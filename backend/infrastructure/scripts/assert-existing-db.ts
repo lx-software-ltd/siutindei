@@ -108,6 +108,7 @@ function assertNewResources(): void {
     BackupRetentionPeriod: 14,
     DeletionProtection: true,
     CopyTagsToSnapshot: true,
+    EnableHttpEndpoint: true,
   });
 }
 
