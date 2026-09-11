@@ -132,6 +132,12 @@ jobs:
           git add -A
           title="board: #${ISSUE} $(head -n 1 "${RUNNER_TEMP}/brief.txt")"
           git commit -m "${title}" || true
+          git fetch origin staging
+          ahead="$(git rev-list --count "origin/staging..HEAD")"
+          if [ "${ahead}" = "0" ]; then
+            echo "No unique commits vs staging; skip draft PR (dry-run / no-op)"
+            exit 0
+          fi
           git push -u origin "HEAD:board/${TASK_ID}" --force-with-lease
           body="$(cat "${RUNNER_TEMP}/brief.txt")
 
