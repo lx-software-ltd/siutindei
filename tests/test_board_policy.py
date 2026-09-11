@@ -112,6 +112,12 @@ def test_ci_green_with_skipped_checks() -> None:
     assert board_policy.ci_is_green(runs, "pending") is True
 
 
-def test_ci_not_green_when_empty_and_not_success() -> None:
-    assert board_policy.ci_is_green([], "pending") is False
+def test_ci_green_when_no_checks_were_requested() -> None:
+    assert board_policy.ci_is_green([], "pending") is True
+    assert board_policy.ci_is_green([], "") is True
     assert board_policy.ci_is_green([], "success") is True
+
+
+def test_ci_not_green_when_combined_status_failed() -> None:
+    assert board_policy.ci_is_green([], "failure") is False
+    assert board_policy.ci_is_green([], "error") is False

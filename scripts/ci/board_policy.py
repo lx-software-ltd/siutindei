@@ -175,7 +175,10 @@ def ci_is_green(check_runs: list[dict[str, Any]], combined_state: str) -> bool:
             for row in check_runs
             if isinstance(row, dict)
         )
-    return combined_state == "success"
+    # Docs-only PRs skip lint.yml / test.yml path filters, so GitHub
+    # reports pending with zero check runs. Treat that as green unless
+    # the combined status already failed.
+    return combined_state not in {"failure", "error"}
 
 
 def main(argv: list[str] | None = None) -> int:
