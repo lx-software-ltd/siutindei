@@ -121,6 +121,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/listing-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ingest first-party listing funnel events
+         * @description Record search, listing view, CTA tap, and lead events used to
+         *     fill `listing_events_daily` / `v_funnel_daily`. This is first-party
+         *     product telemetry (location-grained). The Executive Board already
+         *     reads GA4 via its `web` tools; do not send page titles, search
+         *     terms, or other PII here.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ListingEventIngestRequest"];
+                };
+            };
+            responses: {
+                /** @description Events accepted (duplicates of client_event_id ignored) */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid request body */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -128,6 +191,25 @@ export interface components {
         ErrorResponse: {
             /** @description Human-readable error message */
             error: string;
+        };
+        ListingEventIngestRequest: {
+            events: components["schemas"]["ListingEvent"][];
+        };
+        ListingEvent: {
+            /** @enum {string} */
+            event_type: "search" | "listing_view" | "cta_tap" | "lead_relayed";
+            /** @enum {string} */
+            source: "public_www" | "flutter" | "partner";
+            /**
+             * Format: uuid
+             * @description Venue UUID. Omit for unattributed events (searches, site-wide
+             *     CTAs); the server stores the nil UUID.
+             */
+            location_id?: string;
+            /** Format: uuid */
+            activity_id?: string;
+            /** @description Client-generated idempotency key. */
+            client_event_id?: string;
         };
         ActivitySearchResponse: {
             items: components["schemas"]["ActivitySearchResult"][];

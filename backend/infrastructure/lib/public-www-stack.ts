@@ -30,19 +30,30 @@ import { Construct } from "constructs";
 //     endpoint, pointing at the API Gateway custom domain origin. This replaces
 //     the (fixed-cost) API Gateway stage cache cluster with usage-based
 //     CloudFront edge caching. An allow-list CloudFront Function rejects any
-//     method other than GET/HEAD/OPTIONS on that path. CloudFront Function
-//     creation is serialized via an `addDependency` chain so a single deploy
-//     does not breach the regional CloudFront Functions API rate limit.
+//     method other than GET/HEAD/OPTIONS on that path.
+//   * A `/v1/listing-events` CloudFront behavior fronts first-party funnel
+//     ingest (POST, uncached). A shared allow-list function rejects any
+//     method other than POST/OPTIONS. CloudFront Function creation is
+//     serialized via an `addDependency` chain so a single deploy does not
+//     breach the regional CloudFront Functions API rate limit.
 // -----------------------------------------------------------------------------
 
 // Query-string + auth headers forwarded to the API Gateway origin on a cache
 // miss. Caching does NOT vary on these headers (public search results are the
 // same for every caller), so a single cache entry is shared across viewers.
 const SEARCH_API_PROXY_PATH = "/v1/activities/search";
+const LISTING_EVENTS_PROXY_PATH = "/v1/listing-events";
 const SEARCH_API_FORWARDED_HEADERS = [
   "x-api-key",
   "x-device-attestation",
   "Accept",
+];
+const LISTING_EVENTS_FORWARDED_HEADERS = [
+  "x-api-key",
+  "x-device-attestation",
+  "Accept",
+  "Content-Type",
+  "Origin",
 ];
 // Edge cache TTL mirrors the previous API Gateway method cache (5 minutes).
 const SEARCH_API_CACHE_TTL = cdk.Duration.minutes(5);
@@ -60,6 +71,8 @@ interface WebsiteEnvironmentConfig {
   readonly searchApiOriginDomain: string;
   readonly searchApiCachePolicy: cloudfront.ICachePolicy;
   readonly searchApiOriginRequestPolicy: cloudfront.IOriginRequestPolicy;
+  readonly listingEventsProxyFunction: cloudfront.Function;
+  readonly listingEventsOriginRequestPolicy: cloudfront.IOriginRequestPolicy;
 }
 
 interface WebsiteEnvironmentResources {
@@ -212,6 +225,42 @@ export class PublicWwwStack extends cdk.Stack {
         cookieBehavior: cloudfront.OriginRequestCookieBehavior.none(),
       },
     );
+    const listingEventsOriginRequestPolicy = new cloudfront.OriginRequestPolicy(
+      this,
+      "ListingEventsOriginRequestPolicy",
+      {
+        comment: "Forward listing-event auth and body headers; no cache.",
+        queryStringBehavior:
+          cloudfront.OriginRequestQueryStringBehavior.none(),
+        headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList(
+          ...LISTING_EVENTS_FORWARDED_HEADERS,
+        ),
+        cookieBehavior: cloudfront.OriginRequestCookieBehavior.none(),
+      },
+    );
+    const listingEventsProxyFunction = new cloudfront.Function(
+      this,
+      "ListingEventsProxyAllowlistFunction",
+      {
+        comment:
+          "Allow only POST/OPTIONS on the listing-events ingest behavior.",
+        runtime: cloudfront.FunctionRuntime.JS_2_0,
+        code: cloudfront.FunctionCode.fromInline(`
+function handler(event) {
+  var request = event.request;
+  var method = request.method;
+  if (method === 'POST' || method === 'OPTIONS') {
+    return request;
+  }
+  return {
+    statusCode: 405,
+    statusDescription: 'Method Not Allowed',
+    headers: { 'allow': { value: 'POST, OPTIONS' } },
+  };
+}
+`),
+      },
+    );
 
     const productionResources = this.createWebsiteEnvironment({
       idPrefix: "PublicWww",
@@ -230,6 +279,8 @@ export class PublicWwwStack extends cdk.Stack {
       searchApiOriginDomain: searchApiOriginDomain.valueAsString,
       searchApiCachePolicy,
       searchApiOriginRequestPolicy,
+      listingEventsProxyFunction,
+      listingEventsOriginRequestPolicy,
     });
     this.bucket = productionResources.bucket;
     this.distribution = productionResources.distribution;
@@ -250,22 +301,27 @@ export class PublicWwwStack extends cdk.Stack {
       searchApiOriginDomain: searchApiOriginDomain.valueAsString,
       searchApiCachePolicy,
       searchApiOriginRequestPolicy,
+      listingEventsProxyFunction,
+      listingEventsOriginRequestPolicy,
     });
     this.stagingBucket = stagingResources.bucket;
     this.stagingDistribution = stagingResources.distribution;
     this.stagingLoggingBucket = stagingResources.loggingBucket;
 
     // Serialize CloudFront Function creation/updates across both environments
-    // into a single linear chain. Deploying all four functions in parallel can
+    // into a single linear chain. Deploying functions in parallel can
     // breach the regional CloudFront Functions API rate limit, so each function
     // depends on the previous one:
-    //   prod path-rewrite → prod search-proxy → staging path-rewrite → staging
-    //   search-proxy.
+    //   prod path-rewrite → prod search-proxy → listing-events allow-list →
+    //   staging path-rewrite → staging search-proxy.
     productionResources.searchProxyFunction.node.addDependency(
       productionResources.pathRewriteFunction,
     );
-    stagingResources.pathRewriteFunction.node.addDependency(
+    listingEventsProxyFunction.node.addDependency(
       productionResources.searchProxyFunction,
+    );
+    stagingResources.pathRewriteFunction.node.addDependency(
+      listingEventsProxyFunction,
     );
     stagingResources.searchProxyFunction.node.addDependency(
       stagingResources.pathRewriteFunction,
@@ -552,6 +608,21 @@ function handler(event) {
             functionAssociations: [
               {
                 function: searchProxyFunction,
+                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+              },
+            ],
+          },
+          // First-party funnel ingest: proxied, never cached.
+          [LISTING_EVENTS_PROXY_PATH]: {
+            origin: searchApiOrigin,
+            viewerProtocolPolicy:
+              cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+            cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+            originRequestPolicy: config.listingEventsOriginRequestPolicy,
+            functionAssociations: [
+              {
+                function: config.listingEventsProxyFunction,
                 eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
               },
             ],
