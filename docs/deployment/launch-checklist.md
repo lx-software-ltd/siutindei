@@ -7,9 +7,10 @@ how to verify. Region is `ap-southeast-1` unless stated otherwise
 ## 1. Data safety (Aurora)
 
 The CDK-managed cluster (`backend/infrastructure/lib/constructs/database.ts`)
-sets 14-day backup retention, deletion protection, and copy-tags-to-snapshot.
-These settings deploy automatically with the next `lxsoftware-siutindei` stack
-deploy **only if the cluster is CDK-created**.
+sets 14-day backup retention, deletion protection, copy-tags-to-snapshot,
+and the RDS HTTP Data API (`enableDataApi: true`). These settings deploy
+automatically with the next `lxsoftware-siutindei` stack deploy **only if
+the cluster is CDK-created**.
 
 If production imports an existing cluster (any `EXISTING_DB_*` variables set
 on the deploy environment), apply the same settings out-of-band:
@@ -22,14 +23,27 @@ aws rds modify-db-cluster \
   --copy-tags-to-snapshot \
   --apply-immediately \
   --region ap-southeast-1
+
+aws rds enable-http-endpoint \
+  --resource-arn "$(aws rds describe-db-clusters \
+    --db-cluster-identifier lxsoftware-siutindei-db-cluster \
+    --query 'DBClusters[0].DBClusterArn' \
+    --output text \
+    --region ap-southeast-1)" \
+  --region ap-southeast-1
 ```
+
+The lx-software admin stack also re-enables the HTTP endpoint every 15
+minutes when `SiutindeiClusterArn` is set. Prefer setting
+`enableDataApi: true` on CDK-managed clusters so a product deploy does
+not turn it off.
 
 Verify:
 
 ```bash
 aws rds describe-db-clusters \
   --db-cluster-identifier lxsoftware-siutindei-db-cluster \
-  --query 'DBClusters[0].{Backup:BackupRetentionPeriod,Protect:DeletionProtection,Tags:CopyTagsToSnapshot}' \
+  --query 'DBClusters[0].{Backup:BackupRetentionPeriod,Protect:DeletionProtection,Tags:CopyTagsToSnapshot,Http:HttpEndpointEnabled}' \
   --region ap-southeast-1
 ```
 

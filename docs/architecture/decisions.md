@@ -90,6 +90,13 @@ parallel environments (production + staging) inside a single CDK stack
   are created via migrations and granted `rds_iam`.
 - DB connections enforce TLS and use small pools tuned for Lambda.
 - Migrations Lambda uses password auth directly against the cluster endpoint.
+- The CDK-managed Aurora cluster sets `enableDataApi: true` so the
+  lx-software Executive Board stack can query product views over the
+  RDS HTTP Data API. Product Lambdas still use RDS Proxy. Imported
+  `EXISTING_DB_*` clusters cannot take this CDK property; enable the
+  HTTP endpoint out-of-band (see
+  [`docs/deployment/launch-checklist.md`](../deployment/launch-checklist.md)).
+  The admin stack's 15-minute ensure schedule remains the drift guard.
 
 **Core tables:**
 - `organizations`

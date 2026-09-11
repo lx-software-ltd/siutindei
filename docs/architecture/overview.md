@@ -97,6 +97,9 @@ See [`docs/architecture/database-schema.md`](database-schema.md) for full table 
 
 - Aurora PostgreSQL Serverless v2.
 - RDS Proxy with IAM auth for Lambda connections.
+- CDK-managed clusters enable the RDS HTTP Data API for the
+  lx-software Executive Board stack (`rds-data`). Product Lambdas
+  still use RDS Proxy.
 - Alembic migrations live under `backend/db/`.
 - Seed data stored in `backend/db/seed/seed_data.sql`.
 - Migrations run via a custom resource Lambda using password auth.
