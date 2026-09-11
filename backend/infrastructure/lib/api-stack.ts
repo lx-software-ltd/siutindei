@@ -1182,6 +1182,64 @@ export class ApiStack extends cdk.Stack {
     database.grantAppUserSecretRead(searchFunction);
     database.grantConnect(searchFunction, "siutindei_app");
 
+    const listingEventsIngestFunction = createPythonFunction(
+      "ListingEventsIngestFunction",
+      {
+        handler: "lambda/listing_events_ingest/handler.lambda_handler",
+        memorySize: 256,
+        timeout: cdk.Duration.seconds(10),
+        reservedConcurrentExecutions: null,
+        environment: {
+          DATABASE_SECRET_ARN: database.adminUserSecret.secretArn,
+          DATABASE_NAME: "siutindei",
+          DATABASE_USERNAME: "siutindei_admin",
+          DATABASE_PROXY_ENDPOINT: database.proxy.endpoint,
+          DATABASE_IAM_AUTH: "true",
+          CORS_ALLOWED_ORIGINS: corsAllowedOrigins.join(","),
+        },
+      }
+    );
+    database.grantAdminUserSecretRead(listingEventsIngestFunction);
+    database.grantConnect(listingEventsIngestFunction, "siutindei_admin");
+
+    const listingEventsRollupFunction = createPythonFunction(
+      "ListingEventsRollupFunction",
+      {
+        handler: "lambda/listing_events_rollup/handler.lambda_handler",
+        memorySize: 256,
+        timeout: cdk.Duration.seconds(60),
+        reservedConcurrentExecutions: null,
+        environment: {
+          DATABASE_SECRET_ARN: database.adminUserSecret.secretArn,
+          DATABASE_NAME: "siutindei",
+          DATABASE_USERNAME: "siutindei_admin",
+          DATABASE_PROXY_ENDPOINT: database.proxy.endpoint,
+          DATABASE_IAM_AUTH: "true",
+        },
+      }
+    );
+    database.grantAdminUserSecretRead(listingEventsRollupFunction);
+    database.grantConnect(listingEventsRollupFunction, "siutindei_admin");
+
+    const listingEventsRollupRule = new cdk.aws_events.Rule(
+      this,
+      "ListingEventsRollupSchedule",
+      {
+        ruleName: name("listing-events-rollup"),
+        description:
+          "Rebuild listing_events_daily from first-party listing_events",
+        schedule: cdk.aws_events.Schedule.cron({
+          minute: "15",
+          hour: "16",
+        }),
+      }
+    );
+    listingEventsRollupRule.addTarget(
+      new cdk.aws_events_targets.LambdaFunction(listingEventsRollupFunction, {
+        retryAttempts: 2,
+      })
+    );
+
     // Admin function
     const managerGroupName = "manager";
     const adminFunction = createPythonFunction("SiutindeiAdminFunction", {
@@ -2066,6 +2124,17 @@ export class ApiStack extends cdk.Stack {
       requestParameters,
     });
 
+    const listingEvents = v1.addResource("listing-events");
+    listingEvents.addMethod(
+      "POST",
+      new apigateway.LambdaIntegration(listingEventsIngestFunction),
+      {
+        authorizationType: apigateway.AuthorizationType.CUSTOM,
+        authorizer: deviceAttestationAuthorizer,
+        apiKeyRequired: true,
+      }
+    );
+
     // Admin routes
     const admin = v1.addResource("admin");
     const adminIntegration = new apigateway.Integration({
@@ -2633,6 +2702,16 @@ export class ApiStack extends cdk.Stack {
       monitoredFunctions: [
         // Public search path: user-facing SLO.
         { label: "Search", fn: searchFunction, durationP99ThresholdMs: 3000 },
+        {
+          label: "ListingEventsIngest",
+          fn: listingEventsIngestFunction,
+          durationP99ThresholdMs: 2000,
+        },
+        {
+          label: "ListingEventsRollup",
+          fn: listingEventsRollupFunction,
+          durationP99ThresholdMs: 15000,
+        },
         // Admin console: internal tooling with long-running imports and
         // Cognito round-trips; alert well before the 30 s function timeout.
         { label: "Admin", fn: adminFunction, durationP99ThresholdMs: 10000 },

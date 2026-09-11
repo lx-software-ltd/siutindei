@@ -246,6 +246,8 @@ Each Lambda function created by `PythonLambda` construct includes:
 | `AdminBootstrapFunction` | `lambda/admin_bootstrap/handler.lambda_handler` | 256 MB | 30s | Yes | Custom resource handler |
 | `AwsApiProxyFunction` | `lambda/aws_proxy/handler.lambda_handler` | 256 MB | 15s | No | AWS/HTTP proxy for in-VPC Lambdas |
 | `ApiKeyRotationFunction` | `lambda/api_key_rotation/handler.lambda_handler` | 256 MB | 60s | Yes | Scheduled API key rotation |
+| `ListingEventsIngestFunction` | `lambda/listing_events_ingest/handler.lambda_handler` | 256 MB | 10s | Yes | Public listing-event ingest |
+| `ListingEventsRollupFunction` | `lambda/listing_events_rollup/handler.lambda_handler` | 256 MB | 60s | Yes | Nightly listing_events_daily rollup |
 | `ManagerRequestProcessor` | `lambda/manager_request_processor/handler.lambda_handler` | 512 MB | 10s | Yes | SQS-triggered request processor |
 
 ### Lambda Resources Per Function
@@ -329,6 +331,7 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 |--------------|--------|---------------|-------------|-------|
 | `/health` | GET | IAM | `HealthCheckFunction` | Health check |
 | `/v1/activities/search` | GET | Device Attestation + API Key | `SiutindeiSearchFunction` | Cached at CloudFront edge (5-min TTL) |
+| `/v1/listing-events` | POST | Device Attestation + API Key | `ListingEventsIngestFunction` | First-party funnel ingest; never cached |
 | `/v1/admin/{resource}` | GET, POST | Admin Group | `SiutindeiAdminFunction` | CRUD (orgs, locations, activities, pricing, schedules) |
 | `/v1/admin/{resource}/{id}` | GET, PUT, DELETE | Admin Group | `SiutindeiAdminFunction` | CRUD by ID |
 | `/v1/admin/organizations/{id}/media` | POST, DELETE | Admin Group | `SiutindeiAdminFunction` | Media upload/delete |

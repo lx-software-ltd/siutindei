@@ -100,6 +100,9 @@ See [`docs/architecture/database-schema.md`](database-schema.md) for full table 
 - CDK-managed clusters enable the RDS HTTP Data API for the
   lx-software Executive Board stack (`rds-data`). Product Lambdas
   still use RDS Proxy.
+- Public www posts consented listing events to `POST /v1/listing-events`;
+  a nightly job fills `listing_events_daily` for `v_funnel_daily`.
+  GA4 stays the board `web` tool; Aurora is first-party counts only.
 - Alembic migrations live under `backend/db/`.
 - Seed data stored in `backend/db/seed/seed_data.sql`.
 - Migrations run via a custom resource Lambda using password auth.

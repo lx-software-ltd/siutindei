@@ -192,6 +192,39 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /v1/listing-events:
+    post:
+      summary: Ingest first-party listing funnel events
+      description: |
+        Record search, listing view, CTA tap, and lead events used to
+        fill `listing_events_daily` / `v_funnel_daily`. This is first-party
+        product telemetry (location-grained). The Executive Board already
+        reads GA4 via its `web` tools; do not send page titles, search
+        terms, or other PII here.
+      security:
+        - ApiKeyAuth: []
+          DeviceAttestation: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListingEventIngestRequest"
+      responses:
+        "204":
+          description: Events accepted (duplicates of client_event_id ignored)
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -210,6 +243,39 @@ components:
         error:
           type: string
           description: Human-readable error message
+    ListingEventIngestRequest:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/ListingEvent"
+    ListingEvent:
+      type: object
+      required: [event_type, source]
+      properties:
+        event_type:
+          type: string
+          enum: [search, listing_view, cta_tap, lead_relayed]
+        source:
+          type: string
+          enum: [public_www, flutter, partner]
+        location_id:
+          type: string
+          format: uuid
+          description: |
+            Venue UUID. Omit for unattributed events (searches, site-wide
+            CTAs); the server stores the nil UUID.
+        activity_id:
+          type: string
+          format: uuid
+        client_event_id:
+          type: string
+          maxLength: 128
+          description: Client-generated idempotency key.
     ActivitySearchResponse:
       type: object
       required: [items]

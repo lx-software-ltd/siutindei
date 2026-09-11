@@ -301,6 +301,11 @@ regression. See [`aws-assets-map.md`](./aws-assets-map.md) and
   port. Product Lambdas must keep using RDS Proxy; do not grant
   `rds-data:*` to those functions. The lx-software Executive Board
   `AdminApiFn` is the intended Data API caller.
+- `POST /v1/listing-events` is public telemetry (API key + device
+  attestation, same anti-abuse model as search). Accept only
+  enumerated event types; do not persist search terms, names, or
+  other PII. CloudFront caches this path never. The board already
+  has GA4; do not copy GA4 into Aurora.
 - If importing an existing Secrets Manager credential secret encrypted
   with a customer-managed KMS key, ensure Lambda roles can decrypt it
   (set `EXISTING_DB_CREDENTIALS_SECRET_KMS_KEY_ARN` or use auto-detect).

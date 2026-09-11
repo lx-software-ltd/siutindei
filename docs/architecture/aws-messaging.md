@@ -99,6 +99,14 @@ endpoints are at `/v1/admin/tickets`. For full endpoint details
 
 The processor checks if a ticket with the same `ticket_id` already exists before inserting. This handles SQS's at-least-once delivery guarantee.
 
+## Listing-events rollup
+
+A nightly EventBridge rule (`lxsoftware-siutindei-listing-events-rollup`)
+invokes `ListingEventsRollupFunction` at 16:15 UTC. The job deletes and
+rebuilds that UTC day's `listing_events_daily` rows from `listing_events`.
+Re-runs are idempotent. Manual invoke with `{"day": "YYYY-MM-DD"}`
+backfills one day.
+
 ## Files
 
 | File | Description |

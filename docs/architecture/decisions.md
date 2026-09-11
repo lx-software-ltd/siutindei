@@ -97,6 +97,11 @@ parallel environments (production + staging) inside a single CDK stack
   HTTP endpoint out-of-band (see
   [`docs/deployment/launch-checklist.md`](../deployment/launch-checklist.md)).
   The admin stack's 15-minute ensure schedule remains the drift guard.
+- First-party `listing_events` (public www ingest) plus a nightly
+  rollup fill `listing_events_daily` so `v_funnel_daily` has rows.
+  The board already reads GA4 via `web` tools; Aurora stores only
+  location-grained counts, not a GA4 replica. `bookings_confirmed`
+  stays 0 until a booking product exists.
 
 **Core tables:**
 - `organizations`

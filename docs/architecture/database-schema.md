@@ -332,6 +332,60 @@ Grants:
 Audited via `api_keys_audit_trigger` (the `key_hash` field is redacted in
 admin audit-log responses).
 
+## Table: listing_events
+
+Purpose: First-party listing funnel events from public www (and later
+Flutter). The Executive Board already reads GA4 via its `web` tools;
+this table is the location-grained product source for
+`listing_events_daily` / `v_funnel_daily`.
+
+Columns:
+- `id` (UUID, PK, default `gen_random_uuid()`)
+- `occurred_on` (date, required) — UTC day used by the nightly rollup
+- `occurred_at` (timestamptz, default `now()`)
+- `event_type` (text, required — `search`, `listing_view`, `cta_tap`,
+  `lead_relayed`)
+- `location_id` (UUID, required, default nil UUID) — venue; nil UUID
+  for unattributed searches and site-wide CTAs
+- `activity_id` (UUID, optional)
+- `source` (text, required — `public_www`, `flutter`, `partner`)
+- `client_event_id` (text, required) — client idempotency key
+- `created_at` (timestamptz, default `now()`)
+
+Indexes:
+- `listing_events_day_type_idx` on (`occurred_on`, `event_type`,
+  `location_id`)
+- Unique `listing_events_client_id_uniq` on (`source`,
+  `client_event_id`)
+
+Grants:
+- `siutindei_admin`: SELECT, INSERT
+
+Not audited: high-volume telemetry. Do not store search terms, names,
+or other PII.
+
+## Table: listing_events_daily
+
+Purpose: Daily listing funnel counts by location. The lx-software
+`v_funnel_daily` view aggregates this table by district. The admin
+stack may create the table first (`CREATE TABLE IF NOT EXISTS`); the
+product migration adopts the same shape and owns the writer.
+
+Columns:
+- `day` (date, PK)
+- `location_id` (UUID, PK, default nil UUID)
+- `searches` (integer, default 0)
+- `listing_views` (integer, default 0)
+- `cta_taps` (integer, default 0)
+- `leads_relayed` (integer, default 0)
+- `bookings_confirmed` (integer, default 0) — stays 0 until a booking
+  product exists
+
+Grants:
+- `siutindei_admin`: SELECT, INSERT, UPDATE, DELETE
+
+A nightly EventBridge job rebuilds one UTC day from `listing_events`.
+
 ## Table: audit_log
 
 Purpose: Automatic change tracking for all audited tables.

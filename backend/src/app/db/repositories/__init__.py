@@ -8,6 +8,10 @@ from app.db.repositories.api_key import ApiKeyRepository
 from app.db.repositories.base import BaseRepository
 from app.db.repositories.geographic_area import GeographicAreaRepository
 from app.db.repositories.organization import OrganizationRepository
+from app.db.repositories.listing_event import (
+    ListingEventRepository,
+    ListingEventsDailyRepository,
+)
 from app.db.repositories.location import LocationRepository
 from app.db.repositories.activity import ActivityRepository
 from app.db.repositories.activity_category import ActivityCategoryRepository
@@ -22,6 +26,8 @@ __all__ = [
     "BaseRepository",
     "GeographicAreaRepository",
     "OrganizationRepository",
+    "ListingEventRepository",
+    "ListingEventsDailyRepository",
     "LocationRepository",
     "ActivityRepository",
     "ActivityCategoryRepository",

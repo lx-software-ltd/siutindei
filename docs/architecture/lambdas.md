@@ -18,6 +18,28 @@ their primary responsibilities.
 
 ## API Gateway Lambdas
 
+### Listing events ingest
+- Function: ListingEventsIngestFunction
+- Handler: backend/lambda/listing_events_ingest/handler.py
+- Trigger: API Gateway `POST /v1/listing-events`
+- Auth: API key + device attestation authorizer (same as public search)
+- Purpose: accept first-party listing funnel events (search, view, CTA,
+  lead) from public www. Does not store PII. GA4 remains the board `web`
+  tool source.
+- DB access: RDS Proxy with IAM auth (`siutindei_admin`), INSERT on
+  `listing_events`
+- Endpoint contract: [`docs/api/search.yaml`](../api/search.yaml)
+
+### Listing events rollup
+- Function: ListingEventsRollupFunction
+- Handler: backend/lambda/listing_events_rollup/handler.py
+- Trigger: EventBridge cron `15 16 * * ? *` (16:15 UTC / 00:15 HKT)
+- Purpose: rebuild yesterday's `listing_events_daily` rows from
+  `listing_events` so `v_funnel_daily` has data. `bookings_confirmed`
+  stays 0.
+- DB access: RDS Proxy with IAM auth (`siutindei_admin`)
+- Manual backfill: invoke with `{"day": "YYYY-MM-DD"}`
+
 ### Activity search
 - Function: SiutindeiSearchFunction
 - Handler: backend/lambda/search/handler.py

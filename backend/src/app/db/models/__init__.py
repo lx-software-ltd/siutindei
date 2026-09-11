@@ -13,6 +13,7 @@ from app.db.models.audit_log import AuditLog
 from app.db.models.enums import PricingType, ScheduleType, TicketStatus, TicketType
 from app.db.models.feedback_label import FeedbackLabel
 from app.db.models.geographic_area import GeographicArea
+from app.db.models.listing_event import ListingEvent, ListingEventsDaily
 from app.db.models.location import Location
 from app.db.models.organization_feedback import OrganizationFeedback
 from app.db.models.organization import Organization
@@ -29,6 +30,8 @@ __all__ = [
     "AuditLog",
     "FeedbackLabel",
     "GeographicArea",
+    "ListingEvent",
+    "ListingEventsDaily",
     "Location",
     "Organization",
     "OrganizationFeedback",
