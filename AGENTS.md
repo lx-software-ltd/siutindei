@@ -1,5 +1,23 @@
 # Agents
 
+## Board agent constraints
+
+Board / Cursor Actions runners treat the task brief as **acceptance
+criteria**. Do not expand scope past the brief.
+
+Never modify files matching:
+
+- `**/auth/**`
+- `**/payments/**`
+- `**/migrations/**`
+- `infra/**`
+- `.github/**`
+
+Evaluate both old and new path names (renames count). Leave auth,
+payments, migrations, infrastructure, and GitHub workflow changes to an
+owner. Do not commit, push, or open pull requests; the workflow does
+that after tests.
+
 ## Cursor Cloud specific instructions
 
 ### Services overview

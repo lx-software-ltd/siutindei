@@ -1,0 +1,148 @@
+name: board-agent
+run-name: board-agent ${{ inputs.task_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        required: true
+        type: string
+      issue:
+        required: true
+        type: string
+      brief:
+        required: true
+        type: string
+      kind:
+        required: true
+        type: string
+
+# Secrets on this runner: only CURSOR_API_KEY and GITHUB_TOKEN. No AWS.
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: board-agent-${{ inputs.task_id }}
+  cancel-in-progress: false
+
+env:
+  # Pin the Cursor CLI build. Bump this string when the owner upgrades.
+  CURSOR_CLI_VERSION: 2026.09.10-fd3934a
+
+jobs:
+  run:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout staging
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: staging
+          fetch-depth: 0
+
+      - name: Branch
+        env:
+          TASK_ID: ${{ inputs.task_id }}
+        run: |
+          set -euo pipefail
+          git checkout -B "board/${TASK_ID}"
+
+      - name: Write brief
+        env:
+          BOARD_BRIEF: ${{ inputs.brief }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$BOARD_BRIEF" > "${RUNNER_TEMP}/brief.txt"
+
+      - name: Install pinned Cursor CLI
+        run: |
+          set -euo pipefail
+          os=linux
+          arch=x64
+          case "$(uname -m)" in
+            aarch64|arm64) arch=arm64 ;;
+            x86_64|amd64) arch=x64 ;;
+            *) echo "unsupported arch $(uname -m)" >&2; exit 1 ;;
+          esac
+          version="${CURSOR_CLI_VERSION}"
+          dest="${HOME}/.local/share/cursor-agent/versions/${version}"
+          mkdir -p "${dest}" "${HOME}/.local/bin"
+          curl -fsSL \
+            "https://downloads.cursor.com/lab/${version}/${os}/${arch}/agent-cli-package.tar.gz" \
+            | tar --strip-components=1 -xzf - -C "${dest}"
+          ln -sfn "${dest}/cursor-agent" "${HOME}/.local/bin/agent"
+          ln -sfn "${dest}/cursor-agent" "${HOME}/.local/bin/cursor-agent"
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          echo "${HOME}/.cursor/bin" >> "${GITHUB_PATH}"
+          "${HOME}/.local/bin/cursor-agent" --version
+
+      - name: Cursor agent
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          BOARD_KIND: ${{ inputs.kind }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CURSOR_API_KEY:-}" ]; then
+            echo "CURSOR_API_KEY is not set" >&2
+            exit 1
+          fi
+          {
+            echo "Follow AGENTS.md. Treat the brief as acceptance criteria."
+            echo "Do not modify **/auth/**, **/payments/**, **/migrations/**,"
+            echo "infra/**, or .github/**."
+            echo "Do not commit, push, or open pull requests. Only edit files."
+            echo "Kind: ${BOARD_KIND}"
+            echo
+            cat "${RUNNER_TEMP}/brief.txt"
+          } > "${RUNNER_TEMP}/prompt.txt"
+          cursor-agent -p "$(cat "${RUNNER_TEMP}/prompt.txt")" \
+            --model composer-2.5 --yolo
+
+      - name: Guard protected paths
+        env:
+          BOARD_KIND: ${{ inputs.kind }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/board_policy.py \
+            --check-worktree origin/staging \
+            --kind "${BOARD_KIND}"
+
+      - name: Test
+        run: |
+          set -euo pipefail
+          if git diff --quiet origin/staging -- \
+            && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+            echo "No changes from staging; skip repo tests"
+            exit 0
+          fi
+          echo "Agent produced changes; lint.yml and test.yml on the PR are the merge gate."
+          git diff --check origin/staging || git diff --check
+
+      - name: Commit and draft PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TASK_ID: ${{ inputs.task_id }}
+          ISSUE: ${{ inputs.issue }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          title="board: #${ISSUE} $(head -n 1 "${RUNNER_TEMP}/brief.txt")"
+          git commit -m "${title}" || true
+          git push -u origin "HEAD:board/${TASK_ID}" --force-with-lease
+          body="$(cat "${RUNNER_TEMP}/brief.txt")
+
+          Task: ${TASK_ID}"
+          existing="$(gh pr list --head "board/${TASK_ID}" --base staging \
+            --json number --jq '.[0].number // empty')"
+          if [ -n "${existing}" ]; then
+            gh pr edit "${existing}" --title "${title}" --body "${body}"
+            echo "Updated existing PR #${existing}"
+          else
+            gh pr create --draft --base staging \
+              --title "${title}" \
+              --body "${body}"
+          fi

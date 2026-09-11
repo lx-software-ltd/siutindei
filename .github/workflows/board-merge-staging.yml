@@ -1,0 +1,86 @@
+name: board-merge-staging
+run-name: board-merge-staging #${{ inputs.pr_number }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+concurrency:
+  group: board-merge-staging-${{ inputs.pr_number }}
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout policy helper
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Re-check policy and squash-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          repo="${GITHUB_REPOSITORY}"
+          pr="$(gh api "repos/${repo}/pulls/${PR_NUMBER}")"
+          base="$(printf '%s' "${pr}" | jq -r '.base.ref')"
+          head="$(printf '%s' "${pr}" | jq -r '.head.ref')"
+          sha="$(printf '%s' "${pr}" | jq -r '.head.sha')"
+          echo "PR #${PR_NUMBER} ${head} -> ${base} (${sha})"
+
+          if [ "${base}" != "staging" ]; then
+            echo "base branch must be staging (got ${base})" >&2
+            exit 1
+          fi
+          case "${head}" in
+            board/*) ;;
+            *)
+              echo "head branch must start with board/ (got ${head})" >&2
+              exit 1
+              ;;
+          esac
+
+          files="$(gh api --paginate \
+            "repos/${repo}/pulls/${PR_NUMBER}/files?per_page=100")"
+          printf '%s' "${files}" | python3 scripts/ci/board_policy.py \
+            --files-json -
+
+          checks="$(gh api \
+            "repos/${repo}/commits/${sha}/check-runs?per_page=100")"
+          status="$(gh api "repos/${repo}/commits/${sha}/status")"
+          CHECKS_JSON="${checks}" STATUS_JSON="${status}" python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import importlib.util
+          from pathlib import Path
+
+          spec = importlib.util.spec_from_file_location(
+              "board_policy",
+              Path("scripts/ci/board_policy.py"),
+          )
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          checks = json.loads(os.environ["CHECKS_JSON"])
+          status = json.loads(os.environ["STATUS_JSON"])
+          runs = checks.get("check_runs") or []
+          state = str(status.get("state") or "")
+          if not module.ci_is_green(runs, state):
+              print("CI is not green", file=sys.stderr)
+              sys.exit(1)
+          print(f"CI green checks={len(runs)} state={state}")
+          PY
+
+          gh pr ready "${PR_NUMBER}" || true
+          gh pr merge "${PR_NUMBER}" --squash --delete-branch
