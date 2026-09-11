@@ -1,5 +1,9 @@
 import { hasAnalyticsConsent } from '@/lib/analytics/consent';
 import {
+  ingestListingEvents,
+  type ListingEventPayload,
+} from '@/lib/analytics/listing-events-ingest';
+import {
   listingOrgName,
   listingTitle,
 } from '@/lib/activities/listing-utils';
@@ -94,6 +98,11 @@ export function searchFieldsFromFilters(
   };
 }
 
+export interface ListingIds {
+  readonly locationId?: string;
+  readonly activityId?: string;
+}
+
 export function trackViewItem(
   locale: Locale,
   listing: ActivityListing,
@@ -102,17 +111,46 @@ export function trackViewItem(
     event: 'view_item',
     ...itemFieldsFromListing(locale, listing),
   });
+  if (!hasAnalyticsConsent()) {
+    return;
+  }
+  void ingestListingEvents([
+    {
+      event_type: 'listing_view',
+      location_id: listing.location.id,
+      activity_id: listing.activity.id,
+    },
+  ]);
 }
 
 export function trackGenerateLead(
   leadType: LeadType,
   item?: AnalyticsItemFields,
+  listingIds?: ListingIds,
 ): void {
   pushDataLayerEvent({
     event: 'generate_lead',
     lead_type: leadType,
     ...item,
   });
+  if (!hasAnalyticsConsent()) {
+    return;
+  }
+  const shared = {
+    ...(listingIds?.locationId
+      ? { location_id: listingIds.locationId }
+      : {}),
+    ...(listingIds?.activityId
+      ? { activity_id: listingIds.activityId }
+      : {}),
+  };
+  const events: ListingEventPayload[] = [
+    { event_type: 'cta_tap', ...shared },
+  ];
+  if (leadType === 'whatsapp_activity') {
+    events.push({ event_type: 'lead_relayed', ...shared });
+  }
+  void ingestListingEvents(events);
 }
 
 export function trackSearch(filters: SearchFiltersState): void {
@@ -120,4 +158,8 @@ export function trackSearch(filters: SearchFiltersState): void {
     event: 'search',
     ...searchFieldsFromFilters(filters),
   });
+  if (!hasAnalyticsConsent()) {
+    return;
+  }
+  void ingestListingEvents([{ event_type: 'search' }]);
 }

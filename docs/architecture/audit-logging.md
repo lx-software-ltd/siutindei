@@ -78,7 +78,9 @@ This ensures:
 
 ### Automatic Trigger-Based Auditing
 
-All CRUD operations are automatically audited via database triggers. To include user context:
+All CRUD operations on product tables are automatically audited via
+database triggers. `listing_events` and `listing_events_daily` are
+**not** audited (high-volume telemetry). To include user context:
 
 ```python
 from sqlalchemy.orm import Session

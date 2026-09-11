@@ -317,9 +317,31 @@ distributions (production + staging) carry an extra cache behavior:
 | Origin-request policy (`SearchApiOriginRequestPolicy`) | Forwards all query strings + `x-api-key`, `x-device-attestation`, `Accept` headers to the origin on a cache **miss** |
 
 CloudFront Function creation is serialized across both environments via an
-`addDependency` chain (prod path-rewrite → prod search-proxy → staging
-path-rewrite → staging search-proxy) so a single deploy does not breach the
-regional CloudFront Functions API rate limit.
+`addDependency` chain (prod path-rewrite → prod search-proxy → shared
+listing-events allow-list → staging path-rewrite → staging search-proxy)
+so a single deploy does not breach the regional CloudFront Functions API
+rate limit.
+
+## Listing-event ingest (first-party funnel)
+
+Public www also posts consented `search` / `view_item` / `generate_lead`
+events to **`POST /v1/listing-events`** so Aurora can feed
+`listing_events_daily` / `v_funnel_daily`. The Executive Board already
+reads GA4 via its `web` tools; this path is location-grained product
+telemetry, not a GA4 pull.
+
+| Item | Value |
+|---|---|
+| Path pattern | `/v1/listing-events` (exact path) |
+| Origin | Same API Gateway custom domain as search |
+| Allowed methods | CloudFront `ALLOW_ALL`, allow-list function permits `POST` / `OPTIONS` only |
+| Cache | `CACHING_DISABLED` |
+| Origin-request policy | Forwards `x-api-key`, `x-device-attestation`, `Accept`, `Content-Type`, `Origin`; no query strings |
+| Auth | Same public search API key + static device-attestation token |
+| Consent | Same `siutindei-analytics-consent` gate as the GTM data layer |
+
+`NEXT_PUBLIC_SEARCH_API_BASE_URL` must be the website origin so ingest is
+same-origin (`connect-src 'self'`). Staging fixture mode does not post.
 
 To route traffic through the edge cache, the website build must point
 `NEXT_PUBLIC_SEARCH_API_BASE_URL` at the website's own origin (e.g.

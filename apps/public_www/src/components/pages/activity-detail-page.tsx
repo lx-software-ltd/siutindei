@@ -236,6 +236,8 @@ export function ActivityDetailPage({
                 href={whatsappHref}
                 leadType="whatsapp_activity"
                 item={itemFieldsFromListing(locale, listing)}
+                locationId={listing.location.id}
+                activityId={listing.activity.id}
                 className={
                   'link-unadorned inline-flex min-h-11 w-full ' +
                   'items-center justify-center rounded-lg border ' +
