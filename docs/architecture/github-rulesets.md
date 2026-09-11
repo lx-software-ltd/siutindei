@@ -51,7 +51,7 @@ through pull requests.
 | Require pull request before merging | ✅ Enabled | Prevents direct pushes |
 | Block force pushes | ✅ Enabled | Protects history |
 | Block deletions | ✅ Enabled | Prevents accidental deletion |
-| Bypass actors | Repository admin (`lcacchiani`) | Emergency / bootstrap fixes |
+| Bypass actors | Repository admin (`lcacchiani`); GitHub Actions app (`github-actions`, id `15368`) | Owner emergencies; `board-merge-staging.yml` squash |
 
 ### Setup (GitHub Web UI)
 
@@ -65,7 +65,9 @@ through pull requests.
    - ✅ Restrict deletions
    - ✅ Block force pushes
    - ✅ Require a pull request before merging
-5. **Bypass list:** add yourself (`lcacchiani`)
+5. **Bypass list:** add yourself (`lcacchiani`) and **GitHub Actions**
+   (app `github-actions`, id `15368`) so `board-merge-staging.yml` can
+   squash-merge `board/*` PRs.
 6. Click **Create**
 
 ---

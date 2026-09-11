@@ -113,6 +113,10 @@ See [`docs/architecture/database-schema.md`](database-schema.md) for full table 
 
 - GitHub Actions with OIDC for AWS access.
 - Deploy workflows for mobile, admin, backend, iOS.
+- Board engineering runner: `board-agent.yml` (Cursor CLI on
+  `staging`), `board-merge-staging.yml` (policy squash), and
+  `board-promote.yml` (opens `staging → main` for the owner). See
+  [`executive-board-autonomy-siutindei-appendix-a.md`](executive-board-autonomy-siutindei-appendix-a.md).
 - CDK bootstrap workflow for initial environment setup.
 - Lockfile checks for Flutter, Node, and iOS.
 - Amplify promotion workflow with gating (staging -> main).
