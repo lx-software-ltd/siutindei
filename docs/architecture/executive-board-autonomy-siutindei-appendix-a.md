@@ -4,6 +4,9 @@ Implemented in this repository:
 `.github/workflows/board-agent.yml`,
 `board-merge-staging.yml`, and `board-promote.yml`.
 Cursor CLI is pinned in `board-agent.yml` via `CURSOR_CLI_VERSION`.
+`board-agent` skips the draft PR when the agent makes no commits
+(GitHub rejects empty `staging` ↔ `board/*` PRs). Org Actions must
+allow read/write `GITHUB_TOKEN` and “create and approve pull requests”.
 
 This file is for whoever owns **lx-software-ltd/siutindei**. The lx-software
 admin stack dispatches these workflows; it cannot create them from this
