@@ -295,6 +295,12 @@ regression. See [`aws-assets-map.md`](./aws-assets-map.md) and
 - Use separate database users for different access levels:
   - `siutindei_app` - read-only for search
   - `siutindei_admin` - read-write for admin
+- The CDK-managed Aurora cluster enables the RDS HTTP Data API
+  (`enableDataApi: true`). That is an AWS HTTPS API (`rds-data`)
+  authenticated with IAM plus Secrets Manager, not a public SQL
+  port. Product Lambdas must keep using RDS Proxy; do not grant
+  `rds-data:*` to those functions. The lx-software Executive Board
+  `AdminApiFn` is the intended Data API caller.
 - If importing an existing Secrets Manager credential secret encrypted
   with a customer-managed KMS key, ensure Lambda roles can decrypt it
   (set `EXISTING_DB_CREDENTIALS_SECRET_KMS_KEY_ARN` or use auto-detect).

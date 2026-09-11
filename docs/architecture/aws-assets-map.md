@@ -154,9 +154,15 @@ Cognito operations are proxied through `AwsApiProxyFunction` instead.
 - Monitoring: Enhanced monitoring (60s interval)
 - Backups: 14-day automated backup retention, copy tags to snapshots
 - Deletion Protection: Enabled
-- Note: for clusters imported via `EXISTING_DB_*`, backup retention and
-  deletion protection must be applied out-of-band (see
-  `docs/deployment/launch-checklist.md`)
+- HTTP Data API: Enabled (`enableDataApi: true` on the CDK-managed
+  cluster) so the lx-software Executive Board stack can run
+  `rds-data` against `v_catalog_health`, `v_funnel_daily`, and
+  `v_provider_pipeline`. Product Lambdas still connect through RDS
+  Proxy. This property is not applied to clusters imported via
+  `EXISTING_DB_*`.
+- Note: for clusters imported via `EXISTING_DB_*`, backup retention,
+  deletion protection, and the HTTP Data API must be applied
+  out-of-band (see `docs/deployment/launch-checklist.md`)
 
 ### RDS Proxy
 

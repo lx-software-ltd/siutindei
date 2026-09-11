@@ -397,6 +397,15 @@ export class DatabaseConstruct extends Construct {
         backup: { retention: cdk.Duration.days(14) },
         deletionProtection: true,
         copyTagsToSnapshot: true,
+        // Keep the RDS HTTP Data API enabled so the lx-software
+        // Executive Board stack can query product views via
+        // rds-data. This is an in-place cluster update, not a
+        // replacement. Imported EXISTING_DB_* clusters cannot set
+        // this CDK property — enable the HTTP endpoint out-of-band
+        // (see docs/deployment/launch-checklist.md). The admin
+        // stack's 15-minute ensure schedule remains the drift
+        // guard. Product Lambdas continue to use RDS Proxy.
+        enableDataApi: true,
         serverlessV2MinCapacity: props.minCapacity ?? 0.5,
         serverlessV2MaxCapacity: props.maxCapacity ?? 2,
         writer: writerInstance,
