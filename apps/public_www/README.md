@@ -8,7 +8,7 @@ the deployment workflow are owned by:
 
 - `backend/infrastructure/lib/public-www-stack.ts` (CDK)
 - `scripts/deploy/deploy-public-www.sh`
-- `.github/workflows/deploy-public-www.yml` (push-to-main → staging)
+- `.github/workflows/deploy-public-www.yml` (push-to-staging → staging)
 - `.github/workflows/promote-public-www.yml` (manual → production)
 - `.github/workflows/smoke-public-www-staging.yml`
 - `.github/workflows/lighthouse-public-www.yml`

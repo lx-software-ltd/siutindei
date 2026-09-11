@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - staging
     paths:
       - 'apps/public_www/**'
       - 'scripts/deploy/deploy-public-www.sh'

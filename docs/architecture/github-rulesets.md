@@ -37,6 +37,39 @@ These workflows must pass before merging to `main`:
 
 ---
 
+## Branch Protection: `staging`
+
+The `staging` branch is the source of truth for the public website staging
+deploy (`.github/workflows/deploy-public-www.yml` triggers on
+`push: staging`). Direct pushes and force-pushes are blocked; changes land
+through pull requests.
+
+### Required Rules
+
+| Rule | Setting | Purpose |
+|------|---------|---------|
+| Require pull request before merging | ✅ Enabled | Prevents direct pushes |
+| Block force pushes | ✅ Enabled | Protects history |
+| Block deletions | ✅ Enabled | Prevents accidental deletion |
+| Bypass actors | Repository admin (`lcacchiani`) | Emergency / bootstrap fixes |
+
+### Setup (GitHub Web UI)
+
+1. Go to repository **Settings** → **Rules** → **Rulesets**
+2. Click **New ruleset** → **New branch ruleset**
+3. Configure:
+   - **Ruleset name:** `staging-protection`
+   - **Enforcement status:** Active
+   - **Target branches:** Add target → Include by pattern → `staging`
+4. Enable rules:
+   - ✅ Restrict deletions
+   - ✅ Block force pushes
+   - ✅ Require a pull request before merging
+5. **Bypass list:** add yourself (`lcacchiani`)
+6. Click **Create**
+
+---
+
 ## Tag Protection: `v*`
 
 Release tags should be protected from modification or deletion.

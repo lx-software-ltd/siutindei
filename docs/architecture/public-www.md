@@ -227,7 +227,7 @@ workflow_dispatch (Promote Public Website Release)
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | [`deploy-backend.yml`](../../.github/workflows/deploy-backend.yml) | `workflow_dispatch` (`public website` or `all stacks`), `push: backend/**` | CDK deploy of `lxsoftware-siutindei-public-www` (S3 + CloudFront for production and staging). |
-| [`deploy-public-www.yml`](../../.github/workflows/deploy-public-www.yml) | `push: main`, `workflow_dispatch`, `repository_dispatch: deploy-public-www` | Build + sync to staging bucket, write release marker, then run the staging smoke checks against the deployed site. |
+| [`deploy-public-www.yml`](../../.github/workflows/deploy-public-www.yml) | `push: staging`, `workflow_dispatch`, `repository_dispatch: deploy-public-www` | Build + sync to staging bucket, write release marker, then run the staging smoke checks against the deployed site. |
 | [`promote-public-www.yml`](../../.github/workflows/promote-public-www.yml) | `workflow_dispatch` | Promote a staging release to production or flip production into maintenance mode. |
 | [`smoke-public-www-staging.yml`](../../.github/workflows/smoke-public-www-staging.yml) | `workflow_dispatch` | Crawl staging sitemap and assert every page responds 2xx/3xx. |
 | [`lighthouse-public-www.yml`](../../.github/workflows/lighthouse-public-www.yml) | `workflow_dispatch` | Run Lighthouse CI on the production build. |
