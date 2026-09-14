@@ -7,6 +7,11 @@ Cursor CLI is pinned in `board-agent.yml` via `CURSOR_CLI_VERSION`.
 `board-agent` skips the draft PR when the agent makes no commits
 (GitHub rejects empty `staging` ↔ `board/*` PRs). Org Actions must
 allow read/write `GITHUB_TOKEN` and “create and approve pull requests”.
+Set repo secret `BOARD_PR_TOKEN` (fine-grained PAT or GitHub App) so
+`board-agent` opens the draft PR as that actor; PRs opened with
+`GITHUB_TOKEN` often never start lint/test (or sit in `action_required`).
+Lockfile diffs (`package-lock.json`, `pubspec.lock`, …) are excluded from
+the 400-line runner cap so Dependabot bumps can land.
 
 This file is for whoever owns **lx-software-ltd/siutindei**. The lx-software
 admin stack dispatches these workflows; it cannot create them from this
