@@ -17,10 +17,13 @@ on:
         required: true
         type: string
 
-# Secrets on this runner: only CURSOR_API_KEY and GITHUB_TOKEN. No AWS.
+# Secrets: CURSOR_API_KEY. Optional BOARD_PR_TOKEN (PAT or GitHub App) so the
+# draft PR is not opened with GITHUB_TOKEN — those PRs do not start lint/test
+# and often sit in action_required. No AWS.
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 
 concurrency:
   group: board-agent-${{ inputs.task_id }}
@@ -40,6 +43,7 @@ jobs:
         with:
           ref: staging
           fetch-depth: 0
+          token: ${{ secrets.BOARD_PR_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Branch
         env:
@@ -121,7 +125,7 @@ jobs:
 
       - name: Commit and draft PR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.BOARD_PR_TOKEN || secrets.GITHUB_TOKEN }}
           TASK_ID: ${{ inputs.task_id }}
           ISSUE: ${{ inputs.issue }}
         run: |

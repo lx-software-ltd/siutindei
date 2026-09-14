@@ -20,6 +20,23 @@ CONTENT_ROOT = "content"
 LINE_LIMIT = 400
 CONTENT_LINE_LIMIT = 2000
 CI_OK = frozenset({"success", "neutral", "skipped"})
+LOCKFILE_NAMES = frozenset(
+    {
+        "package-lock.json",
+        "yarn.lock",
+        "pnpm-lock.yaml",
+        "npm-shrinkwrap.json",
+        "poetry.lock",
+        "Pipfile.lock",
+        "Cargo.lock",
+        "Gemfile.lock",
+        "composer.lock",
+        "pubspec.lock",
+        "go.sum",
+        "uv.lock",
+        "flake.lock",
+    }
+)
 
 
 def path_parts(path: str) -> list[str]:
@@ -52,9 +69,16 @@ def file_paths(row: dict[str, Any]) -> list[str]:
     return out
 
 
+def path_is_lockfile(path: str) -> bool:
+    parts = path_parts(path)
+    return bool(parts) and parts[-1] in LOCKFILE_NAMES
+
+
 def changed_lines(files: list[dict[str, Any]]) -> int:
     total = 0
     for row in files:
+        if any(path_is_lockfile(path) for path in file_paths(row)):
+            continue
         if row.get("changes") is not None:
             try:
                 total += int(row.get("changes") or 0)

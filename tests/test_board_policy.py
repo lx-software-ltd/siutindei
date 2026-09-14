@@ -64,6 +64,25 @@ def test_rename_from_protected_path_is_blocked() -> None:
     )
 
 
+def test_lockfile_lines_are_excluded() -> None:
+    files = [
+        {
+            "filename": "apps/public_www/package-lock.json",
+            "additions": 1800,
+            "deletions": 165,
+            "changes": 1965,
+        },
+        {
+            "filename": "apps/public_www/package.json",
+            "additions": 1,
+            "deletions": 1,
+            "changes": 2,
+        },
+    ]
+    assert board_policy.changed_lines(files) == 2
+    assert board_policy.evaluate_files(files, kind="fix") is None
+
+
 def test_feature_line_limit() -> None:
     files = [
         {
