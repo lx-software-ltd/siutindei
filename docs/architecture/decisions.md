@@ -291,9 +291,10 @@ Lambdas or NAT Gateway.
   (GHSA-rgw5-rvv9-x895). The infrastructure `postinstall` script still
   replaces the older bundled `minimatch` copy; it does not patch
   `brace-expansion`.
-- `extract-zip` is ignored in `/apps/public_www` (dev-only LHCI /
-  Lighthouse 12 transitive; no patched release for GHSA-jmr9-qjv8-65gv).
-  Revisit when `@lhci/cli` ships Lighthouse 13+.
+- `extract-zip` is ignored in `/apps/public_www` Dependabot config
+  (dev-only LHCI transitive). GHSA-jmr9-qjv8-65gv is mitigated via
+  `npm overrides` to `@electron-internal/extract-zip` 1.0.5 until
+  upstream publishes 2.0.2+ or LHCI ships Lighthouse 13+.
 - PRs labeled by ecosystem (`dependencies`, `ci`, `backend`, `mobile`, `infrastructure`).
 
 **Dependabot commands:**
