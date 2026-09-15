@@ -49,8 +49,8 @@
   },
   "overrides": {
     "tmp": "^0.2.4",
-    "js-yaml@3": "3.15.1",
-    "js-yaml@4": "4.3.1",
+    "js-yaml@3": "3.15.2",
+    "js-yaml@4": "4.3.2",
     "extract-zip": "npm:@electron-internal/extract-zip@1.0.5",
     "uuid": "^11.1.1"
   }
