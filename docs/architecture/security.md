@@ -318,9 +318,10 @@ regression. See [`aws-assets-map.md`](./aws-assets-map.md) and
 - Public-www production Highs are gated by `npm run audit:deps:prod`
   (`npm audit --omit=dev --audit-level=high`).
 - `extract-zip` (GHSA-jmr9-qjv8-65gv) is a dev-only transitive of
-  `@lhci/cli` / Lighthouse 12. There is no patched release; Dependabot
-  ignores it in `/apps/public_www` until LHCI ships Lighthouse 13+.
-  Do not run `npm audit fix --force` (it downgrades `@lhci/cli` to 0.6.1).
+  `@lhci/cli` / Lighthouse 12. Upstream npm has no release past 2.0.1;
+  `/apps/public_www` overrides it to `@electron-internal/extract-zip`
+  1.0.5. Do not run `npm audit fix --force` (it downgrades
+  `@lhci/cli` to 0.6.1).
 - Bundled `aws-cdk-lib` copies of `minimatch` are replaced at
   `postinstall`. Keep `aws-cdk-lib` at 2.265.0+ so the bundled
   `brace-expansion` is 5.0.9 (GHSA-rgw5-rvv9-x895). `npm overrides`
