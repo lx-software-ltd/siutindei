@@ -66,16 +66,25 @@ def _activity_payload(**overrides: object) -> dict:
 def test_upsert_location_resolves_area_name(
     db_session,
     sample_organization,
-    sample_geographic_area,
 ) -> None:
+    from app.db.models import GeographicArea
+
+    area = GeographicArea(
+        name="Import District Resolve",
+        level="district",
+        active=True,
+    )
+    db_session.add(area)
+    db_session.flush()
+
     location, status = upsert_location(
         db_session,
         sample_organization,
-        _location_payload(area_name="Central and Western"),
+        _location_payload(area_name="Import District Resolve"),
         "Import Loc Resolve",
     )
     assert status == "created"
-    assert str(location.area_id) == str(sample_geographic_area.id)
+    assert str(location.area_id) == str(area.id)
 
 
 def test_upsert_location_unknown_area_name(
@@ -123,15 +132,23 @@ def test_upsert_location_area_id_wins_over_area_name(
 def test_upsert_activity_resolves_category_name(
     db_session,
     sample_organization,
-    sample_activity_category,
 ) -> None:
+    from app.db.models import ActivityCategory
+
+    category = ActivityCategory(
+        name="Import Category Resolve",
+        display_order=99,
+    )
+    db_session.add(category)
+    db_session.flush()
+
     activity, status = upsert_activity(
         db_session,
         sample_organization,
-        _activity_payload(category_name="Sport"),
+        _activity_payload(category_name="Import Category Resolve"),
     )
     assert status == "created"
-    assert str(activity.category_id) == str(sample_activity_category.id)
+    assert str(activity.category_id) == str(category.id)
 
 
 def test_upsert_activity_unknown_category_name(
