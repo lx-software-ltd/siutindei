@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from sqlalchemy import select
 from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
@@ -29,8 +30,8 @@ from app.api.admin_validators import (
     _parse_languages,
     _validate_string_length,
 )
-from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
-from app.db.models import Organization, PricingType
+from app.db.models import Activity, ActivityCategory, ActivityPricing, ActivitySchedule
+from app.db.models import GeographicArea, Location, Organization, PricingType
 from app.db.repositories import (
     ActivityPricingRepository,
     ActivityRepository,
@@ -61,7 +62,14 @@ ALLOWED_ORG_FIELDS = {
     "locations",
     "activities",
 }
-ALLOWED_LOCATION_FIELDS = {"name", "address", "area_id", "lat", "lng"}
+ALLOWED_LOCATION_FIELDS = {
+    "name",
+    "address",
+    "area_id",
+    "area_name",
+    "lat",
+    "lng",
+}
 ALLOWED_ACTIVITY_FIELDS = {
     "name",
     "description",
@@ -70,6 +78,7 @@ ALLOWED_ACTIVITY_FIELDS = {
     "age_min",
     "age_max",
     "category_id",
+    "category_name",
     "pricing",
     "schedules",
 }
@@ -146,6 +155,7 @@ def upsert_location(
         raise ValidationError("Multiple locations found", field="name") from exc
 
     body = _filter_fields(raw_location, ALLOWED_LOCATION_FIELDS)
+    _resolve_location_area_fields(session, body)
     if raw_location.get("name") is not None or raw_location.get("address") is not None:
         body["address"] = address_value
     if existing:
@@ -189,6 +199,7 @@ def upsert_activity(
         ) from exc
 
     body = _filter_fields(raw_activity, ALLOWED_ACTIVITY_FIELDS)
+    _resolve_activity_category_fields(session, body)
     body.pop("pricing", None)
     body.pop("schedules", None)
     if existing:
@@ -443,6 +454,61 @@ def parse_weekly_entries_local(
         )
 
     return entries
+
+
+def _resolve_location_area_fields(
+    session: Session,
+    body: dict[str, Any],
+) -> None:
+    area_name = body.pop("area_name", None)
+    if body.get("area_id") is not None:
+        return
+    if area_name is None:
+        return
+    body["area_id"] = _lookup_district_area_id(session, area_name)
+
+
+def _resolve_activity_category_fields(
+    session: Session,
+    body: dict[str, Any],
+) -> None:
+    category_name = body.pop("category_name", None)
+    if body.get("category_id") is not None:
+        return
+    if category_name is None:
+        return
+    body["category_id"] = _lookup_category_id(session, category_name)
+
+
+def _lookup_district_area_id(session: Session, area_name: Any) -> str:
+    if not isinstance(area_name, str) or not area_name:
+        raise ValidationError("unknown area_name", field="area_name")
+    query = (
+        select(GeographicArea.id)
+        .where(GeographicArea.name == area_name)
+        .where(GeographicArea.level == "district")
+        .limit(2)
+    )
+    matches = session.execute(query).scalars().all()
+    if len(matches) != 1:
+        raise ValidationError("unknown area_name", field="area_name")
+    return str(matches[0])
+
+
+def _lookup_category_id(session: Session, category_name: Any) -> str:
+    if not isinstance(category_name, str) or not category_name:
+        raise ValidationError("unknown category_name", field="category_name")
+    query = (
+        select(ActivityCategory.id)
+        .where(
+            ActivityCategory.name == category_name,
+        )
+        .limit(2)
+    )
+    matches = session.execute(query).scalars().all()
+    if len(matches) != 1:
+        raise ValidationError("unknown category_name", field="category_name")
+    return str(matches[0])
 
 
 def _filter_fields(

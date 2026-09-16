@@ -110,7 +110,7 @@ def sample_activity_category(db_session):
     """Create a sample activity category in the test database."""
     from app.db.models import ActivityCategory
 
-    category = ActivityCategory(name='Sport', display_order=0)
+    category = ActivityCategory(name='Test Sport Category', display_order=0)
     db_session.add(category)
     db_session.flush()
     return category
@@ -122,7 +122,7 @@ def sample_geographic_area(db_session):
     from app.db.models import GeographicArea
 
     area = GeographicArea(
-        name='Central and Western',
+        name='Test Import District',
         level='district',
         active=True,
     )
