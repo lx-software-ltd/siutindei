@@ -11,6 +11,9 @@ on:
         default: production
 
 # The owner merges the staging → main PR in GitHub. This workflow never merges.
+# Optional BOARD_PR_TOKEN (PAT or GitHub App) so gh pr create is not run with
+# GITHUB_TOKEN — those PRs do not start lint/test and often sit in
+# action_required. With the PAT as author, workflows run without approval.
 permissions:
   contents: read
   pull-requests: write
@@ -29,7 +32,7 @@ jobs:
 
       - name: Open or update staging → main PR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.BOARD_PR_TOKEN || secrets.GITHUB_TOKEN }}
           KIND: ${{ inputs.kind || 'production' }}
         run: |
           set -euo pipefail

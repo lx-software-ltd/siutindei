@@ -8,8 +8,10 @@ Cursor CLI is pinned in `board-agent.yml` via `CURSOR_CLI_VERSION`.
 (GitHub rejects empty `staging` ↔ `board/*` PRs). Org Actions must
 allow read/write `GITHUB_TOKEN` and “create and approve pull requests”.
 Set repo secret `BOARD_PR_TOKEN` (fine-grained PAT or GitHub App) so
-`board-agent` opens the draft PR as that actor; PRs opened with
-`GITHUB_TOKEN` often never start lint/test (or sit in `action_required`).
+`board-agent` and `board-promote` open PRs as that actor; PRs opened
+with `GITHUB_TOKEN` often never start lint/test (or sit in
+`action_required`). With the PAT as author, workflows run without a
+manual approval.
 Lockfile diffs (`package-lock.json`, `pubspec.lock`, …) are excluded from
 the 400-line runner cap so Dependabot bumps can land.
 Optional workflow inputs `pr_number`, `ci_failure`, and
@@ -115,8 +117,10 @@ branch prefix `board/`, no protected paths (old and new file names), size
 
 `workflow_dispatch`. If `staging` is behind `main`, exit non-zero (the admin
 Lambda also refuses and opens a `needs_owner` rebase task). Otherwise open or
-update a PR `staging → main` titled `Promote staging YYYY-MM-DD`. **The owner
-merges that PR in GitHub.**
+update a PR `staging → main` titled `Promote staging YYYY-MM-DD`. `gh pr
+create` uses `BOARD_PR_TOKEN` (falls back to `GITHUB_TOKEN`) so the
+promote PR is authored by the PAT and CI starts without a manual
+approval. **The owner merges that PR in GitHub.**
 
 ## Deploy
 
