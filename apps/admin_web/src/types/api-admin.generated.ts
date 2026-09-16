@@ -344,6 +344,8 @@ export interface paths {
          *     partial success and returns per-record warnings and errors.
          *     Requires a Cognito JWT in the `admin` or `importer` group.
          *     `GET /v1/admin/imports/export` remains admin-only.
+         *     When `dry_run` is true the file is validated the same way as a live
+         *     import (presign → PUT → POST) but no rows are committed.
          */
         post: {
             parameters: {
@@ -4140,6 +4142,12 @@ export interface components {
         AdminImportRequest: {
             /** @description S3 object key returned from the presign endpoint. */
             object_key: string;
+            /**
+             * @description When true, validate and report results without committing
+             *     creates or updates. Same presign + PUT flow as a live import.
+             * @default false
+             */
+            dry_run: boolean;
         };
         AdminImportCounts: {
             created: number;
@@ -4175,6 +4183,8 @@ export interface components {
             summary: components["schemas"]["AdminImportSummary"];
             results: components["schemas"]["AdminImportResult"][];
             file_warnings: string[];
+            /** @description Echo of the request dry_run flag. */
+            dry_run?: boolean;
         };
         AdminExportResponse: {
             download_url: string;

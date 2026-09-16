@@ -68,7 +68,8 @@ their primary responsibilities.
   management), manager CRUD (filtered by ownership), partner CRUD
   (scope- and organization-filtered by API key), user self-service
   (tickets), Cognito user management, audit logs, media upload, admin
-  import/export, and address autocomplete (Nominatim via the AWS/HTTP
+  import/export (`POST /v1/admin/imports` accepts `dry_run` to validate
+  without upsert), and address autocomplete (Nominatim via the AWS/HTTP
   proxy)
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - Memory: 1024 MB (cold start is import-bound; CPU scales with memory)

@@ -107,6 +107,7 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
         raise ValidationError("object_key is required", field="object_key")
     object_key = str(object_key).strip()
     validate_object_key(object_key, IMPORT_PREFIX)
+    dry_run = _parse_dry_run(body)
 
     payload = _load_import_payload(object_key)
     if not isinstance(payload, dict):
@@ -115,11 +116,18 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
     file_warnings: list[str] = []
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event)
-        summary, results = process_import_payload(session, payload, file_warnings)
+        summary, results = process_import_payload(
+            session,
+            payload,
+            file_warnings,
+            dry_run=dry_run,
+        )
+        if dry_run:
+            session.rollback()
 
     logger.info(
         "Admin import completed",
-        extra={"summary": summary},
+        extra={"summary": summary, "dry_run": dry_run},
     )
 
     return json_response(
@@ -128,6 +136,7 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
             "summary": summary,
             "results": results,
             "file_warnings": file_warnings,
+            "dry_run": dry_run,
         },
         event=event,
     )
@@ -164,6 +173,15 @@ def _handle_export(event: Mapping[str, Any]) -> dict[str, Any]:
         },
         event=event,
     )
+
+
+def _parse_dry_run(body: dict[str, Any]) -> bool:
+    dry_run = body.get("dry_run", False)
+    if dry_run is None:
+        dry_run = False
+    if not isinstance(dry_run, bool):
+        raise ValidationError("dry_run must be a boolean", field="dry_run")
+    return dry_run
 
 
 def _load_import_payload(object_key: str) -> dict[str, Any]:
