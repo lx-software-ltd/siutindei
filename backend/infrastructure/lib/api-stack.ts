@@ -786,6 +786,16 @@ export class ApiStack extends cdk.Stack {
           "ALLOW_ADMIN_USER_PASSWORD_AUTH",
           "ALLOW_REFRESH_TOKEN_AUTH",
         ],
+        preventUserExistenceErrors: "ENABLED",
+        enableTokenRevocation: true,
+        accessTokenValidity: 60,
+        idTokenValidity: 60,
+        refreshTokenValidity: 1,
+        tokenValidityUnits: {
+          accessToken: "minutes",
+          idToken: "minutes",
+          refreshToken: "days",
+        },
       }
     );
 

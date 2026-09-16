@@ -179,10 +179,14 @@ In-VPC Lambdas call Cognito through the AWS/HTTP proxy instead — see
 The `importer` Cognito group can call only `POST /v1/admin/imports` and
 `POST /v1/admin/imports/presign`. Those routes reuse `AdminGroupAuthorizer`
 with `IMPORTER_GROUP` so a second authorizer Lambda is not required
-(CloudFormation 500-resource cap). The handler re-checks `_is_importer` /
-`_is_admin` so other `/v1/admin/*` paths stay admin-only. The importer
-app client enables `ALLOW_ADMIN_USER_PASSWORD_AUTH` for
-`AdminInitiateAuth` and is not the public OAuth client.
+(CloudFormation 500-resource cap). An importer Allow policy lists those
+two method ARNs only — it does not use the cached ``/*`` wildcard, so a
+5-minute authorizer cache after presign cannot authorize other admin
+routes. The handler still re-checks `_is_importer` / `_is_admin`. The
+importer app client enables `ALLOW_ADMIN_USER_PASSWORD_AUTH` for
+`AdminInitiateAuth`, is not the public OAuth client, sets
+`preventUserExistenceErrors=ENABLED`, enables token revocation, and uses
+60-minute access/ID tokens with a 1-day refresh token.
 
 ### Edge caching of the public search endpoint
 

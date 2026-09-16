@@ -185,7 +185,7 @@ Cognito operations are proxied through `AwsApiProxyFunction` instead.
 | User Pool | `SiutindeiUserPool` | `lxsoftware-siutindei-user-pool` | Email sign-in, auto-verify enabled |
 | User Pool Domain | `SiutindeiUserPoolDomain` | `{CognitoDomainPrefix}.auth.{region}.amazoncognito.com` | Domain prefix from parameter |
 | User Pool Client | `SiutindeiUserPoolClient` | Auto-generated | OAuth client (no secret) |
-| User Pool Client | `SiutindeiImporterUserPoolClient` | Auto-generated | Catalog importer client (`ALLOW_ADMIN_USER_PASSWORD_AUTH`, no OAuth) |
+| User Pool Client | `SiutindeiImporterUserPoolClient` | Auto-generated | Catalog importer client (`ALLOW_ADMIN_USER_PASSWORD_AUTH`, no OAuth, `preventUserExistenceErrors`, token revocation, 60m access/ID, 1d refresh) |
 | User Pool Group | `AdminGroup` | `admin` | Admin group |
 | User Pool Group | `ManagerGroup` | `manager` | Manager group |
 | User Pool Group | `ImporterGroup` | `importer` | Catalog importer group |

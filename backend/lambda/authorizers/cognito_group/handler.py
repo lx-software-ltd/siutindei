@@ -37,13 +37,51 @@ _IMPORTER_PATHS = (
 
 
 def _importer_path_allowed(method_arn: str) -> bool:
-    """Return True for POST /v1/admin/imports and /presign only."""
+    """Return True for POST /v1/admin/imports and /presign only.
+
+    methodArn shape from API Gateway REST:
+    ``arn:aws:execute-api:region:acct:apiId/stage/METHOD/v1/admin/...``
+    so index 2 is the HTTP method.
+    """
     parts = method_arn.split("/")
     if len(parts) < 6:
         return False
     method = parts[2]
     path = tuple(parts[3:])
     return method == "POST" and path in _IMPORTER_PATHS
+
+
+def _importer_method_arns(method_arn: str) -> list[str]:
+    """Both import ARNs so a cached Allow covers presign then POST."""
+    parts = method_arn.split("/")
+    prefix = "/".join(parts[:2])
+    return [
+        f"{prefix}/POST/v1/admin/imports",
+        f"{prefix}/POST/v1/admin/imports/presign",
+    ]
+
+
+def _allow_policy(
+    method_arn: str,
+    user_sub: str,
+    context: dict[str, Any],
+    *,
+    importer_only: bool,
+) -> dict[str, Any]:
+    """Allow admin (cached ``/*``) or importer (two import ARNs only)."""
+    if not importer_only:
+        return policy("Allow", method_arn, user_sub, context)
+    allowed = policy(
+        "Allow",
+        method_arn,
+        user_sub,
+        context,
+        broaden_resource=False,
+    )
+    allowed["policyDocument"]["Statement"][0]["Resource"] = _importer_method_arns(
+        method_arn
+    )
+    return allowed
 
 
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
@@ -102,8 +140,7 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
                 f"Access granted for user {user_sub[:8]}*** "
                 f"(groups: {', '.join(matched)})"
             )
-            return policy(
-                "Allow",
+            return _allow_policy(
                 method_arn,
                 user_sub,
                 {
@@ -112,6 +149,7 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
                     "groups": ",".join(user_groups),
                     "matchedGroups": ",".join(matched),
                 },
+                importer_only=not bool(matching_groups),
             )
         else:
             logger.warning(

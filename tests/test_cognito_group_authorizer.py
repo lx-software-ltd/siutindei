@@ -69,7 +69,35 @@ def test_importer_allowed_on_import_post(monkeypatch) -> None:
         "methodArn": _arn("POST", "v1", "admin", "imports"),
     }
     response = handler.lambda_handler(event, None)
-    assert response["policyDocument"]["Statement"][0]["Effect"] == "Allow"
+    statement = response["policyDocument"]["Statement"][0]
+    assert statement["Effect"] == "Allow"
+    assert statement["Resource"] == [
+        _arn("POST", "v1", "admin", "imports"),
+        _arn("POST", "v1", "admin", "imports", "presign"),
+    ]
+    assert not any(str(item).endswith("/*") for item in statement["Resource"])
+
+
+def test_admin_allow_policy_is_still_broadened(monkeypatch) -> None:
+    monkeypatch.setenv("ALLOWED_GROUPS", "admin")
+    monkeypatch.setenv("IMPORTER_GROUP", "importer")
+    monkeypatch.setattr(
+        handler,
+        "decode_and_verify_token",
+        lambda _token: SimpleNamespace(
+            sub="admin-user",
+            email="admin@example.com",
+            groups=["admin"],
+        ),
+    )
+    event = {
+        "headers": {"Authorization": "Bearer token"},
+        "methodArn": _arn("GET", "v1", "admin", "organizations"),
+    }
+    response = handler.lambda_handler(event, None)
+    statement = response["policyDocument"]["Statement"][0]
+    assert statement["Effect"] == "Allow"
+    assert statement["Resource"].endswith("/*")
 
 
 def test_importer_denied_on_other_admin_route(monkeypatch) -> None:
