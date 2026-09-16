@@ -438,3 +438,50 @@ def test_live_import_persists_organization(test_engine) -> None:
             select(Organization).where(Organization.name == org_name)
         ).scalar_one()
         assert str(found.manager_id) == "00000000-0000-0000-0000-000000000076"
+
+
+def test_dry_run_child_failure_keeps_sibling_results(
+    db_session,
+    test_engine,
+    sample_activity_category,
+) -> None:
+    org_name = f"Partial Dry {uuid4()}"
+    payload = {
+        "organizations": [
+            {
+                "name": org_name,
+                "manager_id": "00000000-0000-0000-0000-000000000055",
+                "locations": [
+                    {
+                        "name": "Bad Loc",
+                        "area_name": "DOES-NOT-EXIST-DISTRICT",
+                        "lat": 22.2,
+                        "lng": 114.1,
+                    }
+                ],
+                "activities": [
+                    {
+                        "name": "Good Act",
+                        "category_id": str(sample_activity_category.id),
+                        "age_min": 5,
+                        "age_max": 10,
+                    }
+                ],
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        dry_run=True,
+    )
+    by_type = {item["type"]: item for item in results}
+    assert by_type["organizations"]["status"] == "created"
+    assert by_type["locations"]["status"] == "failed"
+    assert by_type["activities"]["status"] == "created"
+    with Session(test_engine) as session:
+        found = session.execute(
+            select(Organization).where(Organization.name == org_name)
+        ).scalar_one_or_none()
+    assert found is None

@@ -27,7 +27,11 @@ from app.api.admin_imports_upsert import (
     upsert_location,
     upsert_organization,
 )
-from app.api.admin_imports_utils import collect_unknown_fields
+from app.api.admin_imports_utils import (
+    collect_unknown_fields,
+    rollback_import_change,
+    run_import_upsert,
+)
 from app.api.admin_validators import (
     MAX_ADDRESS_LENGTH,
     MAX_NAME_LENGTH,
@@ -59,21 +63,15 @@ def process_import_payload(
     summary = init_summary()
     summary["warnings"] += len(file_warnings)
 
-    original_commit = session.commit
-    if dry_run:
-        session.commit = session.flush  # type: ignore[method-assign]
-    try:
-        for index, raw_org in enumerate(orgs_raw):
-            process_organization(
-                session,
-                raw_org,
-                index,
-                results,
-                summary,
-            )
-    finally:
-        if dry_run:
-            session.commit = original_commit  # type: ignore[method-assign]
+    for index, raw_org in enumerate(orgs_raw):
+        process_organization(
+            session,
+            raw_org,
+            index,
+            results,
+            summary,
+            dry_run=dry_run,
+        )
 
     return summary, results
 
@@ -84,6 +82,8 @@ def process_organization(
     index: int,
     results: list[dict[str, Any]],
     summary: dict[str, Any],
+    *,
+    dry_run: bool = False,
 ) -> None:
     path = f"organizations[{index}]"
     if not isinstance(raw_org, dict):
@@ -124,7 +124,11 @@ def process_organization(
         return
 
     try:
-        org, status = upsert_organization(session, raw_org)
+        org, status = run_import_upsert(
+            session,
+            dry_run,
+            lambda: upsert_organization(session, raw_org, dry_run=dry_run),
+        )
     except ValidationError as exc:
         record_result(
             results,
@@ -137,7 +141,7 @@ def process_organization(
             path=path,
         )
         record_skipped_children(raw_org, org_name or path, results, summary)
-        session.rollback()
+        rollback_import_change(session, dry_run=dry_run)
         return
 
     record_result(
@@ -174,6 +178,7 @@ def process_organization(
                 results,
                 summary,
                 f"{path}.locations",
+                dry_run=dry_run,
             )
 
     raw_activities = raw_org.get("activities", [])
@@ -198,6 +203,7 @@ def process_organization(
                 results,
                 summary,
                 f"{path}.activities",
+                dry_run=dry_run,
             )
 
 
@@ -210,6 +216,8 @@ def process_location(
     results: list[dict[str, Any]],
     summary: dict[str, Any],
     base_path: str,
+    *,
+    dry_run: bool = False,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_location, dict):
@@ -263,11 +271,16 @@ def process_location(
         address_value = location_name
 
     try:
-        location, status = upsert_location(
+        location, status = run_import_upsert(
             session,
-            org,
-            raw_location,
-            address_value,
+            dry_run,
+            lambda: upsert_location(
+                session,
+                org,
+                raw_location,
+                address_value,
+                dry_run=dry_run,
+            ),
         )
     except ValidationError as exc:
         record_result(
@@ -280,7 +293,7 @@ def process_location(
             errors=[format_error(exc)],
             path=path,
         )
-        session.rollback()
+        rollback_import_change(session, dry_run=dry_run)
         return
 
     location_cache[location_name] = location
@@ -305,6 +318,8 @@ def process_activity(
     results: list[dict[str, Any]],
     summary: dict[str, Any],
     base_path: str,
+    *,
+    dry_run: bool = False,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_activity, dict):
@@ -348,7 +363,16 @@ def process_activity(
         return
 
     try:
-        activity, status = upsert_activity(session, org, raw_activity)
+        activity, status = run_import_upsert(
+            session,
+            dry_run,
+            lambda: upsert_activity(
+                session,
+                org,
+                raw_activity,
+                dry_run=dry_run,
+            ),
+        )
     except ValidationError as exc:
         record_result(
             results,
@@ -361,7 +385,7 @@ def process_activity(
             path=path,
         )
         record_skipped_children(raw_activity, activity_name, results, summary)
-        session.rollback()
+        rollback_import_change(session, dry_run=dry_run)
         return
 
     record_result(
@@ -398,6 +422,7 @@ def process_activity(
                 results,
                 summary,
                 f"{path}.pricing",
+                dry_run=dry_run,
             )
 
     raw_schedules = raw_activity.get("schedules", [])
@@ -423,4 +448,5 @@ def process_activity(
                 results,
                 summary,
                 f"{path}.schedules",
+                dry_run=dry_run,
             )

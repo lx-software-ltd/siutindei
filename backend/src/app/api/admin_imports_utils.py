@@ -4,11 +4,45 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
+from typing import TypeVar
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from sqlalchemy.orm import Session
+
 from app.exceptions import ValidationError
+
+T = TypeVar("T")
+
+
+def persist_import_change(session: Session, *, dry_run: bool) -> None:
+    """Commit live imports; flush only during dry-run."""
+    if dry_run:
+        session.flush()
+    else:
+        session.commit()
+
+
+def rollback_import_change(session: Session, *, dry_run: bool) -> None:
+    """Roll back a live upsert; dry-run uses the savepoint instead."""
+    if dry_run:
+        return
+    session.rollback()
+
+
+def run_import_upsert(
+    session: Session,
+    dry_run: bool,
+    fn: Callable[[], T],
+) -> T:
+    """Run an upsert; isolate dry-run failures with a SAVEPOINT."""
+    if dry_run:
+        with session.begin_nested():
+            return fn()
+    return fn()
+
 
 _TIME_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
 

@@ -15,6 +15,7 @@ from app.api.admin_imports_utils import (
     parse_day_of_week,
     parse_time_minutes,
     parse_timezone,
+    persist_import_change,
     to_utc_weekly,
 )
 from app.api.admin_resource_activity import _create_activity, _update_activity
@@ -113,6 +114,8 @@ ALLOWED_ENTRY_FIELDS = {"day_of_week", "start_time", "end_time"}
 def upsert_organization(
     session: Session,
     raw_org: dict[str, Any],
+    *,
+    dry_run: bool = False,
 ) -> tuple[Organization, str]:
     repo = OrganizationRepository(session)
     name = _validate_string_length(
@@ -149,7 +152,7 @@ def upsert_organization(
     if existing:
         updated = _update_organization(repo, existing, body)
         repo.update(updated)
-        session.commit()
+        persist_import_change(session, dry_run=dry_run)
         session.refresh(updated)
         return updated, "updated"
 
@@ -157,7 +160,7 @@ def upsert_organization(
         raise ValidationError("manager_id is required", field="manager_id")
     created = _create_organization(repo, body)
     repo.create(created)
-    session.commit()
+    persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
     return created, "created"
 
@@ -167,6 +170,8 @@ def upsert_location(
     org: Organization,
     raw_location: dict[str, Any],
     address_value: str,
+    *,
+    dry_run: bool = False,
 ) -> tuple[Location, str]:
     repo = LocationRepository(session)
     try:
@@ -184,7 +189,7 @@ def upsert_location(
     if existing:
         updated = _update_location(repo, existing, body)
         repo.update(updated)
-        session.commit()
+        persist_import_change(session, dry_run=dry_run)
         session.refresh(updated)
         return updated, "updated"
 
@@ -192,7 +197,7 @@ def upsert_location(
     body["address"] = address_value
     created = _create_location(repo, body)
     repo.create(created)
-    session.commit()
+    persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
     return created, "created"
 
@@ -201,6 +206,8 @@ def upsert_activity(
     session: Session,
     org: Organization,
     raw_activity: dict[str, Any],
+    *,
+    dry_run: bool = False,
 ) -> tuple[Activity, str]:
     repo = ActivityRepository(session)
     name = _validate_string_length(
@@ -230,14 +237,14 @@ def upsert_activity(
     if existing:
         updated = _update_activity(repo, existing, body)
         repo.update(updated)
-        session.commit()
+        persist_import_change(session, dry_run=dry_run)
         session.refresh(updated)
         return updated, "updated"
 
     body["org_id"] = str(org.id)
     created = _create_activity(repo, body)
     repo.create(created)
-    session.commit()
+    persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
     return created, "created"
 
@@ -247,6 +254,8 @@ def upsert_pricing(
     activity: Activity,
     location: Location,
     raw_pricing: dict[str, Any],
+    *,
+    dry_run: bool = False,
 ) -> tuple[ActivityPricing, str]:
     pricing_type = raw_pricing.get("pricing_type")
     if not pricing_type:
@@ -277,7 +286,7 @@ def upsert_pricing(
     if existing:
         updated = _update_pricing(repo, existing, body)
         repo.update(updated)
-        session.commit()
+        persist_import_change(session, dry_run=dry_run)
         session.refresh(updated)
         return updated, "updated"
 
@@ -285,7 +294,7 @@ def upsert_pricing(
     body["location_id"] = str(location.id)
     created = _create_pricing(repo, body)
     repo.create(created)
-    session.commit()
+    persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
     return created, "created"
 
@@ -296,6 +305,8 @@ def upsert_schedule(
     location: Location,
     raw_schedule: dict[str, Any],
     warnings: list[str],
+    *,
+    dry_run: bool = False,
 ) -> tuple[ActivitySchedule, str]:
     tzinfo = parse_timezone(raw_schedule.get("timezone"), "timezone")
     languages = _parse_languages(raw_schedule.get("languages"))
@@ -327,13 +338,13 @@ def upsert_schedule(
         body["weekly_entries"] = merge_schedule_entries(existing, entries)
         updated = _update_schedule(repo, existing, body)
         repo.update(updated)
-        session.commit()
+        persist_import_change(session, dry_run=dry_run)
         session.refresh(updated)
         return updated, "updated"
 
     created = _create_schedule(repo, body)
     repo.create(created)
-    session.commit()
+    persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
     return created, "created"
 
