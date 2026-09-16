@@ -3978,6 +3978,11 @@ export interface components {
             [key: string]: string;
         };
         AdminImportFile: {
+            /**
+             * Format: uuid
+             * @description Applied to any organization that omits manager_id. Must be a UUID.
+             */
+            default_manager_id?: string;
             organizations: components["schemas"]["AdminImportOrganization"][];
         };
         AdminImportOrganization: {
@@ -3986,8 +3991,37 @@ export interface components {
             description?: string;
             name_translations?: components["schemas"]["TranslationMap"];
             description_translations?: components["schemas"]["TranslationMap"];
-            /** @description Cognito user sub (required for new orgs). */
+            /**
+             * @description Cognito user sub (required for new orgs unless default_manager_id
+             *     is set at the file root).
+             */
             manager_id?: string;
+            /** @description Appended to description as `Source: <url> — <note>`. */
+            source_url?: string;
+            /** @description Appended to description as `Source: <url> — <note>`. */
+            vetting_note?: string;
+            /**
+             * @description Board-flat org field. When locations[] is empty, the importer
+             *     synthesizes one location resolved like location area_name.
+             */
+            area_name?: string;
+            /**
+             * @description Board-flat org field. When activities[] is empty, the importer
+             *     synthesizes one activity (age 0–18) resolved like activity
+             *     category_name.
+             */
+            category_name?: string;
+            /** @description Board-flat org field used as the synthesized location name. */
+            address?: string;
+            lat?: number;
+            lng?: number;
+            /** @description Accepted on board-flat orgs; not stored on the organization. */
+            website?: string;
+            /**
+             * @description Board-flat org field. An 8-digit HK number is mapped to
+             *     phone_country_code=HK and phone_number.
+             */
+            phone?: string;
             phone_country_code?: string;
             phone_number?: string;
             email?: string;
@@ -4013,6 +4047,12 @@ export interface components {
             address?: string;
             /** Format: uuid */
             area_id: string;
+            /**
+             * @description Alternative to area_id. Resolved by exact match on
+             *     geographic_areas.name where level is district. area_id wins
+             *     when both are set.
+             */
+            area_name?: string;
             lat?: number;
             lng?: number;
         };
@@ -4023,6 +4063,13 @@ export interface components {
             description_translations?: components["schemas"]["TranslationMap"];
             /** Format: uuid */
             category_id: string;
+            /**
+             * @description Alternative to category_id. Resolved by exact match on
+             *     activity_categories.name. category_id wins when both are set.
+             */
+            category_name?: string;
+            source_url?: string;
+            vetting_note?: string;
             age_min: number;
             age_max: number;
             pricing?: components["schemas"]["AdminImportPricing"][];

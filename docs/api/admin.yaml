@@ -2067,10 +2067,12 @@ components:
             is set at the file root).
         source_url:
           type: string
-          description: Appended to description as `Source: <url> — <note>`.
+          description: |
+            Appended to description as `Source: <url> — <note>`.
         vetting_note:
           type: string
-          description: Appended to description as `Source: <url> — <note>`.
+          description: |
+            Appended to description as `Source: <url> — <note>`.
         area_name:
           type: string
           description: |
