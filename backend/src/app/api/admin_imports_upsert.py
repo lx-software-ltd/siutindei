@@ -61,6 +61,15 @@ ALLOWED_ORG_FIELDS = {
     "logo_media_url",
     "locations",
     "activities",
+    "source_url",
+    "vetting_note",
+    "area_name",
+    "category_name",
+    "address",
+    "lat",
+    "lng",
+    "website",
+    "phone",
 }
 ALLOWED_LOCATION_FIELDS = {
     "name",
@@ -79,6 +88,8 @@ ALLOWED_ACTIVITY_FIELDS = {
     "age_max",
     "category_id",
     "category_name",
+    "source_url",
+    "vetting_note",
     "pricing",
     "schedules",
 }
@@ -121,8 +132,20 @@ def upsert_organization(
         ) from exc
 
     body = _filter_fields(raw_org, ALLOWED_ORG_FIELDS)
-    body.pop("locations", None)
-    body.pop("activities", None)
+    for extra in (
+        "locations",
+        "activities",
+        "source_url",
+        "vetting_note",
+        "area_name",
+        "category_name",
+        "address",
+        "lat",
+        "lng",
+        "website",
+        "phone",
+    ):
+        body.pop(extra, None)
     if existing:
         updated = _update_organization(repo, existing, body)
         repo.update(updated)
@@ -202,6 +225,8 @@ def upsert_activity(
     _resolve_activity_category_fields(session, body)
     body.pop("pricing", None)
     body.pop("schedules", None)
+    body.pop("source_url", None)
+    body.pop("vetting_note", None)
     if existing:
         updated = _update_activity(repo, existing, body)
         repo.update(updated)

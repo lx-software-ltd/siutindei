@@ -13,6 +13,11 @@ from app.api.admin_imports_results import (
     record_result,
     record_skipped_children,
 )
+from app.api.admin_imports_fields import (
+    apply_default_manager_id,
+    apply_source_attribution,
+    expand_board_flat_org,
+)
 from app.api.admin_imports_upsert import (
     ALLOWED_ACTIVITY_FIELDS,
     ALLOWED_LOCATION_FIELDS,
@@ -30,7 +35,7 @@ from app.api.admin_validators import (
 from app.db.models import Location, Organization
 from app.exceptions import ValidationError
 
-ALLOWED_ROOT_FIELDS = {"organizations"}
+ALLOWED_ROOT_FIELDS = {"organizations", "default_manager_id"}
 
 
 def process_import_payload(
@@ -39,6 +44,7 @@ def process_import_payload(
     file_warnings: list[str],
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     collect_unknown_fields(payload, ALLOWED_ROOT_FIELDS, "root", file_warnings)
+    apply_default_manager_id(payload)
 
     orgs_raw = payload.get("organizations")
     if not isinstance(orgs_raw, list):
@@ -84,7 +90,9 @@ def process_organization(
         return
 
     warnings: list[str] = []
+    expand_board_flat_org(raw_org)
     collect_unknown_fields(raw_org, ALLOWED_ORG_FIELDS, path, warnings)
+    apply_source_attribution(raw_org)
     org_name = _validate_string_length(
         raw_org.get("name"),
         "name",
@@ -308,6 +316,7 @@ def process_activity(
         path,
         warnings,
     )
+    apply_source_attribution(raw_activity)
     activity_name = _validate_string_length(
         raw_activity.get("name"),
         "name",

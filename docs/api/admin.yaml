@@ -2035,6 +2035,11 @@ components:
       type: object
       required: [organizations]
       properties:
+        default_manager_id:
+          type: string
+          format: uuid
+          description: |
+            Applied to any organization that omits manager_id. Must be a UUID.
         organizations:
           type: array
           items:
@@ -2057,7 +2062,41 @@ components:
           $ref: '#/components/schemas/TranslationMap'
         manager_id:
           type: string
-          description: Cognito user sub (required for new orgs).
+          description: |
+            Cognito user sub (required for new orgs unless default_manager_id
+            is set at the file root).
+        source_url:
+          type: string
+          description: Appended to description as `Source: <url> — <note>`.
+        vetting_note:
+          type: string
+          description: Appended to description as `Source: <url> — <note>`.
+        area_name:
+          type: string
+          description: |
+            Board-flat org field. When locations[] is empty, the importer
+            synthesizes one location resolved like location area_name.
+        category_name:
+          type: string
+          description: |
+            Board-flat org field. When activities[] is empty, the importer
+            synthesizes one activity (age 0–18) resolved like activity
+            category_name.
+        address:
+          type: string
+          description: Board-flat org field used as the synthesized location name.
+        lat:
+          type: number
+        lng:
+          type: number
+        website:
+          type: string
+          description: Accepted on board-flat orgs; not stored on the organization.
+        phone:
+          type: string
+          description: |
+            Board-flat org field. An 8-digit HK number is mapped to
+            phone_country_code=HK and phone_number.
         phone_country_code:
           type: string
           maxLength: 2
@@ -2120,6 +2159,12 @@ components:
         area_id:
           type: string
           format: uuid
+        area_name:
+          type: string
+          description: |
+            Alternative to area_id. Resolved by exact match on
+            geographic_areas.name where level is district. area_id wins
+            when both are set.
         lat:
           type: number
           minimum: -90
@@ -2146,6 +2191,15 @@ components:
         category_id:
           type: string
           format: uuid
+        category_name:
+          type: string
+          description: |
+            Alternative to category_id. Resolved by exact match on
+            activity_categories.name. category_id wins when both are set.
+        source_url:
+          type: string
+        vetting_note:
+          type: string
         age_min:
           type: integer
           minimum: 0
