@@ -194,7 +194,12 @@ paths:
   /v1/admin/imports/presign:
     post:
       summary: Create admin import upload URL
-      description: Generate a presigned URL for uploading a JSON import file to S3.
+      description: |
+        Generate a presigned URL for uploading a JSON import file to S3.
+        Requires a Cognito JWT in the `admin` or `importer` group.
+      security:
+        - AdminGroupAuth: []
+        - ImporterGroupAuth: []
       requestBody:
         required: true
         content:
@@ -221,6 +226,11 @@ paths:
       description: |
         Process a JSON import file previously uploaded to S3. The import supports
         partial success and returns per-record warnings and errors.
+        Requires a Cognito JWT in the `admin` or `importer` group.
+        `GET /v1/admin/imports/export` remains admin-only.
+      security:
+        - AdminGroupAuth: []
+        - ImporterGroupAuth: []
       requestBody:
         required: true
         content:
@@ -1996,6 +2006,15 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: Cognito JWT token, user must be in 'admin' group
+    ImporterGroupAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Cognito JWT token, user must be in the 'importer' or 'admin' group.
+        Allowed only on POST /v1/admin/imports and POST /v1/admin/imports/presign.
+        The importer app client enables ALLOW_ADMIN_USER_PASSWORD_AUTH for
+        AdminInitiateAuth (board catalog import).
     ManagerGroupAuth:
       type: http
       scheme: bearer

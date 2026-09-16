@@ -599,9 +599,11 @@ export class ApiStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
     const adminGroupName = "admin";
+    const importerGroupName = "importer";
     const userPoolGroups = [
       { name: adminGroupName, description: "Administrative users" },
       { name: "manager", description: "Manager users" },
+      { name: importerGroupName, description: "Catalog importer users" },
     ];
 
     const googleProvider = new cognito.CfnUserPoolIdentityProvider(
@@ -768,6 +770,24 @@ export class ApiStack extends cdk.Stack {
 
     userPoolClient.addDependency(googleProvider);
     userPoolClient.addDependency(appleProvider);
+
+    // Dedicated client for the Executive Board catalog importer.
+    // AdminInitiateAuth + ADMIN_USER_PASSWORD_AUTH only — no OAuth,
+    // and not attached to the public hosted-UI client.
+    const importerUserPoolClient = new cognito.CfnUserPoolClient(
+      this,
+      "SiutindeiImporterUserPoolClient",
+      {
+        clientName: name("importer-user-pool-client"),
+        userPoolId: userPool.userPoolId,
+        generateSecret: false,
+        allowedOAuthFlowsUserPoolClient: false,
+        explicitAuthFlows: [
+          "ALLOW_ADMIN_USER_PASSWORD_AUTH",
+          "ALLOW_REFRESH_TOKEN_AUTH",
+        ],
+      }
+    );
 
     // Create Cognito user pool groups using AwsCustomResource
     // Using createGroup for both onCreate and onUpdate ensures groups are always created
@@ -1257,6 +1277,7 @@ export class ApiStack extends cdk.Stack {
         DATABASE_IAM_AUTH: "true",
         ADMIN_GROUP: adminGroupName,
         MANAGER_GROUP: managerGroupName,
+        IMPORTER_GROUP: importerGroupName,
         COGNITO_USER_POOL_ID: userPool.userPoolId,
         ORGANIZATION_MEDIA_BUCKET: organizationImagesBucket.bucketName,
         ORGANIZATION_MEDIA_BASE_URL:
@@ -1668,6 +1689,30 @@ export class ApiStack extends cdk.Stack {
       "ManagerGroupAuthorizer",
       {
         handler: managerGroupAuthorizerFunction,
+        identitySources: [apigateway.IdentitySource.header("Authorization")],
+        resultsCacheTtl: cdk.Duration.minutes(5),
+      }
+    );
+
+    // Cognito group-based authorizer for catalog import (admin OR importer)
+    const importerGroupAuthorizerFunction = createPythonFunction(
+      "ImporterGroupAuthorizerFunction",
+      {
+        handler: "lambda/authorizers/cognito_group/handler.lambda_handler",
+        memorySize: 256,
+        timeout: cdk.Duration.seconds(5),
+        noVpc: true,
+        environment: {
+          ALLOWED_GROUPS: `${adminGroupName},${importerGroupName}`,
+        },
+      }
+    );
+
+    const importerAuthorizer = new apigateway.RequestAuthorizer(
+      this,
+      "ImporterGroupAuthorizer",
+      {
+        handler: importerGroupAuthorizerFunction,
         identitySources: [apigateway.IdentitySource.header("Authorization")],
         resultsCacheTtl: cdk.Duration.minutes(5),
       }
@@ -2202,13 +2247,13 @@ export class ApiStack extends cdk.Stack {
     const imports = admin.addResource("imports");
     imports.addMethod("POST", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
-      authorizer: adminAuthorizer,
+      authorizer: importerAuthorizer,
     });
 
     const importsPresign = imports.addResource("presign");
     importsPresign.addMethod("POST", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
-      authorizer: adminAuthorizer,
+      authorizer: importerAuthorizer,
     });
 
     const importsExport = imports.addResource("export");
@@ -2629,6 +2674,12 @@ export class ApiStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, "UserPoolClientId", {
       value: userPoolClient.ref,
+    });
+
+    new cdk.CfnOutput(this, "ImporterUserPoolClientId", {
+      value: importerUserPoolClient.ref,
+      description:
+        "Cognito app client for the catalog importer (ADMIN_USER_PASSWORD_AUTH)",
     });
 
     new cdk.CfnOutput(this, "OrganizationImagesBucketName", {

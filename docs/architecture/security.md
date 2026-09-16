@@ -170,11 +170,18 @@ unverified claims are **not** trusted. `decode_and_verify_token()` in
 `backend/src/app/auth/jwt_validator.py` then verifies the signature
 (RS256), issuer, and expiry against that JWKS before any claim is used.
 
-JWT authorizers (device attestation, admin, manager, user) run **outside
+JWT authorizers (device attestation, admin, importer, manager, user) run **outside
 the VPC** so they can fetch public JWKS. The VPC has no NAT Gateway.
 In-VPC Lambdas call Cognito through the AWS/HTTP proxy instead — see
 [`decisions.md`](./decisions.md#aws--http-proxy) and
 [`lambdas.md`](./lambdas.md).
+
+The `importer` Cognito group can call only `POST /v1/admin/imports` and
+`POST /v1/admin/imports/presign`. Those routes use
+`ImporterGroupAuthorizer` (`admin` or `importer`). The handler re-checks
+`_is_importer` / `_is_admin` so other `/v1/admin/*` paths stay admin-only.
+The importer app client enables `ALLOW_ADMIN_USER_PASSWORD_AUTH` for
+`AdminInitiateAuth` and is not the public OAuth client.
 
 ### Edge caching of the public search endpoint
 

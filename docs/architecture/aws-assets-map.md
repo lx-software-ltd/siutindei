@@ -185,8 +185,10 @@ Cognito operations are proxied through `AwsApiProxyFunction` instead.
 | User Pool | `SiutindeiUserPool` | `lxsoftware-siutindei-user-pool` | Email sign-in, auto-verify enabled |
 | User Pool Domain | `SiutindeiUserPoolDomain` | `{CognitoDomainPrefix}.auth.{region}.amazoncognito.com` | Domain prefix from parameter |
 | User Pool Client | `SiutindeiUserPoolClient` | Auto-generated | OAuth client (no secret) |
+| User Pool Client | `SiutindeiImporterUserPoolClient` | Auto-generated | Catalog importer client (`ALLOW_ADMIN_USER_PASSWORD_AUTH`, no OAuth) |
 | User Pool Group | `AdminGroup` | `admin` | Admin group |
 | User Pool Group | `ManagerGroup` | `manager` | Manager group |
+| User Pool Group | `ImporterGroup` | `importer` | Catalog importer group |
 
 ### Identity Providers
 
@@ -235,6 +237,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 |---------------------|---------|--------|---------|-----|-------|
 | `DeviceAttestationAuthorizer` | `lambda/authorizers/device_attestation/handler.lambda_handler` | 256 MB | 5s | No | Device attestation authorizer |
 | `AdminGroupAuthorizerFunction` | `lambda/authorizers/cognito_group/handler.lambda_handler` | 256 MB | 5s | No | Admin group authorizer |
+| `ImporterGroupAuthorizerFunction` | `lambda/authorizers/cognito_group/handler.lambda_handler` | 256 MB | 5s | No | Admin or importer group authorizer |
 | `ManagerGroupAuthorizerFunction` | `lambda/authorizers/cognito_group/handler.lambda_handler` | 256 MB | 5s | No | Manager group authorizer |
 | `UserAuthorizerFunction` | `lambda/authorizers/cognito_user/handler.lambda_handler` | 256 MB | 5s | No | Any-user authorizer |
 | `PartnerApiKeyAuthorizerFunction` | `lambda/authorizers/api_key/handler.lambda_handler` | 256 MB | 10s | Yes | Partner API-key authorizer (DB lookup via RDS Proxy) |
@@ -370,6 +373,7 @@ read error status codes instead of silently blocking them.
 |--------------|------------|------|---------|-------|
 | Request Authorizer | `DeviceAttestationRequestAuthorizer` | Lambda | `DeviceAttestationAuthorizer` | Validates `x-device-attestation` header, no caching |
 | Request Authorizer | `AdminGroupAuthorizer` | Lambda | `AdminGroupAuthorizerFunction` | JWT + admin group check, 5-min cache |
+| Request Authorizer | `ImporterGroupAuthorizer` | Lambda | `ImporterGroupAuthorizerFunction` | JWT + admin or importer group, 5-min cache |
 | Request Authorizer | `ManagerGroupAuthorizer` | Lambda | `ManagerGroupAuthorizerFunction` | JWT + admin/manager group check, 5-min cache |
 | Request Authorizer | `UserAuthorizer` | Lambda | `UserAuthorizerFunction` | JWT validation (any user), 5-min cache |
 | Request Authorizer | `PartnerApiKeyAuthorizer` | Lambda | `PartnerApiKeyAuthorizerFunction` | Validates `x-partner-key` against hashed DB keys, 5-min cache |
@@ -506,6 +510,7 @@ the revision the database is at, and the rollback wedges in
 | `DatabaseProxyEndpoint` | RDS Proxy endpoint | Endpoint for database connections via proxy |
 | `UserPoolId` | Cognito User Pool ID | User Pool identifier |
 | `UserPoolClientId` | Cognito User Pool Client ID | OAuth client identifier |
+| `ImporterUserPoolClientId` | Cognito importer app client ID | `ADMIN_USER_PASSWORD_AUTH` client for catalog import |
 | `OrganizationImagesBucketName` | S3 bucket name | Organization media bucket |
 | `OrganizationImagesBaseUrl` | S3 bucket URL | Public URL for organization images |
 | `AdminImportExportBucketName` | S3 bucket name | Admin import/export JSON bucket |
