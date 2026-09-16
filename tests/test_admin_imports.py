@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
-import pytest
+from decimal import Decimal
 
-from app.api.admin_imports_utils import from_utc_weekly
-from app.api.admin_imports_utils import parse_time_minutes
-from app.api.admin_imports_utils import parse_timezone
-from app.api.admin_imports_utils import to_utc_weekly
+import pytest
+from app.api.admin_imports_upsert import upsert_activity, upsert_location
+from app.api.admin_imports_utils import (
+    from_utc_weekly,
+    parse_time_minutes,
+    parse_timezone,
+    to_utc_weekly,
+)
 from app.exceptions import ValidationError
 
 
@@ -37,3 +41,131 @@ def test_utc_round_trip_preserves_weekly_entry() -> None:
     assert local_day == 1
     assert local_start == 9 * 60
     assert local_end == 10 * 60
+
+
+def _location_payload(**overrides: object) -> dict:
+    payload = {
+        "lat": Decimal("22.282667"),
+        "lng": Decimal("114.158167"),
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _activity_payload(**overrides: object) -> dict:
+    payload = {
+        "name": "Import Activity",
+        "description": "Desc",
+        "age_min": 5,
+        "age_max": 12,
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_upsert_location_resolves_area_name(
+    db_session,
+    sample_organization,
+    sample_geographic_area,
+) -> None:
+    location, status = upsert_location(
+        db_session,
+        sample_organization,
+        _location_payload(area_name=sample_geographic_area.name),
+        "Import Loc Resolve",
+    )
+    assert status == "created"
+    assert str(location.area_id) == str(sample_geographic_area.id)
+
+
+def test_upsert_location_unknown_area_name(
+    db_session,
+    sample_organization,
+) -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        upsert_location(
+            db_session,
+            sample_organization,
+            _location_payload(area_name="Missing District"),
+            "Import Loc Unknown",
+        )
+    assert exc_info.value.field == "area_name"
+    assert exc_info.value.message == "unknown area_name"
+
+
+def test_upsert_location_area_id_wins_over_area_name(
+    db_session,
+    sample_organization,
+    sample_geographic_area,
+) -> None:
+    from app.db.models import GeographicArea
+
+    other = GeographicArea(
+        name="Other District",
+        level="district",
+        active=True,
+    )
+    db_session.add(other)
+    db_session.flush()
+
+    location, _status = upsert_location(
+        db_session,
+        sample_organization,
+        _location_payload(
+            area_id=str(sample_geographic_area.id),
+            area_name="Other District",
+        ),
+        "Import Loc Both",
+    )
+    assert str(location.area_id) == str(sample_geographic_area.id)
+
+
+def test_upsert_activity_resolves_category_name(
+    db_session,
+    sample_organization,
+    sample_activity_category,
+) -> None:
+    activity, status = upsert_activity(
+        db_session,
+        sample_organization,
+        _activity_payload(category_name=sample_activity_category.name),
+    )
+    assert status == "created"
+    assert str(activity.category_id) == str(sample_activity_category.id)
+
+
+def test_upsert_activity_unknown_category_name(
+    db_session,
+    sample_organization,
+) -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        upsert_activity(
+            db_session,
+            sample_organization,
+            _activity_payload(category_name="Missing Category"),
+        )
+    assert exc_info.value.field == "category_name"
+    assert exc_info.value.message == "unknown category_name"
+
+
+def test_upsert_activity_category_id_wins_over_category_name(
+    db_session,
+    sample_organization,
+    sample_activity_category,
+) -> None:
+    from app.db.models import ActivityCategory
+
+    other = ActivityCategory(name="Other Category", display_order=1)
+    db_session.add(other)
+    db_session.flush()
+
+    activity, _status = upsert_activity(
+        db_session,
+        sample_organization,
+        _activity_payload(
+            category_id=str(sample_activity_category.id),
+            category_name="Other Category",
+            name="Import Activity Both",
+        ),
+    )
+    assert str(activity.category_id) == str(sample_activity_category.id)
