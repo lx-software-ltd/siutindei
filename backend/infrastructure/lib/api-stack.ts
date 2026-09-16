@@ -1655,6 +1655,10 @@ export class ApiStack extends cdk.Stack {
         noVpc: true,
         environment: {
           ALLOWED_GROUPS: adminGroupName,
+          // Importer JWTs are allowed only for POST /v1/admin/imports
+          // and /presign (enforced in the shared cognito_group handler).
+          // A second authorizer Lambda would breach the 500-resource cap.
+          IMPORTER_GROUP: importerGroupName,
         },
       }
     );
@@ -1689,30 +1693,6 @@ export class ApiStack extends cdk.Stack {
       "ManagerGroupAuthorizer",
       {
         handler: managerGroupAuthorizerFunction,
-        identitySources: [apigateway.IdentitySource.header("Authorization")],
-        resultsCacheTtl: cdk.Duration.minutes(5),
-      }
-    );
-
-    // Cognito group-based authorizer for catalog import (admin OR importer)
-    const importerGroupAuthorizerFunction = createPythonFunction(
-      "ImporterGroupAuthorizerFunction",
-      {
-        handler: "lambda/authorizers/cognito_group/handler.lambda_handler",
-        memorySize: 256,
-        timeout: cdk.Duration.seconds(5),
-        noVpc: true,
-        environment: {
-          ALLOWED_GROUPS: `${adminGroupName},${importerGroupName}`,
-        },
-      }
-    );
-
-    const importerAuthorizer = new apigateway.RequestAuthorizer(
-      this,
-      "ImporterGroupAuthorizer",
-      {
-        handler: importerGroupAuthorizerFunction,
         identitySources: [apigateway.IdentitySource.header("Authorization")],
         resultsCacheTtl: cdk.Duration.minutes(5),
       }
@@ -2247,13 +2227,13 @@ export class ApiStack extends cdk.Stack {
     const imports = admin.addResource("imports");
     imports.addMethod("POST", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
-      authorizer: importerAuthorizer,
+      authorizer: adminAuthorizer,
     });
 
     const importsPresign = imports.addResource("presign");
     importsPresign.addMethod("POST", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
-      authorizer: importerAuthorizer,
+      authorizer: adminAuthorizer,
     });
 
     const importsExport = imports.addResource("export");

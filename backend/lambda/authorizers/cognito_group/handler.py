@@ -11,6 +11,8 @@ SECURITY NOTES:
 Environment Variables:
     ALLOWED_GROUPS: Comma-separated list of groups that can access the endpoint
                     (e.g., "admin" or "admin,manager")
+    IMPORTER_GROUP: Optional extra group allowed only on POST
+                    /v1/admin/imports and POST /v1/admin/imports/presign
 """
 
 from __future__ import annotations
@@ -27,6 +29,21 @@ from app.utils.logging import configure_logging, get_logger
 
 configure_logging()
 logger = get_logger(__name__)
+
+_IMPORTER_PATHS = (
+    ("v1", "admin", "imports"),
+    ("v1", "admin", "imports", "presign"),
+)
+
+
+def _importer_path_allowed(method_arn: str) -> bool:
+    """Return True for POST /v1/admin/imports and /presign only."""
+    parts = method_arn.split("/")
+    if len(parts) < 6:
+        return False
+    method = parts[2]
+    path = tuple(parts[3:])
+    return method == "POST" and path in _IMPORTER_PATHS
 
 
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
@@ -72,11 +89,18 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
 
         # Check if user is in any of the allowed groups
         matching_groups = user_groups & allowed_groups
+        importer_group = os.getenv("IMPORTER_GROUP", "").strip()
+        importer_allowed = (
+            bool(importer_group)
+            and importer_group in user_groups
+            and _importer_path_allowed(method_arn)
+        )
 
-        if matching_groups:
+        if matching_groups or importer_allowed:
+            matched = matching_groups or {importer_group}
             logger.info(
                 f"Access granted for user {user_sub[:8]}*** "
-                f"(groups: {', '.join(matching_groups)})"
+                f"(groups: {', '.join(matched)})"
             )
             return policy(
                 "Allow",
@@ -86,7 +110,7 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
                     "userSub": user_sub,
                     "email": email,
                     "groups": ",".join(user_groups),
-                    "matchedGroups": ",".join(matching_groups),
+                    "matchedGroups": ",".join(matched),
                 },
             )
         else:

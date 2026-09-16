@@ -78,7 +78,7 @@ their primary responsibilities.
   `MANAGER_GROUP`) instead of one `admin_list_groups_for_user` call per
   user, so the proxy hop count is constant per page
 - Catalog import routes also honor `IMPORTER_GROUP` (default `importer`)
-  via `_is_importer` in the handler after `ImporterGroupAuthorizer`
+  via the admin authorizer path gate and `_is_importer` in the handler
 - Environment:
   - `SES_SENDER_EMAIL`
   - `SES_TEMPLATE_REQUEST_DECISION` (optional)
@@ -142,18 +142,12 @@ their primary responsibilities.
 - Function: AdminGroupAuthorizerFunction
 - Handler: backend/lambda/authorizers/cognito_group/handler.py
 - Trigger: API Gateway request authorizer
-- Purpose: verify JWT and check user belongs to the `admin` Cognito group
+- Purpose: verify JWT and check user belongs to the `admin` Cognito group.
+  When `IMPORTER_GROUP` is set, also allow that group on
+  `POST /v1/admin/imports` and `POST /v1/admin/imports/presign` only.
+  A dedicated importer authorizer Lambda is not used (500-resource cap).
 - VPC: **No** (runs outside VPC to fetch JWKS from Cognito)
-- Environment: `ALLOWED_GROUPS=admin`
-
-### Importer group authorizer
-- Function: ImporterGroupAuthorizerFunction
-- Handler: backend/lambda/authorizers/cognito_group/handler.py
-- Trigger: API Gateway request authorizer
-- Purpose: verify JWT and check user belongs to the `admin` or `importer`
-  Cognito group (catalog import presign + process only)
-- VPC: **No** (runs outside VPC to fetch JWKS from Cognito)
-- Environment: `ALLOWED_GROUPS=admin,importer`
+- Environment: `ALLOWED_GROUPS=admin`, `IMPORTER_GROUP=importer`
 
 ### Manager group authorizer
 - Function: ManagerGroupAuthorizerFunction

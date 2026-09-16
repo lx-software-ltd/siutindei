@@ -288,6 +288,7 @@ export interface paths {
         /**
          * Create admin import upload URL
          * @description Generate a presigned URL for uploading a JSON import file to S3.
+         *     Requires a Cognito JWT in the `admin` or `importer` group.
          */
         post: {
             parameters: {
@@ -341,6 +342,8 @@ export interface paths {
          * Process admin import
          * @description Process a JSON import file previously uploaded to S3. The import supports
          *     partial success and returns per-record warnings and errors.
+         *     Requires a Cognito JWT in the `admin` or `importer` group.
+         *     `GET /v1/admin/imports/export` remains admin-only.
          */
         post: {
             parameters: {
