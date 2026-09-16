@@ -60,9 +60,10 @@ their primary responsibilities.
 - Handler: backend/lambda/admin/handler.py
 - Trigger: API Gateway — handles routes under `/v1/admin/*`,
   `/v1/manager/*`, `/v1/user/*`, and `/v1/partner/*` (CRUD resources)
-- Auth: Cognito JWT — admin group for `/v1/admin/*`, admin/manager
-  group for `/v1/manager/*`, any authenticated user for `/v1/user/*`;
-  partner API keys (`x-partner-key`) for `/v1/partner/*`
+- Auth: Cognito JWT — admin group for `/v1/admin/*`, admin or importer
+  group for `POST /v1/admin/imports` and `POST /v1/admin/imports/presign`,
+  admin/manager group for `/v1/manager/*`, any authenticated user for
+  `/v1/user/*`; partner API keys (`x-partner-key`) for `/v1/partner/*`
 - Purpose: admin CRUD (including activity categories and partner API key
   management), manager CRUD (filtered by ownership), partner CRUD
   (scope- and organization-filtered by API key), user self-service
@@ -76,6 +77,8 @@ their primary responsibilities.
   `list_users_in_group` call per managed group (`ADMIN_GROUP`,
   `MANAGER_GROUP`) instead of one `admin_list_groups_for_user` call per
   user, so the proxy hop count is constant per page
+- Catalog import routes also honor `IMPORTER_GROUP` (default `importer`)
+  via the admin authorizer path gate and `_is_importer` in the handler
 - Environment:
   - `SES_SENDER_EMAIL`
   - `SES_TEMPLATE_REQUEST_DECISION` (optional)
@@ -139,9 +142,12 @@ their primary responsibilities.
 - Function: AdminGroupAuthorizerFunction
 - Handler: backend/lambda/authorizers/cognito_group/handler.py
 - Trigger: API Gateway request authorizer
-- Purpose: verify JWT and check user belongs to the `admin` Cognito group
+- Purpose: verify JWT and check user belongs to the `admin` Cognito group.
+  When `IMPORTER_GROUP` is set, also allow that group on
+  `POST /v1/admin/imports` and `POST /v1/admin/imports/presign` only.
+  A dedicated importer authorizer Lambda is not used (500-resource cap).
 - VPC: **No** (runs outside VPC to fetch JWKS from Cognito)
-- Environment: `ALLOWED_GROUPS=admin`
+- Environment: `ALLOWED_GROUPS=admin`, `IMPORTER_GROUP=importer`
 
 ### Manager group authorizer
 - Function: ManagerGroupAuthorizerFunction

@@ -152,6 +152,8 @@ pull requests for dependency updates:
 - Secrets stored in GitHub Secrets or AWS Secrets Manager.
 - Public activity search requires an API key plus device attestation (JWKS-validated).
 - Admin routes require membership in the Cognito `admin` group.
+- Catalog import (`POST /v1/admin/imports` and `/presign`) also allows
+  the `importer` group via a dedicated password-auth app client.
 - Manager routes require `admin` or `manager` group membership.
 - User routes require any valid Cognito JWT (no group requirement).
 - API keys are rotated every 90 days via a scheduled Lambda.

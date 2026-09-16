@@ -54,6 +54,14 @@ def _is_manager(event: Mapping[str, Any]) -> bool:
     return manager_group in groups.split(",") if groups else False
 
 
+def _is_importer(event: Mapping[str, Any]) -> bool:
+    """Return True when request belongs to an importer user."""
+    ctx = _get_authorizer_context(event)
+    groups = ctx.get("groups", "")
+    importer_group = os.getenv("IMPORTER_GROUP", "importer")
+    return importer_group in groups.split(",") if groups else False
+
+
 def _get_user_sub(event: Mapping[str, Any]) -> Optional[str]:
     """Extract the user's Cognito sub (subject) from authorizer context."""
     ctx = _get_authorizer_context(event)
