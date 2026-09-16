@@ -64,6 +64,21 @@ def test_rename_from_protected_path_is_blocked() -> None:
     )
 
 
+def test_board_agent_declares_revision_inputs() -> None:
+    workflow = (
+        Path(__file__).resolve().parents[1]
+        / ".github"
+        / "workflows"
+        / "board-agent.yml"
+    )
+    text = workflow.read_text(encoding="utf-8")
+    for key in ("pr_number:", "ci_failure:", "revision_round:"):
+        assert f"\n      {key}\n" in text
+        assert f"# {key}" not in text
+    assert "POSTGRES_DB: backend_test" in text
+    assert "python-version: \"3.12\"" in text
+
+
 def test_lockfile_lines_are_excluded() -> None:
     files = [
         {
