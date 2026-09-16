@@ -43,6 +43,7 @@ def process_import_payload(
     session: Session,
     payload: dict[str, Any],
     file_warnings: list[str],
+    dry_run: bool = False,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     collect_unknown_fields(payload, ALLOWED_ROOT_FIELDS, "root", file_warnings)
     apply_default_manager_id(payload)
@@ -58,14 +59,21 @@ def process_import_payload(
     summary = init_summary()
     summary["warnings"] += len(file_warnings)
 
-    for index, raw_org in enumerate(orgs_raw):
-        process_organization(
-            session,
-            raw_org,
-            index,
-            results,
-            summary,
-        )
+    original_commit = session.commit
+    if dry_run:
+        session.commit = session.flush  # type: ignore[method-assign]
+    try:
+        for index, raw_org in enumerate(orgs_raw):
+            process_organization(
+                session,
+                raw_org,
+                index,
+                results,
+                summary,
+            )
+    finally:
+        if dry_run:
+            session.commit = original_commit  # type: ignore[method-assign]
 
     return summary, results
 

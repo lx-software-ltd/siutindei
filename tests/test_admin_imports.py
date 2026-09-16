@@ -3,23 +3,26 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
+from app.api.admin_imports import _parse_dry_run
 from app.api.admin_imports_fields import (
     apply_source_attribution,
     collect_flat_org_warnings,
 )
 from app.api.admin_imports_importer import process_import_payload
 from app.api.admin_imports_upsert import upsert_activity, upsert_location
-from app.db.models import Activity, Location, Organization
 from app.api.admin_imports_utils import (
     from_utc_weekly,
     parse_time_minutes,
     parse_timezone,
     to_utc_weekly,
 )
+from app.db.models import Activity, Location, Organization
 from app.exceptions import ValidationError
 
 
@@ -371,3 +374,67 @@ def test_board_flat_org_creates_location_and_activity(
     assert activity.age_range.lower == 0
     assert activity.age_range.upper >= 18
     assert activity.description == ("A park\nSource: https://park.test — verified")
+
+
+def test_parse_dry_run_defaults_false() -> None:
+    assert _parse_dry_run({}) is False
+    assert _parse_dry_run({"dry_run": None}) is False
+    assert _parse_dry_run({"dry_run": True}) is True
+
+
+def test_parse_dry_run_rejects_non_bool() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        _parse_dry_run({"dry_run": "true"})
+    assert exc_info.value.field == "dry_run"
+
+
+def test_dry_run_reports_created_without_persisting(test_engine) -> None:
+    org_name = f"Dry Run Org {uuid4()}"
+    payload = {
+        "organizations": [
+            {
+                "name": org_name,
+                "manager_id": "00000000-0000-0000-0000-000000000077",
+            }
+        ]
+    }
+    with Session(test_engine) as session:
+        _summary, results = process_import_payload(
+            session,
+            payload,
+            [],
+            dry_run=True,
+        )
+        session.rollback()
+    assert results[0]["status"] == "created"
+    assert results[0]["type"] == "organizations"
+    with Session(test_engine) as session:
+        found = session.execute(
+            select(Organization).where(Organization.name == org_name)
+        ).scalar_one_or_none()
+    assert found is None
+
+
+def test_live_import_persists_organization(test_engine) -> None:
+    org_name = f"Live Import Org {uuid4()}"
+    payload = {
+        "organizations": [
+            {
+                "name": org_name,
+                "manager_id": "00000000-0000-0000-0000-000000000076",
+            }
+        ]
+    }
+    with Session(test_engine) as session:
+        _summary, results = process_import_payload(
+            session,
+            payload,
+            [],
+            dry_run=False,
+        )
+    assert results[0]["status"] == "created"
+    with Session(test_engine) as session:
+        found = session.execute(
+            select(Organization).where(Organization.name == org_name)
+        ).scalar_one()
+        assert str(found.manager_id) == "00000000-0000-0000-0000-000000000076"
