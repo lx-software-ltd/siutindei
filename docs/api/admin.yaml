@@ -2056,6 +2056,10 @@ components:
         description:
           type: string
           maxLength: 5000
+          description: |
+            Organization description. The appended source line
+            (`Source: <url>` plus optional ` — <note>`) counts toward
+            this 5000-character limit.
         name_translations:
           $ref: '#/components/schemas/TranslationMap'
         description_translations:
@@ -2068,22 +2072,27 @@ components:
         source_url:
           type: string
           description: |
-            Appended to description as `Source: <url> — <note>`.
+            Appended as `Source: <url>`. When vetting_note is also set,
+            the line is `Source: <url> — <note>`.
         vetting_note:
           type: string
           description: |
-            Appended to description as `Source: <url> — <note>`.
+            Optional note after the source URL. URL-only omits ` — `.
+            Note-only becomes `Source: <note>`.
         area_name:
           type: string
           description: |
             Board-flat org field. When locations[] is empty, the importer
             synthesizes one location resolved like location area_name.
+            Ignored with a warning when locations[] is already present.
         category_name:
           type: string
           description: |
             Board-flat org field. When activities[] is empty, the importer
-            synthesizes one activity (age 0–18) resolved like activity
-            category_name.
+            synthesizes one activity with default ages 0–18 (intended
+            product default for catalog venues) resolved like activity
+            category_name. Ignored with a warning when activities[] is
+            already present.
         address:
           type: string
           description: Board-flat org field used as the synthesized location name.
@@ -2093,7 +2102,9 @@ components:
           type: number
         website:
           type: string
-          description: Accepted on board-flat orgs; not stored on the organization.
+          description: |
+            Accepted on board-flat orgs and recorded as a warning;
+            not stored on the organization.
         phone:
           type: string
           description: |
@@ -2186,6 +2197,9 @@ components:
         description:
           type: string
           maxLength: 5000
+          description: |
+            Activity description. The appended source line counts toward
+            this 5000-character limit.
         name_translations:
           $ref: '#/components/schemas/TranslationMap'
         description_translations:
@@ -2200,8 +2214,12 @@ components:
             activity_categories.name. category_id wins when both are set.
         source_url:
           type: string
+          description: |
+            Appended as `Source: <url>` plus optional ` — <note>`.
         vetting_note:
           type: string
+          description: |
+            Optional note after the source URL on the activity.
         age_min:
           type: integer
           minimum: 0

@@ -7,7 +7,10 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import select
 
-from app.api.admin_imports_fields import apply_source_attribution
+from app.api.admin_imports_fields import (
+    apply_source_attribution,
+    collect_flat_org_warnings,
+)
 from app.api.admin_imports_importer import process_import_payload
 from app.api.admin_imports_upsert import upsert_activity, upsert_location
 from app.db.models import Activity, Location, Organization
@@ -190,6 +193,37 @@ def test_apply_source_attribution_skips_when_both_empty() -> None:
     record = {"description": "Hello", "source_url": "", "vetting_note": "  "}
     apply_source_attribution(record)
     assert record["description"] == "Hello"
+
+
+def test_apply_source_attribution_url_only() -> None:
+    record = {"description": "Hello", "source_url": "https://example.test"}
+    apply_source_attribution(record)
+    assert record["description"] == "Hello\nSource: https://example.test"
+
+
+def test_apply_source_attribution_note_only() -> None:
+    record = {"description": "Hello", "vetting_note": "checked"}
+    apply_source_attribution(record)
+    assert record["description"] == "Hello\nSource: checked"
+
+
+def test_collect_flat_org_warnings_for_nested_and_website() -> None:
+    warnings: list[str] = []
+    collect_flat_org_warnings(
+        {
+            "address": "1 Park Road",
+            "area_name": "Wan Chai",
+            "category_name": "Playground",
+            "website": "https://park.test",
+            "locations": [{"name": "Nested Loc"}],
+            "activities": [{"name": "Nested Act"}],
+        },
+        "organizations[0]",
+        warnings,
+    )
+    assert any("ignored flat location fields" in item for item in warnings)
+    assert any("ignored flat activity fields" in item for item in warnings)
+    assert any("website is accepted but not stored" in item for item in warnings)
 
 
 def test_default_manager_id_fills_missing_manager(db_session) -> None:

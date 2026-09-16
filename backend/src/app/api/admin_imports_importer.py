@@ -16,6 +16,7 @@ from app.api.admin_imports_results import (
 from app.api.admin_imports_fields import (
     apply_default_manager_id,
     apply_source_attribution,
+    collect_flat_org_warnings,
     expand_board_flat_org,
 )
 from app.api.admin_imports_upsert import (
@@ -90,6 +91,7 @@ def process_organization(
         return
 
     warnings: list[str] = []
+    collect_flat_org_warnings(raw_org, path, warnings)
     expand_board_flat_org(raw_org)
     collect_unknown_fields(raw_org, ALLOWED_ORG_FIELDS, path, warnings)
     apply_source_attribution(raw_org)

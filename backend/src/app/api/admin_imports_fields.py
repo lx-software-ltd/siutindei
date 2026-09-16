@@ -42,14 +42,53 @@ def apply_default_manager_id(payload: dict[str, Any]) -> None:
 
 
 def apply_source_attribution(record: dict[str, Any]) -> None:
-    """Append 'Source: <url> — <note>' when either field is present."""
+    """Append ``Source: <url>`` plus optional `` — <note>``."""
     url_text = _optional_text(record.get("source_url"))
     note_text = _optional_text(record.get("vetting_note"))
-    if not url_text and not note_text:
+    parts = [part for part in (url_text, note_text) if part]
+    if not parts:
         return
-    line = f"Source: {url_text} — {note_text}"
+    line = "Source: " + " — ".join(parts)
     description = _optional_text(record.get("description"))
     record["description"] = f"{description}\n{line}" if description else line
+
+
+_FLAT_LOCATION_KEYS = ("area_name", "area_id", "address", "lat", "lng")
+_FLAT_ACTIVITY_KEYS = ("category_name", "category_id")
+
+
+def collect_flat_org_warnings(
+    raw_org: dict[str, Any],
+    path: str,
+    warnings: list[str],
+) -> None:
+    """Warn when flat fields are ignored or website is discarded."""
+    locations = raw_org.get("locations")
+    has_locations = isinstance(locations, list) and bool(locations)
+    if has_locations:
+        used = [
+            key for key in _FLAT_LOCATION_KEYS if raw_org.get(key) not in (None, "")
+        ]
+        if used:
+            warnings.append(
+                f"{path}: ignored flat location fields "
+                f"{', '.join(used)} because locations[] is present"
+            )
+
+    activities = raw_org.get("activities")
+    has_activities = isinstance(activities, list) and bool(activities)
+    if has_activities:
+        used = [
+            key for key in _FLAT_ACTIVITY_KEYS if raw_org.get(key) not in (None, "")
+        ]
+        if used:
+            warnings.append(
+                f"{path}: ignored flat activity fields "
+                f"{', '.join(used)} because activities[] is present"
+            )
+
+    if raw_org.get("website") not in (None, ""):
+        warnings.append(f"{path}: website is accepted but not stored")
 
 
 def expand_board_flat_org(raw_org: dict[str, Any]) -> None:
