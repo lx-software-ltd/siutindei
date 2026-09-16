@@ -71,7 +71,7 @@ def test_upsert_location_resolves_area_name(
     location, status = upsert_location(
         db_session,
         sample_organization,
-        _location_payload(area_name="Central and Western"),
+        _location_payload(area_name=sample_geographic_area.name),
         "Import Loc Resolve",
     )
     assert status == "created"
@@ -128,7 +128,7 @@ def test_upsert_activity_resolves_category_name(
     activity, status = upsert_activity(
         db_session,
         sample_organization,
-        _activity_payload(category_name="Sport"),
+        _activity_payload(category_name=sample_activity_category.name),
     )
     assert status == "created"
     assert str(activity.category_id) == str(sample_activity_category.id)
