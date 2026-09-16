@@ -12,6 +12,11 @@ Set repo secret `BOARD_PR_TOKEN` (fine-grained PAT or GitHub App) so
 `GITHUB_TOKEN` often never start lint/test (or sit in `action_required`).
 Lockfile diffs (`package-lock.json`, `pubspec.lock`, …) are excluded from
 the 400-line runner cap so Dependabot bumps can land.
+Optional workflow inputs `pr_number`, `ci_failure`, and
+`revision_round` let the admin stack revise an existing `board/*` PR
+in place: checkout that PR, append the CI excerpt to the brief, run
+Test Python (Postgres + alembic) before push, and update the existing
+PR instead of force-pushing a new branch from `staging`.
 
 This file is for whoever owns **lx-software-ltd/siutindei**. The lx-software
 admin stack dispatches these workflows; it cannot create them from this
@@ -43,9 +48,21 @@ on:
       kind:
         required: true
         type: string
+      pr_number:
+        required: false
+        type: string
+        description: Existing board/* PR to revise (do not start from staging)
+      ci_failure:
+        required: false
+        type: string
+        description: CI failure excerpt to fix
+      revision_round:
+        required: false
+        type: string
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 jobs:
   run:
     timeout-minutes: 30
@@ -81,8 +98,8 @@ jobs:
 Task: ${{ inputs.task_id }}"
 ```
 
-Secrets on the runner: **only** `CURSOR_API_KEY` and `GITHUB_TOKEN`. No AWS
-credentials.
+Secrets on the runner: `CURSOR_API_KEY` plus `BOARD_PR_TOKEN` (falls back
+to `GITHUB_TOKEN`). No AWS credentials.
 
 Repo-level `AGENTS.md` must require acceptance-criteria discipline and forbid
 touching `**/auth/**`, `**/payments/**`, `**/migrations/**`, `infra/**`,
