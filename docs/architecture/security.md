@@ -182,8 +182,12 @@ with `IMPORTER_GROUP` so a second authorizer Lambda is not required
 (CloudFormation 500-resource cap). An importer Allow policy lists those
 two method ARNs only — it does not use the cached ``/*`` wildcard, so a
 5-minute authorizer cache after presign cannot authorize other admin
-routes. The handler still re-checks `_is_importer` / `_is_admin`. The
-importer app client enables `ALLOW_ADMIN_USER_PASSWORD_AUTH` for
+routes. The handler still re-checks `_is_importer` / `_is_admin`.
+Importer-only tokens are create-only: a matching organization name
+returns per-record `exists` and never calls `_update_organization`.
+Admin imports may update an org whose `manager_id` already matches the
+payload; import never writes `manager_id` on update. The importer app
+client enables `ALLOW_ADMIN_USER_PASSWORD_AUTH` for
 `AdminInitiateAuth`, is not the public OAuth client, sets
 `preventUserExistenceErrors=ENABLED`, enables token revocation, and uses
 60-minute access/ID tokens with a 1-day refresh token.
