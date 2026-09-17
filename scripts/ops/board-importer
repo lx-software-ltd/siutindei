@@ -2,7 +2,7 @@
 # Local CLI for the Siu Tin Dei board catalog importer (Option A).
 #
 # Prerequisites:
-#   - AWS CLI v2, python3, curl
+#   - AWS CLI (v1 or v2), python3, curl
 #   - credentials for account 588024549699 (ap-southeast-1)
 #   - siutindei stack output ImporterUserPoolClientId (PR #508+)
 #
@@ -22,6 +22,9 @@
 #   ./scripts/ops/board-importer --profile prod --region ap-southeast-1 setup
 
 set -euo pipefail
+
+# v2 pages through less by default; v1 ignores this.
+export AWS_PAGER=""
 
 REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-ap-southeast-1}}"
 PROFILE="${AWS_PROFILE:-}"
@@ -71,7 +74,7 @@ Options:
 Default setup does not flip SiutindeiBoardCatalogImportEnabled.
 --enable-import requires --apply-params. Never add this user to admin.
 
-Requires AWS CLI v2, python3, and curl.
+Requires AWS CLI (v1 or v2), python3, and curl.
 EOF
 }
 
@@ -79,7 +82,7 @@ require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "Missing required command: $1" >&2
     if [[ "$1" == "aws" ]]; then
-      echo "Install AWS CLI v2 and configure credentials, then retry." >&2
+      echo "Install AWS CLI (v1 is fine) and configure credentials, then retry." >&2
     fi
     exit 1
   fi
