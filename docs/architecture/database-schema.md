@@ -149,6 +149,12 @@ Columns:
 Indexes:
 - `activity_locations_location_idx` on `location_id`
 
+Admin import attaches each activity to the organization's single
+imported venue after upsert. Alembic `0031_link_orphan_activities`
+backfills activities that have no join when the org has exactly one
+location. Seed assessment: insert-only backfill; `seed_data.sql`
+already inserts joins with `NOT EXISTS`, so seed stays compatible.
+
 ## Table: activity_pricing
 
 Purpose: Pricing for an activity at a location.

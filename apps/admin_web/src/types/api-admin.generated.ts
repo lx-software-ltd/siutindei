@@ -344,8 +344,12 @@ export interface paths {
          *     partial success and returns per-record warnings and errors.
          *     Requires a Cognito JWT in the `admin` or `importer` group.
          *     `GET /v1/admin/imports/export` remains admin-only.
-         *     Importer-only callers are create-only: an organization name that
-         *     already exists fails that record with `exists` and skips children.
+         *     Importer-only callers skip an existing organization when the
+         *     payload `manager_id` matches; existing venues and activities are
+         *     skipped and missing ones are created. After each activity upsert
+         *     the org's single imported venue is attached on
+         *     `activity_locations`. A foreign name match still fails that
+         *     record with `exists` and skips children.
          *     Admin imports may update an organization whose current manager_id
          *     matches the payload; `manager_id` is never changed on update.
          *     When `dry_run` is true the file is validated the same way as a live
@@ -4013,8 +4017,9 @@ export interface components {
              *     is set at the file root. On update, a matching manager_id is
              *     ignored; a different value fails the record with
              *     `manager_id cannot be changed on update`. Import never writes
-             *     manager_id on update. Importer-only callers cannot update
-             *     (existing name → `exists`).
+             *     manager_id on update. Importer-only callers skip a matching
+             *     manager_id org (children still import) and still fail a
+             *     foreign name match with `exists`.
              */
             manager_id?: string;
             /**

@@ -23,6 +23,7 @@ from app.api.admin_imports_upsert import (
     ALLOWED_ACTIVITY_FIELDS,
     ALLOWED_LOCATION_FIELDS,
     ALLOWED_ORG_FIELDS,
+    resolve_single_imported_venue,
     upsert_activity,
     upsert_location,
     upsert_organization,
@@ -187,6 +188,7 @@ def process_organization(
                 summary,
                 f"{path}.locations",
                 dry_run=dry_run,
+                allow_updates=allow_updates,
             )
 
     raw_activities = raw_org.get("activities", [])
@@ -212,6 +214,7 @@ def process_organization(
                 summary,
                 f"{path}.activities",
                 dry_run=dry_run,
+                allow_updates=allow_updates,
             )
 
 
@@ -226,6 +229,7 @@ def process_location(
     base_path: str,
     *,
     dry_run: bool = False,
+    allow_updates: bool = False,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_location, dict):
@@ -288,6 +292,7 @@ def process_location(
                 raw_location,
                 address_value,
                 dry_run=dry_run,
+                allow_updates=allow_updates,
             ),
         )
     except ValidationError as exc:
@@ -328,6 +333,7 @@ def process_activity(
     base_path: str,
     *,
     dry_run: bool = False,
+    allow_updates: bool = False,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_activity, dict):
@@ -379,6 +385,12 @@ def process_activity(
                 org,
                 raw_activity,
                 dry_run=dry_run,
+                allow_updates=allow_updates,
+                venue=resolve_single_imported_venue(
+                    session,
+                    org,
+                    location_cache,
+                ),
             ),
         )
     except ValidationError as exc:

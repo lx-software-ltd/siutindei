@@ -7,7 +7,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
-from sqlalchemy.exc import MultipleResultsFound
+from sqlalchemy.exc import IntegrityError, MultipleResultsFound
 from sqlalchemy.orm import Session
 
 from app.api.admin_imports_fields import guard_import_organization_update
@@ -32,7 +32,8 @@ from app.api.admin_validators import (
     _parse_languages,
     _validate_string_length,
 )
-from app.db.models import Activity, ActivityCategory, ActivityPricing, ActivitySchedule
+from app.db.models import Activity, ActivityCategory, ActivityLocation
+from app.db.models import ActivityPricing, ActivitySchedule
 from app.db.models import GeographicArea, Location, Organization, PricingType
 from app.db.repositories import (
     ActivityPricingRepository,
@@ -152,6 +153,13 @@ def upsert_organization(
     ):
         body.pop(extra, None)
     if existing:
+        if not allow_updates:
+            payload_manager = body.get("manager_id")
+            if payload_manager is not None and str(existing.manager_id) == str(
+                payload_manager
+            ):
+                return existing, "skipped"
+            raise ValidationError("exists", field="name")
         guard_import_organization_update(
             existing,
             body,
@@ -179,6 +187,7 @@ def upsert_location(
     address_value: str,
     *,
     dry_run: bool = False,
+    allow_updates: bool = True,
 ) -> tuple[Location, str]:
     repo = LocationRepository(session)
     try:
@@ -194,6 +203,8 @@ def upsert_location(
     if raw_location.get("name") is not None or raw_location.get("address") is not None:
         body["address"] = address_value
     if existing:
+        if not allow_updates:
+            return existing, "skipped"
         updated = _update_location(repo, existing, body)
         repo.update(updated)
         persist_import_change(session, dry_run=dry_run)
@@ -215,6 +226,8 @@ def upsert_activity(
     raw_activity: dict[str, Any],
     *,
     dry_run: bool = False,
+    allow_updates: bool = True,
+    venue: Location | None = None,
 ) -> tuple[Activity, str]:
     repo = ActivityRepository(session)
     name = _validate_string_length(
@@ -242,8 +255,14 @@ def upsert_activity(
     body.pop("source_url", None)
     body.pop("vetting_note", None)
     if existing:
+        if not allow_updates:
+            wrote_link = link_activity_to_venue(session, existing, venue)
+            if wrote_link:
+                persist_import_change(session, dry_run=dry_run)
+            return existing, "skipped"
         updated = _update_activity(repo, existing, body)
         repo.update(updated)
+        link_activity_to_venue(session, updated, venue)
         persist_import_change(session, dry_run=dry_run)
         session.refresh(updated)
         return updated, "updated"
@@ -251,6 +270,7 @@ def upsert_activity(
     body["org_id"] = str(org.id)
     created = _create_activity(repo, body)
     repo.create(created)
+    link_activity_to_venue(session, created, venue)
     persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
     return created, "created"
@@ -399,6 +419,57 @@ def merge_schedule_entries(
         )
     )
     return merged
+
+
+def resolve_single_imported_venue(
+    session: Session,
+    org: Organization,
+    cache: dict[str, Location],
+) -> Location | None:
+    """Return the org's single imported venue, if there is exactly one."""
+    unique: dict[str, Location] = {}
+    for location in cache.values():
+        unique[str(location.id)] = location
+    if len(unique) == 1:
+        return next(iter(unique.values()))
+    if unique:
+        return None
+    locations = LocationRepository(session).find_by_organization(
+        _coerce_uuid(org.id),
+        limit=2,
+    )
+    if len(locations) == 1:
+        return locations[0]
+    return None
+
+
+def link_activity_to_venue(
+    session: Session,
+    activity: Activity,
+    venue: Location | None,
+) -> bool:
+    """Attach activity to a venue. Return True when a join row is added."""
+    if venue is None:
+        return False
+    activity_id = _coerce_uuid(activity.id)
+    location_id = _coerce_uuid(venue.id)
+    existing = session.get(ActivityLocation, (activity_id, location_id))
+    if existing is not None:
+        return False
+    session.add(
+        ActivityLocation(
+            activity_id=activity_id,
+            location_id=location_id,
+        )
+    )
+    try:
+        session.flush()
+    except IntegrityError as exc:
+        raise ValidationError(
+            "failed to link activity venue",
+            field="location",
+        ) from exc
+    return True
 
 
 def resolve_location(

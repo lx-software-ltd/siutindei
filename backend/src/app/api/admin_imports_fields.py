@@ -49,10 +49,11 @@ def guard_import_organization_update(
 ) -> None:
     """Block importer takeovers and manager_id changes on update.
 
-    Importer-only callers are create-only: a name match is ``exists``.
-    Admin updates may continue only when payload manager_id matches the
-    current manager (or is omitted). Import never writes manager_id on
-    update.
+    Importer-only callers skip an existing org when payload manager_id
+    matches (handled in ``upsert_organization``). A foreign name match
+    is ``exists`` and skips children. Admin updates may continue only
+    when payload manager_id matches the current manager (or is omitted).
+    Import never writes manager_id on update.
     """
     if not allow_updates:
         raise ValidationError("exists", field="name")
