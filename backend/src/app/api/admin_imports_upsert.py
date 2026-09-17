@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
+from app.api.admin_imports_fields import guard_import_organization_update
 from app.api.admin_imports_utils import (
     collect_unknown_fields,
     parse_day_of_week,
@@ -116,6 +117,7 @@ def upsert_organization(
     raw_org: dict[str, Any],
     *,
     dry_run: bool = False,
+    allow_updates: bool = False,
 ) -> tuple[Organization, str]:
     repo = OrganizationRepository(session)
     name = _validate_string_length(
@@ -150,6 +152,11 @@ def upsert_organization(
     ):
         body.pop(extra, None)
     if existing:
+        guard_import_organization_update(
+            existing,
+            body,
+            allow_updates=allow_updates,
+        )
         updated = _update_organization(repo, existing, body)
         repo.update(updated)
         persist_import_change(session, dry_run=dry_run)

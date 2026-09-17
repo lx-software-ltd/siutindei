@@ -41,6 +41,30 @@ def apply_default_manager_id(payload: dict[str, Any]) -> None:
             org["manager_id"] = manager_id
 
 
+def guard_import_organization_update(
+    existing: Any,
+    body: dict[str, Any],
+    *,
+    allow_updates: bool,
+) -> None:
+    """Block importer takeovers and manager_id changes on update.
+
+    Importer-only callers are create-only: a name match is ``exists``.
+    Admin updates may continue only when payload manager_id matches the
+    current manager (or is omitted). Import never writes manager_id on
+    update.
+    """
+    if not allow_updates:
+        raise ValidationError("exists", field="name")
+    payload = body.get("manager_id")
+    if payload is not None and str(existing.manager_id) != str(payload):
+        raise ValidationError(
+            "manager_id cannot be changed on update",
+            field="manager_id",
+        )
+    body.pop("manager_id", None)
+
+
 def apply_source_attribution(record: dict[str, Any]) -> None:
     """Append ``Source: <url>`` plus optional `` — <note>``."""
     url_text = _optional_text(record.get("source_url"))

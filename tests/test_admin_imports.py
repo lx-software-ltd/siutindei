@@ -15,11 +15,16 @@ from app.api.admin_imports_fields import (
     collect_flat_org_warnings,
 )
 from app.api.admin_imports_importer import process_import_payload
-from app.api.admin_imports_upsert import upsert_activity, upsert_location
+from app.api.admin_imports_upsert import (
+    upsert_activity,
+    upsert_location,
+    upsert_organization,
+)
 from app.api.admin_imports_utils import (
     from_utc_weekly,
     parse_time_minutes,
     parse_timezone,
+    persist_import_change,
     to_utc_weekly,
 )
 from app.db.models import Activity, Location, Organization
@@ -485,3 +490,132 @@ def test_dry_run_child_failure_keeps_sibling_results(
             select(Organization).where(Organization.name == org_name)
         ).scalar_one_or_none()
     assert found is None
+
+
+def test_importer_create_only_rejects_existing_org(
+    db_session,
+    sample_organization,
+) -> None:
+    payload = {
+        "organizations": [
+            {
+                "name": sample_organization.name,
+                "description": "Takeover attempt",
+                "manager_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=False,
+    )
+    assert results[0]["status"] == "failed"
+    assert results[0]["errors"][0]["message"] == "exists"
+    assert results[0]["errors"][0]["field"] == "name"
+    db_session.refresh(sample_organization)
+    assert sample_organization.description == (
+        "A test organization for unit tests"
+    )
+    assert str(sample_organization.manager_id) == (
+        "00000000-0000-0000-0000-000000000001"
+    )
+
+
+def test_admin_import_update_keeps_manager_id(
+    db_session,
+    sample_organization,
+) -> None:
+    payload = {
+        "organizations": [
+            {
+                "name": sample_organization.name,
+                "description": "Updated by admin import",
+                "manager_id": str(sample_organization.manager_id),
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=True,
+    )
+    assert results[0]["status"] == "updated"
+    db_session.refresh(sample_organization)
+    assert sample_organization.description == "Updated by admin import"
+    assert str(sample_organization.manager_id) == (
+        "00000000-0000-0000-0000-000000000001"
+    )
+
+
+def test_admin_import_rejects_manager_id_reassign(
+    db_session,
+    sample_organization,
+) -> None:
+    payload = {
+        "organizations": [
+            {
+                "name": sample_organization.name,
+                "manager_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=True,
+    )
+    assert results[0]["status"] == "failed"
+    assert results[0]["errors"][0]["field"] == "manager_id"
+    db_session.refresh(sample_organization)
+    assert str(sample_organization.manager_id) == (
+        "00000000-0000-0000-0000-000000000001"
+    )
+
+
+def test_upsert_organization_create_only_raises(
+    db_session,
+    sample_organization,
+) -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        upsert_organization(
+            db_session,
+            {
+                "name": sample_organization.name,
+                "manager_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            },
+            allow_updates=False,
+        )
+    assert exc_info.value.message == "exists"
+    assert exc_info.value.field == "name"
+
+
+def test_persist_import_change_dry_run_discards_audit(test_engine) -> None:
+    if test_engine.dialect.name != "postgresql":
+        pytest.skip("audit discard uses PostgreSQL xmin")
+    from sqlalchemy import text
+
+    marker = f"dry-run-{uuid4()}"
+    with Session(test_engine) as session:
+        session.execute(
+            text(
+                "INSERT INTO audit_log "
+                "(table_name, record_id, action, source) "
+                "VALUES ('organizations', :rid, 'INSERT', 'trigger')"
+            ),
+            {"rid": marker},
+        )
+        persist_import_change(session, dry_run=True)
+        remaining = session.execute(
+            text(
+                "SELECT count(*) FROM audit_log "
+                "WHERE record_id = :rid "
+                "AND xmin = pg_current_xact_id()::xid"
+            ),
+            {"rid": marker},
+        ).scalar()
+        session.rollback()
+    assert remaining == 0

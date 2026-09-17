@@ -48,6 +48,7 @@ def process_import_payload(
     payload: dict[str, Any],
     file_warnings: list[str],
     dry_run: bool = False,
+    allow_org_updates: bool = False,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     collect_unknown_fields(payload, ALLOWED_ROOT_FIELDS, "root", file_warnings)
     apply_default_manager_id(payload)
@@ -71,6 +72,7 @@ def process_import_payload(
             results,
             summary,
             dry_run=dry_run,
+            allow_updates=allow_org_updates,
         )
 
     return summary, results
@@ -84,6 +86,7 @@ def process_organization(
     summary: dict[str, Any],
     *,
     dry_run: bool = False,
+    allow_updates: bool = False,
 ) -> None:
     path = f"organizations[{index}]"
     if not isinstance(raw_org, dict):
@@ -127,7 +130,12 @@ def process_organization(
         org, status = run_import_upsert(
             session,
             dry_run,
-            lambda: upsert_organization(session, raw_org, dry_run=dry_run),
+            lambda: upsert_organization(
+                session,
+                raw_org,
+                dry_run=dry_run,
+                allow_updates=allow_updates,
+            ),
         )
     except ValidationError as exc:
         record_result(
