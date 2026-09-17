@@ -509,6 +509,7 @@ def test_importer_create_only_rejects_existing_org(
         db_session,
         payload,
         [],
+        dry_run=True,
         allow_org_updates=False,
     )
     assert results[0]["status"] == "failed"
@@ -523,31 +524,46 @@ def test_importer_create_only_rejects_existing_org(
     )
 
 
-def test_admin_import_update_keeps_manager_id(
-    db_session,
-    sample_organization,
-) -> None:
-    payload = {
-        "organizations": [
+def test_admin_import_update_keeps_manager_id(test_engine) -> None:
+    org_name = f"Admin Update Org {uuid4()}"
+    manager_id = "00000000-0000-0000-0000-000000000033"
+    with Session(test_engine) as session:
+        process_import_payload(
+            session,
             {
-                "name": sample_organization.name,
-                "description": "Updated by admin import",
-                "manager_id": str(sample_organization.manager_id),
-            }
-        ]
-    }
-    _summary, results = process_import_payload(
-        db_session,
-        payload,
-        [],
-        allow_org_updates=True,
-    )
+                "organizations": [
+                    {
+                        "name": org_name,
+                        "description": "Original",
+                        "manager_id": manager_id,
+                    }
+                ]
+            },
+            [],
+            allow_org_updates=True,
+        )
+    with Session(test_engine) as session:
+        _summary, results = process_import_payload(
+            session,
+            {
+                "organizations": [
+                    {
+                        "name": org_name,
+                        "description": "Updated by admin import",
+                        "manager_id": manager_id,
+                    }
+                ]
+            },
+            [],
+            allow_org_updates=True,
+        )
     assert results[0]["status"] == "updated"
-    db_session.refresh(sample_organization)
-    assert sample_organization.description == "Updated by admin import"
-    assert str(sample_organization.manager_id) == (
-        "00000000-0000-0000-0000-000000000001"
-    )
+    with Session(test_engine) as session:
+        found = session.execute(
+            select(Organization).where(Organization.name == org_name)
+        ).scalar_one()
+        assert found.description == "Updated by admin import"
+        assert str(found.manager_id) == manager_id
 
 
 def test_admin_import_rejects_manager_id_reassign(
@@ -566,6 +582,7 @@ def test_admin_import_rejects_manager_id_reassign(
         db_session,
         payload,
         [],
+        dry_run=True,
         allow_org_updates=True,
     )
     assert results[0]["status"] == "failed"
