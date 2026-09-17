@@ -27,6 +27,7 @@ from app.api.admin_imports_upsert import (
     upsert_location,
     upsert_organization,
 )
+from app.api.admin_imports_venues import resolve_single_imported_venue
 from app.api.admin_imports_utils import (
     collect_unknown_fields,
     rollback_import_change,
@@ -187,6 +188,7 @@ def process_organization(
                 summary,
                 f"{path}.locations",
                 dry_run=dry_run,
+                allow_updates=allow_updates,
             )
 
     raw_activities = raw_org.get("activities", [])
@@ -212,6 +214,7 @@ def process_organization(
                 summary,
                 f"{path}.activities",
                 dry_run=dry_run,
+                allow_updates=allow_updates,
             )
 
 
@@ -226,6 +229,7 @@ def process_location(
     base_path: str,
     *,
     dry_run: bool = False,
+    allow_updates: bool = True,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_location, dict):
@@ -288,6 +292,7 @@ def process_location(
                 raw_location,
                 address_value,
                 dry_run=dry_run,
+                allow_updates=allow_updates,
             ),
         )
     except ValidationError as exc:
@@ -328,6 +333,7 @@ def process_activity(
     base_path: str,
     *,
     dry_run: bool = False,
+    allow_updates: bool = True,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_activity, dict):
@@ -379,6 +385,9 @@ def process_activity(
                 org,
                 raw_activity,
                 dry_run=dry_run,
+                allow_updates=allow_updates,
+                venue=resolve_single_imported_venue(location_cache),
+                warnings=warnings,
             ),
         )
     except ValidationError as exc:
@@ -431,6 +440,7 @@ def process_activity(
                 summary,
                 f"{path}.pricing",
                 dry_run=dry_run,
+                allow_updates=allow_updates,
             )
 
     raw_schedules = raw_activity.get("schedules", [])
@@ -457,4 +467,5 @@ def process_activity(
                 summary,
                 f"{path}.schedules",
                 dry_run=dry_run,
+                allow_updates=allow_updates,
             )

@@ -10,7 +10,14 @@ from sqlalchemy import select
 from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
-from app.api.admin_imports_fields import guard_import_organization_update
+from app.api.admin_imports_fields import (
+    guard_import_organization_update,
+    manager_ids_match,
+)
+from app.api.admin_imports_venues import (
+    LINKED_VENUE_WARNING,
+    link_activity_to_venue,
+)
 from app.api.admin_imports_utils import (
     collect_unknown_fields,
     parse_day_of_week,
@@ -32,7 +39,8 @@ from app.api.admin_validators import (
     _parse_languages,
     _validate_string_length,
 )
-from app.db.models import Activity, ActivityCategory, ActivityPricing, ActivitySchedule
+from app.db.models import Activity, ActivityCategory
+from app.db.models import ActivityPricing, ActivitySchedule
 from app.db.models import GeographicArea, Location, Organization, PricingType
 from app.db.repositories import (
     ActivityPricingRepository,
@@ -152,11 +160,11 @@ def upsert_organization(
     ):
         body.pop(extra, None)
     if existing:
-        guard_import_organization_update(
-            existing,
-            body,
-            allow_updates=allow_updates,
-        )
+        if not allow_updates:
+            if manager_ids_match(existing.manager_id, body.get("manager_id")):
+                return existing, "skipped"
+            raise ValidationError("exists", field="name")
+        guard_import_organization_update(existing, body)
         updated = _update_organization(repo, existing, body)
         repo.update(updated)
         persist_import_change(session, dry_run=dry_run)
@@ -179,6 +187,7 @@ def upsert_location(
     address_value: str,
     *,
     dry_run: bool = False,
+    allow_updates: bool = True,
 ) -> tuple[Location, str]:
     repo = LocationRepository(session)
     try:
@@ -188,6 +197,9 @@ def upsert_location(
         )
     except MultipleResultsFound as exc:
         raise ValidationError("Multiple locations found", field="name") from exc
+
+    if existing and not allow_updates:
+        return existing, "skipped"
 
     body = _filter_fields(raw_location, ALLOWED_LOCATION_FIELDS)
     _resolve_location_area_fields(session, body)
@@ -215,6 +227,9 @@ def upsert_activity(
     raw_activity: dict[str, Any],
     *,
     dry_run: bool = False,
+    allow_updates: bool = True,
+    venue: Location | None = None,
+    warnings: list[str] | None = None,
 ) -> tuple[Activity, str]:
     repo = ActivityRepository(session)
     name = _validate_string_length(
@@ -235,6 +250,14 @@ def upsert_activity(
             field="name",
         ) from exc
 
+    if existing and not allow_updates:
+        wrote_link = link_activity_to_venue(session, existing, venue)
+        if wrote_link:
+            if warnings is not None:
+                warnings.append(LINKED_VENUE_WARNING)
+            persist_import_change(session, dry_run=dry_run)
+        return existing, "skipped"
+
     body = _filter_fields(raw_activity, ALLOWED_ACTIVITY_FIELDS)
     _resolve_activity_category_fields(session, body)
     body.pop("pricing", None)
@@ -244,6 +267,7 @@ def upsert_activity(
     if existing:
         updated = _update_activity(repo, existing, body)
         repo.update(updated)
+        link_activity_to_venue(session, updated, venue)
         persist_import_change(session, dry_run=dry_run)
         session.refresh(updated)
         return updated, "updated"
@@ -251,6 +275,7 @@ def upsert_activity(
     body["org_id"] = str(org.id)
     created = _create_activity(repo, body)
     repo.create(created)
+    link_activity_to_venue(session, created, venue)
     persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
     return created, "created"
@@ -263,6 +288,7 @@ def upsert_pricing(
     raw_pricing: dict[str, Any],
     *,
     dry_run: bool = False,
+    allow_updates: bool = True,
 ) -> tuple[ActivityPricing, str]:
     pricing_type = raw_pricing.get("pricing_type")
     if not pricing_type:
@@ -287,6 +313,9 @@ def upsert_pricing(
             "Multiple pricing entries found",
             field="pricing_type",
         ) from exc
+
+    if existing and not allow_updates:
+        return existing, "skipped"
 
     body = _filter_fields(raw_pricing, ALLOWED_PRICING_FIELDS)
     body["pricing_type"] = pricing_enum.value
@@ -314,9 +343,19 @@ def upsert_schedule(
     warnings: list[str],
     *,
     dry_run: bool = False,
+    allow_updates: bool = True,
 ) -> tuple[ActivitySchedule, str]:
     tzinfo = parse_timezone(raw_schedule.get("timezone"), "timezone")
     languages = _parse_languages(raw_schedule.get("languages"))
+    repo = ActivityScheduleRepository(session)
+    existing = repo.find_by_activity_location_languages(
+        _coerce_uuid(activity.id),
+        _coerce_uuid(location.id),
+        languages,
+    )
+    if existing and not allow_updates:
+        return existing, "skipped"
+
     entries = parse_weekly_entries_local(
         raw_schedule.get("weekly_entries"),
         tzinfo,
@@ -328,12 +367,6 @@ def upsert_schedule(
             field="weekly_entries",
         )
 
-    repo = ActivityScheduleRepository(session)
-    existing = repo.find_by_activity_location_languages(
-        _coerce_uuid(activity.id),
-        _coerce_uuid(location.id),
-        languages,
-    )
     body = {
         "activity_id": str(activity.id),
         "location_id": str(location.id),
