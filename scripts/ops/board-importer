@@ -39,7 +39,40 @@ ENABLE_IMPORT=false
 ROTATE_PASSWORD=false
 
 usage() {
-  sed -n '2,23p' "$0"
+  cat <<'EOF'
+board-importer — local CLI for Siu Tin Dei catalog importer setup (Option A)
+
+Usage:
+  ./scripts/ops/board-importer setup
+  ./scripts/ops/board-importer setup --rotate-password
+  ./scripts/ops/board-importer setup --apply-params --manager-id <uuid>
+  ./scripts/ops/board-importer setup --apply-params --manager-id <uuid> \
+    --enable-import
+  ./scripts/ops/board-importer list-managers
+  ./scripts/ops/board-importer rotate-password
+  ./scripts/ops/board-importer apply-params --manager-id <uuid>
+  ./scripts/ops/board-importer --profile prod --region ap-southeast-1 setup
+
+Commands:
+  setup            Create/ensure importer user, secret, and smoke tests
+  list-managers    Print manager and admin Cognito users
+  rotate-password  Mint a new password and update the secret
+  apply-params     Update lxsoftware CloudFormation parameter overrides
+
+Options:
+  --profile NAME         AWS CLI profile
+  --region REGION        AWS region (default: ap-southeast-1)
+  --manager-id UUID      Manager Cognito sub for lxsoftware params
+  --apply-params         After setup, update the lxsoftware stack
+  --enable-import        Also set SiutindeiBoardCatalogImportEnabled=true
+  --rotate-password      Mint a new password during setup
+  -h, --help             Show this help
+
+Default setup does not flip SiutindeiBoardCatalogImportEnabled.
+--enable-import requires --apply-params. Never add this user to admin.
+
+Requires AWS CLI v2, python3, and curl.
+EOF
 }
 
 require_cmd() {
