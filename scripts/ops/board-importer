@@ -443,18 +443,25 @@ apply_lxsoftware_params() {
 
   echo
   echo "== Update ${LXSOFTWARE_STACK} parameters (keep all others) =="
-  local params_file
+  local params_file raw_file
   params_file="$(mktemp "$WORKDIR/params.XXXXXX")"
-  aws_cli cloudformation describe-stacks \
+  raw_file="$(mktemp "$WORKDIR/stack-params.XXXXXX")"
+  # Do not pipe aws into `python3 - <<EOF`: the heredoc is stdin, so
+  # json.load() sees EOF and aws gets SIGPIPE (CLI v1 and v2).
+  if ! aws_cli cloudformation describe-stacks \
     --stack-name "$LXSOFTWARE_STACK" \
     --query 'Stacks[0].Parameters' \
-    --output json \
-  | python3 - "$params_file" "$API_BASE" "$POOL_ID" "$CLIENT_ID" \
-      "$MANAGER_ID" "$import_flag" <<'PY'
+    --output json > "$raw_file"; then
+    echo "Failed to read ${LXSOFTWARE_STACK} parameters." >&2
+    echo "Check the stack name, region, and CloudFormation IAM access." >&2
+    exit 1
+  fi
+  python3 - "$raw_file" "$params_file" "$API_BASE" "$POOL_ID" \
+    "$CLIENT_ID" "$MANAGER_ID" "$import_flag" <<'PY'
 import json
 import sys
 
-out, api, pool, client, manager, enabled = sys.argv[1:]
+src, out, api, pool, client, manager, enabled = sys.argv[1:]
 overrides = {
     "SiutindeiAdminApiBaseUrl": api,
     "SiutindeiUserPoolId": pool,
@@ -462,7 +469,24 @@ overrides = {
     "SiutindeiBoardCatalogManagerId": manager,
     "SiutindeiBoardCatalogImportEnabled": enabled,
 }
-params = json.load(sys.stdin)
+with open(src, encoding="utf-8") as handle:
+    raw = handle.read().strip()
+if not raw or raw in {"null", "None"}:
+    raise SystemExit(
+        "CloudFormation returned no parameters for this stack."
+    )
+try:
+    params = json.loads(raw)
+except json.JSONDecodeError as exc:
+    preview = raw[:200].replace("\n", " ")
+    raise SystemExit(
+        f"CloudFormation parameters were not JSON: {exc}. Got: {preview}"
+    ) from exc
+if not isinstance(params, list):
+    raise SystemExit(
+        "CloudFormation parameters JSON must be a list, got "
+        + type(params).__name__
+    )
 rewritten = []
 seen = set()
 for item in params:
