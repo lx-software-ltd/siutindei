@@ -8,7 +8,7 @@ from typing import Any, Mapping
 from botocore.exceptions import ClientError
 from sqlalchemy.orm import Session
 
-from app.api.admin_auth import _set_session_audit_context
+from app.api.admin_auth import _is_admin, _set_session_audit_context
 from app.api.admin_imports_export import (
     build_export_payload,
     export_file_name,
@@ -114,19 +114,25 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
         raise ValidationError("Import file must be a JSON object")
 
     file_warnings: list[str] = []
+    allow_org_updates = _is_admin(event)
     with Session(get_engine()) as session:
-        _set_session_audit_context(session, event)
+        # Dry-run flushes fire the same audit trigger as a live import.
+        # Skip session context so leftover rows cannot look like live
+        # writes; persist_import_change also deletes in-txn audit rows.
+        if not dry_run:
+            _set_session_audit_context(session, event)
         summary, results = process_import_payload(
             session,
             payload,
             file_warnings,
             dry_run=dry_run,
+            allow_org_updates=allow_org_updates,
         )
         if dry_run:
             session.rollback()
 
     logger.info(
-        "Admin import completed",
+        ("Admin import dry-run completed" if dry_run else "Admin import completed"),
         extra={"summary": summary, "dry_run": dry_run},
     )
 

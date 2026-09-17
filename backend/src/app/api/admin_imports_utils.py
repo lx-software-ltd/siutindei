@@ -10,6 +10,7 @@ from typing import TypeVar
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.exceptions import ValidationError
@@ -18,11 +19,28 @@ T = TypeVar("T")
 
 
 def persist_import_change(session: Session, *, dry_run: bool) -> None:
-    """Commit live imports; flush only during dry-run."""
+    """Commit live imports; flush only during dry-run.
+
+    Dry-run flush fires AFTER INSERT/UPDATE audit triggers in the same
+    transaction. Those rows are deleted here so a missed rollback cannot
+    persist dry-run noise. The handler still rolls back the session.
+    """
     if dry_run:
         session.flush()
+        _discard_dry_run_audit_rows(session)
     else:
         session.commit()
+
+
+def _discard_dry_run_audit_rows(session: Session) -> None:
+    """Drop audit_log rows inserted by this dry-run transaction."""
+    bind = session.get_bind()
+    dialect = getattr(getattr(bind, "dialect", None), "name", "")
+    if dialect != "postgresql":
+        return
+    session.execute(
+        text("DELETE FROM audit_log " "WHERE xmin = pg_current_xact_id()::xid")
+    )
 
 
 def rollback_import_change(session: Session, *, dry_run: bool) -> None:

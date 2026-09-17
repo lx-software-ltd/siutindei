@@ -508,7 +508,7 @@ the revision the database is at, and the rollback wedges in
 | `DatabaseProxyEndpoint` | RDS Proxy endpoint | Endpoint for database connections via proxy |
 | `UserPoolId` | Cognito User Pool ID | User Pool identifier |
 | `UserPoolClientId` | Cognito User Pool Client ID | OAuth client identifier |
-| `ImporterUserPoolClientId` | Cognito importer app client ID | `ADMIN_USER_PASSWORD_AUTH` client for catalog import |
+| `ImporterUserPoolClientId` | Cognito importer app client ID | `ADMIN_USER_PASSWORD_AUTH` client for catalog import. Operator setup: `scripts/ops/board-importer`. Catalog switch: lx-software `params/production.json`. |
 | `OrganizationImagesBucketName` | S3 bucket name | Organization media bucket |
 | `OrganizationImagesBaseUrl` | S3 bucket URL | Public URL for organization images |
 | `AdminImportExportBucketName` | S3 bucket name | Admin import/export JSON bucket |
