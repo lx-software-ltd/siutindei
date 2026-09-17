@@ -184,10 +184,12 @@ two method ARNs only — it does not use the cached ``/*`` wildcard, so a
 5-minute authorizer cache after presign cannot authorize other admin
 routes. The handler still re-checks `_is_importer` / `_is_admin`.
 Importer-only tokens skip an existing organization only when
-`manager_id` matches, then create missing venues and activities
-(existing children are skipped, not updated) and never call
+`manager_id` matches (case-insensitive), then create missing venues,
+activities, pricing, and schedules (existing children are skipped
+before name resolution, not updated) and never call
 `_update_organization`. A foreign name match still returns per-record
-`exists` and skips children.
+`exists` and skips children. Activity-to-venue links use the single
+venue from this import payload, not other venues already on the org.
 Admin imports may update an org whose `manager_id` already matches the
 payload; import never writes `manager_id` on update. The importer app
 client enables `ALLOW_ADMIN_USER_PASSWORD_AUTH` for

@@ -37,10 +37,14 @@ AND (
 
 
 def upgrade() -> None:
-    """Backfill activity_locations for single-venue orphan activities."""
+    """Backfill activity_locations for single-venue orphan activities.
+
+    INSERT fires the ``activity_locations`` audit trigger with no app
+    session user, so leftover audit rows have ``source='trigger'``.
+    """
     op.execute(LINK_ORPHAN_ACTIVITIES_SQL)
 
 
 def downgrade() -> None:
-    """Keep backfilled joins; they are valid catalog data."""
+    """Irreversible: backfilled joins are valid catalog data."""
     return

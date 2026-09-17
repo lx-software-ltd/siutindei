@@ -36,6 +36,7 @@ def process_pricing(
     base_path: str,
     *,
     dry_run: bool = False,
+    allow_updates: bool = True,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_pricing, dict):
@@ -90,6 +91,7 @@ def process_pricing(
                 location,
                 raw_pricing,
                 dry_run=dry_run,
+                allow_updates=allow_updates,
             ),
         )
     except ValidationError as exc:
@@ -130,6 +132,7 @@ def process_schedule(
     base_path: str,
     *,
     dry_run: bool = False,
+    allow_updates: bool = True,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_schedule, dict):
@@ -189,6 +192,7 @@ def process_schedule(
                 raw_schedule,
                 warnings,
                 dry_run=dry_run,
+                allow_updates=allow_updates,
             ),
         )
     except ValidationError as exc:

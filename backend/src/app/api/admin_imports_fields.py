@@ -41,24 +41,28 @@ def apply_default_manager_id(payload: dict[str, Any]) -> None:
             org["manager_id"] = manager_id
 
 
+def manager_ids_match(existing_id: Any, payload_id: Any) -> bool:
+    """Compare manager ids without case or surrounding whitespace."""
+    if payload_id is None:
+        return False
+    return str(existing_id).strip().lower() == str(payload_id).strip().lower()
+
+
 def guard_import_organization_update(
     existing: Any,
     body: dict[str, Any],
-    *,
-    allow_updates: bool,
 ) -> None:
-    """Block importer takeovers and manager_id changes on update.
+    """Block manager_id changes on admin import update.
 
-    Importer-only callers skip an existing org when payload manager_id
-    matches (handled in ``upsert_organization``). A foreign name match
-    is ``exists`` and skips children. Admin updates may continue only
-    when payload manager_id matches the current manager (or is omitted).
-    Import never writes manager_id on update.
+    Called only after ``upsert_organization`` has confirmed
+    ``allow_updates``. A different payload manager_id fails the
+    record. Import never writes manager_id on update.
     """
-    if not allow_updates:
-        raise ValidationError("exists", field="name")
     payload = body.get("manager_id")
-    if payload is not None and str(existing.manager_id) != str(payload):
+    if payload is not None and not manager_ids_match(
+        existing.manager_id,
+        payload,
+    ):
         raise ValidationError(
             "manager_id cannot be changed on update",
             field="manager_id",

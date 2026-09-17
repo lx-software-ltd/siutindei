@@ -7,10 +7,17 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError, MultipleResultsFound
+from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
-from app.api.admin_imports_fields import guard_import_organization_update
+from app.api.admin_imports_fields import (
+    guard_import_organization_update,
+    manager_ids_match,
+)
+from app.api.admin_imports_venues import (
+    LINKED_VENUE_WARNING,
+    link_activity_to_venue,
+)
 from app.api.admin_imports_utils import (
     collect_unknown_fields,
     parse_day_of_week,
@@ -32,7 +39,7 @@ from app.api.admin_validators import (
     _parse_languages,
     _validate_string_length,
 )
-from app.db.models import Activity, ActivityCategory, ActivityLocation
+from app.db.models import Activity, ActivityCategory
 from app.db.models import ActivityPricing, ActivitySchedule
 from app.db.models import GeographicArea, Location, Organization, PricingType
 from app.db.repositories import (
@@ -154,17 +161,10 @@ def upsert_organization(
         body.pop(extra, None)
     if existing:
         if not allow_updates:
-            payload_manager = body.get("manager_id")
-            if payload_manager is not None and str(existing.manager_id) == str(
-                payload_manager
-            ):
+            if manager_ids_match(existing.manager_id, body.get("manager_id")):
                 return existing, "skipped"
             raise ValidationError("exists", field="name")
-        guard_import_organization_update(
-            existing,
-            body,
-            allow_updates=allow_updates,
-        )
+        guard_import_organization_update(existing, body)
         updated = _update_organization(repo, existing, body)
         repo.update(updated)
         persist_import_change(session, dry_run=dry_run)
@@ -198,13 +198,14 @@ def upsert_location(
     except MultipleResultsFound as exc:
         raise ValidationError("Multiple locations found", field="name") from exc
 
+    if existing and not allow_updates:
+        return existing, "skipped"
+
     body = _filter_fields(raw_location, ALLOWED_LOCATION_FIELDS)
     _resolve_location_area_fields(session, body)
     if raw_location.get("name") is not None or raw_location.get("address") is not None:
         body["address"] = address_value
     if existing:
-        if not allow_updates:
-            return existing, "skipped"
         updated = _update_location(repo, existing, body)
         repo.update(updated)
         persist_import_change(session, dry_run=dry_run)
@@ -228,6 +229,7 @@ def upsert_activity(
     dry_run: bool = False,
     allow_updates: bool = True,
     venue: Location | None = None,
+    warnings: list[str] | None = None,
 ) -> tuple[Activity, str]:
     repo = ActivityRepository(session)
     name = _validate_string_length(
@@ -248,6 +250,14 @@ def upsert_activity(
             field="name",
         ) from exc
 
+    if existing and not allow_updates:
+        wrote_link = link_activity_to_venue(session, existing, venue)
+        if wrote_link:
+            if warnings is not None:
+                warnings.append(LINKED_VENUE_WARNING)
+            persist_import_change(session, dry_run=dry_run)
+        return existing, "skipped"
+
     body = _filter_fields(raw_activity, ALLOWED_ACTIVITY_FIELDS)
     _resolve_activity_category_fields(session, body)
     body.pop("pricing", None)
@@ -255,11 +265,6 @@ def upsert_activity(
     body.pop("source_url", None)
     body.pop("vetting_note", None)
     if existing:
-        if not allow_updates:
-            wrote_link = link_activity_to_venue(session, existing, venue)
-            if wrote_link:
-                persist_import_change(session, dry_run=dry_run)
-            return existing, "skipped"
         updated = _update_activity(repo, existing, body)
         repo.update(updated)
         link_activity_to_venue(session, updated, venue)
@@ -283,6 +288,7 @@ def upsert_pricing(
     raw_pricing: dict[str, Any],
     *,
     dry_run: bool = False,
+    allow_updates: bool = True,
 ) -> tuple[ActivityPricing, str]:
     pricing_type = raw_pricing.get("pricing_type")
     if not pricing_type:
@@ -307,6 +313,9 @@ def upsert_pricing(
             "Multiple pricing entries found",
             field="pricing_type",
         ) from exc
+
+    if existing and not allow_updates:
+        return existing, "skipped"
 
     body = _filter_fields(raw_pricing, ALLOWED_PRICING_FIELDS)
     body["pricing_type"] = pricing_enum.value
@@ -334,9 +343,19 @@ def upsert_schedule(
     warnings: list[str],
     *,
     dry_run: bool = False,
+    allow_updates: bool = True,
 ) -> tuple[ActivitySchedule, str]:
     tzinfo = parse_timezone(raw_schedule.get("timezone"), "timezone")
     languages = _parse_languages(raw_schedule.get("languages"))
+    repo = ActivityScheduleRepository(session)
+    existing = repo.find_by_activity_location_languages(
+        _coerce_uuid(activity.id),
+        _coerce_uuid(location.id),
+        languages,
+    )
+    if existing and not allow_updates:
+        return existing, "skipped"
+
     entries = parse_weekly_entries_local(
         raw_schedule.get("weekly_entries"),
         tzinfo,
@@ -348,12 +367,6 @@ def upsert_schedule(
             field="weekly_entries",
         )
 
-    repo = ActivityScheduleRepository(session)
-    existing = repo.find_by_activity_location_languages(
-        _coerce_uuid(activity.id),
-        _coerce_uuid(location.id),
-        languages,
-    )
     body = {
         "activity_id": str(activity.id),
         "location_id": str(location.id),
@@ -419,57 +432,6 @@ def merge_schedule_entries(
         )
     )
     return merged
-
-
-def resolve_single_imported_venue(
-    session: Session,
-    org: Organization,
-    cache: dict[str, Location],
-) -> Location | None:
-    """Return the org's single imported venue, if there is exactly one."""
-    unique: dict[str, Location] = {}
-    for location in cache.values():
-        unique[str(location.id)] = location
-    if len(unique) == 1:
-        return next(iter(unique.values()))
-    if unique:
-        return None
-    locations = LocationRepository(session).find_by_organization(
-        _coerce_uuid(org.id),
-        limit=2,
-    )
-    if len(locations) == 1:
-        return locations[0]
-    return None
-
-
-def link_activity_to_venue(
-    session: Session,
-    activity: Activity,
-    venue: Location | None,
-) -> bool:
-    """Attach activity to a venue. Return True when a join row is added."""
-    if venue is None:
-        return False
-    activity_id = _coerce_uuid(activity.id)
-    location_id = _coerce_uuid(venue.id)
-    existing = session.get(ActivityLocation, (activity_id, location_id))
-    if existing is not None:
-        return False
-    session.add(
-        ActivityLocation(
-            activity_id=activity_id,
-            location_id=location_id,
-        )
-    )
-    try:
-        session.flush()
-    except IntegrityError as exc:
-        raise ValidationError(
-            "failed to link activity venue",
-            field="location",
-        ) from exc
-    return True
 
 
 def resolve_location(
