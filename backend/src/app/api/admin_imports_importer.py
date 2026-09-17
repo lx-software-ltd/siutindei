@@ -13,6 +13,12 @@ from app.api.admin_imports_results import (
     record_result,
     record_skipped_children,
 )
+from app.api.admin_imports_fields import (
+    apply_default_manager_id,
+    apply_source_attribution,
+    collect_flat_org_warnings,
+    expand_board_flat_org,
+)
 from app.api.admin_imports_upsert import (
     ALLOWED_ACTIVITY_FIELDS,
     ALLOWED_LOCATION_FIELDS,
@@ -21,7 +27,11 @@ from app.api.admin_imports_upsert import (
     upsert_location,
     upsert_organization,
 )
-from app.api.admin_imports_utils import collect_unknown_fields
+from app.api.admin_imports_utils import (
+    collect_unknown_fields,
+    rollback_import_change,
+    run_import_upsert,
+)
 from app.api.admin_validators import (
     MAX_ADDRESS_LENGTH,
     MAX_NAME_LENGTH,
@@ -30,15 +40,17 @@ from app.api.admin_validators import (
 from app.db.models import Location, Organization
 from app.exceptions import ValidationError
 
-ALLOWED_ROOT_FIELDS = {"organizations"}
+ALLOWED_ROOT_FIELDS = {"organizations", "default_manager_id"}
 
 
 def process_import_payload(
     session: Session,
     payload: dict[str, Any],
     file_warnings: list[str],
+    dry_run: bool = False,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     collect_unknown_fields(payload, ALLOWED_ROOT_FIELDS, "root", file_warnings)
+    apply_default_manager_id(payload)
 
     orgs_raw = payload.get("organizations")
     if not isinstance(orgs_raw, list):
@@ -58,6 +70,7 @@ def process_import_payload(
             index,
             results,
             summary,
+            dry_run=dry_run,
         )
 
     return summary, results
@@ -69,6 +82,8 @@ def process_organization(
     index: int,
     results: list[dict[str, Any]],
     summary: dict[str, Any],
+    *,
+    dry_run: bool = False,
 ) -> None:
     path = f"organizations[{index}]"
     if not isinstance(raw_org, dict):
@@ -84,7 +99,10 @@ def process_organization(
         return
 
     warnings: list[str] = []
+    collect_flat_org_warnings(raw_org, path, warnings)
+    expand_board_flat_org(raw_org)
     collect_unknown_fields(raw_org, ALLOWED_ORG_FIELDS, path, warnings)
+    apply_source_attribution(raw_org)
     org_name = _validate_string_length(
         raw_org.get("name"),
         "name",
@@ -106,7 +124,11 @@ def process_organization(
         return
 
     try:
-        org, status = upsert_organization(session, raw_org)
+        org, status = run_import_upsert(
+            session,
+            dry_run,
+            lambda: upsert_organization(session, raw_org, dry_run=dry_run),
+        )
     except ValidationError as exc:
         record_result(
             results,
@@ -119,7 +141,7 @@ def process_organization(
             path=path,
         )
         record_skipped_children(raw_org, org_name or path, results, summary)
-        session.rollback()
+        rollback_import_change(session, dry_run=dry_run)
         return
 
     record_result(
@@ -156,6 +178,7 @@ def process_organization(
                 results,
                 summary,
                 f"{path}.locations",
+                dry_run=dry_run,
             )
 
     raw_activities = raw_org.get("activities", [])
@@ -180,6 +203,7 @@ def process_organization(
                 results,
                 summary,
                 f"{path}.activities",
+                dry_run=dry_run,
             )
 
 
@@ -192,6 +216,8 @@ def process_location(
     results: list[dict[str, Any]],
     summary: dict[str, Any],
     base_path: str,
+    *,
+    dry_run: bool = False,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_location, dict):
@@ -245,11 +271,16 @@ def process_location(
         address_value = location_name
 
     try:
-        location, status = upsert_location(
+        location, status = run_import_upsert(
             session,
-            org,
-            raw_location,
-            address_value,
+            dry_run,
+            lambda: upsert_location(
+                session,
+                org,
+                raw_location,
+                address_value,
+                dry_run=dry_run,
+            ),
         )
     except ValidationError as exc:
         record_result(
@@ -262,7 +293,7 @@ def process_location(
             errors=[format_error(exc)],
             path=path,
         )
-        session.rollback()
+        rollback_import_change(session, dry_run=dry_run)
         return
 
     location_cache[location_name] = location
@@ -287,6 +318,8 @@ def process_activity(
     results: list[dict[str, Any]],
     summary: dict[str, Any],
     base_path: str,
+    *,
+    dry_run: bool = False,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_activity, dict):
@@ -308,6 +341,7 @@ def process_activity(
         path,
         warnings,
     )
+    apply_source_attribution(raw_activity)
     activity_name = _validate_string_length(
         raw_activity.get("name"),
         "name",
@@ -329,7 +363,16 @@ def process_activity(
         return
 
     try:
-        activity, status = upsert_activity(session, org, raw_activity)
+        activity, status = run_import_upsert(
+            session,
+            dry_run,
+            lambda: upsert_activity(
+                session,
+                org,
+                raw_activity,
+                dry_run=dry_run,
+            ),
+        )
     except ValidationError as exc:
         record_result(
             results,
@@ -342,7 +385,7 @@ def process_activity(
             path=path,
         )
         record_skipped_children(raw_activity, activity_name, results, summary)
-        session.rollback()
+        rollback_import_change(session, dry_run=dry_run)
         return
 
     record_result(
@@ -379,6 +422,7 @@ def process_activity(
                 results,
                 summary,
                 f"{path}.pricing",
+                dry_run=dry_run,
             )
 
     raw_schedules = raw_activity.get("schedules", [])
@@ -404,4 +448,5 @@ def process_activity(
                 results,
                 summary,
                 f"{path}.schedules",
+                dry_run=dry_run,
             )

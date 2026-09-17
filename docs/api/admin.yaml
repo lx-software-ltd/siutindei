@@ -194,7 +194,12 @@ paths:
   /v1/admin/imports/presign:
     post:
       summary: Create admin import upload URL
-      description: Generate a presigned URL for uploading a JSON import file to S3.
+      description: |
+        Generate a presigned URL for uploading a JSON import file to S3.
+        Requires a Cognito JWT in the `admin` or `importer` group.
+      security:
+        - AdminGroupAuth: []
+        - ImporterGroupAuth: []
       requestBody:
         required: true
         content:
@@ -221,6 +226,13 @@ paths:
       description: |
         Process a JSON import file previously uploaded to S3. The import supports
         partial success and returns per-record warnings and errors.
+        Requires a Cognito JWT in the `admin` or `importer` group.
+        `GET /v1/admin/imports/export` remains admin-only.
+        When `dry_run` is true the file is validated the same way as a live
+        import (presign → PUT → POST) but no rows are committed.
+      security:
+        - AdminGroupAuth: []
+        - ImporterGroupAuth: []
       requestBody:
         required: true
         content:
@@ -1996,6 +2008,15 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: Cognito JWT token, user must be in 'admin' group
+    ImporterGroupAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Cognito JWT token, user must be in the 'importer' or 'admin' group.
+        Allowed only on POST /v1/admin/imports and POST /v1/admin/imports/presign.
+        The importer app client enables ALLOW_ADMIN_USER_PASSWORD_AUTH for
+        AdminInitiateAuth (board catalog import).
     ManagerGroupAuth:
       type: http
       scheme: bearer
@@ -2035,6 +2056,11 @@ components:
       type: object
       required: [organizations]
       properties:
+        default_manager_id:
+          type: string
+          format: uuid
+          description: |
+            Applied to any organization that omits manager_id. Must be a UUID.
         organizations:
           type: array
           items:
@@ -2051,13 +2077,60 @@ components:
         description:
           type: string
           maxLength: 5000
+          description: |
+            Organization description. The appended source line
+            (`Source: <url>` plus optional ` — <note>`) counts toward
+            this 5000-character limit.
         name_translations:
           $ref: '#/components/schemas/TranslationMap'
         description_translations:
           $ref: '#/components/schemas/TranslationMap'
         manager_id:
           type: string
-          description: Cognito user sub (required for new orgs).
+          description: |
+            Cognito user sub (required for new orgs unless default_manager_id
+            is set at the file root).
+        source_url:
+          type: string
+          description: |
+            Appended as `Source: <url>`. When vetting_note is also set,
+            the line is `Source: <url> — <note>`.
+        vetting_note:
+          type: string
+          description: |
+            Optional note after the source URL. URL-only omits ` — `.
+            Note-only becomes `Source: <note>`.
+        area_name:
+          type: string
+          description: |
+            Board-flat org field. When locations[] is empty, the importer
+            synthesizes one location resolved like location area_name.
+            Ignored with a warning when locations[] is already present.
+        category_name:
+          type: string
+          description: |
+            Board-flat org field. When activities[] is empty, the importer
+            synthesizes one activity with default ages 0–18 (intended
+            product default for catalog venues) resolved like activity
+            category_name. Ignored with a warning when activities[] is
+            already present.
+        address:
+          type: string
+          description: Board-flat org field used as the synthesized location name.
+        lat:
+          type: number
+        lng:
+          type: number
+        website:
+          type: string
+          description: |
+            Accepted on board-flat orgs and recorded as a warning;
+            not stored on the organization.
+        phone:
+          type: string
+          description: |
+            Board-flat org field. An 8-digit HK number is mapped to
+            phone_country_code=HK and phone_number.
         phone_country_code:
           type: string
           maxLength: 2
@@ -2120,6 +2193,12 @@ components:
         area_id:
           type: string
           format: uuid
+        area_name:
+          type: string
+          description: |
+            Alternative to area_id. Resolved by exact match on
+            geographic_areas.name where level is district. area_id wins
+            when both are set.
         lat:
           type: number
           minimum: -90
@@ -2139,6 +2218,9 @@ components:
         description:
           type: string
           maxLength: 5000
+          description: |
+            Activity description. The appended source line counts toward
+            this 5000-character limit.
         name_translations:
           $ref: '#/components/schemas/TranslationMap'
         description_translations:
@@ -2146,6 +2228,19 @@ components:
         category_id:
           type: string
           format: uuid
+        category_name:
+          type: string
+          description: |
+            Alternative to category_id. Resolved by exact match on
+            activity_categories.name. category_id wins when both are set.
+        source_url:
+          type: string
+          description: |
+            Appended as `Source: <url>` plus optional ` — <note>`.
+        vetting_note:
+          type: string
+          description: |
+            Optional note after the source URL on the activity.
         age_min:
           type: integer
           minimum: 0
@@ -2247,6 +2342,12 @@ components:
         object_key:
           type: string
           description: S3 object key returned from the presign endpoint.
+        dry_run:
+          type: boolean
+          default: false
+          description: |
+            When true, validate and report results without committing
+            creates or updates. Same presign + PUT flow as a live import.
 
     AdminImportCounts:
       type: object
@@ -2338,6 +2439,9 @@ components:
           type: array
           items:
             type: string
+        dry_run:
+          type: boolean
+          description: Echo of the request dry_run flag.
 
     AdminExportResponse:
       type: object

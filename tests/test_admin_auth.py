@@ -9,7 +9,7 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "backend" / "src"))
 
-from app.api.admin import _is_admin  # noqa: E402
+from app.api.admin import _is_admin, _is_importer  # noqa: E402
 
 
 def test_is_admin_true_with_group() -> None:
@@ -43,6 +43,29 @@ def test_is_admin_false_without_claims() -> None:
 
     event = {"requestContext": {}}
     assert not _is_admin(event)
+
+
+def test_is_importer_true_with_group() -> None:
+    event = {
+        "requestContext": {
+            "authorizer": {
+                "groups": "importer",
+                "userSub": "abc",
+            }
+        }
+    }
+    assert _is_importer(event)
+
+
+def test_is_importer_false_without_group() -> None:
+    event = {
+        "requestContext": {
+            "authorizer": {
+                "claims": {"cognito:groups": "admin"},
+            }
+        }
+    }
+    assert not _is_importer(event)
 
 
 def test_admin_cursor_roundtrip() -> None:

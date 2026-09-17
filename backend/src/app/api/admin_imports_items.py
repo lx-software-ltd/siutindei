@@ -14,7 +14,11 @@ from app.api.admin_imports_upsert import (
     upsert_pricing,
     upsert_schedule,
 )
-from app.api.admin_imports_utils import collect_unknown_fields
+from app.api.admin_imports_utils import (
+    collect_unknown_fields,
+    rollback_import_change,
+    run_import_upsert,
+)
 from app.api.admin_validators import MAX_ADDRESS_LENGTH, _validate_string_length
 from app.db.models import Activity, Location, Organization
 from app.exceptions import ValidationError
@@ -30,6 +34,8 @@ def process_pricing(
     results: list[dict[str, Any]],
     summary: dict[str, Any],
     base_path: str,
+    *,
+    dry_run: bool = False,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_pricing, dict):
@@ -75,11 +81,16 @@ def process_pricing(
         return
 
     try:
-        pricing, status = upsert_pricing(
+        pricing, status = run_import_upsert(
             session,
-            activity,
-            location,
-            raw_pricing,
+            dry_run,
+            lambda: upsert_pricing(
+                session,
+                activity,
+                location,
+                raw_pricing,
+                dry_run=dry_run,
+            ),
         )
     except ValidationError as exc:
         record_result(
@@ -92,7 +103,7 @@ def process_pricing(
             errors=[format_error(exc)],
             path=path,
         )
-        session.rollback()
+        rollback_import_change(session, dry_run=dry_run)
         return
 
     record_result(
@@ -117,6 +128,8 @@ def process_schedule(
     results: list[dict[str, Any]],
     summary: dict[str, Any],
     base_path: str,
+    *,
+    dry_run: bool = False,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_schedule, dict):
@@ -166,12 +179,17 @@ def process_schedule(
         return
 
     try:
-        schedule, status = upsert_schedule(
+        schedule, status = run_import_upsert(
             session,
-            activity,
-            location,
-            raw_schedule,
-            warnings,
+            dry_run,
+            lambda: upsert_schedule(
+                session,
+                activity,
+                location,
+                raw_schedule,
+                warnings,
+                dry_run=dry_run,
+            ),
         )
     except ValidationError as exc:
         record_result(
@@ -184,7 +202,7 @@ def process_schedule(
             errors=[format_error(exc)],
             path=path,
         )
-        session.rollback()
+        rollback_import_change(session, dry_run=dry_run)
         return
 
     record_result(

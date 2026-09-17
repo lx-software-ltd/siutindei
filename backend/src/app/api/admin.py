@@ -19,6 +19,7 @@ from app.api.admin_audit import _handle_audit_logs
 from app.api.admin_auth import (
     _get_managed_organization_ids,
     _is_admin,
+    _is_importer,
     _is_manager,
 )
 from app.api.admin_cognito import (
@@ -148,7 +149,13 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
     if base_path != "admin":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    if not _is_admin(event):
+    can_import = (
+        resource == "imports"
+        and method == "POST"
+        and resource_id in (None, "presign")
+        and _is_importer(event)
+    )
+    if not _is_admin(event) and not can_import:
         logger.warning("Unauthorized admin access attempt")
         return json_response(403, {"error": "Forbidden"}, event=event)
 

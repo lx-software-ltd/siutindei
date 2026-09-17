@@ -288,6 +288,7 @@ export interface paths {
         /**
          * Create admin import upload URL
          * @description Generate a presigned URL for uploading a JSON import file to S3.
+         *     Requires a Cognito JWT in the `admin` or `importer` group.
          */
         post: {
             parameters: {
@@ -341,6 +342,10 @@ export interface paths {
          * Process admin import
          * @description Process a JSON import file previously uploaded to S3. The import supports
          *     partial success and returns per-record warnings and errors.
+         *     Requires a Cognito JWT in the `admin` or `importer` group.
+         *     `GET /v1/admin/imports/export` remains admin-only.
+         *     When `dry_run` is true the file is validated the same way as a live
+         *     import (presign → PUT → POST) but no rows are committed.
          */
         post: {
             parameters: {
@@ -3978,16 +3983,67 @@ export interface components {
             [key: string]: string;
         };
         AdminImportFile: {
+            /**
+             * Format: uuid
+             * @description Applied to any organization that omits manager_id. Must be a UUID.
+             */
+            default_manager_id?: string;
             organizations: components["schemas"]["AdminImportOrganization"][];
         };
         AdminImportOrganization: {
             /** @description Organization name (unique). */
             name: string;
+            /**
+             * @description Organization description. The appended source line
+             *     (`Source: <url>` plus optional ` — <note>`) counts toward
+             *     this 5000-character limit.
+             */
             description?: string;
             name_translations?: components["schemas"]["TranslationMap"];
             description_translations?: components["schemas"]["TranslationMap"];
-            /** @description Cognito user sub (required for new orgs). */
+            /**
+             * @description Cognito user sub (required for new orgs unless default_manager_id
+             *     is set at the file root).
+             */
             manager_id?: string;
+            /**
+             * @description Appended as `Source: <url>`. When vetting_note is also set,
+             *     the line is `Source: <url> — <note>`.
+             */
+            source_url?: string;
+            /**
+             * @description Optional note after the source URL. URL-only omits ` — `.
+             *     Note-only becomes `Source: <note>`.
+             */
+            vetting_note?: string;
+            /**
+             * @description Board-flat org field. When locations[] is empty, the importer
+             *     synthesizes one location resolved like location area_name.
+             *     Ignored with a warning when locations[] is already present.
+             */
+            area_name?: string;
+            /**
+             * @description Board-flat org field. When activities[] is empty, the importer
+             *     synthesizes one activity with default ages 0–18 (intended
+             *     product default for catalog venues) resolved like activity
+             *     category_name. Ignored with a warning when activities[] is
+             *     already present.
+             */
+            category_name?: string;
+            /** @description Board-flat org field used as the synthesized location name. */
+            address?: string;
+            lat?: number;
+            lng?: number;
+            /**
+             * @description Accepted on board-flat orgs and recorded as a warning;
+             *     not stored on the organization.
+             */
+            website?: string;
+            /**
+             * @description Board-flat org field. An 8-digit HK number is mapped to
+             *     phone_country_code=HK and phone_number.
+             */
+            phone?: string;
             phone_country_code?: string;
             phone_number?: string;
             email?: string;
@@ -4013,16 +4069,35 @@ export interface components {
             address?: string;
             /** Format: uuid */
             area_id: string;
+            /**
+             * @description Alternative to area_id. Resolved by exact match on
+             *     geographic_areas.name where level is district. area_id wins
+             *     when both are set.
+             */
+            area_name?: string;
             lat?: number;
             lng?: number;
         };
         AdminImportActivity: {
             name: string;
+            /**
+             * @description Activity description. The appended source line counts toward
+             *     this 5000-character limit.
+             */
             description?: string;
             name_translations?: components["schemas"]["TranslationMap"];
             description_translations?: components["schemas"]["TranslationMap"];
             /** Format: uuid */
             category_id: string;
+            /**
+             * @description Alternative to category_id. Resolved by exact match on
+             *     activity_categories.name. category_id wins when both are set.
+             */
+            category_name?: string;
+            /** @description Appended as `Source: <url>` plus optional ` — <note>`. */
+            source_url?: string;
+            /** @description Optional note after the source URL on the activity. */
+            vetting_note?: string;
             age_min: number;
             age_max: number;
             pricing?: components["schemas"]["AdminImportPricing"][];
@@ -4067,6 +4142,12 @@ export interface components {
         AdminImportRequest: {
             /** @description S3 object key returned from the presign endpoint. */
             object_key: string;
+            /**
+             * @description When true, validate and report results without committing
+             *     creates or updates. Same presign + PUT flow as a live import.
+             * @default false
+             */
+            dry_run: boolean;
         };
         AdminImportCounts: {
             created: number;
@@ -4102,6 +4183,8 @@ export interface components {
             summary: components["schemas"]["AdminImportSummary"];
             results: components["schemas"]["AdminImportResult"][];
             file_warnings: string[];
+            /** @description Echo of the request dry_run flag. */
+            dry_run?: boolean;
         };
         AdminExportResponse: {
             download_url: string;
