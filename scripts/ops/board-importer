@@ -1,0 +1,512 @@
+#!/usr/bin/env bash
+# Local CLI for the Siu Tin Dei board catalog importer (Option A).
+#
+# Prerequisites:
+#   - AWS CLI v2, python3, curl
+#   - credentials for account 588024549699 (ap-southeast-1)
+#   - siutindei stack output ImporterUserPoolClientId (PR #508+)
+#
+# Default setup is safe: it creates the Cognito importer user, writes the
+# credentials secret, and smoke-tests AdminInitiateAuth + presign.
+# It does NOT flip SiutindeiBoardCatalogImportEnabled.
+#
+# Usage:
+#   ./scripts/ops/board-importer setup
+#   ./scripts/ops/board-importer setup --rotate-password
+#   ./scripts/ops/board-importer setup --apply-params --manager-id <uuid>
+#   ./scripts/ops/board-importer setup --apply-params --manager-id <uuid> \
+#     --enable-import
+#   ./scripts/ops/board-importer list-managers
+#   ./scripts/ops/board-importer rotate-password
+#   ./scripts/ops/board-importer apply-params --manager-id <uuid>
+#   ./scripts/ops/board-importer --profile prod --region ap-southeast-1 setup
+
+set -euo pipefail
+
+REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-ap-southeast-1}}"
+PROFILE="${AWS_PROFILE:-}"
+SIUTINDEI_STACK="${SIUTINDEI_STACK:-lxsoftware-siutindei}"
+LXSOFTWARE_STACK="${LXSOFTWARE_STACK:-lxsoftware}"
+SECRET_NAME="${SECRET_NAME:-lxsoftware-admin-siutindei-board-importer-credentials}"
+IMPORTER_EMAIL="${IMPORTER_EMAIL:-siutindei-board-importer@lx-software.com}"
+IMPORTER_GROUP="${IMPORTER_GROUP:-importer}"
+API_BASE="${API_BASE:-https://siutindei-api.lx-software.com/v1}"
+MANAGER_ID="${MANAGER_ID:-}"
+
+COMMAND=""
+APPLY_LXSOFTWARE=false
+ENABLE_IMPORT=false
+ROTATE_PASSWORD=false
+
+usage() {
+  sed -n '2,23p' "$0"
+}
+
+require_cmd() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "Missing required command: $1" >&2
+    if [[ "$1" == "aws" ]]; then
+      echo "Install AWS CLI v2 and configure credentials, then retry." >&2
+    fi
+    exit 1
+  fi
+}
+
+aws_cli() {
+  if [[ -n "$PROFILE" ]]; then
+    aws --profile "$PROFILE" --region "$REGION" "$@"
+  else
+    aws --region "$REGION" "$@"
+  fi
+}
+
+cfn_output() {
+  local stack="$1" key="$2"
+  aws_cli cloudformation describe-stacks \
+    --stack-name "$stack" \
+    --query "Stacks[0].Outputs[?OutputKey=='${key}'].OutputValue" \
+    --output text
+}
+
+require_output() {
+  local stack="$1" key="$2"
+  local value
+  value="$(cfn_output "$stack" "$key")"
+  if [[ -z "$value" || "$value" == "None" ]]; then
+    echo "Missing CloudFormation output ${stack}:${key}." >&2
+    echo "PR #508 is not deployed yet, or the account/region is wrong." >&2
+    exit 1
+  fi
+  printf '%s' "$value"
+}
+
+generate_password() {
+  python3 - <<'PY'
+import secrets
+import string
+
+alphabet = string.ascii_letters + string.digits + "!@#%^*_+-="
+symbols = "!@#%^*_+-="
+while True:
+    password = "".join(secrets.choice(alphabet) for _ in range(24))
+    classes = (
+        any(char.islower() for char in password),
+        any(char.isupper() for char in password),
+        any(char.isdigit() for char in password),
+        any(char in symbols for char in password),
+    )
+    if all(classes):
+        print(password)
+        break
+PY
+}
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      setup|list-managers|rotate-password|apply-params)
+        if [[ -n "$COMMAND" ]]; then
+          echo "Unexpected extra command: $1" >&2
+          exit 2
+        fi
+        COMMAND="$1"
+        shift
+        ;;
+      --profile)
+        PROFILE="${2:-}"
+        if [[ -z "$PROFILE" ]]; then
+          echo "--profile requires a value" >&2
+          exit 2
+        fi
+        shift 2
+        ;;
+      --region)
+        REGION="${2:-}"
+        if [[ -z "$REGION" ]]; then
+          echo "--region requires a value" >&2
+          exit 2
+        fi
+        shift 2
+        ;;
+      --manager-id)
+        MANAGER_ID="${2:-}"
+        if [[ -z "$MANAGER_ID" ]]; then
+          echo "--manager-id requires a UUID" >&2
+          exit 2
+        fi
+        shift 2
+        ;;
+      --apply-lxsoftware-params|--apply-params)
+        APPLY_LXSOFTWARE=true
+        shift
+        ;;
+      --enable-import)
+        ENABLE_IMPORT=true
+        shift
+        ;;
+      --rotate-password)
+        ROTATE_PASSWORD=true
+        shift
+        ;;
+      --list-managers)
+        COMMAND="list-managers"
+        shift
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        echo "Unknown argument: $1" >&2
+        usage >&2
+        exit 2
+        ;;
+    esac
+  done
+
+  if [[ -z "$COMMAND" ]]; then
+    if [[ "$ROTATE_PASSWORD" == true ]]; then
+      COMMAND="rotate-password"
+    elif [[ "$APPLY_LXSOFTWARE" == true ]]; then
+      COMMAND="apply-params"
+    else
+      usage >&2
+      exit 2
+    fi
+  fi
+
+  if [[ "$COMMAND" == "rotate-password" ]]; then
+    ROTATE_PASSWORD=true
+    COMMAND="setup"
+  fi
+
+  if [[ "$COMMAND" == "apply-params" ]]; then
+    APPLY_LXSOFTWARE=true
+  fi
+
+  if [[ "$ENABLE_IMPORT" == true && "$APPLY_LXSOFTWARE" != true ]]; then
+    echo "--enable-import requires setup --apply-params or apply-params" >&2
+    exit 2
+  fi
+}
+
+print_identity() {
+  echo "== Region / account =="
+  aws_cli sts get-caller-identity \
+    --query '{Account:Account,Arn:Arn}' \
+    --output json
+  echo "Region: $REGION"
+  if [[ -n "$PROFILE" ]]; then
+    echo "Profile: $PROFILE"
+  fi
+}
+
+load_pool_and_client() {
+  POOL_ID="$(require_output "$SIUTINDEI_STACK" "UserPoolId")"
+  CLIENT_ID="$(require_output "$SIUTINDEI_STACK" "ImporterUserPoolClientId")"
+  echo "UserPoolId=$POOL_ID"
+  echo "ImporterUserPoolClientId=$CLIENT_ID"
+}
+
+confirm_importer_group() {
+  echo
+  echo "== Confirm importer group exists =="
+  aws_cli cognito-idp get-group \
+    --user-pool-id "$POOL_ID" \
+    --group-name "$IMPORTER_GROUP" \
+    --query '{Group:Group.GroupName,Description:Group.Description}' \
+    --output json
+}
+
+cmd_list_managers() {
+  echo
+  echo "== Users in manager group (pick a Username / sub for --manager-id) =="
+  aws_cli cognito-idp list-users-in-group \
+    --user-pool-id "$POOL_ID" \
+    --group-name manager \
+    --query 'Users[].{Username:Username,Sub:Attributes[?Name==`sub`]|[0].Value,Email:Attributes[?Name==`email`]|[0].Value,Status:UserStatus}' \
+    --output table
+  echo
+  echo "== Users in admin group =="
+  aws_cli cognito-idp list-users-in-group \
+    --user-pool-id "$POOL_ID" \
+    --group-name admin \
+    --query 'Users[].{Username:Username,Sub:Attributes[?Name==`sub`]|[0].Value,Email:Attributes[?Name==`email`]|[0].Value,Status:UserStatus}' \
+    --output table
+  echo
+  echo "Re-run setup with --apply-params --manager-id <Sub>"
+}
+
+ensure_importer_user() {
+  local user_exists=false
+  if aws_cli cognito-idp admin-get-user \
+    --user-pool-id "$POOL_ID" \
+    --username "$IMPORTER_EMAIL" >/dev/null 2>&1; then
+    user_exists=true
+    echo "Cognito user already exists: $IMPORTER_EMAIL"
+  fi
+
+  PASSWORD=""
+  local need_password=false
+  if [[ "$user_exists" != true || "$ROTATE_PASSWORD" == true ]]; then
+    need_password=true
+  fi
+
+  if [[ "$need_password" == true ]]; then
+    PASSWORD="$(generate_password)"
+  fi
+
+  if [[ "$user_exists" != true ]]; then
+    echo
+    echo "== Create importer user =="
+    aws_cli cognito-idp admin-create-user \
+      --user-pool-id "$POOL_ID" \
+      --username "$IMPORTER_EMAIL" \
+      --user-attributes \
+        Name=email,Value="$IMPORTER_EMAIL" \
+        Name=email_verified,Value=true \
+      --message-action SUPPRESS >/dev/null
+    echo "Created $IMPORTER_EMAIL"
+  fi
+
+  if [[ -n "$PASSWORD" ]]; then
+    aws_cli cognito-idp admin-set-user-password \
+      --user-pool-id "$POOL_ID" \
+      --username "$IMPORTER_EMAIL" \
+      --password "$PASSWORD" \
+      --permanent
+    echo "Set permanent password"
+  fi
+}
+
+ensure_importer_group_only() {
+  echo
+  echo "== Add to ${IMPORTER_GROUP} (never add this user to admin) =="
+  aws_cli cognito-idp admin-add-user-to-group \
+    --user-pool-id "$POOL_ID" \
+    --username "$IMPORTER_EMAIL" \
+    --group-name "$IMPORTER_GROUP"
+
+  local groups
+  groups="$(aws_cli cognito-idp admin-list-groups-for-user \
+    --user-pool-id "$POOL_ID" \
+    --username "$IMPORTER_EMAIL" \
+    --query 'Groups[].GroupName' \
+    --output text)"
+  echo "Groups: $groups"
+  if [[ "$groups" == *admin* ]]; then
+    echo "Refusing to continue: importer user is in admin. Remove it first." >&2
+    exit 1
+  fi
+}
+
+sync_secret() {
+  if [[ -n "$PASSWORD" ]]; then
+    echo
+    echo "== Write ${SECRET_NAME} =="
+    local secret_json
+    secret_json="$(python3 -c \
+      'import json,sys; print(json.dumps({"username":sys.argv[1],"password":sys.argv[2]}))' \
+      "$IMPORTER_EMAIL" "$PASSWORD")"
+    aws_cli secretsmanager put-secret-value \
+      --secret-id "$SECRET_NAME" \
+      --secret-string "$secret_json" \
+      --query '{ARN:ARN,VersionId:VersionId}' \
+      --output json
+    echo "Secret updated. Password is not printed."
+    return
+  fi
+
+  echo
+  echo "Password unchanged. Re-run with rotate-password to mint a new one."
+  local secret_json
+  secret_json="$(aws_cli secretsmanager get-secret-value \
+    --secret-id "$SECRET_NAME" \
+    --query SecretString \
+    --output text)"
+  PASSWORD="$(python3 -c \
+    'import json,sys; print(json.loads(sys.argv[1])["password"])' \
+    "$secret_json")"
+}
+
+smoke_auth_and_routes() {
+  echo
+  echo "== AdminInitiateAuth smoke test =="
+  local auth_json
+  auth_json="$(aws_cli cognito-idp admin-initiate-auth \
+    --user-pool-id "$POOL_ID" \
+    --client-id "$CLIENT_ID" \
+    --auth-flow ADMIN_USER_PASSWORD_AUTH \
+    --auth-parameters USERNAME="$IMPORTER_EMAIL",PASSWORD="$PASSWORD")"
+  local id_token
+  id_token="$(python3 -c \
+    'import json,sys; print(json.loads(sys.stdin.read())["AuthenticationResult"]["IdToken"])' \
+    <<<"$auth_json")"
+  echo "Got IdToken (${#id_token} chars)"
+
+  echo
+  echo "== Presign smoke test (importer must 200; export must 403) =="
+  local presign_file export_file presign_code export_code
+  presign_file="$(mktemp "$WORKDIR/presign.XXXXXX")"
+  export_file="$(mktemp "$WORKDIR/export.XXXXXX")"
+  presign_code="$(curl -sS -o "$presign_file" -w '%{http_code}' \
+    -X POST "${API_BASE}/admin/imports/presign" \
+    -H "Authorization: Bearer ${id_token}" \
+    -H "Content-Type: application/json" \
+    -d '{"file_name":"board-importer-smoke.json","content_type":"application/json"}')"
+  echo "POST /v1/admin/imports/presign -> ${presign_code}"
+  python3 -m json.tool "$presign_file" || cat "$presign_file"
+  if [[ "$presign_code" != "200" ]]; then
+    echo "Presign failed. If this is 403, #508 may not be on the live API." >&2
+    exit 1
+  fi
+
+  export_code="$(curl -sS -o "$export_file" -w '%{http_code}' \
+    -X GET "${API_BASE}/admin/imports/export" \
+    -H "Authorization: Bearer ${id_token}")"
+  echo "GET /v1/admin/imports/export -> ${export_code} (expect 403)"
+  if [[ "$export_code" != "403" ]]; then
+    echo "Expected 403 on export. Do not continue until the route gate is live." >&2
+    exit 1
+  fi
+}
+
+print_lxsoftware_values() {
+  echo
+  echo "== Values for the lxsoftware stack =="
+  cat <<EOF
+lxsoftware:SiutindeiAdminApiBaseUrl=${API_BASE}
+lxsoftware:SiutindeiUserPoolId=${POOL_ID}
+lxsoftware:SiutindeiBoardImporterClientId=${CLIENT_ID}
+lxsoftware:SiutindeiBoardCatalogManagerId=${MANAGER_ID:-<set --manager-id to a manager Cognito sub>}
+lxsoftware:SiutindeiBoardCatalogImportEnabled=false
+EOF
+  echo
+  echo "Also commit those keys to lx-software params/production.json so the"
+  echo "next CDK deploy does not blank CloudFormation overrides."
+}
+
+apply_lxsoftware_params() {
+  if [[ -z "$MANAGER_ID" ]]; then
+    echo "--manager-id is required for apply-params." >&2
+    echo "Run: $0 list-managers" >&2
+    exit 1
+  fi
+  if [[ ! "$MANAGER_ID" =~ ^[0-9a-fA-F-]{36}$ ]]; then
+    echo "--manager-id must be a UUID (Cognito sub)." >&2
+    exit 1
+  fi
+
+  local import_flag="false"
+  if [[ "$ENABLE_IMPORT" == true ]]; then
+    import_flag="true"
+    echo
+    echo "WARNING: enabling SiutindeiBoardCatalogImportEnabled=true"
+    echo "Live catalog imports will write Aurora via POST /v1/admin/imports."
+  fi
+
+  echo
+  echo "== Update ${LXSOFTWARE_STACK} parameters (keep all others) =="
+  local params_file
+  params_file="$(mktemp "$WORKDIR/params.XXXXXX")"
+  aws_cli cloudformation describe-stacks \
+    --stack-name "$LXSOFTWARE_STACK" \
+    --query 'Stacks[0].Parameters' \
+    --output json \
+  | python3 - "$params_file" "$API_BASE" "$POOL_ID" "$CLIENT_ID" \
+      "$MANAGER_ID" "$import_flag" <<'PY'
+import json
+import sys
+
+out, api, pool, client, manager, enabled = sys.argv[1:]
+overrides = {
+    "SiutindeiAdminApiBaseUrl": api,
+    "SiutindeiUserPoolId": pool,
+    "SiutindeiBoardImporterClientId": client,
+    "SiutindeiBoardCatalogManagerId": manager,
+    "SiutindeiBoardCatalogImportEnabled": enabled,
+}
+params = json.load(sys.stdin)
+rewritten = []
+seen = set()
+for item in params:
+    key = item["ParameterKey"]
+    seen.add(key)
+    if key in overrides:
+        rewritten.append(
+            {"ParameterKey": key, "ParameterValue": overrides[key]}
+        )
+    else:
+        rewritten.append({"ParameterKey": key, "UsePreviousValue": True})
+missing = [key for key in overrides if key not in seen]
+if missing:
+    raise SystemExit("Stack is missing parameters: " + ", ".join(missing))
+with open(out, "w", encoding="utf-8") as handle:
+    json.dump(rewritten, handle)
+print(f"Wrote {len(rewritten)} parameters ({len(overrides)} overrides)")
+PY
+
+  aws_cli cloudformation update-stack \
+    --stack-name "$LXSOFTWARE_STACK" \
+    --use-previous-template \
+    --parameters "file://${params_file}" \
+    --capabilities CAPABILITY_NAMED_IAM
+  echo "Update started. Wait with:"
+  echo "  aws cloudformation wait stack-update-complete \\"
+  echo "    --stack-name ${LXSOFTWARE_STACK} --region ${REGION}"
+}
+
+cmd_setup() {
+  confirm_importer_group
+  ensure_importer_user
+  ensure_importer_group_only
+  sync_secret
+  smoke_auth_and_routes
+  print_lxsoftware_values
+  if [[ "$APPLY_LXSOFTWARE" == true ]]; then
+    apply_lxsoftware_params
+  fi
+  echo
+  echo "Done. Keep SiutindeiBoardCatalogImportEnabled=false until a catalog"
+  echo "dry-run from the board UI succeeds remotely."
+}
+
+cmd_apply_params_only() {
+  print_lxsoftware_values
+  apply_lxsoftware_params
+  echo
+  echo "Done. Keep SiutindeiBoardCatalogImportEnabled=false until a catalog"
+  echo "dry-run from the board UI succeeds remotely."
+}
+
+main() {
+  parse_args "$@"
+  require_cmd aws
+  require_cmd python3
+  require_cmd curl
+
+  WORKDIR="$(mktemp -d)"
+  trap 'rm -rf "$WORKDIR"' EXIT
+
+  print_identity
+  load_pool_and_client
+
+  case "$COMMAND" in
+    list-managers)
+      confirm_importer_group
+      cmd_list_managers
+      ;;
+    apply-params)
+      cmd_apply_params_only
+      ;;
+    setup)
+      cmd_setup
+      ;;
+    *)
+      echo "Unknown command: $COMMAND" >&2
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"
