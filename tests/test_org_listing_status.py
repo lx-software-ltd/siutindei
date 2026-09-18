@@ -262,10 +262,27 @@ def test_catalog_health_view_replaces_integer_counts(db_session) -> None:
             """
         )
     )
+    org_count = db_session.execute(
+        text("SELECT COUNT(*)::integer FROM organizations")
+    ).scalar_one()
     row = db_session.execute(
         text("SELECT activities FROM v_catalog_health")
     ).one()
-    assert row.activities == 0
+    assert row.activities == org_count
+    col_type = db_session.execute(
+        text(
+            """
+            SELECT a.atttypid::regtype::text
+            FROM pg_attribute a
+            JOIN pg_class c ON c.oid = a.attrelid
+            WHERE c.relname = 'v_catalog_health'
+              AND a.attname = 'activities'
+              AND a.attnum > 0
+              AND NOT a.attisdropped
+            """
+        )
+    ).scalar_one()
+    assert col_type == "integer"
 
 
 def test_post_organization_with_id_is_405() -> None:
