@@ -30,6 +30,9 @@ interface StagingFixtureItem {
     readonly name_translations?: Record<string, string>;
     readonly media_urls?: string[];
     readonly logo_media_url?: string | null;
+    readonly status?: string | null;
+    readonly description_source?: string | null;
+    readonly place_id?: string | null;
   };
   readonly location: {
     readonly id: string;
@@ -151,17 +154,25 @@ function matchesItem(
     }
   }
 
+  const status = item.organization.status;
+  if (status === 'closed_permanently' || status === 'hidden') {
+    return false;
+  }
+
   return true;
 }
 
 function mapStagingListing(item: StagingFixtureItem): ActivityListing {
+  const isTemplate = item.organization.description_source === 'template';
   return {
     activity: {
       id: item.activity.id,
       name: item.activity.name,
-      description: item.activity.description,
+      description: isTemplate ? null : item.activity.description,
       nameTranslations: item.activity.name_translations ?? {},
-      descriptionTranslations: item.activity.description_translations ?? {},
+      descriptionTranslations: isTemplate
+        ? {}
+        : item.activity.description_translations ?? {},
       ageMin: item.activity.age_min ?? null,
       ageMax: item.activity.age_max ?? null,
       categoryId: item.activity.category_id ?? null,
@@ -169,10 +180,13 @@ function mapStagingListing(item: StagingFixtureItem): ActivityListing {
     organization: {
       id: item.organization.id,
       name: item.organization.name,
-      description: item.organization.description ?? null,
+      description: isTemplate ? null : item.organization.description ?? null,
       nameTranslations: item.organization.name_translations ?? {},
       mediaUrls: item.organization.media_urls ?? [],
       logoMediaUrl: item.organization.logo_media_url ?? null,
+      status: item.organization.status ?? null,
+      descriptionSource: item.organization.description_source ?? null,
+      placeId: item.organization.place_id ?? null,
     },
     location: {
       id: item.location.id,

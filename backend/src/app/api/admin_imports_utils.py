@@ -19,17 +19,15 @@ T = TypeVar("T")
 
 
 def persist_import_change(session: Session, *, dry_run: bool) -> None:
-    """Commit live imports; flush only during dry-run.
+    """Flush an upsert; live imports commit once per batch.
 
     Dry-run flush fires AFTER INSERT/UPDATE audit triggers in the same
     transaction. Those rows are deleted here so a missed rollback cannot
     persist dry-run noise. The handler still rolls back the session.
     """
+    session.flush()
     if dry_run:
-        session.flush()
         _discard_dry_run_audit_rows(session)
-    else:
-        session.commit()
 
 
 def _discard_dry_run_audit_rows(session: Session) -> None:
@@ -44,10 +42,14 @@ def _discard_dry_run_audit_rows(session: Session) -> None:
 
 
 def rollback_import_change(session: Session, *, dry_run: bool) -> None:
-    """Roll back a live upsert; dry-run uses the savepoint instead."""
-    if dry_run:
-        return
-    session.rollback()
+    """No-op: upserts run inside a SAVEPOINT for both live and dry-run."""
+    del session, dry_run
+
+
+def finish_import_batch(session: Session, *, dry_run: bool) -> None:
+    """Commit a live batch after per-row savepoints have succeeded."""
+    if not dry_run:
+        session.commit()
 
 
 def run_import_upsert(
@@ -55,11 +57,10 @@ def run_import_upsert(
     dry_run: bool,
     fn: Callable[[], T],
 ) -> T:
-    """Run an upsert; isolate dry-run failures with a SAVEPOINT."""
-    if dry_run:
-        with session.begin_nested():
-            return fn()
-    return fn()
+    """Run an upsert inside a SAVEPOINT so one bad row stays isolated."""
+    del dry_run
+    with session.begin_nested():
+        return fn()
 
 
 _TIME_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")

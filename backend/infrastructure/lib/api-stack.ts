@@ -2216,6 +2216,12 @@ export class ApiStack extends cdk.Stack {
         authorizationType: apigateway.AuthorizationType.CUSTOM,
         authorizer: adminAuthorizer,
       });
+      if (resourceName === "organizations") {
+        resourceById.addMethod("PATCH", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: adminAuthorizer,
+        });
+      }
       resourceById.addMethod("DELETE", adminIntegration, {
         authorizationType: apigateway.AuthorizationType.CUSTOM,
         authorizer: adminAuthorizer,
@@ -2248,6 +2254,12 @@ export class ApiStack extends cdk.Stack {
 
     const importsExport = imports.addResource("export");
     importsExport.addMethod("GET", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
+
+    const importById = imports.addResource("{id}");
+    importById.addMethod("GET", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
       authorizer: adminAuthorizer,
     });
@@ -2369,6 +2381,12 @@ export class ApiStack extends cdk.Stack {
         authorizationType: apigateway.AuthorizationType.CUSTOM,
         authorizer: managerAuthorizer,
       });
+      if (resourceName === "organizations") {
+        resourceById.addMethod("PATCH", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: managerAuthorizer,
+        });
+      }
       resourceById.addMethod("DELETE", adminIntegration, {
         authorizationType: apigateway.AuthorizationType.CUSTOM,
         authorizer: managerAuthorizer,

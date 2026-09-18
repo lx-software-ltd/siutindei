@@ -172,6 +172,12 @@ def serialize_export_organization(
         "wechat": org.wechat,
         "media_urls": org.media_urls or [],
         "logo_media_url": org.logo_media_url,
+        "place_id": org.place_id,
+        "status": org.status,
+        "status_source": org.status_source,
+        "source": org.source,
+        "source_id": org.source_id,
+        "description_source": org.description_source,
         "locations": locations_payload,
         "activities": activities_payload,
     }

@@ -98,6 +98,7 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
             ),
         )
         .where(entry_subquery.c.entry_rank == 1)
+        .where(Organization.status.in_(("operational", "closed_temporarily")))
     )
 
     conditions: list = []

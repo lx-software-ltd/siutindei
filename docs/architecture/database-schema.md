@@ -38,6 +38,18 @@ Columns:
 - `wechat` (text, optional)
 - `media_urls` (text[], default empty array)
 - `logo_media_url` (text, optional)
+- `place_id` (text, optional) — Google Places id
+- `status` (text, default `operational`) — `operational`,
+  `closed_temporarily`, `closed_permanently`, or `hidden`
+- `status_changed_at` (timestamptz, optional)
+- `status_source` (text, optional) — `owner`, `provider`, `places`,
+  or `importer`
+- `source` (text, optional) — catalog source (`lcsd`, `edb`, `swd`,
+  `places`, `competitor`)
+- `source_id` (text, optional) — parsed from `sourceId=` in
+  `vetting_note`
+- `description_source` (text, optional) — `template`, `official`,
+  `places`, or `enrich`
 - `created_at` (timestamptz, default `now()`)
 - `updated_at` (timestamptz, default `now()`)
 
@@ -47,6 +59,11 @@ Relationships:
 
 Constraints:
 - UNIQUE (case-insensitive) on `lower(trim(name))`
+- Partial UNIQUE on `place_id` where `place_id IS NOT NULL`
+
+Public search, sitemap, and district counts exclude
+`closed_permanently` and `hidden`. `v_catalog_health` counts only
+`operational` and `closed_temporarily` rows.
 
 ## Table: geographic_areas
 
@@ -103,6 +120,8 @@ Columns:
 - `address` (text, optional)
 - `lat` (numeric(9,6), optional)
 - `lng` (numeric(9,6), optional)
+- `place_id` (text, optional) — copied from the organization when the
+  importer creates a venue from the org address
 - `created_at` (timestamptz, default `now()`)
 - `updated_at` (timestamptz, default `now()`)
 
@@ -110,6 +129,7 @@ Indexes:
 - `locations_district_idx` on `district`
 - `locations_org_idx` on `org_id`
 - `locations_area_idx` on `area_id`
+- Partial UNIQUE on `place_id` where `place_id IS NOT NULL`
 
 Constraints:
 - UNIQUE (case-insensitive) on (`org_id`, `lower(trim(address))`)
@@ -396,6 +416,35 @@ Grants:
 - `siutindei_admin`: SELECT, INSERT, UPDATE, DELETE
 
 A nightly EventBridge job rebuilds one UTC day from `listing_events`.
+
+## Table: import_jobs
+
+Purpose: Idempotent catalog import results keyed by S3 `object_key`.
+A retry of `POST /v1/admin/imports` with the same key returns the
+stored summary and results instead of re-running the batch.
+
+Columns:
+- `id` (UUID, PK, default `gen_random_uuid()`)
+- `object_key` (text, required, unique)
+- `dry_run` (boolean, default false)
+- `summary` (jsonb)
+- `results` (jsonb)
+- `file_warnings` (jsonb)
+- `created_at` (timestamptz, default `now()`)
+- `updated_at` (timestamptz, default `now()`)
+
+Grants:
+- `siutindei_admin`: SELECT, INSERT, UPDATE
+
+Not audited.
+
+## View: v_catalog_health
+
+District × category catalog KPI read by the Executive Board Data API.
+Counts only `operational` and `closed_temporarily` organizations.
+
+Columns: `district`, `category`, `activities`, `providers`, `stores`,
+`completeness`, `has_photo`, `has_price`, `has_schedule`, `has_geo`.
 
 ## Table: audit_log
 

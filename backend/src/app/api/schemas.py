@@ -23,6 +23,9 @@ class OrganizationSchema(BaseModel):
     manager_id: str
     media_urls: List[str]
     logo_media_url: Optional[str]
+    status: Optional[str] = None
+    description_source: Optional[str] = None
+    place_id: Optional[str] = None
 
 
 class LocationSchema(BaseModel):

@@ -87,7 +87,7 @@ def _handle_crud(
             return _crud_get(event, session, config, resource_id, managed_org_ids)
         if method == "POST":
             return _crud_post(event, session, config, managed_org_ids)
-        if method == "PUT":
+        if method in ("PUT", "PATCH"):
             return _crud_put(event, session, config, resource_id, managed_org_ids)
         if method == "DELETE":
             return _crud_delete(event, session, config, resource_id, managed_org_ids)
@@ -123,6 +123,10 @@ def _crud_get(
         return json_response(200, config.serializer(entity), event=event)
 
     # List resources
+    if config.name == "organizations":
+        lookup = _lookup_organization(session, event)
+        if lookup is not None:
+            return lookup
     cursor = _parse_cursor(_query_param(event, "cursor"))
     if managed_org_ids is not None:
         rows = _get_all_filtered_by_org(
@@ -286,6 +290,34 @@ def _get_entity_org_id(entity: Any, session: Session) -> Optional[str]:
             return str(activity.org_id)
 
     return None
+
+
+def _lookup_organization(
+    session: Session,
+    event: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Resolve GET /organizations?place_id= or ?source_id= lookups."""
+    from app.api.admin_imports_catalog import (
+        find_org_by_place_id,
+        find_org_by_source_id,
+    )
+    from app.api.admin_resource_organization import _serialize_organization
+
+    place_id = _query_param(event, "place_id")
+    source_id = _query_param(event, "source_id")
+    if not place_id and not source_id:
+        return None
+    entity = None
+    if place_id:
+        entity = find_org_by_place_id(session, place_id.strip())
+    if entity is None and source_id:
+        entity = find_org_by_source_id(session, source_id.strip())
+    items = [_serialize_organization(entity)] if entity is not None else []
+    return json_response(
+        200,
+        {"items": items, "next_cursor": None},
+        event=event,
+    )
 
 
 def _get_org_id_from_body(body: dict[str, Any], resource_name: str) -> Optional[str]:

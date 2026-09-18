@@ -3,28 +3,38 @@
 from __future__ import annotations
 
 from typing import Any
-from uuid import UUID
-from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
 from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
+from app.api.admin_imports_catalog import (
+    CATALOG_MANAGER_REQUIRED,
+    NO_MATCH_TO_CLOSE,
+    find_import_organization,
+    parse_org_status,
+    parse_place_id,
+)
 from app.api.admin_imports_fields import (
     guard_import_organization_update,
     manager_ids_match,
+)
+from app.api.admin_imports_lookups import (
+    coerce_uuid,
+    filter_fields,
+    guard_existing_org,
+    merge_schedule_entries,
+    parse_weekly_entries_local,
+    prepare_listing_body,
+    resolve_activity_category_fields,
+    resolve_location_area_fields,
 )
 from app.api.admin_imports_venues import (
     LINKED_VENUE_WARNING,
     link_activity_to_venue,
 )
 from app.api.admin_imports_utils import (
-    collect_unknown_fields,
-    parse_day_of_week,
-    parse_time_minutes,
     parse_timezone,
     persist_import_change,
-    to_utc_weekly,
 )
 from app.api.admin_resource_activity import _create_activity, _update_activity
 from app.api.admin_resource_location import _create_location, _update_location
@@ -39,9 +49,9 @@ from app.api.admin_validators import (
     _parse_languages,
     _validate_string_length,
 )
-from app.db.models import Activity, ActivityCategory
+from app.db.models import Activity
 from app.db.models import ActivityPricing, ActivitySchedule
-from app.db.models import GeographicArea, Location, Organization, PricingType
+from app.db.models import Location, Organization, PricingType
 from app.db.repositories import (
     ActivityPricingRepository,
     ActivityRepository,
@@ -80,6 +90,13 @@ ALLOWED_ORG_FIELDS = {
     "lng",
     "website",
     "phone",
+    "name_zh",
+    "description_zh",
+    "place_id",
+    "status",
+    "source",
+    "source_id",
+    "description_source",
 }
 ALLOWED_LOCATION_FIELDS = {
     "name",
@@ -88,6 +105,7 @@ ALLOWED_LOCATION_FIELDS = {
     "area_name",
     "lat",
     "lng",
+    "place_id",
 }
 ALLOWED_ACTIVITY_FIELDS = {
     "name",
@@ -100,6 +118,8 @@ ALLOWED_ACTIVITY_FIELDS = {
     "category_name",
     "source_url",
     "vetting_note",
+    "name_zh",
+    "description_zh",
     "pricing",
     "schedules",
 }
@@ -117,7 +137,6 @@ ALLOWED_SCHEDULE_FIELDS = {
     "languages",
     "weekly_entries",
 }
-ALLOWED_ENTRY_FIELDS = {"day_of_week", "start_time", "end_time"}
 
 
 def upsert_organization(
@@ -126,6 +145,7 @@ def upsert_organization(
     *,
     dry_run: bool = False,
     allow_updates: bool = False,
+    catalog_manager_id: str | None = None,
 ) -> tuple[Organization, str]:
     repo = OrganizationRepository(session)
     name = _validate_string_length(
@@ -137,14 +157,16 @@ def upsert_organization(
     if name is None:
         raise ValidationError("name is required", field="name")
     try:
-        existing = repo.find_by_name_case_insensitive(name)
+        existing = find_import_organization(session, raw_org)
+        if existing is None:
+            existing = repo.find_by_name_case_insensitive(name)
     except MultipleResultsFound as exc:
         raise ValidationError(
             "Multiple organizations found",
             field="name",
         ) from exc
 
-    body = _filter_fields(raw_org, ALLOWED_ORG_FIELDS)
+    body = filter_fields(raw_org, ALLOWED_ORG_FIELDS)
     for extra in (
         "locations",
         "activities",
@@ -157,27 +179,71 @@ def upsert_organization(
         "lng",
         "website",
         "phone",
+        "name_zh",
+        "description_zh",
     ):
         body.pop(extra, None)
+    prepare_listing_body(body)
+    requested_status = parse_org_status(raw_org.get("status"))
+
     if existing:
+        guard_existing_org(
+            existing,
+            body,
+            allow_updates=allow_updates,
+            catalog_manager_id=catalog_manager_id,
+        )
         if not allow_updates:
             if manager_ids_match(existing.manager_id, body.get("manager_id")):
                 return existing, "skipped"
             raise ValidationError("exists", field="name")
         guard_import_organization_update(existing, body)
+        if requested_status:
+            body["status"] = requested_status
+            body["status_source"] = "importer"
         updated = _update_organization(repo, existing, body)
         repo.update(updated)
         persist_import_change(session, dry_run=dry_run)
         session.refresh(updated)
         return updated, "updated"
 
+    if requested_status == "closed_permanently":
+        raise ValidationError(NO_MATCH_TO_CLOSE, field="status")
+    if catalog_manager_id and not manager_ids_match(
+        body.get("manager_id"),
+        catalog_manager_id,
+    ):
+        raise ValidationError(CATALOG_MANAGER_REQUIRED, field="manager_id")
     if not raw_org.get("manager_id"):
         raise ValidationError("manager_id is required", field="manager_id")
+    if requested_status:
+        body["status"] = requested_status
+        body["status_source"] = "importer"
     created = _create_organization(repo, body)
     repo.create(created)
     persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
     return created, "created"
+
+
+def _find_import_location(
+    repo: LocationRepository,
+    org: Organization,
+    raw_location: dict[str, Any],
+    address_value: str,
+) -> Location | None:
+    """Match a location by place_id, then org + address."""
+    place_id = parse_place_id(raw_location.get("place_id"))
+    if place_id:
+        found = repo.find_by_place_id(place_id)
+        if found is not None:
+            if str(found.org_id) == str(org.id):
+                return found
+            raw_location.pop("place_id", None)
+    return repo.find_by_org_and_address_case_insensitive(
+        coerce_uuid(org.id),
+        address_value,
+    )
 
 
 def upsert_location(
@@ -191,8 +257,10 @@ def upsert_location(
 ) -> tuple[Location, str]:
     repo = LocationRepository(session)
     try:
-        existing = repo.find_by_org_and_address_case_insensitive(
-            _coerce_uuid(org.id),
+        existing = _find_import_location(
+            repo,
+            org,
+            raw_location,
             address_value,
         )
     except MultipleResultsFound as exc:
@@ -201,8 +269,8 @@ def upsert_location(
     if existing and not allow_updates:
         return existing, "skipped"
 
-    body = _filter_fields(raw_location, ALLOWED_LOCATION_FIELDS)
-    _resolve_location_area_fields(session, body)
+    body = filter_fields(raw_location, ALLOWED_LOCATION_FIELDS)
+    resolve_location_area_fields(session, body)
     if raw_location.get("name") is not None or raw_location.get("address") is not None:
         body["address"] = address_value
     if existing:
@@ -241,9 +309,7 @@ def upsert_activity(
     if name is None:
         raise ValidationError("name is required", field="name")
     try:
-        existing = repo.find_by_org_and_name_case_insensitive(
-            _coerce_uuid(org.id), name
-        )
+        existing = repo.find_by_org_and_name_case_insensitive(coerce_uuid(org.id), name)
     except MultipleResultsFound as exc:
         raise ValidationError(
             "Multiple activities found",
@@ -258,12 +324,14 @@ def upsert_activity(
             persist_import_change(session, dry_run=dry_run)
         return existing, "skipped"
 
-    body = _filter_fields(raw_activity, ALLOWED_ACTIVITY_FIELDS)
-    _resolve_activity_category_fields(session, body)
+    body = filter_fields(raw_activity, ALLOWED_ACTIVITY_FIELDS)
+    resolve_activity_category_fields(session, body)
     body.pop("pricing", None)
     body.pop("schedules", None)
     body.pop("source_url", None)
     body.pop("vetting_note", None)
+    body.pop("name_zh", None)
+    body.pop("description_zh", None)
     if existing:
         updated = _update_activity(repo, existing, body)
         repo.update(updated)
@@ -304,8 +372,8 @@ def upsert_pricing(
     repo = ActivityPricingRepository(session)
     try:
         existing = repo.find_by_activity_location_pricing_type(
-            _coerce_uuid(activity.id),
-            _coerce_uuid(location.id),
+            coerce_uuid(activity.id),
+            coerce_uuid(location.id),
             pricing_enum,
         )
     except MultipleResultsFound as exc:
@@ -317,7 +385,7 @@ def upsert_pricing(
     if existing and not allow_updates:
         return existing, "skipped"
 
-    body = _filter_fields(raw_pricing, ALLOWED_PRICING_FIELDS)
+    body = filter_fields(raw_pricing, ALLOWED_PRICING_FIELDS)
     body["pricing_type"] = pricing_enum.value
     if existing:
         updated = _update_pricing(repo, existing, body)
@@ -349,8 +417,8 @@ def upsert_schedule(
     languages = _parse_languages(raw_schedule.get("languages"))
     repo = ActivityScheduleRepository(session)
     existing = repo.find_by_activity_location_languages(
-        _coerce_uuid(activity.id),
-        _coerce_uuid(location.id),
+        coerce_uuid(activity.id),
+        coerce_uuid(location.id),
         languages,
     )
     if existing and not allow_updates:
@@ -389,51 +457,6 @@ def upsert_schedule(
     return created, "created"
 
 
-def merge_schedule_entries(
-    schedule: ActivitySchedule,
-    new_entries: list[dict[str, int]],
-) -> list[dict[str, int]]:
-    seen: set[tuple[int, int, int]] = set()
-    merged: list[dict[str, int]] = []
-
-    for existing_entry in schedule.entries or []:
-        key = (
-            existing_entry.day_of_week_utc,
-            existing_entry.start_minutes_utc,
-            existing_entry.end_minutes_utc,
-        )
-        if key in seen:
-            continue
-        seen.add(key)
-        merged.append(
-            {
-                "day_of_week_utc": existing_entry.day_of_week_utc,
-                "start_minutes_utc": existing_entry.start_minutes_utc,
-                "end_minutes_utc": existing_entry.end_minutes_utc,
-            }
-        )
-
-    for new_entry in new_entries:
-        key = (
-            new_entry["day_of_week_utc"],
-            new_entry["start_minutes_utc"],
-            new_entry["end_minutes_utc"],
-        )
-        if key in seen:
-            continue
-        seen.add(key)
-        merged.append(new_entry)
-
-    merged.sort(
-        key=lambda item: (
-            item["day_of_week_utc"],
-            item["start_minutes_utc"],
-            item["end_minutes_utc"],
-        )
-    )
-    return merged
-
-
 def resolve_location(
     session: Session,
     org: Organization,
@@ -446,7 +469,7 @@ def resolve_location(
     repo = LocationRepository(session)
     try:
         location = repo.find_by_org_and_address_case_insensitive(
-            _coerce_uuid(org.id),
+            coerce_uuid(org.id),
             location_name,
         )
     except MultipleResultsFound as exc:
@@ -457,144 +480,3 @@ def resolve_location(
     if location:
         cache[location_name] = location
     return location
-
-
-def parse_weekly_entries_local(
-    value: Any,
-    tzinfo: ZoneInfo,
-    warnings: list[str],
-) -> list[dict[str, int]]:
-    if value is None:
-        raise ValidationError(
-            "weekly_entries is required",
-            field="weekly_entries",
-        )
-    if not isinstance(value, list):
-        raise ValidationError(
-            "weekly_entries must be a list",
-            field="weekly_entries",
-        )
-    if not value:
-        return []
-
-    entries: list[dict[str, int]] = []
-    seen: set[tuple[int, int, int]] = set()
-
-    for index, raw in enumerate(value):
-        field_prefix = f"weekly_entries[{index}]"
-        if not isinstance(raw, dict):
-            raise ValidationError(
-                "weekly_entries must be objects",
-                field=field_prefix,
-            )
-        collect_unknown_fields(
-            raw,
-            ALLOWED_ENTRY_FIELDS,
-            field_prefix,
-            warnings,
-        )
-        day_of_week = parse_day_of_week(
-            raw.get("day_of_week"),
-            f"{field_prefix}.day_of_week",
-        )
-        start_minutes = parse_time_minutes(
-            raw.get("start_time"),
-            f"{field_prefix}.start_time",
-        )
-        end_minutes = parse_time_minutes(
-            raw.get("end_time"),
-            f"{field_prefix}.end_time",
-        )
-        if start_minutes == end_minutes:
-            raise ValidationError(
-                "start_time must not equal end_time",
-                field=f"{field_prefix}.start_time",
-            )
-
-        day_utc, start_utc, end_utc = to_utc_weekly(
-            day_of_week,
-            start_minutes,
-            end_minutes,
-            tzinfo,
-        )
-        key = (day_utc, start_utc, end_utc)
-        if key in seen:
-            continue
-        seen.add(key)
-        entries.append(
-            {
-                "day_of_week_utc": day_utc,
-                "start_minutes_utc": start_utc,
-                "end_minutes_utc": end_utc,
-            }
-        )
-
-    return entries
-
-
-def _resolve_location_area_fields(
-    session: Session,
-    body: dict[str, Any],
-) -> None:
-    area_name = body.pop("area_name", None)
-    if body.get("area_id") is not None:
-        return
-    if area_name is None:
-        return
-    body["area_id"] = _lookup_district_area_id(session, area_name)
-
-
-def _resolve_activity_category_fields(
-    session: Session,
-    body: dict[str, Any],
-) -> None:
-    category_name = body.pop("category_name", None)
-    if body.get("category_id") is not None:
-        return
-    if category_name is None:
-        return
-    body["category_id"] = _lookup_category_id(session, category_name)
-
-
-def _lookup_district_area_id(session: Session, area_name: Any) -> str:
-    if not isinstance(area_name, str) or not area_name:
-        raise ValidationError("unknown area_name", field="area_name")
-    query = (
-        select(GeographicArea.id)
-        .where(GeographicArea.name == area_name)
-        .where(GeographicArea.level == "district")
-        .limit(2)
-    )
-    matches = session.execute(query).scalars().all()
-    if len(matches) != 1:
-        raise ValidationError("unknown area_name", field="area_name")
-    return str(matches[0])
-
-
-def _lookup_category_id(session: Session, category_name: Any) -> str:
-    if not isinstance(category_name, str) or not category_name:
-        raise ValidationError("unknown category_name", field="category_name")
-    query = (
-        select(ActivityCategory.id)
-        .where(
-            ActivityCategory.name == category_name,
-        )
-        .limit(2)
-    )
-    matches = session.execute(query).scalars().all()
-    if len(matches) != 1:
-        raise ValidationError("unknown category_name", field="category_name")
-    return str(matches[0])
-
-
-def _filter_fields(
-    payload: dict[str, Any],
-    allowed: set[str],
-) -> dict[str, Any]:
-    return {key: value for key, value in payload.items() if key in allowed}
-
-
-def _coerce_uuid(value: str | UUID) -> UUID:
-    if isinstance(value, UUID):
-        return value
-    return UUID(str(value))

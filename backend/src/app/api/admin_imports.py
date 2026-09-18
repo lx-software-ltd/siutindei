@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any, Mapping
+from uuid import UUID
 
 from botocore.exceptions import ClientError
 from sqlalchemy.orm import Session
@@ -15,6 +17,12 @@ from app.api.admin_imports_export import (
     load_export_organizations,
 )
 from app.api.admin_imports_importer import process_import_payload
+from app.api.admin_imports_jobs import (
+    find_import_job_by_id,
+    find_import_job_by_key,
+    serialize_import_job,
+    store_import_job,
+)
 from app.api.admin_imports_utils import (
     build_object_key,
     sanitize_filename,
@@ -22,7 +30,7 @@ from app.api.admin_imports_utils import (
 )
 from app.api.admin_request import _parse_body, _query_param, _require_env
 from app.db.engine import get_engine
-from app.exceptions import ValidationError
+from app.exceptions import NotFoundError, ValidationError
 from app.services.aws_clients import get_s3_client
 from app.utils import json_response
 from app.utils.logging import get_logger
@@ -46,6 +54,8 @@ def _handle_admin_imports(
         return _handle_import_process(event)
     if method == "GET" and resource_id == "export":
         return _handle_export(event)
+    if method == "GET" and resource_id:
+        return _handle_get_import_job(event, resource_id)
     return json_response(404, {"error": "Not found"}, event=event)
 
 
@@ -109,12 +119,24 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
     validate_object_key(object_key, IMPORT_PREFIX)
     dry_run = _parse_dry_run(body)
 
+    with Session(get_engine()) as session:
+        existing_job = find_import_job_by_key(session, object_key)
+        if existing_job is not None:
+            return json_response(
+                200,
+                serialize_import_job(existing_job),
+                event=event,
+            )
+
     payload = _load_import_payload(object_key)
     if not isinstance(payload, dict):
         raise ValidationError("Import file must be a JSON object")
 
     file_warnings: list[str] = []
-    allow_org_updates = _is_admin(event)
+    allow_org_updates = True
+    catalog_manager_id = os.getenv("BOARD_CATALOG_MANAGER_ID", "").strip() or None
+    if _is_admin(event):
+        catalog_manager_id = None
     with Session(get_engine()) as session:
         # Dry-run flushes fire the same audit trigger as a live import.
         # Skip session context so leftover rows cannot look like live
@@ -127,9 +149,19 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
             file_warnings,
             dry_run=dry_run,
             allow_org_updates=allow_org_updates,
+            catalog_manager_id=catalog_manager_id,
         )
         if dry_run:
             session.rollback()
+        job = store_import_job(
+            session,
+            object_key,
+            dry_run=dry_run,
+            summary=summary,
+            results=results,
+            file_warnings=file_warnings,
+        )
+        session.commit()
 
     logger.info(
         ("Admin import dry-run completed" if dry_run else "Admin import completed"),
@@ -139,6 +171,8 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
     return json_response(
         200,
         {
+            "id": str(job.id),
+            "object_key": object_key,
             "summary": summary,
             "results": results,
             "file_warnings": file_warnings,
@@ -146,6 +180,22 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
         },
         event=event,
     )
+
+
+def _handle_get_import_job(
+    event: Mapping[str, Any],
+    resource_id: str,
+) -> dict[str, Any]:
+    """Return a stored import job for the owner Progress card."""
+    try:
+        job_id = UUID(resource_id)
+    except ValueError as exc:
+        raise ValidationError("job_id must be a UUID", field="id") from exc
+    with Session(get_engine()) as session:
+        job = find_import_job_by_id(session, job_id)
+        if job is None:
+            raise NotFoundError("imports", resource_id)
+        return json_response(200, serialize_import_job(job), event=event)
 
 
 def _handle_export(event: Mapping[str, Any]) -> dict[str, Any]:

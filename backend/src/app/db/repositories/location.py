@@ -67,6 +67,11 @@ class LocationRepository(BaseRepository[Location]):
         )
         return self._session.execute(query).scalars().all()
 
+    def find_by_place_id(self, place_id: str) -> Optional[Location]:
+        """Find a location by Google place_id."""
+        query = select(Location).where(Location.place_id == place_id)
+        return self._session.execute(query).scalar_one_or_none()
+
     def find_by_org_and_address(
         self,
         org_id: UUID,

@@ -77,6 +77,21 @@ paths:
           description: Pagination cursor from previous response
           schema:
             type: string
+        - name: place_id
+          in: query
+          required: false
+          description: Look up an organization by Google place_id.
+          schema:
+            type: string
+            maxLength: 80
+        - name: source_id
+          in: query
+          required: false
+          description: |
+            Look up an organization by catalog source_id parsed from
+            vetting_note (`sourceId=`).
+          schema:
+            type: string
       responses:
         "200":
           description: List of organizations
@@ -128,6 +143,28 @@ paths:
           description: Organization not found
     put:
       summary: Update organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationUpdate'
+      responses:
+        "200":
+          description: Organization updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        "400":
+          description: Validation error
+        "404":
+          description: Organization not found
+    patch:
+      summary: Patch organization listing fields
+      description: |
+        Partial update used by the owner UI to set `status` (with optional
+        `reason`) or attach a Google `place_id`.
       requestBody:
         required: true
         content:
@@ -268,6 +305,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+
+  /v1/admin/imports/{job_id}:
+    get:
+      summary: Get a stored import job
+      description: |
+        Return the stored summary and per-row results for a previous
+        `object_key` so the owner can reopen an import from the Progress
+        card. Admin-only.
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Stored import job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminImportJob'
+        "404":
+          description: Import job not found
 
   /v1/admin/imports/export:
     get:
@@ -2154,6 +2215,31 @@ components:
           description: |
             Board-flat org field. An 8-digit HK number is mapped to
             phone_country_code=HK and phone_number.
+        name_zh:
+          type: string
+          maxLength: 200
+          description: Optional Traditional Chinese name; blank is ignored.
+        description_zh:
+          type: string
+          maxLength: 400
+          description: Optional Traditional Chinese description; blank is ignored.
+        place_id:
+          type: string
+          maxLength: 80
+          description: |
+            Google Places id. Matched before manager_id + name. A place_id
+            match with a different name updates the organization.
+        status:
+          type: string
+          enum:
+            - operational
+            - closed_temporarily
+            - closed_permanently
+            - hidden
+          description: |
+            Listing status. `closed_permanently` updates an existing match
+            and does not create when no match exists. Provider-owned rows
+            are skipped with `managed by provider`.
         phone_country_code:
           type: string
           maxLength: 2
@@ -2449,11 +2535,23 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AdminImportError'
+        error:
+          type: string
+          description: First error message, for the bulk catalog caller.
+        place_id:
+          type: string
+          description: Echoed on organization results when sent.
 
     AdminImportResponse:
       type: object
       required: [summary, results, file_warnings]
       properties:
+        id:
+          type: string
+          format: uuid
+          description: Stored import job id for later GET.
+        object_key:
+          type: string
         summary:
           $ref: '#/components/schemas/AdminImportSummary'
         results:
@@ -2467,6 +2565,40 @@ components:
         dry_run:
           type: boolean
           description: Echo of the request dry_run flag.
+
+    AdminImportJob:
+      type: object
+      required:
+        - id
+        - object_key
+        - dry_run
+        - summary
+        - results
+        - file_warnings
+      properties:
+        id:
+          type: string
+          format: uuid
+        object_key:
+          type: string
+        dry_run:
+          type: boolean
+        summary:
+          $ref: '#/components/schemas/AdminImportSummary'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminImportResult'
+        file_warnings:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
     AdminExportResponse:
       type: object
@@ -2565,6 +2697,27 @@ components:
           maxLength: 2048
           description: |
             Optional logo media URL. Must match one of the media_urls values.
+        place_id:
+          type: string
+          maxLength: 80
+          nullable: true
+        status:
+          type: string
+          enum:
+            - operational
+            - closed_temporarily
+            - closed_permanently
+            - hidden
+        status_source:
+          type: string
+          enum: [owner, provider, places, importer]
+        source:
+          type: string
+        source_id:
+          type: string
+        description_source:
+          type: string
+          enum: [template, official, places, enrich]
 
     OrganizationUpdate:
       type: object
@@ -2586,6 +2739,30 @@ components:
         manager_id:
           type: string
           description: Cognito user sub of the organization manager
+        place_id:
+          type: string
+          maxLength: 80
+          nullable: true
+        status:
+          type: string
+          enum:
+            - operational
+            - closed_temporarily
+            - closed_permanently
+            - hidden
+        reason:
+          type: string
+          description: Optional owner note when changing status; not stored.
+        status_source:
+          type: string
+          enum: [owner, provider, places, importer]
+        source:
+          type: string
+        source_id:
+          type: string
+        description_source:
+          type: string
+          enum: [template, official, places, enrich]
         phone_country_code:
           type: string
           maxLength: 2
@@ -2667,6 +2844,35 @@ components:
         manager_id:
           type: string
           description: Cognito user sub of the organization manager
+        place_id:
+          type: string
+          maxLength: 80
+          nullable: true
+        status:
+          type: string
+          enum:
+            - operational
+            - closed_temporarily
+            - closed_permanently
+            - hidden
+        status_changed_at:
+          type: string
+          format: date-time
+          nullable: true
+        status_source:
+          type: string
+          nullable: true
+          enum: [owner, provider, places, importer]
+        source:
+          type: string
+          nullable: true
+        source_id:
+          type: string
+          nullable: true
+        description_source:
+          type: string
+          nullable: true
+          enum: [template, official, places, enrich]
         phone_country_code:
           type: string
           nullable: true

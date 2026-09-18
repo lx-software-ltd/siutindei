@@ -13,6 +13,14 @@ from app.api.admin_imports_results import (
     record_result,
     record_skipped_children,
 )
+from app.api.admin_imports_catalog import (
+    ACTIVITY_TRUNCATE_LIMITS,
+    MANAGED_BY_PROVIDER,
+    NO_MATCH_TO_CLOSE,
+    ORG_TRUNCATE_LIMITS,
+    prevalidate_activity_categories,
+    truncate_import_fields,
+)
 from app.api.admin_imports_fields import (
     apply_default_manager_id,
     apply_source_attribution,
@@ -30,7 +38,7 @@ from app.api.admin_imports_upsert import (
 from app.api.admin_imports_venues import resolve_single_imported_venue
 from app.api.admin_imports_utils import (
     collect_unknown_fields,
-    rollback_import_change,
+    finish_import_batch,
     run_import_upsert,
 )
 from app.api.admin_validators import (
@@ -50,6 +58,7 @@ def process_import_payload(
     file_warnings: list[str],
     dry_run: bool = False,
     allow_org_updates: bool = False,
+    catalog_manager_id: str | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     collect_unknown_fields(payload, ALLOWED_ROOT_FIELDS, "root", file_warnings)
     apply_default_manager_id(payload)
@@ -72,10 +81,13 @@ def process_import_payload(
             index,
             results,
             summary,
+            file_warnings,
             dry_run=dry_run,
             allow_updates=allow_org_updates,
+            catalog_manager_id=catalog_manager_id,
         )
 
+    finish_import_batch(session, dry_run=dry_run)
     return summary, results
 
 
@@ -85,9 +97,11 @@ def process_organization(
     index: int,
     results: list[dict[str, Any]],
     summary: dict[str, Any],
+    file_warnings: list[str] | None = None,
     *,
     dry_run: bool = False,
     allow_updates: bool = False,
+    catalog_manager_id: str | None = None,
 ) -> None:
     path = f"organizations[{index}]"
     if not isinstance(raw_org, dict):
@@ -103,10 +117,13 @@ def process_organization(
         return
 
     warnings: list[str] = []
+    truncate_import_fields(raw_org, path, warnings, ORG_TRUNCATE_LIMITS)
     collect_flat_org_warnings(raw_org, path, warnings)
     expand_board_flat_org(raw_org)
     collect_unknown_fields(raw_org, ALLOWED_ORG_FIELDS, path, warnings)
     apply_source_attribution(raw_org)
+    if file_warnings is not None:
+        file_warnings.extend(warnings)
     org_name = _validate_string_length(
         raw_org.get("name"),
         "name",
@@ -128,6 +145,7 @@ def process_organization(
         return
 
     try:
+        prevalidate_activity_categories(session, raw_org)
         org, status = run_import_upsert(
             session,
             dry_run,
@@ -136,21 +154,26 @@ def process_organization(
                 raw_org,
                 dry_run=dry_run,
                 allow_updates=allow_updates,
+                catalog_manager_id=catalog_manager_id,
             ),
         )
     except ValidationError as exc:
+        result_status = (
+            "skipped"
+            if exc.message in {MANAGED_BY_PROVIDER, NO_MATCH_TO_CLOSE}
+            else "failed"
+        )
         record_result(
             results,
             summary,
             "organizations",
             org_name or path,
-            "failed",
+            result_status,
             warnings=warnings,
             errors=[format_error(exc)],
             path=path,
         )
         record_skipped_children(raw_org, org_name or path, results, summary)
-        rollback_import_change(session, dry_run=dry_run)
         return
 
     record_result(
@@ -163,6 +186,8 @@ def process_organization(
         warnings=warnings,
         path=path,
     )
+    if raw_org.get("place_id"):
+        results[-1]["place_id"] = raw_org["place_id"]
 
     location_cache: dict[str, Location] = {}
     raw_locations = raw_org.get("locations", [])
@@ -306,7 +331,6 @@ def process_location(
             errors=[format_error(exc)],
             path=path,
         )
-        rollback_import_change(session, dry_run=dry_run)
         return
 
     location_cache[location_name] = location
@@ -356,6 +380,12 @@ def process_activity(
         warnings,
     )
     apply_source_attribution(raw_activity)
+    truncate_import_fields(
+        raw_activity,
+        path,
+        warnings,
+        ACTIVITY_TRUNCATE_LIMITS,
+    )
     activity_name = _validate_string_length(
         raw_activity.get("name"),
         "name",
@@ -402,7 +432,6 @@ def process_activity(
             path=path,
         )
         record_skipped_children(raw_activity, activity_name, results, summary)
-        rollback_import_change(session, dry_run=dry_run)
         return
 
     record_result(

@@ -335,6 +335,30 @@ components:
           format: uri
           nullable: true
           description: Optional logo media URL.
+        status:
+          type: string
+          nullable: true
+          enum:
+            - operational
+            - closed_temporarily
+          description: |
+            Public listing status. `closed_permanently` and `hidden`
+            organizations are excluded from search. Use this for a
+            temporarily-closed badge.
+        description_source:
+          type: string
+          nullable: true
+          enum: [template, official, places, enrich]
+          description: |
+            When `template`, public descriptions are omitted so near-identical
+            catalog sentences do not render verbatim.
+        place_id:
+          type: string
+          nullable: true
+          description: |
+            Google Places id. Present only when searching by `activity_id`
+            (listing detail) so the app can deep-link to Google Maps. Omitted
+            from search result cards.
     Location:
       type: object
       required: [id, area_id]
