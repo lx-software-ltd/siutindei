@@ -181,6 +181,7 @@
     "nearRegionTitle": "Activities in",
     "parentVerifiedLabel": "Parent-Verified",
     "freeTrialLabel": "Free trial",
+    "temporarilyClosedLabel": "Temporarily closed",
     "imageFallbackLabel": "Photo coming soon",
     "mapAltLabel": "Map location",
     "errorLabel": "Unable to load activities.",
@@ -203,6 +204,7 @@
     "mapAltLabel": "Map location",
     "parentVerifiedLabel": "Parent-Verified",
     "freeTrialLabel": "Free trial",
+    "temporarilyClosedLabel": "Temporarily closed",
     "imageFallbackLabel": "Photo coming soon"
   },
   "activityDetail": {
@@ -210,6 +212,9 @@
     "notFoundLabel": "Activity not found.",
     "errorLabel": "Unable to load this activity.",
     "freeTrialLabel": "Free trial available",
+    "temporarilyClosedLabel": "Temporarily closed",
+    "detailsComingSoonLabel": "Details coming soon",
+    "openInMapsLabel": "Open in Google Maps",
     "imageFallbackLabel": "Photo coming soon",
     "whatsappCtaLabel": "Ask on WhatsApp"
   },

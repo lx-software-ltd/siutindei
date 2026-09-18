@@ -581,6 +581,18 @@ export class ApiStack extends cdk.Stack {
           "Referer header for Nominatim address lookup requests",
       }
     );
+    const boardCatalogManagerId = new cdk.CfnParameter(
+      this,
+      "BoardCatalogManagerId",
+      {
+        type: "String",
+        default: "",
+        description:
+          "Cognito user sub used as the catalog manager for Board " +
+          "imports. When set, importer-only tokens may only create " +
+          "organizations for this manager_id.",
+      }
+    );
 
     // ---------------------------------------------------------------------
     // Cognito User Pool and Identity Providers
@@ -1299,6 +1311,7 @@ export class ApiStack extends cdk.Stack {
         FEEDBACK_STARS_PER_APPROVAL: feedbackStarsPerApproval.valueAsString,
         NOMINATIM_USER_AGENT: nominatimUserAgent.valueAsString,
         NOMINATIM_REFERER: nominatimReferer.valueAsString,
+        BOARD_CATALOG_MANAGER_ID: boardCatalogManagerId.valueAsString,
       },
     });
     database.grantAdminUserSecretRead(adminFunction);
@@ -1665,9 +1678,11 @@ export class ApiStack extends cdk.Stack {
         noVpc: true,
         environment: {
           ALLOWED_GROUPS: adminGroupName,
-          // Importer JWTs are allowed only for POST /v1/admin/imports
-          // and /presign (enforced in the shared cognito_group handler).
-          // A second authorizer Lambda would breach the 500-resource cap.
+          // Importer JWTs are allowed for POST /v1/admin/imports,
+          // /presign, GET /imports/{id}, GET /organizations lookups,
+          // and PATCH /organizations/{id} (enforced in the shared
+          // cognito_group handler). A second authorizer Lambda would
+          // breach the 500-resource cap.
           IMPORTER_GROUP: importerGroupName,
         },
       }
@@ -1968,7 +1983,7 @@ export class ApiStack extends cdk.Stack {
       restApiName: name("api"),
       defaultCorsPreflightOptions: {
         allowOrigins: corsAllowedOrigins,
-        allowMethods: ["GET", "OPTIONS", "POST", "PUT", "DELETE"],
+        allowMethods: ["GET", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"],
       },
       deployOptions: {
         stageName: "prod",
@@ -2208,18 +2223,27 @@ export class ApiStack extends cdk.Stack {
       });
 
       const resourceById = resource.addResource("{id}");
-      resourceById.addMethod("GET", adminIntegration, {
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        authorizer: adminAuthorizer,
-      });
-      resourceById.addMethod("PUT", adminIntegration, {
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        authorizer: adminAuthorizer,
-      });
-      resourceById.addMethod("DELETE", adminIntegration, {
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        authorizer: adminAuthorizer,
-      });
+      // ANY on organizations/{id} covers GET/PUT/PATCH/DELETE so PATCH
+      // does not add a Method past the CloudFormation 500-resource cap.
+      if (resourceName === "organizations") {
+        resourceById.addMethod("ANY", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: adminAuthorizer,
+        });
+      } else {
+        resourceById.addMethod("GET", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: adminAuthorizer,
+        });
+        resourceById.addMethod("PUT", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: adminAuthorizer,
+        });
+        resourceById.addMethod("DELETE", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: adminAuthorizer,
+        });
+      }
 
       if (resourceName === "organizations") {
         const media = resourceById.addResource("media");
@@ -2248,6 +2272,12 @@ export class ApiStack extends cdk.Stack {
 
     const importsExport = imports.addResource("export");
     importsExport.addMethod("GET", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
+
+    const importById = imports.addResource("{id}");
+    importById.addMethod("GET", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
       authorizer: adminAuthorizer,
     });
@@ -2361,18 +2391,25 @@ export class ApiStack extends cdk.Stack {
       });
 
       const resourceById = resource.addResource("{id}");
-      resourceById.addMethod("GET", adminIntegration, {
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        authorizer: managerAuthorizer,
-      });
-      resourceById.addMethod("PUT", adminIntegration, {
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        authorizer: managerAuthorizer,
-      });
-      resourceById.addMethod("DELETE", adminIntegration, {
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        authorizer: managerAuthorizer,
-      });
+      if (resourceName === "organizations") {
+        resourceById.addMethod("ANY", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: managerAuthorizer,
+        });
+      } else {
+        resourceById.addMethod("GET", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: managerAuthorizer,
+        });
+        resourceById.addMethod("PUT", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: managerAuthorizer,
+        });
+        resourceById.addMethod("DELETE", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: managerAuthorizer,
+        });
+      }
     }
 
     // -------------------------------------------------------------------------

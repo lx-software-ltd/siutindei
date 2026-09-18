@@ -124,6 +124,21 @@ export function listingTitle(locale: Locale, listing: ActivityListing): string {
   );
 }
 
+export function isTemporarilyClosed(listing: ActivityListing): boolean {
+  return listing.organization.status === 'closed_temporarily';
+}
+
+export function isTemplateDescription(listing: ActivityListing): boolean {
+  return listing.organization.descriptionSource === 'template';
+}
+
+export function googleMapsPlaceUrl(placeId: string | null | undefined): string | null {
+  if (!placeId) {
+    return null;
+  }
+  return `https://www.google.com/maps/search/?api=1&query_place_id=${encodeURIComponent(placeId)}`;
+}
+
 export function listingOrgName(
   locale: Locale,
   listing: ActivityListing,

@@ -30,6 +30,9 @@ function mapListing(item: {
     name_translations?: Record<string, string>;
     media_urls?: string[];
     logo_media_url?: string | null;
+    status?: string | null;
+    description_source?: string | null;
+    place_id?: string | null;
   };
   location: {
     id: string;
@@ -76,6 +79,9 @@ function mapListing(item: {
       nameTranslations: mapTranslationMap(item.organization.name_translations),
       mediaUrls: item.organization.media_urls ?? [],
       logoMediaUrl: item.organization.logo_media_url ?? null,
+      status: item.organization.status ?? null,
+      descriptionSource: item.organization.description_source ?? null,
+      placeId: item.organization.place_id ?? null,
     },
     location: {
       id: item.location.id,

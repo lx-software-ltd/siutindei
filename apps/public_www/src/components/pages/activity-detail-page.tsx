@@ -10,6 +10,9 @@ import { fetchActivityListingById } from '@/lib/activities/search-client';
 import {
   formatListingPrice,
   formatScheduleSnippet,
+  googleMapsPlaceUrl,
+  isTemplateDescription,
+  isTemporarilyClosed,
   listingImageUrl,
   listingOrgName,
   listingTitle,
@@ -181,15 +184,18 @@ export function ActivityDetailPage({
   }
 
   const title = listingTitle(locale, listing);
-  const description = pickTranslation(
-    locale,
-    listing.activity.description ?? '',
-    listing.activity.descriptionTranslations,
-  );
+  const description = isTemplateDescription(listing)
+    ? ''
+    : pickTranslation(
+        locale,
+        listing.activity.description ?? '',
+        listing.activity.descriptionTranslations,
+      );
   const orgName = listingOrgName(locale, listing);
   const region = regionLabelForListing(locale, listing);
   const schedule = formatScheduleSnippet(locale, listing.schedule.weeklyEntries);
   const price = formatListingPrice(locale, listing);
+  const mapsHref = googleMapsPlaceUrl(listing.organization.placeId);
 
   return (
     <article className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -218,6 +224,11 @@ export function ActivityDetailPage({
           <h1 className="mt-2 text-3xl font-bold text-ink-900 sm:text-4xl">
             {title}
           </h1>
+          {isTemporarilyClosed(listing) ? (
+            <p className="mt-2 text-sm font-semibold text-amber-800">
+              {copy.temporarilyClosedLabel}
+            </p>
+          ) : null}
           <p className="mt-3 text-lg font-semibold text-ink-900">{price}</p>
           <ul className="mt-4 space-y-2 text-sm text-ink-700">
             {region ? <li>{region}</li> : null}
@@ -229,6 +240,10 @@ export function ActivityDetailPage({
           </ul>
           {description ? (
             <p className="mt-6 leading-7 text-ink-700">{description}</p>
+          ) : isTemplateDescription(listing) ? (
+            <p className="mt-6 text-sm leading-6 text-ink-500">
+              {copy.detailsComingSoonLabel}
+            </p>
           ) : null}
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             {whatsappHref ? (
@@ -248,6 +263,22 @@ export function ActivityDetailPage({
               >
                 {copy.whatsappCtaLabel}
               </TrackedWhatsappLink>
+            ) : null}
+            {mapsHref ? (
+              <a
+                href={mapsHref}
+                target="_blank"
+                rel="noreferrer"
+                className={
+                  'link-unadorned inline-flex min-h-11 w-full ' +
+                  'items-center justify-center rounded-lg border ' +
+                  'border-ink-900/20 bg-white px-4 text-sm ' +
+                  'font-semibold text-ink-900 transition ' +
+                  'hover:bg-brand-50 sm:w-auto'
+                }
+              >
+                {copy.openInMapsLabel}
+              </a>
             ) : null}
           </div>
         </div>

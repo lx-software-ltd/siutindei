@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from app.api.admin_imports_catalog import parse_place_id
 from app.api.admin_request import _parse_uuid
 from app.api.admin_validators import MAX_ADDRESS_LENGTH, _validate_string_length
 from app.db.models import Location
@@ -46,6 +47,7 @@ def _create_location(repo: LocationRepository, body: dict[str, Any]) -> Location
         address=address,
         lat=lat,
         lng=lng,
+        place_id=parse_place_id(body.get("place_id")),
     )
 
 
@@ -85,6 +87,8 @@ def _update_location(
         entity.lat = body["lat"]
     if "lng" in body:
         entity.lng = body["lng"]
+    if "place_id" in body:
+        entity.place_id = parse_place_id(body.get("place_id"))
     return entity
 
 
@@ -143,6 +147,7 @@ def _serialize_location(entity: Location) -> dict[str, Any]:
         "address": entity.address,
         "lat": entity.lat,
         "lng": entity.lng,
+        "place_id": entity.place_id,
         "created_at": entity.created_at,
         "updated_at": entity.updated_at,
     }

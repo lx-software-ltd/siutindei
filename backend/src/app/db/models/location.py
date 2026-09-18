@@ -43,6 +43,7 @@ class Location(Base):
     address: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     lat: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
     lng: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
+    place_id: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=False,

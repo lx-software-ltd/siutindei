@@ -186,7 +186,15 @@ def fetch_search_response(
 
     has_more = len(rows) > requested_limit
     trimmed_rows = rows[:requested_limit]
-    items = [map_row_to_result(row, region_cache) for row in trimmed_rows]
+    include_place_id = filters.activity_id is not None
+    items = [
+        map_row_to_result(
+            row,
+            region_cache,
+            include_place_id=include_place_id,
+        )
+        for row in trimmed_rows
+    ]
     next_cursor = None
     if has_more and trimmed_rows:
         last_row = trimmed_rows[-1]
@@ -200,6 +208,7 @@ def fetch_search_response(
 def map_row_to_result(
     row: Any,
     region_cache: dict[str, str | None],
+    include_place_id: bool = False,
 ) -> ActivitySearchResultSchema:
     """Map a SQLAlchemy row to a search result schema."""
 
@@ -211,18 +220,33 @@ def map_row_to_result(
     schedule: ActivitySchedule = mapping[ActivitySchedule]
 
     age_min, age_max = _extract_age_bounds(activity.age_range)
+    is_template = organization.description_source == "template"
+    org_description = None if is_template else organization.description
+    org_desc_translations = (
+        {}
+        if is_template
+        else build_translation_map(
+            organization.description, organization.description_translations
+        )
+    )
+    activity_description = None if is_template else activity.description
+    activity_desc_translations = (
+        {}
+        if is_template
+        else build_translation_map(
+            activity.description, activity.description_translations
+        )
+    )
 
     return ActivitySearchResultSchema(
         activity=ActivitySchema(
             id=str(activity.id),
             name=activity.name,
-            description=activity.description,
+            description=activity_description,
             name_translations=build_translation_map(
                 activity.name, activity.name_translations
             ),
-            description_translations=build_translation_map(
-                activity.description, activity.description_translations
-            ),
+            description_translations=activity_desc_translations,
             age_min=age_min,
             age_max=age_max,
             category_id=str(activity.category_id),
@@ -230,16 +254,17 @@ def map_row_to_result(
         organization=OrganizationSchema(
             id=str(organization.id),
             name=organization.name,
-            description=organization.description,
+            description=org_description,
             name_translations=build_translation_map(
                 organization.name, organization.name_translations
             ),
-            description_translations=build_translation_map(
-                organization.description, organization.description_translations
-            ),
+            description_translations=org_desc_translations,
             manager_id=organization.manager_id,
             media_urls=organization.media_urls or [],
             logo_media_url=organization.logo_media_url,
+            status=organization.status,
+            description_source=organization.description_source,
+            place_id=organization.place_id if include_place_id else None,
         ),
         location=LocationSchema(
             id=str(location.id),

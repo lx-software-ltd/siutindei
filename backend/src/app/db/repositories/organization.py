@@ -43,6 +43,32 @@ class OrganizationRepository(BaseRepository[Organization]):
         )
         return self._session.execute(query).scalar_one_or_none()
 
+    def find_by_place_id(self, place_id: str) -> Optional[Organization]:
+        """Find an organization by Google place_id."""
+        query = select(Organization).where(Organization.place_id == place_id)
+        return self._session.execute(query).scalar_one_or_none()
+
+    def find_by_source_id(self, source_id: str) -> Optional[Organization]:
+        """Find an organization by parsed catalog source_id."""
+        query = select(Organization).where(Organization.source_id == source_id)
+        return self._session.execute(query).scalar_one_or_none()
+
+    def find_by_manager_and_name(
+        self,
+        manager_id: str,
+        name: str,
+    ) -> Optional[Organization]:
+        """Find by manager and case-insensitive trimmed name."""
+        query = (
+            select(Organization)
+            .where(
+                func.lower(func.trim(Organization.manager_id))
+                == manager_id.strip().lower()
+            )
+            .where(func.lower(func.trim(Organization.name)) == name.strip().lower())
+        )
+        return self._session.execute(query).scalar_one_or_none()
+
     def find_by_manager(
         self,
         manager_id: str,

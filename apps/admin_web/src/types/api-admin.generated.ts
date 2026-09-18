@@ -22,6 +22,13 @@ export interface paths {
                     limit?: number;
                     /** @description Pagination cursor from previous response */
                     cursor?: string;
+                    /** @description Look up an organization by Google place_id. */
+                    place_id?: string;
+                    /**
+                     * @description Look up an organization by catalog source_id parsed from
+                     *     vetting_note (`sourceId=`).
+                     */
+                    source_id?: string;
                 };
                 header?: never;
                 path?: never;
@@ -195,7 +202,51 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Patch organization listing fields
+         * @description Partial update used by the owner UI to set `status` (with optional
+         *     `reason`) or attach a Google `place_id`.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OrganizationUpdate"];
+                };
+            };
+            responses: {
+                /** @description Organization updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Organization"];
+                    };
+                };
+                /** @description Validation error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Organization not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         trace?: never;
     };
     "/v1/admin/organizations/{id}/media": {
@@ -396,6 +447,56 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/imports/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a stored import job
+         * @description Return the stored summary and per-row results for a previous
+         *     `object_key` so the owner can reopen an import from the Progress
+         *     card. Admin-only.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    job_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Stored import job */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminImportJob"];
+                    };
+                };
+                /** @description Import job not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4067,6 +4168,22 @@ export interface components {
              *     phone_country_code=HK and phone_number.
              */
             phone?: string;
+            /** @description Optional Traditional Chinese name; blank is ignored. */
+            name_zh?: string;
+            /** @description Optional Traditional Chinese description; blank is ignored. */
+            description_zh?: string;
+            /**
+             * @description Google Places id. Matched before manager_id + name. A place_id
+             *     match with a different name updates the organization.
+             */
+            place_id?: string;
+            /**
+             * @description Listing status. `closed_permanently` updates an existing match
+             *     and does not create when no match exists. Provider-owned rows
+             *     are skipped with `managed by provider`.
+             * @enum {string}
+             */
+            status?: "operational" | "closed_temporarily" | "closed_permanently" | "hidden";
             phone_country_code?: string;
             phone_number?: string;
             email?: string;
@@ -4203,13 +4320,36 @@ export interface components {
             path?: string | null;
             warnings: string[];
             errors: components["schemas"]["AdminImportError"][];
+            /** @description First error message, for the bulk catalog caller. */
+            error?: string;
+            /** @description Echoed on organization results when sent. */
+            place_id?: string;
         };
         AdminImportResponse: {
+            /**
+             * Format: uuid
+             * @description Stored import job id for later GET.
+             */
+            id?: string;
+            object_key?: string;
             summary: components["schemas"]["AdminImportSummary"];
             results: components["schemas"]["AdminImportResult"][];
             file_warnings: string[];
             /** @description Echo of the request dry_run flag. */
             dry_run?: boolean;
+        };
+        AdminImportJob: {
+            /** Format: uuid */
+            id: string;
+            object_key: string;
+            dry_run: boolean;
+            summary: components["schemas"]["AdminImportSummary"];
+            results: components["schemas"]["AdminImportResult"][];
+            file_warnings: string[];
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
         };
         AdminExportResponse: {
             download_url: string;
@@ -4259,6 +4399,15 @@ export interface components {
              * @description Optional logo media URL. Must match one of the media_urls values.
              */
             logo_media_url?: string;
+            place_id?: string | null;
+            /** @enum {string} */
+            status?: "operational" | "closed_temporarily" | "closed_permanently" | "hidden";
+            /** @enum {string} */
+            status_source?: "owner" | "provider" | "places" | "importer";
+            source?: string;
+            source_id?: string;
+            /** @enum {string} */
+            description_source?: "template" | "official" | "places" | "enrich";
         };
         OrganizationUpdate: {
             /** @description Organization name (max 200 characters) */
@@ -4271,6 +4420,17 @@ export interface components {
             description_translations?: components["schemas"]["TranslationMap"];
             /** @description Cognito user sub of the organization manager */
             manager_id?: string;
+            place_id?: string | null;
+            /** @enum {string} */
+            status?: "operational" | "closed_temporarily" | "closed_permanently" | "hidden";
+            /** @description Optional owner note when changing status; not stored. */
+            reason?: string;
+            /** @enum {string} */
+            status_source?: "owner" | "provider" | "places" | "importer";
+            source?: string;
+            source_id?: string;
+            /** @enum {string} */
+            description_source?: "template" | "official" | "places" | "enrich";
             /** @description ISO 3166-1 alpha-2 country code for phone number */
             phone_country_code?: string;
             /** @description National phone number digits (no country code) */
@@ -4307,6 +4467,17 @@ export interface components {
             description_translations: components["schemas"]["TranslationMap"];
             /** @description Cognito user sub of the organization manager */
             manager_id: string;
+            place_id?: string | null;
+            /** @enum {string} */
+            status?: "operational" | "closed_temporarily" | "closed_permanently" | "hidden";
+            /** Format: date-time */
+            status_changed_at?: string | null;
+            /** @enum {string|null} */
+            status_source?: "owner" | "provider" | "places" | "importer" | null;
+            source?: string | null;
+            source_id?: string | null;
+            /** @enum {string|null} */
+            description_source?: "template" | "official" | "places" | "enrich" | null;
             /** @description ISO 3166-1 alpha-2 country code for phone number */
             phone_country_code?: string | null;
             /** @description National phone number digits (no country code) */

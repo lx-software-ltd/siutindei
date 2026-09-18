@@ -56,7 +56,10 @@ def test_engine(test_database_url: str):
 
     yield engine
 
-    # Drop all tables
+    from sqlalchemy import text
+
+    with engine.begin() as connection:
+        connection.execute(text("DROP VIEW IF EXISTS v_catalog_health"))
     Base.metadata.drop_all(engine)
     engine.dispose()
 

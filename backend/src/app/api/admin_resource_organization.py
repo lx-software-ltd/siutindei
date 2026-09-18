@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Optional
 
+from app.api.admin_imports_catalog import (
+    apply_listing_status,
+    parse_description_source,
+    parse_org_status,
+    parse_place_id,
+    parse_status_source,
+)
 from app.api.admin_validators import (
     MAX_DESCRIPTION_LENGTH,
     MAX_NAME_LENGTH,
@@ -133,6 +141,7 @@ def _update_organization_for_manager(
         if entity.logo_media_url and entity.logo_media_url not in media_urls_for_logo:
             entity.logo_media_url = None
     _apply_organization_contact_fields(entity, body)
+    _apply_organization_listing_fields(repo, entity, body)
     return entity
 
 
@@ -168,6 +177,16 @@ def _create_organization(
         media_urls,
     )
     contact_fields = _parse_organization_contact_fields(body)
+    place_id = parse_place_id(body.get("place_id"))
+    if place_id and repo.find_by_place_id(place_id) is not None:
+        raise ValidationError("place_id already exists", field="place_id")
+    status = parse_org_status(body.get("status")) or "operational"
+    status_source = parse_status_source(body.get("status_source"))
+    if status != "operational" and not status_source:
+        status_source = "owner"
+    status_changed_at = None
+    if status != "operational":
+        status_changed_at = datetime.now(timezone.utc)
 
     return Organization(
         name=name,
@@ -177,6 +196,13 @@ def _create_organization(
         manager_id=manager_id,
         media_urls=media_urls,
         logo_media_url=logo_media_url,
+        place_id=place_id,
+        status=status,
+        status_source=status_source,
+        status_changed_at=status_changed_at,
+        source=body.get("source") or None,
+        source_id=body.get("source_id") or None,
+        description_source=parse_description_source(body.get("description_source")),
         **contact_fields,
     )
 
@@ -233,7 +259,39 @@ def _update_organization(
         if entity.logo_media_url and entity.logo_media_url not in media_urls_for_logo:
             entity.logo_media_url = None
     _apply_organization_contact_fields(entity, body)
+    _apply_organization_listing_fields(repo, entity, body)
     return entity
+
+
+def _apply_organization_listing_fields(
+    repo: OrganizationRepository,
+    entity: Organization,
+    body: dict[str, Any],
+) -> None:
+    """Apply place_id, status, and catalog source fields."""
+    body.pop("reason", None)
+    if "place_id" in body:
+        place_id = parse_place_id(body.get("place_id"))
+        if place_id:
+            existing = repo.find_by_place_id(place_id)
+            if existing is not None and str(existing.id) != str(entity.id):
+                raise ValidationError(
+                    "place_id already exists",
+                    field="place_id",
+                )
+        entity.place_id = place_id
+    if "status" in body:
+        status = parse_org_status(body.get("status")) or "operational"
+        source = parse_status_source(body.get("status_source")) or "owner"
+        apply_listing_status(entity, status, source)
+    if "source" in body:
+        entity.source = body.get("source") or None
+    if "source_id" in body:
+        entity.source_id = body.get("source_id") or None
+    if "description_source" in body:
+        entity.description_source = parse_description_source(
+            body.get("description_source")
+        )
 
 
 def _serialize_organization(entity: Organization) -> dict[str, Any]:
@@ -261,6 +319,13 @@ def _serialize_organization(entity: Organization) -> dict[str, Any]:
         "wechat": entity.wechat,
         "media_urls": entity.media_urls or [],
         "logo_media_url": entity.logo_media_url,
+        "place_id": entity.place_id,
+        "status": entity.status,
+        "status_changed_at": entity.status_changed_at,
+        "status_source": entity.status_source,
+        "source": entity.source,
+        "source_id": entity.source_id,
+        "description_source": entity.description_source,
         "created_at": entity.created_at,
         "updated_at": entity.updated_at,
     }

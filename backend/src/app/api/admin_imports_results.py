@@ -28,6 +28,11 @@ def record_result(
         "warnings": warnings_list,
         "errors": errors_list,
     }
+    if errors_list:
+        first = errors_list[0]
+        result["error"] = (
+            first.get("message") if isinstance(first, dict) else str(first)
+        )
     if path:
         result["path"] = path
     results.append(result)

@@ -3,12 +3,14 @@
 import Link from 'next/link';
 
 import type { Locale } from '@/content';
+import { getContent } from '@/content';
 import type { ActivityListing } from '@/lib/activities/types';
 import { regionIdForListing } from '@/lib/activities/map-search-url';
 import {
   formatListingPrice,
   formatScheduleSnippet,
   listingImageUrl,
+  isTemporarilyClosed,
   listingOrgName,
   listingTitle,
   regionLabelForListing,
@@ -59,6 +61,7 @@ export function ListingCard({
   const regionId = regionIdForListing(listing);
   const schedule = formatScheduleSnippet(locale, listing.schedule.weeklyEntries);
   const price = formatListingPrice(locale, listing);
+  const closedLabel = getContent(locale).searchPage.temporarilyClosedLabel;
 
   return (
     <article
@@ -98,6 +101,11 @@ export function ListingCard({
             {listing.pricing.freeTrialClassOffered ? (
               <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-ink-900 shadow-sm">
                 {freeTrialLabel}
+              </span>
+            ) : null}
+            {isTemporarilyClosed(listing) ? (
+              <span className="rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-ink-900 shadow-sm">
+                {closedLabel}
               </span>
             ) : null}
           </span>
