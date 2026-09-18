@@ -19,7 +19,7 @@
 #   * PUBLIC_WWW_MAINTENANCE_MODE    = true     ← upload the branded coming-soon
 #                                                  holding page from
 #                                                  apps/public_www/maintenance/
-#                                                  (no-store) to the target bucket.
+#                                                  (HTML no-store; images 1h).
 #
 # /www/* CloudFront proxy switching is intentionally NOT implemented here. The
 # scaffolded stack has no /www/* behavior. When the public API is added,
@@ -41,6 +41,8 @@ MAINTENANCE_MODE="${PUBLIC_WWW_MAINTENANCE_MODE:-false}"
 ASSET_CACHE_CONTROL="public, max-age=31536000, immutable"
 DOCUMENT_CACHE_CONTROL="public, max-age=300, must-revalidate"
 NO_STORE_CACHE_CONTROL="no-store, max-age=0"
+MAINTENANCE_ASSET_CACHE_CONTROL="public, max-age=3600, must-revalidate"
+DEFAULT_LX_SOFTWARE_URL="https://www.lx-software.com"
 
 if [ "$MAINTENANCE_MODE" != "true" ] && [ "$MAINTENANCE_MODE" != "false" ]; then
   echo "Unsupported PUBLIC_WWW_MAINTENANCE_MODE: '$MAINTENANCE_MODE'"
@@ -156,6 +158,41 @@ copy_required_maintenance_asset() {
   cp "$source_path" "$destination_path"
 }
 
+inject_maintenance_partial() {
+  local html_path="$1"
+  local marker="$2"
+  local snippet_path="$3"
+  if [ ! -f "$snippet_path" ]; then
+    echo "Maintenance partial not found: $snippet_path"
+    exit 1
+  fi
+  python3 - "$html_path" "$marker" "$snippet_path" <<'PY'
+from pathlib import Path
+import sys
+
+html_path = Path(sys.argv[1])
+marker = sys.argv[2]
+snippet_path = Path(sys.argv[3])
+html = html_path.read_text(encoding="utf-8")
+if marker not in html:
+    raise SystemExit(f"Marker {marker} not found in {html_path}")
+snippet = snippet_path.read_text(encoding="utf-8").rstrip("\n")
+html_path.write_text(html.replace(marker, snippet), encoding="utf-8")
+PY
+}
+
+assemble_maintenance_html() {
+  local html_path="$1"
+  inject_maintenance_partial \
+    "$html_path" \
+    "__MAINTENANCE_BUBBLES__" \
+    "$MAINTENANCE_DIR/partials/bubbles.html"
+  inject_maintenance_partial \
+    "$html_path" \
+    "__MAINTENANCE_FOOTER__" \
+    "$MAINTENANCE_DIR/partials/footer.html"
+}
+
 escape_sed_replacement() {
   printf '%s' "$1" | sed -e 's/[\\&|]/\\&/g'
 }
@@ -172,7 +209,7 @@ inject_maintenance_contact_values() {
   escaped_whatsapp_url="$(escape_sed_replacement "${NEXT_PUBLIC_WHATSAPP_URL:-#}")"
   escaped_instagram_url="$(escape_sed_replacement "${NEXT_PUBLIC_INSTAGRAM_URL:-#}")"
   escaped_lx_software_url="$(escape_sed_replacement \
-    "${NEXT_PUBLIC_LX_SOFTWARE_URL:-https://lx-software.com}")"
+    "${NEXT_PUBLIC_LX_SOFTWARE_URL:-$DEFAULT_LX_SOFTWARE_URL}")"
   escaped_build_year="$(escape_sed_replacement "$(resolve_maintenance_build_year)")"
   sed -i \
     -e "s|__NEXT_PUBLIC_EMAIL__|$escaped_email|g" \
@@ -214,9 +251,19 @@ prepare_maintenance_build_dir() {
       "$APP_DIR/public/images/small-world/${bubble_name}.webp" \
       "$maintenance_build_dir/images/small-world/${bubble_name}.webp"
   done
+  assemble_maintenance_html "$maintenance_build_dir/index.html"
+  if [ -f "$maintenance_build_dir/404.html" ]; then
+    assemble_maintenance_html "$maintenance_build_dir/404.html"
+  fi
+  rm -rf "$maintenance_build_dir/partials"
   inject_maintenance_contact_values "$maintenance_build_dir/index.html"
   if [ -f "$maintenance_build_dir/404.html" ]; then
     inject_maintenance_contact_values "$maintenance_build_dir/404.html"
+  fi
+  if grep -R -q -E '__MAINTENANCE_|__NEXT_PUBLIC_' \
+    "$maintenance_build_dir"/*.html; then
+    echo "Unreplaced maintenance placeholders remain in the build dir."
+    exit 1
   fi
   echo "$maintenance_build_dir"
 }
@@ -352,10 +399,18 @@ sync_release_artifacts() {
 sync_maintenance_artifacts() {
   local source_dir="$1"
   local destination_uri="$2"
+  if [ -d "$source_dir/images" ]; then
+    aws s3 sync \
+      "$source_dir/images" \
+      "$destination_uri/images" \
+      --cache-control "$MAINTENANCE_ASSET_CACHE_CONTROL" \
+      --delete
+  fi
   aws s3 sync \
     "$source_dir" \
     "$destination_uri" \
     --exclude "releases/*" \
+    --exclude "images/*" \
     --cache-control "$NO_STORE_CACHE_CONTROL" \
     --delete
 }
