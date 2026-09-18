@@ -344,8 +344,24 @@ export interface paths {
          *     partial success and returns per-record warnings and errors.
          *     Requires a Cognito JWT in the `admin` or `importer` group.
          *     `GET /v1/admin/imports/export` remains admin-only.
+         *     Importer-only callers skip an existing organization when the
+         *     payload `manager_id` matches (case-insensitive); existing
+         *     venues, activities, pricing, and schedules are skipped and
+         *     missing ones are created. Existing rows are skipped before
+         *     `area_name` / `category_name` resolution. After each activity
+         *     upsert the single venue from this import's `locations[]` (or
+         *     the expanded flat location) is attached on `activity_locations`.
+         *     Import does not look up other venues already on the org;
+         *     Alembic `0031_link_orphan_activities` backfills historical
+         *     orphans when an org has exactly one location. A skipped
+         *     activity that gains a join reports warning
+         *     `linked existing activity to imported venue`. A foreign name
+         *     match still fails that record with `exists` and skips children.
+         *     Admin imports may update an organization whose current manager_id
+         *     matches the payload; `manager_id` is never changed on update.
          *     When `dry_run` is true the file is validated the same way as a live
-         *     import (presign → PUT → POST) but no rows are committed.
+         *     import (presign → PUT → POST) but no rows or audit entries are
+         *     committed.
          */
         post: {
             parameters: {
@@ -3986,6 +4002,8 @@ export interface components {
             /**
              * Format: uuid
              * @description Applied to any organization that omits manager_id. Must be a UUID.
+             *     Used only to satisfy the create-time manager_id requirement.
+             *     It does not reassign an existing organization's manager.
              */
             default_manager_id?: string;
             organizations: components["schemas"]["AdminImportOrganization"][];
@@ -4002,8 +4020,13 @@ export interface components {
             name_translations?: components["schemas"]["TranslationMap"];
             description_translations?: components["schemas"]["TranslationMap"];
             /**
-             * @description Cognito user sub (required for new orgs unless default_manager_id
-             *     is set at the file root).
+             * @description Cognito user sub. Required on create unless default_manager_id
+             *     is set at the file root. On update, a matching manager_id is
+             *     ignored; a different value fails the record with
+             *     `manager_id cannot be changed on update`. Import never writes
+             *     manager_id on update. Importer-only callers skip a matching
+             *     manager_id org (compared case-insensitively; children still
+             *     import) and still fail a foreign name match with `exists`.
              */
             manager_id?: string;
             /**
@@ -4144,7 +4167,9 @@ export interface components {
             object_key: string;
             /**
              * @description When true, validate and report results without committing
-             *     creates or updates. Same presign + PUT flow as a live import.
+             *     creates or updates, and without persisting audit_log rows.
+             *     CloudWatch uses a distinct "dry-run completed" line. Same
+             *     presign + PUT flow as a live import.
              * @default false
              */
             dry_run: boolean;

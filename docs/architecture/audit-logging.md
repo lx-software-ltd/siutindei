@@ -80,7 +80,14 @@ This ensures:
 
 All CRUD operations on product tables are automatically audited via
 database triggers. `listing_events` and `listing_events_daily` are
-**not** audited (high-volume telemetry). To include user context:
+**not** audited (high-volume telemetry). `POST /v1/admin/imports` with
+`dry_run=true` flushes the same triggers, then
+`persist_import_change` deletes `audit_log` rows from the current
+transaction (`xmin = pg_current_xact_id()`) and the handler rolls back
+without calling `set_audit_context`. Live imports keep the usual
+trigger rows and a distinct CloudWatch line
+(`Admin import completed` vs `Admin import dry-run completed`).
+To include user context:
 
 ```python
 from sqlalchemy.orm import Session

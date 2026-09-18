@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import importlib.util
 from decimal import Decimal
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.api.admin_imports import _parse_dry_run
@@ -15,15 +17,40 @@ from app.api.admin_imports_fields import (
     collect_flat_org_warnings,
 )
 from app.api.admin_imports_importer import process_import_payload
-from app.api.admin_imports_upsert import upsert_activity, upsert_location
+from app.api.admin_imports_upsert import (
+    upsert_activity,
+    upsert_location,
+    upsert_organization,
+)
+from app.api.admin_imports_venues import LINKED_VENUE_WARNING
 from app.api.admin_imports_utils import (
     from_utc_weekly,
     parse_time_minutes,
     parse_timezone,
+    persist_import_change,
     to_utc_weekly,
 )
-from app.db.models import Activity, Location, Organization
+from app.db.models import Activity, ActivityLocation, Location, Organization
 from app.exceptions import ValidationError
+
+
+def _orphan_backfill_sql() -> str:
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "backend"
+        / "db"
+        / "alembic"
+        / "versions"
+        / "0031_link_orphan_activities.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "link_orphan_activities",
+        path,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.LINK_ORPHAN_ACTIVITIES_SQL
 
 
 def test_parse_time_minutes_accepts_hhmm() -> None:
@@ -485,3 +512,526 @@ def test_dry_run_child_failure_keeps_sibling_results(
             select(Organization).where(Organization.name == org_name)
         ).scalar_one_or_none()
     assert found is None
+
+
+def test_importer_create_only_rejects_existing_org(
+    db_session,
+    sample_organization,
+) -> None:
+    payload = {
+        "organizations": [
+            {
+                "name": sample_organization.name,
+                "description": "Takeover attempt",
+                "manager_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        dry_run=True,
+        allow_org_updates=False,
+    )
+    assert results[0]["status"] == "failed"
+    assert results[0]["errors"][0]["message"] == "exists"
+    assert results[0]["errors"][0]["field"] == "name"
+    db_session.refresh(sample_organization)
+    assert sample_organization.description == (
+        "A test organization for unit tests"
+    )
+    assert str(sample_organization.manager_id) == (
+        "00000000-0000-0000-0000-000000000001"
+    )
+
+
+def test_admin_import_update_keeps_manager_id(test_engine) -> None:
+    org_name = f"Admin Update Org {uuid4()}"
+    manager_id = "00000000-0000-0000-0000-000000000033"
+    with Session(test_engine) as session:
+        process_import_payload(
+            session,
+            {
+                "organizations": [
+                    {
+                        "name": org_name,
+                        "description": "Original",
+                        "manager_id": manager_id,
+                    }
+                ]
+            },
+            [],
+            allow_org_updates=True,
+        )
+    with Session(test_engine) as session:
+        _summary, results = process_import_payload(
+            session,
+            {
+                "organizations": [
+                    {
+                        "name": org_name,
+                        "description": "Updated by admin import",
+                        "manager_id": manager_id,
+                    }
+                ]
+            },
+            [],
+            allow_org_updates=True,
+        )
+    assert results[0]["status"] == "updated"
+    with Session(test_engine) as session:
+        found = session.execute(
+            select(Organization).where(Organization.name == org_name)
+        ).scalar_one()
+        assert found.description == "Updated by admin import"
+        assert str(found.manager_id) == manager_id
+
+
+def test_admin_import_rejects_manager_id_reassign(
+    db_session,
+    sample_organization,
+) -> None:
+    payload = {
+        "organizations": [
+            {
+                "name": sample_organization.name,
+                "manager_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        dry_run=True,
+        allow_org_updates=True,
+    )
+    assert results[0]["status"] == "failed"
+    assert results[0]["errors"][0]["field"] == "manager_id"
+    db_session.refresh(sample_organization)
+    assert str(sample_organization.manager_id) == (
+        "00000000-0000-0000-0000-000000000001"
+    )
+
+
+def test_upsert_organization_create_only_raises(
+    db_session,
+    sample_organization,
+) -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        upsert_organization(
+            db_session,
+            {
+                "name": sample_organization.name,
+                "manager_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            },
+            allow_updates=False,
+        )
+    assert exc_info.value.message == "exists"
+    assert exc_info.value.field == "name"
+
+
+def test_persist_import_change_dry_run_discards_audit(test_engine) -> None:
+    if test_engine.dialect.name != "postgresql":
+        pytest.skip("audit discard uses PostgreSQL xmin")
+    from sqlalchemy import text
+
+    marker = f"dry-run-{uuid4()}"
+    with Session(test_engine) as session:
+        session.execute(
+            text(
+                "INSERT INTO audit_log "
+                "(table_name, record_id, action, source) "
+                "VALUES ('organizations', :rid, 'INSERT', 'trigger')"
+            ),
+            {"rid": marker},
+        )
+        persist_import_change(session, dry_run=True)
+        remaining = session.execute(
+            text(
+                "SELECT count(*) FROM audit_log "
+                "WHERE record_id = :rid "
+                "AND xmin = pg_current_xact_id()::xid"
+            ),
+            {"rid": marker},
+        ).scalar()
+        session.rollback()
+    assert remaining == 0
+
+
+def test_importer_matching_manager_skips_org_and_creates_children(
+    db_session,
+    sample_organization,
+    sample_geographic_area,
+    sample_activity_category,
+) -> None:
+    payload = {
+        "organizations": [
+            {
+                "name": sample_organization.name,
+                "manager_id": str(sample_organization.manager_id),
+                "description": "Should not overwrite",
+                "locations": [
+                    {
+                        "name": "Catalog Venue",
+                        "area_id": str(sample_geographic_area.id),
+                        "lat": 22.2,
+                        "lng": 114.1,
+                    }
+                ],
+                "activities": [
+                    {
+                        "name": "Catalog Class",
+                        "category_id": str(sample_activity_category.id),
+                        "age_min": 3,
+                        "age_max": 8,
+                    }
+                ],
+            }
+        ]
+    }
+    summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=False,
+    )
+    by_type = {item["type"]: item for item in results}
+    assert by_type["organizations"]["status"] == "skipped"
+    assert by_type["locations"]["status"] == "created"
+    assert by_type["activities"]["status"] == "created"
+    assert summary["organizations"]["skipped"] == 1
+    assert summary["locations"]["created"] == 1
+    assert summary["activities"]["created"] == 1
+    db_session.refresh(sample_organization)
+    assert sample_organization.description == (
+        "A test organization for unit tests"
+    )
+    activity = db_session.execute(
+        select(Activity).where(Activity.name == "Catalog Class")
+    ).scalar_one()
+    location = db_session.execute(
+        select(Location).where(Location.address == "Catalog Venue")
+    ).scalar_one()
+    link = db_session.get(
+        ActivityLocation,
+        (activity.id, location.id),
+    )
+    assert link is not None
+
+
+def test_importer_skips_existing_venue_and_activity(
+    db_session,
+    sample_organization,
+    sample_location,
+    sample_activity,
+    sample_geographic_area,
+) -> None:
+    payload = {
+        "organizations": [
+            {
+                "name": sample_organization.name,
+                "manager_id": str(sample_organization.manager_id),
+                "locations": [
+                    {
+                        "name": sample_location.address,
+                        "area_id": str(sample_geographic_area.id),
+                        "lat": 22.3,
+                        "lng": 114.2,
+                    }
+                ],
+                "activities": [
+                    {
+                        "name": sample_activity.name,
+                        "category_id": str(sample_activity.category_id),
+                        "description": "Should not overwrite",
+                        "age_min": 1,
+                        "age_max": 2,
+                    }
+                ],
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=False,
+    )
+    by_type = {item["type"]: item for item in results}
+    assert by_type["organizations"]["status"] == "skipped"
+    assert by_type["locations"]["status"] == "skipped"
+    assert by_type["activities"]["status"] == "skipped"
+    assert LINKED_VENUE_WARNING in by_type["activities"]["warnings"]
+    db_session.refresh(sample_activity)
+    assert sample_activity.description == (
+        "Learn to swim in our heated pool"
+    )
+    link = db_session.get(
+        ActivityLocation,
+        (sample_activity.id, sample_location.id),
+    )
+    assert link is not None
+
+
+def test_first_import_links_activity_to_single_venue(
+    db_session,
+    sample_geographic_area,
+    sample_activity_category,
+) -> None:
+    org_name = f"Link Venue Org {uuid4()}"
+    payload = {
+        "organizations": [
+            {
+                "name": org_name,
+                "manager_id": "00000000-0000-0000-0000-000000000088",
+                "locations": [
+                    {
+                        "name": "Only Venue",
+                        "area_id": str(sample_geographic_area.id),
+                        "lat": 22.2,
+                        "lng": 114.1,
+                    }
+                ],
+                "activities": [
+                    {
+                        "name": "Only Activity",
+                        "category_id": str(sample_activity_category.id),
+                        "age_min": 4,
+                        "age_max": 9,
+                    }
+                ],
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=False,
+    )
+    by_type = {item["type"]: item for item in results}
+    assert by_type["organizations"]["status"] == "created"
+    assert by_type["activities"]["status"] == "created"
+    activity = db_session.execute(
+        select(Activity).where(Activity.name == "Only Activity")
+    ).scalar_one()
+    location = db_session.execute(
+        select(Location).where(Location.address == "Only Venue")
+    ).scalar_one()
+    assert db_session.get(
+        ActivityLocation,
+        (activity.id, location.id),
+    ) is not None
+
+
+def test_link_orphan_activities_sql_backfills_single_venue(
+    db_session,
+    sample_organization,
+    sample_location,
+    sample_activity,
+) -> None:
+    existing = db_session.get(
+        ActivityLocation,
+        (sample_activity.id, sample_location.id),
+    )
+    assert existing is None
+    db_session.execute(text(_orphan_backfill_sql()))
+    db_session.flush()
+    assert db_session.get(
+        ActivityLocation,
+        (sample_activity.id, sample_location.id),
+    ) is not None
+
+
+def test_importer_matching_manager_id_is_case_insensitive(
+    db_session,
+    sample_organization,
+    sample_geographic_area,
+    sample_activity_category,
+) -> None:
+    payload = {
+        "organizations": [
+            {
+                "name": sample_organization.name,
+                "manager_id": str(sample_organization.manager_id).upper(),
+                "locations": [
+                    {
+                        "name": "Case Venue",
+                        "area_id": str(sample_geographic_area.id),
+                        "lat": 22.2,
+                        "lng": 114.1,
+                    }
+                ],
+                "activities": [
+                    {
+                        "name": "Case Activity",
+                        "category_id": str(sample_activity_category.id),
+                        "age_min": 2,
+                        "age_max": 6,
+                    }
+                ],
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=False,
+    )
+    by_type = {item["type"]: item for item in results}
+    assert by_type["organizations"]["status"] == "skipped"
+    assert by_type["locations"]["status"] == "created"
+    assert by_type["activities"]["status"] == "created"
+
+
+def test_importer_skips_existing_before_name_resolution(
+    db_session,
+    sample_organization,
+    sample_location,
+    sample_activity,
+) -> None:
+    payload = {
+        "organizations": [
+            {
+                "name": sample_organization.name,
+                "manager_id": str(sample_organization.manager_id),
+                "locations": [
+                    {
+                        "name": sample_location.address,
+                        "area_name": "DOES-NOT-EXIST-DISTRICT",
+                        "lat": 22.2,
+                        "lng": 114.1,
+                    }
+                ],
+                "activities": [
+                    {
+                        "name": sample_activity.name,
+                        "category_name": "DOES-NOT-EXIST-CATEGORY",
+                        "age_min": 1,
+                        "age_max": 2,
+                    }
+                ],
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=False,
+    )
+    by_type = {item["type"]: item for item in results}
+    assert by_type["locations"]["status"] == "skipped"
+    assert by_type["activities"]["status"] == "skipped"
+
+
+def test_activity_only_import_does_not_link_db_venues(
+    db_session,
+    sample_organization,
+    sample_location,
+    sample_activity,
+    sample_activity_category,
+) -> None:
+    payload = {
+        "organizations": [
+            {
+                "name": sample_organization.name,
+                "manager_id": str(sample_organization.manager_id),
+                "activities": [
+                    {
+                        "name": sample_activity.name,
+                        "category_id": str(sample_activity_category.id),
+                        "age_min": 5,
+                        "age_max": 12,
+                    }
+                ],
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=False,
+    )
+    by_type = {item["type"]: item for item in results}
+    assert by_type["activities"]["status"] == "skipped"
+    assert db_session.get(
+        ActivityLocation,
+        (sample_activity.id, sample_location.id),
+    ) is None
+
+
+def test_importer_skips_existing_pricing_and_schedule(
+    db_session,
+    sample_organization,
+    sample_location,
+    sample_activity,
+    sample_pricing,
+    sample_schedule,
+    sample_geographic_area,
+) -> None:
+    original_amount = sample_pricing.amount
+    original_entry_count = len(sample_schedule.entries)
+    payload = {
+        "organizations": [
+            {
+                "name": sample_organization.name,
+                "manager_id": str(sample_organization.manager_id),
+                "locations": [
+                    {
+                        "name": sample_location.address,
+                        "area_id": str(sample_geographic_area.id),
+                        "lat": 22.2,
+                        "lng": 114.1,
+                    }
+                ],
+                "activities": [
+                    {
+                        "name": sample_activity.name,
+                        "category_id": str(sample_activity.category_id),
+                        "age_min": 5,
+                        "age_max": 12,
+                        "pricing": [
+                            {
+                                "location_name": sample_location.address,
+                                "pricing_type": "per_class",
+                                "amount": "999.00",
+                                "currency": "HKD",
+                            }
+                        ],
+                        "schedules": [
+                            {
+                                "location_name": sample_location.address,
+                                "timezone": "UTC",
+                                "languages": ["en", "zh"],
+                                "weekly_entries": [
+                                    {
+                                        "day_of_week": 3,
+                                        "start_time": "12:00",
+                                        "end_time": "13:00",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=False,
+    )
+    by_type = {item["type"]: item for item in results}
+    assert by_type["pricing"]["status"] == "skipped"
+    assert by_type["schedules"]["status"] == "skipped"
+    db_session.refresh(sample_pricing)
+    db_session.refresh(sample_schedule)
+    assert sample_pricing.amount == original_amount
+    assert len(sample_schedule.entries) == original_entry_count

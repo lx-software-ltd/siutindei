@@ -41,6 +41,35 @@ def apply_default_manager_id(payload: dict[str, Any]) -> None:
             org["manager_id"] = manager_id
 
 
+def manager_ids_match(existing_id: Any, payload_id: Any) -> bool:
+    """Compare manager ids without case or surrounding whitespace."""
+    if payload_id is None:
+        return False
+    return str(existing_id).strip().lower() == str(payload_id).strip().lower()
+
+
+def guard_import_organization_update(
+    existing: Any,
+    body: dict[str, Any],
+) -> None:
+    """Block manager_id changes on admin import update.
+
+    Called only after ``upsert_organization`` has confirmed
+    ``allow_updates``. A different payload manager_id fails the
+    record. Import never writes manager_id on update.
+    """
+    payload = body.get("manager_id")
+    if payload is not None and not manager_ids_match(
+        existing.manager_id,
+        payload,
+    ):
+        raise ValidationError(
+            "manager_id cannot be changed on update",
+            field="manager_id",
+        )
+    body.pop("manager_id", None)
+
+
 def apply_source_attribution(record: dict[str, Any]) -> None:
     """Append ``Source: <url>`` plus optional `` — <note>``."""
     url_text = _optional_text(record.get("source_url"))
