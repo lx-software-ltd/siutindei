@@ -242,6 +242,14 @@ def test_catalog_health_view_replaces_integer_counts(db_session) -> None:
     except ProgrammingError as exc:
         assert "cannot change data type of view column" in str(exc)
 
+    for index in range(3):
+        db_session.add(
+            Organization(
+                name=f"Health View Org {index} {uuid4()}",
+                manager_id=f"00000000-0000-0000-0000-00000000000{index}",
+            )
+        )
+    db_session.flush()
     db_session.execute(text("DROP VIEW IF EXISTS v_catalog_health"))
     db_session.execute(
         text(
@@ -265,6 +273,7 @@ def test_catalog_health_view_replaces_integer_counts(db_session) -> None:
     org_count = db_session.execute(
         text("SELECT COUNT(*)::integer FROM organizations")
     ).scalar_one()
+    assert org_count >= 3
     row = db_session.execute(
         text("SELECT activities FROM v_catalog_health")
     ).one()
