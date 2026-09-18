@@ -481,7 +481,6 @@ def test_location_place_id_collision_warns(
     sample_organization.place_id = "ChIJ-loc-unique"
     other_location = Location(
         org_id=sample_organization.id,
-        name="Existing venue",
         address="99 Other Road",
         area_id=sample_geographic_area.id,
         place_id="ChIJ-shared-loc",
