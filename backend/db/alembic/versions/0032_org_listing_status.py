@@ -165,15 +165,19 @@ def upgrade() -> None:
     )
     op.execute("GRANT SELECT, INSERT, UPDATE ON import_jobs TO siutindei_admin;")
 
+    # Production already has this view with integer count columns.
+    # CREATE OR REPLACE cannot change integer → bigint (COUNT), so drop first
+    # and cast counts back to integer.
+    op.execute("DROP VIEW IF EXISTS v_catalog_health")
     op.execute(
         """
-        CREATE OR REPLACE VIEW v_catalog_health AS
+        CREATE VIEW v_catalog_health AS
         SELECT
           COALESCE(ga.name, 'Unknown') AS district,
           COALESCE(ac.name, 'Unknown') AS category,
-          COUNT(DISTINCT a.id) AS activities,
-          COUNT(DISTINCT o.id) AS providers,
-          COUNT(DISTINCT l.id) AS stores,
+          COUNT(DISTINCT a.id)::integer AS activities,
+          COUNT(DISTINCT o.id)::integer AS providers,
+          COUNT(DISTINCT l.id)::integer AS stores,
           CASE
             WHEN COUNT(DISTINCT o.id) = 0 THEN 0
             ELSE ROUND(
@@ -203,22 +207,22 @@ def upgrade() -> None:
           END AS completeness,
           COUNT(DISTINCT o.id) FILTER (
             WHERE COALESCE(cardinality(o.media_urls), 0) > 0
-          ) AS has_photo,
+          )::integer AS has_photo,
           COUNT(DISTINCT a.id) FILTER (
             WHERE EXISTS (
               SELECT 1 FROM activity_pricing ap
               WHERE ap.activity_id = a.id
             )
-          ) AS has_price,
+          )::integer AS has_price,
           COUNT(DISTINCT a.id) FILTER (
             WHERE EXISTS (
               SELECT 1 FROM activity_schedule s
               WHERE s.activity_id = a.id
             )
-          ) AS has_schedule,
+          )::integer AS has_schedule,
           COUNT(DISTINCT l.id) FILTER (
             WHERE l.lat IS NOT NULL AND l.lng IS NOT NULL
-          ) AS has_geo
+          )::integer AS has_geo
         FROM organizations o
         LEFT JOIN locations l ON l.org_id = o.id
         LEFT JOIN geographic_areas ga ON ga.id = l.area_id
