@@ -1,0 +1,541 @@
+"""Board catalog bulk-import acceptance tests."""
+
+from __future__ import annotations
+
+from uuid import uuid4
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.api.admin_imports_importer import process_import_payload
+from app.api.admin_imports_jobs import (
+    find_import_job_by_key,
+    serialize_import_job,
+    store_import_job,
+)
+from app.db.models import Organization
+
+
+CATALOG_MANAGER = "00000000-0000-0000-0000-000000000088"
+
+
+def _board_org(
+    index: int,
+    *,
+    category_name: str,
+    area_name: str,
+    place_id: str | None = None,
+    name: str | None = None,
+    status: str | None = None,
+) -> dict:
+    org_name = name or f"Board Playground {index:02d}"
+    payload = {
+        "name": org_name,
+        "name_zh": "",
+        "manager_id": CATALOG_MANAGER,
+        "area_name": area_name,
+        "category_name": category_name,
+        "address": f"{index} Park Road, Eastern",
+        "description": f"{org_name} is a public outdoor venue.",
+        "description_zh": "",
+        "vetting_note": (
+            f"source=lcsd; sourceId=lcsd-{index}; descriptionSource=template"
+        ),
+        "lat": 22.291,
+        "lng": 114.216,
+        "activities": [
+            {
+                "name": org_name,
+                "category_name": category_name,
+                "description": f"{org_name} is a public outdoor venue.",
+                "vetting_note": (
+                    f"source=lcsd; sourceId=lcsd-{index}; "
+                    "descriptionSource=template"
+                ),
+            }
+        ],
+    }
+    if place_id:
+        payload["place_id"] = place_id
+    if status:
+        payload["status"] = status
+    return payload
+
+
+def test_fifty_org_batch_place_id_and_unknown_category(
+    db_session,
+    sample_activity_category,
+    sample_geographic_area,
+) -> None:
+    batch = uuid4().hex[:8]
+    orgs = []
+    shared_place = f"ChIJ-{batch}-03"
+    for index in range(1, 51):
+        category = sample_activity_category.name
+        if index == 7:
+            category = "Unknown Category"
+        place_id = f"ChIJ-{batch}-{index:02d}"
+        name = f"Board {batch} Playground {index:02d}"
+        if index == 12:
+            place_id = shared_place
+            name = f"Board {batch} Playground 12 renamed"
+        if index == 3:
+            place_id = shared_place
+        orgs.append(
+            _board_org(
+                index,
+                category_name=category,
+                area_name=sample_geographic_area.name,
+                place_id=place_id,
+                name=name,
+            )
+        )
+
+    warnings: list[str] = []
+    summary, results = process_import_payload(
+        db_session,
+        {"organizations": orgs},
+        warnings,
+        allow_org_updates=True,
+        catalog_manager_id=CATALOG_MANAGER,
+    )
+    assert summary["organizations"]["created"] == 48
+    assert summary["organizations"]["updated"] == 1
+    assert summary["organizations"]["failed"] == 1
+    org_results = [row for row in results if row["type"] == "organizations"]
+    failed = next(row for row in org_results if row["status"] == "failed")
+    assert failed["key"].startswith(f"Board {batch} Playground 07")
+    updated = next(row for row in org_results if row["status"] == "updated")
+    assert updated["key"] == f"Board {batch} Playground 12 renamed"
+    assert updated["place_id"] == shared_place
+
+    stored = store_import_job(
+        db_session,
+        f"admin/imports/board-catalog-{batch}.json",
+        dry_run=False,
+        summary=summary,
+        results=results,
+        file_warnings=warnings,
+    )
+    again = find_import_job_by_key(
+        db_session,
+        f"admin/imports/board-catalog-{batch}.json",
+    )
+    assert again is not None
+    assert again.id == stored.id
+    replay = serialize_import_job(again)
+    assert replay["summary"]["organizations"]["created"] == 48
+    assert replay["results"] == results
+
+
+def test_closed_permanently_updates_and_hides_from_search(
+    db_session,
+    sample_activity_category,
+    sample_geographic_area,
+) -> None:
+    name = f"Close Me Park {uuid4()}"
+    process_import_payload(
+        db_session,
+        {
+            "organizations": [
+                _board_org(
+                    1,
+                    category_name=sample_activity_category.name,
+                    area_name=sample_geographic_area.name,
+                    place_id="ChIJ-close-me",
+                    name=name,
+                )
+            ]
+        },
+        [],
+        allow_org_updates=True,
+        catalog_manager_id=CATALOG_MANAGER,
+    )
+    org = db_session.execute(
+        select(Organization).where(Organization.name == name)
+    ).scalar_one()
+    assert org.status == "operational"
+
+    summary, results = process_import_payload(
+        db_session,
+        {
+            "organizations": [
+                _board_org(
+                    1,
+                    category_name=sample_activity_category.name,
+                    area_name=sample_geographic_area.name,
+                    place_id="ChIJ-close-me",
+                    name=name,
+                    status="closed_permanently",
+                )
+            ]
+        },
+        [],
+        allow_org_updates=True,
+        catalog_manager_id=CATALOG_MANAGER,
+    )
+    assert results[0]["status"] == "updated"
+    assert summary["organizations"]["updated"] == 1
+    db_session.refresh(org)
+    assert org.status == "closed_permanently"
+    assert org.status_source == "importer"
+
+    admin_found = db_session.execute(
+        select(Organization).where(Organization.id == org.id)
+    ).scalar_one()
+    assert admin_found.name == name
+
+    public_ids = {
+        row.id
+        for row in db_session.execute(
+            select(Organization).where(
+                Organization.status.in_(
+                    ("operational", "closed_temporarily")
+                )
+            )
+        ).scalars()
+    }
+    assert org.id not in public_ids
+
+
+def test_closed_permanently_without_match_does_not_create(
+    db_session,
+    sample_activity_category,
+    sample_geographic_area,
+) -> None:
+    name = f"Never Existed Park {uuid4()}"
+    summary, results = process_import_payload(
+        db_session,
+        {
+            "organizations": [
+                _board_org(
+                    1,
+                    category_name=sample_activity_category.name,
+                    area_name=sample_geographic_area.name,
+                    name=name,
+                    status="closed_permanently",
+                )
+            ]
+        },
+        [],
+        allow_org_updates=True,
+        catalog_manager_id=CATALOG_MANAGER,
+    )
+    assert results[0]["status"] == "skipped"
+    assert results[0]["error"] == "no matching organization to close"
+    assert summary["organizations"]["skipped"] == 1
+    found = db_session.execute(
+        select(Organization).where(Organization.name == name)
+    ).scalar_one_or_none()
+    assert found is None
+
+
+def test_provider_owned_org_is_skipped(
+    db_session,
+    sample_organization,
+) -> None:
+    summary, results = process_import_payload(
+        db_session,
+        {
+            "organizations": [
+                {
+                    "name": sample_organization.name,
+                    "manager_id": CATALOG_MANAGER,
+                    "status": "closed_permanently",
+                }
+            ]
+        },
+        [],
+        allow_org_updates=True,
+        catalog_manager_id=CATALOG_MANAGER,
+    )
+    assert results[0]["status"] == "skipped"
+    assert results[0]["error"] == "managed by provider"
+    db_session.refresh(sample_organization)
+    assert sample_organization.status == "operational"
+
+
+def test_dry_run_place_id_match_reports_update_without_write(
+    test_engine,
+) -> None:
+    from app.db.models import ActivityCategory, GeographicArea
+
+    name = f"Dry Place Park {uuid4()}"
+    category_name = f"Dry Cat {uuid4().hex[:8]}"
+    area_name = f"Dry Dist {uuid4().hex[:8]}"
+    with Session(test_engine) as session:
+        session.add(ActivityCategory(name=category_name, display_order=0))
+        session.add(
+            GeographicArea(name=area_name, level="district", active=True)
+        )
+        session.commit()
+        process_import_payload(
+            session,
+            {
+                "organizations": [
+                    _board_org(
+                        1,
+                        category_name=category_name,
+                        area_name=area_name,
+                        place_id="ChIJ-dry-place",
+                        name=name,
+                    )
+                ]
+            },
+            [],
+            allow_org_updates=True,
+        )
+    renamed = f"{name} renamed"
+    with Session(test_engine) as session:
+        _summary, results = process_import_payload(
+            session,
+            {
+                "organizations": [
+                    _board_org(
+                        1,
+                        category_name=category_name,
+                        area_name=area_name,
+                        place_id="ChIJ-dry-place",
+                        name=renamed,
+                    )
+                ]
+            },
+            [],
+            dry_run=True,
+            allow_org_updates=True,
+        )
+        session.rollback()
+    assert results[0]["status"] == "updated"
+    assert results[0]["key"] == renamed
+    with Session(test_engine) as session:
+        org = session.execute(
+            select(Organization).where(
+                Organization.place_id == "ChIJ-dry-place"
+            )
+        ).scalar_one()
+        assert org.name == name
+
+
+def test_activity_created_without_schedule(
+    db_session,
+    sample_activity_category,
+    sample_geographic_area,
+) -> None:
+    name = f"No Hours Park {uuid4()}"
+    summary, results = process_import_payload(
+        db_session,
+        {
+            "organizations": [
+                _board_org(
+                    1,
+                    category_name=sample_activity_category.name,
+                    area_name=sample_geographic_area.name,
+                    name=name,
+                )
+            ]
+        },
+        [],
+        allow_org_updates=True,
+    )
+    by_type = {item["type"]: item for item in results}
+    assert by_type["organizations"]["status"] == "created"
+    assert by_type["activities"]["status"] == "created"
+    assert summary["schedules"]["failed"] == 0
+
+
+def test_truncation_is_a_file_warning(
+    db_session,
+    sample_activity_category,
+    sample_geographic_area,
+) -> None:
+    warnings: list[str] = []
+    long_name = "N" * 201
+    process_import_payload(
+        db_session,
+        {
+            "organizations": [
+                _board_org(
+                    1,
+                    category_name=sample_activity_category.name,
+                    area_name=sample_geographic_area.name,
+                    name=long_name,
+                )
+            ]
+        },
+        warnings,
+        allow_org_updates=True,
+    )
+    assert any("truncated" in item for item in warnings)
+    found = db_session.execute(
+        select(Organization).where(Organization.name == long_name[:200])
+    ).scalar_one()
+    assert found.place_id is None
+    assert found.description_source == "template"
+    assert found.source == "lcsd"
+    assert found.source_id == "lcsd-1"
+
+
+def test_store_import_job_upgrades_dry_run(db_session) -> None:
+    dry = store_import_job(
+        db_session,
+        "admin/imports/upgrade.json",
+        dry_run=True,
+        summary={"organizations": {"created": 0}},
+        results=[],
+        file_warnings=[],
+    )
+    db_session.flush()
+    live = store_import_job(
+        db_session,
+        "admin/imports/upgrade.json",
+        dry_run=False,
+        summary={"organizations": {"created": 1}},
+        results=[{"status": "created"}],
+        file_warnings=[],
+    )
+    assert live.id == dry.id
+    assert live.dry_run is False
+    assert live.summary["organizations"]["created"] == 1
+
+
+def test_long_place_id_fails_the_row(
+    db_session,
+    sample_activity_category,
+    sample_geographic_area,
+) -> None:
+    too_long = "P" * 256
+    _summary, results = process_import_payload(
+        db_session,
+        {
+            "organizations": [
+                _board_org(
+                    1,
+                    category_name=sample_activity_category.name,
+                    area_name=sample_geographic_area.name,
+                    place_id=too_long,
+                    name=f"Long Place {uuid4()}",
+                )
+            ]
+        },
+        [],
+        allow_org_updates=True,
+    )
+    org_result = next(
+        row for row in results if row["type"] == "organizations"
+    )
+    assert org_result["status"] == "failed"
+    assert org_result["error"].startswith("place_id exceeds")
+
+
+def test_owner_status_is_not_overridden(
+    db_session,
+    sample_organization,
+    sample_activity_category,
+    sample_geographic_area,
+) -> None:
+    from app.api.admin_resource_organization import _update_organization
+    from app.db.repositories import OrganizationRepository
+
+    repo = OrganizationRepository(db_session)
+    sample_organization.place_id = "ChIJ-owner-keep"
+    updated = _update_organization(
+        repo,
+        sample_organization,
+        {"status": "hidden", "status_source": "owner"},
+    )
+    repo.update(updated)
+    db_session.flush()
+    payload = _board_org(
+        1,
+        category_name=sample_activity_category.name,
+        area_name=sample_geographic_area.name,
+        place_id="ChIJ-owner-keep",
+        name=sample_organization.name,
+        status="operational",
+    )
+    payload["manager_id"] = sample_organization.manager_id
+    _summary, results = process_import_payload(
+        db_session,
+        {"organizations": [payload]},
+        [],
+        allow_org_updates=True,
+    )
+    org_result = next(
+        row for row in results if row["type"] == "organizations"
+    )
+    assert org_result["status"] == "updated"
+    assert any("owner listing status" in item for item in org_result["warnings"])
+    db_session.refresh(sample_organization)
+    assert sample_organization.status == "hidden"
+    assert sample_organization.status_source == "owner"
+
+
+def test_location_place_id_collision_warns(
+    db_session,
+    sample_organization,
+    sample_activity_category,
+    sample_geographic_area,
+) -> None:
+    from app.db.models import Location
+
+    sample_organization.place_id = "ChIJ-loc-unique"
+    other_location = Location(
+        org_id=sample_organization.id,
+        address="99 Other Road",
+        area_id=sample_geographic_area.id,
+        place_id="ChIJ-shared-loc",
+    )
+    db_session.add(other_location)
+    db_session.flush()
+    name = f"Collision Park {uuid4()}"
+    _summary, results = process_import_payload(
+        db_session,
+        {
+            "organizations": [
+                _board_org(
+                    1,
+                    category_name=sample_activity_category.name,
+                    area_name=sample_geographic_area.name,
+                    place_id="ChIJ-shared-loc",
+                    name=name,
+                )
+            ]
+        },
+        [],
+        allow_org_updates=True,
+        catalog_manager_id=CATALOG_MANAGER,
+    )
+    loc_results = [row for row in results if row["type"] == "locations"]
+    assert loc_results
+    assert any(
+        "already used by another organization" in warning
+        for row in loc_results
+        for warning in row.get("warnings", [])
+    )
+
+
+def test_vetting_pairs_parsed_before_truncate(
+    db_session,
+    sample_activity_category,
+    sample_geographic_area,
+) -> None:
+    name = f"Vetting Tail {uuid4()}"
+    note = ("x" * 480) + "; descriptionSource=template; source=lcsd"
+    payload = _board_org(
+        1,
+        category_name=sample_activity_category.name,
+        area_name=sample_geographic_area.name,
+        name=name,
+    )
+    payload["vetting_note"] = note
+    process_import_payload(
+        db_session,
+        {"organizations": [payload]},
+        [],
+        allow_org_updates=True,
+    )
+    org = db_session.execute(
+        select(Organization).where(Organization.name == name)
+    ).scalar_one()
+    assert org.description_source == "template"
+    assert org.source == "lcsd"

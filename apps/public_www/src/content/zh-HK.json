@@ -181,6 +181,7 @@
     "nearRegionTitle": "活動 —",
     "parentVerifiedLabel": "家長認證",
     "freeTrialLabel": "免費試堂",
+    "temporarilyClosedLabel": "暫時休息",
     "imageFallbackLabel": "相片稍後提供",
     "mapAltLabel": "地圖位置",
     "errorLabel": "無法載入活動。",
@@ -203,6 +204,7 @@
     "mapAltLabel": "地圖位置",
     "parentVerifiedLabel": "家長認證",
     "freeTrialLabel": "免費試堂",
+    "temporarilyClosedLabel": "暫時休息",
     "imageFallbackLabel": "相片稍後提供"
   },
   "activityDetail": {
@@ -210,6 +212,9 @@
     "notFoundLabel": "找不到活動。",
     "errorLabel": "無法載入此活動。",
     "freeTrialLabel": "提供免費試堂",
+    "temporarilyClosedLabel": "暫時休息",
+    "detailsComingSoonLabel": "詳情稍後公布",
+    "openInMapsLabel": "在 Google 地圖開啟",
     "imageFallbackLabel": "相片稍後提供",
     "whatsappCtaLabel": "WhatsApp 查詢"
   },

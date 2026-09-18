@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Text, text
+from sqlalchemy import CheckConstraint, Text, text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TIMESTAMP
@@ -75,6 +75,24 @@ class Organization(Base):
         Text(),
         nullable=True,
     )
+    place_id: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    status: Mapped[str] = mapped_column(
+        Text(),
+        nullable=False,
+        default="operational",
+        server_default=text("'operational'"),
+    )
+    status_changed_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+    )
+    status_source: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    source: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    source_id: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    description_source: Mapped[Optional[str]] = mapped_column(
+        Text(),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=False,
@@ -93,4 +111,22 @@ class Organization(Base):
     activities: Mapped[List["Activity"]] = relationship(
         back_populates="organization",
         cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('operational', 'closed_temporarily', "
+            "'closed_permanently', 'hidden')",
+            name="organizations_status_check",
+        ),
+        CheckConstraint(
+            "status_source IS NULL OR status_source IN "
+            "('owner', 'provider', 'places', 'importer')",
+            name="organizations_status_source_check",
+        ),
+        CheckConstraint(
+            "description_source IS NULL OR description_source IN "
+            "('template', 'official', 'places', 'enrich')",
+            name="organizations_desc_source_check",
+        ),
     )

@@ -11,8 +11,9 @@ SECURITY NOTES:
 Environment Variables:
     ALLOWED_GROUPS: Comma-separated list of groups that can access the endpoint
                     (e.g., "admin" or "admin,manager")
-    IMPORTER_GROUP: Optional extra group allowed only on POST
-                    /v1/admin/imports and POST /v1/admin/imports/presign
+    IMPORTER_GROUP: Optional extra group allowed on catalog import
+                    and owner-UI listing routes (see
+                    ``_importer_path_allowed``).
 """
 
 from __future__ import annotations
@@ -30,14 +31,14 @@ from app.utils.logging import configure_logging, get_logger
 configure_logging()
 logger = get_logger(__name__)
 
-_IMPORTER_PATHS = (
+_IMPORTER_POST_PATHS = (
     ("v1", "admin", "imports"),
     ("v1", "admin", "imports", "presign"),
 )
 
 
 def _importer_path_allowed(method_arn: str) -> bool:
-    """Return True for POST /v1/admin/imports and /presign only.
+    """Return True for importer catalog and owner-UI listing routes.
 
     methodArn shape from API Gateway REST:
     ``arn:aws:execute-api:region:acct:apiId/stage/METHOD/v1/admin/...``
@@ -48,16 +49,32 @@ def _importer_path_allowed(method_arn: str) -> bool:
         return False
     method = parts[2]
     path = tuple(parts[3:])
-    return method == "POST" and path in _IMPORTER_PATHS
+    if method == "POST" and path in _IMPORTER_POST_PATHS:
+        return True
+    if method == "GET" and path == ("v1", "admin", "organizations"):
+        return True
+    if method == "GET" and len(path) == 4:
+        if path[:3] == ("v1", "admin", "imports"):
+            return path[3] not in {"presign", "export"}
+        if path[:3] == ("v1", "admin", "organizations"):
+            return True
+    if method in {"PATCH", "ANY"} and len(path) == 4:
+        return path[:3] == ("v1", "admin", "organizations")
+    return False
 
 
 def _importer_method_arns(method_arn: str) -> list[str]:
-    """Both import ARNs so a cached Allow covers presign then POST."""
+    """Cached Allow covers import plus owner-UI listing routes."""
     parts = method_arn.split("/")
     prefix = "/".join(parts[:2])
     return [
         f"{prefix}/POST/v1/admin/imports",
         f"{prefix}/POST/v1/admin/imports/presign",
+        f"{prefix}/GET/v1/admin/imports/*",
+        f"{prefix}/GET/v1/admin/organizations",
+        f"{prefix}/GET/v1/admin/organizations/*",
+        f"{prefix}/PATCH/v1/admin/organizations/*",
+        f"{prefix}/ANY/v1/admin/organizations/*",
     ]
 
 

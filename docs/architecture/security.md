@@ -176,22 +176,25 @@ In-VPC Lambdas call Cognito through the AWS/HTTP proxy instead — see
 [`decisions.md`](./decisions.md#aws--http-proxy) and
 [`lambdas.md`](./lambdas.md).
 
-The `importer` Cognito group can call only `POST /v1/admin/imports` and
-`POST /v1/admin/imports/presign`. Those routes reuse `AdminGroupAuthorizer`
-with `IMPORTER_GROUP` so a second authorizer Lambda is not required
-(CloudFormation 500-resource cap). An importer Allow policy lists those
-two method ARNs only — it does not use the cached ``/*`` wildcard, so a
-5-minute authorizer cache after presign cannot authorize other admin
-routes. The handler still re-checks `_is_importer` / `_is_admin`.
-Importer-only tokens skip an existing organization only when
-`manager_id` matches (case-insensitive), then create missing venues,
-activities, pricing, and schedules (existing children are skipped
-before name resolution, not updated) and never call
-`_update_organization`. A foreign name match still returns per-record
-`exists` and skips children. Activity-to-venue links use the single
-venue from this import payload, not other venues already on the org.
-Admin imports may update an org whose `manager_id` already matches the
-payload; import never writes `manager_id` on update. The importer app
+The `importer` Cognito group can call catalog import and owner-UI
+listing routes: `POST /v1/admin/imports`,
+`POST /v1/admin/imports/presign`, `GET /v1/admin/imports/{job_id}`,
+`GET /v1/admin/organizations` (lookup by `place_id` or `source_id`
+only; a full list is 403), and `PATCH /v1/admin/organizations/{id}`.
+Those routes reuse `AdminGroupAuthorizer` with `IMPORTER_GROUP` so a
+second authorizer Lambda is not required (CloudFormation 500-resource
+cap). An importer Allow policy lists those method ARNs only — it does
+not use the cached ``/*`` wildcard, so a 5-minute authorizer cache
+after presign cannot authorize other admin routes. The handler still
+re-checks `_is_importer` / `_is_admin`.
+Importer-only tokens upsert catalog rows by `place_id` then
+manager+name. A match owned by another manager is skipped with
+`managed by provider`. `BOARD_CATALOG_MANAGER_ID`, when set, rejects
+payload `manager_id` values that are not the catalog manager.
+`closed_permanently` updates an existing match and does not create.
+Activity-to-venue links use the single venue from this import payload,
+not other venues already on the org. Import never writes `manager_id`
+on update. The importer app
 client enables `ALLOW_ADMIN_USER_PASSWORD_AUTH` for
 `AdminInitiateAuth`, is not the public OAuth client, sets
 `preventUserExistenceErrors=ENABLED`, enables token revocation, and uses

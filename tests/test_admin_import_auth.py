@@ -13,8 +13,9 @@ def _event(
     *,
     method: str = "POST",
     groups: str = "importer",
+    query: dict | None = None,
 ) -> dict:
-    return {
+    event = {
         "httpMethod": method,
         "path": path,
         "headers": {"Content-Type": "application/json"},
@@ -32,6 +33,9 @@ def _event(
             }
         ),
     }
+    if query:
+        event["queryStringParameters"] = query
+    return event
 
 
 def _ok_response() -> dict:
@@ -82,6 +86,47 @@ def test_importer_cannot_list_organizations(mock_crud) -> None:
     mock_crud.assert_not_called()
 
 
+@patch("app.api.admin._handle_crud", return_value=_ok_response())
+def test_importer_can_lookup_organization(mock_crud) -> None:
+    response = lambda_handler(
+        _event(
+            "/v1/admin/organizations",
+            method="GET",
+            query={"place_id": "ChIJ-x"},
+        ),
+        None,
+    )
+    assert response["statusCode"] == 200
+    mock_crud.assert_called_once()
+
+
+@patch("app.api.admin._handle_admin_imports", return_value=_ok_response())
+def test_importer_can_get_import_job(mock_imports) -> None:
+    response = lambda_handler(
+        _event(
+            "/v1/admin/imports/00000000-0000-0000-0000-000000000011",
+            method="GET",
+        ),
+        None,
+    )
+    assert response["statusCode"] == 200
+    mock_imports.assert_called_once()
+
+
+@patch("app.api.admin._handle_crud", return_value=_ok_response())
+def test_importer_can_patch_organization(mock_crud) -> None:
+    response = lambda_handler(
+        _event(
+            "/v1/admin/organizations/"
+            "00000000-0000-0000-0000-000000000001",
+            method="PATCH",
+        ),
+        None,
+    )
+    assert response["statusCode"] == 200
+    mock_crud.assert_called_once()
+
+
 @patch("app.api.admin._handle_admin_imports", return_value=_ok_response())
 def test_admin_can_still_import(mock_imports) -> None:
     response = lambda_handler(
@@ -113,7 +158,21 @@ def _process_event(*, groups: str, dry_run: bool) -> dict:
     }
 
 
-def test_importer_process_is_create_only_and_skips_audit(
+def _stub_import_jobs(monkeypatch) -> None:
+    class _Job:
+        id = "00000000-0000-0000-0000-000000000010"
+
+    monkeypatch.setattr(
+        "app.api.admin_imports.find_import_job_by_key",
+        lambda session, key: None,
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.store_import_job",
+        lambda *args, **kwargs: _Job(),
+    )
+
+
+def test_importer_process_allows_updates_and_skips_audit(
     monkeypatch,
 ) -> None:
     captured: dict = {}
@@ -128,6 +187,9 @@ def test_importer_process_is_create_only_and_skips_audit(
         def rollback(self):
             captured["rolled_back"] = True
 
+        def commit(self):
+            captured["committed"] = True
+
     monkeypatch.setattr(
         "app.api.admin_imports.Session",
         lambda *args, **kwargs: _Session(),
@@ -137,6 +199,7 @@ def test_importer_process_is_create_only_and_skips_audit(
         "app.api.admin_imports._load_import_payload",
         lambda key: {"organizations": []},
     )
+    _stub_import_jobs(monkeypatch)
 
     def fake_process(
         session,
@@ -144,9 +207,11 @@ def test_importer_process_is_create_only_and_skips_audit(
         warnings,
         dry_run=False,
         allow_org_updates=True,
+        catalog_manager_id=None,
     ):
         captured["allow_org_updates"] = allow_org_updates
         captured["dry_run"] = dry_run
+        captured["catalog_manager_id"] = catalog_manager_id
         return {"warnings": 0}, []
 
     monkeypatch.setattr(
@@ -165,7 +230,7 @@ def test_importer_process_is_create_only_and_skips_audit(
         _process_event(groups="importer", dry_run=True)
     )
     assert response["statusCode"] == 200
-    assert captured["allow_org_updates"] is False
+    assert captured["allow_org_updates"] is True
     assert captured["dry_run"] is True
     assert captured.get("rolled_back") is True
     assert audit_calls == []
@@ -186,6 +251,9 @@ def test_admin_process_allows_updates_and_sets_audit(
         def rollback(self):
             captured["rolled_back"] = True
 
+        def commit(self):
+            captured["committed"] = True
+
     monkeypatch.setattr(
         "app.api.admin_imports.Session",
         lambda *args, **kwargs: _Session(),
@@ -195,6 +263,7 @@ def test_admin_process_allows_updates_and_sets_audit(
         "app.api.admin_imports._load_import_payload",
         lambda key: {"organizations": []},
     )
+    _stub_import_jobs(monkeypatch)
 
     def fake_process(
         session,
@@ -202,9 +271,11 @@ def test_admin_process_allows_updates_and_sets_audit(
         warnings,
         dry_run=False,
         allow_org_updates=False,
+        catalog_manager_id=None,
     ):
         captured["allow_org_updates"] = allow_org_updates
         captured["dry_run"] = dry_run
+        captured["catalog_manager_id"] = catalog_manager_id
         return {"warnings": 0}, []
 
     monkeypatch.setattr(
@@ -227,3 +298,170 @@ def test_admin_process_allows_updates_and_sets_audit(
     assert captured["dry_run"] is False
     assert "rolled_back" not in captured
     assert audit_calls == [True]
+
+
+def test_repeat_object_key_returns_stored_job(monkeypatch) -> None:
+    class _Job:
+        id = "00000000-0000-0000-0000-000000000011"
+        object_key = "admin/imports/file.json"
+        dry_run = False
+        summary = {"organizations": {"created": 48, "updated": 1, "failed": 1}}
+        results = [{"type": "organizations", "key": "Park", "status": "created"}]
+        file_warnings = []
+        created_at = "2026-01-01T00:00:00+00:00"
+        updated_at = "2026-01-01T00:00:00+00:00"
+
+    class _Session:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr(
+        "app.api.admin_imports.Session",
+        lambda *args, **kwargs: _Session(),
+    )
+    monkeypatch.setattr("app.api.admin_imports.get_engine", lambda: None)
+    monkeypatch.setattr(
+        "app.api.admin_imports.find_import_job_by_key",
+        lambda session, key: _Job(),
+    )
+    process_calls: list[bool] = []
+    monkeypatch.setattr(
+        "app.api.admin_imports.process_import_payload",
+        lambda *args, **kwargs: process_calls.append(True) or ({}, []),
+    )
+
+    from app.api.admin_imports import _handle_import_process
+
+    response = _handle_import_process(
+        _process_event(groups="importer", dry_run=False)
+    )
+    assert response["statusCode"] == 200
+    body = json.loads(response["body"])
+    assert body["summary"]["organizations"]["created"] == 48
+    assert process_calls == []
+
+
+def test_dry_run_job_does_not_block_live_import(monkeypatch) -> None:
+    class _DryJob:
+        dry_run = True
+
+    class _LiveJob:
+        id = "00000000-0000-0000-0000-000000000012"
+        object_key = "admin/imports/file.json"
+        dry_run = False
+        summary = {"organizations": {"created": 1}}
+        results = []
+        file_warnings = []
+        created_at = "2026-01-01T00:00:00+00:00"
+        updated_at = "2026-01-01T00:00:00+00:00"
+
+    class _Session:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def rollback(self):
+            return None
+
+        def commit(self):
+            return None
+
+    monkeypatch.setattr(
+        "app.api.admin_imports.Session",
+        lambda *args, **kwargs: _Session(),
+    )
+    monkeypatch.setattr("app.api.admin_imports.get_engine", lambda: None)
+    monkeypatch.setattr(
+        "app.api.admin_imports.find_import_job_by_key",
+        lambda session, key: _DryJob(),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports._load_import_payload",
+        lambda key: {"organizations": []},
+    )
+    process_calls: list[bool] = []
+    monkeypatch.setattr(
+        "app.api.admin_imports.process_import_payload",
+        lambda *args, **kwargs: process_calls.append(True) or ({}, []),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.store_import_job",
+        lambda *args, **kwargs: _LiveJob(),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports._set_session_audit_context",
+        lambda session, event: None,
+    )
+
+    from app.api.admin_imports import _handle_import_process
+
+    response = _handle_import_process(
+        _process_event(groups="importer", dry_run=False)
+    )
+    assert response["statusCode"] == 200
+    assert process_calls == [True]
+    body = json.loads(response["body"])
+    assert body["dry_run"] is False
+
+
+def test_importer_uses_board_catalog_manager_id(monkeypatch) -> None:
+    captured: dict = {}
+
+    class _Session:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def rollback(self):
+            return None
+
+        def commit(self):
+            return None
+
+    monkeypatch.setenv(
+        "BOARD_CATALOG_MANAGER_ID",
+        "00000000-0000-0000-0000-000000000088",
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.Session",
+        lambda *args, **kwargs: _Session(),
+    )
+    monkeypatch.setattr("app.api.admin_imports.get_engine", lambda: None)
+    monkeypatch.setattr(
+        "app.api.admin_imports._load_import_payload",
+        lambda key: {"organizations": []},
+    )
+    _stub_import_jobs(monkeypatch)
+
+    def fake_process(
+        session,
+        payload,
+        warnings,
+        dry_run=False,
+        allow_org_updates=True,
+        catalog_manager_id=None,
+    ):
+        captured["catalog_manager_id"] = catalog_manager_id
+        return {"warnings": 0}, []
+
+    monkeypatch.setattr(
+        "app.api.admin_imports.process_import_payload",
+        fake_process,
+    )
+
+    from app.api.admin_imports import _handle_import_process
+
+    response = _handle_import_process(
+        _process_event(groups="importer", dry_run=True)
+    )
+    assert response["statusCode"] == 200
+    assert captured["catalog_manager_id"] == (
+        "00000000-0000-0000-0000-000000000088"
+    )

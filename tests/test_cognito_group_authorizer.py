@@ -43,8 +43,40 @@ def _arn(method: str, *path: str) -> str:
         (_arn("POST", "v1", "admin", "imports"), True),
         (_arn("POST", "v1", "admin", "imports", "presign"), True),
         (_arn("GET", "v1", "admin", "imports"), False),
+        (
+            _arn(
+                "GET",
+                "v1",
+                "admin",
+                "imports",
+                "00000000-0000-0000-0000-000000000011",
+            ),
+            True,
+        ),
+        (_arn("GET", "v1", "admin", "imports", "export"), False),
         (_arn("POST", "v1", "admin", "imports", "export"), False),
-        (_arn("GET", "v1", "admin", "organizations"), False),
+        (_arn("GET", "v1", "admin", "organizations"), True),
+        (
+            _arn(
+                "PATCH",
+                "v1",
+                "admin",
+                "organizations",
+                "00000000-0000-0000-0000-000000000001",
+            ),
+            True,
+        ),
+        (
+            _arn(
+                "ANY",
+                "v1",
+                "admin",
+                "organizations",
+                "00000000-0000-0000-0000-000000000001",
+            ),
+            True,
+        ),
+        (_arn("GET", "v1", "admin", "users"), False),
         ("arn:aws:execute-api:ap-southeast-1:123:api", False),
     ],
 )
@@ -71,11 +103,16 @@ def test_importer_allowed_on_import_post(monkeypatch) -> None:
     response = handler.lambda_handler(event, None)
     statement = response["policyDocument"]["Statement"][0]
     assert statement["Effect"] == "Allow"
-    assert statement["Resource"] == [
-        _arn("POST", "v1", "admin", "imports"),
-        _arn("POST", "v1", "admin", "imports", "presign"),
+    assert _arn("POST", "v1", "admin", "imports") in statement["Resource"]
+    assert _arn("POST", "v1", "admin", "imports", "presign") in statement[
+        "Resource"
     ]
-    assert not any(str(item).endswith("/*") for item in statement["Resource"])
+    assert _arn("GET", "v1", "admin", "imports", "*") in statement["Resource"]
+    assert _arn("GET", "v1", "admin", "organizations") in statement["Resource"]
+    assert _arn("PATCH", "v1", "admin", "organizations", "*") in statement[
+        "Resource"
+    ]
+    assert not any(str(item).endswith("/prod/*") for item in statement["Resource"])
 
 
 def test_admin_allow_policy_is_still_broadened(monkeypatch) -> None:
@@ -114,7 +151,7 @@ def test_importer_denied_on_other_admin_route(monkeypatch) -> None:
     )
     event = {
         "headers": {"Authorization": "Bearer token"},
-        "methodArn": _arn("GET", "v1", "admin", "organizations"),
+        "methodArn": _arn("GET", "v1", "admin", "users"),
     }
     response = handler.lambda_handler(event, None)
     assert response["policyDocument"]["Statement"][0]["Effect"] == "Deny"

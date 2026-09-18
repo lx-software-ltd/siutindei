@@ -20,6 +20,9 @@ export interface SearchOrganization {
   readonly nameTranslations: TranslationMap;
   readonly mediaUrls: readonly string[];
   readonly logoMediaUrl: string | null;
+  readonly status?: string | null;
+  readonly descriptionSource?: string | null;
+  readonly placeId?: string | null;
 }
 
 export interface SearchLocation {

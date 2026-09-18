@@ -6,6 +6,10 @@ import re
 from typing import Any
 from uuid import UUID
 
+from app.api.admin_imports_catalog import (
+    apply_vetting_columns,
+    apply_zh_translations,
+)
 from app.exceptions import ValidationError
 
 FLAT_ORG_PASSTHROUGH_FIELDS = {
@@ -18,6 +22,10 @@ FLAT_ORG_PASSTHROUGH_FIELDS = {
     "phone",
     "source_url",
     "vetting_note",
+    "name_zh",
+    "description_zh",
+    "place_id",
+    "status",
 }
 
 FLAT_ACTIVITY_DEFAULT_AGE_MIN = 0
@@ -127,14 +135,19 @@ def expand_board_flat_org(raw_org: dict[str, Any]) -> None:
     the organization. Nested locations/activities are left alone when present.
     """
     apply_flat_org_contacts(raw_org)
+    apply_zh_translations(raw_org)
+    apply_vetting_columns(raw_org)
     locations = raw_org.get("locations")
     has_locations = isinstance(locations, list) and bool(locations)
     if not has_locations and _has_flat_location_fields(raw_org):
         raw_org["locations"] = [_location_from_flat_org(raw_org)]
 
     activities = raw_org.get("activities")
-    has_activities = isinstance(activities, list) and bool(activities)
-    if not has_activities and _has_flat_activity_fields(raw_org):
+    if isinstance(activities, list) and activities:
+        for activity in activities:
+            if isinstance(activity, dict):
+                _apply_nested_activity_defaults(raw_org, activity)
+    elif _has_flat_activity_fields(raw_org):
         raw_org["activities"] = [_activity_from_flat_org(raw_org)]
 
 
@@ -156,7 +169,14 @@ def apply_flat_org_contacts(raw_org: dict[str, Any]) -> None:
 def _has_flat_location_fields(raw_org: dict[str, Any]) -> bool:
     return any(
         raw_org.get(key) not in (None, "")
-        for key in ("area_name", "area_id", "address", "lat", "lng")
+        for key in (
+            "area_name",
+            "area_id",
+            "address",
+            "lat",
+            "lng",
+            "place_id",
+        )
     )
 
 
@@ -179,7 +199,25 @@ def _location_from_flat_org(raw_org: dict[str, Any]) -> dict[str, Any]:
         location["lat"] = raw_org["lat"]
     if raw_org.get("lng") is not None:
         location["lng"] = raw_org["lng"]
+    if raw_org.get("place_id") not in (None, ""):
+        location["place_id"] = raw_org["place_id"]
     return location
+
+
+def _apply_nested_activity_defaults(
+    raw_org: dict[str, Any],
+    activity: dict[str, Any],
+) -> None:
+    """Fill ages and zh fields so a bare board activity still imports."""
+    if activity.get("age_min") in (None, ""):
+        activity["age_min"] = FLAT_ACTIVITY_DEFAULT_AGE_MIN
+    if activity.get("age_max") in (None, ""):
+        activity["age_max"] = FLAT_ACTIVITY_DEFAULT_AGE_MAX
+    if activity.get("description_zh") in (None, "") and raw_org.get(
+        "description_zh"
+    ) not in (None, ""):
+        activity["description_zh"] = raw_org["description_zh"]
+    apply_zh_translations(activity)
 
 
 def _activity_from_flat_org(raw_org: dict[str, Any]) -> dict[str, Any]:
@@ -198,6 +236,7 @@ def _activity_from_flat_org(raw_org: dict[str, Any]) -> dict[str, Any]:
         activity["source_url"] = raw_org["source_url"]
     if raw_org.get("vetting_note") not in (None, ""):
         activity["vetting_note"] = raw_org["vetting_note"]
+    apply_zh_translations(activity)
     return activity
 
 

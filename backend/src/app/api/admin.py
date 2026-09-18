@@ -40,6 +40,7 @@ from app.api.admin_request import (
     _encode_cursor,
     _parse_cursor,
     _parse_path,
+    _query_param,
 )
 from app.api.admin_resources import (
     _RESOURCE_CONFIG,
@@ -149,13 +150,12 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
     if base_path != "admin":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    can_import = (
-        resource == "imports"
-        and method == "POST"
-        and resource_id in (None, "presign")
-        and _is_importer(event)
-    )
-    if not _is_admin(event) and not can_import:
+    if not _is_admin(event) and not _importer_can_access(
+        event,
+        method,
+        resource,
+        resource_id,
+    ):
         logger.warning("Unauthorized admin access attempt")
         return json_response(403, {"error": "Forbidden"}, event=event)
 
@@ -195,6 +195,17 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
             event,
         )
 
+    if (
+        resource == "organizations"
+        and method == "GET"
+        and not resource_id
+        and _is_importer(event)
+        and not _is_admin(event)
+        and not _query_param(event, "place_id")
+        and not _query_param(event, "source_id")
+    ):
+        return json_response(403, {"error": "Forbidden"}, event=event)
+
     if resource == "areas":
         if method == "GET":
             return _safe_handler(
@@ -215,6 +226,30 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
         lambda: _handle_crud(event, method, config, resource_id),
         event,
     )
+
+
+def _importer_can_access(
+    event: Mapping[str, Any],
+    method: str,
+    resource: str,
+    resource_id: Optional[str],
+) -> bool:
+    """Allow importer JWTs on catalog import and owner-UI listing routes."""
+    if not _is_importer(event):
+        return False
+    if resource == "imports":
+        if method == "POST" and resource_id in (None, "presign"):
+            return True
+        if method == "GET" and resource_id and resource_id != "export":
+            return True
+        return False
+    if resource == "organizations":
+        if method == "GET":
+            return True
+        if method == "PATCH" and resource_id:
+            return True
+        return False
+    return False
 
 
 def _safe_handler(
