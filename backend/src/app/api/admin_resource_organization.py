@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from app.api.admin_imports_catalog import (
@@ -183,6 +184,9 @@ def _create_organization(
     status_source = parse_status_source(body.get("status_source"))
     if status != "operational" and not status_source:
         status_source = "owner"
+    status_changed_at = None
+    if status != "operational":
+        status_changed_at = datetime.now(timezone.utc)
 
     return Organization(
         name=name,
@@ -195,6 +199,7 @@ def _create_organization(
         place_id=place_id,
         status=status,
         status_source=status_source,
+        status_changed_at=status_changed_at,
         source=body.get("source") or None,
         source_id=body.get("source_id") or None,
         description_source=parse_description_source(body.get("description_source")),
@@ -264,6 +269,7 @@ def _apply_organization_listing_fields(
     body: dict[str, Any],
 ) -> None:
     """Apply place_id, status, and catalog source fields."""
+    body.pop("reason", None)
     if "place_id" in body:
         place_id = parse_place_id(body.get("place_id"))
         if place_id:

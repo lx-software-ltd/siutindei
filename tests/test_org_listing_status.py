@@ -38,6 +38,16 @@ def test_patch_status_and_place_id(db_session, sample_organization) -> None:
     payload = _serialize_organization(sample_organization)
     assert payload["place_id"] == "ChIJ-owner-attach"
     assert payload["status"] == "closed_temporarily"
+    first_changed = sample_organization.status_changed_at
+    again = _update_organization(
+        repo,
+        sample_organization,
+        {"status": "closed_temporarily"},
+    )
+    repo.update(again)
+    db_session.flush()
+    db_session.refresh(sample_organization)
+    assert sample_organization.status_changed_at == first_changed
 
 
 def test_lookup_organization_by_place_id_and_source_id(
@@ -125,3 +135,71 @@ def test_blank_zh_fields_do_not_fail(db_session) -> None:
         )
     ).scalar_one()
     assert org.name_translations == {} or "zh-HK" not in org.name_translations
+
+
+def test_lookup_respects_managed_org_ids(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.place_id = "ChIJ-scoped"
+    db_session.flush()
+    response = _lookup_organization(
+        db_session,
+        {"queryStringParameters": {"place_id": "ChIJ-scoped"}},
+        managed_org_ids={"00000000-0000-0000-0000-000000000099"},
+    )
+    body = __import__("json").loads(response["body"])
+    assert body["items"] == []
+
+
+def test_duplicate_source_id_lookup_is_validation_error(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.source_id = "dup-source"
+    other = Organization(
+        name=f"Other {uuid4()}",
+        manager_id="00000000-0000-0000-0000-000000000002",
+        source_id="dup-source",
+    )
+    db_session.add(other)
+    db_session.flush()
+    from app.exceptions import ValidationError
+
+    try:
+        _lookup_organization(
+            db_session,
+            {"queryStringParameters": {"source_id": "dup-source"}},
+        )
+        raise AssertionError("expected ValidationError")
+    except ValidationError as exc:
+        assert exc.field == "source_id"
+
+
+def test_create_non_operational_stamps_changed_at(db_session) -> None:
+    from app.api.admin_resource_organization import _create_organization
+
+    repo = OrganizationRepository(db_session)
+    created = _create_organization(
+        repo,
+        {
+            "name": f"Closed New {uuid4()}",
+            "manager_id": "00000000-0000-0000-0000-000000000003",
+            "status": "closed_temporarily",
+        },
+    )
+    assert created.status == "closed_temporarily"
+    assert created.status_changed_at is not None
+
+
+def test_post_organization_with_id_is_405() -> None:
+    from app.api.admin_crud import _handle_crud
+    from app.api.admin_resources import _RESOURCE_CONFIG
+
+    response = _handle_crud(
+        {},
+        "POST",
+        _RESOURCE_CONFIG["organizations"],
+        "00000000-0000-0000-0000-000000000001",
+    )
+    assert response["statusCode"] == 405

@@ -61,9 +61,14 @@ Constraints:
 - UNIQUE (case-insensitive) on `lower(trim(name))`
 - Partial UNIQUE on `place_id` where `place_id IS NOT NULL`
 
-Public search, sitemap, and district counts exclude
-`closed_permanently` and `hidden`. `v_catalog_health` counts only
-`operational` and `closed_temporarily` rows.
+Public search and `v_catalog_health` exclude `closed_permanently`
+and `hidden` (they count only `operational` and
+`closed_temporarily` rows). The public sitemap is a static route
+list and does not enumerate listings.
+
+Seed assessment: `status` is NOT NULL with server default
+`operational`; `import_jobs` needs no seed rows. Existing
+`seed_data.sql` is unchanged.
 
 ## Table: geographic_areas
 

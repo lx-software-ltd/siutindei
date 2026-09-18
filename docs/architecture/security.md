@@ -176,13 +176,17 @@ In-VPC Lambdas call Cognito through the AWS/HTTP proxy instead — see
 [`decisions.md`](./decisions.md#aws--http-proxy) and
 [`lambdas.md`](./lambdas.md).
 
-The `importer` Cognito group can call only `POST /v1/admin/imports` and
-`POST /v1/admin/imports/presign`. Those routes reuse `AdminGroupAuthorizer`
-with `IMPORTER_GROUP` so a second authorizer Lambda is not required
-(CloudFormation 500-resource cap). An importer Allow policy lists those
-two method ARNs only — it does not use the cached ``/*`` wildcard, so a
-5-minute authorizer cache after presign cannot authorize other admin
-routes. The handler still re-checks `_is_importer` / `_is_admin`.
+The `importer` Cognito group can call catalog import and owner-UI
+listing routes: `POST /v1/admin/imports`,
+`POST /v1/admin/imports/presign`, `GET /v1/admin/imports/{job_id}`,
+`GET /v1/admin/organizations` (lookup by `place_id` or `source_id`
+only; a full list is 403), and `PATCH /v1/admin/organizations/{id}`.
+Those routes reuse `AdminGroupAuthorizer` with `IMPORTER_GROUP` so a
+second authorizer Lambda is not required (CloudFormation 500-resource
+cap). An importer Allow policy lists those method ARNs only — it does
+not use the cached ``/*`` wildcard, so a 5-minute authorizer cache
+after presign cannot authorize other admin routes. The handler still
+re-checks `_is_importer` / `_is_admin`.
 Importer-only tokens upsert catalog rows by `place_id` then
 manager+name. A match owned by another manager is skipped with
 `managed by provider`. `BOARD_CATALOG_MANAGER_ID`, when set, rejects

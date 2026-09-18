@@ -83,7 +83,7 @@ paths:
           description: Look up an organization by Google place_id.
           schema:
             type: string
-            maxLength: 80
+            maxLength: 255
         - name: source_id
           in: query
           required: false
@@ -2225,7 +2225,7 @@ components:
           description: Optional Traditional Chinese description; blank is ignored.
         place_id:
           type: string
-          maxLength: 80
+          maxLength: 255
           description: |
             Google Places id. Matched before manager_id + name. A place_id
             match with a different name updates the organization.
@@ -2699,7 +2699,7 @@ components:
             Optional logo media URL. Must match one of the media_urls values.
         place_id:
           type: string
-          maxLength: 80
+          maxLength: 255
           nullable: true
         status:
           type: string
@@ -2741,7 +2741,7 @@ components:
           description: Cognito user sub of the organization manager
         place_id:
           type: string
-          maxLength: 80
+          maxLength: 255
           nullable: true
         status:
           type: string
@@ -2846,7 +2846,7 @@ components:
           description: Cognito user sub of the organization manager
         place_id:
           type: string
-          maxLength: 80
+          maxLength: 255
           nullable: true
         status:
           type: string

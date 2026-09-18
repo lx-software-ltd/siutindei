@@ -12,6 +12,7 @@ from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
 from app.db.models import Organization
+from app.db.repositories import OrganizationRepository
 from app.exceptions import ValidationError
 
 ORG_STATUSES = (
@@ -25,7 +26,7 @@ STATUS_SOURCES = ("owner", "provider", "places", "importer")
 DESCRIPTION_SOURCES = ("template", "official", "places", "enrich")
 ORG_SOURCES = ("lcsd", "edb", "swd", "places", "competitor")
 
-MAX_PLACE_ID_LENGTH = 80
+MAX_PLACE_ID_LENGTH = 255
 MAX_AREA_NAME_LENGTH = 80
 MAX_IMPORT_ADDRESS_LENGTH = 300
 MAX_IMPORT_DESCRIPTION_LENGTH = 400
@@ -111,7 +112,6 @@ ORG_TRUNCATE_LIMITS = {
     "website": MAX_WEBSITE_LENGTH,
     "source_url": MAX_WEBSITE_LENGTH,
     "phone": MAX_IMPORT_PHONE_LENGTH,
-    "place_id": MAX_PLACE_ID_LENGTH,
 }
 
 ACTIVITY_TRUNCATE_LIMITS = {
@@ -126,7 +126,14 @@ ACTIVITY_TRUNCATE_LIMITS = {
 def parse_place_id(value: Any) -> str | None:
     """Return a trimmed place_id or None when blank."""
     text = _optional_text(value)
-    return text or None
+    if not text:
+        return None
+    if len(text) > MAX_PLACE_ID_LENGTH:
+        raise ValidationError(
+            f"place_id exceeds {MAX_PLACE_ID_LENGTH} characters",
+            field="place_id",
+        )
+    return text
 
 
 def parse_org_status(value: Any) -> str | None:
@@ -167,7 +174,14 @@ def apply_listing_status(
     status: str,
     status_source: str,
 ) -> None:
-    """Set listing status and stamp the change metadata."""
+    """Set listing status and stamp the change metadata.
+
+    ``status_changed_at`` is only written when the status value changes.
+    """
+    if entity.status == status:
+        if not entity.status_source:
+            entity.status_source = status_source
+        return
     entity.status = status
     entity.status_source = status_source
     entity.status_changed_at = datetime.now(timezone.utc)
@@ -178,11 +192,10 @@ def find_import_organization(
     raw_org: dict[str, Any],
 ) -> Organization | None:
     """Match an org by place_id, then manager_id + normalised name."""
+    repo = OrganizationRepository(session)
     place_id = parse_place_id(raw_org.get("place_id"))
     if place_id:
-        found = session.execute(
-            select(Organization).where(Organization.place_id == place_id)
-        ).scalar_one_or_none()
+        found = repo.find_by_place_id(place_id)
         if found is not None:
             return found
 
@@ -190,15 +203,7 @@ def find_import_organization(
     manager_id = raw_org.get("manager_id")
     if not name or manager_id in (None, ""):
         return None
-    trimmed = name.strip().lower()
-    found = session.execute(
-        select(Organization)
-        .where(func.lower(func.trim(Organization.name)) == trimmed)
-        .where(
-            func.lower(func.trim(Organization.manager_id))
-            == str(manager_id).strip().lower()
-        )
-    ).scalar_one_or_none()
+    found = repo.find_by_manager_and_name(str(manager_id), name)
     if found is not None:
         return found
     matches = _fallback_name_matches(session, name, manager_id)
@@ -214,9 +219,7 @@ def find_org_by_place_id(
     place_id: str,
 ) -> Organization | None:
     """Find an organization by exact place_id."""
-    return session.execute(
-        select(Organization).where(Organization.place_id == place_id)
-    ).scalar_one_or_none()
+    return OrganizationRepository(session).find_by_place_id(place_id)
 
 
 def find_org_by_source_id(
@@ -224,9 +227,13 @@ def find_org_by_source_id(
     source_id: str,
 ) -> Organization | None:
     """Find an organization by parsed source_id."""
-    return session.execute(
-        select(Organization).where(Organization.source_id == source_id)
-    ).scalar_one_or_none()
+    try:
+        return OrganizationRepository(session).find_by_source_id(source_id)
+    except MultipleResultsFound as exc:
+        raise ValidationError(
+            "Multiple organizations found",
+            field="source_id",
+        ) from exc
 
 
 def _fallback_name_matches(

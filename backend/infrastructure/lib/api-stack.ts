@@ -581,6 +581,18 @@ export class ApiStack extends cdk.Stack {
           "Referer header for Nominatim address lookup requests",
       }
     );
+    const boardCatalogManagerId = new cdk.CfnParameter(
+      this,
+      "BoardCatalogManagerId",
+      {
+        type: "String",
+        default: "",
+        description:
+          "Cognito user sub used as the catalog manager for Board " +
+          "imports. When set, importer-only tokens may only create " +
+          "organizations for this manager_id.",
+      }
+    );
 
     // ---------------------------------------------------------------------
     // Cognito User Pool and Identity Providers
@@ -1299,6 +1311,7 @@ export class ApiStack extends cdk.Stack {
         FEEDBACK_STARS_PER_APPROVAL: feedbackStarsPerApproval.valueAsString,
         NOMINATIM_USER_AGENT: nominatimUserAgent.valueAsString,
         NOMINATIM_REFERER: nominatimReferer.valueAsString,
+        BOARD_CATALOG_MANAGER_ID: boardCatalogManagerId.valueAsString,
       },
     });
     database.grantAdminUserSecretRead(adminFunction);
@@ -1665,9 +1678,11 @@ export class ApiStack extends cdk.Stack {
         noVpc: true,
         environment: {
           ALLOWED_GROUPS: adminGroupName,
-          // Importer JWTs are allowed only for POST /v1/admin/imports
-          // and /presign (enforced in the shared cognito_group handler).
-          // A second authorizer Lambda would breach the 500-resource cap.
+          // Importer JWTs are allowed for POST /v1/admin/imports,
+          // /presign, GET /imports/{id}, GET /organizations lookups,
+          // and PATCH /organizations/{id} (enforced in the shared
+          // cognito_group handler). A second authorizer Lambda would
+          // breach the 500-resource cap.
           IMPORTER_GROUP: importerGroupName,
         },
       }

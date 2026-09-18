@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -38,9 +39,24 @@ def store_import_job(
     results: list[dict[str, Any]],
     file_warnings: list[str],
 ) -> ImportJob:
-    """Persist the import result for later GET and retries."""
+    """Persist the import result for later GET and retries.
+
+    A stored dry-run job is replaced when the same object_key is
+    processed live. A stored live job is never overwritten by a
+    later dry-run.
+    """
     existing = find_import_job_by_key(session, object_key)
     if existing is not None:
+        if existing.dry_run == dry_run:
+            return existing
+        if not existing.dry_run:
+            return existing
+        existing.dry_run = dry_run
+        existing.summary = summary
+        existing.results = results
+        existing.file_warnings = file_warnings
+        existing.updated_at = datetime.now(timezone.utc)
+        session.flush()
         return existing
     job = ImportJob(
         object_key=object_key,

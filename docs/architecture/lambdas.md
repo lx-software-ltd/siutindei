@@ -60,8 +60,12 @@ their primary responsibilities.
 - Handler: backend/lambda/admin/handler.py
 - Trigger: API Gateway — handles routes under `/v1/admin/*`,
   `/v1/manager/*`, `/v1/user/*`, and `/v1/partner/*` (CRUD resources)
-- Auth: Cognito JWT — admin group for `/v1/admin/*`, admin or importer
-  group for `POST /v1/admin/imports` and `POST /v1/admin/imports/presign`,
+- Auth: Cognito JWT — admin group for `/v1/admin/*`,   admin or importer
+  group for catalog import and owner-UI listing routes
+  (`POST /v1/admin/imports`, `POST /v1/admin/imports/presign`,
+  `GET /v1/admin/imports/{job_id}`,
+  `GET /v1/admin/organizations?place_id=` / `?source_id=`,
+  `PATCH /v1/admin/organizations/{id}`),
   admin/manager group for `/v1/manager/*`, any authenticated user for
   `/v1/user/*`; partner API keys (`x-partner-key`) for `/v1/partner/*`
 - Purpose: admin CRUD (including activity categories and partner API key
@@ -73,7 +77,9 @@ their primary responsibilities.
   `import_jobs`; matching is `place_id` then manager+name; catalog
   re-imports update description/hours/price; `closed_permanently`
   updates an existing match only; `GET /v1/admin/imports/{job_id}`
-  returns the stored result),
+  returns the stored result). Live imports commit once per batch
+  after per-row SAVEPOINTs, so a Lambda timeout mid-batch rolls
+  back the whole file),
   and address autocomplete (Nominatim via the AWS/HTTP proxy)
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - Memory: 1024 MB (cold start is import-bound; CPU scales with memory)
@@ -93,6 +99,7 @@ their primary responsibilities.
   - `NOMINATIM_USER_AGENT`
   - `NOMINATIM_REFERER`
   - `ADMIN_IMPORT_EXPORT_BUCKET`
+  - `BOARD_CATALOG_MANAGER_ID` (optional catalog manager sub)
 - For the full endpoint list, see the OpenAPI spec:
   `docs/api/admin.yaml`
 

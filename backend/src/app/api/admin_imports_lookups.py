@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Any
-from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -121,12 +120,6 @@ def filter_fields(
     allowed: set[str],
 ) -> dict[str, Any]:
     return {key: value for key, value in payload.items() if key in allowed}
-
-
-def coerce_uuid(value: str | UUID) -> UUID:
-    if isinstance(value, UUID):
-        return value
-    return UUID(str(value))
 
 
 def merge_schedule_entries(

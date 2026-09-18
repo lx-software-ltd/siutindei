@@ -79,6 +79,13 @@ def _handle_crud(
     Returns:
         API Gateway response.
     """
+    if method == "POST" and resource_id:
+        return json_response(
+            405,
+            {"error": "Method not allowed"},
+            event=event,
+        )
+
     with Session(get_engine()) as session:
         # Set audit context for trigger-based audit logging
         _set_session_audit_context(session, event)
@@ -124,7 +131,7 @@ def _crud_get(
 
     # List resources
     if config.name == "organizations":
-        lookup = _lookup_organization(session, event)
+        lookup = _lookup_organization(session, event, managed_org_ids)
         if lookup is not None:
             return lookup
     cursor = _parse_cursor(_query_param(event, "cursor"))
@@ -295,6 +302,7 @@ def _get_entity_org_id(entity: Any, session: Session) -> Optional[str]:
 def _lookup_organization(
     session: Session,
     event: Mapping[str, Any],
+    managed_org_ids: Optional[set[str]] = None,
 ) -> dict[str, Any] | None:
     """Resolve GET /organizations?place_id= or ?source_id= lookups."""
     from app.api.admin_imports_catalog import (
@@ -312,6 +320,12 @@ def _lookup_organization(
         entity = find_org_by_place_id(session, place_id.strip())
     if entity is None and source_id:
         entity = find_org_by_source_id(session, source_id.strip())
+    if (
+        entity is not None
+        and managed_org_ids is not None
+        and str(entity.id) not in managed_org_ids
+    ):
+        entity = None
     items = [_serialize_organization(entity)] if entity is not None else []
     return json_response(
         200,

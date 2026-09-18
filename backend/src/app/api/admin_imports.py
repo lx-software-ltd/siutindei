@@ -121,7 +121,7 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
 
     with Session(get_engine()) as session:
         existing_job = find_import_job_by_key(session, object_key)
-        if existing_job is not None:
+        if existing_job is not None and not (existing_job.dry_run and not dry_run):
             return json_response(
                 200,
                 serialize_import_job(existing_job),

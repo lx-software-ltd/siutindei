@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+from uuid import UUID as UUIDType
 
 from sqlalchemy import Boolean, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -18,7 +19,7 @@ class ImportJob(Base):
 
     __tablename__ = "import_jobs"
 
-    id: Mapped[str] = mapped_column(
+    id: Mapped[UUIDType] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         server_default=text("gen_random_uuid()"),

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.api.admin_imports_catalog import (
     CATALOG_MANAGER_REQUIRED,
     NO_MATCH_TO_CLOSE,
+    coerce_uuid,
     find_import_organization,
     parse_org_status,
     parse_place_id,
@@ -19,7 +20,6 @@ from app.api.admin_imports_fields import (
     manager_ids_match,
 )
 from app.api.admin_imports_lookups import (
-    coerce_uuid,
     filter_fields,
     guard_existing_org,
     merge_schedule_entries,
@@ -146,6 +146,7 @@ def upsert_organization(
     dry_run: bool = False,
     allow_updates: bool = False,
     catalog_manager_id: str | None = None,
+    warnings: list[str] | None = None,
 ) -> tuple[Organization, str]:
     repo = OrganizationRepository(session)
     name = _validate_string_length(
@@ -194,13 +195,17 @@ def upsert_organization(
             catalog_manager_id=catalog_manager_id,
         )
         if not allow_updates:
-            if manager_ids_match(existing.manager_id, body.get("manager_id")):
-                return existing, "skipped"
-            raise ValidationError("exists", field="name")
+            return existing, "skipped"
         guard_import_organization_update(existing, body)
         if requested_status:
-            body["status"] = requested_status
-            body["status_source"] = "importer"
+            if existing.status_source == "owner":
+                if warnings is not None:
+                    warnings.append(
+                        "owner listing status preserved; " "importer status ignored"
+                    )
+            else:
+                body["status"] = requested_status
+                body["status_source"] = "importer"
         updated = _update_organization(repo, existing, body)
         repo.update(updated)
         persist_import_change(session, dry_run=dry_run)
@@ -231,6 +236,7 @@ def _find_import_location(
     org: Organization,
     raw_location: dict[str, Any],
     address_value: str,
+    warnings: list[str] | None = None,
 ) -> Location | None:
     """Match a location by place_id, then org + address."""
     place_id = parse_place_id(raw_location.get("place_id"))
@@ -239,6 +245,11 @@ def _find_import_location(
         if found is not None:
             if str(found.org_id) == str(org.id):
                 return found
+            if warnings is not None:
+                warnings.append(
+                    "place_id already used by another organization; "
+                    "matching by address"
+                )
             raw_location.pop("place_id", None)
     return repo.find_by_org_and_address_case_insensitive(
         coerce_uuid(org.id),
@@ -254,6 +265,7 @@ def upsert_location(
     *,
     dry_run: bool = False,
     allow_updates: bool = True,
+    warnings: list[str] | None = None,
 ) -> tuple[Location, str]:
     repo = LocationRepository(session)
     try:
@@ -262,6 +274,7 @@ def upsert_location(
             org,
             raw_location,
             address_value,
+            warnings,
         )
     except MultipleResultsFound as exc:
         raise ValidationError("Multiple locations found", field="name") from exc
