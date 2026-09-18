@@ -73,7 +73,7 @@ parallel environments (production + staging) inside a single CDK stack
 |---|---|
 | `latest_staging` (default) | Read `releases/latest-release-id.txt` from the staging bucket, S3-copy that release into the production bucket, invalidate. |
 | `release_id` | Operator supplies the SHA. The workflow rebuilds with **production** env vars and uploads the local build to production (the release id only gates eligibility). |
-| `maintenance_on` | Upload `apps/public_www/maintenance/` to the production bucket with `Cache-Control: no-store`, invalidate. |
+| `maintenance_on` | Upload the branded coming-soon holding page from `apps/public_www/maintenance/` (plus copied logo and bubble assets) to the production bucket with `Cache-Control: no-store`, invalidate. |
 
 ## Database schema (Aurora PostgreSQL)
 

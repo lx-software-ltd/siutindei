@@ -249,10 +249,17 @@ and is invoked by both workflows. It supports three primary modes:
      production env vars) is uploaded to production;
    - otherwise the script does an S3-side `aws s3 sync` from
      `s3://staging/releases/<id>/` to `s3://production/`.
-3. **Maintenance mode**: `PUBLIC_WWW_MAINTENANCE_MODE=true` uploads
+3. **Maintenance / pre-launch mode**: `PUBLIC_WWW_MAINTENANCE_MODE=true`
+   uploads the branded coming-soon holding page from
    `apps/public_www/maintenance/` to the target bucket with `Cache-Control:
-   no-store`, after substituting `__NEXT_PUBLIC_EMAIL__`,
-   `__NEXT_PUBLIC_WHATSAPP_URL__`, `__NEXT_PUBLIC_INSTAGRAM_URL__` placeholders.
+   no-store`. The script substitutes `__NEXT_PUBLIC_EMAIL__`,
+   `__NEXT_PUBLIC_WHATSAPP_URL__`, `__NEXT_PUBLIC_INSTAGRAM_URL__`,
+   `__NEXT_PUBLIC_LX_SOFTWARE_URL__`, and `__NEXT_PUBLIC_BUILD_YEAR__`.
+   Unset WhatsApp/Instagram URLs become `#`; an unset LX Software URL
+   defaults to `https://lx-software.com`; an unset build year defaults to
+   the current calendar year. It also copies `favicon.ico`, `favicon.svg`,
+   the stacked logo, and the six Small World bubble images referenced by
+   the holding page so those assets survive the `--delete` sync.
 
 The script also enforces `robots.txt: User-agent: *\nDisallow: /` whenever
 the target environment is `staging`.
