@@ -237,6 +237,25 @@ export interface components {
              * @description Optional logo media URL.
              */
             logo_media_url?: string | null;
+            /**
+             * @description Public listing status. `closed_permanently` and `hidden`
+             *     organizations are excluded from search. Use this for a
+             *     temporarily-closed badge.
+             * @enum {string|null}
+             */
+            status?: "operational" | "closed_temporarily" | null;
+            /**
+             * @description When `template`, public descriptions are omitted so near-identical
+             *     catalog sentences do not render verbatim.
+             * @enum {string|null}
+             */
+            description_source?: "template" | "official" | "places" | "enrich" | null;
+            /**
+             * @description Google Places id. Present only when searching by `activity_id`
+             *     (listing detail) so the app can deep-link to Google Maps. Omitted
+             *     from search result cards.
+             */
+            place_id?: string | null;
         };
         Location: {
             /** Format: uuid */

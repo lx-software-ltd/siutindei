@@ -143,13 +143,12 @@ def expand_board_flat_org(raw_org: dict[str, Any]) -> None:
         raw_org["locations"] = [_location_from_flat_org(raw_org)]
 
     activities = raw_org.get("activities")
-    has_activities = isinstance(activities, list) and bool(activities)
-    if not has_activities and _has_flat_activity_fields(raw_org):
-        raw_org["activities"] = [_activity_from_flat_org(raw_org)]
-    elif has_activities:
+    if isinstance(activities, list) and activities:
         for activity in activities:
             if isinstance(activity, dict):
                 _apply_nested_activity_defaults(raw_org, activity)
+    elif _has_flat_activity_fields(raw_org):
+        raw_org["activities"] = [_activity_from_flat_org(raw_org)]
 
 
 def apply_flat_org_contacts(raw_org: dict[str, Any]) -> None:

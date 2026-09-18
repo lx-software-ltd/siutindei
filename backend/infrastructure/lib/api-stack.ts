@@ -1968,7 +1968,7 @@ export class ApiStack extends cdk.Stack {
       restApiName: name("api"),
       defaultCorsPreflightOptions: {
         allowOrigins: corsAllowedOrigins,
-        allowMethods: ["GET", "OPTIONS", "POST", "PUT", "DELETE"],
+        allowMethods: ["GET", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"],
       },
       deployOptions: {
         stageName: "prod",
@@ -2208,24 +2208,27 @@ export class ApiStack extends cdk.Stack {
       });
 
       const resourceById = resource.addResource("{id}");
-      resourceById.addMethod("GET", adminIntegration, {
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        authorizer: adminAuthorizer,
-      });
-      resourceById.addMethod("PUT", adminIntegration, {
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        authorizer: adminAuthorizer,
-      });
+      // ANY on organizations/{id} covers GET/PUT/PATCH/DELETE so PATCH
+      // does not add a Method past the CloudFormation 500-resource cap.
       if (resourceName === "organizations") {
-        resourceById.addMethod("PATCH", adminIntegration, {
+        resourceById.addMethod("ANY", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: adminAuthorizer,
+        });
+      } else {
+        resourceById.addMethod("GET", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: adminAuthorizer,
+        });
+        resourceById.addMethod("PUT", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: adminAuthorizer,
+        });
+        resourceById.addMethod("DELETE", adminIntegration, {
           authorizationType: apigateway.AuthorizationType.CUSTOM,
           authorizer: adminAuthorizer,
         });
       }
-      resourceById.addMethod("DELETE", adminIntegration, {
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        authorizer: adminAuthorizer,
-      });
 
       if (resourceName === "organizations") {
         const media = resourceById.addResource("media");
@@ -2373,24 +2376,25 @@ export class ApiStack extends cdk.Stack {
       });
 
       const resourceById = resource.addResource("{id}");
-      resourceById.addMethod("GET", adminIntegration, {
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        authorizer: managerAuthorizer,
-      });
-      resourceById.addMethod("PUT", adminIntegration, {
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        authorizer: managerAuthorizer,
-      });
       if (resourceName === "organizations") {
-        resourceById.addMethod("PATCH", adminIntegration, {
+        resourceById.addMethod("ANY", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: managerAuthorizer,
+        });
+      } else {
+        resourceById.addMethod("GET", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: managerAuthorizer,
+        });
+        resourceById.addMethod("PUT", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: managerAuthorizer,
+        });
+        resourceById.addMethod("DELETE", adminIntegration, {
           authorizationType: apigateway.AuthorizationType.CUSTOM,
           authorizer: managerAuthorizer,
         });
       }
-      resourceById.addMethod("DELETE", adminIntegration, {
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        authorizer: managerAuthorizer,
-      });
     }
 
     // -------------------------------------------------------------------------

@@ -35,9 +35,7 @@ MAX_IMPORT_PHONE_LENGTH = 40
 MAX_SOURCE_ID_LENGTH = 80
 MANAGED_BY_PROVIDER = "managed by provider"
 NO_MATCH_TO_CLOSE = "no matching organization to close"
-CATALOG_MANAGER_REQUIRED = (
-    "manager_id is not the catalog manager"
-)
+CATALOG_MANAGER_REQUIRED = "manager_id is not the catalog manager"
 
 _VETTING_PAIR = re.compile(r"([A-Za-z]+)\s*=\s*([^;]+)")
 
@@ -98,9 +96,7 @@ def truncate_import_fields(
             continue
         if len(value) <= max_length:
             continue
-        warnings.append(
-            f"{path}.{field} truncated from {len(value)} to {max_length}"
-        )
+        warnings.append(f"{path}.{field} truncated from {len(value)} to {max_length}")
         raw[field] = value[:max_length]
 
 
@@ -241,11 +237,15 @@ def _fallback_name_matches(
     """Match manager+name without PostgreSQL regexp_replace."""
     wanted = normalize_org_name(name)
     manager = str(manager_id).strip().lower()
-    rows = session.execute(
-        select(Organization).where(
-            func.lower(func.trim(Organization.manager_id)) == manager
+    rows = (
+        session.execute(
+            select(Organization).where(
+                func.lower(func.trim(Organization.manager_id)) == manager
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return [row for row in rows if normalize_org_name(row.name) == wanted]
 
 
