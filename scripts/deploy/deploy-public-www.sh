@@ -16,9 +16,10 @@
 #                                                  pass PUBLIC_WWW_PROMOTION_BUILD_DIR
 #                                                  to upload a fresh build with
 #                                                  production env vars instead.
-#   * PUBLIC_WWW_MAINTENANCE_MODE    = true     ← upload apps/public_www/maintenance/
-#                                                  contents (no-store) to the target
-#                                                  bucket.
+#   * PUBLIC_WWW_MAINTENANCE_MODE    = true     ← upload the branded coming-soon
+#                                                  holding page from
+#                                                  apps/public_www/maintenance/
+#                                                  (HTML no-store; images 1h).
 #
 # /www/* CloudFront proxy switching is intentionally NOT implemented here. The
 # scaffolded stack has no /www/* behavior. When the public API is added,
@@ -40,6 +41,8 @@ MAINTENANCE_MODE="${PUBLIC_WWW_MAINTENANCE_MODE:-false}"
 ASSET_CACHE_CONTROL="public, max-age=31536000, immutable"
 DOCUMENT_CACHE_CONTROL="public, max-age=300, must-revalidate"
 NO_STORE_CACHE_CONTROL="no-store, max-age=0"
+MAINTENANCE_ASSET_CACHE_CONTROL="public, max-age=3600, must-revalidate"
+DEFAULT_LX_SOFTWARE_URL="https://www.lx-software.com"
 
 if [ "$MAINTENANCE_MODE" != "true" ] && [ "$MAINTENANCE_MODE" != "false" ]; then
   echo "Unsupported PUBLIC_WWW_MAINTENANCE_MODE: '$MAINTENANCE_MODE'"
@@ -100,6 +103,15 @@ validate_release_id() {
   fi
 }
 
+validate_http_url_when_set() {
+  local env_name="$1"
+  local env_value="${2:-}"
+  if [ -n "$env_value" ] && [[ ! "$env_value" =~ ^https?:// ]]; then
+    echo "$env_name must start with http:// or https:// when set."
+    exit 1
+  fi
+}
+
 validate_maintenance_contact_settings() {
   if [ -z "${NEXT_PUBLIC_EMAIL:-}" ]; then
     echo "NEXT_PUBLIC_EMAIL is required for maintenance mode deployment."
@@ -109,16 +121,76 @@ validate_maintenance_contact_settings() {
     echo "NEXT_PUBLIC_EMAIL must be a valid email address."
     exit 1
   fi
-  if [ -n "${NEXT_PUBLIC_WHATSAPP_URL:-}" ] && \
-    [[ ! "$NEXT_PUBLIC_WHATSAPP_URL" =~ ^https?:// ]]; then
-    echo "NEXT_PUBLIC_WHATSAPP_URL must start with http:// or https:// when set."
+  validate_http_url_when_set \
+    "NEXT_PUBLIC_WHATSAPP_URL" \
+    "${NEXT_PUBLIC_WHATSAPP_URL:-}"
+  validate_http_url_when_set \
+    "NEXT_PUBLIC_INSTAGRAM_URL" \
+    "${NEXT_PUBLIC_INSTAGRAM_URL:-}"
+  validate_http_url_when_set \
+    "NEXT_PUBLIC_LX_SOFTWARE_URL" \
+    "${NEXT_PUBLIC_LX_SOFTWARE_URL:-}"
+  if [ -n "${NEXT_PUBLIC_BUILD_YEAR:-}" ] && \
+    { [[ ! "$NEXT_PUBLIC_BUILD_YEAR" =~ ^[0-9]{4}$ ]] || \
+      [ "$NEXT_PUBLIC_BUILD_YEAR" -lt 2000 ] || \
+      [ "$NEXT_PUBLIC_BUILD_YEAR" -gt 2100 ]; }; then
+    echo "NEXT_PUBLIC_BUILD_YEAR must be a year between 2000 and 2100."
     exit 1
   fi
-  if [ -n "${NEXT_PUBLIC_INSTAGRAM_URL:-}" ] && \
-    [[ ! "$NEXT_PUBLIC_INSTAGRAM_URL" =~ ^https?:// ]]; then
-    echo "NEXT_PUBLIC_INSTAGRAM_URL must start with http:// or https:// when set."
+}
+
+resolve_maintenance_build_year() {
+  if [ -n "${NEXT_PUBLIC_BUILD_YEAR:-}" ]; then
+    printf '%s' "$NEXT_PUBLIC_BUILD_YEAR"
+    return
+  fi
+  date +%Y
+}
+
+copy_required_maintenance_asset() {
+  local source_path="$1"
+  local destination_path="$2"
+  if [ ! -f "$source_path" ]; then
+    echo "Required maintenance asset not found: $source_path"
     exit 1
   fi
+  mkdir -p "$(dirname "$destination_path")"
+  cp "$source_path" "$destination_path"
+}
+
+inject_maintenance_partial() {
+  local html_path="$1"
+  local marker="$2"
+  local snippet_path="$3"
+  if [ ! -f "$snippet_path" ]; then
+    echo "Maintenance partial not found: $snippet_path"
+    exit 1
+  fi
+  python3 - "$html_path" "$marker" "$snippet_path" <<'PY'
+from pathlib import Path
+import sys
+
+html_path = Path(sys.argv[1])
+marker = sys.argv[2]
+snippet_path = Path(sys.argv[3])
+html = html_path.read_text(encoding="utf-8")
+if marker not in html:
+    raise SystemExit(f"Marker {marker} not found in {html_path}")
+snippet = snippet_path.read_text(encoding="utf-8").rstrip("\n")
+html_path.write_text(html.replace(marker, snippet), encoding="utf-8")
+PY
+}
+
+assemble_maintenance_html() {
+  local html_path="$1"
+  inject_maintenance_partial \
+    "$html_path" \
+    "__MAINTENANCE_BUBBLES__" \
+    "$MAINTENANCE_DIR/partials/bubbles.html"
+  inject_maintenance_partial \
+    "$html_path" \
+    "__MAINTENANCE_FOOTER__" \
+    "$MAINTENANCE_DIR/partials/footer.html"
 }
 
 escape_sed_replacement() {
@@ -132,13 +204,19 @@ inject_maintenance_contact_values() {
     exit 1
   fi
   local escaped_email escaped_whatsapp_url escaped_instagram_url
+  local escaped_lx_software_url escaped_build_year
   escaped_email="$(escape_sed_replacement "$NEXT_PUBLIC_EMAIL")"
   escaped_whatsapp_url="$(escape_sed_replacement "${NEXT_PUBLIC_WHATSAPP_URL:-#}")"
   escaped_instagram_url="$(escape_sed_replacement "${NEXT_PUBLIC_INSTAGRAM_URL:-#}")"
+  escaped_lx_software_url="$(escape_sed_replacement \
+    "${NEXT_PUBLIC_LX_SOFTWARE_URL:-$DEFAULT_LX_SOFTWARE_URL}")"
+  escaped_build_year="$(escape_sed_replacement "$(resolve_maintenance_build_year)")"
   sed -i \
     -e "s|__NEXT_PUBLIC_EMAIL__|$escaped_email|g" \
     -e "s|__NEXT_PUBLIC_WHATSAPP_URL__|$escaped_whatsapp_url|g" \
     -e "s|__NEXT_PUBLIC_INSTAGRAM_URL__|$escaped_instagram_url|g" \
+    -e "s|__NEXT_PUBLIC_LX_SOFTWARE_URL__|$escaped_lx_software_url|g" \
+    -e "s|__NEXT_PUBLIC_BUILD_YEAR__|$escaped_build_year|g" \
     "$html_path"
 }
 
@@ -154,9 +232,38 @@ prepare_maintenance_build_dir() {
   if [ -f "$APP_DIR/public/favicon.ico" ]; then
     cp "$APP_DIR/public/favicon.ico" "$maintenance_build_dir/favicon.ico"
   fi
+  if [ -f "$APP_DIR/public/favicon.svg" ]; then
+    cp "$APP_DIR/public/favicon.svg" "$maintenance_build_dir/favicon.svg"
+  fi
+  copy_required_maintenance_asset \
+    "$APP_DIR/public/images/brand/siutindei-logo-stacked.svg" \
+    "$maintenance_build_dir/images/brand/siutindei-logo-stacked.svg"
+  local bubble_name
+  for bubble_name in \
+    bubble-junk \
+    bubble-tram \
+    bubble-bao \
+    bubble-clock-tower \
+    bubble-bauhinia \
+    bubble-lantern
+  do
+    copy_required_maintenance_asset \
+      "$APP_DIR/public/images/small-world/${bubble_name}.webp" \
+      "$maintenance_build_dir/images/small-world/${bubble_name}.webp"
+  done
+  assemble_maintenance_html "$maintenance_build_dir/index.html"
+  if [ -f "$maintenance_build_dir/404.html" ]; then
+    assemble_maintenance_html "$maintenance_build_dir/404.html"
+  fi
+  rm -rf "$maintenance_build_dir/partials"
   inject_maintenance_contact_values "$maintenance_build_dir/index.html"
   if [ -f "$maintenance_build_dir/404.html" ]; then
     inject_maintenance_contact_values "$maintenance_build_dir/404.html"
+  fi
+  if grep -R -q -E '__MAINTENANCE_|__NEXT_PUBLIC_' \
+    "$maintenance_build_dir"/*.html; then
+    echo "Unreplaced maintenance placeholders remain in the build dir."
+    exit 1
   fi
   echo "$maintenance_build_dir"
 }
@@ -292,10 +399,18 @@ sync_release_artifacts() {
 sync_maintenance_artifacts() {
   local source_dir="$1"
   local destination_uri="$2"
+  if [ -d "$source_dir/images" ]; then
+    aws s3 sync \
+      "$source_dir/images" \
+      "$destination_uri/images" \
+      --cache-control "$MAINTENANCE_ASSET_CACHE_CONTROL" \
+      --delete
+  fi
   aws s3 sync \
     "$source_dir" \
     "$destination_uri" \
     --exclude "releases/*" \
+    --exclude "images/*" \
     --cache-control "$NO_STORE_CACHE_CONTROL" \
     --delete
 }

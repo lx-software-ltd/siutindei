@@ -192,6 +192,108 @@ def test_create_non_operational_stamps_changed_at(db_session) -> None:
     assert created.status_changed_at is not None
 
 
+def test_catalog_health_view_replaces_integer_counts(db_session) -> None:
+    """DROP + integer casts succeed when REPLACE would change bigint."""
+    from sqlalchemy import text
+    from sqlalchemy.exc import ProgrammingError
+
+    db_session.execute(text("DROP VIEW IF EXISTS v_catalog_health"))
+    db_session.execute(
+        text(
+            """
+            CREATE VIEW v_catalog_health AS
+            SELECT
+              'Unknown'::text AS district,
+              'Unknown'::text AS category,
+              0::integer AS activities,
+              0::integer AS providers,
+              0::integer AS stores,
+              0::numeric AS completeness,
+              0::integer AS has_photo,
+              0::integer AS has_price,
+              0::integer AS has_schedule,
+              0::integer AS has_geo
+            """
+        )
+    )
+    db_session.flush()
+    try:
+        with db_session.begin_nested():
+            db_session.execute(
+                text(
+                    """
+                    CREATE OR REPLACE VIEW v_catalog_health AS
+                    SELECT
+                      'Unknown'::text AS district,
+                      'Unknown'::text AS category,
+                      COUNT(*) AS activities,
+                      0::integer AS providers,
+                      0::integer AS stores,
+                      0::numeric AS completeness,
+                      0::integer AS has_photo,
+                      0::integer AS has_price,
+                      0::integer AS has_schedule,
+                      0::integer AS has_geo
+                    FROM organizations
+                    """
+                )
+            )
+        raise AssertionError("expected integer-to-bigint view error")
+    except ProgrammingError as exc:
+        assert "cannot change data type of view column" in str(exc)
+
+    for index in range(3):
+        db_session.add(
+            Organization(
+                name=f"Health View Org {index} {uuid4()}",
+                manager_id=f"00000000-0000-0000-0000-00000000000{index}",
+            )
+        )
+    db_session.flush()
+    db_session.execute(text("DROP VIEW IF EXISTS v_catalog_health"))
+    db_session.execute(
+        text(
+            """
+            CREATE VIEW v_catalog_health AS
+            SELECT
+              'Unknown'::text AS district,
+              'Unknown'::text AS category,
+              COUNT(*)::integer AS activities,
+              0::integer AS providers,
+              0::integer AS stores,
+              0::numeric AS completeness,
+              0::integer AS has_photo,
+              0::integer AS has_price,
+              0::integer AS has_schedule,
+              0::integer AS has_geo
+            FROM organizations
+            """
+        )
+    )
+    org_count = db_session.execute(
+        text("SELECT COUNT(*)::integer FROM organizations")
+    ).scalar_one()
+    assert org_count >= 3
+    row = db_session.execute(
+        text("SELECT activities FROM v_catalog_health")
+    ).one()
+    assert row.activities == org_count
+    col_type = db_session.execute(
+        text(
+            """
+            SELECT a.atttypid::regtype::text
+            FROM pg_attribute a
+            JOIN pg_class c ON c.oid = a.attrelid
+            WHERE c.relname = 'v_catalog_health'
+              AND a.attname = 'activities'
+              AND a.attnum > 0
+              AND NOT a.attisdropped
+            """
+        )
+    ).scalar_one()
+    assert col_type == "integer"
+
+
 def test_post_organization_with_id_is_405() -> None:
     from app.api.admin_crud import _handle_crud
     from app.api.admin_resources import _RESOURCE_CONFIG
