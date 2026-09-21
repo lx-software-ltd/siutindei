@@ -2218,11 +2218,16 @@ components:
         name_zh:
           type: string
           maxLength: 200
-          description: Optional Traditional Chinese name; blank is ignored.
+          description: |
+            Optional Traditional Chinese name; blank is ignored.
+            Mapped onto name_translations.zh (ISO 639-1), not zh-HK.
         description_zh:
           type: string
           maxLength: 400
-          description: Optional Traditional Chinese description; blank is ignored.
+          description: |
+            Optional Traditional Chinese description; blank is ignored.
+            Mapped onto description_translations.zh (ISO 639-1),
+            not zh-HK. Nested activities inherit this value.
         place_id:
           type: string
           maxLength: 255
