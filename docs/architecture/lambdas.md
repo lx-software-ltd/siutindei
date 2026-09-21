@@ -74,7 +74,9 @@ their primary responsibilities.
   (tickets), Cognito user management, audit logs, media upload, admin
   import/export (`POST /v1/admin/imports` accepts `dry_run` to validate
   without commit or audit rows; `object_key` is idempotent via
-  `import_jobs`; matching is `place_id` then manager+name; catalog
+  `import_jobs`; the process handler copies the job payload before
+  the session closes so `expire_on_commit` cannot 500 the response;
+  matching is `place_id` then manager+name; catalog
   re-imports update description/hours/price; `closed_permanently`
   updates an existing match only; `GET /v1/admin/imports/{job_id}`
   returns the stored result). Live imports commit once per batch
