@@ -71,16 +71,16 @@ def apply_vetting_columns(raw_org: dict[str, Any]) -> None:
 
 
 def apply_zh_translations(record: dict[str, Any]) -> None:
-    """Map blank-safe name_zh / description_zh onto translation maps."""
+    """Map blank-safe name_zh / description_zh onto `zh` translation keys."""
     name_zh = _optional_text(record.get("name_zh"))
     if name_zh:
         translations = dict(record.get("name_translations") or {})
-        translations.setdefault("zh-HK", name_zh)
+        translations.setdefault("zh", name_zh)
         record["name_translations"] = translations
     description_zh = _optional_text(record.get("description_zh"))
     if description_zh:
         translations = dict(record.get("description_translations") or {})
-        translations.setdefault("zh-HK", description_zh)
+        translations.setdefault("zh", description_zh)
         record["description_translations"] = translations
 
 

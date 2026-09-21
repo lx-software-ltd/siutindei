@@ -4168,9 +4168,16 @@ export interface components {
              *     phone_country_code=HK and phone_number.
              */
             phone?: string;
-            /** @description Optional Traditional Chinese name; blank is ignored. */
+            /**
+             * @description Optional Traditional Chinese name; blank is ignored.
+             *     Mapped onto name_translations.zh (ISO 639-1), not zh-HK.
+             */
             name_zh?: string;
-            /** @description Optional Traditional Chinese description; blank is ignored. */
+            /**
+             * @description Optional Traditional Chinese description; blank is ignored.
+             *     Mapped onto description_translations.zh (ISO 639-1),
+             *     not zh-HK. Nested activities inherit this value.
+             */
             description_zh?: string;
             /**
              * @description Google Places id. Matched before manager_id + name. A place_id

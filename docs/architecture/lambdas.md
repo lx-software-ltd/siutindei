@@ -77,6 +77,7 @@ their primary responsibilities.
   `import_jobs`; the process handler copies the job payload before
   the session closes so `expire_on_commit` cannot 500 the response;
   matching is `place_id` then manager+name; catalog
+  `name_zh` / `description_zh` map to translations.zh;
   re-imports update description/hours/price; `closed_permanently`
   updates an existing match only; `GET /v1/admin/imports/{job_id}`
   returns the stored result). Live imports commit once per batch

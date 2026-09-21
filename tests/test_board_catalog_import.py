@@ -13,7 +13,7 @@ from app.api.admin_imports_jobs import (
     serialize_import_job,
     store_import_job,
 )
-from app.db.models import Organization
+from app.db.models import Activity, Organization
 
 
 CATALOG_MANAGER = "00000000-0000-0000-0000-000000000088"
@@ -26,18 +26,20 @@ def _board_org(
     area_name: str,
     place_id: str | None = None,
     name: str | None = None,
+    name_zh: str = "",
+    description_zh: str = "",
     status: str | None = None,
 ) -> dict:
     org_name = name or f"Board Playground {index:02d}"
     payload = {
         "name": org_name,
-        "name_zh": "",
+        "name_zh": name_zh,
         "manager_id": CATALOG_MANAGER,
         "area_name": area_name,
         "category_name": category_name,
         "address": f"{index} Park Road, Eastern",
         "description": f"{org_name} is a public outdoor venue.",
-        "description_zh": "",
+        "description_zh": description_zh,
         "vetting_note": (
             f"source=lcsd; sourceId=lcsd-{index}; descriptionSource=template"
         ),
@@ -341,6 +343,50 @@ def test_activity_created_without_schedule(
     assert by_type["organizations"]["status"] == "created"
     assert by_type["activities"]["status"] == "created"
     assert summary["schedules"]["failed"] == 0
+
+
+def test_name_zh_maps_to_zh_iso_code(
+    db_session,
+    sample_activity_category,
+    sample_geographic_area,
+) -> None:
+    name = f"Tung Chung North Park {uuid4()}"
+    name_zh = "東涌北公園"
+    description_zh = "東涌北公園是公共戶外場地。"
+    summary, results = process_import_payload(
+        db_session,
+        {
+            "organizations": [
+                _board_org(
+                    1,
+                    category_name=sample_activity_category.name,
+                    area_name=sample_geographic_area.name,
+                    name=name,
+                    name_zh=name_zh,
+                    description_zh=description_zh,
+                )
+            ]
+        },
+        [],
+        allow_org_updates=True,
+        catalog_manager_id=CATALOG_MANAGER,
+    )
+    assert summary["organizations"]["created"] == 1
+    assert summary["organizations"]["failed"] == 0
+    org_result = next(
+        row for row in results if row["type"] == "organizations"
+    )
+    assert org_result["status"] == "created"
+    org = db_session.execute(
+        select(Organization).where(Organization.name == name)
+    ).scalar_one()
+    assert org.name_translations == {"zh": name_zh}
+    assert "zh-HK" not in org.name_translations
+    activity = db_session.execute(
+        select(Activity).where(Activity.org_id == org.id)
+    ).scalar_one()
+    assert activity.description_translations["zh"] == description_zh
+    assert "zh-HK" not in activity.description_translations
 
 
 def test_truncation_is_a_file_warning(
