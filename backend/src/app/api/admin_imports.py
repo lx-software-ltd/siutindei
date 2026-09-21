@@ -161,6 +161,17 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
             results=results,
             file_warnings=file_warnings,
         )
+        # expire_on_commit empties attributes; the session then
+        # closes. Copy the response first or job.id raises
+        # DetachedInstanceError and the client sees HTTP 500.
+        body = {
+            "id": str(job.id),
+            "object_key": object_key,
+            "summary": summary,
+            "results": results,
+            "file_warnings": file_warnings,
+            "dry_run": dry_run,
+        }
         session.commit()
 
     logger.info(
@@ -168,18 +179,7 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
         extra={"summary": summary, "dry_run": dry_run},
     )
 
-    return json_response(
-        200,
-        {
-            "id": str(job.id),
-            "object_key": object_key,
-            "summary": summary,
-            "results": results,
-            "file_warnings": file_warnings,
-            "dry_run": dry_run,
-        },
-        event=event,
-    )
+    return json_response(200, body, event=event)
 
 
 def _handle_get_import_job(

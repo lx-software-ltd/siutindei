@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 from unittest.mock import patch
+from uuid import uuid4
+
+import pytest
 
 from app.api.admin import lambda_handler
 
@@ -465,3 +468,117 @@ def test_importer_uses_board_catalog_manager_id(monkeypatch) -> None:
     assert captured["catalog_manager_id"] == (
         "00000000-0000-0000-0000-000000000088"
     )
+
+
+def test_handle_import_process_survives_expire_on_commit(
+    monkeypatch,
+) -> None:
+    """Reproduce the production 500: job.id after session close."""
+    from sqlalchemy.orm.exc import DetachedInstanceError
+
+    class _ExpiringJob:
+        def __init__(self) -> None:
+            self._id = "00000000-0000-0000-0000-000000000099"
+            self._detached = False
+
+        @property
+        def id(self) -> str:
+            if self._detached:
+                raise DetachedInstanceError(
+                    "Instance <ImportJob> is not bound to a Session"
+                )
+            return self._id
+
+    job = _ExpiringJob()
+
+    class _Session:
+        def __init__(self, *args, **kwargs) -> None:
+            self._committed = False
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            # Match expire_on_commit + close: only the store
+            # session detaches the job after commit().
+            if self._committed:
+                job._detached = True
+            return False
+
+        def rollback(self):
+            return None
+
+        def commit(self):
+            self._committed = True
+
+    monkeypatch.setattr(
+        "app.api.admin_imports.Session",
+        lambda *args, **kwargs: _Session(),
+    )
+    monkeypatch.setattr("app.api.admin_imports.get_engine", lambda: None)
+    monkeypatch.setattr(
+        "app.api.admin_imports._load_import_payload",
+        lambda key: {"organizations": []},
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.find_import_job_by_key",
+        lambda session, key: None,
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.process_import_payload",
+        lambda *args, **kwargs: ({"warnings": 0}, []),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.store_import_job",
+        lambda *args, **kwargs: job,
+    )
+
+    from app.api.admin_imports import _handle_import_process
+
+    response = _handle_import_process(
+        _process_event(groups="importer", dry_run=True)
+    )
+    assert response["statusCode"] == 200
+    body = json.loads(response["body"])
+    assert body["id"] == job._id
+    assert body["dry_run"] is True
+    assert job._detached is True
+
+
+def test_handle_import_process_reads_job_before_session_close(
+    test_engine,
+    monkeypatch,
+) -> None:
+    """Real Session expire_on_commit must not 500 the process response."""
+    if test_engine.dialect.name != "postgresql":
+        pytest.skip("ImportJob JSONB needs PostgreSQL")
+
+    object_key = f"admin/imports/{uuid4().hex}-expire.json"
+    monkeypatch.setattr(
+        "app.api.admin_imports.get_engine",
+        lambda: test_engine,
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports._load_import_payload",
+        lambda key: {"organizations": []},
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.process_import_payload",
+        lambda *args, **kwargs: (
+            {"organizations": {"created": 0, "updated": 0, "failed": 0}},
+            [],
+        ),
+    )
+
+    from app.api.admin_imports import _handle_import_process
+
+    event = _process_event(groups="importer", dry_run=True)
+    event["body"] = json.dumps(
+        {"object_key": object_key, "dry_run": True}
+    )
+    response = _handle_import_process(event)
+    assert response["statusCode"] == 200
+    body = json.loads(response["body"])
+    assert body["object_key"] == object_key
+    assert body["dry_run"] is True
+    assert body["id"]
