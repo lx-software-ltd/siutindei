@@ -36,8 +36,8 @@ logger = get_logger(__name__)
 
 # Reject accidentally short secrets. CDK parameters use the same minimum.
 _MIN_SECRET_LENGTH = 32
-_WEB_TOKEN_ENV = "PUBLIC_WWW_ATTESTATION_TOKEN"
-_ORIGIN_SECRET_ENV = "PUBLIC_WWW_ORIGIN_VERIFY_SECRET"
+_WEB_CREDENTIAL_ENV = "PUBLIC_WWW_ATTESTATION_TOKEN"
+_ORIGIN_VERIFY_ENV = "PUBLIC_WWW_ORIGIN_VERIFY_SECRET"
 _ORIGIN_HEADER = "x-origin-verify"
 
 
@@ -76,10 +76,10 @@ def _public_www_decision(token: str, headers: dict[str, Any]) -> str:
     a matching origin secret, and ``skip`` for every other request (mobile
     JWTs continue through Firebase verification).
     """
-    web_token = _configured_secret(_WEB_TOKEN_ENV)
+    web_token = _configured_secret(_WEB_CREDENTIAL_ENV)
     if not web_token or not _secrets_equal(token, web_token):
         return "skip"
-    origin_secret = _configured_secret(_ORIGIN_SECRET_ENV)
+    origin_secret = _configured_secret(_ORIGIN_VERIFY_ENV)
     origin_header = get_header(headers, _ORIGIN_HEADER).strip()
     if origin_secret and _secrets_equal(origin_header, origin_secret):
         return "allow"
