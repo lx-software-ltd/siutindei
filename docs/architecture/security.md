@@ -124,6 +124,19 @@ The device attestation authorizer has two modes:
 
 **WARNING:** Always use `ATTESTATION_FAIL_CLOSED=true` in production environments.
 
+The public website does not mint App Check JWTs. It sends
+`NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN` (the `PublicWwwAttestationToken` CDK
+parameter) as `x-device-attestation`. The authorizer accepts that value only
+when the request also includes `X-Origin-Verify` equal to
+`PublicWwwOriginVerifySecret`. CloudFront sets that header on the search and
+listing-events origins when the secret is non-empty, and omits it otherwise.
+It is not in the viewer header allow-list, so a browser cannot supply it, and
+it is not an API Gateway identity source, because mobile clients do not send
+it. A missing identity source would be rejected with 401 before the authorizer
+runs. Rotation keeps the previous token and origin secret accepted until the
+CloudFront distribution and the website bundle have both moved to the new
+values.
+
 ### CDK Configuration
 
 ```typescript
@@ -216,7 +229,8 @@ for cached entries. This is acceptable because:
 - Edge abuse protection is provided by the CloudFront WAF WebACL.
 - On a cache **miss**, the request is forwarded to the API Gateway origin with
   the auth headers intact, where the device-attestation authorizer and API key
-  are enforced as normal.
+  are enforced as normal. CloudFront also sends `X-Origin-Verify`. Direct
+  calls to the API host that present only the public website token are denied.
 
 The cache key includes all query strings but **no** request headers, so a
 single cached response is shared across callers (no per-token cache

@@ -456,6 +456,66 @@ export class ApiStack extends cdk.Stack {
           "SECURITY: Must be 'true' in production.",
       }
     );
+    // Empty disables the website credential. A value shorter than 32
+    // characters is rejected. Mobile App Check JWTs do not use these values.
+    const optionalSecretPattern = "^$|^.{32,}$";
+    const publicWwwAttestationToken = new cdk.CfnParameter(
+      this,
+      "PublicWwwAttestationToken",
+      {
+        type: "String",
+        noEcho: true,
+        default: "",
+        allowedPattern: optionalSecretPattern,
+        description:
+          "Static public-website attestation token. Empty disables the " +
+          "website credential. When set, minimum 32 characters. Must match " +
+          "CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN used by the website build.",
+      }
+    );
+    const publicWwwAttestationTokenPrevious = new cdk.CfnParameter(
+      this,
+      "PublicWwwAttestationTokenPrevious",
+      {
+        type: "String",
+        noEcho: true,
+        default: "",
+        allowedPattern: optionalSecretPattern,
+        description:
+          "Previous public-website attestation token, accepted during " +
+          "rotation. Empty when not rotating.",
+      }
+    );
+    // Shared with PublicWwwStack. CloudFront injects this header; viewers
+    // cannot. Not an authorizer identity source: mobile clients omit it, and
+    // a missing identity source is rejected before this Lambda runs.
+    const publicWwwOriginVerifySecret = new cdk.CfnParameter(
+      this,
+      "PublicWwwOriginVerifySecret",
+      {
+        type: "String",
+        noEcho: true,
+        default: "",
+        allowedPattern: optionalSecretPattern,
+        description:
+          "Shared secret CloudFront sends as X-Origin-Verify. Empty " +
+          "disables the header. When set, minimum 32 characters. Must match " +
+          "the public website stack parameter.",
+      }
+    );
+    const publicWwwOriginVerifySecretPrevious = new cdk.CfnParameter(
+      this,
+      "PublicWwwOriginVerifySecretPrevious",
+      {
+        type: "String",
+        noEcho: true,
+        default: "",
+        allowedPattern: optionalSecretPattern,
+        description:
+          "Previous X-Origin-Verify secret, accepted during rotation. " +
+          "Empty when not rotating.",
+      }
+    );
 
     // ---------------------------------------------------------------------
     // Migration Parameters
@@ -1651,6 +1711,13 @@ export class ApiStack extends cdk.Stack {
           ATTESTATION_AUDIENCE: deviceAttestationAudience.valueAsString,
           // SECURITY: Fail-closed mode denies requests when attestation is not configured
           ATTESTATION_FAIL_CLOSED: deviceAttestationFailClosed.valueAsString,
+          PUBLIC_WWW_ATTESTATION_TOKEN: publicWwwAttestationToken.valueAsString,
+          PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS:
+            publicWwwAttestationTokenPrevious.valueAsString,
+          PUBLIC_WWW_ORIGIN_VERIFY_SECRET:
+            publicWwwOriginVerifySecret.valueAsString,
+          PUBLIC_WWW_ORIGIN_VERIFY_SECRET_PREVIOUS:
+            publicWwwOriginVerifySecretPrevious.valueAsString,
         },
       }
     );

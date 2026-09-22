@@ -3,14 +3,24 @@
 This Lambda validates device attestation tokens for mobile API requests,
 ensuring only legitimate app instances can access the API.
 
+The public website cannot mint a Firebase App Check JWT. It sends a static
+token as ``x-device-attestation``. That token is accepted only when CloudFront
+also injected ``x-origin-verify`` (a secret the browser never sees). Mobile
+JWTs do not need the origin header.
+
 SECURITY NOTES:
 - In production, ATTESTATION_FAIL_CLOSED should be "true" to deny requests
   when attestation is not configured.
 - Setting ATTESTATION_FAIL_CLOSED to "false" is only for development/testing.
+- Do not add ``x-origin-verify`` as an API Gateway identity source. Mobile
+  clients omit it, and a missing identity source is rejected with 401 before
+  this function runs.
 """
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import os
 from typing import Any
 
@@ -24,6 +34,14 @@ from app.utils.logging import configure_logging, get_logger
 configure_logging()
 logger = get_logger(__name__)
 
+# Reject accidentally short secrets. CDK parameters use the same minimum.
+_MIN_SECRET_LENGTH = 32
+_WEB_CREDENTIAL_ENV = "PUBLIC_WWW_ATTESTATION_TOKEN"
+_WEB_CREDENTIAL_PREVIOUS_ENV = "PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS"
+_ORIGIN_VERIFY_ENV = "PUBLIC_WWW_ORIGIN_VERIFY_SECRET"
+_ORIGIN_VERIFY_PREVIOUS_ENV = "PUBLIC_WWW_ORIGIN_VERIFY_SECRET_PREVIOUS"
+_ORIGIN_HEADER = "x-origin-verify"
+
 
 def _is_fail_closed() -> bool:
     """Return True if fail-closed mode is enabled (production default)."""
@@ -34,12 +52,83 @@ def _is_fail_closed() -> bool:
     }
 
 
+def _configured_secret(name: str) -> str:
+    """Return a secret env var, or empty when it is missing or too short."""
+    value = os.getenv(name, "").strip()
+    if len(value) < _MIN_SECRET_LENGTH:
+        return ""
+    return value
+
+
+def _secrets_equal(left: str, right: str) -> bool:
+    """Compare two secrets without leaking length or contents."""
+    if not left or not right:
+        return False
+    return hmac.compare_digest(
+        hashlib.sha256(left.encode("utf-8")).digest(),
+        hashlib.sha256(right.encode("utf-8")).digest(),
+    )
+
+
+def _matches_configured(presented: str, *env_names: str) -> bool:
+    """Return True when ``presented`` matches any configured secret."""
+    return any(
+        _secrets_equal(presented, _configured_secret(name)) for name in env_names
+    )
+
+
+def _public_www_decision(token: str, headers: dict[str, Any]) -> str:
+    """Classify a static public-website credential.
+
+    Returns ``allow`` when the attestation token and CloudFront origin
+    secret both match a current or previous value, ``deny`` when the
+    website token is presented without a matching origin secret, and
+    ``skip`` for every other request (mobile JWTs continue through Firebase
+    verification). Previous values keep rotation from denying traffic while
+    CloudFront and the website bundle still send the old secret.
+    """
+    if not _matches_configured(
+        token,
+        _WEB_CREDENTIAL_ENV,
+        _WEB_CREDENTIAL_PREVIOUS_ENV,
+    ):
+        return "skip"
+    origin_header = get_header(headers, _ORIGIN_HEADER).strip()
+    if _matches_configured(
+        origin_header,
+        _ORIGIN_VERIFY_ENV,
+        _ORIGIN_VERIFY_PREVIOUS_ENV,
+    ):
+        return "allow"
+    return "deny"
+
+
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     """Authorize requests based on device attestation token."""
 
     headers = event.get("headers") or {}
     method_arn = event.get("methodArn", "")
     token = get_header(headers, "x-device-attestation")
+
+    web_decision = _public_www_decision(token, headers)
+    if web_decision == "allow":
+        logger.info("Public website attestation accepted")
+        return policy(
+            "Allow",
+            method_arn,
+            "public-www",
+            {"attested": "web"},
+            broaden_resource=False,
+        )
+    if web_decision == "deny":
+        logger.warning("Public website attestation rejected")
+        return policy(
+            "Deny",
+            method_arn,
+            "public-www",
+            {"reason": "origin_verify_failed"},
+            broaden_resource=False,
+        )
 
     # SECURITY: Check if attestation is configured
     if not is_attestation_enabled():

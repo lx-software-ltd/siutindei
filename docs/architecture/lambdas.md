@@ -150,8 +150,14 @@ their primary responsibilities.
 - Function: DeviceAttestationAuthorizer
 - Handler: backend/lambda/authorizers/device_attestation/handler.py
 - Trigger: API Gateway request authorizer
-- Purpose: verify device attestation JWTs for public search
+- Purpose: verify device attestation JWTs for public search, and accept the
+  static public-website token when `X-Origin-Verify` matches
 - VPC: **No** (runs outside VPC to fetch JWKS from Firebase)
+- Environment: `ATTESTATION_JWKS_URL`, `ATTESTATION_ISSUER`,
+  `ATTESTATION_AUDIENCE`, `ATTESTATION_FAIL_CLOSED`,
+  `PUBLIC_WWW_ATTESTATION_TOKEN`, `PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS`,
+  `PUBLIC_WWW_ORIGIN_VERIFY_SECRET`, `PUBLIC_WWW_ORIGIN_VERIFY_SECRET_PREVIOUS`.
+  Empty or short values disable that slot. Previous values are for rotation.
 
 ### Admin group authorizer
 - Function: AdminGroupAuthorizerFunction
