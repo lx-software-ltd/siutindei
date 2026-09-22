@@ -1,6 +1,9 @@
+import buildDefaults from '../../build-env.defaults.json';
+
 interface SiteContact {
   readonly email: string;
   readonly whatsappUrl: string;
+  readonly whatsappDisplay: string;
   readonly instagramUrl: string;
 }
 
@@ -23,12 +26,20 @@ export interface SiteConfig {
 
 export interface PublicSiteConfig {
   readonly whatsappUrl?: string;
+  readonly whatsappDisplay?: string;
   readonly contactEmail?: string;
   readonly instagramUrl?: string;
 }
 
 function trimEnv(value: string | undefined): string {
   return (value ?? '').trim();
+}
+
+function contactValue(
+  envValue: string | undefined,
+  fallback: string,
+): string {
+  return trimEnv(envValue) || fallback;
 }
 
 function readBooleanEnv(value: string | undefined): boolean {
@@ -45,8 +56,15 @@ export function getSiteConfig(): SiteConfig {
       process.env.NEXT_PUBLIC_STAGING_BADGE_ENABLED,
     ),
     contact: {
-      email: trimEnv(process.env.NEXT_PUBLIC_EMAIL),
-      whatsappUrl: trimEnv(process.env.NEXT_PUBLIC_WHATSAPP_URL),
+      email: contactValue(
+        process.env.NEXT_PUBLIC_EMAIL,
+        buildDefaults.contactEmail,
+      ),
+      whatsappUrl: contactValue(
+        process.env.NEXT_PUBLIC_WHATSAPP_URL,
+        buildDefaults.whatsappUrl,
+      ),
+      whatsappDisplay: buildDefaults.whatsappDisplay,
       instagramUrl: trimEnv(process.env.NEXT_PUBLIC_INSTAGRAM_URL),
     },
     search: getSearchConfig(),
@@ -110,13 +128,13 @@ export function getMetaPixelAllowedHosts(): string {
 }
 
 export function resolvePublicSiteConfig(): PublicSiteConfig {
-  const whatsappUrl = trimEnv(process.env.NEXT_PUBLIC_WHATSAPP_URL);
-  const contactEmail = trimEnv(process.env.NEXT_PUBLIC_EMAIL);
-  const instagramUrl = trimEnv(process.env.NEXT_PUBLIC_INSTAGRAM_URL);
+  const { email, whatsappUrl, whatsappDisplay, instagramUrl } =
+    getSiteConfig().contact;
 
   return {
     ...(whatsappUrl ? { whatsappUrl } : {}),
-    ...(contactEmail ? { contactEmail } : {}),
+    ...(whatsappDisplay ? { whatsappDisplay } : {}),
+    ...(email ? { contactEmail: email } : {}),
     ...(instagramUrl ? { instagramUrl } : {}),
   };
 }

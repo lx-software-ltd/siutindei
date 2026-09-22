@@ -82,6 +82,24 @@ describe('pre-launch holding page', () => {
     },
   );
 
+  it('uses the public brand contacts for the holding page', () => {
+    const defaults = JSON.parse(
+      readFileSync(resolve(APP_DIR, 'build-env.defaults.json'), 'utf8'),
+    ) as {
+      contactEmail: string;
+      whatsappUrl: string;
+      whatsappDisplay: string;
+    };
+    expect(defaults.contactEmail).toBe('hello@siutindei.com');
+    expect(defaults.whatsappUrl).toBe('https://wa.me/85294460861');
+    expect(defaults.whatsappDisplay).toBe('+852 9446 0861');
+    for (const fileName of HOLDING_PAGES) {
+      const html = assembleHoldingPage(fileName);
+      expect(html).not.toContain('or WhatsApp');
+      expect(html).toContain('__NEXT_PUBLIC_EMAIL__</a>.');
+    }
+  });
+
   it('uses launching-soon copy on the front page', () => {
     const html = readMaintenance('index.html');
     expect(html).toContain('Coming soon');
@@ -96,6 +114,9 @@ describe('pre-launch holding page', () => {
     expect(css).toContain('--color-ink-900: #2e1d12');
     expect(css).toContain('prefers-reduced-motion');
     expect(css).toContain('100dvh');
+    expect(css).toContain('.card a[href^="mailto:"]:not(.btn)');
+    expect(css).toContain('white-space: nowrap');
+    expect(css).toContain('hyphens: none');
   });
 
   it('keeps deploy-script placeholders aligned with assembled HTML', () => {
@@ -111,6 +132,10 @@ describe('pre-launch holding page', () => {
     for (const marker of PARTIAL_MARKERS) {
       expect(deployScript).toContain(marker);
     }
+    expect(deployScript).toContain('contactEmail');
+    expect(deployScript).toContain('whatsappUrl');
+    expect(deployScript).not.toContain('__NEXT_PUBLIC_WHATSAPP_DISPLAY__');
+    expect(deployScript).not.toContain('maintenanceContactEmail');
     expect(deployScript).toContain(
       'DEFAULT_LX_SOFTWARE_URL="https://www.lx-software.com"',
     );
