@@ -156,25 +156,16 @@ resolve_maintenance_whatsapp_url() {
   resolve_public_contact_value "NEXT_PUBLIC_WHATSAPP_URL" "whatsappUrl"
 }
 
-resolve_maintenance_whatsapp_display() {
-  read_public_www_build_default "whatsappDisplay"
-}
-
 validate_maintenance_contact_settings() {
-  local email whatsapp_url whatsapp_display
+  local email whatsapp_url
   email="$(resolve_maintenance_email)"
   whatsapp_url="$(resolve_maintenance_whatsapp_url)"
-  whatsapp_display="$(resolve_maintenance_whatsapp_display)"
   if [[ ! "$email" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
     echo "contactEmail must be a valid email address."
     exit 1
   fi
   if [[ ! "$whatsapp_url" =~ ^https?:// ]]; then
     echo "whatsappUrl must start with http:// or https://."
-    exit 1
-  fi
-  if [[ ! "$whatsapp_display" =~ ^[+0-9][0-9[:space:]-]{6,24}$ ]]; then
-    echo "whatsappDisplay must be a phone number."
     exit 1
   fi
   validate_http_url_when_set \
@@ -256,13 +247,11 @@ inject_maintenance_contact_values() {
     echo "Maintenance HTML file not found: $html_path"
     exit 1
   fi
-  local escaped_email escaped_whatsapp_url escaped_whatsapp_display
-  local escaped_instagram_url escaped_lx_software_url escaped_build_year
+  local escaped_email escaped_whatsapp_url escaped_instagram_url
+  local escaped_lx_software_url escaped_build_year
   escaped_email="$(escape_sed_replacement "$(resolve_maintenance_email)")"
   escaped_whatsapp_url="$(escape_sed_replacement \
     "$(resolve_maintenance_whatsapp_url)")"
-  escaped_whatsapp_display="$(escape_sed_replacement \
-    "$(resolve_maintenance_whatsapp_display)")"
   escaped_instagram_url="$(escape_sed_replacement "${NEXT_PUBLIC_INSTAGRAM_URL:-#}")"
   escaped_lx_software_url="$(escape_sed_replacement \
     "${NEXT_PUBLIC_LX_SOFTWARE_URL:-$DEFAULT_LX_SOFTWARE_URL}")"
@@ -270,7 +259,6 @@ inject_maintenance_contact_values() {
   sed -i \
     -e "s|__NEXT_PUBLIC_EMAIL__|$escaped_email|g" \
     -e "s|__NEXT_PUBLIC_WHATSAPP_URL__|$escaped_whatsapp_url|g" \
-    -e "s|__NEXT_PUBLIC_WHATSAPP_DISPLAY__|$escaped_whatsapp_display|g" \
     -e "s|__NEXT_PUBLIC_INSTAGRAM_URL__|$escaped_instagram_url|g" \
     -e "s|__NEXT_PUBLIC_LX_SOFTWARE_URL__|$escaped_lx_software_url|g" \
     -e "s|__NEXT_PUBLIC_BUILD_YEAR__|$escaped_build_year|g" \

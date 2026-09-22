@@ -95,8 +95,8 @@ describe('pre-launch holding page', () => {
     expect(defaults.whatsappDisplay).toBe('+852 9446 0861');
     for (const fileName of HOLDING_PAGES) {
       const html = assembleHoldingPage(fileName);
-      expect(html).toContain('__NEXT_PUBLIC_WHATSAPP_DISPLAY__');
-      expect(html).toContain('or WhatsApp');
+      expect(html).not.toContain('or WhatsApp');
+      expect(html).toContain('__NEXT_PUBLIC_EMAIL__</a>.');
     }
   });
 
@@ -134,9 +134,8 @@ describe('pre-launch holding page', () => {
     }
     expect(deployScript).toContain('contactEmail');
     expect(deployScript).toContain('whatsappUrl');
-    expect(deployScript).toContain('whatsappDisplay');
+    expect(deployScript).not.toContain('__NEXT_PUBLIC_WHATSAPP_DISPLAY__');
     expect(deployScript).not.toContain('maintenanceContactEmail');
-    expect(deployScript).toContain('__NEXT_PUBLIC_WHATSAPP_DISPLAY__');
     expect(deployScript).toContain(
       'DEFAULT_LX_SOFTWARE_URL="https://www.lx-software.com"',
     );
