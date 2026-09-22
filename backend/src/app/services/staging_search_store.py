@@ -24,6 +24,7 @@ from app.db.queries import ActivitySearchFilters, validate_filters
 
 _FIXTURE_CACHE: dict[str, Any] | None = None
 _SORTED_PUBLISHED_ITEMS: list[dict[str, Any]] | None = None
+_LFS_POINTER_PREFIX = "version https://git-lfs.github.com/spec/v1"
 
 
 def staging_search_data_enabled() -> bool:
@@ -91,10 +92,19 @@ def _load_fixture() -> dict[str, Any]:
         return _FIXTURE_CACHE
 
     path = _resolve_fixture_path()
-    with path.open(encoding="utf-8") as handle:
-        _FIXTURE_CACHE = json.load(handle)
+    _FIXTURE_CACHE = _read_fixture_json(path)
     _SORTED_PUBLISHED_ITEMS = None
     return _FIXTURE_CACHE
+
+
+def _read_fixture_json(path: Path) -> dict[str, Any]:
+    raw = path.read_text(encoding="utf-8")
+    if raw.startswith(_LFS_POINTER_PREFIX):
+        raise FileNotFoundError(
+            "Staging search fixture is a Git LFS pointer; run git lfs pull "
+            "or set STAGING_SEARCH_DATA_PATH to a materialized JSON file."
+        )
+    return json.loads(raw)
 
 
 def _sorted_published_items() -> list[dict[str, Any]]:

@@ -10,8 +10,10 @@ import pytest
 from app.db.queries import ActivitySearchFilters
 from app.services import staging_search_store
 
-MIN_PUBLIC_LISTINGS = 10
-DISCOVERY_LOAD_BUDGET_SECONDS = 2.0
+from staging_search_acceptance import (
+    DISCOVERY_LOAD_BUDGET_SECONDS,
+    MIN_PUBLIC_LISTINGS,
+)
 
 
 @pytest.fixture(autouse=True)
