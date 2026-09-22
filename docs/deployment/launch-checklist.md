@@ -98,9 +98,17 @@ On the **production** environment:
   `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`; do not create a second copy.
   Also set variable `NEXT_PUBLIC_SEARCH_API_BASE_URL` to `https://siutindei.com`
   and secret `NEXT_PUBLIC_SEARCH_API_KEY` to the live mobile search API key.
-- Deploy the API stack and the public website stack after those secrets
-  exist, then promote. Promotion before that deploy ships a token the
-  authorizer and CloudFront do not know yet.
+- The website attestation parameters default to empty. A backend deploy
+  before those two secrets exist succeeds and leaves website search closed.
+  Set the secrets, deploy the API stack and the public website stack, then
+  promote. Promotion before that deploy ships a token the authorizer and
+  CloudFront do not know yet.
+- To rotate, set `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS` and
+  `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS` to the values currently in
+  production, put the new values in `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`
+  and `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`, and deploy the API stack first.
+  Then deploy the public website stack and promote. After both are serving
+  the new values, clear the previous secrets and deploy the API stack again.
 - Variables: `APPLE_TEAM_ID`, `CDK_PARAM_FILE` pointing at
   `params/production.json`.
 
@@ -156,8 +164,9 @@ Verify each with `curl -sI https://<domain>` (expect 200/301, valid cert).
 4. Promote with `promote-public-www.yml`
    (`PUBLIC_WWW_PROMOTE_RELEASE_ID` = the staging release to promote).
    The API stack and public website stack must already be deployed with
-   `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN` and
-   `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`.
+   non-empty `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN` and
+   `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`. Empty defaults leave website search
+   closed.
 5. Post-promote: spot-check production search, an activity detail page, and
    both locales.
 

@@ -159,6 +159,10 @@ parallel environments (production + staging) inside a single CDK stack
   authorizer accepts that token only when the request also carries the
   CloudFront-injected `X-Origin-Verify` secret. Mobile App Check tokens do
   not need that header, and the header is not an API Gateway identity source.
+  Both secrets default to empty, which leaves the website path closed, so a
+  backend deploy can land before the secrets exist. During rotation the
+  authorizer also accepts `PublicWwwAttestationTokenPrevious` and
+  `PublicWwwOriginVerifySecretPrevious`.
 - Hosted UI uses OAuth code flow with callback/logout URLs supplied via CDK
   parameters.
 - API keys are rotated every 90 days by a scheduled Lambda.
@@ -360,6 +364,8 @@ Lambdas or NAT Gateway.
 - `CDK_PARAM_PUBLIC_API_KEY_VALUE`
 - `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`
 - `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`
+- `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS` (optional, rotation)
+- `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS` (optional, rotation)
 - `CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD` (optional)
 - `APPSTORE_API_KEY_JSON` (recommended single JSON secret with issuer_id,
   key_id, private_key)

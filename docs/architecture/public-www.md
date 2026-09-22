@@ -345,7 +345,7 @@ telemetry, not a GA4 pull.
 | Item | Value |
 |---|---|
 | Path pattern | `/v1/listing-events` (exact path) |
-| Origin | Same API Gateway custom domain as search |
+| Origin | Same API Gateway custom domain as search, including the `X-Origin-Verify` custom origin header when `PublicWwwOriginVerifySecret` is set |
 | Allowed methods | CloudFront `ALLOW_ALL`, allow-list function permits `POST` / `OPTIONS` only |
 | Cache | `CACHING_DISABLED` |
 | Origin-request policy | Forwards `x-api-key`, `x-device-attestation`, `Accept`, `Content-Type`, `Origin`; no query strings |

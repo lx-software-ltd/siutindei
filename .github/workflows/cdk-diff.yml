@@ -23,6 +23,7 @@ concurrency:
 jobs:
   diff:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -80,8 +81,14 @@ jobs:
               "PublicWwwAttestationToken": os.getenv(
                   "CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN", ""
               ),
+              "PublicWwwAttestationTokenPrevious": os.getenv(
+                  "CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS", ""
+              ),
               "PublicWwwOriginVerifySecret": os.getenv(
                   "CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY", ""
+              ),
+              "PublicWwwOriginVerifySecretPrevious": os.getenv(
+                  "CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS", ""
               ),
               "AdminBootstrapTempPassword": os.getenv(
                   "CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD", ""
@@ -102,7 +109,9 @@ jobs:
           CDK_PARAM_APPLE_PRIVATE_KEY: ${{ secrets.CDK_PARAM_APPLE_PRIVATE_KEY }}
           CDK_PARAM_PUBLIC_API_KEY_VALUE: ${{ secrets.CDK_PARAM_PUBLIC_API_KEY_VALUE }}
           CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN }}
+          CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS }}
           CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY }}
+          CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS }}
           CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD: ${{ secrets.CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD }}
 
       - name: Build CDK non-secret parameters file
@@ -304,7 +313,9 @@ jobs:
           CDK_PARAM_APPLE_PRIVATE_KEY: ${{ secrets.CDK_PARAM_APPLE_PRIVATE_KEY }}
           CDK_PARAM_PUBLIC_API_KEY_VALUE: ${{ secrets.CDK_PARAM_PUBLIC_API_KEY_VALUE }}
           CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN }}
+          CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS }}
           CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY }}
+          CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS }}
           CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD: ${{ secrets.CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD }}
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
           FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}

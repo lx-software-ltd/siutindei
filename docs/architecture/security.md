@@ -129,10 +129,13 @@ The public website does not mint App Check JWTs. It sends
 parameter) as `x-device-attestation`. The authorizer accepts that value only
 when the request also includes `X-Origin-Verify` equal to
 `PublicWwwOriginVerifySecret`. CloudFront sets that header on the search and
-listing-events origins. It is not in the viewer header allow-list, so a
-browser cannot supply it, and it is not an API Gateway identity source,
-because mobile clients do not send it. A missing identity source would be
-rejected with 401 before the authorizer runs.
+listing-events origins when the secret is non-empty, and omits it otherwise.
+It is not in the viewer header allow-list, so a browser cannot supply it, and
+it is not an API Gateway identity source, because mobile clients do not send
+it. A missing identity source would be rejected with 401 before the authorizer
+runs. Rotation keeps the previous token and origin secret accepted until the
+CloudFront distribution and the website bundle have both moved to the new
+values.
 
 ### CDK Configuration
 

@@ -456,20 +456,34 @@ export class ApiStack extends cdk.Stack {
           "SECURITY: Must be 'true' in production.",
       }
     );
-    // Static credential the public website sends as x-device-attestation.
-    // Accepted only together with PublicWwwOriginVerifySecret. Mobile App
-    // Check JWTs do not use this value.
+    // Empty disables the website credential. A value shorter than 32
+    // characters is rejected. Mobile App Check JWTs do not use these values.
+    const optionalSecretPattern = "^$|^.{32,}$";
     const publicWwwAttestationToken = new cdk.CfnParameter(
       this,
       "PublicWwwAttestationToken",
       {
         type: "String",
         noEcho: true,
-        minLength: 32,
+        default: "",
+        allowedPattern: optionalSecretPattern,
         description:
-          "Static public-website attestation token. Must match " +
-          "CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN used by the website build. " +
-          "Minimum 32 characters.",
+          "Static public-website attestation token. Empty disables the " +
+          "website credential. When set, minimum 32 characters. Must match " +
+          "CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN used by the website build.",
+      }
+    );
+    const publicWwwAttestationTokenPrevious = new cdk.CfnParameter(
+      this,
+      "PublicWwwAttestationTokenPrevious",
+      {
+        type: "String",
+        noEcho: true,
+        default: "",
+        allowedPattern: optionalSecretPattern,
+        description:
+          "Previous public-website attestation token, accepted during " +
+          "rotation. Empty when not rotating.",
       }
     );
     // Shared with PublicWwwStack. CloudFront injects this header; viewers
@@ -481,10 +495,25 @@ export class ApiStack extends cdk.Stack {
       {
         type: "String",
         noEcho: true,
-        minLength: 32,
+        default: "",
+        allowedPattern: optionalSecretPattern,
         description:
-          "Shared secret CloudFront sends as X-Origin-Verify. Must match " +
-          "the public website stack parameter. Minimum 32 characters.",
+          "Shared secret CloudFront sends as X-Origin-Verify. Empty " +
+          "disables the header. When set, minimum 32 characters. Must match " +
+          "the public website stack parameter.",
+      }
+    );
+    const publicWwwOriginVerifySecretPrevious = new cdk.CfnParameter(
+      this,
+      "PublicWwwOriginVerifySecretPrevious",
+      {
+        type: "String",
+        noEcho: true,
+        default: "",
+        allowedPattern: optionalSecretPattern,
+        description:
+          "Previous X-Origin-Verify secret, accepted during rotation. " +
+          "Empty when not rotating.",
       }
     );
 
@@ -1683,8 +1712,12 @@ export class ApiStack extends cdk.Stack {
           // SECURITY: Fail-closed mode denies requests when attestation is not configured
           ATTESTATION_FAIL_CLOSED: deviceAttestationFailClosed.valueAsString,
           PUBLIC_WWW_ATTESTATION_TOKEN: publicWwwAttestationToken.valueAsString,
+          PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS:
+            publicWwwAttestationTokenPrevious.valueAsString,
           PUBLIC_WWW_ORIGIN_VERIFY_SECRET:
             publicWwwOriginVerifySecret.valueAsString,
+          PUBLIC_WWW_ORIGIN_VERIFY_SECRET_PREVIOUS:
+            publicWwwOriginVerifySecretPrevious.valueAsString,
         },
       }
     );

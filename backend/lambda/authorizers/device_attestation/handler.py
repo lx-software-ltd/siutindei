@@ -37,7 +37,9 @@ logger = get_logger(__name__)
 # Reject accidentally short secrets. CDK parameters use the same minimum.
 _MIN_SECRET_LENGTH = 32
 _WEB_CREDENTIAL_ENV = "PUBLIC_WWW_ATTESTATION_TOKEN"
+_WEB_CREDENTIAL_PREVIOUS_ENV = "PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS"
 _ORIGIN_VERIFY_ENV = "PUBLIC_WWW_ORIGIN_VERIFY_SECRET"
+_ORIGIN_VERIFY_PREVIOUS_ENV = "PUBLIC_WWW_ORIGIN_VERIFY_SECRET_PREVIOUS"
 _ORIGIN_HEADER = "x-origin-verify"
 
 
@@ -68,20 +70,35 @@ def _secrets_equal(left: str, right: str) -> bool:
     )
 
 
+def _matches_configured(presented: str, *env_names: str) -> bool:
+    """Return True when ``presented`` matches any configured secret."""
+    return any(
+        _secrets_equal(presented, _configured_secret(name)) for name in env_names
+    )
+
+
 def _public_www_decision(token: str, headers: dict[str, Any]) -> str:
     """Classify a static public-website credential.
 
     Returns ``allow`` when the attestation token and CloudFront origin
-    secret both match, ``deny`` when the website token is presented without
-    a matching origin secret, and ``skip`` for every other request (mobile
-    JWTs continue through Firebase verification).
+    secret both match a current or previous value, ``deny`` when the
+    website token is presented without a matching origin secret, and
+    ``skip`` for every other request (mobile JWTs continue through Firebase
+    verification). Previous values keep rotation from denying traffic while
+    CloudFront and the website bundle still send the old secret.
     """
-    web_token = _configured_secret(_WEB_CREDENTIAL_ENV)
-    if not web_token or not _secrets_equal(token, web_token):
+    if not _matches_configured(
+        token,
+        _WEB_CREDENTIAL_ENV,
+        _WEB_CREDENTIAL_PREVIOUS_ENV,
+    ):
         return "skip"
-    origin_secret = _configured_secret(_ORIGIN_VERIFY_ENV)
     origin_header = get_header(headers, _ORIGIN_HEADER).strip()
-    if origin_secret and _secrets_equal(origin_header, origin_secret):
+    if _matches_configured(
+        origin_header,
+        _ORIGIN_VERIFY_ENV,
+        _ORIGIN_VERIFY_PREVIOUS_ENV,
+    ):
         return "allow"
     return "deny"
 

@@ -76,6 +76,7 @@ interface WebsiteEnvironmentConfig {
   readonly listingEventsProxyFunction: cloudfront.Function;
   readonly listingEventsOriginRequestPolicy: cloudfront.IOriginRequestPolicy;
   readonly originVerifySecret: string;
+  readonly hasOriginVerifySecret: cdk.CfnCondition;
 }
 
 interface WebsiteEnvironmentResources {
@@ -201,10 +202,21 @@ export class PublicWwwStack extends cdk.Stack {
       {
         type: "String",
         noEcho: true,
-        minLength: 32,
+        default: "",
+        allowedPattern: "^$|^.{32,}$",
         description:
           "Shared secret added as the X-Origin-Verify origin header on " +
-          "proxied search and listing-event requests. Minimum 32 characters.",
+          "proxied search and listing-event requests. Empty omits the " +
+          "header. When set, minimum 32 characters.",
+      },
+    );
+    const hasOriginVerifySecret = new cdk.CfnCondition(
+      this,
+      "HasPublicWwwOriginVerifySecret",
+      {
+        expression: cdk.Fn.conditionNot(
+          cdk.Fn.conditionEquals(publicWwwOriginVerifySecret.valueAsString, ""),
+        ),
       },
     );
 
@@ -300,6 +312,7 @@ function handler(event) {
       listingEventsProxyFunction,
       listingEventsOriginRequestPolicy,
       originVerifySecret: publicWwwOriginVerifySecret.valueAsString,
+      hasOriginVerifySecret,
     });
     this.bucket = productionResources.bucket;
     this.distribution = productionResources.distribution;
@@ -323,6 +336,7 @@ function handler(event) {
       listingEventsProxyFunction,
       listingEventsOriginRequestPolicy,
       originVerifySecret: publicWwwOriginVerifySecret.valueAsString,
+      hasOriginVerifySecret,
     });
     this.stagingBucket = stagingResources.bucket;
     this.stagingDistribution = stagingResources.distribution;
@@ -661,6 +675,25 @@ function handler(event) {
       cdk.Fn.conditionIf(
         config.hasWafWebAclArn.logicalId,
         config.wafWebAclArn.valueAsString,
+        cdk.Aws.NO_VALUE,
+      ),
+    );
+    // An empty header value is invalid on a CloudFront origin. Omit the
+    // header until the secret is set so a deploy before the secret exists
+    // still succeeds and the website credential stays closed.
+    // Origin 0 is the S3 website origin. Origin 1 is the shared search and
+    // listing-events HTTP origin. The L1 origins list is lazy, so it cannot
+    // be searched at construct time.
+    cfnDistribution.addPropertyOverride(
+      "DistributionConfig.Origins.1.OriginCustomHeaders",
+      cdk.Fn.conditionIf(
+        config.hasOriginVerifySecret.logicalId,
+        [
+          {
+            HeaderName: "X-Origin-Verify",
+            HeaderValue: config.originVerifySecret,
+          },
+        ],
         cdk.Aws.NO_VALUE,
       ),
     );
