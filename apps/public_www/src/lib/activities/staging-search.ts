@@ -70,11 +70,40 @@ interface StagingFixture {
 
 let cachedFixture: StagingFixture | null = null;
 let cachedFixtureUrl: string | null = null;
+let cachedSortedPublishedItems: StagingFixtureItem[] | null = null;
 
 /** Clears the in-memory fixture cache (for tests). */
 export function clearStagingFixtureCacheForTests(): void {
   cachedFixture = null;
   cachedFixtureUrl = null;
+  cachedSortedPublishedItems = null;
+}
+
+function isVisibleListing(item: StagingFixtureItem): boolean {
+  const status = item.organization.status;
+  return status !== 'closed_permanently' && status !== 'hidden';
+}
+
+function sortedPublishedItems(fixture: StagingFixture): StagingFixtureItem[] {
+  if (cachedSortedPublishedItems) {
+    return cachedSortedPublishedItems;
+  }
+  const items = fixture.items
+    .filter(isVisibleListing)
+    .slice()
+    .sort((left, right) => {
+      const leftKey = sortKey(left);
+      const rightKey = sortKey(right);
+      if (leftKey[0] !== rightKey[0]) {
+        return leftKey[0] - rightKey[0];
+      }
+      if (leftKey[1] !== rightKey[1]) {
+        return leftKey[1] - rightKey[1];
+      }
+      return leftKey[2].localeCompare(rightKey[2]);
+    });
+  cachedSortedPublishedItems = items;
+  return items;
 }
 
 export function resolveStagingSearchFixtureUrl(): string {
@@ -109,6 +138,7 @@ async function loadStagingFixture(): Promise<StagingFixture> {
 
   cachedFixture = (await response.json()) as StagingFixture;
   cachedFixtureUrl = url;
+  cachedSortedPublishedItems = null;
   return cachedFixture;
 }
 
@@ -257,20 +287,9 @@ export async function fetchStagingActivitySearch(
   const limit = params.limit ?? 50;
   const areaDescendants = fixture.meta.area_descendants ?? {};
 
-  let matched = fixture.items.filter((item) =>
+  const matched = sortedPublishedItems(fixture).filter((item) =>
     matchesItem(item, params, areaDescendants),
   );
-  matched = [...matched].sort((left, right) => {
-    const leftKey = sortKey(left);
-    const rightKey = sortKey(right);
-    if (leftKey[0] !== rightKey[0]) {
-      return leftKey[0] - rightKey[0];
-    }
-    if (leftKey[1] !== rightKey[1]) {
-      return leftKey[1] - rightKey[1];
-    }
-    return leftKey[2].localeCompare(rightKey[2]);
-  });
 
   let startIndex = 0;
   if (params.cursor) {
