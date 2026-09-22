@@ -114,6 +114,9 @@ describe('pre-launch holding page', () => {
     expect(css).toContain('--color-ink-900: #2e1d12');
     expect(css).toContain('prefers-reduced-motion');
     expect(css).toContain('100dvh');
+    expect(css).toContain('.card a[href^="mailto:"]:not(.btn)');
+    expect(css).toContain('white-space: nowrap');
+    expect(css).toContain('hyphens: none');
   });
 
   it('keeps deploy-script placeholders aligned with assembled HTML', () => {

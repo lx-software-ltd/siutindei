@@ -220,6 +220,11 @@ a:focus-visible {
   text-underline-offset: 0.15em;
 }
 
+.card a[href^="mailto:"]:not(.btn) {
+  white-space: nowrap;
+  hyphens: none;
+}
+
 .actions {
   list-style: none;
   display: flex;
