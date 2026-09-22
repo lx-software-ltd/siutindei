@@ -107,8 +107,10 @@ export const mockOrganizations = [
     wechat: '@orgone',
     media_urls: [],
     logo_media_url: null,
+    status: 'operational',
+    status_changed_at: '2024-01-05T10:00:00Z',
     created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-10T08:00:00Z',
   },
   {
     id: 'org-2',
@@ -137,8 +139,10 @@ export const mockOrganizations = [
     wechat: '',
     media_urls: [],
     logo_media_url: null,
+    status: 'hidden',
+    status_changed_at: '2024-01-08T12:00:00Z',
     created_at: '2024-01-02T00:00:00Z',
-    updated_at: '2024-01-02T00:00:00Z',
+    updated_at: '2024-01-08T12:00:00Z',
   },
 ];
 
@@ -963,7 +967,13 @@ export async function setupApiMocks(page: Page): Promise<void> {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ items: mockTickets, next_cursor: null }),
+        body: JSON.stringify({
+          items: mockTickets,
+          next_cursor: null,
+          pending_count: mockTickets.filter(
+            (ticket) => ticket.status === 'pending'
+          ).length,
+        }),
       });
       return;
     }

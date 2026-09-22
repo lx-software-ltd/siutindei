@@ -16,6 +16,7 @@ test.describe('Admin Dashboard', () => {
 
     // Check all navigation buttons
     const expectedSections = [
+      'Overview',
       'Organizations',
       'Media',
       'Locations',
@@ -39,17 +40,18 @@ test.describe('Admin Dashboard', () => {
     }
   });
 
-  test('should highlight Organizations as default active section', async ({ adminPage }) => {
+  test('should highlight Overview as default active section', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard');
 
-    // Organizations should be selected by default
-    const organizationsButton = adminPage.getByRole('button', { name: 'Organizations' });
-    await expect(organizationsButton).toBeVisible();
+    const overviewButton = adminPage.getByRole('button', { name: 'Overview' });
+    await expect(overviewButton).toBeVisible();
 
-    // Check that Organizations panel is visible
     await expect(
-      adminPage.getByRole('heading', { name: /Organization/i }).first()
+      adminPage.getByRole('heading', {
+        name: 'Listing & vendor partnerships',
+      })
     ).toBeVisible();
+    await expect(adminPage.getByText('Active listings')).toBeVisible();
   });
 
   test('should navigate to Media section', async ({ adminPage }) => {
@@ -151,9 +153,10 @@ test.describe('Admin Dashboard', () => {
   test('should switch between sections correctly', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard');
 
-    // Start at Organizations (default)
     await expect(
-      adminPage.getByRole('heading', { name: /Organization/i }).first()
+      adminPage.getByRole('heading', {
+        name: 'Listing & vendor partnerships',
+      })
     ).toBeVisible();
 
     // Switch to Activities
@@ -190,10 +193,10 @@ test.describe('Admin Dashboard Layout', () => {
   test('should have sidebar navigation', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard');
 
-    // Check that nav element exists with buttons. Each of the 14 sections
+    // Check that nav element exists with buttons. Each of the 15 sections
     // renders twice: desktop sidebar + mobile drawer.
     const navButtons = adminPage.locator('nav button');
-    await expect(navButtons).toHaveCount(28);
+    await expect(navButtons).toHaveCount(30);
   });
 
   test('should have main content area', async ({ adminPage }) => {

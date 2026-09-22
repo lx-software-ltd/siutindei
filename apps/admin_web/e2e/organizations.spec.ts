@@ -2,8 +2,8 @@ import { test, expect, mockOrganizations, mockCognitoUsers } from './fixtures/te
 
 test.describe('Organizations Panel', () => {
   test.beforeEach(async ({ adminPage }) => {
-  await adminPage.goto('/admin/dashboard');
-    // Organizations is the default section, so we should already be there
+    await adminPage.goto('/admin/dashboard');
+    await adminPage.getByRole('button', { name: 'Organizations' }).click();
   });
 
   test('should display the organizations form', async ({ adminPage }) => {
@@ -231,7 +231,7 @@ test.describe('Organizations Panel', () => {
 
 test.describe('Organizations Panel - Admin vs Manager', () => {
   test('admin should see all organizations', async ({ adminPage }) => {
-  await adminPage.goto('/admin/dashboard');
+    await adminPage.goto('/admin/dashboard?section=organizations');
 
     // Should see both organizations
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
@@ -239,21 +239,21 @@ test.describe('Organizations Panel - Admin vs Manager', () => {
   });
 
   test('admin should see manager column', async ({ adminPage }) => {
-  await adminPage.goto('/admin/dashboard');
+    await adminPage.goto('/admin/dashboard?section=organizations');
 
     // Should see Manager column header
     await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toBeVisible();
   });
 
   test('admin should see manager selector in form', async ({ adminPage }) => {
-  await adminPage.goto('/admin/dashboard');
+    await adminPage.goto('/admin/dashboard?section=organizations');
 
     // Should see Manager field
     await expect(adminPage.getByLabel('Manager')).toBeVisible();
   });
 
   test('admin should be able to create new organizations', async ({ adminPage }) => {
-  await adminPage.goto('/admin/dashboard');
+    await adminPage.goto('/admin/dashboard?section=organizations');
 
     // Should see the "New Organization" form
     await expect(adminPage.getByRole('heading', { name: 'New Organization' })).toBeVisible();

@@ -24,9 +24,11 @@ import { ImportsPanel } from './imports-panel';
 import { MediaPanel } from './media-panel';
 import { ManagerDashboard } from './manager-dashboard';
 import { TicketsPanel } from './tickets-panel';
+import { ListingPartnershipDashboardPanel } from './listing-partnership-dashboard-panel';
 import { UserDashboard } from './user-dashboard';
 
 const sectionLabels = [
+  { key: 'overview', label: 'Overview' },
   { key: 'organizations', label: 'Organizations' },
   { key: 'media', label: 'Media' },
   { key: 'locations', label: 'Locations' },
@@ -51,7 +53,7 @@ export function AdminDashboard() {
     [sectionParam]
   );
   const activeSection = useMemo(() => {
-    return isValidSectionParam && sectionParam ? sectionParam : 'organizations';
+    return isValidSectionParam && sectionParam ? sectionParam : 'overview';
   }, [isValidSectionParam, sectionParam]);
 
   useEffect(() => {
@@ -76,6 +78,12 @@ export function AdminDashboard() {
 
   const activeContent = useMemo(() => {
     switch (activeSection) {
+      case 'overview':
+        return (
+          <ListingPartnershipDashboardPanel
+            onNavigateSection={handleSelectSection}
+          />
+        );
       case 'media':
         return <MediaPanel />;
       case 'locations':
@@ -106,7 +114,7 @@ export function AdminDashboard() {
       default:
         return <OrganizationsPanel mode='admin' />;
     }
-  }, [activeSection]);
+  }, [activeSection, handleSelectSection]);
 
   if (status === 'loading') {
     return (
