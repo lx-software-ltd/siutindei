@@ -322,7 +322,7 @@ distributions (production + staging) carry an extra cache behavior:
 | Item | Value |
 |---|---|
 | Path pattern | `/v1/activities/search` (exact path; admin/other API paths are **not** exposed) |
-| Origin | `HttpOrigin` → API Gateway custom domain from the `SearchApiProxyOriginDomain` parameter (`siutindei-api.lx-software.com`), HTTPS-only, TLS 1.2+ |
+| Origin | `HttpOrigin` → API Gateway custom domain from the `SearchApiProxyOriginDomain` parameter (`siutindei-api.lx-software.com`), HTTPS-only, TLS 1.2+. CloudFront adds `X-Origin-Verify` from `PublicWwwOriginVerifySecret`. That header is not forwarded from the viewer |
 | Allowed methods | `GET`, `HEAD`, `OPTIONS` |
 | Allow-list function | `${env}SearchProxyAllowlistFunction` CloudFront Function (viewer-request) returns `405` for any other method |
 | Cache policy (`SearchApiCachePolicy`) | TTL min `0` / default `300s` / max `300s`; cache key = **all query strings**, **no** headers, **no** cookies (a single cached entry is shared across all callers) |
@@ -345,11 +345,11 @@ telemetry, not a GA4 pull.
 | Item | Value |
 |---|---|
 | Path pattern | `/v1/listing-events` (exact path) |
-| Origin | Same API Gateway custom domain as search |
+| Origin | Same API Gateway custom domain as search, including the `X-Origin-Verify` custom origin header when `PublicWwwOriginVerifySecret` is set |
 | Allowed methods | CloudFront `ALLOW_ALL`, allow-list function permits `POST` / `OPTIONS` only |
 | Cache | `CACHING_DISABLED` |
 | Origin-request policy | Forwards `x-api-key`, `x-device-attestation`, `Accept`, `Content-Type`, `Origin`; no query strings |
-| Auth | Same public search API key + static device-attestation token |
+| Auth | Same public search API key + static device-attestation token. The token is `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`. API Gateway accepts it only together with the CloudFront `X-Origin-Verify` secret |
 | Consent | Same `siutindei-analytics-consent` gate as the GTM data layer |
 
 `NEXT_PUBLIC_SEARCH_API_BASE_URL` must be the website origin so ingest is
@@ -369,8 +369,11 @@ response without re-invoking the origin, so the per-request `x-api-key` /
 not enforced for cached entries. This matches the intent of a *public* search
 endpoint and the prior API Gateway method-cache behavior of returning cached
 results; abuse protection at the edge is provided by the CloudFront WAF
-WebACL. Only the exact `/v1/activities/search` path is proxied, so admin
-endpoints (`/v1/admin/*`) are never reachable through the website domain.
+WebACL. A caller who copies the public attestation token and calls
+`siutindei-api.lx-software.com` directly is denied: `X-Origin-Verify` is
+added only by CloudFront. Only the exact `/v1/activities/search` path is
+proxied, so admin endpoints (`/v1/admin/*`) are never reachable through the
+website domain.
 Distribution-level custom error responses (403/404 → `/404.html`) still apply
 to this behavior; validate API error handling on staging before pointing
 production traffic at the edge.

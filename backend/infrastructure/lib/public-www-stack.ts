@@ -38,9 +38,11 @@ import { Construct } from "constructs";
 //     breach the regional CloudFront Functions API rate limit.
 // -----------------------------------------------------------------------------
 
-// Query-string + auth headers forwarded to the API Gateway origin on a cache
-// miss. Caching does NOT vary on these headers (public search results are the
-// same for every caller), so a single cache entry is shared across viewers.
+// Query-string + auth headers forwarded from the viewer to API Gateway on a
+// cache miss. Caching does NOT vary on these headers (public search results
+// are the same for every caller), so a single cache entry is shared across
+// viewers. X-Origin-Verify is intentionally absent: CloudFront sets it as a
+// custom origin header so viewers cannot supply it.
 const SEARCH_API_PROXY_PATH = "/v1/activities/search";
 const LISTING_EVENTS_PROXY_PATH = "/v1/listing-events";
 const SEARCH_API_FORWARDED_HEADERS = [
@@ -73,6 +75,8 @@ interface WebsiteEnvironmentConfig {
   readonly searchApiOriginRequestPolicy: cloudfront.IOriginRequestPolicy;
   readonly listingEventsProxyFunction: cloudfront.Function;
   readonly listingEventsOriginRequestPolicy: cloudfront.IOriginRequestPolicy;
+  readonly originVerifySecret: string;
+  readonly hasOriginVerifySecret: cdk.CfnCondition;
 }
 
 interface WebsiteEnvironmentResources {
@@ -189,6 +193,32 @@ export class PublicWwwStack extends cdk.Stack {
         constraintDescription: "Must be a bare DNS hostname (no scheme/path).",
       },
     );
+    // Injected by CloudFront on the search and listing-events origins only.
+    // Not listed in the viewer header allow-lists, so a browser cannot supply
+    // or override it. Must match the API stack parameter of the same name.
+    const publicWwwOriginVerifySecret = new cdk.CfnParameter(
+      this,
+      "PublicWwwOriginVerifySecret",
+      {
+        type: "String",
+        noEcho: true,
+        default: "",
+        allowedPattern: "^$|^.{32,}$",
+        description:
+          "Shared secret added as the X-Origin-Verify origin header on " +
+          "proxied search and listing-event requests. Empty omits the " +
+          "header. When set, minimum 32 characters.",
+      },
+    );
+    const hasOriginVerifySecret = new cdk.CfnCondition(
+      this,
+      "HasPublicWwwOriginVerifySecret",
+      {
+        expression: cdk.Fn.conditionNot(
+          cdk.Fn.conditionEquals(publicWwwOriginVerifySecret.valueAsString, ""),
+        ),
+      },
+    );
 
     // Shared cache + origin-request policies (CloudFront policies are global to
     // the account; create once and reuse across both website environments).
@@ -281,6 +311,8 @@ function handler(event) {
       searchApiOriginRequestPolicy,
       listingEventsProxyFunction,
       listingEventsOriginRequestPolicy,
+      originVerifySecret: publicWwwOriginVerifySecret.valueAsString,
+      hasOriginVerifySecret,
     });
     this.bucket = productionResources.bucket;
     this.distribution = productionResources.distribution;
@@ -303,6 +335,8 @@ function handler(event) {
       searchApiOriginRequestPolicy,
       listingEventsProxyFunction,
       listingEventsOriginRequestPolicy,
+      originVerifySecret: publicWwwOriginVerifySecret.valueAsString,
+      hasOriginVerifySecret,
     });
     this.stagingBucket = stagingResources.bucket;
     this.stagingDistribution = stagingResources.distribution;
@@ -549,6 +583,9 @@ function handler(event) {
       {
         protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
         originSslProtocols: [cloudfront.OriginSslPolicy.TLS_V1_2],
+        customHeaders: {
+          "X-Origin-Verify": config.originVerifySecret,
+        },
       },
     );
 
@@ -638,6 +675,25 @@ function handler(event) {
       cdk.Fn.conditionIf(
         config.hasWafWebAclArn.logicalId,
         config.wafWebAclArn.valueAsString,
+        cdk.Aws.NO_VALUE,
+      ),
+    );
+    // An empty header value is invalid on a CloudFront origin. Omit the
+    // header until the secret is set so a deploy before the secret exists
+    // still succeeds and the website credential stays closed.
+    // Origin 0 is the S3 website origin. Origin 1 is the shared search and
+    // listing-events HTTP origin. The L1 origins list is lazy, so it cannot
+    // be searched at construct time.
+    cfnDistribution.addPropertyOverride(
+      "DistributionConfig.Origins.1.OriginCustomHeaders",
+      cdk.Fn.conditionIf(
+        config.hasOriginVerifySecret.logicalId,
+        [
+          {
+            HeaderName: "X-Origin-Verify",
+            HeaderValue: config.originVerifySecret,
+          },
+        ],
         cdk.Aws.NO_VALUE,
       ),
     );

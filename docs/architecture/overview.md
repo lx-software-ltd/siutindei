@@ -150,7 +150,7 @@ pull requests for dependency updates:
 - No long-lived AWS credentials in GitHub.
 - IAM auth for RDS Proxy, TLS enforced on DB connections.
 - Secrets stored in GitHub Secrets or AWS Secrets Manager.
-- Public activity search requires an API key plus device attestation (JWKS-validated).
+- Public activity search requires an API key plus device attestation. Mobile clients present a JWKS-validated App Check JWT. The public website presents a static token that is accepted only with the CloudFront `X-Origin-Verify` secret.
 - Admin routes require membership in the Cognito `admin` group.
 - Catalog import (`POST /v1/admin/imports` and `/presign`) also allows
   the `importer` group via a dedicated password-auth app client.
