@@ -1,3 +1,4 @@
+import { HOME_WIZARD_SEARCH_LIMIT } from '@/lib/activities/search-limits';
 import { fetchActivitySearch } from '@/lib/activities/search-client';
 import type { ActivityListing } from '@/lib/activities/types';
 
@@ -30,7 +31,7 @@ export async function fetchActivitiesForWizard(params: {
   const response = await fetchActivitySearch({
     age: params.age,
     categoryIds: params.categoryIds,
-    limit: 200,
+    limit: HOME_WIZARD_SEARCH_LIMIT,
   });
   return { items: response.items };
 }

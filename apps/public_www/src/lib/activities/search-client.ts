@@ -114,18 +114,18 @@ interface FetchActivitySearchOptions {
   readonly highPriority?: boolean;
 }
 
-export async function fetchActivitySearch(
-  params: ActivitySearchParams,
-  options?: FetchActivitySearchOptions,
-): Promise<ActivitySearchResponse> {
-  const config = getSearchConfig();
-  if (config.stagingSearchDataEnabled) {
-    return await fetchStagingActivitySearch(params);
-  }
-  if (!config.apiBaseUrl) {
-    throw new Error('Search API is not configured.');
-  }
+export interface ActivitySearchRequest {
+  readonly url: string;
+  readonly headers: Record<string, string>;
+}
 
+export function buildActivitySearchRequest(
+  params: ActivitySearchParams,
+  config: Pick<
+    ReturnType<typeof getSearchConfig>,
+    'apiBaseUrl' | 'apiKey' | 'attestationToken'
+  >,
+): ActivitySearchRequest {
   const url = new URL('/v1/activities/search', config.apiBaseUrl);
   if (params.age !== undefined) {
     url.searchParams.set('age', String(params.age));
@@ -154,7 +154,24 @@ export async function fetchActivitySearch(
     headers['x-device-attestation'] = config.attestationToken;
   }
 
-  const response = await fetch(url.toString(), {
+  return { url: url.toString(), headers };
+}
+
+export async function fetchActivitySearch(
+  params: ActivitySearchParams,
+  options?: FetchActivitySearchOptions,
+): Promise<ActivitySearchResponse> {
+  const config = getSearchConfig();
+  if (config.stagingSearchDataEnabled) {
+    return await fetchStagingActivitySearch(params);
+  }
+  if (!config.apiBaseUrl) {
+    throw new Error('Search API is not configured.');
+  }
+
+  const { url, headers } = buildActivitySearchRequest(params, config);
+
+  const response = await fetch(url, {
     headers,
     ...(options?.highPriority ? { priority: 'high' as RequestPriority } : {}),
   });

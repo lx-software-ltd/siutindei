@@ -9,6 +9,7 @@ import { SearchMapSplitLayout } from '@/components/sections/search/search-map-sp
 import { SearchViewToggle } from '@/components/sections/search/search-view-toggle';
 import { ListingGrid } from '@/components/sections/listings/listing-grid';
 import { useSearchContext } from '@/components/shared/search/search-context';
+import { SEARCH_RESULTS_PAGE_LIMIT } from '@/lib/activities/search-limits';
 import { fetchActivitySearch } from '@/lib/activities/search-client';
 import { buildMapSearchHref } from '@/lib/activities/map-search-url';
 import {
@@ -76,7 +77,7 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
       const apiParams = filtersToApiParams(urlFilters);
       const response = await fetchActivitySearch({
         ...apiParams,
-        limit: 200,
+        limit: SEARCH_RESULTS_PAGE_LIMIT,
       });
       const filtered = response.items.filter((listing) =>
         matchesTextQuery(listing, locale, urlFilters.textQuery),

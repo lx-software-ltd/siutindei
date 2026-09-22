@@ -15,6 +15,7 @@ from app.services import staging_search_store
 def enable_staging_search(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("STAGING_SEARCH_DATA_ENABLED", "true")
     staging_search_store._FIXTURE_CACHE = None
+    staging_search_store._SORTED_PUBLISHED_ITEMS = None
 
 
 def test_staging_fixture_has_at_least_3000_items() -> None:
