@@ -31,7 +31,7 @@ describe('WhatsApp analytics surfaces', () => {
       <Footer locale="en" content={getContent('en').footer} />,
     );
 
-    fireEvent.click(screen.getByRole('link', { name: 'WhatsApp' }));
+    fireEvent.click(screen.getByRole('link', { name: /WhatsApp/ }));
 
     expect(window.dataLayer).toEqual([
       { event: 'generate_lead', lead_type: 'whatsapp_footer' },

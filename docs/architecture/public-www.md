@@ -258,13 +258,13 @@ and is invoked by both workflows. It supports three primary modes:
    `maintenance/partials/`, then substitutes `__NEXT_PUBLIC_EMAIL__`,
    `__NEXT_PUBLIC_WHATSAPP_URL__`, `__NEXT_PUBLIC_WHATSAPP_DISPLAY__`,
    `__NEXT_PUBLIC_INSTAGRAM_URL__`, `__NEXT_PUBLIC_LX_SOFTWARE_URL__`,
-   and `__NEXT_PUBLIC_BUILD_YEAR__`. Holding-page email and WhatsApp come
-   from `apps/public_www/build-env.defaults.json`
-   (`maintenanceContactEmail`, `maintenanceWhatsappUrl`,
-   `maintenanceWhatsappDisplay`) — currently `hello@siutindei.com` and
-   WhatsApp `+852 9446 0861` (`https://wa.me/85294460861`). Those values
-   are not taken from `NEXT_PUBLIC_EMAIL` or `NEXT_PUBLIC_WHATSAPP_URL`,
-   which CI sets for the full site. An unset Instagram URL becomes `#`;
+   and `__NEXT_PUBLIC_BUILD_YEAR__`. Email and WhatsApp use the same
+   public contacts as the full site: `NEXT_PUBLIC_EMAIL` and
+   `NEXT_PUBLIC_WHATSAPP_URL` when set, otherwise `contactEmail` and
+   `whatsappUrl` in `apps/public_www/build-env.defaults.json`
+   (`hello@siutindei.com`, `https://wa.me/85294460861`). The visible
+   number is `whatsappDisplay` in that file (`+852 9446 0861`). An
+   unset Instagram URL becomes `#`;
    an unset LX Software URL defaults to `https://www.lx-software.com`;
    an unset build year defaults to the current calendar year. It also
    copies `favicon.ico`,

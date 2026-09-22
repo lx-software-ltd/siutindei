@@ -86,13 +86,13 @@ describe('pre-launch holding page', () => {
     const defaults = JSON.parse(
       readFileSync(resolve(APP_DIR, 'build-env.defaults.json'), 'utf8'),
     ) as {
-      maintenanceContactEmail: string;
-      maintenanceWhatsappUrl: string;
-      maintenanceWhatsappDisplay: string;
+      contactEmail: string;
+      whatsappUrl: string;
+      whatsappDisplay: string;
     };
-    expect(defaults.maintenanceContactEmail).toBe('hello@siutindei.com');
-    expect(defaults.maintenanceWhatsappUrl).toBe('https://wa.me/85294460861');
-    expect(defaults.maintenanceWhatsappDisplay).toBe('+852 9446 0861');
+    expect(defaults.contactEmail).toBe('hello@siutindei.com');
+    expect(defaults.whatsappUrl).toBe('https://wa.me/85294460861');
+    expect(defaults.whatsappDisplay).toBe('+852 9446 0861');
     for (const fileName of HOLDING_PAGES) {
       const html = assembleHoldingPage(fileName);
       expect(html).toContain('__NEXT_PUBLIC_WHATSAPP_DISPLAY__');
@@ -129,9 +129,10 @@ describe('pre-launch holding page', () => {
     for (const marker of PARTIAL_MARKERS) {
       expect(deployScript).toContain(marker);
     }
-    expect(deployScript).toContain('maintenanceContactEmail');
-    expect(deployScript).toContain('maintenanceWhatsappUrl');
-    expect(deployScript).toContain('maintenanceWhatsappDisplay');
+    expect(deployScript).toContain('contactEmail');
+    expect(deployScript).toContain('whatsappUrl');
+    expect(deployScript).toContain('whatsappDisplay');
+    expect(deployScript).not.toContain('maintenanceContactEmail');
     expect(deployScript).toContain('__NEXT_PUBLIC_WHATSAPP_DISPLAY__');
     expect(deployScript).toContain(
       'DEFAULT_LX_SOFTWARE_URL="https://www.lx-software.com"',

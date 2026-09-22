@@ -135,19 +135,29 @@ sys.stdout.write(value.strip())
 PY
 }
 
-# Holding-page contacts come from build-env.defaults.json, not from
-# NEXT_PUBLIC_EMAIL / NEXT_PUBLIC_WHATSAPP_URL. CI always exports those
-# for the full site, and the holding page uses the public brand contacts.
+# Same public contacts as the full site. An exported NEXT_PUBLIC_* value
+# wins; otherwise use build-env.defaults.json.
+resolve_public_contact_value() {
+  local env_name="$1"
+  local default_key="$2"
+  local env_value="${!env_name:-}"
+  if [ -n "$env_value" ]; then
+    printf '%s' "$env_value"
+    return
+  fi
+  read_public_www_build_default "$default_key"
+}
+
 resolve_maintenance_email() {
-  read_public_www_build_default "maintenanceContactEmail"
+  resolve_public_contact_value "NEXT_PUBLIC_EMAIL" "contactEmail"
 }
 
 resolve_maintenance_whatsapp_url() {
-  read_public_www_build_default "maintenanceWhatsappUrl"
+  resolve_public_contact_value "NEXT_PUBLIC_WHATSAPP_URL" "whatsappUrl"
 }
 
 resolve_maintenance_whatsapp_display() {
-  read_public_www_build_default "maintenanceWhatsappDisplay"
+  read_public_www_build_default "whatsappDisplay"
 }
 
 validate_maintenance_contact_settings() {
@@ -156,15 +166,15 @@ validate_maintenance_contact_settings() {
   whatsapp_url="$(resolve_maintenance_whatsapp_url)"
   whatsapp_display="$(resolve_maintenance_whatsapp_display)"
   if [[ ! "$email" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
-    echo "maintenanceContactEmail must be a valid email address."
+    echo "contactEmail must be a valid email address."
     exit 1
   fi
   if [[ ! "$whatsapp_url" =~ ^https?:// ]]; then
-    echo "maintenanceWhatsappUrl must start with http:// or https://."
+    echo "whatsappUrl must start with http:// or https://."
     exit 1
   fi
   if [[ ! "$whatsapp_display" =~ ^[+0-9][0-9[:space:]-]{6,24}$ ]]; then
-    echo "maintenanceWhatsappDisplay must be a phone number."
+    echo "whatsappDisplay must be a phone number."
     exit 1
   fi
   validate_http_url_when_set \
