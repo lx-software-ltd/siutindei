@@ -256,11 +256,18 @@ and is invoked by both workflows. It supports three primary modes:
    `public, max-age=3600, must-revalidate`. The script first inlines
    `__MAINTENANCE_BUBBLES__` and `__MAINTENANCE_FOOTER__` from
    `maintenance/partials/`, then substitutes `__NEXT_PUBLIC_EMAIL__`,
-   `__NEXT_PUBLIC_WHATSAPP_URL__`, `__NEXT_PUBLIC_INSTAGRAM_URL__`,
-   `__NEXT_PUBLIC_LX_SOFTWARE_URL__`, and `__NEXT_PUBLIC_BUILD_YEAR__`.
-   Unset WhatsApp/Instagram URLs become `#`; an unset LX Software URL
-   defaults to `https://www.lx-software.com`; an unset build year defaults
-   to the current calendar year. It also copies `favicon.ico`,
+   `__NEXT_PUBLIC_WHATSAPP_URL__`, `__NEXT_PUBLIC_WHATSAPP_DISPLAY__`,
+   `__NEXT_PUBLIC_INSTAGRAM_URL__`, `__NEXT_PUBLIC_LX_SOFTWARE_URL__`,
+   and `__NEXT_PUBLIC_BUILD_YEAR__`. Holding-page email and WhatsApp come
+   from `apps/public_www/build-env.defaults.json`
+   (`maintenanceContactEmail`, `maintenanceWhatsappUrl`,
+   `maintenanceWhatsappDisplay`) — currently `hello@siutindei.com` and
+   WhatsApp `+852 9446 0861` (`https://wa.me/85294460861`). Those values
+   are not taken from `NEXT_PUBLIC_EMAIL` or `NEXT_PUBLIC_WHATSAPP_URL`,
+   which CI sets for the full site. An unset Instagram URL becomes `#`;
+   an unset LX Software URL defaults to `https://www.lx-software.com`;
+   an unset build year defaults to the current calendar year. It also
+   copies `favicon.ico`,
    `favicon.svg`, the stacked logo, and the six Small World bubble images
    referenced by the holding page so those assets survive the `--delete`
    sync. The promote workflow passes `NEXT_PUBLIC_LX_SOFTWARE_URL` and

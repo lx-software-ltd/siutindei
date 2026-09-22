@@ -1,5 +1,8 @@
 {
   "siteName": "Siu Tin Dei",
   "siteTagline": "Curated children's activities in Hong Kong.",
-  "contactEmail": "hello@lx-software.com"
+  "contactEmail": "hello@lx-software.com",
+  "maintenanceContactEmail": "hello@siutindei.com",
+  "maintenanceWhatsappUrl": "https://wa.me/85294460861",
+  "maintenanceWhatsappDisplay": "+852 9446 0861"
 }

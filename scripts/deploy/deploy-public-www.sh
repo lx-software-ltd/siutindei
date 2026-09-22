@@ -112,18 +112,61 @@ validate_http_url_when_set() {
   fi
 }
 
+read_public_www_build_default() {
+  local key="$1"
+  python3 - "$APP_DIR/build-env.defaults.json" "$key" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+defaults_path = Path(sys.argv[1])
+key = sys.argv[2]
+if not defaults_path.is_file():
+    raise SystemExit(
+        f"Public website build defaults not found: {defaults_path}"
+    )
+data = json.loads(defaults_path.read_text(encoding="utf-8"))
+value = data.get(key, "")
+if not isinstance(value, str) or not value.strip():
+    raise SystemExit(
+        f"Build default {key} must be a non-empty string in {defaults_path}"
+    )
+sys.stdout.write(value.strip())
+PY
+}
+
+# Holding-page contacts come from build-env.defaults.json, not from
+# NEXT_PUBLIC_EMAIL / NEXT_PUBLIC_WHATSAPP_URL. CI always exports those
+# for the full site, and the holding page uses the public brand contacts.
+resolve_maintenance_email() {
+  read_public_www_build_default "maintenanceContactEmail"
+}
+
+resolve_maintenance_whatsapp_url() {
+  read_public_www_build_default "maintenanceWhatsappUrl"
+}
+
+resolve_maintenance_whatsapp_display() {
+  read_public_www_build_default "maintenanceWhatsappDisplay"
+}
+
 validate_maintenance_contact_settings() {
-  if [ -z "${NEXT_PUBLIC_EMAIL:-}" ]; then
-    echo "NEXT_PUBLIC_EMAIL is required for maintenance mode deployment."
+  local email whatsapp_url whatsapp_display
+  email="$(resolve_maintenance_email)"
+  whatsapp_url="$(resolve_maintenance_whatsapp_url)"
+  whatsapp_display="$(resolve_maintenance_whatsapp_display)"
+  if [[ ! "$email" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
+    echo "maintenanceContactEmail must be a valid email address."
     exit 1
   fi
-  if [[ ! "$NEXT_PUBLIC_EMAIL" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
-    echo "NEXT_PUBLIC_EMAIL must be a valid email address."
+  if [[ ! "$whatsapp_url" =~ ^https?:// ]]; then
+    echo "maintenanceWhatsappUrl must start with http:// or https://."
     exit 1
   fi
-  validate_http_url_when_set \
-    "NEXT_PUBLIC_WHATSAPP_URL" \
-    "${NEXT_PUBLIC_WHATSAPP_URL:-}"
+  if [[ ! "$whatsapp_display" =~ ^[+0-9][0-9[:space:]-]{6,24}$ ]]; then
+    echo "maintenanceWhatsappDisplay must be a phone number."
+    exit 1
+  fi
   validate_http_url_when_set \
     "NEXT_PUBLIC_INSTAGRAM_URL" \
     "${NEXT_PUBLIC_INSTAGRAM_URL:-}"
@@ -203,10 +246,13 @@ inject_maintenance_contact_values() {
     echo "Maintenance HTML file not found: $html_path"
     exit 1
   fi
-  local escaped_email escaped_whatsapp_url escaped_instagram_url
-  local escaped_lx_software_url escaped_build_year
-  escaped_email="$(escape_sed_replacement "$NEXT_PUBLIC_EMAIL")"
-  escaped_whatsapp_url="$(escape_sed_replacement "${NEXT_PUBLIC_WHATSAPP_URL:-#}")"
+  local escaped_email escaped_whatsapp_url escaped_whatsapp_display
+  local escaped_instagram_url escaped_lx_software_url escaped_build_year
+  escaped_email="$(escape_sed_replacement "$(resolve_maintenance_email)")"
+  escaped_whatsapp_url="$(escape_sed_replacement \
+    "$(resolve_maintenance_whatsapp_url)")"
+  escaped_whatsapp_display="$(escape_sed_replacement \
+    "$(resolve_maintenance_whatsapp_display)")"
   escaped_instagram_url="$(escape_sed_replacement "${NEXT_PUBLIC_INSTAGRAM_URL:-#}")"
   escaped_lx_software_url="$(escape_sed_replacement \
     "${NEXT_PUBLIC_LX_SOFTWARE_URL:-$DEFAULT_LX_SOFTWARE_URL}")"
@@ -214,6 +260,7 @@ inject_maintenance_contact_values() {
   sed -i \
     -e "s|__NEXT_PUBLIC_EMAIL__|$escaped_email|g" \
     -e "s|__NEXT_PUBLIC_WHATSAPP_URL__|$escaped_whatsapp_url|g" \
+    -e "s|__NEXT_PUBLIC_WHATSAPP_DISPLAY__|$escaped_whatsapp_display|g" \
     -e "s|__NEXT_PUBLIC_INSTAGRAM_URL__|$escaped_instagram_url|g" \
     -e "s|__NEXT_PUBLIC_LX_SOFTWARE_URL__|$escaped_lx_software_url|g" \
     -e "s|__NEXT_PUBLIC_BUILD_YEAR__|$escaped_build_year|g" \

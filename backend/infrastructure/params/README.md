@@ -40,6 +40,10 @@ or `all stacks`). Deploy static site artifacts with
 Static-export branding defaults (site name, tagline, contact email) live in
 `apps/public_www/build-env.defaults.json` and are **not** CDK parameters.
 CI reads them via `scripts/deploy/resolve-public-www-build-env.sh`.
+Maintenance-page email and WhatsApp (`maintenanceContactEmail`,
+`maintenanceWhatsappUrl`, `maintenanceWhatsappDisplay` in that file) are
+injected by the public-website deploy script and are separate from the
+full-site `contactEmail` / `NEXT_PUBLIC_EMAIL` value.
 
 Before the first `cdk deploy`, ensure the ACM certificate listed in
 `PublicWwwCertificateArn`/`PublicWwwStagingCertificateArn` includes the
