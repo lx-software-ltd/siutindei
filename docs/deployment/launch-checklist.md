@@ -90,9 +90,17 @@ On the **production** environment:
 
 - Secrets: `CDK_PARAM_GOOGLE_CLIENT_SECRET`, `CDK_PARAM_APPLE_PRIVATE_KEY`,
   `CDK_PARAM_PUBLIC_API_KEY_VALUE`,
-  `CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD`, and the public-www search vars
-  required by `promote-public-www.yml` (see remediation P0-1 in
-  `docs/remediation/public-www-and-api-remediation.md`).
+  `CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD`,
+  `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`, and
+  `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`. Generate the last two with
+  `python3 -c "import secrets; print(secrets.token_urlsafe(48))"` and store
+  each value once. The promote workflow reads the attestation token from
+  `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`; do not create a second copy.
+  Also set variable `NEXT_PUBLIC_SEARCH_API_BASE_URL` to `https://siutindei.com`
+  and secret `NEXT_PUBLIC_SEARCH_API_KEY` to the live mobile search API key.
+- Deploy the API stack and the public website stack after those secrets
+  exist, then promote. Promotion before that deploy ships a token the
+  authorizer and CloudFront do not know yet.
 - Variables: `APPLE_TEAM_ID`, `CDK_PARAM_FILE` pointing at
   `params/production.json`.
 
@@ -147,6 +155,9 @@ Verify each with `curl -sI https://<domain>` (expect 200/301, valid cert).
    `generate_lead`.
 4. Promote with `promote-public-www.yml`
    (`PUBLIC_WWW_PROMOTE_RELEASE_ID` = the staging release to promote).
+   The API stack and public website stack must already be deployed with
+   `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN` and
+   `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`.
 5. Post-promote: spot-check production search, an activity detail page, and
    both locales.
 

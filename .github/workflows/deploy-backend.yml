@@ -172,6 +172,8 @@ jobs:
               "WafWebAclArn",
               "SearchApiProxyOriginDomain",
           }
+          # Authorizer (API stack) and CloudFront origin header (public stack).
+          origin_verify_param = "PublicWwwOriginVerifySecret"
 
           def resolve_value(raw: str) -> str:
               """Replace <FROM_GITHUB_SECRET: X> / <FROM_GITHUB_VAR: X> placeholders."""
@@ -194,6 +196,8 @@ jobs:
                   continue
 
               targets = []
+              if key == origin_verify_param:
+                  targets.extend([api_stack, public_stack])
               if key in admin_web_params:
                   if value_str or key != "WafWebAclArn":
                       targets.append(admin_web_stack)
@@ -351,6 +355,8 @@ jobs:
           CDK_PARAM_GOOGLE_CLIENT_SECRET: ${{ secrets.CDK_PARAM_GOOGLE_CLIENT_SECRET }}
           CDK_PARAM_APPLE_PRIVATE_KEY: ${{ secrets.CDK_PARAM_APPLE_PRIVATE_KEY }}
           CDK_PARAM_PUBLIC_API_KEY_VALUE: ${{ secrets.CDK_PARAM_PUBLIC_API_KEY_VALUE }}
+          CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN }}
+          CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY }}
           CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD: ${{ secrets.CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD }}
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
           MIGRATIONS_FORCE_RUN_ID: >-

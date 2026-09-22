@@ -155,7 +155,10 @@ parallel environments (production + staging) inside a single CDK stack
 - Authentication is passwordless: email custom challenge (OTP + optional magic
   link) and federated sign-in via Google and Apple.
 - Device attestation validates JWTs against a JWKS URL configured in CDK
-  parameters.
+  parameters. The public website sends a separate static token. The
+  authorizer accepts that token only when the request also carries the
+  CloudFront-injected `X-Origin-Verify` secret. Mobile App Check tokens do
+  not need that header, and the header is not an API Gateway identity source.
 - Hosted UI uses OAuth code flow with callback/logout URLs supplied via CDK
   parameters.
 - API keys are rotated every 90 days by a scheduled Lambda.
@@ -355,6 +358,8 @@ Lambdas or NAT Gateway.
 - `CDK_PARAM_GOOGLE_CLIENT_SECRET`
 - `CDK_PARAM_APPLE_PRIVATE_KEY`
 - `CDK_PARAM_PUBLIC_API_KEY_VALUE`
+- `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`
+- `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`
 - `CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD` (optional)
 - `APPSTORE_API_KEY_JSON` (recommended single JSON secret with issuer_id,
   key_id, private_key)

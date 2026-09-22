@@ -18,6 +18,8 @@
   "LoginLinkBaseUrl": "",
   "MaxChallengeAttempts": "3",
   "PublicApiKeyValue": "<FROM_GITHUB_SECRET: CDK_PARAM_PUBLIC_API_KEY_VALUE>",
+  "PublicWwwAttestationToken": "<FROM_GITHUB_SECRET: CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN>",
+  "PublicWwwOriginVerifySecret": "<FROM_GITHUB_SECRET: CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY>",
   "DeviceAttestationJwksUrl": "https://firebaseappcheck.googleapis.com/v1/jwks",
   "DeviceAttestationIssuer": "https://firebaseappcheck.googleapis.com/",
   "DeviceAttestationAudience": "projects/640961587388/apps/1:640961587388:ios:5c228b747bcea3590ac8b9,projects/640961587388/apps/1:640961587388:android:732fede73ce1d9730ac8b9",

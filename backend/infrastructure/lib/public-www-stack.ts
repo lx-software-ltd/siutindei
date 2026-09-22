@@ -38,9 +38,11 @@ import { Construct } from "constructs";
 //     breach the regional CloudFront Functions API rate limit.
 // -----------------------------------------------------------------------------
 
-// Query-string + auth headers forwarded to the API Gateway origin on a cache
-// miss. Caching does NOT vary on these headers (public search results are the
-// same for every caller), so a single cache entry is shared across viewers.
+// Query-string + auth headers forwarded from the viewer to API Gateway on a
+// cache miss. Caching does NOT vary on these headers (public search results
+// are the same for every caller), so a single cache entry is shared across
+// viewers. X-Origin-Verify is intentionally absent: CloudFront sets it as a
+// custom origin header so viewers cannot supply it.
 const SEARCH_API_PROXY_PATH = "/v1/activities/search";
 const LISTING_EVENTS_PROXY_PATH = "/v1/listing-events";
 const SEARCH_API_FORWARDED_HEADERS = [
@@ -73,6 +75,7 @@ interface WebsiteEnvironmentConfig {
   readonly searchApiOriginRequestPolicy: cloudfront.IOriginRequestPolicy;
   readonly listingEventsProxyFunction: cloudfront.Function;
   readonly listingEventsOriginRequestPolicy: cloudfront.IOriginRequestPolicy;
+  readonly originVerifySecret: string;
 }
 
 interface WebsiteEnvironmentResources {
@@ -189,6 +192,21 @@ export class PublicWwwStack extends cdk.Stack {
         constraintDescription: "Must be a bare DNS hostname (no scheme/path).",
       },
     );
+    // Injected by CloudFront on the search and listing-events origins only.
+    // Not listed in the viewer header allow-lists, so a browser cannot supply
+    // or override it. Must match the API stack parameter of the same name.
+    const publicWwwOriginVerifySecret = new cdk.CfnParameter(
+      this,
+      "PublicWwwOriginVerifySecret",
+      {
+        type: "String",
+        noEcho: true,
+        minLength: 32,
+        description:
+          "Shared secret added as the X-Origin-Verify origin header on " +
+          "proxied search and listing-event requests. Minimum 32 characters.",
+      },
+    );
 
     // Shared cache + origin-request policies (CloudFront policies are global to
     // the account; create once and reuse across both website environments).
@@ -281,6 +299,7 @@ function handler(event) {
       searchApiOriginRequestPolicy,
       listingEventsProxyFunction,
       listingEventsOriginRequestPolicy,
+      originVerifySecret: publicWwwOriginVerifySecret.valueAsString,
     });
     this.bucket = productionResources.bucket;
     this.distribution = productionResources.distribution;
@@ -303,6 +322,7 @@ function handler(event) {
       searchApiOriginRequestPolicy,
       listingEventsProxyFunction,
       listingEventsOriginRequestPolicy,
+      originVerifySecret: publicWwwOriginVerifySecret.valueAsString,
     });
     this.stagingBucket = stagingResources.bucket;
     this.stagingDistribution = stagingResources.distribution;
@@ -549,6 +569,9 @@ function handler(event) {
       {
         protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
         originSslProtocols: [cloudfront.OriginSslPolicy.TLS_V1_2],
+        customHeaders: {
+          "X-Origin-Verify": config.originVerifySecret,
+        },
       },
     );
 

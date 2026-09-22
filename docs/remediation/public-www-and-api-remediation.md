@@ -49,13 +49,15 @@ DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/backend_test 
 ### P0-1. Production build ships with no Search API configuration → live search is broken
 
 **Status: RESOLVED.** `promote-public-www.yml` passes
-`NEXT_PUBLIC_SEARCH_API_BASE_URL` (production Environment var) and
-`NEXT_PUBLIC_SEARCH_API_KEY` / `NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN`
-(production Environment secrets) to both the env-contract check and the
-build, and `assert-build-env-contract.mjs` hard-fails when they are missing
-with `NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED=false`. Operator reminder to
-populate the GitHub Environment values lives in
-`docs/deployment/launch-checklist.md`.
+`NEXT_PUBLIC_SEARCH_API_BASE_URL` (production Environment var),
+`NEXT_PUBLIC_SEARCH_API_KEY`, and `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`
+(as `NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN`) to both the env-contract check
+and the build. `assert-build-env-contract.mjs` hard-fails when they are
+missing with `NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED=false`. That token is
+a static website credential, not a Firebase App Check JWT. The device
+attestation authorizer accepts it only with the CloudFront-injected
+`X-Origin-Verify` secret (`CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`). Operator
+steps live in `docs/deployment/launch-checklist.md`.
 
 **Problem.** The production promote workflow builds the site with
 `NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED: 'false'` but never passes

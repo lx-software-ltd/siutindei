@@ -483,6 +483,8 @@ the revision the database is at, and the rollback wedges in
 | `LoginLinkBaseUrl` | String | No | No | Base URL for magic links (default: empty) |
 | `MaxChallengeAttempts` | Number | No | No | Max passwordless auth attempts (default: 3) |
 | `PublicApiKeyValue` | String | Yes | Yes | API key for mobile search (min 20 chars) |
+| `PublicWwwAttestationToken` | String | Yes | Yes | Static public-website attestation token (min 32 chars). API stack only |
+| `PublicWwwOriginVerifySecret` | String | Yes | Yes | CloudFront `X-Origin-Verify` secret (min 32 chars). API stack and public website stack |
 | `DeviceAttestationJwksUrl` | String | No | No | JWKS URL for device attestation (default: empty) |
 | `DeviceAttestationIssuer` | String | No | No | Expected issuer (default: empty) |
 | `DeviceAttestationAudience` | String | No | No | Expected audience (default: empty) |

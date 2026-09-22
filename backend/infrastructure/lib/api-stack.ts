@@ -456,6 +456,37 @@ export class ApiStack extends cdk.Stack {
           "SECURITY: Must be 'true' in production.",
       }
     );
+    // Static credential the public website sends as x-device-attestation.
+    // Accepted only together with PublicWwwOriginVerifySecret. Mobile App
+    // Check JWTs do not use this value.
+    const publicWwwAttestationToken = new cdk.CfnParameter(
+      this,
+      "PublicWwwAttestationToken",
+      {
+        type: "String",
+        noEcho: true,
+        minLength: 32,
+        description:
+          "Static public-website attestation token. Must match " +
+          "CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN used by the website build. " +
+          "Minimum 32 characters.",
+      }
+    );
+    // Shared with PublicWwwStack. CloudFront injects this header; viewers
+    // cannot. Not an authorizer identity source: mobile clients omit it, and
+    // a missing identity source is rejected before this Lambda runs.
+    const publicWwwOriginVerifySecret = new cdk.CfnParameter(
+      this,
+      "PublicWwwOriginVerifySecret",
+      {
+        type: "String",
+        noEcho: true,
+        minLength: 32,
+        description:
+          "Shared secret CloudFront sends as X-Origin-Verify. Must match " +
+          "the public website stack parameter. Minimum 32 characters.",
+      }
+    );
 
     // ---------------------------------------------------------------------
     // Migration Parameters
@@ -1651,6 +1682,9 @@ export class ApiStack extends cdk.Stack {
           ATTESTATION_AUDIENCE: deviceAttestationAudience.valueAsString,
           // SECURITY: Fail-closed mode denies requests when attestation is not configured
           ATTESTATION_FAIL_CLOSED: deviceAttestationFailClosed.valueAsString,
+          PUBLIC_WWW_ATTESTATION_TOKEN: publicWwwAttestationToken.valueAsString,
+          PUBLIC_WWW_ORIGIN_VERIFY_SECRET:
+            publicWwwOriginVerifySecret.valueAsString,
         },
       }
     );
