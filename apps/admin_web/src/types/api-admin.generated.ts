@@ -541,8 +541,8 @@ export interface paths {
          * Export admin data
          * @description Generate a presigned download URL for an export JSON file. The exported
          *     JSON is compatible with the admin import schema. Schedule entries are
-         *     emitted in UTC. `review_status` is included for visibility and ignored
-         *     on import.
+         *     emitted in UTC. `review_status` is omitted. `review_notes` is included
+         *     for visibility and ignored on import.
          */
         get: {
             parameters: {
@@ -593,8 +593,10 @@ export interface paths {
         };
         /**
          * List organizations for review
-         * @description Cursor page of organizations with completeness issues. Filters
-         *     narrow the backlog created by catalog import. Public search hides
+         * @description Cursor page of organizations with completeness issues, ordered by
+         *     name then id unless `sort=last_imported_at`. The cursor carries the
+         *     sort key. Blocker filters run in SQL. Warning issue codes are
+         *     matched after the SQL filters. Public search hides
          *     rows that are not `approved` only when `ORG_REVIEW_GATE_ENABLED`
          *     is true. After a release, CloudFront may serve the previous
          *     search response for up to 5 minutes.
@@ -603,7 +605,9 @@ export interface paths {
             parameters: {
                 query?: {
                     limit?: number;
+                    /** @description Opaque cursor for the active sort. */
                     cursor?: string;
+                    sort?: "name" | "last_imported_at";
                     review_status?: "pending_review" | "approved" | "rejected";
                     status?: "operational" | "closed_temporarily" | "closed_permanently" | "hidden";
                     source?: string;
@@ -672,7 +676,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Review queue counts */
+        /**
+         * Review queue counts
+         * @description Aggregated in SQL. `by_issue` counts organizations once per issue
+         *     code, including warnings.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -4395,10 +4403,15 @@ export interface components {
              */
             vetting_note?: string;
             /**
-             * @description Ignored. New imported organizations are stored as
-             *     `pending_review`. Updates keep the current review state.
+             * @description Ignored and omitted from export. A warning is recorded when the
+             *     supplied value is not the organization's current review state,
+             *     including organizations that do not exist yet. New imported
+             *     organizations are stored as `pending_review`. Updates keep the
+             *     current review state.
              */
             review_status?: string;
+            /** @description Included on export for visibility and ignored on import. */
+            review_notes?: string;
             /**
              * @description Board-flat org field. When locations[] is empty, the importer
              *     synthesizes one location resolved like location area_name.
