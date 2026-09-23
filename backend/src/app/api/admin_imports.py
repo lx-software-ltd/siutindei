@@ -18,9 +18,14 @@ from app.api.admin_imports_export import (
 )
 from app.api.admin_imports_importer import process_import_payload
 from app.api.admin_imports_jobs import (
+    begin_import_job,
+    fail_import_job,
     find_import_job_by_id,
     find_import_job_by_key,
+    finish_import_job,
+    list_import_jobs,
     serialize_import_job,
+    serialize_import_job_summary,
     store_import_job,
 )
 from app.api.admin_imports_utils import (
@@ -28,7 +33,14 @@ from app.api.admin_imports_utils import (
     sanitize_filename,
     validate_object_key,
 )
-from app.api.admin_request import _parse_body, _query_param, _require_env
+from app.api.admin_request import (
+    _encode_cursor,
+    _parse_body,
+    _parse_cursor,
+    _query_param,
+    _require_env,
+    parse_limit,
+)
 from app.db.engine import get_engine
 from app.exceptions import NotFoundError, ValidationError
 from app.services.aws_clients import get_s3_client
@@ -52,6 +64,8 @@ def _handle_admin_imports(
         return _handle_import_presign(event)
     if method == "POST" and resource_id is None:
         return _handle_import_process(event)
+    if method == "GET" and resource_id is None:
+        return _handle_list_import_jobs(event)
     if method == "GET" and resource_id == "export":
         return _handle_export(event)
     if method == "GET" and resource_id:
@@ -107,6 +121,36 @@ def _handle_import_presign(event: Mapping[str, Any]) -> dict[str, Any]:
     )
 
 
+def _stored_job_answers_request(job: Any, dry_run: bool) -> bool:
+    """Return True when the stored job should be returned as-is.
+
+    A dry run does not block a later live import. A failed live import
+    can be retried with the same object key.
+    """
+    if job.dry_run and not dry_run:
+        return False
+    if not dry_run and getattr(job, "status", None) == "failed":
+        return False
+    return True
+
+
+def _record_import_failure(job_id: Any, exc: BaseException) -> None:
+    """Persist failed status outside the rolled-back import transaction."""
+    logger.info(
+        "Admin import failed",
+        extra={"error_type": type(exc).__name__},
+    )
+    try:
+        with Session(get_engine()) as session:
+            fail_import_job(session, job_id, type(exc).__name__)
+            session.commit()
+    except Exception:
+        logger.info(
+            "Admin import failure status was not saved",
+            extra={"error_type": type(exc).__name__},
+        )
+
+
 def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
     """Process a JSON import from S3."""
     body = _parse_body(event)
@@ -121,7 +165,10 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
 
     with Session(get_engine()) as session:
         existing_job = find_import_job_by_key(session, object_key)
-        if existing_job is not None and not (existing_job.dry_run and not dry_run):
+        if existing_job is not None and _stored_job_answers_request(
+            existing_job,
+            dry_run,
+        ):
             return json_response(
                 200,
                 serialize_import_job(existing_job),
@@ -137,42 +184,63 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
     catalog_manager_id = os.getenv("BOARD_CATALOG_MANAGER_ID", "").strip() or None
     if _is_admin(event):
         catalog_manager_id = None
+    import_job_id = None
+    if not dry_run:
+        with Session(get_engine()) as session:
+            started = begin_import_job(session, object_key)
+            import_job_id = started.id
+            session.commit()
     with Session(get_engine()) as session:
         # Dry-run flushes fire the same audit trigger as a live import.
         # Skip session context so leftover rows cannot look like live
         # writes; persist_import_change also deletes in-txn audit rows.
         if not dry_run:
             _set_session_audit_context(session, event)
-        summary, results = process_import_payload(
-            session,
-            payload,
-            file_warnings,
-            dry_run=dry_run,
-            allow_org_updates=allow_org_updates,
-            catalog_manager_id=catalog_manager_id,
-        )
-        if dry_run:
+        try:
+            summary, results = process_import_payload(
+                session,
+                payload,
+                file_warnings,
+                dry_run=dry_run,
+                allow_org_updates=allow_org_updates,
+                catalog_manager_id=catalog_manager_id,
+                import_job_id=import_job_id,
+            )
+            if dry_run:
+                session.rollback()
+                job = store_import_job(
+                    session,
+                    object_key,
+                    dry_run=True,
+                    summary=summary,
+                    results=results,
+                    file_warnings=file_warnings,
+                )
+            else:
+                job = finish_import_job(
+                    session,
+                    import_job_id,
+                    summary=summary,
+                    results=results,
+                    file_warnings=file_warnings,
+                )
+            # expire_on_commit empties attributes; the session then
+            # closes. Copy the response first or job.id raises
+            # DetachedInstanceError and the client sees HTTP 500.
+            body = {
+                "id": str(job.id),
+                "object_key": object_key,
+                "summary": summary,
+                "results": results,
+                "file_warnings": file_warnings,
+                "dry_run": dry_run,
+            }
+            session.commit()
+        except Exception as exc:
             session.rollback()
-        job = store_import_job(
-            session,
-            object_key,
-            dry_run=dry_run,
-            summary=summary,
-            results=results,
-            file_warnings=file_warnings,
-        )
-        # expire_on_commit empties attributes; the session then
-        # closes. Copy the response first or job.id raises
-        # DetachedInstanceError and the client sees HTTP 500.
-        body = {
-            "id": str(job.id),
-            "object_key": object_key,
-            "summary": summary,
-            "results": results,
-            "file_warnings": file_warnings,
-            "dry_run": dry_run,
-        }
-        session.commit()
+            if import_job_id is not None:
+                _record_import_failure(import_job_id, exc)
+            raise
 
     logger.info(
         ("Admin import dry-run completed" if dry_run else "Admin import completed"),
@@ -180,6 +248,25 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
     )
 
     return json_response(200, body, event=event)
+
+
+def _handle_list_import_jobs(event: Mapping[str, Any]) -> dict[str, Any]:
+    """Return recent import jobs for the review history tab."""
+    limit = parse_limit(event)
+    cursor = _parse_cursor(_query_param(event, "cursor"))
+    with Session(get_engine()) as session:
+        rows = list_import_jobs(session, limit=limit + 1, cursor=cursor)
+        has_more = len(rows) > limit
+        page = rows[:limit]
+        next_cursor = _encode_cursor(page[-1].id) if has_more and page else None
+        return json_response(
+            200,
+            {
+                "items": [serialize_import_job_summary(job) for job in page],
+                "next_cursor": next_cursor,
+            },
+            event=event,
+        )
 
 
 def _handle_get_import_job(

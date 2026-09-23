@@ -169,6 +169,20 @@ def parse_description_source(value: Any) -> str | None:
     return source
 
 
+def stamp_imported_organization(
+    entity: Organization,
+    *,
+    created: bool,
+    import_job_id: Any,
+) -> None:
+    """Tag a live import. Updates keep review state and the creating job."""
+    if created:
+        entity.review_status = "pending_review"
+        if import_job_id is not None:
+            entity.import_job_id = import_job_id
+    entity.last_imported_at = datetime.now(timezone.utc)
+
+
 def apply_listing_status(
     entity: Organization,
     status: str,

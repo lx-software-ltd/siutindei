@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID as UUIDType
 
-from sqlalchemy import Boolean, Text, text
+from sqlalchemy import Boolean, CheckConstraint, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import TIMESTAMP
@@ -29,6 +29,12 @@ class ImportJob(Base):
         Boolean(),
         nullable=False,
         server_default=text("false"),
+    )
+    status: Mapped[str] = mapped_column(
+        Text(),
+        nullable=False,
+        default="completed",
+        server_default=text("'completed'"),
     )
     summary: Mapped[dict[str, Any]] = mapped_column(
         JSONB(),
@@ -54,4 +60,11 @@ class ImportJob(Base):
         TIMESTAMP(timezone=True),
         nullable=False,
         server_default=text("now()"),
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('running', 'completed', 'failed')",
+            name="import_jobs_status_check",
+        ),
     )

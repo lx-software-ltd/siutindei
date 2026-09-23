@@ -14,6 +14,7 @@ from app.api.admin_validators import (
     _validate_string_length,
     _validate_translations_map,
 )
+from app.db.age_bounds import inclusive_age_bounds
 from app.db.models import Activity
 from app.db.repositories import ActivityCategoryRepository, ActivityRepository
 from app.exceptions import ValidationError
@@ -166,9 +167,7 @@ def _ensure_unique_activity_name(
 
 def _serialize_activity(entity: Activity) -> dict[str, Any]:
     """Serialize an activity."""
-    age_range = entity.age_range
-    age_min = getattr(age_range, "lower", None)
-    age_max = getattr(age_range, "upper", None)
+    age_min, age_max = inclusive_age_bounds(entity.age_range)
     return {
         "id": str(entity.id),
         "org_id": str(entity.org_id),

@@ -258,6 +258,30 @@ paths:
                 $ref: '#/components/schemas/ValidationError'
 
   /v1/admin/imports:
+    get:
+      summary: List import jobs
+      description: |
+        Newest-first cursor page of stored import jobs. Admin only.
+        Per-row results stay on `GET /v1/admin/imports/{job_id}`.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Import job page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminImportJobList'
     post:
       summary: Process admin import
       description: |
@@ -336,7 +360,8 @@ paths:
       description: |
         Generate a presigned download URL for an export JSON file. The exported
         JSON is compatible with the admin import schema. Schedule entries are
-        emitted in UTC.
+        emitted in UTC. `review_status` is omitted. `review_notes` is included
+        for visibility and ignored on import.
       parameters:
         - name: org_name
           in: query
@@ -357,6 +382,155 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+
+  /v1/admin/org-review:
+    get:
+      summary: List organizations for review
+      description: |
+        Cursor page of organizations with completeness issues, ordered by
+        name then id unless `sort=last_imported_at`. The cursor carries the
+        sort key. Blocker filters run in SQL. Warning issue codes are
+        matched after the SQL filters. Public search hides
+        rows that are not `approved` only when `ORG_REVIEW_GATE_ENABLED`
+        is true. After a release, CloudFront may serve the previous
+        search response for up to 5 minutes.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: cursor
+          in: query
+          description: Opaque cursor for the active sort.
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name, last_imported_at]
+            default: name
+        - name: review_status
+          in: query
+          schema:
+            type: string
+            enum: [pending_review, approved, rejected]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [operational, closed_temporarily, closed_permanently, hidden]
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: import_job_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: issue
+          in: query
+          schema:
+            type: string
+        - name: has_blockers
+          in: query
+          schema:
+            type: boolean
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Review queue page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgReviewList'
+    post:
+      summary: Bulk review action
+      description: |
+        `POST /v1/admin/org-review/bulk`. Apply one action to up to 200
+        organizations. `set_fields` writes only the supplied whitelist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgReviewBulkRequest'
+      responses:
+        "200":
+          description: Per-organization results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgReviewBulkResponse'
+
+  /v1/admin/org-review/summary:
+    get:
+      summary: Review queue counts
+      description: |
+        Aggregated in SQL. `by_issue` counts organizations once per issue
+        code, including warnings.
+      responses:
+        "200":
+          description: Counts by review state, source, and issue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgReviewSummary'
+
+  /v1/admin/org-review/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Organization review detail
+      responses:
+        "200":
+          description: Organization, children, and issues
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgReviewDetail'
+        "404":
+          description: Organization not found
+
+  /v1/admin/org-review/{id}/decision:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Approve, reject, or reopen one organization
+      description: |
+        Approve returns 400 with `issues` when blockers remain unless
+        `force` is true.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgReviewDecisionRequest'
+      responses:
+        "200":
+          description: Updated organization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        "400":
+          description: Blocked or invalid
+        "404":
+          description: Organization not found
 
   /v1/admin/locations:
     get:
@@ -2184,6 +2358,18 @@ components:
           description: |
             Optional note after the source URL. URL-only omits ` — `.
             Note-only becomes `Source: <note>`.
+        review_status:
+          type: string
+          description: |
+            Ignored and omitted from export. A warning is recorded when the
+            supplied value is not the organization's current review state,
+            including organizations that do not exist yet. New imported
+            organizations are stored as `pending_review`. Updates keep the
+            current review state.
+        review_notes:
+          type: string
+          description: |
+            Included on export for visibility and ignored on import.
         area_name:
           type: string
           description: |
@@ -2598,12 +2784,258 @@ components:
           type: array
           items:
             type: string
+        status:
+          type: string
+          enum: [running, completed, failed]
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+
+    AdminImportJobListItem:
+      type: object
+      required: [id, object_key, dry_run, status, summary, file_warnings]
+      properties:
+        id:
+          type: string
+          format: uuid
+        object_key:
+          type: string
+        dry_run:
+          type: boolean
+        status:
+          type: string
+          enum: [running, completed, failed]
+        summary:
+          $ref: '#/components/schemas/AdminImportSummary'
+        file_warnings:
+          type: array
+          items:
+            type: string
+        result_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AdminImportJobList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminImportJobListItem'
+        next_cursor:
+          type: string
+          nullable: true
+
+    OrgReviewIssue:
+      type: object
+      required: [code, severity, entity_type, entity_id, message]
+      properties:
+        code:
+          type: string
+        severity:
+          type: string
+          enum: [blocker, warning]
+        entity_type:
+          type: string
+          enum: [organization, location, activity]
+        entity_id:
+          type: string
+        message:
+          type: string
+
+    OrgReviewListItem:
+      type: object
+      required: [id, name, status, review_status, issues, completeness]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+        review_status:
+          type: string
+          enum: [pending_review, approved, rejected]
+        source:
+          type: string
+          nullable: true
+        status_source:
+          type: string
+          nullable: true
+        description_source:
+          type: string
+          nullable: true
+        import_job_id:
+          type: string
+          format: uuid
+          nullable: true
+        last_imported_at:
+          type: string
+          format: date-time
+          nullable: true
+        reviewed_at:
+          type: string
+          format: date-time
+          nullable: true
+        reviewed_by:
+          type: string
+          nullable: true
+        place_id:
+          type: string
+          nullable: true
+        location_count:
+          type: integer
+        activity_count:
+          type: integer
+        pricing_count:
+          type: integer
+        schedule_count:
+          type: integer
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgReviewIssue'
+        completeness:
+          type: number
+        blocker_count:
+          type: integer
+        warning_count:
+          type: integer
+
+    OrgReviewList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgReviewListItem'
+        next_cursor:
+          type: string
+          nullable: true
+
+    OrgReviewDetail:
+      allOf:
+        - $ref: '#/components/schemas/OrgReviewListItem'
+        - type: object
+          properties:
+            organization:
+              $ref: '#/components/schemas/Organization'
+            locations:
+              type: array
+              items:
+                $ref: '#/components/schemas/Location'
+            activities:
+              type: array
+              items:
+                $ref: '#/components/schemas/Activity'
+
+    OrgReviewSummary:
+      type: object
+      required: [total, by_review_status, by_source, by_status_source, by_issue, with_blockers]
+      properties:
+        total:
+          type: integer
+        by_review_status:
+          type: object
+          additionalProperties:
+            type: integer
+        by_source:
+          type: object
+          additionalProperties:
+            type: integer
+        by_status_source:
+          type: object
+          additionalProperties:
+            type: integer
+        by_issue:
+          type: object
+          additionalProperties:
+            type: integer
+        with_blockers:
+          type: integer
+
+    OrgReviewDecisionRequest:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [approve, reject, reopen]
+        force:
+          type: boolean
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [operational, closed_temporarily, closed_permanently, hidden]
+
+    OrgReviewBulkRequest:
+      type: object
+      required: [org_ids, action]
+      properties:
+        org_ids:
+          type: array
+          maxItems: 200
+          items:
+            type: string
+            format: uuid
+        action:
+          type: string
+          enum: [approve, reject, reopen, set_fields]
+        force:
+          type: boolean
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
+        fields:
+          type: object
+          description: |
+            Whitelist for `set_fields`: status, manager_id, source,
+            description_source, review_notes, phone fields, email, and
+            social fields. Only supplied keys are written.
+          additionalProperties: true
+
+    OrgReviewBulkResult:
+      type: object
+      required: [org_id, status]
+      properties:
+        org_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [ok, blocked, error]
+        review_status:
+          type: string
+        message:
+          type: string
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgReviewIssue'
+
+    OrgReviewBulkResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgReviewBulkResult'
 
     AdminExportResponse:
       type: object
@@ -2878,6 +3310,28 @@ components:
           type: string
           nullable: true
           enum: [template, official, places, enrich]
+        review_status:
+          type: string
+          enum: [pending_review, approved, rejected]
+        reviewed_at:
+          type: string
+          format: date-time
+          nullable: true
+        reviewed_by:
+          type: string
+          nullable: true
+          description: Cognito sub of the admin who last changed review state
+        review_notes:
+          type: string
+          nullable: true
+        import_job_id:
+          type: string
+          format: uuid
+          nullable: true
+        last_imported_at:
+          type: string
+          format: date-time
+          nullable: true
         phone_country_code:
           type: string
           nullable: true

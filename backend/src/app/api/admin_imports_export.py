@@ -17,6 +17,7 @@ from app.api.admin_imports_utils import (
     parse_timezone,
     sanitize_filename,
 )
+from app.db.age_bounds import inclusive_age_bounds
 from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
 from app.db.models import Organization
 from app.db.repositories import OrganizationRepository
@@ -178,6 +179,7 @@ def serialize_export_organization(
         "source": org.source,
         "source_id": org.source_id,
         "description_source": org.description_source,
+        "review_notes": org.review_notes,
         "locations": locations_payload,
         "activities": activities_payload,
     }
@@ -220,8 +222,7 @@ def serialize_export_activity(
     tzinfo: ZoneInfo,
     warnings: list[str],
 ) -> dict[str, Any]:
-    age_min = getattr(activity.age_range, "lower", None)
-    age_max = getattr(activity.age_range, "upper", None)
+    age_min, age_max = inclusive_age_bounds(activity.age_range)
     activity_payload = {
         "name": activity.name,
         "description": activity.description,

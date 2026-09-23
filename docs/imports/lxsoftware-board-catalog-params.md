@@ -21,3 +21,8 @@ CloudFormation rewrite from this repo is reverted on the next merge.
 `production.json` in lx-software to change the switch or manager id.
 Leave `SiutindeiBoardCatalogImportEnabled` false until a remote board
 Preview succeeds.
+
+Organizations created by that import are stored as `pending_review`.
+They are not a public listing until an admin releases them in the
+admin Imports review queue. Turning on `OrgReviewGateEnabled` in this
+repo's API stack is what makes public search enforce that release.

@@ -203,6 +203,7 @@ def _create_organization(
         source=body.get("source") or None,
         source_id=body.get("source_id") or None,
         description_source=parse_description_source(body.get("description_source")),
+        review_status="approved",
         **contact_fields,
     )
 
@@ -326,6 +327,12 @@ def _serialize_organization(entity: Organization) -> dict[str, Any]:
         "source": entity.source,
         "source_id": entity.source_id,
         "description_source": entity.description_source,
+        "review_status": entity.review_status,
+        "reviewed_at": entity.reviewed_at,
+        "reviewed_by": entity.reviewed_by,
+        "review_notes": entity.review_notes,
+        "import_job_id": (str(entity.import_job_id) if entity.import_job_id else None),
+        "last_imported_at": entity.last_imported_at,
         "created_at": entity.created_at,
         "updated_at": entity.updated_at,
     }

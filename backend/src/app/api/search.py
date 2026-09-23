@@ -15,6 +15,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.db.age_bounds import inclusive_age_bounds
 from app.api.schemas import (
     ActivitySchema,
     ActivitySearchResponseSchema,
@@ -342,22 +343,8 @@ def _load_region_area_cache(session: Session) -> dict[str, str | None]:
 
 
 def _extract_age_bounds(age_range: Any) -> tuple[int | None, int | None]:
-    """Extract age range bounds from a database range value."""
-
-    lower = getattr(age_range, "lower", None)
-    upper = getattr(age_range, "upper", None)
-    if lower is not None or upper is not None:
-        return lower, upper
-
-    if isinstance(age_range, str):
-        cleaned = age_range.strip("[]()")
-        parts = cleaned.split(",")
-        if len(parts) == 2:
-            try:
-                return int(parts[0]), int(parts[1])
-            except ValueError:
-                return None, None
-    return None, None
+    """Extract inclusive age bounds from a database range value."""
+    return inclusive_age_bounds(age_range)
 
 
 def _create_response(

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useEditDeepLink } from '../../hooks/use-edit-deep-link';
 import { useGeographicAreas } from '../../hooks/use-geographic-areas';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationsByMode } from '../../hooks/use-organizations-by-mode';
@@ -129,6 +130,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     emptyForm,
     itemToForm
   );
+  useEditDeepLink(panel.items, panel.editingId, panel.startEdit);
 
   // Geographic area tree for cascading dropdowns
   const { tree, countryCodes, matchNominatimResult } = useGeographicAreas();

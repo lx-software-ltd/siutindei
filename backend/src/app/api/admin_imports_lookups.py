@@ -6,10 +6,12 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
+from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
 from app.api.admin_imports_catalog import (
     MANAGED_BY_PROVIDER,
+    coerce_uuid,
     parse_description_source,
     parse_place_id,
 )
@@ -21,7 +23,8 @@ from app.api.admin_imports_utils import (
     to_utc_weekly,
 )
 from app.db.models import ActivityCategory, ActivitySchedule, GeographicArea
-from app.db.models import Organization
+from app.db.models import Location, Organization
+from app.db.repositories import LocationRepository
 from app.exceptions import ValidationError
 
 ALLOWED_ENTRY_FIELDS = {"day_of_week", "start_time", "end_time"}
@@ -238,3 +241,29 @@ def parse_weekly_entries_local(
         )
 
     return entries
+
+
+def resolve_location(
+    session: Session,
+    org: Organization,
+    location_name: str,
+    cache: dict[str, Location],
+) -> Location | None:
+    """Find a location by the import location_name cache, then address."""
+    cached = cache.get(location_name)
+    if cached:
+        return cached
+    repo = LocationRepository(session)
+    try:
+        location = repo.find_by_org_and_address_case_insensitive(
+            coerce_uuid(org.id),
+            location_name,
+        )
+    except MultipleResultsFound as exc:
+        raise ValidationError(
+            "Multiple locations found for name",
+            field="location_name",
+        ) from exc
+    if location:
+        cache[location_name] = location
+    return location
