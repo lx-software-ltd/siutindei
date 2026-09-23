@@ -13,7 +13,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import InstrumentedAttribute, Session
 
 from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
 from app.db.models import Organization
@@ -255,12 +255,12 @@ def load_snapshots(
     activity_ids = [activity.id for activity in activities]
     pricing_counts = _counts_by_activity(
         session,
-        ActivityPricing,
+        ActivityPricing.activity_id,
         activity_ids,
     )
     schedule_counts = _counts_by_activity(
         session,
-        ActivitySchedule,
+        ActivitySchedule.activity_id,
         activity_ids,
     )
     locations_by_org: dict[str, list[Location]] = defaultdict(list)
@@ -314,15 +314,15 @@ def snapshot_for_org(
 
 def _counts_by_activity(
     session: Session,
-    model: type[ActivityPricing] | type[ActivitySchedule],
+    activity_id_column: InstrumentedAttribute[Any],
     activity_ids: list[Any],
 ) -> dict[str, int]:
     if not activity_ids:
         return {}
     rows = session.execute(
-        select(model.activity_id, func.count())
-        .where(model.activity_id.in_(activity_ids))
-        .group_by(model.activity_id)
+        select(activity_id_column, func.count())
+        .where(activity_id_column.in_(activity_ids))
+        .group_by(activity_id_column)
     ).all()
     return {str(activity_id): int(count) for activity_id, count in rows}
 
