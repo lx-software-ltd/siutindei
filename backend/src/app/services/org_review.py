@@ -15,6 +15,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import InstrumentedAttribute, Session
 
+from app.db.age_bounds import inclusive_age_bounds
 from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
 from app.db.models import Organization
 
@@ -303,6 +304,40 @@ def load_snapshots(
     return snapshots
 
 
+def summarize_snapshots(snapshots: list[OrgReviewSnapshot]) -> dict[str, Any]:
+    """Python summary used to check the SQL aggregate stays equivalent."""
+    by_review = {status: 0 for status in REVIEW_STATUSES}
+    by_source: dict[str, int] = {}
+    by_status_source: dict[str, int] = {}
+    by_issue: dict[str, int] = {}
+    with_blockers = 0
+    for snapshot in snapshots:
+        org = snapshot.organization
+        by_review[org.review_status] = by_review.get(org.review_status, 0) + 1
+        source_key = org.source or "unknown"
+        by_source[source_key] = by_source.get(source_key, 0) + 1
+        status_source_key = org.status_source or "unknown"
+        by_status_source[status_source_key] = (
+            by_status_source.get(status_source_key, 0) + 1
+        )
+        if snapshot.blocker_count:
+            with_blockers += 1
+        seen: set[str] = set()
+        for issue in snapshot.issues:
+            if issue.code in seen:
+                continue
+            seen.add(issue.code)
+            by_issue[issue.code] = by_issue.get(issue.code, 0) + 1
+    return {
+        "total": len(snapshots),
+        "by_review_status": by_review,
+        "by_source": by_source,
+        "by_status_source": by_status_source,
+        "by_issue": by_issue,
+        "with_blockers": with_blockers,
+    }
+
+
 def snapshot_for_org(
     session: Session,
     organization: Organization,
@@ -356,12 +391,7 @@ def _text(value: Any) -> str:
 
 
 def _age_bounds(activity: Activity) -> tuple[int | None, int | None]:
-    age_range = activity.age_range
-    if age_range is None:
-        return None, None
-    lower = getattr(age_range, "lower", None)
-    upper = getattr(age_range, "upper", None)
-    return lower, upper
+    return inclusive_age_bounds(activity.age_range)
 
 
 def parse_org_uuid(value: str) -> UUID:

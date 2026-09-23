@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
 from app.api.admin_imports_catalog import (
@@ -11,6 +12,7 @@ from app.api.admin_imports_catalog import (
     NO_MATCH_TO_CLOSE,
     ORG_TRUNCATE_LIMITS,
     apply_vetting_columns,
+    find_import_organization,
     prevalidate_activity_categories,
     truncate_import_fields,
 )
@@ -87,6 +89,25 @@ def process_import_payload(
     return summary, results
 
 
+def _review_status_needs_warning(
+    session: Session,
+    raw_org: dict[str, Any],
+    ignored_review: Any,
+) -> bool:
+    """Warn when a file tries to set a review state we will not store."""
+    if ignored_review in (None, ""):
+        return False
+    supplied = str(ignored_review).strip()
+    if not supplied:
+        return False
+    try:
+        existing = find_import_organization(session, raw_org)
+    except MultipleResultsFound:
+        return True
+    current = existing.review_status if existing is not None else None
+    return current != supplied
+
+
 def process_organization(
     session: Session,
     raw_org: Any,
@@ -115,7 +136,8 @@ def process_organization(
 
     warnings: list[str] = []
     ignored_review = raw_org.pop("review_status", None)
-    if ignored_review not in (None, ""):
+    raw_org.pop("review_notes", None)
+    if _review_status_needs_warning(session, raw_org, ignored_review):
         warnings.append(
             f"{path}: review_status is ignored; "
             "release state is managed in the review queue"

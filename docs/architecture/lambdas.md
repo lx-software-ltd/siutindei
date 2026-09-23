@@ -107,11 +107,8 @@ their primary responsibilities.
   - `ADMIN_IMPORT_EXPORT_BUCKET`
   - `BOARD_CATALOG_MANAGER_ID` (optional catalog manager sub)
   - `ORG_REVIEW_GATE_ENABLED` (same flag as search; default `false`)
-- Review queue routes on this function: `GET /v1/admin/org-review`,
-  `GET /v1/admin/org-review/summary`, `GET /v1/admin/org-review/{id}`,
-  `POST /v1/admin/org-review/{id}/decision`,
-  `POST /v1/admin/org-review/bulk`, and `GET /v1/admin/imports`
-  (job history). Shapes are in `docs/api/admin.yaml`.
+- Hosts the organization review queue and import-job history. Shapes
+  are in `docs/api/admin.yaml`.
 - For the full endpoint list, see the OpenAPI spec:
   `docs/api/admin.yaml`
 

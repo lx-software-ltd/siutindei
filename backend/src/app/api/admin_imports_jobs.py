@@ -119,6 +119,17 @@ def finish_import_job(
     return job
 
 
+def fail_import_job(session: Session, job_id: Any, error_type: str) -> None:
+    """Mark a committed live import as failed after the work rolled back."""
+    job = session.get(ImportJob, job_id)
+    if job is None:
+        return
+    job.status = "failed"
+    job.summary = {"error": error_type[:80]}
+    job.updated_at = datetime.now(timezone.utc)
+    session.flush()
+
+
 def list_import_jobs(
     session: Session,
     *,

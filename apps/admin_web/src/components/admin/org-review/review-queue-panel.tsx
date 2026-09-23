@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryState } from 'nuqs';
 
 import { ApiError } from '../../../lib/api-client';
@@ -51,10 +51,14 @@ export function ReviewQueuePanel() {
   const [, setSection] = useQueryState('section');
   const [, setEdit] = useQueryState('edit');
   const [reviewStatus, setReviewStatus] = useState('pending_review');
+  const [sourceInput, setSourceInput] = useState('');
   const [source, setSource] = useState('');
   const [issue, setIssue] = useState('');
   const [hasBlockers, setHasBlockers] = useState('');
+  const [queryInput, setQueryInput] = useState('');
   const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<'name' | 'last_imported_at'>('name');
+  const summaryLoaded = useRef(false);
   const [items, setItems] = useState<OrgReviewListItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [summary, setSummary] = useState<OrgReviewSummary | null>(null);
@@ -76,24 +80,27 @@ export function ReviewQueuePanel() {
         hasBlockers === '' ? undefined : hasBlockers === 'true',
       q: query || undefined,
       import_job_id: jobParam || undefined,
+      sort: sort === 'last_imported_at' ? sort : undefined,
       limit: 50,
     }),
-    [hasBlockers, issue, jobParam, query, reviewStatus, source]
+    [hasBlockers, issue, jobParam, query, reviewStatus, sort, source]
   );
 
   const load = useCallback(
-    async (cursor?: string) => {
+    async (cursor?: string, refreshSummary = false) => {
       setIsLoading(true);
       setError('');
+      const shouldLoadSummary = refreshSummary || !summaryLoaded.current;
       try {
         const [page, counts] = await Promise.all([
           listOrgReviews({ ...filters, cursor }),
-          cursor ? Promise.resolve(null) : getOrgReviewSummary(),
+          shouldLoadSummary ? getOrgReviewSummary() : Promise.resolve(null),
         ]);
         setItems((prev) => (cursor ? [...prev, ...page.items] : page.items));
         setNextCursor(page.next_cursor ?? null);
         if (counts) {
           setSummary(counts);
+          summaryLoaded.current = true;
         }
         if (!cursor) {
           setSelected(new Set());
@@ -108,6 +115,19 @@ export function ReviewQueuePanel() {
     },
     [filters]
   );
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setSource(sourceInput);
+      setQuery(queryInput);
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [queryInput, sourceInput]);
+
+  function commitTextFilters() {
+    setSource(sourceInput);
+    setQuery(queryInput);
+  }
 
   useEffect(() => {
     void load();
@@ -138,7 +158,7 @@ export function ReviewQueuePanel() {
       const response = await bulkOrgReview({
         org_ids: orgIds,
         action,
-        force,
+        force: action === 'approve' ? force : undefined,
         fields,
       });
       const blocked = response.results.filter((item) => item.status === 'blocked');
@@ -148,7 +168,7 @@ export function ReviewQueuePanel() {
         `Updated ${ok.length}. ${blocked.length} still missing details. ${failed.length} failed.`
       );
       setShowFields(false);
-      await load();
+      await load(undefined, true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Bulk update failed.');
     } finally {
@@ -241,18 +261,47 @@ export function ReviewQueuePanel() {
               <Label htmlFor='review-source-filter'>Source</Label>
               <Input
                 id='review-source-filter'
-                value={source}
+                value={sourceInput}
                 placeholder='lcsd'
-                onChange={(event) => setSource(event.target.value)}
+                onChange={(event) => setSourceInput(event.target.value)}
+                onBlur={commitTextFilters}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    commitTextFilters();
+                  }
+                }}
               />
             </div>
             <div className='space-y-1'>
               <Label htmlFor='review-name-filter'>Name</Label>
               <Input
                 id='review-name-filter'
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                value={queryInput}
+                onChange={(event) => setQueryInput(event.target.value)}
+                onBlur={commitTextFilters}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    commitTextFilters();
+                  }
+                }}
               />
+            </div>
+            <div className='space-y-1'>
+              <Label htmlFor='review-sort'>Sort</Label>
+              <Select
+                id='review-sort'
+                value={sort}
+                onChange={(event) =>
+                  setSort(
+                    event.target.value === 'last_imported_at'
+                      ? 'last_imported_at'
+                      : 'name'
+                  )
+                }
+              >
+                <option value='name'>Name</option>
+                <option value='last_imported_at'>Recently imported</option>
+              </Select>
             </div>
             {jobParam && (
               <div className='flex items-end'>
@@ -313,6 +362,7 @@ export function ReviewQueuePanel() {
             <BulkFieldsDialog
               isSaving={isSaving}
               onCancel={() => setShowFields(false)}
+              onInvalid={(message) => setError(message)}
               onApply={(fields) => {
                 if (Object.keys(fields).length === 0) {
                   setError('Tick at least one property.');

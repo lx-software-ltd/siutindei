@@ -58,8 +58,10 @@ Columns:
 - `reviewed_by` (text, optional) — Cognito sub of the reviewing admin
 - `review_notes` (text, optional)
 - `import_job_id` (uuid, optional, FK → `import_jobs.id`, ON DELETE
-  SET NULL)
-- `last_imported_at` (timestamptz, optional)
+  SET NULL) — the job that created the organization. Later imports
+  do not replace it.
+- `last_imported_at` (timestamptz, optional) — set on every live import,
+  including updates
 - `created_at` (timestamptz, default `now()`)
 - `updated_at` (timestamptz, default `now()`)
 
@@ -78,7 +80,10 @@ counts only `operational` and `closed_temporarily` rows). When
 The public sitemap is a static route list and does not enumerate
 listings.
 
-`import_jobs.status` is `running`, `completed`, or `failed`.
+`import_jobs.status` is `running`, `completed`, or `failed`. A live
+import commits `running` before it writes organizations. If that work
+raises, the job is marked `failed` and the same object key can be
+retried. Dry runs stay `completed` and do not block a later live import.
 
 Seed assessment: migration `0033_org_review_status` backfills every
 existing organization to `pending_review`. `seed_data.sql` sets

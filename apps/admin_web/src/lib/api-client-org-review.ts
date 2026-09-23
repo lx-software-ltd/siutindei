@@ -59,6 +59,7 @@ export interface OrgReviewFilters {
   issue?: string;
   has_blockers?: boolean;
   q?: string;
+  sort?: 'name' | 'last_imported_at';
   cursor?: string;
   limit?: number;
 }

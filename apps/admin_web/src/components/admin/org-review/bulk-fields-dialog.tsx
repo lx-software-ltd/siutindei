@@ -15,6 +15,12 @@ const FIELD_OPTIONS = [
   { key: 'phone_country_code', label: 'Phone country' },
   { key: 'phone_number', label: 'Phone number' },
   { key: 'whatsapp', label: 'WhatsApp' },
+  { key: 'facebook', label: 'Facebook' },
+  { key: 'instagram', label: 'Instagram' },
+  { key: 'tiktok', label: 'TikTok' },
+  { key: 'twitter', label: 'Twitter' },
+  { key: 'xiaohongshu', label: 'Xiaohongshu' },
+  { key: 'wechat', label: 'WeChat' },
   { key: 'review_notes', label: 'Review notes' },
 ] as const;
 
@@ -24,12 +30,14 @@ interface BulkFieldsDialogProps {
   isSaving: boolean;
   onCancel: () => void;
   onApply: (fields: Record<string, string>) => void;
+  onInvalid: (message: string) => void;
 }
 
 export function BulkFieldsDialog({
   isSaving,
   onCancel,
   onApply,
+  onInvalid,
 }: BulkFieldsDialogProps) {
   const [enabled, setEnabled] = useState<Record<string, boolean>>({});
   const [values, setValues] = useState<Record<string, string>>({
@@ -49,6 +57,10 @@ export function BulkFieldsDialog({
       }
       fields[option.key] = values[option.key] ?? '';
     }
+    if ('manager_id' in fields && !fields.manager_id.trim()) {
+      onInvalid('Enter a manager id, or untick that property.');
+      return;
+    }
     onApply(fields);
   }
 
@@ -56,6 +68,7 @@ export function BulkFieldsDialog({
     <div className='space-y-4 rounded-lg border border-slate-200 p-4'>
       <p className='text-sm text-slate-700'>
         Only the ticked fields are written. Empty text clears that field.
+        Manager id cannot be cleared.
       </p>
       <div className='grid gap-3 md:grid-cols-2'>
         {FIELD_OPTIONS.map((option) => (

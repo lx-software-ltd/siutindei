@@ -101,19 +101,21 @@ export function ImportHistoryPanel() {
             }
           }}
           isLoading={isLoading}
-          renderActions={(item) => (
-            <Button
-              type='button'
-              size='sm'
-              variant='secondary'
-              onClick={() => {
-                void setJob(item.id);
-                void setTab('review');
-              }}
-            >
-              View orgs
-            </Button>
-          )}
+          renderActions={(item) =>
+            item.dry_run ? null : (
+              <Button
+                type='button'
+                size='sm'
+                variant='secondary'
+                onClick={() => {
+                  void setJob(item.id);
+                  void setTab('review');
+                }}
+              >
+                View orgs
+              </Button>
+            )
+          }
         />
       )}
     </Card>

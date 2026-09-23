@@ -1423,6 +1423,13 @@ export async function setupApiMocks(page: Page): Promise<void> {
           schedule_count: 0,
           issues: [
             {
+              code: 'missing_coordinates',
+              severity: 'blocker',
+              entity_type: 'location',
+              entity_id: 'loc-1',
+              message: 'Location is missing a map pin',
+            },
+            {
               code: 'no_locations',
               severity: 'blocker',
               entity_type: 'organization',
@@ -1492,6 +1499,18 @@ export async function setupApiMocks(page: Page): Promise<void> {
               file_warnings: [],
               result_count: 1,
               created_at: '2024-02-01T00:00:00Z',
+            },
+            {
+              id: 'job-dry',
+              object_key: 'admin/imports/dry-run.json',
+              dry_run: true,
+              status: 'completed',
+              summary: {
+                organizations: { created: 0, updated: 0, failed: 0, skipped: 0 },
+              },
+              file_warnings: [],
+              result_count: 0,
+              created_at: '2024-01-01T00:00:00Z',
             },
           ],
           next_cursor: null,

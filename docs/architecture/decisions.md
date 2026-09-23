@@ -395,8 +395,11 @@ Listing `status` stays the business state (`operational`,
 `review_status` (`pending_review`, `approved`, `rejected`) decides
 whether an admin has released the organization. Re-importing an
 approved organization does not send it back to the queue; it stamps
-`last_imported_at`. Admin-console creates and approved tickets are
-`approved` immediately.
+`last_imported_at` and leaves `import_job_id` pointing at the job
+that created the row. Admin-console creates and approved tickets are
+`approved` immediately. A live import commits its job as `running`
+before writing organizations and marks that job `failed` if the
+import raises, so the same object key can be retried.
 
 Every organization already in the database is backfilled to
 `pending_review`. Public search keeps returning those rows until the

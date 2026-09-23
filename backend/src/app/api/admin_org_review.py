@@ -2,20 +2,23 @@
 
 from __future__ import annotations
 
+import base64
+import json
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Mapping
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
+from app.api.admin_imports_catalog import ORG_STATUSES
 from app.api.admin_org_review_actions import (
     handle_bulk,
     handle_decision,
 )
 from app.api.admin_request import (
-    _encode_cursor,
-    _parse_cursor,
+    _decode_cursor,
     _query_param,
     parse_limit,
 )
@@ -30,14 +33,15 @@ from app.services.org_review import (
     OrgReviewSnapshot,
     load_snapshots,
 )
+from app.services.org_review_sql import (
+    BLOCKER_ISSUE_CODES,
+    has_blocker_clause,
+    issue_clause,
+    summarize_catalog,
+)
 from app.utils import json_response
 
-_ORG_STATUSES = (
-    "operational",
-    "closed_temporarily",
-    "closed_permanently",
-    "hidden",
-)
+_REVIEW_SORTS = ("name", "last_imported_at")
 
 
 @dataclass(frozen=True)
@@ -51,6 +55,7 @@ class ReviewListFilters:
     issue: str | None
     has_blockers: bool | None
     query: str | None
+    sort: str
 
 
 def _handle_admin_org_review(
@@ -75,22 +80,28 @@ def _handle_admin_org_review(
 
 def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
     limit = parse_limit(event)
-    cursor = _parse_cursor(_query_param(event, "cursor"))
     filters = _parse_filters(event)
-    needs_scan = bool(filters.issue) or filters.has_blockers is not None
+    cursor = _parse_review_cursor(_query_param(event, "cursor"), filters.sort)
+    warning_scan = _needs_warning_scan(filters)
     with Session(get_engine()) as session:
         organizations = _load_filtered_organizations(
             session,
             filters,
             cursor,
-            None if needs_scan else limit + 1,
+            None if warning_scan else limit + 1,
         )
         snapshots = load_snapshots(session, organizations)
-        matched = [item for item in snapshots if _matches_issue(item, filters)]
+        matched = (
+            [item for item in snapshots if _matches_issue(item, filters)]
+            if warning_scan
+            else snapshots
+        )
         page = matched[:limit]
         has_more = len(matched) > limit
         next_cursor = (
-            _encode_cursor(page[-1].organization.id) if has_more and page else None
+            _encode_review_cursor(page[-1].organization, filters.sort)
+            if has_more and page
+            else None
         )
         return json_response(
             200,
@@ -104,42 +115,12 @@ def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
 
 def _handle_summary(event: Mapping[str, Any]) -> dict[str, Any]:
     with Session(get_engine()) as session:
-        organizations = list(session.scalars(select(Organization)).all())
-        snapshots = load_snapshots(session, organizations)
-        return json_response(200, _summarize(snapshots), event=event)
+        return json_response(200, summarize_catalog(session), event=event)
 
 
-def _summarize(snapshots: list[OrgReviewSnapshot]) -> dict[str, Any]:
-    by_review = {status: 0 for status in REVIEW_STATUSES}
-    by_source: dict[str, int] = {}
-    by_status_source: dict[str, int] = {}
-    by_issue: dict[str, int] = {}
-    with_blockers = 0
-    for snapshot in snapshots:
-        org = snapshot.organization
-        by_review[org.review_status] = by_review.get(org.review_status, 0) + 1
-        source_key = org.source or "unknown"
-        by_source[source_key] = by_source.get(source_key, 0) + 1
-        status_source_key = org.status_source or "unknown"
-        by_status_source[status_source_key] = (
-            by_status_source.get(status_source_key, 0) + 1
-        )
-        if snapshot.blocker_count:
-            with_blockers += 1
-        seen: set[str] = set()
-        for issue in snapshot.issues:
-            if issue.code in seen:
-                continue
-            seen.add(issue.code)
-            by_issue[issue.code] = by_issue.get(issue.code, 0) + 1
-    return {
-        "total": len(snapshots),
-        "by_review_status": by_review,
-        "by_source": by_source,
-        "by_status_source": by_status_source,
-        "by_issue": by_issue,
-        "with_blockers": with_blockers,
-    }
+def _needs_warning_scan(filters: ReviewListFilters) -> bool:
+    """Warning codes are matched in Python after the SQL page filters."""
+    return bool(filters.issue) and filters.issue not in BLOCKER_ISSUE_CODES
 
 
 def _handle_detail(event: Mapping[str, Any], resource_id: str) -> dict[str, Any]:
@@ -155,7 +136,7 @@ def _handle_detail(event: Mapping[str, Any], resource_id: str) -> dict[str, Any]
 def _load_filtered_organizations(
     session: Session,
     filters: ReviewListFilters,
-    cursor: UUID | None,
+    cursor: _ReviewCursor | None,
     limit: int | None,
 ) -> list[Organization]:
     stmt = select(Organization)
@@ -170,9 +151,16 @@ def _load_filtered_organizations(
     if filters.query:
         pattern = f"%{_escape_like(filters.query)}%"
         stmt = stmt.where(Organization.name.ilike(pattern, escape="\\"))
-    if cursor is not None:
-        stmt = stmt.where(Organization.id > cursor)
-    stmt = stmt.order_by(Organization.id)
+    if filters.has_blockers is True:
+        stmt = stmt.where(has_blocker_clause())
+    elif filters.has_blockers is False:
+        stmt = stmt.where(~has_blocker_clause())
+    if filters.issue in BLOCKER_ISSUE_CODES:
+        clause = issue_clause(filters.issue)
+        if clause is not None:
+            stmt = stmt.where(clause)
+    stmt = _apply_review_cursor(stmt, filters.sort, cursor)
+    stmt = _apply_review_order(stmt, filters.sort)
     if limit is not None:
         stmt = stmt.limit(limit)
     return list(session.scalars(stmt).all())
@@ -198,7 +186,7 @@ def _parse_filters(event: Mapping[str, Any]) -> ReviewListFilters:
     )
     status = _optional_choice(
         _query_param(event, "status"),
-        _ORG_STATUSES,
+        ORG_STATUSES,
         "status",
     )
     source = _blank_to_none(_query_param(event, "source"))
@@ -207,6 +195,7 @@ def _parse_filters(event: Mapping[str, Any]) -> ReviewListFilters:
     import_job_raw = _blank_to_none(_query_param(event, "import_job_id"))
     import_job_id = _parse_uuid(import_job_raw) if import_job_raw else None
     has_blockers = _parse_optional_bool(_query_param(event, "has_blockers"))
+    sort = _optional_choice(_query_param(event, "sort"), _REVIEW_SORTS, "sort")
     return ReviewListFilters(
         review_status=review_status,
         source=source,
@@ -215,6 +204,7 @@ def _parse_filters(event: Mapping[str, Any]) -> ReviewListFilters:
         issue=issue,
         has_blockers=has_blockers,
         query=query,
+        sort=sort or "name",
     )
 
 
@@ -297,3 +287,85 @@ def _blank_to_none(value: str | None) -> str | None:
 
 def _escape_like(pattern: str) -> str:
     return pattern.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+@dataclass(frozen=True)
+class _ReviewCursor:
+    org_id: UUID
+    name: str | None
+    last_imported_at: datetime | None
+
+
+def _encode_review_cursor(organization: Organization, sort: str) -> str:
+    imported_at = organization.last_imported_at
+    payload = json.dumps(
+        {
+            "sort": sort,
+            "id": str(organization.id),
+            "name": organization.name,
+            "last_imported_at": (
+                imported_at.isoformat() if imported_at is not None else None
+            ),
+        }
+    ).encode("utf-8")
+    return base64.urlsafe_b64encode(payload).decode("utf-8").rstrip("=")
+
+
+def _parse_review_cursor(value: str | None, sort: str) -> _ReviewCursor | None:
+    if value is None or value == "":
+        return None
+    try:
+        payload = _decode_cursor(value)
+        if payload.get("sort") != sort or "id" not in payload:
+            raise ValueError("sort")
+        imported_raw = payload.get("last_imported_at")
+        imported_at = datetime.fromisoformat(imported_raw) if imported_raw else None
+        return _ReviewCursor(
+            org_id=UUID(payload["id"]),
+            name=payload.get("name"),
+            last_imported_at=imported_at,
+        )
+    except (ValueError, KeyError, TypeError) as exc:
+        raise ValidationError("Invalid cursor", field="cursor") from exc
+
+
+def _apply_review_order(stmt: Any, sort: str) -> Any:
+    if sort == "last_imported_at":
+        return stmt.order_by(
+            Organization.last_imported_at.desc().nulls_last(),
+            Organization.id.desc(),
+        )
+    return stmt.order_by(Organization.name, Organization.id)
+
+
+def _apply_review_cursor(stmt: Any, sort: str, cursor: _ReviewCursor | None) -> Any:
+    if cursor is None:
+        return stmt
+    if sort == "name":
+        name = cursor.name or ""
+        return stmt.where(
+            or_(
+                Organization.name > name,
+                and_(
+                    Organization.name == name,
+                    Organization.id > cursor.org_id,
+                ),
+            )
+        )
+    if cursor.last_imported_at is None:
+        return stmt.where(
+            and_(
+                Organization.last_imported_at.is_(None),
+                Organization.id < cursor.org_id,
+            )
+        )
+    return stmt.where(
+        or_(
+            Organization.last_imported_at < cursor.last_imported_at,
+            and_(
+                Organization.last_imported_at == cursor.last_imported_at,
+                Organization.id < cursor.org_id,
+            ),
+            Organization.last_imported_at.is_(None),
+        )
+    )
