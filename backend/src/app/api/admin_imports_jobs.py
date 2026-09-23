@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.db.models import ImportJob
@@ -61,6 +61,7 @@ def store_import_job(
     job = ImportJob(
         object_key=object_key,
         dry_run=dry_run,
+        status="completed",
         summary=summary,
         results=results,
         file_warnings=file_warnings,
@@ -70,15 +71,98 @@ def store_import_job(
     return job
 
 
+def begin_import_job(session: Session, object_key: str) -> ImportJob:
+    """Create or reuse a live job row before organizations are written."""
+    existing = find_import_job_by_key(session, object_key)
+    now = datetime.now(timezone.utc)
+    if existing is not None:
+        existing.dry_run = False
+        existing.status = "running"
+        existing.summary = {}
+        existing.results = []
+        existing.file_warnings = []
+        existing.updated_at = now
+        session.flush()
+        return existing
+    job = ImportJob(
+        object_key=object_key,
+        dry_run=False,
+        status="running",
+        summary={},
+        results=[],
+        file_warnings=[],
+    )
+    session.add(job)
+    session.flush()
+    return job
+
+
+def finish_import_job(
+    session: Session,
+    job_id: Any,
+    *,
+    summary: dict[str, Any],
+    results: list[dict[str, Any]],
+    file_warnings: list[str],
+) -> ImportJob:
+    """Mark a live import job completed inside the same transaction."""
+    job = session.get(ImportJob, job_id)
+    if job is None:
+        raise RuntimeError("import job missing")
+    job.status = "completed"
+    job.dry_run = False
+    job.summary = summary
+    job.results = results
+    job.file_warnings = file_warnings
+    job.updated_at = datetime.now(timezone.utc)
+    session.flush()
+    return job
+
+
+def list_import_jobs(
+    session: Session,
+    *,
+    limit: int,
+    cursor: UUID | None,
+) -> list[ImportJob]:
+    """Return import jobs newest first."""
+    query = select(ImportJob).order_by(
+        ImportJob.created_at.desc(),
+        ImportJob.id.desc(),
+    )
+    if cursor is not None:
+        cursor_job = session.get(ImportJob, cursor)
+        if cursor_job is not None:
+            query = query.where(
+                or_(
+                    ImportJob.created_at < cursor_job.created_at,
+                    and_(
+                        ImportJob.created_at == cursor_job.created_at,
+                        ImportJob.id < cursor_job.id,
+                    ),
+                )
+            )
+    return list(session.scalars(query.limit(limit)).all())
+
+
 def serialize_import_job(job: ImportJob) -> dict[str, Any]:
     """Serialize a stored import job for the owner UI."""
     return {
         "id": str(job.id),
         "object_key": job.object_key,
         "dry_run": job.dry_run,
+        "status": job.status,
         "summary": job.summary,
         "results": job.results,
         "file_warnings": job.file_warnings,
         "created_at": job.created_at,
         "updated_at": job.updated_at,
     }
+
+
+def serialize_import_job_summary(job: ImportJob) -> dict[str, Any]:
+    """Serialize a job for the history list without per-row results."""
+    payload = serialize_import_job(job)
+    payload.pop("results", None)
+    payload["result_count"] = len(job.results or [])
+    return payload

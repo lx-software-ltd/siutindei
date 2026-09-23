@@ -54,6 +54,9 @@ their primary responsibilities.
 - Environment:
   - `STAGING_SEARCH_DATA_ENABLED` (always `false` in deployed stacks)
   - `STAGING_SEARCH_DATA_PATH` (bundled fixture path; unused when disabled)
+  - `ORG_REVIEW_GATE_ENABLED` (CDK `OrgReviewGateEnabled`, default
+    `false`). When `true`, search returns only organizations with
+    `review_status=approved` in addition to the listing-status filter.
 
 ### Admin API
 - Function: SiutindeiAdminFunction
@@ -103,6 +106,12 @@ their primary responsibilities.
   - `NOMINATIM_REFERER`
   - `ADMIN_IMPORT_EXPORT_BUCKET`
   - `BOARD_CATALOG_MANAGER_ID` (optional catalog manager sub)
+  - `ORG_REVIEW_GATE_ENABLED` (same flag as search; default `false`)
+- Review queue routes on this function: `GET /v1/admin/org-review`,
+  `GET /v1/admin/org-review/summary`, `GET /v1/admin/org-review/{id}`,
+  `POST /v1/admin/org-review/{id}/decision`,
+  `POST /v1/admin/org-review/bulk`, and `GET /v1/admin/imports`
+  (job history). Shapes are in `docs/api/admin.yaml`.
 - For the full endpoint list, see the OpenAPI spec:
   `docs/api/admin.yaml`
 

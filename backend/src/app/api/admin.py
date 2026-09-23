@@ -34,6 +34,7 @@ from app.api.admin_feedback import (
     _handle_user_feedback_labels,
 )
 from app.api.admin_imports import _handle_admin_imports
+from app.api.admin_org_review import _handle_admin_org_review
 from app.api.admin_media import _handle_organization_media
 from app.api.admin_request import (
     _decode_cursor,
@@ -192,6 +193,16 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
     if resource == "imports":
         return _safe_handler(
             lambda: _handle_admin_imports(event, method, resource_id),
+            event,
+        )
+    if resource == "org-review":
+        return _safe_handler(
+            lambda: _handle_admin_org_review(
+                event,
+                method,
+                resource_id,
+                sub_resource,
+            ),
             event,
         )
 

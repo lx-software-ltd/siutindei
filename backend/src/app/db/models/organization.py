@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import CheckConstraint, Text, text
+from sqlalchemy import CheckConstraint, ForeignKey, Text, text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TIMESTAMP
@@ -93,6 +93,31 @@ class Organization(Base):
         Text(),
         nullable=True,
     )
+    review_status: Mapped[str] = mapped_column(
+        Text(),
+        nullable=False,
+        default="pending_review",
+        server_default=text("'pending_review'"),
+    )
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+    )
+    reviewed_by: Mapped[Optional[str]] = mapped_column(
+        Text(),
+        nullable=True,
+        comment="Cognito sub of the admin who last set review_status",
+    )
+    review_notes: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    import_job_id: Mapped[Optional[str]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("import_jobs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    last_imported_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=False,
@@ -128,5 +153,9 @@ class Organization(Base):
             "description_source IS NULL OR description_source IN "
             "('template', 'official', 'places', 'enrich')",
             name="organizations_desc_source_check",
+        ),
+        CheckConstraint(
+            "review_status IN ('pending_review', 'approved', 'rejected')",
+            name="organizations_review_status_check",
         ),
     )

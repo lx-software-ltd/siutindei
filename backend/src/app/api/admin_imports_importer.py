@@ -53,6 +53,7 @@ def process_import_payload(
     dry_run: bool = False,
     allow_org_updates: bool = False,
     catalog_manager_id: str | None = None,
+    import_job_id: Any = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     collect_unknown_fields(payload, ALLOWED_ROOT_FIELDS, "root", file_warnings)
     apply_default_manager_id(payload)
@@ -79,6 +80,7 @@ def process_import_payload(
             dry_run=dry_run,
             allow_updates=allow_org_updates,
             catalog_manager_id=catalog_manager_id,
+            import_job_id=import_job_id,
         )
 
     finish_import_batch(session, dry_run=dry_run)
@@ -96,6 +98,7 @@ def process_organization(
     dry_run: bool = False,
     allow_updates: bool = False,
     catalog_manager_id: str | None = None,
+    import_job_id: Any = None,
 ) -> None:
     path = f"organizations[{index}]"
     if not isinstance(raw_org, dict):
@@ -111,6 +114,12 @@ def process_organization(
         return
 
     warnings: list[str] = []
+    ignored_review = raw_org.pop("review_status", None)
+    if ignored_review not in (None, ""):
+        warnings.append(
+            f"{path}: review_status is ignored; "
+            "release state is managed in the review queue"
+        )
     apply_vetting_columns(raw_org)
     truncate_import_fields(raw_org, path, warnings, ORG_TRUNCATE_LIMITS)
     collect_flat_org_warnings(raw_org, path, warnings)
@@ -151,6 +160,7 @@ def process_organization(
                 allow_updates=allow_updates,
                 catalog_manager_id=catalog_manager_id,
                 warnings=warnings,
+                import_job_id=import_job_id,
             ),
         )
     except ValidationError as exc:

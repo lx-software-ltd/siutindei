@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
@@ -100,6 +101,8 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
         .where(entry_subquery.c.entry_rank == 1)
         .where(Organization.status.in_(("operational", "closed_temporarily")))
     )
+    if review_gate_enabled():
+        query = query.where(Organization.review_status == "approved")
 
     conditions: list = []
 
@@ -261,3 +264,9 @@ def _area_descendant_ids_subquery(area_id: UUID) -> Select[Any]:
     )
     area_tree = base.union_all(recursive)
     return select(area_tree.c.id)
+
+
+def review_gate_enabled() -> bool:
+    """Public search hides unapproved orgs only when this flag is on."""
+    raw = os.getenv("ORG_REVIEW_GATE_ENABLED", "false").strip().lower()
+    return raw in {"1", "true", "yes", "on"}

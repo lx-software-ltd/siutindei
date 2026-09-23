@@ -130,6 +130,14 @@ def test_importer_can_patch_organization(mock_crud) -> None:
     mock_crud.assert_called_once()
 
 
+def test_importer_cannot_review_organizations() -> None:
+    response = lambda_handler(
+        _event("/v1/admin/org-review", method="GET"),
+        None,
+    )
+    assert response["statusCode"] == 403
+
+
 @patch("app.api.admin._handle_admin_imports", return_value=_ok_response())
 def test_admin_can_still_import(mock_imports) -> None:
     response = lambda_handler(
@@ -164,6 +172,7 @@ def _process_event(*, groups: str, dry_run: bool) -> dict:
 def _stub_import_jobs(monkeypatch) -> None:
     class _Job:
         id = "00000000-0000-0000-0000-000000000010"
+        status = "completed"
 
     monkeypatch.setattr(
         "app.api.admin_imports.find_import_job_by_key",
@@ -171,6 +180,14 @@ def _stub_import_jobs(monkeypatch) -> None:
     )
     monkeypatch.setattr(
         "app.api.admin_imports.store_import_job",
+        lambda *args, **kwargs: _Job(),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.begin_import_job",
+        lambda session, object_key: _Job(),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.finish_import_job",
         lambda *args, **kwargs: _Job(),
     )
 
@@ -211,10 +228,12 @@ def test_importer_process_allows_updates_and_skips_audit(
         dry_run=False,
         allow_org_updates=True,
         catalog_manager_id=None,
+        import_job_id=None,
     ):
         captured["allow_org_updates"] = allow_org_updates
         captured["dry_run"] = dry_run
         captured["catalog_manager_id"] = catalog_manager_id
+        captured["import_job_id"] = import_job_id
         return {"warnings": 0}, []
 
     monkeypatch.setattr(
@@ -235,6 +254,7 @@ def test_importer_process_allows_updates_and_skips_audit(
     assert response["statusCode"] == 200
     assert captured["allow_org_updates"] is True
     assert captured["dry_run"] is True
+    assert captured["import_job_id"] is None
     assert captured.get("rolled_back") is True
     assert audit_calls == []
 
@@ -275,10 +295,12 @@ def test_admin_process_allows_updates_and_sets_audit(
         dry_run=False,
         allow_org_updates=False,
         catalog_manager_id=None,
+        import_job_id=None,
     ):
         captured["allow_org_updates"] = allow_org_updates
         captured["dry_run"] = dry_run
         captured["catalog_manager_id"] = catalog_manager_id
+        captured["import_job_id"] = import_job_id
         return {"warnings": 0}, []
 
     monkeypatch.setattr(
@@ -299,6 +321,9 @@ def test_admin_process_allows_updates_and_sets_audit(
     assert response["statusCode"] == 200
     assert captured["allow_org_updates"] is True
     assert captured["dry_run"] is False
+    assert captured["import_job_id"] == (
+        "00000000-0000-0000-0000-000000000010"
+    )
     assert "rolled_back" not in captured
     assert audit_calls == [True]
 
@@ -308,6 +333,7 @@ def test_repeat_object_key_returns_stored_job(monkeypatch) -> None:
         id = "00000000-0000-0000-0000-000000000011"
         object_key = "admin/imports/file.json"
         dry_run = False
+        status = "completed"
         summary = {"organizations": {"created": 48, "updated": 1, "failed": 1}}
         results = [{"type": "organizations", "key": "Park", "status": "created"}]
         file_warnings = []
@@ -355,6 +381,7 @@ def test_dry_run_job_does_not_block_live_import(monkeypatch) -> None:
         id = "00000000-0000-0000-0000-000000000012"
         object_key = "admin/imports/file.json"
         dry_run = False
+        status = "completed"
         summary = {"organizations": {"created": 1}}
         results = []
         file_warnings = []
@@ -393,7 +420,11 @@ def test_dry_run_job_does_not_block_live_import(monkeypatch) -> None:
         lambda *args, **kwargs: process_calls.append(True) or ({}, []),
     )
     monkeypatch.setattr(
-        "app.api.admin_imports.store_import_job",
+        "app.api.admin_imports.begin_import_job",
+        lambda session, object_key: _LiveJob(),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.finish_import_job",
         lambda *args, **kwargs: _LiveJob(),
     )
     monkeypatch.setattr(
@@ -450,8 +481,10 @@ def test_importer_uses_board_catalog_manager_id(monkeypatch) -> None:
         dry_run=False,
         allow_org_updates=True,
         catalog_manager_id=None,
+        import_job_id=None,
     ):
         captured["catalog_manager_id"] = catalog_manager_id
+        captured["import_job_id"] = import_job_id
         return {"warnings": 0}, []
 
     monkeypatch.setattr(

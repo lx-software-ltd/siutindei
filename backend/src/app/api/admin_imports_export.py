@@ -178,6 +178,8 @@ def serialize_export_organization(
         "source": org.source,
         "source_id": org.source_id,
         "description_source": org.description_source,
+        "review_status": org.review_status,
+        "review_notes": org.review_notes,
         "locations": locations_payload,
         "activities": activities_payload,
     }

@@ -50,6 +50,16 @@ Columns:
   `vetting_note`
 - `description_source` (text, optional) — `template`, `official`,
   `places`, or `enrich`
+- `review_status` (text, default `pending_review`) — `pending_review`,
+  `approved`, or `rejected`. Public search applies this only when
+  `ORG_REVIEW_GATE_ENABLED=true`. `v_catalog_health` always counts
+  `approved` rows.
+- `reviewed_at` (timestamptz, optional)
+- `reviewed_by` (text, optional) — Cognito sub of the reviewing admin
+- `review_notes` (text, optional)
+- `import_job_id` (uuid, optional, FK → `import_jobs.id`, ON DELETE
+  SET NULL)
+- `last_imported_at` (timestamptz, optional)
 - `created_at` (timestamptz, default `now()`)
 - `updated_at` (timestamptz, default `now()`)
 
@@ -61,14 +71,19 @@ Constraints:
 - UNIQUE (case-insensitive) on `lower(trim(name))`
 - Partial UNIQUE on `place_id` where `place_id IS NOT NULL`
 
-Public search and `v_catalog_health` exclude `closed_permanently`
-and `hidden` (they count only `operational` and
-`closed_temporarily` rows). The public sitemap is a static route
-list and does not enumerate listings.
+Public search excludes `closed_permanently` and `hidden` (it
+counts only `operational` and `closed_temporarily` rows). When
+`ORG_REVIEW_GATE_ENABLED=true` it also requires
+`review_status = approved`. `v_catalog_health` always requires both.
+The public sitemap is a static route list and does not enumerate
+listings.
 
-Seed assessment: `status` is NOT NULL with server default
-`operational`; `import_jobs` needs no seed rows. Existing
-`seed_data.sql` is unchanged.
+`import_jobs.status` is `running`, `completed`, or `failed`.
+
+Seed assessment: migration `0033_org_review_status` backfills every
+existing organization to `pending_review`. `seed_data.sql` sets
+`review_status = approved` on the two local organizations so a
+gated local search still returns them. No new seed table.
 
 ## Table: geographic_areas
 

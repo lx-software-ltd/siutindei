@@ -1,17 +1,17 @@
 -- Seed data for Hong Kong activities
 
-INSERT INTO organizations (id, name, description, manager_id)
+INSERT INTO organizations (id, name, description, manager_id, review_status)
 SELECT '11111111-1111-1111-1111-111111111111', 'Harbor Arts Studio',
        'Art classes focused on painting and crafts.',
-       '{{SEED_MANAGER_SUB}}'
+       '{{SEED_MANAGER_SUB}}', 'approved'
 WHERE NOT EXISTS (
   SELECT 1 FROM organizations WHERE id = '11111111-1111-1111-1111-111111111111'
 );
 
-INSERT INTO organizations (id, name, description, manager_id)
+INSERT INTO organizations (id, name, description, manager_id, review_status)
 SELECT '22222222-2222-2222-2222-222222222222', 'Kowloon Kids Dance',
        'Dance and movement programs for children.',
-       '{{SEED_MANAGER_SUB}}'
+       '{{SEED_MANAGER_SUB}}', 'approved'
 WHERE NOT EXISTS (
   SELECT 1 FROM organizations WHERE id = '22222222-2222-2222-2222-222222222222'
 );
