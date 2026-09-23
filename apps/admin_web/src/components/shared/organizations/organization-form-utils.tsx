@@ -101,6 +101,7 @@ export interface OrganizationFormState {
   twitter: string;
   xiaohongshu: string;
   wechat: string;
+  status: string;
 }
 
 export const emptyForm: OrganizationFormState = {
@@ -119,6 +120,7 @@ export const emptyForm: OrganizationFormState = {
   twitter: '',
   xiaohongshu: '',
   wechat: '',
+  status: 'operational',
 };
 
 export function itemToForm(item: Organization): OrganizationFormState {
@@ -138,6 +140,7 @@ export function itemToForm(item: Organization): OrganizationFormState {
     twitter: item.twitter ?? '',
     xiaohongshu: item.xiaohongshu ?? '',
     wechat: item.wechat ?? '',
+    status: item.status ?? 'operational',
   };
 }
 

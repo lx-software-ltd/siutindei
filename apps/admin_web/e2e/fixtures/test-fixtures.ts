@@ -1374,7 +1374,131 @@ export async function setupApiMocks(page: Page): Promise<void> {
     });
   });
 
+  await page.route('**/api/mock/**/admin/org-review**', async (route) => {
+    const url = route.request().url();
+    const method = route.request().method();
+    if (url.includes('/summary')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          total: 1,
+          by_review_status: { pending_review: 1, approved: 0, rejected: 0 },
+          by_source: { lcsd: 1 },
+          by_status_source: { importer: 1 },
+          by_issue: { no_locations: 1 },
+          with_blockers: 1,
+        }),
+      });
+      return;
+    }
+    if (url.includes('/bulk') && method === 'POST') {
+      const body = route.request().postDataJSON() as { org_ids?: string[] };
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: (body.org_ids ?? ['org-1']).map((orgId) => ({
+            org_id: orgId,
+            status: 'ok',
+            review_status: 'approved',
+          })),
+        }),
+      });
+      return;
+    }
+    if (method === 'GET' && /org-review\/[^/?]+$/.test(url)) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'org-1',
+          name: 'Test Organization 1',
+          status: 'operational',
+          review_status: 'pending_review',
+          source: 'lcsd',
+          location_count: 0,
+          activity_count: 0,
+          pricing_count: 0,
+          schedule_count: 0,
+          issues: [
+            {
+              code: 'no_locations',
+              severity: 'blocker',
+              entity_type: 'organization',
+              entity_id: 'org-1',
+              message: 'No locations',
+            },
+          ],
+          completeness: 0.5,
+          blocker_count: 1,
+          warning_count: 0,
+          organization: mockOrganizations[0],
+          locations: [],
+          activities: [],
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: [
+          {
+            id: 'org-1',
+            name: 'Test Organization 1',
+            status: 'operational',
+            review_status: 'pending_review',
+            source: 'lcsd',
+            location_count: 0,
+            activity_count: 0,
+            pricing_count: 0,
+            schedule_count: 0,
+            issues: [
+              {
+                code: 'no_locations',
+                severity: 'blocker',
+                entity_type: 'organization',
+                entity_id: 'org-1',
+                message: 'No locations',
+              },
+            ],
+            completeness: 0.5,
+            blocker_count: 1,
+            warning_count: 0,
+          },
+        ],
+        next_cursor: null,
+      }),
+    });
+  });
+
   await page.route('**/api/mock/**/admin/imports', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              id: 'job-1',
+              object_key: 'admin/imports/catalog.json',
+              dry_run: false,
+              status: 'completed',
+              summary: {
+                organizations: { created: 1, updated: 0, failed: 0, skipped: 0 },
+              },
+              file_warnings: [],
+              result_count: 1,
+              created_at: '2024-02-01T00:00:00Z',
+            },
+          ],
+          next_cursor: null,
+        }),
+      });
+      return;
+    }
     if (route.request().method() !== 'POST') {
       await route.continue();
       return;

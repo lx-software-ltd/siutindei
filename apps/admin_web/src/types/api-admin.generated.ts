@@ -387,7 +387,34 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List import jobs
+         * @description Newest-first cursor page of stored import jobs. Admin only.
+         *     Per-row results stay on `GET /v1/admin/imports/{job_id}`.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Import job page */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminImportJobList"];
+                    };
+                };
+            };
+        };
         put?: never;
         /**
          * Process admin import
@@ -514,7 +541,8 @@ export interface paths {
          * Export admin data
          * @description Generate a presigned download URL for an export JSON file. The exported
          *     JSON is compatible with the admin import schema. Schedule entries are
-         *     emitted in UTC.
+         *     emitted in UTC. `review_status` is included for visibility and ignored
+         *     on import.
          */
         get: {
             parameters: {
@@ -550,6 +578,232 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/org-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List organizations for review
+         * @description Cursor page of organizations with completeness issues. Filters
+         *     narrow the backlog created by catalog import. Public search hides
+         *     rows that are not `approved` only when `ORG_REVIEW_GATE_ENABLED`
+         *     is true. After a release, CloudFront may serve the previous
+         *     search response for up to 5 minutes.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                    review_status?: "pending_review" | "approved" | "rejected";
+                    status?: "operational" | "closed_temporarily" | "closed_permanently" | "hidden";
+                    source?: string;
+                    import_job_id?: string;
+                    issue?: string;
+                    has_blockers?: boolean;
+                    q?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Review queue page */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrgReviewList"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Bulk review action
+         * @description `POST /v1/admin/org-review/bulk`. Apply one action to up to 200
+         *     organizations. `set_fields` writes only the supplied whitelist.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OrgReviewBulkRequest"];
+                };
+            };
+            responses: {
+                /** @description Per-organization results */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrgReviewBulkResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/org-review/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Review queue counts */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Counts by review state, source, and issue */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrgReviewSummary"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/org-review/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Organization review detail */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Organization, children, and issues */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrgReviewDetail"];
+                    };
+                };
+                /** @description Organization not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/org-review/{id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve, reject, or reopen one organization
+         * @description Approve returns 400 with `issues` when blockers remain unless
+         *     `force` is true.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OrgReviewDecisionRequest"];
+                };
+            };
+            responses: {
+                /** @description Updated organization */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Organization"];
+                    };
+                };
+                /** @description Blocked or invalid */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Organization not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -4141,6 +4395,11 @@ export interface components {
              */
             vetting_note?: string;
             /**
+             * @description Ignored. New imported organizations are stored as
+             *     `pending_review`. Updates keep the current review state.
+             */
+            review_status?: string;
+            /**
              * @description Board-flat org field. When locations[] is empty, the importer
              *     synthesizes one location resolved like location area_name.
              *     Ignored with a warning when locations[] is already present.
@@ -4353,10 +4612,128 @@ export interface components {
             summary: components["schemas"]["AdminImportSummary"];
             results: components["schemas"]["AdminImportResult"][];
             file_warnings: string[];
+            /** @enum {string} */
+            status?: "running" | "completed" | "failed";
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
             updated_at?: string;
+        };
+        AdminImportJobListItem: {
+            /** Format: uuid */
+            id: string;
+            object_key: string;
+            dry_run: boolean;
+            /** @enum {string} */
+            status: "running" | "completed" | "failed";
+            summary: components["schemas"]["AdminImportSummary"];
+            file_warnings: string[];
+            result_count?: number;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        AdminImportJobList: {
+            items: components["schemas"]["AdminImportJobListItem"][];
+            next_cursor?: string | null;
+        };
+        OrgReviewIssue: {
+            code: string;
+            /** @enum {string} */
+            severity: "blocker" | "warning";
+            /** @enum {string} */
+            entity_type: "organization" | "location" | "activity";
+            entity_id: string;
+            message: string;
+        };
+        OrgReviewListItem: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            status: string;
+            /** @enum {string} */
+            review_status: "pending_review" | "approved" | "rejected";
+            source?: string | null;
+            status_source?: string | null;
+            description_source?: string | null;
+            /** Format: uuid */
+            import_job_id?: string | null;
+            /** Format: date-time */
+            last_imported_at?: string | null;
+            /** Format: date-time */
+            reviewed_at?: string | null;
+            reviewed_by?: string | null;
+            place_id?: string | null;
+            location_count?: number;
+            activity_count?: number;
+            pricing_count?: number;
+            schedule_count?: number;
+            issues: components["schemas"]["OrgReviewIssue"][];
+            completeness: number;
+            blocker_count?: number;
+            warning_count?: number;
+        };
+        OrgReviewList: {
+            items: components["schemas"]["OrgReviewListItem"][];
+            next_cursor?: string | null;
+        };
+        OrgReviewDetail: components["schemas"]["OrgReviewListItem"] & {
+            organization?: components["schemas"]["Organization"];
+            locations?: components["schemas"]["Location"][];
+            activities?: components["schemas"]["Activity"][];
+        };
+        OrgReviewSummary: {
+            total: number;
+            by_review_status: {
+                [key: string]: number;
+            };
+            by_source: {
+                [key: string]: number;
+            };
+            by_status_source: {
+                [key: string]: number;
+            };
+            by_issue: {
+                [key: string]: number;
+            };
+            with_blockers: number;
+        };
+        OrgReviewDecisionRequest: {
+            /** @enum {string} */
+            action: "approve" | "reject" | "reopen";
+            force?: boolean;
+            notes?: string | null;
+            /** @enum {string} */
+            status?: "operational" | "closed_temporarily" | "closed_permanently" | "hidden";
+        };
+        OrgReviewBulkRequest: {
+            org_ids: string[];
+            /** @enum {string} */
+            action: "approve" | "reject" | "reopen" | "set_fields";
+            force?: boolean;
+            notes?: string | null;
+            status?: string;
+            /**
+             * @description Whitelist for `set_fields`: status, manager_id, source,
+             *     description_source, review_notes, phone fields, email, and
+             *     social fields. Only supplied keys are written.
+             */
+            fields?: {
+                [key: string]: unknown;
+            };
+        };
+        OrgReviewBulkResult: {
+            /** Format: uuid */
+            org_id: string;
+            /** @enum {string} */
+            status: "ok" | "blocked" | "error";
+            review_status?: string;
+            message?: string;
+            issues?: components["schemas"]["OrgReviewIssue"][];
+        };
+        OrgReviewBulkResponse: {
+            results: components["schemas"]["OrgReviewBulkResult"][];
         };
         AdminExportResponse: {
             download_url: string;
@@ -4485,6 +4862,17 @@ export interface components {
             source_id?: string | null;
             /** @enum {string|null} */
             description_source?: "template" | "official" | "places" | "enrich" | null;
+            /** @enum {string} */
+            review_status?: "pending_review" | "approved" | "rejected";
+            /** Format: date-time */
+            reviewed_at?: string | null;
+            /** @description Cognito sub of the admin who last changed review state */
+            reviewed_by?: string | null;
+            review_notes?: string | null;
+            /** Format: uuid */
+            import_job_id?: string | null;
+            /** Format: date-time */
+            last_imported_at?: string | null;
             /** @description ISO 3166-1 alpha-2 country code for phone number */
             phone_country_code?: string | null;
             /** @description National phone number digits (no country code) */

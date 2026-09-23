@@ -31,6 +31,10 @@ export interface DataTableProps<T> {
   onLoadMore?: () => void;
   isLoading?: boolean;
   emptyMessage?: string;
+  selectable?: boolean;
+  selectedKeys?: ReadonlySet<string>;
+  onToggleRow?: (key: string) => void;
+  onToggleAll?: (keys: string[], selected: boolean) => void;
 }
 
 export function DataTable<T>({
@@ -45,6 +49,10 @@ export function DataTable<T>({
   onLoadMore,
   isLoading,
   emptyMessage = 'No items found.',
+  selectable = false,
+  selectedKeys,
+  onToggleRow,
+  onToggleAll,
 }: DataTableProps<T>) {
   if (data.length === 0) {
     return <p className='text-sm text-slate-600'>{emptyMessage}</p>;
@@ -57,6 +65,11 @@ export function DataTable<T>({
   );
   const isRowEditable = Boolean(onEdit);
   const hasActions = Boolean(onDelete || renderActions);
+  const rowKeys = data.map((item) => keyExtractor(item));
+  const allSelected =
+    selectable &&
+    rowKeys.length > 0 &&
+    rowKeys.every((key) => selectedKeys?.has(key));
 
   return (
     <>
@@ -65,6 +78,18 @@ export function DataTable<T>({
         <table className='w-full text-left text-sm'>
           <thead className='border-b border-slate-200 text-slate-500'>
             <tr>
+              {selectable && (
+                <th className='w-10 py-2 pr-2'>
+                  <input
+                    type='checkbox'
+                    aria-label='Select all rows'
+                    checked={allSelected}
+                    onChange={(event) => {
+                      onToggleAll?.(rowKeys, event.target.checked);
+                    }}
+                  />
+                </th>
+              )}
               {columns.map((column) => (
                 <th
                   key={column.key}
@@ -95,6 +120,23 @@ export function DataTable<T>({
                     : undefined
                 }
               >
+                {selectable && (
+                  <td
+                    className='py-2 pr-2'
+                    onClick={(event) => {
+                      event.stopPropagation();
+                    }}
+                  >
+                    <input
+                      type='checkbox'
+                      aria-label='Select row'
+                      checked={selectedKeys?.has(keyExtractor(item)) ?? false}
+                      onChange={() => {
+                        onToggleRow?.(keyExtractor(item));
+                      }}
+                    />
+                  </td>
+                )}
                 {columns.map((column) => (
                   <td
                     key={column.key}
@@ -152,11 +194,26 @@ export function DataTable<T>({
             }
           >
             {/* Primary info */}
-            {primaryColumn && (
-              <div className='font-medium text-slate-900'>
-                {primaryColumn.render(item)}
-              </div>
-            )}
+            <div className='flex items-start gap-2'>
+              {selectable && (
+                <input
+                  type='checkbox'
+                  aria-label='Select row'
+                  checked={selectedKeys?.has(keyExtractor(item)) ?? false}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                  }}
+                  onChange={() => {
+                    onToggleRow?.(keyExtractor(item));
+                  }}
+                />
+              )}
+              {primaryColumn && (
+                <div className='font-medium text-slate-900'>
+                  {primaryColumn.render(item)}
+                </div>
+              )}
+            </div>
             {/* Secondary info */}
             {secondaryColumn && (
               <div className='mt-0.5 text-sm text-slate-600'>
