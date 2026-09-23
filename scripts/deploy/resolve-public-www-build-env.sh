@@ -54,6 +54,8 @@ outputs = {
         "Curated children's activities in Hong Kong.",
     ),
     "contact_email": contact_email,
+    "whatsapp_url": build_get("whatsappUrl"),
+    "whatsapp_display": build_get("whatsappDisplay"),
 }
 
 out_path = os.environ["GITHUB_OUTPUT"]

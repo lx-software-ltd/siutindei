@@ -58,7 +58,9 @@ export function Footer({ locale, content }: FooterProps) {
                     rel="noreferrer noopener"
                     className="underline-offset-2 hover:underline"
                   >
-                    WhatsApp
+                    {contact.whatsappDisplay
+                      ? `WhatsApp ${contact.whatsappDisplay}`
+                      : 'WhatsApp'}
                   </TrackedWhatsappLink>
                 </p>
               ) : null}

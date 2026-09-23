@@ -112,18 +112,62 @@ validate_http_url_when_set() {
   fi
 }
 
+read_public_www_build_default() {
+  local key="$1"
+  python3 - "$APP_DIR/build-env.defaults.json" "$key" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+defaults_path = Path(sys.argv[1])
+key = sys.argv[2]
+if not defaults_path.is_file():
+    raise SystemExit(
+        f"Public website build defaults not found: {defaults_path}"
+    )
+data = json.loads(defaults_path.read_text(encoding="utf-8"))
+value = data.get(key, "")
+if not isinstance(value, str) or not value.strip():
+    raise SystemExit(
+        f"Build default {key} must be a non-empty string in {defaults_path}"
+    )
+sys.stdout.write(value.strip())
+PY
+}
+
+# Same public contacts as the full site. An exported NEXT_PUBLIC_* value
+# wins; otherwise use build-env.defaults.json.
+resolve_public_contact_value() {
+  local env_name="$1"
+  local default_key="$2"
+  local env_value="${!env_name:-}"
+  if [ -n "$env_value" ]; then
+    printf '%s' "$env_value"
+    return
+  fi
+  read_public_www_build_default "$default_key"
+}
+
+resolve_maintenance_email() {
+  resolve_public_contact_value "NEXT_PUBLIC_EMAIL" "contactEmail"
+}
+
+resolve_maintenance_whatsapp_url() {
+  resolve_public_contact_value "NEXT_PUBLIC_WHATSAPP_URL" "whatsappUrl"
+}
+
 validate_maintenance_contact_settings() {
-  if [ -z "${NEXT_PUBLIC_EMAIL:-}" ]; then
-    echo "NEXT_PUBLIC_EMAIL is required for maintenance mode deployment."
+  local email whatsapp_url
+  email="$(resolve_maintenance_email)"
+  whatsapp_url="$(resolve_maintenance_whatsapp_url)"
+  if [[ ! "$email" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
+    echo "contactEmail must be a valid email address."
     exit 1
   fi
-  if [[ ! "$NEXT_PUBLIC_EMAIL" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
-    echo "NEXT_PUBLIC_EMAIL must be a valid email address."
+  if [[ ! "$whatsapp_url" =~ ^https?:// ]]; then
+    echo "whatsappUrl must start with http:// or https://."
     exit 1
   fi
-  validate_http_url_when_set \
-    "NEXT_PUBLIC_WHATSAPP_URL" \
-    "${NEXT_PUBLIC_WHATSAPP_URL:-}"
   validate_http_url_when_set \
     "NEXT_PUBLIC_INSTAGRAM_URL" \
     "${NEXT_PUBLIC_INSTAGRAM_URL:-}"
@@ -205,8 +249,9 @@ inject_maintenance_contact_values() {
   fi
   local escaped_email escaped_whatsapp_url escaped_instagram_url
   local escaped_lx_software_url escaped_build_year
-  escaped_email="$(escape_sed_replacement "$NEXT_PUBLIC_EMAIL")"
-  escaped_whatsapp_url="$(escape_sed_replacement "${NEXT_PUBLIC_WHATSAPP_URL:-#}")"
+  escaped_email="$(escape_sed_replacement "$(resolve_maintenance_email)")"
+  escaped_whatsapp_url="$(escape_sed_replacement \
+    "$(resolve_maintenance_whatsapp_url)")"
   escaped_instagram_url="$(escape_sed_replacement "${NEXT_PUBLIC_INSTAGRAM_URL:-#}")"
   escaped_lx_software_url="$(escape_sed_replacement \
     "${NEXT_PUBLIC_LX_SOFTWARE_URL:-$DEFAULT_LX_SOFTWARE_URL}")"

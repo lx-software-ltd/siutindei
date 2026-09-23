@@ -37,9 +37,11 @@ or `all stacks`). Deploy static site artifacts with
 | `PublicWwwStagingCertificateArn` | ACM cert ARN in **us-east-1** that covers the staging alias. |
 | `WafWebAclArn` | (Optional) us-east-1 WAF WebACL ARN; reuse the admin-web ACL. |
 
-Static-export branding defaults (site name, tagline, contact email) live in
+Static-export branding defaults (site name, tagline, contact email,
+WhatsApp URL, and WhatsApp display number) live in
 `apps/public_www/build-env.defaults.json` and are **not** CDK parameters.
-CI reads them via `scripts/deploy/resolve-public-www-build-env.sh`.
+CI reads the email via `scripts/deploy/resolve-public-www-build-env.sh`.
+The full site and the maintenance holding page use those same contacts.
 
 Before the first `cdk deploy`, ensure the ACM certificate listed in
 `PublicWwwCertificateArn`/`PublicWwwStagingCertificateArn` includes the

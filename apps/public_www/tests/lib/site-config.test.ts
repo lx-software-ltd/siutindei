@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { getCopyrightYear, getSearchConfig } from '@/lib/site-config';
+import {
+  getCopyrightYear,
+  getSearchConfig,
+  getSiteConfig,
+} from '@/lib/site-config';
 
 describe('getCopyrightYear', () => {
   const originalYear = process.env.NEXT_PUBLIC_BUILD_YEAR;
@@ -21,6 +25,51 @@ describe('getCopyrightYear', () => {
   it('falls back when env is missing or invalid', () => {
     delete process.env.NEXT_PUBLIC_BUILD_YEAR;
     expect(getCopyrightYear()).toBe(new Date().getFullYear());
+  });
+});
+
+describe('public contacts', () => {
+  const envKeys = [
+    'NEXT_PUBLIC_EMAIL',
+    'NEXT_PUBLIC_WHATSAPP_URL',
+  ] as const;
+  const original: Record<string, string | undefined> = {};
+
+  afterEach(() => {
+    for (const key of envKeys) {
+      if (original[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = original[key];
+      }
+    }
+  });
+
+  it('uses the shared defaults when env is unset', () => {
+    for (const key of envKeys) {
+      original[key] = process.env[key];
+      delete process.env[key];
+    }
+
+    expect(getSiteConfig().contact).toMatchObject({
+      email: 'hello@siutindei.com',
+      whatsappUrl: 'https://wa.me/85294460861',
+      whatsappDisplay: '+852 9446 0861',
+    });
+  });
+
+  it('lets NEXT_PUBLIC_EMAIL and NEXT_PUBLIC_WHATSAPP_URL override', () => {
+    for (const key of envKeys) {
+      original[key] = process.env[key];
+    }
+    process.env.NEXT_PUBLIC_EMAIL = 'hello@example.com';
+    process.env.NEXT_PUBLIC_WHATSAPP_URL = 'https://wa.me/85200000000';
+
+    expect(getSiteConfig().contact).toMatchObject({
+      email: 'hello@example.com',
+      whatsappUrl: 'https://wa.me/85200000000',
+      whatsappDisplay: '+852 9446 0861',
+    });
   });
 });
 
