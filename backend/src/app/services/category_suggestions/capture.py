@@ -108,7 +108,11 @@ def capture_pending(
         suggestion.updated_at = now
         reopened = True
     previous = int(suggestion.activity_count or 0)
-    _replace_other_links(session, activity_id=activity.id, keep=suggestion.id)
+    _replace_other_links(
+        session,
+        activity_id=UUID(str(activity.id)),
+        keep=suggestion.id,
+    )
     linked = _link_activity(
         session,
         suggestion=suggestion,

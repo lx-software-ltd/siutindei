@@ -62,7 +62,11 @@ their primary responsibilities.
 - Function: SiutindeiAdminFunction
 - Handler: backend/lambda/admin/handler.py
 - Trigger: API Gateway — handles routes under `/v1/admin/*`,
-  `/v1/manager/*`, `/v1/user/*`, and `/v1/partner/*` (CRUD resources)
+  `/v1/manager/*`, `/v1/user/*`, and `/v1/partner/*` (CRUD resources).
+  Also SQS `category-suggestion-enrich` (batch size 1, partial batch
+  failures). The entrypoint dispatches `eventSource=aws:sqs` to
+  `backend/lambda/category_suggestions/handler.py`. A separate worker
+  function would exceed the CloudFormation 500-resource cap.
 - Auth: Cognito JWT — admin group for `/v1/admin/*`,   admin or importer
   group for catalog import and owner-UI listing routes
   (`POST /v1/admin/imports`, `POST /v1/admin/imports/presign`,
@@ -98,8 +102,12 @@ their primary responsibilities.
   29 seconds.
 - Environment additions: `CATEGORY_SUGGESTION_QUEUE_URL`,
   `OPENROUTER_API_KEY_SECRET_ARN`, `OPENROUTER_CHAT_COMPLETIONS_URL`,
-  `OPENROUTER_MODEL`
+  `OPENROUTER_MODEL`, `CATEGORY_SUGGESTION_LAMBDA_TIMEOUT_SECONDS`,
+  `CATEGORY_SUGGESTION_OPENROUTER_TIMEOUT_SECONDS`
 - Memory: 1024 MB (cold start is import-bound; CPU scales with memory)
+- Timeout: 120 seconds so one SQS enrichment can wait on a 90-second
+  OpenRouter attempt. API Gateway still limits HTTP to 29 seconds, so
+  the settings test stays a single ~15 second attempt.
 - X-Ray: active tracing (function segment with init/invocation split)
 - Cognito user listing resolves group membership with one
   `list_users_in_group` call per managed group (`ADMIN_GROUP`,
@@ -294,21 +302,16 @@ their primary responsibilities.
 - OpenRouter: the proxy does not inject the API key. Callers pass
   `Authorization` from Secrets Manager via `app.services.openrouter_client`.
 
-### Category suggestion worker
-- Function: CategorySuggestionsWorkerFunction
-- Handler: backend/lambda/category_suggestions/handler.py
+### Category suggestion enrichment
+- Function: SiutindeiAdminFunction (same function as the admin API)
+- Handler: backend/lambda/category_suggestions/handler.py, loaded by
+  backend/lambda/admin/handler.py for SQS events
 - Trigger: SQS `category-suggestion-enrich` (batch size 1, partial
   batch failures)
 - Purpose: ask OpenRouter where an unknown imported category name
   should sit, then store the proposal
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - VPC: Yes
-- Timeout: 120 seconds. One OpenRouter attempt of up to 90 seconds
-  per receive; SQS retries, and the third failure is left for the DLQ.
-  Reserved concurrency 2.
-- Permissions: invoke `AwsApiProxyFunction`, read the OpenRouter secret
-- Environment: database connection variables,
-  `AWS_PROXY_FUNCTION_ARN`, `OPENROUTER_API_KEY_SECRET_ARN`,
-  `OPENROUTER_CHAT_COMPLETIONS_URL`, `OPENROUTER_MODEL`,
-  `CATEGORY_SUGGESTION_LAMBDA_TIMEOUT_SECONDS`,
-  `CATEGORY_SUGGESTION_OPENROUTER_TIMEOUT_SECONDS`
+- Timeout: 120 seconds on the admin function. One OpenRouter attempt
+  of up to 90 seconds per receive; SQS retries, and the third failure
+  is left for the DLQ.

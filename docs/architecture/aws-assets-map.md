@@ -218,7 +218,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 | Function Logical ID | Handler | Memory | Timeout | VPC | Extra Paths |
 |---------------------|---------|--------|---------|-----|-------------|
 | `SiutindeiSearchFunction` | `lambda/search/handler.lambda_handler` | 512 MB | 30s | Yes | - |
-| `SiutindeiAdminFunction` | `lambda/admin/handler.lambda_handler` | 1024 MB | 30s | Yes | - |
+| `SiutindeiAdminFunction` | `lambda/admin/handler.lambda_handler` | 1024 MB | 120s | Yes | Also consumes the category-suggestion SQS queue |
 | `SiutindeiMigrationFunction` | `lambda/migrations/handler.lambda_handler` | 512 MB | 5 min | Yes | `db` |
 | `HealthCheckFunction` | `lambda/health/handler.lambda_handler` | 256 MB | 10s | Yes | - |
 
@@ -247,7 +247,6 @@ Each Lambda function created by `PythonLambda` construct includes:
 |---------------------|---------|--------|---------|-----|-------|
 | `AdminBootstrapFunction` | `lambda/admin_bootstrap/handler.lambda_handler` | 256 MB | 30s | Yes | Custom resource handler |
 | `AwsApiProxyFunction` | `lambda/aws_proxy/handler.lambda_handler` | 256 MB | 120s | No | AWS/HTTP proxy for in-VPC Lambdas |
-| `CategorySuggestionsWorkerFunction` | `lambda/category_suggestions/handler.lambda_handler` | 512 MB | 120s | Yes | SQS category suggestion enrichment |
 | `ApiKeyRotationFunction` | `lambda/api_key_rotation/handler.lambda_handler` | 256 MB | 60s | Yes | Scheduled API key rotation |
 | `ListingEventsIngestFunction` | `lambda/listing_events_ingest/handler.lambda_handler` | 256 MB | 10s | Yes | Public listing-event ingest |
 | `ListingEventsRollupFunction` | `lambda/listing_events_rollup/handler.lambda_handler` | 256 MB | 60s | Yes | Nightly listing_events_daily rollup |
@@ -283,7 +282,7 @@ For each function above, the following resources are created:
 |----------|------------------------|
 | `SiutindeiSearchFunction` | Read DB secret, connect to RDS Proxy as `siutindei_app` |
 | `PartnerApiKeyAuthorizerFunction` | Read app DB secret, connect to RDS Proxy as `siutindei_app` |
-| `SiutindeiAdminFunction` | Read DB secret, connect to RDS Proxy as `siutindei_admin`, invoke `AwsApiProxyFunction`, read the OpenRouter secret, send to the category suggestion queue, SNS publish to manager request topic, SES send email, S3 read/write for org media and admin import/export |
+| `SiutindeiAdminFunction` | Read DB secret, connect to RDS Proxy as `siutindei_admin`, invoke `AwsApiProxyFunction`, read the OpenRouter secret, send to and consume the category suggestion queue, SNS publish to manager request topic, SES send email, S3 read/write for org media and admin import/export |
 | `AwsApiProxyFunction` | Cognito admin operations (`ListUsers`, `AdminGetUser`, `AdminDeleteUser`, `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `AdminUserGlobalSignOut`) |
 | `SiutindeiMigrationFunction` | Read DB secret, direct connect to Aurora as `postgres`, Cognito user management, CloudFormation invoke permission |
 | `HealthCheckFunction` | Read DB secret, connect to RDS Proxy as `siutindei_app` |
@@ -291,7 +290,6 @@ For each function above, the following resources are created:
 | `AdminBootstrapFunction` | Cognito `AdminCreateUser`, `AdminUpdateUserAttributes`, `AdminSetUserPassword`, `AdminAddUserToGroup`, CloudFormation invoke permission |
 | `ApiKeyRotationFunction` | API Gateway key management, Secrets Manager read/write |
 | `ManagerRequestProcessor` | Read DB secret, connect to RDS Proxy as `siutindei_admin`, SES send email |
-| `CategorySuggestionsWorkerFunction` | Read DB secret, connect to RDS Proxy as `siutindei_admin`, invoke `AwsApiProxyFunction`, read the OpenRouter secret |
 
 **Lambda Log Groups:**
 - Explicitly created by CDK with KMS encryption
@@ -354,7 +352,7 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/admin/api-keys` | GET, POST | Admin Group | `SiutindeiAdminFunction` | Partner API key management |
 | `/v1/admin/api-keys/{id}` | GET, DELETE | Admin Group | `SiutindeiAdminFunction` | Get / revoke partner API key |
 | `/v1/manager/{resource}` | GET, POST | Manager Group | `SiutindeiAdminFunction` | Filtered CRUD |
-| `/v1/manager/{resource}/{id}` | GET, PUT, DELETE | Manager Group | `SiutindeiAdminFunction` | Filtered CRUD by ID |
+| `/v1/manager/{resource}/{id}` | ANY | Manager Group | `SiutindeiAdminFunction` | Filtered CRUD by ID. One method stays under the CloudFormation resource cap; the Lambda rejects methods it does not implement. |
 | `/v1/partner/activities/search` | GET | Partner API Key | `SiutindeiSearchFunction` | Partner search (org-filtered) |
 | `/v1/partner/activities` | GET, POST | Partner API Key | `SiutindeiAdminFunction` | Partner activities CRUD (explicit; literal resource shadows the proxy) |
 | `/v1/partner/{proxy+}` | ANY | Partner API Key | `SiutindeiAdminFunction` | Greedy proxy for remaining partner CRUD (orgs, locations, activities/{id}, pricing, schedules); scope/org enforced in Lambda |

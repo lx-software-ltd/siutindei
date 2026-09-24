@@ -39,9 +39,9 @@ the suggestion rows back and enqueue nothing.
 
 In-VPC Lambdas call OpenRouter only through
 `app.services.openrouter_client`, which uses the existing HTTP proxy
-(`http_invoke`). The worker reads the named key `lxsoftware:siutindei`
-from Secrets Manager and sends `Authorization`. The proxy does not
-store or inject that key.
+(`http_invoke`). `SiutindeiAdminFunction` reads the named key
+`lxsoftware:siutindei` from Secrets Manager and sends `Authorization`
+when SQS invokes it. The proxy does not store or inject that key.
 
 Requests set `usage.include`, app attribution (`siutindei`, title
 "Siu Tin Dei", referer `https://siutindei.com`), and
@@ -50,13 +50,14 @@ The default model is `qwen/qwen3-30b-a3b` with fallback
 `qwen/qwen-turbo`. Admins change the model on the settings singleton
 without a redeploy.
 
-The worker timeout is 120 seconds and makes one OpenRouter call of up
-to 90 seconds. SQS retries that message; the client does not retry
-inside the Lambda, because three 90-second attempts would be killed
-at the Lambda timeout. The admin "test model" action reads the saved
-model for that request and is one attempt of about 15 seconds, because
-API Gateway REST integrations time out at 29 seconds and the admin
-Lambda timeout is 30 seconds.
+Enrichment runs on `SiutindeiAdminFunction` (120 seconds) and makes
+one OpenRouter call of up to 90 seconds. SQS retries that message;
+the client does not retry inside the Lambda, because three 90-second
+attempts would be killed at the Lambda timeout. A separate worker
+function would exceed the CloudFormation 500-resource cap. The admin
+"test model" action reads the saved model for that request and is one
+attempt of about 15 seconds, because API Gateway REST integrations
+time out at 29 seconds.
 
 Prompts redact email addresses and phone numbers. The model is asked
 to prefer an existing category, otherwise a sub-category, with a

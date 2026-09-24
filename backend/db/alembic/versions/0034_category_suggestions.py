@@ -181,8 +181,7 @@ def upgrade() -> None:
             name="cat_sug_status_check",
         ),
         sa.CheckConstraint(
-            "enrichment_status IN "
-            "('none', 'queued', 'running', 'done', 'failed')",
+            "enrichment_status IN " "('none', 'queued', 'running', 'done', 'failed')",
             name="cat_sug_enrich_check",
         ),
         sa.UniqueConstraint("fingerprint", name="cat_sug_fingerprint_key"),

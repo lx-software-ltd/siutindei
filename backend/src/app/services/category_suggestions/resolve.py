@@ -153,7 +153,8 @@ def _exact_ids(session: Session, name: str) -> list[UUID]:
         .where(ActivityCategory.id != PENDING_CATEGORY_ID)
         .limit(2)
     )
-    return list(session.execute(query).scalars().all())
+    found = session.execute(query).scalars().all()
+    return [UUID(str(item)) for item in found]
 
 
 def _alias_category_id(session: Session, name: str) -> UUID | None:
@@ -216,7 +217,7 @@ def _category_index(session: Session) -> dict[str, set[UUID]]:
         for key in keys:
             if not key:
                 continue
-            index.setdefault(key, set()).add(row.id)
+            index.setdefault(key, set()).add(UUID(str(row.id)))
     if _batch is not None:
         _batch.index = index
     return index

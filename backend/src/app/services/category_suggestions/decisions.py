@@ -45,18 +45,21 @@ def apply_decision(
             "action must be approve, map, or reject",
             field="action",
         )
+    target: ActivityCategory | None
     if action == "approve":
         target = _approve(session, suggestion, body)
     elif action == "map":
         target = _require_target(session, body)
         suggestion.status = "merged"
-        suggestion.merged_into_category_id = target.id
+        suggestion.merged_into_category_id = UUID(str(target.id))
     else:
         target = _optional_target(session, body)
         suggestion.status = "rejected"
-        suggestion.merged_into_category_id = target.id if target else None
+        suggestion.merged_into_category_id = (
+            UUID(str(target.id)) if target is not None else None
+        )
     if target is not None:
-        _reassign_pending(session, suggestion.id, target.id)
+        _reassign_pending(session, suggestion.id, UUID(str(target.id)))
     suggestion.decided_by = decided_by
     suggestion.decided_at = datetime.now(timezone.utc)
     suggestion.decision_notes = _notes(body.get("notes", body.get("decision_notes")))
@@ -84,7 +87,7 @@ def _approve(
             field="name",
         ) from exc
     suggestion.status = "approved"
-    suggestion.created_category_id = category.id
+    suggestion.created_category_id = UUID(str(category.id))
     suggestion.merged_into_category_id = None
     return category
 
@@ -163,7 +166,8 @@ def _reassign_pending(
     ).all()
     for activity in activities:
         if str(activity.category_id) == str(PENDING_CATEGORY_ID):
-            activity.category_id = target_id
+            # Activity.category_id is annotated str; the column is a UUID.
+            activity.category_id = target_id  # type: ignore[assignment]
 
 
 def _notes(value: Any) -> str | None:

@@ -156,7 +156,8 @@ def _apply_parsed(
     maps_id = None
     if isinstance(maps, dict):
         maps_id = _existing_category(session, maps.get("category_id"))
-    propose = parsed.get("propose") if isinstance(parsed.get("propose"), dict) else {}
+    raw_propose = parsed.get("propose")
+    propose: dict[str, Any] = raw_propose if isinstance(raw_propose, dict) else {}
     parent_id = _existing_category(session, propose.get("parent_id"))
     name = _clean_name(propose.get("name_en"))
     name_zh = _clean_name(propose.get("name_zh"))
@@ -218,22 +219,22 @@ def _alternatives(session: Session, raw: Any) -> list[dict[str, Any]]:
 
 def _merge_usage(existing: Any, delta: dict[str, Any]) -> dict[str, Any]:
     base = existing if isinstance(existing, dict) else {}
+    prompt_tokens = int(delta.get("prompt_tokens") or 0)
+    completion_tokens = int(delta.get("completion_tokens") or 0)
+    cost_usd = float(delta.get("cost_usd") or 0)
     event = {
         "at": datetime.now(timezone.utc).isoformat(),
-        "prompt_tokens": int(delta.get("prompt_tokens") or 0),
-        "completion_tokens": int(delta.get("completion_tokens") or 0),
-        "cost_usd": float(delta.get("cost_usd") or 0),
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "cost_usd": cost_usd,
     }
     events = [item for item in (base.get("events") or []) if isinstance(item, dict)]
     events.append(event)
     return {
-        "prompt_tokens": int(base.get("prompt_tokens") or 0) + event["prompt_tokens"],
+        "prompt_tokens": int(base.get("prompt_tokens") or 0) + prompt_tokens,
         "completion_tokens": int(base.get("completion_tokens") or 0)
-        + event["completion_tokens"],
-        "cost_usd": round(
-            float(base.get("cost_usd") or 0) + float(event["cost_usd"]),
-            6,
-        ),
+        + completion_tokens,
+        "cost_usd": round(float(base.get("cost_usd") or 0) + cost_usd, 6),
         "events": events[-24:],
     }
 

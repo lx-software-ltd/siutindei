@@ -1388,7 +1388,10 @@ export class ApiStack extends cdk.Stack {
       // 1024 MB: Lambda CPU scales with memory, and this function's cold
       // start is import-bound (~2.2-3.0 s at 512 MB on the shared bundle).
       // Invocation volume is tiny, so the per-GB-second cost is negligible.
+      // 120s covers one 90s OpenRouter attempt when SQS invokes this
+      // function. API Gateway still cuts HTTP calls at 29s.
       memorySize: 1024,
+      timeout: cdk.Duration.seconds(120),
       tracing: lambda.Tracing.ACTIVE,
       environment: {
         DATABASE_SECRET_ARN: database.adminUserSecret.secretArn,
@@ -2240,36 +2243,13 @@ export class ApiStack extends cdk.Stack {
         encryptionMasterKey: sqsEncryptionKey,
       }
     );
-    const categorySuggestionsWorker = createPythonFunction(
-      "CategorySuggestionsWorkerFunction",
-      {
-        handler: "lambda/category_suggestions/handler.lambda_handler",
-        memorySize: 512,
-        timeout: cdk.Duration.seconds(120),
-        reservedConcurrentExecutions: 2,
-        environment: {
-          DATABASE_SECRET_ARN: database.adminUserSecret.secretArn,
-          DATABASE_NAME: "siutindei",
-          DATABASE_USERNAME: "siutindei_admin",
-          DATABASE_PROXY_ENDPOINT: database.proxy.endpoint,
-          DATABASE_IAM_AUTH: "true",
-          AWS_PROXY_FUNCTION_ARN: awsProxyFunction.functionArn,
-          OPENROUTER_API_KEY_SECRET_ARN: openRouterApiKeySecret.secretArn,
-          OPENROUTER_CHAT_COMPLETIONS_URL:
-            openRouterChatCompletionsUrl.valueAsString,
-          OPENROUTER_MODEL: openRouterModel.valueAsString,
-          CATEGORY_SUGGESTION_LAMBDA_TIMEOUT_SECONDS: "120",
-          CATEGORY_SUGGESTION_OPENROUTER_TIMEOUT_SECONDS: "90",
-        },
-      }
-    );
-    database.grantAdminUserSecretRead(categorySuggestionsWorker);
-    database.grantConnect(categorySuggestionsWorker, "siutindei_admin");
-    awsProxyFunction.grantInvoke(categorySuggestionsWorker);
-    openRouterApiKeySecret.grantRead(categorySuggestionsWorker);
+    // Enrichment runs on the admin function. A dedicated worker would
+    // add a function, role, policy, log group, invocation DLQ, and
+    // invoke permission, which pushes this stack over the 500-resource
+    // CloudFormation cap.
     openRouterApiKeySecret.grantRead(adminFunction);
     categorySuggestionQueue.grantSendMessages(adminFunction);
-    categorySuggestionsWorker.addEventSource(
+    adminFunction.addEventSource(
       new lambdaEventSources.SqsEventSource(categorySuggestionQueue, {
         batchSize: 1,
         reportBatchItemFailures: true,
@@ -2290,6 +2270,14 @@ export class ApiStack extends cdk.Stack {
     adminFunction.addEnvironment(
       "OPENROUTER_MODEL",
       openRouterModel.valueAsString
+    );
+    adminFunction.addEnvironment(
+      "CATEGORY_SUGGESTION_LAMBDA_TIMEOUT_SECONDS",
+      "120"
+    );
+    adminFunction.addEnvironment(
+      "CATEGORY_SUGGESTION_OPENROUTER_TIMEOUT_SECONDS",
+      "90"
     );
     const categorySuggestionDlqAlarm = new cdk.aws_cloudwatch.Alarm(
       this,
@@ -2637,25 +2625,13 @@ export class ApiStack extends cdk.Stack {
       });
 
       const resourceById = resource.addResource("{id}");
-      if (resourceName === "organizations") {
-        resourceById.addMethod("ANY", adminIntegration, {
-          authorizationType: apigateway.AuthorizationType.CUSTOM,
-          authorizer: managerAuthorizer,
-        });
-      } else {
-        resourceById.addMethod("GET", adminIntegration, {
-          authorizationType: apigateway.AuthorizationType.CUSTOM,
-          authorizer: managerAuthorizer,
-        });
-        resourceById.addMethod("PUT", adminIntegration, {
-          authorizationType: apigateway.AuthorizationType.CUSTOM,
-          authorizer: managerAuthorizer,
-        });
-        resourceById.addMethod("DELETE", adminIntegration, {
-          authorizationType: apigateway.AuthorizationType.CUSTOM,
-          authorizer: managerAuthorizer,
-        });
-      }
+      // One ANY method covers GET/PUT/DELETE. Separate methods push
+      // the stack past the CloudFormation 500-resource cap. The Lambda
+      // rejects methods it does not implement.
+      resourceById.addMethod("ANY", adminIntegration, {
+        authorizationType: apigateway.AuthorizationType.CUSTOM,
+        authorizer: managerAuthorizer,
+      });
     }
 
     // -------------------------------------------------------------------------

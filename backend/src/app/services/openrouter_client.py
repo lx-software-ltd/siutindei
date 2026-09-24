@@ -165,8 +165,10 @@ def openrouter_chat_completion(
     endpoint_url = require_env("OPENROUTER_CHAT_COMPLETIONS_URL")
     chosen = (model or "").strip() or configured_model_name()
     api_key = get_openrouter_api_key()
-    fallbacks = list(fallback_models) if fallback_models is not None else (
-        configured_fallback_models(chosen)
+    fallbacks = (
+        list(fallback_models)
+        if fallback_models is not None
+        else (configured_fallback_models(chosen))
     )
     deny = (
         deny_data_collection
@@ -254,9 +256,7 @@ def extract_message_text(body: str) -> str:
     try:
         payload = json.loads(body)
     except json.JSONDecodeError as exc:
-        raise OpenRouterError(
-            f"OpenRouter response was not valid JSON: {exc}"
-        ) from exc
+        raise OpenRouterError(f"OpenRouter response was not valid JSON: {exc}") from exc
     if not isinstance(payload, dict):
         raise OpenRouterError("OpenRouter response must be a JSON object")
     top_error = payload.get("error")
@@ -282,7 +282,9 @@ def extract_message_text(body: str) -> str:
         parts = [
             str(item.get("text"))
             for item in content
-            if isinstance(item, dict) and item.get("type") == "text" and item.get("text")
+            if isinstance(item, dict)
+            and item.get("type") == "text"
+            and item.get("text")
         ]
         text = "\n".join(parts).strip()
     elif isinstance(content, str):

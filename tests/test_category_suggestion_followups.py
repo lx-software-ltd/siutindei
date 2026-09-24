@@ -335,3 +335,27 @@ def test_settings_model_test_returns_502(monkeypatch, test_engine) -> None:
         None,
     )
     assert response["statusCode"] == 502
+
+
+def test_admin_entrypoint_acks_poison_sqs_message() -> None:
+    import importlib.util
+    from pathlib import Path
+
+    path = Path("backend/lambda/admin/handler.py")
+    spec = importlib.util.spec_from_file_location("admin_entrypoint_sqs", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    result = module.lambda_handler(
+        {
+            "Records": [
+                {
+                    "messageId": "m1",
+                    "eventSource": "aws:sqs",
+                    "body": "not-json",
+                }
+            ]
+        },
+        None,
+    )
+    assert result == {"batchItemFailures": []}

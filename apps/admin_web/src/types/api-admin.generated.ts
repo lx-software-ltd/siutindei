@@ -6023,7 +6023,9 @@ export interface components {
                 [key: string]: number;
             };
             pending_activity_total: number;
+            /** @description Activities still on Pending categorisation whose suggestion is no longer pending, usually a reject without a map target. */
             stranded_activity_total: number;
+            /** @description OpenRouter cost recorded this month. Each enrichment stores its own cost, so earlier months are not included. */
             month_cost_usd: number;
         };
         CategorySuggestionSettings: {

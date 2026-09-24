@@ -375,7 +375,7 @@ def _optional_choice(
 
 
 def _optional_uuid(value: str | None, field: str) -> UUID | None:
-    if value in (None, ""):
+    if not value:
         return None
     return _parse_uuid(value, field)
 
@@ -399,7 +399,7 @@ def _encode_list_cursor(row: CategorySuggestion) -> str:
 
 
 def _parse_list_cursor(value: str | None) -> tuple[int, datetime, UUID] | None:
-    if value in (None, ""):
+    if not value:
         return None
     try:
         padding = "=" * (-len(value) % 4)
