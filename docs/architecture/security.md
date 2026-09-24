@@ -378,6 +378,21 @@ HTTPS/.amazonaws.com URL check) and `gha-curl-pipe-shell` (false-positive
 Bash parse of GitHub `${{ }}` in workflow `run:` blocks; those SARIF
 warnings were surfacing on the Code Scanning tool-status page).
 
+### Personal data in source
+
+Personal names, phone numbers, personal inboxes, street addresses, bank
+account numbers, and business-registration numbers stay out of source and
+docs. `scripts/check-pii.sh` compares normalized text to SHA-256 digests in
+`scripts/pii-denylist.sha256` (digests only; a hit is a path and line).
+Role mailboxes (`hello@`, `support@`, `no-reply@`) remain. Pre-commit,
+the Test workflow, and Security Scanning all run the check. Git author
+trailers are outside it. The scanned suffixes are `.py`, `.ts`, `.tsx`,
+`.js`, `.mjs`, `.dart`, `.sql`, `.md`, `.mdc`, `.yml`, `.yaml`, `.sh`,
+`.html`, and `.css`. Parameter JSON is outside that list; do not commit
+personal inboxes there either. `FallbackManagerEmail` in
+`backend/infrastructure/params/production.json` is empty and matches the
+CDK default.
+
 ### Gitleaks Secret Scanning
 
 Secret Scanning in `.github/workflows/security.yml` runs the MIT-licensed
@@ -410,6 +425,7 @@ Before approving any PR, verify:
 
 ### Logging
 - [ ] No PII (emails, names, etc.) logged without masking
+- [ ] No denylisted personal data in source (`scripts/check-pii.sh`)
 - [ ] No `print()` statements in production code
 - [ ] Error messages don't expose internal details
 
