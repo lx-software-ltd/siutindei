@@ -18,7 +18,11 @@ from app.db.models.category_suggestion import (
     CategorySuggestion,
 )
 from app.services.category_suggestions.prompt import build_enrichment_prompt
-from app.services.category_suggestions.settings import get_settings
+from app.services.category_suggestions.settings import (
+    get_settings,
+    resolved_fallback_models,
+    resolved_model_name,
+)
 from app.services.openrouter_client import (
     WORKLOAD_CATEGORY_SUGGESTION,
     OpenRouterError,
@@ -84,8 +88,8 @@ def process_suggestion(
         _generate(suggestion_id)
     except OpenRouterError as exc:
         _fail_or_requeue(suggestion_id, str(exc), receive_count=receive_count)
-        if receive_count >= 3:
-            return True
+        # Re-raise so SQS keeps the message. The third receive is the
+        # queue's maxReceiveCount, which moves it to the DLQ.
         raise
     except Exception as exc:
         logger.exception(
@@ -114,12 +118,19 @@ def _generate(suggestion_id: UUID) -> None:
             max_evidence=int(settings.max_evidence_items),
         )
         deny = bool(settings.deny_data_collection)
+        model_name = resolved_model_name(settings.openrouter_model)
+        fallbacks = resolved_fallback_models(settings.fallback_models)
+    # One attempt. SQS retries the message; stacking client retries
+    # would exceed the 120s Lambda timeout.
     body = openrouter_chat_completion(
         system_prompt=system,
         user_content=user,
         timeout=_timeout_seconds(),
         workload=WORKLOAD_CATEGORY_SUGGESTION,
         temperature=0,
+        max_attempts=1,
+        model=model_name,
+        fallback_models=fallbacks,
         deny_data_collection=deny,
     )
     text = extract_message_text(body)
@@ -207,15 +218,23 @@ def _alternatives(session: Session, raw: Any) -> list[dict[str, Any]]:
 
 def _merge_usage(existing: Any, delta: dict[str, Any]) -> dict[str, Any]:
     base = existing if isinstance(existing, dict) else {}
+    event = {
+        "at": datetime.now(timezone.utc).isoformat(),
+        "prompt_tokens": int(delta.get("prompt_tokens") or 0),
+        "completion_tokens": int(delta.get("completion_tokens") or 0),
+        "cost_usd": float(delta.get("cost_usd") or 0),
+    }
+    events = [item for item in (base.get("events") or []) if isinstance(item, dict)]
+    events.append(event)
     return {
-        "prompt_tokens": int(base.get("prompt_tokens") or 0)
-        + int(delta.get("prompt_tokens") or 0),
+        "prompt_tokens": int(base.get("prompt_tokens") or 0) + event["prompt_tokens"],
         "completion_tokens": int(base.get("completion_tokens") or 0)
-        + int(delta.get("completion_tokens") or 0),
+        + event["completion_tokens"],
         "cost_usd": round(
-            float(base.get("cost_usd") or 0) + float(delta.get("cost_usd") or 0),
+            float(base.get("cost_usd") or 0) + float(event["cost_usd"]),
             6,
         ),
+        "events": events[-24:],
     }
 
 

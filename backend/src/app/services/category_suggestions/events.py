@@ -34,18 +34,21 @@ def enqueue_enrichment(
                 )
             ).all()
         )
+        queued: list[str] = []
         for row in rows:
             if row.enrichment_status == "running" and not force:
                 continue
             row.enrichment_status = "queued"
             row.enrichment_error = None
+            queued.append(str(row.id))
         session.commit()
     queue_url = os.getenv("CATEGORY_SUGGESTION_QUEUE_URL", "").strip()
-    if not queue_url:
-        logger.warning("CATEGORY_SUGGESTION_QUEUE_URL is not configured")
+    if not queue_url or not queued:
+        if not queue_url and queued:
+            logger.warning("CATEGORY_SUGGESTION_QUEUE_URL is not configured")
         return
     client = get_client("sqs")
-    for suggestion_id in ids:
+    for suggestion_id in queued:
         client.send_message(
             QueueUrl=queue_url,
             MessageBody=json.dumps({"suggestion_id": suggestion_id, "force": force}),

@@ -100,7 +100,7 @@ export function CategorySuggestionSettingsCard() {
   return (
     <Card
       title='Suggestion settings'
-      description='Capture is off until you turn it on. The test call is one short ping.'
+      description='Capture is off until you turn it on. Saved model and fallbacks apply to the next enrichment. The test call is one short ping.'
     >
       {error ? (
         <div className='mb-4'>

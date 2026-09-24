@@ -110,6 +110,13 @@ export function DecisionDialog({
             onChange={(event) => setNotes(event.target.value)}
           />
         </div>
+        {!mapId ? (
+          <p className='text-sm text-slate-600'>
+            Reject without a target leaves these activities in Pending
+            categorisation. Organization review stays blocked until you map
+            them.
+          </p>
+        ) : null}
         <div className='flex flex-wrap gap-3'>
           <Button type='button' onClick={() => void submit('approve')} disabled={isSaving}>
             Approve

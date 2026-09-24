@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryState } from 'nuqs';
 
 import {
@@ -23,38 +23,22 @@ export function CategorySuggestionsPanel() {
   const [summary, setSummary] = useState<CategorySuggestionSummary | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState('');
-
-  const load = useCallback(async () => {
-    try {
-      const [page, counts] = await Promise.all([
-        listCategorySuggestions({ status: status || undefined }),
-        getCategorySuggestionSummary(),
-      ]);
-      setItems(page.items);
-      setNextCursor(page.next_cursor || null);
-      setSummary(counts);
-      setError('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load suggestions.');
-    }
-  }, [status]);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    listCategorySuggestions({ status: status || undefined })
-      .then((page) => {
+    Promise.all([
+      listCategorySuggestions({ status: status || undefined }),
+      getCategorySuggestionSummary(),
+    ])
+      .then(([page, counts]) => {
         if (cancelled) {
-          return null;
+          return;
         }
         setItems(page.items);
         setNextCursor(page.next_cursor || null);
-        return getCategorySuggestionSummary();
-      })
-      .then((counts) => {
-        if (!cancelled && counts) {
-          setSummary(counts);
-          setError('');
-        }
+        setSummary(counts);
+        setError('');
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -66,9 +50,14 @@ export function CategorySuggestionsPanel() {
     return () => {
       cancelled = true;
     };
-  }, [status]);
+  }, [status, reloadToken]);
 
   const pendingCount = summary?.by_status.pending ?? 0;
+  const stranded = summary?.stranded_activity_total ?? 0;
+  const strandedNote =
+    stranded > 0
+      ? ` ${stranded} remain after a decision that did not map them.`
+      : '';
 
   return (
     <div className='space-y-6'>
@@ -80,7 +69,7 @@ export function CategorySuggestionsPanel() {
       ) : null}
       <Card
         title='Category suggestions'
-        description={`${pendingCount} pending. ${summary?.pending_activity_total ?? 0} activities still need a category. This month $${(summary?.month_cost_usd ?? 0).toFixed(4)}.`}
+        description={`${pendingCount} pending. ${summary?.pending_activity_total ?? 0} activities still need a category.${strandedNote} This month $${(summary?.month_cost_usd ?? 0).toFixed(4)}.`}
       >
         <div className='mb-4 max-w-xs'>
           <Select
@@ -98,7 +87,7 @@ export function CategorySuggestionsPanel() {
         <SuggestionsTable
           items={items}
           onOpen={(item) => void setSuggestionId(item.id)}
-          onReload={() => void load()}
+          onReload={() => setReloadToken((value) => value + 1)}
           nextCursor={nextCursor}
           onLoadMore={() => {
             if (!nextCursor) {

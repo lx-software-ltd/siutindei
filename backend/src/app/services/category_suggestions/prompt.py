@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
@@ -57,8 +58,6 @@ def build_enrichment_prompt(
         "taxonomy": taxonomy,
         "do_not_propose": rejected,
     }
-    import json
-
     return system, json.dumps(user, ensure_ascii=False)
 
 

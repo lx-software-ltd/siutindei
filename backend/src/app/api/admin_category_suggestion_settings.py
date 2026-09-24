@@ -8,12 +8,13 @@ from typing import Mapping
 from sqlalchemy.orm import Session
 
 from app.api.admin_auth import _get_user_sub, _set_session_audit_context
-from app.api.admin_request import _parse_body
+from app.api.admin_request import parse_object_body
 from app.db.engine import get_engine
-from app.exceptions import ValidationError
 from app.services.category_suggestions.settings import (
     apply_settings_update,
     get_settings,
+    resolved_fallback_models,
+    resolved_model_name,
     serialize_settings,
 )
 from app.services.openrouter_client import (
@@ -71,9 +72,8 @@ def _handle_put(event: Mapping[str, Any]) -> dict[str, Any]:
 def _handle_test(event: Mapping[str, Any]) -> dict[str, Any]:
     body = _object_body(event)
     model = body.get("model")
-    model_name = (
-        str(model).strip() if isinstance(model, str) and model.strip() else None
-    )
+    override = str(model).strip() if isinstance(model, str) and model.strip() else None
+    model_name, fallbacks, deny = _test_call_settings(override)
     try:
         raw = openrouter_chat_completion(
             system_prompt="Reply with the single word ok.",
@@ -83,6 +83,8 @@ def _handle_test(event: Mapping[str, Any]) -> dict[str, Any]:
             temperature=0,
             max_attempts=1,
             model=model_name,
+            fallback_models=fallbacks,
+            deny_data_collection=deny,
         )
     except OpenRouterError as exc:
         return json_response(
@@ -102,10 +104,16 @@ def _handle_test(event: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _object_body(event: Mapping[str, Any]) -> dict[str, Any]:
-    raw = event.get("body") or ""
-    if not str(raw).strip():
-        return {}
-    body = _parse_body(event)
-    if not isinstance(body, dict):
-        raise ValidationError("Request body must be an object")
-    return body
+    return parse_object_body(event)
+
+
+def _test_call_settings(override: str | None) -> tuple[str, list[str], bool]:
+    """Read the saved model for this call so a settings save is immediate."""
+    with Session(get_engine()) as session:
+        row = get_settings(session)
+        stored = override if override is not None else row.openrouter_model
+        return (
+            resolved_model_name(stored),
+            resolved_fallback_models(row.fallback_models),
+            bool(row.deny_data_collection),
+        )

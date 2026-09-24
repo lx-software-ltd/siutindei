@@ -25,7 +25,7 @@ This document outlines security best practices and requirements for the Siu Tin 
 
 ### DO
 
-- Use AWS Secrets Manager for database credentials and the OpenRouter API key (`OpenRouterApiKey`, noEcho, secret `openrouter-api-key`)
+- Use AWS Secrets Manager for database credentials and the OpenRouter API key (`OpenRouterApiKey`, noEcho, secret `openrouter-api-key`). An empty parameter stores the placeholder `pending` so the stack can deploy before the key exists.
 - Category suggestion prompts redact emails and phone numbers before they leave the VPC. `provider.data_collection` stays `deny` unless an admin turns that setting off.
 - Use GitHub Secrets for CI/CD sensitive values
 - Use CDK parameters with `noEcho: true` for secrets

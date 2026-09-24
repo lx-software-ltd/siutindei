@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from sqlalchemy import or_, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db.models import ActivityCategory
@@ -17,6 +18,9 @@ from app.db.models.category_suggestion import (
 )
 from app.exceptions import ValidationError
 from app.services.category_suggestions.settings import get_settings
+from app.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 _PUNCT_RE = re.compile(r"[^\w\s]+", re.UNICODE)
 _SPACE_RE = re.compile(r"\s+")
@@ -64,8 +68,12 @@ def begin_capture_batch(session: Session) -> None:
     _last_enqueue = []
 
 
-def finish_capture_batch(summary: dict) -> None:
-    """Record how many distinct suggestions this batch touched."""
+def finish_capture_batch(summary: dict, session: Session | None = None) -> None:
+    """Record suggestions from this batch that are still in the transaction.
+
+    A per-row savepoint can roll back after the id was noted. Those ids
+    are dropped so the summary and the enqueue list match committed rows.
+    """
     global _batch, _last_enqueue
     batch = _batch
     _batch = None
@@ -73,8 +81,9 @@ def finish_capture_batch(summary: dict) -> None:
         summary.setdefault("captured_categories", 0)
         _last_enqueue = []
         return
-    summary["captured_categories"] = len(batch.seen)
-    _last_enqueue = list(batch.enqueue)
+    surviving = _surviving_ids(session, batch.seen)
+    summary["captured_categories"] = len(surviving)
+    _last_enqueue = [item for item in batch.enqueue if item in surviving]
 
 
 def take_import_category_enqueues() -> list[str]:
@@ -121,15 +130,17 @@ def resolve_category_name(session: Session, category_name: str) -> CategoryResol
     name = category_name.strip()
     exact = _exact_ids(session, name)
     if len(exact) > 1:
+        if capture_enabled(session):
+            return CategoryResolution(capture=True)
         raise ValidationError("unknown category_name", field="category_name")
     if len(exact) == 1:
         return CategoryResolution(category_id=exact[0])
     alias = _alias_category_id(session, name)
     if alias is not None:
         return CategoryResolution(category_id=alias)
-    fuzzy = _fuzzy_ids(session, name)
-    if len(fuzzy) == 1:
-        return CategoryResolution(category_id=next(iter(fuzzy)))
+    normalized = _normalized_ids(session, name)
+    if len(normalized) == 1:
+        return CategoryResolution(category_id=next(iter(normalized)))
     if capture_enabled(session):
         return CategoryResolution(capture=True)
     raise ValidationError("unknown category_name", field="category_name")
@@ -164,7 +175,23 @@ def _alias_category_id(session: Session, name: str) -> UUID | None:
     return target
 
 
-def _fuzzy_ids(session: Session, name: str) -> set[UUID]:
+def _surviving_ids(session: Session | None, ids: set[str]) -> set[str]:
+    """Keep ids that still exist. A failed transaction keeps the in-memory set."""
+    if session is None or not ids or not session.is_active:
+        return set(ids)
+    try:
+        found = session.scalars(
+            select(CategorySuggestion.id).where(
+                CategorySuggestion.id.in_([UUID(item) for item in ids])
+            )
+        ).all()
+    except SQLAlchemyError:
+        logger.warning("Could not confirm captured category suggestions")
+        return set(ids)
+    return {str(item) for item in found}
+
+
+def _normalized_ids(session: Session, name: str) -> set[UUID]:
     key = normalize_category_key(name)
     if not key:
         return set()

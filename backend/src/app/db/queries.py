@@ -17,7 +17,6 @@ from sqlalchemy import select
 from sqlalchemy.sql import Select
 
 from app.db.models import Activity
-from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.db.models import ActivityPricing
 from app.db.models import ActivitySchedule
 from app.db.models import ActivityScheduleEntry
@@ -26,6 +25,7 @@ from app.db.models import Location
 from app.db.models import Organization
 from app.db.models import PricingType
 from app.db.models import ScheduleType
+from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 
 
 @dataclass(frozen=True)

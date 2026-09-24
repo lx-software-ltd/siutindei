@@ -690,6 +690,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
           by_status: { pending: 1 },
           by_enrichment_status: { done: 1 },
           pending_activity_total: 2,
+          stranded_activity_total: 0,
           month_cost_usd: 0.01,
         }),
       });

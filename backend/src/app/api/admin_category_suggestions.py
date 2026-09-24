@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import json
 from datetime import datetime
 from datetime import timezone
 from typing import Any
@@ -16,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.api.admin_auth import _get_user_sub, _set_session_audit_context
 from app.api.admin_category_suggestion_settings import handle_settings
-from app.api.admin_request import _parse_body, _query_param, parse_limit
+from app.api.admin_request import _query_param, parse_limit, parse_object_body
 from app.db.engine import get_engine
 from app.db.models import Activity, Organization
 from app.db.models.category_suggestion import (
@@ -211,16 +213,67 @@ def _summary(session: Session) -> dict[str, Any]:
     month_rows = session.scalars(
         select(CategorySuggestion).where(CategorySuggestion.enriched_at >= month_start)
     ).all()
-    month_cost = 0.0
-    for row in month_rows:
-        usage = row.usage if isinstance(row.usage, dict) else {}
-        month_cost += float(usage.get("cost_usd") or 0)
+    month_cost = sum(
+        _month_cost(row.usage, row.enriched_at, month_start) for row in month_rows
+    )
+    stranded = int(
+        session.scalar(
+            select(func.count())
+            .select_from(Activity)
+            .where(Activity.category_id == PENDING_CATEGORY_ID)
+            .where(
+                select(CategorySuggestionActivity.activity_id)
+                .join(
+                    CategorySuggestion,
+                    CategorySuggestion.id == CategorySuggestionActivity.suggestion_id,
+                )
+                .where(CategorySuggestionActivity.activity_id == Activity.id)
+                .where(CategorySuggestion.status != "pending")
+                .exists()
+            )
+        )
+        or 0
+    )
     return {
         "by_status": by_status,
         "by_enrichment_status": by_enrichment,
         "pending_activity_total": pending_activities,
+        "stranded_activity_total": stranded,
         "month_cost_usd": round(month_cost, 6),
     }
+
+
+def _month_cost(
+    usage: Any, enriched_at: datetime | None, month_start: datetime
+) -> float:
+    """Sum enrichment cost recorded this month, not the lifetime total."""
+    payload = usage if isinstance(usage, dict) else {}
+    events = payload.get("events")
+    if isinstance(events, list) and events:
+        total = 0.0
+        for event in events:
+            if not isinstance(event, dict):
+                continue
+            occurred = _parse_event_time(event.get("at"))
+            if occurred is None or occurred < month_start:
+                continue
+            total += float(event.get("cost_usd") or 0)
+        return total
+    if enriched_at is not None and enriched_at >= month_start:
+        return float(payload.get("cost_usd") or 0)
+    return 0.0
+
+
+def _parse_event_time(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed
 
 
 def _links(session: Session, suggestion_id: UUID) -> list[dict[str, Any]]:
@@ -266,12 +319,12 @@ def _list_query(
         )
         query = query.where(linked.exists())
     if query_text:
-        like = f"%{query_text.casefold()}%"
+        like = _like_contains(query_text)
         query = query.where(
             or_(
-                func.lower(CategorySuggestion.requested_name).like(like),
+                func.lower(CategorySuggestion.requested_name).like(like, escape="\\"),
                 func.lower(func.coalesce(CategorySuggestion.suggested_name, "")).like(
-                    like
+                    like, escape="\\"
                 ),
             )
         )
@@ -299,17 +352,14 @@ def _list_query(
 
 
 def _object_body(event: Mapping[str, Any]) -> dict[str, Any]:
-    raw = event.get("body") or ""
-    if event.get("isBase64Encoded"):
-        import base64
+    return parse_object_body(event)
 
-        raw = base64.b64decode(raw).decode("utf-8")
-    if not str(raw).strip():
-        return {}
-    body = _parse_body(event)
-    if not isinstance(body, dict):
-        raise ValidationError("Request body must be an object")
-    return body
+
+def _like_contains(value: str) -> str:
+    escaped = (
+        value.casefold().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    )
+    return f"%{escaped}%"
 
 
 def _optional_choice(
@@ -338,9 +388,6 @@ def _parse_uuid(value: str, field: str = "id") -> UUID:
 
 
 def _encode_list_cursor(row: CategorySuggestion) -> str:
-    import base64
-    import json
-
     payload = json.dumps(
         {
             "activity_count": int(row.activity_count or 0),
@@ -354,9 +401,6 @@ def _encode_list_cursor(row: CategorySuggestion) -> str:
 def _parse_list_cursor(value: str | None) -> tuple[int, datetime, UUID] | None:
     if value in (None, ""):
         return None
-    import base64
-    import json
-
     try:
         padding = "=" * (-len(value) % 4)
         payload = json.loads(base64.urlsafe_b64decode(value + padding))

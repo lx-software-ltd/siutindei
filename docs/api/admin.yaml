@@ -5043,6 +5043,7 @@ components:
         - by_status
         - by_enrichment_status
         - pending_activity_total
+        - stranded_activity_total
         - month_cost_usd
       properties:
         by_status:
@@ -5055,8 +5056,16 @@ components:
             type: integer
         pending_activity_total:
           type: integer
+        stranded_activity_total:
+          type: integer
+          description: >-
+            Activities still on Pending categorisation whose suggestion is
+            no longer pending, usually a reject without a map target.
         month_cost_usd:
           type: number
+          description: >-
+            OpenRouter cost recorded this month. Each enrichment stores its
+            own cost, so earlier months are not included.
 
     CategorySuggestionSettings:
       type: object

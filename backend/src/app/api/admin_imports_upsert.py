@@ -38,7 +38,6 @@ from app.api.admin_imports_utils import (
     persist_import_change,
 )
 from app.api.admin_resource_activity import _create_activity, _update_activity
-from app.services.category_suggestions.capture import record_import_capture
 from app.api.admin_resource_location import _create_location, _update_location
 from app.api.admin_resource_organization import (
     _create_organization,
@@ -62,6 +61,7 @@ from app.db.repositories import (
     OrganizationRepository,
 )
 from app.exceptions import ValidationError
+from app.services.category_suggestions.capture import record_import_capture
 
 ALLOWED_ORG_FIELDS = {
     "name",

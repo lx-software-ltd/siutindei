@@ -30,10 +30,13 @@ import os
 from typing import Any, Mapping, Optional
 from urllib.parse import urlparse
 
-import boto3
 from botocore.config import Config
-from botocore.exceptions import BotoCoreError, ClientError, ConnectTimeoutError
-from botocore.exceptions import ReadTimeoutError
+from botocore.exceptions import (
+    BotoCoreError,
+    ClientError,
+    ConnectTimeoutError,
+    ReadTimeoutError,
+)
 
 from app.services.aws_clients import get_client
 from app.utils.logging import configure_logging, get_logger
@@ -257,7 +260,6 @@ class AwsProxyError(Exception):
 
 
 # Module-level cache
-_lambda_client: Any = None
 _proxy_arn: str | None = None
 
 
@@ -280,10 +282,7 @@ def _lambda_invoke_config() -> Config:
 
 
 def _get_lambda_client() -> Any:
-    global _lambda_client
-    if _lambda_client is None:
-        _lambda_client = boto3.client("lambda", config=_lambda_invoke_config())
-    return _lambda_client
+    return get_client("lambda", config=_lambda_invoke_config())
 
 
 def _invoke_proxy(payload: dict[str, Any]) -> dict[str, Any]:

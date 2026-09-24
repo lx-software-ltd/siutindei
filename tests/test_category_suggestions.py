@@ -467,7 +467,8 @@ def test_worker_success_repair_invalid_refusal_and_stale(
         "app.services.openrouter_client.openrouter_chat_completion",
         _limited,
     )
-    assert process_suggestion(suggestion_id, force=True, receive_count=3) is True
+    with pytest.raises(OpenRouterError):
+        process_suggestion(suggestion_id, force=True, receive_count=3)
     with Session(engine) as session:
         row = session.get(CategorySuggestion, suggestion_id)
         assert row is not None

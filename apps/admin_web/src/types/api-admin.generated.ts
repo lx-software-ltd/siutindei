@@ -6023,6 +6023,7 @@ export interface components {
                 [key: string]: number;
             };
             pending_activity_total: number;
+            stranded_activity_total: number;
             month_cost_usd: number;
         };
         CategorySuggestionSettings: {

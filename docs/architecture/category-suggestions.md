@@ -10,11 +10,12 @@ Endpoint shapes live in `docs/api/admin.yaml` under
 ## Capture
 
 Resolution order for `category_name` is exact name, then an alias from
-an approved or targeted suggestion, then a unique fuzzy match on the
-English name and `name_translations` (case, whitespace, and punctuation
-insensitive). Anything else is captured when `on_import_enabled` is
-true. When that switch is false, an unknown name still fails the
-import the way it does today.
+an approved or targeted suggestion, then a unique normalised match on
+the English name and `name_translations` (case, whitespace, and
+punctuation insensitive). Anything else is captured when
+`on_import_enabled` is true. Two categories with the same exact name
+are captured too when that switch is on; when it is off, an unknown or
+ambiguous name still fails the import.
 
 Captured activities use the system category Pending categorisation
 (`c1111111-1111-1111-1111-111111111199`, Chinese name 待分類). Public
@@ -26,6 +27,9 @@ One suggestion exists per normalised name. A rejected suggestion with
 no target reopens if the same name is imported again. A target on
 approve, map, or reject-with-target is an alias for later imports.
 Reject without a target leaves activities on the pending category.
+Those activities stay out of search and keep the organization blocked.
+The summary reports them as `stranded_activity_total`, and the admin
+detail says they still need a map.
 
 Live imports enqueue enrichment when a suggestion is created or
 reopened, or when its activity count crosses 5 or 25. Dry runs roll
@@ -46,10 +50,13 @@ The default model is `qwen/qwen3-30b-a3b` with fallback
 `qwen/qwen-turbo`. Admins change the model on the settings singleton
 without a redeploy.
 
-The worker timeout is 120 seconds and the OpenRouter call is 90
-seconds. The admin "test model" action is one attempt of about 15
-seconds because API Gateway REST integrations time out at 29 seconds
-and the admin Lambda timeout is 30 seconds.
+The worker timeout is 120 seconds and makes one OpenRouter call of up
+to 90 seconds. SQS retries that message; the client does not retry
+inside the Lambda, because three 90-second attempts would be killed
+at the Lambda timeout. The admin "test model" action reads the saved
+model for that request and is one attempt of about 15 seconds, because
+API Gateway REST integrations time out at 29 seconds and the admin
+Lambda timeout is 30 seconds.
 
 Prompts redact email addresses and phone numbers. The model is asked
 to prefer an existing category, otherwise a sub-category, with a

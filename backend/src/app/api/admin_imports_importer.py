@@ -94,7 +94,7 @@ def process_import_payload(
         finish_import_batch(session, dry_run=dry_run)
         return summary, results
     finally:
-        finish_capture_batch(summary)
+        finish_capture_batch(summary, session)
 
 
 def _review_status_needs_warning(

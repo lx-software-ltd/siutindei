@@ -11,7 +11,6 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.admin_resource_activity_category import _create_activity_category
 from app.db.models import Activity, ActivityCategory
 from app.db.models.category_suggestion import (
     PENDING_CATEGORY_ID,
@@ -21,6 +20,7 @@ from app.db.models.category_suggestion import (
 from app.db.repositories import ActivityCategoryRepository
 from app.db.repositories.category_suggestion import CategorySuggestionRepository
 from app.exceptions import ValidationError
+from app.services.activity_categories import create_activity_category
 
 _DECIDABLE = {"pending", "rejected"}
 _ACTIONS = {"approve", "map", "reject"}
@@ -72,7 +72,7 @@ def _approve(
     body: dict[str, Any],
 ) -> ActivityCategory:
     repo = ActivityCategoryRepository(session)
-    category = _create_activity_category(repo, _approve_body(suggestion, body))
+    category = create_activity_category(repo, _approve_body(suggestion, body))
     try:
         with session.begin_nested():
             session.add(category)

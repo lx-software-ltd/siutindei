@@ -64,6 +64,12 @@ export function SuggestionDetail({ suggestionId, onClose }: SuggestionDetailProp
         description={item.rationale || 'No rationale yet.'}
       >
         {error ? <p className='mb-3 text-sm text-red-600'>{error}</p> : null}
+        {item.status === 'rejected' && !item.merged_into_category_id ? (
+          <p className='mb-3 text-sm text-amber-800'>
+            These activities are still in Pending categorisation, so the
+            organization cannot be approved until you map them.
+          </p>
+        ) : null}
         <dl className='grid gap-2 text-sm md:grid-cols-2'>
           <div>Status: {item.status}</div>
           <div>Enrichment: {item.enrichment_status}</div>

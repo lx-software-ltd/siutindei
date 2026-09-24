@@ -672,7 +672,8 @@ export class ApiStack extends cdk.Stack {
       noEcho: true,
       description:
         "OpenRouter API key for lxsoftware:siutindei. Stored in " +
-        "Secrets Manager. Leave empty until the key is minted.",
+        "Secrets Manager. Leave empty to store the placeholder pending " +
+        "until the key is minted.",
     });
     const openRouterChatCompletionsUrl = new cdk.CfnParameter(
       this,
@@ -2192,6 +2193,15 @@ export class ApiStack extends cdk.Stack {
       encryptionKey: secretsEncryptionKey,
     });
 
+    const openRouterKeyProvided = new cdk.CfnCondition(
+      this,
+      "OpenRouterKeyProvided",
+      {
+        expression: cdk.Fn.conditionNot(
+          cdk.Fn.conditionEquals(openRouterApiKey.valueAsString, "")
+        ),
+      }
+    );
     const openRouterApiKeySecret = new secretsmanager.Secret(
       this,
       "OpenRouterApiKeySecret",
@@ -2200,7 +2210,13 @@ export class ApiStack extends cdk.Stack {
         description: "OpenRouter API key for lxsoftware:siutindei",
         encryptionKey: secretsEncryptionKey,
         secretStringValue: cdk.SecretValue.unsafePlainText(
-          openRouterApiKey.valueAsString
+          cdk.Token.asString(
+            cdk.Fn.conditionIf(
+              openRouterKeyProvided.logicalId,
+              openRouterApiKey.valueAsString,
+              "pending"
+            )
+          )
         ),
       }
     );

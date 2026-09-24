@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from datetime import datetime
 from datetime import timezone
@@ -10,6 +11,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.db.models.category_suggestion import (
+    DEFAULT_FALLBACK_MODELS,
     DEFAULT_OPENROUTER_MODEL,
     CategorySuggestionSettings,
 )
@@ -54,6 +56,19 @@ def load_deny_data_collection() -> bool:
 
     with Session(get_engine()) as session:
         return bool(get_settings(session).deny_data_collection)
+
+
+def resolved_model_name(stored: str | None) -> str:
+    """Saved slug, else the environment, else the Qwen default. No cache."""
+    chosen = (stored or "").strip() or os.getenv("OPENROUTER_MODEL", "").strip()
+    return chosen or DEFAULT_OPENROUTER_MODEL
+
+
+def resolved_fallback_models(stored: Any) -> list[str]:
+    """Saved fallbacks, or the built-in list when none are stored."""
+    values = stored if isinstance(stored, list) else []
+    slugs = [str(item).strip() for item in values if str(item).strip()]
+    return slugs or list(DEFAULT_FALLBACK_MODELS)
 
 
 def validate_model_slug(value: str, field: str) -> str:

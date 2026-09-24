@@ -51,6 +51,7 @@ export interface CategorySuggestionSummary {
   by_status: Record<string, number>;
   by_enrichment_status: Record<string, number>;
   pending_activity_total: number;
+  stranded_activity_total: number;
   month_cost_usd: number;
 }
 

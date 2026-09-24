@@ -303,8 +303,9 @@ their primary responsibilities.
   should sit, then store the proposal
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - VPC: Yes
-- Timeout: 120 seconds. OpenRouter timeout 90 seconds. Reserved
-  concurrency 2.
+- Timeout: 120 seconds. One OpenRouter attempt of up to 90 seconds
+  per receive; SQS retries, and the third failure is left for the DLQ.
+  Reserved concurrency 2.
 - Permissions: invoke `AwsApiProxyFunction`, read the OpenRouter secret
 - Environment: database connection variables,
   `AWS_PROXY_FUNCTION_ARN`, `OPENROUTER_API_KEY_SECRET_ARN`,
