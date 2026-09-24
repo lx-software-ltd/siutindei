@@ -15,6 +15,8 @@ export interface AppShellProps {
   sections: NavSection[];
   activeKey: string;
   onSelect: (key: string) => void;
+  /** Hover or focus on a nav item. Used to prefetch that section's list. */
+  onIntent?: (key: string) => void;
   onLogout: () => void;
   userEmail?: string;
   lastAuthTime?: string;
@@ -87,6 +89,7 @@ export function AppShell({
   sections,
   activeKey,
   onSelect,
+  onIntent,
   onLogout,
   userEmail,
   lastAuthTime,
@@ -233,6 +236,8 @@ export function AppShell({
                     <button
                       type='button'
                       onClick={() => handleNavSelect(section.key)}
+                      onMouseEnter={() => onIntent?.(section.key)}
+                      onFocus={() => onIntent?.(section.key)}
                       className={`w-full rounded-md px-3 py-2.5 text-left text-sm font-medium ${
                         isActive
                           ? 'bg-slate-900 text-white'
@@ -265,6 +270,8 @@ export function AppShell({
                     <button
                       type='button'
                       onClick={() => onSelect(section.key)}
+                      onMouseEnter={() => onIntent?.(section.key)}
+                      onFocus={() => onIntent?.(section.key)}
                       className={`w-full rounded-md px-3 py-2 text-left text-sm ${
                         isActive
                           ? 'bg-slate-900 text-white'

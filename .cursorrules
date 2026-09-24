@@ -486,3 +486,48 @@ You are an AI assistant specialized in Python development. Your approach emphasi
    - Rich error context for debugging
 
 You provide code snippets and explanations tailored to these principles, optimizing for clarity and AI-assisted development.
+
+### Admin Web CRUD UX pattern (MANDATORY for `apps/admin_web/**`)
+
+The admin product standard is **table-first, expand-in-place**. Build list
+screens from `apps/admin_web/src/components/ui/`:
+
+- **Page order:** filters, then the table, inside one untitled white `Card`
+  (`AdminRecordTable`). Do not render a listing card title. The section name
+  already appears in the nav.
+- **Filters** (`AdminFilterBar` + `AdminFilterField`) sit above the table.
+  The create control (`AdminCreateButton`) spells out its label (`New
+  organization`) at every breakpoint, lives in the trailing slot, and moves
+  to its own full-width line on phones. Filters apply on change. Text
+  filters are debounced. Do not render Apply or Clear.
+- **Rows expand in place** (`AdminExpandableRow` + `useExpandedRecord`).
+  One row is open. The open record is framed with the inset box-shadow
+  classes in `globals.css`. Do not put `border-x-*` on expandable rows.
+  Create inserts a draft row (`DRAFT_RECORD_ID`, URL value `new`).
+- **Editors** (`AdminEditorPanel` + `AdminEditorActions`) have no title and
+  no Cancel button. Fields use `AdminFieldGrid` with 1, 2, or 4 columns.
+  Leaving the row collapses it. Unsaved edits are confirmed with
+  `AdminDiscardChangesDialog`.
+- **Operations** uses `AdminRowActions`: icon-only, same size, bordered,
+  white, tooltip. More than two actions: the first stays inline and the
+  rest go in the three-dots menu. Destructive actions confirm with
+  `ConfirmDialog`. Tables with no row actions omit the Operations column
+  (`hasActions={false}` on `ResourceTableShell`).
+- **Mobile:** no `min-w-*` on record tables. Non-essential columns use
+  `priority='secondary'` (from `md`) or `priority='tertiary'` (from `lg`).
+  Surface one hidden value with `AdminDataTableCellMeta`. Cells wrap long
+  tokens below `md`.
+- **In-flight buttons** use `Button` `loading`. Loading tables use
+  `AdminSkeletonRows`. Do not hand-roll `Saving...` ternaries.
+- **Server state** is TanStack Query. Use `getAdminQueryClient()`,
+  `adminQueryKeys`, and `usePaginatedList`. Do not add new
+  `useEffect` + `useState` list loops. `useResourceEditor` is the list +
+  editor hook for `resource-api` CRUD screens.
+- **Read-only records** still expand in place. Do not add a detail dialog
+  for them. `ConfirmDialog` is only for confirm/cancel.
+- **In-area switchers** use `AdminTabStrip` (button group, not ARIA tabs).
+- **Exception:** organization media stays a drag-reorder grid. Document
+  any new exception with a comment at the site.
+- Deep links use `?<entity>=<id>` (`organization`, `location`, `activity`,
+  `pricing`, `schedule`, `category`, `feedback`, `feedback-label`,
+  `api-key`, `suggestion`). Organizations still accept legacy `?edit=`.

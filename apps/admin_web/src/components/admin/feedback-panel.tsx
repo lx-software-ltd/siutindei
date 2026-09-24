@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { useResourcePanel } from '../../hooks/use-resource-panel';
+import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { ApiError, listResource } from '../../lib/api-client';
 import { formatDate } from '../../lib/date-utils';
 import type {
@@ -10,11 +10,21 @@ import type {
   Organization,
   OrganizationFeedback,
 } from '../../types/admin';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { DataTable } from '../ui/data-table';
+import { AdminCreateButton } from '../ui/admin-create-button';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '../ui/admin-data-table';
+import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import {
+  deleteRowActions,
+  ResourceTableShell,
+} from '../ui/resource-table-shell';
 import { Select } from '../ui/select';
 import { StarRating } from '../ui/star-rating';
 import { Textarea } from '../ui/textarea';
@@ -53,16 +63,19 @@ function itemToForm(item: OrganizationFeedback): FeedbackFormState {
 }
 
 export function FeedbackPanel() {
-  const panel = useResourcePanel<OrganizationFeedback, FeedbackFormState>(
-    'organization-feedback',
-    'admin',
+  const panel = useResourceEditor<OrganizationFeedback, FeedbackFormState>({
+    resource: 'organization-feedback',
+    mode: 'admin',
     emptyForm,
-    itemToForm
-  );
+    itemToForm,
+    paramName: 'feedback',
+    noun: 'feedback',
+  });
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [labels, setLabels] = useState<FeedbackLabel[]>([]);
   const [lookupError, setLookupError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const loadLookups = async () => {
@@ -126,248 +139,273 @@ export function FeedbackPanel() {
     source_ticket_id: form.source_ticket_id.trim() || undefined,
   });
 
-  const columns = useMemo(
-    () => [
-      {
-        key: 'organization',
-        header: 'Organization',
-        primary: true,
-        render: (item: OrganizationFeedback) =>
-          item.organization_name || item.organization_id,
-      },
-      {
-        key: 'stars',
-        header: 'Stars',
-        render: (item: OrganizationFeedback) => item.stars,
-      },
-      {
-        key: 'labels',
-        header: 'Labels',
-        render: (item: OrganizationFeedback) => {
-          const names =
-            item.label_ids?.map((id) => labelNameById.get(id) || id) ?? [];
-          return (
-            <span className='text-slate-600'>
-              {names.length ? names.join(', ') : '—'}
-            </span>
-          );
-        },
-      },
-      {
-        key: 'submitter',
-        header: 'Submitter',
-        render: (item: OrganizationFeedback) => (
-          <span className='text-slate-600'>
-            {item.submitter_email || item.submitter_id || '—'}
-          </span>
-        ),
-      },
-      {
-        key: 'created',
-        header: 'Submitted',
-        render: (item: OrganizationFeedback) => (
-          <span className='text-slate-600'>
-            {formatDate(item.created_at)}
-          </span>
-        ),
-      },
-    ],
-    [labelNameById]
-  );
+  const handleSubmit = () => panel.handleSubmit(formToPayload, validate);
 
-  return (
-    <div className='space-y-6'>
-      <Card
-        title={panel.editingId ? 'Edit Feedback' : 'New Feedback'}
-        description='Manage approved feedback entries for organizations.'
-      >
-        {panel.error && (
-          <div className='mb-4'>
-            <StatusBanner variant='error' title='Error'>
-              {panel.error}
-            </StatusBanner>
-          </div>
-        )}
-        {lookupError && (
-          <div className='mb-4'>
-            <StatusBanner variant='error' title='Lookups'>
-              {lookupError}
-            </StatusBanner>
-          </div>
-        )}
+  const labelNames = (item: OrganizationFeedback) =>
+    item.label_ids?.map((id) => labelNameById.get(id) || id) ?? [];
 
-        <div className='space-y-4'>
-          <div>
-            <Label htmlFor='feedback-organization'>Organization</Label>
-            <Select
-              id='feedback-organization'
-              value={panel.formState.organization_id}
-              onChange={(e) =>
+  const filteredItems = panel.items.filter((item) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    const names = labelNames(item).join(' ').toLowerCase();
+    return (
+      (item.organization_name || item.organization_id)
+        .toLowerCase()
+        .includes(query) ||
+      `${item.stars}`.includes(query) ||
+      names.includes(query) ||
+      (item.submitter_email || '').toLowerCase().includes(query) ||
+      (item.submitter_id || '').toLowerCase().includes(query) ||
+      (item.description || '').toLowerCase().includes(query)
+    );
+  });
+
+  const detail = (
+    <AdminEditorPanel
+      status={
+        panel.error ? (
+          <StatusBanner variant='error' title='Error'>
+            {panel.error}
+          </StatusBanner>
+        ) : null
+      }
+      actions={
+        <AdminEditorActions
+          mode={panel.editorMode}
+          onSubmit={handleSubmit}
+          isSaving={panel.isSaving}
+        />
+      }
+    >
+      <AdminFieldGrid columns={2}>
+        <div className='sm:col-span-2'>
+          <Label htmlFor='feedback-organization'>Organization</Label>
+          <Select
+            id='feedback-organization'
+            value={panel.formState.organization_id}
+            onChange={(e) =>
+              panel.setFormState((prev) => ({
+                ...prev,
+                organization_id: e.target.value,
+              }))
+            }
+          >
+            <option value=''>Select organization...</option>
+            {organizations.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor='feedback-stars'>Stars</Label>
+          <div className='mt-2 flex items-center gap-2'>
+            <StarRating
+              value={panel.formState.stars}
+              onChange={(value) =>
                 panel.setFormState((prev) => ({
                   ...prev,
-                  organization_id: e.target.value,
-                }))
-              }
-            >
-              <option value=''>Select organization...</option>
-              {organizations.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          <div className='grid gap-4 sm:grid-cols-2'>
-            <div>
-              <Label htmlFor='feedback-stars'>Stars</Label>
-              <div className='mt-2 flex items-center gap-2'>
-                <StarRating
-                  value={panel.formState.stars}
-                  onChange={(value) =>
-                    panel.setFormState((prev) => ({
-                      ...prev,
-                      stars: value,
-                    }))
-                  }
-                />
-                <span className='text-sm text-slate-500'>
-                  {panel.formState.stars}/5
-                </span>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor='feedback-ticket-id'>Source Ticket ID</Label>
-              <Input
-                id='feedback-ticket-id'
-                type='text'
-                value={panel.formState.source_ticket_id}
-                onChange={(e) =>
-                  panel.setFormState((prev) => ({
-                    ...prev,
-                    source_ticket_id: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </div>
-
-          <div className='grid gap-4 sm:grid-cols-2'>
-            <div>
-              <Label htmlFor='feedback-submit-id'>Submitter ID</Label>
-              <Input
-                id='feedback-submit-id'
-                type='text'
-                value={panel.formState.submitter_id}
-                onChange={(e) =>
-                  panel.setFormState((prev) => ({
-                    ...prev,
-                    submitter_id: e.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor='feedback-submit-email'>Submitter Email</Label>
-              <Input
-                id='feedback-submit-email'
-                type='email'
-                value={panel.formState.submitter_email}
-                onChange={(e) =>
-                  panel.setFormState((prev) => ({
-                    ...prev,
-                    submitter_email: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label>Labels</Label>
-            {labels.length === 0 ? (
-              <p className='text-sm text-slate-500'>
-                No feedback labels available.
-              </p>
-            ) : (
-              <div className='mt-2 flex flex-wrap gap-2'>
-                {labels.map((label) => {
-                  const isSelected = panel.formState.label_ids.includes(
-                    label.id
-                  );
-                  return (
-                    <button
-                      key={label.id}
-                      type='button'
-                      onClick={() => toggleLabel(label.id)}
-                      className={`rounded-full border px-3 py-1 text-sm ${
-                        isSelected
-                          ? 'border-slate-900 bg-slate-900 text-white'
-                          : 'border-slate-200 bg-white text-slate-600'
-                      }`}
-                    >
-                      {label.name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor='feedback-description'>Description</Label>
-            <Textarea
-              id='feedback-description'
-              rows={3}
-              value={panel.formState.description}
-              onChange={(e) =>
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  description: e.target.value,
+                  stars: value,
                 }))
               }
             />
-          </div>
-
-          <div className='flex flex-wrap gap-2 pt-2'>
-            <Button
-              type='button'
-              variant='primary'
-              onClick={() => panel.handleSubmit(formToPayload, validate)}
-              disabled={panel.isSaving}
-            >
-              {panel.isSaving ? 'Saving...' : 'Save Feedback'}
-            </Button>
-            {panel.editingId && (
-              <Button
-                type='button'
-                variant='secondary'
-                onClick={panel.resetForm}
-              >
-                Cancel
-              </Button>
-            )}
+            <span className='text-sm text-slate-500'>
+              {panel.formState.stars}/5
+            </span>
           </div>
         </div>
-      </Card>
+        <div>
+          <Label htmlFor='feedback-ticket-id'>Source Ticket ID</Label>
+          <Input
+            id='feedback-ticket-id'
+            type='text'
+            value={panel.formState.source_ticket_id}
+            onChange={(e) =>
+              panel.setFormState((prev) => ({
+                ...prev,
+                source_ticket_id: e.target.value,
+              }))
+            }
+          />
+        </div>
+        <div>
+          <Label htmlFor='feedback-submit-id'>Submitter ID</Label>
+          <Input
+            id='feedback-submit-id'
+            type='text'
+            value={panel.formState.submitter_id}
+            onChange={(e) =>
+              panel.setFormState((prev) => ({
+                ...prev,
+                submitter_id: e.target.value,
+              }))
+            }
+          />
+        </div>
+        <div>
+          <Label htmlFor='feedback-submit-email'>Submitter Email</Label>
+          <Input
+            id='feedback-submit-email'
+            type='email'
+            value={panel.formState.submitter_email}
+            onChange={(e) =>
+              panel.setFormState((prev) => ({
+                ...prev,
+                submitter_email: e.target.value,
+              }))
+            }
+          />
+        </div>
+        <div className='sm:col-span-2'>
+          <Label>Labels</Label>
+          {labels.length === 0 ? (
+            <p className='text-sm text-slate-500'>
+              No feedback labels available.
+            </p>
+          ) : (
+            <div className='mt-2 flex flex-wrap gap-2'>
+              {labels.map((label) => {
+                const isSelected = panel.formState.label_ids.includes(
+                  label.id
+                );
+                return (
+                  <button
+                    key={label.id}
+                    type='button'
+                    onClick={() => toggleLabel(label.id)}
+                    className={`rounded-full border px-3 py-1 text-sm ${
+                      isSelected
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-200 bg-white text-slate-600'
+                    }`}
+                  >
+                    {label.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div className='sm:col-span-2'>
+          <Label htmlFor='feedback-description'>Description</Label>
+          <Textarea
+            id='feedback-description'
+            rows={3}
+            value={panel.formState.description}
+            onChange={(e) =>
+              panel.setFormState((prev) => ({
+                ...prev,
+                description: e.target.value,
+              }))
+            }
+          />
+        </div>
+      </AdminFieldGrid>
+    </AdminEditorPanel>
+  );
 
-      <Card
-        title='Organization Feedback'
-        description='Review and maintain approved feedback entries.'
-      >
-        <DataTable
-          columns={columns}
-          data={panel.items}
-          keyExtractor={(item) => item.id}
-          onEdit={panel.startEdit}
-          onDelete={panel.handleDelete}
-          nextCursor={panel.nextCursor}
-          onLoadMore={panel.loadMore}
-          isLoading={panel.isLoading}
-          emptyMessage='No feedback entries found.'
-        />
-      </Card>
+  return (
+    <>
+      <ResourceTableShell
+        ariaLabel='Organization feedback'
+        rows={filteredItems}
+        getLabel={(item) =>
+          item.organization_name || item.organization_id || 'Feedback'
+        }
+        middleColumnCount={5}
+        isLoading={panel.isLoading}
+        isLoadingMore={panel.isLoadingMore}
+        hasMore={panel.hasMore}
+        onLoadMore={panel.loadMore}
+        error={panel.listError}
+        emptyLabel={
+          searchQuery.trim()
+            ? 'No feedback matches your search.'
+            : 'No feedback entries found.'
+        }
+        isExpanded={panel.isExpanded}
+        onToggle={panel.toggle}
+        isDraftOpen={panel.isDraftOpen}
+        draftLabel='New feedback'
+        onToggleDraft={panel.collapse}
+        detail={detail}
+        toolbar={
+          lookupError ? (
+            <StatusBanner variant='error' title='Lookups'>
+              {lookupError}
+            </StatusBanner>
+          ) : null
+        }
+        filters={
+          <AdminFilterBar
+            trailing={
+              panel.canCreate ? (
+                <AdminCreateButton
+                  label='New feedback'
+                  active={panel.isDraftOpen}
+                  onClick={panel.openDraft}
+                />
+              ) : null
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='feedback-search'>
+              <Input
+                id='feedback-search'
+                placeholder='Search feedback...'
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+              />
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <>
+            <AdminDataTableHeadCell>Organization</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Stars
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Labels
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Submitter
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Submitted
+            </AdminDataTableHeadCell>
+          </>
+        }
+        renderCells={(item) => {
+          const names = labelNames(item);
+          return (
+            <>
+              <AdminDataTableCell>
+                {item.organization_name || item.organization_id}
+                <AdminDataTableCellMeta until='secondary'>
+                  {item.stars}
+                </AdminDataTableCellMeta>
+              </AdminDataTableCell>
+              <AdminDataTableCell priority='secondary'>
+                {item.stars}
+              </AdminDataTableCell>
+              <AdminDataTableCell priority='tertiary'>
+                {names.length ? names.join(', ') : '—'}
+              </AdminDataTableCell>
+              <AdminDataTableCell priority='tertiary'>
+                {item.submitter_email || item.submitter_id || '—'}
+              </AdminDataTableCell>
+              <AdminDataTableCell priority='tertiary'>
+                {formatDate(item.created_at)}
+              </AdminDataTableCell>
+            </>
+          );
+        }}
+        renderActions={(item) =>
+          deleteRowActions(() => panel.handleDelete(item))
+        }
+      />
       {panel.confirmDialog}
-    </div>
+    </>
   );
 }

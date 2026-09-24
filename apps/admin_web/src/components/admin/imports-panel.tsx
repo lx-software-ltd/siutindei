@@ -11,17 +11,27 @@ import {
   runAdminImport,
   type AdminImportResponse,
 } from '../../lib/api-client';
+import { AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminTabStrip } from '../ui/admin-tab-strip';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { FileUploadButton } from '../ui/file-upload-button';
-import { Label } from '../ui/label';
 import { Select } from '../ui/select';
 import { StatusBanner } from '../status-banner';
 import { ImportHistoryPanel } from './org-review/import-history-panel';
 import { ReviewQueuePanel } from './org-review/review-queue-panel';
 
+type ImportTab = 'import' | 'review' | 'history';
 type ImportStatus = 'idle' | 'uploading' | 'processing' | 'done' | 'error';
 type ExportStatus = 'idle' | 'loading' | 'done' | 'error';
+type ExportTarget = 'all' | 'selected';
+
+const IMPORT_TABS: { key: ImportTab; label: string }[] = [
+  { key: 'import', label: 'Import' },
+  { key: 'review', label: 'Review' },
+  { key: 'history', label: 'History' },
+];
 
 const emptyImportSummary = {
   created: 0,
@@ -58,7 +68,7 @@ function downloadFile(url: string, fileName: string) {
 export function ImportsPanel() {
   const [tabParam, setTabParam] = useQueryState('tab');
   const [, setJobParam] = useQueryState('job');
-  const activeTab =
+  const activeTab: ImportTab =
     tabParam === 'review' || tabParam === 'history' ? tabParam : 'import';
   const {
     items: organizations,
@@ -76,6 +86,7 @@ export function ImportsPanel() {
 
   const [selectedOrgName, setSelectedOrgName] = useState('');
   const [exportStatus, setExportStatus] = useState<ExportStatus>('idle');
+  const [exportTarget, setExportTarget] = useState<ExportTarget | null>(null);
   const [exportError, setExportError] = useState('');
   const [exportWarnings, setExportWarnings] = useState<string[]>([]);
 
@@ -83,11 +94,6 @@ export function ImportsPanel() {
     importStatus === 'uploading' || importStatus === 'processing';
   const isExportBusy = exportStatus === 'loading';
 
-  const requiredIndicator = (
-    <span className='text-red-500' aria-hidden='true'>
-      *
-    </span>
-  );
   const showImportFileError = importTouched && !selectedFile;
   const importFileError = showImportFileError
     ? 'Select a JSON file to upload.'
@@ -155,6 +161,7 @@ export function ImportsPanel() {
   }
 
   async function handleExport(orgName?: string) {
+    setExportTarget(orgName ? 'selected' : 'all');
     setExportError('');
     setExportWarnings([]);
     setExportStatus('loading');
@@ -173,226 +180,239 @@ export function ImportsPanel() {
     }
   }
 
+  const importLoadingLabel =
+    importStatus === 'processing' ? 'Processing…' : 'Uploading…';
+
   return (
     <div className='space-y-6'>
-      <div className='flex flex-wrap gap-2'>
-        {(
-          [
-            ['import', 'Import / Export'],
-            ['review', 'Review queue'],
-            ['history', 'Import history'],
-          ] as const
-        ).map(([key, label]) => (
-          <Button
-            key={key}
-            type='button'
-            variant={activeTab === key ? 'primary' : 'secondary'}
-            onClick={() => {
-              void setTabParam(key === 'import' ? null : key);
-            }}
-          >
-            {label}
-          </Button>
-        ))}
-      </div>
+      <AdminTabStrip
+        aria-label='Imports'
+        items={IMPORT_TABS}
+        activeKey={activeTab}
+        onChange={(key) => {
+          void setTabParam(key === 'import' ? null : key);
+        }}
+      />
       {activeTab === 'review' && <ReviewQueuePanel />}
       {activeTab === 'history' && <ImportHistoryPanel />}
       {activeTab === 'import' && (
-      <>
-      <Card
-        title='Imports'
-        description={
-          'Upload a JSON file to upsert organizations and related data.'
-        }
-      >
-        <div className='space-y-4'>
-          {importError && (
-            <StatusBanner variant='error' title='Import error'>
-              {importError}
-            </StatusBanner>
-          )}
-          <div className='space-y-1'>
-            <Label htmlFor='admin-import-file'>
-              JSON file{' '}
-              <span className='ml-1'>{requiredIndicator}</span>
-            </Label>
-            <FileUploadButton
-              id='admin-import-file'
-              accept='application/json,.json'
-              onChange={(event) => {
-                setImportTouched(true);
-                setSelectedFile(event.target.files?.[0] ?? null);
-              }}
-              buttonLabel='Choose file'
-              selectedFileName={selectedFile?.name ?? null}
-              emptyLabel='No file selected'
-              fileNameClassName={
-                showImportFileError ? 'text-red-600' : 'text-slate-600'
+        <>
+          <Card>
+            <h2 className='sr-only'>Imports</h2>
+            <AdminEditorPanel
+              status={
+                importError ? (
+                  <StatusBanner variant='error' title='Import error'>
+                    {importError}
+                  </StatusBanner>
+                ) : null
               }
-            />
-            {showImportFileError ? (
-              <p className='text-xs text-red-600'>{importFileError}</p>
-            ) : null}
-          </div>
-          <div className='flex flex-wrap gap-3'>
-            <Button
-              type='button'
-              onClick={handleImport}
-              disabled={isImportBusy || !selectedFile}
+              actions={
+                <Button
+                  type='button'
+                  onClick={() => {
+                    void handleImport();
+                  }}
+                  disabled={!selectedFile}
+                  loading={isImportBusy}
+                  loadingLabel={importLoadingLabel}
+                >
+                  Upload & Import
+                </Button>
+              }
             >
-              {importStatus === 'uploading'
-                ? 'Uploading...'
-                : importStatus === 'processing'
-                  ? 'Processing...'
-                  : 'Upload & Import'}
-            </Button>
-          </div>
-              {importResult && (
-            <div className='space-y-4 rounded-lg border border-slate-200 p-4'>
-              {importResult.id &&
-                importResult.summary.organizations.created > 0 && (
+              <p className='text-sm text-slate-600'>
+                Upload a JSON file to upsert organizations and related data.
+              </p>
+              <AdminFieldGrid columns={1}>
+                <AdminField
+                  label='JSON file'
+                  htmlFor='admin-import-file'
+                  required
+                  error={importFileError || undefined}
+                >
+                  <FileUploadButton
+                    id='admin-import-file'
+                    accept='application/json,.json'
+                    onChange={(event) => {
+                      setImportTouched(true);
+                      setSelectedFile(event.target.files?.[0] ?? null);
+                    }}
+                    buttonLabel='Choose file'
+                    selectedFileName={selectedFile?.name ?? null}
+                    emptyLabel='No file selected'
+                    fileNameClassName={
+                      showImportFileError ? 'text-red-600' : 'text-slate-600'
+                    }
+                  />
+                </AdminField>
+              </AdminFieldGrid>
+            </AdminEditorPanel>
+            {importResult && (
+              <div className='mt-4 space-y-4 rounded-lg border border-slate-200 p-4'>
+                {importResult.id &&
+                  importResult.summary.organizations.created > 0 && (
+                    <Button
+                      type='button'
+                      variant='secondary'
+                      onClick={() => {
+                        void setJobParam(importResult.id ?? null);
+                        void setTabParam('review');
+                      }}
+                    >
+                      Review organizations from this import
+                    </Button>
+                  )}
+                <div className='space-y-1 text-sm text-slate-700'>
+                  <p className='font-semibold text-slate-900'>Summary</p>
+                  <p>
+                    Organizations:{' '}
+                    {formatCountLabel(importResult.summary.organizations)}
+                  </p>
+                  <p>
+                    Locations: {formatCountLabel(importResult.summary.locations)}
+                  </p>
+                  <p>
+                    Activities:{' '}
+                    {formatCountLabel(importResult.summary.activities)}
+                  </p>
+                  <p>Pricing: {formatCountLabel(importResult.summary.pricing)}</p>
+                  <p>
+                    Schedules: {formatCountLabel(importResult.summary.schedules)}
+                  </p>
+                  <p>
+                    Warnings: {importResult.summary.warnings}, Errors:{' '}
+                    {importResult.summary.errors}
+                  </p>
+                </div>
+                {importResult.file_warnings.length > 0 && (
+                  <div className='space-y-1 text-sm text-slate-600'>
+                    <p className='font-semibold text-slate-900'>
+                      File warnings
+                    </p>
+                    <ul className='list-disc space-y-1 pl-5'>
+                      {importResult.file_warnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {warningResults.length > 0 && (
+                  <div className='space-y-1 text-sm text-slate-600'>
+                    <p className='font-semibold text-slate-900'>
+                      Record warnings
+                    </p>
+                    <ul className='list-disc space-y-1 pl-5'>
+                      {warningResults.map((result, index) => (
+                        <li key={`${result.key}-${index}`}>
+                          <span className='font-medium text-slate-800'>
+                            {result.type}
+                          </span>{' '}
+                          {result.key}: {result.warnings.join('; ')}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {failedResults.length > 0 && (
+                  <div className='space-y-1 text-sm text-red-700'>
+                    <p className='font-semibold text-red-900'>Errors</p>
+                    <ul className='list-disc space-y-1 pl-5'>
+                      {failedResults.map((result, index) => (
+                        <li key={`${result.key}-${index}`}>
+                          <span className='font-medium'>{result.type}</span>{' '}
+                          {result.key}:{' '}
+                          {result.errors
+                            .map((err) => err.message)
+                            .join('; ')}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
+
+          <Card>
+            <h2 className='sr-only'>Exports</h2>
+            <AdminEditorPanel
+              status={
+                <>
+                  {orgError ? (
+                    <StatusBanner variant='error' title='Organization error'>
+                      {orgError}
+                    </StatusBanner>
+                  ) : null}
+                  {exportError ? (
+                    <StatusBanner variant='error' title='Export error'>
+                      {exportError}
+                    </StatusBanner>
+                  ) : null}
+                  {exportWarnings.length > 0 ? (
+                    <StatusBanner variant='info' title='Export warnings'>
+                      {exportWarnings.length} warning(s) encountered. See file
+                      for details.
+                    </StatusBanner>
+                  ) : null}
+                </>
+              }
+              actions={
+                <>
+                  <Button
+                    type='button'
+                    onClick={() => {
+                      void handleExport();
+                    }}
+                    disabled={isExportBusy}
+                    loading={isExportBusy && exportTarget === 'all'}
+                    loadingLabel='Exporting…'
+                  >
+                    Export all
+                  </Button>
                   <Button
                     type='button'
                     variant='secondary'
                     onClick={() => {
-                      void setJobParam(importResult.id ?? null);
-                      void setTabParam('review');
+                      if (selectedOrgName) {
+                        void handleExport(selectedOrgName);
+                      }
                     }}
+                    disabled={isExportBusy || !selectedOrgName}
+                    loading={isExportBusy && exportTarget === 'selected'}
+                    loadingLabel='Exporting…'
                   >
-                    Review organizations from this import
+                    Export selected
                   </Button>
-                )}
-              <div className='space-y-1 text-sm text-slate-700'>
-                <p className='font-semibold text-slate-900'>Summary</p>
-                <p>
-                  Organizations:{' '}
-                  {formatCountLabel(importResult.summary.organizations)}
-                </p>
-                <p>
-                  Locations: {formatCountLabel(importResult.summary.locations)}
-                </p>
-                <p>
-                  Activities:{' '}
-                  {formatCountLabel(importResult.summary.activities)}
-                </p>
-                <p>Pricing: {formatCountLabel(importResult.summary.pricing)}</p>
-                <p>
-                  Schedules: {formatCountLabel(importResult.summary.schedules)}
-                </p>
-                <p>
-                  Warnings: {importResult.summary.warnings}, Errors:{' '}
-                  {importResult.summary.errors}
-                </p>
-              </div>
-              {importResult.file_warnings.length > 0 && (
-                <div className='space-y-1 text-sm text-slate-600'>
-                  <p className='font-semibold text-slate-900'>
-                    File warnings
-                  </p>
-                  <ul className='list-disc space-y-1 pl-5'>
-                    {importResult.file_warnings.map((warning) => (
-                      <li key={warning}>{warning}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {warningResults.length > 0 && (
-                <div className='space-y-1 text-sm text-slate-600'>
-                  <p className='font-semibold text-slate-900'>
-                    Record warnings
-                  </p>
-                  <ul className='list-disc space-y-1 pl-5'>
-                    {warningResults.map((result, index) => (
-                      <li key={`${result.key}-${index}`}>
-                        <span className='font-medium text-slate-800'>
-                          {result.type}
-                        </span>{' '}
-                        {result.key}: {result.warnings.join('; ')}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {failedResults.length > 0 && (
-                <div className='space-y-1 text-sm text-red-700'>
-                  <p className='font-semibold text-red-900'>Errors</p>
-                  <ul className='list-disc space-y-1 pl-5'>
-                    {failedResults.map((result, index) => (
-                      <li key={`${result.key}-${index}`}>
-                        <span className='font-medium'>{result.type}</span>{' '}
-                        {result.key}:{' '}
-                        {result.errors
-                          .map((err) => err.message)
-                          .join('; ')}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </Card>
-
-      <Card
-        title='Exports'
-        description='Download the current dataset as a JSON file.'
-      >
-        <div className='space-y-4'>
-          {orgError && (
-            <StatusBanner variant='error' title='Organization error'>
-              {orgError}
-            </StatusBanner>
-          )}
-          {exportError && (
-            <StatusBanner variant='error' title='Export error'>
-              {exportError}
-            </StatusBanner>
-          )}
-          {exportWarnings.length > 0 && (
-            <StatusBanner variant='info' title='Export warnings'>
-              {exportWarnings.length} warning(s) encountered. See file for
-              details.
-            </StatusBanner>
-          )}
-          <div>
-            <Label htmlFor='admin-export-org'>Organization (optional)</Label>
-            <Select
-              id='admin-export-org'
-              value={selectedOrgName}
-              onChange={(event) => setSelectedOrgName(event.target.value)}
-              disabled={isOrgLoading}
-            >
-              <option value=''>All organizations</option>
-              {organizations.map((org) => (
-                <option key={org.id} value={org.name}>
-                  {org.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className='flex flex-wrap gap-3'>
-            <Button
-              type='button'
-              onClick={() => handleExport()}
-              disabled={isExportBusy}
-            >
-              Export all
-            </Button>
-            <Button
-              type='button'
-              variant='secondary'
-              onClick={() =>
-                selectedOrgName ? handleExport(selectedOrgName) : undefined
+                </>
               }
-              disabled={isExportBusy || !selectedOrgName}
             >
-              Export selected
-            </Button>
-          </div>
-        </div>
-      </Card>
-      </>
+              <p className='text-sm text-slate-600'>
+                Download the current dataset as a JSON file.
+              </p>
+              <AdminFieldGrid columns={1}>
+                <AdminField
+                  label='Organization (optional)'
+                  htmlFor='admin-export-org'
+                >
+                  <Select
+                    id='admin-export-org'
+                    value={selectedOrgName}
+                    onChange={(event) => setSelectedOrgName(event.target.value)}
+                    disabled={isOrgLoading}
+                  >
+                    <option value=''>All organizations</option>
+                    {organizations.map((org) => (
+                      <option key={org.id} value={org.name}>
+                        {org.name}
+                      </option>
+                    ))}
+                  </Select>
+                </AdminField>
+              </AdminFieldGrid>
+            </AdminEditorPanel>
+          </Card>
+        </>
       )}
     </div>
   );

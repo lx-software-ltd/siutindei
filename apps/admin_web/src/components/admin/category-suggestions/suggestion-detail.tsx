@@ -7,18 +7,24 @@ import {
   getCategorySuggestion,
   type CategorySuggestion,
 } from '../../../lib/api-client-category-suggestions';
+import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { Button } from '../../ui/button';
-import { Card } from '../../ui/card';
 import { DecisionDialog } from './decision-dialog';
 
 interface SuggestionDetailProps {
   suggestionId: string;
   onClose: () => void;
+  onReload?: () => void;
 }
 
-export function SuggestionDetail({ suggestionId, onClose }: SuggestionDetailProps) {
+export function SuggestionDetail({
+  suggestionId,
+  onClose,
+  onReload,
+}: SuggestionDetailProps) {
   const [item, setItem] = useState<CategorySuggestion | null>(null);
   const [error, setError] = useState('');
+  const [isEnriching, setIsEnriching] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,6 +45,7 @@ export function SuggestionDetail({ suggestionId, onClose }: SuggestionDetailProp
   }, [suggestionId]);
 
   async function enrich() {
+    setIsEnriching(true);
     setError('');
     try {
       await enrichCategorySuggestion(suggestionId);
@@ -46,26 +53,47 @@ export function SuggestionDetail({ suggestionId, onClose }: SuggestionDetailProp
       setItem(row);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Enrich failed.');
+    } finally {
+      setIsEnriching(false);
     }
   }
 
   if (!item) {
     return (
-      <Card title='Suggestion' description='Loading suggestion.'>
+      <AdminEditorPanel>
+        <p className='text-sm text-slate-600'>Loading suggestion.</p>
         {error ? <p className='text-sm text-red-600'>{error}</p> : null}
-      </Card>
+      </AdminEditorPanel>
     );
   }
 
   return (
     <div className='space-y-4'>
-      <Card
-        title={item.requested_name}
-        description={item.rationale || 'No rationale yet.'}
+      <AdminEditorPanel
+        actions={
+          <>
+            <Button
+              type='button'
+              variant='secondary'
+              onClick={() => void enrich()}
+              disabled={isEnriching}
+              loading={isEnriching}
+              loadingLabel='Enriching…'
+            >
+              Enrich again
+            </Button>
+            <Button type='button' variant='secondary' onClick={onClose}>
+              Close
+            </Button>
+          </>
+        }
       >
-        {error ? <p className='mb-3 text-sm text-red-600'>{error}</p> : null}
+        {error ? <p className='text-sm text-red-600'>{error}</p> : null}
+        <p className='text-sm text-slate-600'>
+          {item.rationale || 'No rationale yet.'}
+        </p>
         {item.status === 'rejected' && !item.merged_into_category_id ? (
-          <p className='mb-3 text-sm text-amber-800'>
+          <p className='text-sm text-amber-800'>
             These activities are still in Pending categorisation, so the
             organization cannot be approved until you map them.
           </p>
@@ -78,25 +106,20 @@ export function SuggestionDetail({ suggestionId, onClose }: SuggestionDetailProp
           <div>Confidence: {item.confidence ?? '—'}</div>
           <div>Activities: {item.activity_count}</div>
         </dl>
-        <ul className='mt-4 space-y-1 text-sm text-slate-700'>
+        <ul className='space-y-1 text-sm text-slate-700'>
           {(item.activities || []).map((link) => (
             <li key={link.activity_id}>
               {link.org_name || link.org_id}: {link.activity_name || link.requested_name}
             </li>
           ))}
         </ul>
-        <div className='mt-4 flex flex-wrap gap-3'>
-          <Button type='button' variant='secondary' onClick={() => void enrich()}>
-            Enrich again
-          </Button>
-          <Button type='button' variant='secondary' onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </Card>
+      </AdminEditorPanel>
       <DecisionDialog
         suggestion={item}
-        onDecided={setItem}
+        onDecided={(next) => {
+          setItem(next);
+          onReload?.();
+        }}
         onError={setError}
       />
     </div>

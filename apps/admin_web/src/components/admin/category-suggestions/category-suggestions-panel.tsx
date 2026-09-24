@@ -1,48 +1,71 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useQueryState } from 'nuqs';
+import { useCallback, useEffect, useState } from 'react';
 
+import { usePaginatedList } from '../../../hooks/use-paginated-list';
+import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import {
   getCategorySuggestionSummary,
   listCategorySuggestions,
   type CategorySuggestion,
   type CategorySuggestionSummary,
 } from '../../../lib/api-client-category-suggestions';
-import { Card } from '../../ui/card';
-import { Select } from '../../ui/select';
 import { StatusBanner } from '../../status-banner';
 import { CategorySuggestionSettingsCard } from './settings-card';
-import { SuggestionDetail } from './suggestion-detail';
 import { SuggestionsTable } from './suggestions-table';
 
+interface SuggestionFilters {
+  status: string;
+}
+
+const DEFAULT_SUGGESTION_FILTERS: SuggestionFilters = {
+  status: '',
+};
+
 export function CategorySuggestionsPanel() {
-  const [suggestionId, setSuggestionId] = useQueryState('suggestion');
-  const [status, setStatus] = useState('');
-  const [items, setItems] = useState<CategorySuggestion[]>([]);
+  const list = usePaginatedList<CategorySuggestion, SuggestionFilters>({
+    queryKey: adminQueryKeys.categorySuggestions(DEFAULT_SUGGESTION_FILTERS),
+    defaultFilters: DEFAULT_SUGGESTION_FILTERS,
+    errorPrefix: 'Could not load suggestions',
+    fetcher: async ({ cursor, limit, status }) => {
+      const page = await listCategorySuggestions({
+        status: status || undefined,
+        cursor: cursor ?? undefined,
+        limit,
+      });
+      return {
+        items: page.items,
+        nextCursor: page.next_cursor || null,
+      };
+    },
+  });
   const [summary, setSummary] = useState<CategorySuggestionSummary | null>(null);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [error, setError] = useState('');
-  const [reloadToken, setReloadToken] = useState(0);
+  const [summaryError, setSummaryError] = useState('');
+
+  const { refetch } = list;
+  const reload = useCallback(() => {
+    void refetch();
+    void getCategorySuggestionSummary()
+      .then((counts) => {
+        setSummary(counts);
+      })
+      .catch(() => {
+        // The table already surfaces list errors.
+      });
+  }, [refetch]);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      listCategorySuggestions({ status: status || undefined }),
-      getCategorySuggestionSummary(),
-    ])
-      .then(([page, counts]) => {
-        if (cancelled) {
-          return;
+    getCategorySuggestionSummary()
+      .then((counts) => {
+        if (!cancelled) {
+          setSummary(counts);
+          setSummaryError('');
         }
-        setItems(page.items);
-        setNextCursor(page.next_cursor || null);
-        setSummary(counts);
-        setError('');
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(
+          setSummaryError(
             err instanceof Error ? err.message : 'Could not load suggestions.'
           );
         }
@@ -50,7 +73,7 @@ export function CategorySuggestionsPanel() {
     return () => {
       cancelled = true;
     };
-  }, [status, reloadToken]);
+  }, []);
 
   const pendingCount = summary?.by_status.pending ?? 0;
   const stranded = summary?.stranded_activity_total ?? 0;
@@ -58,58 +81,33 @@ export function CategorySuggestionsPanel() {
     stranded > 0
       ? ` ${stranded} remain after a decision that did not map them.`
       : '';
+  const summaryText =
+    `${pendingCount} pending. ${summary?.pending_activity_total ?? 0} ` +
+    `activities still need a category.${strandedNote} This month ` +
+    `$${(summary?.month_cost_usd ?? 0).toFixed(4)}.`;
 
   return (
     <div className='space-y-6'>
       <CategorySuggestionSettingsCard />
-      {error ? (
+      {summaryError ? (
         <StatusBanner variant='error' title='Error'>
-          {error}
+          {summaryError}
         </StatusBanner>
       ) : null}
-      <Card
-        title='Category suggestions'
-        description={`${pendingCount} pending. ${summary?.pending_activity_total ?? 0} activities still need a category.${strandedNote} This month $${(summary?.month_cost_usd ?? 0).toFixed(4)}.`}
-      >
-        <div className='mb-4 max-w-xs'>
-          <Select
-            aria-label='Status'
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-          >
-            <option value=''>Any status</option>
-            <option value='pending'>Pending</option>
-            <option value='approved'>Approved</option>
-            <option value='merged'>Merged</option>
-            <option value='rejected'>Rejected</option>
-          </Select>
-        </div>
-        <SuggestionsTable
-          items={items}
-          onOpen={(item) => void setSuggestionId(item.id)}
-          onReload={() => setReloadToken((value) => value + 1)}
-          nextCursor={nextCursor}
-          onLoadMore={() => {
-            if (!nextCursor) {
-              return;
-            }
-            void listCategorySuggestions({
-              status: status || undefined,
-              cursor: nextCursor,
-            }).then((page) => {
-              setItems((current) => [...current, ...page.items]);
-              setNextCursor(page.next_cursor || null);
-            });
-          }}
-        />
-      </Card>
-      {suggestionId ? (
-        <SuggestionDetail
-          key={suggestionId}
-          suggestionId={suggestionId}
-          onClose={() => void setSuggestionId(null)}
-        />
-      ) : null}
+      <SuggestionsTable
+        items={list.items}
+        isLoading={list.isLoading}
+        isLoadingMore={list.isLoadingMore}
+        error={list.error}
+        summary={summaryText}
+        status={list.filters.status}
+        onStatusChange={(status) => list.setFilter('status', status)}
+        onReload={reload}
+        hasMore={list.hasMore}
+        onLoadMore={() => {
+          void list.loadMore();
+        }}
+      />
     </div>
   );
 }

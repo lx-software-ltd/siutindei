@@ -14,6 +14,8 @@ import {
   type ManagerStatusResponse,
   type Ticket,
 } from '../../lib/api-client-user';
+import { usePrefetchAdminSection } from '@/hooks/use-prefetch-admin-section';
+
 import { useAuth } from '../auth-provider';
 import { AppShell } from '../app-shell';
 import { StatusBanner } from '../status-banner';
@@ -47,6 +49,7 @@ const managerSectionLabels = [
 
 export function ManagerDashboard() {
   const { user, logout, error: authError } = useAuth();
+  const prefetchSection = usePrefetchAdminSection('manager');
   const [managerStatus, setManagerStatus] = useState<ManagerStatusResponse | null>(
     null
   );
@@ -291,6 +294,7 @@ export function ManagerDashboard() {
       sections={managerSectionLabels}
       activeKey={activeSection}
       onSelect={handleSelectSection}
+      onIntent={prefetchSection}
       onLogout={logout}
       userEmail={user?.email}
       lastAuthTime={user?.lastAuthTime}

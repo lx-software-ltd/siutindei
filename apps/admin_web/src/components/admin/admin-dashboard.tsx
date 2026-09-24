@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useQueryState } from 'nuqs';
 
+import { usePrefetchAdminSection } from '@/hooks/use-prefetch-admin-section';
+
 import { AppShell } from '../app-shell';
 import { useAuth } from '../auth-provider';
 import { LoginScreen } from '../login-screen';
@@ -47,6 +49,7 @@ const sectionLabels = [
 
 export function AdminDashboard() {
   const { status, user, isAdmin, isManager, logout, error } = useAuth();
+  const prefetchSection = usePrefetchAdminSection('admin');
   const [sectionParam, setSectionParam] = useQueryState('section');
   const isValidSectionParam = useMemo(
     () => sectionLabels.some((section) => section.key === sectionParam),
@@ -144,6 +147,7 @@ export function AdminDashboard() {
       sections={sectionLabels}
       activeKey={activeSection}
       onSelect={handleSelectSection}
+      onIntent={prefetchSection}
       onLogout={logout}
       userEmail={user?.email}
       lastAuthTime={user?.lastAuthTime}

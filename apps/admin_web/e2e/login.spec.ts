@@ -71,7 +71,7 @@ test.describe('Login Screen', () => {
   test('should redirect to dashboard when authenticated as admin', async ({ adminPage }) => {
     await adminPage.goto('/');
 
-    await expect(adminPage).toHaveURL(/\/admin\/dashboard$/);
+    await expect(adminPage).toHaveURL(/\/admin\/dashboard\/?(\?.*)?$/);
 
     // Should see the admin dashboard header
     await expect(adminPage.getByRole('heading', { name: 'Siu Tin Dei Admin' })).toBeVisible();
@@ -140,7 +140,7 @@ test.describe('Authentication Flow', () => {
     await adminPage.goto('/admin/dashboard');
 
     // Should display the user's email
-    await expect(adminPage.getByText('admin@example.com')).toBeVisible();
+    await expect(adminPage.locator('header').getByText('admin@example.com')).toBeVisible();
   });
 
   test('logout button should be visible for authenticated users', async ({ adminPage }) => {

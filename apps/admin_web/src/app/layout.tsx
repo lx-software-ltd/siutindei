@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 
+import { AdminQueryProvider } from '@/components/admin-query-provider';
+
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -24,7 +26,9 @@ export default function RootLayout({
   return (
     <html lang='en'>
       <body className='antialiased'>
-        <NuqsAdapter>{children}</NuqsAdapter>
+        <NuqsAdapter>
+          <AdminQueryProvider>{children}</AdminQueryProvider>
+        </NuqsAdapter>
       </body>
     </html>
   );

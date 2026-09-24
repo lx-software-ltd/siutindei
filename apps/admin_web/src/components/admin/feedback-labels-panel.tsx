@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 
 import { useFormValidation } from '../../hooks/use-form-validation';
-import { useResourcePanel } from '../../hooks/use-resource-panel';
+import { useResourceEditor } from '../../hooks/use-resource-editor';
 import {
   buildTranslationsPayload,
   emptyTranslations,
@@ -12,13 +12,22 @@ import {
   type TranslationLanguageCode,
 } from '../../lib/translations';
 import type { FeedbackLabel } from '../../types/admin';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { DataTable } from '../ui/data-table';
+import { AdminCreateButton } from '../ui/admin-create-button';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '../ui/admin-data-table';
+import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
-import { SearchInput } from '../ui/search-input';
+import {
+  deleteRowActions,
+  ResourceTableShell,
+} from '../ui/resource-table-shell';
 import { StatusBanner } from '../status-banner';
 
 interface FeedbackLabelFormState {
@@ -52,13 +61,22 @@ function parseDisplayOrder(value: string): number | null {
   return parsed;
 }
 
+function translationSummary(item: FeedbackLabel): string {
+  const translations = Object.entries(item.name_translations ?? {})
+    .map(([lang, value]) => `${lang}: ${value}`)
+    .join(', ');
+  return translations || '—';
+}
+
 export function FeedbackLabelsPanel() {
-  const panel = useResourcePanel<FeedbackLabel, FeedbackLabelFormState>(
-    'feedback-labels',
-    'admin',
+  const panel = useResourceEditor<FeedbackLabel, FeedbackLabelFormState>({
+    resource: 'feedback-labels',
+    mode: 'admin',
     emptyForm,
-    itemToForm
-  );
+    itemToForm,
+    paramName: 'feedback-label',
+    noun: 'feedback label',
+  });
 
   const [searchQuery, setSearchQuery] = useState('');
   const formKey = panel.editingId ?? 'new';
@@ -136,150 +154,150 @@ export function FeedbackLabelsPanel() {
     Boolean(displayOrderError)
   );
 
-  const columns = useMemo(
-    () => [
-      {
-        key: 'name',
-        header: 'Label',
-        primary: true,
-        render: (item: FeedbackLabel) => item.name,
-      },
-      {
-        key: 'translations',
-        header: 'Translations',
-        render: (item: FeedbackLabel) => {
-          const translations = Object.entries(item.name_translations ?? {})
-            .map(([lang, value]) => `${lang}: ${value}`)
-            .join(', ');
-          return (
-            <span className='text-xs text-slate-500'>
-              {translations || '—'}
-            </span>
-          );
-        },
-      },
-      {
-        key: 'display-order',
-        header: 'Order',
-        render: (item: FeedbackLabel) => (
-          <span className='text-slate-600'>
-            {item.display_order ?? 0}
-          </span>
-        ),
-      },
-    ],
-    []
+  const detail = (
+    <AdminEditorPanel
+      status={
+        panel.error ? (
+          <StatusBanner variant='error' title='Error'>
+            {panel.error}
+          </StatusBanner>
+        ) : null
+      }
+      actions={
+        <AdminEditorActions
+          mode={panel.editorMode}
+          onSubmit={handleSubmit}
+          isSaving={panel.isSaving}
+        />
+      }
+    >
+      <AdminFieldGrid columns={2}>
+        <div className='space-y-1'>
+          <LanguageToggleInput
+            id='label-name'
+            label='Label Name'
+            required
+            values={{
+              en: panel.formState.name,
+              zh: panel.formState.name_translations.zh,
+              yue: panel.formState.name_translations.yue,
+            }}
+            onChange={handleNameChange}
+            hasError={showNameError}
+            inputClassName={validation.errorClassName(
+              'name',
+              Boolean(nameError)
+            )}
+          />
+          {showNameError ? (
+            <p className='text-xs text-red-600'>{nameError}</p>
+          ) : null}
+        </div>
+        <div className='space-y-1'>
+          <Label htmlFor='display-order'>Display Order</Label>
+          <Input
+            id='display-order'
+            type='number'
+            value={panel.formState.display_order}
+            onChange={(e) => {
+              validation.markTouched('display_order');
+              panel.setFormState((prev) => ({
+                ...prev,
+                display_order: e.target.value,
+              }));
+            }}
+            onBlur={() => validation.markTouched('display_order')}
+            className={validation.errorClassName(
+              'display_order',
+              Boolean(displayOrderError)
+            )}
+            aria-invalid={showDisplayOrderError || undefined}
+          />
+          {showDisplayOrderError ? (
+            <p className='text-xs text-red-600'>{displayOrderError}</p>
+          ) : null}
+        </div>
+      </AdminFieldGrid>
+    </AdminEditorPanel>
   );
 
   return (
-    <div className='space-y-6'>
-      <Card
-        title={panel.editingId ? 'Edit Feedback Label' : 'New Feedback Label'}
-        description='Define the labels users can attach to feedback.'
-      >
-        {panel.error && (
-          <div className='mb-4'>
-            <StatusBanner variant='error' title='Error'>
-              {panel.error}
-            </StatusBanner>
-          </div>
+    <>
+      <ResourceTableShell
+        ariaLabel='Feedback labels'
+        rows={filteredItems}
+        getLabel={(item) => item.name || 'Label'}
+        middleColumnCount={3}
+        isLoading={panel.isLoading}
+        isLoadingMore={panel.isLoadingMore}
+        hasMore={panel.hasMore}
+        onLoadMore={panel.loadMore}
+        error={panel.listError}
+        emptyLabel={
+          searchQuery.trim()
+            ? 'No labels match your search.'
+            : 'No feedback labels found.'
+        }
+        isExpanded={panel.isExpanded}
+        onToggle={panel.toggle}
+        isDraftOpen={panel.isDraftOpen}
+        draftLabel='New feedback label'
+        onToggleDraft={panel.collapse}
+        detail={detail}
+        filters={
+          <AdminFilterBar
+            trailing={
+              panel.canCreate ? (
+                <AdminCreateButton
+                  label='New feedback label'
+                  active={panel.isDraftOpen}
+                  onClick={panel.openDraft}
+                />
+              ) : null
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='label-search'>
+              <Input
+                id='label-search'
+                placeholder='Search labels...'
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+              />
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <>
+            <AdminDataTableHeadCell>Label</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Order
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Translations
+            </AdminDataTableHeadCell>
+          </>
+        }
+        renderCells={(item) => (
+          <>
+            <AdminDataTableCell>
+              {item.name}
+              <AdminDataTableCellMeta until='tertiary'>
+                {translationSummary(item)}
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              {item.display_order ?? 0}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {translationSummary(item)}
+            </AdminDataTableCell>
+          </>
         )}
-
-        <div className='space-y-4'>
-          <div className='space-y-1'>
-            <LanguageToggleInput
-              id='label-name'
-              label='Label Name'
-              required
-              values={{
-                en: panel.formState.name,
-                zh: panel.formState.name_translations.zh,
-                yue: panel.formState.name_translations.yue,
-              }}
-              onChange={handleNameChange}
-              hasError={showNameError}
-              inputClassName={validation.errorClassName(
-                'name',
-                Boolean(nameError)
-              )}
-            />
-            {showNameError ? (
-              <p className='text-xs text-red-600'>{nameError}</p>
-            ) : null}
-          </div>
-
-          <div>
-            <Label htmlFor='display-order'>Display Order</Label>
-            <Input
-              id='display-order'
-              type='number'
-              value={panel.formState.display_order}
-              onChange={(e) => {
-                validation.markTouched('display_order');
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  display_order: e.target.value,
-                }));
-              }}
-              onBlur={() => validation.markTouched('display_order')}
-              className={validation.errorClassName(
-                'display_order',
-                Boolean(displayOrderError)
-              )}
-              aria-invalid={showDisplayOrderError || undefined}
-            />
-            {showDisplayOrderError ? (
-              <p className='text-xs text-red-600'>{displayOrderError}</p>
-            ) : null}
-          </div>
-
-          <div className='flex flex-wrap gap-2 pt-2'>
-            <Button
-              type='button'
-              variant='primary'
-              onClick={handleSubmit}
-              disabled={panel.isSaving}
-            >
-              {panel.isSaving ? 'Saving...' : 'Save Label'}
-            </Button>
-            {panel.editingId && (
-              <Button
-                type='button'
-                variant='secondary'
-                onClick={panel.resetForm}
-              >
-                Cancel
-              </Button>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      <Card
-        title='Feedback Labels'
-        description='Manage the labels available to end users.'
-      >
-        <div className='mb-4 max-w-sm'>
-          <SearchInput
-            placeholder='Search labels...'
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        <DataTable
-          columns={columns}
-          data={filteredItems}
-          keyExtractor={(item) => item.id}
-          onEdit={panel.startEdit}
-          onDelete={panel.handleDelete}
-          nextCursor={panel.nextCursor}
-          onLoadMore={panel.loadMore}
-          isLoading={panel.isLoading}
-          emptyMessage='No feedback labels found.'
-        />
-      </Card>
+        renderActions={(item) =>
+          deleteRowActions(() => panel.handleDelete(item))
+        }
+      />
       {panel.confirmDialog}
-    </div>
+    </>
   );
 }

@@ -46,7 +46,11 @@ export type ResourceType =
   | 'organization-feedback';
 
 export interface ResourceApi<T> {
-  list: (cursor?: string) => Promise<ListResponse<T>>;
+  list: (
+    cursor?: string,
+    limit?: number,
+    signal?: AbortSignal
+  ) => Promise<ListResponse<T>>;
   create?: <TInput>(payload: TInput) => Promise<T>;
   update: <TInput>(id: string, payload: TInput) => Promise<T>;
   delete: (id: string) => Promise<void>;
@@ -61,7 +65,8 @@ export function getResourceApi<T>(
 ): ResourceApi<T> {
   if (mode === 'admin') {
     return {
-      list: (cursor?: string) => listResource<T>(resource, cursor),
+      list: (cursor?: string, limit?: number, signal?: AbortSignal) =>
+        listResource<T>(resource, cursor, limit, signal),
       create: <TInput>(payload: TInput) =>
         createResource<TInput, T>(resource, payload),
       update: <TInput>(id: string, payload: TInput) =>

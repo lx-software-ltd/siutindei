@@ -1,22 +1,36 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import currencyCodes from 'currency-codes';
 
 import { useActivitiesByMode } from '../../hooks/use-activities-by-mode';
-import { useEditDeepLink } from '../../hooks/use-edit-deep-link';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useLocationsByMode } from '../../hooks/use-locations-by-mode';
-import { useResourcePanel } from '../../hooks/use-resource-panel';
+import { useResourceEditor } from '../../hooks/use-resource-editor';
 import {
   formatPriceAmount,
   parseOptionalNumber,
 } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/resource-api';
 import type { ActivityPricing } from '../../types/admin';
-import { PricingFormCard } from './pricing/pricing-form-card';
-import { PricingTableCard } from './pricing/pricing-table-card';
+import { StatusBanner } from '../status-banner';
+import { AdminCreateButton } from '../ui/admin-create-button';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '../ui/admin-data-table';
+import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import {
+  deleteRowActions,
+  ResourceTableShell,
+} from '../ui/resource-table-shell';
+import { Select } from '../ui/select';
 import {
   defaultCurrencyCode,
   emptyForm,
@@ -32,21 +46,63 @@ interface PricingPanelProps {
   mode: ApiMode;
 }
 
+function pricingAmountLabel(item: ActivityPricing): string {
+  if (item.pricing_type === 'free') {
+    return '-';
+  }
+  return `${normalizeCurrencyCode(item.currency)} ${formatPriceAmount(item.amount)}`;
+}
+
+function applyCreateDefaults(
+  form: PricingFormState,
+  editingId: string | null,
+  singleActivityId: string,
+  singleLocationId: string
+): PricingFormState {
+  if (editingId) {
+    return form;
+  }
+  const activityId = form.activity_id || singleActivityId;
+  const locationId = form.location_id || singleLocationId;
+  if (activityId === form.activity_id && locationId === form.location_id) {
+    return form;
+  }
+  return {
+    ...form,
+    activity_id: activityId,
+    location_id: locationId,
+  };
+}
+
 export function PricingPanel({ mode }: PricingPanelProps) {
-  const panel = useResourcePanel<ActivityPricing, PricingFormState>(
-    'pricing',
+  const panel = useResourceEditor<ActivityPricing, PricingFormState>({
+    resource: 'pricing',
     mode,
     emptyForm,
-    itemToForm
-  );
-  const { editingId, formState, setFormState } = panel;
-  useEditDeepLink(panel.items, editingId, panel.startEdit);
+    itemToForm,
+    paramName: 'pricing',
+    noun: 'pricing',
+  });
 
   const { items: activities } = useActivitiesByMode(mode, { limit: 200 });
   const { items: locations } = useLocationsByMode(mode, { limit: 200 });
 
-  // Search state
   const [searchQuery, setSearchQuery] = useState('');
+
+  const singleActivityId =
+    activities.length === 1 ? (activities[0]?.id ?? '') : '';
+  const singleLocationId =
+    locations.length === 1 ? (locations[0]?.id ?? '') : '';
+  const formState = useMemo(
+    () =>
+      applyCreateDefaults(
+        panel.formState,
+        panel.editingId,
+        singleActivityId,
+        singleLocationId
+      ),
+    [panel.editingId, panel.formState, singleActivityId, singleLocationId]
+  );
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
@@ -59,45 +115,6 @@ export function PricingPanel({ mode }: PricingPanelProps) {
   const { markTouched } = validation;
   const shouldShowError = (field: string, message: string) =>
     validation.shouldShowError(field, Boolean(message));
-
-  useEffect(() => {
-    if (editingId) {
-      return;
-    }
-    const defaultActivityId =
-      activities.length === 1 ? activities[0]?.id ?? '' : '';
-    const defaultLocationId =
-      locations.length === 1 ? locations[0]?.id ?? '' : '';
-    const shouldSetActivityDefault =
-      Boolean(defaultActivityId) && !formState.activity_id;
-    const shouldSetLocationDefault =
-      Boolean(defaultLocationId) && !formState.location_id;
-    if (!shouldSetActivityDefault && !shouldSetLocationDefault) {
-      return;
-    }
-    setFormState((prev) => {
-      const nextActivityId = prev.activity_id || defaultActivityId;
-      const nextLocationId = prev.location_id || defaultLocationId;
-      if (
-        nextActivityId === prev.activity_id &&
-        nextLocationId === prev.location_id
-      ) {
-        return prev;
-      }
-      return {
-        ...prev,
-        activity_id: nextActivityId,
-        location_id: nextLocationId,
-      };
-    });
-  }, [
-    activities,
-    locations,
-    editingId,
-    formState.activity_id,
-    formState.location_id,
-    setFormState,
-  ]);
 
   const currencyOptions = useMemo<CurrencyOption[]>(() => {
     const display =
@@ -119,8 +136,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
       });
     }
     if (!optionsMap.has(defaultCurrencyCode)) {
-      const name =
-        display?.of(defaultCurrencyCode) ?? defaultCurrencyCode;
+      const name = display?.of(defaultCurrencyCode) ?? defaultCurrencyCode;
       optionsMap.set(defaultCurrencyCode, {
         code: defaultCurrencyCode,
         name,
@@ -140,29 +156,25 @@ export function PricingPanel({ mode }: PricingPanelProps) {
     return map;
   }, [currencyOptions]);
 
-  function getCurrencyDisplay(value?: string | null): string {
-    return normalizeCurrencyCode(value);
-  }
-
   function getCurrencySearchText(value?: string | null): string {
     const normalized = normalizeCurrencyCode(value);
     const name = currencyNameByCode.get(normalized);
     return name ? `${name} ${normalized}` : normalized;
   }
 
-  const isFreeType = panel.formState.pricing_type === 'free';
-  const showSessionsField = panel.formState.pricing_type === 'per_sessions';
+  const isFreeType = formState.pricing_type === 'free';
+  const showSessionsField = formState.pricing_type === 'per_sessions';
   const showFreeTrialToggle = showSessionsField;
 
   const validate = () => {
-    if (!panel.formState.activity_id || !panel.formState.location_id) {
+    if (!formState.activity_id || !formState.location_id) {
       return 'Activity and location are required.';
     }
     if (!isFreeType) {
-      if (!panel.formState.amount.trim()) {
+      if (!formState.amount.trim()) {
         return 'Amount is required.';
       }
-      const amountValue = Number(panel.formState.amount);
+      const amountValue = Number(formState.amount);
       if (!Number.isFinite(amountValue)) {
         return 'Amount must be numeric.';
       }
@@ -170,10 +182,8 @@ export function PricingPanel({ mode }: PricingPanelProps) {
         return 'Amount must be greater than 0.';
       }
     }
-    if (panel.formState.pricing_type === 'per_sessions') {
-      const sessionsCount = parseOptionalNumber(
-        panel.formState.sessions_count
-      );
+    if (formState.pricing_type === 'per_sessions') {
+      const sessionsCount = parseOptionalNumber(formState.sessions_count);
       if (sessionsCount === null || sessionsCount <= 0) {
         return 'Classes per term is required for per-term pricing.';
       }
@@ -181,18 +191,14 @@ export function PricingPanel({ mode }: PricingPanelProps) {
     return null;
   };
 
-  const locationError = panel.formState.location_id
-    ? ''
-    : 'Select a location.';
-  const activityError = panel.formState.activity_id
-    ? ''
-    : 'Select an activity.';
+  const locationError = formState.location_id ? '' : 'Select a location.';
+  const activityError = formState.activity_id ? '' : 'Select an activity.';
 
   const amountError = useMemo(() => {
     if (isFreeType) {
       return '';
     }
-    const trimmed = panel.formState.amount.trim();
+    const trimmed = formState.amount.trim();
     if (!trimmed) {
       return 'Enter an amount.';
     }
@@ -204,39 +210,45 @@ export function PricingPanel({ mode }: PricingPanelProps) {
       return 'Amount must be greater than 0.';
     }
     return '';
-  }, [isFreeType, panel.formState.amount]);
+  }, [formState.amount, isFreeType]);
 
   const sessionsError = useMemo(() => {
     if (!showSessionsField) {
       return '';
     }
-    const trimmed = panel.formState.sessions_count.trim();
+    const trimmed = formState.sessions_count.trim();
     if (!trimmed) {
       return 'Enter classes per term.';
     }
-    const parsed = parseOptionalNumber(panel.formState.sessions_count);
+    const parsed = parseOptionalNumber(formState.sessions_count);
     if (parsed === null || parsed <= 0) {
       return 'Classes per term must be greater than 0.';
     }
     return '';
-  }, [panel.formState.sessions_count, showSessionsField]);
+  }, [formState.sessions_count, showSessionsField]);
 
   const formToPayload = (form: PricingFormState) => {
-    const isFree = form.pricing_type === 'free';
-    const isPerTerm = form.pricing_type === 'per_sessions';
+    const resolved = applyCreateDefaults(
+      form,
+      panel.editingId,
+      singleActivityId,
+      singleLocationId
+    );
+    const isFree = resolved.pricing_type === 'free';
+    const isPerTerm = resolved.pricing_type === 'per_sessions';
     return {
-      activity_id: form.activity_id,
-      location_id: form.location_id,
-      pricing_type: form.pricing_type,
-      amount: isFree ? '0' : form.amount.trim(),
+      activity_id: resolved.activity_id,
+      location_id: resolved.location_id,
+      pricing_type: resolved.pricing_type,
+      amount: isFree ? '0' : resolved.amount.trim(),
       currency: isFree
         ? defaultCurrencyCode
-        : normalizeCurrencyCode(form.currency),
+        : normalizeCurrencyCode(resolved.currency),
       sessions_count: isPerTerm
-        ? parseOptionalNumber(form.sessions_count)
+        ? parseOptionalNumber(resolved.sessions_count)
         : null,
       free_trial_class_offered: isPerTerm
-        ? form.free_trial_class_offered
+        ? resolved.free_trial_class_offered
         : false,
     };
   };
@@ -261,55 +273,6 @@ export function PricingPanel({ mode }: PricingPanelProps) {
     [locations]
   );
 
-  const columns = useMemo(
-    () => [
-      {
-        key: 'location',
-        header: 'Location',
-        primary: true,
-        render: (item: ActivityPricing) => (
-          <span className='font-medium'>
-            {getLocationName(item.location_id)}
-          </span>
-        ),
-      },
-      {
-        key: 'activity',
-        header: 'Activity',
-        secondary: true,
-        render: (item: ActivityPricing) => (
-          <span className='text-slate-600'>
-            {getActivityName(item.activity_id)}
-          </span>
-        ),
-      },
-      {
-        key: 'type',
-        header: 'Type',
-        render: (item: ActivityPricing) => (
-          <span className='text-slate-600'>
-            {getPricingTypeLabel(item.pricing_type)}
-          </span>
-        ),
-      },
-      {
-        key: 'amount',
-        header: 'Amount',
-        render: (item: ActivityPricing) =>
-          item.pricing_type === 'free' ? (
-            <span className='text-slate-600'>-</span>
-          ) : (
-            <span className='text-slate-600'>
-              {getCurrencyDisplay(item.currency)}{' '}
-              {formatPriceAmount(item.amount)}
-            </span>
-          ),
-      },
-    ],
-    [getActivityName, getLocationName]
-  );
-
-  // Filter items based on search query
   const filteredItems = panel.items.filter((item) => {
     if (!searchQuery.trim()) {
       return true;
@@ -336,108 +299,298 @@ export function PricingPanel({ mode }: PricingPanelProps) {
   const showLocationError = shouldShowError('location_id', locationError);
   const showActivityError = shouldShowError('activity_id', activityError);
   const showAmountError = shouldShowError('amount', amountError);
-  const showSessionsError = shouldShowError(
-    'sessions_count',
-    sessionsError
+  const showSessionsError = shouldShowError('sessions_count', sessionsError);
+
+  const detail = (
+    <AdminEditorPanel
+      status={
+        panel.error ? (
+          <StatusBanner variant='error' title='Error'>
+            {panel.error}
+          </StatusBanner>
+        ) : null
+      }
+      actions={
+        <AdminEditorActions
+          mode={panel.editorMode}
+          onSubmit={handleSubmit}
+          isSaving={panel.isSaving}
+        />
+      }
+    >
+      <AdminFieldGrid columns={2}>
+        <div className='space-y-1'>
+          <Label htmlFor='pricing-location'>
+            Location <span className='ml-1'>{requiredIndicator}</span>
+          </Label>
+          <Select
+            id='pricing-location'
+            value={formState.location_id}
+            onChange={(event) => {
+              markTouched('location_id');
+              panel.setFormState((prev) => ({
+                ...prev,
+                location_id: event.target.value,
+              }));
+            }}
+            className={showLocationError ? errorInputClassName : ''}
+            aria-invalid={showLocationError || undefined}
+          >
+            <option value=''>Select location</option>
+            {locations.map((location) => (
+              <option key={location.id} value={location.id}>
+                {location.address || location.area_id}
+              </option>
+            ))}
+          </Select>
+          {showLocationError ? (
+            <p className='text-xs text-red-600'>{locationError}</p>
+          ) : null}
+        </div>
+        <div className='space-y-1'>
+          <Label htmlFor='pricing-activity'>
+            Activity <span className='ml-1'>{requiredIndicator}</span>
+          </Label>
+          <Select
+            id='pricing-activity'
+            value={formState.activity_id}
+            onChange={(event) => {
+              markTouched('activity_id');
+              panel.setFormState((prev) => ({
+                ...prev,
+                activity_id: event.target.value,
+              }));
+            }}
+            className={showActivityError ? errorInputClassName : ''}
+            aria-invalid={showActivityError || undefined}
+          >
+            <option value=''>Select activity</option>
+            {activities.map((activity) => (
+              <option key={activity.id} value={activity.id}>
+                {activity.name}
+              </option>
+            ))}
+          </Select>
+          {showActivityError ? (
+            <p className='text-xs text-red-600'>{activityError}</p>
+          ) : null}
+        </div>
+        <div
+          className={
+            showSessionsField ? 'space-y-1' : 'space-y-1 sm:col-span-2'
+          }
+        >
+          <Label htmlFor='pricing-type'>Pricing Type</Label>
+          <Select
+            id='pricing-type'
+            value={formState.pricing_type}
+            onChange={(event) => {
+              const value = event.target.value;
+              panel.setFormState((prev) => ({
+                ...prev,
+                pricing_type: value,
+                sessions_count:
+                  value === 'per_sessions' ? prev.sessions_count : '',
+                free_trial_class_offered:
+                  value === 'per_sessions'
+                    ? prev.free_trial_class_offered
+                    : false,
+                amount: value === 'free' ? '' : prev.amount,
+                currency:
+                  value === 'free' ? defaultCurrencyCode : prev.currency,
+              }));
+            }}
+          >
+            {pricingOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        {showSessionsField ? (
+          <div className='space-y-1'>
+            <Label htmlFor='pricing-sessions'>
+              Classes per term <span className='ml-1'>{requiredIndicator}</span>
+            </Label>
+            <Input
+              id='pricing-sessions'
+              type='number'
+              min='1'
+              value={formState.sessions_count}
+              onChange={(event) => {
+                markTouched('sessions_count');
+                panel.setFormState((prev) => ({
+                  ...prev,
+                  sessions_count: event.target.value,
+                }));
+              }}
+              className={showSessionsError ? errorInputClassName : ''}
+              aria-invalid={showSessionsError || undefined}
+            />
+            {showSessionsError ? (
+              <p className='text-xs text-red-600'>{sessionsError}</p>
+            ) : null}
+          </div>
+        ) : null}
+        {showFreeTrialToggle ? (
+          <div className='sm:col-span-2'>
+            <label className='flex items-center gap-2 text-sm'>
+              <input
+                id='pricing-free-trial'
+                type='checkbox'
+                checked={formState.free_trial_class_offered}
+                onChange={(event) =>
+                  panel.setFormState((prev) => ({
+                    ...prev,
+                    free_trial_class_offered: event.target.checked,
+                  }))
+                }
+                className='h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500'
+              />
+              <span>Free trial class offered</span>
+            </label>
+          </div>
+        ) : null}
+        <div className='space-y-1'>
+          <Label htmlFor='pricing-currency'>Currency</Label>
+          <Select
+            id='pricing-currency'
+            value={formState.currency}
+            disabled={isFreeType}
+            onChange={(event) =>
+              panel.setFormState((prev) => ({
+                ...prev,
+                currency: normalizeCurrencyCode(event.target.value),
+              }))
+            }
+          >
+            {currencyOptions.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className='space-y-1'>
+          <Label htmlFor='pricing-amount'>
+            Amount
+            {!isFreeType ? (
+              <span className='ml-1'>{requiredIndicator}</span>
+            ) : null}
+          </Label>
+          <Input
+            id='pricing-amount'
+            type='number'
+            step='0.01'
+            value={formState.amount}
+            disabled={isFreeType}
+            onChange={(event) => {
+              markTouched('amount');
+              panel.setFormState((prev) => ({
+                ...prev,
+                amount: event.target.value,
+              }));
+            }}
+            className={showAmountError ? errorInputClassName : ''}
+            aria-invalid={showAmountError || undefined}
+          />
+          {showAmountError ? (
+            <p className='text-xs text-red-600'>{amountError}</p>
+          ) : null}
+        </div>
+      </AdminFieldGrid>
+    </AdminEditorPanel>
   );
 
   return (
-    <div className='space-y-6'>
-      <PricingFormCard
-        error={panel.error}
-        formState={panel.formState}
-        locations={locations}
-        activities={activities}
-        currencyOptions={currencyOptions}
-        pricingOptions={pricingOptions}
-        requiredIndicator={requiredIndicator}
-        errorInputClassName={errorInputClassName}
-        isFreeType={isFreeType}
-        showSessionsField={showSessionsField}
-        showFreeTrialToggle={showFreeTrialToggle}
-        showLocationError={showLocationError}
-        showActivityError={showActivityError}
-        showAmountError={showAmountError}
-        showSessionsError={showSessionsError}
-        locationError={locationError}
-        activityError={activityError}
-        amountError={amountError}
-        sessionsError={sessionsError}
-        isSaving={panel.isSaving}
-        editingId={panel.editingId}
-        onLocationChange={(value) => {
-          markTouched('location_id');
-          panel.setFormState((prev) => ({
-            ...prev,
-            location_id: value,
-          }));
-        }}
-        onActivityChange={(value) => {
-          markTouched('activity_id');
-          panel.setFormState((prev) => ({
-            ...prev,
-            activity_id: value,
-          }));
-        }}
-        onPricingTypeChange={(value) =>
-          panel.setFormState((prev) => ({
-            ...prev,
-            pricing_type: value,
-            sessions_count: value === 'per_sessions' ? prev.sessions_count : '',
-            free_trial_class_offered:
-              value === 'per_sessions' ? prev.free_trial_class_offered : false,
-            amount: value === 'free' ? '' : prev.amount,
-            currency: value === 'free' ? defaultCurrencyCode : prev.currency,
-          }))
-        }
-        onSessionsChange={(value) => {
-          markTouched('sessions_count');
-          panel.setFormState((prev) => ({
-            ...prev,
-            sessions_count: value,
-          }));
-        }}
-        onFreeTrialToggle={(value) =>
-          panel.setFormState((prev) => ({
-            ...prev,
-            free_trial_class_offered: value,
-          }))
-        }
-        onCurrencyChange={(value) =>
-          panel.setFormState((prev) => ({
-            ...prev,
-            currency: normalizeCurrencyCode(value),
-          }))
-        }
-        onAmountChange={(value) => {
-          markTouched('amount');
-          panel.setFormState((prev) => ({
-            ...prev,
-            amount: value,
-          }));
-        }}
-        onSubmit={handleSubmit}
-        onCancel={panel.resetForm}
-      />
-
-      <PricingTableCard
+    <>
+      <ResourceTableShell
+        ariaLabel='Pricing'
+        rows={filteredItems}
+        getLabel={(item) => getLocationName(item.location_id)}
+        middleColumnCount={4}
         isLoading={panel.isLoading}
-        hasItems={panel.items.length > 0}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        columns={columns}
-        data={filteredItems}
-        onEdit={(item) => panel.startEdit(item)}
-        onDelete={(item) =>
-          panel.handleDelete({
-            ...item,
-            name: getActivityName(item.activity_id),
-          })
-        }
-        nextCursor={panel.nextCursor}
+        isLoadingMore={panel.isLoadingMore}
+        hasMore={panel.hasMore}
         onLoadMore={panel.loadMore}
+        error={panel.listError}
+        emptyLabel={
+          searchQuery.trim()
+            ? 'No pricing entries match your search.'
+            : 'No pricing entries yet.'
+        }
+        isExpanded={panel.isExpanded}
+        onToggle={panel.toggle}
+        isDraftOpen={panel.isDraftOpen}
+        draftLabel='New pricing'
+        onToggleDraft={panel.collapse}
+        detail={detail}
+        filters={
+          <AdminFilterBar
+            trailing={
+              panel.canCreate ? (
+                <AdminCreateButton
+                  label='New pricing'
+                  active={panel.isDraftOpen}
+                  onClick={panel.openDraft}
+                />
+              ) : null
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='pricing-search'>
+              <Input
+                id='pricing-search'
+                placeholder='Search pricing...'
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+              />
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <>
+            <AdminDataTableHeadCell>Location</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Activity
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Amount
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Type
+            </AdminDataTableHeadCell>
+          </>
+        }
+        renderCells={(item) => (
+          <>
+            <AdminDataTableCell>
+              {getLocationName(item.location_id)}
+              <AdminDataTableCellMeta until='secondary'>
+                {pricingAmountLabel(item)}
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              {getActivityName(item.activity_id)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              {pricingAmountLabel(item)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {getPricingTypeLabel(item.pricing_type)}
+            </AdminDataTableCell>
+          </>
+        )}
+        renderActions={(item) =>
+          deleteRowActions(() =>
+            panel.handleDelete({
+              ...item,
+              name: getActivityName(item.activity_id),
+            })
+          )
+        }
       />
       {panel.confirmDialog}
-    </div>
+    </>
   );
 }

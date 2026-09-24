@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 
-import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Select } from '../../ui/select';
 
@@ -26,16 +25,18 @@ const FIELD_OPTIONS = [
 
 type FieldKey = (typeof FIELD_OPTIONS)[number]['key'];
 
+export const BULK_FIELDS_FORM_ID = 'bulk-fields-form';
+
 interface BulkFieldsDialogProps {
+  formId?: string;
   isSaving: boolean;
-  onCancel: () => void;
   onApply: (fields: Record<string, string>) => void;
   onInvalid: (message: string) => void;
 }
 
 export function BulkFieldsDialog({
+  formId = BULK_FIELDS_FORM_ID,
   isSaving,
-  onCancel,
   onApply,
   onInvalid,
 }: BulkFieldsDialogProps) {
@@ -49,7 +50,8 @@ export function BulkFieldsDialog({
     setEnabled((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
-  function submit() {
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     const fields: Record<string, string> = {};
     for (const option of FIELD_OPTIONS) {
       if (!enabled[option.key]) {
@@ -65,11 +67,7 @@ export function BulkFieldsDialog({
   }
 
   return (
-    <div className='space-y-4 rounded-lg border border-slate-200 p-4'>
-      <p className='text-sm text-slate-700'>
-        Only the ticked fields are written. Empty text clears that field.
-        Manager id cannot be cleared.
-      </p>
+    <form id={formId} className='space-y-4' onSubmit={submit}>
       <div className='grid gap-3 md:grid-cols-2'>
         {FIELD_OPTIONS.map((option) => (
           <div key={option.key} className='space-y-1'>
@@ -78,6 +76,7 @@ export function BulkFieldsDialog({
                 type='checkbox'
                 checked={Boolean(enabled[option.key])}
                 onChange={() => toggle(option.key)}
+                disabled={isSaving}
               />
               {option.label}
             </label>
@@ -85,7 +84,7 @@ export function BulkFieldsDialog({
               <Select
                 aria-label='Listing status'
                 value={values.status}
-                disabled={!enabled.status}
+                disabled={!enabled.status || isSaving}
                 onChange={(event) =>
                   setValues((prev) => ({ ...prev, status: event.target.value }))
                 }
@@ -99,7 +98,7 @@ export function BulkFieldsDialog({
               <Select
                 aria-label='Description source'
                 value={values.description_source}
-                disabled={!enabled.description_source}
+                disabled={!enabled.description_source || isSaving}
                 onChange={(event) =>
                   setValues((prev) => ({
                     ...prev,
@@ -116,7 +115,7 @@ export function BulkFieldsDialog({
               <Input
                 aria-label={option.label}
                 value={values[option.key] ?? ''}
-                disabled={!enabled[option.key]}
+                disabled={!enabled[option.key] || isSaving}
                 onChange={(event) =>
                   setValues((prev) => ({
                     ...prev,
@@ -128,14 +127,6 @@ export function BulkFieldsDialog({
           </div>
         ))}
       </div>
-      <div className='flex flex-wrap gap-2'>
-        <Button type='button' onClick={submit} disabled={isSaving}>
-          Apply to selected
-        </Button>
-        <Button type='button' variant='secondary' onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </div>
+    </form>
   );
 }

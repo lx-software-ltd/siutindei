@@ -1,41 +1,49 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useActivitiesByMode } from '../../hooks/use-activities-by-mode';
-import { useEditDeepLink } from '../../hooks/use-edit-deep-link';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useLocationsByMode } from '../../hooks/use-locations-by-mode';
-import { useResourcePanel } from '../../hooks/use-resource-panel';
+import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/resource-api';
 import type { LanguageCode } from '../../lib/translations';
 import { languageOptions } from '../../lib/translations';
 import type { ActivitySchedule } from '../../types/admin';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { DataTable } from '../ui/data-table';
-import { Label } from '../ui/label';
-import { SearchInput } from '../ui/search-input';
-import { Select } from '../ui/select';
 import { StatusBanner } from '../status-banner';
+import { AdminCreateButton } from '../ui/admin-create-button';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '../ui/admin-data-table';
+import { AdminDisclosure } from '../ui/admin-disclosure';
+import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import {
+  deleteRowActions,
+  ResourceTableShell,
+} from '../ui/resource-table-shell';
+import { Select } from '../ui/select';
 import {
   dayOfWeekOptions,
   emptyForm,
   formatTimeLabelForMinutes,
   fromUtcWeekly,
-  getDayLabel,
   getLanguageOption,
   getTimeOptions,
   itemToForm,
-  toLanguageCodes,
   toUtcWeekly,
   type ScheduleFormState,
   type WeeklyEntryForm,
 } from './schedules/schedule-form-utils';
 
 const minutesPerDay = 24 * 60;
-const halfHourMinutes = 30;
 const defaultStartMinutes = 10 * 60;
 const defaultDurationMinutes = 60;
 const defaultEndMinutes =
@@ -46,26 +54,61 @@ function addMinutes(baseMinutes: number, extraMinutes: number): number {
   return ((total % minutesPerDay) + minutesPerDay) % minutesPerDay;
 }
 
+function applyCreateDefaults(
+  form: ScheduleFormState,
+  editingId: string | null,
+  singleActivityId: string,
+  singleLocationId: string
+): ScheduleFormState {
+  if (editingId) {
+    return form;
+  }
+  const activityId = form.activity_id || singleActivityId;
+  const locationId = form.location_id || singleLocationId;
+  if (activityId === form.activity_id && locationId === form.location_id) {
+    return form;
+  }
+  return {
+    ...form,
+    activity_id: activityId,
+    location_id: locationId,
+  };
+}
+
 interface SchedulesPanelProps {
   mode: ApiMode;
 }
 
 export function SchedulesPanel({ mode }: SchedulesPanelProps) {
-  const panel = useResourcePanel<ActivitySchedule, ScheduleFormState>(
-    'schedules',
+  const panel = useResourceEditor<ActivitySchedule, ScheduleFormState>({
+    resource: 'schedules',
     mode,
     emptyForm,
-    itemToForm
-  );
-  const { editingId, formState, setFormState } = panel;
-  useEditDeepLink(panel.items, editingId, panel.startEdit);
+    itemToForm,
+    paramName: 'schedule',
+    noun: 'schedule',
+  });
 
   const { items: activities } = useActivitiesByMode(mode, { limit: 200 });
   const { items: locations } = useLocationsByMode(mode, { limit: 200 });
   const entryIdRef = useRef(0);
 
-  // Search state
   const [searchQuery, setSearchQuery] = useState('');
+
+  const singleActivityId =
+    activities.length === 1 ? (activities[0]?.id ?? '') : '';
+  const singleLocationId =
+    locations.length === 1 ? (locations[0]?.id ?? '') : '';
+  const formState = useMemo(
+    () =>
+      applyCreateDefaults(
+        panel.formState,
+        panel.editingId,
+        singleActivityId,
+        singleLocationId
+      ),
+    [panel.editingId, panel.formState, singleActivityId, singleLocationId]
+  );
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
@@ -77,54 +120,14 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     'border-red-500 focus:border-red-500 focus:ring-red-500';
   const { markTouched } = validation;
 
-  useEffect(() => {
-    if (editingId) {
-      return;
-    }
-    const defaultActivityId =
-      activities.length === 1 ? activities[0]?.id ?? '' : '';
-    const defaultLocationId =
-      locations.length === 1 ? locations[0]?.id ?? '' : '';
-    const shouldSetActivityDefault =
-      Boolean(defaultActivityId) && !formState.activity_id;
-    const shouldSetLocationDefault =
-      Boolean(defaultLocationId) && !formState.location_id;
-    if (!shouldSetActivityDefault && !shouldSetLocationDefault) {
-      return;
-    }
-    setFormState((prev) => {
-      const nextActivityId = prev.activity_id || defaultActivityId;
-      const nextLocationId = prev.location_id || defaultLocationId;
-      if (
-        nextActivityId === prev.activity_id &&
-        nextLocationId === prev.location_id
-      ) {
-        return prev;
-      }
-      return {
-        ...prev,
-        activity_id: nextActivityId,
-        location_id: nextLocationId,
-      };
-    });
-  }, [
-    activities,
-    locations,
-    editingId,
-    formState.activity_id,
-    formState.location_id,
-    setFormState,
-  ]);
-
   const validate = () => {
-    const form = panel.formState;
-    if (!form.activity_id || !form.location_id) {
+    if (!formState.activity_id || !formState.location_id) {
       return 'Activity and location are required.';
     }
-    if (form.weekly_entries.length === 0) {
+    if (formState.weekly_entries.length === 0) {
       return 'Select at least one day and timeslot.';
     }
-    for (const entry of form.weekly_entries) {
+    for (const entry of formState.weekly_entries) {
       const dayOfWeek = parseOptionalNumber(entry.day_of_week_local);
       const startMinutes = parseOptionalNumber(entry.start_minutes_local);
       const endMinutes = parseOptionalNumber(entry.end_minutes_local);
@@ -135,33 +138,25 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
         return 'Timeslots need a non-zero time range.';
       }
     }
-    if (form.languages.length === 0) {
+    if (formState.languages.length === 0) {
       return 'Select at least one language.';
     }
     return null;
   };
 
-  const locationError = panel.formState.location_id
-    ? ''
-    : 'Select a location.';
-  const activityError = panel.formState.activity_id
-    ? ''
-    : 'Select an activity.';
+  const locationError = formState.location_id ? '' : 'Select a location.';
+  const activityError = formState.activity_id ? '' : 'Select an activity.';
   const daysError =
-    panel.formState.weekly_entries.length > 0
-      ? ''
-      : 'Select at least one day.';
+    formState.weekly_entries.length > 0 ? '' : 'Select at least one day.';
   const languagesError =
-    panel.formState.languages.length > 0
-      ? ''
-      : 'Select at least one language.';
+    formState.languages.length > 0 ? '' : 'Select at least one language.';
 
   const entryErrors = useMemo(() => {
     const errors: Record<
       string,
       { start: string; end: string; range: string }
     > = {};
-    for (const entry of panel.formState.weekly_entries) {
+    for (const entry of formState.weekly_entries) {
       const startMinutes = parseOptionalNumber(entry.start_minutes_local);
       const endMinutes = parseOptionalNumber(entry.end_minutes_local);
       let startError = '';
@@ -187,10 +182,16 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
       };
     }
     return errors;
-  }, [panel.formState.weekly_entries]);
+  }, [formState.weekly_entries]);
 
   const formToPayload = (form: ScheduleFormState) => {
-    const weeklyEntries = form.weekly_entries
+    const resolved = applyCreateDefaults(
+      form,
+      panel.editingId,
+      singleActivityId,
+      singleLocationId
+    );
+    const weeklyEntries = resolved.weekly_entries
       .map((entry) => {
         const dayOfWeek = parseOptionalNumber(entry.day_of_week_local);
         const startMinutes = parseOptionalNumber(entry.start_minutes_local);
@@ -218,11 +219,11 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
       );
 
     return {
-      activity_id: form.activity_id,
-      location_id: form.location_id,
+      activity_id: resolved.activity_id,
+      location_id: resolved.location_id,
       schedule_type: 'weekly',
       weekly_entries: weeklyEntries,
-      languages: form.languages,
+      languages: resolved.languages,
     };
   };
 
@@ -232,13 +233,13 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     return panel.handleSubmit(formToPayload, validate);
   };
 
-  const selectedLanguages = new Set(panel.formState.languages);
+  const selectedLanguages = new Set(formState.languages);
   const selectedDays = new Set(
-    panel.formState.weekly_entries.map((entry) => entry.day_of_week_local)
+    formState.weekly_entries.map((entry) => entry.day_of_week_local)
   );
 
   const entriesByDay = dayOfWeekOptions.map((option) => {
-    const entries = panel.formState.weekly_entries
+    const entries = formState.weekly_entries
       .filter((entry) => entry.day_of_week_local === option.value)
       .sort((left, right) => {
         const leftStart = parseOptionalNumber(left.start_minutes_local) ?? 0;
@@ -289,10 +290,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     }));
   };
 
-  const updateEntry = (
-    entryId: string,
-    updates: Partial<WeeklyEntryForm>
-  ) => {
+  const updateEntry = (entryId: string, updates: Partial<WeeklyEntryForm>) => {
     panel.setFormState((prev) => ({
       ...prev,
       weekly_entries: prev.weekly_entries.map((entry) =>
@@ -425,75 +423,6 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     [getDayLabel, getLocalEntries]
   );
 
-  const columns = useMemo(
-    () => [
-      {
-        key: 'location',
-        header: 'Location',
-        primary: true,
-        render: (item: ActivitySchedule) => (
-          <span className='font-medium'>
-            {getLocationName(item.location_id)}
-          </span>
-        ),
-      },
-      {
-        key: 'activity',
-        header: 'Activity',
-        secondary: true,
-        render: (item: ActivitySchedule) => (
-          <span className='text-slate-600'>
-            {getActivityName(item.activity_id)}
-          </span>
-        ),
-      },
-      {
-        key: 'day-time',
-        header: 'Day/Time',
-        render: (item: ActivitySchedule) => renderWeeklyEntries(item),
-      },
-      {
-        key: 'languages',
-        header: 'Languages',
-        render: (item: ActivitySchedule) => (
-          <div className='flex flex-wrap items-center gap-2 text-slate-600'>
-            {item.languages?.length ? (
-              item.languages.map((language) => {
-                const option = getLanguageOption(language);
-                if (!option) {
-                  return (
-                    <span key={language} className='text-xs uppercase'>
-                      {language}
-                    </span>
-                  );
-                }
-                return (
-                  <span
-                    key={option.code}
-                    className='inline-flex items-center justify-center rounded border border-slate-200 bg-white px-1.5 py-1'
-                    title={option.label}
-                  >
-                    <img
-                      src={option.flagSrc}
-                      alt={`${option.label} flag`}
-                      width={20}
-                      height={14}
-                      loading='lazy'
-                    />
-                  </span>
-                );
-              })
-            ) : (
-              <span>—</span>
-            )}
-          </div>
-        ),
-      },
-    ],
-    [getActivityName, getLocationName, renderWeeklyEntries]
-  );
-
-  // Filter items based on search query
   const filteredItems = panel.items.filter((item) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
@@ -523,392 +452,462 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     Boolean(languagesError)
   );
 
-  return (
-    <div className='space-y-6'>
-      <Card title='Schedules' description='Manage schedule entries.'>
-        {panel.error && (
-          <div className='mb-4'>
-            <StatusBanner variant='error' title='Error'>
-              {panel.error}
-            </StatusBanner>
-          </div>
-        )}
-        <div className='grid gap-4 md:grid-cols-2'>
-          <div className='space-y-1'>
-            <Label htmlFor='schedule-location'>
-              Location{' '}
-              <span className='ml-1'>{requiredIndicator}</span>
-            </Label>
-            <Select
-              id='schedule-location'
-              value={panel.formState.location_id}
-              onChange={(e) => {
-                markTouched('location_id');
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  location_id: e.target.value,
-                }));
-              }}
-              className={showLocationError ? errorInputClassName : ''}
-              aria-invalid={showLocationError || undefined}
-            >
-              <option value=''>Select location</option>
-              {locations.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.address || location.area_id}
-                </option>
-              ))}
-            </Select>
-            {showLocationError ? (
-              <p className='text-xs text-red-600'>{locationError}</p>
-            ) : null}
-          </div>
-          <div className='space-y-1'>
-            <Label htmlFor='schedule-activity'>
-              Activity{' '}
-              <span className='ml-1'>{requiredIndicator}</span>
-            </Label>
-            <Select
-              id='schedule-activity'
-              value={panel.formState.activity_id}
-              onChange={(e) => {
-                markTouched('activity_id');
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  activity_id: e.target.value,
-                }));
-              }}
-              className={showActivityError ? errorInputClassName : ''}
-              aria-invalid={showActivityError || undefined}
-            >
-              <option value=''>Select activity</option>
-              {activities.map((activity) => (
-                <option key={activity.id} value={activity.id}>
-                  {activity.name}
-                </option>
-              ))}
-            </Select>
-            {showActivityError ? (
-              <p className='text-xs text-red-600'>{activityError}</p>
-            ) : null}
-          </div>
-          <div className='md:col-span-2'>
-            <div className='space-y-2'>
-              <Label id='schedule-days-label'>
-                Days of Week{' '}
-                <span className='ml-1'>{requiredIndicator}</span>
-              </Label>
-              <p id='schedule-days-help' className='text-xs text-slate-500'>
-                Select one or more days, then add timeslots.
-              </p>
-              <div
-                role='group'
-                aria-labelledby='schedule-days-label'
-                aria-describedby='schedule-days-help'
-                className={`flex flex-wrap items-center gap-2 ${
-                  showDaysError ? 'ring-1 ring-red-500 rounded-md p-2' : ''
-                }`}
-              >
-                {dayOfWeekOptions.map((option) => {
-                  const isSelected = selectedDays.has(option.value);
-                  return (
-                    <button
-                      key={option.value}
-                      type='button'
-                      onClick={() => toggleDay(option.value)}
-                      className={`rounded border px-2 py-1 text-sm transition ${
-                        isSelected
-                          ? 'border-slate-400 bg-slate-50 ring-2 ring-slate-200'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                      aria-pressed={isSelected}
-                    >
-                      {option.label.slice(0, 3)}
-                    </button>
-                  );
-                })}
-              </div>
-              {showDaysError ? (
-                <p className='text-xs text-red-600'>{daysError}</p>
-              ) : null}
-            </div>
-          </div>
-          {entriesByDay
-            .filter((day) => day.entries.length > 0)
-            .map((day) => (
-              <div key={day.value} className='md:col-span-2'>
-                <div className='space-y-3 rounded border border-slate-200 bg-slate-50 p-4'>
-                  <div className='flex flex-wrap items-center justify-between gap-2'>
-                    <div>
-                      <p className='text-sm font-semibold text-slate-900'>
-                        {day.label}
-                      </p>
-                      <p className='text-xs text-slate-500'>
-                        Add one or more timeslots.
-                      </p>
-                    </div>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='ghost'
-                      onClick={() => toggleDay(day.value)}
-                    >
-                      Remove day
-                    </Button>
-                  </div>
-                  <div className='space-y-3'>
-                    {day.entries.map((entry) => {
-                      const startId = `schedule-${day.value}-${entry.id}-start`;
-                      const endId = `schedule-${day.value}-${entry.id}-end`;
-                      const startTouchedKey = `entry-${entry.id}-start`;
-                      const endTouchedKey = `entry-${entry.id}-end`;
-                      const startOptions = getTimeOptions(
-                        entry.start_minutes_local
-                      );
-                      const endOptions = getTimeOptions(
-                        entry.end_minutes_local
-                      );
-                      const entryError = entryErrors[entry.id] ?? {
-                        start: '',
-                        end: '',
-                        range: '',
-                      };
-                      const showStartError = Boolean(
-                        entryError.start &&
-                          (validation.hasSubmitted ||
-                            validation.touched[startTouchedKey])
-                      );
-                      const showEndError = Boolean(
-                        entryError.end &&
-                          (validation.hasSubmitted ||
-                            validation.touched[endTouchedKey])
-                      );
-                      const showRangeError = Boolean(
-                        entryError.range &&
-                          (validation.hasSubmitted ||
-                            validation.touched[startTouchedKey] ||
-                            validation.touched[endTouchedKey])
-                      );
-                      return (
-                        <div
-                          key={entry.id}
-                          className='grid gap-3 md:grid-cols-[1fr_1fr_auto]'
-                        >
-                          <div>
-                            <Label htmlFor={startId}>
-                              Start Time (Local){' '}
-                              <span className='ml-1'>{requiredIndicator}</span>
-                            </Label>
-                            <Select
-                              id={startId}
-                              value={entry.start_minutes_local}
-                              onChange={(e) =>
-                                updateEntryStartTime(entry.id, e.target.value)
-                              }
-                              className={
-                                showStartError || showRangeError
-                                  ? errorInputClassName
-                                  : ''
-                              }
-                              aria-invalid={
-                                showStartError || showRangeError || undefined
-                              }
-                            >
-                              <option value=''>Select time</option>
-                              {startOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </Select>
-                            {showStartError ? (
-                              <p className='text-xs text-red-600'>
-                                {entryError.start}
-                              </p>
-                            ) : null}
-                          </div>
-                          <div>
-                            <Label htmlFor={endId}>
-                              End Time (Local){' '}
-                              <span className='ml-1'>{requiredIndicator}</span>
-                            </Label>
-                            <Select
-                              id={endId}
-                              value={entry.end_minutes_local}
-                              onChange={(e) => {
-                                markTouched(endTouchedKey);
-                                updateEntry(entry.id, {
-                                  end_minutes_local: e.target.value,
-                                });
-                              }}
-                              className={
-                                showEndError || showRangeError
-                                  ? errorInputClassName
-                                  : ''
-                              }
-                              aria-invalid={
-                                showEndError || showRangeError || undefined
-                              }
-                            >
-                              <option value=''>Select time</option>
-                              {endOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </Select>
-                            {showEndError ? (
-                              <p className='text-xs text-red-600'>
-                                {entryError.end}
-                              </p>
-                            ) : showRangeError ? (
-                              <p className='text-xs text-red-600'>
-                                {entryError.range}
-                              </p>
-                            ) : null}
-                          </div>
-                          <div className='flex items-end'>
-                            <Button
-                              type='button'
-                              size='sm'
-                              variant='ghost'
-                              onClick={() => removeEntry(entry.id)}
-                            >
-                              Remove
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='secondary'
-                      onClick={() => addTimeslot(day.value)}
-                    >
-                      Add timeslot
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          <div className='md:col-span-2'>
-            <div className='space-y-2'>
-              <Label id='schedule-languages-label'>
-                Languages{' '}
-                <span className='ml-1'>{requiredIndicator}</span>
-              </Label>
-              <p
-                id='schedule-languages-help'
-                className='text-xs text-slate-500'
-              >
-                Select one or more flags.
-              </p>
-              <div
-                role='group'
-                aria-labelledby='schedule-languages-label'
-                aria-describedby='schedule-languages-help'
-                className={`flex flex-wrap items-center gap-2 ${
-                  showLanguagesError ? 'ring-1 ring-red-500 rounded-md p-2' : ''
-                }`}
-              >
-                {languageOptions.map((option) => {
-                  const isSelected = selectedLanguages.has(option.code);
-                  return (
-                    <button
-                      key={option.code}
-                      type='button'
-                      onClick={() => toggleLanguage(option.code)}
-                      className={`relative flex items-center justify-center rounded border px-2 py-1 transition ${
-                        isSelected
-                          ? 'border-slate-400 bg-slate-50 ring-2 ring-slate-200'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                      aria-pressed={isSelected}
-                      aria-label={`Toggle ${option.label}`}
-                      title={option.label}
-                    >
-                      <img
-                        src={option.flagSrc}
-                        alt={`${option.label} flag`}
-                        width={40}
-                        height={28}
-                        loading='lazy'
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-              {showLanguagesError ? (
-                <p className='text-xs text-red-600'>{languagesError}</p>
-              ) : null}
-            </div>
-          </div>
-        </div>
-        <div className='mt-4 flex flex-wrap gap-3'>
-          <Button
-            type='button'
-            onClick={handleSubmit}
-            disabled={panel.isSaving}
+  const detail = (
+    <AdminEditorPanel
+      status={
+        panel.error ? (
+          <StatusBanner variant='error' title='Error'>
+            {panel.error}
+          </StatusBanner>
+        ) : null
+      }
+      actions={
+        <AdminEditorActions
+          mode={panel.editorMode}
+          onSubmit={handleSubmit}
+          isSaving={panel.isSaving}
+        />
+      }
+    >
+      <AdminFieldGrid columns={2}>
+        <div className='space-y-1'>
+          <Label htmlFor='schedule-location'>
+            Location <span className='ml-1'>{requiredIndicator}</span>
+          </Label>
+          <Select
+            id='schedule-location'
+            value={formState.location_id}
+            onChange={(e) => {
+              markTouched('location_id');
+              panel.setFormState((prev) => ({
+                ...prev,
+                location_id: e.target.value,
+              }));
+            }}
+            className={showLocationError ? errorInputClassName : ''}
+            aria-invalid={showLocationError || undefined}
           >
-            {panel.editingId ? 'Update Schedule' : 'Add Schedule'}
-          </Button>
-          {panel.editingId && (
-            <Button
-              type='button'
-              variant='secondary'
-              onClick={panel.resetForm}
-              disabled={panel.isSaving}
-            >
-              Cancel
-            </Button>
-          )}
+            <option value=''>Select location</option>
+            {locations.map((location) => (
+              <option key={location.id} value={location.id}>
+                {location.address || location.area_id}
+              </option>
+            ))}
+          </Select>
+          {showLocationError ? (
+            <p className='text-xs text-red-600'>{locationError}</p>
+          ) : null}
         </div>
-      </Card>
+        <div className='space-y-1'>
+          <Label htmlFor='schedule-activity'>
+            Activity <span className='ml-1'>{requiredIndicator}</span>
+          </Label>
+          <Select
+            id='schedule-activity'
+            value={formState.activity_id}
+            onChange={(e) => {
+              markTouched('activity_id');
+              panel.setFormState((prev) => ({
+                ...prev,
+                activity_id: e.target.value,
+              }));
+            }}
+            className={showActivityError ? errorInputClassName : ''}
+            aria-invalid={showActivityError || undefined}
+          >
+            <option value=''>Select activity</option>
+            {activities.map((activity) => (
+              <option key={activity.id} value={activity.id}>
+                {activity.name}
+              </option>
+            ))}
+          </Select>
+          {showActivityError ? (
+            <p className='text-xs text-red-600'>{activityError}</p>
+          ) : null}
+        </div>
+        <div className='sm:col-span-2'>
+          <AdminDisclosure
+            id='schedule-weekly'
+            title='Weekly schedule'
+            defaultOpen
+            summary={
+              selectedDays.size > 0
+                ? `${selectedDays.size} day${selectedDays.size === 1 ? '' : 's'}`
+                : 'No days selected'
+            }
+          >
+            <div className='space-y-4'>
+              <div className='space-y-2'>
+                <Label id='schedule-days-label'>
+                  Days of Week <span className='ml-1'>{requiredIndicator}</span>
+                </Label>
+                <p id='schedule-days-help' className='text-xs text-slate-500'>
+                  Select one or more days, then add timeslots.
+                </p>
+                <div
+                  role='group'
+                  aria-labelledby='schedule-days-label'
+                  aria-describedby='schedule-days-help'
+                  className={`flex flex-wrap items-center gap-2 ${
+                    showDaysError ? 'ring-1 ring-red-500 rounded-md p-2' : ''
+                  }`}
+                >
+                  {dayOfWeekOptions.map((option) => {
+                    const isSelected = selectedDays.has(option.value);
+                    return (
+                      <button
+                        key={option.value}
+                        type='button'
+                        onClick={() => toggleDay(option.value)}
+                        className={`rounded border px-2 py-1 text-sm transition ${
+                          isSelected
+                            ? 'border-slate-400 bg-slate-50 ring-2 ring-slate-200'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                        aria-pressed={isSelected}
+                      >
+                        {option.label.slice(0, 3)}
+                      </button>
+                    );
+                  })}
+                </div>
+                {showDaysError ? (
+                  <p className='text-xs text-red-600'>{daysError}</p>
+                ) : null}
+              </div>
+              {entriesByDay
+                .filter((day) => day.entries.length > 0)
+                .map((day) => (
+                  <div key={day.value}>
+                    <div className='space-y-3 rounded border border-slate-200 bg-slate-50 p-4'>
+                      <div className='flex flex-wrap items-center justify-between gap-2'>
+                        <div>
+                          <p className='text-sm font-semibold text-slate-900'>
+                            {day.label}
+                          </p>
+                          <p className='text-xs text-slate-500'>
+                            Add one or more timeslots.
+                          </p>
+                        </div>
+                        <Button
+                          type='button'
+                          size='sm'
+                          variant='ghost'
+                          onClick={() => toggleDay(day.value)}
+                        >
+                          Remove day
+                        </Button>
+                      </div>
+                      <div className='space-y-3'>
+                        {day.entries.map((entry) => {
+                          const startId = `schedule-${day.value}-${entry.id}-start`;
+                          const endId = `schedule-${day.value}-${entry.id}-end`;
+                          const startTouchedKey = `entry-${entry.id}-start`;
+                          const endTouchedKey = `entry-${entry.id}-end`;
+                          const startOptions = getTimeOptions(
+                            entry.start_minutes_local
+                          );
+                          const endOptions = getTimeOptions(entry.end_minutes_local);
+                          const entryError = entryErrors[entry.id] ?? {
+                            start: '',
+                            end: '',
+                            range: '',
+                          };
+                          const showStartError = Boolean(
+                            entryError.start &&
+                              (validation.hasSubmitted ||
+                                validation.touched[startTouchedKey])
+                          );
+                          const showEndError = Boolean(
+                            entryError.end &&
+                              (validation.hasSubmitted ||
+                                validation.touched[endTouchedKey])
+                          );
+                          const showRangeError = Boolean(
+                            entryError.range &&
+                              (validation.hasSubmitted ||
+                                validation.touched[startTouchedKey] ||
+                                validation.touched[endTouchedKey])
+                          );
+                          return (
+                            <div
+                              key={entry.id}
+                              className='grid gap-3 md:grid-cols-[1fr_1fr_auto]'
+                            >
+                              <div>
+                                <Label htmlFor={startId}>
+                                  Start Time (Local){' '}
+                                  <span className='ml-1'>{requiredIndicator}</span>
+                                </Label>
+                                <Select
+                                  id={startId}
+                                  value={entry.start_minutes_local}
+                                  onChange={(e) =>
+                                    updateEntryStartTime(entry.id, e.target.value)
+                                  }
+                                  className={
+                                    showStartError || showRangeError
+                                      ? errorInputClassName
+                                      : ''
+                                  }
+                                  aria-invalid={
+                                    showStartError || showRangeError || undefined
+                                  }
+                                >
+                                  <option value=''>Select time</option>
+                                  {startOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </Select>
+                                {showStartError ? (
+                                  <p className='text-xs text-red-600'>
+                                    {entryError.start}
+                                  </p>
+                                ) : null}
+                              </div>
+                              <div>
+                                <Label htmlFor={endId}>
+                                  End Time (Local){' '}
+                                  <span className='ml-1'>{requiredIndicator}</span>
+                                </Label>
+                                <Select
+                                  id={endId}
+                                  value={entry.end_minutes_local}
+                                  onChange={(e) => {
+                                    markTouched(endTouchedKey);
+                                    updateEntry(entry.id, {
+                                      end_minutes_local: e.target.value,
+                                    });
+                                  }}
+                                  className={
+                                    showEndError || showRangeError
+                                      ? errorInputClassName
+                                      : ''
+                                  }
+                                  aria-invalid={
+                                    showEndError || showRangeError || undefined
+                                  }
+                                >
+                                  <option value=''>Select time</option>
+                                  {endOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </Select>
+                                {showEndError ? (
+                                  <p className='text-xs text-red-600'>
+                                    {entryError.end}
+                                  </p>
+                                ) : showRangeError ? (
+                                  <p className='text-xs text-red-600'>
+                                    {entryError.range}
+                                  </p>
+                                ) : null}
+                              </div>
+                              <div className='flex items-end'>
+                                <Button
+                                  type='button'
+                                  size='sm'
+                                  variant='ghost'
+                                  onClick={() => removeEntry(entry.id)}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div>
+                        <Button
+                          type='button'
+                          size='sm'
+                          variant='secondary'
+                          onClick={() => addTimeslot(day.value)}
+                        >
+                          Add timeslot
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </AdminDisclosure>
+        </div>
+        <div className='sm:col-span-2'>
+          <div className='space-y-2'>
+            <Label id='schedule-languages-label'>
+              Languages <span className='ml-1'>{requiredIndicator}</span>
+            </Label>
+            <p id='schedule-languages-help' className='text-xs text-slate-500'>
+              Select one or more flags.
+            </p>
+            <div
+              role='group'
+              aria-labelledby='schedule-languages-label'
+              aria-describedby='schedule-languages-help'
+              className={`flex flex-wrap items-center gap-2 ${
+                showLanguagesError ? 'ring-1 ring-red-500 rounded-md p-2' : ''
+              }`}
+            >
+              {languageOptions.map((option) => {
+                const isSelected = selectedLanguages.has(option.code);
+                return (
+                  <button
+                    key={option.code}
+                    type='button'
+                    onClick={() => toggleLanguage(option.code)}
+                    className={`relative flex items-center justify-center rounded border px-2 py-1 transition ${
+                      isSelected
+                        ? 'border-slate-400 bg-slate-50 ring-2 ring-slate-200'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                    aria-pressed={isSelected}
+                    aria-label={`Toggle ${option.label}`}
+                    title={option.label}
+                  >
+                    <img
+                      src={option.flagSrc}
+                      alt={`${option.label} flag`}
+                      width={40}
+                      height={28}
+                      loading='lazy'
+                    />
+                  </button>
+                );
+              })}
+            </div>
+            {showLanguagesError ? (
+              <p className='text-xs text-red-600'>{languagesError}</p>
+            ) : null}
+          </div>
+        </div>
+      </AdminFieldGrid>
+    </AdminEditorPanel>
+  );
 
-      <Card
-        title='Existing Schedules'
-        description='Select a schedule to edit or delete.'
-      >
-        {panel.isLoading ? (
-          <p className='text-sm text-slate-600'>Loading schedules...</p>
-        ) : panel.items.length === 0 ? (
-          <p className='text-sm text-slate-600'>No schedules yet.</p>
-        ) : (
-          <div className='space-y-4'>
-            <div className='max-w-full sm:max-w-sm'>
-              <SearchInput
+  return (
+    <>
+      <ResourceTableShell
+        ariaLabel='Schedules'
+        rows={filteredItems}
+        getLabel={(item) => getLocationName(item.location_id)}
+        middleColumnCount={4}
+        isLoading={panel.isLoading}
+        isLoadingMore={panel.isLoadingMore}
+        hasMore={panel.hasMore}
+        onLoadMore={panel.loadMore}
+        error={panel.listError}
+        emptyLabel={
+          searchQuery.trim()
+            ? 'No schedules match your search.'
+            : 'No schedules yet.'
+        }
+        isExpanded={panel.isExpanded}
+        onToggle={panel.toggle}
+        isDraftOpen={panel.isDraftOpen}
+        draftLabel='New schedule'
+        onToggleDraft={panel.collapse}
+        detail={detail}
+        filters={
+          <AdminFilterBar
+            trailing={
+              panel.canCreate ? (
+                <AdminCreateButton
+                  label='New schedule'
+                  active={panel.isDraftOpen}
+                  onClick={panel.openDraft}
+                />
+              ) : null
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='schedule-search'>
+              <Input
+                id='schedule-search'
                 placeholder='Search schedules...'
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(event) => setSearchQuery(event.target.value)}
               />
-            </div>
-            <DataTable
-              columns={columns}
-              data={filteredItems}
-              keyExtractor={(item) => item.id}
-              onEdit={(item) => panel.startEdit(item)}
-              onDelete={(item) =>
-                panel.handleDelete({
-                  ...item,
-                  name: getActivityName(item.activity_id),
-                })
-              }
-              nextCursor={panel.nextCursor}
-              onLoadMore={panel.loadMore}
-              isLoading={panel.isLoading}
-              emptyMessage={
-                searchQuery.trim()
-                  ? 'No schedules match your search.'
-                  : 'No schedules yet.'
-              }
-            />
-          </div>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <>
+            <AdminDataTableHeadCell>Location</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Activity
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Day/Time
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Languages
+            </AdminDataTableHeadCell>
+          </>
+        }
+        renderCells={(item) => (
+          <>
+            <AdminDataTableCell>
+              {getLocationName(item.location_id)}
+              <AdminDataTableCellMeta until='secondary'>
+                {weeklyEntriesLabel(item) || '—'}
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              {getActivityName(item.activity_id)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              {renderWeeklyEntries(item)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              <div className='flex flex-wrap items-center gap-2 text-slate-600'>
+                {item.languages?.length ? (
+                  item.languages.map((language) => {
+                    const option = getLanguageOption(language);
+                    if (!option) {
+                      return (
+                        <span key={language} className='text-xs uppercase'>
+                          {language}
+                        </span>
+                      );
+                    }
+                    return (
+                      <span
+                        key={option.code}
+                        className='inline-flex items-center justify-center rounded border border-slate-200 bg-white px-1.5 py-1'
+                        title={option.label}
+                      >
+                        <img
+                          src={option.flagSrc}
+                          alt={`${option.label} flag`}
+                          width={20}
+                          height={14}
+                          loading='lazy'
+                        />
+                      </span>
+                    );
+                  })
+                ) : (
+                  <span>—</span>
+                )}
+              </div>
+            </AdminDataTableCell>
+          </>
         )}
-      </Card>
+        renderActions={(item) =>
+          deleteRowActions(() =>
+            panel.handleDelete({
+              ...item,
+              name: getActivityName(item.activity_id),
+            })
+          )
+        }
+      />
       {panel.confirmDialog}
-    </div>
+    </>
   );
 }
