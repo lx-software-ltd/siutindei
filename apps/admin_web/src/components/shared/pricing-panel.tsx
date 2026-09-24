@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import currencyCodes from 'currency-codes';
 
 import { useActivitiesByMode } from '../../hooks/use-activities-by-mode';
+import { useEditDeepLink } from '../../hooks/use-edit-deep-link';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useLocationsByMode } from '../../hooks/use-locations-by-mode';
 import { useResourcePanel } from '../../hooks/use-resource-panel';
@@ -39,6 +40,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
     itemToForm
   );
   const { editingId, formState, setFormState } = panel;
+  useEditDeepLink(panel.items, editingId, panel.startEdit);
 
   const { items: activities } = useActivitiesByMode(mode, { limit: 200 });
   const { items: locations } = useLocationsByMode(mode, { limit: 200 });

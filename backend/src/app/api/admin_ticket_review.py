@@ -94,6 +94,7 @@ def _approve_access_request(
             description=None,
             manager_id=ticket.submitter_id,
             media_urls=[],
+            review_status="approved",
         )
         org_repo.create(organization)
         logger.info(
@@ -167,6 +168,7 @@ def _approve_org_creation(
         description=ticket.description,
         manager_id=reviewer_sub,
         media_urls=ticket.media_urls or [],
+        review_status="approved",
     )
     org_repo.create(organization)
     return organization

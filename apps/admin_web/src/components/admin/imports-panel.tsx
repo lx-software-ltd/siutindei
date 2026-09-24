@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useQueryState } from 'nuqs';
 
 import { useOrganizationsByMode } from '../../hooks/use-organizations-by-mode';
 import {
@@ -16,6 +17,8 @@ import { FileUploadButton } from '../ui/file-upload-button';
 import { Label } from '../ui/label';
 import { Select } from '../ui/select';
 import { StatusBanner } from '../status-banner';
+import { ImportHistoryPanel } from './org-review/import-history-panel';
+import { ReviewQueuePanel } from './org-review/review-queue-panel';
 
 type ImportStatus = 'idle' | 'uploading' | 'processing' | 'done' | 'error';
 type ExportStatus = 'idle' | 'loading' | 'done' | 'error';
@@ -53,6 +56,10 @@ function downloadFile(url: string, fileName: string) {
 }
 
 export function ImportsPanel() {
+  const [tabParam, setTabParam] = useQueryState('tab');
+  const [, setJobParam] = useQueryState('job');
+  const activeTab =
+    tabParam === 'review' || tabParam === 'history' ? tabParam : 'import';
   const {
     items: organizations,
     isLoading: isOrgLoading,
@@ -168,6 +175,30 @@ export function ImportsPanel() {
 
   return (
     <div className='space-y-6'>
+      <div className='flex flex-wrap gap-2'>
+        {(
+          [
+            ['import', 'Import / Export'],
+            ['review', 'Review queue'],
+            ['history', 'Import history'],
+          ] as const
+        ).map(([key, label]) => (
+          <Button
+            key={key}
+            type='button'
+            variant={activeTab === key ? 'primary' : 'secondary'}
+            onClick={() => {
+              void setTabParam(key === 'import' ? null : key);
+            }}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+      {activeTab === 'review' && <ReviewQueuePanel />}
+      {activeTab === 'history' && <ImportHistoryPanel />}
+      {activeTab === 'import' && (
+      <>
       <Card
         title='Imports'
         description={
@@ -216,8 +247,21 @@ export function ImportsPanel() {
                   : 'Upload & Import'}
             </Button>
           </div>
-          {importResult && (
+              {importResult && (
             <div className='space-y-4 rounded-lg border border-slate-200 p-4'>
+              {importResult.id &&
+                importResult.summary.organizations.created > 0 && (
+                  <Button
+                    type='button'
+                    variant='secondary'
+                    onClick={() => {
+                      void setJobParam(importResult.id ?? null);
+                      void setTabParam('review');
+                    }}
+                  >
+                    Review organizations from this import
+                  </Button>
+                )}
               <div className='space-y-1 text-sm text-slate-700'>
                 <p className='font-semibold text-slate-900'>Summary</p>
                 <p>
@@ -348,6 +392,8 @@ export function ImportsPanel() {
           </div>
         </div>
       </Card>
+      </>
+      )}
     </div>
   );
 }

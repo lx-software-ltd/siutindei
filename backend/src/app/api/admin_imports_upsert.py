@@ -14,6 +14,7 @@ from app.api.admin_imports_catalog import (
     find_import_organization,
     parse_org_status,
     parse_place_id,
+    stamp_imported_organization,
 )
 from app.api.admin_imports_fields import (
     guard_import_organization_update,
@@ -147,6 +148,7 @@ def upsert_organization(
     allow_updates: bool = False,
     catalog_manager_id: str | None = None,
     warnings: list[str] | None = None,
+    import_job_id: Any = None,
 ) -> tuple[Organization, str]:
     repo = OrganizationRepository(session)
     name = _validate_string_length(
@@ -201,12 +203,17 @@ def upsert_organization(
             if existing.status_source == "owner":
                 if warnings is not None:
                     warnings.append(
-                        "owner listing status preserved; " "importer status ignored"
+                        "owner listing status preserved; importer status ignored"
                     )
             else:
                 body["status"] = requested_status
                 body["status_source"] = "importer"
         updated = _update_organization(repo, existing, body)
+        stamp_imported_organization(
+            updated,
+            created=False,
+            import_job_id=import_job_id,
+        )
         repo.update(updated)
         persist_import_change(session, dry_run=dry_run)
         session.refresh(updated)
@@ -225,6 +232,11 @@ def upsert_organization(
         body["status"] = requested_status
         body["status_source"] = "importer"
     created = _create_organization(repo, body)
+    stamp_imported_organization(
+        created,
+        created=True,
+        import_job_id=import_job_id,
+    )
     repo.create(created)
     persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
@@ -247,8 +259,7 @@ def _find_import_location(
                 return found
             if warnings is not None:
                 warnings.append(
-                    "place_id already used by another organization; "
-                    "matching by address"
+                    "place_id already used by another organization; matching by address"
                 )
             raw_location.pop("place_id", None)
     return repo.find_by_org_and_address_case_insensitive(
@@ -468,28 +479,3 @@ def upsert_schedule(
     persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
     return created, "created"
-
-
-def resolve_location(
-    session: Session,
-    org: Organization,
-    location_name: str,
-    cache: dict[str, Location],
-) -> Location | None:
-    cached = cache.get(location_name)
-    if cached:
-        return cached
-    repo = LocationRepository(session)
-    try:
-        location = repo.find_by_org_and_address_case_insensitive(
-            coerce_uuid(org.id),
-            location_name,
-        )
-    except MultipleResultsFound as exc:
-        raise ValidationError(
-            "Multiple locations found for name",
-            field="location_name",
-        ) from exc
-    if location:
-        cache[location_name] = location
-    return location

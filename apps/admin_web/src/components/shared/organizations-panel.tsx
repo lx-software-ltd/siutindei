@@ -13,6 +13,7 @@ import {
   getCountryCallingCode,
 } from 'libphonenumber-js';
 
+import { useEditDeepLink } from '../../hooks/use-edit-deep-link';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useResourcePanel } from '../../hooks/use-resource-panel';
 import { ApiError } from '../../lib/api-client';
@@ -33,6 +34,7 @@ import { Label } from '../ui/label';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
 import { SearchInput } from '../ui/search-input';
 import { Select } from '../ui/select';
+import { StatusBadge } from '../ui/status-badge';
 import { StatusBanner } from '../status-banner';
 import {
   ContactIcon,
@@ -68,6 +70,7 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
     itemToForm
   );
   const { items, editingId, startEdit } = panel;
+  useEditDeepLink(items, editingId, startEdit);
 
   // Admin-only: Load Cognito users for manager selection
   const [cognitoUsers, setCognitoUsers] = useState<CognitoUser[]>([]);
@@ -75,6 +78,7 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
+  const [reviewFilter, setReviewFilter] = useState('all');
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
@@ -347,6 +351,8 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
     };
     if (isAdmin) {
       payload.manager_id = form.manager_id;
+      payload.status = form.status;
+      payload.status_source = 'owner';
     }
     return payload;
   };
@@ -363,6 +369,12 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
 
   // Filter items based on search query
   const filteredItems = panel.items.filter((item) => {
+    if (
+      reviewFilter !== 'all' &&
+      (item.review_status ?? 'pending_review') !== reviewFilter
+    ) {
+      return false;
+    }
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     const nameTranslations = Object.values(item.name_translations ?? {})
@@ -454,6 +466,27 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
             },
           ]
         : []),
+      {
+        key: 'status',
+        header: 'Status',
+        render: (item: Organization) => (
+          <StatusBadge
+            status={(item.status ?? 'operational').replaceAll('_', ' ')}
+          />
+        ),
+      },
+      {
+        key: 'review',
+        header: 'Review',
+        render: (item: Organization) => (
+          <StatusBadge
+            status={(item.review_status ?? 'pending_review').replaceAll(
+              '_',
+              ' '
+            )}
+          />
+        ),
+      },
       {
         key: 'description',
         header: 'Description',
@@ -635,6 +668,37 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
                 <p className='text-xs text-red-600'>{phoneNumberError}</p>
               ) : null}
             </div>
+            {isAdmin && (
+              <div className='space-y-1'>
+                <Label htmlFor='org-listing-status'>Listing status</Label>
+                <Select
+                  id='org-listing-status'
+                  value={panel.formState.status}
+                  onChange={(event) =>
+                    panel.setFormState((prev) => ({
+                      ...prev,
+                      status: event.target.value,
+                    }))
+                  }
+                >
+                  <option value='operational'>Operational</option>
+                  <option value='closed_temporarily'>Closed temporarily</option>
+                  <option value='closed_permanently'>Closed permanently</option>
+                  <option value='hidden'>Hidden</option>
+                </Select>
+                {panel.editingId && (
+                  <p className='text-xs text-slate-500'>
+                    Review state is changed from Imports → Review queue.
+                    Current review:{' '}
+                    {(
+                      panel.items.find((item) => item.id === panel.editingId)
+                        ?.review_status ?? 'pending_review'
+                    ).replaceAll('_', ' ')}
+                    .
+                  </p>
+                )}
+              </div>
+            )}
             <div className='md:col-span-2 border-t border-slate-100 pt-4'>
               <p className='text-sm font-medium text-slate-700'>Social</p>
               <p className='text-xs text-slate-500'>
@@ -716,12 +780,32 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
           </p>
         ) : (
           <div className='space-y-4'>
-            <div className='max-w-full sm:max-w-sm'>
-              <SearchInput
-                placeholder='Search organizations...'
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
+              <div className='max-w-full sm:max-w-sm sm:flex-1'>
+                <SearchInput
+                  placeholder='Search organizations...'
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className='flex flex-wrap gap-2'>
+                {[
+                  ['all', 'All'],
+                  ['pending_review', 'Pending review'],
+                  ['approved', 'Approved'],
+                  ['rejected', 'Rejected'],
+                ].map(([value, label]) => (
+                  <Button
+                    key={value}
+                    type='button'
+                    size='sm'
+                    variant={reviewFilter === value ? 'primary' : 'secondary'}
+                    onClick={() => setReviewFilter(value)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
             </div>
             <DataTable
               columns={columns}

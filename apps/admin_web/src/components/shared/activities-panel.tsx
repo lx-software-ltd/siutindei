@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useActivityCategories } from '../../hooks/use-activity-categories';
+import { useEditDeepLink } from '../../hooks/use-edit-deep-link';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationsByMode } from '../../hooks/use-organizations-by-mode';
 import { useResourcePanel } from '../../hooks/use-resource-panel';
@@ -75,6 +76,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     emptyForm,
     itemToForm
   );
+  useEditDeepLink(panel.items, panel.editingId, panel.startEdit);
 
   const { tree: categoryTree } = useActivityCategories();
 

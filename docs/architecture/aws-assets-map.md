@@ -346,6 +346,9 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/admin/audit-logs/{id}` | GET | Admin Group | `SiutindeiAdminFunction` | Get audit log entry |
 | `/v1/admin/organization-suggestions` | GET | Admin Group | `SiutindeiAdminFunction` | List suggestions |
 | `/v1/admin/organization-suggestions/{id}` | PUT | Admin Group | `SiutindeiAdminFunction` | Review suggestion |
+| `/v1/admin/imports` | GET | Admin Group | `SiutindeiAdminFunction` | Import job history |
+| `/v1/admin/org-review` | GET | Admin Group | `SiutindeiAdminFunction` | Organization review queue |
+| `/v1/admin/org-review/{proxy+}` | ANY | Admin Group | `SiutindeiAdminFunction` | Summary, detail, decision, bulk |
 | `/v1/admin/api-keys` | GET, POST | Admin Group | `SiutindeiAdminFunction` | Partner API key management |
 | `/v1/admin/api-keys/{id}` | GET, DELETE | Admin Group | `SiutindeiAdminFunction` | Get / revoke partner API key |
 | `/v1/manager/{resource}` | GET, POST | Manager Group | `SiutindeiAdminFunction` | Filtered CRUD |

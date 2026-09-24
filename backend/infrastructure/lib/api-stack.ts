@@ -653,6 +653,19 @@ export class ApiStack extends cdk.Stack {
           "organizations for this manager_id.",
       }
     );
+    const orgReviewGateEnabled = new cdk.CfnParameter(
+      this,
+      "OrgReviewGateEnabled",
+      {
+        type: "String",
+        default: "false",
+        allowedValues: ["true", "false"],
+        description:
+          "When true, public activity search hides organizations whose " +
+          "review_status is not approved. Leave false until the imported " +
+          "backlog has been released from the admin review queue.",
+      }
+    );
 
     // ---------------------------------------------------------------------
     // Cognito User Pool and Identity Providers
@@ -1279,6 +1292,7 @@ export class ApiStack extends cdk.Stack {
         STAGING_SEARCH_DATA_ENABLED: "false",
         STAGING_SEARCH_DATA_PATH:
           "/var/task/fixtures/activity_search_staging.json",
+        ORG_REVIEW_GATE_ENABLED: orgReviewGateEnabled.valueAsString,
       },
     });
     database.grantAppUserSecretRead(searchFunction);
@@ -1372,6 +1386,7 @@ export class ApiStack extends cdk.Stack {
         NOMINATIM_USER_AGENT: nominatimUserAgent.valueAsString,
         NOMINATIM_REFERER: nominatimReferer.valueAsString,
         BOARD_CATALOG_MANAGER_ID: boardCatalogManagerId.valueAsString,
+        ORG_REVIEW_GATE_ENABLED: orgReviewGateEnabled.valueAsString,
       },
     });
     database.grantAdminUserSecretRead(adminFunction);
@@ -2290,27 +2305,14 @@ export class ApiStack extends cdk.Stack {
       });
 
       const resourceById = resource.addResource("{id}");
-      // ANY on organizations/{id} covers GET/PUT/PATCH/DELETE so PATCH
-      // does not add a Method past the CloudFormation 500-resource cap.
-      if (resourceName === "organizations") {
-        resourceById.addMethod("ANY", adminIntegration, {
-          authorizationType: apigateway.AuthorizationType.CUSTOM,
-          authorizer: adminAuthorizer,
-        });
-      } else {
-        resourceById.addMethod("GET", adminIntegration, {
-          authorizationType: apigateway.AuthorizationType.CUSTOM,
-          authorizer: adminAuthorizer,
-        });
-        resourceById.addMethod("PUT", adminIntegration, {
-          authorizationType: apigateway.AuthorizationType.CUSTOM,
-          authorizer: adminAuthorizer,
-        });
-        resourceById.addMethod("DELETE", adminIntegration, {
-          authorizationType: apigateway.AuthorizationType.CUSTOM,
-          authorizer: adminAuthorizer,
-        });
-      }
+      // One ANY method covers GET/PUT/PATCH/DELETE. Separate methods
+      // would push the stack past the CloudFormation 500-resource cap
+      // once org-review and import history are registered. The admin
+      // Lambda still rejects methods it does not implement.
+      resourceById.addMethod("ANY", adminIntegration, {
+        authorizationType: apigateway.AuthorizationType.CUSTOM,
+        authorizer: adminAuthorizer,
+      });
 
       if (resourceName === "organizations") {
         const media = resourceById.addResource("media");
@@ -2345,6 +2347,23 @@ export class ApiStack extends cdk.Stack {
 
     const importById = imports.addResource("{id}");
     importById.addMethod("GET", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
+    imports.addMethod("GET", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
+
+    // One proxy method covers summary, bulk, detail, and decision so
+    // the stack stays under the CloudFormation resource cap.
+    const orgReview = admin.addResource("org-review");
+    orgReview.addMethod("GET", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
+    const orgReviewProxy = orgReview.addResource("{proxy+}");
+    orgReviewProxy.addMethod("ANY", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
       authorizer: adminAuthorizer,
     });

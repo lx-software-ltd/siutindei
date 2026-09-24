@@ -57,6 +57,7 @@ export interface AdminImportSummary {
 }
 
 export interface AdminImportResponse {
+  id?: string;
   summary: AdminImportSummary;
   results: AdminImportResult[];
   file_warnings: string[];

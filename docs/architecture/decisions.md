@@ -387,6 +387,36 @@ Lambdas or NAT Gateway.
 - `PublicApiKeyValue` (API key required for public search)
 - `DeviceAttestationJwksUrl`, `DeviceAttestationIssuer`, `DeviceAttestationAudience`
 
+## Organization review gate
+
+**Decision:** Catalog imports create organizations as `pending_review`.
+Listing `status` stays the business state (`operational`,
+`closed_temporarily`, `closed_permanently`, `hidden`). A separate
+`review_status` (`pending_review`, `approved`, `rejected`) decides
+whether an admin has released the organization. Re-importing an
+approved organization does not send it back to the queue; it stamps
+`last_imported_at` and leaves `import_job_id` pointing at the job
+that created the row. Admin-console creates and approved tickets are
+`approved` immediately. A live import commits its job as `running`
+before writing organizations and marks that job `failed` if the
+import raises, so the same object key can be retried.
+
+Every organization already in the database is backfilled to
+`pending_review`. Public search keeps returning those rows until the
+CDK parameter `OrgReviewGateEnabled` (`ORG_REVIEW_GATE_ENABLED`) is
+`true`. `v_catalog_health` counts approved organizations only, because
+a SQL view cannot read the Lambda flag. CloudFront caches public
+search for 5 minutes, so a release can lag by that long.
+
+The admin Imports section is the release tool: a review queue shows
+which details are missing, and bulk actions approve, reject, reopen,
+or set a whitelist of organization fields. Approve refuses while
+blockers remain unless `force` is set. Blockers are a missing
+description, no location, no activity, a location without coordinates,
+and an activity without pricing or a schedule.
+
+Endpoint shapes live in `docs/api/admin.yaml` under `/v1/admin/org-review`.
+
 ## Keeping Documentation Up to Date
 
 **Decision:** Architecture documentation in `docs/architecture/` describes
