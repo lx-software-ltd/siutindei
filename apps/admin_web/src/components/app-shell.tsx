@@ -156,9 +156,9 @@ export function AppShell({
               src='/images/siutindei-logo.svg'
               alt=''
               aria-hidden
-              width={100}
-              height={100}
-              className='h-11 w-11 shrink-0 lg:mb-[-20px] lg:mt-[-20px] lg:h-[100px] lg:w-[100px]'
+              width={80}
+              height={80}
+              className='h-[2.2rem] w-[2.2rem] shrink-0 lg:mb-[-16px] lg:mt-[-16px] lg:h-[80px] lg:w-[80px]'
             />
             <div>
               <h1 className='text-[calc(1.125rem*0.8)] font-semibold sm:text-[calc(1.25rem*0.8)]'>
