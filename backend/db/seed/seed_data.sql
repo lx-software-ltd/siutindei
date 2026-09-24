@@ -26,7 +26,7 @@ WHERE NOT EXISTS (
 INSERT INTO locations (id, org_id, area_id, address, lat, lng)
 SELECT 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111',
        (SELECT id FROM geographic_areas WHERE name = 'Central and Western' AND level = 'district' LIMIT 1),
-       '1 Queens Road Central', 22.282, 114.158
+       '10 Example Lane', 22.282, 114.158
 WHERE NOT EXISTS (
   SELECT 1 FROM locations WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 );
