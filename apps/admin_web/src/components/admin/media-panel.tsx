@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useReducer, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent, SetStateAction } from 'react';
 
 import {
@@ -13,11 +13,11 @@ import {
 import { useConfirmDialog } from '../../hooks/use-confirm-dialog';
 import { useOrganizationsByMode } from '../../hooks/use-organizations-by-mode';
 import type { Organization } from '../../types/admin';
+import { AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
-import { FileUploadButton } from '../ui/file-upload-button';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { Select } from '../ui/select';
 import { StatusBanner } from '../status-banner';
 import { MediaGrid } from './media/media-grid';
@@ -28,7 +28,6 @@ import {
   normalizeMediaUrls,
   reorderMediaUrls,
   resolveLogoMediaUrl,
-  type MediaPanelAction,
   type MediaPanelProps,
   type MediaPanelState,
   uploadMediaFile,
@@ -38,15 +37,15 @@ function PlusIcon({ className }: { className?: string }) {
   return (
     <svg
       className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
     >
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
+      <line x1='12' y1='5' x2='12' y2='19' />
+      <line x1='5' y1='12' x2='19' y2='12' />
     </svg>
   );
 }
@@ -127,6 +126,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
   const setDragOverIndex = (value: SetStateAction<number | null>) =>
     setMediaField('dragOverIndex', value);
   const { confirm, confirmDialog } = useConfirmDialog();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const requiredIndicator = (
     <span className='text-red-500' aria-hidden='true'>
@@ -497,64 +497,88 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
 
   return (
     <div className='space-y-6'>
-      <Card
-        title='Organization Media'
-        description='Select an organization to manage its media.'
-      >
-        {error && (
-          <div className='mb-4'>
-            <StatusBanner variant='error' title='Error'>
-              {error}
-            </StatusBanner>
-          </div>
-        )}
-        {successMessage && (
-          <div className='mb-4'>
-            <StatusBanner variant='success' title='Success'>
-              {successMessage}
-            </StatusBanner>
-          </div>
-        )}
-        <div className='space-y-4'>
-          <div className='space-y-1'>
-            <Label htmlFor='org-select'>
-              Organization{' '}
-              <span className='ml-1'>{requiredIndicator}</span>
-            </Label>
-            <Select
-              id='org-select'
-              value={selectedOrgId}
-              onChange={(event) => {
-                void handleSelectOrganization(event.target.value);
-              }}
-              disabled={isLoadingOrgs || isMediaBusy || isSingleOrgManager}
-              className={showOrgError ? errorInputClassName : ''}
-              aria-invalid={showOrgError || undefined}
-            >
-              <option value=''>
-                {isLoadingOrgs
-                  ? 'Loading organizations...'
-                  : 'Select an organization'}
+      <h2 className='sr-only'>Organization Media</h2>
+      {error && (
+        <StatusBanner variant='error' title='Error'>
+          {error}
+        </StatusBanner>
+      )}
+      {successMessage && (
+        <StatusBanner variant='success' title='Success'>
+          {successMessage}
+        </StatusBanner>
+      )}
+      <AdminFilterBar>
+        <AdminFilterField
+          label={
+            <>
+              Organization <span className='ml-1'>{requiredIndicator}</span>
+            </>
+          }
+          htmlFor='org-select'
+        >
+          <Select
+            id='org-select'
+            value={selectedOrgId}
+            onChange={(event) => {
+              void handleSelectOrganization(event.target.value);
+            }}
+            disabled={isLoadingOrgs || isMediaBusy || isSingleOrgManager}
+            className={showOrgError ? errorInputClassName : ''}
+            aria-invalid={showOrgError || undefined}
+          >
+            <option value=''>
+              {isLoadingOrgs
+                ? 'Loading organizations...'
+                : 'Select an organization'}
+            </option>
+            {organizations.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name}
               </option>
-              {organizations.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </Select>
-            {showOrgError ? (
-              <p className='text-xs text-red-600'>{orgErrorMessage}</p>
-            ) : null}
-          </div>
-        </div>
-      </Card>
+            ))}
+          </Select>
+          {showOrgError ? (
+            <p className='text-xs text-red-600'>{orgErrorMessage}</p>
+          ) : null}
+        </AdminFilterField>
+      </AdminFilterBar>
 
       {selectedOrgId && (
-        <Card
-          title={`Media for ${selectedOrganization?.name ?? 'Organization'}`}
-          description='Add or remove media for this organization.'
-        >
-          <div className='space-y-4'>
+        <Card>
+          <AdminEditorPanel
+            actions={
+              <>
+                <Button
+                  type='button'
+                  onClick={() => {
+                    void handleSave();
+                  }}
+                  disabled={isProcessingMedia || !hasUnsavedChanges}
+                  loading={isSaving}
+                  loadingLabel='Saving…'
+                  className='w-full sm:w-auto'
+                >
+                  Save media
+                </Button>
+                {hasUnsavedChanges && (
+                  <Button
+                    type='button'
+                    variant='secondary'
+                    onClick={() => void handleCancelChanges()}
+                    disabled={isMediaBusy}
+                    className='w-full sm:w-auto'
+                  >
+                    Cancel changes
+                  </Button>
+                )}
+              </>
+            }
+          >
+            <p className='text-sm text-slate-600'>
+              Add or remove media for{' '}
+              {selectedOrganization?.name ?? 'this organization'}.
+            </p>
             <div className='flex flex-col gap-2 sm:flex-row'>
               <Input
                 id='media-url'
@@ -575,15 +599,27 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
               </Button>
             </div>
             <div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
-              <FileUploadButton
+              <input
                 id='media-upload'
+                ref={fileInputRef}
+                type='file'
                 accept='image/*'
                 multiple
                 onChange={handleMediaFiles}
                 disabled={isMediaBusy}
-                buttonLabel='Choose files'
-                inputAriaLabel='Upload media files'
+                aria-label='Upload media files'
+                className='sr-only'
               />
+              <Button
+                type='button'
+                variant='secondary'
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSaving}
+                loading={isProcessingMedia}
+                loadingLabel='Uploading…'
+              >
+                Choose files
+              </Button>
               <p className='text-xs text-slate-500 sm:self-center'>
                 Upload files or add URLs. Drag or use arrows to reorder.
                 Select a logo, then save to apply changes.
@@ -591,6 +627,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
             </div>
 
             {mediaUrls.length > 0 ? (
+              // Exception: image ordering stays a grid, not a record table.
               <MediaGrid
                 mediaUrls={mediaUrls}
                 logoMediaUrl={logoMediaUrl}
@@ -610,38 +647,19 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
                 No media added yet. Upload files or add URLs above.
               </p>
             )}
-
-            <div className='flex flex-col gap-2 pt-2 sm:flex-row sm:flex-wrap sm:gap-3'>
-              <Button
-                type='button'
-                onClick={handleSave}
-                disabled={isMediaBusy || !hasUnsavedChanges}
-                className='w-full sm:w-auto'
-              >
-                {isSaving ? 'Saving...' : 'Save media'}
-              </Button>
-              {hasUnsavedChanges && (
-                <Button
-                  type='button'
-                  variant='secondary'
-                  onClick={() => void handleCancelChanges()}
-                  disabled={isMediaBusy}
-                  className='w-full sm:w-auto'
-                >
-                  Cancel changes
-                </Button>
-              )}
-            </div>
-          </div>
+          </AdminEditorPanel>
         </Card>
       )}
 
       {!selectedOrgId && !isLoadingOrgs && organizations.length > 0 && (
-        <Card
-          title='Select an organization'
-          description='Choose an organization from the dropdown above to manage its media.'
-        >
-          <p className='text-sm text-slate-600'>
+        <Card>
+          <p className='text-base font-semibold text-slate-900'>
+            Select an organization
+          </p>
+          <p className='mt-1 text-sm text-slate-600'>
+            Choose an organization from the dropdown above to manage its media.
+          </p>
+          <p className='mt-3 text-sm text-slate-600'>
             You can upload images or add media URLs to any organization.
             Media is saved when you click the &ldquo;Save media&rdquo;
             button.
@@ -650,11 +668,14 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
       )}
 
       {!selectedOrgId && !isLoadingOrgs && organizations.length === 0 && (
-        <Card
-          title='No organizations found'
-          description='Create an organization first to manage its media.'
-        >
-          <p className='text-sm text-slate-600'>
+        <Card>
+          <p className='text-base font-semibold text-slate-900'>
+            No organizations found
+          </p>
+          <p className='mt-1 text-sm text-slate-600'>
+            Create an organization first to manage its media.
+          </p>
+          <p className='mt-3 text-sm text-slate-600'>
             Go to the Organizations section to create a new organization, then
             return here to add media.
           </p>

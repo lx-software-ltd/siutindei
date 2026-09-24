@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 
-export interface CardProps {
+import { clsx } from 'clsx';
+
+export interface CardProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   title?: string;
   description?: string;
   children: ReactNode;
@@ -12,10 +14,15 @@ export function Card({
   description,
   children,
   className = '',
+  ...rest
 }: CardProps) {
   return (
     <section
-      className={`rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:rounded-xl sm:p-6 ${className}`}
+      {...rest}
+      className={clsx(
+        'rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:rounded-xl sm:p-6',
+        className
+      )}
     >
       {(title || description) && (
         <header className='mb-3 sm:mb-4'>

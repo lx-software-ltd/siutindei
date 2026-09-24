@@ -1,80 +1,163 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-import {
-  ApiError,
-  listResource,
-} from '../../lib/api-client';
-import { formatDateTime } from '../../lib/date-utils';
+import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
+import { useExhaustPages } from '@/hooks/use-exhaust-pages';
+import { usePaginatedList } from '@/hooks/use-paginated-list';
+import { ApiError, listResource } from '@/lib/api-client';
+import { listCognitoUsers } from '@/lib/api-client-cognito';
 import {
   listTickets,
+  reviewTicket,
+  type ReviewTicketPayload,
   type Ticket,
   type TicketStatus,
   type TicketType,
-} from '../../lib/api-client-tickets';
-import type { FeedbackLabel } from '../../types/admin';
-import { ReviewIcon } from '../icons/action-icons';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { DataTable } from '../ui/data-table';
-import { Label } from '../ui/label';
-import { SearchInput } from '../ui/search-input';
-import { Select } from '../ui/select';
-import { StatusBadge } from '../ui/status-badge';
-import { StatusBanner } from '../status-banner';
-import { ReviewModal, TicketTypeBadge } from './tickets/review-modal';
+} from '@/lib/api-client-tickets';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
+import { formatDateTime } from '@/lib/date-utils';
+import type { FeedbackLabel, Organization } from '@/types/admin';
+import { StatusBanner } from '@/components/status-banner';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '@/components/ui/admin-data-table';
+import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
+import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
+import {
+  AdminFilterBar,
+  AdminFilterField,
+} from '@/components/ui/admin-filter-bar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ResourceTableShell, rowActions } from '@/components/ui/resource-table-shell';
+import { Select } from '@/components/ui/select';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Textarea } from '@/components/ui/textarea';
 
-type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
-type TypeFilter =
-  | 'all'
-  | 'access_request'
-  | 'organization_suggestion'
-  | 'organization_feedback';
+type StatusFilter = 'all' | TicketStatus;
+type TypeFilter = 'all' | TicketType;
+type OrganizationMode = 'existing' | 'new';
 
-// --- Main Panel ---
+interface TicketListFilters {
+  type: TypeFilter;
+  status: StatusFilter;
+}
+
+interface ReviewFormState {
+  adminNotes: string;
+  createOrg: boolean;
+  organizationMode: OrganizationMode;
+  selectedOrgId: string;
+  orgTouched: boolean;
+  hasSubmitted: boolean;
+}
+
+const defaultTicketFilters: TicketListFilters = {
+  type: 'all',
+  status: 'pending',
+};
+
+const emptyReviewForm: ReviewFormState = {
+  adminNotes: '',
+  createOrg: true,
+  organizationMode: 'new',
+  selectedOrgId: '',
+  orgTouched: false,
+  hasSubmitted: false,
+};
+
+const TICKET_TYPE_LABELS: Record<TicketType, string> = {
+  access_request: 'Access Request',
+  organization_suggestion: 'Suggestion',
+  organization_feedback: 'Feedback',
+};
+
+const TICKET_TYPE_COLORS: Record<TicketType, string> = {
+  access_request: 'bg-blue-100 text-blue-800',
+  organization_suggestion: 'bg-purple-100 text-purple-800',
+  organization_feedback: 'bg-amber-100 text-amber-800',
+};
+
+function TicketTypeBadge({ type }: { type: TicketType }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${TICKET_TYPE_COLORS[type]}`}
+    >
+      {TICKET_TYPE_LABELS[type]}
+    </span>
+  );
+}
+
+function ApproveIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <path d='M20 6 9 17l-5-5' />
+    </svg>
+  );
+}
+
+function RejectIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <path d='M18 6 6 18' />
+      <path d='m6 6 12 12' />
+    </svg>
+  );
+}
 
 export function TicketsPanel() {
-  const [items, setItems] = useState<Ticket[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
-  const [reviewingTicket, setReviewingTicket] = useState<Ticket | null>(null);
+  const shell = useEntityPanelEditorShell({ paramName: 'ticket' });
+  const { clearDirty, markDirty, selectedId } = shell;
   const [searchQuery, setSearchQuery] = useState('');
   const [feedbackLabels, setFeedbackLabels] = useState<FeedbackLabel[]>([]);
+  const [reviewForm, setReviewForm] = useState<ReviewFormState>(emptyReviewForm);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewTargetId, setReviewTargetId] = useState<string | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [managerEmails, setManagerEmails] = useState<Record<string, string>>({});
+  const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
+  const reviewTargetIdRef = useRef<string | null>(null);
 
-  const loadItems = useCallback(
-    async (cursor?: string, reset = false) => {
-      setIsLoading(true);
-      setError('');
-      try {
-        const filterStatus =
-          statusFilter === 'all' ? undefined : (statusFilter as TicketStatus);
-        const filterType =
-          typeFilter === 'all' ? undefined : (typeFilter as TicketType);
-        const response = await listTickets(filterType, filterStatus, cursor);
-        setItems((prev) =>
-          reset || !cursor ? response.items : [...prev, ...response.items]
-        );
-        setNextCursor(response.next_cursor ?? null);
-        setPendingCount(response.pending_count);
-      } catch (err) {
-        const message =
-          err instanceof ApiError ? err.message : 'Failed to load tickets.';
-        setError(message);
-      } finally {
-        setIsLoading(false);
-      }
+  const list = usePaginatedList<Ticket, TicketListFilters>({
+    queryKey: adminQueryKeys.tickets(),
+    defaultFilters: defaultTicketFilters,
+    errorPrefix: 'Failed to load tickets',
+    fetcher: async ({ cursor, type, status }) => {
+      const response = await listTickets(
+        type === 'all' ? undefined : type,
+        status === 'all' ? undefined : status,
+        cursor ?? undefined
+      );
+      return {
+        items: response.items,
+        nextCursor: response.next_cursor ?? null,
+        pendingCount: response.pending_count,
+      };
     },
-    [statusFilter, typeFilter]
-  );
-
-  useEffect(() => {
-    void loadItems(undefined, true);
-  }, [loadItems]);
+  });
+  const pendingCount = list.pendingCount ?? 0;
+  useExhaustPages(Boolean(searchQuery.trim()), list);
 
   useEffect(() => {
     const loadLabels = async () => {
@@ -85,19 +168,71 @@ export function TicketsPanel() {
         setFeedbackLabels([]);
       }
     };
-    loadLabels();
+    void loadLabels();
   }, []);
 
-  const handleReviewed = (updated: Ticket) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === updated.id ? updated : item))
-    );
-    setReviewingTicket(null);
-    void loadItems(undefined, true);
-  };
+  useEffect(() => {
+    setReviewForm(emptyReviewForm);
+    clearDirty();
+    if (reviewTargetIdRef.current !== selectedId) {
+      setReviewError('');
+    }
+  }, [selectedId, clearDirty]);
 
-  const filteredItems = items.filter((item) => {
-    if (!searchQuery.trim()) return true;
+  const selected = list.items.find((item) => item.id === selectedId) ?? null;
+  const selectedTicketType = selected?.ticket_type;
+
+  useEffect(() => {
+    if (!selectedId || selectedTicketType !== 'access_request') {
+      return;
+    }
+    let cancelled = false;
+    const loadOrgs = async () => {
+      setIsLoadingOrgs(true);
+      try {
+        const [orgsResponse, usersResponse] = await Promise.all([
+          listResource<Organization>('organizations'),
+          listCognitoUsers(),
+        ]);
+        if (cancelled) {
+          return;
+        }
+        setOrganizations(orgsResponse.items);
+        const emailMap: Record<string, string> = {};
+        for (const user of usersResponse.items) {
+          if (user.sub && user.email) {
+            emailMap[user.sub] = user.email;
+          }
+        }
+        setManagerEmails(emailMap);
+      } catch {
+        if (!cancelled) {
+          setOrganizations([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingOrgs(false);
+        }
+      }
+    };
+    void loadOrgs();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, selectedTicketType]);
+
+  const labelNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const label of feedbackLabels) {
+      map[label.id] = label.name;
+    }
+    return map;
+  }, [feedbackLabels]);
+
+  const filteredItems = list.items.filter((item) => {
+    if (!searchQuery.trim()) {
+      return true;
+    }
     const query = searchQuery.toLowerCase();
     return (
       item.ticket_id?.toLowerCase().includes(query) ||
@@ -109,192 +244,450 @@ export function TicketsPanel() {
     );
   });
 
-  const labelNameById = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const label of feedbackLabels) {
-      map[label.id] = label.name;
-    }
-    return map;
-  }, [feedbackLabels]);
+  const updateReviewForm = (patch: Partial<ReviewFormState>) => {
+    markDirty();
+    setReviewForm((prev) => ({ ...prev, ...patch }));
+  };
 
-  const columns = useMemo(
-    () => [
-      {
-        key: 'ticket-id',
-        header: 'Ticket ID',
-        secondary: true,
-        render: (item: Ticket) => (
-          <span className='font-mono text-xs text-slate-600'>
-            {item.ticket_id}
-          </span>
-        ),
-      },
-      {
-        key: 'type',
-        header: 'Type',
-        render: (item: Ticket) => <TicketTypeBadge type={item.ticket_type} />,
-      },
-      {
-        key: 'organization',
-        header: 'Organization',
-        primary: true,
-        render: (item: Ticket) => (
-          <span className='font-medium'>{item.organization_name}</span>
-        ),
-      },
-      {
-        key: 'district',
-        header: 'District',
-        headerClassName: 'md:hidden',
-        cellClassName: 'md:hidden',
-        render: (item: Ticket) => (
-          <span className='text-slate-600'>
-            {item.suggested_district || '—'}
-          </span>
-        ),
-      },
-      {
-        key: 'submitted-by',
-        header: 'Submitted By',
-        render: (item: Ticket) => (
-          <span className='text-slate-600'>{item.submitter_email}</span>
-        ),
-      },
-      {
-        key: 'status',
-        header: 'Status',
-        render: (item: Ticket) => <StatusBadge status={item.status} />,
-      },
-      {
-        key: 'submitted',
-        header: 'Submitted',
-        render: (item: Ticket) => (
-          <span className='text-slate-600'>{formatDateTime(item.created_at)}</span>
-        ),
-      },
-    ],
-    []
-  );
+  const submitReview = async (ticket: Ticket, action: 'approve' | 'reject') => {
+    const usingForm = selectedId === ticket.id;
+    const form = usingForm ? reviewForm : emptyReviewForm;
+    reviewTargetIdRef.current = ticket.id;
+    setReviewTargetId(ticket.id);
 
-  function renderActions(item: Ticket, context: 'desktop' | 'mobile') {
-    if (item.status === 'pending') {
-      return (
-        <Button
-          type='button'
-          size='sm'
-          variant='ghost'
-          onClick={() => setReviewingTicket(item)}
-          className={context === 'mobile' ? 'flex-1' : undefined}
-          aria-label='Review ticket'
-        >
-          <ReviewIcon className='h-4 w-4' />
-        </Button>
-      );
+    if (
+      ticket.ticket_type === 'access_request' &&
+      action === 'approve' &&
+      form.organizationMode === 'existing' &&
+      !form.selectedOrgId
+    ) {
+      if (usingForm) {
+        setReviewForm((prev) => ({ ...prev, orgTouched: true, hasSubmitted: true }));
+      }
+      setReviewError('Please select an organization');
+      shell.expanded.expand(ticket.id);
+      return;
     }
-    const reviewedLabel = item.reviewed_at
-      ? `Reviewed ${formatDateTime(item.reviewed_at)}`
-      : '—';
-    return (
-      <span
-        className={
-          context === 'mobile'
-            ? 'flex-1 text-center text-xs text-slate-400'
-            : 'text-xs text-slate-400'
+
+    setSubmittingId(ticket.id);
+    setReviewError('');
+    try {
+      const payload: ReviewTicketPayload = {
+        action,
+        admin_notes: form.adminNotes.trim() || undefined,
+      };
+      if (action === 'approve') {
+        if (ticket.ticket_type === 'access_request') {
+          if (form.organizationMode === 'existing') {
+            payload.organization_id = form.selectedOrgId;
+          } else {
+            payload.create_organization = true;
+          }
+        } else {
+          payload.create_organization = form.createOrg;
         }
-      >
-        {reviewedLabel}
-      </span>
-    );
-  }
+      }
+      const response = await reviewTicket(ticket.id, payload);
+      const updated = response.ticket;
+      list.setItems((prev) => {
+        if (list.filters.status !== 'all' && updated.status !== list.filters.status) {
+          return prev.filter((item) => item.id !== updated.id);
+        }
+        return prev.map((item) => (item.id === updated.id ? updated : item));
+      });
+      clearDirty();
+      reviewTargetIdRef.current = null;
+      shell.expanded.collapse();
+      setReviewError('');
+      await list.refetch();
+    } catch (err) {
+      const errorMessage = err instanceof ApiError ? err.message : 'Failed to process ticket';
+      setReviewError(errorMessage);
+      shell.expanded.expand(ticket.id);
+    } finally {
+      setSubmittingId(null);
+    }
+  };
+
+  const detail = selected ? (
+    <TicketDetail
+      ticket={selected}
+      form={reviewForm}
+      reviewError={reviewTargetId === selected.id ? reviewError : ''}
+      labelNameById={labelNameById}
+      organizations={organizations}
+      managerEmails={managerEmails}
+      isLoadingOrgs={isLoadingOrgs}
+      onChange={updateReviewForm}
+    />
+  ) : null;
+
+  const showToolbarError = Boolean(reviewError && reviewTargetId !== selectedId);
 
   return (
-    <div className='space-y-6'>
-      <Card
-        title='Tickets'
-        description='Review and manage submitted tickets.'
-      >
-        {pendingCount > 0 && (
-          <div className='mb-4'>
-            <StatusBanner variant='info' title='Pending Review'>
-              {pendingCount} ticket{pendingCount !== 1 ? 's' : ''} awaiting review.
-            </StatusBanner>
-          </div>
-        )}
-
-        {error && (
-          <div className='mb-4'>
-            <StatusBanner variant='error' title='Error'>
-              {error}
-            </StatusBanner>
-          </div>
-        )}
-
-        <div className='mb-4 flex flex-col gap-3 sm:flex-row'>
-          <div className='flex-1'>
-            <Label htmlFor='type-filter'>Type</Label>
-            <Select
-              id='type-filter'
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}
-            >
-              <option value='all'>All Types</option>
-              <option value='access_request'>Access Requests</option>
-              <option value='organization_suggestion'>Suggestions</option>
-              <option value='organization_feedback'>Feedback</option>
-            </Select>
-          </div>
-          <div className='flex-1'>
-            <Label htmlFor='status-filter'>Status</Label>
-            <Select
-              id='status-filter'
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            >
-              <option value='pending'>Pending</option>
-              <option value='approved'>Approved</option>
-              <option value='rejected'>Rejected</option>
-              <option value='all'>All</option>
-            </Select>
-          </div>
-        </div>
-
-        {isLoading && items.length === 0 ? (
-          <p className='text-sm text-slate-600'>Loading tickets...</p>
-        ) : items.length === 0 ? (
-          <p className='text-sm text-slate-600'>
-            No {statusFilter !== 'all' ? statusFilter : ''} tickets found.
-          </p>
-        ) : (
-          <div className='space-y-4'>
-            <div className='max-w-full sm:max-w-sm'>
-              <SearchInput
+    <>
+      <ResourceTableShell
+        ariaLabel='Tickets'
+        rows={filteredItems}
+        getLabel={(item) => item.ticket_id}
+        middleColumnCount={6}
+        isLoading={list.isLoading}
+        isLoadingMore={list.isLoadingMore}
+        hasMore={list.hasMore}
+        onLoadMore={list.loadMore}
+        error={list.error}
+        emptyLabel={
+          searchQuery.trim()
+            ? 'No tickets match your search.'
+            : list.filters.status === 'all'
+              ? 'No tickets found.'
+              : `No ${list.filters.status} tickets found.`
+        }
+        isExpanded={shell.expanded.isExpanded}
+        onToggle={shell.expanded.toggle}
+        detail={detail}
+        toolbar={
+          pendingCount > 0 || showToolbarError ? (
+            <div className='mb-3 space-y-3'>
+              {pendingCount > 0 ? (
+                <StatusBanner variant='info' title='Pending Review'>
+                  {pendingCount} ticket{pendingCount !== 1 ? 's' : ''} awaiting review.
+                </StatusBanner>
+              ) : null}
+              {showToolbarError ? (
+                <StatusBanner variant='error' title='Error'>
+                  {reviewError}
+                </StatusBanner>
+              ) : null}
+            </div>
+          ) : null
+        }
+        filters={
+          <AdminFilterBar>
+            <AdminFilterField label='Type' htmlFor='type-filter'>
+              <Select
+                id='type-filter'
+                value={list.filters.type}
+                onChange={(event) => {
+                  list.setFilter('type', event.target.value as TypeFilter);
+                }}
+              >
+                <option value='all'>All Types</option>
+                <option value='access_request'>Access Requests</option>
+                <option value='organization_suggestion'>Suggestions</option>
+                <option value='organization_feedback'>Feedback</option>
+              </Select>
+            </AdminFilterField>
+            <AdminFilterField label='Status' htmlFor='status-filter'>
+              <Select
+                id='status-filter'
+                value={list.filters.status}
+                onChange={(event) => {
+                  list.setFilter('status', event.target.value as StatusFilter);
+                }}
+              >
+                <option value='pending'>Pending</option>
+                <option value='approved'>Approved</option>
+                <option value='rejected'>Rejected</option>
+                <option value='all'>All</option>
+              </Select>
+            </AdminFilterField>
+            <AdminFilterField label='Search' htmlFor='ticket-search'>
+              <Input
+                id='ticket-search'
                 placeholder='Search tickets...'
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(event) => setSearchQuery(event.target.value)}
               />
-            </div>
-            <DataTable
-              columns={columns}
-              data={filteredItems}
-              keyExtractor={(item) => item.id}
-              renderActions={renderActions}
-              nextCursor={nextCursor}
-              onLoadMore={() => loadItems(nextCursor ?? undefined)}
-              isLoading={isLoading}
-              emptyMessage='No tickets match your search.'
-            />
-          </div>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <>
+            <AdminDataTableHeadCell>Organization</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Ticket ID</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Type</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Submitted By</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Status</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Submitted</AdminDataTableHeadCell>
+          </>
+        }
+        renderCells={(item) => (
+          <>
+            <AdminDataTableCell>
+              <span className='font-medium'>{item.organization_name}</span>
+              <AdminDataTableCellMeta>
+                {item.ticket_id}
+                {item.suggested_district ? ` · ${item.suggested_district}` : ''}
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              <span className='font-mono text-xs text-slate-600'>{item.ticket_id}</span>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              <TicketTypeBadge type={item.ticket_type} />
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              <span className='text-slate-600'>{item.submitter_email}</span>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              <StatusBadge status={item.status} />
+              {item.reviewed_at ? (
+                <span className='mt-1 block text-xs text-slate-400'>
+                  Reviewed {formatDateTime(item.reviewed_at)}
+                </span>
+              ) : null}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              <span className='text-slate-600'>{formatDateTime(item.created_at)}</span>
+            </AdminDataTableCell>
+          </>
         )}
-      </Card>
+        renderActions={(item) =>
+          rowActions([
+            {
+              key: 'approve',
+              label: 'Approve',
+              tone: 'success',
+              hidden: item.status !== 'pending',
+              disabled: submittingId === item.id,
+              icon: <ApproveIcon className='h-4 w-4' />,
+              onClick: () => {
+                void submitReview(item, 'approve');
+              },
+            },
+            {
+              key: 'reject',
+              label: 'Reject',
+              tone: 'danger',
+              hidden: item.status !== 'pending',
+              disabled: submittingId === item.id,
+              icon: <RejectIcon className='h-4 w-4' />,
+              onClick: () => {
+                void submitReview(item, 'reject');
+              },
+            },
+          ])
+        }
+      />
+      <AdminDiscardChangesDialog prompt={shell.expanded.discardPrompt} />
+    </>
+  );
+}
 
-      {reviewingTicket && (
-        <ReviewModal
-          ticket={reviewingTicket}
-          onClose={() => setReviewingTicket(null)}
-          onReviewed={handleReviewed}
-          labelNameById={labelNameById}
-        />
-      )}
-    </div>
+function TicketDetail({
+  ticket,
+  form,
+  reviewError,
+  labelNameById,
+  organizations,
+  managerEmails,
+  isLoadingOrgs,
+  onChange,
+}: {
+  ticket: Ticket;
+  form: ReviewFormState;
+  reviewError: string;
+  labelNameById: Record<string, string>;
+  organizations: Organization[];
+  managerEmails: Record<string, string>;
+  isLoadingOrgs: boolean;
+  onChange: (patch: Partial<ReviewFormState>) => void;
+}) {
+  const fieldId = (name: string) => `ticket-${ticket.id}-${name}`;
+  const isPending = ticket.status === 'pending';
+  const isAccessRequest = ticket.ticket_type === 'access_request';
+  const feedbackLabelNames = ticket.feedback_label_ids?.map((id) => labelNameById[id] || id) ?? [];
+  const orgError =
+    form.organizationMode === 'existing' && !form.selectedOrgId
+      ? 'Choose an organization to continue.'
+      : '';
+  const showOrgError = Boolean(orgError && (form.hasSubmitted || form.orgTouched));
+
+  return (
+    <AdminEditorPanel
+      status={
+        reviewError ? (
+          <StatusBanner variant='error' title='Error'>
+            {reviewError}
+          </StatusBanner>
+        ) : null
+      }
+    >
+      <AdminFieldGrid columns={2}>
+        <AdminField label='Ticket ID' htmlFor={fieldId('ticket-id')}>
+          <Input id={fieldId('ticket-id')} value={ticket.ticket_id} readOnly />
+        </AdminField>
+        <AdminField label='Type' htmlFor={fieldId('type')}>
+          <Input id={fieldId('type')} value={TICKET_TYPE_LABELS[ticket.ticket_type]} readOnly />
+        </AdminField>
+        <AdminField label='Organization' htmlFor={fieldId('organization')}>
+          <Input id={fieldId('organization')} value={ticket.organization_name} readOnly />
+        </AdminField>
+        <AdminField label='Submitted by' htmlFor={fieldId('submitter')}>
+          <Input id={fieldId('submitter')} value={ticket.submitter_email} readOnly />
+        </AdminField>
+        <AdminField label='Status' htmlFor={fieldId('status')}>
+          <Input id={fieldId('status')} value={ticket.status} readOnly />
+        </AdminField>
+        <AdminField label='Submitted' htmlFor={fieldId('submitted')}>
+          <Input id={fieldId('submitted')} value={formatDateTime(ticket.created_at)} readOnly />
+        </AdminField>
+        {ticket.message ? (
+          <AdminField label='Message' htmlFor={fieldId('message')} span='full'>
+            <Textarea id={fieldId('message')} value={ticket.message} readOnly rows={3} />
+          </AdminField>
+        ) : null}
+        {ticket.feedback_stars !== null && ticket.feedback_stars !== undefined ? (
+          <AdminField label='Stars' htmlFor={fieldId('stars')}>
+            <Input id={fieldId('stars')} value={String(ticket.feedback_stars)} readOnly />
+          </AdminField>
+        ) : null}
+        {feedbackLabelNames.length > 0 ? (
+          <AdminField label='Labels' htmlFor={fieldId('labels')} span='full'>
+            <Input id={fieldId('labels')} value={feedbackLabelNames.join(', ')} readOnly />
+          </AdminField>
+        ) : null}
+        {ticket.feedback_text ? (
+          <AdminField label='Feedback' htmlFor={fieldId('feedback')} span='full'>
+            <Textarea id={fieldId('feedback')} value={ticket.feedback_text} readOnly rows={3} />
+          </AdminField>
+        ) : null}
+        {ticket.description ? (
+          <AdminField label='Description' htmlFor={fieldId('description')} span='full'>
+            <Textarea id={fieldId('description')} value={ticket.description} readOnly rows={3} />
+          </AdminField>
+        ) : null}
+        {ticket.suggested_district ? (
+          <AdminField label='District' htmlFor={fieldId('district')}>
+            <Input id={fieldId('district')} value={ticket.suggested_district} readOnly />
+          </AdminField>
+        ) : null}
+        {ticket.suggested_address ? (
+          <AdminField label='Address' htmlFor={fieldId('address')} span='full'>
+            <Input id={fieldId('address')} value={ticket.suggested_address} readOnly />
+          </AdminField>
+        ) : null}
+        {!isPending && ticket.admin_notes ? (
+          <AdminField label='Admin Notes' htmlFor={fieldId('notes-ro')} span='full'>
+            <Textarea id={fieldId('notes-ro')} value={ticket.admin_notes} readOnly rows={3} />
+          </AdminField>
+        ) : null}
+        {!isPending && ticket.reviewed_at ? (
+          <AdminField label='Reviewed' htmlFor={fieldId('reviewed')}>
+            <Input id={fieldId('reviewed')} value={formatDateTime(ticket.reviewed_at)} readOnly />
+          </AdminField>
+        ) : null}
+      </AdminFieldGrid>
+
+      {isPending && isAccessRequest ? (
+        <div className='space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3'>
+          <Label>Organization Assignment</Label>
+          <p className='text-xs text-slate-500'>
+            The requester will become the manager of the selected organization. This applies when
+            you approve.
+          </p>
+          <div className='flex gap-2'>
+            <label className='flex items-center gap-2'>
+              <input
+                type='radio'
+                name={`org-mode-${ticket.id}`}
+                value='new'
+                checked={form.organizationMode === 'new'}
+                onChange={() => {
+                  onChange({
+                    organizationMode: 'new',
+                    selectedOrgId: '',
+                    orgTouched: false,
+                    hasSubmitted: false,
+                  });
+                }}
+                className='h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-500'
+              />
+              <span className='text-sm'>Create new</span>
+            </label>
+            <label className='flex items-center gap-2'>
+              <input
+                type='radio'
+                name={`org-mode-${ticket.id}`}
+                value='existing'
+                checked={form.organizationMode === 'existing'}
+                onChange={() => {
+                  onChange({ organizationMode: 'existing', orgTouched: false, hasSubmitted: false });
+                }}
+                className='h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-500'
+              />
+              <span className='text-sm'>Use existing</span>
+            </label>
+          </div>
+          {form.organizationMode === 'new' ? (
+            <div className='rounded border border-slate-200 bg-white p-2 text-sm'>
+              <span className='text-slate-500'>New organization name:</span>{' '}
+              <span className='font-medium'>{ticket.organization_name}</span>
+            </div>
+          ) : isLoadingOrgs ? (
+            <p className='text-sm text-slate-500'>Loading organizations...</p>
+          ) : organizations.length === 0 ? (
+            <p className='text-sm text-slate-500'>No existing organizations available.</p>
+          ) : (
+            <AdminField
+              label='Organization'
+              htmlFor='org-select'
+              required
+              error={showOrgError ? orgError : undefined}
+            >
+              <Select
+                id='org-select'
+                value={form.selectedOrgId}
+                onChange={(event) => {
+                  onChange({ orgTouched: true, selectedOrgId: event.target.value });
+                }}
+                className={showOrgError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
+                aria-invalid={showOrgError || undefined}
+              >
+                <option value=''>Select an organization...</option>
+                {organizations.map((org) => {
+                  const managerEmail = managerEmails[org.manager_id];
+                  const displayText = managerEmail ? `${org.name} - ${managerEmail}` : org.name;
+                  return (
+                    <option key={org.id} value={org.id}>
+                      {displayText}
+                    </option>
+                  );
+                })}
+              </Select>
+            </AdminField>
+          )}
+        </div>
+      ) : null}
+
+      {isPending && !isAccessRequest ? (
+        <label className='flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3'>
+          <input
+            type='checkbox'
+            checked={form.createOrg}
+            onChange={(event) => {
+              onChange({ createOrg: event.target.checked });
+            }}
+            className='h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500'
+          />
+          <span className='text-sm'>Create organization from this suggestion</span>
+        </label>
+      ) : null}
+
+      {isPending ? (
+        <AdminField label='Admin Notes (Optional)' htmlFor='admin-notes'>
+          <Textarea
+            id='admin-notes'
+            rows={3}
+            value={form.adminNotes}
+            onChange={(event) => {
+              onChange({ adminNotes: event.target.value });
+            }}
+            placeholder='Add notes about your decision...'
+          />
+        </AdminField>
+      ) : null}
+    </AdminEditorPanel>
   );
 }

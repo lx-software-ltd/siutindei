@@ -63,6 +63,6 @@ test.describe('Organization review queue', () => {
     await adminPage.getByRole('cell', { name: 'Test Organization 1' }).click();
     await adminPage.getByRole('button', { name: 'Fix' }).first().click();
     await expect(adminPage).toHaveURL(/section=locations/);
-    await expect(adminPage).toHaveURL(/edit=loc-1/);
+    await expect(adminPage).toHaveURL(/location=loc-1/);
   });
 });

@@ -9,6 +9,7 @@ import {
   ApiError,
   createResource,
   deleteResource,
+  getResource,
   listResource,
   updateResource,
   listManagerOrganizations,
@@ -30,6 +31,11 @@ import {
   deleteManagerActivity,
   deleteManagerPricing,
   deleteManagerSchedule,
+  getManagerOrganization,
+  getManagerLocation,
+  getManagerActivity,
+  getManagerPricing,
+  getManagerSchedule,
   type ListResponse,
 } from './api-client';
 
@@ -46,7 +52,12 @@ export type ResourceType =
   | 'organization-feedback';
 
 export interface ResourceApi<T> {
-  list: (cursor?: string) => Promise<ListResponse<T>>;
+  list: (
+    cursor?: string,
+    limit?: number,
+    signal?: AbortSignal
+  ) => Promise<ListResponse<T>>;
+  get: (id: string, signal?: AbortSignal) => Promise<T>;
   create?: <TInput>(payload: TInput) => Promise<T>;
   update: <TInput>(id: string, payload: TInput) => Promise<T>;
   delete: (id: string) => Promise<void>;
@@ -61,7 +72,10 @@ export function getResourceApi<T>(
 ): ResourceApi<T> {
   if (mode === 'admin') {
     return {
-      list: (cursor?: string) => listResource<T>(resource, cursor),
+      list: (cursor?: string, limit?: number, signal?: AbortSignal) =>
+        listResource<T>(resource, cursor, limit, signal),
+      get: (id: string, signal?: AbortSignal) =>
+        getResource<T>(resource, id, signal),
       create: <TInput>(payload: TInput) =>
         createResource<TInput, T>(resource, payload),
       update: <TInput>(id: string, payload: TInput) =>
@@ -75,6 +89,7 @@ export function getResourceApi<T>(
     case 'organizations':
       return {
         list: () => listManagerOrganizations<T>(),
+        get: (id: string) => getManagerOrganization(id) as Promise<T>,
         // Managers cannot create organizations
         update: <TInput>(id: string, payload: TInput) =>
           updateManagerOrganization<TInput, T>(id, payload),
@@ -83,6 +98,7 @@ export function getResourceApi<T>(
     case 'locations':
       return {
         list: () => listManagerLocations<T>(),
+        get: (id: string) => getManagerLocation(id) as Promise<T>,
         create: <TInput>(payload: TInput) =>
           createManagerLocation<TInput, T>(payload),
         update: <TInput>(id: string, payload: TInput) =>
@@ -92,6 +108,7 @@ export function getResourceApi<T>(
     case 'activities':
       return {
         list: () => listManagerActivities<T>(),
+        get: (id: string) => getManagerActivity(id) as Promise<T>,
         create: <TInput>(payload: TInput) =>
           createManagerActivity<TInput, T>(payload),
         update: <TInput>(id: string, payload: TInput) =>
@@ -101,6 +118,7 @@ export function getResourceApi<T>(
     case 'pricing':
       return {
         list: () => listManagerPricing<T>(),
+        get: (id: string) => getManagerPricing(id) as Promise<T>,
         create: <TInput>(payload: TInput) =>
           createManagerPricing<TInput, T>(payload),
         update: <TInput>(id: string, payload: TInput) =>
@@ -110,6 +128,7 @@ export function getResourceApi<T>(
     case 'schedules':
       return {
         list: () => listManagerSchedules<T>(),
+        get: (id: string) => getManagerSchedule(id) as Promise<T>,
         create: <TInput>(payload: TInput) =>
           createManagerSchedule<TInput, T>(payload),
         update: <TInput>(id: string, payload: TInput) =>

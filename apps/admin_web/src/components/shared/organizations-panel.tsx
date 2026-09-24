@@ -5,7 +5,6 @@ import {
   useMemo,
   useState,
   type ReactElement,
-  type ReactNode,
 } from 'react';
 
 import {
@@ -13,9 +12,9 @@ import {
   getCountryCallingCode,
 } from 'libphonenumber-js';
 
-import { useEditDeepLink } from '../../hooks/use-edit-deep-link';
+import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
-import { useResourcePanel } from '../../hooks/use-resource-panel';
+import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { ApiError } from '../../lib/api-client';
 import { listCognitoUsers } from '../../lib/api-client-cognito';
 import type { ApiMode } from '../../lib/resource-api';
@@ -26,13 +25,22 @@ import {
 } from '../../lib/translations';
 import type { CognitoUser, Organization } from '../../types/admin';
 import { useAuth } from '../auth-provider';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { DataTable } from '../ui/data-table';
+import { AdminCreateButton } from '../ui/admin-create-button';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '../ui/admin-data-table';
+import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
-import { SearchInput } from '../ui/search-input';
+import {
+  deleteRowActions,
+  ResourceTableShell,
+} from '../ui/resource-table-shell';
 import { Select } from '../ui/select';
 import { StatusBadge } from '../ui/status-badge';
 import { StatusBanner } from '../status-banner';
@@ -63,14 +71,16 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
   const isAdmin = mode === 'admin';
   const isManager = mode === 'manager';
   const { user } = useAuth();
-  const panel = useResourcePanel<Organization, OrganizationFormState>(
-    'organizations',
+  const panel = useResourceEditor<Organization, OrganizationFormState>({
+    resource: 'organizations',
     mode,
     emptyForm,
-    itemToForm
-  );
-  const { items, editingId, startEdit } = panel;
-  useEditDeepLink(items, editingId, startEdit);
+    itemToForm,
+    paramName: 'organization',
+    legacyParam: 'edit',
+    autoExpandFirst: isManager,
+    noun: 'organization',
+  });
 
   // Admin-only: Load Cognito users for manager selection
   const [cognitoUsers, setCognitoUsers] = useState<CognitoUser[]>([]);
@@ -79,6 +89,13 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [reviewFilter, setReviewFilter] = useState('all');
+  useExhaustPages(Boolean(searchQuery.trim()), {
+    hasMore: panel.hasMore,
+    isLoading: panel.isLoading,
+    isLoadingMore: panel.isLoadingMore,
+    error: panel.listError,
+    loadMore: panel.loadMore,
+  });
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
@@ -131,19 +148,6 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
 
     loadCognitoUsers();
   }, [isAdmin, setError]);
-
-  useEffect(() => {
-    if (!isManager) {
-      return;
-    }
-    if (items.length === 0) {
-      return;
-    }
-    if (editingId) {
-      return;
-    }
-    startEdit(items[0]);
-  }, [editingId, isManager, items, startEdit]);
 
   const countryOptions = useMemo(() => {
     const display =
@@ -363,10 +367,6 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
     return panel.handleSubmit(formToPayload, validate);
   };
 
-  // Manager mode: Don't show create form, only edit
-  const showCreateForm = isAdmin || panel.editingId;
-  const canCreate = isAdmin;
-
   // Filter items based on search query
   const filteredItems = panel.items.filter((item) => {
     if (
@@ -447,79 +447,24 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
     );
   };
 
-  const columns = useMemo(
-    () => [
-      {
-        key: 'name',
-        header: 'Name',
-        primary: true,
-        render: (item: Organization) => item.name,
-      },
-      ...(isAdmin
-        ? [
-            {
-              key: 'manager',
-              header: 'Manager',
-              secondary: true,
-              render: (item: Organization) =>
-                getManagerDisplayName(item.manager_id, cognitoUsers),
-            },
-          ]
-        : []),
-      {
-        key: 'status',
-        header: 'Status',
-        render: (item: Organization) => (
-          <StatusBadge
-            status={(item.status ?? 'operational').replaceAll('_', ' ')}
-          />
-        ),
-      },
-      {
-        key: 'review',
-        header: 'Review',
-        render: (item: Organization) => (
-          <StatusBadge
-            status={(item.review_status ?? 'pending_review').replaceAll(
-              '_',
-              ' '
-            )}
-          />
-        ),
-      },
-      {
-        key: 'description',
-        header: 'Description',
-        render: (item: Organization) => item.description || '—',
-      },
-      {
-        key: 'contact',
-        header: 'Contact',
-        render: (item: Organization) => renderContactIcons(item),
-      },
-    ],
-    [cognitoUsers, isAdmin]
-  );
-
-  return (
-    <div className='space-y-6'>
-      {showCreateForm && (
-        <Card
-          title={panel.editingId ? 'Edit Organization' : 'New Organization'}
-          description={
-            isAdmin
-              ? 'Create and manage organizations. Use the Media section to add images.'
-              : 'Update your organization details.'
-          }
-        >
-          {panel.error && (
-            <div className='mb-4'>
-              <StatusBanner variant='error' title='Error'>
-                {panel.error}
-              </StatusBanner>
-            </div>
-          )}
-          <div className='grid gap-4 md:grid-cols-2'>
+  const detail = (
+    <AdminEditorPanel
+      status={
+        panel.error ? (
+          <StatusBanner variant='error' title='Error'>
+            {panel.error}
+          </StatusBanner>
+        ) : null
+      }
+      actions={
+        <AdminEditorActions
+          mode={panel.editorMode}
+          onSubmit={handleSubmit}
+          isSaving={panel.isSaving}
+        />
+      }
+    >
+      <AdminFieldGrid columns={2}>
             <div className='space-y-1'>
               <LanguageToggleInput
                 id='org-name'
@@ -732,100 +677,126 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
                 </div>
               );
             })}
-          </div>
-          <div className='mt-4 flex flex-wrap gap-3'>
-            <Button
-              type='button'
-              onClick={handleSubmit}
-              disabled={panel.isSaving}
-            >
-              {panel.editingId ? 'Update Organization' : 'Add Organization'}
-            </Button>
-            {panel.editingId && isAdmin && (
-              <Button
-                type='button'
-                variant='secondary'
-                onClick={panel.resetForm}
-                disabled={panel.isSaving}
-              >
-                Cancel
-              </Button>
-            )}
-          </div>
-        </Card>
-      )}
+      </AdminFieldGrid>
+    </AdminEditorPanel>
+  );
 
-      <Card
-        title={isAdmin ? 'Existing Organizations' : 'Your Organizations'}
-        description={
-          isAdmin
-            ? 'Select an organization to edit or delete.'
-            : 'Organizations you own and manage.'
+  return (
+    <>
+      <ResourceTableShell
+        ariaLabel={isAdmin ? 'Organizations' : 'Your organizations'}
+        rows={filteredItems}
+        getLabel={(item) => item.name || 'Organization'}
+        middleColumnCount={isAdmin ? 6 : 5}
+        isLoading={panel.isLoading}
+        isLoadingMore={panel.isLoadingMore}
+        hasMore={panel.hasMore}
+        onLoadMore={panel.loadMore}
+        error={panel.listError}
+        emptyLabel={
+          searchQuery.trim()
+            ? 'No organizations match your search.'
+            : 'No organizations yet.'
         }
-      >
-        {!showCreateForm && panel.error && (
-          <div className='mb-4'>
-            <StatusBanner variant='error' title='Error'>
-              {panel.error}
-            </StatusBanner>
-          </div>
-        )}
-        {panel.isLoading ? (
-          <p className='text-sm text-slate-600'>Loading organizations...</p>
-        ) : panel.items.length === 0 ? (
-          <p className='text-sm text-slate-600'>
-            {isAdmin
-              ? 'No organizations yet.'
-              : 'You do not own any organizations yet.'}
-          </p>
-        ) : (
-          <div className='space-y-4'>
-            <div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
-              <div className='max-w-full sm:max-w-sm sm:flex-1'>
-                <SearchInput
-                  placeholder='Search organizations...'
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+        isExpanded={panel.isExpanded}
+        onToggle={panel.toggle}
+        isDraftOpen={panel.isDraftOpen}
+        draftLabel='New organization'
+        onToggleDraft={panel.collapse}
+        detail={detail}
+        filters={
+          <AdminFilterBar
+            trailing={
+              panel.canCreate ? (
+                <AdminCreateButton
+                  label='New organization'
+                  active={panel.isDraftOpen}
+                  onClick={panel.openDraft}
                 />
-              </div>
-              <div className='flex flex-wrap gap-2'>
-                {[
-                  ['all', 'All'],
-                  ['pending_review', 'Pending review'],
-                  ['approved', 'Approved'],
-                  ['rejected', 'Rejected'],
-                ].map(([value, label]) => (
-                  <Button
-                    key={value}
-                    type='button'
-                    size='sm'
-                    variant={reviewFilter === value ? 'primary' : 'secondary'}
-                    onClick={() => setReviewFilter(value)}
-                  >
-                    {label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <DataTable
-              columns={columns}
-              data={filteredItems}
-              keyExtractor={(item) => item.id}
-              onEdit={(item) => panel.startEdit(item)}
-              onDelete={(item) => panel.handleDelete(item)}
-              nextCursor={panel.nextCursor}
-              onLoadMore={panel.loadMore}
-              isLoading={panel.isLoading}
-              emptyMessage={
-                searchQuery.trim()
-                  ? 'No organizations match your search.'
-                  : 'No organizations yet.'
-              }
-            />
-          </div>
+              ) : null
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='org-search'>
+              <Input
+                id='org-search'
+                placeholder='Search organizations...'
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+              />
+            </AdminFilterField>
+            <AdminFilterField label='Review' htmlFor='org-review-filter'>
+              <Select
+                id='org-review-filter'
+                value={reviewFilter}
+                onChange={(event) => setReviewFilter(event.target.value)}
+              >
+                <option value='all'>All</option>
+                <option value='pending_review'>Pending review</option>
+                <option value='approved'>Approved</option>
+                <option value='rejected'>Rejected</option>
+              </Select>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <>
+            <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
+            {isAdmin ? (
+              <AdminDataTableHeadCell priority='secondary'>
+                Manager
+              </AdminDataTableHeadCell>
+            ) : null}
+            <AdminDataTableHeadCell priority='secondary'>
+              Status
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Review
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Description
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Contact
+            </AdminDataTableHeadCell>
+          </>
+        }
+        renderCells={(item) => (
+          <>
+            <AdminDataTableCell>
+              {item.name}
+              <AdminDataTableCellMeta until='tertiary'>
+                {(item.review_status ?? 'pending_review').replaceAll('_', ' ')}
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
+            {isAdmin ? (
+              <AdminDataTableCell priority='secondary'>
+                {getManagerDisplayName(item.manager_id, cognitoUsers)}
+              </AdminDataTableCell>
+            ) : null}
+            <AdminDataTableCell priority='secondary'>
+              <StatusBadge
+                status={(item.status ?? 'operational').replaceAll('_', ' ')}
+              />
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              <StatusBadge
+                status={(item.review_status ?? 'pending_review').replaceAll(
+                  '_',
+                  ' '
+                )}
+              />
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {item.description || '—'}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              {renderContactIcons(item)}
+            </AdminDataTableCell>
+          </>
         )}
-      </Card>
+        renderActions={(item) => deleteRowActions(() => panel.handleDelete(item))}
+      />
       {panel.confirmDialog}
-    </div>
+    </>
   );
 }

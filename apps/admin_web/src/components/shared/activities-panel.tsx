@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useActivityCategories } from '../../hooks/use-activity-categories';
-import { useEditDeepLink } from '../../hooks/use-edit-deep-link';
+import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationsByMode } from '../../hooks/use-organizations-by-mode';
-import { useResourcePanel } from '../../hooks/use-resource-panel';
+import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { parseRequiredNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/resource-api';
 import { normalizeKey } from '../../lib/string-utils';
@@ -18,14 +18,23 @@ import {
   type TranslationLanguageCode,
 } from '../../lib/translations';
 import type { Activity } from '../../types/admin';
+import { AdminCreateButton } from '../ui/admin-create-button';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '../ui/admin-data-table';
+import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { CascadingCategorySelect } from '../ui/cascading-category-select';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { DataTable } from '../ui/data-table';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
-import { SearchInput } from '../ui/search-input';
+import {
+  deleteRowActions,
+  ResourceTableShell,
+} from '../ui/resource-table-shell';
 import { Select } from '../ui/select';
 import { StatusBanner } from '../status-banner';
 
@@ -70,17 +79,23 @@ interface ActivitiesPanelProps {
 
 export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
   const isAdmin = mode === 'admin';
-  const panel = useResourcePanel<Activity, ActivityFormState>(
-    'activities',
-    mode,
-    emptyForm,
-    itemToForm
-  );
-  useEditDeepLink(panel.items, panel.editingId, panel.startEdit);
-
   const { tree: categoryTree } = useActivityCategories();
-
   const { items: organizations } = useOrganizationsByMode(mode, { limit: 200 });
+  const defaultOrgId =
+    !isAdmin && organizations.length === 1 ? organizations[0].id : '';
+  const resolvedEmptyForm = useMemo(
+    () => ({ ...emptyForm, org_id: defaultOrgId }),
+    [defaultOrgId]
+  );
+  const panel = useResourceEditor<Activity, ActivityFormState>({
+    resource: 'activities',
+    mode,
+    emptyForm: resolvedEmptyForm,
+    itemToForm,
+    paramName: 'activity',
+    legacyParam: 'edit',
+    noun: 'activity',
+  });
 
   const categoryPathById = useMemo(() => {
     const map = new Map<string, string>();
@@ -100,8 +115,22 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
   const getCategoryPath = (categoryId?: string) =>
     (categoryId ? categoryPathById.get(categoryId) : undefined) ?? '—';
 
-  // Search state
+  const getOrgName = (orgId?: string) => {
+    if (!orgId) {
+      return '';
+    }
+    const match = organizations.find((org) => org.id === orgId);
+    return match?.name ?? orgId;
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
+  useExhaustPages(Boolean(searchQuery.trim()), {
+    hasMore: panel.hasMore,
+    isLoading: panel.isLoading,
+    isLoadingMore: panel.isLoadingMore,
+    error: panel.listError,
+    loadMore: panel.loadMore,
+  });
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
@@ -115,20 +144,27 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
   const shouldShowError = (field: string, message: string) =>
     validation.shouldShowError(field, Boolean(message));
 
-  // For managers with a single org, auto-select and disable the dropdown
   const isSingleOrgManager = !isAdmin && organizations.length === 1;
 
   const { setFormState } = panel;
 
   useEffect(() => {
-    if (isAdmin || organizations.length !== 1) {
+    if (!defaultOrgId || panel.formState.org_id) {
       return;
     }
-    const orgId = organizations[0].id;
+    if (!panel.isDraftOpen && panel.editingId === null) {
+      return;
+    }
     setFormState((prev) =>
-      prev.org_id === orgId ? prev : { ...prev, org_id: orgId }
+      prev.org_id ? prev : { ...prev, org_id: defaultOrgId }
     );
-  }, [isAdmin, organizations, setFormState]);
+  }, [
+    defaultOrgId,
+    panel.editingId,
+    panel.formState.org_id,
+    panel.isDraftOpen,
+    setFormState,
+  ]);
 
   const validate = () => {
     const ageMin = parseRequiredNumber(panel.formState.age_min);
@@ -156,7 +192,12 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     if (!panel.formState.category_id) {
       return 'Category is required.';
     }
-    if (ageMin === null || ageMax === null) {
+    if (
+      !panel.formState.age_min.trim() ||
+      !panel.formState.age_max.trim() ||
+      ageMin === null ||
+      ageMax === null
+    ) {
       return 'Age range must be numeric.';
     }
     if (ageMin >= ageMax) {
@@ -269,43 +310,6 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     return panel.handleSubmit(formToPayload, validate);
   };
 
-  const columns = useMemo(() => {
-    const getOrgName = (orgId?: string) => {
-      if (!orgId) {
-        return '';
-      }
-      const match = organizations.find((org) => org.id === orgId);
-      return match?.name ?? orgId;
-    };
-
-    const getCategoryLabel = (categoryId?: string) =>
-      (categoryId ? categoryPathById.get(categoryId) : undefined) ?? '—';
-
-    return [
-      {
-        key: 'name',
-        header: isAdmin ? 'Organization / Activity' : 'Name',
-        primary: true,
-        render: (item: Activity) =>
-          isAdmin
-            ? `${getOrgName(item.org_id)} - ${item.name}`
-            : item.name,
-      },
-      {
-        key: 'category',
-        header: 'Category',
-        secondary: true,
-        render: (item: Activity) => getCategoryLabel(item.category_id),
-      },
-      {
-        key: 'age-range',
-        header: 'Age Range',
-        render: (item: Activity) => `${item.age_min} - ${item.age_max}`,
-      },
-    ];
-  }, [categoryPathById, isAdmin, organizations]);
-
-  // Filter items based on search query
   const filteredItems = panel.items.filter((item) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
@@ -344,215 +348,257 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
         validation.touched.age_max)
   );
 
-  return (
-    <div className='space-y-6'>
-      <Card title='Activities' description='Manage activity entries.'>
-        {panel.error && (
-          <div className='mb-4'>
-            <StatusBanner variant='error' title='Error'>
-              {panel.error}
-            </StatusBanner>
-          </div>
-        )}
-        <div className='grid gap-4 md:grid-cols-2'>
-          <div className='space-y-1'>
-            <Label htmlFor='activity-org'>
-              Organization{' '}
-              <span className='ml-1'>{requiredIndicator}</span>
-            </Label>
-            <Select
-              id='activity-org'
-              value={panel.formState.org_id}
-              onChange={(e) => {
-                markTouched('org_id');
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  org_id: e.target.value,
-                }));
-              }}
-              disabled={isSingleOrgManager}
-              className={showOrgError ? errorInputClassName : ''}
-              aria-invalid={showOrgError || undefined}
-            >
-              <option value=''>Select organization</option>
-              {organizations.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </Select>
-            {showOrgError ? (
-              <p className='text-xs text-red-600'>{orgError}</p>
-            ) : null}
-          </div>
-          <div className='space-y-1'>
-            <LanguageToggleInput
-              id='activity-name'
-              label='Name'
-              required
-              values={{
-                en: panel.formState.name,
-                zh: panel.formState.name_translations.zh,
-                yue: panel.formState.name_translations.yue,
-              }}
-              onChange={handleNameChange}
-              hasError={showNameError}
-              inputClassName={showNameError ? errorInputClassName : ''}
-            />
-            {showNameError ? (
-              <p className='text-xs text-red-600'>{nameError}</p>
-            ) : null}
-          </div>
-          <div className='md:col-span-2'>
-            <CascadingCategorySelect
-              tree={categoryTree}
-              value={panel.formState.category_id}
-              onChange={(categoryId, _chain) => {
-                markTouched('category_id');
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  category_id: categoryId,
-                }));
-              }}
-              required
-              hasError={showCategoryError}
-              errorMessage={showCategoryError ? categoryError : undefined}
-            />
-          </div>
-          <div className='md:col-span-2'>
-            <LanguageToggleInput
-              id='activity-description'
-              label='Description'
-              multiline
-              rows={3}
-              values={{
-                en: panel.formState.description,
-                zh: panel.formState.description_translations.zh,
-                yue: panel.formState.description_translations.yue,
-              }}
-              onChange={handleDescriptionChange}
-            />
-          </div>
-          <div className='space-y-1'>
-            <Label htmlFor='activity-age-min'>
-              Age Min{' '}
-              <span className='ml-1'>{requiredIndicator}</span>
-            </Label>
-            <Input
-              id='activity-age-min'
-              type='number'
-              min='0'
-              value={panel.formState.age_min}
-              onChange={(e) => {
-                markTouched('age_min');
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  age_min: e.target.value,
-                }));
-              }}
-              className={
-                showAgeMinError || showAgeRangeError
-                  ? errorInputClassName
-                  : ''
-              }
-              aria-invalid={
-                showAgeMinError || showAgeRangeError || undefined
-              }
-            />
-            {showAgeMinError ? (
-              <p className='text-xs text-red-600'>{ageMinError}</p>
-            ) : null}
-          </div>
-          <div className='space-y-1'>
-            <Label htmlFor='activity-age-max'>
-              Age Max{' '}
-              <span className='ml-1'>{requiredIndicator}</span>
-            </Label>
-            <Input
-              id='activity-age-max'
-              type='number'
-              min='0'
-              value={panel.formState.age_max}
-              onChange={(e) => {
-                markTouched('age_max');
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  age_max: e.target.value,
-                }));
-              }}
-              className={
-                showAgeMaxError || showAgeRangeError
-                  ? errorInputClassName
-                  : ''
-              }
-              aria-invalid={
-                showAgeMaxError || showAgeRangeError || undefined
-              }
-            />
-            {showAgeMaxError ? (
-              <p className='text-xs text-red-600'>{ageMaxError}</p>
-            ) : showAgeRangeError ? (
-              <p className='text-xs text-red-600'>{ageRangeError}</p>
-            ) : null}
-          </div>
-        </div>
-        <div className='mt-4 flex flex-wrap gap-3'>
-          <Button
-            type='button'
-            onClick={handleSubmit}
-            disabled={panel.isSaving}
+  const detail = (
+    <AdminEditorPanel
+      status={
+        panel.error ? (
+          <StatusBanner variant='error' title='Error'>
+            {panel.error}
+          </StatusBanner>
+        ) : null
+      }
+      actions={
+        <AdminEditorActions
+          mode={panel.editorMode}
+          onSubmit={handleSubmit}
+          isSaving={panel.isSaving}
+        />
+      }
+    >
+      <AdminFieldGrid columns={2}>
+        <div className='space-y-1'>
+          <Label htmlFor='activity-org'>
+            Organization{' '}
+            <span className='ml-1'>{requiredIndicator}</span>
+          </Label>
+          <Select
+            id='activity-org'
+            value={panel.formState.org_id}
+            onChange={(e) => {
+              markTouched('org_id');
+              panel.setFormState((prev) => ({
+                ...prev,
+                org_id: e.target.value,
+              }));
+            }}
+            disabled={isSingleOrgManager}
+            className={showOrgError ? errorInputClassName : ''}
+            aria-invalid={showOrgError || undefined}
           >
-            {panel.editingId ? 'Update Activity' : 'Add Activity'}
-          </Button>
-          {panel.editingId && (
-            <Button
-              type='button'
-              variant='secondary'
-              onClick={panel.resetForm}
-              disabled={panel.isSaving}
-            >
-              Cancel
-            </Button>
-          )}
+            <option value=''>Select organization</option>
+            {organizations.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name}
+              </option>
+            ))}
+          </Select>
+          {showOrgError ? (
+            <p className='text-xs text-red-600'>{orgError}</p>
+          ) : null}
         </div>
-      </Card>
+        <div className='space-y-1'>
+          <LanguageToggleInput
+            id='activity-name'
+            label='Name'
+            required
+            values={{
+              en: panel.formState.name,
+              zh: panel.formState.name_translations.zh,
+              yue: panel.formState.name_translations.yue,
+            }}
+            onChange={handleNameChange}
+            hasError={showNameError}
+            inputClassName={showNameError ? errorInputClassName : ''}
+          />
+          {showNameError ? (
+            <p className='text-xs text-red-600'>{nameError}</p>
+          ) : null}
+        </div>
+        <div className='sm:col-span-2'>
+          <CascadingCategorySelect
+            tree={categoryTree}
+            value={panel.formState.category_id}
+            onChange={(categoryId, _chain) => {
+              markTouched('category_id');
+              panel.setFormState((prev) => ({
+                ...prev,
+                category_id: categoryId,
+              }));
+            }}
+            required
+            hasError={showCategoryError}
+            errorMessage={showCategoryError ? categoryError : undefined}
+          />
+        </div>
+        <div className='sm:col-span-2'>
+          <LanguageToggleInput
+            id='activity-description'
+            label='Description'
+            multiline
+            rows={3}
+            values={{
+              en: panel.formState.description,
+              zh: panel.formState.description_translations.zh,
+              yue: panel.formState.description_translations.yue,
+            }}
+            onChange={handleDescriptionChange}
+          />
+        </div>
+        <div className='space-y-1'>
+          <Label htmlFor='activity-age-min'>
+            Age Min{' '}
+            <span className='ml-1'>{requiredIndicator}</span>
+          </Label>
+          <Input
+            id='activity-age-min'
+            type='number'
+            min='0'
+            value={panel.formState.age_min}
+            onChange={(e) => {
+              markTouched('age_min');
+              panel.setFormState((prev) => ({
+                ...prev,
+                age_min: e.target.value,
+              }));
+            }}
+            className={
+              showAgeMinError || showAgeRangeError
+                ? errorInputClassName
+                : ''
+            }
+            aria-invalid={
+              showAgeMinError || showAgeRangeError || undefined
+            }
+          />
+          {showAgeMinError ? (
+            <p className='text-xs text-red-600'>{ageMinError}</p>
+          ) : null}
+        </div>
+        <div className='space-y-1'>
+          <Label htmlFor='activity-age-max'>
+            Age Max{' '}
+            <span className='ml-1'>{requiredIndicator}</span>
+          </Label>
+          <Input
+            id='activity-age-max'
+            type='number'
+            min='0'
+            value={panel.formState.age_max}
+            onChange={(e) => {
+              markTouched('age_max');
+              panel.setFormState((prev) => ({
+                ...prev,
+                age_max: e.target.value,
+              }));
+            }}
+            className={
+              showAgeMaxError || showAgeRangeError
+                ? errorInputClassName
+                : ''
+            }
+            aria-invalid={
+              showAgeMaxError || showAgeRangeError || undefined
+            }
+          />
+          {showAgeMaxError ? (
+            <p className='text-xs text-red-600'>{ageMaxError}</p>
+          ) : showAgeRangeError ? (
+            <p className='text-xs text-red-600'>{ageRangeError}</p>
+          ) : null}
+        </div>
+      </AdminFieldGrid>
+    </AdminEditorPanel>
+  );
 
-      <Card
-        title='Existing Activities'
-        description='Select an activity to edit or delete.'
-      >
-        {panel.isLoading && panel.items.length === 0 ? (
-          <p className='text-sm text-slate-600'>Loading activities...</p>
-        ) : panel.items.length === 0 ? (
-          <p className='text-sm text-slate-600'>No activities yet.</p>
-        ) : (
-          <div className='space-y-4'>
-            <div className='max-w-full sm:max-w-sm'>
-              <SearchInput
+  return (
+    <>
+      <ResourceTableShell
+        ariaLabel={isAdmin ? 'Activities' : 'Your activities'}
+        rows={filteredItems}
+        getLabel={(item) => item.name || 'Activity'}
+        middleColumnCount={isAdmin ? 4 : 3}
+        isLoading={panel.isLoading}
+        isLoadingMore={panel.isLoadingMore}
+        hasMore={panel.hasMore}
+        onLoadMore={panel.loadMore}
+        error={panel.listError}
+        emptyLabel={
+          searchQuery.trim()
+            ? 'No activities match your search.'
+            : 'No activities yet.'
+        }
+        isExpanded={panel.isExpanded}
+        onToggle={panel.toggle}
+        isDraftOpen={panel.isDraftOpen}
+        draftLabel='New activity'
+        onToggleDraft={panel.collapse}
+        detail={detail}
+        filters={
+          <AdminFilterBar
+            trailing={
+              panel.canCreate ? (
+                <AdminCreateButton
+                  label='New activity'
+                  active={panel.isDraftOpen}
+                  onClick={panel.openDraft}
+                />
+              ) : null
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='activity-search'>
+              <Input
+                id='activity-search'
                 placeholder='Search activities...'
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(event) => setSearchQuery(event.target.value)}
               />
-            </div>
-            <DataTable
-              columns={columns}
-              data={filteredItems}
-              keyExtractor={(item) => item.id}
-              onEdit={(item) => panel.startEdit(item)}
-              onDelete={(item) => panel.handleDelete(item)}
-              nextCursor={panel.nextCursor}
-              onLoadMore={panel.loadMore}
-              isLoading={panel.isLoading}
-              emptyMessage={
-                searchQuery.trim()
-                  ? 'No activities match your search.'
-                  : 'No activities yet.'
-              }
-            />
-          </div>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <>
+            <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
+            {isAdmin ? (
+              <AdminDataTableHeadCell priority='secondary'>
+                Organization
+              </AdminDataTableHeadCell>
+            ) : null}
+            <AdminDataTableHeadCell priority='secondary'>
+              Category
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Age Range
+            </AdminDataTableHeadCell>
+          </>
+        }
+        renderCells={(item) => (
+          <>
+            <AdminDataTableCell>
+              {item.name}
+              <AdminDataTableCellMeta until='secondary'>
+                {isAdmin
+                  ? getOrgName(item.org_id)
+                  : getCategoryPath(item.category_id)}
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
+            {isAdmin ? (
+              <AdminDataTableCell priority='secondary'>
+                {getOrgName(item.org_id)}
+              </AdminDataTableCell>
+            ) : null}
+            <AdminDataTableCell priority='secondary'>
+              {getCategoryPath(item.category_id)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {`${item.age_min} - ${item.age_max}`}
+            </AdminDataTableCell>
+          </>
         )}
-      </Card>
+        renderActions={(item) =>
+          deleteRowActions(() => panel.handleDelete(item))
+        }
+      />
       {panel.confirmDialog}
-    </div>
+    </>
   );
 }

@@ -1,7 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
-import { useQueryState } from 'nuqs';
+import { useMemo } from 'react';
+
+import { useAdminSectionQuery } from '@/hooks/use-admin-section-query';
+import { usePrefetchAdminSection } from '@/hooks/use-prefetch-admin-section';
 
 import { AppShell } from '../app-shell';
 import { useAuth } from '../auth-provider';
@@ -47,33 +49,10 @@ const sectionLabels = [
 
 export function AdminDashboard() {
   const { status, user, isAdmin, isManager, logout, error } = useAuth();
-  const [sectionParam, setSectionParam] = useQueryState('section');
-  const isValidSectionParam = useMemo(
-    () => sectionLabels.some((section) => section.key === sectionParam),
-    [sectionParam]
-  );
-  const activeSection = useMemo(() => {
-    return isValidSectionParam && sectionParam ? sectionParam : 'organizations';
-  }, [isValidSectionParam, sectionParam]);
-
-  useEffect(() => {
-    if (sectionParam && isValidSectionParam) {
-      return;
-    }
-    void setSectionParam(activeSection, { history: 'replace' });
-  }, [activeSection, isValidSectionParam, sectionParam, setSectionParam]);
-
-  const handleSelectSection = useCallback(
-    (nextSection: string) => {
-      const isValidSection = sectionLabels.some(
-        (section) => section.key === nextSection
-      );
-      if (!isValidSection) {
-        return;
-      }
-      void setSectionParam(nextSection, { history: 'push' });
-    },
-    [setSectionParam]
+  const prefetchSection = usePrefetchAdminSection('admin');
+  const { activeSection, selectSection } = useAdminSectionQuery(
+    sectionLabels,
+    'organizations'
   );
 
   const activeContent = useMemo(() => {
@@ -143,7 +122,8 @@ export function AdminDashboard() {
     <AppShell
       sections={sectionLabels}
       activeKey={activeSection}
-      onSelect={handleSelectSection}
+      onSelect={selectSection}
+      onIntent={prefetchSection}
       onLogout={logout}
       userEmail={user?.email}
       lastAuthTime={user?.lastAuthTime}

@@ -2,30 +2,38 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useEditDeepLink } from '../../hooks/use-edit-deep-link';
+import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useGeographicAreas } from '../../hooks/use-geographic-areas';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationsByMode } from '../../hooks/use-organizations-by-mode';
-import { useResourcePanel } from '../../hooks/use-resource-panel';
+import { useResourceEditor } from '../../hooks/use-resource-editor';
 import type { GeographicAreaNode } from '../../lib/api-client';
 import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/resource-api';
 import { normalizeKey } from '../../lib/string-utils';
 import type { Location } from '../../types/admin';
+import { AdminCreateButton } from '../ui/admin-create-button';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '../ui/admin-data-table';
+import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import {
   AddressAutocomplete,
   type AddressSelection,
 } from '../ui/address-autocomplete';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
 import { CascadingAreaSelect } from '../ui/cascading-area-select';
-import { DataTable } from '../ui/data-table';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { SearchInput } from '../ui/search-input';
+import {
+  deleteRowActions,
+  ResourceTableShell,
+} from '../ui/resource-table-shell';
 import { Select } from '../ui/select';
 import { StatusBanner } from '../status-banner';
-
 
 const MAP_ICON_BASE_URL =
   'https://api.iconify.design/simple-icons';
@@ -50,9 +58,9 @@ function MapServiceIcon({
     <img
       className={className}
       src={src}
-      alt=""
-      aria-hidden="true"
-      loading="lazy"
+      alt=''
+      aria-hidden='true'
+      loading='lazy'
       width={16}
       height={16}
     />
@@ -124,18 +132,23 @@ interface LocationsPanelProps {
 
 export function LocationsPanel({ mode }: LocationsPanelProps) {
   const isAdmin = mode === 'admin';
-  const panel = useResourcePanel<Location, LocationFormState>(
-    'locations',
-    mode,
-    emptyForm,
-    itemToForm
-  );
-  useEditDeepLink(panel.items, panel.editingId, panel.startEdit);
-
-  // Geographic area tree for cascading dropdowns
   const { tree, countryCodes, matchNominatimResult } = useGeographicAreas();
-
   const { items: organizations } = useOrganizationsByMode(mode, { limit: 200 });
+  const defaultOrgId =
+    !isAdmin && organizations.length === 1 ? organizations[0].id : '';
+  const resolvedEmptyForm = useMemo(
+    () => ({ ...emptyForm, org_id: defaultOrgId }),
+    [defaultOrgId]
+  );
+  const panel = useResourceEditor<Location, LocationFormState>({
+    resource: 'locations',
+    mode,
+    emptyForm: resolvedEmptyForm,
+    itemToForm,
+    paramName: 'location',
+    legacyParam: 'edit',
+    noun: 'location',
+  });
 
   const areaNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -157,8 +170,14 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     [areaNameById]
   );
 
-  // Search state
   const [searchQuery, setSearchQuery] = useState('');
+  useExhaustPages(Boolean(searchQuery.trim()), {
+    hasMore: panel.hasMore,
+    isLoading: panel.isLoading,
+    isLoadingMore: panel.isLoadingMore,
+    error: panel.listError,
+    loadMore: panel.loadMore,
+  });
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
@@ -172,30 +191,35 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   const shouldShowError = (field: string, message: string) =>
     validation.shouldShowError(field, Boolean(message));
 
-  // For managers with a single org, auto-select and disable the dropdown
   const isSingleOrgManager = !isAdmin && organizations.length === 1;
 
   const { setFormState } = panel;
 
   useEffect(() => {
-    if (isAdmin || organizations.length !== 1) {
+    if (!defaultOrgId || panel.formState.org_id) {
       return;
     }
-    const orgId = organizations[0].id;
+    if (!panel.isDraftOpen && panel.editingId === null) {
+      return;
+    }
     setFormState((prev) =>
-      prev.org_id === orgId ? prev : { ...prev, org_id: orgId }
+      prev.org_id ? prev : { ...prev, org_id: defaultOrgId }
     );
-  }, [isAdmin, organizations, setFormState]);
+  }, [
+    defaultOrgId,
+    panel.editingId,
+    panel.formState.org_id,
+    panel.isDraftOpen,
+    setFormState,
+  ]);
 
   const handleAddressSelect = (selection: AddressSelection) => {
-    // Try to reverse-match the Nominatim result to the area tree
     const match = matchNominatimResult(selection.raw);
     panel.setFormState((prev) => ({
       ...prev,
       address: selection.displayName,
       lat: `${selection.lat}`,
       lng: `${selection.lng}`,
-      // Auto-fill area_id if we found a match in the tree
       area_id: match ? match.areaId : prev.area_id,
     }));
   };
@@ -321,41 +345,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     );
   }
 
-  const columns = useMemo(
-    () => [
-      {
-        key: 'area',
-        header: 'Area',
-        primary: true,
-        render: (item: Location) => (
-          <span className='font-medium'>{getAreaName(item.area_id)}</span>
-        ),
-      },
-      ...(isAdmin
-        ? [
-            {
-              key: 'organization',
-              header: 'Organization',
-              secondary: true,
-              render: (item: Location) => (
-                <span className='text-slate-600'>
-                  {organizations.find((org) => org.id === item.org_id)?.name ||
-                    item.org_id}
-                </span>
-              ),
-            },
-          ]
-        : []),
-      {
-        key: 'address',
-        header: 'Address',
-        render: (item: Location) => renderAddressCell(item),
-      },
-    ],
-    [getAreaName, isAdmin, organizations]
-  );
-
-  // Filter items based on search query
   const filteredItems = panel.items.filter((item) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
@@ -374,172 +363,213 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   const showOrgError = shouldShowError('org_id', orgError);
   const showAreaError = shouldShowError('area_id', areaError);
   const showAddressError = shouldShowError('address', addressError);
+  // Area identifies the row. Address is the next column, except for admins
+  // where organization sits between them.
+  const addressColumnPriority = isAdmin ? 'tertiary' : 'secondary';
+
+  const detail = (
+    <AdminEditorPanel
+      status={
+        panel.error ? (
+          <StatusBanner variant='error' title='Error'>
+            {panel.error}
+          </StatusBanner>
+        ) : null
+      }
+      actions={
+        <AdminEditorActions
+          mode={panel.editorMode}
+          onSubmit={handleSubmit}
+          isSaving={panel.isSaving}
+        />
+      }
+    >
+      <AdminFieldGrid columns={2}>
+        <div className='space-y-1'>
+          <Label htmlFor='location-org'>
+            Organization{' '}
+            <span className='ml-1'>{requiredIndicator}</span>
+          </Label>
+          <Select
+            id='location-org'
+            value={panel.formState.org_id}
+            onChange={(e) => {
+              markTouched('org_id');
+              panel.setFormState((prev) => ({
+                ...prev,
+                org_id: e.target.value,
+              }));
+            }}
+            disabled={isSingleOrgManager}
+            className={showOrgError ? errorInputClassName : ''}
+            aria-invalid={showOrgError || undefined}
+          >
+            <option value=''>Select organization</option>
+            {organizations.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name}
+              </option>
+            ))}
+          </Select>
+          {showOrgError ? (
+            <p className='text-xs text-red-600'>{orgError}</p>
+          ) : null}
+        </div>
+        <div className='sm:col-span-2 space-y-1'>
+          <Label htmlFor='location-address'>Address</Label>
+          <AddressAutocomplete
+            id='location-address'
+            value={panel.formState.address}
+            onChange={(val) => {
+              markTouched('address');
+              panel.setFormState((prev) => ({
+                ...prev,
+                address: val,
+              }));
+            }}
+            onSelect={handleAddressSelect}
+            placeholder='Start typing an address...'
+            countryCodes={countryCodes}
+            inputClassName={showAddressError ? errorInputClassName : ''}
+            hasError={showAddressError}
+            onBlur={() => markTouched('address')}
+          />
+          {showAddressError ? (
+            <p className='text-xs text-red-600'>{addressError}</p>
+          ) : null}
+        </div>
+        <div className='sm:col-span-2'>
+          <CascadingAreaSelect
+            tree={tree}
+            value={panel.formState.area_id}
+            onChange={handleAreaChange}
+            disableCountry
+            required
+            hasError={showAreaError}
+            errorMessage={showAreaError ? areaError : undefined}
+          />
+        </div>
+        <div>
+          <Label htmlFor='location-lat'>Latitude</Label>
+          <Input
+            id='location-lat'
+            type='number'
+            step='0.000001'
+            value={panel.formState.lat}
+            onChange={(e) =>
+              panel.setFormState((prev) => ({
+                ...prev,
+                lat: e.target.value,
+              }))
+            }
+          />
+        </div>
+        <div>
+          <Label htmlFor='location-lng'>Longitude</Label>
+          <Input
+            id='location-lng'
+            type='number'
+            step='0.000001'
+            value={panel.formState.lng}
+            onChange={(e) =>
+              panel.setFormState((prev) => ({
+                ...prev,
+                lng: e.target.value,
+              }))
+            }
+          />
+        </div>
+      </AdminFieldGrid>
+    </AdminEditorPanel>
+  );
 
   return (
-    <div className='space-y-6'>
-      <Card title='Locations' description='Manage location entries.'>
-        {panel.error && (
-          <div className='mb-4'>
-            <StatusBanner variant='error' title='Error'>
-              {panel.error}
-            </StatusBanner>
-          </div>
-        )}
-        <div className='grid gap-4 md:grid-cols-2'>
-          <div className='space-y-1'>
-            <Label htmlFor='location-org'>
-              Organization{' '}
-              <span className='ml-1'>{requiredIndicator}</span>
-            </Label>
-            <Select
-              id='location-org'
-              value={panel.formState.org_id}
-              onChange={(e) => {
-                markTouched('org_id');
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  org_id: e.target.value,
-                }));
-              }}
-              disabled={isSingleOrgManager}
-              className={showOrgError ? errorInputClassName : ''}
-              aria-invalid={showOrgError || undefined}
-            >
-              <option value=''>Select organization</option>
-              {organizations.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </Select>
-            {showOrgError ? (
-              <p className='text-xs text-red-600'>{orgError}</p>
-            ) : null}
-          </div>
-          <div className='md:col-span-2 space-y-1'>
-            <Label htmlFor='location-address'>Address</Label>
-            <AddressAutocomplete
-              id='location-address'
-              value={panel.formState.address}
-              onChange={(val) => {
-                markTouched('address');
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  address: val,
-                }));
-              }}
-              onSelect={handleAddressSelect}
-              placeholder='Start typing an address...'
-              countryCodes={countryCodes}
-              inputClassName={showAddressError ? errorInputClassName : ''}
-              hasError={showAddressError}
-              onBlur={() => markTouched('address')}
-            />
-            {showAddressError ? (
-              <p className='text-xs text-red-600'>{addressError}</p>
-            ) : null}
-          </div>
-          <div className='md:col-span-2'>
-            <CascadingAreaSelect
-              tree={tree}
-              value={panel.formState.area_id}
-              onChange={handleAreaChange}
-              disableCountry
-              required
-              hasError={showAreaError}
-              errorMessage={showAreaError ? areaError : undefined}
-            />
-          </div>
-          <div>
-            <Label htmlFor='location-lat'>Latitude</Label>
-            <Input
-              id='location-lat'
-              type='number'
-              step='0.000001'
-              value={panel.formState.lat}
-              onChange={(e) =>
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  lat: e.target.value,
-                }))
-              }
-            />
-          </div>
-          <div>
-            <Label htmlFor='location-lng'>Longitude</Label>
-            <Input
-              id='location-lng'
-              type='number'
-              step='0.000001'
-              value={panel.formState.lng}
-              onChange={(e) =>
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  lng: e.target.value,
-                }))
-              }
-            />
-          </div>
-        </div>
-        <div className='mt-4 flex flex-wrap gap-3'>
-          <Button
-            type='button'
-            onClick={handleSubmit}
-            disabled={panel.isSaving}
+    <>
+      <ResourceTableShell
+        ariaLabel={isAdmin ? 'Locations' : 'Your locations'}
+        rows={filteredItems}
+        getLabel={(item) => getAreaName(item.area_id)}
+        middleColumnCount={isAdmin ? 3 : 2}
+        isLoading={panel.isLoading}
+        isLoadingMore={panel.isLoadingMore}
+        hasMore={panel.hasMore}
+        onLoadMore={panel.loadMore}
+        error={panel.listError}
+        emptyLabel={
+          searchQuery.trim()
+            ? 'No locations match your search.'
+            : 'No locations yet.'
+        }
+        isExpanded={panel.isExpanded}
+        onToggle={panel.toggle}
+        isDraftOpen={panel.isDraftOpen}
+        draftLabel='New location'
+        onToggleDraft={panel.collapse}
+        detail={detail}
+        filters={
+          <AdminFilterBar
+            trailing={
+              panel.canCreate ? (
+                <AdminCreateButton
+                  label='New location'
+                  active={panel.isDraftOpen}
+                  onClick={panel.openDraft}
+                />
+              ) : null
+            }
           >
-            {panel.editingId ? 'Update Location' : 'Add Location'}
-          </Button>
-          {panel.editingId && (
-            <Button
-              type='button'
-              variant='secondary'
-              onClick={panel.resetForm}
-              disabled={panel.isSaving}
-            >
-              Cancel
-            </Button>
-          )}
-        </div>
-      </Card>
-
-      <Card
-        title='Existing Locations'
-        description='Select a location to edit or delete.'
-      >
-        {panel.isLoading ? (
-          <p className='text-sm text-slate-600'>Loading locations...</p>
-        ) : panel.items.length === 0 ? (
-          <p className='text-sm text-slate-600'>No locations yet.</p>
-        ) : (
-          <div className='space-y-4'>
-            <div className='max-w-full sm:max-w-sm'>
-              <SearchInput
+            <AdminFilterField label='Search' htmlFor='location-search'>
+              <Input
+                id='location-search'
                 placeholder='Search locations...'
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(event) => setSearchQuery(event.target.value)}
               />
-            </div>
-            <DataTable
-              columns={columns}
-              data={filteredItems}
-              keyExtractor={(item) => item.id}
-              onEdit={(item) => panel.startEdit(item)}
-              onDelete={(item) =>
-                panel.handleDelete({ ...item, name: getAreaName(item.area_id) })
-              }
-              nextCursor={panel.nextCursor}
-              onLoadMore={panel.loadMore}
-              isLoading={panel.isLoading}
-              emptyMessage={
-                searchQuery.trim()
-                  ? 'No locations match your search.'
-                  : 'No locations yet.'
-              }
-            />
-          </div>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <>
+            <AdminDataTableHeadCell>Area</AdminDataTableHeadCell>
+            {isAdmin ? (
+              <AdminDataTableHeadCell priority='secondary'>
+                Organization
+              </AdminDataTableHeadCell>
+            ) : null}
+            <AdminDataTableHeadCell priority={addressColumnPriority}>
+              Address
+            </AdminDataTableHeadCell>
+          </>
+        }
+        renderCells={(item) => (
+          <>
+            <AdminDataTableCell>
+              <span className='font-medium'>{getAreaName(item.area_id)}</span>
+              <AdminDataTableCellMeta until={addressColumnPriority}>
+                {item.address || '—'}
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
+            {isAdmin ? (
+              <AdminDataTableCell priority='secondary'>
+                {organizations.find((org) => org.id === item.org_id)?.name ||
+                  item.org_id}
+              </AdminDataTableCell>
+            ) : null}
+            <AdminDataTableCell priority={addressColumnPriority}>
+              {renderAddressCell(item)}
+            </AdminDataTableCell>
+          </>
         )}
-      </Card>
+        renderActions={(item) =>
+          deleteRowActions(() => {
+            const areaName = getAreaName(item.area_id);
+            panel.handleDelete(
+              areaName === '—' ? item : { ...item, name: areaName }
+            );
+          })
+        }
+      />
       {panel.confirmDialog}
-    </div>
+    </>
   );
 }

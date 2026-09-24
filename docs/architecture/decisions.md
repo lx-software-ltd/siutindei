@@ -432,6 +432,41 @@ When making changes:
 3. Update `docs/architecture/database-schema.md` if adding/changing tables.
 4. Update other architecture docs if design decisions or patterns change.
 
+## 9) Admin table-first console
+
+**Decision:** The admin console (`apps/admin_web`) lists records in an
+untitled table and edits them in place under the selected row. Server
+state is TanStack Query (`usePaginatedList`, 25 rows per page). The
+section switcher stays on `/admin/dashboard?section=`. Open rows sync to
+`?<entity>=<id>`. Organizations, locations, activities, pricing, and
+schedules still honor the older `?edit=` link. An id that is not on a
+loaded page is fetched by id. Switching sections drops record params
+that belong to other sections. A non-empty table search keeps loading
+pages (capped at 40) so matches are not limited to the first page.
+Activity categories load every page, because the parent tree needs the
+full list.
+
+**Why:**
+- Operators were editing in a form card stacked above a second table
+  card, so the record and the list were easy to lose on a phone.
+- One expansion hook, one filter bar, and one operations column keep
+  every section on the same interaction.
+
+**Shape:**
+- Filters, then the table, inside one white card. Create is a labelled
+  button in the filter bar and inserts a draft row.
+- The open record is framed on all four sides. The editor has one
+  primary action and no Cancel. Unsaved edits are confirmed before the
+  row changes.
+- Operations controls are icon buttons. Read-only records expand in
+  place rather than opening a dialog.
+- Organization media stays a drag-reorder grid. That is the documented
+  exception.
+
+The standard lives in `.cursorrules` under "Admin Web CRUD UX pattern".
+Endpoint shapes stay in `docs/api/admin.yaml`. This change does not add
+routes or columns.
+
 ## Category suggestions
 
 **Decision:** Unknown imported category names are captured on a system

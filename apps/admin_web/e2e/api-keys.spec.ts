@@ -6,9 +6,7 @@ test.describe('API Keys Panel', () => {
   }) => {
     await adminPage.goto('/admin/dashboard?section=api-keys');
 
-    await expect(
-      adminPage.getByRole('heading', { name: 'API Keys' })
-    ).toBeVisible();
+    await expect(adminPage.getByRole('table', { name: 'API keys' })).toBeVisible();
 
     const table = adminPage.getByRole('table');
     await expect(table).toContainText('Partner read key');
@@ -23,6 +21,7 @@ test.describe('API Keys Panel', () => {
   test('creates a key and shows the plaintext once', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=api-keys');
 
+    await adminPage.getByRole('button', { name: 'New API key' }).click();
     await adminPage.getByLabel('Name').fill('New Partner Key');
     await adminPage.getByLabel('Scope').selectOption('crud');
     await adminPage
@@ -49,6 +48,7 @@ test.describe('API Keys Panel', () => {
   test('validates the create form', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=api-keys');
 
+    await adminPage.getByRole('button', { name: 'New API key' }).click();
     await adminPage.getByRole('button', { name: 'Create Key' }).click();
     await expect(adminPage.getByText('Name is required.')).toBeVisible();
 
@@ -68,13 +68,13 @@ test.describe('API Keys Panel', () => {
     const table = adminPage.getByRole('table');
     await expect(table).toContainText('Partner read key');
 
-    await adminPage.getByTitle('Revoke Key').first().click();
+    await adminPage.getByTitle('Revoke key').first().click();
 
     const dialog = adminPage.getByRole('dialog');
     await expect(dialog.getByText('Revoke API key?')).toBeVisible();
     await dialog.getByRole('button', { name: 'Revoke Key' }).click();
 
-    await expect(table.getByText('revoked').first()).toBeVisible();
+    await expect(table.getByRole('cell', { name: /revoked/i }).first()).toBeVisible();
   });
 
   test('search filters the key list', async ({ adminPage }) => {

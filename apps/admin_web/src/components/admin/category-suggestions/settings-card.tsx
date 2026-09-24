@@ -8,11 +8,14 @@ import {
   updateCategorySuggestionSettings,
   type CategorySuggestionSettings,
 } from '../../../lib/api-client-category-suggestions';
+import { AdminEditorPanel } from '../../ui/admin-editor-panel';
+import { AdminField, AdminFieldGrid } from '../../ui/admin-field-grid';
 import { Button } from '../../ui/button';
 import { Card } from '../../ui/card';
 import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
 import { StatusBanner } from '../../status-banner';
+
+type PendingAction = 'save' | 'test';
 
 export function CategorySuggestionSettingsCard() {
   const [settings, setSettings] = useState<CategorySuggestionSettings | null>(
@@ -21,7 +24,7 @@ export function CategorySuggestionSettingsCard() {
   const [fallbacks, setFallbacks] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  const [pending, setPending] = useState<PendingAction | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,7 +50,7 @@ export function CategorySuggestionSettingsCard() {
     if (!settings) {
       return;
     }
-    setIsSaving(true);
+    setPending('save');
     setError('');
     setNotice('');
     try {
@@ -63,12 +66,12 @@ export function CategorySuggestionSettingsCard() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Save failed.');
     } finally {
-      setIsSaving(false);
+      setPending(null);
     }
   }
 
   async function testModel() {
-    setIsSaving(true);
+    setPending('test');
     setError('');
     setNotice('');
     try {
@@ -79,13 +82,13 @@ export function CategorySuggestionSettingsCard() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Model test failed.');
     } finally {
-      setIsSaving(false);
+      setPending(null);
     }
   }
 
   if (!settings) {
     return (
-      <Card title='Suggestion settings' description='Loading settings.'>
+      <Card>
         {error ? (
           <StatusBanner variant='error' title='Error'>
             {error}
@@ -97,115 +100,136 @@ export function CategorySuggestionSettingsCard() {
     );
   }
 
+  const isSaving = pending !== null;
+
   return (
-    <Card
-      title='Suggestion settings'
-      description='Capture is off until you turn it on. Saved model and fallbacks apply to the next enrichment. The test call is one short ping.'
-    >
-      {error ? (
-        <div className='mb-4'>
-          <StatusBanner variant='error' title='Error'>
-            {error}
-          </StatusBanner>
-        </div>
-      ) : null}
-      {notice ? (
-        <div className='mb-4'>
-          <StatusBanner variant='success' title='Saved'>
-            {notice}
-          </StatusBanner>
-        </div>
-      ) : null}
-      <div className='grid gap-4 md:grid-cols-2'>
-        <label className='flex items-center gap-2 text-sm'>
-          <input
-            type='checkbox'
-            checked={settings.on_import_enabled}
-            onChange={(event) =>
-              setSettings({
-                ...settings,
-                on_import_enabled: event.target.checked,
-              })
-            }
-          />
-          Capture unknown categories on import
-        </label>
-        <label className='flex items-center gap-2 text-sm'>
-          <input
-            type='checkbox'
-            checked={settings.auto_enrich_enabled}
-            onChange={(event) =>
-              setSettings({
-                ...settings,
-                auto_enrich_enabled: event.target.checked,
-              })
-            }
-          />
-          Enrich new suggestions automatically
-        </label>
-        <label className='flex items-center gap-2 text-sm'>
-          <input
-            type='checkbox'
-            checked={settings.deny_data_collection}
-            onChange={(event) =>
-              setSettings({
-                ...settings,
-                deny_data_collection: event.target.checked,
-              })
-            }
-          />
-          Deny provider data collection
-        </label>
-        <div className='space-y-1'>
-          <Label htmlFor='suggestion-model'>OpenRouter model</Label>
-          <Input
-            id='suggestion-model'
-            value={settings.openrouter_model || ''}
-            placeholder={settings.default_openrouter_model || 'qwen/qwen3-30b-a3b'}
-            onChange={(event) =>
-              setSettings({ ...settings, openrouter_model: event.target.value })
-            }
-          />
-        </div>
-        <div className='space-y-1'>
-          <Label htmlFor='suggestion-fallbacks'>Fallback models</Label>
-          <Input
-            id='suggestion-fallbacks'
-            value={fallbacks}
-            placeholder='qwen/qwen-turbo'
-            onChange={(event) => setFallbacks(event.target.value)}
-          />
-        </div>
-        <div className='space-y-1'>
-          <Label htmlFor='suggestion-evidence'>Max evidence items</Label>
-          <Input
-            id='suggestion-evidence'
-            type='number'
-            min={5}
-            max={50}
-            value={settings.max_evidence_items}
-            onChange={(event) =>
-              setSettings({
-                ...settings,
-                max_evidence_items: Number(event.target.value),
-              })
-            }
-          />
-        </div>
-      </div>
-      <div className='mt-4 flex flex-wrap gap-3'>
-        <Button type='button' onClick={() => void save()} disabled={isSaving}>
-          Save settings
-        </Button>
-        <Button
-          type='button'
-          variant='secondary'
-          onClick={() => void testModel()}
-          disabled={isSaving}
-        >
-          Test model
-        </Button>
-      </div>
+    <Card>
+      <AdminEditorPanel
+        status={
+          <>
+            {error ? (
+              <StatusBanner variant='error' title='Error'>
+                {error}
+              </StatusBanner>
+            ) : null}
+            {notice ? (
+              <StatusBanner variant='success' title='Saved'>
+                {notice}
+              </StatusBanner>
+            ) : null}
+          </>
+        }
+        actions={
+          <>
+            <Button
+              type='button'
+              onClick={() => void save()}
+              disabled={isSaving}
+              loading={pending === 'save'}
+              loadingLabel='Saving…'
+            >
+              Save settings
+            </Button>
+            <Button
+              type='button'
+              variant='secondary'
+              onClick={() => void testModel()}
+              disabled={isSaving}
+              loading={pending === 'test'}
+              loadingLabel='Testing…'
+            >
+              Test model
+            </Button>
+          </>
+        }
+      >
+        <AdminFieldGrid columns={2}>
+          <AdminField label='Suggestion settings' span='full'>
+            <p className='text-sm text-slate-600'>
+              Capture is off until you turn it on. Saved model and fallbacks
+              apply to the next enrichment. The test call is one short ping.
+            </p>
+          </AdminField>
+          <AdminField span='full'>
+            <label className='flex items-center gap-2 text-sm'>
+              <input
+                type='checkbox'
+                checked={settings.on_import_enabled}
+                onChange={(event) =>
+                  setSettings({
+                    ...settings,
+                    on_import_enabled: event.target.checked,
+                  })
+                }
+              />
+              Capture unknown categories on import
+            </label>
+          </AdminField>
+          <AdminField span='full'>
+            <label className='flex items-center gap-2 text-sm'>
+              <input
+                type='checkbox'
+                checked={settings.auto_enrich_enabled}
+                onChange={(event) =>
+                  setSettings({
+                    ...settings,
+                    auto_enrich_enabled: event.target.checked,
+                  })
+                }
+              />
+              Enrich new suggestions automatically
+            </label>
+          </AdminField>
+          <AdminField span='full'>
+            <label className='flex items-center gap-2 text-sm'>
+              <input
+                type='checkbox'
+                checked={settings.deny_data_collection}
+                onChange={(event) =>
+                  setSettings({
+                    ...settings,
+                    deny_data_collection: event.target.checked,
+                  })
+                }
+              />
+              Deny provider data collection
+            </label>
+          </AdminField>
+          <AdminField label='OpenRouter model' htmlFor='suggestion-model'>
+            <Input
+              id='suggestion-model'
+              value={settings.openrouter_model || ''}
+              placeholder={settings.default_openrouter_model || 'qwen/qwen3-30b-a3b'}
+              onChange={(event) =>
+                setSettings({ ...settings, openrouter_model: event.target.value })
+              }
+            />
+          </AdminField>
+          <AdminField label='Fallback models' htmlFor='suggestion-fallbacks'>
+            <Input
+              id='suggestion-fallbacks'
+              value={fallbacks}
+              placeholder='qwen/qwen-turbo'
+              onChange={(event) => setFallbacks(event.target.value)}
+            />
+          </AdminField>
+          <AdminField label='Max evidence items' htmlFor='suggestion-evidence'>
+            <Input
+              id='suggestion-evidence'
+              type='number'
+              min={5}
+              max={50}
+              value={settings.max_evidence_items}
+              onChange={(event) =>
+                setSettings({
+                  ...settings,
+                  max_evidence_items: Number(event.target.value),
+                })
+              }
+            />
+          </AdminField>
+        </AdminFieldGrid>
+      </AdminEditorPanel>
     </Card>
   );
 }

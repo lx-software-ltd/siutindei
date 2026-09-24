@@ -7,8 +7,7 @@ test.describe('Organizations Panel', () => {
   });
 
   test('should display the organizations form', async ({ adminPage }) => {
-    // Check for New Organization form
-    await expect(adminPage.getByRole('heading', { name: 'New Organization' })).toBeVisible();
+    await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
 
     // Check form fields
     await expect(adminPage.getByLabel('Name')).toBeVisible();
@@ -29,26 +28,25 @@ test.describe('Organizations Panel', () => {
         .getByRole('button', { name: 'Select Cantonese (yue)' })
         .first()
     ).toBeVisible();
-    await expect(adminPage.getByLabel('Email')).toBeVisible();
+    await expect(adminPage.locator('#org-email')).toBeVisible();
     await expect(adminPage.getByLabel('Phone country')).toBeVisible();
     await expect(adminPage.getByLabel('Phone number')).toBeVisible();
-    await expect(adminPage.getByLabel('WhatsApp')).toBeVisible();
-    await expect(adminPage.getByLabel('X')).toBeVisible();
-    await expect(adminPage.getByLabel('WeChat')).toBeVisible();
+    await expect(adminPage.locator('#org-whatsapp')).toBeVisible();
+    await expect(adminPage.locator('#org-twitter')).toBeVisible();
+    await expect(adminPage.locator('#org-wechat')).toBeVisible();
 
     // Check for submit button
-    await expect(adminPage.getByRole('button', { name: 'Add Organization' })).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Create' })).toBeVisible();
   });
 
   test('should display existing organizations table', async ({ adminPage }) => {
-    // Check for existing organizations section
-    await expect(adminPage.getByRole('heading', { name: 'Existing Organizations' })).toBeVisible();
+    await expect(adminPage.getByRole('table', { name: 'Organizations' })).toBeVisible();
 
     // Check for table headers
     await expect(adminPage.getByRole('columnheader', { name: 'Name' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Description' })).toBeVisible();
-    await expect(adminPage.getByRole('columnheader', { name: 'Actions' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Operations' })).toBeVisible();
 
     // Check for organization data
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
@@ -56,6 +54,7 @@ test.describe('Organizations Panel', () => {
   });
 
   test('should display manager selector with Cognito users', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
     const managerSelect = adminPage.getByLabel('Manager');
     await expect(managerSelect).toBeVisible();
 
@@ -63,29 +62,34 @@ test.describe('Organizations Panel', () => {
     await managerSelect.click();
 
     // Check that users are available in the dropdown
-    await expect(adminPage.locator('option').filter({ hasText: 'manager@example.com' })).toBeVisible();
+    await expect(
+      adminPage.locator('#org-manager option[value="manager-user-id-456"]')
+    ).toBeAttached();
   });
 
   test('should validate required fields on submit', async ({ adminPage }) => {
     // Try to submit empty form
-    await adminPage.getByRole('button', { name: 'Add Organization' }).click();
+    await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
+    await adminPage.getByRole('button', { name: 'Create' }).click();
 
     // Should show error message
     await expect(adminPage.getByText('Name is required.')).toBeVisible();
   });
 
   test('should validate manager field on submit', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
     // Fill only name
     await adminPage.getByLabel('Name').fill('Test Org');
 
     // Try to submit without manager
-    await adminPage.getByRole('button', { name: 'Add Organization' }).click();
+    await adminPage.getByRole('button', { name: 'Create' }).click();
 
     // Should show error message for manager
     await expect(adminPage.getByText('Manager is required.')).toBeVisible();
   });
 
   test('should fill out the organization form', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
     // Fill name
     await adminPage.getByLabel('Name').fill('New Test Organization');
 
@@ -104,13 +108,14 @@ test.describe('Organizations Panel', () => {
   });
 
   test('should create a new organization', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
     // Fill the form
     await adminPage.getByLabel('Name').fill('Brand New Organization');
     await adminPage.getByLabel('Manager').selectOption({ index: 1 }); // Select first user
     await adminPage.getByLabel('Description').fill('A brand new organization');
 
     // Submit the form
-    await adminPage.getByRole('button', { name: 'Add Organization' }).click();
+    await adminPage.getByRole('button', { name: 'Create' }).click();
 
     // Form should be reset after successful creation
     // Note: In real test, we'd verify the API was called and the table updated
@@ -121,16 +126,10 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
 
     // Click first organization row
-    await adminPage.getByRole('row', { name: /Test Organization 1/ }).click();
+    await adminPage.getByRole('row', { name: /Test Organization 1/ }).first().click();
 
-    // Form title should change to "Edit Organization"
-    await expect(adminPage.getByRole('heading', { name: 'Edit Organization' })).toBeVisible();
-
-    // Cancel button should appear
-    await expect(adminPage.getByRole('button', { name: 'Cancel' })).toBeVisible();
-
-    // Submit button text should change
-    await expect(adminPage.getByRole('button', { name: 'Update Organization' })).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Update' })).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
   });
 
   test('should populate form with existing data when editing', async ({ adminPage }) => {
@@ -138,7 +137,7 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
 
     // Click row
-    await adminPage.getByRole('row', { name: /Test Organization 1/ }).click();
+    await adminPage.getByRole('row', { name: /Test Organization 1/ }).first().click();
 
     // Form should be populated with existing data
     await expect(adminPage.getByLabel('Name')).toHaveValue('Test Organization 1');
@@ -150,19 +149,14 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
 
     // Click row
-    await adminPage.getByRole('row', { name: /Test Organization 1/ }).click();
+    await adminPage.getByRole('row', { name: /Test Organization 1/ }).first().click();
 
-    // Verify we're in edit mode
-    await expect(adminPage.getByRole('heading', { name: 'Edit Organization' })).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Update' })).toBeVisible();
 
-    // Click Cancel
-    await adminPage.getByRole('button', { name: 'Cancel' }).click();
+    // Clicking the open row collapses the editor.
+    await adminPage.getByRole('row', { name: /Test Organization 1/ }).first().click();
 
-    // Should return to "New Organization" form
-    await expect(adminPage.getByRole('heading', { name: 'New Organization' })).toBeVisible();
-
-    // Form should be reset
-    await expect(adminPage.getByLabel('Name')).toHaveValue('');
+    await expect(adminPage.getByLabel('Name')).toHaveCount(0);
   });
 
   test('should have delete button for each organization', async ({ adminPage }) => {
@@ -247,6 +241,7 @@ test.describe('Organizations Panel - Admin vs Manager', () => {
 
   test('admin should see manager selector in form', async ({ adminPage }) => {
   await adminPage.goto('/admin/dashboard');
+    await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
 
     // Should see Manager field
     await expect(adminPage.getByLabel('Manager')).toBeVisible();
@@ -255,8 +250,8 @@ test.describe('Organizations Panel - Admin vs Manager', () => {
   test('admin should be able to create new organizations', async ({ adminPage }) => {
   await adminPage.goto('/admin/dashboard');
 
-    // Should see the "New Organization" form
-    await expect(adminPage.getByRole('heading', { name: 'New Organization' })).toBeVisible();
-    await expect(adminPage.getByRole('button', { name: 'Add Organization' })).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'New organization', exact: true })).toBeVisible();
+    await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
+    await expect(adminPage.getByRole('button', { name: 'Create' })).toBeVisible();
   });
 });
