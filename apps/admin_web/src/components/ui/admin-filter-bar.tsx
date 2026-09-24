@@ -43,8 +43,9 @@ export function AdminFilterBar({ children, trailing, summary, className }: Admin
 }
 
 export interface AdminFilterFieldProps {
-  label: ReactNode;
-  htmlFor: string;
+  /** Visible title above the control. Omit when the control should stand alone. */
+  label?: ReactNode;
+  htmlFor?: string;
   children: ReactNode;
   /** Width class; defaults to a compact filter width that grows on wide screens. */
   className?: string;
@@ -53,7 +54,7 @@ export interface AdminFilterFieldProps {
 export function AdminFilterField({ label, htmlFor, children, className }: AdminFilterFieldProps) {
   return (
     <div className={clsx('min-w-[10rem] flex-1 sm:flex-none sm:basis-48', className)}>
-      <Label htmlFor={htmlFor}>{label}</Label>
+      {label ? <Label htmlFor={htmlFor}>{label}</Label> : null}
       {children}
     </div>
   );

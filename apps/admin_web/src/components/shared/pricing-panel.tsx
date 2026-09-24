@@ -547,10 +547,11 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               ) : null
             }
           >
-            <AdminFilterField label='Search' htmlFor='pricing-search'>
+            <AdminFilterField>
               <Input
                 id='pricing-search'
                 placeholder='Search pricing...'
+                aria-label='Search pricing'
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
               />

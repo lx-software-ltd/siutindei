@@ -545,10 +545,11 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
               ) : null
             }
           >
-            <AdminFilterField label='Search' htmlFor='activity-search'>
+            <AdminFilterField>
               <Input
                 id='activity-search'
                 placeholder='Search activities...'
+                aria-label='Search activities'
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
               />

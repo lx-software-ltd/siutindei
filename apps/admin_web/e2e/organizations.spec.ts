@@ -175,6 +175,8 @@ test.describe('Organizations Panel', () => {
     // Check for search input
     const searchInput = adminPage.getByPlaceholder('Search organizations...');
     await expect(searchInput).toBeVisible();
+    await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
+    await expect(adminPage.locator('label', { hasText: /^Review$/ })).toHaveCount(0);
   });
 
   test('should filter organizations by search query', async ({ adminPage }) => {
