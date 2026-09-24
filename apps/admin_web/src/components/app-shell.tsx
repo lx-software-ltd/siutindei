@@ -149,7 +149,7 @@ export function AppShell({
               </button>
             )}
             <div>
-              <h1 className='text-lg font-semibold sm:text-xl'>
+              <h1 className='text-[calc(1.125rem*0.8)] font-semibold sm:text-[calc(1.25rem*0.8)]'>
                 Siu Tin Dei Admin
               </h1>
               <p className='hidden text-sm text-slate-500 sm:block'>
@@ -172,11 +172,7 @@ export function AppShell({
                 )}
               </div>
             )}
-            <Button
-              variant='secondary'
-              onClick={onLogout}
-              className='text-sm sm:text-base'
-            >
+            <Button type='button' variant='outline' onClick={onLogout}>
               <span className='hidden sm:inline'>Log out</span>
               <span className='sm:hidden'>Exit</span>
             </Button>
