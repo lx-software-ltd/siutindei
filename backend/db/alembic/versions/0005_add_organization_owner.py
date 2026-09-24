@@ -80,7 +80,7 @@ def upgrade() -> None:
     The column is NOT NULL - every organization must have an owner.
 
     Existing organizations without an owner will be assigned to the fallback
-    owner (luca.cacchiani@gmail.com).
+    owner identified by the FALLBACK_OWNER_EMAIL environment variable.
     """
     # First add the column as nullable
     op.add_column(

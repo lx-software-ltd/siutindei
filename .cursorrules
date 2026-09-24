@@ -216,6 +216,12 @@ repo root
 ### Security requirements (MANDATORY - see docs/architecture/security.md)
 - NEVER hardcode secrets, API keys, passwords, or tokens in source code.
 - NEVER log PII (emails, names) without masking. Use mask_email() and mask_pii() from app.utils.logging.
+- Real personal names, phone numbers, personal email addresses, street addresses, bank account numbers, and business-registration numbers must not appear in source or docs.
+- Role mailboxes that are service configuration (`hello@`, `support@`, `no-reply@`) stay in source. They are not personal data.
+- Tests and seed data use fictional people, `example.com` addresses, and sample street names.
+- `scripts/check-pii.sh` enforces a hashed denylist (`scripts/pii-denylist.sha256`). Do not add plaintext denylist entries to the repository.
+- The check covers `.py`, `.ts`, `.tsx`, `.js`, `.mjs`, `.dart`, `.sql`, `.md`, `.mdc`, `.yml`, `.yaml`, `.sh`, `.html`, and `.css`.
+- Git author and `Co-authored-by` trailers are outside this check.
 - NEVER use print() in production code. Always use structured logging with get_logger().
 - NEVER use random module for security tokens. Always use secrets module.
 - NEVER use Cors.ALL_ORIGINS in production. Restrict to specific allowed origins.
