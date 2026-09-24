@@ -269,9 +269,10 @@ export function AuditLogsPanel() {
       }
       filters={
         <AdminFilterBar summary={`Showing ${list.items.length} entries`}>
-          <AdminFilterField label='Action' htmlFor='action-filter' className={filterFieldClass}>
+          <AdminFilterField className={filterFieldClass}>
             <Select
               id='action-filter'
+              aria-label='Action'
               value={list.filters.action}
               onChange={(event) => {
                 list.setFilter('action', event.target.value as ActionFilter);
@@ -283,9 +284,10 @@ export function AuditLogsPanel() {
               <option value='DELETE'>Delete</option>
             </Select>
           </AdminFilterField>
-          <AdminFilterField label='Table' htmlFor='table-filter' className={filterFieldClass}>
+          <AdminFilterField className={filterFieldClass}>
             <Select
               id='table-filter'
+              aria-label='Table'
               value={list.filters.table}
               onChange={(event) => {
                 list.setFilter('table', event.target.value);
@@ -299,9 +301,10 @@ export function AuditLogsPanel() {
               ))}
             </Select>
           </AdminFilterField>
-          <AdminFilterField label='Time range' htmlFor='time-range' className={filterFieldClass}>
+          <AdminFilterField className={filterFieldClass}>
             <Select
               id='time-range'
+              aria-label='Time range'
               value={list.filters.timeRange}
               onChange={(event) => {
                 list.setFilter('timeRange', event.target.value);
@@ -314,9 +317,10 @@ export function AuditLogsPanel() {
               ))}
             </Select>
           </AdminFilterField>
-          <AdminFilterField label='Actor' htmlFor='actor-filter' className={filterFieldClass}>
+          <AdminFilterField className={filterFieldClass}>
             <Input
               id='actor-filter'
+              aria-label='Actor'
               type='text'
               placeholder='Filter by email...'
               value={list.filters.actor}

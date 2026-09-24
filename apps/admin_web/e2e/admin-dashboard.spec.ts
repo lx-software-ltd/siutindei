@@ -24,7 +24,6 @@ test.describe('Admin Dashboard', () => {
       'Media',
       'Locations',
       'Categories',
-      'Category Suggestions',
       'Activities',
       'Pricing',
       'Schedules',
@@ -185,10 +184,10 @@ test.describe('Admin Dashboard Layout', () => {
   test('should have sidebar navigation', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard');
 
-    // Check that nav element exists with buttons. Each of the 15 sections
+    // Check that nav element exists with buttons. Each of the 14 sections
     // renders twice: desktop sidebar + mobile drawer.
     const navButtons = adminPage.locator('nav button');
-    await expect(navButtons).toHaveCount(30);
+    await expect(navButtons).toHaveCount(28);
   });
 
   test('should have main content area', async ({ adminPage }) => {

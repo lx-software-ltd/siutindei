@@ -8,6 +8,10 @@ test.describe('Audit Logs Panel', () => {
     await expect(
       adminPage.getByRole('cell', { name: 'organizations' }).first()
     ).toBeVisible();
+    await expect(adminPage.locator('label', { hasText: /^Action$/ })).toHaveCount(0);
+    await expect(adminPage.locator('label', { hasText: /^Table$/ })).toHaveCount(0);
+    await expect(adminPage.locator('label', { hasText: /^Time range$/ })).toHaveCount(0);
+    await expect(adminPage.locator('label', { hasText: /^Actor$/ })).toHaveCount(0);
 
     await adminPage.getByLabel('Action').selectOption('UPDATE');
     await expect(adminPage.getByRole('table')).toContainText('UPDATE');

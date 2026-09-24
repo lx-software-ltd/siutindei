@@ -3,7 +3,6 @@
 import { useCallback, useState } from 'react';
 
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
-import { useExhaustPages } from '@/hooks/use-exhaust-pages';
 import { useExpandedRecord } from '@/hooks/use-expanded-record';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { ApiError } from '@/lib/api-client';
@@ -26,10 +25,6 @@ import {
 } from '@/components/ui/admin-data-table';
 import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
-import {
-  AdminFilterBar,
-  AdminFilterField,
-} from '@/components/ui/admin-filter-bar';
 import { Input } from '@/components/ui/input';
 import { ResourceTableShell, rowActions } from '@/components/ui/resource-table-shell';
 import { Textarea } from '@/components/ui/textarea';
@@ -50,7 +45,6 @@ export function CognitoUsersPanel() {
   const { confirm, confirmDialog } = useConfirmDialog();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
 
   const list = usePaginatedList<CognitoUserRow, Record<string, never>>({
     queryKey: adminQueryKeys.cognitoUsers(),
@@ -65,7 +59,6 @@ export function CognitoUsersPanel() {
       };
     },
   });
-  useExhaustPages(Boolean(searchQuery.trim()), list);
 
   const handleToggleRole = async (
     targetUser: CognitoUserRow,
@@ -151,28 +144,13 @@ export function CognitoUsersPanel() {
     [currentUser?.subject]
   );
 
-  const filteredUsers = list.items.filter((cognitoUser) => {
-    if (!searchQuery.trim()) {
-      return true;
-    }
-    const query = searchQuery.toLowerCase();
-    const groupsStr = cognitoUser.groups?.join(', ')?.toLowerCase() || '';
-    return (
-      cognitoUser.email?.toLowerCase().includes(query) ||
-      cognitoUser.username?.toLowerCase().includes(query) ||
-      cognitoUser.name?.toLowerCase().includes(query) ||
-      cognitoUser.status?.toLowerCase().includes(query) ||
-      groupsStr.includes(query)
-    );
-  });
-
   const selected = list.items.find((item) => item.id === expanded.expandedId) ?? null;
 
   return (
     <>
       <ResourceTableShell
         ariaLabel='Users'
-        rows={filteredUsers}
+        rows={list.items}
         getLabel={(item) => item.email || item.username || 'Unknown'}
         middleColumnCount={4}
         isLoading={list.isLoading}
@@ -180,7 +158,7 @@ export function CognitoUsersPanel() {
         hasMore={list.hasMore}
         onLoadMore={list.loadMore}
         error={list.error}
-        emptyLabel={searchQuery.trim() ? 'No users match your search.' : 'No users found.'}
+        emptyLabel='No users found.'
         isExpanded={expanded.isExpanded}
         onToggle={expanded.toggle}
         detail={selected ? <UserAttributesDetail user={selected} /> : null}
@@ -192,18 +170,6 @@ export function CognitoUsersPanel() {
               </StatusBanner>
             </div>
           ) : null
-        }
-        filters={
-          <AdminFilterBar>
-            <AdminFilterField label='Search' htmlFor='cognito-user-search'>
-              <Input
-                id='cognito-user-search'
-                placeholder='Search users...'
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-              />
-            </AdminFilterField>
-          </AdminFilterBar>
         }
         head={
           <>

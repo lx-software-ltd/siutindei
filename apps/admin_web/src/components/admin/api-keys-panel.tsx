@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
-import { useExhaustPages } from '@/hooks/use-exhaust-pages';
 import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { listResource } from '@/lib/api-client';
@@ -31,7 +30,7 @@ import {
   AdminEditorPanel,
 } from '@/components/ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
-import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminFilterBar } from '@/components/ui/admin-filter-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -63,7 +62,6 @@ export function ApiKeysPanel() {
   const [isSaving, setIsSaving] = useState(false);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
   const list = usePaginatedList<ApiKey, Record<string, never>>({
@@ -78,7 +76,6 @@ export function ApiKeysPanel() {
       };
     },
   });
-  useExhaustPages(Boolean(searchQuery.trim()), list);
 
   const organizationsQuery = useQuery(
     {
@@ -96,23 +93,6 @@ export function ApiKeysPanel() {
     }
     return map;
   }, [organizationsQuery.data?.items]);
-
-  const filteredKeys = list.items.filter((apiKey) => {
-    if (!searchQuery.trim()) {
-      return true;
-    }
-    const query = searchQuery.toLowerCase();
-    const orgName = apiKey.org_id
-      ? (orgNameById.get(apiKey.org_id) ?? apiKey.org_id)
-      : 'full access';
-    return (
-      apiKey.name.toLowerCase().includes(query) ||
-      apiKey.key_prefix.toLowerCase().includes(query) ||
-      apiKey.scope.toLowerCase().includes(query) ||
-      apiKey.status.toLowerCase().includes(query) ||
-      orgName.toLowerCase().includes(query)
-    );
-  });
 
   const handleCreate = async () => {
     if (!formState.name.trim()) {
@@ -323,7 +303,7 @@ export function ApiKeysPanel() {
     <>
       <ResourceTableShell
         ariaLabel='API keys'
-        rows={filteredKeys}
+        rows={list.items}
         getLabel={(item) => item.name}
         middleColumnCount={4}
         isLoading={list.isLoading}
@@ -331,11 +311,7 @@ export function ApiKeysPanel() {
         hasMore={list.hasMore}
         onLoadMore={list.loadMore}
         error={list.error}
-        emptyLabel={
-          searchQuery.trim()
-            ? 'No API keys match your search.'
-            : 'No API keys found.'
-        }
+        emptyLabel='No API keys found.'
         isExpanded={shell.expanded.isExpanded}
         onToggle={shell.expanded.toggle}
         isDraftOpen={shell.expanded.isDraftOpen}
@@ -396,16 +372,7 @@ export function ApiKeysPanel() {
                 }}
               />
             }
-          >
-            <AdminFilterField label='Search' htmlFor='api-key-search'>
-              <Input
-                id='api-key-search'
-                placeholder='Search keys...'
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-              />
-            </AdminFilterField>
-          </AdminFilterBar>
+          />
         }
         head={
           <>

@@ -77,14 +77,12 @@ test.describe('API Keys Panel', () => {
     await expect(table.getByRole('cell', { name: /revoked/i }).first()).toBeVisible();
   });
 
-  test('search filters the key list', async ({ adminPage }) => {
+  test('lists keys without a search field', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=api-keys');
 
     const table = adminPage.getByRole('table');
     await expect(table).toContainText('Partner read key');
-
-    await adminPage.getByPlaceholder('Search keys...').fill('CRUD');
     await expect(table).toContainText('Org One CRUD key');
-    await expect(table).not.toContainText('Partner read key');
+    await expect(adminPage.getByPlaceholder('Search keys...')).toHaveCount(0);
   });
 });

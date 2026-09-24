@@ -12,14 +12,13 @@ import { StatusBanner } from '../status-banner';
 import {
   OrganizationsPanel,
   LocationsPanel,
-  ActivityCategoriesPanel,
   ActivitiesPanel,
   PricingPanel,
   SchedulesPanel,
 } from '../shared';
 import { ApiKeysPanel } from './api-keys-panel';
-import { CategorySuggestionsPanel } from './category-suggestions/category-suggestions-panel';
 import { AuditLogsPanel } from './audit-logs-panel';
+import { CategoriesPage } from './categories-page';
 import { CognitoUsersPanel } from './cognito-users-panel';
 import { FeedbackLabelsPanel } from './feedback-labels-panel';
 import { FeedbackPanel } from './feedback-panel';
@@ -41,17 +40,21 @@ const sectionLabels = [
   { key: 'feedback-labels', label: 'Feedback Labels' },
   { key: 'cognito-users', label: 'Users' },
   { key: 'activity-categories', label: 'Categories' },
-  { key: 'category-suggestions', label: 'Category Suggestions' },
   { key: 'api-keys', label: 'API Keys' },
   { key: 'audit-logs', label: 'Audit Logs' },
   { key: 'imports', label: 'Imports' },
+];
+
+const recognizedSections = [
+  ...sectionLabels,
+  { key: 'category-suggestions', label: 'Category Suggestions' },
 ];
 
 export function AdminDashboard() {
   const { status, user, isAdmin, isManager, logout, error } = useAuth();
   const prefetchSection = usePrefetchAdminSection('admin');
   const { activeSection, selectSection } = useAdminSectionQuery(
-    sectionLabels,
+    recognizedSections,
     'organizations'
   );
 
@@ -62,9 +65,8 @@ export function AdminDashboard() {
       case 'locations':
         return <LocationsPanel mode='admin' />;
       case 'activity-categories':
-        return <ActivityCategoriesPanel />;
       case 'category-suggestions':
-        return <CategorySuggestionsPanel />;
+        return <CategoriesPage />;
       case 'activities':
         return <ActivitiesPanel mode='admin' />;
       case 'pricing':
@@ -121,7 +123,11 @@ export function AdminDashboard() {
   return (
     <AppShell
       sections={sectionLabels}
-      activeKey={activeSection}
+      activeKey={
+        activeSection === 'category-suggestions'
+          ? 'activity-categories'
+          : activeSection
+      }
       onSelect={selectSection}
       onIntent={prefetchSection}
       onLogout={logout}
