@@ -185,6 +185,7 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
     if _is_admin(event):
         catalog_manager_id = None
     import_job_id = None
+    enqueue_ids: list[str] = []
     if not dry_run:
         with Session(get_engine()) as session:
             started = begin_import_job(session, object_key)
@@ -206,6 +207,11 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
                 catalog_manager_id=catalog_manager_id,
                 import_job_id=import_job_id,
             )
+            from app.services.category_suggestions.resolve import (
+                import_enrichment_ids,
+            )
+
+            enqueue_ids = import_enrichment_ids(dry_run=dry_run)
             if dry_run:
                 session.rollback()
                 job = store_import_job(
@@ -238,9 +244,22 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
             session.commit()
         except Exception as exc:
             session.rollback()
+            from app.services.category_suggestions.resolve import (
+                take_import_category_enqueues,
+            )
+
+            take_import_category_enqueues()
             if import_job_id is not None:
                 _record_import_failure(import_job_id, exc)
             raise
+
+    if enqueue_ids:
+        from app.services.category_suggestions.events import enqueue_enrichment
+
+        try:
+            enqueue_enrichment(enqueue_ids)
+        except Exception:
+            logger.exception("Category suggestion enqueue failed")
 
     logger.info(
         ("Admin import dry-run completed" if dry_run else "Admin import completed"),

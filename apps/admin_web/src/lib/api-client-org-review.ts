@@ -79,6 +79,7 @@ export interface ImportJobListItem {
   status: string;
   summary: {
     organizations?: { created: number; updated: number; failed: number; skipped: number };
+    captured_categories?: number;
   };
   file_warnings: string[];
   result_count?: number;

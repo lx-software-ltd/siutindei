@@ -37,7 +37,10 @@ test.describe('Manager Dashboard', () => {
 
     // Admin-only sections should NOT be visible
     await expect(
-      managerPage.getByRole('button', { name: 'Categories' })
+      managerPage.getByRole('button', { name: 'Categories', exact: true })
+    ).not.toBeVisible();
+    await expect(
+      managerPage.getByRole('button', { name: 'Category Suggestions' })
     ).not.toBeVisible();
     await expect(managerPage.getByRole('button', { name: 'Tickets' })).not.toBeVisible();
     await expect(

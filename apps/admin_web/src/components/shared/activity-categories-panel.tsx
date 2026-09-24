@@ -126,7 +126,7 @@ export function ActivityCategoriesPanel() {
     function walk(nodes: ActivityCategory[], prefix = '') {
       for (const node of nodes) {
         const path = prefix ? `${prefix} / ${node.name}` : node.name;
-        if (!excludedIds.has(node.id)) {
+        if (!excludedIds.has(node.id) && !node.is_system) {
           options.push({ id: node.id, label: path });
         }
         const children = childrenByParent.get(node.id) ?? [];
@@ -218,8 +218,10 @@ export function ActivityCategoriesPanel() {
         key: 'path',
         header: 'Path',
         primary: true,
-        render: (item: ActivityCategory) =>
-          categoryPathById.get(item.id) || item.name,
+        render: (item: ActivityCategory) => {
+          const label = categoryPathById.get(item.id) || item.name;
+          return item.is_system ? `${label} (pending)` : label;
+        },
       },
       {
         key: 'display-order',
@@ -353,8 +355,18 @@ export function ActivityCategoriesPanel() {
               columns={columns}
               data={filteredItems}
               keyExtractor={(item) => item.id}
-              onEdit={(item) => panel.startEdit(item)}
-              onDelete={(item) => panel.handleDelete(item)}
+              onEdit={(item) => {
+                if (item.is_system) {
+                  return;
+                }
+                panel.startEdit(item);
+              }}
+              onDelete={(item) => {
+                if (item.is_system) {
+                  return;
+                }
+                panel.handleDelete(item);
+              }}
               nextCursor={panel.nextCursor}
               onLoadMore={panel.loadMore}
               isLoading={panel.isLoading}

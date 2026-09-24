@@ -163,7 +163,7 @@ export function CascadingCategorySelect({
                 </option>
                 {level.options.map((opt) => (
                   <option key={opt.id} value={opt.id}>
-                    {opt.name}
+                    {opt.is_system ? `${opt.name} (pending)` : opt.name}
                   </option>
                 ))}
               </Select>

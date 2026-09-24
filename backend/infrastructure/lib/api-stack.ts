@@ -666,6 +666,31 @@ export class ApiStack extends cdk.Stack {
           "backlog has been released from the admin review queue.",
       }
     );
+    const openRouterApiKey = new cdk.CfnParameter(this, "OpenRouterApiKey", {
+      type: "String",
+      default: "",
+      noEcho: true,
+      description:
+        "OpenRouter API key for lxsoftware:siutindei. Stored in " +
+        "Secrets Manager. Leave empty to store the placeholder pending " +
+        "until the key is minted.",
+    });
+    const openRouterChatCompletionsUrl = new cdk.CfnParameter(
+      this,
+      "OpenRouterChatCompletionsUrl",
+      {
+        type: "String",
+        default: "https://openrouter.ai/api/v1/chat/completions",
+        description:
+          "OpenRouter chat completions URL allowed through the HTTP proxy",
+      }
+    );
+    const openRouterModel = new cdk.CfnParameter(this, "OpenRouterModel", {
+      type: "String",
+      default: "qwen/qwen3-30b-a3b",
+      description:
+        "Default OpenRouter model when admin settings leave the model blank",
+    });
 
     // ---------------------------------------------------------------------
     // Cognito User Pool and Identity Providers
@@ -1363,7 +1388,10 @@ export class ApiStack extends cdk.Stack {
       // 1024 MB: Lambda CPU scales with memory, and this function's cold
       // start is import-bound (~2.2-3.0 s at 512 MB on the shared bundle).
       // Invocation volume is tiny, so the per-GB-second cost is negligible.
+      // 120s covers one 90s OpenRouter attempt when SQS invokes this
+      // function. API Gateway still cuts HTTP calls at 29s.
       memorySize: 1024,
+      timeout: cdk.Duration.seconds(120),
       tracing: lambda.Tracing.ACTIVE,
       environment: {
         DATABASE_SECRET_ARN: database.adminUserSecret.secretArn,
@@ -1419,7 +1447,8 @@ export class ApiStack extends cdk.Stack {
     const awsProxyFunction = createPythonFunction("AwsApiProxyFunction", {
       handler: "lambda/aws_proxy/handler.lambda_handler",
       memorySize: 256,
-      timeout: cdk.Duration.seconds(15),
+      // 120s so in-VPC callers can wait on OpenRouter (HTTP cap is 90s).
+      timeout: cdk.Duration.seconds(120),
       noVpc: true,
       tracing: lambda.Tracing.ACTIVE,
       environment: {
@@ -1427,7 +1456,10 @@ export class ApiStack extends cdk.Stack {
         // Comma-separated URL prefixes for outbound HTTP requests.
         // Add prefixes here when Lambdas inside the VPC need to call
         // external APIs via the proxy.
-        ALLOWED_HTTP_URLS: "https://nominatim.openstreetmap.org/search",
+        ALLOWED_HTTP_URLS: [
+          "https://nominatim.openstreetmap.org/search",
+          openRouterChatCompletionsUrl.valueAsString,
+        ].join(","),
       },
     });
 
@@ -2164,6 +2196,107 @@ export class ApiStack extends cdk.Stack {
       encryptionKey: secretsEncryptionKey,
     });
 
+    const openRouterKeyProvided = new cdk.CfnCondition(
+      this,
+      "OpenRouterKeyProvided",
+      {
+        expression: cdk.Fn.conditionNot(
+          cdk.Fn.conditionEquals(openRouterApiKey.valueAsString, "")
+        ),
+      }
+    );
+    const openRouterApiKeySecret = new secretsmanager.Secret(
+      this,
+      "OpenRouterApiKeySecret",
+      {
+        secretName: name("openrouter-api-key"),
+        description: "OpenRouter API key for lxsoftware:siutindei",
+        encryptionKey: secretsEncryptionKey,
+        secretStringValue: cdk.SecretValue.unsafePlainText(
+          cdk.Token.asString(
+            cdk.Fn.conditionIf(
+              openRouterKeyProvided.logicalId,
+              openRouterApiKey.valueAsString,
+              "pending"
+            )
+          )
+        ),
+      }
+    );
+    const categorySuggestionDLQ = new sqs.Queue(this, "CategorySuggestionDLQ", {
+      queueName: name("category-suggestion-dlq"),
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.KMS,
+      encryptionMasterKey: sqsEncryptionKey,
+    });
+    const categorySuggestionQueue = new sqs.Queue(
+      this,
+      "CategorySuggestionQueue",
+      {
+        queueName: name("category-suggestion-enrich"),
+        visibilityTimeout: cdk.Duration.seconds(180),
+        deadLetterQueue: {
+          queue: categorySuggestionDLQ,
+          maxReceiveCount: 3,
+        },
+        encryption: sqs.QueueEncryption.KMS,
+        encryptionMasterKey: sqsEncryptionKey,
+      }
+    );
+    // Enrichment runs on the admin function. A dedicated worker would
+    // add a function, role, policy, log group, invocation DLQ, and
+    // invoke permission, which pushes this stack over the 500-resource
+    // CloudFormation cap.
+    openRouterApiKeySecret.grantRead(adminFunction);
+    categorySuggestionQueue.grantSendMessages(adminFunction);
+    adminFunction.addEventSource(
+      new lambdaEventSources.SqsEventSource(categorySuggestionQueue, {
+        batchSize: 1,
+        reportBatchItemFailures: true,
+      })
+    );
+    adminFunction.addEnvironment(
+      "CATEGORY_SUGGESTION_QUEUE_URL",
+      categorySuggestionQueue.queueUrl
+    );
+    adminFunction.addEnvironment(
+      "OPENROUTER_API_KEY_SECRET_ARN",
+      openRouterApiKeySecret.secretArn
+    );
+    adminFunction.addEnvironment(
+      "OPENROUTER_CHAT_COMPLETIONS_URL",
+      openRouterChatCompletionsUrl.valueAsString
+    );
+    adminFunction.addEnvironment(
+      "OPENROUTER_MODEL",
+      openRouterModel.valueAsString
+    );
+    adminFunction.addEnvironment(
+      "CATEGORY_SUGGESTION_LAMBDA_TIMEOUT_SECONDS",
+      "120"
+    );
+    adminFunction.addEnvironment(
+      "CATEGORY_SUGGESTION_OPENROUTER_TIMEOUT_SECONDS",
+      "90"
+    );
+    const categorySuggestionDlqAlarm = new cdk.aws_cloudwatch.Alarm(
+      this,
+      "CategorySuggestionDLQAlarm",
+      {
+        alarmName: name("category-suggestion-dlq-alarm"),
+        alarmDescription:
+          "Category suggestion enrichment messages failed and landed in the DLQ",
+        metric: categorySuggestionDLQ.metricApproximateNumberOfMessagesVisible(
+          {
+            period: cdk.Duration.minutes(5),
+          }
+        ),
+        threshold: 1,
+        evaluationPeriods: 1,
+        treatMissingData: cdk.aws_cloudwatch.TreatMissingData.NOT_BREACHING,
+      }
+    );
+
     // API Key rotation Lambda
     const apiKeyRotationFunction = createPythonFunction("ApiKeyRotationFunction", {
       handler: "lambda/api_key_rotation/handler.lambda_handler",
@@ -2368,6 +2501,21 @@ export class ApiStack extends cdk.Stack {
       authorizer: adminAuthorizer,
     });
 
+    // One proxy method covers summary, settings, detail, decision, and
+    // enrich so the stack stays under the CloudFormation resource cap.
+    const categorySuggestions = admin.addResource("category-suggestions");
+    categorySuggestions.addMethod("GET", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
+    const categorySuggestionsProxy = categorySuggestions.addResource(
+      "{proxy+}"
+    );
+    categorySuggestionsProxy.addMethod("ANY", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
+
     const users = admin.addResource("users");
     const userByName = users.addResource("{username}");
     const userGroups = userByName.addResource("groups");
@@ -2477,25 +2625,13 @@ export class ApiStack extends cdk.Stack {
       });
 
       const resourceById = resource.addResource("{id}");
-      if (resourceName === "organizations") {
-        resourceById.addMethod("ANY", adminIntegration, {
-          authorizationType: apigateway.AuthorizationType.CUSTOM,
-          authorizer: managerAuthorizer,
-        });
-      } else {
-        resourceById.addMethod("GET", adminIntegration, {
-          authorizationType: apigateway.AuthorizationType.CUSTOM,
-          authorizer: managerAuthorizer,
-        });
-        resourceById.addMethod("PUT", adminIntegration, {
-          authorizationType: apigateway.AuthorizationType.CUSTOM,
-          authorizer: managerAuthorizer,
-        });
-        resourceById.addMethod("DELETE", adminIntegration, {
-          authorizationType: apigateway.AuthorizationType.CUSTOM,
-          authorizer: managerAuthorizer,
-        });
-      }
+      // One ANY method covers GET/PUT/DELETE. Separate methods push
+      // the stack past the CloudFormation 500-resource cap. The Lambda
+      // rejects methods it does not implement.
+      resourceById.addMethod("ANY", adminIntegration, {
+        authorizationType: apigateway.AuthorizationType.CUSTOM,
+        authorizer: managerAuthorizer,
+      });
     }
 
     // -------------------------------------------------------------------------
@@ -2823,6 +2959,16 @@ export class ApiStack extends cdk.Stack {
       description: "SQS dead letter queue URL for failed manager requests",
     });
 
+    new cdk.CfnOutput(this, "CategorySuggestionQueueUrl", {
+      value: categorySuggestionQueue.queueUrl,
+      description: "SQS queue URL for category suggestion enrichment",
+    });
+
+    new cdk.CfnOutput(this, "CategorySuggestionDLQUrl", {
+      value: categorySuggestionDLQ.queueUrl,
+      description: "SQS dead letter queue URL for category suggestion enrichment",
+    });
+
     const customAuthDomainOutput = new cdk.CfnOutput(
       this,
       "CognitoCustomDomainCloudFront",
@@ -2881,7 +3027,7 @@ export class ApiStack extends cdk.Stack {
         { label: "Admin", fn: adminFunction, durationP99ThresholdMs: 10000 },
       ],
       dbClusterIdentifier: database.cluster.clusterIdentifier,
-      additionalAlarms: [dlqAlarm],
+      additionalAlarms: [dlqAlarm, categorySuggestionDlqAlarm],
     });
 
     // Apply Checkov suppressions to CDK-internal Lambda functions

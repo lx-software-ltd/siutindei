@@ -70,23 +70,31 @@ def process_import_payload(
     results: list[dict[str, Any]] = []
     summary = init_summary()
     summary["warnings"] += len(file_warnings)
+    from app.services.category_suggestions.resolve import (
+        begin_capture_batch,
+        finish_capture_batch,
+    )
 
-    for index, raw_org in enumerate(orgs_raw):
-        process_organization(
-            session,
-            raw_org,
-            index,
-            results,
-            summary,
-            file_warnings,
-            dry_run=dry_run,
-            allow_updates=allow_org_updates,
-            catalog_manager_id=catalog_manager_id,
-            import_job_id=import_job_id,
-        )
+    begin_capture_batch(session)
+    try:
+        for index, raw_org in enumerate(orgs_raw):
+            process_organization(
+                session,
+                raw_org,
+                index,
+                results,
+                summary,
+                file_warnings,
+                dry_run=dry_run,
+                allow_updates=allow_org_updates,
+                catalog_manager_id=catalog_manager_id,
+                import_job_id=import_job_id,
+            )
 
-    finish_import_batch(session, dry_run=dry_run)
-    return summary, results
+        finish_import_batch(session, dry_run=dry_run)
+        return summary, results
+    finally:
+        finish_capture_batch(summary, session)
 
 
 def _review_status_needs_warning(
@@ -268,4 +276,5 @@ def process_organization(
                 f"{path}.activities",
                 dry_run=dry_run,
                 allow_updates=allow_updates,
+                import_job_id=import_job_id,
             )

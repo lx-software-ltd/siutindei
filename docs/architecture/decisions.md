@@ -413,7 +413,8 @@ which details are missing, and bulk actions approve, reject, reopen,
 or set a whitelist of organization fields. Approve refuses while
 blockers remain unless `force` is set. Blockers are a missing
 description, no location, no activity, a location without coordinates,
-and an activity without pricing or a schedule.
+an activity without pricing or a schedule, and an activity still on
+Pending categorisation.
 
 Endpoint shapes live in `docs/api/admin.yaml` under `/v1/admin/org-review`.
 
@@ -430,3 +431,18 @@ When making changes:
 2. Update `docs/architecture/lambdas.md` if adding/changing Lambda functions.
 3. Update `docs/architecture/database-schema.md` if adding/changing tables.
 4. Update other architecture docs if design decisions or patterns change.
+
+## Category suggestions
+
+**Decision:** Unknown imported category names are captured on a system
+category and enriched asynchronously. Admins decide in the console.
+In-VPC Lambdas reach OpenRouter only through
+`app.services.openrouter_client`, which calls the existing HTTP proxy.
+The worker reads the named key from Secrets Manager and sends
+`Authorization` itself. The proxy does not hold the key.
+
+Capture is off until an admin turns on `on_import_enabled` in the
+settings singleton. Public search always excludes Pending
+categorisation. Design notes:
+`docs/architecture/category-suggestions.md`. Endpoint shapes:
+`docs/api/admin.yaml` under `/v1/admin/category-suggestions`.

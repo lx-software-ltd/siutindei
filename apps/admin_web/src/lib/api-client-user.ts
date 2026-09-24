@@ -115,6 +115,7 @@ export interface ActivityCategoryNode {
   name: string;
   name_translations: Record<string, string>;
   display_order: number;
+  is_system?: boolean;
   children: ActivityCategoryNode[];
 }
 

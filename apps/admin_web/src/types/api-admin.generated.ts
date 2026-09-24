@@ -818,6 +818,373 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/category-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List category suggestions
+         * @description Admin group only. Unknown import `category_name` values are
+         *     captured here when settings `on_import_enabled` is true. The
+         *     pending system category id is
+         *     `c1111111-1111-1111-1111-111111111199`. Import row warnings use
+         *     `category_name '{name}' captured as pending suggestion`.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "pending" | "approved" | "merged" | "rejected";
+                    enrichment_status?: "none" | "queued" | "running" | "done" | "failed";
+                    import_job_id?: string;
+                    q?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Suggestion page */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CategorySuggestionListResponse"];
+                    };
+                };
+                /** @description Admin group required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/category-suggestions/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Category suggestion counts and month cost */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Summary */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CategorySuggestionSummary"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/category-suggestions/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read category suggestion settings */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Settings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CategorySuggestionSettings"];
+                    };
+                };
+            };
+        };
+        /** Update category suggestion settings */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CategorySuggestionSettingsUpdate"];
+                };
+            };
+            responses: {
+                /** @description Updated settings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CategorySuggestionSettings"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/category-suggestions/settings/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a short OpenRouter ping with the configured model
+         * @description One attempt, about 15 seconds. API Gateway REST integrations
+         *     time out at 29 seconds and the admin Lambda timeout is 30
+         *     seconds, so this call cannot use the worker's 90 second budget.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        model?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Model replied */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CategorySuggestionModelTest"];
+                    };
+                };
+                /** @description OpenRouter request failed */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/category-suggestions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Category suggestion detail and evidence links */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Suggestion */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CategorySuggestionDetail"];
+                    };
+                };
+                /** @description Suggestion not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/category-suggestions/{id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve, map, or reject a category suggestion
+         * @description Approve creates a category and moves linked activities that are
+         *     still on Pending categorisation. Map and reject-with-target do
+         *     the same reassignment and store an alias. Reject without a
+         *     target leaves activities on the pending category.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CategorySuggestionDecision"];
+                };
+            };
+            responses: {
+                /** @description Updated suggestion */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CategorySuggestion"];
+                    };
+                };
+                /** @description Invalid decision or duplicate category name */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Suggestion not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/category-suggestions/{id}/enrich": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Queue enrichment for one suggestion */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            responses: {
+                /** @description Queued */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Suggestion not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/locations": {
         parameters: {
             query?: never;
@@ -4584,6 +4951,11 @@ export interface components {
             schedules: components["schemas"]["AdminImportCounts"];
             warnings: number;
             errors: number;
+            /**
+             * @description Distinct category suggestions touched by this import.
+             *     Omitted on jobs stored before capture existed.
+             */
+            captured_categories?: number;
         };
         AdminImportError: {
             message: string;
@@ -5480,6 +5852,12 @@ export interface components {
             name: string;
             name_translations: components["schemas"]["TranslationMap"];
             display_order: number;
+            /**
+             * @description True for Pending categorisation
+             *     (`c1111111-1111-1111-1111-111111111199`). That row cannot
+             *     be renamed, re-parented, deleted, or used as a parent.
+             */
+            is_system?: boolean;
             /** @description Nested child categories (tree responses) */
             children?: components["schemas"]["ActivityCategory"][];
         };
@@ -5571,6 +5949,123 @@ export interface components {
             media_urls?: string[];
             /** @description Additional notes for the admin */
             additional_notes?: string;
+        };
+        CategorySuggestion: {
+            /** Format: uuid */
+            id: string;
+            fingerprint?: string;
+            requested_name: string;
+            /** @enum {string} */
+            source?: "import" | "scan";
+            /** @enum {string} */
+            status: "pending" | "approved" | "merged" | "rejected";
+            /** @enum {string} */
+            enrichment_status: "none" | "queued" | "running" | "done" | "failed";
+            enrichment_error?: string | null;
+            /** Format: date-time */
+            enriched_at?: string | null;
+            model_used?: string | null;
+            suggested_name?: string | null;
+            name_translations?: components["schemas"]["TranslationMap"];
+            /** Format: uuid */
+            suggested_parent_id?: string | null;
+            /** Format: uuid */
+            maps_to_category_id?: string | null;
+            confidence?: number | null;
+            rationale?: string | null;
+            alternatives?: {
+                [key: string]: unknown;
+            };
+            usage?: {
+                [key: string]: unknown;
+            };
+            /** Format: uuid */
+            created_category_id?: string | null;
+            /** Format: uuid */
+            merged_into_category_id?: string | null;
+            decided_by?: string | null;
+            /** Format: date-time */
+            decided_at?: string | null;
+            decision_notes?: string | null;
+            activity_count: number;
+            /** Format: date-time */
+            reopened_at?: string | null;
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+        };
+        CategorySuggestionActivityLink: {
+            /** Format: uuid */
+            activity_id: string;
+            activity_name?: string;
+            /** Format: uuid */
+            org_id: string;
+            org_name?: string;
+            /** Format: uuid */
+            import_job_id?: string | null;
+            requested_name: string;
+            /** Format: date-time */
+            created_at?: string | null;
+        };
+        CategorySuggestionDetail: components["schemas"]["CategorySuggestion"] & {
+            activities?: components["schemas"]["CategorySuggestionActivityLink"][];
+        };
+        CategorySuggestionListResponse: {
+            items: components["schemas"]["CategorySuggestion"][];
+            next_cursor?: string | null;
+        };
+        CategorySuggestionSummary: {
+            by_status: {
+                [key: string]: number;
+            };
+            by_enrichment_status: {
+                [key: string]: number;
+            };
+            pending_activity_total: number;
+            /** @description Activities still on Pending categorisation whose suggestion is no longer pending, usually a reject without a map target. */
+            stranded_activity_total: number;
+            /** @description OpenRouter cost recorded this month. Each enrichment stores its own cost, so earlier months are not included. */
+            month_cost_usd: number;
+        };
+        CategorySuggestionSettings: {
+            on_import_enabled: boolean;
+            auto_enrich_enabled: boolean;
+            openrouter_model?: string | null;
+            default_openrouter_model?: string;
+            fallback_models: string[];
+            max_evidence_items: number;
+            deny_data_collection: boolean;
+            updated_by?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+        };
+        CategorySuggestionSettingsUpdate: {
+            on_import_enabled?: boolean;
+            auto_enrich_enabled?: boolean;
+            openrouter_model?: string | null;
+            fallback_models?: string[];
+            max_evidence_items?: number;
+            deny_data_collection?: boolean;
+        };
+        CategorySuggestionDecision: {
+            /** @enum {string} */
+            action: "approve" | "map" | "reject";
+            name?: string;
+            name_translations?: components["schemas"]["TranslationMap"];
+            /** Format: uuid */
+            parent_id?: string | null;
+            display_order?: number;
+            /** Format: uuid */
+            category_id?: string | null;
+            notes?: string;
+        };
+        CategorySuggestionModelTest: {
+            ok: boolean;
+            message: string;
+            usage?: {
+                [key: string]: unknown;
+            };
         };
         HealthStatus: {
             healthy: boolean;
