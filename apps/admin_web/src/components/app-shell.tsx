@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import Image from 'next/image';
 
 import { LegalLinks } from './legal-links';
 import { Button } from './ui/button';
@@ -138,7 +139,7 @@ export function AppShell({
     <div className='min-h-screen'>
       {/* Header */}
       <header className='sticky top-0 z-40 border-b border-slate-200 bg-white'>
-        <div className='mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4'>
+        <div className='mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4'>
           <div className='flex items-center gap-3'>
             {/* Mobile menu button */}
             {sections.length > 0 && (
@@ -151,6 +152,14 @@ export function AppShell({
                 <MenuIcon className='h-6 w-6' />
               </button>
             )}
+            <Image
+              src='/images/siutindei-logo.svg'
+              alt=''
+              aria-hidden
+              width={100}
+              height={100}
+              className='h-11 w-11 shrink-0 lg:mb-[-20px] lg:mt-[-20px] lg:h-[100px] lg:w-[100px]'
+            />
             <div>
               <h1 className='text-lg font-semibold sm:text-xl'>
                 Siu Tin Dei Admin
@@ -255,7 +264,7 @@ export function AppShell({
       </aside>
 
       {/* Main content area */}
-      <div className='mx-auto flex max-w-6xl gap-6 px-4 py-4 sm:px-6 sm:py-6'>
+      <div className='mx-auto flex w-full max-w-7xl gap-6 px-4 py-4 sm:px-6 sm:py-6'>
         {/* Desktop sidebar */}
         {sections.length > 0 && (
           <aside className='hidden w-56 shrink-0 lg:block'>
@@ -291,7 +300,7 @@ export function AppShell({
 
       {/* Footer */}
       <footer className='border-t border-slate-200 bg-white'>
-        <div className='mx-auto max-w-6xl px-4 py-4 sm:px-6'>
+        <div className='mx-auto w-full max-w-7xl px-4 py-4 sm:px-6'>
           <LegalLinks className='text-center text-xs text-slate-500' />
         </div>
       </footer>
