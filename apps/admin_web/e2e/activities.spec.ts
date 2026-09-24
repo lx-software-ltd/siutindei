@@ -214,6 +214,7 @@ test.describe('Activities Panel', () => {
     // Check for search input
     const searchInput = adminPage.getByPlaceholder('Search activities...');
     await expect(searchInput).toBeVisible();
+    await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
   });
 
   test('should filter activities by search query', async ({ adminPage }) => {

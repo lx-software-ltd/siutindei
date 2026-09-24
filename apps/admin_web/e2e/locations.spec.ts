@@ -5,6 +5,7 @@ test.describe('Locations Panel', () => {
     await adminPage.goto('/admin/dashboard?section=locations');
     await expect(adminPage.getByRole('table', { name: 'Locations' })).toBeVisible();
 
+    await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
     await adminPage.getByPlaceholder('Search locations...').fill('Test Street');
     await expect(adminPage.getByRole('table')).toContainText('123 Test Street');
 

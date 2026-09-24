@@ -4,6 +4,7 @@ test.describe('Pricing Panel', () => {
   test('creates a pricing entry', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=pricing');
     await expect(adminPage.getByRole('table', { name: 'Pricing' })).toBeVisible();
+    await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
     await adminPage.getByRole('button', { name: 'New pricing' }).click();
 
     await adminPage.locator('#pricing-location').selectOption('loc-1');

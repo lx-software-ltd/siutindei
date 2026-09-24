@@ -8,6 +8,12 @@ test.describe('Login Screen', () => {
     await expect(
       unauthenticatedPage.getByRole('heading', { name: 'Welcome back' })
     ).toBeVisible();
+    const iconHrefs = await unauthenticatedPage
+      .locator('link[rel="icon"]')
+      .evaluateAll((links) => links.map((link) => link.getAttribute('href')));
+    expect(iconHrefs).toEqual(
+      expect.arrayContaining(['/favicon.ico', '/favicon.svg'])
+    );
 
     // Check for social login buttons
     await expect(

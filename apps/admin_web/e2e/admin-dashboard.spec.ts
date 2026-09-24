@@ -9,6 +9,10 @@ test.describe('Admin Dashboard', () => {
     await expect(
       adminPage.getByText('Manage organizations, activities, and schedules.')
     ).toBeVisible();
+    const brandLogo = adminPage.locator('header img[alt=""]');
+    await expect(brandLogo).toBeVisible();
+    await expect(brandLogo).toHaveAttribute('src', '/images/siutindei-logo.svg');
+    await expect(adminPage.locator('[class*="max-w-7xl"]')).toHaveCount(3);
   });
 
   test('should display all navigation sections', async ({ adminPage }) => {

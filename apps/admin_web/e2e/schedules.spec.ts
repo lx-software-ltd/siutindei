@@ -4,6 +4,7 @@ test.describe('Schedules Panel', () => {
   test('creates a weekly schedule entry', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=schedules');
     await expect(adminPage.getByRole('table', { name: 'Schedules' })).toBeVisible();
+    await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
     await adminPage.getByRole('button', { name: 'New schedule' }).click();
 
     await adminPage.locator('#schedule-location').selectOption('loc-1');

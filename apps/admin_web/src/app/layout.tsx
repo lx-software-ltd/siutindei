@@ -9,6 +9,13 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Siu Tin Dei Admin',
   description: 'Admin tools for managing activities data.',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', type: 'image/x-icon' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/favicon.ico',
+  },
 };
 
 export const viewport: Viewport = {

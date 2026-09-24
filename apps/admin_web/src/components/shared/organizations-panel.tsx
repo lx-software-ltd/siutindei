@@ -716,17 +716,19 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
               ) : null
             }
           >
-            <AdminFilterField label='Search' htmlFor='org-search'>
+            <AdminFilterField>
               <Input
                 id='org-search'
                 placeholder='Search organizations...'
+                aria-label='Search organizations'
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
               />
             </AdminFilterField>
-            <AdminFilterField label='Review' htmlFor='org-review-filter'>
+            <AdminFilterField>
               <Select
                 id='org-review-filter'
+                aria-label='Review status'
                 value={reviewFilter}
                 onChange={(event) => setReviewFilter(event.target.value)}
               >
