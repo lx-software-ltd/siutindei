@@ -16,6 +16,8 @@ export interface UseExpandedRecordFormOptions<TRow extends { id: string }> {
   reset: () => void;
   /** Close the expansion when the id cannot be resolved to a record. */
   collapse: () => void;
+  /** Called when the id cannot be resolved, before `collapse`. */
+  onMissing?: (id: string) => void;
   /**
    * Fetch a record that is not in the loaded pages (deep links). When it
    * resolves, the record is returned as `pinnedRow` so the table can render
@@ -37,12 +39,13 @@ export function useExpandedRecordForm<TRow extends { id: string }>({
   reset,
   collapse,
   fetchMissing,
+  onMissing,
 }: UseExpandedRecordFormOptions<TRow>): { pinnedRow: TRow | null } {
   const appliedRef = useRef<string | null | undefined>(undefined);
   const [pinnedRow, setPinnedRow] = useState<TRow | null>(null);
-  const callbacksRef = useRef({ applyRow, reset, collapse, fetchMissing });
+  const callbacksRef = useRef({ applyRow, reset, collapse, fetchMissing, onMissing });
   useEffect(() => {
-    callbacksRef.current = { applyRow, reset, collapse, fetchMissing };
+    callbacksRef.current = { applyRow, reset, collapse, fetchMissing, onMissing };
   });
 
   useEffect(() => {
@@ -83,12 +86,14 @@ export function useExpandedRecordForm<TRow extends { id: string }>({
             setPinnedRow(fetched);
             callbacksRef.current.applyRow(fetched);
           } else {
+            callbacksRef.current.onMissing?.(expandedId);
             callbacksRef.current.collapse();
           }
         })
         .catch(() => {
           if (!cancelled) {
             appliedRef.current = expandedId;
+            callbacksRef.current.onMissing?.(expandedId);
             callbacksRef.current.collapse();
           }
         });
@@ -98,6 +103,7 @@ export function useExpandedRecordForm<TRow extends { id: string }>({
     }
 
     appliedRef.current = expandedId;
+    callbacks.onMissing?.(expandedId);
     callbacks.collapse();
   }, [expandedId, rows, isLoading, pinnedRow]);
 

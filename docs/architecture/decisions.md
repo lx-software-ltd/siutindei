@@ -438,7 +438,13 @@ When making changes:
 untitled table and edits them in place under the selected row. Server
 state is TanStack Query (`usePaginatedList`, 25 rows per page). The
 section switcher stays on `/admin/dashboard?section=`. Open rows sync to
-`?<entity>=<id>`. Organizations still honor the older `?edit=` link.
+`?<entity>=<id>`. Organizations, locations, activities, pricing, and
+schedules still honor the older `?edit=` link. An id that is not on a
+loaded page is fetched by id. Switching sections drops record params
+that belong to other sections. A non-empty table search keeps loading
+pages (capped at 40) so matches are not limited to the first page.
+Activity categories load every page, because the parent tree needs the
+full list.
 
 **Why:**
 - Operators were editing in a form card stacked above a second table

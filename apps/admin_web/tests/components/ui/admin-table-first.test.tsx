@@ -33,6 +33,8 @@ describe('AdminRecordTable', () => {
     );
 
     expect(screen.getByTestId('admin-record-table')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Organizations' })).toBeVisible();
+    expect(screen.queryAllByRole('region', { name: 'Organizations' })).toHaveLength(0);
     expect(screen.queryByRole('heading')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'New organization' })).toBeVisible();
     expect(screen.getByText('No records match the current filters.')).toBeVisible();

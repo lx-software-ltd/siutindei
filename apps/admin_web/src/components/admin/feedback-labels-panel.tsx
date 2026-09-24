@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
+import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import {
@@ -79,6 +80,13 @@ export function FeedbackLabelsPanel() {
   });
 
   const [searchQuery, setSearchQuery] = useState('');
+  useExhaustPages(Boolean(searchQuery.trim()), {
+    hasMore: panel.hasMore,
+    isLoading: panel.isLoading,
+    isLoadingMore: panel.isLoadingMore,
+    error: panel.listError,
+    loadMore: panel.loadMore,
+  });
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
     ['name', 'display_order'],

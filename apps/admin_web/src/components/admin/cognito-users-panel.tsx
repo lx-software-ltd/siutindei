@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import { useExhaustPages } from '@/hooks/use-exhaust-pages';
 import { useExpandedRecord } from '@/hooks/use-expanded-record';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { ApiError } from '@/lib/api-client';
@@ -64,6 +65,7 @@ export function CognitoUsersPanel() {
       };
     },
   });
+  useExhaustPages(Boolean(searchQuery.trim()), list);
 
   const handleToggleRole = async (
     targetUser: CognitoUserRow,

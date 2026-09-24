@@ -183,7 +183,7 @@ export function AuditLogsPanel() {
   }, []);
 
   const list = usePaginatedList<AuditLog, AuditLogListFilters>({
-    queryKey: adminQueryKeys.auditLogs(defaultAuditLogFilters),
+    queryKey: adminQueryKeys.auditLogs(),
     defaultFilters: defaultAuditLogFilters,
     debounceKeys: auditDebounceKeys,
     limit: 50,

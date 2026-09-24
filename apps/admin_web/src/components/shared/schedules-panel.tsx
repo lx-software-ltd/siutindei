@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useActivitiesByMode } from '../../hooks/use-activities-by-mode';
+import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useLocationsByMode } from '../../hooks/use-locations-by-mode';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
@@ -86,6 +87,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     emptyForm,
     itemToForm,
     paramName: 'schedule',
+    legacyParam: 'edit',
     noun: 'schedule',
   });
 
@@ -94,6 +96,13 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
   const entryIdRef = useRef(0);
 
   const [searchQuery, setSearchQuery] = useState('');
+  useExhaustPages(Boolean(searchQuery.trim()), {
+    hasMore: panel.hasMore,
+    isLoading: panel.isLoading,
+    isLoadingMore: panel.isLoadingMore,
+    error: panel.listError,
+    loadMore: panel.loadMore,
+  });
 
   const singleActivityId =
     activities.length === 1 ? (activities[0]?.id ?? '') : '';

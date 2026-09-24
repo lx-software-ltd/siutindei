@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useId,
   useMemo,
   useRef,
@@ -18,7 +19,11 @@ import {
   type QueryFunctionContext,
 } from '@tanstack/react-query';
 
-import { ADMIN_LIST_PAGE_SIZE, clampAdminListLimit } from '@/lib/admin-list-query';
+import {
+  ADMIN_LIST_AUTO_PAGE_CAP,
+  ADMIN_LIST_PAGE_SIZE,
+  clampAdminListLimit,
+} from '@/lib/admin-list-query';
 import { getAdminQueryClient } from '@/lib/admin-query-client';
 
 import { toErrorMessage } from './hook-errors';
@@ -29,6 +34,8 @@ export interface PaginatedResponse<TItem> {
   nextCursor: string | null;
   /** When omitted, {@link usePaginatedList} exposes `totalCount: null` (unknown total). */
   totalCount?: number;
+  /** Tickets list: count of rows awaiting review. Omitted by other lists. */
+  pendingCount?: number;
 }
 
 export type PaginatedFetcherParams<TFilters extends object> = TFilters & {
@@ -52,6 +59,8 @@ export interface UsePaginatedListOptions<TItem, TFilters extends object> {
    * cached for this hook instance only.
    */
   queryKey?: readonly unknown[];
+  /** Keep requesting pages until the cursor is exhausted or the auto-page cap is hit. */
+  fetchAll?: boolean;
 }
 
 export interface UsePaginatedListReturn<TItem, TFilters extends object> {
@@ -68,6 +77,8 @@ export interface UsePaginatedListReturn<TItem, TFilters extends object> {
   hasMore: boolean;
   /** `null` when the list API omitted `totalCount` (unknown). */
   totalCount: number | null;
+  /** `null` when the page omitted `pendingCount`. */
+  pendingCount: number | null;
 }
 
 type PageParam = string | null;
@@ -82,6 +93,41 @@ function flattenPages<TItem>(data: ListData<TItem> | undefined): TItem[] {
     return [];
   }
   return data.pages.flatMap((page) => page.items);
+}
+
+function readItemId(item: unknown): string | undefined {
+  if (!item || typeof item !== 'object' || !('id' in item)) {
+    return undefined;
+  }
+  const id = (item as { id: unknown }).id;
+  return typeof id === 'string' && id.length > 0 ? id : undefined;
+}
+
+/**
+ * Write an edited item list back onto the pages it came from. New ids stay
+ * on the first page (creates are prepended). Cursors are left in place so a
+ * later refetch still reloads every page the operator had opened.
+ */
+function distributeItems<TItem>(data: ListData<TItem>, nextItems: TItem[]): ListData<TItem> {
+  const pageIndexById = new Map<string, number>();
+  data.pages.forEach((page, index) => {
+    for (const item of page.items) {
+      const id = readItemId(item);
+      if (id && !pageIndexById.has(id)) {
+        pageIndexById.set(id, index);
+      }
+    }
+  });
+  const buckets = data.pages.map(() => [] as TItem[]);
+  for (const item of nextItems) {
+    const id = readItemId(item);
+    const index = id ? (pageIndexById.get(id) ?? 0) : 0;
+    buckets[index].push(item);
+  }
+  return {
+    pages: data.pages.map((page, index) => ({ ...page, items: buckets[index] })),
+    pageParams: data.pageParams,
+  };
 }
 
 function trimToFirstPage<TItem>(data: ListData<TItem> | undefined): ListData<TItem> | undefined {
@@ -145,6 +191,7 @@ export function usePaginatedList<TItem, TFilters extends object>({
   debounceMs = 300,
   fetchOnMount = true,
   queryKey,
+  fetchAll = false,
 }: UsePaginatedListOptions<TItem, TFilters>): UsePaginatedListReturn<TItem, TFilters> {
   const queryClient = getAdminQueryClient();
   const pageSize = clampAdminListLimit(limit);
@@ -255,6 +302,26 @@ export function usePaginatedList<TItem, TFilters extends object>({
   );
 
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = query;
+  const loadedPageCount = query.data?.pages.length ?? 0;
+  useEffect(() => {
+    if (!fetchAll || !enabled || !hasNextPage || isFetchingNextPage || query.isFetching) {
+      return;
+    }
+    if (query.error || loadedPageCount >= ADMIN_LIST_AUTO_PAGE_CAP) {
+      return;
+    }
+    void fetchNextPage();
+  }, [
+    enabled,
+    fetchAll,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    loadedPageCount,
+    query.error,
+    query.isFetching,
+  ]);
+
   const loadMore = useCallback(async () => {
     if (!hasNextPage || isFetchingNextPage) {
       return;
@@ -292,11 +359,7 @@ export function usePaginatedList<TItem, TFilters extends object>({
         }
         const currentItems = flattenPages(data);
         const nextItems = typeof update === 'function' ? update(currentItems) : update;
-        const lastPage = data.pages[data.pages.length - 1];
-        return {
-          pages: [{ ...lastPage, items: nextItems }],
-          pageParams: [null],
-        };
+        return distributeItems(data, nextItems);
       });
     },
     [queryClient]
@@ -308,6 +371,7 @@ export function usePaginatedList<TItem, TFilters extends object>({
   );
   const lastPage = query.data?.pages[query.data.pages.length - 1];
   const totalCount = lastPage?.totalCount === undefined ? null : lastPage.totalCount;
+  const pendingCount = lastPage?.pendingCount === undefined ? null : lastPage.pendingCount;
 
   const isFetchingFirstPage = query.isFetching && !isFetchingNextPage;
   const isLoading =
@@ -337,5 +401,6 @@ export function usePaginatedList<TItem, TFilters extends object>({
     loadMore,
     hasMore: Boolean(hasNextPage),
     totalCount,
+    pendingCount,
   };
 }

@@ -12,6 +12,7 @@ import {
   getCountryCallingCode,
 } from 'libphonenumber-js';
 
+import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { ApiError } from '../../lib/api-client';
@@ -88,6 +89,13 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [reviewFilter, setReviewFilter] = useState('all');
+  useExhaustPages(Boolean(searchQuery.trim()), {
+    hasMore: panel.hasMore,
+    isLoading: panel.isLoading,
+    isLoadingMore: panel.isLoadingMore,
+    error: panel.listError,
+    loadMore: panel.loadMore,
+  });
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(

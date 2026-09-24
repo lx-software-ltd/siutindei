@@ -4,6 +4,12 @@
  */
 export const ADMIN_LIST_PAGE_SIZE = 25;
 
+/**
+ * Safety cap for automatic "load the rest" fetches (table search and the
+ * category tree). 40 pages is 1,000 rows at the default page size.
+ */
+export const ADMIN_LIST_AUTO_PAGE_CAP = 40;
+
 /** Matches backend `MAX_LIST_LIMIT` in `app.api.admin_request.parse_limit`. */
 export const ADMIN_API_MAX_LIST_LIMIT = 100;
 

@@ -18,6 +18,14 @@ function buildResourceUrl(resource: ResourceName, id?: string) {
     : buildApiUrl(`v1/admin/${resource}`);
 }
 
+export async function getResource<T>(
+  resource: ResourceName,
+  id: string,
+  signal?: AbortSignal
+): Promise<T> {
+  return request<T>(buildResourceUrl(resource, id), { signal });
+}
+
 export async function listResource<T>(
   resource: ResourceName,
   cursor?: string,

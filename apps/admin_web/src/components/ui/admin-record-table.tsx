@@ -87,12 +87,12 @@ export function AdminRecordTable({
   }, []);
 
   const showSkeleton = isLoading && rowCount === 0;
-  const showEmpty = !isLoading && !error && rowCount === 0;
+  const showEmpty = !isLoading && !isLoadingMore && !error && rowCount === 0;
 
   const Shell = embedded ? 'section' : Card;
 
   return (
-    <Shell aria-label={ariaLabel} data-testid='admin-record-table' data-embedded={embedded ? 'true' : undefined}>
+    <Shell data-testid='admin-record-table' data-embedded={embedded ? 'true' : undefined}>
       {filters}
       {toolbar}
       {error ? (

@@ -150,7 +150,7 @@ export function ReviewQueuePanel() {
     []
   );
   const list = usePaginatedList<OrgReviewListItem, ReviewQueueFilters>({
-    queryKey: adminQueryKeys.orgReview(defaultFilters),
+    queryKey: adminQueryKeys.orgReview(),
     defaultFilters,
     limit: 50,
     debounceKeys: ['q', 'source'],

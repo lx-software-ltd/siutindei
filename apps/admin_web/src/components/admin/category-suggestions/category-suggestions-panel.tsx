@@ -24,7 +24,7 @@ const DEFAULT_SUGGESTION_FILTERS: SuggestionFilters = {
 
 export function CategorySuggestionsPanel() {
   const list = usePaginatedList<CategorySuggestion, SuggestionFilters>({
-    queryKey: adminQueryKeys.categorySuggestions(DEFAULT_SUGGESTION_FILTERS),
+    queryKey: adminQueryKeys.categorySuggestions(),
     defaultFilters: DEFAULT_SUGGESTION_FILTERS,
     errorPrefix: 'Could not load suggestions',
     fetcher: async ({ cursor, limit, status }) => {

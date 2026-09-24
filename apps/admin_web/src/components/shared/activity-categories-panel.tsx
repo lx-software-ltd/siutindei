@@ -1,9 +1,10 @@
 'use client';
 
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
+import { ADMIN_API_MAX_LIST_LIMIT } from '../../lib/admin-list-query';
 import {
   buildTranslationsPayload,
   emptyTranslations,
@@ -72,6 +73,8 @@ export function ActivityCategoriesPanel() {
     emptyForm,
     itemToForm,
     paramName: 'category',
+    fetchAll: true,
+    limit: ADMIN_API_MAX_LIST_LIMIT,
     noun: 'category',
   });
 
@@ -236,14 +239,6 @@ export function ActivityCategoriesPanel() {
     Boolean(displayOrderError)
   );
 
-  const nameFieldRef = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const input = nameFieldRef.current?.querySelector('input');
-    if (input instanceof HTMLInputElement) {
-      input.readOnly = isSystemLocked;
-    }
-  }, [isSystemLocked, panel.formState]);
-
   const detail = (
     <AdminEditorPanel
       status={
@@ -262,11 +257,12 @@ export function ActivityCategoriesPanel() {
       }
     >
       <AdminFieldGrid columns={2}>
-        <div ref={nameFieldRef} className='space-y-1'>
+        <div className='space-y-1'>
           <LanguageToggleInput
             id='category-name'
             label='Name'
             required
+            readOnly={isSystemLocked}
             values={{
               en: panel.formState.name,
               zh: panel.formState.name_translations.zh,

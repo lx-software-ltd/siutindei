@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useActivityCategories } from '../../hooks/use-activity-categories';
+import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationsByMode } from '../../hooks/use-organizations-by-mode';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
@@ -92,6 +93,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     emptyForm: resolvedEmptyForm,
     itemToForm,
     paramName: 'activity',
+    legacyParam: 'edit',
     noun: 'activity',
   });
 
@@ -122,6 +124,13 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
   };
 
   const [searchQuery, setSearchQuery] = useState('');
+  useExhaustPages(Boolean(searchQuery.trim()), {
+    hasMore: panel.hasMore,
+    isLoading: panel.isLoading,
+    isLoadingMore: panel.isLoadingMore,
+    error: panel.listError,
+    loadMore: panel.loadMore,
+  });
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(

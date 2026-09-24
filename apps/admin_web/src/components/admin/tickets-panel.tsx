@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
+import { useExhaustPages } from '@/hooks/use-exhaust-pages';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { ApiError, listResource } from '@/lib/api-client';
 import { listCognitoUsers } from '@/lib/api-client-cognito';
@@ -127,7 +128,6 @@ function RejectIcon({ className }: { className?: string }) {
 export function TicketsPanel() {
   const shell = useEntityPanelEditorShell({ paramName: 'ticket' });
   const { clearDirty, markDirty, selectedId } = shell;
-  const [pendingCount, setPendingCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [feedbackLabels, setFeedbackLabels] = useState<FeedbackLabel[]>([]);
   const [reviewForm, setReviewForm] = useState<ReviewFormState>(emptyReviewForm);
@@ -140,7 +140,7 @@ export function TicketsPanel() {
   const reviewTargetIdRef = useRef<string | null>(null);
 
   const list = usePaginatedList<Ticket, TicketListFilters>({
-    queryKey: adminQueryKeys.tickets(defaultTicketFilters),
+    queryKey: adminQueryKeys.tickets(),
     defaultFilters: defaultTicketFilters,
     errorPrefix: 'Failed to load tickets',
     fetcher: async ({ cursor, type, status }) => {
@@ -149,13 +149,15 @@ export function TicketsPanel() {
         status === 'all' ? undefined : status,
         cursor ?? undefined
       );
-      setPendingCount(response.pending_count);
       return {
         items: response.items,
         nextCursor: response.next_cursor ?? null,
+        pendingCount: response.pending_count,
       };
     },
   });
+  const pendingCount = list.pendingCount ?? 0;
+  useExhaustPages(Boolean(searchQuery.trim()), list);
 
   useEffect(() => {
     const loadLabels = async () => {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useGeographicAreas } from '../../hooks/use-geographic-areas';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationsByMode } from '../../hooks/use-organizations-by-mode';
@@ -145,6 +146,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     emptyForm: resolvedEmptyForm,
     itemToForm,
     paramName: 'location',
+    legacyParam: 'edit',
     noun: 'location',
   });
 
@@ -169,6 +171,13 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   );
 
   const [searchQuery, setSearchQuery] = useState('');
+  useExhaustPages(Boolean(searchQuery.trim()), {
+    hasMore: panel.hasMore,
+    isLoading: panel.isLoading,
+    isLoadingMore: panel.isLoadingMore,
+    error: panel.listError,
+    loadMore: panel.loadMore,
+  });
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { ApiError, listResource } from '../../lib/api-client';
 import { formatDate } from '../../lib/date-utils';
@@ -76,6 +77,13 @@ export function FeedbackPanel() {
   const [labels, setLabels] = useState<FeedbackLabel[]>([]);
   const [lookupError, setLookupError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  useExhaustPages(Boolean(searchQuery.trim()), {
+    hasMore: panel.hasMore,
+    isLoading: panel.isLoading,
+    isLoadingMore: panel.isLoadingMore,
+    error: panel.listError,
+    loadMore: panel.loadMore,
+  });
 
   useEffect(() => {
     const loadLookups = async () => {

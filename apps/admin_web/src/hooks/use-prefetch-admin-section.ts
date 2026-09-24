@@ -27,7 +27,13 @@ export function usePrefetchAdminSection(mode: 'admin' | 'manager' = 'admin') {
       if (!resource) {
         return;
       }
-      const api = getResourceApi(resource, mode);
+      let api: ReturnType<typeof getResourceApi>;
+      try {
+        api = getResourceApi(resource, mode);
+      } catch {
+        // Manager mode has no API for some admin resources (feedback).
+        return;
+      }
       void prefetchPaginatedList({
         queryKey: adminQueryKeys.resourceList(resource, mode),
         filters: {},

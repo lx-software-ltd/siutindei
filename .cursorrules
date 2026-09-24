@@ -530,4 +530,10 @@ screens from `apps/admin_web/src/components/ui/`:
   any new exception with a comment at the site.
 - Deep links use `?<entity>=<id>` (`organization`, `location`, `activity`,
   `pricing`, `schedule`, `category`, `feedback`, `feedback-label`,
-  `api-key`, `suggestion`). Organizations still accept legacy `?edit=`.
+  `api-key`, `suggestion`, `ticket`, `user`, `audit-log`). Organizations,
+  locations, activities, pricing, and schedules still accept legacy
+  `?edit=`. An id that is not on the loaded page is fetched by id.
+  Switching sections drops record params that belong to other sections.
+- Table search is client-side and keeps requesting further pages while
+  the query is non-empty, up to 40 pages. Activity categories load every
+  page on open because the parent tree needs the full list.

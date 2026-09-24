@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import { useExhaustPages } from '@/hooks/use-exhaust-pages';
 import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { listResource } from '@/lib/api-client';
@@ -77,6 +78,7 @@ export function ApiKeysPanel() {
       };
     },
   });
+  useExhaustPages(Boolean(searchQuery.trim()), list);
 
   const organizationsQuery = useQuery(
     {

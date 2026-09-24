@@ -16,6 +16,7 @@ import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell
 import { useExpandedRecordForm } from '@/hooks/use-expanded-record-form';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { ApiError } from '@/lib/api-client-core';
+import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import {
   getResourceApi,
@@ -30,10 +31,16 @@ interface UseResourceEditorOptions<T extends { id: string }, TForm> {
   itemToForm: (item: T) => TForm;
   /** URL parameter for the open row, for example `organization`. */
   paramName: string;
-  /** Read `?edit=` until the next expansion change. Organizations only. */
+  /**
+   * Read `?edit=` until the next expansion change. Used by organizations,
+   * locations, activities, pricing, and schedules.
+   */
   legacyParam?: string;
   /** Open the first row once when the list arrives (manager organizations). */
   autoExpandFirst?: boolean;
+  /** Load every page (category tree). Stops at `ADMIN_LIST_AUTO_PAGE_CAP`. */
+  fetchAll?: boolean;
+  limit?: number;
   noun: string;
 }
 
@@ -49,6 +56,8 @@ export function useResourceEditor<T extends { id: string }, TForm>({
   paramName,
   legacyParam,
   autoExpandFirst = false,
+  fetchAll = false,
+  limit = ADMIN_LIST_PAGE_SIZE,
   noun,
 }: UseResourceEditorOptions<T, TForm>) {
   const api = useMemo(
@@ -60,6 +69,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
   const [saveError, setSaveError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [pinnedCreated, setPinnedCreated] = useState<T | null>(null);
+  const [missingNotice, setMissingNotice] = useState('');
   const formStateRef = useRef(formState);
   const emptyFormRef = useRef(emptyForm);
   const itemToFormRef = useRef(itemToForm);
@@ -70,6 +80,8 @@ export function useResourceEditor<T extends { id: string }, TForm>({
   const list = usePaginatedList<T, Record<string, never>>({
     queryKey: adminQueryKeys.resourceList(resource, mode),
     defaultFilters: {},
+    fetchAll,
+    limit,
     errorPrefix: `Failed to load ${resource}`,
     fetcher: async ({ cursor, limit, signal }) => {
       const response = await api.list(cursor ?? undefined, limit, signal);
@@ -95,6 +107,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
     rows,
     isLoading: list.isLoading,
     applyRow: (row) => {
+      setMissingNotice('');
       setFormStateRaw(itemToFormRef.current(row));
       shell.clearDirty();
       setSaveError('');
@@ -105,6 +118,19 @@ export function useResourceEditor<T extends { id: string }, TForm>({
       setSaveError('');
     },
     collapse: shell.expanded.collapse,
+    fetchMissing: async (id) => {
+      try {
+        return await api.get(id);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) {
+          return null;
+        }
+        throw err;
+      }
+    },
+    onMissing: () => {
+      setMissingNotice('That record could not be opened. It may have been deleted.');
+    },
   });
 
   const items = useMemo(() => {
@@ -126,6 +152,12 @@ export function useResourceEditor<T extends { id: string }, TForm>({
   const expand = expanded.expand;
   const collapse = expanded.collapse;
   const expandedId = expanded.expandedId;
+
+  useEffect(() => {
+    if (expandedId) {
+      setMissingNotice('');
+    }
+  }, [expandedId]);
 
   const didAutoExpand = useRef(false);
   useEffect(() => {
@@ -206,6 +238,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
       setSaveError('');
       try {
         await api.delete(item.id);
+        setPinnedCreated((current) => (current?.id === item.id ? null : current));
         list.setItems((prev) => prev.filter((entry) => entry.id !== item.id));
         if (expandedId === item.id) {
           clearDirty();
@@ -235,7 +268,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
     loadMore: list.loadMore,
     isSaving,
     error: saveError,
-    listError: list.error,
+    listError: list.error || missingNotice,
     setError: setSaveError,
     editingId: selectedId,
     editorMode,

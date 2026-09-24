@@ -19,6 +19,7 @@ interface LanguageToggleInputProps {
   required?: boolean;
   hasError?: boolean;
   inputClassName?: string;
+  readOnly?: boolean;
 }
 
 export function LanguageToggleInput({
@@ -32,6 +33,7 @@ export function LanguageToggleInput({
   required = false,
   hasError = false,
   inputClassName = '',
+  readOnly = false,
 }: LanguageToggleInputProps) {
   const [activeLanguage, setActiveLanguage] = useState<LanguageCode>('en');
 
@@ -54,7 +56,13 @@ export function LanguageToggleInput({
       id={id}
       rows={rows}
       value={activeValue}
-      onChange={(event) => onChange(activeLanguage, event.target.value)}
+      readOnly={readOnly}
+      aria-readonly={readOnly || undefined}
+      onChange={(event) => {
+        if (!readOnly) {
+          onChange(activeLanguage, event.target.value);
+        }
+      }}
       className={inputClassName}
       aria-invalid={hasError || undefined}
     />
@@ -62,7 +70,13 @@ export function LanguageToggleInput({
     <Input
       id={id}
       value={activeValue}
-      onChange={(event) => onChange(activeLanguage, event.target.value)}
+      readOnly={readOnly}
+      aria-readonly={readOnly || undefined}
+      onChange={(event) => {
+        if (!readOnly) {
+          onChange(activeLanguage, event.target.value);
+        }
+      }}
       className={inputClassName}
       aria-invalid={hasError || undefined}
     />
