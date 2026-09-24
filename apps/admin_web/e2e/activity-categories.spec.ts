@@ -32,6 +32,10 @@ test.describe('Categories Panel', () => {
 
   test('should display existing categories list', async ({ adminPage }) => {
     await expect(adminPage.getByRole('table', { name: 'Categories' })).toBeVisible();
+    await expect(adminPage.getByPlaceholder('Search categories...')).toHaveCount(0);
+    await expect(
+      adminPage.getByRole('button', { name: 'Category Suggestions', exact: true })
+    ).toBeVisible();
 
     await expect(adminPage.getByRole('columnheader', { name: 'Path' })).toBeVisible();
     await expect(

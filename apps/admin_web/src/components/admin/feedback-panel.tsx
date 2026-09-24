@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { ApiError, listResource } from '../../lib/api-client';
 import { formatDate } from '../../lib/date-utils';
@@ -19,7 +18,7 @@ import {
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminFieldGrid } from '../ui/admin-field-grid';
-import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
+import { AdminFilterBar } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import {
@@ -76,14 +75,6 @@ export function FeedbackPanel() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [labels, setLabels] = useState<FeedbackLabel[]>([]);
   const [lookupError, setLookupError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  useExhaustPages(Boolean(searchQuery.trim()), {
-    hasMore: panel.hasMore,
-    isLoading: panel.isLoading,
-    isLoadingMore: panel.isLoadingMore,
-    error: panel.listError,
-    loadMore: panel.loadMore,
-  });
 
   useEffect(() => {
     const loadLookups = async () => {
@@ -151,22 +142,6 @@ export function FeedbackPanel() {
 
   const labelNames = (item: OrganizationFeedback) =>
     item.label_ids?.map((id) => labelNameById.get(id) || id) ?? [];
-
-  const filteredItems = panel.items.filter((item) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const names = labelNames(item).join(' ').toLowerCase();
-    return (
-      (item.organization_name || item.organization_id)
-        .toLowerCase()
-        .includes(query) ||
-      `${item.stars}`.includes(query) ||
-      names.includes(query) ||
-      (item.submitter_email || '').toLowerCase().includes(query) ||
-      (item.submitter_id || '').toLowerCase().includes(query) ||
-      (item.description || '').toLowerCase().includes(query)
-    );
-  });
 
   const detail = (
     <AdminEditorPanel
@@ -317,7 +292,7 @@ export function FeedbackPanel() {
     <>
       <ResourceTableShell
         ariaLabel='Organization feedback'
-        rows={filteredItems}
+        rows={panel.items}
         getLabel={(item) =>
           item.organization_name || item.organization_id || 'Feedback'
         }
@@ -327,11 +302,7 @@ export function FeedbackPanel() {
         hasMore={panel.hasMore}
         onLoadMore={panel.loadMore}
         error={panel.listError}
-        emptyLabel={
-          searchQuery.trim()
-            ? 'No feedback matches your search.'
-            : 'No feedback entries found.'
-        }
+        emptyLabel='No feedback entries found.'
         isExpanded={panel.isExpanded}
         onToggle={panel.toggle}
         isDraftOpen={panel.isDraftOpen}
@@ -356,16 +327,7 @@ export function FeedbackPanel() {
                 />
               ) : null
             }
-          >
-            <AdminFilterField label='Search' htmlFor='feedback-search'>
-              <Input
-                id='feedback-search'
-                placeholder='Search feedback...'
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-              />
-            </AdminFilterField>
-          </AdminFilterBar>
+          />
         }
         head={
           <>

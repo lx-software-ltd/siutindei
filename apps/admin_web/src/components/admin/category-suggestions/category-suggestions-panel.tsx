@@ -14,22 +14,13 @@ import { StatusBanner } from '../../status-banner';
 import { CategorySuggestionSettingsCard } from './settings-card';
 import { SuggestionsTable } from './suggestions-table';
 
-interface SuggestionFilters {
-  status: string;
-}
-
-const DEFAULT_SUGGESTION_FILTERS: SuggestionFilters = {
-  status: '',
-};
-
 export function CategorySuggestionsPanel() {
-  const list = usePaginatedList<CategorySuggestion, SuggestionFilters>({
+  const list = usePaginatedList<CategorySuggestion, Record<string, never>>({
     queryKey: adminQueryKeys.categorySuggestions(),
-    defaultFilters: DEFAULT_SUGGESTION_FILTERS,
+    defaultFilters: {},
     errorPrefix: 'Could not load suggestions',
-    fetcher: async ({ cursor, limit, status }) => {
+    fetcher: async ({ cursor, limit }) => {
       const page = await listCategorySuggestions({
-        status: status || undefined,
         cursor: cursor ?? undefined,
         limit,
       });
@@ -100,8 +91,6 @@ export function CategorySuggestionsPanel() {
         isLoadingMore={list.isLoadingMore}
         error={list.error}
         summary={summaryText}
-        status={list.filters.status}
-        onStatusChange={(status) => list.setFilter('status', status)}
         onReload={reload}
         hasMore={list.hasMore}
         onLoadMore={() => {

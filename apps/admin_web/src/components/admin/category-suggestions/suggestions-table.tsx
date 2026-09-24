@@ -8,9 +8,8 @@ import {
   AdminDataTableCell,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
-import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
+import { AdminFilterBar } from '../../ui/admin-filter-bar';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
-import { Select } from '../../ui/select';
 import { StatusBadge } from '../../ui/status-badge';
 import { SuggestionDetail } from './suggestion-detail';
 
@@ -20,8 +19,6 @@ interface SuggestionsTableProps {
   isLoadingMore?: boolean;
   error?: string;
   summary?: string;
-  status: string;
-  onStatusChange: (status: string) => void;
   onReload: () => void;
   hasMore?: boolean;
   onLoadMore?: () => void;
@@ -33,8 +30,6 @@ export function SuggestionsTable({
   isLoadingMore = false,
   error = '',
   summary,
-  status,
-  onStatusChange,
   onReload,
   hasMore = false,
   onLoadMore,
@@ -82,23 +77,7 @@ export function SuggestionsTable({
         isExpanded={expanded.isExpanded}
         onToggle={expanded.toggle}
         detail={openInList ? detail : null}
-        filters={
-          <AdminFilterBar summary={summary}>
-            <AdminFilterField label='Status' htmlFor='suggestion-status-filter'>
-              <Select
-                id='suggestion-status-filter'
-                value={status}
-                onChange={(event) => onStatusChange(event.target.value)}
-              >
-                <option value=''>Any status</option>
-                <option value='pending'>Pending</option>
-                <option value='approved'>Approved</option>
-                <option value='merged'>Merged</option>
-                <option value='rejected'>Rejected</option>
-              </Select>
-            </AdminFilterField>
-          </AdminFilterBar>
-        }
+        filters={summary ? <AdminFilterBar summary={summary} /> : undefined}
         head={
           <>
             <AdminDataTableHeadCell>Requested name</AdminDataTableHeadCell>

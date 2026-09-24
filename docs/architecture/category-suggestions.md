@@ -2,7 +2,8 @@
 
 Unknown imported category names are captured instead of failing the
 organization, then enriched off the request path. Admins approve, map,
-or reject each suggestion in the admin console.
+or reject each suggestion from the Category Suggestions tab on the
+Categories page.
 
 Endpoint shapes live in `docs/api/admin.yaml` under
 `/v1/admin/category-suggestions`.

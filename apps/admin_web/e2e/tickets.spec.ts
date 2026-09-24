@@ -6,16 +6,13 @@ test.describe('Tickets Panel', () => {
     await expect(adminPage.getByRole('table', { name: 'Tickets' })).toBeVisible();
   });
 
-  test('lists and filters tickets', async ({ adminPage }) => {
+  test('lists tickets without type, status, or search filters', async ({ adminPage }) => {
     await expect(
       adminPage.getByRole('cell', { name: 'T00001' }).first()
     ).toBeVisible();
-
-    await adminPage.getByLabel('Type').selectOption('access_request');
-    await adminPage.getByLabel('Status').selectOption('pending');
-
-    const search = adminPage.getByPlaceholder('Search tickets...');
-    await search.fill('pending@example.com');
+    await expect(adminPage.getByPlaceholder('Search tickets...')).toHaveCount(0);
+    await expect(adminPage.locator('#type-filter')).toHaveCount(0);
+    await expect(adminPage.locator('#status-filter')).toHaveCount(0);
     await expect(
       adminPage.getByRole('table').getByText('pending@example.com').first()
     ).toBeVisible();

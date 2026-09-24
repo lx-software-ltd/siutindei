@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
-import { useExhaustPages } from '@/hooks/use-exhaust-pages';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { ApiError, listResource } from '@/lib/api-client';
 import { listCognitoUsers } from '@/lib/api-client-cognito';
@@ -12,7 +11,6 @@ import {
   reviewTicket,
   type ReviewTicketPayload,
   type Ticket,
-  type TicketStatus,
   type TicketType,
 } from '@/lib/api-client-tickets';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
@@ -27,10 +25,6 @@ import {
 import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
 import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
-import {
-  AdminFilterBar,
-  AdminFilterField,
-} from '@/components/ui/admin-filter-bar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ResourceTableShell, rowActions } from '@/components/ui/resource-table-shell';
@@ -38,14 +32,7 @@ import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Textarea } from '@/components/ui/textarea';
 
-type StatusFilter = 'all' | TicketStatus;
-type TypeFilter = 'all' | TicketType;
 type OrganizationMode = 'existing' | 'new';
-
-interface TicketListFilters {
-  type: TypeFilter;
-  status: StatusFilter;
-}
 
 interface ReviewFormState {
   adminNotes: string;
@@ -55,11 +42,6 @@ interface ReviewFormState {
   orgTouched: boolean;
   hasSubmitted: boolean;
 }
-
-const defaultTicketFilters: TicketListFilters = {
-  type: 'all',
-  status: 'pending',
-};
 
 const emptyReviewForm: ReviewFormState = {
   adminNotes: '',
@@ -128,7 +110,6 @@ function RejectIcon({ className }: { className?: string }) {
 export function TicketsPanel() {
   const shell = useEntityPanelEditorShell({ paramName: 'ticket' });
   const { clearDirty, markDirty, selectedId } = shell;
-  const [searchQuery, setSearchQuery] = useState('');
   const [feedbackLabels, setFeedbackLabels] = useState<FeedbackLabel[]>([]);
   const [reviewForm, setReviewForm] = useState<ReviewFormState>(emptyReviewForm);
   const [reviewError, setReviewError] = useState('');
@@ -139,16 +120,12 @@ export function TicketsPanel() {
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
   const reviewTargetIdRef = useRef<string | null>(null);
 
-  const list = usePaginatedList<Ticket, TicketListFilters>({
+  const list = usePaginatedList<Ticket, Record<string, never>>({
     queryKey: adminQueryKeys.tickets(),
-    defaultFilters: defaultTicketFilters,
+    defaultFilters: {},
     errorPrefix: 'Failed to load tickets',
-    fetcher: async ({ cursor, type, status }) => {
-      const response = await listTickets(
-        type === 'all' ? undefined : type,
-        status === 'all' ? undefined : status,
-        cursor ?? undefined
-      );
+    fetcher: async ({ cursor }) => {
+      const response = await listTickets(undefined, undefined, cursor ?? undefined);
       return {
         items: response.items,
         nextCursor: response.next_cursor ?? null,
@@ -157,7 +134,6 @@ export function TicketsPanel() {
     },
   });
   const pendingCount = list.pendingCount ?? 0;
-  useExhaustPages(Boolean(searchQuery.trim()), list);
 
   useEffect(() => {
     const loadLabels = async () => {
@@ -229,21 +205,6 @@ export function TicketsPanel() {
     return map;
   }, [feedbackLabels]);
 
-  const filteredItems = list.items.filter((item) => {
-    if (!searchQuery.trim()) {
-      return true;
-    }
-    const query = searchQuery.toLowerCase();
-    return (
-      item.ticket_id?.toLowerCase().includes(query) ||
-      item.organization_name?.toLowerCase().includes(query) ||
-      item.submitter_email?.toLowerCase().includes(query) ||
-      item.suggested_district?.toLowerCase().includes(query) ||
-      item.feedback_text?.toLowerCase().includes(query) ||
-      item.status?.toLowerCase().includes(query)
-    );
-  });
-
   const updateReviewForm = (patch: Partial<ReviewFormState>) => {
     markDirty();
     setReviewForm((prev) => ({ ...prev, ...patch }));
@@ -289,12 +250,9 @@ export function TicketsPanel() {
       }
       const response = await reviewTicket(ticket.id, payload);
       const updated = response.ticket;
-      list.setItems((prev) => {
-        if (list.filters.status !== 'all' && updated.status !== list.filters.status) {
-          return prev.filter((item) => item.id !== updated.id);
-        }
-        return prev.map((item) => (item.id === updated.id ? updated : item));
-      });
+      list.setItems((prev) =>
+        prev.map((item) => (item.id === updated.id ? updated : item))
+      );
       clearDirty();
       reviewTargetIdRef.current = null;
       shell.expanded.collapse();
@@ -328,7 +286,7 @@ export function TicketsPanel() {
     <>
       <ResourceTableShell
         ariaLabel='Tickets'
-        rows={filteredItems}
+        rows={list.items}
         getLabel={(item) => item.ticket_id}
         middleColumnCount={6}
         isLoading={list.isLoading}
@@ -336,13 +294,7 @@ export function TicketsPanel() {
         hasMore={list.hasMore}
         onLoadMore={list.loadMore}
         error={list.error}
-        emptyLabel={
-          searchQuery.trim()
-            ? 'No tickets match your search.'
-            : list.filters.status === 'all'
-              ? 'No tickets found.'
-              : `No ${list.filters.status} tickets found.`
-        }
+        emptyLabel='No tickets found.'
         isExpanded={shell.expanded.isExpanded}
         onToggle={shell.expanded.toggle}
         detail={detail}
@@ -361,46 +313,6 @@ export function TicketsPanel() {
               ) : null}
             </div>
           ) : null
-        }
-        filters={
-          <AdminFilterBar>
-            <AdminFilterField label='Type' htmlFor='type-filter'>
-              <Select
-                id='type-filter'
-                value={list.filters.type}
-                onChange={(event) => {
-                  list.setFilter('type', event.target.value as TypeFilter);
-                }}
-              >
-                <option value='all'>All Types</option>
-                <option value='access_request'>Access Requests</option>
-                <option value='organization_suggestion'>Suggestions</option>
-                <option value='organization_feedback'>Feedback</option>
-              </Select>
-            </AdminFilterField>
-            <AdminFilterField label='Status' htmlFor='status-filter'>
-              <Select
-                id='status-filter'
-                value={list.filters.status}
-                onChange={(event) => {
-                  list.setFilter('status', event.target.value as StatusFilter);
-                }}
-              >
-                <option value='pending'>Pending</option>
-                <option value='approved'>Approved</option>
-                <option value='rejected'>Rejected</option>
-                <option value='all'>All</option>
-              </Select>
-            </AdminFilterField>
-            <AdminFilterField label='Search' htmlFor='ticket-search'>
-              <Input
-                id='ticket-search'
-                placeholder='Search tickets...'
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-              />
-            </AdminFilterField>
-          </AdminFilterBar>
         }
         head={
           <>

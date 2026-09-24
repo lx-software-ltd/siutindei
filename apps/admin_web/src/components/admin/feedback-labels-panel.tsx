@@ -1,8 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
-import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import {
@@ -21,7 +20,7 @@ import {
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminFieldGrid } from '../ui/admin-field-grid';
-import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
+import { AdminFilterBar } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
@@ -79,14 +78,6 @@ export function FeedbackLabelsPanel() {
     noun: 'feedback label',
   });
 
-  const [searchQuery, setSearchQuery] = useState('');
-  useExhaustPages(Boolean(searchQuery.trim()), {
-    hasMore: panel.hasMore,
-    isLoading: panel.isLoading,
-    isLoadingMore: panel.isLoadingMore,
-    error: panel.listError,
-    loadMore: panel.loadMore,
-  });
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
     ['name', 'display_order'],
@@ -141,17 +132,6 @@ export function FeedbackLabelsPanel() {
     validation.markAllTouched();
     return panel.handleSubmit(formToPayload, validate);
   };
-
-  const filteredItems = panel.items.filter((item) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const translations = Object.values(item.name_translations ?? {})
-      .join(' ')
-      .toLowerCase();
-    return (
-      item.name.toLowerCase().includes(query) || translations.includes(query)
-    );
-  });
 
   const showNameError = validation.shouldShowError(
     'name',
@@ -233,7 +213,7 @@ export function FeedbackLabelsPanel() {
     <>
       <ResourceTableShell
         ariaLabel='Feedback labels'
-        rows={filteredItems}
+        rows={panel.items}
         getLabel={(item) => item.name || 'Label'}
         middleColumnCount={3}
         isLoading={panel.isLoading}
@@ -241,11 +221,7 @@ export function FeedbackLabelsPanel() {
         hasMore={panel.hasMore}
         onLoadMore={panel.loadMore}
         error={panel.listError}
-        emptyLabel={
-          searchQuery.trim()
-            ? 'No labels match your search.'
-            : 'No feedback labels found.'
-        }
+        emptyLabel='No feedback labels found.'
         isExpanded={panel.isExpanded}
         onToggle={panel.toggle}
         isDraftOpen={panel.isDraftOpen}
@@ -263,16 +239,7 @@ export function FeedbackLabelsPanel() {
                 />
               ) : null
             }
-          >
-            <AdminFilterField label='Search' htmlFor='label-search'>
-              <Input
-                id='label-search'
-                placeholder='Search labels...'
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-              />
-            </AdminFilterField>
-          </AdminFilterBar>
+          />
         }
         head={
           <>

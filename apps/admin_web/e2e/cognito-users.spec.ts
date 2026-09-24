@@ -4,6 +4,7 @@ test.describe('Cognito Users Panel', () => {
   test('views attributes and updates roles', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=cognito-users');
     await expect(adminPage.getByRole('table', { name: 'Users' })).toBeVisible();
+    await expect(adminPage.getByPlaceholder('Search users...')).toHaveCount(0);
 
     await expect(
       adminPage

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
@@ -21,7 +21,7 @@ import {
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminFieldGrid } from '../ui/admin-field-grid';
-import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
+import { AdminFilterBar } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
@@ -78,7 +78,6 @@ export function ActivityCategoriesPanel() {
     noun: 'category',
   });
 
-  const [searchQuery, setSearchQuery] = useState('');
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
     ['name', 'display_order'],
@@ -216,20 +215,6 @@ export function ActivityCategoriesPanel() {
     return panel.handleSubmit(formToPayload, validate);
   };
 
-  const filteredItems = panel.items.filter((item) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const path = categoryPathById.get(item.id)?.toLowerCase() ?? '';
-    const nameTranslations = Object.values(item.name_translations ?? {})
-      .join(' ')
-      .toLowerCase();
-    return (
-      path.includes(query) ||
-      item.name.toLowerCase().includes(query) ||
-      nameTranslations.includes(query)
-    );
-  });
-
   const showNameError = validation.shouldShowError(
     'name',
     Boolean(nameError)
@@ -338,7 +323,7 @@ export function ActivityCategoriesPanel() {
     <>
       <ResourceTableShell
         ariaLabel='Categories'
-        rows={filteredItems}
+        rows={panel.items}
         getLabel={(item) => {
           const label = categoryPathById.get(item.id) || item.name;
           return item.is_system ? `${label} (pending)` : label;
@@ -349,11 +334,7 @@ export function ActivityCategoriesPanel() {
         hasMore={panel.hasMore}
         onLoadMore={panel.loadMore}
         error={panel.listError}
-        emptyLabel={
-          searchQuery.trim()
-            ? 'No categories match your search.'
-            : 'No categories yet.'
-        }
+        emptyLabel='No categories yet.'
         isExpanded={panel.isExpanded}
         onToggle={panel.toggle}
         isDraftOpen={panel.isDraftOpen}
@@ -371,16 +352,7 @@ export function ActivityCategoriesPanel() {
                 />
               ) : null
             }
-          >
-            <AdminFilterField label='Search' htmlFor='category-search'>
-              <Input
-                id='category-search'
-                placeholder='Search categories...'
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-              />
-            </AdminFilterField>
-          </AdminFilterBar>
+          />
         }
         head={
           <>
