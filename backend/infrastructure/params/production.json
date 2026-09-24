@@ -41,5 +41,8 @@
   "ApiCustomDomainName": "siutindei-api.lx-software.com",
   "ApiCustomDomainCertificateArn": "arn:aws:acm:ap-southeast-1:588024549699:certificate/af726e1f-444b-47e6-906e-ce9e0925bde4",
   "NominatimUserAgent": "SiuTinDeiAdminWeb/1.0 (https://siutindei.lx-software.com)",
-  "NominatimReferer": "https://siutindei.lx-software.com"
+  "NominatimReferer": "https://siutindei.lx-software.com",
+  "OpenRouterApiKey": "<FROM_GITHUB_SECRET: CDK_PARAM_OPENROUTER_API_KEY>",
+  "OpenRouterChatCompletionsUrl": "https://openrouter.ai/api/v1/chat/completions",
+  "OpenRouterModel": "qwen/qwen3-30b-a3b"
 }

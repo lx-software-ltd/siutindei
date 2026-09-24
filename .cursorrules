@@ -111,6 +111,9 @@ repo root
 - AWS/HTTP proxy Lambda runs outside VPC with allow-listed actions/URLs.
 - In-VPC Lambdas call Cognito via `app.services.aws_proxy.invoke()`.
 - In-VPC Lambdas call external HTTP APIs via `app.services.aws_proxy.http_invoke()`.
+- OpenRouter is called only through `app.services.openrouter_client`, which uses `http_invoke`. Do not call OpenRouter from in-VPC code any other way, and do not put the API key on the proxy.
+- Pending categorisation (`c1111111-1111-1111-1111-111111111199`) is a system category: public search excludes it, it cannot be renamed, re-parented, deleted, or used as a parent, and org review treats activities on it as a blocker.
+- Category suggestion settings are the singleton row in `category_suggestion_settings`, edited in the admin console.
 - Never call boto3 cognito-idp directly from in-VPC Lambdas; always use the proxy.
 - Search responses use cursor pagination.
 - Flutter uses Amplify config passed via dart-define.

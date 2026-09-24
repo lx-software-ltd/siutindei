@@ -12,6 +12,7 @@ from app.api.admin_validators import (
     _validate_translations_map,
 )
 from app.db.models import ActivityCategory
+from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.db.repositories import ActivityCategoryRepository
 from app.exceptions import ValidationError
 from app.utils.translations import build_translation_map
@@ -27,6 +28,7 @@ def _serialize_activity_category(entity: ActivityCategory) -> dict[str, Any]:
             entity.name, entity.name_translations
         ),
         "display_order": entity.display_order,
+        "is_system": _to_uuid(entity.id) == PENDING_CATEGORY_ID,
     }
 
 
@@ -58,6 +60,11 @@ def _validate_category_parent(
     category_uuid = _to_uuid(category_id) if category_id is not None else None
     if parent_id is None:
         return
+    if parent_id == PENDING_CATEGORY_ID:
+        raise ValidationError(
+            "Pending categorisation cannot be a parent",
+            field="parent_id",
+        )
     if category_uuid is not None and parent_id == category_uuid:
         raise ValidationError(
             "parent_id cannot reference the same category",
@@ -128,6 +135,13 @@ def _update_activity_category(
     body: dict[str, Any],
 ) -> ActivityCategory:
     """Update an activity category."""
+    if _to_uuid(entity.id) == PENDING_CATEGORY_ID and (
+        "name" in body or "name_translations" in body or "parent_id" in body
+    ):
+        raise ValidationError(
+            "Pending categorisation cannot be renamed or re-parented",
+            field="id",
+        )
     if "name" in body:
         name = _validate_string_length(
             body["name"], "name", MAX_NAME_LENGTH, required=True

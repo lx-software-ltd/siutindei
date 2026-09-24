@@ -30,7 +30,10 @@ import os
 from typing import Any, Mapping, Optional
 from urllib.parse import urlparse
 
-from botocore.exceptions import BotoCoreError, ClientError
+import boto3
+from botocore.config import Config
+from botocore.exceptions import BotoCoreError, ClientError, ConnectTimeoutError
+from botocore.exceptions import ReadTimeoutError
 
 from app.services.aws_clients import get_client
 from app.utils.logging import configure_logging, get_logger
@@ -45,6 +48,12 @@ logger = get_logger(__name__)
 
 _ALLOWED_ACTIONS: set[str] | None = None
 _ALLOWED_HTTP_URLS: list[str] | None = None
+_HTTP_PROXY_USER_AGENT = "SiutindeiProxy/1.0"
+# Category enrichment asks for a 90s OpenRouter wait. Cap at 90s and keep
+# headroom under AwsApiProxyFunction's 120s timeout.
+_MAX_HTTP_TIMEOUT_SECONDS = 90
+_LAMBDA_INVOKE_CONNECT_TIMEOUT_SECONDS = 10
+_LAMBDA_INVOKE_READ_TIMEOUT_SECONDS = _MAX_HTTP_TIMEOUT_SECONDS + 15
 
 
 def _get_allowed_actions() -> set[str]:
@@ -144,7 +153,7 @@ def _handle_http(event: Mapping[str, Any]) -> dict[str, Any]:
         url:     Full URL
         headers: Optional dict of request headers
         body:    Optional request body (string)
-        timeout: Optional timeout in seconds (default 10, max 30)
+        timeout: Optional timeout in seconds (default 10, max 90)
     """
     import urllib.error
     import urllib.request
@@ -153,7 +162,10 @@ def _handle_http(event: Mapping[str, Any]) -> dict[str, Any]:
     url: str = event.get("url") or ""
     headers: dict[str, str] = event.get("headers") or {}
     body: Optional[str] = event.get("body")
-    timeout: int = min(int(event.get("timeout") or 10), 30)
+    timeout: int = min(int(event.get("timeout") or 10), _MAX_HTTP_TIMEOUT_SECONDS)
+
+    if not any(key.lower() == "user-agent" for key in headers):
+        headers["User-Agent"] = _HTTP_PROXY_USER_AGENT
 
     if not url:
         return {"error": {"code": "MissingURL", "message": "url is required"}}
@@ -258,22 +270,54 @@ def _get_proxy_arn() -> str:
     return _proxy_arn
 
 
+def _lambda_invoke_config() -> Config:
+    """Wait longer than OpenRouter HTTP and do not retry Invoke on timeout."""
+    return Config(
+        connect_timeout=_LAMBDA_INVOKE_CONNECT_TIMEOUT_SECONDS,
+        read_timeout=_LAMBDA_INVOKE_READ_TIMEOUT_SECONDS,
+        retries={"max_attempts": 1, "mode": "standard"},
+    )
+
+
 def _get_lambda_client() -> Any:
     global _lambda_client
     if _lambda_client is None:
-        _lambda_client = get_client("lambda")
+        _lambda_client = boto3.client("lambda", config=_lambda_invoke_config())
     return _lambda_client
 
 
 def _invoke_proxy(payload: dict[str, Any]) -> dict[str, Any]:
     """Low-level invoke of the proxy Lambda.  Returns the parsed body."""
-    resp = _get_lambda_client().invoke(
-        FunctionName=_get_proxy_arn(),
-        InvocationType="RequestResponse",
-        Payload=json.dumps(payload).encode(),
-    )
+    try:
+        resp = _get_lambda_client().invoke(
+            FunctionName=_get_proxy_arn(),
+            InvocationType="RequestResponse",
+            Payload=json.dumps(payload).encode(),
+        )
+    except (ReadTimeoutError, ConnectTimeoutError) as exc:
+        raise AwsProxyError(
+            "TimeoutError",
+            str(exc) or "Lambda invoke timed out",
+        ) from exc
 
-    body = json.loads(resp["Payload"].read())
+    raw_payload = resp["Payload"].read()
+    if not raw_payload:
+        raise AwsProxyError(
+            "EmptyProxyResponse",
+            "AWS proxy returned an empty payload",
+        )
+    try:
+        body = json.loads(raw_payload)
+    except json.JSONDecodeError as exc:
+        raise AwsProxyError(
+            "InvalidProxyResponse",
+            f"AWS proxy returned invalid JSON: {exc}",
+        ) from exc
+    if not isinstance(body, dict):
+        raise AwsProxyError(
+            "InvalidProxyResponse",
+            "AWS proxy response must be a JSON object",
+        )
 
     if resp.get("FunctionError"):
         raise AwsProxyError("LambdaInvocationError", str(body))

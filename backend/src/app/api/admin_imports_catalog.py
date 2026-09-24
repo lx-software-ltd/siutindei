@@ -286,9 +286,18 @@ def prevalidate_activity_categories(
     session: Session,
     raw_org: dict[str, Any],
 ) -> None:
-    """Fail the org before insert when a category_name is unknown."""
-    from app.api.admin_imports_lookups import lookup_category_id
+    """Fail the org before insert when a category_name is unknown.
 
+    When capture is on, unknown names are stored later instead of
+    failing the organization here.
+    """
+    from app.services.category_suggestions.resolve import (
+        capture_enabled,
+        resolve_category_name,
+    )
+
+    if capture_enabled(session):
+        return
     activities = raw_org.get("activities")
     if not isinstance(activities, list):
         return
@@ -300,4 +309,4 @@ def prevalidate_activity_categories(
         category_name = activity.get("category_name")
         if category_name in (None, ""):
             continue
-        lookup_category_id(session, category_name)
+        resolve_category_name(session, str(category_name))

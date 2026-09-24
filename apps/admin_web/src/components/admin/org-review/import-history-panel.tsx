@@ -87,7 +87,12 @@ export function ImportHistoryPanel() {
                 if (!counts) {
                   return '—';
                 }
-                return `created ${counts.created}, updated ${counts.updated}`;
+                const captured = item.summary?.captured_categories;
+                const base = `created ${counts.created}, updated ${counts.updated}`;
+                if (!captured) {
+                  return base;
+                }
+                return `${base}; ${captured} categories captured`;
               },
             },
           ]}

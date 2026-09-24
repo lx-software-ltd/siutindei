@@ -532,6 +532,192 @@ paths:
         "404":
           description: Organization not found
 
+  /v1/admin/category-suggestions:
+    get:
+      summary: List category suggestions
+      description: |
+        Admin group only. Unknown import `category_name` values are
+        captured here when settings `on_import_enabled` is true. The
+        pending system category id is
+        `c1111111-1111-1111-1111-111111111199`. Import row warnings use
+        `category_name '{name}' captured as pending suggestion`.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, merged, rejected]
+        - name: enrichment_status
+          in: query
+          schema:
+            type: string
+            enum: [none, queued, running, done, failed]
+        - name: import_job_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Suggestion page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategorySuggestionListResponse'
+        "403":
+          description: Admin group required
+
+  /v1/admin/category-suggestions/summary:
+    get:
+      summary: Category suggestion counts and month cost
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategorySuggestionSummary'
+
+  /v1/admin/category-suggestions/settings:
+    get:
+      summary: Read category suggestion settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategorySuggestionSettings'
+    put:
+      summary: Update category suggestion settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategorySuggestionSettingsUpdate'
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategorySuggestionSettings'
+
+  /v1/admin/category-suggestions/settings/test:
+    post:
+      summary: Send a short OpenRouter ping with the configured model
+      description: |
+        One attempt, about 15 seconds. API Gateway REST integrations
+        time out at 29 seconds and the admin Lambda timeout is 30
+        seconds, so this call cannot use the worker's 90 second budget.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Model replied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategorySuggestionModelTest'
+        "502":
+          description: OpenRouter request failed
+
+  /v1/admin/category-suggestions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Category suggestion detail and evidence links
+      responses:
+        "200":
+          description: Suggestion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategorySuggestionDetail'
+        "404":
+          description: Suggestion not found
+
+  /v1/admin/category-suggestions/{id}/decision:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Approve, map, or reject a category suggestion
+      description: |
+        Approve creates a category and moves linked activities that are
+        still on Pending categorisation. Map and reject-with-target do
+        the same reassignment and store an alias. Reject without a
+        target leaves activities on the pending category.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategorySuggestionDecision'
+      responses:
+        "200":
+          description: Updated suggestion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategorySuggestion'
+        "400":
+          description: Invalid decision or duplicate category name
+        "404":
+          description: Suggestion not found
+
+  /v1/admin/category-suggestions/{id}/enrich:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Queue enrichment for one suggestion
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "202":
+          description: Queued
+        "404":
+          description: Suggestion not found
+
   /v1/admin/locations:
     get:
       summary: List locations
@@ -2689,6 +2875,11 @@ components:
           type: integer
         errors:
           type: integer
+        captured_categories:
+          type: integer
+          description: |
+            Distinct category suggestions touched by this import.
+            Omitted on jobs stored before capture existed.
 
     AdminImportError:
       type: object
@@ -4517,6 +4708,12 @@ components:
           $ref: '#/components/schemas/TranslationMap'
         display_order:
           type: integer
+        is_system:
+          type: boolean
+          description: |
+            True for Pending categorisation
+            (`c1111111-1111-1111-1111-111111111199`). That row cannot
+            be renamed, re-parented, deleted, or used as a parent.
         children:
           type: array
           items:
@@ -4705,6 +4902,254 @@ components:
           description: Additional notes for the admin
 
     # Health Check schemas
+    CategorySuggestion:
+      type: object
+      required: [id, requested_name, status, enrichment_status, activity_count]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fingerprint:
+          type: string
+        requested_name:
+          type: string
+        source:
+          type: string
+          enum: [import, scan]
+        status:
+          type: string
+          enum: [pending, approved, merged, rejected]
+        enrichment_status:
+          type: string
+          enum: [none, queued, running, done, failed]
+        enrichment_error:
+          type: string
+          nullable: true
+        enriched_at:
+          type: string
+          format: date-time
+          nullable: true
+        model_used:
+          type: string
+          nullable: true
+        suggested_name:
+          type: string
+          nullable: true
+        name_translations:
+          $ref: '#/components/schemas/TranslationMap'
+        suggested_parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        maps_to_category_id:
+          type: string
+          format: uuid
+          nullable: true
+        confidence:
+          type: number
+          nullable: true
+        rationale:
+          type: string
+          nullable: true
+        alternatives:
+          type: object
+          additionalProperties: true
+        usage:
+          type: object
+          additionalProperties: true
+        created_category_id:
+          type: string
+          format: uuid
+          nullable: true
+        merged_into_category_id:
+          type: string
+          format: uuid
+          nullable: true
+        decided_by:
+          type: string
+          nullable: true
+        decided_at:
+          type: string
+          format: date-time
+          nullable: true
+        decision_notes:
+          type: string
+          nullable: true
+        activity_count:
+          type: integer
+        reopened_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CategorySuggestionActivityLink:
+      type: object
+      required: [activity_id, org_id, requested_name]
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+        activity_name:
+          type: string
+        org_id:
+          type: string
+          format: uuid
+        org_name:
+          type: string
+        import_job_id:
+          type: string
+          format: uuid
+          nullable: true
+        requested_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CategorySuggestionDetail:
+      allOf:
+        - $ref: '#/components/schemas/CategorySuggestion'
+        - type: object
+          properties:
+            activities:
+              type: array
+              items:
+                $ref: '#/components/schemas/CategorySuggestionActivityLink'
+
+    CategorySuggestionListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategorySuggestion'
+        next_cursor:
+          type: string
+          nullable: true
+
+    CategorySuggestionSummary:
+      type: object
+      required:
+        - by_status
+        - by_enrichment_status
+        - pending_activity_total
+        - month_cost_usd
+      properties:
+        by_status:
+          type: object
+          additionalProperties:
+            type: integer
+        by_enrichment_status:
+          type: object
+          additionalProperties:
+            type: integer
+        pending_activity_total:
+          type: integer
+        month_cost_usd:
+          type: number
+
+    CategorySuggestionSettings:
+      type: object
+      required:
+        - on_import_enabled
+        - auto_enrich_enabled
+        - fallback_models
+        - max_evidence_items
+        - deny_data_collection
+      properties:
+        on_import_enabled:
+          type: boolean
+        auto_enrich_enabled:
+          type: boolean
+        openrouter_model:
+          type: string
+          nullable: true
+        default_openrouter_model:
+          type: string
+        fallback_models:
+          type: array
+          items:
+            type: string
+        max_evidence_items:
+          type: integer
+        deny_data_collection:
+          type: boolean
+        updated_by:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CategorySuggestionSettingsUpdate:
+      type: object
+      properties:
+        on_import_enabled:
+          type: boolean
+        auto_enrich_enabled:
+          type: boolean
+        openrouter_model:
+          type: string
+          nullable: true
+        fallback_models:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+        max_evidence_items:
+          type: integer
+          minimum: 5
+          maximum: 50
+        deny_data_collection:
+          type: boolean
+
+    CategorySuggestionDecision:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [approve, map, reject]
+        name:
+          type: string
+        name_translations:
+          $ref: '#/components/schemas/TranslationMap'
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        display_order:
+          type: integer
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        notes:
+          type: string
+
+    CategorySuggestionModelTest:
+      type: object
+      required: [ok, message]
+      properties:
+        ok:
+          type: boolean
+        message:
+          type: string
+        usage:
+          type: object
+          additionalProperties: true
+
     HealthStatus:
       type: object
       required: [healthy]

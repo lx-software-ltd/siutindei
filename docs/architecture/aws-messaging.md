@@ -99,6 +99,16 @@ endpoints are at `/v1/admin/tickets`. For full endpoint details
 
 The processor checks if a ticket with the same `ticket_id` already exists before inserting. This handles SQS's at-least-once delivery guarantee.
 
+## Category suggestion enrichment
+
+Live imports enqueue one message per new or reopened suggestion, and
+again when a suggestion's activity count crosses 5 or 25. Dry runs do
+not enqueue. The queue `category-suggestion-enrich` uses the shared SQS
+KMS key, visibility 180 seconds, and `maxReceiveCount` 3 into a 14-day
+DLQ with a CloudWatch alarm. The worker acknowledges poison JSON and
+reports partial batch failures. Message body:
+`{"suggestion_id": "<uuid>", "force": false}`.
+
 ## Listing-events rollup
 
 A nightly EventBridge rule (`lxsoftware-siutindei-listing-events-rollup`)

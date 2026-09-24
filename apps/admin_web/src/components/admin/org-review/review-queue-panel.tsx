@@ -31,6 +31,7 @@ const ISSUE_OPTIONS = [
   ['missing_coordinates', 'Missing map pin'],
   ['missing_pricing', 'Missing price'],
   ['missing_schedule', 'Missing schedule'],
+  ['pending_category', 'Pending category'],
   ['no_contact', 'No contact'],
   ['no_media', 'No photos'],
   ['source_attribution', 'Import note in description'],

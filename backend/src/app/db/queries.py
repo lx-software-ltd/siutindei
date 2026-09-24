@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.sql import Select
 
 from app.db.models import Activity
+from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.db.models import ActivityPricing
 from app.db.models import ActivitySchedule
 from app.db.models import ActivityScheduleEntry
@@ -103,6 +104,7 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
     )
     if review_gate_enabled():
         query = query.where(Organization.review_status == "approved")
+    query = query.where(Activity.category_id != PENDING_CATEGORY_ID)
 
     conditions: list = []
 

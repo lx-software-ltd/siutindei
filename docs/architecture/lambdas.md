@@ -71,7 +71,8 @@ their primary responsibilities.
   `PATCH /v1/admin/organizations/{id}`),
   admin/manager group for `/v1/manager/*`, any authenticated user for
   `/v1/user/*`; partner API keys (`x-partner-key`) for `/v1/partner/*`
-- Purpose: admin CRUD (including activity categories and partner API key
+- Purpose: admin CRUD (including activity categories, category
+  suggestions, and partner API key
   management), manager CRUD (filtered by ownership), partner CRUD
   (scope- and organization-filtered by API key), user self-service
   (tickets), Cognito user management, audit logs, media upload, admin
@@ -88,6 +89,16 @@ their primary responsibilities.
   back the whole file),
   and address autocomplete (Nominatim via the AWS/HTTP proxy)
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
+- Category suggestions: admin-only routes under
+  `/v1/admin/category-suggestions` (see `docs/api/admin.yaml`).
+  After a live import commits, the function sends SQS messages when
+  `CATEGORY_SUGGESTION_QUEUE_URL` is set. OpenRouter calls go through
+  `app.services.openrouter_client` and the HTTP proxy. The settings
+  test uses one 15 second attempt because API Gateway times out at
+  29 seconds.
+- Environment additions: `CATEGORY_SUGGESTION_QUEUE_URL`,
+  `OPENROUTER_API_KEY_SECRET_ARN`, `OPENROUTER_CHAT_COMPLETIONS_URL`,
+  `OPENROUTER_MODEL`
 - Memory: 1024 MB (cold start is import-bound; CPU scales with memory)
 - X-Ray: active tracing (function segment with init/invocation split)
 - Cognito user listing resolves group membership with one
@@ -277,3 +288,26 @@ their primary responsibilities.
   a reusable channel for any service that is unreachable via PrivateLink.
 - Client: in-VPC Lambdas import `app.services.aws_proxy.invoke` (for
   AWS calls) or `app.services.aws_proxy.http_invoke` (for HTTP calls)
+- Timeout: 120 seconds. Outbound HTTP is capped at 90 seconds in
+  `app.services.aws_proxy`. `ALLOWED_HTTP_URLS` includes Nominatim and
+  the OpenRouter chat completions URL.
+- OpenRouter: the proxy does not inject the API key. Callers pass
+  `Authorization` from Secrets Manager via `app.services.openrouter_client`.
+
+### Category suggestion worker
+- Function: CategorySuggestionsWorkerFunction
+- Handler: backend/lambda/category_suggestions/handler.py
+- Trigger: SQS `category-suggestion-enrich` (batch size 1, partial
+  batch failures)
+- Purpose: ask OpenRouter where an unknown imported category name
+  should sit, then store the proposal
+- DB access: RDS Proxy with IAM auth (`siutindei_admin`)
+- VPC: Yes
+- Timeout: 120 seconds. OpenRouter timeout 90 seconds. Reserved
+  concurrency 2.
+- Permissions: invoke `AwsApiProxyFunction`, read the OpenRouter secret
+- Environment: database connection variables,
+  `AWS_PROXY_FUNCTION_ARN`, `OPENROUTER_API_KEY_SECRET_ARN`,
+  `OPENROUTER_CHAT_COMPLETIONS_URL`, `OPENROUTER_MODEL`,
+  `CATEGORY_SUGGESTION_LAMBDA_TIMEOUT_SECONDS`,
+  `CATEGORY_SUGGESTION_OPENROUTER_TIMEOUT_SECONDS`

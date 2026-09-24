@@ -86,7 +86,19 @@ def resolve_activity_category_fields(
         return
     if category_name is None:
         return
-    body["category_id"] = lookup_category_id(session, category_name)
+    from app.db.models.category_suggestion import PENDING_CATEGORY_ID
+    from app.services.category_suggestions.capture import ensure_pending_category
+    from app.services.category_suggestions.resolve import resolve_category_name
+
+    resolution = resolve_category_name(session, str(category_name))
+    if resolution.capture:
+        ensure_pending_category(session)
+        body["category_id"] = str(PENDING_CATEGORY_ID)
+        body["_capture_category_name"] = str(category_name).strip()
+        return
+    if resolution.category_id is None:
+        raise ValidationError("unknown category_name", field="category_name")
+    body["category_id"] = str(resolution.category_id)
 
 
 def lookup_district_area_id(session: Session, area_name: Any) -> str:

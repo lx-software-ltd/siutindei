@@ -246,7 +246,8 @@ Each Lambda function created by `PythonLambda` construct includes:
 | Function Logical ID | Handler | Memory | Timeout | VPC | Notes |
 |---------------------|---------|--------|---------|-----|-------|
 | `AdminBootstrapFunction` | `lambda/admin_bootstrap/handler.lambda_handler` | 256 MB | 30s | Yes | Custom resource handler |
-| `AwsApiProxyFunction` | `lambda/aws_proxy/handler.lambda_handler` | 256 MB | 15s | No | AWS/HTTP proxy for in-VPC Lambdas |
+| `AwsApiProxyFunction` | `lambda/aws_proxy/handler.lambda_handler` | 256 MB | 120s | No | AWS/HTTP proxy for in-VPC Lambdas |
+| `CategorySuggestionsWorkerFunction` | `lambda/category_suggestions/handler.lambda_handler` | 512 MB | 120s | Yes | SQS category suggestion enrichment |
 | `ApiKeyRotationFunction` | `lambda/api_key_rotation/handler.lambda_handler` | 256 MB | 60s | Yes | Scheduled API key rotation |
 | `ListingEventsIngestFunction` | `lambda/listing_events_ingest/handler.lambda_handler` | 256 MB | 10s | Yes | Public listing-event ingest |
 | `ListingEventsRollupFunction` | `lambda/listing_events_rollup/handler.lambda_handler` | 256 MB | 60s | Yes | Nightly listing_events_daily rollup |
@@ -282,7 +283,7 @@ For each function above, the following resources are created:
 |----------|------------------------|
 | `SiutindeiSearchFunction` | Read DB secret, connect to RDS Proxy as `siutindei_app` |
 | `PartnerApiKeyAuthorizerFunction` | Read app DB secret, connect to RDS Proxy as `siutindei_app` |
-| `SiutindeiAdminFunction` | Read DB secret, connect to RDS Proxy as `siutindei_admin`, invoke `AwsApiProxyFunction`, SNS publish to manager request topic, SES send email, S3 read/write for org media and admin import/export |
+| `SiutindeiAdminFunction` | Read DB secret, connect to RDS Proxy as `siutindei_admin`, invoke `AwsApiProxyFunction`, read the OpenRouter secret, send to the category suggestion queue, SNS publish to manager request topic, SES send email, S3 read/write for org media and admin import/export |
 | `AwsApiProxyFunction` | Cognito admin operations (`ListUsers`, `AdminGetUser`, `AdminDeleteUser`, `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `AdminUserGlobalSignOut`) |
 | `SiutindeiMigrationFunction` | Read DB secret, direct connect to Aurora as `postgres`, Cognito user management, CloudFormation invoke permission |
 | `HealthCheckFunction` | Read DB secret, connect to RDS Proxy as `siutindei_app` |
@@ -290,6 +291,7 @@ For each function above, the following resources are created:
 | `AdminBootstrapFunction` | Cognito `AdminCreateUser`, `AdminUpdateUserAttributes`, `AdminSetUserPassword`, `AdminAddUserToGroup`, CloudFormation invoke permission |
 | `ApiKeyRotationFunction` | API Gateway key management, Secrets Manager read/write |
 | `ManagerRequestProcessor` | Read DB secret, connect to RDS Proxy as `siutindei_admin`, SES send email |
+| `CategorySuggestionsWorkerFunction` | Read DB secret, connect to RDS Proxy as `siutindei_admin`, invoke `AwsApiProxyFunction`, read the OpenRouter secret |
 
 **Lambda Log Groups:**
 - Explicitly created by CDK with KMS encryption
@@ -503,6 +505,9 @@ the revision the database is at, and the rollback wedges in
 | `ApiCustomDomainCertificateArn` | String | No | No | ACM certificate ARN for API custom domain |
 | `AdminBootstrapEmail` | String | No | No | Admin email for bootstrap (default: empty) |
 | `AdminBootstrapTempPassword` | String | No | Yes | Temporary password for bootstrap (default: empty) |
+| `OpenRouterApiKey` | String | No | Yes | OpenRouter key stored in Secrets Manager (default: empty) |
+| `OpenRouterChatCompletionsUrl` | String | No | No | Chat completions URL allowed on the HTTP proxy |
+| `OpenRouterModel` | String | No | No | Default model when admin settings leave the model blank |
 
 ---
 
@@ -522,6 +527,8 @@ the revision the database is at, and the rollback wedges in
 | `ManagerRequestTopicArn` | SNS topic ARN | Manager request events topic |
 | `ManagerRequestQueueUrl` | SQS queue URL | Manager request processing queue |
 | `ManagerRequestDLQUrl` | SQS DLQ URL | Failed manager request messages |
+| `CategorySuggestionQueueUrl` | SQS queue URL | Category suggestion enrichment queue |
+| `CategorySuggestionDLQUrl` | SQS DLQ URL | Failed category suggestion enrichment messages |
 | `CognitoCustomDomainCloudFront` | CloudFront distribution | Custom auth domain target (conditional) |
 | `ApiCustomDomainTarget` | CNAME target | API custom domain DNS target (conditional) |
 | `ApiCustomDomainUrl` | Custom domain URL | API custom domain URL (conditional) |

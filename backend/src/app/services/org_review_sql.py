@@ -16,6 +16,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
 from app.db.models import Organization
+from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.services.org_review import REVIEW_STATUSES
 
 BLOCKER_ISSUE_CODES = (
@@ -25,6 +26,7 @@ BLOCKER_ISSUE_CODES = (
     "missing_coordinates",
     "missing_pricing",
     "missing_schedule",
+    "pending_category",
 )
 
 _WS_EDGES = r"^[[:space:]]+|[[:space:]]+$"
@@ -123,6 +125,10 @@ def _issue_predicates() -> dict[str, ColumnElement[bool]]:
         ),
         "missing_pricing": _activity_missing(ActivityPricing),
         "missing_schedule": _activity_missing(ActivitySchedule),
+        "pending_category": _child_exists(
+            Activity,
+            Activity.category_id == PENDING_CATEGORY_ID,
+        ),
         "missing_activity_description": _child_exists(
             Activity,
             _blank(Activity.description),

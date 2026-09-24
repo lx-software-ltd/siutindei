@@ -158,6 +158,7 @@ def process_activity(
     *,
     dry_run: bool = False,
     allow_updates: bool = True,
+    import_job_id: Any = None,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_activity, dict):
@@ -218,6 +219,7 @@ def process_activity(
                 allow_updates=allow_updates,
                 venue=resolve_single_imported_venue(location_cache),
                 warnings=warnings,
+                import_job_id=import_job_id,
             ),
         )
     except ValidationError as exc:
