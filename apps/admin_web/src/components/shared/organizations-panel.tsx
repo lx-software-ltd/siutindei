@@ -67,6 +67,19 @@ interface OrganizationsPanelProps {
   mode: ApiMode;
 }
 
+function OrganizationStatusBadges({ item }: { item: Organization }) {
+  return (
+    <span className='inline-flex flex-wrap items-center gap-1'>
+      <StatusBadge
+        status={(item.status ?? 'operational').replaceAll('_', ' ')}
+      />
+      <StatusBadge
+        status={(item.review_status ?? 'pending_review').replaceAll('_', ' ')}
+      />
+    </span>
+  );
+}
+
 export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
   const isAdmin = mode === 'admin';
   const isManager = mode === 'manager';
@@ -687,7 +700,7 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
         ariaLabel={isAdmin ? 'Organizations' : 'Your organizations'}
         rows={filteredItems}
         getLabel={(item) => item.name || 'Organization'}
-        middleColumnCount={isAdmin ? 6 : 5}
+        middleColumnCount={isAdmin ? 4 : 3}
         isLoading={panel.isLoading}
         isLoadingMore={panel.isLoadingMore}
         hasMore={panel.hasMore}
@@ -751,12 +764,6 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
             <AdminDataTableHeadCell priority='secondary'>
               Status
             </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>
-              Review
-            </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>
-              Description
-            </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>
               Contact
             </AdminDataTableHeadCell>
@@ -766,8 +773,8 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
           <>
             <AdminDataTableCell>
               {item.name}
-              <AdminDataTableCellMeta until='tertiary'>
-                {(item.review_status ?? 'pending_review').replaceAll('_', ' ')}
+              <AdminDataTableCellMeta until='secondary'>
+                <OrganizationStatusBadges item={item} />
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             {isAdmin ? (
@@ -776,20 +783,7 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
               </AdminDataTableCell>
             ) : null}
             <AdminDataTableCell priority='secondary'>
-              <StatusBadge
-                status={(item.status ?? 'operational').replaceAll('_', ' ')}
-              />
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='tertiary'>
-              <StatusBadge
-                status={(item.review_status ?? 'pending_review').replaceAll(
-                  '_',
-                  ' '
-                )}
-              />
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='tertiary'>
-              {item.description || '—'}
+              <OrganizationStatusBadges item={item} />
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               {renderContactIcons(item)}
