@@ -32,6 +32,8 @@ test.describe('Activities Panel', () => {
     ).toBeVisible();
     await expect(adminPage.getByLabel('Age Min')).toBeVisible();
     await expect(adminPage.getByLabel('Age Max')).toBeVisible();
+    await expect(adminPage.getByLabel('Source URL')).toBeVisible();
+    await expect(adminPage.getByLabel('Source note')).toBeVisible();
 
     // Check for submit button
     await expect(adminPage.getByRole('button', { name: 'Create' })).toBeVisible();

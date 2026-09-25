@@ -100,6 +100,8 @@ test.describe('Manager Organizations Panel', () => {
     await expect(managerPage.getByLabel('Name')).toHaveValue(
       'Test Organization 1'
     );
+    await expect(managerPage.getByLabel('Source URL')).toHaveCount(0);
+    await expect(managerPage.getByLabel('Source note')).toHaveCount(0);
   });
 
   test('should not show manager column in table (manager sees their own orgs)', async ({ managerPage }) => {
@@ -142,6 +144,22 @@ test.describe('Manager Organizations Panel', () => {
     await expect(managerSelect).toBeVisible();
     await expect(managerSelect).toBeDisabled();
     await expect(managerSelect).toHaveValue('manager@example.com');
+  });
+});
+
+test.describe('Manager Activities Panel', () => {
+  test('should hide source fields on the activity editor', async ({
+    managerPage,
+  }) => {
+    await managerPage.goto('/admin/dashboard');
+    await managerPage.getByRole('button', { name: 'Activities' }).click();
+    await expect(
+      managerPage.getByRole('table', { name: 'Your activities' })
+    ).toBeVisible();
+    await managerPage.getByRole('row', { name: /Swimming Class/ }).first().click();
+    await expect(managerPage.getByRole('button', { name: 'Update' })).toBeVisible();
+    await expect(managerPage.getByLabel('Source URL')).toHaveCount(0);
+    await expect(managerPage.getByLabel('Source note')).toHaveCount(0);
   });
 });
 

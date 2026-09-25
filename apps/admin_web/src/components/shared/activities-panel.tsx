@@ -309,8 +309,12 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     ),
     age_min: parseRequiredNumber(form.age_min),
     age_max: parseRequiredNumber(form.age_max),
-    source_url: form.source_url.trim() || null,
-    source_note: form.source_note.trim() || null,
+    ...(isAdmin
+      ? {
+          source_url: form.source_url.trim() || null,
+          source_note: form.source_note.trim() || null,
+        }
+      : {}),
   });
 
   const handleSubmit = () => {
@@ -453,35 +457,39 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             onChange={handleDescriptionChange}
           />
         </div>
-        <div className='space-y-1 sm:col-span-2'>
-          <Label htmlFor='activity-source-url'>Source URL</Label>
-          <Input
-            id='activity-source-url'
-            type='url'
-            value={panel.formState.source_url}
-            onChange={(event) =>
-              panel.setFormState((prev) => ({
-                ...prev,
-                source_url: event.target.value,
-              }))
-            }
-            placeholder='https://'
-          />
-        </div>
-        <div className='space-y-1 sm:col-span-2'>
-          <Label htmlFor='activity-source-note'>Source note</Label>
-          <Textarea
-            id='activity-source-note'
-            rows={2}
-            value={panel.formState.source_note}
-            onChange={(event) =>
-              panel.setFormState((prev) => ({
-                ...prev,
-                source_note: event.target.value,
-              }))
-            }
-          />
-        </div>
+        {isAdmin ? (
+          <>
+            <div className='space-y-1 sm:col-span-2'>
+              <Label htmlFor='activity-source-url'>Source URL</Label>
+              <Input
+                id='activity-source-url'
+                type='url'
+                value={panel.formState.source_url}
+                onChange={(event) =>
+                  panel.setFormState((prev) => ({
+                    ...prev,
+                    source_url: event.target.value,
+                  }))
+                }
+                placeholder='https://'
+              />
+            </div>
+            <div className='space-y-1 sm:col-span-2'>
+              <Label htmlFor='activity-source-note'>Source note</Label>
+              <Textarea
+                id='activity-source-note'
+                rows={2}
+                value={panel.formState.source_note}
+                onChange={(event) =>
+                  panel.setFormState((prev) => ({
+                    ...prev,
+                    source_note: event.target.value,
+                  }))
+                }
+              />
+            </div>
+          </>
+        ) : null}
         <div className='space-y-1'>
           <Label htmlFor='activity-age-min'>
             Age Min{' '}

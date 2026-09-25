@@ -101,6 +101,8 @@ def _update_organization_for_manager(
     body: dict[str, Any],
 ) -> Organization:
     """Update an organization for a manager (limited fields)."""
+    body.pop("source_url", None)
+    body.pop("source_note", None)
     if "name" in body:
         name = _validate_string_length(
             body["name"], "name", MAX_NAME_LENGTH, required=True

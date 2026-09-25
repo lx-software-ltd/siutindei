@@ -65,32 +65,37 @@ def downgrade() -> None:
 def peel_appended_source(
     description: str | None,
 ) -> tuple[str | None, str | None, str | None, dict[str, str]]:
-    """Split import attribution out of a description.
+    """Split trailing import attribution out of a description.
 
     Returns cleaned description, source URL, source note, and catalog
-    pairs from the last ``Source:`` line. A line is removed only when
-    it is exactly ``Source: ...``. The first `` — `` segment is the URL
+    pairs from the last trailing ``Source:`` line. Only a suffix of
+    exact ``Source: ...`` lines is removed (blank lines after that
+    suffix are ignored). A ``Source:`` line with more description
+    after it stays in place. The first `` — `` segment is the URL
     when it starts with http(s); otherwise the whole remainder is the
     note, so a note that itself contains `` — `` stays intact.
     """
     if description is None:
         return None, None, None, {}
-    kept: list[str] = []
+    lines = description.split("\n")
+    while lines and not lines[-1].strip():
+        lines.pop()
     source_lines: list[str] = []
-    for line in description.split("\n"):
-        match = _SOURCE_LINE.match(line.strip())
-        if match:
-            source_lines.append(match.group(1).strip())
-        else:
-            kept.append(line)
+    while lines:
+        match = _SOURCE_LINE.match(lines[-1].strip())
+        if match is None:
+            break
+        source_lines.append(match.group(1).strip())
+        lines.pop()
     if not source_lines:
         return description, None, None, {}
+    source_lines.reverse()
     url, raw_note = _split_source_line(source_lines[-1])
     pairs = {
         match.group(1): match.group(2).strip() for match in _PAIR.finditer(raw_note)
     }
     note = _residual_note(raw_note)
-    cleaned = "\n".join(kept).strip()
+    cleaned = "\n".join(lines).strip()
     return cleaned or None, url, note or None, pairs
 
 
@@ -107,12 +112,8 @@ def backfill_appended_sources(bind: sa.Connection) -> None:
 
     activity_rows = bind.execute(
         sa.text(
-            "SELECT a.id AS id, a.org_id AS org_id, a.description AS description, "
-            "o.source AS source, o.source_id AS source_id, "
-            "o.description_source AS description_source "
-            "FROM activities a "
-            "JOIN organizations o ON o.id = a.org_id "
-            "WHERE a.description LIKE '%Source:%'"
+            "SELECT id, description FROM activities "
+            "WHERE description LIKE '%Source:%'"
         )
     ).mappings()
     for row in activity_rows:
@@ -150,8 +151,8 @@ def _update_activity_source(
     bind: sa.Connection,
     row: Mapping[str, Any],
 ) -> None:
-    description, url, note, pairs = peel_appended_source(row["description"])
-    if description == row["description"] and not url and not note and not pairs:
+    description, url, note, _pairs = peel_appended_source(row["description"])
+    if description == row["description"] and not url and not note:
         return
     bind.execute(
         sa.text(
@@ -164,30 +165,6 @@ def _update_activity_source(
             "description": description,
             "source_url": url,
             "source_note": note,
-        },
-    )
-    source = row["source"] or _allowed(pairs.get("source"), _ORG_SOURCES)
-    source_id = row["source_id"] or _clip(pairs.get("sourceId"))
-    description_source = row["description_source"] or _allowed(
-        pairs.get("descriptionSource"),
-        _DESCRIPTION_SOURCES,
-    )
-    if (
-        source == row["source"]
-        and source_id == row["source_id"]
-        and description_source == row["description_source"]
-    ):
-        return
-    bind.execute(
-        sa.text(
-            "UPDATE organizations SET source = :source, source_id = :source_id, "
-            "description_source = :description_source WHERE id = :id"
-        ),
-        {
-            "id": row["org_id"],
-            "source": source,
-            "source_id": source_id,
-            "description_source": description_source,
         },
     )
 
@@ -204,15 +181,20 @@ def _split_source_line(payload: str) -> tuple[str | None, str]:
 
 
 def _residual_note(note: str) -> str:
+    text = note.strip()
     kept: list[str] = []
-    for segment in note.split(";"):
+    removed_catalog = False
+    for segment in text.split(";"):
         piece = segment.strip()
         if not piece:
             continue
         match = _PAIR.fullmatch(piece)
         if match and match.group(1) in _CATALOG_KEYS:
+            removed_catalog = True
             continue
         kept.append(piece)
+    if not removed_catalog:
+        return text
     return "; ".join(kept)
 
 

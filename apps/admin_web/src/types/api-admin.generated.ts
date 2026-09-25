@@ -5118,8 +5118,9 @@ export interface components {
             status?: string;
             /**
              * @description Whitelist for `set_fields`: status, manager_id, source,
-             *     description_source, review_notes, phone fields, email, and
-             *     social fields. Only supplied keys are written.
+             *     source_url, source_note, description_source, review_notes,
+             *     phone fields, email, and social fields. Only supplied keys
+             *     are written.
              */
             fields?: {
                 [key: string]: unknown;
@@ -5193,9 +5194,9 @@ export interface components {
             /** @enum {string} */
             source?: "lcsd" | "edb" | "swd" | "places" | "competitor";
             source_id?: string;
-            /** @description Page the organization listing was taken from */
+            /** @description Page the organization listing was taken from. Admin-write only; manager routes ignore this field. */
             source_url?: string | null;
-            /** @description Free-text note about where the listing came from */
+            /** @description Free-text note about where the listing came from. Admin-write only; manager routes ignore this field. */
             source_note?: string | null;
             /** @enum {string} */
             description_source?: "template" | "official" | "places" | "enrich";
@@ -5221,7 +5222,9 @@ export interface components {
             /** @enum {string} */
             source?: "lcsd" | "edb" | "swd" | "places" | "competitor";
             source_id?: string;
+            /** @description Admin-write only; manager routes ignore this field. */
             source_url?: string | null;
+            /** @description Admin-write only; manager routes ignore this field. */
             source_note?: string | null;
             /** @enum {string} */
             description_source?: "template" | "official" | "places" | "enrich";
@@ -5393,9 +5396,9 @@ export interface components {
             name_translations?: components["schemas"]["TranslationMap"];
             /** @description Non-English description translations (language map) */
             description_translations?: components["schemas"]["TranslationMap"];
-            /** @description Page the activity listing was taken from */
+            /** @description Page the activity listing was taken from. Admin-write only; manager routes ignore this field. */
             source_url?: string | null;
-            /** @description Free-text note about where the activity came from */
+            /** @description Free-text note about where the activity came from. Admin-write only; manager routes ignore this field. */
             source_note?: string | null;
             /** @description Minimum age (required, 0-119, must be less than age_max) */
             age_min: number;
@@ -5416,7 +5419,9 @@ export interface components {
             name_translations?: components["schemas"]["TranslationMap"];
             /** @description Non-English description translations (language map) */
             description_translations?: components["schemas"]["TranslationMap"];
+            /** @description Admin-write only; manager routes ignore this field. */
             source_url?: string | null;
+            /** @description Admin-write only; manager routes ignore this field. */
             source_note?: string | null;
             /** @description Minimum age (must provide both age_min and age_max together) */
             age_min?: number;

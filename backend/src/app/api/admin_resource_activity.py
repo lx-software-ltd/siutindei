@@ -87,6 +87,17 @@ def _create_activity(repo: ActivityRepository, body: dict[str, Any]) -> Activity
     )
 
 
+def _update_activity_for_manager(
+    repo: ActivityRepository,
+    entity: Activity,
+    body: dict[str, Any],
+) -> Activity:
+    """Update an activity for a manager (no provenance fields)."""
+    body.pop("source_url", None)
+    body.pop("source_note", None)
+    return _update_activity(repo, entity, body)
+
+
 def _update_activity(
     repo: ActivityRepository,
     entity: Activity,

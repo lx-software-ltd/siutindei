@@ -58,18 +58,27 @@ def parse_vetting_pairs(vetting_note: Any) -> dict[str, str]:
 
 
 def residual_vetting_note(vetting_note: Any) -> str:
-    """Return vetting text with catalog key=value pairs removed."""
+    """Return vetting text with catalog key=value pairs removed.
+
+    Notes with no catalog pairs are returned unchanged after strip, so
+    free-text semicolons keep their original spacing.
+    """
     if not isinstance(vetting_note, str) or not vetting_note.strip():
         return ""
+    text = vetting_note.strip()
     kept: list[str] = []
-    for segment in vetting_note.split(";"):
+    removed_catalog = False
+    for segment in text.split(";"):
         piece = segment.strip()
         if not piece:
             continue
         match = _VETTING_PAIR.fullmatch(piece)
         if match and match.group(1) in _CATALOG_PAIR_KEYS:
+            removed_catalog = True
             continue
         kept.append(piece)
+    if not removed_catalog:
+        return text
     return "; ".join(kept)
 
 

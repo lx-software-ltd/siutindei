@@ -245,6 +245,12 @@ def test_apply_source_fields_note_only() -> None:
     assert record["source_note"] == "checked"
 
 
+def test_apply_source_fields_preserves_free_text_semicolons() -> None:
+    record = {"description": "Hello", "source_note": "checked;extra"}
+    apply_source_fields(record)
+    assert record["source_note"] == "checked;extra"
+
+
 def test_apply_source_fields_strips_catalog_pairs() -> None:
     record = {
         "description": "Hello",

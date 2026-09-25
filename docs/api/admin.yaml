@@ -3221,8 +3221,9 @@ components:
           type: object
           description: |
             Whitelist for `set_fields`: status, manager_id, source,
-            description_source, review_notes, phone fields, email, and
-            social fields. Only supplied keys are written.
+            source_url, source_note, description_source, review_notes,
+            phone fields, email, and social fields. Only supplied keys
+            are written.
           additionalProperties: true
 
     OrgReviewBulkResult:
@@ -3374,12 +3375,16 @@ components:
           type: string
           maxLength: 400
           nullable: true
-          description: Page the organization listing was taken from
+          description: >
+            Page the organization listing was taken from. Admin-write
+            only; manager routes ignore this field.
         source_note:
           type: string
           maxLength: 500
           nullable: true
-          description: Free-text note about where the listing came from
+          description: >
+            Free-text note about where the listing came from. Admin-write
+            only; manager routes ignore this field.
         description_source:
           type: string
           enum: [template, official, places, enrich]
@@ -3431,10 +3436,12 @@ components:
           type: string
           maxLength: 400
           nullable: true
+          description: Admin-write only; manager routes ignore this field.
         source_note:
           type: string
           maxLength: 500
           nullable: true
+          description: Admin-write only; manager routes ignore this field.
         description_source:
           type: string
           enum: [template, official, places, enrich]
@@ -3778,12 +3785,16 @@ components:
           type: string
           maxLength: 400
           nullable: true
-          description: Page the activity listing was taken from
+          description: >
+            Page the activity listing was taken from. Admin-write only;
+            manager routes ignore this field.
         source_note:
           type: string
           maxLength: 500
           nullable: true
-          description: Free-text note about where the activity came from
+          description: >
+            Free-text note about where the activity came from. Admin-write
+            only; manager routes ignore this field.
         age_min:
           type: integer
           minimum: 0
@@ -3820,10 +3831,12 @@ components:
           type: string
           maxLength: 400
           nullable: true
+          description: Admin-write only; manager routes ignore this field.
         source_note:
           type: string
           maxLength: 500
           nullable: true
+          description: Admin-write only; manager routes ignore this field.
         age_min:
           type: integer
           minimum: 0
