@@ -20,8 +20,11 @@ repos:
       - id: mypy
         files: ^backend/src/
         additional_dependencies:
-          - pydantic>=2.0
-          - sqlalchemy>=2.0
+          # Pin to backend/requirements.txt. Unbounded sqlalchemy>=2.0
+          # installed 2.1.0, whose Cython stubs use the untyped-decorator
+          # error code and crash mypy 1.8.0.
+          - pydantic==2.13.5
+          - sqlalchemy==2.0.52
           - types-boto3
         args: [--ignore-missing-imports]
 

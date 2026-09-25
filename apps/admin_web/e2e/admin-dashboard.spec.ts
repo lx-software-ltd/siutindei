@@ -12,8 +12,8 @@ test.describe('Admin Dashboard', () => {
     const brandLogo = adminPage.locator('header img[alt=""]');
     await expect(brandLogo).toBeVisible();
     await expect(brandLogo).toHaveAttribute('src', '/images/siutindei-logo.svg');
-    await expect(brandLogo).toHaveCSS('width', '80px');
-    await expect(brandLogo).toHaveCSS('height', '80px');
+    await expect(brandLogo).toHaveCSS('width', '64px');
+    await expect(brandLogo).toHaveCSS('height', '64px');
     await expect(adminPage.locator('[class*="max-w-7xl"]')).toHaveCount(3);
   });
 
