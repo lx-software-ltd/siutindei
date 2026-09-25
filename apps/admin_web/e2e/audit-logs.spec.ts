@@ -4,6 +4,7 @@ test.describe('Audit Logs Panel', () => {
   test('filters logs and opens detail modal', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=audit-logs');
     await expect(adminPage.getByRole('table', { name: 'Audit logs' })).toBeVisible();
+    await expect(adminPage.getByText(/Showing \d+ entries/)).toHaveCount(0);
 
     await expect(
       adminPage.getByRole('cell', { name: 'organizations' }).first()
