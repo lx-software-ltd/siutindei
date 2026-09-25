@@ -45,8 +45,19 @@ test.describe('Organizations Panel', () => {
     // Check for table headers
     await expect(adminPage.getByRole('columnheader', { name: 'Name' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toBeVisible();
-    await expect(adminPage.getByRole('columnheader', { name: 'Description' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Status' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Review' })).toHaveCount(0);
+    await expect(adminPage.getByRole('columnheader', { name: 'Description' })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Operations' })).toBeVisible();
+
+    // Description stays in the editor and is not previewed in the row.
+    await expect(adminPage.getByText('First test organization')).toHaveCount(0);
+    await expect(
+      adminPage.getByRole('cell', { name: /operational/ }).first()
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: /pending review/ }).first()
+    ).toBeVisible();
 
     // Check for organization data
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();

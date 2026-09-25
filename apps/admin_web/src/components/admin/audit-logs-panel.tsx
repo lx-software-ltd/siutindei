@@ -268,7 +268,7 @@ export function AuditLogsPanel() {
         ) : null
       }
       filters={
-        <AdminFilterBar summary={`Showing ${list.items.length} entries`}>
+        <AdminFilterBar>
           <AdminFilterField className={filterFieldClass}>
             <Select
               id='action-filter'
