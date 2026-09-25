@@ -178,6 +178,8 @@ def serialize_export_organization(
         "status_source": org.status_source,
         "source": org.source,
         "source_id": org.source_id,
+        "source_url": org.source_url,
+        "source_note": org.source_note,
         "description_source": org.description_source,
         "review_notes": org.review_notes,
         "locations": locations_payload,
@@ -229,6 +231,8 @@ def serialize_export_activity(
         "name_translations": activity.name_translations or {},
         "description_translations": activity.description_translations or {},
         "category_id": str(activity.category_id),
+        "source_url": activity.source_url,
+        "source_note": activity.source_note,
         "age_min": age_min,
         "age_max": age_max,
         "pricing": [

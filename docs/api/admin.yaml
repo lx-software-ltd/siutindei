@@ -88,8 +88,9 @@ paths:
           in: query
           required: false
           description: |
-            Look up an organization by catalog source_id parsed from
-            vetting_note (`sourceId=`).
+            Look up an organization by its stored catalog source_id.
+            Import sets it from `source_id` or from `sourceId=` in
+            `vetting_note`.
           schema:
             type: string
       responses:
@@ -2517,9 +2518,8 @@ components:
           type: string
           maxLength: 5000
           description: |
-            Organization description. The appended source line
-            (`Source: <url>` plus optional ` — <note>`) counts toward
-            this 5000-character limit.
+            Organization description. Source URL and notes are stored
+            on source_url and source_note and are not appended here.
         name_translations:
           $ref: '#/components/schemas/TranslationMap'
         description_translations:
@@ -2536,14 +2536,30 @@ components:
             import) and still fail a foreign name match with `exists`.
         source_url:
           type: string
+          maxLength: 400
+          description: Stored on the organization. Not appended to description.
+        source_note:
+          type: string
+          maxLength: 500
           description: |
-            Appended as `Source: <url>`. When vetting_note is also set,
-            the line is `Source: <url> — <note>`.
+            Stored on the organization. Wins over vetting_note when both
+            are set. Catalog key=value pairs are removed before storage.
         vetting_note:
           type: string
+          maxLength: 500
           description: |
-            Optional note after the source URL. URL-only omits ` — `.
-            Note-only becomes `Source: <note>`.
+            Import-only. `source=`, `sourceId=`, and `descriptionSource=`
+            pairs fill those columns. The remaining text is stored as
+            source_note when source_note is empty.
+        source:
+          type: string
+          enum: [lcsd, edb, swd, places, competitor]
+        source_id:
+          type: string
+          maxLength: 80
+        description_source:
+          type: string
+          enum: [template, official, places, enrich]
         review_status:
           type: string
           description: |
@@ -2705,8 +2721,8 @@ components:
           type: string
           maxLength: 5000
           description: |
-            Activity description. The appended source line counts toward
-            this 5000-character limit.
+            Activity description. Source URL and notes are stored on
+            source_url and source_note and are not appended here.
         name_translations:
           $ref: '#/components/schemas/TranslationMap'
         description_translations:
@@ -2721,12 +2737,21 @@ components:
             activity_categories.name. category_id wins when both are set.
         source_url:
           type: string
+          maxLength: 400
+          description: Stored on the activity. Not appended to description.
+        source_note:
+          type: string
+          maxLength: 500
           description: |
-            Appended as `Source: <url>` plus optional ` — <note>`.
+            Stored on the activity. Wins over vetting_note when both
+            are set.
         vetting_note:
           type: string
+          maxLength: 500
           description: |
-            Optional note after the source URL on the activity.
+            Import-only. Catalog key=value pairs are removed and the
+            remaining text is stored as source_note when source_note
+            is empty.
         age_min:
           type: integer
           minimum: 0
@@ -3341,8 +3366,20 @@ components:
           enum: [owner, provider, places, importer]
         source:
           type: string
+          enum: [lcsd, edb, swd, places, competitor]
         source_id:
           type: string
+          maxLength: 80
+        source_url:
+          type: string
+          maxLength: 400
+          nullable: true
+          description: Page the organization listing was taken from
+        source_note:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Free-text note about where the listing came from
         description_source:
           type: string
           enum: [template, official, places, enrich]
@@ -3386,8 +3423,18 @@ components:
           enum: [owner, provider, places, importer]
         source:
           type: string
+          enum: [lcsd, edb, swd, places, competitor]
         source_id:
           type: string
+          maxLength: 80
+        source_url:
+          type: string
+          maxLength: 400
+          nullable: true
+        source_note:
+          type: string
+          maxLength: 500
+          nullable: true
         description_source:
           type: string
           enum: [template, official, places, enrich]
@@ -3494,9 +3541,19 @@ components:
         source:
           type: string
           nullable: true
+          enum: [lcsd, edb, swd, places, competitor]
         source_id:
           type: string
           nullable: true
+          maxLength: 80
+        source_url:
+          type: string
+          nullable: true
+          maxLength: 400
+        source_note:
+          type: string
+          nullable: true
+          maxLength: 500
         description_source:
           type: string
           nullable: true
@@ -3717,6 +3774,16 @@ components:
         description_translations:
           $ref: '#/components/schemas/TranslationMap'
           description: Non-English description translations (language map)
+        source_url:
+          type: string
+          maxLength: 400
+          nullable: true
+          description: Page the activity listing was taken from
+        source_note:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Free-text note about where the activity came from
         age_min:
           type: integer
           minimum: 0
@@ -3749,6 +3816,14 @@ components:
         description_translations:
           $ref: '#/components/schemas/TranslationMap'
           description: Non-English description translations (language map)
+        source_url:
+          type: string
+          maxLength: 400
+          nullable: true
+        source_note:
+          type: string
+          maxLength: 500
+          nullable: true
         age_min:
           type: integer
           minimum: 0
@@ -3794,6 +3869,12 @@ components:
           $ref: '#/components/schemas/TranslationMap'
         description_translations:
           $ref: '#/components/schemas/TranslationMap'
+        source_url:
+          type: string
+          nullable: true
+        source_note:
+          type: string
+          nullable: true
         age_min:
           type: integer
         age_max:

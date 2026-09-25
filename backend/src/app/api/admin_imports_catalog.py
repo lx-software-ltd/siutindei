@@ -39,6 +39,7 @@ NO_MATCH_TO_CLOSE = "no matching organization to close"
 CATALOG_MANAGER_REQUIRED = "manager_id is not the catalog manager"
 
 _VETTING_PAIR = re.compile(r"([A-Za-z]+)\s*=\s*([^;]+)")
+_CATALOG_PAIR_KEYS = frozenset({"source", "sourceId", "descriptionSource"})
 
 
 def normalize_org_name(name: str) -> str:
@@ -54,6 +55,22 @@ def parse_vetting_pairs(vetting_note: Any) -> dict[str, str]:
     for match in _VETTING_PAIR.finditer(vetting_note):
         pairs[match.group(1)] = match.group(2).strip()
     return pairs
+
+
+def residual_vetting_note(vetting_note: Any) -> str:
+    """Return vetting text with catalog key=value pairs removed."""
+    if not isinstance(vetting_note, str) or not vetting_note.strip():
+        return ""
+    kept: list[str] = []
+    for segment in vetting_note.split(";"):
+        piece = segment.strip()
+        if not piece:
+            continue
+        match = _VETTING_PAIR.fullmatch(piece)
+        if match and match.group(1) in _CATALOG_PAIR_KEYS:
+            continue
+        kept.append(piece)
+    return "; ".join(kept)
 
 
 def apply_vetting_columns(raw_org: dict[str, Any]) -> None:
@@ -109,6 +126,7 @@ ORG_TRUNCATE_LIMITS = {
     "description": MAX_IMPORT_DESCRIPTION_LENGTH,
     "description_zh": MAX_IMPORT_DESCRIPTION_LENGTH,
     "vetting_note": MAX_VETTING_NOTE_LENGTH,
+    "source_note": MAX_VETTING_NOTE_LENGTH,
     "website": MAX_WEBSITE_LENGTH,
     "source_url": MAX_WEBSITE_LENGTH,
     "phone": MAX_IMPORT_PHONE_LENGTH,
@@ -119,6 +137,7 @@ ACTIVITY_TRUNCATE_LIMITS = {
     "description": MAX_IMPORT_DESCRIPTION_LENGTH,
     "description_zh": MAX_IMPORT_DESCRIPTION_LENGTH,
     "vetting_note": MAX_VETTING_NOTE_LENGTH,
+    "source_note": MAX_VETTING_NOTE_LENGTH,
     "source_url": MAX_WEBSITE_LENGTH,
 }
 
@@ -153,6 +172,16 @@ def parse_status_source(value: Any) -> str | None:
     source = str(value).strip()
     if source not in STATUS_SOURCES:
         raise ValidationError("Invalid status_source", field="status_source")
+    return source
+
+
+def parse_org_source(value: Any) -> str | None:
+    """Validate an optional catalog source."""
+    if value is None or value == "":
+        return None
+    source = str(value).strip()
+    if source not in ORG_SOURCES:
+        raise ValidationError("Invalid source", field="source")
     return source
 
 

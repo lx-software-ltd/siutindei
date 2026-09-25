@@ -98,6 +98,11 @@ export interface OrganizationFormState {
   xiaohongshu: string;
   wechat: string;
   status: string;
+  source: string;
+  source_id: string;
+  source_url: string;
+  source_note: string;
+  description_source: string;
 }
 
 export const emptyForm: OrganizationFormState = {
@@ -117,6 +122,11 @@ export const emptyForm: OrganizationFormState = {
   xiaohongshu: '',
   wechat: '',
   status: 'operational',
+  source: '',
+  source_id: '',
+  source_url: '',
+  source_note: '',
+  description_source: '',
 };
 
 export function itemToForm(item: Organization): OrganizationFormState {
@@ -137,8 +147,28 @@ export function itemToForm(item: Organization): OrganizationFormState {
     xiaohongshu: item.xiaohongshu ?? '',
     wechat: item.wechat ?? '',
     status: item.status ?? 'operational',
+    source: item.source ?? '',
+    source_id: item.source_id ?? '',
+    source_url: item.source_url ?? '',
+    source_note: item.source_note ?? '',
+    description_source: item.description_source ?? '',
   };
 }
+
+export const ORG_SOURCE_OPTIONS = [
+  { value: 'lcsd', label: 'LCSD' },
+  { value: 'edb', label: 'EDB' },
+  { value: 'swd', label: 'SWD' },
+  { value: 'places', label: 'Places' },
+  { value: 'competitor', label: 'Competitor' },
+] as const;
+
+export const DESCRIPTION_SOURCE_OPTIONS = [
+  { value: 'template', label: 'Template' },
+  { value: 'official', label: 'Official' },
+  { value: 'places', label: 'Places' },
+  { value: 'enrich', label: 'Enriched' },
+] as const;
 
 export type SocialFieldKey =
   | 'whatsapp'

@@ -1,9 +1,13 @@
 -- Seed data for Hong Kong activities
 
-INSERT INTO organizations (id, name, description, manager_id, review_status)
+INSERT INTO organizations (
+  id, name, description, manager_id, review_status,
+  source, source_url, source_note, description_source
+)
 SELECT '11111111-1111-1111-1111-111111111111', 'Harbor Arts Studio',
        'Art classes focused on painting and crafts.',
-       '{{SEED_MANAGER_SUB}}', 'approved'
+       '{{SEED_MANAGER_SUB}}', 'approved',
+       'places', 'https://harborarts.example', 'Sample catalog note', 'official'
 WHERE NOT EXISTS (
   SELECT 1 FROM organizations WHERE id = '11111111-1111-1111-1111-111111111111'
 );
@@ -47,11 +51,14 @@ WHERE NOT EXISTS (
   SELECT 1 FROM locations WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
 );
 
-INSERT INTO activities (id, org_id, category_id, name, description, age_range)
+INSERT INTO activities (
+  id, org_id, category_id, name, description, age_range, source_url, source_note
+)
 SELECT 'dddddddd-dddd-dddd-dddd-dddddddddddd', '11111111-1111-1111-1111-111111111111',
        '99999999-9999-9999-9999-999999999999',
        'Creative Painting', 'Painting classes for young artists.',
-       int4range(4, 9, '[]')
+       int4range(4, 9, '[]'),
+       'https://harborarts.example/painting', 'Sample class note'
 WHERE NOT EXISTS (
   SELECT 1 FROM activities WHERE id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
 );

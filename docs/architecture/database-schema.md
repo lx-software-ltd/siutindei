@@ -46,8 +46,11 @@ Columns:
   or `importer`
 - `source` (text, optional) — catalog source (`lcsd`, `edb`, `swd`,
   `places`, `competitor`)
-- `source_id` (text, optional) — parsed from `sourceId=` in
-  `vetting_note`
+- `source_id` (text, optional) — explicit import field, or parsed from
+  `sourceId=` in `vetting_note`
+- `source_url` (text, optional) — page the listing was taken from
+- `source_note` (text, optional) — free-text vetting note after catalog
+  `key=value` pairs are removed
 - `description_source` (text, optional) — `template`, `official`,
   `places`, or `enrich`
 - `review_status` (text, default `pending_review`) — `pending_review`,
@@ -217,6 +220,9 @@ Columns:
 - `description` (text, optional)
 - `name_translations` (jsonb, default `{}`) — non-English name translations
 - `description_translations` (jsonb, default `{}`) — non-English description translations
+- `source_url` (text, optional) — page the activity was taken from
+- `source_note` (text, optional) — free-text vetting note after catalog
+  `key=value` pairs are removed
 - `age_range` (int4range, required)
 - `created_at` (timestamptz, default `now()`)
 - `updated_at` (timestamptz, default `now()`)

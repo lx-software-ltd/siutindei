@@ -36,6 +36,7 @@ import {
   ResourceTableShell,
 } from '../ui/resource-table-shell';
 import { Select } from '../ui/select';
+import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
 
 interface ActivityFormState {
@@ -47,6 +48,8 @@ interface ActivityFormState {
   description_translations: Record<TranslationLanguageCode, string>;
   age_min: string;
   age_max: string;
+  source_url: string;
+  source_note: string;
 }
 
 const emptyForm: ActivityFormState = {
@@ -58,6 +61,8 @@ const emptyForm: ActivityFormState = {
   description_translations: emptyTranslations(),
   age_min: '',
   age_max: '',
+  source_url: '',
+  source_note: '',
 };
 
 function itemToForm(item: Activity): ActivityFormState {
@@ -70,6 +75,8 @@ function itemToForm(item: Activity): ActivityFormState {
     description_translations: extractTranslations(item.description_translations),
     age_min: item.age_min !== undefined ? `${item.age_min}` : '',
     age_max: item.age_max !== undefined ? `${item.age_max}` : '',
+    source_url: item.source_url ?? '',
+    source_note: item.source_note ?? '',
   };
 }
 
@@ -302,6 +309,8 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     ),
     age_min: parseRequiredNumber(form.age_min),
     age_max: parseRequiredNumber(form.age_max),
+    source_url: form.source_url.trim() || null,
+    source_note: form.source_note.trim() || null,
   });
 
   const handleSubmit = () => {
@@ -442,6 +451,35 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
               yue: panel.formState.description_translations.yue,
             }}
             onChange={handleDescriptionChange}
+          />
+        </div>
+        <div className='space-y-1 sm:col-span-2'>
+          <Label htmlFor='activity-source-url'>Source URL</Label>
+          <Input
+            id='activity-source-url'
+            type='url'
+            value={panel.formState.source_url}
+            onChange={(event) =>
+              panel.setFormState((prev) => ({
+                ...prev,
+                source_url: event.target.value,
+              }))
+            }
+            placeholder='https://'
+          />
+        </div>
+        <div className='space-y-1 sm:col-span-2'>
+          <Label htmlFor='activity-source-note'>Source note</Label>
+          <Textarea
+            id='activity-source-note'
+            rows={2}
+            value={panel.formState.source_note}
+            onChange={(event) =>
+              panel.setFormState((prev) => ({
+                ...prev,
+                source_note: event.target.value,
+              }))
+            }
           />
         </div>
         <div className='space-y-1'>

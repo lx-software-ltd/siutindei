@@ -67,6 +67,8 @@ class Activity(Base):
         server_default=text("'{}'::jsonb"),
         comment="Language map for non-English description translations",
     )
+    source_url: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    source_note: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     age_range: Mapped[object] = mapped_column(INT4RANGE(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),

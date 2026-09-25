@@ -12,8 +12,9 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.api.admin_imports import _parse_dry_run
+from app.api.admin_imports_catalog import apply_vetting_columns
 from app.api.admin_imports_fields import (
-    apply_source_attribution,
+    apply_source_fields,
     collect_flat_org_warnings,
 )
 from app.api.admin_imports_importer import process_import_payload
@@ -209,32 +210,56 @@ def test_upsert_activity_category_id_wins_over_category_name(
     assert str(activity.category_id) == str(sample_activity_category.id)
 
 
-def test_apply_source_attribution_appends_line() -> None:
+def test_apply_source_fields_keeps_description() -> None:
     record = {
         "description": "Hello",
         "source_url": "https://example.test",
         "vetting_note": "checked",
     }
-    apply_source_attribution(record)
-    assert record["description"] == ("Hello\nSource: https://example.test — checked")
-
-
-def test_apply_source_attribution_skips_when_both_empty() -> None:
-    record = {"description": "Hello", "source_url": "", "vetting_note": "  "}
-    apply_source_attribution(record)
+    apply_source_fields(record)
     assert record["description"] == "Hello"
+    assert record["source_url"] == "https://example.test"
+    assert record["source_note"] == "checked"
 
 
-def test_apply_source_attribution_url_only() -> None:
+def test_apply_source_fields_skips_when_both_empty() -> None:
+    record = {"description": "Hello", "source_url": "", "vetting_note": "  "}
+    apply_source_fields(record)
+    assert record["description"] == "Hello"
+    assert record["source_url"] is None
+    assert record["source_note"] is None
+
+
+def test_apply_source_fields_url_only() -> None:
     record = {"description": "Hello", "source_url": "https://example.test"}
-    apply_source_attribution(record)
-    assert record["description"] == "Hello\nSource: https://example.test"
+    apply_source_fields(record)
+    assert record["description"] == "Hello"
+    assert record["source_url"] == "https://example.test"
+    assert "source_note" not in record
 
 
-def test_apply_source_attribution_note_only() -> None:
+def test_apply_source_fields_note_only() -> None:
     record = {"description": "Hello", "vetting_note": "checked"}
-    apply_source_attribution(record)
-    assert record["description"] == "Hello\nSource: checked"
+    apply_source_fields(record)
+    assert record["description"] == "Hello"
+    assert record["source_note"] == "checked"
+
+
+def test_apply_source_fields_strips_catalog_pairs() -> None:
+    record = {
+        "description": "Hello",
+        "vetting_note": (
+            "source=lcsd; sourceId=lcsd-1; descriptionSource=template; "
+            "age_range=5-12"
+        ),
+    }
+    apply_vetting_columns(record)
+    apply_source_fields(record)
+    assert record["description"] == "Hello"
+    assert record["source"] == "lcsd"
+    assert record["source_id"] == "lcsd-1"
+    assert record["description_source"] == "template"
+    assert record["source_note"] == "age_range=5-12"
 
 
 def test_collect_flat_org_warnings_for_nested_and_website() -> None:
@@ -343,11 +368,15 @@ def test_source_fields_appended_on_org_and_activity(
     org = db_session.execute(
         select(Organization).where(Organization.name == "Source Org")
     ).scalar_one()
-    assert org.description == "Hello\nSource: https://org.test — org-note"
+    assert org.description == "Hello"
+    assert org.source_url == "https://org.test"
+    assert org.source_note == "org-note"
     activity = db_session.execute(
         select(Activity).where(Activity.name == "Source Act")
     ).scalar_one()
-    assert activity.description == "Class\nSource: https://act.test — act-note"
+    assert activity.description == "Class"
+    assert activity.source_url == "https://act.test"
+    assert activity.source_note == "act-note"
 
 
 def test_board_flat_org_creates_location_and_activity(
@@ -385,7 +414,9 @@ def test_board_flat_org_creates_location_and_activity(
     ).scalar_one()
     assert org.phone_country_code == "HK"
     assert org.phone_number == "23456789"
-    assert org.description == "A park\nSource: https://park.test — verified"
+    assert org.description == "A park"
+    assert org.source_url == "https://park.test"
+    assert org.source_note == "verified"
 
     location = db_session.execute(
         select(Location).where(Location.org_id == org.id)
@@ -400,7 +431,9 @@ def test_board_flat_org_creates_location_and_activity(
     assert str(activity.category_id) == str(sample_activity_category.id)
     assert activity.age_range.lower == 0
     assert activity.age_range.upper >= 18
-    assert activity.description == ("A park\nSource: https://park.test — verified")
+    assert activity.description == "A park"
+    assert activity.source_url == "https://park.test"
+    assert activity.source_note == "verified"
 
 
 def test_parse_dry_run_defaults_false() -> None:
@@ -538,9 +571,7 @@ def test_importer_create_only_rejects_existing_org(
     assert results[0]["errors"][0]["message"] == "exists"
     assert results[0]["errors"][0]["field"] == "name"
     db_session.refresh(sample_organization)
-    assert sample_organization.description == (
-        "A test organization for unit tests"
-    )
+    assert sample_organization.description == ("A test organization for unit tests")
     assert str(sample_organization.manager_id) == (
         "00000000-0000-0000-0000-000000000001"
     )
@@ -705,9 +736,7 @@ def test_importer_matching_manager_skips_org_and_creates_children(
     assert summary["locations"]["created"] == 1
     assert summary["activities"]["created"] == 1
     db_session.refresh(sample_organization)
-    assert sample_organization.description == (
-        "A test organization for unit tests"
-    )
+    assert sample_organization.description == ("A test organization for unit tests")
     activity = db_session.execute(
         select(Activity).where(Activity.name == "Catalog Class")
     ).scalar_one()
@@ -765,9 +794,7 @@ def test_importer_skips_existing_venue_and_activity(
     assert by_type["activities"]["status"] == "skipped"
     assert LINKED_VENUE_WARNING in by_type["activities"]["warnings"]
     db_session.refresh(sample_activity)
-    assert sample_activity.description == (
-        "Learn to swim in our heated pool"
-    )
+    assert sample_activity.description == ("Learn to swim in our heated pool")
     link = db_session.get(
         ActivityLocation,
         (sample_activity.id, sample_location.id),
@@ -820,10 +847,13 @@ def test_first_import_links_activity_to_single_venue(
     location = db_session.execute(
         select(Location).where(Location.address == "Only Venue")
     ).scalar_one()
-    assert db_session.get(
-        ActivityLocation,
-        (activity.id, location.id),
-    ) is not None
+    assert (
+        db_session.get(
+            ActivityLocation,
+            (activity.id, location.id),
+        )
+        is not None
+    )
 
 
 def test_link_orphan_activities_sql_backfills_single_venue(
@@ -839,10 +869,13 @@ def test_link_orphan_activities_sql_backfills_single_venue(
     assert existing is None
     db_session.execute(text(_orphan_backfill_sql()))
     db_session.flush()
-    assert db_session.get(
-        ActivityLocation,
-        (sample_activity.id, sample_location.id),
-    ) is not None
+    assert (
+        db_session.get(
+            ActivityLocation,
+            (sample_activity.id, sample_location.id),
+        )
+        is not None
+    )
 
 
 def test_importer_matching_manager_id_is_case_insensitive(
@@ -959,10 +992,13 @@ def test_activity_only_import_does_not_link_db_venues(
     )
     by_type = {item["type"]: item for item in results}
     assert by_type["activities"]["status"] == "skipped"
-    assert db_session.get(
-        ActivityLocation,
-        (sample_activity.id, sample_location.id),
-    ) is None
+    assert (
+        db_session.get(
+            ActivityLocation,
+            (sample_activity.id, sample_location.id),
+        )
+        is None
+    )
 
 
 def test_importer_skips_existing_pricing_and_schedule(

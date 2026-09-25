@@ -10,7 +10,7 @@ from app.api.admin_imports_catalog import (
     ACTIVITY_TRUNCATE_LIMITS,
     truncate_import_fields,
 )
-from app.api.admin_imports_fields import apply_source_attribution
+from app.api.admin_imports_fields import apply_source_fields
 from app.api.admin_imports_items import process_pricing, process_schedule
 from app.api.admin_imports_results import (
     format_error,
@@ -180,7 +180,7 @@ def process_activity(
         path,
         warnings,
     )
-    apply_source_attribution(raw_activity)
+    apply_source_fields(raw_activity)
     truncate_import_fields(
         raw_activity,
         path,

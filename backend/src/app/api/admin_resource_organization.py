@@ -6,8 +6,12 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from app.api.admin_imports_catalog import (
+    MAX_SOURCE_ID_LENGTH,
+    MAX_VETTING_NOTE_LENGTH,
+    MAX_WEBSITE_LENGTH,
     apply_listing_status,
     parse_description_source,
+    parse_org_source,
     parse_org_status,
     parse_place_id,
     parse_status_source,
@@ -200,8 +204,22 @@ def _create_organization(
         status=status,
         status_source=status_source,
         status_changed_at=status_changed_at,
-        source=body.get("source") or None,
-        source_id=body.get("source_id") or None,
+        source=parse_org_source(body.get("source")),
+        source_id=_validate_string_length(
+            body.get("source_id"),
+            "source_id",
+            MAX_SOURCE_ID_LENGTH,
+        ),
+        source_url=_validate_string_length(
+            body.get("source_url"),
+            "source_url",
+            MAX_WEBSITE_LENGTH,
+        ),
+        source_note=_validate_string_length(
+            body.get("source_note"),
+            "source_note",
+            MAX_VETTING_NOTE_LENGTH,
+        ),
         description_source=parse_description_source(body.get("description_source")),
         review_status="approved",
         **contact_fields,
@@ -286,9 +304,25 @@ def _apply_organization_listing_fields(
         source = parse_status_source(body.get("status_source")) or "owner"
         apply_listing_status(entity, status, source)
     if "source" in body:
-        entity.source = body.get("source") or None
+        entity.source = parse_org_source(body.get("source"))
     if "source_id" in body:
-        entity.source_id = body.get("source_id") or None
+        entity.source_id = _validate_string_length(
+            body.get("source_id"),
+            "source_id",
+            MAX_SOURCE_ID_LENGTH,
+        )
+    if "source_url" in body:
+        entity.source_url = _validate_string_length(
+            body.get("source_url"),
+            "source_url",
+            MAX_WEBSITE_LENGTH,
+        )
+    if "source_note" in body:
+        entity.source_note = _validate_string_length(
+            body.get("source_note"),
+            "source_note",
+            MAX_VETTING_NOTE_LENGTH,
+        )
     if "description_source" in body:
         entity.description_source = parse_description_source(
             body.get("description_source")
@@ -326,6 +360,8 @@ def _serialize_organization(entity: Organization) -> dict[str, Any]:
         "status_source": entity.status_source,
         "source": entity.source,
         "source_id": entity.source_id,
+        "source_url": entity.source_url,
+        "source_note": entity.source_note,
         "description_source": entity.description_source,
         "review_status": entity.review_status,
         "reviewed_at": entity.reviewed_at,

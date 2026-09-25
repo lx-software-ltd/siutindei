@@ -9,6 +9,7 @@ from uuid import UUID
 from app.api.admin_imports_catalog import (
     apply_vetting_columns,
     apply_zh_translations,
+    residual_vetting_note,
 )
 from app.exceptions import ValidationError
 
@@ -78,16 +79,27 @@ def guard_import_organization_update(
     body.pop("manager_id", None)
 
 
-def apply_source_attribution(record: dict[str, Any]) -> None:
-    """Append ``Source: <url>`` plus optional `` — <note>``."""
-    url_text = _optional_text(record.get("source_url"))
-    note_text = _optional_text(record.get("vetting_note"))
-    parts = [part for part in (url_text, note_text) if part]
-    if not parts:
+def apply_source_fields(record: dict[str, Any]) -> None:
+    """Store source URL and note beside the description.
+
+    ``description`` is left unchanged. A non-empty ``source_note`` wins
+    over ``vetting_note``. Catalog ``key=value`` pairs are removed from
+    the stored note. Call ``apply_vetting_columns`` first for orgs.
+    """
+    if "source_url" in record:
+        url = _optional_text(record.get("source_url"))
+        record["source_url"] = url or None
+    if "source_note" in record and _optional_text(record.get("source_note")):
+        record["source_note"] = residual_vetting_note(record.get("source_note")) or None
         return
-    line = "Source: " + " — ".join(parts)
-    description = _optional_text(record.get("description"))
-    record["description"] = f"{description}\n{line}" if description else line
+    if "vetting_note" not in record and "source_note" not in record:
+        return
+    raw_note = (
+        record.get("vetting_note")
+        if "vetting_note" in record
+        else record.get("source_note")
+    )
+    record["source_note"] = residual_vetting_note(raw_note) or None
 
 
 _FLAT_LOCATION_KEYS = ("area_name", "area_id", "address", "lat", "lng")

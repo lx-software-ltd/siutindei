@@ -98,6 +98,7 @@ ALLOWED_ORG_FIELDS = {
     "status",
     "source",
     "source_id",
+    "source_note",
     "description_source",
 }
 ALLOWED_LOCATION_FIELDS = {
@@ -119,6 +120,7 @@ ALLOWED_ACTIVITY_FIELDS = {
     "category_id",
     "category_name",
     "source_url",
+    "source_note",
     "vetting_note",
     "name_zh",
     "description_zh",
@@ -174,7 +176,6 @@ def upsert_organization(
     for extra in (
         "locations",
         "activities",
-        "source_url",
         "vetting_note",
         "area_name",
         "category_name",
@@ -355,7 +356,6 @@ def upsert_activity(
     capture_name = body.pop("_capture_category_name", None)
     body.pop("pricing", None)
     body.pop("schedules", None)
-    body.pop("source_url", None)
     body.pop("vetting_note", None)
     body.pop("name_zh", None)
     body.pop("description_zh", None)
