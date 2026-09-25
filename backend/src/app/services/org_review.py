@@ -120,13 +120,21 @@ def collect_issues(
             org_id,
             "Description is missing",
         )
-    if _has_source_attribution(organization):
+    if organization.description_source == "template":
         add(
             "source_attribution",
             "warning",
             "organization",
             org_id,
-            "Description still looks like an import note",
+            "Description is a template",
+        )
+    elif "Source:" in (organization.description or ""):
+        add(
+            "source_attribution",
+            "warning",
+            "organization",
+            org_id,
+            "Description still contains a source line",
         )
     if not _translation(organization.name_translations, "zh"):
         add(
@@ -378,13 +386,6 @@ def _passed_checks(snapshot: OrgReviewSnapshot) -> int:
     activity_checks = len(snapshot.activities) * 5
     total = org_checks + location_checks + activity_checks
     return max(total - len(snapshot.issues), 0)
-
-
-def _has_source_attribution(organization: Organization) -> bool:
-    if organization.description_source == "template":
-        return True
-    description = organization.description or ""
-    return "Source:" in description
 
 
 def _translation(value: Any, language: str) -> str:

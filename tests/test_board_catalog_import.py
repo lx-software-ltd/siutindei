@@ -51,8 +51,7 @@ def _board_org(
                 "category_name": category_name,
                 "description": f"{org_name} is a public outdoor venue.",
                 "vetting_note": (
-                    f"source=lcsd; sourceId=lcsd-{index}; "
-                    "descriptionSource=template"
+                    f"source=lcsd; sourceId=lcsd-{index}; " "descriptionSource=template"
                 ),
             }
         ],
@@ -191,9 +190,7 @@ def test_closed_permanently_updates_and_hides_from_search(
         row.id
         for row in db_session.execute(
             select(Organization).where(
-                Organization.status.in_(
-                    ("operational", "closed_temporarily")
-                )
+                Organization.status.in_(("operational", "closed_temporarily"))
             )
         ).scalars()
     }
@@ -267,9 +264,7 @@ def test_dry_run_place_id_match_reports_update_without_write(
     area_name = f"Dry Dist {uuid4().hex[:8]}"
     with Session(test_engine) as session:
         session.add(ActivityCategory(name=category_name, display_order=0))
-        session.add(
-            GeographicArea(name=area_name, level="district", active=True)
-        )
+        session.add(GeographicArea(name=area_name, level="district", active=True))
         session.commit()
         process_import_payload(
             session,
@@ -311,9 +306,7 @@ def test_dry_run_place_id_match_reports_update_without_write(
     assert results[0]["key"] == renamed
     with Session(test_engine) as session:
         org = session.execute(
-            select(Organization).where(
-                Organization.place_id == "ChIJ-dry-place"
-            )
+            select(Organization).where(Organization.place_id == "ChIJ-dry-place")
         ).scalar_one()
         assert org.name == name
 
@@ -373,9 +366,7 @@ def test_name_zh_maps_to_zh_iso_code(
     )
     assert summary["organizations"]["created"] == 1
     assert summary["organizations"]["failed"] == 0
-    org_result = next(
-        row for row in results if row["type"] == "organizations"
-    )
+    org_result = next(row for row in results if row["type"] == "organizations")
     assert org_result["status"] == "created"
     org = db_session.execute(
         select(Organization).where(Organization.name == name)
@@ -419,6 +410,8 @@ def test_truncation_is_a_file_warning(
     assert found.description_source == "template"
     assert found.source == "lcsd"
     assert found.source_id == "lcsd-1"
+    assert found.source_note is None
+    assert "Source:" not in (found.description or "")
 
 
 def test_store_import_job_upgrades_dry_run(db_session) -> None:
@@ -466,9 +459,7 @@ def test_long_place_id_fails_the_row(
         [],
         allow_org_updates=True,
     )
-    org_result = next(
-        row for row in results if row["type"] == "organizations"
-    )
+    org_result = next(row for row in results if row["type"] == "organizations")
     assert org_result["status"] == "failed"
     assert org_result["error"].startswith("place_id exceeds")
 
@@ -506,9 +497,7 @@ def test_owner_status_is_not_overridden(
         [],
         allow_org_updates=True,
     )
-    org_result = next(
-        row for row in results if row["type"] == "organizations"
-    )
+    org_result = next(row for row in results if row["type"] == "organizations")
     assert org_result["status"] == "updated"
     assert any("owner listing status" in item for item in org_result["warnings"])
     db_session.refresh(sample_organization)

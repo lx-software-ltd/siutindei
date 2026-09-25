@@ -19,7 +19,7 @@ from app.api.admin_imports_catalog import (
 from app.api.admin_imports_children import process_activity, process_location
 from app.api.admin_imports_fields import (
     apply_default_manager_id,
-    apply_source_attribution,
+    apply_source_fields,
     collect_flat_org_warnings,
     expand_board_flat_org,
 )
@@ -155,7 +155,7 @@ def process_organization(
     collect_flat_org_warnings(raw_org, path, warnings)
     expand_board_flat_org(raw_org)
     collect_unknown_fields(raw_org, ALLOWED_ORG_FIELDS, path, warnings)
-    apply_source_attribution(raw_org)
+    apply_source_fields(raw_org)
     if file_warnings is not None:
         file_warnings.extend(warnings)
     org_name = _validate_string_length(

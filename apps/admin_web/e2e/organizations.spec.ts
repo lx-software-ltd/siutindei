@@ -12,7 +12,8 @@ test.describe('Organizations Panel', () => {
     // Check form fields
     await expect(adminPage.getByLabel('Name')).toBeVisible();
     await expect(adminPage.getByLabel('Manager')).toBeVisible();
-    await expect(adminPage.getByLabel('Description')).toBeVisible();
+    await expect(adminPage.getByLabel('Description', { exact: true })).toBeVisible();
+    await expect(adminPage.getByLabel('Source URL')).toBeVisible();
     await expect(
       adminPage
         .getByRole('button', { name: 'Select English (en)' })
@@ -109,12 +110,22 @@ test.describe('Organizations Panel', () => {
     await managerSelect.selectOption({ index: 1 });
 
     // Fill description
-    await adminPage.getByLabel('Description').fill('This is a test organization description');
+    await adminPage
+      .getByLabel('Description', { exact: true })
+      .fill('This is a test organization description');
+    await adminPage.getByLabel('Source URL').fill('https://neworg.example');
+    await adminPage.getByLabel('Source note').fill('Imported from the catalog');
 
     // Verify form is filled
     await expect(adminPage.getByLabel('Name')).toHaveValue('New Test Organization');
-    await expect(adminPage.getByLabel('Description')).toHaveValue(
+    await expect(adminPage.getByLabel('Description', { exact: true })).toHaveValue(
       'This is a test organization description'
+    );
+    await expect(adminPage.getByLabel('Source URL')).toHaveValue(
+      'https://neworg.example'
+    );
+    await expect(adminPage.getByLabel('Source note')).toHaveValue(
+      'Imported from the catalog'
     );
   });
 
@@ -123,7 +134,10 @@ test.describe('Organizations Panel', () => {
     // Fill the form
     await adminPage.getByLabel('Name').fill('Brand New Organization');
     await adminPage.getByLabel('Manager').selectOption({ index: 1 }); // Select first user
-    await adminPage.getByLabel('Description').fill('A brand new organization');
+    await adminPage
+      .getByLabel('Description', { exact: true })
+      .fill('A brand new organization');
+    await adminPage.getByLabel('Source', { exact: true }).selectOption('places');
 
     // Submit the form
     await adminPage.getByRole('button', { name: 'Create' }).click();
@@ -152,7 +166,15 @@ test.describe('Organizations Panel', () => {
 
     // Form should be populated with existing data
     await expect(adminPage.getByLabel('Name')).toHaveValue('Test Organization 1');
-    await expect(adminPage.getByLabel('Description')).toHaveValue('First test organization');
+    await expect(adminPage.getByLabel('Description', { exact: true })).toHaveValue(
+      'First test organization'
+    );
+    await expect(adminPage.getByLabel('Source URL')).toHaveValue(
+      'https://lcsd.example/org-one'
+    );
+    await expect(adminPage.getByLabel('Source note')).toHaveValue('Checked listing');
+    await expect(adminPage.getByLabel('Source', { exact: true })).toHaveValue('lcsd');
+    await expect(adminPage.getByLabel('Description origin')).toHaveValue('official');
   });
 
   test('should cancel editing and reset form', async ({ adminPage }) => {

@@ -25,8 +25,9 @@ export interface paths {
                     /** @description Look up an organization by Google place_id. */
                     place_id?: string;
                     /**
-                     * @description Look up an organization by catalog source_id parsed from
-                     *     vetting_note (`sourceId=`).
+                     * @description Look up an organization by its stored catalog source_id.
+                     *     Import sets it from `source_id` or from `sourceId=` in
+                     *     `vetting_note`.
                      */
                     source_id?: string;
                 };
@@ -4742,9 +4743,8 @@ export interface components {
             /** @description Organization name (unique). */
             name: string;
             /**
-             * @description Organization description. The appended source line
-             *     (`Source: <url>` plus optional ` — <note>`) counts toward
-             *     this 5000-character limit.
+             * @description Organization description. Source URL and notes are stored
+             *     on source_url and source_note and are not appended here.
              */
             description?: string;
             name_translations?: components["schemas"]["TranslationMap"];
@@ -4759,16 +4759,24 @@ export interface components {
              *     import) and still fail a foreign name match with `exists`.
              */
             manager_id?: string;
-            /**
-             * @description Appended as `Source: <url>`. When vetting_note is also set,
-             *     the line is `Source: <url> — <note>`.
-             */
+            /** @description Stored on the organization. Not appended to description. */
             source_url?: string;
             /**
-             * @description Optional note after the source URL. URL-only omits ` — `.
-             *     Note-only becomes `Source: <note>`.
+             * @description Stored on the organization. Wins over vetting_note when both
+             *     are set. Catalog key=value pairs are removed before storage.
+             */
+            source_note?: string;
+            /**
+             * @description Import-only. `source=`, `sourceId=`, and `descriptionSource=`
+             *     pairs fill those columns. The remaining text is stored as
+             *     source_note when source_note is empty.
              */
             vetting_note?: string;
+            /** @enum {string} */
+            source?: "lcsd" | "edb" | "swd" | "places" | "competitor";
+            source_id?: string;
+            /** @enum {string} */
+            description_source?: "template" | "official" | "places" | "enrich";
             /**
              * @description Ignored and omitted from export. A warning is recorded when the
              *     supplied value is not the organization's current review state,
@@ -4867,8 +4875,8 @@ export interface components {
         AdminImportActivity: {
             name: string;
             /**
-             * @description Activity description. The appended source line counts toward
-             *     this 5000-character limit.
+             * @description Activity description. Source URL and notes are stored on
+             *     source_url and source_note and are not appended here.
              */
             description?: string;
             name_translations?: components["schemas"]["TranslationMap"];
@@ -4880,9 +4888,18 @@ export interface components {
              *     activity_categories.name. category_id wins when both are set.
              */
             category_name?: string;
-            /** @description Appended as `Source: <url>` plus optional ` — <note>`. */
+            /** @description Stored on the activity. Not appended to description. */
             source_url?: string;
-            /** @description Optional note after the source URL on the activity. */
+            /**
+             * @description Stored on the activity. Wins over vetting_note when both
+             *     are set.
+             */
+            source_note?: string;
+            /**
+             * @description Import-only. Catalog key=value pairs are removed and the
+             *     remaining text is stored as source_note when source_note
+             *     is empty.
+             */
             vetting_note?: string;
             age_min: number;
             age_max: number;
@@ -5101,8 +5118,9 @@ export interface components {
             status?: string;
             /**
              * @description Whitelist for `set_fields`: status, manager_id, source,
-             *     description_source, review_notes, phone fields, email, and
-             *     social fields. Only supplied keys are written.
+             *     source_url, source_note, description_source, review_notes,
+             *     phone fields, email, and social fields. Only supplied keys
+             *     are written.
              */
             fields?: {
                 [key: string]: unknown;
@@ -5173,8 +5191,13 @@ export interface components {
             status?: "operational" | "closed_temporarily" | "closed_permanently" | "hidden";
             /** @enum {string} */
             status_source?: "owner" | "provider" | "places" | "importer";
-            source?: string;
+            /** @enum {string} */
+            source?: "lcsd" | "edb" | "swd" | "places" | "competitor";
             source_id?: string;
+            /** @description Page the organization listing was taken from. Admin-write only; manager routes ignore this field. */
+            source_url?: string | null;
+            /** @description Free-text note about where the listing came from. Admin-write only; manager routes ignore this field. */
+            source_note?: string | null;
             /** @enum {string} */
             description_source?: "template" | "official" | "places" | "enrich";
         };
@@ -5196,8 +5219,13 @@ export interface components {
             reason?: string;
             /** @enum {string} */
             status_source?: "owner" | "provider" | "places" | "importer";
-            source?: string;
+            /** @enum {string} */
+            source?: "lcsd" | "edb" | "swd" | "places" | "competitor";
             source_id?: string;
+            /** @description Admin-write only; manager routes ignore this field. */
+            source_url?: string | null;
+            /** @description Admin-write only; manager routes ignore this field. */
+            source_note?: string | null;
             /** @enum {string} */
             description_source?: "template" | "official" | "places" | "enrich";
             /** @description ISO 3166-1 alpha-2 country code for phone number */
@@ -5243,8 +5271,11 @@ export interface components {
             status_changed_at?: string | null;
             /** @enum {string|null} */
             status_source?: "owner" | "provider" | "places" | "importer" | null;
-            source?: string | null;
+            /** @enum {string|null} */
+            source?: "lcsd" | "edb" | "swd" | "places" | "competitor" | null;
             source_id?: string | null;
+            source_url?: string | null;
+            source_note?: string | null;
             /** @enum {string|null} */
             description_source?: "template" | "official" | "places" | "enrich" | null;
             /** @enum {string} */
@@ -5365,6 +5396,10 @@ export interface components {
             name_translations?: components["schemas"]["TranslationMap"];
             /** @description Non-English description translations (language map) */
             description_translations?: components["schemas"]["TranslationMap"];
+            /** @description Page the activity listing was taken from. Admin-write only; manager routes ignore this field. */
+            source_url?: string | null;
+            /** @description Free-text note about where the activity came from. Admin-write only; manager routes ignore this field. */
+            source_note?: string | null;
             /** @description Minimum age (required, 0-119, must be less than age_max) */
             age_min: number;
             /** @description Maximum age (required, 1-120, must be greater than age_min) */
@@ -5384,6 +5419,10 @@ export interface components {
             name_translations?: components["schemas"]["TranslationMap"];
             /** @description Non-English description translations (language map) */
             description_translations?: components["schemas"]["TranslationMap"];
+            /** @description Admin-write only; manager routes ignore this field. */
+            source_url?: string | null;
+            /** @description Admin-write only; manager routes ignore this field. */
+            source_note?: string | null;
             /** @description Minimum age (must provide both age_min and age_max together) */
             age_min?: number;
             /** @description Maximum age (must provide both age_min and age_max together) */
@@ -5400,6 +5439,8 @@ export interface components {
             description?: string | null;
             name_translations: components["schemas"]["TranslationMap"];
             description_translations: components["schemas"]["TranslationMap"];
+            source_url?: string | null;
+            source_note?: string | null;
             age_min: number;
             age_max: number;
             /** Format: date-time */

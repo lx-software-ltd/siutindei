@@ -32,6 +32,8 @@ test.describe('Activities Panel', () => {
     ).toBeVisible();
     await expect(adminPage.getByLabel('Age Min')).toBeVisible();
     await expect(adminPage.getByLabel('Age Max')).toBeVisible();
+    await expect(adminPage.getByLabel('Source URL')).toBeVisible();
+    await expect(adminPage.getByLabel('Source note')).toBeVisible();
 
     // Check for submit button
     await expect(adminPage.getByRole('button', { name: 'Create' })).toBeVisible();
@@ -169,6 +171,10 @@ test.describe('Activities Panel', () => {
     // Form should be populated with existing data
     await expect(adminPage.getByLabel('Name')).toHaveValue('Swimming Class');
     await expect(adminPage.getByLabel('Description')).toHaveValue('Learn to swim');
+    await expect(adminPage.getByLabel('Source URL')).toHaveValue(
+      'https://lcsd.example/swim'
+    );
+    await expect(adminPage.getByLabel('Source note')).toHaveValue('Class listing');
     await expect(adminPage.getByLabel('Age Min')).toHaveValue('5');
     await expect(adminPage.getByLabel('Age Max')).toHaveValue('12');
   });

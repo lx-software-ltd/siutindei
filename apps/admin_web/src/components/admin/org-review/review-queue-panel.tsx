@@ -43,7 +43,7 @@ const ISSUE_OPTIONS = [
   ['pending_category', 'Pending category'],
   ['no_contact', 'No contact'],
   ['no_media', 'No photos'],
-  ['source_attribution', 'Import note in description'],
+  ['source_attribution', 'Template or source line'],
 ];
 
 type BulkAction = 'approve' | 'reject' | 'reopen' | 'set_fields';

@@ -42,6 +42,7 @@ import {
   ResourceTableShell,
 } from '../ui/resource-table-shell';
 import { Select } from '../ui/select';
+import { Textarea } from '../ui/textarea';
 import { StatusBadge } from '../ui/status-badge';
 import { StatusBanner } from '../status-banner';
 import {
@@ -50,8 +51,10 @@ import {
   PhoneIcon,
   ServiceIcon,
   SOCIAL_FIELDS,
+  DESCRIPTION_SOURCE_OPTIONS,
   emptyForm,
   getManagerDisplayName,
+  ORG_SOURCE_OPTIONS,
   hasValue,
   isValidEmail,
   isValidPhoneNumber,
@@ -370,6 +373,11 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
       payload.manager_id = form.manager_id;
       payload.status = form.status;
       payload.status_source = 'owner';
+      payload.source = form.source || null;
+      payload.source_id = form.source_id.trim() || null;
+      payload.source_url = form.source_url.trim() || null;
+      payload.source_note = form.source_note.trim() || null;
+      payload.description_source = form.description_source || null;
     }
     return payload;
   };
@@ -627,6 +635,98 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
               ) : null}
             </div>
             {isAdmin && (
+              <>
+              <div className='md:col-span-2 border-t border-slate-100 pt-4'>
+                <p className='text-sm font-medium text-slate-700'>Source</p>
+                <p className='text-xs text-slate-500'>
+                  Catalog and page attribution, stored separately from the
+                  description.
+                </p>
+              </div>
+              <div className='space-y-1'>
+                <Label htmlFor='org-source'>Source</Label>
+                <Select
+                  id='org-source'
+                  value={panel.formState.source}
+                  onChange={(event) =>
+                    panel.setFormState((prev) => ({
+                      ...prev,
+                      source: event.target.value,
+                    }))
+                  }
+                >
+                  <option value=''>None</option>
+                  {ORG_SOURCE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className='space-y-1'>
+                <Label htmlFor='org-source-id'>Source ID</Label>
+                <Input
+                  id='org-source-id'
+                  value={panel.formState.source_id}
+                  onChange={(event) =>
+                    panel.setFormState((prev) => ({
+                      ...prev,
+                      source_id: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className='space-y-1'>
+                <Label htmlFor='org-description-source'>
+                  Description origin
+                </Label>
+                <Select
+                  id='org-description-source'
+                  value={panel.formState.description_source}
+                  onChange={(event) =>
+                    panel.setFormState((prev) => ({
+                      ...prev,
+                      description_source: event.target.value,
+                    }))
+                  }
+                >
+                  <option value=''>None</option>
+                  {DESCRIPTION_SOURCE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className='space-y-1'>
+                <Label htmlFor='org-source-url'>Source URL</Label>
+                <Input
+                  id='org-source-url'
+                  type='url'
+                  value={panel.formState.source_url}
+                  onChange={(event) =>
+                    panel.setFormState((prev) => ({
+                      ...prev,
+                      source_url: event.target.value,
+                    }))
+                  }
+                  placeholder='https://'
+                />
+              </div>
+              <div className='md:col-span-2 space-y-1'>
+                <Label htmlFor='org-source-note'>Source note</Label>
+                <Textarea
+                  id='org-source-note'
+                  rows={2}
+                  value={panel.formState.source_note}
+                  onChange={(event) =>
+                    panel.setFormState((prev) => ({
+                      ...prev,
+                      source_note: event.target.value,
+                    }))
+                  }
+                />
+              </div>
               <div className='space-y-1'>
                 <Label htmlFor='org-listing-status'>Listing status</Label>
                 <Select
@@ -656,6 +756,7 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
                   </p>
                 )}
               </div>
+              </>
             )}
             <div className='md:col-span-2 border-t border-slate-100 pt-4'>
               <p className='text-sm font-medium text-slate-700'>Social</p>
@@ -775,6 +876,7 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
               {item.name}
               <AdminDataTableCellMeta until='secondary'>
                 <OrganizationStatusBadges item={item} />
+                {isAdmin && item.source ? <span>{item.source}</span> : null}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             {isAdmin ? (
