@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'amplify_service.dart';
 import 'api_service.dart';
+import 'areas_service.dart';
 import 'auth_service.dart';
 import 'device_attestation_service.dart';
 
@@ -43,4 +44,9 @@ final apiServiceProvider = Provider<ApiService>((ref) {
     ref.watch(authServiceProvider),
     ref.watch(deviceAttestationServiceProvider),
   );
+});
+
+/// Provider for [AreasService].
+final areasServiceProvider = Provider<AreasService>((ref) {
+  return AreasService(ref.watch(apiServiceProvider));
 });
