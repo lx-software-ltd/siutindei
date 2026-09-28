@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/constants.dart';
 import '../../../config/tokens/tokens.dart';
 import '../../../domain/entities/entities.dart';
-import 'area_filter_section.dart';
+import 'area_filter_chips.dart';
 
 /// Advanced search filters bottom sheet using leaf tokens.
 ///
@@ -192,9 +192,9 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
   }
 
   Widget _buildAreaSection() {
-    return AreaFilterSection(
+    return AreaFilterChips(
       selectedAreaId: _filters.areaId,
-      onAreaSelected: (areaId) {
+      onAreaChanged: (areaId) {
         _updateFilters(
           (filters) => filters.copyWith(
             areaId: areaId,
