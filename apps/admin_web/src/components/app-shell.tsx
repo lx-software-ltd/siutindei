@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import Image from 'next/image';
 
 import { LegalLinks } from './legal-links';
 import { Button } from './ui/button';
@@ -15,6 +16,8 @@ export interface AppShellProps {
   sections: NavSection[];
   activeKey: string;
   onSelect: (key: string) => void;
+  /** Hover or focus on a nav item. Used to prefetch that section's list. */
+  onIntent?: (key: string) => void;
   onLogout: () => void;
   userEmail?: string;
   lastAuthTime?: string;
@@ -87,6 +90,7 @@ export function AppShell({
   sections,
   activeKey,
   onSelect,
+  onIntent,
   onLogout,
   userEmail,
   lastAuthTime,
@@ -135,7 +139,7 @@ export function AppShell({
     <div className='min-h-screen'>
       {/* Header */}
       <header className='sticky top-0 z-40 border-b border-slate-200 bg-white'>
-        <div className='mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4'>
+        <div className='mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4'>
           <div className='flex items-center gap-3'>
             {/* Mobile menu button */}
             {sections.length > 0 && (
@@ -148,8 +152,16 @@ export function AppShell({
                 <MenuIcon className='h-6 w-6' />
               </button>
             )}
+            <Image
+              src='/images/siutindei-logo.svg'
+              alt=''
+              aria-hidden
+              width={64}
+              height={64}
+              className='h-[1.76rem] w-[1.76rem] shrink-0 lg:mb-[-8px] lg:mt-[-8px] lg:h-[64px] lg:w-[64px]'
+            />
             <div>
-              <h1 className='text-lg font-semibold sm:text-xl'>
+              <h1 className='text-[calc(1.125rem*0.8)] font-semibold sm:text-[calc(1.25rem*0.8)]'>
                 Siu Tin Dei Admin
               </h1>
               <p className='hidden text-sm text-slate-500 sm:block'>
@@ -172,11 +184,7 @@ export function AppShell({
                 )}
               </div>
             )}
-            <Button
-              variant='secondary'
-              onClick={onLogout}
-              className='text-sm sm:text-base'
-            >
+            <Button type='button' variant='outline' onClick={onLogout}>
               <span className='hidden sm:inline'>Log out</span>
               <span className='sm:hidden'>Exit</span>
             </Button>
@@ -233,6 +241,8 @@ export function AppShell({
                     <button
                       type='button'
                       onClick={() => handleNavSelect(section.key)}
+                      onMouseEnter={() => onIntent?.(section.key)}
+                      onFocus={() => onIntent?.(section.key)}
                       className={`w-full rounded-md px-3 py-2.5 text-left text-sm font-medium ${
                         isActive
                           ? 'bg-slate-900 text-white'
@@ -250,7 +260,7 @@ export function AppShell({
       </aside>
 
       {/* Main content area */}
-      <div className='mx-auto flex max-w-6xl gap-6 px-4 py-4 sm:px-6 sm:py-6'>
+      <div className='mx-auto flex w-full max-w-7xl gap-6 px-4 py-4 sm:px-6 sm:py-6'>
         {/* Desktop sidebar */}
         {sections.length > 0 && (
           <aside className='hidden w-56 shrink-0 lg:block'>
@@ -265,6 +275,8 @@ export function AppShell({
                     <button
                       type='button'
                       onClick={() => onSelect(section.key)}
+                      onMouseEnter={() => onIntent?.(section.key)}
+                      onFocus={() => onIntent?.(section.key)}
                       className={`w-full rounded-md px-3 py-2 text-left text-sm ${
                         isActive
                           ? 'bg-slate-900 text-white'
@@ -284,7 +296,7 @@ export function AppShell({
 
       {/* Footer */}
       <footer className='border-t border-slate-200 bg-white'>
-        <div className='mx-auto max-w-6xl px-4 py-4 sm:px-6'>
+        <div className='mx-auto w-full max-w-7xl px-4 py-4 sm:px-6'>
           <LegalLinks className='text-center text-xs text-slate-500' />
         </div>
       </footer>

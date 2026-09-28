@@ -112,6 +112,9 @@ See [`docs/architecture/database-schema.md`](database-schema.md) for full table 
 ## CI/CD
 
 - GitHub Actions with OIDC for AWS access.
+- Security Scanning runs `scripts/check_pii.py` on every pull request.
+  The Test workflow runs the same check. Pre-commit runs
+  `scripts/check-pii.sh`.
 - Deploy workflows for mobile, admin, backend, iOS.
 - Board engineering runner: `board-agent.yml` (Cursor CLI on
   `staging`; optional `pr_number` revises an existing `board/*` PR),

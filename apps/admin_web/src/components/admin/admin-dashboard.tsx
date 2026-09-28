@@ -1,7 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
-import { useQueryState } from 'nuqs';
+import { useMemo } from 'react';
+
+import { useAdminSectionQuery } from '@/hooks/use-admin-section-query';
+import { usePrefetchAdminSection } from '@/hooks/use-prefetch-admin-section';
 
 import { AppShell } from '../app-shell';
 import { useAuth } from '../auth-provider';
@@ -10,13 +12,13 @@ import { StatusBanner } from '../status-banner';
 import {
   OrganizationsPanel,
   LocationsPanel,
-  ActivityCategoriesPanel,
   ActivitiesPanel,
   PricingPanel,
   SchedulesPanel,
 } from '../shared';
 import { ApiKeysPanel } from './api-keys-panel';
 import { AuditLogsPanel } from './audit-logs-panel';
+import { CategoriesPage } from './categories-page';
 import { CognitoUsersPanel } from './cognito-users-panel';
 import { FeedbackLabelsPanel } from './feedback-labels-panel';
 import { FeedbackPanel } from './feedback-panel';
@@ -24,11 +26,9 @@ import { ImportsPanel } from './imports-panel';
 import { MediaPanel } from './media-panel';
 import { ManagerDashboard } from './manager-dashboard';
 import { TicketsPanel } from './tickets-panel';
-import { ListingPartnershipDashboardPanel } from './listing-partnership-dashboard-panel';
 import { UserDashboard } from './user-dashboard';
 
 const sectionLabels = [
-  { key: 'overview', label: 'Overview' },
   { key: 'organizations', label: 'Organizations' },
   { key: 'media', label: 'Media' },
   { key: 'locations', label: 'Locations' },
@@ -45,51 +45,28 @@ const sectionLabels = [
   { key: 'imports', label: 'Imports' },
 ];
 
+const recognizedSections = [
+  ...sectionLabels,
+  { key: 'category-suggestions', label: 'Category Suggestions' },
+];
+
 export function AdminDashboard() {
   const { status, user, isAdmin, isManager, logout, error } = useAuth();
-  const [sectionParam, setSectionParam] = useQueryState('section');
-  const isValidSectionParam = useMemo(
-    () => sectionLabels.some((section) => section.key === sectionParam),
-    [sectionParam]
-  );
-  const activeSection = useMemo(() => {
-    return isValidSectionParam && sectionParam ? sectionParam : 'overview';
-  }, [isValidSectionParam, sectionParam]);
-
-  useEffect(() => {
-    if (sectionParam && isValidSectionParam) {
-      return;
-    }
-    void setSectionParam(activeSection, { history: 'replace' });
-  }, [activeSection, isValidSectionParam, sectionParam, setSectionParam]);
-
-  const handleSelectSection = useCallback(
-    (nextSection: string) => {
-      const isValidSection = sectionLabels.some(
-        (section) => section.key === nextSection
-      );
-      if (!isValidSection) {
-        return;
-      }
-      void setSectionParam(nextSection, { history: 'push' });
-    },
-    [setSectionParam]
+  const prefetchSection = usePrefetchAdminSection('admin');
+  const { activeSection, selectSection } = useAdminSectionQuery(
+    recognizedSections,
+    'organizations'
   );
 
   const activeContent = useMemo(() => {
     switch (activeSection) {
-      case 'overview':
-        return (
-          <ListingPartnershipDashboardPanel
-            onNavigateSection={handleSelectSection}
-          />
-        );
       case 'media':
         return <MediaPanel />;
       case 'locations':
         return <LocationsPanel mode='admin' />;
       case 'activity-categories':
-        return <ActivityCategoriesPanel />;
+      case 'category-suggestions':
+        return <CategoriesPage />;
       case 'activities':
         return <ActivitiesPanel mode='admin' />;
       case 'pricing':
@@ -114,7 +91,7 @@ export function AdminDashboard() {
       default:
         return <OrganizationsPanel mode='admin' />;
     }
-  }, [activeSection, handleSelectSection]);
+  }, [activeSection]);
 
   if (status === 'loading') {
     return (
@@ -146,8 +123,13 @@ export function AdminDashboard() {
   return (
     <AppShell
       sections={sectionLabels}
-      activeKey={activeSection}
-      onSelect={handleSelectSection}
+      activeKey={
+        activeSection === 'category-suggestions'
+          ? 'activity-categories'
+          : activeSection
+      }
+      onSelect={selectSection}
+      onIntent={prefetchSection}
       onLogout={logout}
       userEmail={user?.email}
       lastAuthTime={user?.lastAuthTime}

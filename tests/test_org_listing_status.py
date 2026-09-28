@@ -7,11 +7,16 @@ from uuid import uuid4
 
 from sqlalchemy import select
 
-from app.api.admin_crud import _lookup_organization
+from app.api.admin_crud import (
+    _drop_admin_only_write_fields,
+    _lookup_organization,
+)
 from app.api.admin_imports_jobs import store_import_job
+from app.api.admin_resource_activity import _update_activity_for_manager
 from app.api.admin_resource_organization import (
     _serialize_organization,
     _update_organization,
+    _update_organization_for_manager,
 )
 from app.db.models import Organization
 from app.db.repositories import OrganizationRepository
@@ -292,6 +297,58 @@ def test_catalog_health_view_replaces_integer_counts(db_session) -> None:
         )
     ).scalar_one()
     assert col_type == "integer"
+
+
+def test_manager_update_ignores_source_fields(
+    db_session, sample_organization
+) -> None:
+    sample_organization.source_url = "https://old.test"
+    sample_organization.source_note = "keep"
+    repo = OrganizationRepository(db_session)
+    _update_organization_for_manager(
+        repo,
+        sample_organization,
+        {
+            "source_url": "https://evil.test",
+            "source_note": "overwrite",
+            "description": "Manager description",
+        },
+    )
+    assert sample_organization.source_url == "https://old.test"
+    assert sample_organization.source_note == "keep"
+    assert sample_organization.description == "Manager description"
+
+
+def test_manager_activity_update_ignores_source_fields(
+    db_session, sample_activity
+) -> None:
+    from app.db.repositories import ActivityRepository
+
+    sample_activity.source_url = "https://class-old.test"
+    sample_activity.source_note = "roster"
+    repo = ActivityRepository(db_session)
+    _update_activity_for_manager(
+        repo,
+        sample_activity,
+        {
+            "source_url": "https://evil.test",
+            "source_note": "overwrite",
+            "description": "Manager class",
+        },
+    )
+    assert sample_activity.source_url == "https://class-old.test"
+    assert sample_activity.source_note == "roster"
+    assert sample_activity.description == "Manager class"
+
+
+def test_drop_admin_only_write_fields_removes_source_keys() -> None:
+    body = {
+        "name": "Studio",
+        "source_url": "https://evil.test",
+        "source_note": "overwrite",
+    }
+    _drop_admin_only_write_fields(body)
+    assert body == {"name": "Studio"}
 
 
 def test_post_organization_with_id_is_405() -> None:

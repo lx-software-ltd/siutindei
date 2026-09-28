@@ -7,6 +7,7 @@ from app.api.admin_resource_activity import (
     _create_activity,
     _serialize_activity,
     _update_activity,
+    _update_activity_for_manager,
     _validate_age_range,
 )
 from app.api.admin_resource_activity_category import (
@@ -81,6 +82,7 @@ __all__ = [
     "_serialize_pricing",
     "_serialize_schedule",
     "_update_activity",
+    "_update_activity_for_manager",
     "_update_activity_category",
     "_update_feedback_label",
     "_update_location",
@@ -138,6 +140,7 @@ _RESOURCE_CONFIG = {
         serializer=_serialize_activity,
         create_handler=_create_activity,
         update_handler=_update_activity,
+        manager_update_handler=_update_activity_for_manager,
     ),
     "pricing": ResourceConfig(
         name="pricing",

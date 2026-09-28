@@ -82,6 +82,7 @@ def init_summary() -> dict[str, Any]:
         "schedules": init_counts(),
         "warnings": 0,
         "errors": 0,
+        "captured_categories": 0,
     }
 
 

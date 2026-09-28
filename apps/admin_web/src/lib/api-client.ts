@@ -3,6 +3,7 @@ export { ApiError, type ListResponse } from './api-client-core';
 export {
   createResource,
   deleteResource,
+  getResource,
   listResource,
   updateResource,
   type ResourceName,

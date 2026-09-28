@@ -30,11 +30,7 @@ export function PhoneIcon({ className }: IconProps) {
       strokeLinejoin='round'
       aria-hidden='true'
     >
-      <path d='M22 16.9v3a2 2 0 0 1-2.2 2' />
-      <path d='M3 5a2 2 0 0 1 2-2h3' />
-      <path d='M5 3h3a2 2 0 0 1 2 1.7' />
-      <path d='M8.6 7.6a16 16 0 0 0 7.8 7.8' />
-      <path d='M16.4 15.4 20 14a2 2 0 0 1 2 1.3' />
+      <path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z' />
     </svg>
   );
 }
@@ -102,6 +98,11 @@ export interface OrganizationFormState {
   xiaohongshu: string;
   wechat: string;
   status: string;
+  source: string;
+  source_id: string;
+  source_url: string;
+  source_note: string;
+  description_source: string;
 }
 
 export const emptyForm: OrganizationFormState = {
@@ -121,6 +122,11 @@ export const emptyForm: OrganizationFormState = {
   xiaohongshu: '',
   wechat: '',
   status: 'operational',
+  source: '',
+  source_id: '',
+  source_url: '',
+  source_note: '',
+  description_source: '',
 };
 
 export function itemToForm(item: Organization): OrganizationFormState {
@@ -141,8 +147,28 @@ export function itemToForm(item: Organization): OrganizationFormState {
     xiaohongshu: item.xiaohongshu ?? '',
     wechat: item.wechat ?? '',
     status: item.status ?? 'operational',
+    source: item.source ?? '',
+    source_id: item.source_id ?? '',
+    source_url: item.source_url ?? '',
+    source_note: item.source_note ?? '',
+    description_source: item.description_source ?? '',
   };
 }
+
+export const ORG_SOURCE_OPTIONS = [
+  { value: 'lcsd', label: 'LCSD' },
+  { value: 'edb', label: 'EDB' },
+  { value: 'swd', label: 'SWD' },
+  { value: 'places', label: 'Places' },
+  { value: 'competitor', label: 'Competitor' },
+] as const;
+
+export const DESCRIPTION_SOURCE_OPTIONS = [
+  { value: 'template', label: 'Template' },
+  { value: 'official', label: 'Official' },
+  { value: 'places', label: 'Places' },
+  { value: 'enrich', label: 'Enriched' },
+] as const;
 
 export type SocialFieldKey =
   | 'whatsapp'

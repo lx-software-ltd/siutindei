@@ -16,6 +16,9 @@ from app.api.admin_areas import (
 )
 from app.api.admin_api_keys import _handle_admin_api_keys
 from app.api.admin_audit import _handle_audit_logs
+from app.api.admin_category_suggestions import (
+    _handle_admin_category_suggestions,
+)
 from app.api.admin_auth import (
     _get_managed_organization_ids,
     _is_admin,
@@ -193,6 +196,18 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
     if resource == "imports":
         return _safe_handler(
             lambda: _handle_admin_imports(event, method, resource_id),
+            event,
+        )
+    if resource == "category-suggestions":
+        if not _is_admin(event):
+            return json_response(403, {"error": "Forbidden"}, event=event)
+        return _safe_handler(
+            lambda: _handle_admin_category_suggestions(
+                event,
+                method,
+                resource_id,
+                sub_resource,
+            ),
             event,
         )
     if resource == "org-review":

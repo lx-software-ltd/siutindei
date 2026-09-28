@@ -60,6 +60,15 @@ class ResourceConfig:
     manager_update_handler: Optional[Callable[..., Any]] = None
 
 
+_ADMIN_ONLY_WRITE_FIELDS = ("source_url", "source_note")
+
+
+def _drop_admin_only_write_fields(body: dict[str, Any]) -> None:
+    """Managers cannot write listing provenance fields."""
+    for key in _ADMIN_ONLY_WRITE_FIELDS:
+        body.pop(key, None)
+
+
 def _handle_crud(
     event: Mapping[str, Any],
     method: str,
@@ -167,6 +176,7 @@ def _crud_post(
 
     # Validate management if filtering is enabled
     if managed_org_ids is not None:
+        _drop_admin_only_write_fields(body)
         org_id = _get_org_id_from_body(body, config.name)
         if org_id and org_id not in managed_org_ids:
             return json_response(
@@ -223,6 +233,8 @@ def _crud_put(
             )
 
     body = _parse_body(event)
+    if managed_org_ids is not None:
+        _drop_admin_only_write_fields(body)
 
     # Use manager-specific update handler if available and in manager mode
     if managed_org_ids is not None and config.manager_update_handler is not None:

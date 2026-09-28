@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useQueryState } from 'nuqs';
 
 import {
   ApiError,
@@ -14,6 +13,9 @@ import {
   type ManagerStatusResponse,
   type Ticket,
 } from '../../lib/api-client-user';
+import { useAdminSectionQuery } from '@/hooks/use-admin-section-query';
+import { usePrefetchAdminSection } from '@/hooks/use-prefetch-admin-section';
+
 import { useAuth } from '../auth-provider';
 import { AppShell } from '../app-shell';
 import { StatusBanner } from '../status-banner';
@@ -47,6 +49,7 @@ const managerSectionLabels = [
 
 export function ManagerDashboard() {
   const { user, logout, error: authError } = useAuth();
+  const prefetchSection = usePrefetchAdminSection('manager');
   const [managerStatus, setManagerStatus] = useState<ManagerStatusResponse | null>(
     null
   );
@@ -58,7 +61,10 @@ export function ManagerDashboard() {
     useState<Ticket | null>(null);
   const [pendingFeedback, setPendingFeedback] = useState<Ticket | null>(null);
   const [managerOrgName, setManagerOrgName] = useState<string | null>(null);
-  const [sectionParam, setSectionParam] = useQueryState('section');
+  const { activeSection, selectSection } = useAdminSectionQuery(
+    managerSectionLabels,
+    'organizations'
+  );
 
   const loadManagerOrgName = useCallback(async (): Promise<string | null> => {
     try {
@@ -148,36 +154,6 @@ export function ManagerDashboard() {
   const headerDescription = managerOrgName
     ? `Manage your organization, ${managerOrgName}.`
     : 'Manage your organization.';
-
-  const isValidSectionParam = useMemo(
-    () => managerSectionLabels.some((section) => section.key === sectionParam),
-    [sectionParam]
-  );
-  const activeSection = useMemo(
-    () =>
-      isValidSectionParam && sectionParam ? sectionParam : 'organizations',
-    [isValidSectionParam, sectionParam]
-  );
-
-  useEffect(() => {
-    if (sectionParam && isValidSectionParam) {
-      return;
-    }
-    void setSectionParam(activeSection, { history: 'replace' });
-  }, [activeSection, isValidSectionParam, sectionParam, setSectionParam]);
-
-  const handleSelectSection = useCallback(
-    (nextSection: string) => {
-      const isValidSection = managerSectionLabels.some(
-        (section) => section.key === nextSection
-      );
-      if (!isValidSection) {
-        return;
-      }
-      void setSectionParam(nextSection, { history: 'push' });
-    },
-    [setSectionParam]
-  );
 
   // Use shared components with mode='manager'
   const activeContent = useMemo(() => {
@@ -290,7 +266,8 @@ export function ManagerDashboard() {
     <AppShell
       sections={managerSectionLabels}
       activeKey={activeSection}
-      onSelect={handleSelectSection}
+      onSelect={selectSection}
+      onIntent={prefetchSection}
       onLogout={logout}
       userEmail={user?.email}
       lastAuthTime={user?.lastAuthTime}
