@@ -6,10 +6,8 @@ import time
 from uuid import UUID
 
 import pytest
-
 from app.db.queries import ActivitySearchFilters
 from app.services import staging_search_store
-
 from staging_search_acceptance import (
     DISCOVERY_LOAD_BUDGET_SECONDS,
     MIN_PUBLIC_LISTINGS,
