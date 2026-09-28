@@ -11,7 +11,7 @@ import '../../activity_detail/screens/activity_detail_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../organization/screens/organization_screen.dart';
 import '../widgets/activity_card.dart';
-import '../widgets/area_filter_section.dart';
+import '../widgets/area_filter_chips.dart';
 import '../widgets/filter_chip_bar.dart';
 import '../widgets/search_filters_sheet.dart';
 
@@ -344,12 +344,13 @@ class _QuickFilters extends ConsumerWidget {
             ],
           ),
           SizedBox(height: spacing.sm),
+          AreaFilterChips(
+            selectedAreaId: filters.areaId,
+            onAreaChanged: onAreaChanged,
+          ),
+          SizedBox(height: spacing.sm),
           FilterChipBar(
             children: [
-              AreaDropdownFilterChip(
-                selectedAreaId: filters.areaId,
-                onAreaChanged: onAreaChanged,
-              ),
               DropdownFilterChip(
                 label: 'Pricing',
                 value: filters.pricingType?.toApiString(),

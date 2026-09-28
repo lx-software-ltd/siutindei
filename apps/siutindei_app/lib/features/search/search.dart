@@ -18,6 +18,7 @@
 library;
 
 export 'screens/search_screen.dart';
+export 'widgets/area_filter_chips.dart';
 export 'widgets/activity_card.dart';
 export 'widgets/filter_chip_bar.dart';
 export 'widgets/search_filters_sheet.dart';
