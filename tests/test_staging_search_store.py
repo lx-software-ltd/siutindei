@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import os
 from uuid import UUID
 
 import pytest
-
 from app.db.queries import ActivitySearchFilters
 from app.services import staging_search_store
 

@@ -5,11 +5,9 @@ from __future__ import annotations
 import time
 
 import pytest
-
 from app.api.search import fetch_search_response
 from app.db.queries import ActivitySearchFilters
 from app.services import staging_search_store
-
 from staging_search_acceptance import (
     DISCOVERY_HOME_SEARCH_LIMIT,
     DISCOVERY_LOAD_BUDGET_SECONDS,

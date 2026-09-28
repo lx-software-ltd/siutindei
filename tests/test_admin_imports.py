@@ -8,9 +8,6 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import select, text
-from sqlalchemy.orm import Session
-
 from app.api.admin_imports import _parse_dry_run
 from app.api.admin_imports_catalog import apply_vetting_columns
 from app.api.admin_imports_fields import (
@@ -22,8 +19,8 @@ from app.api.admin_imports_upsert import (
     upsert_activity,
     upsert_location,
     upsert_organization,
+    upsert_schedule,
 )
-from app.api.admin_imports_venues import LINKED_VENUE_WARNING
 from app.api.admin_imports_utils import (
     from_utc_weekly,
     parse_time_minutes,
@@ -31,8 +28,11 @@ from app.api.admin_imports_utils import (
     persist_import_change,
     to_utc_weekly,
 )
+from app.api.admin_imports_venues import LINKED_VENUE_WARNING
 from app.db.models import Activity, ActivityLocation, Location, Organization
 from app.exceptions import ValidationError
+from sqlalchemy import select, text
+from sqlalchemy.orm import Session
 
 
 def _orphan_backfill_sql() -> str:
@@ -1005,6 +1005,48 @@ def test_activity_only_import_does_not_link_db_venues(
         )
         is None
     )
+
+
+def test_upsert_schedule_reimport_is_idempotent(
+    db_session,
+    sample_activity,
+    sample_location,
+) -> None:
+    raw_schedule = {
+        "timezone": "UTC",
+        "languages": ["en", "zh"],
+        "weekly_entries": [
+            {
+                "day_of_week": 1,
+                "start_time": "10:00",
+                "end_time": "11:00",
+            }
+        ],
+    }
+    warnings: list[str] = []
+    schedule, status = upsert_schedule(
+        db_session,
+        sample_activity,
+        sample_location,
+        raw_schedule,
+        warnings,
+        allow_updates=True,
+    )
+    assert status == "created"
+    schedule_id = schedule.id
+    entry_ids = [entry.id for entry in schedule.entries]
+
+    schedule_again, status_again = upsert_schedule(
+        db_session,
+        sample_activity,
+        sample_location,
+        raw_schedule,
+        warnings,
+        allow_updates=True,
+    )
+    assert status_again == "updated"
+    assert schedule_again.id == schedule_id
+    assert [entry.id for entry in schedule_again.entries] == entry_ids
 
 
 def test_importer_skips_existing_pricing_and_schedule(

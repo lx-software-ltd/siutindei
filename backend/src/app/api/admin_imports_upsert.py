@@ -23,7 +23,6 @@ from app.api.admin_imports_fields import (
 from app.api.admin_imports_lookups import (
     filter_fields,
     guard_existing_org,
-    merge_schedule_entries,
     parse_weekly_entries_local,
     prepare_listing_body,
     resolve_activity_category_fields,
@@ -474,7 +473,6 @@ def upsert_schedule(
         "weekly_entries": entries,
     }
     if existing:
-        body["weekly_entries"] = merge_schedule_entries(existing, entries)
         updated = _update_schedule(repo, existing, body)
         repo.update(updated)
         persist_import_change(session, dry_run=dry_run)
