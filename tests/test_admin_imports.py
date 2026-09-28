@@ -21,6 +21,7 @@ from app.api.admin_imports_upsert import (
     upsert_activity,
     upsert_location,
     upsert_organization,
+    upsert_schedule,
 )
 from app.api.admin_imports_venues import LINKED_VENUE_WARNING
 from app.api.admin_imports_utils import (
@@ -963,6 +964,48 @@ def test_activity_only_import_does_not_link_db_venues(
         ActivityLocation,
         (sample_activity.id, sample_location.id),
     ) is None
+
+
+def test_upsert_schedule_reimport_is_idempotent(
+    db_session,
+    sample_activity,
+    sample_location,
+) -> None:
+    raw_schedule = {
+        "timezone": "UTC",
+        "languages": ["en", "zh"],
+        "weekly_entries": [
+            {
+                "day_of_week": 1,
+                "start_time": "10:00",
+                "end_time": "11:00",
+            }
+        ],
+    }
+    warnings: list[str] = []
+    schedule, status = upsert_schedule(
+        db_session,
+        sample_activity,
+        sample_location,
+        raw_schedule,
+        warnings,
+        allow_updates=True,
+    )
+    assert status == "created"
+    schedule_id = schedule.id
+    entry_ids = [entry.id for entry in schedule.entries]
+
+    schedule_again, status_again = upsert_schedule(
+        db_session,
+        sample_activity,
+        sample_location,
+        raw_schedule,
+        warnings,
+        allow_updates=True,
+    )
+    assert status_again == "updated"
+    assert schedule_again.id == schedule_id
+    assert [entry.id for entry in schedule_again.entries] == entry_ids
 
 
 def test_importer_skips_existing_pricing_and_schedule(
