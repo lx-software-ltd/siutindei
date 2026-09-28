@@ -40,24 +40,18 @@ class ApiService {
     return ActivitySearchResponse.fromJson(decoded);
   }
 
-  /// Active geographic area tree (requires a signed-in user).
   Future<AreaTreeResponse> fetchActiveAreas() async {
     final tokens = await _authService.tryGetTokens();
     if (tokens == null) {
       throw StateError('Sign in required to load areas from the API');
     }
-
-    final headers = <String, String>{
-      'Authorization': tokens.idToken,
-    };
-
     final response = await Amplify.API.get(
       '/v1/user/areas',
       apiName: AppAmplifyConfig.apiName,
-      headers: headers,
+      headers: {'Authorization': tokens.idToken},
     ).response;
-
-    final decoded = jsonDecode(response.decodeBody()) as Map<String, dynamic>;
-    return AreaTreeResponse.fromJson(decoded);
+    return AreaTreeResponse.fromJson(
+      jsonDecode(response.decodeBody()) as Map<String, dynamic>,
+    );
   }
 }

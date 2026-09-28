@@ -1,4 +1,4 @@
-/// Geographic area tree models (GET /v1/user/areas).
+/// Geographic area tree node from GET /v1/user/areas.
 class GeographicAreaNode {
   const GeographicAreaNode({
     required this.id,
@@ -13,27 +13,24 @@ class GeographicAreaNode {
   });
 
   factory GeographicAreaNode.fromJson(Map<String, dynamic> json) {
-    final childrenJson = json['children'] as List<dynamic>? ?? [];
+    final translations = json['name_translations'] as Map<String, dynamic>? ??
+        {};
     return GeographicAreaNode(
       id: json['id'] as String,
       parentId: json['parent_id'] as String?,
       name: json['name'] as String,
-      nameTranslations: Map<String, String>.from(
-        (json['name_translations'] as Map<String, dynamic>? ?? {}).map(
-          (key, value) => MapEntry(key.toString(), value.toString()),
-        ),
-      ),
+      nameTranslations: {
+        for (final entry in translations.entries)
+          entry.key.toString(): entry.value.toString(),
+      },
       level: json['level'] as String,
       code: json['code'] as String?,
       active: json['active'] as bool? ?? true,
       displayOrder: json['display_order'] as int? ?? 0,
-      children: childrenJson
-          .map(
-            (child) => GeographicAreaNode.fromJson(
-              child as Map<String, dynamic>,
-            ),
-          )
-          .toList(),
+      children: [
+        for (final child in json['children'] as List<dynamic>? ?? [])
+          GeographicAreaNode.fromJson(child as Map<String, dynamic>),
+      ],
     );
   }
 
@@ -62,15 +59,11 @@ class AreaTreeResponse {
   const AreaTreeResponse({required this.items});
 
   factory AreaTreeResponse.fromJson(Map<String, dynamic> json) {
-    final itemsJson = json['items'] as List<dynamic>? ?? [];
     return AreaTreeResponse(
-      items: itemsJson
-          .map(
-            (item) => GeographicAreaNode.fromJson(
-              item as Map<String, dynamic>,
-            ),
-          )
-          .toList(),
+      items: [
+        for (final item in json['items'] as List<dynamic>? ?? [])
+          GeographicAreaNode.fromJson(item as Map<String, dynamic>),
+      ],
     );
   }
 

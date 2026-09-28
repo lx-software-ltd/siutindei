@@ -1,59 +1,49 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:siutindei_app/features/search/utils/area_filter_options.dart';
 import 'package:siutindei_app/models/geographic_area_models.dart';
+import 'package:siutindei_app/services/areas_service.dart';
+
+GeographicAreaNode _node({
+  required String id,
+  required String name,
+  bool active = true,
+  int displayOrder = 0,
+  List<GeographicAreaNode> children = const [],
+}) {
+  return GeographicAreaNode(
+    id: id,
+    name: name,
+    nameTranslations: {'en': name},
+    level: 'district',
+    active: active,
+    displayOrder: displayOrder,
+    children: children,
+  );
+}
 
 void main() {
-  group('leafAreaFilterOptions', () {
-    test('returns leaf nodes sorted by display order', () {
-      final tree = [
-        GeographicAreaNode(
-          id: 'country',
-          name: 'Hong Kong',
-          nameTranslations: const {'en': 'Hong Kong'},
-          level: 'country',
-          active: true,
-          displayOrder: 0,
-          children: [
-            GeographicAreaNode(
-              id: 'district-b',
-              name: 'B District',
-              nameTranslations: const {'en': 'B District'},
-              level: 'district',
-              active: true,
-              displayOrder: 2,
-            ),
-            GeographicAreaNode(
-              id: 'district-a',
-              name: 'A District',
-              nameTranslations: const {'en': 'A District'},
-              level: 'district',
-              active: true,
-              displayOrder: 1,
-            ),
-          ],
-        ),
-      ];
+  test('leafAreaFilterOptions sorts leaves and skips inactive', () {
+    final options = leafAreaFilterOptions([
+      _node(
+        id: 'country',
+        name: 'Hong Kong',
+        children: [
+          _node(id: 'district-b', name: 'B District', displayOrder: 2),
+          _node(id: 'district-a', name: 'A District', displayOrder: 1),
+        ],
+      ),
+      _node(id: 'inactive', name: 'Hidden', active: false),
+    ]);
+    expect(options.map((o) => o.id), ['district-a', 'district-b']);
+  });
 
-      final options = leafAreaFilterOptions(tree);
-      expect(options.map((option) => option.id).toList(), [
-        'district-a',
-        'district-b',
-      ]);
-    });
-
-    test('skips inactive nodes', () {
-      final tree = [
-        GeographicAreaNode(
-          id: 'inactive',
-          name: 'Hidden',
-          nameTranslations: const {'en': 'Hidden'},
-          level: 'district',
-          active: false,
-          displayOrder: 0,
-        ),
-      ];
-
-      expect(leafAreaFilterOptions(tree), isEmpty);
-    });
+  test('bundled home wizard tree exposes region area ids', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    final options = leafAreaFilterOptions(await AreasService.loadBundledAreas());
+    expect(options, isNotEmpty);
+    expect(
+      options.map((o) => o.id),
+      contains('a1111111-1111-1111-1111-111111111101'),
+    );
   });
 }

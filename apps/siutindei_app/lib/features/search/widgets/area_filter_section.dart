@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/geographic_areas_provider.dart';
+import '../../../models/geographic_area_models.dart';
+import '../../../services/service_providers.dart';
 import '../utils/area_filter_options.dart';
 import 'filter_chip_bar.dart';
 
-/// Area filter chips backed by GET /v1/user/areas (with offline fallback).
+final geographicAreasProvider =
+    FutureProvider<List<GeographicAreaNode>>((ref) {
+  return ref.watch(areasServiceProvider).getActiveAreaTree();
+});
+
 class AreaFilterSection extends ConsumerWidget {
   const AreaFilterSection({
     super.key,
@@ -20,11 +25,9 @@ class AreaFilterSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final areasAsync = ref.watch(geographicAreasProvider);
-
-    return areasAsync.when(
+    return ref.watch(geographicAreasProvider).when(
       loading: () => const LinearProgressIndicator(minHeight: 2),
-      error: (_, __) => const Text(
+      error: (_, _) => const Text(
         'Unable to load areas',
         style: TextStyle(color: Colors.grey),
       ),
@@ -36,31 +39,29 @@ class AreaFilterSection extends ConsumerWidget {
             style: TextStyle(color: Colors.grey),
           );
         }
-
         return Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: options.map((option) {
-            final isSelected = selectedAreaId == option.id;
-            return FilterChip(
-              label: Text(option.label),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (!selected || isSelected) {
-                  onAreaSelected(null);
-                } else {
-                  onAreaSelected(option.id);
-                }
-              },
-            );
-          }).toList(),
+          children: [
+            for (final option in options)
+              FilterChip(
+                label: Text(option.label),
+                selected: selectedAreaId == option.id,
+                onSelected: (selected) {
+                  onAreaSelected(
+                    !selected || selectedAreaId == option.id
+                        ? null
+                        : option.id,
+                  );
+                },
+              ),
+          ],
         );
       },
     );
   }
 }
 
-/// Dropdown chip for the quick-filter row.
 class AreaDropdownFilterChip extends ConsumerWidget {
   const AreaDropdownFilterChip({
     super.key,
@@ -75,11 +76,9 @@ class AreaDropdownFilterChip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final areasAsync = ref.watch(geographicAreasProvider);
-
-    return areasAsync.when(
+    return ref.watch(geographicAreasProvider).when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (tree) {
         final options = leafAreaFilterOptions(tree, locale: locale);
         if (options.isEmpty) {

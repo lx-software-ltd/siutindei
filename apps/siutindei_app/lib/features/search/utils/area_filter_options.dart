@@ -1,23 +1,18 @@
 import '../../../models/geographic_area_models.dart';
 
-/// Selectable area shown in search filters.
 class AreaFilterOption {
-  const AreaFilterOption({
-    required this.id,
-    required this.label,
-  });
+  const AreaFilterOption({required this.id, required this.label});
 
   final String id;
   final String label;
 }
 
-/// Collects leaf nodes from the geographic area tree for filtering.
+/// Active leaf nodes from the geographic area tree.
 List<AreaFilterOption> leafAreaFilterOptions(
   List<GeographicAreaNode> roots, {
   String locale = 'en',
 }) {
   final leaves = <GeographicAreaNode>[];
-
   void visit(GeographicAreaNode node) {
     if (!node.active) {
       return;
@@ -34,17 +29,11 @@ List<AreaFilterOption> leafAreaFilterOptions(
   for (final root in roots) {
     visit(root);
   }
-
-  leaves.sort((left, right) => left.displayOrder.compareTo(right.displayOrder));
-
-  return leaves
-      .map(
-        (node) => AreaFilterOption(
-          id: node.id,
-          label: node.labelForLocale(locale),
-        ),
-      )
-      .toList();
+  leaves.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+  return [
+    for (final node in leaves)
+      AreaFilterOption(id: node.id, label: node.labelForLocale(locale)),
+  ];
 }
 
 Map<String, String> areaFilterLabelLookup(List<AreaFilterOption> options) {

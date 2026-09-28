@@ -11,7 +11,6 @@ import '../../activity_detail/screens/activity_detail_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../organization/screens/organization_screen.dart';
 import '../widgets/activity_card.dart';
-import '../providers/geographic_areas_provider.dart';
 import '../widgets/area_filter_section.dart';
 import '../widgets/filter_chip_bar.dart';
 import '../widgets/search_filters_sheet.dart';
@@ -44,11 +43,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _performSearch();
-      // Preload area tree for filter chips without blocking first search.
-      ref.read(geographicAreasProvider.future);
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _performSearch());
     _scrollController.addListener(_onScroll);
   }
 
