@@ -8,9 +8,6 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import select, text
-from sqlalchemy.orm import Session
-
 from app.api.admin_imports import _parse_dry_run
 from app.api.admin_imports_fields import (
     apply_source_attribution,
@@ -23,7 +20,6 @@ from app.api.admin_imports_upsert import (
     upsert_organization,
     upsert_schedule,
 )
-from app.api.admin_imports_venues import LINKED_VENUE_WARNING
 from app.api.admin_imports_utils import (
     from_utc_weekly,
     parse_time_minutes,
@@ -31,8 +27,11 @@ from app.api.admin_imports_utils import (
     persist_import_change,
     to_utc_weekly,
 )
+from app.api.admin_imports_venues import LINKED_VENUE_WARNING
 from app.db.models import Activity, ActivityLocation, Location, Organization
 from app.exceptions import ValidationError
+from sqlalchemy import select, text
+from sqlalchemy.orm import Session
 
 
 def _orphan_backfill_sql() -> str:
