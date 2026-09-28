@@ -4,6 +4,7 @@ import 'package:amplify_flutter/amplify_flutter.dart';
 
 import '../config/amplify_config.dart';
 import '../models/activity_models.dart';
+import '../models/geographic_area_models.dart';
 import 'auth_service.dart';
 import 'device_attestation_service.dart';
 import 'staging_search_service.dart';
@@ -37,5 +38,20 @@ class ApiService {
     ).response;
     final decoded = jsonDecode(response.decodeBody()) as Map<String, dynamic>;
     return ActivitySearchResponse.fromJson(decoded);
+  }
+
+  Future<AreaTreeResponse> fetchActiveAreas() async {
+    final tokens = await _authService.tryGetTokens();
+    if (tokens == null) {
+      throw StateError('Sign in required to load areas from the API');
+    }
+    final response = await Amplify.API.get(
+      '/v1/user/areas',
+      apiName: AppAmplifyConfig.apiName,
+      headers: {'Authorization': tokens.idToken},
+    ).response;
+    return AreaTreeResponse.fromJson(
+      jsonDecode(response.decodeBody()) as Map<String, dynamic>,
+    );
   }
 }
