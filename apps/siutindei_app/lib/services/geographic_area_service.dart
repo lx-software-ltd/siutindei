@@ -3,13 +3,12 @@ import '../models/geographic_area.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
 
-/// Loads and caches the active geographic area tree.
+/// Loads the active geographic area tree, with a bundled fallback.
 class GeographicAreaService {
   GeographicAreaService(this._apiService, this._authService);
 
   final ApiService _apiService;
   final AuthService _authService;
-
   List<GeographicArea>? _cachedTree;
   bool? _cachedForSignedIn;
 
@@ -29,29 +28,21 @@ class GeographicAreaService {
           _cachedForSignedIn = signedIn;
           return tree;
         }
-      } catch (_) {
-        // Fall through to bundled fallback for offline / staging.
+      } on Object {
+        // Use bundled regions when the API is unavailable.
       }
     }
-
-    final fallback = await _fallbackTreeFromHomeWizard();
+    final fallback = await _fallbackTree();
     _cachedTree = fallback;
     _cachedForSignedIn = signedIn;
     return fallback;
   }
 
-  void clearCache() {
-    _cachedTree = null;
-    _cachedForSignedIn = null;
-  }
-
-  static Future<List<GeographicArea>> _fallbackTreeFromHomeWizard() async {
-    final choices = await HomeWizardChoices.loadFromAsset();
-    final regions = choices.regions;
+  static Future<List<GeographicArea>> _fallbackTree() async {
+    final regions = (await HomeWizardChoices.loadFromAsset()).regions;
     if (regions.isEmpty) {
       return const [];
     }
-
     const countryId = 'fallback-country-hk';
     return [
       GeographicArea(
@@ -63,14 +54,14 @@ class GeographicAreaService {
         active: true,
         displayOrder: 1,
         children: [
-          for (var index = 0; index < regions.length; index++)
+          for (var i = 0; i < regions.length; i++)
             GeographicArea(
-              id: regions[index].areaId,
+              id: regions[i].areaId,
               parentId: countryId,
-              name: regions[index].labels.en,
+              name: regions[i].labels.en,
               level: 'region',
               active: true,
-              displayOrder: index + 1,
+              displayOrder: i + 1,
             ),
         ],
       ),
