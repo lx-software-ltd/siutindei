@@ -19,7 +19,7 @@ from app.api.admin_imports_catalog import (
 from app.api.admin_imports_children import process_activity, process_location
 from app.api.admin_imports_fields import (
     apply_default_manager_id,
-    apply_source_attribution,
+    apply_source_fields,
     collect_flat_org_warnings,
     expand_board_flat_org,
 )
@@ -70,23 +70,31 @@ def process_import_payload(
     results: list[dict[str, Any]] = []
     summary = init_summary()
     summary["warnings"] += len(file_warnings)
+    from app.services.category_suggestions.resolve import (
+        begin_capture_batch,
+        finish_capture_batch,
+    )
 
-    for index, raw_org in enumerate(orgs_raw):
-        process_organization(
-            session,
-            raw_org,
-            index,
-            results,
-            summary,
-            file_warnings,
-            dry_run=dry_run,
-            allow_updates=allow_org_updates,
-            catalog_manager_id=catalog_manager_id,
-            import_job_id=import_job_id,
-        )
+    begin_capture_batch(session)
+    try:
+        for index, raw_org in enumerate(orgs_raw):
+            process_organization(
+                session,
+                raw_org,
+                index,
+                results,
+                summary,
+                file_warnings,
+                dry_run=dry_run,
+                allow_updates=allow_org_updates,
+                catalog_manager_id=catalog_manager_id,
+                import_job_id=import_job_id,
+            )
 
-    finish_import_batch(session, dry_run=dry_run)
-    return summary, results
+        finish_import_batch(session, dry_run=dry_run)
+        return summary, results
+    finally:
+        finish_capture_batch(summary, session)
 
 
 def _review_status_needs_warning(
@@ -147,7 +155,7 @@ def process_organization(
     collect_flat_org_warnings(raw_org, path, warnings)
     expand_board_flat_org(raw_org)
     collect_unknown_fields(raw_org, ALLOWED_ORG_FIELDS, path, warnings)
-    apply_source_attribution(raw_org)
+    apply_source_fields(raw_org)
     if file_warnings is not None:
         file_warnings.extend(warnings)
     org_name = _validate_string_length(
@@ -268,4 +276,5 @@ def process_organization(
                 f"{path}.activities",
                 dry_run=dry_run,
                 allow_updates=allow_updates,
+                import_job_id=import_job_id,
             )

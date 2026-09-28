@@ -7,9 +7,7 @@ test.describe('Categories Panel', () => {
   });
 
   test('should display the category form', async ({ adminPage }) => {
-    await expect(
-      adminPage.getByRole('heading', { name: 'Categories' })
-    ).toBeVisible();
+    await adminPage.getByRole('button', { name: 'New category' }).click();
 
     await expect(adminPage.getByLabel('Name')).toBeVisible();
     await expect(
@@ -29,14 +27,14 @@ test.describe('Categories Panel', () => {
     ).toBeVisible();
     await expect(adminPage.getByLabel('Parent')).toBeVisible();
     await expect(adminPage.getByLabel('Display Order')).toBeVisible();
-    await expect(
-      adminPage.getByRole('button', { name: 'Add Category' })
-    ).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Create' })).toBeVisible();
   });
 
   test('should display existing categories list', async ({ adminPage }) => {
+    await expect(adminPage.getByRole('table', { name: 'Categories' })).toBeVisible();
+    await expect(adminPage.getByPlaceholder('Search categories...')).toHaveCount(0);
     await expect(
-      adminPage.getByRole('heading', { name: 'Existing Categories' })
+      adminPage.getByRole('button', { name: 'Category Suggestions', exact: true })
     ).toBeVisible();
 
     await expect(adminPage.getByRole('columnheader', { name: 'Path' })).toBeVisible();
@@ -44,18 +42,19 @@ test.describe('Categories Panel', () => {
       adminPage.getByRole('columnheader', { name: 'Display Order' })
     ).toBeVisible();
     await expect(
-      adminPage.getByRole('columnheader', { name: 'Actions' })
+      adminPage.getByRole('columnheader', { name: 'Operations' })
     ).toBeVisible();
 
     await expect(adminPage.getByText('Sport / Water Sports')).toBeVisible();
   });
 
   test('should create a new category', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New category' }).click();
     await adminPage.getByLabel('Name').fill('Outdoor');
     await adminPage.getByLabel('Parent').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Display Order').fill('3');
 
-    await adminPage.getByRole('button', { name: 'Add Category' }).click();
+    await adminPage.getByRole('button', { name: 'Create' }).click();
 
     await expect(adminPage.getByText('Outdoor')).toBeVisible();
   });

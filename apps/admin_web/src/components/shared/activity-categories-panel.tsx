@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { useFormValidation } from '../../hooks/use-form-validation';
-import { useResourcePanel } from '../../hooks/use-resource-panel';
+import { useResourceEditor } from '../../hooks/use-resource-editor';
+import { ADMIN_API_MAX_LIST_LIMIT } from '../../lib/admin-list-query';
 import {
   buildTranslationsPayload,
   emptyTranslations,
@@ -12,16 +13,24 @@ import {
   type TranslationLanguageCode,
 } from '../../lib/translations';
 import type { ActivityCategory } from '../../types/admin';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { DataTable } from '../ui/data-table';
+import { AdminCreateButton } from '../ui/admin-create-button';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '../ui/admin-data-table';
+import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminFilterBar } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
-import { SearchInput } from '../ui/search-input';
+import {
+  deleteRowActions,
+  ResourceTableShell,
+} from '../ui/resource-table-shell';
 import { Select } from '../ui/select';
 import { StatusBanner } from '../status-banner';
-
 
 interface ActivityCategoryFormState {
   name: string;
@@ -58,14 +67,17 @@ function parseDisplayOrder(value: string): number | null {
 }
 
 export function ActivityCategoriesPanel() {
-  const panel = useResourcePanel<ActivityCategory, ActivityCategoryFormState>(
-    'activity-categories',
-    'admin',
+  const panel = useResourceEditor<ActivityCategory, ActivityCategoryFormState>({
+    resource: 'activity-categories',
+    mode: 'admin',
     emptyForm,
-    itemToForm
-  );
+    itemToForm,
+    paramName: 'category',
+    fetchAll: true,
+    limit: ADMIN_API_MAX_LIST_LIMIT,
+    noun: 'category',
+  });
 
-  const [searchQuery, setSearchQuery] = useState('');
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
     ['name', 'display_order'],
@@ -126,7 +138,7 @@ export function ActivityCategoriesPanel() {
     function walk(nodes: ActivityCategory[], prefix = '') {
       for (const node of nodes) {
         const path = prefix ? `${prefix} / ${node.name}` : node.name;
-        if (!excludedIds.has(node.id)) {
+        if (!excludedIds.has(node.id) && !node.is_system) {
           options.push({ id: node.id, label: path });
         }
         const children = childrenByParent.get(node.id) ?? [];
@@ -137,6 +149,11 @@ export function ActivityCategoriesPanel() {
     walk(roots);
     return options;
   }, [childrenByParent, excludedIds]);
+
+  const editingCategory = panel.items.find(
+    (item) => item.id === panel.editingId
+  );
+  const isSystemLocked = Boolean(editingCategory?.is_system);
 
   const validate = () => {
     if (!panel.formState.name.trim()) {
@@ -162,6 +179,9 @@ export function ActivityCategoriesPanel() {
   }, [panel.formState.display_order]);
 
   const handleNameChange = (language: LanguageCode, value: string) => {
+    if (isSystemLocked) {
+      return;
+    }
     validation.markTouched('name');
     panel.setFormState((prev) =>
       language === 'en'
@@ -176,32 +196,24 @@ export function ActivityCategoriesPanel() {
     );
   };
 
-  const formToPayload = (form: ActivityCategoryFormState) => ({
-    name: form.name.trim(),
-    name_translations: buildTranslationsPayload(form.name_translations),
-    parent_id: form.parent_id || null,
-    display_order: parseDisplayOrder(form.display_order),
-  });
+  const formToPayload = (form: ActivityCategoryFormState) => {
+    const displayOrder = parseDisplayOrder(form.display_order);
+    if (isSystemLocked) {
+      return { display_order: displayOrder };
+    }
+    return {
+      name: form.name.trim(),
+      name_translations: buildTranslationsPayload(form.name_translations),
+      parent_id: form.parent_id || null,
+      display_order: displayOrder,
+    };
+  };
 
   const handleSubmit = () => {
     validation.setHasSubmitted(true);
     validation.markAllTouched();
     return panel.handleSubmit(formToPayload, validate);
   };
-
-  const filteredItems = panel.items.filter((item) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const path = categoryPathById.get(item.id)?.toLowerCase() ?? '';
-    const nameTranslations = Object.values(item.name_translations ?? {})
-      .join(' ')
-      .toLowerCase();
-    return (
-      path.includes(query) ||
-      item.name.toLowerCase().includes(query) ||
-      nameTranslations.includes(query)
-    );
-  });
 
   const showNameError = validation.shouldShowError(
     'name',
@@ -212,162 +224,166 @@ export function ActivityCategoriesPanel() {
     Boolean(displayOrderError)
   );
 
-  const columns = useMemo(
-    () => [
-      {
-        key: 'path',
-        header: 'Path',
-        primary: true,
-        render: (item: ActivityCategory) =>
-          categoryPathById.get(item.id) || item.name,
-      },
-      {
-        key: 'display-order',
-        header: 'Display Order',
-        render: (item: ActivityCategory) => item.display_order ?? 0,
-      },
-    ],
-    [categoryPathById]
+  const detail = (
+    <AdminEditorPanel
+      status={
+        panel.error ? (
+          <StatusBanner variant='error' title='Error'>
+            {panel.error}
+          </StatusBanner>
+        ) : null
+      }
+      actions={
+        <AdminEditorActions
+          mode={panel.editorMode}
+          onSubmit={handleSubmit}
+          isSaving={panel.isSaving}
+        />
+      }
+    >
+      <AdminFieldGrid columns={2}>
+        <div className='space-y-1'>
+          <LanguageToggleInput
+            id='category-name'
+            label='Name'
+            required
+            readOnly={isSystemLocked}
+            values={{
+              en: panel.formState.name,
+              zh: panel.formState.name_translations.zh,
+              yue: panel.formState.name_translations.yue,
+            }}
+            onChange={handleNameChange}
+            hasError={showNameError}
+            inputClassName={
+              isSystemLocked
+                ? 'bg-slate-100'
+                : validation.errorClassName('name', Boolean(nameError))
+            }
+          />
+          {showNameError ? (
+            <p className='text-xs text-red-600'>{nameError}</p>
+          ) : null}
+        </div>
+        <div>
+          <Label htmlFor='category-parent'>Parent</Label>
+          <Select
+            id='category-parent'
+            value={panel.formState.parent_id}
+            disabled={isSystemLocked}
+            aria-readonly={isSystemLocked || undefined}
+            onChange={(e) => {
+              if (isSystemLocked) {
+                return;
+              }
+              panel.setFormState((prev) => ({
+                ...prev,
+                parent_id: e.target.value,
+              }));
+            }}
+          >
+            <option value=''>No parent (root)</option>
+            {parentOptions.map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                {opt.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className='space-y-1'>
+          <Label htmlFor='category-order'>Display Order</Label>
+          <Input
+            id='category-order'
+            type='number'
+            min='0'
+            step='1'
+            value={panel.formState.display_order}
+            onChange={(e) => {
+              validation.markTouched('display_order');
+              panel.setFormState((prev) => ({
+                ...prev,
+                display_order: e.target.value,
+              }));
+            }}
+            className={validation.errorClassName(
+              'display_order',
+              Boolean(displayOrderError)
+            )}
+            aria-invalid={showDisplayOrderError || undefined}
+          />
+          {showDisplayOrderError ? (
+            <p className='text-xs text-red-600'>{displayOrderError}</p>
+          ) : null}
+        </div>
+      </AdminFieldGrid>
+    </AdminEditorPanel>
   );
 
   return (
-    <div className='space-y-6'>
-      <Card
-        title='Categories'
-        description='Manage categories and subcategories.'
-      >
-        {panel.error && (
-          <div className='mb-4'>
-            <StatusBanner variant='error' title='Error'>
-              {panel.error}
-            </StatusBanner>
-          </div>
-        )}
-        <div className='grid gap-4 md:grid-cols-2'>
-          <div className='space-y-1'>
-            <LanguageToggleInput
-              id='category-name'
-              label='Name'
-              required
-              values={{
-                en: panel.formState.name,
-                zh: panel.formState.name_translations.zh,
-                yue: panel.formState.name_translations.yue,
-              }}
-              onChange={handleNameChange}
-              hasError={showNameError}
-              inputClassName={validation.errorClassName(
-                'name',
-                Boolean(nameError)
-              )}
-            />
-            {showNameError ? (
-              <p className='text-xs text-red-600'>{nameError}</p>
-            ) : null}
-          </div>
-          <div>
-            <Label htmlFor='category-parent'>Parent</Label>
-            <Select
-              id='category-parent'
-              value={panel.formState.parent_id}
-              onChange={(e) =>
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  parent_id: e.target.value,
-                }))
-              }
-            >
-              <option value=''>No parent (root)</option>
-              {parentOptions.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.label}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className='space-y-1'>
-            <Label htmlFor='category-order'>Display Order</Label>
-            <Input
-              id='category-order'
-              type='number'
-              min='0'
-              step='1'
-              value={panel.formState.display_order}
-              onChange={(e) => {
-                validation.markTouched('display_order');
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  display_order: e.target.value,
-                }));
-              }}
-              className={validation.errorClassName(
-                'display_order',
-                Boolean(displayOrderError)
-              )}
-              aria-invalid={showDisplayOrderError || undefined}
-            />
-            {showDisplayOrderError ? (
-              <p className='text-xs text-red-600'>{displayOrderError}</p>
-            ) : null}
-          </div>
-        </div>
-        <div className='mt-4 flex flex-wrap gap-3'>
-          <Button
-            type='button'
-            onClick={handleSubmit}
-            disabled={panel.isSaving}
-          >
-            {panel.editingId ? 'Update Category' : 'Add Category'}
-          </Button>
-          {panel.editingId && (
-            <Button
-              type='button'
-              variant='secondary'
-              onClick={panel.resetForm}
-              disabled={panel.isSaving}
-            >
-              Cancel
-            </Button>
-          )}
-        </div>
-      </Card>
-
-      <Card
-        title='Existing Categories'
-        description='Select a category to edit or delete.'
-      >
-        {panel.isLoading ? (
-          <p className='text-sm text-slate-600'>Loading categories...</p>
-        ) : panel.items.length === 0 ? (
-          <p className='text-sm text-slate-600'>No categories yet.</p>
-        ) : (
-          <div className='space-y-4'>
-            <div className='max-w-full sm:max-w-sm'>
-              <SearchInput
-                placeholder='Search categories...'
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <DataTable
-              columns={columns}
-              data={filteredItems}
-              keyExtractor={(item) => item.id}
-              onEdit={(item) => panel.startEdit(item)}
-              onDelete={(item) => panel.handleDelete(item)}
-              nextCursor={panel.nextCursor}
-              onLoadMore={panel.loadMore}
-              isLoading={panel.isLoading}
-              emptyMessage={
-                searchQuery.trim()
-                  ? 'No categories match your search.'
-                  : 'No categories yet.'
-              }
-            />
-          </div>
-        )}
-      </Card>
+    <>
+      <ResourceTableShell
+        ariaLabel='Categories'
+        rows={panel.items}
+        getLabel={(item) => {
+          const label = categoryPathById.get(item.id) || item.name;
+          return item.is_system ? `${label} (pending)` : label;
+        }}
+        middleColumnCount={2}
+        isLoading={panel.isLoading}
+        isLoadingMore={panel.isLoadingMore}
+        hasMore={panel.hasMore}
+        onLoadMore={panel.loadMore}
+        error={panel.listError}
+        emptyLabel='No categories yet.'
+        isExpanded={panel.isExpanded}
+        onToggle={panel.toggle}
+        isDraftOpen={panel.isDraftOpen}
+        draftLabel='New category'
+        onToggleDraft={panel.collapse}
+        detail={detail}
+        filters={
+          <AdminFilterBar
+            trailing={
+              panel.canCreate ? (
+                <AdminCreateButton
+                  label='New category'
+                  active={panel.isDraftOpen}
+                  onClick={panel.openDraft}
+                />
+              ) : null
+            }
+          />
+        }
+        head={
+          <>
+            <AdminDataTableHeadCell>Path</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Display Order
+            </AdminDataTableHeadCell>
+          </>
+        }
+        renderCells={(item) => {
+          const label = categoryPathById.get(item.id) || item.name;
+          const pathLabel = item.is_system ? `${label} (pending)` : label;
+          return (
+            <>
+              <AdminDataTableCell>
+                {pathLabel}
+                <AdminDataTableCellMeta until='secondary'>
+                  {item.display_order ?? 0}
+                </AdminDataTableCellMeta>
+              </AdminDataTableCell>
+              <AdminDataTableCell priority='secondary'>
+                {item.display_order ?? 0}
+              </AdminDataTableCell>
+            </>
+          );
+        }}
+        renderActions={(item) =>
+          item.is_system ? null : deleteRowActions(() => panel.handleDelete(item))
+        }
+      />
       {panel.confirmDialog}
-    </div>
+    </>
   );
 }

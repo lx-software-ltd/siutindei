@@ -105,6 +105,64 @@ export function AppleIcon({ className }: IconProps) {
   );
 }
 
+export function ChevronDownIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      aria-hidden
+    >
+      <path d='m6 9 6 6 6-6' />
+    </svg>
+  );
+}
+
+export function MoreHorizontalIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox='0 0 24 24'
+      fill='currentColor'
+      aria-hidden
+    >
+      <circle cx='5' cy='12' r='1.6' />
+      <circle cx='12' cy='12' r='1.6' />
+      <circle cx='19' cy='12' r='1.6' />
+    </svg>
+  );
+}
+
+export function SpinnerIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox='0 0 24 24'
+      fill='none'
+      aria-hidden
+    >
+      <circle
+        cx='12'
+        cy='12'
+        r='9'
+        stroke='currentColor'
+        strokeWidth='2'
+        opacity='0.25'
+      />
+      <path
+        d='M21 12a9 9 0 0 0-9-9'
+        stroke='currentColor'
+        strokeWidth='2'
+        strokeLinecap='round'
+      />
+    </svg>
+  );
+}
+
 export function EmailIcon({ className }: IconProps) {
   return (
     <svg

@@ -61,6 +61,7 @@ from app.db.repositories import (
     OrganizationRepository,
 )
 from app.exceptions import ValidationError
+from app.services.category_suggestions.capture import record_import_capture
 
 ALLOWED_ORG_FIELDS = {
     "name",
@@ -97,6 +98,7 @@ ALLOWED_ORG_FIELDS = {
     "status",
     "source",
     "source_id",
+    "source_note",
     "description_source",
 }
 ALLOWED_LOCATION_FIELDS = {
@@ -118,6 +120,7 @@ ALLOWED_ACTIVITY_FIELDS = {
     "category_id",
     "category_name",
     "source_url",
+    "source_note",
     "vetting_note",
     "name_zh",
     "description_zh",
@@ -173,7 +176,6 @@ def upsert_organization(
     for extra in (
         "locations",
         "activities",
-        "source_url",
         "vetting_note",
         "area_name",
         "category_name",
@@ -322,6 +324,7 @@ def upsert_activity(
     allow_updates: bool = True,
     venue: Location | None = None,
     warnings: list[str] | None = None,
+    import_job_id: Any = None,
 ) -> tuple[Activity, str]:
     repo = ActivityRepository(session)
     name = _validate_string_length(
@@ -350,9 +353,9 @@ def upsert_activity(
 
     body = filter_fields(raw_activity, ALLOWED_ACTIVITY_FIELDS)
     resolve_activity_category_fields(session, body)
+    capture_name = body.pop("_capture_category_name", None)
     body.pop("pricing", None)
     body.pop("schedules", None)
-    body.pop("source_url", None)
     body.pop("vetting_note", None)
     body.pop("name_zh", None)
     body.pop("description_zh", None)
@@ -362,6 +365,9 @@ def upsert_activity(
         link_activity_to_venue(session, updated, venue)
         persist_import_change(session, dry_run=dry_run)
         session.refresh(updated)
+        record_import_capture(
+            session, updated, org, capture_name, import_job_id, warnings
+        )
         return updated, "updated"
 
     body["org_id"] = str(org.id)
@@ -370,6 +376,7 @@ def upsert_activity(
     link_activity_to_venue(session, created, venue)
     persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
+    record_import_capture(session, created, org, capture_name, import_job_id, warnings)
     return created, "created"
 
 
