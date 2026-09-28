@@ -9,11 +9,11 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import InstrumentedAttribute, Session
+from sqlalchemy.orm import Session
 
 from app.db.age_bounds import inclusive_age_bounds
 from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
@@ -349,7 +349,7 @@ def snapshot_for_org(
 
 def _counts_by_activity(
     session: Session,
-    activity_id_column: InstrumentedAttribute[Any],
+    activity_id_column: Any,
     activity_ids: list[Any],
 ) -> dict[str, int]:
     if not activity_ids:
@@ -359,7 +359,7 @@ def _counts_by_activity(
         .where(activity_id_column.in_(activity_ids))
         .group_by(activity_id_column)
     ).all()
-    return {str(activity_id): int(count) for activity_id, count in rows}
+    return {str(activity_id): cast(int, count) for activity_id, count in rows}
 
 
 def _passed_checks(snapshot: OrgReviewSnapshot) -> int:
