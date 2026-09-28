@@ -25,6 +25,7 @@ from app.db.models import Location
 from app.db.models import Organization
 from app.db.models import PricingType
 from app.db.models import ScheduleType
+from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 
 
 @dataclass(frozen=True)
@@ -103,6 +104,7 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
     )
     if review_gate_enabled():
         query = query.where(Organization.review_status == "approved")
+    query = query.where(Activity.category_id != PENDING_CATEGORY_ID)
 
     conditions: list = []
 

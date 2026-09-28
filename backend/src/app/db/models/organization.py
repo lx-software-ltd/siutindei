@@ -93,6 +93,8 @@ class Organization(Base):
         Text(),
         nullable=True,
     )
+    source_url: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    source_note: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     review_status: Mapped[str] = mapped_column(
         Text(),
         nullable=False,

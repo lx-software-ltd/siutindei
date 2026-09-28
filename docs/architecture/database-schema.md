@@ -46,8 +46,13 @@ Columns:
   or `importer`
 - `source` (text, optional) — catalog source (`lcsd`, `edb`, `swd`,
   `places`, `competitor`)
-- `source_id` (text, optional) — parsed from `sourceId=` in
-  `vetting_note`
+- `source_id` (text, optional) — explicit import field, or parsed from
+  `sourceId=` in `vetting_note`
+- `source_url` (text, optional) — page the listing was taken from.
+  Admin-write only; manager routes ignore this field.
+- `source_note` (text, optional) — free-text vetting note after catalog
+  `key=value` pairs are removed. Admin-write only; manager routes
+  ignore this field.
 - `description_source` (text, optional) — `template`, `official`,
   `places`, or `enrich`
 - `review_status` (text, default `pending_review`) — `pending_review`,
@@ -134,6 +139,52 @@ Indexes:
 - `activity_categories_parent_idx` on `parent_id`
 - `activity_categories_name_idx` on `name`
 
+The system row Pending categorisation
+(`c1111111-1111-1111-1111-111111111199`, Chinese name 待分類,
+`display_order` 9999) holds activities whose imported category name
+is not resolved yet. It cannot be renamed, re-parented, deleted, or
+used as a parent. Public search excludes it.
+
+## Table: category_suggestion_settings
+
+Purpose: Singleton admin settings for category capture and OpenRouter.
+The row id is `c2222222-2222-2222-2222-222222222201`.
+
+Columns:
+- `id` (UUID, PK)
+- `on_import_enabled` (boolean, default false)
+- `auto_enrich_enabled` (boolean, default true)
+- `openrouter_model` (text, nullable)
+- `fallback_models` (text[], default empty)
+- `max_evidence_items` (integer, default 25, check 5–50)
+- `deny_data_collection` (boolean, default true)
+- `updated_by` (text, nullable)
+- `updated_at` (timestamptz)
+
+## Table: category_suggestions
+
+Purpose: One proposed category per normalised requested name.
+
+Columns include `fingerprint` (unique), `requested_name`, `source`,
+`status` (`pending`, `approved`, `merged`, `rejected`),
+`enrichment_status` (`none`, `queued`, `running`, `done`, `failed`),
+model output (`suggested_name`, `name_translations`,
+`suggested_parent_id`, `maps_to_category_id`, `confidence`,
+`rationale`, `alternatives`, `usage`), decision fields
+(`created_category_id`, `merged_into_category_id`, `decided_by`,
+`decided_at`, `decision_notes`), `activity_count`, and timestamps.
+Category foreign keys use `ON DELETE SET NULL`.
+
+Indexes: status, enrichment status, created_at, unique fingerprint.
+
+## Table: category_suggestion_activities
+
+Purpose: Evidence link from a suggestion to an imported activity.
+
+Primary key: (`suggestion_id`, `activity_id`). `org_id` cascades with
+the organization. `import_job_id` is set null when the job is removed.
+`suggestion_id` and `activity_id` cascade.
+
 ## Table: locations
 
 Purpose: Physical or logical locations for an organization.
@@ -171,6 +222,11 @@ Columns:
 - `description` (text, optional)
 - `name_translations` (jsonb, default `{}`) — non-English name translations
 - `description_translations` (jsonb, default `{}`) — non-English description translations
+- `source_url` (text, optional) — page the activity was taken from.
+  Admin-write only; manager routes ignore this field.
+- `source_note` (text, optional) — free-text vetting note after catalog
+  `key=value` pairs are removed. Admin-write only; manager routes
+  ignore this field.
 - `age_range` (int4range, required)
 - `created_at` (timestamptz, default `now()`)
 - `updated_at` (timestamptz, default `now()`)

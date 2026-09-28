@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
+
+import { Button } from './button';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -11,6 +13,10 @@ interface ConfirmDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
   variant?: 'danger' | 'default';
+  children?: ReactNode;
+  confirmDisabled?: boolean;
+  confirmLoading?: boolean;
+  confirmLoadingLabel?: string;
 }
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
@@ -30,6 +36,10 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
   variant = 'default',
+  children,
+  confirmDisabled = false,
+  confirmLoading = false,
+  confirmLoadingLabel,
 }: ConfirmDialogProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -95,11 +105,6 @@ export function ConfirmDialog({
     return null;
   }
 
-  const confirmClassName =
-    variant === 'danger'
-      ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
-      : 'bg-slate-900 text-white hover:bg-slate-700 focus:ring-slate-500';
-
   return (
     <div
       className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
@@ -120,21 +125,21 @@ export function ConfirmDialog({
           {title}
         </h2>
         <p className='mt-2 text-sm text-slate-600'>{message}</p>
+        {children ? <div className='mt-4'>{children}</div> : null}
         <div className='mt-6 flex justify-end gap-3'>
-          <button
-            type='button'
-            onClick={onCancel}
-            className='rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500'
-          >
+          <Button type='button' variant='secondary' onClick={onCancel}>
             {cancelLabel}
-          </button>
-          <button
+          </Button>
+          <Button
             type='button'
+            variant={variant === 'danger' ? 'danger' : 'primary'}
+            disabled={confirmDisabled}
+            loading={confirmLoading}
+            loadingLabel={confirmLoadingLabel}
             onClick={onConfirm}
-            className={`rounded-md px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 ${confirmClassName}`}
           >
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

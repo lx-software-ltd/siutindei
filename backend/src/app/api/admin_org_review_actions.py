@@ -36,6 +36,8 @@ _BULK_FIELDS = {
     "status",
     "manager_id",
     "source",
+    "source_url",
+    "source_note",
     "description_source",
     "review_notes",
     "phone_country_code",

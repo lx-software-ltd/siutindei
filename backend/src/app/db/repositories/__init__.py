@@ -15,6 +15,10 @@ from app.db.repositories.listing_event import (
 from app.db.repositories.location import LocationRepository
 from app.db.repositories.activity import ActivityRepository
 from app.db.repositories.activity_category import ActivityCategoryRepository
+from app.db.repositories.category_suggestion import (
+    CategorySuggestionRepository,
+    CategorySuggestionSettingsRepository,
+)
 from app.db.repositories.feedback_label import FeedbackLabelRepository
 from app.db.repositories.pricing import ActivityPricingRepository
 from app.db.repositories.organization_feedback import OrganizationFeedbackRepository
@@ -31,6 +35,8 @@ __all__ = [
     "LocationRepository",
     "ActivityRepository",
     "ActivityCategoryRepository",
+    "CategorySuggestionRepository",
+    "CategorySuggestionSettingsRepository",
     "FeedbackLabelRepository",
     "ActivityPricingRepository",
     "OrganizationFeedbackRepository",

@@ -10,7 +10,7 @@ from app.api.admin_imports_catalog import (
     ACTIVITY_TRUNCATE_LIMITS,
     truncate_import_fields,
 )
-from app.api.admin_imports_fields import apply_source_attribution
+from app.api.admin_imports_fields import apply_source_fields
 from app.api.admin_imports_items import process_pricing, process_schedule
 from app.api.admin_imports_results import (
     format_error,
@@ -158,6 +158,7 @@ def process_activity(
     *,
     dry_run: bool = False,
     allow_updates: bool = True,
+    import_job_id: Any = None,
 ) -> None:
     path = f"{base_path}[{index}]"
     if not isinstance(raw_activity, dict):
@@ -179,7 +180,7 @@ def process_activity(
         path,
         warnings,
     )
-    apply_source_attribution(raw_activity)
+    apply_source_fields(raw_activity)
     truncate_import_fields(
         raw_activity,
         path,
@@ -218,6 +219,7 @@ def process_activity(
                 allow_updates=allow_updates,
                 venue=resolve_single_imported_venue(location_cache),
                 warnings=warnings,
+                import_job_id=import_job_id,
             ),
         )
     except ValidationError as exc:

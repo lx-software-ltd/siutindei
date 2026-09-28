@@ -18,12 +18,31 @@ DEFAULT_MAX_LIMIT = 200
 
 def _parse_body(event: Mapping[str, Any]) -> dict[str, Any]:
     """Parse JSON request body."""
-    raw = event.get("body") or ""
-    if event.get("isBase64Encoded"):
-        raw = base64.b64decode(raw).decode("utf-8")
+    raw = _raw_body(event)
     if not raw:
         raise ValidationError("Request body is required")
     return json.loads(raw)
+
+
+def parse_object_body(event: Mapping[str, Any]) -> dict[str, Any]:
+    """Parse a JSON object body. An empty body is an empty object."""
+    raw = _raw_body(event)
+    if not str(raw).strip():
+        return {}
+    try:
+        body = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValidationError("Request body must be JSON") from exc
+    if not isinstance(body, dict):
+        raise ValidationError("Request body must be an object")
+    return body
+
+
+def _raw_body(event: Mapping[str, Any]) -> str:
+    raw = event.get("body") or ""
+    if event.get("isBase64Encoded") and raw:
+        raw = base64.b64decode(raw).decode("utf-8")
+    return str(raw)
 
 
 def _parse_path(path: str) -> tuple[str, str, Optional[str], Optional[str]]:
