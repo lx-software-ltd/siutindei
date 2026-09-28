@@ -1,3 +1,4 @@
+import { ADMIN_LIST_PAGE_SIZE } from './admin-list-query';
 import type { ListResponse } from './api-client-core';
 import { buildApiUrl, request } from './api-client-core';
 
@@ -17,17 +18,26 @@ function buildResourceUrl(resource: ResourceName, id?: string) {
     : buildApiUrl(`v1/admin/${resource}`);
 }
 
+export async function getResource<T>(
+  resource: ResourceName,
+  id: string,
+  signal?: AbortSignal
+): Promise<T> {
+  return request<T>(buildResourceUrl(resource, id), { signal });
+}
+
 export async function listResource<T>(
   resource: ResourceName,
   cursor?: string,
-  limit = 50
+  limit = ADMIN_LIST_PAGE_SIZE,
+  signal?: AbortSignal
 ): Promise<ListResponse<T>> {
   const url = new URL(buildResourceUrl(resource));
   if (cursor) {
     url.searchParams.set('cursor', cursor);
   }
   url.searchParams.set('limit', `${limit}`);
-  return request<ListResponse<T>>(url.toString());
+  return request<ListResponse<T>>(url.toString(), { signal });
 }
 
 export async function createResource<TInput, TOutput>(

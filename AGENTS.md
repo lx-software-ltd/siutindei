@@ -102,6 +102,7 @@ cd apps/admin_web && npx playwright test
 - Public www copies `shared/home_wizard/home_wizard_choices.json` into `apps/public_www/src/data/` for TypeScript bundling; keep both in sync when editing choices.
 - Staging activity search fixture: canonical file is `shared/fixtures/activity_search_staging.json` (Git LFS). Generate with `python3 scripts/codegen/generate_activity_search_staging.py`, then `bash scripts/codegen/sync-activity-search-staging-fixture.sh` (copies to `backend/fixtures/` for Lambda bundle/synth and `apps/public_www/public/fixtures/` for static CDN). After clone run `git lfs pull`. Set GitHub Environment variable `STAGING_SEARCH_DATA_ENABLED=true` on the **staging** environment only (public www); production always uses Aurora + live API. Optional: `NEXT_PUBLIC_STAGING_SEARCH_FIXTURE_URL` (staging www) or `STAGING_SEARCH_FIXTURE_URL` dart-define (Flutter).
 - Python formatting rule: run `pre-commit run ruff-format --all-files` before any Python commit (per `.cursorrules`).
+- PII denylist: `scripts/check-pii.sh` (pre-commit, Test, and Security Scanning) fails when tracked source matches SHA-256 digests in `scripts/pii-denylist.sha256`. The file stores digests only. Role mailboxes stay in source; personal names, phones, street addresses, and personal inboxes do not. Git author trailers are outside the check.
 - Do not file GitHub issues from `NOTE:`, `SECURITY NOTE:`, or
   `next-env.d.ts` comments. Those are documented architecture, not
   defects. See `docs/architecture/security.md` and

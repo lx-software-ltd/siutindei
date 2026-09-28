@@ -107,10 +107,13 @@ export const mockOrganizations = [
     wechat: '@orgone',
     media_urls: [],
     logo_media_url: null,
-    status: 'operational',
-    status_changed_at: '2024-01-05T10:00:00Z',
+    source: 'lcsd',
+    source_id: 'lcsd-1',
+    source_url: 'https://lcsd.example/org-one',
+    source_note: 'Checked listing',
+    description_source: 'official',
     created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-10T08:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
   },
   {
     id: 'org-2',
@@ -139,10 +142,8 @@ export const mockOrganizations = [
     wechat: '',
     media_urls: [],
     logo_media_url: null,
-    status: 'hidden',
-    status_changed_at: '2024-01-08T12:00:00Z',
     created_at: '2024-01-02T00:00:00Z',
-    updated_at: '2024-01-08T12:00:00Z',
+    updated_at: '2024-01-02T00:00:00Z',
   },
 ];
 
@@ -168,6 +169,8 @@ export const mockActivities = [
     },
     age_min: 5,
     age_max: 12,
+    source_url: 'https://lcsd.example/swim',
+    source_note: 'Class listing',
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
   },
@@ -659,6 +662,99 @@ export async function setupApiMocks(page: Page): Promise<void> {
     }
   });
 
+  await page.route('**/api/mock/**/admin/category-suggestions**', async (route) => {
+    const url = route.request().url();
+    const method = route.request().method();
+    if (url.includes('/settings/test')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, message: 'ok' }),
+      });
+      return;
+    }
+    if (url.includes('/settings')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          on_import_enabled: false,
+          auto_enrich_enabled: true,
+          openrouter_model: null,
+          default_openrouter_model: 'qwen/qwen3-30b-a3b',
+          fallback_models: ['qwen/qwen-turbo'],
+          max_evidence_items: 25,
+          deny_data_collection: true,
+        }),
+      });
+      return;
+    }
+    if (url.includes('/summary')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          by_status: { pending: 1 },
+          by_enrichment_status: { done: 1 },
+          pending_activity_total: 2,
+          stranded_activity_total: 0,
+          month_cost_usd: 0.01,
+        }),
+      });
+      return;
+    }
+    if (url.includes('/decision')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'sug-1',
+          requested_name: 'Pottery',
+          status: 'approved',
+          enrichment_status: 'done',
+          activity_count: 2,
+        }),
+      });
+      return;
+    }
+    if (method === 'GET' && url.includes('/sug-1')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'sug-1',
+          requested_name: 'Pottery',
+          status: 'pending',
+          enrichment_status: 'done',
+          suggested_name: 'Ceramics',
+          name_translations: { zh: '陶藝' },
+          rationale: 'Hands-on indoor class',
+          activity_count: 2,
+          activities: [],
+          alternatives: { display_order_hint: 3 },
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: [
+          {
+            id: 'sug-1',
+            requested_name: 'Pottery',
+            status: 'pending',
+            enrichment_status: 'done',
+            suggested_name: 'Ceramics',
+            activity_count: 2,
+          },
+        ],
+        next_cursor: null,
+      }),
+    });
+  });
+
   // Mock activity categories list
   await page.route('**/api/mock/**/admin/activity-categories*', async (route) => {
     const method = route.request().method();
@@ -967,13 +1063,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          items: mockTickets,
-          next_cursor: null,
-          pending_count: mockTickets.filter(
-            (ticket) => ticket.status === 'pending'
-          ).length,
-        }),
+        body: JSON.stringify({ items: mockTickets, next_cursor: null }),
       });
       return;
     }

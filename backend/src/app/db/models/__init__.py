@@ -9,6 +9,11 @@ from app.db.models.activity import (
 )
 from app.db.models.activity_category import ActivityCategory
 from app.db.models.api_key import ApiKey
+from app.db.models.category_suggestion import (
+    CategorySuggestion,
+    CategorySuggestionActivity,
+    CategorySuggestionSettings,
+)
 from app.db.models.audit_log import AuditLog
 from app.db.models.enums import PricingType, ScheduleType, TicketStatus, TicketType
 from app.db.models.feedback_label import FeedbackLabel
@@ -29,6 +34,9 @@ __all__ = [
     "ActivityScheduleEntry",
     "ApiKey",
     "AuditLog",
+    "CategorySuggestion",
+    "CategorySuggestionActivity",
+    "CategorySuggestionSettings",
     "FeedbackLabel",
     "GeographicArea",
     "ImportJob",

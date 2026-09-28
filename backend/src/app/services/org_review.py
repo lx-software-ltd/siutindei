@@ -18,6 +18,7 @@ from sqlalchemy.orm import InstrumentedAttribute, Session
 from app.db.age_bounds import inclusive_age_bounds
 from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
 from app.db.models import Organization
+from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 
 REVIEW_STATUSES = ("pending_review", "approved", "rejected")
 MAX_REVIEW_NOTES_LENGTH = 2000
@@ -119,13 +120,21 @@ def collect_issues(
             org_id,
             "Description is missing",
         )
-    if _has_source_attribution(organization):
+    if organization.description_source == "template":
         add(
             "source_attribution",
             "warning",
             "organization",
             org_id,
-            "Description still looks like an import note",
+            "Description is a template",
+        )
+    elif "Source:" in (organization.description or ""):
+        add(
+            "source_attribution",
+            "warning",
+            "organization",
+            org_id,
+            "Description still contains a source line",
         )
     if not _translation(organization.name_translations, "zh"):
         add(
@@ -218,6 +227,14 @@ def collect_issues(
                 "activity",
                 activity_id,
                 "Activity has no schedule",
+            )
+        if str(activity.category_id) == str(PENDING_CATEGORY_ID):
+            add(
+                "pending_category",
+                "blocker",
+                "activity",
+                activity_id,
+                "Activity is waiting for a category",
             )
         if not _text(activity.description):
             add(
@@ -366,16 +383,9 @@ def _passed_checks(snapshot: OrgReviewSnapshot) -> int:
     """Checks that did not produce an issue, so completeness can reach 1."""
     org_checks = 9
     location_checks = len(snapshot.locations)
-    activity_checks = len(snapshot.activities) * 4
+    activity_checks = len(snapshot.activities) * 5
     total = org_checks + location_checks + activity_checks
     return max(total - len(snapshot.issues), 0)
-
-
-def _has_source_attribution(organization: Organization) -> bool:
-    if organization.description_source == "template":
-        return True
-    description = organization.description or ""
-    return "Source:" in description
 
 
 def _translation(value: Any, language: str) -> str:

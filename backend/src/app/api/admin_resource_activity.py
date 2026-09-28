@@ -8,6 +8,10 @@ from uuid import UUID
 from psycopg.types.range import Range
 
 from app.api.admin_request import _parse_uuid
+from app.api.admin_imports_catalog import (
+    MAX_VETTING_NOTE_LENGTH,
+    MAX_WEBSITE_LENGTH,
+)
 from app.api.admin_validators import (
     MAX_DESCRIPTION_LENGTH,
     MAX_NAME_LENGTH,
@@ -69,8 +73,29 @@ def _create_activity(repo: ActivityRepository, body: dict[str, Any]) -> Activity
         description=description,
         name_translations=name_translations,
         description_translations=description_translations,
+        source_url=_validate_string_length(
+            body.get("source_url"),
+            "source_url",
+            MAX_WEBSITE_LENGTH,
+        ),
+        source_note=_validate_string_length(
+            body.get("source_note"),
+            "source_note",
+            MAX_VETTING_NOTE_LENGTH,
+        ),
         age_range=age_range,
     )
+
+
+def _update_activity_for_manager(
+    repo: ActivityRepository,
+    entity: Activity,
+    body: dict[str, Any],
+) -> Activity:
+    """Update an activity for a manager (no provenance fields)."""
+    body.pop("source_url", None)
+    body.pop("source_note", None)
+    return _update_activity(repo, entity, body)
 
 
 def _update_activity(
@@ -102,6 +127,18 @@ def _update_activity(
             body["description_translations"],
             "description_translations",
             MAX_DESCRIPTION_LENGTH,
+        )
+    if "source_url" in body:
+        entity.source_url = _validate_string_length(
+            body["source_url"],
+            "source_url",
+            MAX_WEBSITE_LENGTH,
+        )
+    if "source_note" in body:
+        entity.source_note = _validate_string_length(
+            body["source_note"],
+            "source_note",
+            MAX_VETTING_NOTE_LENGTH,
         )
     if "category_id" in body:
         category_id = body["category_id"]
@@ -180,6 +217,8 @@ def _serialize_activity(entity: Activity) -> dict[str, Any]:
         "description_translations": build_translation_map(
             entity.description, entity.description_translations
         ),
+        "source_url": entity.source_url,
+        "source_note": entity.source_note,
         "age_min": age_min,
         "age_max": age_max,
         "created_at": entity.created_at,

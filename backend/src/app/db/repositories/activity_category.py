@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Activity
 from app.db.models import ActivityCategory
+from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.db.repositories.base import BaseRepository
 from app.exceptions import ValidationError
 
@@ -71,6 +72,11 @@ class ActivityCategoryRepository(BaseRepository[ActivityCategory]):
     def delete(self, entity: ActivityCategory) -> None:
         """Delete a category if it has no children or activities."""
         category_id = _to_uuid(entity.id)
+        if category_id == PENDING_CATEGORY_ID:
+            raise ValidationError(
+                "Pending categorisation cannot be deleted",
+                field="id",
+            )
         if self._has_children(category_id):
             raise ValidationError(
                 "Cannot delete a category with subcategories",

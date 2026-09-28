@@ -24,6 +24,7 @@ from app.api.admin_org_review_actions import (
     ReviewBlockedError,
     _apply_decision,
     _apply_fields,
+    _parse_fields,
 )
 from app.api.admin_resource_activity import _serialize_activity
 from app.api.admin_resource_organization import _create_organization
@@ -150,6 +151,21 @@ def test_approve_blocks_until_forced(db_session, sample_organization) -> None:
     assert sample_organization.review_status == "approved"
     assert sample_organization.reviewed_by == "admin-sub"
     assert sample_organization.review_notes == "ship it"
+
+
+def test_bulk_fields_sets_source_url_and_note(
+    db_session, sample_organization
+) -> None:
+    repo = OrganizationRepository(db_session)
+    fields = _parse_fields(
+        {
+            "source_url": "https://review.test",
+            "source_note": "called the venue",
+        }
+    )
+    _apply_fields(repo, sample_organization, fields)
+    assert sample_organization.source_url == "https://review.test"
+    assert sample_organization.source_note == "called the venue"
 
 
 def test_bulk_fields_sets_email(db_session, sample_organization) -> None:

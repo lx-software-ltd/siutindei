@@ -8,11 +8,10 @@ test.describe('Activities Panel', () => {
   });
 
   test('should display the activities form', async ({ adminPage }) => {
-    // Check for Activities form
-    await expect(adminPage.getByRole('heading', { name: 'Activities' })).toBeVisible();
+    await adminPage.getByRole('button', { name: 'New activity' }).click();
 
     // Check form fields
-    await expect(adminPage.getByLabel('Organization')).toBeVisible();
+    await expect(adminPage.locator('#activity-org')).toBeVisible();
     await expect(adminPage.getByLabel('Category')).toBeVisible();
     await expect(adminPage.getByLabel('Name')).toBeVisible();
     await expect(adminPage.getByLabel('Description')).toBeVisible();
@@ -33,22 +32,22 @@ test.describe('Activities Panel', () => {
     ).toBeVisible();
     await expect(adminPage.getByLabel('Age Min')).toBeVisible();
     await expect(adminPage.getByLabel('Age Max')).toBeVisible();
+    await expect(adminPage.getByLabel('Source URL')).toBeVisible();
+    await expect(adminPage.getByLabel('Source note')).toBeVisible();
 
     // Check for submit button
-    await expect(adminPage.getByRole('button', { name: 'Add Activity' })).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Create' })).toBeVisible();
   });
 
   test('should display existing activities table', async ({ adminPage }) => {
     // Check for existing activities section
-    await expect(adminPage.getByRole('heading', { name: 'Existing Activities' })).toBeVisible();
+    await expect(adminPage.getByRole('table', { name: 'Activities' })).toBeVisible();
 
     // Check for table headers
-    await expect(
-      adminPage.getByRole('columnheader', { name: 'Organization / Activity' })
-    ).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Name' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Category' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Age Range' })).toBeVisible();
-    await expect(adminPage.getByRole('columnheader', { name: 'Actions' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Operations' })).toBeVisible();
 
     // Check for activity data
     await expect(adminPage.getByText('Swimming Class')).toBeVisible();
@@ -57,38 +56,44 @@ test.describe('Activities Panel', () => {
   });
 
   test('should display organization selector', async ({ adminPage }) => {
-    const orgSelect = adminPage.getByLabel('Organization');
+    await adminPage.getByRole('button', { name: 'New activity' }).click();
+    const orgSelect = adminPage.locator('#activity-org');
     await expect(orgSelect).toBeVisible();
 
     // Should have default "Select organization" option
-    await expect(adminPage.locator('option').filter({ hasText: 'Select organization' })).toBeVisible();
+    await expect(
+      adminPage.locator('#activity-org option', { hasText: 'Select organization' })
+    ).toBeAttached();
   });
 
   test('should validate required fields on submit', async ({ adminPage }) => {
     // Try to submit empty form
-    await adminPage.getByRole('button', { name: 'Add Activity' }).click();
+    await adminPage.getByRole('button', { name: 'New activity' }).click();
+    await adminPage.getByRole('button', { name: 'Create' }).click();
 
     // Should show error message
     await expect(adminPage.getByText('Organization and name are required.')).toBeVisible();
   });
 
   test('should validate age range is numeric', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Fill required fields but leave age range empty
-    await adminPage.getByLabel('Organization').selectOption({ index: 1 });
+    await adminPage.locator('#activity-org').selectOption({ index: 1 });
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
     await adminPage.getByLabel('Name').fill('Test Activity');
 
     // Submit without age range
-    await adminPage.getByRole('button', { name: 'Add Activity' }).click();
+    await adminPage.getByRole('button', { name: 'Create' }).click();
 
     // Should show error message about age range
     await expect(adminPage.getByText('Age range must be numeric.')).toBeVisible();
   });
 
   test('should validate age min is less than age max', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Fill form with invalid age range
-    await adminPage.getByLabel('Organization').selectOption({ index: 1 });
+    await adminPage.locator('#activity-org').selectOption({ index: 1 });
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
     await adminPage.getByLabel('Name').fill('Test Activity');
@@ -96,15 +101,16 @@ test.describe('Activities Panel', () => {
     await adminPage.getByLabel('Age Max').fill('5'); // Max less than min
 
     // Submit
-    await adminPage.getByRole('button', { name: 'Add Activity' }).click();
+    await adminPage.getByRole('button', { name: 'Create' }).click();
 
     // Should show error message
-    await expect(adminPage.getByText('Age min must be less than age max.')).toBeVisible();
+    await expect(adminPage.getByText('Age min must be less than age max.').first()).toBeVisible();
   });
 
   test('should fill out the activity form', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Select organization
-    await adminPage.getByLabel('Organization').selectOption({ index: 1 });
+    await adminPage.locator('#activity-org').selectOption({ index: 1 });
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
 
@@ -128,8 +134,9 @@ test.describe('Activities Panel', () => {
   });
 
   test('should create a new activity', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Fill the form completely
-    await adminPage.getByLabel('Organization').selectOption({ index: 1 });
+    await adminPage.locator('#activity-org').selectOption({ index: 1 });
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
     await adminPage.getByLabel('Name').fill('New Swimming Class');
@@ -138,7 +145,7 @@ test.describe('Activities Panel', () => {
     await adminPage.getByLabel('Age Max').fill('18');
 
     // Submit the form
-    await adminPage.getByRole('button', { name: 'Add Activity' }).click();
+    await adminPage.getByRole('button', { name: 'Create' }).click();
 
     // Form should be reset after successful creation
   });
@@ -148,13 +155,10 @@ test.describe('Activities Panel', () => {
     await expect(adminPage.getByText('Swimming Class')).toBeVisible();
 
     // Click first activity row
-    await adminPage.getByRole('row', { name: /Swimming Class/ }).click();
+    await adminPage.getByRole('row', { name: /Swimming Class/ }).first().click();
 
-    // Cancel button should appear
-    await expect(adminPage.getByRole('button', { name: 'Cancel' })).toBeVisible();
-
-    // Submit button text should change
-    await expect(adminPage.getByRole('button', { name: 'Update Activity' })).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Update' })).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
   });
 
   test('should populate form with existing data when editing', async ({ adminPage }) => {
@@ -162,11 +166,15 @@ test.describe('Activities Panel', () => {
     await expect(adminPage.getByText('Swimming Class')).toBeVisible();
 
     // Click row
-    await adminPage.getByRole('row', { name: /Swimming Class/ }).click();
+    await adminPage.getByRole('row', { name: /Swimming Class/ }).first().click();
 
     // Form should be populated with existing data
     await expect(adminPage.getByLabel('Name')).toHaveValue('Swimming Class');
     await expect(adminPage.getByLabel('Description')).toHaveValue('Learn to swim');
+    await expect(adminPage.getByLabel('Source URL')).toHaveValue(
+      'https://lcsd.example/swim'
+    );
+    await expect(adminPage.getByLabel('Source note')).toHaveValue('Class listing');
     await expect(adminPage.getByLabel('Age Min')).toHaveValue('5');
     await expect(adminPage.getByLabel('Age Max')).toHaveValue('12');
   });
@@ -176,19 +184,15 @@ test.describe('Activities Panel', () => {
     await expect(adminPage.getByText('Swimming Class')).toBeVisible();
 
     // Click row
-    await adminPage.getByRole('row', { name: /Swimming Class/ }).click();
+    await adminPage.getByRole('row', { name: /Swimming Class/ }).first().click();
 
     // Verify we're in edit mode
-    await expect(adminPage.getByRole('button', { name: 'Update Activity' })).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Update' })).toBeVisible();
 
-    // Click Cancel
-    await adminPage.getByRole('button', { name: 'Cancel' }).click();
+    await adminPage.getByRole('row', { name: /Swimming Class/ }).first().click();
 
-    // Should return to "Add Activity" button
-    await expect(adminPage.getByRole('button', { name: 'Add Activity' })).toBeVisible();
-
-    // Form should be reset
-    await expect(adminPage.getByLabel('Name')).toHaveValue('');
+    await expect(adminPage.getByRole('button', { name: 'New activity' })).toBeVisible();
+    await expect(adminPage.getByLabel('Name')).toHaveCount(0);
   });
 
   test('should have delete button for each activity', async ({ adminPage }) => {
@@ -216,6 +220,7 @@ test.describe('Activities Panel', () => {
     // Check for search input
     const searchInput = adminPage.getByPlaceholder('Search activities...');
     await expect(searchInput).toBeVisible();
+    await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
   });
 
   test('should filter activities by search query', async ({ adminPage }) => {
@@ -252,8 +257,9 @@ test.describe('Activities Panel - Form Validation', () => {
   });
 
   test('should accept valid age range with 0 as minimum', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Fill form with 0 as minimum age
-    await adminPage.getByLabel('Organization').selectOption({ index: 1 });
+    await adminPage.locator('#activity-org').selectOption({ index: 1 });
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
     await adminPage.getByLabel('Name').fill('Baby Activity');
@@ -261,15 +267,16 @@ test.describe('Activities Panel - Form Validation', () => {
     await adminPage.getByLabel('Age Max').fill('3');
 
     // Submit should work (no validation error about age range)
-    await adminPage.getByRole('button', { name: 'Add Activity' }).click();
+    await adminPage.getByRole('button', { name: 'Create' }).click();
 
     // Should not show age validation error
     await expect(adminPage.getByText('Age min must be less than age max.')).not.toBeVisible();
   });
 
   test('should reject equal age min and max', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Fill form with equal min and max
-    await adminPage.getByLabel('Organization').selectOption({ index: 1 });
+    await adminPage.locator('#activity-org').selectOption({ index: 1 });
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
     await adminPage.getByLabel('Name').fill('Test Activity');
@@ -277,13 +284,14 @@ test.describe('Activities Panel - Form Validation', () => {
     await adminPage.getByLabel('Age Max').fill('5');
 
     // Submit
-    await adminPage.getByRole('button', { name: 'Add Activity' }).click();
+    await adminPage.getByRole('button', { name: 'Create' }).click();
 
     // Should show error message
-    await expect(adminPage.getByText('Age min must be less than age max.')).toBeVisible();
+    await expect(adminPage.getByText('Age min must be less than age max.').first()).toBeVisible();
   });
 
   test('should use number input for age fields', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Check that age inputs are type="number"
     const ageMinInput = adminPage.getByLabel('Age Min');
     const ageMaxInput = adminPage.getByLabel('Age Max');
