@@ -14,12 +14,13 @@ const requireFromRoot = createRequire(
   path.join(packageRoot, 'package.json'),
 );
 
-describe('js-yaml CVE-2026-84375 (3.x override)', () => {
-  it('pins js-yaml@3 to 3.15.2 in package overrides', () => {
+describe('js-yaml CVE-2026-84375 / GHSA-2883-xcg3-v3hh', () => {
+  it('pins patched js-yaml majors in package overrides', () => {
     const pkg = JSON.parse(
       readFileSync(path.join(packageRoot, 'package.json'), 'utf8'),
     ) as { overrides?: Record<string, string> };
     expect(pkg.overrides?.['js-yaml@3']).toBe('3.15.2');
+    expect(pkg.overrides?.['js-yaml@4']).toBe('4.3.2');
   });
 
   it('locks every js-yaml 3.x install to 3.15.2', () => {
@@ -38,6 +39,25 @@ describe('js-yaml CVE-2026-84375 (3.x override)', () => {
         continue;
       }
       expect(version).toBe('3.15.2');
+    }
+  });
+
+  it('locks every js-yaml 4.x install to 4.3.2', () => {
+    const lock = JSON.parse(
+      readFileSync(path.join(packageRoot, 'package-lock.json'), 'utf8'),
+    ) as {
+      packages?: Record<string, { version?: string }>;
+    };
+    const packages = lock.packages ?? {};
+    for (const [name, meta] of Object.entries(packages)) {
+      if (!name.endsWith('/js-yaml') && name !== 'node_modules/js-yaml') {
+        continue;
+      }
+      const version = meta.version ?? '';
+      if (!version.startsWith('4.')) {
+        continue;
+      }
+      expect(version).toBe('4.3.2');
     }
   });
 

@@ -23,6 +23,8 @@ from app.api.schemas import (
 from app.db.queries import ActivitySearchFilters, validate_filters
 
 _FIXTURE_CACHE: dict[str, Any] | None = None
+_SORTED_PUBLISHED_ITEMS: list[dict[str, Any]] | None = None
+_LFS_POINTER_PREFIX = "version https://git-lfs.github.com/spec/v1"
 
 
 def staging_search_data_enabled() -> bool:
@@ -39,17 +41,15 @@ def fetch_staging_search_response(
 
     validate_filters(filters)
     payload = _load_fixture()
-    items = payload.get("items", [])
     area_descendants: dict[str, list[str]] = payload.get("meta", {}).get(
         "area_descendants", {}
     )
 
     matched = [
-        _normalize_item(item)
-        for item in items
+        item
+        for item in _sorted_published_items()
         if _matches(item, filters, area_descendants)
     ]
-    matched.sort(key=_sort_key)
 
     requested_limit = filters.limit
     start_index = 0
@@ -87,14 +87,46 @@ def fetch_staging_search_response(
 
 
 def _load_fixture() -> dict[str, Any]:
-    global _FIXTURE_CACHE
+    global _FIXTURE_CACHE, _SORTED_PUBLISHED_ITEMS
     if _FIXTURE_CACHE is not None:
         return _FIXTURE_CACHE
 
     path = _resolve_fixture_path()
-    with path.open(encoding="utf-8") as handle:
-        _FIXTURE_CACHE = json.load(handle)
+    _FIXTURE_CACHE = _read_fixture_json(path)
+    _SORTED_PUBLISHED_ITEMS = None
     return _FIXTURE_CACHE
+
+
+def _read_fixture_json(path: Path) -> dict[str, Any]:
+    raw = path.read_text(encoding="utf-8")
+    if raw.startswith(_LFS_POINTER_PREFIX):
+        raise FileNotFoundError(
+            "Staging search fixture is a Git LFS pointer; run git lfs pull "
+            "or set STAGING_SEARCH_DATA_PATH to a materialized JSON file."
+        )
+    return json.loads(raw)
+
+
+def _sorted_published_items() -> list[dict[str, Any]]:
+    """Return fixture rows sorted for search, excluding hidden listings."""
+
+    global _SORTED_PUBLISHED_ITEMS
+    if _SORTED_PUBLISHED_ITEMS is not None:
+        return _SORTED_PUBLISHED_ITEMS
+
+    items = [
+        _normalize_item(item)
+        for item in _load_fixture().get("items", [])
+        if _is_visible_listing(item)
+    ]
+    items.sort(key=_sort_key)
+    _SORTED_PUBLISHED_ITEMS = items
+    return _SORTED_PUBLISHED_ITEMS
+
+
+def _is_visible_listing(item: dict[str, Any]) -> bool:
+    status = item.get("organization", {}).get("status")
+    return status not in {"closed_permanently", "hidden"}
 
 
 def _resolve_fixture_path() -> Path:

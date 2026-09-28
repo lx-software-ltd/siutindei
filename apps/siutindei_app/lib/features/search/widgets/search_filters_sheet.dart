@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/constants.dart';
 import '../../../config/tokens/tokens.dart';
 import '../../../domain/entities/entities.dart';
+import 'area_filter_chips.dart';
 
 /// Advanced search filters bottom sheet using leaf tokens.
 ///
@@ -113,7 +114,7 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
               children: [
                 _buildSection('Child Age', _buildAgeSection(semantic, chip)),
                 SizedBox(height: semantic.spacing.lg),
-                _buildSection('District', _buildDistrictSection(chip)),
+                _buildSection('Area', _buildAreaSection()),
                 SizedBox(height: semantic.spacing.lg),
                 _buildSection('Price Range', _buildPriceSection(semantic)),
                 SizedBox(height: semantic.spacing.lg),
@@ -190,13 +191,17 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
     );
   }
 
-  Widget _buildDistrictSection(ChipTokens chipTokens) {
-    // TODO: Replace with area-based filter chips using GET /v1/user/areas tree.
-    // The geographic area tree should be fetched from the API and cached,
-    // then used to populate filter chips dynamically.
-    return const Text(
-      'Area filter coming soon',
-      style: TextStyle(color: Colors.grey),
+  Widget _buildAreaSection() {
+    return AreaFilterChips(
+      selectedAreaId: _filters.areaId,
+      onAreaChanged: (areaId) {
+        _updateFilters(
+          (filters) => filters.copyWith(
+            areaId: areaId,
+            clearAreaId: areaId == null,
+          ),
+        );
+      },
     );
   }
 

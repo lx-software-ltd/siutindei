@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy.orm import Session
+
 from app.api.admin_request import _parse_uuid
 from app.api.admin_validators import _parse_languages
 from app.db.models import (
@@ -57,7 +59,8 @@ def _update_schedule(
     if "languages" in body:
         entity.languages = _parse_languages(body["languages"])
     if "weekly_entries" in body:
-        entity.entries = _parse_weekly_entries(body.get("weekly_entries"))
+        parsed_entries = _parse_weekly_entries(body.get("weekly_entries"))
+        _sync_weekly_entries(repo.session, entity, parsed_entries)
     _validate_schedule(entity)
     _ensure_unique_schedule(repo, entity, current_id=entity.id)
     return entity
@@ -208,6 +211,44 @@ def _entry_sort_key(entry: ActivityScheduleEntry) -> tuple[int, int, int]:
         entry.start_minutes_utc,
         entry.end_minutes_utc,
     )
+
+
+def _weekly_entry_key(
+    entry: ActivityScheduleEntry,
+) -> tuple[int, int, int]:
+    """Unique slot key for a weekly entry."""
+    return (
+        entry.day_of_week_utc,
+        entry.start_minutes_utc,
+        entry.end_minutes_utc,
+    )
+
+
+def _sync_weekly_entries(
+    session: Session,
+    schedule: ActivitySchedule,
+    desired: list[ActivityScheduleEntry],
+) -> None:
+    """Replace weekly entries while preserving ids for unchanged slots."""
+    desired_keys = {_weekly_entry_key(entry) for entry in desired}
+    existing_by_key = {
+        _weekly_entry_key(entry): entry for entry in list(schedule.entries or [])
+    }
+
+    for entry in list(schedule.entries or []):
+        if _weekly_entry_key(entry) not in desired_keys:
+            schedule.entries.remove(entry)
+
+    session.flush()
+
+    synced: list[ActivityScheduleEntry] = []
+    for entry in desired:
+        key = _weekly_entry_key(entry)
+        if key in existing_by_key:
+            synced.append(existing_by_key[key])
+        else:
+            synced.append(entry)
+    schedule.entries[:] = synced
 
 
 def _ensure_unique_schedule(

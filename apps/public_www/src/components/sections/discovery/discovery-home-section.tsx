@@ -6,6 +6,7 @@ import type { Locale, SiteContent } from '@/content';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { ListingCarouselSection } from '@/components/sections/listings/listing-carousel-section';
 import { logActivityLoadError } from '@/lib/activities/load-error';
+import { DISCOVERY_HOME_SEARCH_LIMIT } from '@/lib/activities/search-limits';
 import { fetchActivitySearch } from '@/lib/activities/search-client';
 import {
   buildSearchHref,
@@ -36,7 +37,7 @@ async function fetchDiscoveryListings(
   const apiParams = filtersToApiParams(filters);
   const response = await fetchActivitySearch({
     ...apiParams,
-    limit: 120,
+    limit: DISCOVERY_HOME_SEARCH_LIMIT,
   });
   return sortListingsForDiscovery(
     response.items.filter((listing) =>
