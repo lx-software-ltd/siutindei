@@ -4,5 +4,5 @@ pyjwt[crypto]==2.15.0
 pydantic==2.13.5
 psycopg[binary]==3.2.13
 sqlalchemy==2.1.1
-phonenumbers==9.0.39
+phonenumbers==9.0.40
 pycountry==26.2.16
