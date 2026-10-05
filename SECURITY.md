@@ -128,7 +128,9 @@ This repository uses the following automated security tools:
     tool-status banner)
 - **pip-audit**: Python dependency vulnerability scanning
   - Suppressed: `PYSEC-2025-183` (PyJWT weak-encryption advisory; supplier-disputed,
-    no fixed release beyond `pyjwt==2.12.1`; app uses Cognito JWKS / RS256)
+    last affected release is `pyjwt==2.10.1`; Cognito JWT paths use RS256 via JWKS).
+    The backend pins `pyjwt[crypto]==2.15.0`, which is outside that range and
+    includes the fix for `PYSEC-2026-4141` (nested JWT payload `RecursionError`).
 - **Bandit**: Python security linter
 - **Checkov**: Infrastructure as Code security scanning
 
