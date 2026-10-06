@@ -114,7 +114,7 @@ timeout), which also re-enables the scan button. A new run is refused
 when this month's category-check spend has reached
 `monthly_cost_limit_usd` (default 25). The queue consumer runs at most
 two batches at once, because the admin function also serves live
-  traffic. A healthy batch often takes tens of seconds and may take up
+traffic. A healthy batch often takes tens of seconds and may take up
 to the 90 s OpenRouter timeout. That lifts Admin Lambda p99 `Duration`
 for the length of the run; the duration alarm is 90 s so a scan does
 not page. HTTP console latency stays on the API Gateway p99 alarm.
