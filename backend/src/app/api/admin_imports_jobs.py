@@ -128,14 +128,35 @@ def finish_import_job(
     return job
 
 
-def fail_import_job(session: Session, job_id: Any, error_type: str) -> None:
-    """Mark a committed live import as failed after the work rolled back."""
+def fail_import_job(
+    session: Session,
+    job_id: Any,
+    error_type: str,
+    *,
+    keep_completed: bool = False,
+) -> None:
+    """Mark a committed live import as failed after the work rolled back.
+
+    A retry keeps the completed summary and results. The retry itself
+    rolled back, so the previous history is still the job record.
+    """
     job = session.get(ImportJob, job_id)
     if job is None:
         return
+    now = datetime.now(timezone.utc)
+    if keep_completed:
+        job.status = "completed"
+        warnings = list(job.file_warnings or [])
+        note = f"Retry failed: {error_type[:80]}"
+        if note not in warnings:
+            warnings.append(note)
+        job.file_warnings = warnings
+        job.updated_at = now
+        session.flush()
+        return
     job.status = "failed"
     job.summary = {"error": error_type[:80]}
-    job.updated_at = datetime.now(timezone.utc)
+    job.updated_at = now
     session.flush()
 
 

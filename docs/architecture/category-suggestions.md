@@ -132,20 +132,38 @@ count; a run still stops at `scan_limit` (500).
 
 ## Discover
 
-Discover is the primary button. It groups pending-review activities by
-the imported label. A label that already matches a category is assigned
-immediately and can be reverted. A label that does not match is one
-`source=scan` suggestion (an existing import suggestion keeps its
-source). The model sees a batch of those labels, not one activity each.
-Mapping onto an existing category at or above `auto_assign_threshold`
-is applied and revertable. Creating a category stays an admin approve.
-A suggestion an admin rejected without a target can be reopened, and it
-is not auto-mapped again. Omitted `mode` on `POST .../scan` stays
-`verify`. Discovery messages are
-`{"scan_run_id", "suggestion_ids"}` on the same queue.
+Discover is the primary button. It groups activities that are still on
+Pending categorisation, on organizations in `pending_review`, by the
+imported label. An activity already placed on a real category is left
+alone; verify checks those. A label that already matches a category is
+assigned immediately and can be reverted. The category-check audit
+actor is `category-scan:<run id>` for that write. A label that does
+not match is one `source=scan` suggestion (an existing import
+suggestion keeps its source). The model sees a batch of those labels,
+not one activity each. Auto-map uses `maps_to_existing.confidence`,
+not the proposal confidence, and it only moves activities still on
+Pending categorisation. At or above `auto_assign_threshold` the
+suggestion is merged, linked activities still on Pending categorisation
+move, and reviews waiting on that suggestion are applied. Creating a
+category stays an admin approve. Discover does not reopen a rejected
+suggestion. A later import of the same name still can. Omitted `mode`
+on `POST .../scan` stays `verify`. Discovery messages are
+`{"scan_run_id", "suggestion_ids"}` on the same queue. The summary
+poll loads the taxonomy once per request.
 
 Approving a suggestion copies a Chinese name into both `zh` and
-`zh-HK`. Categories with `show_in_wizard` are the home-wizard activity
-types. Public search matches a category and its descendants, and it
-still excludes Pending categorisation. A category shown in the wizard
-cannot be deleted until the flag is cleared.
+`zh-HK`. The category editor keeps translation keys other than `zh`
+and `yue`, including `zh-HK`, when a category is saved. Categories
+with `show_in_wizard` are the home-wizard activity types. Regenerate
+the static choices after changing flags:
+
+```bash
+DATABASE_URL=postgresql+psycopg://... \
+  python3 scripts/codegen/generate_home_wizard_choices.py --write
+```
+
+That writes `shared/home_wizard/home_wizard_choices.json` and
+`apps/public_www/src/data/home_wizard_choices.json`. Public search
+matches a category and its descendants, and it still excludes Pending
+categorisation. A category shown in the wizard cannot be deleted until
+the flag is cleared.

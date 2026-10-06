@@ -139,7 +139,12 @@ def _stored_job_answers_request(job: Any, dry_run: bool) -> bool:
     return True
 
 
-def _record_import_failure(job_id: Any, exc: BaseException) -> None:
+def _record_import_failure(
+    job_id: Any,
+    exc: BaseException,
+    *,
+    keep_completed: bool = False,
+) -> None:
     """Persist failed status outside the rolled-back import transaction."""
     logger.info(
         "Admin import failed",
@@ -147,7 +152,12 @@ def _record_import_failure(job_id: Any, exc: BaseException) -> None:
     )
     try:
         with Session(get_engine()) as session:
-            fail_import_job(session, job_id, type(exc).__name__)
+            fail_import_job(
+                session,
+                job_id,
+                type(exc).__name__,
+                keep_completed=keep_completed,
+            )
             session.commit()
     except Exception:
         logger.info(
@@ -312,7 +322,11 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
 
             take_import_category_enqueues()
             if import_job_id is not None:
-                _record_import_failure(import_job_id, exc)
+                _record_import_failure(
+                    import_job_id,
+                    exc,
+                    keep_completed=retry_subset,
+                )
             raise
 
     if enqueue_ids:

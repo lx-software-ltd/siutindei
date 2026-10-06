@@ -42,3 +42,24 @@ export function buildTranslationsPayload(
   }
   return payload;
 }
+
+const formTranslationCodes = new Set<string>(['en', 'zh', 'yue']);
+
+export function mergePreservedTranslations(
+  payload: Record<string, string>,
+  existing?: Record<string, string> | null
+): Record<string, string> {
+  const merged = { ...payload };
+  if (!existing) {
+    return merged;
+  }
+  for (const [code, value] of Object.entries(existing)) {
+    if (formTranslationCodes.has(code)) {
+      continue;
+    }
+    if (typeof value === 'string' && value.trim()) {
+      merged[code] = value;
+    }
+  }
+  return merged;
+}

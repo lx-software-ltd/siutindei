@@ -482,13 +482,16 @@ its descendants. A completed import can retry the organizations that
 failed without rewriting the ones that succeeded.
 
 A category check still verifies activities on organizations that are
-`pending_review`. Discover, the primary button, groups the imported
-label instead. An existing category match is assigned immediately.
-The model only sees labels that are not in the taxonomy, and it may
-auto-map one of those onto an existing category at or above
+`pending_review`. Discover, the primary button, groups imported labels
+on activities that are still Pending categorisation. An existing
+category match is assigned immediately. The model only sees labels
+that are not in the taxonomy, and it may auto-map one of those onto
+an existing category when `maps_to_existing.confidence` is at or above
 `auto_assign_threshold` (default 0.90). Creating a category still
-waits for an admin. Home wizard activity types are the categories
-flagged `show_in_wizard`, generated into the static choices file.
+waits for an admin. Rejected labels stay rejected until a new import
+reopens them. Home wizard activity types are the categories flagged
+`show_in_wizard`. `generate_home_wizard_choices.py --write` reads
+those rows and regenerates the static choices file.
 Design notes:
 `docs/architecture/category-suggestions.md`. Endpoint shapes:
 `docs/api/admin.yaml` under `/v1/admin/category-suggestions`.

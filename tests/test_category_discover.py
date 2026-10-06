@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.db.models import ActivityCategory
 from app.db.models.category_scan import ActivityCategoryReview, CategoryScanRun
 from app.db.models.category_suggestion import (
+    PENDING_CATEGORY_ID,
     CategorySuggestion,
     CategorySuggestionActivity,
 )
@@ -27,13 +28,17 @@ from app.services.category_suggestions.scan_discover_batch import (
 from app.services.openrouter_client import OpenRouterError
 
 
+def _leave_pending(session, activity) -> None:
+    from app.services.category_suggestions.capture import ensure_pending_category
+
+    ensure_pending_category(session)
+    activity.category_id = PENDING_CATEGORY_ID
+
+
 def test_known_label_is_assigned_without_a_model_call(
     db_session, sample_activity, sample_activity_category
 ) -> None:
-    other = ActivityCategory(name="Holding category", display_order=4)
-    db_session.add(other)
-    db_session.flush()
-    sample_activity.category_id = other.id
+    _leave_pending(db_session, sample_activity)
     sample_activity.source_category_name = sample_activity_category.name
     db_session.flush()
     run, batches = start_scan(
@@ -52,7 +57,28 @@ def test_known_label_is_assigned_without_a_model_call(
     assert review.decided_by == f"category-scan:{run.id}"
 
 
+def test_categorised_activity_is_left_alone(
+    db_session, sample_activity, sample_activity_category
+) -> None:
+    other = ActivityCategory(name="Holding category", display_order=4)
+    db_session.add(other)
+    db_session.flush()
+    sample_activity.category_id = other.id
+    sample_activity.source_category_name = sample_activity_category.name
+    db_session.flush()
+    run, batches = start_scan(
+        db_session,
+        {"mode": "discover"},
+        requested_by="admin",
+    )
+    db_session.refresh(sample_activity)
+    assert batches == []
+    assert run.total_activities == 0
+    assert str(sample_activity.category_id) == str(other.id)
+
+
 def test_unknown_label_stays_whole_and_is_queued(db_session, sample_activity) -> None:
+    _leave_pending(db_session, sample_activity)
     sample_activity.source_category_name = "Art, Music"
     db_session.flush()
     run, batches = start_scan(
@@ -71,9 +97,10 @@ def test_unknown_label_stays_whole_and_is_queued(db_session, sample_activity) ->
     assert len(links) == 1
 
 
-def test_rejected_label_reopens_and_is_not_auto_mapped(
+def test_rejected_label_stays_rejected(
     db_session, sample_activity, sample_activity_category
 ) -> None:
+    _leave_pending(db_session, sample_activity)
     sample_activity.source_category_name = "Wheel throwing"
     fingerprint = normalize_category_key("Wheel throwing")
     suggestion = CategorySuggestion(
@@ -85,48 +112,27 @@ def test_rejected_label_reopens_and_is_not_auto_mapped(
     )
     db_session.add(suggestion)
     db_session.flush()
-    _run, batches = start_scan(
+    run, batches = start_scan(
         db_session,
         {"mode": "discover"},
         requested_by="admin",
     )
     db_session.refresh(suggestion)
-    assert suggestion.status == "pending"
-    assert suggestion.reopened_at is not None
-    assert suggestion.source == "import"
-    assert batches == [[str(suggestion.id)]]
-    other = ActivityCategory(name="Clay studio", display_order=8)
-    db_session.add(other)
-    db_session.flush()
-    store_discover_batch(
-        db_session,
-        _run.id,
-        batches[0],
-        {
-            "results": [
-                {
-                    "suggestion_id": str(suggestion.id),
-                    "maps_to_existing": {
-                        "category_id": str(other.id),
-                        "confidence": 0.99,
-                    },
-                    "confidence": 0.99,
-                    "rationale": "Close",
-                }
-            ]
-        },
-        {"cost_usd": 0.01},
-        "reopen-1",
-    )
     db_session.refresh(sample_activity)
-    db_session.refresh(suggestion)
-    assert str(sample_activity.category_id) == str(sample_activity_category.id)
-    assert suggestion.status == "pending"
+    assert suggestion.status == "rejected"
+    assert suggestion.reopened_at is None
+    assert suggestion.source == "import"
+    assert batches == []
+    assert run.labels_total == 0
+    assert str(sample_activity.category_id) == str(PENDING_CATEGORY_ID)
+    links = db_session.scalars(select(CategorySuggestionActivity)).all()
+    assert len(links) == 1
 
 
 def test_second_discover_does_not_duplicate_the_link(
     db_session, sample_activity
 ) -> None:
+    _leave_pending(db_session, sample_activity)
     sample_activity.source_category_name = "Printmaking"
     db_session.flush()
     run, _batches = start_scan(
@@ -146,6 +152,7 @@ def test_second_discover_does_not_duplicate_the_link(
 def test_auto_maps_a_confident_existing_category(
     db_session, sample_activity, sample_activity_category
 ) -> None:
+    _leave_pending(db_session, sample_activity)
     sample_activity.source_category_name = "Studio pottery"
     db_session.flush()
     run, batches = start_scan(
@@ -183,10 +190,12 @@ def test_auto_maps_a_confident_existing_category(
     assert str(sample_activity.category_id) == str(target.id)
     review = db_session.scalars(select(ActivityCategoryReview)).one()
     assert review.status == "auto_applied"
-    assert str(review.previous_category_id) == str(sample_activity_category.id)
+    assert str(review.previous_category_id) == str(PENDING_CATEGORY_ID)
+    assert suggestion.activity_count == 1
 
 
 def test_low_confidence_map_stays_pending(db_session, sample_activity) -> None:
+    _leave_pending(db_session, sample_activity)
     original = sample_activity.category_id
     sample_activity.source_category_name = "Orchestra"
     db_session.flush()
@@ -223,6 +232,149 @@ def test_low_confidence_map_stays_pending(db_session, sample_activity) -> None:
     assert str(sample_activity.category_id) == str(original)
     assert suggestion is not None
     assert suggestion.status == "pending"
+
+
+def test_proposal_confidence_does_not_auto_map(db_session, sample_activity) -> None:
+    _leave_pending(db_session, sample_activity)
+    sample_activity.source_category_name = "Choir"
+    db_session.flush()
+    run, batches = start_scan(
+        db_session,
+        {"mode": "discover"},
+        requested_by="admin",
+    )
+    target = ActivityCategory(name="Singing", display_order=9)
+    db_session.add(target)
+    db_session.flush()
+    store_discover_batch(
+        db_session,
+        run.id,
+        batches[0],
+        [
+            {
+                "suggestion_id": batches[0][0],
+                "maps_to_existing": {
+                    "category_id": str(target.id),
+                    "confidence": 0.4,
+                },
+                "confidence": 0.99,
+                "rationale": "Proposal is sure, the map is not",
+            }
+        ],
+        {},
+        "map-low",
+    )
+    db_session.refresh(sample_activity)
+    suggestion = db_session.get(CategorySuggestion, batches[0][0])
+    assert suggestion is not None
+    assert suggestion.status == "pending"
+    assert float(suggestion.confidence or 0) == 0.4
+    assert str(sample_activity.category_id) == str(PENDING_CATEGORY_ID)
+
+
+def test_map_confidence_auto_maps_when_proposal_is_low(
+    db_session, sample_activity
+) -> None:
+    _leave_pending(db_session, sample_activity)
+    sample_activity.source_category_name = "Choir practice"
+    db_session.flush()
+    run, batches = start_scan(
+        db_session,
+        {"mode": "discover"},
+        requested_by="admin",
+    )
+    target = ActivityCategory(name="Voice", display_order=11)
+    db_session.add(target)
+    db_session.flush()
+    store_discover_batch(
+        db_session,
+        run.id,
+        batches[0],
+        {
+            "results": [
+                {
+                    "suggestion_id": batches[0][0],
+                    "maps_to_existing": {
+                        "category_id": str(target.id),
+                        "confidence": 0.95,
+                    },
+                    "confidence": 0.2,
+                    "rationale": "Map is sure",
+                }
+            ]
+        },
+        {},
+        "map-high",
+    )
+    db_session.refresh(sample_activity)
+    suggestion = db_session.get(CategorySuggestion, batches[0][0])
+    assert suggestion is not None
+    assert suggestion.status == "merged"
+    assert str(sample_activity.category_id) == str(target.id)
+
+
+def test_auto_map_applies_reviews_waiting_on_the_suggestion(
+    db_session, sample_activity
+) -> None:
+    _leave_pending(db_session, sample_activity)
+    sample_activity.source_category_name = "Batik"
+    db_session.flush()
+    run, batches = start_scan(
+        db_session,
+        {"mode": "discover"},
+        requested_by="admin",
+    )
+    suggestion = db_session.get(CategorySuggestion, batches[0][0])
+    assert suggestion is not None
+    earlier = CategoryScanRun(
+        status="done",
+        mode="verify",
+        batch_size=10,
+        total_activities=1,
+        batches_total=1,
+        batches_done=1,
+    )
+    db_session.add(earlier)
+    db_session.flush()
+    waiting = ActivityCategoryReview(
+        scan_run_id=earlier.id,
+        activity_id=sample_activity.id,
+        org_id=sample_activity.org_id,
+        verdict="propose",
+        suggestion_id=suggestion.id,
+        status="pending",
+    )
+    db_session.add(waiting)
+    db_session.flush()
+    target = ActivityCategory(name="Textile", display_order=12)
+    db_session.add(target)
+    db_session.flush()
+    store_discover_batch(
+        db_session,
+        run.id,
+        batches[0],
+        {
+            "results": [
+                {
+                    "suggestion_id": str(suggestion.id),
+                    "maps_to_existing": {
+                        "category_id": str(target.id),
+                        "confidence": 0.96,
+                    },
+                    "confidence": 0.96,
+                    "rationale": "Same craft",
+                }
+            ]
+        },
+        {},
+        "map-review",
+    )
+    db_session.refresh(waiting)
+    db_session.refresh(sample_activity)
+    db_session.refresh(suggestion)
+    assert waiting.status == "applied"
+    assert suggestion.status == "merged"
+    assert str(sample_activity.category_id) == str(target.id)
 
 
 def test_discover_refuses_when_the_month_budget_is_used(

@@ -3,10 +3,11 @@
 Revision ID: 0039_act_source_category
 Revises: 0038_capture_default_on
 
-Seed assessment: source_category_name is nullable. show_in_wizard and
-scan mode/labels have server defaults. seed_data.sql inserts Sport only
-and does not insert scan runs, so existing seed rows stay valid. The
-four wizard categories are flagged when present.
+Seed assessment: source_category_name is nullable. The backfill copies
+requested_name only from import-sourced suggestion links. show_in_wizard
+and scan mode/labels have server defaults. seed_data.sql inserts Sport
+only and does not insert scan runs, so existing seed rows stay valid.
+The four wizard categories are flagged when present.
 """
 
 from __future__ import annotations
@@ -38,9 +39,13 @@ def upgrade() -> None:
     op.execute(
         "UPDATE activities AS activity SET source_category_name = picked.name "
         "FROM ("
-        "  SELECT DISTINCT ON (activity_id) activity_id, requested_name AS name "
-        "  FROM category_suggestion_activities "
-        "  ORDER BY activity_id, created_at DESC"
+        "  SELECT DISTINCT ON (link.activity_id) "
+        "    link.activity_id, link.requested_name AS name "
+        "  FROM category_suggestion_activities AS link "
+        "  JOIN category_suggestions AS suggestion "
+        "    ON suggestion.id = link.suggestion_id "
+        "  WHERE suggestion.source = 'import' "
+        "  ORDER BY link.activity_id, link.created_at DESC"
         ") AS picked "
         "WHERE activity.id = picked.activity_id "
         "AND activity.source_category_name IS NULL"

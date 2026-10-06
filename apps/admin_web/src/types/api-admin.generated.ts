@@ -5253,6 +5253,10 @@ export interface components {
              *     Omitted on jobs stored before capture existed.
              */
             captured_categories?: number;
+            /**
+             * @description Suggestion ids counted by captured_categories. A retry unions this list with the previous job so one label is not counted twice. Omitted on jobs stored before the list existed.
+             */
+            captured_category_ids?: string[];
         };
         AdminImportError: {
             message: string;
@@ -6364,9 +6368,11 @@ export interface components {
             scan_candidate_total?: number;
             /** @description Maximum activities one run will enqueue. */
             scan_limit?: number;
-            /** @description Pending-review activities that still carry an imported category label. Not capped. */
+            /** @description Default number of activities or labels in one model call. A request can still pass a different batch_size. */
+            scan_batch_size?: number;
+            /** @description Activities still on Pending categorisation, in a pending-review organization, that carry an imported label. Not capped. */
             discover_activity_total?: number;
-            /** @description Distinct imported labels that are not already a category and still need a model call. Not capped. */
+            /** @description Distinct imported labels among those activities that are not already a category and still need a model call. Not capped. Rejected labels are not included. */
             discover_label_total?: number;
             active_scan_run?: components["schemas"]["CategoryScanRun"] | null;
             /** @description OpenRouter cost recorded this month. Each enrichment stores its own cost, so earlier months are not included. */

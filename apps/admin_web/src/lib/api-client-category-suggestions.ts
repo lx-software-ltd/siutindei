@@ -57,6 +57,7 @@ export interface CategorySuggestionSummary {
   auto_applied_total?: number;
   scan_candidate_total?: number;
   scan_limit?: number;
+  scan_batch_size?: number;
   discover_activity_total?: number;
   discover_label_total?: number;
   active_scan_run?: CategoryScanRun | null;

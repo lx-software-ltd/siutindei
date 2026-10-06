@@ -200,6 +200,7 @@ def summary_counts(
         "auto_applied_total": _count("auto_applied"),
         "scan_candidate_total": count_candidates(session, org_id=org_id),
         "scan_limit": MAX_LIMIT,
+        "scan_batch_size": DEFAULT_BATCH_SIZE,
         "discover_activity_total": discover_activities,
         "discover_label_total": discover_labels,
         "active_scan_run": None if active is None else serialize_run(active),

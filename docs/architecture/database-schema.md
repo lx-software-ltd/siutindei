@@ -134,6 +134,8 @@ Columns:
 - `show_in_wizard` (boolean, default false) — home wizard activity type.
   Pending categorisation cannot set this. Delete is refused while it
   is true. The four wizard roots are set true by migration.
+  `scripts/codegen/generate_home_wizard_choices.py --write` copies
+  flagged rows into the static wizard JSON.
 
 Constraints:
 - UNIQUE(`parent_id`, `name`)

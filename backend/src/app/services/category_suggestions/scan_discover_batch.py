@@ -14,15 +14,19 @@ from app.db.engine import get_engine
 from app.db.models import Activity, ActivityCategory, Organization
 from app.db.models.category_scan import ActivityCategoryReview, CategoryScanRun
 from app.db.models.category_suggestion import (
+    PENDING_CATEGORY_ID,
     CategorySuggestion,
     CategorySuggestionActivity,
 )
+from app.db.repositories.category_suggestion import CategorySuggestionRepository
 from app.services.category_suggestions.prompt import build_discovery_prompt
+from app.services.category_suggestions.reviews import apply_suggestion_to_reviews
 from app.services.category_suggestions.scan_apply import (
     _add_review,
     _audit_scan,
     _bump,
     _claim_message,
+    _confidence,
     _overridden,
     _threshold,
     record_batch_failure,
@@ -131,6 +135,9 @@ def store_discover_batch(
             counts["failed"] += 1
             continue
         _apply_parsed(session, suggestion, result, usage)
+        maps_confidence = _maps_confidence(result)
+        if suggestion.maps_to_category_id is not None:
+            suggestion.confidence = maps_confidence
         if not _can_auto_map(suggestion, threshold):
             continue
         target = session.get(ActivityCategory, suggestion.maps_to_category_id)
@@ -140,12 +147,19 @@ def store_discover_batch(
             _audit_scan(session, run.id)
             audited = True
         moved = _move_linked(session, run, suggestion, target, now)
+        apply_suggestion_to_reviews(
+            session,
+            suggestion,
+            target_id=UUID(str(target.id)),
+            decided_by=f"category-scan:{run.id}",
+        )
         counts["auto_applied"] += moved
         suggestion.status = "merged"
         suggestion.merged_into_category_id = target.id  # type: ignore[assignment]
         suggestion.decided_by = f"category-scan:{run.id}"
         suggestion.decided_at = now
         suggestion.updated_at = now
+        CategorySuggestionRepository(session).refresh_activity_count(suggestion)
     _bump(run, counts, usage, now)
     session.flush()
 
@@ -200,6 +214,14 @@ def _prepare(
         )
 
 
+def _maps_confidence(result: dict[str, Any]) -> float | None:
+    """Confidence that this label is an existing category, not the proposal."""
+    maps = result.get("maps_to_existing")
+    if not isinstance(maps, dict):
+        return None
+    return _confidence(maps.get("confidence"))
+
+
 def _can_auto_map(suggestion: CategorySuggestion, threshold: float | None) -> bool:
     if suggestion.status != "pending" or suggestion.reopened_at is not None:
         return False
@@ -244,10 +266,12 @@ def _move_linked(
             continue
         if _has_open_review(session, activity.id):
             continue
+        if str(activity.category_id) != str(PENDING_CATEGORY_ID):
+            continue
         if str(activity.category_id) == str(target.id):
             continue
         previous = UUID(str(activity.category_id))
-        activity.category_id = target.id  # type: ignore[assignment]
+        activity.category_id = target.id
         _add_review(
             session,
             run=run,
@@ -305,6 +329,8 @@ def _index_results(parsed: Any) -> dict[str, dict[str, Any]]:
     raw_items: Any
     if isinstance(parsed, dict):
         raw_items = parsed.get("results", [])
+    elif isinstance(parsed, list):
+        raw_items = parsed
     else:
         raw_items = []
     indexed: dict[str, dict[str, Any]] = {}

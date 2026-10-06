@@ -145,12 +145,13 @@ export function CategoryChecksPanel() {
 
   const candidates = summary?.scan_candidate_total ?? 0;
   const scanLimit = summary?.scan_limit ?? 500;
+  const batchSize = summary?.scan_batch_size ?? 10;
   const scanCount = Math.min(candidates, scanLimit);
-  const batches = Math.max(1, Math.ceil(scanCount / 10));
+  const batches = Math.max(1, Math.ceil(scanCount / batchSize));
   const discoverActivities = summary?.discover_activity_total ?? 0;
   const discoverLabels = summary?.discover_label_total ?? 0;
   const discoverCount = Math.min(discoverLabels, scanLimit);
-  const discoverBatches = Math.ceil(discoverCount / 10);
+  const discoverBatches = Math.ceil(discoverCount / batchSize);
   const thresholdText =
     threshold === null
       ? 'Auto-assign is off.'

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
 from uuid import UUID
@@ -13,20 +14,35 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Activity, ActivityCategory, Organization
 from app.db.models.category_scan import ActivityCategoryReview, CategoryScanRun
-from app.db.models.category_suggestion import CategorySuggestion
+from app.db.models.category_suggestion import (
+    PENDING_CATEGORY_ID,
+    CategorySuggestion,
+)
 from app.db.repositories.category_suggestion import CategorySuggestionRepository
 from app.services.category_suggestions.capture import (
     REENRICH_THRESHOLDS,
-    _is_reopenable,
     _link_activity,
     _replace_other_links,
 )
-from app.services.category_suggestions.resolve import (
-    matching_category_id,
-    normalize_category_key,
-)
+from app.services.category_suggestions.resolve import normalize_category_key
 from app.services.category_suggestions.scan import CategoryScanBusy, _chunks
-from app.services.category_suggestions.scan_apply import _add_review, _overridden
+from app.services.category_suggestions.scan_apply import (
+    _add_review,
+    _audit_scan,
+)
+
+# An admin already decided, or verify already settled the category.
+_LEAVE = ("applied", "confirmed", "dismissed", "reverted")
+
+
+@dataclass
+class _Catalog:
+    """Taxonomy and suggestions loaded once for a discover pass."""
+
+    exact: dict[str, list[UUID]]
+    by_key: dict[str, set[UUID]]
+    live_ids: set[UUID]
+    suggestions: dict[str, CategorySuggestion]
 
 
 def count_discover(
@@ -34,11 +50,14 @@ def count_discover(
     *,
     org_id: UUID | None = None,
 ) -> tuple[int, int]:
-    """Uncapped activity count and unknown labels a discover run would model."""
+    """Pending activities and labels a default discover run would model."""
     groups = _groups(session, org_id=org_id)
+    catalog = _catalog(session, list(groups))
     activities = sum(len(rows) for rows in groups.values())
     labels = sum(
-        1 for key, rows in groups.items() if _label_needs_model(session, key, rows)
+        1
+        for key, rows in groups.items()
+        if _preview_enqueue(catalog, key, rows, rescan=False)
     )
     return activities, labels
 
@@ -53,35 +72,16 @@ def start_discover(
     rescan: bool,
 ) -> tuple[CategoryScanRun, list[list[str]]]:
     """Assign known labels now and queue unknown labels for the model."""
-    groups = _groups(session, org_id=org_id)
-    known, unknown = _split(session, groups)
-    unknown_keys = sorted(unknown)[:limit]
-    seen_ids: set[str] = set()
-    for key in list(known) + unknown_keys:
-        for activity in groups[key]:
-            seen_ids.add(str(activity.id))
-    suggestion_ids: list[str] = []
-    for key in unknown_keys:
-        suggestion_id = _capture_label(
-            session,
-            key,
-            groups[key],
-            rescan=rescan,
-        )
-        if suggestion_id is not None:
-            suggestion_ids.append(suggestion_id)
     now = datetime.now(timezone.utc)
-    batches = _chunks(suggestion_ids, batch_size)
     run = CategoryScanRun(
-        status="done" if not batches else "queued",
+        status="running",
         requested_by=requested_by,
         org_id=org_id,
         mode="discover",
         batch_size=batch_size,
-        total_activities=len(seen_ids),
-        labels_total=len(unknown_keys),
-        batches_total=len(batches),
-        finished_at=now if not batches else None,
+        total_activities=0,
+        labels_total=0,
+        batches_total=0,
         updated_at=now,
     )
     session.add(run)
@@ -90,7 +90,44 @@ def start_discover(
     except IntegrityError as exc:
         session.rollback()
         raise CategoryScanBusy() from exc
-    _attach_known_reviews(session, run, known, groups, now)
+    groups = _groups(session, org_id=org_id)
+    catalog = _catalog(session, list(groups))
+    orgs = _orgs(session, groups)
+    known, unknown = _split(catalog, groups)
+    model_keys = [
+        key
+        for key in sorted(unknown)
+        if _preview_enqueue(catalog, key, groups[key], rescan=rescan)
+    ]
+    chosen = set(model_keys[:limit])
+    suggestion_ids: list[str] = []
+    for key in sorted(unknown):
+        suggestion_id = _capture_label(
+            session,
+            catalog,
+            orgs,
+            key,
+            groups[key],
+            rescan=rescan,
+            allow_enqueue=key in chosen,
+        )
+        if suggestion_id is not None:
+            suggestion_ids.append(suggestion_id)
+    seen: set[str] = set()
+    for key in known:
+        for activity in groups[key]:
+            seen.add(str(activity.id))
+    for key in chosen:
+        for activity in groups[key]:
+            seen.add(str(activity.id))
+    batches = _chunks(suggestion_ids, batch_size)
+    run.status = "done" if not batches else "queued"
+    run.total_activities = len(seen)
+    run.labels_total = len(suggestion_ids)
+    run.batches_total = len(batches)
+    run.finished_at = now if not batches else None
+    run.updated_at = now
+    _attach_known_reviews(session, run, known, groups, orgs, now)
     session.flush()
     return run, batches
 
@@ -100,7 +137,7 @@ def _groups(
     *,
     org_id: UUID | None,
 ) -> dict[str, list[Activity]]:
-    pending = (
+    pending_review = (
         select(ActivityCategoryReview.id)
         .where(ActivityCategoryReview.activity_id == Activity.id)
         .where(ActivityCategoryReview.status == "pending")
@@ -109,8 +146,9 @@ def _groups(
         select(Activity)
         .join(Organization, Organization.id == Activity.org_id)
         .where(Organization.review_status == "pending_review")
+        .where(Activity.category_id == PENDING_CATEGORY_ID)
         .where(Activity.source_category_name.is_not(None))
-        .where(~pending.exists())
+        .where(~pending_review.exists())
     )
     if org_id is not None:
         query = query.where(Activity.org_id == org_id)
@@ -124,14 +162,53 @@ def _groups(
     return grouped
 
 
-def _split(
+def _catalog(session: Session, keys: list[str]) -> _Catalog:
+    exact: dict[str, list[UUID]] = {}
+    by_key: dict[str, set[UUID]] = {}
+    live: set[UUID] = set()
+    for row in session.scalars(select(ActivityCategory)).all():
+        if row.id == PENDING_CATEGORY_ID:
+            continue
+        category_id = UUID(str(row.id))
+        live.add(category_id)
+        exact.setdefault(row.name, []).append(category_id)
+        names = {normalize_category_key(row.name)}
+        translations = row.name_translations or {}
+        if isinstance(translations, dict):
+            for value in translations.values():
+                if isinstance(value, str) and value.strip():
+                    names.add(normalize_category_key(value))
+        for name in names:
+            if name:
+                by_key.setdefault(name, set()).add(category_id)
+    suggestions: dict[str, CategorySuggestion] = {}
+    if keys:
+        found = session.scalars(
+            select(CategorySuggestion).where(CategorySuggestion.fingerprint.in_(keys))
+        ).all()
+        suggestions = {row.fingerprint: row for row in found}
+    return _Catalog(exact, by_key, live, suggestions)
+
+
+def _orgs(
     session: Session,
+    groups: dict[str, list[Activity]],
+) -> dict[str, Organization]:
+    ids = {row.org_id for rows in groups.values() for row in rows}
+    if not ids:
+        return {}
+    found = session.scalars(select(Organization).where(Organization.id.in_(ids))).all()
+    return {str(org.id): org for org in found}
+
+
+def _split(
+    catalog: _Catalog,
     groups: dict[str, list[Activity]],
 ) -> tuple[dict[str, UUID], dict[str, list[Activity]]]:
     known: dict[str, UUID] = {}
     unknown: dict[str, list[Activity]] = {}
     for key, rows in groups.items():
-        target = _known_target(session, key, rows)
+        target = _known_target(catalog, rows)
         if target is None:
             unknown[key] = rows
         else:
@@ -140,37 +217,67 @@ def _split(
 
 
 def _known_target(
-    session: Session,
-    key: str,
+    catalog: _Catalog,
     rows: list[Activity],
 ) -> UUID | None:
     name = _preferred_name([row.source_category_name or "" for row in rows])
-    matched = matching_category_id(session, name)
-    if matched is not None:
-        return matched
-    suggestion = CategorySuggestionRepository(session).get_by_fingerprint(key)
-    if suggestion is None:
+    exact = catalog.exact.get(name, [])
+    if len(exact) > 1:
         return None
-    if suggestion.status == "approved" and suggestion.created_category_id:
-        return UUID(str(suggestion.created_category_id))
-    if suggestion.status == "merged" and suggestion.merged_into_category_id:
-        return UUID(str(suggestion.merged_into_category_id))
+    if len(exact) == 1:
+        return exact[0]
+    alias = _alias_target(catalog, name)
+    if alias is not None:
+        return alias
+    normalized = normalize_category_key(name)
+    if not normalized:
+        return None
+    found = catalog.by_key.get(normalized, set())
+    if len(found) == 1:
+        return next(iter(found))
     return None
 
 
-def _label_needs_model(
-    session: Session,
+def _alias_target(catalog: _Catalog, name: str) -> UUID | None:
+    fingerprint = normalize_category_key(name)
+    if not fingerprint:
+        return None
+    suggestion = catalog.suggestions.get(fingerprint)
+    if suggestion is None:
+        return None
+    raw = suggestion.created_category_id or suggestion.merged_into_category_id
+    if raw is None:
+        return None
+    target = UUID(str(raw))
+    if target == PENDING_CATEGORY_ID or target not in catalog.live_ids:
+        return None
+    return target
+
+
+def _preview_enqueue(
+    catalog: _Catalog,
     key: str,
     rows: list[Activity],
+    *,
+    rescan: bool,
 ) -> bool:
-    if _known_target(session, key, rows) is not None:
+    if _known_target(catalog, rows) is not None:
         return False
-    suggestion = CategorySuggestionRepository(session).get_by_fingerprint(key)
-    if suggestion is None or _is_reopenable(suggestion):
+    suggestion = catalog.suggestions.get(key)
+    if suggestion is None:
         return True
     if suggestion.status != "pending":
         return False
-    return suggestion.enrichment_status in {"none", "failed"}
+    previous = int(suggestion.activity_count or 0)
+    projected = max(previous, len(rows))
+    return _should_enqueue(
+        suggestion,
+        rescan=rescan,
+        created=False,
+        linked=projected > previous,
+        previous=previous,
+        count=projected,
+    )
 
 
 def _attach_known_reviews(
@@ -178,12 +285,14 @@ def _attach_known_reviews(
     run: CategoryScanRun,
     known: dict[str, UUID],
     groups: dict[str, list[Activity]],
+    orgs: dict[str, Organization],
     now: datetime,
 ) -> None:
-    overridden = _overridden(
-        session,
-        [str(row.id) for key in known for row in groups[key]],
-    )
+    if not known:
+        return
+    _audit_scan(session, run.id)
+    activity_ids = [str(row.id) for key in known for row in groups[key]]
+    overridden = _left_alone(session, activity_ids)
     for key, target_id in known.items():
         target = session.get(ActivityCategory, target_id)
         if target is None:
@@ -194,9 +303,22 @@ def _attach_known_reviews(
                 run,
                 activity,
                 target,
+                org=orgs.get(str(activity.org_id)),
                 overridden=str(activity.id) in overridden,
                 now=now,
             )
+
+
+def _left_alone(session: Session, activity_ids: list[str]) -> set[str]:
+    if not activity_ids:
+        return set()
+    rows = session.scalars(
+        select(ActivityCategoryReview.activity_id).where(
+            ActivityCategoryReview.activity_id.in_(activity_ids),
+            ActivityCategoryReview.status.in_(_LEAVE),
+        )
+    ).all()
+    return {str(item) for item in rows}
 
 
 def _move_known(
@@ -205,18 +327,20 @@ def _move_known(
     activity: Activity,
     target: ActivityCategory,
     *,
+    org: Organization | None,
     overridden: bool,
     now: datetime,
 ) -> None:
-    org = session.get(Organization, activity.org_id)
     if org is None or org.review_status != "pending_review":
+        return
+    if str(activity.category_id) != str(PENDING_CATEGORY_ID):
         return
     if str(activity.category_id) == str(target.id):
         return
     previous = UUID(str(activity.category_id))
     can_auto = not overridden
     if can_auto:
-        activity.category_id = target.id  # type: ignore[assignment]
+        activity.category_id = target.id
     _add_review(
         session,
         run=run,
@@ -238,14 +362,16 @@ def _move_known(
 
 def _capture_label(
     session: Session,
+    catalog: _Catalog,
+    orgs: dict[str, Organization],
     key: str,
     rows: list[Activity],
     *,
     rescan: bool,
+    allow_enqueue: bool,
 ) -> str | None:
     repo = CategorySuggestionRepository(session)
-    suggestion = repo.get_by_fingerprint(key)
-    now = datetime.now(timezone.utc)
+    suggestion = catalog.suggestions.get(key)
     created = False
     if suggestion is None:
         suggestion = CategorySuggestion(
@@ -259,19 +385,38 @@ def _capture_label(
         )
         session.add(suggestion)
         session.flush()
+        catalog.suggestions[key] = suggestion
         created = True
-    elif _is_reopenable(suggestion):
-        suggestion.status = "pending"
-        suggestion.reopened_at = now
-        suggestion.enrichment_status = "none"
-        suggestion.enrichment_error = None
-        suggestion.updated_at = now
     elif suggestion.status != "pending":
+        # Rejected, approved, and merged labels stay decided. Discover
+        # still records activities imported after that decision.
+        _link_rows(session, suggestion, rows, orgs)
+        repo.refresh_activity_count(suggestion)
         return None
     previous = int(suggestion.activity_count or 0)
+    linked = _link_rows(session, suggestion, rows, orgs)
+    count = repo.refresh_activity_count(suggestion)
+    if not allow_enqueue or not _should_enqueue(
+        suggestion,
+        rescan=rescan,
+        created=created,
+        linked=linked,
+        previous=previous,
+        count=count,
+    ):
+        return None
+    return str(suggestion.id)
+
+
+def _link_rows(
+    session: Session,
+    suggestion: CategorySuggestion,
+    rows: list[Activity],
+    orgs: dict[str, Organization],
+) -> bool:
     linked = False
     for activity in rows:
-        org = session.get(Organization, activity.org_id)
+        org = orgs.get(str(activity.org_id))
         if org is None:
             continue
         _replace_other_links(
@@ -290,20 +435,10 @@ def _capture_label(
             )
             or linked
         )
-    count = repo.refresh_activity_count(suggestion)
-    if not _enqueue_model(
-        suggestion,
-        rescan=rescan,
-        created=created,
-        linked=linked,
-        previous=previous,
-        count=count,
-    ):
-        return None
-    return str(suggestion.id)
+    return linked
 
 
-def _enqueue_model(
+def _should_enqueue(
     suggestion: CategorySuggestion,
     *,
     rescan: bool,
