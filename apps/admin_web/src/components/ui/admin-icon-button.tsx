@@ -11,6 +11,7 @@ import { twMerge } from 'tailwind-merge';
  */
 export const ADMIN_ICON_BUTTON_BASE_CLASS =
   'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-white transition ' +
+  '[&>svg]:h-4 [&>svg]:w-4 ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ' +
   'disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50';
 

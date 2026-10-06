@@ -7,6 +7,20 @@ export interface AdminTabItem<T extends string = string> {
   label: string;
 }
 
+/**
+ * Title Case for in-area tab labels: first letter of every word is
+ * capital (`Category Checks`, not `Category checks`).
+ */
+export function formatAdminTabLabel(label: string): string {
+  return label
+    .trim()
+    .split(/\s+/)
+    .map((word) =>
+      word ? word.charAt(0).toUpperCase() + word.slice(1) : word
+    )
+    .join(' ');
+}
+
 export interface AdminTabStripProps<T extends string> {
   items: readonly AdminTabItem<T>[];
   activeKey: T;
@@ -19,6 +33,7 @@ export interface AdminTabStripProps<T extends string> {
  * a white card with a uniform 1px `slate-300` border on all four sides; hover
  * previews the same white surface. On phones the controls fill the row two
  * per line so every view stays readable without horizontal scrolling.
+ * Labels render in Title Case (first letter of each word capital).
  */
 export function AdminTabStrip<T extends string>({
   items,
@@ -48,7 +63,7 @@ export function AdminTabStrip<T extends string>({
                 : 'border-transparent text-slate-600 hover:border-slate-300 hover:bg-white hover:text-slate-900'
             )}
           >
-            {item.label}
+            {formatAdminTabLabel(item.label)}
           </button>
         );
       })}

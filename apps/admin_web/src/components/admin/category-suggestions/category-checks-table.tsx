@@ -52,7 +52,7 @@ export function CategoryChecksTable({
   return (
     <div className='space-y-4'>
       <ResourceTableShell
-        ariaLabel='Category checks'
+        ariaLabel='Category Checks'
         rows={items}
         getLabel={(item) => item.activity_name || item.activity_id}
         middleColumnCount={5}
@@ -157,7 +157,7 @@ function ReviewActions({
         {
           key: 'apply',
           label: pending === 'apply' ? 'Applying…' : 'Apply',
-          icon: <EditIcon />,
+          icon: <EditIcon className='h-4 w-4' />,
           hidden: !canApply,
           disabled: pending !== '',
           onClick: () => void decide('apply'),
@@ -165,7 +165,7 @@ function ReviewActions({
         {
           key: 'dismiss',
           label: 'Dismiss',
-          icon: <DeleteIcon />,
+          icon: <DeleteIcon className='h-4 w-4' />,
           hidden: !isPending,
           disabled: pending !== '',
           onClick: () => void decide('dismiss'),
@@ -173,7 +173,7 @@ function ReviewActions({
         {
           key: 'revert',
           label: 'Revert',
-          icon: <ReviewIcon />,
+          icon: <ReviewIcon className='h-4 w-4' />,
           hidden: !canRevert,
           disabled: pending !== '',
           onClick: () => void decide('revert'),

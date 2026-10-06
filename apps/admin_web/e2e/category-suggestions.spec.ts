@@ -23,7 +23,7 @@ test.describe('Category suggestions', () => {
   }) => {
     await adminPage.goto('/admin/dashboard');
     await adminPage.getByRole('button', { name: 'Categories', exact: true }).click();
-    await adminPage.getByRole('button', { name: 'Category checks', exact: true }).click();
+    await adminPage.getByRole('button', { name: 'Category Checks', exact: true }).click();
     await expect(adminPage.getByText('Clay club')).toBeVisible();
     await adminPage.getByRole('button', { name: 'Verify categories' }).click();
     await expect(adminPage.getByText('Scan 2 activities in 1 model call.')).toBeVisible();
