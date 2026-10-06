@@ -16,6 +16,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
 from app.db.models import Organization
+from app.db.models.category_scan import ActivityCategoryReview
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.services.org_review import REVIEW_STATUSES
 
@@ -128,6 +129,13 @@ def _issue_predicates() -> dict[str, ColumnElement[bool]]:
         "pending_category": _child_exists(
             Activity,
             Activity.category_id == PENDING_CATEGORY_ID,
+        ),
+        "category_check_pending": _child_exists(
+            Activity,
+            select(ActivityCategoryReview.id)
+            .where(ActivityCategoryReview.activity_id == Activity.id)
+            .where(ActivityCategoryReview.status == "pending")
+            .exists(),
         ),
         "missing_activity_description": _child_exists(
             Activity,

@@ -166,7 +166,9 @@ The following tables have audit triggers:
 
 - `organizations`
 - `locations`
-- `activities`
+- `activities` (a category check records `category-scan:<run id>` as
+  the audit user when it auto-assigns a category; an admin apply or
+  revert records that admin's Cognito sub)
 - `activity_locations`
 - `activity_pricing`
 - `activity_schedule`

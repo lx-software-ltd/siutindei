@@ -23,6 +23,7 @@ const parsers = {
   'feedback-label': parseAsString,
   'api-key': parseAsString,
   suggestion: parseAsString,
+  'category-check': parseAsString,
   ticket: parseAsString,
   user: parseAsString,
   'audit-log': parseAsString,

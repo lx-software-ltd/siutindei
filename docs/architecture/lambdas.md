@@ -93,8 +93,9 @@ their primary responsibilities.
   back the whole file),
   and address autocomplete (Nominatim via the AWS/HTTP proxy)
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
-- Category suggestions: admin-only routes under
-  `/v1/admin/category-suggestions` (see `docs/api/admin.yaml`).
+- Category suggestions and category checks: admin-only routes under
+  `/v1/admin/category-suggestions` (see `docs/api/admin.yaml`),
+  including `/scan` and `/reviews`.
   After a live import commits, the function sends SQS messages when
   `CATEGORY_SUGGESTION_QUEUE_URL` is set. OpenRouter calls go through
   `app.services.openrouter_client` and the HTTP proxy. The settings
@@ -309,7 +310,8 @@ their primary responsibilities.
 - Trigger: SQS `category-suggestion-enrich` (batch size 1, partial
   batch failures)
 - Purpose: ask OpenRouter where an unknown imported category name
-  should sit, then store the proposal
+  should sit, and run category-check batches for activities in
+  organizations that are still pending review
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - VPC: Yes
 - Timeout: 120 seconds on the admin function. One OpenRouter attempt

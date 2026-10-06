@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.db.age_bounds import inclusive_age_bounds
 from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
 from app.db.models import Organization
+from app.db.models.category_scan import ActivityCategoryReview
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 
 REVIEW_STATUSES = ("pending_review", "approved", "rejected")
@@ -90,6 +91,7 @@ def collect_issues(
     activities: list[Activity],
     pricing_counts: dict[str, int],
     schedule_counts: dict[str, int],
+    pending_category_check_ids: set[str] | None = None,
 ) -> list[ReviewIssue]:
     """Return blocker and warning issues for one organization."""
     org_id = str(organization.id)
@@ -236,6 +238,14 @@ def collect_issues(
                 activity_id,
                 "Activity is waiting for a category",
             )
+        if activity_id in (pending_category_check_ids or set()):
+            add(
+                "category_check_pending",
+                "warning",
+                "activity",
+                activity_id,
+                "Category check is waiting for a decision",
+            )
         if not _text(activity.description):
             add(
                 "missing_activity_description",
@@ -287,6 +297,7 @@ def load_snapshots(
         locations_by_org[str(location.org_id)].append(location)
     for activity in activities:
         activities_by_org[str(activity.org_id)].append(activity)
+    pending_checks = _pending_category_checks(session, activity_ids)
 
     snapshots: list[OrgReviewSnapshot] = []
     for organization in organizations:
@@ -307,6 +318,7 @@ def load_snapshots(
             org_activities,
             org_pricing,
             org_schedules,
+            pending_checks,
         )
         snapshots.append(
             OrgReviewSnapshot(
@@ -319,6 +331,18 @@ def load_snapshots(
             )
         )
     return snapshots
+
+
+def _pending_category_checks(session: Session, activity_ids: list) -> set[str]:
+    if not activity_ids:
+        return set()
+    rows = session.scalars(
+        select(ActivityCategoryReview.activity_id).where(
+            ActivityCategoryReview.activity_id.in_(activity_ids),
+            ActivityCategoryReview.status == "pending",
+        )
+    ).all()
+    return {str(item) for item in rows}
 
 
 def summarize_snapshots(snapshots: list[OrgReviewSnapshot]) -> dict[str, Any]:

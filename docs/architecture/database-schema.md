@@ -158,6 +158,8 @@ Columns:
 - `fallback_models` (text[], default empty)
 - `max_evidence_items` (integer, default 25, check 5–50)
 - `deny_data_collection` (boolean, default true)
+- `auto_assign_threshold` (numeric(4,3), nullable, default 0.900;
+  null turns auto-assign off; check 0.5–1)
 - `updated_by` (text, nullable)
 - `updated_at` (timestamptz)
 
@@ -184,6 +186,30 @@ Purpose: Evidence link from a suggestion to an imported activity.
 Primary key: (`suggestion_id`, `activity_id`). `org_id` cascades with
 the organization. `import_job_id` is set null when the job is removed.
 `suggestion_id` and `activity_id` cascade.
+
+## Table: category_scan_runs
+
+Purpose: One admin category-check run over activities in
+pending-review organizations.
+
+Columns: `id`, `status` (`queued`, `running`, `done`, `failed`),
+`requested_by`, optional `org_id` (set null when the organization is
+removed), batch and result counters, `cost_usd`, `error`,
+`processed_message_ids` (JSON array of SQS message ids), and
+timestamps. `org_id` uses `ON DELETE SET NULL`.
+
+## Table: activity_category_reviews
+
+Purpose: One model verdict for an activity in a category-check run.
+
+Columns: `scan_run_id`, `activity_id`, `org_id`, the category at scan
+time, `verdict` (`confirm`, `reassign`, `propose`), optional
+`proposed_category_id` and `suggestion_id`, `confidence`, `rationale`,
+`status` (`confirmed`, `pending`, `auto_applied`, `applied`,
+`dismissed`, `reverted`), `previous_category_id`, and decision fields.
+Unique on (`scan_run_id`, `activity_id`). Category foreign keys use
+`ON DELETE SET NULL`. Activity, organization, run, and suggestion
+foreign keys cascade or set null with the parent row.
 
 ## Table: locations
 

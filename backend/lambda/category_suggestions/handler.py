@@ -8,6 +8,7 @@ from uuid import UUID
 
 from app.events.sqs_batch import failure_response
 from app.services.category_suggestions.enrich import process_suggestion
+from app.services.category_suggestions.scan import process_scan_batch
 from app.utils.logging import configure_logging, get_logger
 
 configure_logging()
@@ -25,7 +26,14 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         except json.JSONDecodeError:
             logger.warning("Category suggestion message was not JSON")
             continue
-        if not isinstance(payload, dict) or not payload.get("suggestion_id"):
+        if not isinstance(payload, dict):
+            logger.warning("Category suggestion message is missing a payload")
+            continue
+        receive_count = _receive_count(record)
+        if payload.get("scan_run_id"):
+            _handle_scan(payload, message_id, receive_count, failures)
+            continue
+        if not payload.get("suggestion_id"):
             logger.warning("Category suggestion message is missing suggestion_id")
             continue
         try:
@@ -33,7 +41,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         except ValueError:
             logger.warning("Category suggestion id is not a UUID")
             continue
-        receive_count = _receive_count(record)
         force = bool(payload.get("force"))
         try:
             acked = process_suggestion(
@@ -52,6 +59,40 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         if not acked and message_id:
             failures.append(message_id)
     return failure_response(failures)
+
+
+def _handle_scan(
+    payload: dict[str, Any],
+    message_id: str,
+    receive_count: int,
+    failures: list[str],
+) -> None:
+    raw_ids = payload.get("activity_ids")
+    if not isinstance(raw_ids, list) or not raw_ids:
+        logger.warning("Category check message is missing activity_ids")
+        return
+    try:
+        scan_run_id = UUID(str(payload.get("scan_run_id")))
+    except ValueError:
+        logger.warning("Category check id is not a UUID")
+        return
+    try:
+        acked = process_scan_batch(
+            scan_run_id,
+            [str(item) for item in raw_ids],
+            message_id=message_id,
+            receive_count=receive_count,
+        )
+    except Exception:
+        logger.exception(
+            "Category check batch will retry",
+            extra={"scan_run_id": str(scan_run_id)},
+        )
+        if message_id:
+            failures.append(message_id)
+        return
+    if not acked and message_id:
+        failures.append(message_id)
 
 
 def _receive_count(record: dict[str, Any]) -> int:

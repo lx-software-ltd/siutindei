@@ -2501,8 +2501,9 @@ export class ApiStack extends cdk.Stack {
       authorizer: adminAuthorizer,
     });
 
-    // One proxy method covers summary, settings, detail, decision, and
-    // enrich so the stack stays under the CloudFormation resource cap.
+    // One proxy method covers summary, settings, detail, decision,
+    // enrich, scan, and reviews so the stack stays under the
+    // CloudFormation resource cap.
     const categorySuggestions = admin.addResource("category-suggestions");
     categorySuggestions.addMethod("GET", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,

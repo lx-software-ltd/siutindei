@@ -662,9 +662,61 @@ export async function setupApiMocks(page: Page): Promise<void> {
     }
   });
 
+  let categoryScanStarted = false;
+  let categoryReviewStatus = 'pending';
   await page.route('**/api/mock/**/admin/category-suggestions**', async (route) => {
     const url = route.request().url();
     const method = route.request().method();
+    if (url.includes('/scan')) {
+      categoryScanStarted = true;
+      await route.fulfill({
+        status: method === 'POST' ? 202 : 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'run-1',
+          status: 'running',
+          batch_size: 10,
+          total_activities: 2,
+          batches_total: 1,
+          batches_done: 1,
+          confirmed: 0,
+          auto_applied: 0,
+          reassign_pending: 1,
+          proposed: 0,
+          skipped: 0,
+          failed: 0,
+          cost_usd: 0,
+        }),
+      });
+      return;
+    }
+    if (url.includes('/reviews')) {
+      if (method === 'POST') {
+        categoryReviewStatus = 'applied';
+      }
+      const review = {
+        id: 'rev-1',
+        scan_run_id: 'run-1',
+        activity_id: 'activity-1',
+        activity_name: 'Clay club',
+        org_id: 'org-1',
+        org_name: 'Harbor Arts',
+        current_category_name: 'Sport',
+        proposed_category_name: 'Ceramics',
+        verdict: 'reassign',
+        confidence: 0.62,
+        rationale: 'Indoor craft, not sport',
+        status: categoryReviewStatus,
+      };
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(
+          url.includes('/reviews/') ? review : { items: [review], next_cursor: null }
+        ),
+      });
+      return;
+    }
     if (url.includes('/settings/test')) {
       await route.fulfill({
         status: 200,
@@ -685,6 +737,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
           fallback_models: ['qwen/qwen-turbo'],
           max_evidence_items: 25,
           deny_data_collection: true,
+          auto_assign_threshold: 0.9,
         }),
       });
       return;
@@ -699,6 +752,19 @@ export async function setupApiMocks(page: Page): Promise<void> {
           pending_activity_total: 2,
           stranded_activity_total: 0,
           month_cost_usd: 0.01,
+          review_pending_total: 1,
+          auto_applied_total: 0,
+          scan_candidate_total: 2,
+          active_scan_run: categoryScanStarted
+            ? {
+                id: 'run-1',
+                status: 'running',
+                batches_total: 1,
+                batches_done: 1,
+                failed: 0,
+                total_activities: 2,
+              }
+            : null,
         }),
       });
       return;

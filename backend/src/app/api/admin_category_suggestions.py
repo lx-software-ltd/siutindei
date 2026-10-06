@@ -17,6 +17,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.admin_auth import _get_user_sub, _set_session_audit_context
+from app.api.admin_category_reviews import handle_reviews
+from app.api.admin_category_scan import handle_scan
 from app.api.admin_category_suggestion_settings import handle_settings
 from app.api.admin_request import _query_param, parse_limit, parse_object_body
 from app.db.engine import get_engine
@@ -32,6 +34,7 @@ from app.services.category_suggestions.events import enqueue_enrichment
 from app.utils import json_response
 
 _STATUSES = {"pending", "approved", "merged", "rejected"}
+_SOURCES = {"import", "scan"}
 _ENRICHMENT = {"none", "queued", "running", "done", "failed"}
 
 
@@ -44,6 +47,10 @@ def _handle_admin_category_suggestions(
     """Dispatch /v1/admin/category-suggestions."""
     if resource_id == "settings":
         return handle_settings(event, method, sub_resource)
+    if resource_id == "scan":
+        return handle_scan(event, method, sub_resource)
+    if resource_id == "reviews":
+        return handle_reviews(event, method, sub_resource)
     if method == "GET" and resource_id is None:
         return _handle_list(event)
     if method == "GET" and resource_id == "summary":
@@ -68,6 +75,7 @@ def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
     import_job_id = _optional_uuid(
         _query_param(event, "import_job_id"), "import_job_id"
     )
+    source = _optional_choice(_query_param(event, "source"), _SOURCES, "source")
     query_text = (_query_param(event, "q") or "").strip()
     cursor = _parse_list_cursor(_query_param(event, "cursor"))
     with Session(get_engine()) as session:
@@ -77,6 +85,7 @@ def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
                     status=status,
                     enrichment=enrichment,
                     import_job_id=import_job_id,
+                    source=source,
                     query_text=query_text,
                     cursor=cursor,
                 ).limit(limit + 1)
@@ -216,6 +225,10 @@ def _summary(session: Session) -> dict[str, Any]:
     month_cost = sum(
         _month_cost(row.usage, row.enriched_at, month_start) for row in month_rows
     )
+    from app.services.category_suggestions.scan import summary_counts
+
+    extra = summary_counts(session)
+    month_cost += float(extra.pop("month_scan_cost_usd") or 0)
     stranded = int(
         session.scalar(
             select(func.count())
@@ -240,6 +253,7 @@ def _summary(session: Session) -> dict[str, Any]:
         "pending_activity_total": pending_activities,
         "stranded_activity_total": stranded,
         "month_cost_usd": round(month_cost, 6),
+        **extra,
     }
 
 
@@ -303,6 +317,7 @@ def _list_query(
     status: str | None,
     enrichment: str | None,
     import_job_id: UUID | None,
+    source: str | None,
     query_text: str,
     cursor: tuple[int, datetime, UUID] | None,
 ):
@@ -311,6 +326,8 @@ def _list_query(
         query = query.where(CategorySuggestion.status == status)
     if enrichment:
         query = query.where(CategorySuggestion.enrichment_status == enrichment)
+    if source:
+        query = query.where(CategorySuggestion.source == source)
     if import_job_id is not None:
         linked = (
             select(CategorySuggestionActivity.suggestion_id)

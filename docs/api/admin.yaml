@@ -562,6 +562,11 @@ paths:
           in: query
           schema:
             type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [import, scan]
         - name: cursor
           in: query
           schema:
@@ -718,6 +723,157 @@ paths:
           description: Queued
         "404":
           description: Suggestion not found
+
+  /v1/admin/category-suggestions/scan:
+    get:
+      summary: List recent category-check runs
+      responses:
+        "200":
+          description: Runs, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CategoryScanRun'
+    post:
+      summary: Scan activities in pending-review organizations
+      description: |
+        Admin group only. Selects activities whose organization
+        `review_status` is `pending_review`, skipping ones confirmed,
+        applied, or auto-applied in the last 30 days unless `rescan`
+        is true. Returns 202 with the run. An empty selection is a
+        finished run with zero batches. 409 when a run is already
+        queued or running.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryScanRequest'
+      responses:
+        "202":
+          description: Run created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryScanRun'
+        "409":
+          description: A category check is already running
+        "502":
+          description: The run could not be queued
+
+  /v1/admin/category-suggestions/scan/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Read one category-check run
+      responses:
+        "200":
+          description: Run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryScanRun'
+        "404":
+          description: Run not found
+
+  /v1/admin/category-suggestions/reviews:
+    get:
+      summary: List category-check reviews
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [confirmed, pending, auto_applied, applied, dismissed, reverted]
+        - name: verdict
+          in: query
+          schema:
+            type: string
+            enum: [confirm, reassign, propose]
+        - name: org_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: scan_run_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Review page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityCategoryReviewListResponse'
+
+  /v1/admin/category-suggestions/reviews/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Read one category-check review
+      responses:
+        "200":
+          description: Review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityCategoryReview'
+        "404":
+          description: Review not found
+    post:
+      summary: Apply, dismiss, or revert a category-check review
+      description: |
+        Apply assigns `category_id` when the body or the review has one,
+        and confirms a correct current category when the verdict is
+        confirm. Dismiss leaves the category unchanged. Revert restores
+        `previous_category_id` for an applied or auto-applied review.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivityCategoryReviewDecision'
+      responses:
+        "200":
+          description: Updated review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityCategoryReview'
+        "400":
+          description: Invalid decision
+        "404":
+          description: Review not found
 
   /v1/admin/locations:
     get:
@@ -5155,6 +5311,17 @@ components:
           description: >-
             Activities still on Pending categorisation whose suggestion is
             no longer pending, usually a reject without a map target.
+        review_pending_total:
+          type: integer
+        auto_applied_total:
+          type: integer
+        scan_candidate_total:
+          type: integer
+          description: Activities a new scan would check, capped at 500.
+        active_scan_run:
+          allOf:
+            - $ref: '#/components/schemas/CategoryScanRun'
+          nullable: true
         month_cost_usd:
           type: number
           description: >-
@@ -5187,6 +5354,12 @@ components:
           type: integer
         deny_data_collection:
           type: boolean
+        auto_assign_threshold:
+          type: number
+          nullable: true
+          minimum: 0.5
+          maximum: 1
+          description: Null disables automatic reassignment. Default 0.9.
         updated_by:
           type: string
           nullable: true
@@ -5216,6 +5389,177 @@ components:
           maximum: 50
         deny_data_collection:
           type: boolean
+        auto_assign_threshold:
+          type: number
+          nullable: true
+          minimum: 0.5
+          maximum: 1
+
+    CategoryScanRequest:
+      type: object
+      properties:
+        org_id:
+          type: string
+          format: uuid
+          nullable: true
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 500
+        batch_size:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 10
+        rescan:
+          type: boolean
+          default: false
+
+    CategoryScanRun:
+      type: object
+      required: [id, status, total_activities, batches_total, batches_done]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [queued, running, done, failed]
+        requested_by:
+          type: string
+          nullable: true
+        org_id:
+          type: string
+          format: uuid
+          nullable: true
+        batch_size:
+          type: integer
+        total_activities:
+          type: integer
+        batches_total:
+          type: integer
+        batches_done:
+          type: integer
+        confirmed:
+          type: integer
+        auto_applied:
+          type: integer
+        reassign_pending:
+          type: integer
+        proposed:
+          type: integer
+        skipped:
+          type: integer
+        failed:
+          type: integer
+        cost_usd:
+          type: number
+        error:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ActivityCategoryReview:
+      type: object
+      required: [id, scan_run_id, activity_id, org_id, verdict, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        scan_run_id:
+          type: string
+          format: uuid
+        activity_id:
+          type: string
+          format: uuid
+        activity_name:
+          type: string
+        org_id:
+          type: string
+          format: uuid
+        org_name:
+          type: string
+        current_category_id:
+          type: string
+          format: uuid
+          nullable: true
+        current_category_name:
+          type: string
+          nullable: true
+        verdict:
+          type: string
+          enum: [confirm, reassign, propose]
+        proposed_category_id:
+          type: string
+          format: uuid
+          nullable: true
+        proposed_category_name:
+          type: string
+          nullable: true
+        suggestion_id:
+          type: string
+          format: uuid
+          nullable: true
+        confidence:
+          type: number
+          nullable: true
+        rationale:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [confirmed, pending, auto_applied, applied, dismissed, reverted]
+        previous_category_id:
+          type: string
+          format: uuid
+          nullable: true
+        decided_by:
+          type: string
+          nullable: true
+        decided_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ActivityCategoryReviewListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityCategoryReview'
+        next_cursor:
+          type: string
+          nullable: true
+
+    ActivityCategoryReviewDecision:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [apply, dismiss, revert]
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
 
     CategorySuggestionDecision:
       type: object

@@ -73,3 +73,36 @@ characters. At most three fallbacks are stored. Evidence size is 5 to
 50 items, default 25.
 
 Only the admin group can read or change suggestions and settings.
+`auto_assign_threshold` defaults to 0.90. Blank disables automatic
+reassignment. The allowed range is 0.50 to 1.
+
+## Category check
+
+The Category checks tab scans activities whose organization is still
+`pending_review`. It does not include approved organizations. A run
+skips an activity that was confirmed, applied, or auto-applied in the
+last 30 days unless the request sets `rescan`. An activity an admin
+dismissed or reverted is still scanned, and it is never auto-assigned
+again.
+
+Each batch is one SQS message, `{"scan_run_id", "activity_ids"}`, on
+the same queue as enrichment. The model returns confirm, reassign, or
+propose. Confirm leaves the category in place. Reassign at or above
+the threshold changes `activities.category_id` immediately and stores
+the previous category. A lower score, or an organization that left
+`pending_review` before the batch ran, stays as a pending review.
+Propose finds or creates one `source=scan` suggestion per normalised
+name and leaves the assignment to the existing approve or map action.
+A proposed name that already matches a category becomes a reassign.
+Pending categorisation is never confirmed.
+
+Approving or mapping a scan suggestion assigns linked activities whose
+review is still pending. Rejecting without a target dismisses those
+reviews and leaves the category unchanged. Apply, dismiss, and revert
+are `POST /v1/admin/category-suggestions/reviews/{id}`. Revert restores
+`previous_category_id`.
+
+A pending review is the organization-review warning
+`category_check_pending`. It does not block approval. The scan button
+is the only trigger. A run with no batch progress for five minutes is
+marked failed the next time a scan starts.

@@ -6,6 +6,8 @@ import os
 import re
 from datetime import datetime
 from datetime import timezone
+from decimal import Decimal
+from decimal import InvalidOperation
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -116,6 +118,8 @@ def apply_settings_update(
         row.fallback_models = _parse_fallbacks(body["fallback_models"])
     if "max_evidence_items" in body:
         row.max_evidence_items = _parse_evidence(body["max_evidence_items"])
+    if "auto_assign_threshold" in body:
+        row.auto_assign_threshold = _parse_threshold(body["auto_assign_threshold"])
     row.updated_by = updated_by
     row.updated_at = datetime.now(timezone.utc)
     session.flush()
@@ -135,6 +139,11 @@ def serialize_settings(row: CategorySuggestionSettings) -> dict[str, Any]:
         "fallback_models": list(row.fallback_models or []),
         "max_evidence_items": int(row.max_evidence_items),
         "deny_data_collection": bool(row.deny_data_collection),
+        "auto_assign_threshold": (
+            None
+            if row.auto_assign_threshold is None
+            else float(row.auto_assign_threshold)
+        ),
         "updated_by": row.updated_by,
         "updated_at": row.updated_at,
     }
@@ -162,6 +171,24 @@ def _parse_evidence(value: Any) -> int:
             field="max_evidence_items",
         )
     return parsed
+
+
+def _parse_threshold(value: Any) -> Decimal | None:
+    if value is None or value == "":
+        return None
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, ValueError) as exc:
+        raise ValidationError(
+            "auto_assign_threshold must be a number",
+            field="auto_assign_threshold",
+        ) from exc
+    if parsed < Decimal("0.5") or parsed > Decimal("1"):
+        raise ValidationError(
+            "auto_assign_threshold must be between 0.5 and 1",
+            field="auto_assign_threshold",
+        )
+    return parsed.quantize(Decimal("0.001"))
 
 
 def _parse_fallbacks(value: Any) -> list[str]:
