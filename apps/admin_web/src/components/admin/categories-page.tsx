@@ -12,7 +12,7 @@ type CategoryView = 'categories' | 'suggestions' | 'checks';
 const CATEGORY_VIEWS = [
   { key: 'categories' as const, label: 'Categories' },
   { key: 'suggestions' as const, label: 'Category Suggestions' },
-  { key: 'checks' as const, label: 'Category checks' },
+  { key: 'checks' as const, label: 'Category Checks' },
 ];
 
 export function CategoriesPage() {
