@@ -5254,7 +5254,10 @@ export interface components {
              */
             captured_categories?: number;
             /**
-             * @description Suggestion ids counted by captured_categories. A retry unions this list with the previous job so one label is not counted twice. Omitted on jobs stored before the list existed.
+             * @description Suggestion ids counted by captured_categories. A retry
+             *     unions this list with the previous job so one label is
+             *     not counted twice. Omitted on jobs stored before the list
+             *     existed.
              */
             captured_category_ids?: string[];
         };
