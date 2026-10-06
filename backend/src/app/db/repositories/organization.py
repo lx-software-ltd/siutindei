@@ -44,14 +44,33 @@ class OrganizationRepository(BaseRepository[Organization]):
         return self._session.execute(query).scalar_one_or_none()
 
     def find_by_place_id(self, place_id: str) -> Optional[Organization]:
-        """Find an organization by Google place_id."""
+        """Find an organization by Google place_id, including merge forwarding."""
         query = select(Organization).where(Organization.place_id == place_id)
-        return self._session.execute(query).scalar_one_or_none()
+        found = self._session.execute(query).scalar_one_or_none()
+        if found is not None:
+            return found
+        return self._find_merged_survivor("place_id", place_id)
 
     def find_by_source_id(self, source_id: str) -> Optional[Organization]:
         """Find an organization by parsed catalog source_id."""
         query = select(Organization).where(Organization.source_id == source_id)
-        return self._session.execute(query).scalar_one_or_none()
+        found = self._session.execute(query).scalar_one_or_none()
+        if found is not None:
+            return found
+        return self._find_merged_survivor("source_id", source_id)
+
+    def _find_merged_survivor(self, field: str, value: str) -> Optional[Organization]:
+        from app.db.models import OrganizationMerge
+
+        column = getattr(OrganizationMerge, field)
+        merge = self._session.scalars(
+            select(OrganizationMerge)
+            .where(column == value)
+            .order_by(OrganizationMerge.merged_at.desc())
+        ).first()
+        if merge is None:
+            return None
+        return self._session.get(Organization, merge.survivor_org_id)
 
     def find_by_manager_and_name(
         self,

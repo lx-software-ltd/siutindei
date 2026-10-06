@@ -16,6 +16,12 @@ from app.db.models.category_suggestion import (
     CategorySuggestionSettings,
 )
 from app.db.models.audit_log import AuditLog
+from app.db.models.data_quality import (
+    NameFixProposal,
+    NameFixSettings,
+    OrganizationDuplicateDismissal,
+    OrganizationMerge,
+)
 from app.db.models.enums import PricingType, ScheduleType, TicketStatus, TicketType
 from app.db.models.feedback_label import FeedbackLabel
 from app.db.models.geographic_area import GeographicArea
@@ -46,7 +52,11 @@ __all__ = [
     "ListingEvent",
     "ListingEventsDaily",
     "Location",
+    "NameFixProposal",
+    "NameFixSettings",
     "Organization",
+    "OrganizationDuplicateDismissal",
+    "OrganizationMerge",
     "OrganizationFeedback",
     "PricingType",
     "ScheduleType",

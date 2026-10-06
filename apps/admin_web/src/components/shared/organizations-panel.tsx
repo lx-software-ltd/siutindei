@@ -24,7 +24,9 @@ import {
   type LanguageCode,
 } from '../../lib/translations';
 import type { CognitoUser, Organization } from '../../types/admin';
+import { OrganizationMergeDialog } from '../admin/data-quality/organization-merge-dialog';
 import { useAuth } from '../auth-provider';
+import { DeleteIcon, MergeIcon } from '../icons/action-icons';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import {
   AdminDataTableCell,
@@ -40,6 +42,7 @@ import { LanguageToggleInput } from '../ui/language-toggle-input';
 import {
   deleteRowActions,
   ResourceTableShell,
+  rowActions,
 } from '../ui/resource-table-shell';
 import { Select } from '../ui/select';
 import { Textarea } from '../ui/textarea';
@@ -105,6 +108,10 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [reviewFilter, setReviewFilter] = useState('all');
+  const [mergeAnchor, setMergeAnchor] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   useExhaustPages(Boolean(searchQuery.trim()), {
     hasMore: panel.hasMore,
     isLoading: panel.isLoading,
@@ -879,8 +886,36 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
             </AdminDataTableCell>
           </>
         )}
-        renderActions={(item) => deleteRowActions(() => panel.handleDelete(item))}
+        renderActions={(item) =>
+          isAdmin
+            ? rowActions([
+                {
+                  key: 'delete',
+                  label: 'Delete',
+                  tone: 'danger',
+                  icon: <DeleteIcon className='h-4 w-4' />,
+                  onClick: () => {
+                    panel.handleDelete(item);
+                  },
+                },
+                {
+                  key: 'merge',
+                  label: 'Merge into…',
+                  icon: <MergeIcon className='h-4 w-4' />,
+                  onClick: () => {
+                    setMergeAnchor({ id: item.id, name: item.name });
+                  },
+                },
+              ])
+            : deleteRowActions(() => panel.handleDelete(item))
+        }
       />
+      {isAdmin ? (
+        <OrganizationMergeDialog
+          anchor={mergeAnchor}
+          onClose={() => setMergeAnchor(null)}
+        />
+      ) : null}
       {panel.confirmDialog}
     </>
   );

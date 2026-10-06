@@ -22,6 +22,8 @@ Purpose: Organizations that provide activities.
 Columns:
 - `id` (UUID, PK, default `gen_random_uuid()`)
 - `name` (text, required)
+- `name_key` (text, optional) — folded name maintained by
+  `organizations_name_key_trg` before insert or update of `name`
 - `description` (text, optional)
 - `name_translations` (jsonb, default `{}`) — non-English name translations
 - `description_translations` (jsonb, default `{}`) — non-English description translations
@@ -77,6 +79,9 @@ Relationships:
 Constraints:
 - UNIQUE (case-insensitive) on `lower(trim(name))`
 - Partial UNIQUE on `place_id` where `place_id IS NOT NULL`
+- B-tree index on `name_key`
+- GIN index `organizations_name_trgm_idx` on `lower(name)` using
+  `gin_trgm_ops` (`pg_trgm`)
 
 Public search excludes `closed_permanently` and `hidden` (it
 counts only `operational` and `closed_temporarily` rows). When
@@ -94,6 +99,80 @@ Seed assessment: migration `0033_org_review_status` backfills every
 existing organization to `pending_review`. `seed_data.sql` sets
 `review_status = approved` on the two local organizations so a
 gated local search still returns them. No new seed table.
+Migration `0041_data_quality` adds `name_key` as nullable and fills it
+with a trigger, so existing seed inserts that omit the column stay
+valid. It also inserts the `name_fix_settings` singleton. No
+`seed_data.sql` change.
+
+## Table: organization_merges
+
+Purpose: Remember a removed organization's `source_id` and `place_id`
+so a later import resolves to the survivor.
+
+Columns:
+- `id` (UUID, PK)
+- `merged_org_id` (UUID, required) — id of the deleted organization
+- `survivor_org_id` (UUID, FK → `organizations.id`, ON DELETE CASCADE)
+- `source` (text, optional)
+- `source_id` (text, optional)
+- `place_id` (text, optional)
+- `snapshot` (jsonb, required) — contact and name captured before delete
+- `moved_counts` (jsonb, default `{}`)
+- `merged_by` (text, optional)
+- `merged_at` (timestamptz, default `now()`)
+
+Indexes: `source_id`, `place_id`, `survivor_org_id`.
+
+## Table: organization_duplicate_dismissals
+
+Purpose: Pairs an admin marked as not the same organization. Those
+pairs are not grouped again.
+
+Columns:
+- `id` (UUID, PK)
+- `org_id_low` (UUID, FK → `organizations.id`, ON DELETE CASCADE)
+- `org_id_high` (UUID, FK → `organizations.id`, ON DELETE CASCADE)
+- `dismissed_by` (text, optional)
+- `dismissed_at` (timestamptz, default `now()`)
+
+Constraints: unique pair, and `org_id_low` <> `org_id_high`.
+
+## Table: name_fix_proposals
+
+Purpose: Pending, applied, or dismissed name cleanups for organizations
+and for activities whose organization is still `pending_review`.
+
+Columns:
+- `id` (UUID, PK)
+- `entity_type` (text) — `organization` or `activity`
+- `entity_id` (UUID, required)
+- `org_id` (UUID, optional, FK → `organizations.id`, ON DELETE CASCADE)
+- `field` (text) — `name`
+- `current_value` (text, required)
+- `proposed_value` (text, required)
+- `rules` (jsonb, default `[]`)
+- `translation_patch` (jsonb, optional)
+- `status` (text) — `pending`, `applied`, or `dismissed`
+- `decided_by` (text, optional)
+- `decided_at` (timestamptz, optional)
+- `created_at` / `updated_at` (timestamptz)
+
+Constraints: partial unique index on pending `(entity_type, entity_id, field)`.
+
+## Table: name_fix_settings
+
+Purpose: Singleton (`id = 1`) of enabled name rules, capital-letter
+exceptions, and bracket suffixes.
+
+Columns:
+- `id` (integer, PK)
+- `enabled_rules` (jsonb, required)
+- `exception_words` (jsonb, required)
+- `bracket_suffixes` (jsonb, required)
+- `updated_at` (timestamptz)
+
+Seed assessment: the migration inserts the default row. No
+`seed_data.sql` change.
 
 ## Table: geographic_areas
 

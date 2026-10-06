@@ -20,6 +20,7 @@ from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
 from app.db.models import Organization
 from app.db.models.category_scan import ActivityCategoryReview
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
+from app.services.name_sanitizer import NameSanitizeConfig, sanitize_name
 
 REVIEW_STATUSES = ("pending_review", "approved", "rejected")
 MAX_REVIEW_NOTES_LENGTH = 2000
@@ -92,6 +93,8 @@ def collect_issues(
     pricing_counts: dict[str, int],
     schedule_counts: dict[str, int],
     pending_category_check_ids: set[str] | None = None,
+    name_config: NameSanitizeConfig | None = None,
+    duplicate_ids: set[str] | None = None,
 ) -> list[ReviewIssue]:
     """Return blocker and warning issues for one organization."""
     org_id = str(organization.id)
@@ -114,6 +117,27 @@ def collect_issues(
             )
         )
 
+    cleaned = sanitize_name(
+        organization.name or "",
+        organization.name_translations or {},
+        name_config,
+    )
+    if cleaned.changed:
+        add(
+            "name_needs_cleanup",
+            "warning",
+            "organization",
+            org_id,
+            "Name needs cleanup",
+        )
+    if duplicate_ids and org_id in duplicate_ids:
+        add(
+            "possible_duplicate",
+            "warning",
+            "organization",
+            org_id,
+            "Another organization has the same name, phone, email, or source id",
+        )
     if not _text(organization.description):
         add(
             "missing_description",
@@ -298,6 +322,11 @@ def load_snapshots(
     for activity in activities:
         activities_by_org[str(activity.org_id)].append(activity)
     pending_checks = _pending_category_checks(session, activity_ids)
+    from app.services.name_fixes import load_name_fix_config
+    from app.services.org_duplicates import orgs_with_duplicate_signals
+
+    name_config = load_name_fix_config(session)
+    duplicate_ids = orgs_with_duplicate_signals(session, organizations)
 
     snapshots: list[OrgReviewSnapshot] = []
     for organization in organizations:
@@ -319,6 +348,8 @@ def load_snapshots(
             org_pricing,
             org_schedules,
             pending_checks,
+            name_config,
+            duplicate_ids,
         )
         snapshots.append(
             OrgReviewSnapshot(

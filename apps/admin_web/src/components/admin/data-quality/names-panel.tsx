@@ -1,0 +1,355 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+
+import { useExpandedRecord } from '../../../hooks/use-expanded-record';
+import { usePaginatedList } from '../../../hooks/use-paginated-list';
+import { adminQueryKeys } from '../../../lib/admin-query-keys';
+import { ApiError } from '../../../lib/api-client';
+import {
+  decideNameFix,
+  decideNameFixesBulk,
+  getNameFixSettings,
+  getNameFixSummary,
+  listNameFixes,
+  scanNameFixes,
+  updateNameFixSettings,
+  type NameFixProposal,
+  type NameFixSettings,
+} from '../../../lib/api-client-data-quality';
+import { StatusBanner } from '../../status-banner';
+import { AdminDataTableCell, AdminDataTableHeadCell } from '../../ui/admin-data-table';
+import { AdminEditorPanel } from '../../ui/admin-editor-panel';
+import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
+import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
+import { ResourceTableShell } from '../../ui/resource-table-shell';
+import { Select } from '../../ui/select';
+
+interface NameFilters {
+  q: string;
+  entity_type: string;
+  rule: string;
+  status: string;
+}
+
+const DEFAULT_FILTERS: NameFilters = {
+  q: '',
+  entity_type: '',
+  rule: '',
+  status: 'pending',
+};
+
+export function NamesPanel() {
+  const expanded = useExpandedRecord({ paramName: 'name-fix' });
+  const list = usePaginatedList<NameFixProposal, NameFilters>({
+    queryKey: adminQueryKeys.nameFixes(),
+    defaultFilters: DEFAULT_FILTERS,
+    debounceKeys: ['q'],
+    errorPrefix: 'Failed to load name fixes',
+    fetcher: async ({ cursor, limit, q, entity_type, rule, status }) => {
+      const page = await listNameFixes({
+        cursor: cursor ?? undefined,
+        limit,
+        q: q || undefined,
+        entity_type: entity_type || undefined,
+        rule: rule || undefined,
+        status: status || undefined,
+      });
+      return { items: page.items, nextCursor: page.next_cursor ?? null };
+    },
+  });
+  const [summary, setSummary] = useState('No pending names.');
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [settings, setSettings] = useState<NameFixSettings | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const open = list.items.find((item) => item.id === expanded.expandedId) ?? null;
+
+  useEffect(() => {
+    void getNameFixSummary()
+      .then((row) => {
+        const pending = row.by_status.pending ?? 0;
+        setSummary(`${pending} pending`);
+      })
+      .catch(() => setSummary(''));
+    void getNameFixSettings()
+      .then(setSettings)
+      .catch(() => setSettings(null));
+  }, [notice]);
+
+  async function scan() {
+    setIsScanning(true);
+    setError('');
+    setNotice('');
+    try {
+      const result = await scanNameFixes({
+        entity_type: list.filters.entity_type || undefined,
+        q: list.filters.q || undefined,
+      });
+      setNotice(
+        `Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}.`
+      );
+      await list.refetch();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Scan failed.');
+    } finally {
+      setIsScanning(false);
+    }
+  }
+
+  async function decide(id: string, action: 'apply' | 'dismiss') {
+    setActiveId(id);
+    setError('');
+    try {
+      await decideNameFix(id, { action });
+      setNotice(action === 'apply' ? 'Name updated.' : 'Proposal dismissed.');
+      await list.refetch();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not update the name.');
+    } finally {
+      setActiveId(null);
+    }
+  }
+
+  async function bulk(action: 'apply' | 'dismiss') {
+    const ids = Array.from(selected);
+    if (ids.length === 0) {
+      setError('Select at least one name.');
+      return;
+    }
+    setError('');
+    try {
+      const result = await decideNameFixesBulk({ action, ids });
+      setNotice(`Updated ${result.decided}. ${result.failed} failed.`);
+      setSelected(new Set());
+      await list.refetch();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Bulk update failed.');
+    }
+  }
+
+  async function saveSettings() {
+    if (!settings) {
+      return;
+    }
+    setError('');
+    try {
+      setSettings(await updateNameFixSettings(settings));
+      setNotice('Name rules saved.');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not save rules.');
+    }
+  }
+
+  return (
+    <div className='space-y-4'>
+      <h2 className='sr-only'>Names</h2>
+      <p className='text-sm text-slate-600'>
+        Imports clean names as they are written and keep the original spelling
+        in the source note. This list reviews the same rules for records already
+        stored. Activity names are scanned only while the organization is
+        pending review.
+      </p>
+      <p className='text-sm text-slate-700'>{summary}</p>
+      {notice ? (
+        <StatusBanner variant='info' title='Names'>
+          {notice}
+        </StatusBanner>
+      ) : null}
+      {error ? (
+        <StatusBanner variant='error' title='Names'>
+          {error}
+        </StatusBanner>
+      ) : null}
+      <div className='flex flex-wrap gap-2'>
+        <Button type='button' onClick={() => void scan()} loading={isScanning} loadingLabel='Scanning…'>
+          Scan names
+        </Button>
+        <Button type='button' variant='secondary' onClick={() => void bulk('apply')} disabled={selected.size === 0}>
+          Apply selected
+        </Button>
+        <Button type='button' variant='secondary' onClick={() => void bulk('dismiss')} disabled={selected.size === 0}>
+          Dismiss selected
+        </Button>
+      </div>
+      <ResourceTableShell
+        ariaLabel='Name fixes'
+        rows={list.items}
+        getLabel={(item) => item.current_value}
+        middleColumnCount={4}
+        hasActions={false}
+        isExpanded={expanded.isExpanded}
+        onToggle={expanded.toggle}
+        detail={
+          open && open.status === 'pending' ? (
+            <AdminEditorPanel>
+              <p className='text-sm text-slate-700'>
+                {open.current_value} becomes {open.proposed_value}
+              </p>
+              <div className='flex gap-2'>
+                <Button
+                  type='button'
+                  onClick={() => void decide(open.id, 'apply')}
+                  loading={activeId === open.id}
+                  loadingLabel='Saving…'
+                >
+                  Apply
+                </Button>
+                <Button
+                  type='button'
+                  variant='secondary'
+                  onClick={() => void decide(open.id, 'dismiss')}
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </AdminEditorPanel>
+          ) : null
+        }
+        isLoading={list.isLoading}
+        isLoadingMore={list.isLoadingMore}
+        hasMore={list.hasMore}
+        onLoadMore={() => void list.loadMore()}
+        error={list.error}
+        emptyLabel='No names match these filters. Scan names to find some.'
+        filters={
+          <AdminFilterBar>
+            <AdminFilterField label='Name' htmlFor='name-fix-q'>
+              <Input
+                id='name-fix-q'
+                value={list.filters.q}
+                onChange={(event) => list.setFilter('q', event.target.value)}
+              />
+            </AdminFilterField>
+            <AdminFilterField label='Record' htmlFor='name-fix-entity'>
+              <Select
+                id='name-fix-entity'
+                value={list.filters.entity_type}
+                onChange={(event) => list.setFilter('entity_type', event.target.value)}
+              >
+                <option value=''>Organizations and activities</option>
+                <option value='organization'>Organizations</option>
+                <option value='activity'>Activities</option>
+              </Select>
+            </AdminFilterField>
+            <AdminFilterField label='Status' htmlFor='name-fix-status'>
+              <Select
+                id='name-fix-status'
+                value={list.filters.status}
+                onChange={(event) => list.setFilter('status', event.target.value)}
+              >
+                <option value='pending'>Pending</option>
+                <option value='applied'>Applied</option>
+                <option value='dismissed'>Dismissed</option>
+              </Select>
+            </AdminFilterField>
+            <AdminFilterField label='Rule' htmlFor='name-fix-rule'>
+              <Input
+                id='name-fix-rule'
+                value={list.filters.rule}
+                placeholder='title_case'
+                onChange={(event) => list.setFilter('rule', event.target.value)}
+              />
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        leadingHead={
+          <input
+            type='checkbox'
+            aria-label='Select all rows'
+            checked={list.items.length > 0 && list.items.every((item) => selected.has(item.id))}
+            onChange={(event) => {
+              const checked = event.target.checked;
+              setSelected((current) => {
+                const next = new Set(current);
+                for (const item of list.items) {
+                  if (checked) {
+                    next.add(item.id);
+                  } else {
+                    next.delete(item.id);
+                  }
+                }
+                return next;
+              });
+            }}
+          />
+        }
+        renderLeading={(item) => (
+          <input
+            type='checkbox'
+            aria-label='Select row'
+            checked={selected.has(item.id)}
+            onClick={(event) => event.stopPropagation()}
+            onChange={(event) => {
+              setSelected((current) => {
+                const next = new Set(current);
+                if (event.target.checked) {
+                  next.add(item.id);
+                } else {
+                  next.delete(item.id);
+                }
+                return next;
+              });
+            }}
+          />
+        )}
+        head={
+          <>
+            <AdminDataTableHeadCell>Current</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell>Proposed</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Record</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Rules</AdminDataTableHeadCell>
+          </>
+        }
+        renderCells={(item) => (
+          <>
+            <AdminDataTableCell>{item.current_value}</AdminDataTableCell>
+            <AdminDataTableCell>{item.proposed_value}</AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>{item.entity_type}</AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>{item.rules.join(', ')}</AdminDataTableCell>
+          </>
+        )}
+      />
+      {settings ? (
+        <div className='space-y-3 rounded-lg border border-slate-200 p-4'>
+          <h3 className='text-sm font-medium text-slate-900'>Rules</h3>
+          <div className='flex flex-wrap gap-3'>
+            {(settings.available_rules ?? settings.enabled_rules).map((rule) => (
+              <label key={rule} className='flex items-center gap-2 text-sm text-slate-700'>
+                <input
+                  type='checkbox'
+                  checked={settings.enabled_rules.includes(rule)}
+                  onChange={(event) => {
+                    const enabled = event.target.checked
+                      ? [...settings.enabled_rules, rule]
+                      : settings.enabled_rules.filter((item) => item !== rule);
+                    setSettings({ ...settings, enabled_rules: enabled });
+                  }}
+                />
+                {rule}
+              </label>
+            ))}
+          </div>
+          <AdminFilterField label='Words to leave in capitals' htmlFor='name-fix-exceptions'>
+            <Input
+              id='name-fix-exceptions'
+              value={settings.exception_words.join(' ')}
+              onChange={(event) =>
+                setSettings({
+                  ...settings,
+                  exception_words: event.target.value.split(/\s+/).filter(Boolean),
+                })
+              }
+            />
+          </AdminFilterField>
+          <Button type='button' variant='secondary' onClick={() => void saveSettings()}>
+            Save rules
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}

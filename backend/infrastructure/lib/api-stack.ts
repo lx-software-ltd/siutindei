@@ -2520,6 +2520,31 @@ export class ApiStack extends cdk.Stack {
       authorizer: adminAuthorizer,
     });
 
+    // One proxy covers search, dismiss, and merge. A child under
+    // organizations/{id} would add another method toward the
+    // CloudFormation resource cap.
+    const orgDuplicates = admin.addResource("org-duplicates");
+    orgDuplicates.addMethod("GET", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
+    const orgDuplicatesProxy = orgDuplicates.addResource("{proxy+}");
+    orgDuplicatesProxy.addMethod("ANY", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
+
+    const nameFixes = admin.addResource("name-fixes");
+    nameFixes.addMethod("GET", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
+    const nameFixesProxy = nameFixes.addResource("{proxy+}");
+    nameFixesProxy.addMethod("ANY", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
+
     const users = admin.addResource("users");
     const userByName = users.addResource("{username}");
     const userGroups = userByName.addResource("groups");

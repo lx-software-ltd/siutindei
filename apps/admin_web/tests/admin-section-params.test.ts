@@ -53,4 +53,19 @@ describe('admin section params', () => {
     expect(patch).not.toHaveProperty('feedback-label');
     expect(patch.ticket).toBeNull();
   });
+
+  it('keeps duplicate and name-fix links on data quality', () => {
+    expect(
+      staleRecordParams('data-quality', {
+        duplicate: 'org-a,org-b',
+        'name-fix': 'fix-1',
+        organization: 'org-1',
+      })
+    ).toEqual({ organization: null });
+    const patch = patchForSectionChange('data-quality');
+    expect(patch.section).toBe('data-quality');
+    expect(patch).not.toHaveProperty('duplicate');
+    expect(patch).not.toHaveProperty('name-fix');
+    expect(patch.organization).toBeNull();
+  });
 });

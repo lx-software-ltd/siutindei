@@ -28,6 +28,11 @@ class Organization(Base):
         server_default=text("gen_random_uuid()"),
     )
     name: Mapped[str] = mapped_column(Text(), nullable=False)
+    name_key: Mapped[Optional[str]] = mapped_column(
+        Text(),
+        nullable=True,
+        comment="Normalized name for duplicate matching; maintained by trigger",
+    )
     description: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     name_translations: Mapped[dict[str, str]] = mapped_column(
         JSONB(),
