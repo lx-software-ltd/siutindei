@@ -110,7 +110,7 @@ export function LoginScreen() {
   };
 
   const handleProviderLogin = (provider: string) => {
-    void login({ provider, returnTo: '/admin/dashboard' });
+    void login({ provider, returnTo: '/' });
   };
 
   return (

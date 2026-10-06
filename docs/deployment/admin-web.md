@@ -37,3 +37,11 @@ Set `CORS_ALLOWED_ORIGINS` (or CDK context `corsAllowedOrigins`) to include:
 - `http://localhost:3000`
 
 This is required for the admin SPA to call the admin API endpoints.
+
+## Login session routing
+
+Admin-web CloudFront serves `/index.html` for 403/404 responses and does
+not rewrite `/admin/dashboard/` to `admin/dashboard/index.html`. After a
+successful sign-in the login route therefore renders the console in place
+instead of navigating to `/admin/dashboard`. A client redirect there
+rehydrates the login page and loops on the Redirecting banner.

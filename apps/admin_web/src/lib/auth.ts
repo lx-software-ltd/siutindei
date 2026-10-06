@@ -114,10 +114,23 @@ function resolveLoginRedirect() {
   }
   const stored = loadLoginRedirect();
   clearLoginRedirect();
+  return sanitizeLoginRedirect(stored);
+}
+
+// CloudFront serves /index.html for /admin/dashboard, so completed
+// logins must land on `/` and render the console in place.
+export function sanitizeLoginRedirect(stored: string | null): string {
   if (!stored || !stored.startsWith('/')) {
     return '/';
   }
   if (stored.startsWith('/auth/callback')) {
+    return '/';
+  }
+  if (
+    stored === '/admin/dashboard' ||
+    stored.startsWith('/admin/dashboard/') ||
+    stored.startsWith('/admin/dashboard?')
+  ) {
     return '/';
   }
   return stored;
