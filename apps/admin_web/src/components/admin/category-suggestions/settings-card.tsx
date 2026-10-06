@@ -245,7 +245,7 @@ export function CategorySuggestionSettingsCard() {
               min={0.01}
               max={1000}
               step={1}
-              value={settings.monthly_cost_limit_usd ?? 25}
+              value={settings.monthly_cost_limit_usd ?? 50}
               onChange={(event) =>
                 setSettings({
                   ...settings,
