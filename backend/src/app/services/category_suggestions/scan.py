@@ -134,8 +134,17 @@ def start_scan(
         MAX_BATCH_SIZE,
     )
     rescan = _parse_bool(body.get("rescan", False), "rescan")
+    ignore_current = _parse_bool(
+        body.get("ignore_current_category", False),
+        "ignore_current_category",
+    )
     mode = _parse_mode(body.get("mode", "verify"))
     if mode == "discover":
+        if ignore_current:
+            raise ValidationError(
+                "ignore_current_category applies to verify only",
+                field="ignore_current_category",
+            )
         from app.services.category_suggestions.scan_discover import start_discover
 
         return start_discover(
@@ -154,6 +163,7 @@ def start_scan(
         requested_by=requested_by,
         org_id=org_id,
         batch_size=batch_size,
+        ignore_current_category=ignore_current,
         total_activities=len(ids),
         batches_total=len(batches),
         finished_at=now if not batches else None,
@@ -228,6 +238,7 @@ def serialize_run(run: CategoryScanRun) -> dict[str, Any]:
         "requested_by": run.requested_by,
         "org_id": None if run.org_id is None else str(run.org_id),
         "mode": run.mode or "verify",
+        "ignore_current_category": bool(run.ignore_current_category),
         "batch_size": int(run.batch_size),
         "total_activities": int(run.total_activities or 0),
         "batches_total": int(run.batches_total or 0),
@@ -336,7 +347,11 @@ def _prepare(
             session.commit()
             return None
         settings = get_settings(session)
-        system, user = build_scan_prompt(session, activities)
+        system, user = build_scan_prompt(
+            session,
+            activities,
+            ignore_current_category=bool(run.ignore_current_category),
+        )
         return (
             system,
             user,

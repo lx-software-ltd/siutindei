@@ -821,6 +821,14 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: proposed_category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: >
+            Limit reviews to one proposed category, for a bulk apply
+            or dismiss of that leaf.
         - name: q
           in: query
           schema:
@@ -5445,7 +5453,7 @@ components:
           maximum: 1000
           description: >-
             Category-check spend this month cannot start another run
-            once it reaches this amount. Default 25.
+            once it reaches this amount. Default 50.
         updated_by:
           type: string
           nullable: true
@@ -5505,6 +5513,13 @@ components:
         rescan:
           type: boolean
           default: false
+        ignore_current_category:
+          type: boolean
+          default: false
+          description: >
+            Verify only. Omit the current category and template
+            descriptions, and offer only non-legacy leaves. A confirm
+            verdict is counted as failed. Discover rejects this flag.
         mode:
           type: string
           enum: [verify, discover]
@@ -5535,6 +5550,11 @@ components:
         mode:
           type: string
           enum: [verify, discover]
+        ignore_current_category:
+          type: boolean
+          description: >
+            Verify run that classifies without trusting the current
+            category. Discover runs stay false.
         batch_size:
           type: integer
         total_activities:

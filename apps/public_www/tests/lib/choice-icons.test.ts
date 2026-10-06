@@ -33,8 +33,8 @@ describe('choice icons', () => {
         iconSrcForActivity(type.id),
       );
     }
-    expect(activityTypeIdForCategory(null)).toBe('workshop');
-    expect(activityTypeIdForCategory('unknown')).toBe('workshop');
+    expect(activityTypeIdForCategory(null)).toBe('early-years');
+    expect(activityTypeIdForCategory('unknown')).toBe('early-years');
     expect(iconSrcForActivityCategory(null)).toBe(DEFAULT_ACTIVITY_ICON_SRC);
   });
 

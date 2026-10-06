@@ -1,13 +1,16 @@
 import { homeWizardChoices } from './choices';
 
 export const ACTIVITY_ICON_SRC: Record<string, string> = {
-  workshop: '/images/categories/workshop.svg',
-  class: '/images/categories/class.svg',
-  outdoor: '/images/categories/outdoor.svg',
-  indoor: '/images/categories/indoor.svg',
+  'early-years': '/images/categories/early-years.svg',
+  learning: '/images/categories/learning.svg',
+  arts: '/images/categories/arts.svg',
+  sports: '/images/categories/sports.svg',
+  play: '/images/categories/play.svg',
+  culture: '/images/categories/culture.svg',
+  community: '/images/categories/community.svg',
 };
 
-export const DEFAULT_ACTIVITY_ICON_SRC = ACTIVITY_ICON_SRC.workshop;
+export const DEFAULT_ACTIVITY_ICON_SRC = ACTIVITY_ICON_SRC['early-years'];
 
 export const AGE_ICON_SRC: Record<string, string> = {
   '1-3': '/images/ages/baby.png',
@@ -39,12 +42,12 @@ export function activityTypeIdForCategory(
   categoryId: string | null,
 ): string {
   if (!categoryId) {
-    return homeWizardChoices.activityTypes[0]?.id ?? 'workshop';
+    return homeWizardChoices.activityTypes[0]?.id ?? 'early-years';
   }
   const match = homeWizardChoices.activityTypes.find(
     (type) => type.categoryId === categoryId,
   );
-  return match?.id ?? homeWizardChoices.activityTypes[0]?.id ?? 'workshop';
+  return match?.id ?? homeWizardChoices.activityTypes[0]?.id ?? 'early-years';
 }
 
 export function iconSrcForActivityCategory(

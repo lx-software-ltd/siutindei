@@ -385,7 +385,7 @@ def test_discover_refuses_when_the_month_budget_is_used(
         CategoryScanRun(
             status="done",
             batch_size=10,
-            cost_usd=Decimal("30"),
+            cost_usd=Decimal("60"),
         )
     )
     db_session.flush()

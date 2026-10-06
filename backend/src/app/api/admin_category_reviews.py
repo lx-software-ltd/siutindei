@@ -54,6 +54,10 @@ def _list(event: Mapping[str, Any]) -> dict[str, Any]:
     verdict = _choice(_query_param(event, "verdict"), _VERDICTS, "verdict")
     org_id = _optional_uuid(_query_param(event, "org_id"), "org_id")
     scan_run_id = _optional_uuid(_query_param(event, "scan_run_id"), "scan_run_id")
+    proposed_category_id = _optional_uuid(
+        _query_param(event, "proposed_category_id"),
+        "proposed_category_id",
+    )
     query_text = (_query_param(event, "q") or "").strip()
     cursor = _parse_cursor(_query_param(event, "cursor"))
     with Session(get_engine()) as session:
@@ -63,6 +67,7 @@ def _list(event: Mapping[str, Any]) -> dict[str, Any]:
                 verdict=verdict,
                 org_id=org_id,
                 scan_run_id=scan_run_id,
+                proposed_category_id=proposed_category_id,
                 query_text=query_text,
                 cursor=cursor,
             ).limit(limit + 1)
@@ -117,6 +122,7 @@ def _query(
     verdict: str | None,
     org_id: UUID | None,
     scan_run_id: UUID | None,
+    proposed_category_id: UUID | None,
     query_text: str,
     cursor: tuple[datetime, UUID] | None,
 ):
@@ -150,6 +156,10 @@ def _query(
         query = query.where(ActivityCategoryReview.org_id == org_id)
     if scan_run_id is not None:
         query = query.where(ActivityCategoryReview.scan_run_id == scan_run_id)
+    if proposed_category_id is not None:
+        query = query.where(
+            ActivityCategoryReview.proposed_category_id == proposed_category_id
+        )
     if query_text:
         like = _like(query_text)
         query = query.where(
@@ -182,6 +192,7 @@ def _one(session: Session, review_id: UUID):
             verdict=None,
             org_id=None,
             scan_run_id=None,
+            proposed_category_id=None,
             query_text="",
             cursor=None,
         ).where(ActivityCategoryReview.id == review_id)

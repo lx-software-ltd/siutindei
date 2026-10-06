@@ -10,6 +10,7 @@ from uuid import UUID as UUIDType
 from uuid import uuid4
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     ForeignKey,
     Index,
@@ -57,6 +58,12 @@ class CategoryScanRun(Base):
         nullable=False,
         default="verify",
         server_default=text("'verify'"),
+    )
+    ignore_current_category: Mapped[bool] = mapped_column(
+        Boolean(),
+        nullable=False,
+        default=False,
+        server_default=text("false"),
     )
     batch_size: Mapped[int] = mapped_column(Integer(), nullable=False, default=10)
     total_activities: Mapped[int] = mapped_column(
