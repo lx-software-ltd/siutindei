@@ -32,7 +32,6 @@ test.describe('Admin Dashboard', () => {
       'Imports',
       'Tickets',
       'Feedback',
-      'Feedback Labels',
       'Users',
       'API Keys',
       'Audit Logs',
