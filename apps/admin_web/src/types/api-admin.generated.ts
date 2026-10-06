@@ -887,7 +887,10 @@ export interface paths {
         /** Category suggestion counts and month cost */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description When set, scan_candidate_total counts only this organization's activities. */
+                    org_id?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -6337,8 +6340,10 @@ export interface components {
             stranded_activity_total: number;
             review_pending_total?: number;
             auto_applied_total?: number;
-            /** @description Activities a new scan would check, capped at 500. */
+            /** @description Activities a new scan would check. Optional query org_id limits the count to one organization. The count is not capped. */
             scan_candidate_total?: number;
+            /** @description Maximum activities one run will enqueue. */
+            scan_limit?: number;
             active_scan_run?: components["schemas"]["CategoryScanRun"] | null;
             /** @description OpenRouter cost recorded this month. Each enrichment stores its own cost, so earlier months are not included. */
             month_cost_usd: number;
@@ -6353,6 +6358,8 @@ export interface components {
             deny_data_collection: boolean;
             /** @description Null disables automatic reassignment. Default 0.9. */
             auto_assign_threshold?: number | null;
+            /** @description Category-check spend this month cannot start another run once it reaches this amount. Default 25. */
+            monthly_cost_limit_usd?: number;
             updated_by?: string | null;
             /** Format: date-time */
             updated_at?: string | null;
@@ -6365,6 +6372,7 @@ export interface components {
             max_evidence_items?: number;
             deny_data_collection?: boolean;
             auto_assign_threshold?: number | null;
+            monthly_cost_limit_usd?: number;
         };
         CategoryScanRequest: {
             /** Format: uuid */

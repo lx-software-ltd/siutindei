@@ -116,6 +116,19 @@ export function CategoryChecksTable({
   );
 }
 
+const PENDING_CATEGORY_ID = 'c1111111-1111-1111-1111-111111111199';
+
+function canApplyReview(item: ActivityCategoryReview): boolean {
+  if (item.proposed_category_id) {
+    return true;
+  }
+  return (
+    item.verdict === 'confirm' &&
+    Boolean(item.current_category_id) &&
+    item.current_category_id !== PENDING_CATEGORY_ID
+  );
+}
+
 function ReviewActions({
   item,
   onReload,
@@ -136,6 +149,7 @@ function ReviewActions({
   }
 
   const isPending = item.status === 'pending';
+  const canApply = isPending && canApplyReview(item);
   const canRevert = item.status === 'auto_applied' || item.status === 'applied';
   return (
     <AdminRowActions
@@ -144,7 +158,7 @@ function ReviewActions({
           key: 'apply',
           label: pending === 'apply' ? 'Applying…' : 'Apply',
           icon: <EditIcon />,
-          hidden: !isPending,
+          hidden: !canApply,
           disabled: pending !== '',
           onClick: () => void decide('apply'),
         },

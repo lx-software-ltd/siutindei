@@ -8,7 +8,8 @@ from datetime import timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.engine import get_engine
@@ -38,7 +39,9 @@ from app.utils.logging import get_logger
 logger = get_logger(__name__)
 
 SKIP_WINDOW = timedelta(days=30)
-STALE_AFTER = timedelta(seconds=300)
+# Three SQS receives can each sit for the 180s visibility timeout, plus
+# the 120s Lambda timeout, before the message reaches the DLQ.
+STALE_AFTER = timedelta(seconds=660)
 DEFAULT_LIMIT = 500
 MAX_LIMIT = 500
 DEFAULT_BATCH_SIZE = 10
@@ -59,6 +62,26 @@ def select_candidate_ids(
     rescan: bool = False,
 ) -> list[UUID]:
     """Activities in pending-review organizations that still need a check."""
+    query = _candidate_stmt(org_id=org_id, rescan=rescan)
+    rows = session.scalars(
+        query.order_by(Activity.created_at, Activity.id).limit(limit)
+    ).all()
+    return [UUID(str(item)) for item in rows]
+
+
+def count_candidates(
+    session: Session,
+    *,
+    org_id: UUID | None = None,
+    rescan: bool = False,
+) -> int:
+    """How many activities a scan would see, without the per-run cap."""
+    stmt = _candidate_stmt(org_id=org_id, rescan=rescan).subquery()
+    return int(session.scalar(select(func.count()).select_from(stmt)) or 0)
+
+
+def _candidate_stmt(*, org_id: UUID | None, rescan: bool):
+    """Pending-review activities with no open review."""
     query = (
         select(Activity.id)
         .join(Organization, Organization.id == Activity.org_id)
@@ -66,6 +89,14 @@ def select_candidate_ids(
     )
     if org_id is not None:
         query = query.where(Activity.org_id == org_id)
+    # An open review is already waiting on an admin. Scanning it again
+    # would add a second pending row for the same activity.
+    pending = (
+        select(ActivityCategoryReview.id)
+        .where(ActivityCategoryReview.activity_id == Activity.id)
+        .where(ActivityCategoryReview.status == "pending")
+    )
+    query = query.where(~pending.exists())
     if not rescan:
         cutoff = datetime.now(timezone.utc) - SKIP_WINDOW
         settled = (
@@ -75,10 +106,7 @@ def select_candidate_ids(
             .where(ActivityCategoryReview.created_at >= cutoff)
         )
         query = query.where(~settled.exists())
-    rows = session.scalars(
-        query.order_by(Activity.created_at, Activity.id).limit(limit)
-    ).all()
-    return [UUID(str(item)) for item in rows]
+    return query
 
 
 def start_scan(
@@ -89,6 +117,7 @@ def start_scan(
 ) -> tuple[CategoryScanRun, list[list[str]]]:
     """Create a run and return id batches to enqueue after commit."""
     _fail_stale_runs(session)
+    _reject_over_budget(session)
     active = session.scalar(
         select(CategoryScanRun.id).where(CategoryScanRun.status.in_(_ACTIVE)).limit(1)
     )
@@ -119,13 +148,20 @@ def start_scan(
         updated_at=now,
     )
     session.add(run)
-    session.flush()
+    try:
+        session.flush()
+    except IntegrityError as exc:
+        session.rollback()
+        raise CategoryScanBusy() from exc
     return run, batches
 
 
-def summary_counts(session: Session) -> dict[str, Any]:
+def summary_counts(
+    session: Session,
+    *,
+    org_id: UUID | None = None,
+) -> dict[str, Any]:
     """Counts the category-check tab and the suggestion summary share."""
-    from sqlalchemy import func
 
     def _count(status: str) -> int:
         return int(
@@ -137,31 +173,26 @@ def summary_counts(session: Session) -> dict[str, Any]:
             or 0
         )
 
+    _fail_stale_runs(session)
     active = session.scalars(
         select(CategoryScanRun)
         .where(CategoryScanRun.status.in_(_ACTIVE))
         .order_by(CategoryScanRun.created_at.desc())
         .limit(1)
     ).first()
-    month_start = datetime.now(timezone.utc).replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0
-    )
-    month_cost = session.scalar(
-        select(func.coalesce(func.sum(CategoryScanRun.cost_usd), 0)).where(
-            CategoryScanRun.created_at >= month_start
-        )
-    )
     return {
         "review_pending_total": _count("pending"),
         "auto_applied_total": _count("auto_applied"),
-        "scan_candidate_total": len(select_candidate_ids(session, limit=MAX_LIMIT)),
+        "scan_candidate_total": count_candidates(session, org_id=org_id),
+        "scan_limit": MAX_LIMIT,
         "active_scan_run": None if active is None else serialize_run(active),
-        "month_scan_cost_usd": float(month_cost or 0),
+        "month_scan_cost_usd": _month_scan_cost(session),
     }
 
 
 def list_runs(session: Session, *, limit: int = 20) -> list[CategoryScanRun]:
     """Recent category-check runs, newest first."""
+    _fail_stale_runs(session)
     return list(
         session.scalars(
             select(CategoryScanRun)
@@ -276,6 +307,14 @@ def _prepare(
             )
             session.commit()
             return None
+        if _over_budget(session):
+            now = datetime.now(timezone.utc)
+            run.status = "failed"
+            run.error = "Monthly category-check budget is used"
+            run.finished_at = now
+            run.updated_at = now
+            session.commit()
+            return None
         settings = get_settings(session)
         system, user = build_scan_prompt(session, activities)
         return (
@@ -302,6 +341,34 @@ def _fail(
             message_id=message_id,
         )
         session.commit()
+
+
+def _month_start() -> datetime:
+    return datetime.now(timezone.utc).replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
+
+
+def _month_scan_cost(session: Session) -> float:
+    value = session.scalar(
+        select(func.coalesce(func.sum(CategoryScanRun.cost_usd), 0)).where(
+            CategoryScanRun.created_at >= _month_start()
+        )
+    )
+    return float(value or 0)
+
+
+def _over_budget(session: Session) -> bool:
+    limit = get_settings(session).monthly_cost_limit_usd
+    return _month_scan_cost(session) >= float(limit)
+
+
+def _reject_over_budget(session: Session) -> None:
+    if _over_budget(session):
+        raise ValidationError(
+            "Monthly category-check budget is used",
+            field="monthly_cost_limit_usd",
+        )
 
 
 def _fail_stale_runs(session: Session) -> None:

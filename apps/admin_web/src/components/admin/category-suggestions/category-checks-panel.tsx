@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
+import { buildApiUrl, request } from '../../../lib/api-client-core';
 import {
   getCategorySuggestionSettings,
   getCategorySuggestionSummary,
@@ -24,9 +25,21 @@ interface ReviewFilters {
   status: string;
   verdict: string;
   q: string;
+  org_id: string;
 }
 
-const DEFAULT_FILTERS: ReviewFilters = { status: '', verdict: '', q: '' };
+interface PendingOrganization {
+  id: string;
+  name: string;
+  review_status?: string;
+}
+
+const DEFAULT_FILTERS: ReviewFilters = {
+  status: '',
+  verdict: '',
+  q: '',
+  org_id: '',
+};
 
 export function CategoryChecksPanel() {
   const fetchReviews = useCallback(
@@ -36,6 +49,7 @@ export function CategoryChecksPanel() {
       status,
       verdict,
       q,
+      org_id,
     }: ReviewFilters & { cursor: string | null; limit: number }) => {
       const page = await listCategoryReviews({
         cursor: cursor ?? undefined,
@@ -43,6 +57,7 @@ export function CategoryChecksPanel() {
         status: status || undefined,
         verdict: verdict || undefined,
         q: q || undefined,
+        org_id: org_id || undefined,
       });
       return { items: page.items, nextCursor: page.next_cursor || null };
     },
@@ -56,25 +71,46 @@ export function CategoryChecksPanel() {
     fetcher: fetchReviews,
   });
   const [summary, setSummary] = useState<CategorySuggestionSummary | null>(null);
+  const [organizations, setOrganizations] = useState<PendingOrganization[]>([]);
   const [threshold, setThreshold] = useState<number | null>(0.9);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState('');
 
   const { refetch } = list;
+  const selectedOrgId = list.filters.org_id;
   const reload = useCallback(() => {
     void refetch();
-    void getCategorySuggestionSummary()
+    void getCategorySuggestionSummary(selectedOrgId || undefined)
       .then((counts) => setSummary(counts))
       .catch(() => undefined);
-  }, [refetch]);
+  }, [refetch, selectedOrgId]);
 
   useEffect(() => {
     let cancelled = false;
-    void getCategorySuggestionSummary()
+    void getCategorySuggestionSummary(selectedOrgId || undefined)
       .then((counts) => {
         if (!cancelled) {
           setSummary(counts);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedOrgId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const url = new URL(buildApiUrl('v1/admin/organizations'));
+    url.searchParams.set('review_status', 'pending_review');
+    url.searchParams.set('limit', '100');
+    void request<{ items: PendingOrganization[] }>(url.toString())
+      .then((page) => {
+        if (!cancelled) {
+          setOrganizations(
+            page.items.filter((item) => item.review_status === 'pending_review')
+          );
         }
       })
       .catch(() => undefined);
@@ -106,7 +142,9 @@ export function CategoryChecksPanel() {
   }, [isRunning, reload]);
 
   const candidates = summary?.scan_candidate_total ?? 0;
-  const batches = Math.max(1, Math.ceil(candidates / 10));
+  const scanLimit = summary?.scan_limit ?? 500;
+  const scanCount = Math.min(candidates, scanLimit);
+  const batches = Math.max(1, Math.ceil(scanCount / 10));
   const thresholdText =
     threshold === null
       ? 'Auto-assign is off.'
@@ -119,7 +157,9 @@ export function CategoryChecksPanel() {
     setIsStarting(true);
     setError('');
     try {
-      await startCategoryScan({});
+      await startCategoryScan({
+        org_id: selectedOrgId || undefined,
+      });
       setConfirmOpen(false);
       reload();
     } catch (err) {
@@ -156,11 +196,25 @@ export function CategoryChecksPanel() {
             trailing={
               <AdminCreateButton
                 label='Scan pending organizations'
-                disabled={candidates === 0 || isRunning || isStarting}
+                disabled={scanCount === 0 || isRunning || isStarting}
                 onClick={() => setConfirmOpen(true)}
               />
             }
           >
+            <AdminFilterField label='Organization' htmlFor='check-org-filter'>
+              <Select
+                id='check-org-filter'
+                value={selectedOrgId}
+                onChange={(event) => list.setFilter('org_id', event.target.value)}
+              >
+                <option value=''>All pending organizations</option>
+                {organizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
+              </Select>
+            </AdminFilterField>
             <AdminFilterField label='Status' htmlFor='check-status-filter'>
               <Select
                 id='check-status-filter'
@@ -203,8 +257,11 @@ export function CategoryChecksPanel() {
         open={confirmOpen}
         title='Scan pending organizations'
         message={
-          `Scan ${candidates} activities in ${batches} model ` +
-          `${batches === 1 ? 'call' : 'calls'}. ${thresholdText}`
+          `${
+            candidates > scanCount
+              ? `Scan ${scanCount} of ${candidates} activities`
+              : `Scan ${scanCount} activities`
+          } in ${batches} model ${batches === 1 ? 'call' : 'calls'}. ${thresholdText}`
         }
         confirmLabel='Start scan'
         confirmLoading={isStarting}

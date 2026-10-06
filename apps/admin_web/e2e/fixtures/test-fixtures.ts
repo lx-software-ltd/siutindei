@@ -702,6 +702,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
         org_id: 'org-1',
         org_name: 'Harbor Arts',
         current_category_name: 'Sport',
+        proposed_category_id: 'cat-ceramics',
         proposed_category_name: 'Ceramics',
         verdict: 'reassign',
         confidence: 0.62,
@@ -738,6 +739,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
           max_evidence_items: 25,
           deny_data_collection: true,
           auto_assign_threshold: 0.9,
+          monthly_cost_limit_usd: 25,
         }),
       });
       return;
@@ -755,6 +757,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
           review_pending_total: 1,
           auto_applied_total: 0,
           scan_candidate_total: 2,
+          scan_limit: 500,
           active_scan_run: categoryScanStarted
             ? {
                 id: 'run-1',

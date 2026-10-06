@@ -56,6 +56,7 @@ export interface CategorySuggestionSummary {
   review_pending_total?: number;
   auto_applied_total?: number;
   scan_candidate_total?: number;
+  scan_limit?: number;
   active_scan_run?: CategoryScanRun | null;
 }
 
@@ -68,6 +69,7 @@ export interface CategorySuggestionSettings {
   max_evidence_items: number;
   deny_data_collection: boolean;
   auto_assign_threshold?: number | null;
+  monthly_cost_limit_usd?: number;
   updated_by?: string | null;
   updated_at?: string | null;
 }
@@ -153,8 +155,12 @@ export function listCategorySuggestions(filters: CategorySuggestionFilters = {})
   );
 }
 
-export function getCategorySuggestionSummary() {
-  return request<CategorySuggestionSummary>(suggestionUrl('/summary'));
+export function getCategorySuggestionSummary(orgId?: string) {
+  const url = new URL(suggestionUrl('/summary'));
+  if (orgId) {
+    url.searchParams.set('org_id', orgId);
+  }
+  return request<CategorySuggestionSummary>(url.toString());
 }
 
 export function getCategorySuggestion(id: string) {

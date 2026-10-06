@@ -105,8 +105,11 @@ def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _handle_summary(event: Mapping[str, Any]) -> dict[str, Any]:
+    org_id = _optional_uuid(_query_param(event, "org_id"), "org_id")
     with Session(get_engine()) as session:
-        return json_response(200, _summary(session), event=event)
+        payload = _summary(session, org_id=org_id)
+        session.commit()
+        return json_response(200, payload, event=event)
 
 
 def _handle_detail(event: Mapping[str, Any], resource_id: str) -> dict[str, Any]:
@@ -187,7 +190,7 @@ def serialize_suggestion(row: CategorySuggestion) -> dict[str, Any]:
     }
 
 
-def _summary(session: Session) -> dict[str, Any]:
+def _summary(session: Session, *, org_id: UUID | None = None) -> dict[str, Any]:
     by_status = {
         status: int(count)
         for status, count in session.execute(
@@ -227,7 +230,7 @@ def _summary(session: Session) -> dict[str, Any]:
     )
     from app.services.category_suggestions.scan import summary_counts
 
-    extra = summary_counts(session)
+    extra = summary_counts(session, org_id=org_id)
     month_cost += float(extra.pop("month_scan_cost_usd") or 0)
     stranded = int(
         session.scalar(

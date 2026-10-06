@@ -160,6 +160,9 @@ Columns:
 - `deny_data_collection` (boolean, default true)
 - `auto_assign_threshold` (numeric(4,3), nullable, default 0.900;
   null turns auto-assign off; check 0.5–1)
+- `monthly_cost_limit_usd` (numeric(12,2), default 25, check greater
+  than 0 and at most 1000). A new category check is refused once this
+  month's category-check spend reaches the limit.
 - `updated_by` (text, nullable)
 - `updated_at` (timestamptz)
 

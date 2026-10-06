@@ -120,6 +120,8 @@ def apply_settings_update(
         row.max_evidence_items = _parse_evidence(body["max_evidence_items"])
     if "auto_assign_threshold" in body:
         row.auto_assign_threshold = _parse_threshold(body["auto_assign_threshold"])
+    if "monthly_cost_limit_usd" in body:
+        row.monthly_cost_limit_usd = _parse_cost_limit(body["monthly_cost_limit_usd"])
     row.updated_by = updated_by
     row.updated_at = datetime.now(timezone.utc)
     session.flush()
@@ -144,6 +146,7 @@ def serialize_settings(row: CategorySuggestionSettings) -> dict[str, Any]:
             if row.auto_assign_threshold is None
             else float(row.auto_assign_threshold)
         ),
+        "monthly_cost_limit_usd": float(row.monthly_cost_limit_usd),
         "updated_by": row.updated_by,
         "updated_at": row.updated_at,
     }
@@ -189,6 +192,22 @@ def _parse_threshold(value: Any) -> Decimal | None:
             field="auto_assign_threshold",
         )
     return parsed.quantize(Decimal("0.001"))
+
+
+def _parse_cost_limit(value: Any) -> Decimal:
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, ValueError) as exc:
+        raise ValidationError(
+            "monthly_cost_limit_usd must be a number",
+            field="monthly_cost_limit_usd",
+        ) from exc
+    if parsed <= 0 or parsed > Decimal("1000"):
+        raise ValidationError(
+            "monthly_cost_limit_usd must be greater than 0 and at most 1000",
+            field="monthly_cost_limit_usd",
+        )
+    return parsed.quantize(Decimal("0.01"))
 
 
 def _parse_fallbacks(value: Any) -> list[str]:

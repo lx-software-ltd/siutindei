@@ -47,7 +47,8 @@ def build_scan_prompt(
         '{"results":[{"activity_id":string,'
         '"verdict":"confirm"|"reassign"|"propose",'
         '"category_id":string|null,"confidence":number,"rationale":string,'
-        '"propose":{"name_en":string,"name_zh":string,"parent_id":string|null}}]}'
+        '"propose":{"name_en":string,"name_zh":string,"parent_id":string|null,'
+        '"rationale":string}}]}'
     )
     user = {
         "activities": [_scan_item(session, activity, by_id) for activity in activities],
@@ -64,7 +65,7 @@ def _scan_item(
 ) -> dict[str, Any]:
     org = session.get(Organization, activity.org_id)
     category = by_id.get(activity.category_id)
-    lower, upper = inclusive_age_bounds(activity)
+    lower, upper = inclusive_age_bounds(activity.age_range)
     description = (activity.description or "")[:_MAX_DESCRIPTION]
     path = ""
     category_id = None

@@ -245,7 +245,7 @@ def test_dismissed_and_approved_org_are_not_auto_applied(
     other = ActivityCategory(name="Dance Hall", display_order=5)
     db_session.add(other)
     db_session.flush()
-    earlier = _run(db_session, batches_total=2)
+    earlier = _run(db_session, status="done", batches_total=2)
     db_session.add(
         ActivityCategoryReview(
             scan_run_id=earlier.id,

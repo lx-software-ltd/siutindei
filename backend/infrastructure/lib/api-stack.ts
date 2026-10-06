@@ -2252,6 +2252,9 @@ export class ApiStack extends cdk.Stack {
     adminFunction.addEventSource(
       new lambdaEventSources.SqsEventSource(categorySuggestionQueue, {
         batchSize: 1,
+        // Shared with live admin traffic. Two at a time keeps a category
+        // check from opening dozens of RDS Proxy connections at once.
+        maxConcurrency: 2,
         reportBatchItemFailures: true,
       })
     );

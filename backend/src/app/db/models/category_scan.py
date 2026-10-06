@@ -12,6 +12,7 @@ from uuid import uuid4
 from sqlalchemy import (
     CheckConstraint,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     Text,
@@ -113,6 +114,12 @@ class CategoryScanRun(Base):
         CheckConstraint(
             "status IN ('queued', 'running', 'done', 'failed')",
             name="cat_scan_run_status_check",
+        ),
+        Index(
+            "cat_scan_one_active",
+            text("(true)"),
+            unique=True,
+            postgresql_where=text("status IN ('queued', 'running')"),
         ),
     )
 

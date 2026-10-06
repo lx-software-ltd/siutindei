@@ -197,6 +197,21 @@ def _apply_reassign(
     now: datetime,
     suggestion_id: UUID | None = None,
 ) -> None:
+    current = _uuid(activity.category_id)
+    if current is not None and current == _uuid(target.id):
+        counts["confirmed"] += 1
+        _add_review(
+            session,
+            run=run,
+            activity=activity,
+            verdict="confirm",
+            status="confirmed",
+            confidence=confidence,
+            rationale=rationale,
+            now=now,
+            suggestion_id=suggestion_id,
+        )
+        return
     org_open = org is not None and org.review_status == "pending_review"
     can_auto = (
         org_open

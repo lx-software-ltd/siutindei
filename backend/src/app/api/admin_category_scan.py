@@ -77,6 +77,7 @@ def _start(event: Mapping[str, Any]) -> dict[str, Any]:
 def _list(event: Mapping[str, Any]) -> dict[str, Any]:
     with Session(get_engine()) as session:
         items = [serialize_run(run) for run in list_runs(session)]
+        session.commit()
     return json_response(200, {"items": items}, event=event)
 
 

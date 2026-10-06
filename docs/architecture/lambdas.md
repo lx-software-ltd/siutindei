@@ -63,8 +63,8 @@ their primary responsibilities.
 - Handler: backend/lambda/admin/handler.py
 - Trigger: API Gateway — handles routes under `/v1/admin/*`,
   `/v1/manager/*`, `/v1/user/*`, and `/v1/partner/*` (CRUD resources).
-  Also SQS `category-suggestion-enrich` (batch size 1, partial batch
-  failures). The entrypoint dispatches `eventSource=aws:sqs` to
+  Also SQS `category-suggestion-enrich` (batch size 1, max concurrency
+  2, partial batch failures). The entrypoint dispatches `eventSource=aws:sqs` to
   `backend/lambda/category_suggestions/handler.py`. A separate worker
   function would exceed the CloudFormation 500-resource cap.
 - Auth: Cognito JWT — admin group for `/v1/admin/*`,   admin or importer
@@ -307,8 +307,8 @@ their primary responsibilities.
 - Function: SiutindeiAdminFunction (same function as the admin API)
 - Handler: backend/lambda/category_suggestions/handler.py, loaded by
   backend/lambda/admin/handler.py for SQS events
-- Trigger: SQS `category-suggestion-enrich` (batch size 1, partial
-  batch failures)
+- Trigger: SQS `category-suggestion-enrich` (batch size 1, max
+  concurrency 2, partial batch failures)
 - Purpose: ask OpenRouter where an unknown imported category name
   should sit, and run category-check batches for activities in
   organizations that are still pending review

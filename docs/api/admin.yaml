@@ -588,6 +588,16 @@ paths:
   /v1/admin/category-suggestions/summary:
     get:
       summary: Category suggestion counts and month cost
+      parameters:
+        - name: org_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: >-
+            When set, scan_candidate_total counts only this
+            organization's activities.
       responses:
         "200":
           description: Summary
@@ -5317,7 +5327,12 @@ components:
           type: integer
         scan_candidate_total:
           type: integer
-          description: Activities a new scan would check, capped at 500.
+          description: >-
+            Activities a new scan would check. Optional query org_id
+            limits the count to one organization. The count is not capped.
+        scan_limit:
+          type: integer
+          description: Maximum activities one run will enqueue.
         active_scan_run:
           allOf:
             - $ref: '#/components/schemas/CategoryScanRun'
@@ -5360,6 +5375,13 @@ components:
           minimum: 0.5
           maximum: 1
           description: Null disables automatic reassignment. Default 0.9.
+        monthly_cost_limit_usd:
+          type: number
+          minimum: 0.01
+          maximum: 1000
+          description: >-
+            Category-check spend this month cannot start another run
+            once it reaches this amount. Default 25.
         updated_by:
           type: string
           nullable: true
@@ -5394,6 +5416,10 @@ components:
           nullable: true
           minimum: 0.5
           maximum: 1
+        monthly_cost_limit_usd:
+          type: number
+          minimum: 0.01
+          maximum: 1000
 
     CategoryScanRequest:
       type: object

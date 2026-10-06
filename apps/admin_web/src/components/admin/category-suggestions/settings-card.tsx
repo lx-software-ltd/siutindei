@@ -234,6 +234,25 @@ export function CategorySuggestionSettingsCard() {
               }
             />
           </AdminField>
+          <AdminField
+            label='Monthly check budget (USD)'
+            htmlFor='suggestion-cost-limit'
+          >
+            <Input
+              id='suggestion-cost-limit'
+              type='number'
+              min={0.01}
+              max={1000}
+              step={1}
+              value={settings.monthly_cost_limit_usd ?? 25}
+              onChange={(event) =>
+                setSettings({
+                  ...settings,
+                  monthly_cost_limit_usd: Number(event.target.value),
+                })
+              }
+            />
+          </AdminField>
           <AdminField label='Max evidence items' htmlFor='suggestion-evidence'>
             <Input
               id='suggestion-evidence'
