@@ -476,14 +476,22 @@ In-VPC Lambdas reach OpenRouter only through
 The worker reads the named key from Secrets Manager and sends
 `Authorization` itself. The proxy does not hold the key.
 
-Capture is off until an admin turns on `on_import_enabled` in the
-settings singleton. Public search always excludes Pending
-categorisation.
+Capture defaults on (`on_import_enabled`). Public search always
+excludes Pending categorisation and matches a chosen category plus
+its descendants. A completed import can retry the organizations that
+failed without rewriting the ones that succeeded.
 
-A separate category check scans activities on organizations that are
-still `pending_review`. High-confidence reassignments to an existing
-category are applied immediately when `auto_assign_threshold` is set
-(default 0.90). New categories still wait for an admin decision.
+A category check still verifies activities on organizations that are
+`pending_review`. Discover, the primary button, groups imported labels
+on activities that are still Pending categorisation. An existing
+category match is assigned immediately. The model only sees labels
+that are not in the taxonomy, and it may auto-map one of those onto
+an existing category when `maps_to_existing.confidence` is at or above
+`auto_assign_threshold` (default 0.90). Creating a category still
+waits for an admin. Rejected labels stay rejected until a new import
+reopens them. Home wizard activity types are the categories flagged
+`show_in_wizard`. `generate_home_wizard_choices.py --write` reads
+those rows and regenerates the static choices file.
 Design notes:
 `docs/architecture/category-suggestions.md`. Endpoint shapes:
 `docs/api/admin.yaml` under `/v1/admin/category-suggestions`.

@@ -83,6 +83,7 @@ def _create_activity(repo: ActivityRepository, body: dict[str, Any]) -> Activity
             "source_note",
             MAX_VETTING_NOTE_LENGTH,
         ),
+        source_category_name=_source_category_name(body.get("source_category_name")),
         age_range=age_range,
     )
 
@@ -95,6 +96,7 @@ def _update_activity_for_manager(
     """Update an activity for a manager (no provenance fields)."""
     body.pop("source_url", None)
     body.pop("source_note", None)
+    body.pop("source_category_name", None)
     return _update_activity(repo, entity, body)
 
 
@@ -140,6 +142,10 @@ def _update_activity(
             "source_note",
             MAX_VETTING_NOTE_LENGTH,
         )
+    if "source_category_name" in body:
+        entity.source_category_name = _source_category_name(
+            body.get("source_category_name")
+        )
     if "category_id" in body:
         category_id = body["category_id"]
         if not category_id:
@@ -157,6 +163,14 @@ def _update_activity(
         _validate_age_range(age_min, age_max)
         entity.age_range = Range(int(age_min), int(age_max), bounds="[]")
     return entity
+
+
+def _source_category_name(value: Any) -> str | None:
+    """Keep a non-empty imported category label."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    return text or None
 
 
 def _validate_age_range(age_min: Any, age_max: Any) -> None:
@@ -219,6 +233,7 @@ def _serialize_activity(entity: Activity) -> dict[str, Any]:
         ),
         "source_url": entity.source_url,
         "source_note": entity.source_note,
+        "source_category_name": entity.source_category_name,
         "age_min": age_min,
         "age_max": age_max,
         "created_at": entity.created_at,

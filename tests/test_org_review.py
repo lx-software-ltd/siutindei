@@ -11,6 +11,7 @@ from app.api.admin_imports_export import serialize_export_organization
 from app.api.admin_imports_importer import process_import_payload
 from app.api.admin_imports_jobs import (
     begin_import_job,
+    begin_import_retry,
     fail_import_job,
     list_import_jobs,
 )
@@ -153,9 +154,7 @@ def test_approve_blocks_until_forced(db_session, sample_organization) -> None:
     assert sample_organization.review_notes == "ship it"
 
 
-def test_bulk_fields_sets_source_url_and_note(
-    db_session, sample_organization
-) -> None:
+def test_bulk_fields_sets_source_url_and_note(db_session, sample_organization) -> None:
     repo = OrganizationRepository(db_session)
     fields = _parse_fields(
         {
@@ -423,6 +422,23 @@ def test_import_job_failure_and_history_cursor(db_session) -> None:
     db_session.refresh(started)
     assert started.status == "failed"
     assert started.summary == {"error": "RuntimeError"}
+    kept = ImportJob(
+        object_key=f"admin/imports/{uuid4().hex}.json",
+        dry_run=False,
+        status="completed",
+        summary={"captured_categories": 2},
+        results=[{"type": "organizations", "key": "Kept", "status": "created"}],
+        file_warnings=[],
+    )
+    db_session.add(kept)
+    db_session.flush()
+    running = begin_import_retry(db_session, kept)
+    fail_import_job(db_session, running.id, "RuntimeError", keep_completed=True)
+    db_session.refresh(kept)
+    assert kept.status == "completed"
+    assert kept.summary == {"captured_categories": 2}
+    assert kept.results[0]["key"] == "Kept"
+    assert kept.file_warnings == ["Retry failed: RuntimeError"]
     newer = ImportJob(
         object_key=f"admin/imports/{uuid4().hex}.json",
         dry_run=False,

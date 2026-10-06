@@ -99,6 +99,9 @@ def test_resolve_exact_alias_fuzzy_and_capture(
     fuzzy = resolve_category_name(db_session, "測試班")
     assert fuzzy.category_id == sample_activity_category.id
 
+    settings = get_settings(db_session)
+    settings.on_import_enabled = False
+    db_session.flush()
     with pytest.raises(ValidationError):
         resolve_category_name(db_session, "Missing Category")
 

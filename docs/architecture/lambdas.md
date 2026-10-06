@@ -95,7 +95,9 @@ their primary responsibilities.
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - Category suggestions and category checks: admin-only routes under
   `/v1/admin/category-suggestions` (see `docs/api/admin.yaml`),
-  including `/scan` and `/reviews`.
+  including `/scan` and `/reviews`. Discover batches send
+  `suggestion_ids` on the same queue; verify batches send
+  `activity_ids`.
   After a live import commits, the function sends SQS messages when
   `CATEGORY_SUGGESTION_QUEUE_URL` is set. OpenRouter calls go through
   `app.services.openrouter_client` and the HTTP proxy. The settings

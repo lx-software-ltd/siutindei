@@ -84,7 +84,9 @@ def test_live_import_failure_marks_job(monkeypatch) -> None:
     monkeypatch.setattr("app.api.admin_imports.process_import_payload", boom)
     monkeypatch.setattr(
         "app.api.admin_imports.fail_import_job",
-        lambda session, job_id, error_type: order.append(f"fail:{job_id}:{error_type}"),
+        lambda session, job_id, error_type, **_kwargs: order.append(
+            f"fail:{job_id}:{error_type}"
+        ),
     )
 
     try:

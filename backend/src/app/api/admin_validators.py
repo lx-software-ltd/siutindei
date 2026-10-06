@@ -339,7 +339,10 @@ def _validate_language_code(code: str, field_name: str = "language") -> str:
 
     if not isinstance(code, str):
         code = str(code)
-    code = code.strip().lower()
+    folded = code.strip()
+    if folded.casefold() in {"zh-hk", "zh_hk"}:
+        return "zh-HK"
+    code = folded.lower()
     if len(code) > MAX_LANGUAGE_CODE_LENGTH:
         raise ValidationError(
             f"{field_name} must be at most {MAX_LANGUAGE_CODE_LENGTH} characters",

@@ -177,6 +177,11 @@ def test_upsert_activity_unknown_category_name(
     db_session,
     sample_organization,
 ) -> None:
+    from app.services.category_suggestions.settings import get_settings
+
+    settings = get_settings(db_session)
+    settings.on_import_enabled = False
+    db_session.flush()
     with pytest.raises(ValidationError) as exc_info:
         upsert_activity(
             db_session,
@@ -185,6 +190,40 @@ def test_upsert_activity_unknown_category_name(
         )
     assert exc_info.value.field == "category_name"
     assert exc_info.value.message == "unknown category_name"
+
+
+def test_upsert_activity_stores_source_category_name(
+    db_session,
+    sample_organization,
+) -> None:
+    from app.db.models.category_suggestion import PENDING_CATEGORY_ID
+
+    activity, status = upsert_activity(
+        db_session,
+        sample_organization,
+        _activity_payload(category_name="Art, Music"),
+    )
+    assert status == "created"
+    assert activity.source_category_name == "Art, Music"
+    assert str(activity.category_id) == str(PENDING_CATEGORY_ID)
+
+
+def test_upsert_activity_keeps_source_label_when_category_id_wins(
+    db_session,
+    sample_organization,
+    sample_activity_category,
+) -> None:
+    activity, status = upsert_activity(
+        db_session,
+        sample_organization,
+        _activity_payload(
+            category_id=str(sample_activity_category.id),
+            category_name="Imported ceramics",
+        ),
+    )
+    assert status == "created"
+    assert str(activity.category_id) == str(sample_activity_category.id)
+    assert activity.source_category_name == "Imported ceramics"
 
 
 def test_upsert_activity_category_id_wins_over_category_name(

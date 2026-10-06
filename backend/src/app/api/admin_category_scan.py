@@ -13,7 +13,10 @@ from app.api.admin_request import parse_object_body
 from app.db.engine import get_engine
 from app.db.models.category_scan import CategoryScanRun
 from app.exceptions import ValidationError
-from app.services.category_suggestions.events import enqueue_scan_batches
+from app.services.category_suggestions.events import (
+    enqueue_discover_batches,
+    enqueue_scan_batches,
+)
 from app.services.category_suggestions.scan import (
     CategoryScanBusy,
     list_runs,
@@ -59,10 +62,14 @@ def _start(event: Mapping[str, Any]) -> dict[str, Any]:
             )
         payload = serialize_run(run)
         run_id = str(run.id)
+        mode = run.mode
         session.commit()
     if batches:
         try:
-            enqueue_scan_batches(run_id, batches)
+            enqueue = (
+                enqueue_discover_batches if mode == "discover" else enqueue_scan_batches
+            )
+            enqueue(run_id, batches)
         except Exception:
             logger.exception("Category check enqueue failed")
             _mark_enqueue_failed(run_id)

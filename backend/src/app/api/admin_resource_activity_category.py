@@ -34,6 +34,7 @@ def _serialize_activity_category(entity: ActivityCategory) -> dict[str, Any]:
             entity.name, entity.name_translations
         ),
         "display_order": entity.display_order,
+        "show_in_wizard": bool(entity.show_in_wizard),
         "is_system": _to_uuid(entity.id) == PENDING_CATEGORY_ID,
     }
 
@@ -69,5 +70,19 @@ def _update_activity_category(
 
     if "display_order" in body:
         entity.display_order = _parse_display_order(body["display_order"])
+
+    if "show_in_wizard" in body:
+        show_in_wizard = body["show_in_wizard"]
+        if not isinstance(show_in_wizard, bool):
+            raise ValidationError(
+                "show_in_wizard must be a boolean",
+                field="show_in_wizard",
+            )
+        if show_in_wizard and _to_uuid(entity.id) == PENDING_CATEGORY_ID:
+            raise ValidationError(
+                "Pending categorisation cannot appear in the home wizard",
+                field="show_in_wizard",
+            )
+        entity.show_in_wizard = show_in_wizard
 
     return entity

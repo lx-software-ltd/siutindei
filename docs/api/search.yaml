@@ -67,7 +67,8 @@ paths:
           required: false
           description: |
             Filter by activity category UUID. Multiple values allowed; results
-            match any listed category.
+            match any listed category or one of its descendants. Pending
+            categorisation is excluded.
           style: form
           explode: true
           schema:

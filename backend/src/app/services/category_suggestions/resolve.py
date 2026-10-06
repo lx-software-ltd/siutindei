@@ -83,6 +83,7 @@ def finish_capture_batch(summary: dict, session: Session | None = None) -> None:
         return
     surviving = _surviving_ids(session, batch.seen)
     summary["captured_categories"] = len(surviving)
+    summary["captured_category_ids"] = sorted(surviving)
     _last_enqueue = [item for item in batch.enqueue if item in surviving]
 
 

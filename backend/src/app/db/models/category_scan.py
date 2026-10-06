@@ -52,11 +52,20 @@ class CategoryScanRun(Base):
         ForeignKey("organizations.id", ondelete="SET NULL"),
         nullable=True,
     )
+    mode: Mapped[str] = mapped_column(
+        Text(),
+        nullable=False,
+        default="verify",
+        server_default=text("'verify'"),
+    )
     batch_size: Mapped[int] = mapped_column(Integer(), nullable=False, default=10)
     total_activities: Mapped[int] = mapped_column(
         Integer(), nullable=False, default=0, server_default=text("0")
     )
     batches_total: Mapped[int] = mapped_column(
+        Integer(), nullable=False, default=0, server_default=text("0")
+    )
+    labels_total: Mapped[int] = mapped_column(
         Integer(), nullable=False, default=0, server_default=text("0")
     )
     batches_done: Mapped[int] = mapped_column(
@@ -114,6 +123,10 @@ class CategoryScanRun(Base):
         CheckConstraint(
             "status IN ('queued', 'running', 'done', 'failed')",
             name="cat_scan_run_status_check",
+        ),
+        CheckConstraint(
+            "mode IN ('verify', 'discover')",
+            name="cat_scan_run_mode_check",
         ),
         Index(
             "cat_scan_one_active",

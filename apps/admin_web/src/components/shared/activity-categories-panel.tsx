@@ -9,6 +9,7 @@ import {
   buildTranslationsPayload,
   emptyTranslations,
   extractTranslations,
+  mergePreservedTranslations,
   type LanguageCode,
   type TranslationLanguageCode,
 } from '../../lib/translations';
@@ -35,24 +36,30 @@ import { StatusBanner } from '../status-banner';
 interface ActivityCategoryFormState {
   name: string;
   name_translations: Record<TranslationLanguageCode, string>;
+  preserved_translations: Record<string, string>;
   parent_id: string;
   display_order: string;
+  show_in_wizard: boolean;
 }
 
 const emptyForm: ActivityCategoryFormState = {
   name: '',
   name_translations: emptyTranslations(),
+  preserved_translations: {},
   parent_id: '',
   display_order: '0',
+  show_in_wizard: false,
 };
 
 function itemToForm(item: ActivityCategory): ActivityCategoryFormState {
   return {
     name: item.name ?? '',
     name_translations: extractTranslations(item.name_translations),
+    preserved_translations: { ...(item.name_translations ?? {}) },
     parent_id: item.parent_id ?? '',
     display_order:
       item.display_order !== undefined ? `${item.display_order}` : '0',
+    show_in_wizard: Boolean(item.show_in_wizard),
   };
 }
 
@@ -203,9 +210,13 @@ export function ActivityCategoriesPanel() {
     }
     return {
       name: form.name.trim(),
-      name_translations: buildTranslationsPayload(form.name_translations),
+      name_translations: mergePreservedTranslations(
+        buildTranslationsPayload(form.name_translations),
+        form.preserved_translations
+      ),
       parent_id: form.parent_id || null,
       display_order: displayOrder,
+      show_in_wizard: form.show_in_wizard,
     };
   };
 
@@ -315,6 +326,23 @@ export function ActivityCategoriesPanel() {
             <p className='text-xs text-red-600'>{displayOrderError}</p>
           ) : null}
         </div>
+        <label className='flex items-center gap-2 text-sm sm:col-span-2'>
+          <input
+            type='checkbox'
+            checked={panel.formState.show_in_wizard}
+            disabled={isSystemLocked}
+            onChange={(event) => {
+              if (isSystemLocked) {
+                return;
+              }
+              panel.setFormState((prev) => ({
+                ...prev,
+                show_in_wizard: event.target.checked,
+              }));
+            }}
+          />
+          Show in the home wizard
+        </label>
       </AdminFieldGrid>
     </AdminEditorPanel>
   );

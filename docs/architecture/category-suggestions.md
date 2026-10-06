@@ -14,7 +14,10 @@ Resolution order for `category_name` is exact name, then an alias from
 an approved or targeted suggestion, then a unique normalised match on
 the English name and `name_translations` (case, whitespace, and
 punctuation insensitive). Anything else is captured when
-`on_import_enabled` is true. Two categories with the same exact name
+`on_import_enabled` is true. That switch defaults to true. The imported
+label is stored on `activities.source_category_name` even when the name
+resolves to an existing category. Multi-word labels such as "Art, Music"
+stay one label. Two categories with the same exact name
 are captured too when that switch is on; when it is off, an unknown or
 ambiguous name still fails the import.
 
@@ -67,7 +70,10 @@ Traditional Chinese name.
 ## Settings
 
 `category_suggestion_settings` is a single row. `on_import_enabled`
-defaults to false and is the only capture switch. `auto_enrich_enabled`
+defaults to true and is the only capture switch. A completed import can
+be retried with `retry_failed`: only organizations whose stored result
+failed are run again, and their rows replace the previous ones. A job
+whose status is `failed` is rerun as a whole. `auto_enrich_enabled`
 defaults to true. Model slugs match `vendor/model` and are at most 128
 characters. At most three fallbacks are stored. Evidence size is 5 to
 50 items, default 25.
@@ -108,7 +114,7 @@ timeout), which also re-enables the scan button. A new run is refused
 when this month's category-check spend has reached
 `monthly_cost_limit_usd` (default 25). The queue consumer runs at most
 two batches at once, because the admin function also serves live
-  traffic. A healthy batch often takes tens of seconds and may take up
+traffic. A healthy batch often takes tens of seconds and may take up
 to the 90 s OpenRouter timeout. That lifts Admin Lambda p99 `Duration`
 for the length of the run; the duration alarm is 90 s so a scan does
 not page. HTTP console latency stays on the API Gateway p99 alarm.
@@ -123,3 +129,41 @@ A pending review is the organization-review warning
 `category_check_pending`. It does not block approval. The scan button
 is the only trigger. `scan_candidate_total` is the full candidate
 count; a run still stops at `scan_limit` (500).
+
+## Discover
+
+Discover is the primary button. It groups activities that are still on
+Pending categorisation, on organizations in `pending_review`, by the
+imported label. An activity already placed on a real category is left
+alone; verify checks those. A label that already matches a category is
+assigned immediately and can be reverted. The category-check audit
+actor is `category-scan:<run id>` for that write. A label that does
+not match is one `source=scan` suggestion (an existing import
+suggestion keeps its source). The model sees a batch of those labels,
+not one activity each. Auto-map uses `maps_to_existing.confidence`,
+not the proposal confidence, and it only moves activities still on
+Pending categorisation. At or above `auto_assign_threshold` the
+suggestion is merged, linked activities still on Pending categorisation
+move, and reviews waiting on that suggestion are applied. Creating a
+category stays an admin approve. Discover does not reopen a rejected
+suggestion. A later import of the same name still can. Omitted `mode`
+on `POST .../scan` stays `verify`. Discovery messages are
+`{"scan_run_id", "suggestion_ids"}` on the same queue. The summary
+poll loads the taxonomy once per request.
+
+Approving a suggestion copies a Chinese name into both `zh` and
+`zh-HK`. The category editor keeps translation keys other than `zh`
+and `yue`, including `zh-HK`, when a category is saved. Categories
+with `show_in_wizard` are the home-wizard activity types. Regenerate
+the static choices after changing flags:
+
+```bash
+DATABASE_URL=postgresql+psycopg://... \
+  python3 scripts/codegen/generate_home_wizard_choices.py --write
+```
+
+That writes `shared/home_wizard/home_wizard_choices.json` and
+`apps/public_www/src/data/home_wizard_choices.json`. Public search
+matches a category and its descendants, and it still excludes Pending
+categorisation. A category shown in the wizard cannot be deleted until
+the flag is cleared.

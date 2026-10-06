@@ -17,8 +17,13 @@ from app.api.admin_imports_export import (
     load_export_organizations,
 )
 from app.api.admin_imports_importer import process_import_payload
+from app.api.admin_imports_retry import (
+    merge_import_results,
+    select_retry_organizations,
+)
 from app.api.admin_imports_jobs import (
     begin_import_job,
+    begin_import_retry,
     fail_import_job,
     find_import_job_by_id,
     find_import_job_by_key,
@@ -134,7 +139,12 @@ def _stored_job_answers_request(job: Any, dry_run: bool) -> bool:
     return True
 
 
-def _record_import_failure(job_id: Any, exc: BaseException) -> None:
+def _record_import_failure(
+    job_id: Any,
+    exc: BaseException,
+    *,
+    keep_completed: bool = False,
+) -> None:
     """Persist failed status outside the rolled-back import transaction."""
     logger.info(
         "Admin import failed",
@@ -142,7 +152,12 @@ def _record_import_failure(job_id: Any, exc: BaseException) -> None:
     )
     try:
         with Session(get_engine()) as session:
-            fail_import_job(session, job_id, type(exc).__name__)
+            fail_import_job(
+                session,
+                job_id,
+                type(exc).__name__,
+                keep_completed=keep_completed,
+            )
             session.commit()
     except Exception:
         logger.info(
@@ -162,18 +177,51 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
     object_key = str(object_key).strip()
     validate_object_key(object_key, IMPORT_PREFIX)
     dry_run = _parse_dry_run(body)
+    retry_failed = _parse_retry_failed(body)
+    if retry_failed and dry_run:
+        raise ValidationError(
+            "retry_failed cannot be used with dry_run",
+            field="retry_failed",
+        )
+    previous_results: list[dict[str, Any]] = []
+    previous_summary: dict[str, Any] = {}
+    retry_paths: set[str] = set()
+    retry_names: set[str] = set()
+    unmatched: list[dict[str, Any]] = []
+    retry_subset = False
 
     with Session(get_engine()) as session:
         existing_job = find_import_job_by_key(session, object_key)
-        if existing_job is not None and _stored_job_answers_request(
-            existing_job,
-            dry_run,
+        if (
+            existing_job is not None
+            and not existing_job.dry_run
+            and existing_job.status == "running"
+        ):
+            return json_response(
+                409,
+                {"error": "Import is already running"},
+                event=event,
+            )
+        if (
+            existing_job is not None
+            and not retry_failed
+            and _stored_job_answers_request(existing_job, dry_run)
         ):
             return json_response(
                 200,
                 serialize_import_job(existing_job),
                 event=event,
             )
+        if retry_failed:
+            if existing_job is None or existing_job.dry_run:
+                raise ValidationError(
+                    "No completed import to retry",
+                    field="object_key",
+                )
+            if existing_job.status != "failed":
+                retry_subset = True
+                previous_results = list(existing_job.results or [])
+                previous_summary = dict(existing_job.summary or {})
 
     payload = _load_import_payload(object_key)
     if not isinstance(payload, dict):
@@ -186,9 +234,23 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
         catalog_manager_id = None
     import_job_id = None
     enqueue_ids: list[str] = []
+    if retry_subset:
+        payload, unmatched, retry_paths, retry_names = select_retry_organizations(
+            payload,
+            previous_results,
+        )
     if not dry_run:
         with Session(get_engine()) as session:
-            started = begin_import_job(session, object_key)
+            if retry_subset:
+                job = find_import_job_by_key(session, object_key)
+                if job is None:
+                    raise ValidationError(
+                        "No completed import to retry",
+                        field="object_key",
+                    )
+                started = begin_import_retry(session, job)
+            else:
+                started = begin_import_job(session, object_key)
             import_job_id = started.id
             session.commit()
     with Session(get_engine()) as session:
@@ -212,6 +274,16 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
             )
 
             enqueue_ids = import_enrichment_ids(dry_run=dry_run)
+            if retry_subset:
+                summary, results = merge_import_results(
+                    previous_results,
+                    previous_summary,
+                    results,
+                    summary,
+                    paths=retry_paths,
+                    names=retry_names,
+                    unmatched=unmatched,
+                )
             if dry_run:
                 session.rollback()
                 job = store_import_job(
@@ -250,7 +322,11 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
 
             take_import_category_enqueues()
             if import_job_id is not None:
-                _record_import_failure(import_job_id, exc)
+                _record_import_failure(
+                    import_job_id,
+                    exc,
+                    keep_completed=retry_subset,
+                )
             raise
 
     if enqueue_ids:
@@ -335,6 +411,18 @@ def _handle_export(event: Mapping[str, Any]) -> dict[str, Any]:
         },
         event=event,
     )
+
+
+def _parse_retry_failed(body: dict[str, Any]) -> bool:
+    retry_failed = body.get("retry_failed", False)
+    if retry_failed is None:
+        retry_failed = False
+    if not isinstance(retry_failed, bool):
+        raise ValidationError(
+            "retry_failed must be a boolean",
+            field="retry_failed",
+        )
+    return retry_failed
 
 
 def _parse_dry_run(body: dict[str, Any]) -> bool:

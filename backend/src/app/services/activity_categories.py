@@ -106,13 +106,26 @@ def create_activity_category(
     parent_id = _parse_uuid(parent_id_raw) if parent_id_raw else None
     validate_category_parent(repo, None, parent_id)
     display_order = parse_display_order(body.get("display_order"))
+    show_in_wizard = _parse_show_in_wizard(body.get("show_in_wizard", False))
 
     return ActivityCategory(
         name=name,
         name_translations=name_translations,
         parent_id=parent_id,
         display_order=display_order,
+        show_in_wizard=show_in_wizard,
     )
+
+
+def _parse_show_in_wizard(value: Any) -> bool:
+    if value is None:
+        return False
+    if not isinstance(value, bool):
+        raise ValidationError(
+            "show_in_wizard must be a boolean",
+            field="show_in_wizard",
+        )
+    return value
 
 
 def _as_uuid(value: UUID | str) -> UUID:

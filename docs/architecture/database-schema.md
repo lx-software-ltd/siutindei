@@ -131,6 +131,11 @@ Columns:
 - `name` (text, required)
 - `name_translations` (jsonb, default `{}`) — non-English name translations
 - `display_order` (integer, default 0)
+- `show_in_wizard` (boolean, default false) — home wizard activity type.
+  Pending categorisation cannot set this. Delete is refused while it
+  is true. The four wizard roots are set true by migration.
+  `scripts/codegen/generate_home_wizard_choices.py --write` copies
+  flagged rows into the static wizard JSON.
 
 Constraints:
 - UNIQUE(`parent_id`, `name`)
@@ -152,7 +157,7 @@ The row id is `c2222222-2222-2222-2222-222222222201`.
 
 Columns:
 - `id` (UUID, PK)
-- `on_import_enabled` (boolean, default false)
+- `on_import_enabled` (boolean, default true)
 - `auto_enrich_enabled` (boolean, default true)
 - `openrouter_model` (text, nullable)
 - `fallback_models` (text[], default empty)
@@ -197,7 +202,9 @@ pending-review organizations.
 
 Columns: `id`, `status` (`queued`, `running`, `done`, `failed`),
 `requested_by`, optional `org_id` (set null when the organization is
-removed), batch and result counters, `cost_usd`, `error`,
+removed), `mode` (`verify` or `discover`, default `verify`),
+`labels_total` for a discover run, batch and result counters,
+`cost_usd`, `error`,
 `processed_message_ids` (JSON array of SQS message ids), and
 timestamps. `org_id` uses `ON DELETE SET NULL`.
 
@@ -256,6 +263,9 @@ Columns:
 - `source_note` (text, optional) — free-text vetting note after catalog
   `key=value` pairs are removed. Admin-write only; manager routes
   ignore this field.
+- `source_category_name` (text, optional) — category label from the
+  import file. Kept when the activity is assigned to an existing
+  category. Manager routes ignore this field.
 - `age_range` (int4range, required)
 - `created_at` (timestamptz, default `now()`)
 - `updated_at` (timestamptz, default `now()`)

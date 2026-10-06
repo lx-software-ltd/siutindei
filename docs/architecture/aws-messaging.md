@@ -114,7 +114,8 @@ DLQ and the alarm can fire. Poison JSON is acknowledged. Other
 exceptions use partial batch failures. Enrichment message body:
 `{"suggestion_id": "<uuid>", "force": false}`. Category-check batches
 use `{"scan_run_id": "<uuid>", "activity_ids": ["<uuid>"]}` on the
-same queue. The worker stores the SQS message id on the run so a
+same queue. Discover batches use
+`{"scan_run_id": "<uuid>", "suggestion_ids": ["<uuid>"]}`. The worker stores the SQS message id on the run so a
 redelivery does not apply the batch twice. An OpenRouter failure is
 retried; the third receive records the batch as failed and the
 message moves to the DLQ.

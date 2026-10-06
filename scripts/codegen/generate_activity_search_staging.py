@@ -103,6 +103,11 @@ def _build_area_descendants() -> dict[str, list[str]]:
     return descendants
 
 
+def _build_category_descendants() -> dict[str, list[str]]:
+    """Flat wizard categories match themselves until a tree is generated."""
+    return {category_id: [category_id] for category_id, _label in CATEGORIES}
+
+
 def _build_item(
     *,
     cat_id: str,
@@ -122,9 +127,7 @@ def _build_item(
     end: int,
 ) -> dict[str, Any]:
     district_id = _district_id(district_name)
-    cell_key = (
-        f"{cat_id}:{age_key}:{district_name}:{pricing_type}:{variant}"
-    )
+    cell_key = f"{cat_id}:{age_key}:{district_name}:{pricing_type}:{variant}"
     activity_id = _uuid(f"siutindei.staging.activity.{cell_key}")
     org_id = _uuid(f"siutindei.staging.org.{cat_id}:{district_name}")
     location_id = _uuid(f"siutindei.staging.location.{district_name}")
@@ -161,8 +164,7 @@ def _build_item(
             },
             "description_translations": {
                 "en": (
-                    f"English-language {cat_label.lower()} "
-                    f"provider in Hong Kong."
+                    f"English-language {cat_label.lower()} " f"provider in Hong Kong."
                 ),
             },
             "manager_id": MANAGER_ID,
@@ -253,6 +255,7 @@ def generate() -> dict[str, Any]:
         "region": "HK",
         "meta": {
             "area_descendants": _build_area_descendants(),
+            "category_descendants": _build_category_descendants(),
             "item_count": len(items),
         },
         "items": items,

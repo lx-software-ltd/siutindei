@@ -6,8 +6,6 @@ import sys
 from pathlib import Path
 from uuid import uuid4
 
-import pytest
-
 sys.path.append(str(Path(__file__).resolve().parents[1] / "backend" / "src"))
 
 from app.db.queries import ActivitySearchFilters  # noqa: E402
@@ -29,8 +27,35 @@ def test_build_search_query_applies_category_filter() -> None:
     category_id = uuid4()
     filters = ActivitySearchFilters(category_ids=[category_id])
     query = build_search_query(filters)
-    where_clause = str(query.whereclause)
-    assert "activities.category_id" in where_clause
+    compiled = str(query)
+    assert "activities.category_id" in compiled
+    assert "activity_categories" in compiled
+
+
+def test_staging_match_uses_category_descendants_when_present() -> None:
+    from app.services.staging_search_store import _matches
+
+    parent = uuid4()
+    child = uuid4()
+    item = {
+        "activity": {
+            "id": str(uuid4()),
+            "category_id": str(child),
+            "age_min": 5,
+            "age_max": 12,
+        },
+        "location": {},
+        "pricing": {"pricing_type": "free", "amount": 0},
+        "schedule": {"schedule_type": "weekly", "languages": []},
+    }
+    filters = ActivitySearchFilters(category_ids=[parent])
+    assert _matches(
+        item,
+        filters,
+        {},
+        {str(parent): [str(parent), str(child)]},
+    )
+    assert not _matches(item, filters, {}, None)
 
 
 def test_build_search_query_applies_area_tree_filter() -> None:
