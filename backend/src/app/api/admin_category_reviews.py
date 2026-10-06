@@ -19,7 +19,10 @@ from app.db.models import Activity, ActivityCategory, Organization
 from app.db.models.category_scan import ActivityCategoryReview
 from app.db.models.category_suggestion import CategorySuggestion
 from app.exceptions import NotFoundError, ValidationError
-from app.services.category_suggestions.reviews import apply_review_decision
+from app.services.category_suggestions.reviews import (
+    apply_review_decision,
+    decide_matching_reviews,
+)
 from app.utils import json_response
 
 _STATUSES = {
@@ -41,6 +44,8 @@ def handle_reviews(
     """GET /reviews, GET /reviews/{id}, and POST /reviews/{id}."""
     if method == "GET" and sub_resource is None:
         return _list(event)
+    if method == "POST" and sub_resource == "bulk":
+        return _bulk(event)
     if method == "GET" and sub_resource:
         return _detail(event, sub_resource)
     if method == "POST" and sub_resource:
@@ -93,6 +98,24 @@ def _detail(event: Mapping[str, Any], raw_id: str) -> dict[str, Any]:
         if row is None:
             raise NotFoundError("category review", str(review_id))
         return json_response(200, _serialize(session, *row), event=event)
+
+
+def _bulk(event: Mapping[str, Any]) -> dict[str, Any]:
+    body = parse_object_body(event)
+    raw_cursor = body.get("cursor")
+    cursor = _parse_cursor(raw_cursor if isinstance(raw_cursor, str) else None)
+    with Session(get_engine()) as session:
+        _set_session_audit_context(session, event)
+        result = decide_matching_reviews(
+            session,
+            body,
+            decided_by=_get_user_sub(event),
+            cursor=cursor,
+        )
+        review = result.pop("next_review", None)
+        session.commit()
+        result["next_cursor"] = None if review is None else _encode_cursor(review)
+        return json_response(200, result, event=event)
 
 
 def _decide(event: Mapping[str, Any], raw_id: str) -> dict[str, Any]:

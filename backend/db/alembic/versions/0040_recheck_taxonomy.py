@@ -9,7 +9,9 @@ changes rows still on the old default of 25. New categories are
 inserted by id. seed_data.sql re-points its two sample activities at
 Visual arts and Dance and ballet; the Sport row stays because live
 activities may still reference it until a recheck moves them. The four
-former wizard roots lose show_in_wizard and are not deleted.
+former wizard roots lose show_in_wizard and are not deleted. The
+partial unique index on root names does not change seed rows: Sport
+and the new group names are distinct, and no seed column was added.
 """
 
 from __future__ import annotations
@@ -344,19 +346,28 @@ def upgrade() -> None:
         "UPDATE activity_categories SET show_in_wizard = false "
         f"WHERE id IN ({former})"
     )
+    op.create_index(
+        "uq_activity_category_root_name",
+        "activity_categories",
+        ["name"],
+        unique=True,
+        postgresql_where=sa.text("parent_id IS NULL"),
+    )
 
 
 def downgrade() -> None:
-    """Remove the leaf taxonomy, the flag, and the doubled default."""
+    """Remove the leaf taxonomy, the flag, and the doubled default.
+
+    Every activity on a new group or leaf moves to Sport. The previous
+    leaf is not restored. Suggestion and review foreign keys set
+    themselves to null when those categories are deleted.
+    """
     leaf_ids = ", ".join(f"'{row[0]}'" for row in _LEAVES)
     group_ids = ", ".join(f"'{row[0]}'" for row in _GROUPS)
     op.execute(
         "UPDATE activities SET category_id = "
         "'99999999-9999-9999-9999-999999999999' "
-        "WHERE id IN ("
-        "'dddddddd-dddd-dddd-dddd-dddddddddddd', "
-        "'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'"
-        f") AND category_id IN ({leaf_ids})"
+        f"WHERE category_id IN ({leaf_ids}, {group_ids})"
     )
     op.execute(f"DELETE FROM activity_categories WHERE id IN ({leaf_ids})")
     op.execute(f"DELETE FROM activity_categories WHERE id IN ({group_ids})")
@@ -376,3 +387,7 @@ def downgrade() -> None:
         server_default=sa.text("25"),
     )
     op.drop_column("category_scan_runs", "ignore_current_category")
+    op.drop_index(
+        "uq_activity_category_root_name",
+        table_name="activity_categories",
+    )

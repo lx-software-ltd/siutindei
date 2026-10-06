@@ -251,6 +251,17 @@ describe('SearchResultsPage', () => {
     });
   });
 
+  it('explains results that still use the previous categories', async () => {
+    vi.mocked(fetchActivitySearch).mockResolvedValue({
+      items: [buildListing()],
+      nextCursor: null,
+      categoryMatch: 'legacy_fallback',
+    });
+    const copy = renderPage();
+
+    expect(await screen.findByText(copy.unsortedCategoryLabel)).toBeTruthy();
+  });
+
   it('does not push search when the fetch fails', async () => {
     window.localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, 'granted');
     vi.mocked(fetchActivitySearch).mockRejectedValue(new Error('offline'));

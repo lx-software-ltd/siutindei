@@ -143,10 +143,14 @@ Columns:
 
 Constraints:
 - UNIQUE(`parent_id`, `name`)
+- UNIQUE(`name`) WHERE `parent_id` IS NULL
+  (`uq_activity_category_root_name`). Postgres treats NULL as distinct
+  in the pair above, so this partial index stops two roots sharing a name.
 
 Indexes:
 - `activity_categories_parent_idx` on `parent_id`
 - `activity_categories_name_idx` on `name`
+- `uq_activity_category_root_name` on `name` where `parent_id` is null
 
 The system row Pending categorisation
 (`c1111111-1111-1111-1111-111111111199`, Chinese name 待分類,

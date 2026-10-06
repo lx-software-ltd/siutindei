@@ -194,6 +194,7 @@
     "listViewLabel": "List",
     "mapViewLabel": "Map",
     "emptyLabel": "No activities match your search. Try different filters.",
+    "unsortedCategoryLabel": "These listings are not sorted into the selected categories yet. They still use the previous categories.",
     "errorLabel": "Unable to load activities.",
     "mapEmptyLabel": "No map locations for these results.",
     "mapUnavailableLabel": "Google Maps is not configured for this environment.",

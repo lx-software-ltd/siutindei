@@ -155,6 +155,10 @@ def start_scan(
             batch_size=batch_size,
             rescan=rescan,
         )
+    # A recheck that kept the 30-day skip would leave the old taxonomy
+    # in place for anything checked recently.
+    if ignore_current:
+        rescan = True
     ids = select_candidate_ids(session, org_id=org_id, limit=limit, rescan=rescan)
     now = datetime.now(timezone.utc)
     batches = _chunks([str(item) for item in ids], batch_size)

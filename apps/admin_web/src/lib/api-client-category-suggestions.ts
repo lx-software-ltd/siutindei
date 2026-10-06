@@ -255,6 +255,39 @@ export function decideCategoryReview(id: string, body: Record<string, unknown>) 
   });
 }
 
+export interface CategoryReviewBulkBody {
+  action: 'apply' | 'dismiss';
+  dry_run?: boolean;
+  verdict?: string;
+  org_id?: string;
+  scan_run_id?: string;
+  proposed_category_id?: string;
+  q?: string;
+  cursor?: string;
+}
+
+export interface CategoryReviewBulkResult {
+  decided: number;
+  skipped: number;
+  failed: number;
+  matched: number;
+  applicable: number;
+  failures: Array<{ id: string; message: string }>;
+  next_cursor?: string | null;
+}
+
+export function decideCategoryReviewsBulk(
+  body: CategoryReviewBulkBody,
+  signal?: AbortSignal
+) {
+  return request<CategoryReviewBulkResult>(suggestionUrl('/reviews/bulk'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  });
+}
+
 export function testCategorySuggestionModel(model?: string) {
   return request<{ ok: boolean; message: string }>(suggestionUrl('/settings/test'), {
     method: 'POST',

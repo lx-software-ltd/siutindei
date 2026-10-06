@@ -41,6 +41,7 @@ from app.db.queries import (
     ActivitySearchCursor,
     ActivitySearchFilters,
     build_search_query,
+    category_match_mode,
 )
 from app.api.partner_auth import PartnerContext, get_partner_context
 from app.api.search_validation import validate_search_query_params
@@ -184,6 +185,7 @@ def fetch_search_response(
     with Session(engine) as session:
         rows = session.execute(query).all()
         region_cache = _load_region_area_cache(session)
+        match_mode = category_match_mode(session, filters.category_ids)
 
     has_more = len(rows) > requested_limit
     trimmed_rows = rows[:requested_limit]
@@ -203,7 +205,11 @@ def fetch_search_response(
         order_day = last_row._mapping["order_day_of_week"]
         order_start = last_row._mapping["order_start_minutes"]
         next_cursor = _encode_cursor(order_day, order_start, schedule.id)
-    return ActivitySearchResponseSchema(items=items, next_cursor=next_cursor)
+    return ActivitySearchResponseSchema(
+        items=items,
+        next_cursor=next_cursor,
+        category_match=match_mode,
+    )
 
 
 def map_row_to_result(

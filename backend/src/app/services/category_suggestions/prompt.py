@@ -89,7 +89,7 @@ def _scan_item(
     org = session.get(Organization, activity.org_id)
     category = by_id.get(activity.category_id)
     lower, upper = inclusive_age_bounds(activity.age_range)
-    template = org is not None and org.description_source == "template"
+    template = _description_is_untrusted(org)
     description = "" if ignore_current and template else (activity.description or "")
     description = description[:_MAX_DESCRIPTION]
     item: dict[str, Any] = {
@@ -119,6 +119,13 @@ def _scan_item(
     item["current_category_id"] = category_id
     item["current_category"] = path
     return item
+
+
+def _description_is_untrusted(org: Organization | None) -> bool:
+    """Template copy, or a missing source, must not steer a recheck."""
+    if org is None:
+        return False
+    return org.description_source in (None, "template")
 
 
 def _source_host(org: Organization | None) -> str:

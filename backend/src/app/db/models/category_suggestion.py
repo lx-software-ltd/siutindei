@@ -35,6 +35,11 @@ LEGACY_CATEGORY_IDS = frozenset(
         UUIDType("99999999-9999-9999-9999-999999999999"),
     }
 )
+# Home-wizard groups inserted by 0040. Public search falls back to the
+# legacy roots while a group still has no activities on its leaves.
+WIZARD_GROUP_IDS = frozenset(
+    UUIDType(f"c1111111-1111-1111-1111-11111111120{index}") for index in range(1, 8)
+)
 SETTINGS_SINGLETON_ID = UUIDType("c2222222-2222-2222-2222-222222222201")
 PENDING_CATEGORY_NAME = "Pending categorisation"
 DEFAULT_OPENROUTER_MODEL = "qwen/qwen3-30b-a3b"

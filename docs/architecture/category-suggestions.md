@@ -96,15 +96,17 @@ and it is never auto-assigned again. A reassign whose target is the
 activity's current category is stored as confirm.
 
 `ignore_current_category` on a verify run is the recheck used to
-rebuild assignments against a new taxonomy. The prompt omits the
+rebuild assignments against a new taxonomy. The request forces
+`rescan`, so the 30-day skip does not apply. The prompt omits the
 current category, blanks a description whose organization
-`description_source` is `template`, and adds the organization source
-and source URL host. The taxonomy sent to the model is leaves only,
-excluding Pending categorisation and the legacy roots Workshop, Class,
-Outdoor activity, Indoor fun, and Sport. A confirm verdict, or a
-reassign onto one of those roots or onto a parent, counts as failed
-and stores no review, so a later run can try again. A reassign onto a
-leaf still auto-applies at the threshold. Discover rejects the flag.
+`description_source` is `template` or unset, and adds the organization
+source and source URL host. The taxonomy sent to the model is leaves
+only, excluding Pending categorisation and the legacy roots Workshop,
+Class, Outdoor activity, Indoor fun, and Sport. A confirm verdict, or
+a reassign or a propose that resolves onto one of those roots or onto
+a parent, counts as failed and stores no review, so a later run can
+try again. A reassign onto a leaf still auto-applies at the threshold.
+Discover rejects the flag.
 
 Each batch is one SQS message, `{"scan_run_id", "activity_ids"}`, on
 the same queue as enrichment. The model returns confirm, reassign, or
@@ -135,8 +137,10 @@ review is still pending. Rejecting without a target dismisses those
 reviews and leaves the category unchanged. Apply, dismiss, and revert
 are `POST /v1/admin/category-suggestions/reviews/{id}`. The checks
 table can apply or dismiss every pending review that matches the
-current filters, including `proposed_category_id`, by calling that
-endpoint once per row. Revert restores
+current filters, including `proposed_category_id`, through
+`POST /v1/admin/category-suggestions/reviews/bulk`. Each call decides
+one page and the console follows `next_cursor`. A dry run returns the
+match count before anything is written. Revert restores
 `previous_category_id`.
 
 A pending review is the organization-review warning
@@ -179,5 +183,9 @@ DATABASE_URL=postgresql+psycopg://... \
 That writes `shared/home_wizard/home_wizard_choices.json` and
 `apps/public_www/src/data/home_wizard_choices.json`. Public search
 matches a category and its descendants, and it still excludes Pending
-categorisation. A category shown in the wizard cannot be deleted until
+categorisation. A search for one of the seven wizard groups that has
+no activities on its leaves also includes the legacy roots, and the
+response sets `category_match` to `legacy_fallback`. That union stops
+for a group once any activity is on the group or a leaf under it. A
+category shown in the wizard cannot be deleted until
 the flag is cleared.

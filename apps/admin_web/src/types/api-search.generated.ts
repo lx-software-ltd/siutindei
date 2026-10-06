@@ -215,6 +215,15 @@ export interface components {
         ActivitySearchResponse: {
             items: components["schemas"]["ActivitySearchResult"][];
             next_cursor?: string | null;
+            /**
+             * @description `legacy_fallback` means every requested category is a wizard
+             *     group that still has no activities on its leaves, so the
+             *     results also include activities on the legacy roots. The
+             *     match becomes `exact` once any activity sits on that group
+             *     or one of its leaves.
+             * @enum {string}
+             */
+            category_match?: "exact" | "legacy_fallback";
         };
         ActivitySearchResult: {
             activity: components["schemas"]["Activity"];

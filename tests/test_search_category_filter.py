@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from uuid import UUID
 from uuid import uuid4
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "backend" / "src"))
@@ -30,6 +31,16 @@ def test_build_search_query_applies_category_filter() -> None:
     compiled = str(query)
     assert "activities.category_id" in compiled
     assert "activity_categories" in compiled
+    assert "EXISTS" not in compiled.upper()
+
+
+def test_wizard_group_search_sql_unions_legacy_roots() -> None:
+    """An empty wizard group can still match the legacy roots."""
+
+    group_id = UUID("c1111111-1111-1111-1111-111111111201")
+    filters = ActivitySearchFilters(category_ids=[group_id])
+    compiled = str(build_search_query(filters)).upper()
+    assert "EXISTS" in compiled
 
 
 def test_staging_match_uses_category_descendants_when_present() -> None:

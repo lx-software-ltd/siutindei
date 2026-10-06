@@ -108,6 +108,8 @@ def store_scan_batch(
         now,
         threshold=threshold,
         overridden=overridden,
+        ignore_current=ignore_current,
+        parent_ids=parent_ids,
     )
     _bump(run, counts, usage or {}, now)
     session.flush()

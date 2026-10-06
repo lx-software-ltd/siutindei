@@ -143,18 +143,28 @@ class ActivitySearchFilters {
 }
 
 class ActivitySearchResponse {
-  ActivitySearchResponse({required this.items, required this.nextCursor});
+  ActivitySearchResponse({
+    required this.items,
+    required this.nextCursor,
+    this.categoryMatch = 'exact',
+  });
 
   final List<ActivitySearchResult> items;
   final String? nextCursor;
+  final String categoryMatch;
 
   factory ActivitySearchResponse.fromJson(Map<String, dynamic> json) {
     final itemsJson = json['items'] as List<dynamic>? ?? [];
     return ActivitySearchResponse(
       items: itemsJson
-          .map((item) => ActivitySearchResult.fromJson(item as Map<String, dynamic>))
+          .map(
+            (item) => ActivitySearchResult.fromJson(
+              item as Map<String, dynamic>,
+            ),
+          )
           .toList(),
       nextCursor: json['next_cursor'] as String?,
+      categoryMatch: json['category_match'] as String? ?? 'exact',
     );
   }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate staging activity search fixture (~3000 HK, English-only rows)."""
+"""Generate staging activity search fixture (at least 3000 HK rows)."""
 
 from __future__ import annotations
 
@@ -66,9 +66,10 @@ DISTRICTS: list[tuple[str, str]] = [
     ("Yuen Long", NEW_TERRITORIES_REGION),
 ]
 
+# Two weekly slots keep every category, age, district, and price in the
+# fixture without doubling the file the staging site downloads.
 SCHEDULE_VARIANTS: list[tuple[int, int, int]] = [
     (1, 600, 660),
-    (3, 840, 900),
     (6, 540, 600),
 ]
 
@@ -269,7 +270,7 @@ def main() -> None:
     payload = generate()
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(
-        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n",
         encoding="utf-8",
     )
     print(f"Wrote {payload['meta']['item_count']} items to {OUTPUT}")

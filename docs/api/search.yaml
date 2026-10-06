@@ -288,6 +288,15 @@ components:
         next_cursor:
           type: string
           nullable: true
+        category_match:
+          type: string
+          enum: [exact, legacy_fallback]
+          description: |
+            `legacy_fallback` means every requested category is a wizard
+            group that still has no activities on its leaves, so the
+            results also include activities on the legacy roots. The
+            match becomes `exact` once any activity sits on that group
+            or one of its leaves.
     ActivitySearchResult:
       type: object
       required: [activity, organization, location, pricing, schedule]

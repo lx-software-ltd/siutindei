@@ -35,6 +35,9 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
   const searchParams = useSearchParams();
   const { setFilters } = useSearchContext();
   const [listings, setListings] = useState<readonly ActivityListing[]>([]);
+  const [categoryMatch, setCategoryMatch] = useState<
+    'exact' | 'legacy_fallback'
+  >('exact');
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -83,10 +86,12 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
         matchesTextQuery(listing, locale, urlFilters.textQuery),
       );
       setListings(filtered);
+      setCategoryMatch(response.categoryMatch ?? 'exact');
       trackSearch(urlFilters);
     } catch {
       setErrorMessage(copy.errorLabel);
       setListings([]);
+      setCategoryMatch('exact');
     } finally {
       setIsLoading(false);
     }
@@ -126,6 +131,11 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
     <div className="bg-white">
       <h1 className="sr-only">{copy.pageTitle}</h1>
       <FilterChipRow locale={locale} />
+      {categoryMatch === 'legacy_fallback' ? (
+        <p className="mx-auto max-w-7xl px-4 pt-4 text-sm text-ink-700 sm:px-6 lg:px-8">
+          {copy.unsortedCategoryLabel}
+        </p>
+      ) : null}
       {errorMessage ? (
         <p className="mx-auto max-w-7xl px-4 py-6 text-center text-red-700">
           {errorMessage}

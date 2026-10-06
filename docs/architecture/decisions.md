@@ -497,9 +497,13 @@ does the same from an admin category export.
 The home wizard groups are Early years and schools, Learning and
 tutoring, Arts and performance, Sports and movement, Play and
 outdoors, Culture, and Community and support. Activities are assigned
-to the leaves under those groups. A verify run with
-`ignore_current_category` rechecks activities without trusting the
-current category or a template description. The monthly category-check
+to the leaves under those groups. Until a group has an activity on a
+leaf, public search for that group still returns activities on the
+legacy roots and marks the response `category_match: legacy_fallback`.
+A verify run with `ignore_current_category` rechecks activities
+without trusting the current category, a template description, or a
+description whose source was never recorded, and it always includes
+activities checked in the last 30 days. The monthly category-check
 budget defaults to 50 USD.
 Design notes:
 `docs/architecture/category-suggestions.md`. Endpoint shapes:

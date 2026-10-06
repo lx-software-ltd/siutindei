@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
@@ -8,9 +8,11 @@ import { buildApiUrl, request } from '../../../lib/api-client-core';
 import {
   getCategorySuggestionSettings,
   getCategorySuggestionSummary,
+  decideCategoryReviewsBulk,
   listCategoryReviews,
   startCategoryScan,
   type ActivityCategoryReview,
+  type CategoryReviewBulkResult,
   type CategorySuggestionSummary,
 } from '../../../lib/api-client-category-suggestions';
 import { StatusBanner } from '../../status-banner';
@@ -90,9 +92,14 @@ export function CategoryChecksPanel() {
   );
   const [ignoreCurrent, setIgnoreCurrent] = useState(false);
   const [bulkAction, setBulkAction] = useState<'apply' | 'dismiss' | null>(null);
+  const [bulkPreview, setBulkPreview] = useState<CategoryReviewBulkResult | null>(
+    null
+  );
+  const [bulkProgress, setBulkProgress] = useState('');
   const [isStarting, setIsStarting] = useState(false);
   const [isBulkRunning, setIsBulkRunning] = useState(false);
   const [error, setError] = useState('');
+  const bulkAbort = useRef<AbortController | null>(null);
 
   const { refetch } = list;
   const selectedOrgId = list.filters.org_id;
@@ -206,30 +213,92 @@ export function CategoryChecksPanel() {
     }
   }
 
+  const bulkFilters = {
+    verdict: list.filters.verdict || undefined,
+    q: list.filters.q || undefined,
+    org_id: list.filters.org_id || undefined,
+    proposed_category_id: list.filters.proposed_category_id || undefined,
+  };
+  const filtersAreBlank =
+    !list.filters.verdict &&
+    !list.filters.q &&
+    !list.filters.org_id &&
+    !list.filters.proposed_category_id;
+
+  useEffect(() => {
+    if (bulkAction === null) {
+      setBulkPreview(null);
+      setBulkProgress('');
+      return;
+    }
+    const controller = new AbortController();
+    let cancelled = false;
+    decideCategoryReviewsBulk(
+      {
+        action: bulkAction,
+        dry_run: true,
+        verdict: list.filters.verdict || undefined,
+        q: list.filters.q || undefined,
+        org_id: list.filters.org_id || undefined,
+        proposed_category_id: list.filters.proposed_category_id || undefined,
+      },
+      controller.signal
+    )
+      .then((result) => {
+        if (!cancelled) {
+          setBulkPreview(result);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBulkPreview(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [
+    bulkAction,
+    list.filters.org_id,
+    list.filters.proposed_category_id,
+    list.filters.q,
+    list.filters.verdict,
+  ]);
+
   async function runBulk(action: 'apply' | 'dismiss') {
+    const controller = new AbortController();
+    bulkAbort.current = controller;
     setIsBulkRunning(true);
     setError('');
+    setBulkProgress('');
     try {
-      const result = await decideMatchingPending(
-        {
-          verdict: list.filters.verdict || undefined,
-          q: list.filters.q || undefined,
-          org_id: list.filters.org_id || undefined,
-          proposed_category_id: list.filters.proposed_category_id || undefined,
+      const result = await decideMatchingPending(bulkFilters, action, {
+        signal: controller.signal,
+        onProgress: (progress) => {
+          setBulkProgress(
+            `${progress.decided} of ${progress.matched} updated. ` +
+              `${progress.failed} failed.`
+          );
         },
-        action
-      );
+      });
       setBulkAction(null);
-      if (result.failed > 0) {
+      const verb = action === 'apply' ? 'applied' : 'dismissed';
+      const details = result.failures.map((item) => item.message).join(' ');
+      if (result.cancelled) {
+        setError(`Stopped after ${result.decided} ${verb}.`);
+      } else if (result.truncated) {
         setError(
-          `${result.decided} ${action === 'apply' ? 'applied' : 'dismissed'}, ` +
-            `${result.failed} failed.`
+          `Stopped after ${result.decided} ${verb}. More matching reviews remain.`
         );
+      } else if (result.failed > 0) {
+        setError(`${result.decided} ${verb}, ${result.failed} failed. ${details}`);
       }
       reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bulk update failed.');
     } finally {
+      bulkAbort.current = null;
       setIsBulkRunning(false);
     }
   }
@@ -438,8 +507,28 @@ export function CategoryChecksPanel() {
             void runBulk(bulkAction);
           }
         }}
-        onCancel={() => setBulkAction(null)}
-      />
+        onCancel={() => {
+          if (isBulkRunning) {
+            bulkAbort.current?.abort();
+            return;
+          }
+          setBulkAction(null);
+        }}
+      >
+        <p>
+          {filtersAreBlank
+            ? 'No filters are set, so this includes every pending review.'
+            : 'Only reviews matching the current filters are included.'}
+        </p>
+        <p className='mt-2'>
+          {bulkPreview
+            ? `${bulkPreview.applicable} will be ${
+                bulkAction === 'dismiss' ? 'dismissed' : 'applied'
+              }. ${bulkPreview.skipped} will be skipped.`
+            : 'Counting matching reviews.'}
+        </p>
+        {bulkProgress ? <p className='mt-2'>{bulkProgress}</p> : null}
+      </ConfirmDialog>
     </div>
   );
 }

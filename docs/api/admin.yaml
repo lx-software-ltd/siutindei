@@ -849,6 +849,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActivityCategoryReviewListResponse'
 
+  /v1/admin/category-suggestions/reviews/bulk:
+    post:
+      summary: Apply or dismiss matching pending category-check reviews
+      description: |
+        One page of pending reviews that match the filters. `dry_run`
+        counts the full match and writes nothing. Otherwise the server
+        decides up to 100 reviews and returns `next_cursor` when more
+        remain. Skipped rows still advance the cursor. Apply skips a
+        pending confirm of Pending categorisation and a proposal that
+        has no category yet.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryReviewBulkRequest'
+      responses:
+        "200":
+          description: Page of bulk decisions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryReviewBulkResponse'
+        "400":
+          description: Invalid bulk request
+
   /v1/admin/category-suggestions/reviews/{id}:
     parameters:
       - name: id
@@ -5517,9 +5543,14 @@ components:
           type: boolean
           default: false
           description: >
-            Verify only. Omit the current category and template
+            Verify only. Omit the current category and untrusted
             descriptions, and offer only non-legacy leaves. A confirm
-            verdict is counted as failed. Discover rejects this flag.
+            verdict is counted as failed. A propose or reassign onto a
+            legacy root or a parent group is counted as failed.
+            Setting this flag forces rescan, so activities checked in
+            the last 30 days are included. A missing
+            description_source is treated like template.
+            Discover rejects this flag.
         mode:
           type: string
           enum: [verify, discover]
@@ -5684,6 +5715,68 @@ components:
         category_id:
           type: string
           format: uuid
+          nullable: true
+
+    CategoryReviewBulkRequest:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [apply, dismiss]
+        dry_run:
+          type: boolean
+          default: false
+        verdict:
+          type: string
+          enum: [confirm, reassign, propose]
+        org_id:
+          type: string
+          format: uuid
+        scan_run_id:
+          type: string
+          format: uuid
+        proposed_category_id:
+          type: string
+          format: uuid
+        q:
+          type: string
+        cursor:
+          type: string
+          nullable: true
+
+    CategoryReviewBulkFailure:
+      type: object
+      required: [id, message]
+      properties:
+        id:
+          type: string
+          format: uuid
+        message:
+          type: string
+
+    CategoryReviewBulkResponse:
+      type: object
+      required: [decided, skipped, failed, failures, matched, applicable]
+      properties:
+        decided:
+          type: integer
+        skipped:
+          type: integer
+        failed:
+          type: integer
+        matched:
+          type: integer
+          description: Pending reviews that match the filters.
+        applicable:
+          type: integer
+          description: Matching reviews an apply can assign.
+        failures:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryReviewBulkFailure'
+        next_cursor:
+          type: string
           nullable: true
 
     CategorySuggestionDecision:

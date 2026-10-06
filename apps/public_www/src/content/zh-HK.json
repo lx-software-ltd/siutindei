@@ -194,6 +194,7 @@
     "listViewLabel": "列表",
     "mapViewLabel": "地圖",
     "emptyLabel": "沒有符合的活動，請嘗試其他篩選。",
+    "unsortedCategoryLabel": "這些活動尚未分類到所選類別，目前仍沿用先前的分類。",
     "errorLabel": "無法載入活動。",
     "mapEmptyLabel": "這些結果沒有地圖位置。",
     "mapUnavailableLabel": "此環境未設定 Google Maps。",

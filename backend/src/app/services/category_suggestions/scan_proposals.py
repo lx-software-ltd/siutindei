@@ -26,6 +26,7 @@ from app.services.category_suggestions.resolve import (
 from app.services.category_suggestions.scan_apply import (
     _add_review,
     _apply_reassign,
+    _blocked_recheck,
     _category,
     _confidence,
     _name,
@@ -43,6 +44,8 @@ def record_proposals(
     *,
     threshold: float | None,
     overridden: set[str],
+    ignore_current: bool = False,
+    parent_ids: set[UUID] | None = None,
 ) -> None:
     """Collapse identical proposed names and link the activities."""
     groups: dict[str, list[tuple[Activity, dict[str, Any]]]] = {}
@@ -63,7 +66,12 @@ def record_proposals(
             matched = _suggestion_target(session, key)
         if matched is not None:
             target = session.get(ActivityCategory, matched)
-            if target is None:
+            blocked = (
+                target is not None
+                and ignore_current
+                and _blocked_recheck(target, parent_ids or set())
+            )
+            if target is None or blocked:
                 counts["failed"] += len(items)
                 continue
             for activity, result in items:
