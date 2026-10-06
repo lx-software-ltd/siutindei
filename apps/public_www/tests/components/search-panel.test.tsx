@@ -119,7 +119,9 @@ describe('SearchPanel', () => {
   it('toggles an activity type when its choice is pressed', () => {
     renderPanel();
 
-    const workshop = screen.getByRole('button', { name: 'Workshop' });
+    const workshop = screen.getByRole('button', {
+      name: 'Early years and schools',
+    });
     expect(workshop).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.click(workshop);
@@ -132,7 +134,9 @@ describe('SearchPanel', () => {
   it('does not show a clear activity types button', () => {
     renderPanel();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Workshop' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Early years and schools' }),
+    );
 
     expect(
       screen.queryByRole('button', { name: 'Clear activity types' }),

@@ -14,7 +14,10 @@ from sqlalchemy.orm import Session
 from app.db.audit import set_audit_context
 from app.db.models import Activity, ActivityCategory, Organization
 from app.db.models.category_scan import ActivityCategoryReview, CategoryScanRun
-from app.db.models.category_suggestion import PENDING_CATEGORY_ID
+from app.db.models.category_suggestion import (
+    LEGACY_CATEGORY_IDS,
+    PENDING_CATEGORY_ID,
+)
 from app.services.category_suggestions.settings import get_settings
 
 _OVERRIDE = ("dismissed", "reverted")
@@ -55,6 +58,8 @@ def store_scan_batch(
     }
     overridden = _overridden(session, list(by_id))
     threshold = _threshold(session)
+    parent_ids = _parent_ids(session)
+    ignore_current = bool(run.ignore_current_category)
     results = _index_results(parsed)
     counts = {
         "confirmed": 0,
@@ -89,6 +94,8 @@ def store_scan_batch(
             overridden=str(activity.id) in overridden,
             counts=counts,
             now=now,
+            ignore_current=ignore_current,
+            parent_ids=parent_ids,
         )
     from app.services.category_suggestions.scan_proposals import record_proposals
 
@@ -138,12 +145,17 @@ def _record_direct(
     overridden: bool,
     counts: dict[str, int],
     now: datetime,
+    ignore_current: bool = False,
+    parent_ids: set[UUID] | None = None,
 ) -> None:
     verdict = result.get("verdict")
     confidence = _confidence(result.get("confidence"))
     rationale = _text(result.get("rationale"))
     current_id = _uuid(activity.category_id)
     if verdict == "confirm":
+        if ignore_current:
+            counts["failed"] += 1
+            return
         status = "pending" if current_id == PENDING_CATEGORY_ID else "confirmed"
         if status == "confirmed":
             counts["confirmed"] += 1
@@ -165,6 +177,9 @@ def _record_direct(
         return
     target = _category(session, result.get("category_id"))
     if target is None:
+        counts["failed"] += 1
+        return
+    if ignore_current and _blocked_recheck(target, parent_ids or set()):
         counts["failed"] += 1
         return
     _apply_reassign(
@@ -225,7 +240,7 @@ def _apply_reassign(
     if can_auto:
         _audit_scan(session, run.id)
         previous = _uuid(activity.category_id)
-        activity.category_id = target.id  # type: ignore[assignment]
+        activity.category_id = target.id
         status = "auto_applied"
         counts["auto_applied"] += 1
     else:
@@ -331,6 +346,25 @@ def _overridden(session: Session, activity_ids: list[str]) -> set[str]:
         )
     ).all()
     return {str(item) for item in rows}
+
+
+def _parent_ids(session: Session) -> set[UUID]:
+    found: set[UUID] = set()
+    for value in session.scalars(select(ActivityCategory.parent_id)).all():
+        parsed = _uuid(value)
+        if parsed is not None:
+            found.add(parsed)
+    return found
+
+
+def _blocked_recheck(target: ActivityCategory, parent_ids: set[UUID]) -> bool:
+    """A recheck may only move an activity onto a non-legacy leaf."""
+    target_id = _uuid(target.id)
+    if target_id is None:
+        return True
+    if target_id == PENDING_CATEGORY_ID or target_id in LEGACY_CATEGORY_IDS:
+        return True
+    return target_id in parent_ids
 
 
 def _threshold(session: Session) -> float | None:

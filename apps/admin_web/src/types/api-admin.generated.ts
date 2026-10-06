@@ -1336,6 +1336,8 @@ export interface paths {
                     verdict?: "confirm" | "reassign" | "propose";
                     org_id?: string;
                     scan_run_id?: string;
+                    /** @description Limit reviews to one proposed category, for a bulk apply or dismiss of that leaf. */
+                    proposed_category_id?: string;
                     q?: string;
                     cursor?: string;
                     limit?: number;
@@ -6391,7 +6393,7 @@ export interface components {
             deny_data_collection: boolean;
             /** @description Null disables automatic reassignment. Default 0.9. */
             auto_assign_threshold?: number | null;
-            /** @description Category-check spend this month cannot start another run once it reaches this amount. Default 25. */
+            /** @description Category-check spend this month cannot start another run once it reaches this amount. Default 50. */
             monthly_cost_limit_usd?: number;
             updated_by?: string | null;
             /** Format: date-time */
@@ -6417,6 +6419,11 @@ export interface components {
             /** @default false */
             rescan: boolean;
             /**
+             * @description Verify only. Omit the current category and template descriptions, and offer only non-legacy leaves. A confirm verdict is counted as failed. Discover rejects this flag.
+             * @default false
+             */
+            ignore_current_category: boolean;
+            /**
              * @description verify checks the assigned category. discover groups the imported label, assigns an existing match, and asks the model only about labels that are not in the taxonomy. Omitted mode stays verify.
              * @default verify
              * @enum {string}
@@ -6433,6 +6440,8 @@ export interface components {
             org_id?: string | null;
             /** @enum {string} */
             mode?: "verify" | "discover";
+            /** @description Verify run that classifies without trusting the current category. Discover runs stay false. */
+            ignore_current_category?: boolean;
             batch_size?: number;
             total_activities: number;
             batches_total: number;

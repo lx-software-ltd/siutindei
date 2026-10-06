@@ -435,6 +435,7 @@ def test_pending_review_is_an_org_review_warning(
             verdict=None,
             org_id=None,
             scan_run_id=None,
+            proposed_category_id=None,
             query_text="",
             cursor=None,
         )

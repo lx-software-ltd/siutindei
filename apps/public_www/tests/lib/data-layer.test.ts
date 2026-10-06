@@ -144,7 +144,7 @@ describe('dataLayer helpers', () => {
       searchFieldsFromFilters({
         ageGroupId: '3-6',
         regionId: 'kowloon',
-        activityTypeIds: ['workshop', 'class'],
+        activityTypeIds: ['early-years', 'learning'],
         textQuery: '  pottery  ',
       }),
     ).toEqual({
@@ -152,7 +152,7 @@ describe('dataLayer helpers', () => {
       area_id: 'a1111111-1111-1111-1111-111111111102',
       age: 4,
       category_id:
-        'c1111111-1111-1111-1111-111111111101,c1111111-1111-1111-1111-111111111102',
+        'c1111111-1111-1111-1111-111111111201,c1111111-1111-1111-1111-111111111202',
     });
   });
 

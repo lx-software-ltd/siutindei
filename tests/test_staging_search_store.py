@@ -24,13 +24,13 @@ def test_staging_fixture_has_at_least_3000_items() -> None:
 def test_filter_by_category_and_age() -> None:
     filters = ActivitySearchFilters(
         age=4,
-        category_ids=[UUID("c1111111-1111-1111-1111-111111111102")],
+        category_ids=[UUID("c1111111-1111-1111-1111-111111111201")],
         limit=10,
     )
     response = staging_search_store.fetch_staging_search_response(filters)
     assert len(response.items) == 10
     for item in response.items:
-        assert item.activity.category_id == "c1111111-1111-1111-1111-111111111102"
+        assert item.activity.category_id == "c1111111-1111-1111-1111-111111111201"
         assert item.activity.age_min is not None
         assert item.activity.age_max is not None
         assert item.activity.age_min <= 4 <= item.activity.age_max

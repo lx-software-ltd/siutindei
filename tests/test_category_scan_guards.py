@@ -545,7 +545,7 @@ def test_worker_fails_the_run_when_the_month_budget_is_used(
         lambda **_kwargs: calls.append("called"),
     )
     with _Seed(test_engine) as seeded:
-        seeded.spend("30")
+        seeded.spend("60")
         assert (
             process_scan_batch(
                 seeded.run_id,
@@ -591,3 +591,120 @@ def test_scan_handler_reports_retries_and_acks_finished_work(
         None,
     )
     assert missing["batchItemFailures"] == []
+
+
+def test_recheck_prompt_omits_the_current_category(
+    db_session, sample_activity, sample_organization
+) -> None:
+    sample_organization.description_source = "template"
+    sample_organization.source = "edb"
+    sample_organization.source_url = "https://www.edb.gov.hk/en/page"
+    parent = ActivityCategory(name="Recheck Parent", display_order=3)
+    db_session.add(parent)
+    db_session.flush()
+    leaf = ActivityCategory(
+        name="Recheck Leaf",
+        display_order=1,
+        parent_id=parent.id,
+    )
+    db_session.add(leaf)
+    db_session.flush()
+    system, user = build_scan_prompt(
+        db_session,
+        [sample_activity],
+        ignore_current_category=True,
+    )
+    item = json.loads(user)["activities"][0]
+    taxonomy = {row["id"] for row in json.loads(user)["taxonomy"]}
+    assert "current_category" not in item
+    assert item["description"] == ""
+    assert item["description_is_template"] is True
+    assert item["organization_source"] == "edb"
+    assert item["source_url_host"] == "edb.gov.hk"
+    assert str(parent.id) not in taxonomy
+    assert str(leaf.id) in taxonomy
+    assert "Do not reply confirm" in system
+
+
+def test_recheck_confirm_counts_as_failed(db_session, sample_activity) -> None:
+    run = _run(db_session, ignore_current_category=True)
+    store_scan_batch(
+        db_session,
+        run.id,
+        [str(sample_activity.id)],
+        {"results": [_result(sample_activity, verdict="confirm", confidence=0.99)]},
+        {},
+    )
+    db_session.refresh(run)
+    assert int(run.failed) == 1
+    assert list(db_session.scalars(select(ActivityCategoryReview)).all()) == []
+
+
+def test_recheck_rejects_a_parent_and_assigns_a_leaf(
+    db_session, sample_activity, sample_activity_category
+) -> None:
+    leaf = ActivityCategory(
+        name="Child Leaf",
+        display_order=1,
+        parent_id=sample_activity_category.id,
+    )
+    db_session.add(leaf)
+    db_session.flush()
+    parent_run = _run(db_session, ignore_current_category=True)
+    store_scan_batch(
+        db_session,
+        parent_run.id,
+        [str(sample_activity.id)],
+        {
+            "results": [
+                _result(
+                    sample_activity,
+                    verdict="reassign",
+                    category_id=str(sample_activity_category.id),
+                    confidence=0.99,
+                )
+            ]
+        },
+        {},
+    )
+    db_session.refresh(parent_run)
+    db_session.refresh(sample_activity)
+    assert int(parent_run.failed) == 1
+    assert sample_activity.category_id == sample_activity_category.id
+
+    leaf_run = _run(db_session, ignore_current_category=True)
+    store_scan_batch(
+        db_session,
+        leaf_run.id,
+        [str(sample_activity.id)],
+        {
+            "results": [
+                _result(
+                    sample_activity,
+                    verdict="reassign",
+                    category_id=str(leaf.id),
+                    confidence=0.99,
+                )
+            ]
+        },
+        {},
+        message_id="leaf-batch",
+    )
+    db_session.refresh(sample_activity)
+    review = db_session.scalars(select(ActivityCategoryReview)).one()
+    assert review.status == "auto_applied"
+    assert sample_activity.category_id == leaf.id
+
+
+def test_discover_rejects_ignore_current(db_session, sample_organization) -> None:
+    with pytest.raises(ValidationError) as caught:
+        start_scan(
+            db_session,
+            {
+                "mode": "discover",
+                "ignore_current_category": True,
+                "org_id": str(sample_organization.id),
+            },
+            requested_by="admin",
+        )
+    assert caught.value.field == "ignore_current_category"

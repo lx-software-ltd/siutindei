@@ -95,6 +95,17 @@ decision. An activity an admin dismissed or reverted is still scanned,
 and it is never auto-assigned again. A reassign whose target is the
 activity's current category is stored as confirm.
 
+`ignore_current_category` on a verify run is the recheck used to
+rebuild assignments against a new taxonomy. The prompt omits the
+current category, blanks a description whose organization
+`description_source` is `template`, and adds the organization source
+and source URL host. The taxonomy sent to the model is leaves only,
+excluding Pending categorisation and the legacy roots Workshop, Class,
+Outdoor activity, Indoor fun, and Sport. A confirm verdict, or a
+reassign onto one of those roots or onto a parent, counts as failed
+and stores no review, so a later run can try again. A reassign onto a
+leaf still auto-applies at the threshold. Discover rejects the flag.
+
 Each batch is one SQS message, `{"scan_run_id", "activity_ids"}`, on
 the same queue as enrichment. The model returns confirm, reassign, or
 propose. Confirm leaves the category in place. Reassign at or above
@@ -112,7 +123,7 @@ list mark a run failed when it has had no batch progress for 11
 minutes (three 180-second visibility timeouts plus the Lambda
 timeout), which also re-enables the scan button. A new run is refused
 when this month's category-check spend has reached
-`monthly_cost_limit_usd` (default 25). The queue consumer runs at most
+`monthly_cost_limit_usd` (default 50). The queue consumer runs at most
 two batches at once, because the admin function also serves live
 traffic. A healthy batch often takes tens of seconds and may take up
 to the 90 s OpenRouter timeout. That lifts Admin Lambda p99 `Duration`
@@ -122,7 +133,10 @@ not page. HTTP console latency stays on the API Gateway p99 alarm.
 Approving or mapping a scan suggestion assigns linked activities whose
 review is still pending. Rejecting without a target dismisses those
 reviews and leaves the category unchanged. Apply, dismiss, and revert
-are `POST /v1/admin/category-suggestions/reviews/{id}`. Revert restores
+are `POST /v1/admin/category-suggestions/reviews/{id}`. The checks
+table can apply or dismiss every pending review that matches the
+current filters, including `proposed_category_id`, by calling that
+endpoint once per row. Revert restores
 `previous_category_id`.
 
 A pending review is the organization-review warning

@@ -1,36 +1,60 @@
 {
-  "version": 1,
+  "version": 2,
   "activityTypes": [
     {
-      "id": "workshop",
-      "categoryId": "c1111111-1111-1111-1111-111111111101",
+      "id": "early-years",
+      "categoryId": "c1111111-1111-1111-1111-111111111201",
       "labels": {
-        "en": "Workshop",
-        "zh-HK": "工作坊"
+        "en": "Early years and schools",
+        "zh-HK": "幼兒及學校"
       }
     },
     {
-      "id": "class",
-      "categoryId": "c1111111-1111-1111-1111-111111111102",
+      "id": "learning",
+      "categoryId": "c1111111-1111-1111-1111-111111111202",
       "labels": {
-        "en": "Class",
-        "zh-HK": "課程"
+        "en": "Learning and tutoring",
+        "zh-HK": "學習及補習"
       }
     },
     {
-      "id": "outdoor",
-      "categoryId": "c1111111-1111-1111-1111-111111111103",
+      "id": "arts",
+      "categoryId": "c1111111-1111-1111-1111-111111111203",
       "labels": {
-        "en": "Outdoor activity",
-        "zh-HK": "戶外活動"
+        "en": "Arts and performance",
+        "zh-HK": "藝術及表演"
       }
     },
     {
-      "id": "indoor",
-      "categoryId": "c1111111-1111-1111-1111-111111111104",
+      "id": "sports",
+      "categoryId": "c1111111-1111-1111-1111-111111111204",
       "labels": {
-        "en": "Indoor fun",
-        "zh-HK": "室內玩樂"
+        "en": "Sports and movement",
+        "zh-HK": "運動"
+      }
+    },
+    {
+      "id": "play",
+      "categoryId": "c1111111-1111-1111-1111-111111111205",
+      "labels": {
+        "en": "Play and outdoors",
+        "zh-HK": "遊樂及戶外"
+      }
+    },
+    {
+      "id": "culture",
+      "categoryId": "c1111111-1111-1111-1111-111111111206",
+      "labels": {
+        "en": "Culture",
+        "zh-HK": "文化"
+      }
+    },
+    {
+      "id": "community",
+      "categoryId": "c1111111-1111-1111-1111-111111111207",
+      "labels": {
+        "en": "Community and support",
+        "zh-HK": "社區及支援"
       }
     }
   ],

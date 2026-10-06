@@ -22,10 +22,13 @@ NEW_TERRITORIES_REGION = "a1111111-1111-1111-1111-111111111103"
 ISLANDS_REGION = "a1111111-1111-1111-1111-111111111104"
 
 CATEGORIES: list[tuple[str, str]] = [
-    ("c1111111-1111-1111-1111-111111111101", "Workshop"),
-    ("c1111111-1111-1111-1111-111111111102", "Class"),
-    ("c1111111-1111-1111-1111-111111111103", "Outdoor activity"),
-    ("c1111111-1111-1111-1111-111111111104", "Indoor fun"),
+    ("c1111111-1111-1111-1111-111111111201", "Early years and schools"),
+    ("c1111111-1111-1111-1111-111111111202", "Learning and tutoring"),
+    ("c1111111-1111-1111-1111-111111111203", "Arts and performance"),
+    ("c1111111-1111-1111-1111-111111111204", "Sports and movement"),
+    ("c1111111-1111-1111-1111-111111111205", "Play and outdoors"),
+    ("c1111111-1111-1111-1111-111111111206", "Culture"),
+    ("c1111111-1111-1111-1111-111111111207", "Community and support"),
 ]
 
 AGE_GROUPS: list[tuple[str, int, int, int]] = [
@@ -104,7 +107,7 @@ def _build_area_descendants() -> dict[str, list[str]]:
 
 
 def _build_category_descendants() -> dict[str, list[str]]:
-    """Flat wizard categories match themselves until a tree is generated."""
+    """Wizard groups are stored directly on staging rows."""
     return {category_id: [category_id] for category_id, _label in CATEGORIES}
 
 

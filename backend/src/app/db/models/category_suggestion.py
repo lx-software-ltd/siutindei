@@ -24,6 +24,17 @@ from sqlalchemy.types import TIMESTAMP
 from app.db.base import Base
 
 PENDING_CATEGORY_ID = UUIDType("c1111111-1111-1111-1111-111111111199")
+# Roots the first catalog import used before the leaf taxonomy existed.
+# A recheck run does not offer these to the model.
+LEGACY_CATEGORY_IDS = frozenset(
+    {
+        UUIDType("c1111111-1111-1111-1111-111111111101"),
+        UUIDType("c1111111-1111-1111-1111-111111111102"),
+        UUIDType("c1111111-1111-1111-1111-111111111103"),
+        UUIDType("c1111111-1111-1111-1111-111111111104"),
+        UUIDType("99999999-9999-9999-9999-999999999999"),
+    }
+)
 SETTINGS_SINGLETON_ID = UUIDType("c2222222-2222-2222-2222-222222222201")
 PENDING_CATEGORY_NAME = "Pending categorisation"
 DEFAULT_OPENROUTER_MODEL = "qwen/qwen3-30b-a3b"
@@ -80,8 +91,8 @@ class CategorySuggestionSettings(Base):
     monthly_cost_limit_usd: Mapped[Decimal] = mapped_column(
         Numeric(12, 2),
         nullable=False,
-        default=Decimal("25"),
-        server_default=text("25"),
+        default=Decimal("50"),
+        server_default=text("50"),
     )
     updated_by: Mapped[str | None] = mapped_column(Text(), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(

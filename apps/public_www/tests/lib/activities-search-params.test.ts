@@ -14,7 +14,7 @@ describe('search-params', () => {
       buildSearchQueryString({
         ageGroupId: '3-6',
         regionId: 'kowloon',
-        activityTypeIds: ['workshop', 'class'],
+        activityTypeIds: ['early-years', 'learning'],
         textQuery: 'music',
       }),
     );
@@ -22,7 +22,7 @@ describe('search-params', () => {
     const parsed = parseSearchFiltersFromQuery(params);
     expect(parsed.ageGroupId).toBe('3-6');
     expect(parsed.regionId).toBe('kowloon');
-    expect(parsed.activityTypeIds).toEqual(['workshop', 'class']);
+    expect(parsed.activityTypeIds).toEqual(['early-years', 'learning']);
     expect(parsed.textQuery).toBe('music');
     expect(params.get('view')).toBe('map');
   });
@@ -49,8 +49,8 @@ describe('search-params', () => {
   });
 
   it('maps activity types to category ids', () => {
-    expect(categoryIdsForTypes(['workshop'])).toEqual([
-      'c1111111-1111-1111-1111-111111111101',
+    expect(categoryIdsForTypes(['early-years'])).toEqual([
+      'c1111111-1111-1111-1111-111111111201',
     ]);
   });
 
@@ -62,16 +62,16 @@ describe('search-params', () => {
       textQuery: 'music',
     };
 
-    const added = toggleActivityTypeId(base, 'workshop');
-    expect(added.activityTypeIds).toEqual(['workshop']);
+    const added = toggleActivityTypeId(base, 'early-years');
+    expect(added.activityTypeIds).toEqual(['early-years']);
     expect(added.ageGroupId).toBe('3-6');
     expect(added.regionId).toBe('kowloon');
     expect(added.textQuery).toBe('music');
 
-    const addedAgain = toggleActivityTypeId(added, 'class');
-    expect(addedAgain.activityTypeIds).toEqual(['workshop', 'class']);
+    const addedAgain = toggleActivityTypeId(added, 'learning');
+    expect(addedAgain.activityTypeIds).toEqual(['early-years', 'learning']);
 
-    const removed = toggleActivityTypeId(addedAgain, 'workshop');
-    expect(removed.activityTypeIds).toEqual(['class']);
+    const removed = toggleActivityTypeId(addedAgain, 'early-years');
+    expect(removed.activityTypeIds).toEqual(['learning']);
   });
 });

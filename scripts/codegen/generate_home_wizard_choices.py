@@ -104,14 +104,34 @@ def _slug(name: str) -> str:
     return slug or "category"
 
 
+def rows_from_category_export(payload: Any) -> list[dict[str, Any]]:
+    """Accept an admin category list or ``{"items": [...]}`` export."""
+    items = payload.get("items") if isinstance(payload, dict) else payload
+    if not isinstance(items, list):
+        raise ValueError("category export must be a list or an items object")
+    return [row for row in items if isinstance(row, dict)]
+
+
 def main() -> None:
     """Print the contract, or rewrite the JSON when ``--write`` is set."""
     existing = json.loads(CHOICES.read_text(encoding="utf-8"))
+    if "--from-json" in sys.argv:
+        index = sys.argv.index("--from-json")
+        if index + 1 >= len(sys.argv):
+            raise SystemExit("--from-json requires a file path")
+        raw = json.loads(Path(sys.argv[index + 1]).read_text(encoding="utf-8"))
+        built = build_home_wizard_choices(rows_from_category_export(raw), existing)
+        write_home_wizard_choices(built)
+        print(
+            f"Wrote {CHOICES.name} version {built.get('version')} "
+            f"({len(built.get('activityTypes') or [])} activity types)."
+        )
+        return
     if "--write" not in sys.argv:
         print(
             "Home wizard choices stay in "
             f"{CHOICES.name} version {existing.get('version')}. "
-            "Run with --write and DATABASE_URL to regenerate them."
+            "Run with --write and DATABASE_URL, or --from-json <export>."
         )
         return
     database_url = os.environ.get("DATABASE_URL", "").strip()
