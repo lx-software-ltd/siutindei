@@ -25,6 +25,10 @@ test.describe('Category suggestions', () => {
     await adminPage.getByRole('button', { name: 'Categories', exact: true }).click();
     await adminPage.getByRole('button', { name: 'Category Checks', exact: true }).click();
     await expect(adminPage.getByText('Clay club')).toBeVisible();
+    const apply = adminPage.getByRole('button', { name: 'Apply' });
+    const applyIcon = await apply.locator('svg').boundingBox();
+    expect(applyIcon?.width).toBeGreaterThan(8);
+    expect(applyIcon?.height).toBeGreaterThan(8);
     await adminPage.getByRole('button', { name: 'Verify categories' }).click();
     await expect(adminPage.getByText('Scan 2 activities in 1 model call.')).toBeVisible();
     await adminPage.getByRole('button', { name: 'Start scan' }).click();
