@@ -35,6 +35,14 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.locator('#org-whatsapp')).toBeVisible();
     await expect(adminPage.locator('#org-twitter')).toBeVisible();
     await expect(adminPage.locator('#org-wechat')).toBeVisible();
+    await expect(
+      adminPage.getByText(
+        'Catalog and page attribution, stored separately from the description.'
+      )
+    ).toHaveCount(0);
+    await expect(
+      adminPage.getByText('Use @handle or https:// URLs for each network.')
+    ).toHaveCount(0);
 
     // Check for submit button
     await expect(adminPage.getByRole('button', { name: 'Create' })).toBeVisible();
