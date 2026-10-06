@@ -82,6 +82,8 @@ def resolve_activity_category_fields(
     body: dict[str, Any],
 ) -> None:
     category_name = body.pop("category_name", None)
+    if isinstance(category_name, str) and category_name.strip():
+        body["source_category_name"] = category_name.strip()
     if body.get("category_id") is not None:
         return
     if category_name is None:

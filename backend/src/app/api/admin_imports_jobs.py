@@ -71,6 +71,15 @@ def store_import_job(
     return job
 
 
+def begin_import_retry(session: Session, job: ImportJob) -> ImportJob:
+    """Mark a completed job running without dropping its stored results."""
+    job.status = "running"
+    job.dry_run = False
+    job.updated_at = datetime.now(timezone.utc)
+    session.flush()
+    return job
+
+
 def begin_import_job(session: Session, object_key: str) -> ImportJob:
     """Create or reuse a live job row before organizations are written."""
     existing = find_import_job_by_key(session, object_key)

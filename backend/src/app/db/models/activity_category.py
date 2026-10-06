@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import ForeignKey, Integer, Text, text
+from sqlalchemy import Boolean, ForeignKey, Integer, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -42,6 +42,12 @@ class ActivityCategory(Base):
         Integer(),
         nullable=False,
         server_default=text("0"),
+    )
+    show_in_wizard: Mapped[bool] = mapped_column(
+        Boolean(),
+        nullable=False,
+        default=False,
+        server_default=text("false"),
     )
 
     parent: Mapped[Optional["ActivityCategory"]] = relationship(

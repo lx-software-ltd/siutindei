@@ -43,8 +43,8 @@ class CategorySuggestionSettings(Base):
     on_import_enabled: Mapped[bool] = mapped_column(
         Boolean(),
         nullable=False,
-        default=False,
-        server_default=text("false"),
+        default=True,
+        server_default=text("true"),
     )
     auto_enrich_enabled: Mapped[bool] = mapped_column(
         Boolean(),

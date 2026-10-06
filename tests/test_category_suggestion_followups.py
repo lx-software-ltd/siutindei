@@ -40,6 +40,11 @@ def test_ambiguous_exact_name_is_captured_when_enabled(db_session) -> None:
         ]
     )
     db_session.flush()
+    from app.services.category_suggestions.settings import get_settings
+
+    settings = get_settings(db_session)
+    settings.on_import_enabled = False
+    db_session.flush()
     with pytest.raises(ValidationError):
         resolve_category_name(db_session, "Shared")
     _enable_capture(db_session)
