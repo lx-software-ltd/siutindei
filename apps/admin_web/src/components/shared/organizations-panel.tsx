@@ -636,13 +636,6 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
             </div>
             {isAdmin && (
               <>
-              <div className='md:col-span-2 border-t border-slate-100 pt-4'>
-                <p className='text-sm font-medium text-slate-700'>Source</p>
-                <p className='text-xs text-slate-500'>
-                  Catalog and page attribution, stored separately from the
-                  description.
-                </p>
-              </div>
               <div className='space-y-1'>
                 <Label htmlFor='org-source'>Source</Label>
                 <Select
@@ -758,12 +751,6 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
               </div>
               </>
             )}
-            <div className='md:col-span-2 border-t border-slate-100 pt-4'>
-              <p className='text-sm font-medium text-slate-700'>Social</p>
-              <p className='text-xs text-slate-500'>
-                Use @handle or https:// URLs for each network.
-              </p>
-            </div>
             {SOCIAL_FIELDS.map((field) => {
               const showError = showSocialError(field.key);
               return (
