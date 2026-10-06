@@ -111,6 +111,10 @@ their primary responsibilities.
 - Timeout: 120 seconds so one SQS enrichment can wait on a 90-second
   OpenRouter attempt. API Gateway still limits HTTP to 29 seconds, so
   the settings test stays a single ~15 second attempt.
+- Duration alarm: p99 ≥ 90 s for 15 min. Category-check and enrichment
+  batches are expected to run 10–90 s on this same function, so a 10 s
+  threshold pages on healthy scans. User-facing admin HTTP latency is
+  the API Gateway p99 alarm.
 - X-Ray: active tracing (function segment with init/invocation split)
 - Cognito user listing resolves group membership with one
   `list_users_in_group` call per managed group (`ADMIN_GROUP`,

@@ -3026,9 +3026,10 @@ export class ApiStack extends cdk.Stack {
           fn: listingEventsRollupFunction,
           durationP99ThresholdMs: 15000,
         },
-        // Admin console: internal tooling with long-running imports and
-        // Cognito round-trips; alert well before the 30 s function timeout.
-        { label: "Admin", fn: adminFunction, durationP99ThresholdMs: 10000 },
+        // Admin also consumes category-suggestion SQS (OpenRouter up to
+        // 90s, function timeout 120s). A 10s p99 pages on every category
+        // check. HTTP latency stays on the API Gateway p99 alarm.
+        { label: "Admin", fn: adminFunction, durationP99ThresholdMs: 90000 },
       ],
       dbClusterIdentifier: database.cluster.clusterIdentifier,
       additionalAlarms: [dlqAlarm, categorySuggestionDlqAlarm],

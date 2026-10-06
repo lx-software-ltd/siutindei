@@ -20,8 +20,7 @@ import { ApiKeysPanel } from './api-keys-panel';
 import { AuditLogsPanel } from './audit-logs-panel';
 import { CategoriesPage } from './categories-page';
 import { CognitoUsersPanel } from './cognito-users-panel';
-import { FeedbackLabelsPanel } from './feedback-labels-panel';
-import { FeedbackPanel } from './feedback-panel';
+import { FeedbackPage } from './feedback-page';
 import { ImportsPanel } from './imports-panel';
 import { MediaPanel } from './media-panel';
 import { ManagerDashboard } from './manager-dashboard';
@@ -37,7 +36,6 @@ const sectionLabels = [
   { key: 'schedules', label: 'Schedules' },
   { key: 'tickets', label: 'Tickets', dividerBefore: true },
   { key: 'feedback', label: 'Feedback' },
-  { key: 'feedback-labels', label: 'Feedback Labels' },
   { key: 'cognito-users', label: 'Users' },
   { key: 'activity-categories', label: 'Categories' },
   { key: 'api-keys', label: 'API Keys' },
@@ -48,6 +46,7 @@ const sectionLabels = [
 const recognizedSections = [
   ...sectionLabels,
   { key: 'category-suggestions', label: 'Category Suggestions' },
+  { key: 'feedback-labels', label: 'Feedback Labels' },
 ];
 
 export function AdminDashboard() {
@@ -78,9 +77,8 @@ export function AdminDashboard() {
       case 'tickets':
         return <TicketsPanel />;
       case 'feedback':
-        return <FeedbackPanel />;
       case 'feedback-labels':
-        return <FeedbackLabelsPanel />;
+        return <FeedbackPage />;
       case 'cognito-users':
         return <CognitoUsersPanel />;
       case 'api-keys':
@@ -126,7 +124,9 @@ export function AdminDashboard() {
       activeKey={
         activeSection === 'category-suggestions'
           ? 'activity-categories'
-          : activeSection
+          : activeSection === 'feedback-labels'
+            ? 'feedback'
+            : activeSection
       }
       onSelect={selectSection}
       onIntent={prefetchSection}

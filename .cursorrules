@@ -532,6 +532,9 @@ screens from `apps/admin_web/src/components/ui/`:
 - **Read-only records** still expand in place. Do not add a detail dialog
   for them. `ConfirmDialog` is only for confirm/cancel.
 - **In-area switchers** use `AdminTabStrip` (button group, not ARIA tabs).
+  Category suggestions stay on the Categories nav item. Feedback labels
+  stay on the Feedback nav item, keep the `feedback-label` deep link,
+  and `?section=feedback-labels` still opens that tab.
 - **Exception:** organization media stays a drag-reorder grid. Document
   any new exception with a comment at the site.
 - Deep links use `?<entity>=<id>` (`organization`, `location`, `activity`,

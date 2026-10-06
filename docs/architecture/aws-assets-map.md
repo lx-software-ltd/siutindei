@@ -416,7 +416,7 @@ Created by `OpsAlarmsConstruct` (`lib/constructs/ops-alarms.ts`).
 | CloudWatch Alarm | `lxsoftware-siutindei-search-lambda-duration-p99-alarm` | Search Lambda p99 `Duration` ≥ 3 s for 15 min |
 | CloudWatch Alarm | `lxsoftware-siutindei-search-lambda-errors-alarm` | Search Lambda errors ≥ 3 in 5 min |
 | CloudWatch Alarm | `lxsoftware-siutindei-search-lambda-throttles-alarm` | Search Lambda throttles ≥ 1 |
-| CloudWatch Alarm | `lxsoftware-siutindei-admin-lambda-duration-p99-alarm` | Admin Lambda p99 `Duration` ≥ 10 s for 15 min |
+| CloudWatch Alarm | `lxsoftware-siutindei-admin-lambda-duration-p99-alarm` | Admin Lambda p99 `Duration` ≥ 90 s for 15 min (75% of the 120 s timeout; expected OpenRouter scan/enrich batches are 10–90 s). HTTP latency is the API Gateway p99 alarm. |
 | CloudWatch Alarm | `lxsoftware-siutindei-admin-lambda-errors-alarm` | Admin Lambda errors ≥ 3 in 5 min |
 | CloudWatch Alarm | `lxsoftware-siutindei-admin-lambda-throttles-alarm` | Admin Lambda throttles ≥ 1 |
 | CloudWatch Alarm | `lxsoftware-siutindei-aurora-acu-utilization-alarm` | Aurora ACU utilization ≥ 90% for 15 min |
@@ -428,7 +428,9 @@ Latency alarms are split by traffic regime: the API-wide p99 alarm only
 evaluates periods with enough requests for a percentile to be meaningful
 (below the floor, p99 equals the slowest single request), while the
 per-function `Duration` alarms carry each function's own SLO (public search
-tight, admin console loose) and cover low-traffic periods.
+tight, admin SQS workers near the 120 s timeout) and cover low-traffic
+periods. Admin HTTP slowness is the volume-gated API Gateway p99 alarm,
+because `SiutindeiAdminFunction` also runs 90 s OpenRouter batches.
 
 ---
 

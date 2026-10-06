@@ -562,7 +562,9 @@ def test_worker_fails_the_run_when_the_month_budget_is_used(
             assert run.error == "Monthly category-check budget is used"
 
 
-def test_scan_handler_reports_retries_and_acks_finished_work(monkeypatch) -> None:
+def test_scan_handler_reports_retries_and_acks_finished_work(
+    monkeypatch, capsys
+) -> None:
     worker = _worker()
 
     def fail(*_args, **_kwargs):
@@ -575,6 +577,7 @@ def test_scan_handler_reports_retries_and_acks_finished_work(monkeypatch) -> Non
     monkeypatch.setattr(worker, "process_scan_batch", lambda *_a, **_k: True)
     stored = worker.lambda_handler(_scan_event("m-2", "2"), None)
     assert stored["batchItemFailures"] == []
+    assert "Category check batch finished" in capsys.readouterr().out
 
     missing = worker.lambda_handler(
         {

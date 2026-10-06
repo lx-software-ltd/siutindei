@@ -1,28 +1,28 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import type { ReactNode } from 'react';
 
 import { useAuth } from './auth-provider';
+import { LoginScreen } from './login-screen';
 import { StatusBanner } from './status-banner';
 
 interface AuthGateProps {
   children: ReactNode;
   requireAuth?: boolean;
+  /**
+   * Rendered on public routes after sign-in. Do not router-replace to
+   * `/admin/dashboard`: admin-web CloudFront maps unknown paths to
+   * `/index.html`, which rehydrates this gate and loops on Redirecting.
+   */
+  signedIn?: ReactNode;
 }
 
-export function AuthGate({ children, requireAuth = true }: AuthGateProps) {
+export function AuthGate({
+  children,
+  requireAuth = true,
+  signedIn,
+}: AuthGateProps) {
   const { status } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (requireAuth && status === 'unauthenticated') {
-      router.replace('/');
-    }
-    if (!requireAuth && status === 'authenticated') {
-      router.replace('/admin/dashboard');
-    }
-  }, [requireAuth, router, status]);
 
   if (status === 'loading') {
     return (
@@ -34,24 +34,12 @@ export function AuthGate({ children, requireAuth = true }: AuthGateProps) {
     );
   }
 
-  if (requireAuth && status === 'unauthenticated') {
-    return (
-      <main className='mx-auto flex min-h-screen max-w-lg items-center px-6'>
-        <StatusBanner variant='info' title='Redirecting'>
-          Sending you back to sign in.
-        </StatusBanner>
-      </main>
-    );
+  if (status === 'unauthenticated') {
+    return requireAuth ? <LoginScreen /> : <>{children}</>;
   }
 
-  if (!requireAuth && status === 'authenticated') {
-    return (
-      <main className='mx-auto flex min-h-screen max-w-lg items-center px-6'>
-        <StatusBanner variant='info' title='Redirecting'>
-          Sending you to the dashboard.
-        </StatusBanner>
-      </main>
-    );
+  if (!requireAuth) {
+    return <>{signedIn ?? children}</>;
   }
 
   return <>{children}</>;

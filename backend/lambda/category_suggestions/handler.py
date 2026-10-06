@@ -133,6 +133,15 @@ def _handle_scan(
         if message_id:
             failures.append(message_id)
         return
+    logger.info(
+        "Category check batch finished",
+        extra={
+            "scan_run_id": str(scan_run_id),
+            "activity_count": len(raw_ids),
+            "acked": acked,
+            "receive_count": receive_count,
+        },
+    )
     if not acked and message_id:
         failures.append(message_id)
 

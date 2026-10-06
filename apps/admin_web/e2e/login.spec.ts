@@ -74,16 +74,12 @@ test.describe('Login Screen', () => {
     await expect(googleButton).toBeEnabled();
   });
 
-  test('should redirect to dashboard when authenticated as admin', async ({ adminPage }) => {
+  test('should show the admin console when authenticated as admin', async ({ adminPage }) => {
     await adminPage.goto('/');
 
-    await expect(adminPage).toHaveURL(/\/admin\/dashboard\/?(\?.*)?$/);
-
-    // Should see the admin dashboard header
     await expect(adminPage.getByRole('heading', { name: 'Siu Tin Dei Admin' })).toBeVisible();
-
-    // Should see navigation sections
     await expect(adminPage.getByRole('button', { name: 'Organizations' })).toBeVisible();
+    await expect(adminPage.getByText('Redirecting')).toHaveCount(0);
   });
 
   test('should display config errors when environment variables are missing', async ({ page }) => {

@@ -30,4 +30,27 @@ describe('admin section params', () => {
       edit: null,
     });
   });
+
+  it('keeps feedback entry and label links on the feedback page', () => {
+    expect(
+      staleRecordParams('feedback', {
+        feedback: 'fb-1',
+        'feedback-label': 'lbl-1',
+        ticket: 't-1',
+      })
+    ).toEqual({ ticket: null });
+    expect(
+      staleRecordParams('feedback-labels', {
+        feedback: 'fb-1',
+        'feedback-label': 'lbl-1',
+        ticket: 't-1',
+      })
+    ).toEqual({ ticket: null });
+
+    const patch = patchForSectionChange('feedback');
+    expect(patch.section).toBe('feedback');
+    expect(patch).not.toHaveProperty('feedback');
+    expect(patch).not.toHaveProperty('feedback-label');
+    expect(patch.ticket).toBeNull();
+  });
 });
