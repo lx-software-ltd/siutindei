@@ -27,11 +27,26 @@ test.describe('Category suggestions', () => {
     await expect(adminPage.getByText('Clay club')).toBeVisible();
     await adminPage.getByRole('button', { name: 'Verify categories' }).click();
     await expect(adminPage.getByText('Scan 2 activities in 1 model call.')).toBeVisible();
+    await expect(adminPage.getByLabel('Ignore the current category')).toBeVisible();
     await adminPage.getByRole('button', { name: 'Start scan' }).click();
     await expect(adminPage.getByText('1 of 1 batches.')).toBeVisible();
     await adminPage.getByRole('cell', { name: 'Clay club', exact: true }).click();
     await expect(adminPage.getByText('Indoor craft, not sport')).toBeVisible();
-    await adminPage.getByRole('button', { name: 'Apply' }).click();
+    await adminPage.getByRole('button', { name: 'Apply', exact: true }).click();
+    await expect(
+      adminPage.getByTestId('admin-row-rev-1').getByText('applied', { exact: true })
+    ).toBeVisible();
+  });
+
+  test('admin can apply every matching pending check', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard');
+    await adminPage.getByRole('button', { name: 'Categories', exact: true }).click();
+    await adminPage.getByRole('button', { name: 'Category checks', exact: true }).click();
+    await adminPage.getByRole('button', { name: 'Apply matching' }).click();
+    await expect(
+      adminPage.getByText('Apply every pending reassignment')
+    ).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Apply pending' }).click();
     await expect(
       adminPage.getByTestId('admin-row-rev-1').getByText('applied', { exact: true })
     ).toBeVisible();

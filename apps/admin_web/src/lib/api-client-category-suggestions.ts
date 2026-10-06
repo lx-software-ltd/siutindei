@@ -93,6 +93,7 @@ export interface CategoryScanRun {
   requested_by?: string | null;
   org_id?: string | null;
   mode?: 'verify' | 'discover';
+  ignore_current_category?: boolean;
   batch_size: number;
   total_activities: number;
   labels_total?: number;
@@ -138,6 +139,7 @@ export interface CategoryReviewFilters {
   verdict?: string;
   org_id?: string;
   scan_run_id?: string;
+  proposed_category_id?: string;
   q?: string;
   cursor?: string;
   limit?: number;
@@ -211,6 +213,7 @@ export function startCategoryScan(body: {
   batch_size?: number;
   rescan?: boolean;
   mode?: 'verify' | 'discover';
+  ignore_current_category?: boolean;
 } = {}) {
   return request<CategoryScanRun>(suggestionUrl('/scan'), {
     method: 'POST',
