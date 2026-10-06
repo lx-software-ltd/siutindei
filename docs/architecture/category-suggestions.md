@@ -73,3 +73,50 @@ characters. At most three fallbacks are stored. Evidence size is 5 to
 50 items, default 25.
 
 Only the admin group can read or change suggestions and settings.
+`auto_assign_threshold` defaults to 0.90. Blank disables automatic
+reassignment. The allowed range is 0.50 to 1.
+
+## Category check
+
+The Category checks tab scans activities whose organization is still
+`pending_review`. The organization filter limits one run to a single
+organization; the default is every pending organization. It does not
+include approved organizations. A run skips an activity that was
+confirmed, applied, or auto-applied in the last 30 days unless the
+request sets `rescan`. An activity with a review still `pending` is
+skipped even on rescan, so a second run does not open a duplicate
+decision. An activity an admin dismissed or reverted is still scanned,
+and it is never auto-assigned again. A reassign whose target is the
+activity's current category is stored as confirm.
+
+Each batch is one SQS message, `{"scan_run_id", "activity_ids"}`, on
+the same queue as enrichment. The model returns confirm, reassign, or
+propose. Confirm leaves the category in place. Reassign at or above
+the threshold changes `activities.category_id` immediately and stores
+the previous category. A lower score, or an organization that left
+`pending_review` before the batch ran, stays as a pending review.
+Propose finds or creates one `source=scan` suggestion per normalised
+name and leaves the assignment to the existing approve or map action.
+The checks table does not offer Apply for a proposal or for a confirm
+of Pending categorisation, because those rows have no category to
+assign. A proposed name that already matches a category becomes a
+reassign. Pending categorisation is never confirmed. A partial unique
+index allows only one queued or running scan. The summary and run
+list mark a run failed when it has had no batch progress for 11
+minutes (three 180-second visibility timeouts plus the Lambda
+timeout), which also re-enables the scan button. A new run is refused
+when this month's category-check spend has reached
+`monthly_cost_limit_usd` (default 25). The queue consumer runs at most
+two batches at once, because the admin function also serves live
+traffic.
+
+Approving or mapping a scan suggestion assigns linked activities whose
+review is still pending. Rejecting without a target dismisses those
+reviews and leaves the category unchanged. Apply, dismiss, and revert
+are `POST /v1/admin/category-suggestions/reviews/{id}`. Revert restores
+`previous_category_id`.
+
+A pending review is the organization-review warning
+`category_check_pending`. It does not block approval. The scan button
+is the only trigger. `scan_candidate_total` is the full candidate
+count; a run still stops at `scan_limit` (500).

@@ -17,6 +17,23 @@ from app.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
+def enqueue_scan_batches(scan_run_id: str, batches: list[list[str]]) -> None:
+    """Publish one SQS message per category-check batch."""
+    if not batches:
+        return
+    queue_url = os.getenv("CATEGORY_SUGGESTION_QUEUE_URL", "").strip()
+    if not queue_url:
+        raise RuntimeError("CATEGORY_SUGGESTION_QUEUE_URL is not configured")
+    client = get_client("sqs")
+    for activity_ids in batches:
+        client.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(
+                {"scan_run_id": scan_run_id, "activity_ids": activity_ids}
+            ),
+        )
+
+
 def enqueue_enrichment(
     suggestion_ids: list[str],
     *,

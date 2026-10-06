@@ -41,6 +41,7 @@ const ISSUE_OPTIONS = [
   ['missing_pricing', 'Missing price'],
   ['missing_schedule', 'Missing schedule'],
   ['pending_category', 'Pending category'],
+  ['category_check_pending', 'Category check'],
   ['no_contact', 'No contact'],
   ['no_media', 'No photos'],
   ['source_attribution', 'Template or source line'],

@@ -28,6 +28,67 @@ def redact_contacts(value: str) -> str:
     return _PHONE_RE.sub("[redacted-phone]", text)
 
 
+def build_scan_prompt(
+    session: Session,
+    activities: list[Activity],
+) -> tuple[str, str]:
+    """Return system and user prompts for one category-check batch."""
+    rows = list(session.scalars(select(ActivityCategory)).all())
+    by_id = {row.id: row for row in rows}
+    system = (
+        "You check categories for children's activities in Hong Kong. "
+        "Each activity already has a category. Reply confirm when that "
+        "category fits. Reply reassign with an existing category_id when "
+        "a different existing category is clearly better. Reply propose "
+        "only when no existing category fits. Use Traditional Chinese for "
+        "zh names. Never confirm Pending categorisation. Do not invent "
+        "near-duplicates of existing names. Reply with one JSON object "
+        "and no markdown. Schema: "
+        '{"results":[{"activity_id":string,'
+        '"verdict":"confirm"|"reassign"|"propose",'
+        '"category_id":string|null,"confidence":number,"rationale":string,'
+        '"propose":{"name_en":string,"name_zh":string,"parent_id":string|null,'
+        '"rationale":string}}]}'
+    )
+    user = {
+        "activities": [_scan_item(session, activity, by_id) for activity in activities],
+        "taxonomy": _taxonomy(session),
+        "do_not_propose": _rejected_names(session),
+    }
+    return system, json.dumps(user, ensure_ascii=False)
+
+
+def _scan_item(
+    session: Session,
+    activity: Activity,
+    by_id: dict,
+) -> dict[str, Any]:
+    org = session.get(Organization, activity.org_id)
+    category = by_id.get(activity.category_id)
+    lower, upper = inclusive_age_bounds(activity.age_range)
+    description = (activity.description or "")[:_MAX_DESCRIPTION]
+    path = ""
+    category_id = None
+    if category is not None:
+        path = (
+            category.name
+            if category.id == PENDING_CATEGORY_ID
+            else _path(category, by_id)
+        )
+        category_id = str(category.id)
+    return {
+        "activity_id": str(activity.id),
+        "activity_name": redact_contacts(activity.name),
+        "description": redact_contacts(description),
+        "age_min": lower,
+        "age_max": upper,
+        "organization": redact_contacts(org.name) if org is not None else "",
+        "organization_zh": _zh_name(org),
+        "current_category_id": category_id,
+        "current_category": path,
+    }
+
+
 def build_enrichment_prompt(
     session: Session,
     suggestion: CategorySuggestion,

@@ -4,13 +4,15 @@ import { parseAsString, useQueryStates } from 'nuqs';
 
 import { ActivityCategoriesPanel } from '../shared';
 import { AdminTabStrip } from '../ui/admin-tab-strip';
+import { CategoryChecksPanel } from './category-suggestions/category-checks-panel';
 import { CategorySuggestionsPanel } from './category-suggestions/category-suggestions-panel';
 
-type CategoryView = 'categories' | 'suggestions';
+type CategoryView = 'categories' | 'suggestions' | 'checks';
 
 const CATEGORY_VIEWS = [
   { key: 'categories' as const, label: 'Categories' },
   { key: 'suggestions' as const, label: 'Category Suggestions' },
+  { key: 'checks' as const, label: 'Category checks' },
 ];
 
 export function CategoriesPage() {
@@ -19,7 +21,9 @@ export function CategoriesPage() {
     categoryView: parseAsString,
   });
   const activeView: CategoryView =
-    query.categoryView === 'suggestions' || query.categoryView === 'categories'
+    query.categoryView === 'suggestions' ||
+    query.categoryView === 'categories' ||
+    query.categoryView === 'checks'
       ? query.categoryView
       : query.section === 'category-suggestions'
         ? 'suggestions'
@@ -34,12 +38,14 @@ export function CategoriesPage() {
         onChange={(key) => {
           void setQuery({
             section: 'activity-categories',
-            categoryView: key === 'categories' ? null : 'suggestions',
+            categoryView: key === 'categories' ? null : key,
           });
         }}
       />
       {activeView === 'suggestions' ? (
         <CategorySuggestionsPanel />
+      ) : activeView === 'checks' ? (
+        <CategoryChecksPanel />
       ) : (
         <ActivityCategoriesPanel />
       )}

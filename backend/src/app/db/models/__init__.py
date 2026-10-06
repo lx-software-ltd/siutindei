@@ -9,6 +9,7 @@ from app.db.models.activity import (
 )
 from app.db.models.activity_category import ActivityCategory
 from app.db.models.api_key import ApiKey
+from app.db.models.category_scan import ActivityCategoryReview, CategoryScanRun
 from app.db.models.category_suggestion import (
     CategorySuggestion,
     CategorySuggestionActivity,
@@ -28,12 +29,14 @@ from app.db.models.ticket import Ticket
 __all__ = [
     "Activity",
     "ActivityCategory",
+    "ActivityCategoryReview",
     "ActivityLocation",
     "ActivityPricing",
     "ActivitySchedule",
     "ActivityScheduleEntry",
     "ApiKey",
     "AuditLog",
+    "CategoryScanRun",
     "CategorySuggestion",
     "CategorySuggestionActivity",
     "CategorySuggestionSettings",

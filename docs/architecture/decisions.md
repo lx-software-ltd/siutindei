@@ -478,6 +478,12 @@ The worker reads the named key from Secrets Manager and sends
 
 Capture is off until an admin turns on `on_import_enabled` in the
 settings singleton. Public search always excludes Pending
-categorisation. Design notes:
+categorisation.
+
+A separate category check scans activities on organizations that are
+still `pending_review`. High-confidence reassignments to an existing
+category are applied immediately when `auto_assign_threshold` is set
+(default 0.90). New categories still wait for an admin decision.
+Design notes:
 `docs/architecture/category-suggestions.md`. Endpoint shapes:
 `docs/api/admin.yaml` under `/v1/admin/category-suggestions`.

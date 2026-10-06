@@ -17,4 +17,23 @@ test.describe('Category suggestions', () => {
     await adminPage.getByRole('button', { name: 'Reject' }).click();
     await expect(adminPage.getByText('Status: approved')).toBeVisible();
   });
+
+  test('admin can scan pending organizations and apply a check', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard');
+    await adminPage.getByRole('button', { name: 'Categories', exact: true }).click();
+    await adminPage.getByRole('button', { name: 'Category checks', exact: true }).click();
+    await expect(adminPage.getByText('Clay club')).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Scan pending organizations' }).click();
+    await expect(adminPage.getByText('Scan 2 activities in 1 model call.')).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Start scan' }).click();
+    await expect(adminPage.getByText('1 of 1 batches.')).toBeVisible();
+    await adminPage.getByRole('cell', { name: 'Clay club', exact: true }).click();
+    await expect(adminPage.getByText('Indoor craft, not sport')).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Apply' }).click();
+    await expect(
+      adminPage.getByTestId('admin-row-rev-1').getByText('applied', { exact: true })
+    ).toBeVisible();
+  });
 });

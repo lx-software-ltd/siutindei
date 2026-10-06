@@ -8,7 +8,8 @@ import {
   AdminDataTableCell,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
-import { AdminFilterBar } from '../../ui/admin-filter-bar';
+import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
+import { Select } from '../../ui/select';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { StatusBadge } from '../../ui/status-badge';
 import { SuggestionDetail } from './suggestion-detail';
@@ -19,6 +20,8 @@ interface SuggestionsTableProps {
   isLoadingMore?: boolean;
   error?: string;
   summary?: string;
+  source?: string;
+  onSourceChange?: (source: string) => void;
   onReload: () => void;
   hasMore?: boolean;
   onLoadMore?: () => void;
@@ -30,6 +33,8 @@ export function SuggestionsTable({
   isLoadingMore = false,
   error = '',
   summary,
+  source = '',
+  onSourceChange,
   onReload,
   hasMore = false,
   onLoadMore,
@@ -66,7 +71,7 @@ export function SuggestionsTable({
         ariaLabel='Category suggestions'
         rows={items}
         getLabel={(item) => `suggestion ${item.id}`}
-        middleColumnCount={5}
+        middleColumnCount={6}
         hasActions={false}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
@@ -77,7 +82,21 @@ export function SuggestionsTable({
         isExpanded={expanded.isExpanded}
         onToggle={expanded.toggle}
         detail={openInList ? detail : null}
-        filters={summary ? <AdminFilterBar summary={summary} /> : undefined}
+        filters={
+          <AdminFilterBar summary={summary}>
+            <AdminFilterField label='Source' htmlFor='suggestion-source-filter'>
+              <Select
+                id='suggestion-source-filter'
+                value={source}
+                onChange={(event) => onSourceChange?.(event.target.value)}
+              >
+                <option value=''>Any</option>
+                <option value='import'>Import</option>
+                <option value='scan'>Scan</option>
+              </Select>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
         head={
           <>
             <AdminDataTableHeadCell>Requested name</AdminDataTableHeadCell>
@@ -92,6 +111,9 @@ export function SuggestionsTable({
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
               Suggested name
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Source
             </AdminDataTableHeadCell>
           </>
         }
@@ -111,6 +133,9 @@ export function SuggestionsTable({
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {item.suggested_name || '—'}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {item.source || '—'}
             </AdminDataTableCell>
           </>
         )}

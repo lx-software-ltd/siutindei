@@ -841,6 +841,7 @@ export interface paths {
                     enrichment_status?: "none" | "queued" | "running" | "done" | "failed";
                     import_job_id?: string;
                     q?: string;
+                    source?: "import" | "scan";
                     cursor?: string;
                     limit?: number;
                 };
@@ -886,7 +887,10 @@ export interface paths {
         /** Category suggestion counts and month cost */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description When set, scan_candidate_total counts only this organization's activities. */
+                    org_id?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -1172,6 +1176,274 @@ export interface paths {
                     content?: never;
                 };
                 /** @description Suggestion not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/category-suggestions/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List recent category-check runs */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Runs, newest first */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["CategoryScanRun"][];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Scan activities in pending-review organizations
+         * @description Admin group only. Selects activities whose organization
+         *     `review_status` is `pending_review`, skipping ones confirmed,
+         *     applied, or auto-applied in the last 30 days unless `rescan`
+         *     is true. Returns 202 with the run. An empty selection is a
+         *     finished run with zero batches. 409 when a run is already
+         *     queued or running.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CategoryScanRequest"];
+                };
+            };
+            responses: {
+                /** @description Run created */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CategoryScanRun"];
+                    };
+                };
+                /** @description A category check is already running */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description The run could not be queued */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/category-suggestions/scan/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Read one category-check run */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Run */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CategoryScanRun"];
+                    };
+                };
+                /** @description Run not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/category-suggestions/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List category-check reviews */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "confirmed" | "pending" | "auto_applied" | "applied" | "dismissed" | "reverted";
+                    verdict?: "confirm" | "reassign" | "propose";
+                    org_id?: string;
+                    scan_run_id?: string;
+                    q?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Review page */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ActivityCategoryReviewListResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/category-suggestions/reviews/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Read one category-check review */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Review */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ActivityCategoryReview"];
+                    };
+                };
+                /** @description Review not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Apply, dismiss, or revert a category-check review
+         * @description Apply assigns `category_id` when the body or the review has one,
+         *     and confirms a correct current category when the verdict is
+         *     confirm. Dismiss leaves the category unchanged. Revert restores
+         *     `previous_category_id` for an applied or auto-applied review.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ActivityCategoryReviewDecision"];
+                };
+            };
+            responses: {
+                /** @description Updated review */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ActivityCategoryReview"];
+                    };
+                };
+                /** @description Invalid decision */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Review not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -6066,6 +6338,13 @@ export interface components {
             pending_activity_total: number;
             /** @description Activities still on Pending categorisation whose suggestion is no longer pending, usually a reject without a map target. */
             stranded_activity_total: number;
+            review_pending_total?: number;
+            auto_applied_total?: number;
+            /** @description Activities a new scan would check. Optional query org_id limits the count to one organization. The count is not capped. */
+            scan_candidate_total?: number;
+            /** @description Maximum activities one run will enqueue. */
+            scan_limit?: number;
+            active_scan_run?: components["schemas"]["CategoryScanRun"] | null;
             /** @description OpenRouter cost recorded this month. Each enrichment stores its own cost, so earlier months are not included. */
             month_cost_usd: number;
         };
@@ -6077,6 +6356,10 @@ export interface components {
             fallback_models: string[];
             max_evidence_items: number;
             deny_data_collection: boolean;
+            /** @description Null disables automatic reassignment. Default 0.9. */
+            auto_assign_threshold?: number | null;
+            /** @description Category-check spend this month cannot start another run once it reaches this amount. Default 25. */
+            monthly_cost_limit_usd?: number;
             updated_by?: string | null;
             /** Format: date-time */
             updated_at?: string | null;
@@ -6088,6 +6371,88 @@ export interface components {
             fallback_models?: string[];
             max_evidence_items?: number;
             deny_data_collection?: boolean;
+            auto_assign_threshold?: number | null;
+            monthly_cost_limit_usd?: number;
+        };
+        CategoryScanRequest: {
+            /** Format: uuid */
+            org_id?: string | null;
+            /** @default 500 */
+            limit: number;
+            /** @default 10 */
+            batch_size: number;
+            /** @default false */
+            rescan: boolean;
+        };
+        CategoryScanRun: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "queued" | "running" | "done" | "failed";
+            requested_by?: string | null;
+            /** Format: uuid */
+            org_id?: string | null;
+            batch_size?: number;
+            total_activities: number;
+            batches_total: number;
+            batches_done: number;
+            confirmed?: number;
+            auto_applied?: number;
+            reassign_pending?: number;
+            proposed?: number;
+            skipped?: number;
+            failed?: number;
+            cost_usd?: number;
+            error?: string | null;
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+        };
+        ActivityCategoryReview: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            scan_run_id: string;
+            /** Format: uuid */
+            activity_id: string;
+            activity_name?: string;
+            /** Format: uuid */
+            org_id: string;
+            org_name?: string;
+            /** Format: uuid */
+            current_category_id?: string | null;
+            current_category_name?: string | null;
+            /** @enum {string} */
+            verdict: "confirm" | "reassign" | "propose";
+            /** Format: uuid */
+            proposed_category_id?: string | null;
+            proposed_category_name?: string | null;
+            /** Format: uuid */
+            suggestion_id?: string | null;
+            confidence?: number | null;
+            rationale?: string | null;
+            /** @enum {string} */
+            status: "confirmed" | "pending" | "auto_applied" | "applied" | "dismissed" | "reverted";
+            /** Format: uuid */
+            previous_category_id?: string | null;
+            decided_by?: string | null;
+            /** Format: date-time */
+            decided_at?: string | null;
+            /** Format: date-time */
+            created_at?: string | null;
+        };
+        ActivityCategoryReviewListResponse: {
+            items: components["schemas"]["ActivityCategoryReview"][];
+            next_cursor?: string | null;
+        };
+        ActivityCategoryReviewDecision: {
+            /** @enum {string} */
+            action: "apply" | "dismiss" | "revert";
+            /** Format: uuid */
+            category_id?: string | null;
         };
         CategorySuggestionDecision: {
             /** @enum {string} */

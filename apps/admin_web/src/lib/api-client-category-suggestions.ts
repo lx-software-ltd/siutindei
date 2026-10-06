@@ -53,6 +53,11 @@ export interface CategorySuggestionSummary {
   pending_activity_total: number;
   stranded_activity_total: number;
   month_cost_usd: number;
+  review_pending_total?: number;
+  auto_applied_total?: number;
+  scan_candidate_total?: number;
+  scan_limit?: number;
+  active_scan_run?: CategoryScanRun | null;
 }
 
 export interface CategorySuggestionSettings {
@@ -63,6 +68,8 @@ export interface CategorySuggestionSettings {
   fallback_models: string[];
   max_evidence_items: number;
   deny_data_collection: boolean;
+  auto_assign_threshold?: number | null;
+  monthly_cost_limit_usd?: number;
   updated_by?: string | null;
   updated_at?: string | null;
 }
@@ -71,6 +78,61 @@ export interface CategorySuggestionFilters {
   status?: string;
   enrichment_status?: string;
   import_job_id?: string;
+  source?: string;
+  q?: string;
+  cursor?: string;
+  limit?: number;
+}
+
+export interface CategoryScanRun {
+  id: string;
+  status: 'queued' | 'running' | 'done' | 'failed';
+  requested_by?: string | null;
+  org_id?: string | null;
+  batch_size: number;
+  total_activities: number;
+  batches_total: number;
+  batches_done: number;
+  confirmed: number;
+  auto_applied: number;
+  reassign_pending: number;
+  proposed: number;
+  skipped: number;
+  failed: number;
+  cost_usd: number;
+  error?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  finished_at?: string | null;
+}
+
+export interface ActivityCategoryReview {
+  id: string;
+  scan_run_id: string;
+  activity_id: string;
+  activity_name?: string;
+  org_id: string;
+  org_name?: string;
+  current_category_id?: string | null;
+  current_category_name?: string | null;
+  verdict: 'confirm' | 'reassign' | 'propose';
+  proposed_category_id?: string | null;
+  proposed_category_name?: string | null;
+  suggestion_id?: string | null;
+  confidence?: number | null;
+  rationale?: string | null;
+  status: string;
+  previous_category_id?: string | null;
+  decided_by?: string | null;
+  decided_at?: string | null;
+  created_at?: string | null;
+}
+
+export interface CategoryReviewFilters {
+  status?: string;
+  verdict?: string;
+  org_id?: string;
+  scan_run_id?: string;
   q?: string;
   cursor?: string;
   limit?: number;
@@ -93,8 +155,12 @@ export function listCategorySuggestions(filters: CategorySuggestionFilters = {})
   );
 }
 
-export function getCategorySuggestionSummary() {
-  return request<CategorySuggestionSummary>(suggestionUrl('/summary'));
+export function getCategorySuggestionSummary(orgId?: string) {
+  const url = new URL(suggestionUrl('/summary'));
+  if (orgId) {
+    url.searchParams.set('org_id', orgId);
+  }
+  return request<CategorySuggestionSummary>(url.toString());
 }
 
 export function getCategorySuggestion(id: string) {
@@ -129,6 +195,52 @@ export function updateCategorySuggestionSettings(
 ) {
   return request<CategorySuggestionSettings>(suggestionUrl('/settings'), {
     method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+export function startCategoryScan(body: {
+  org_id?: string;
+  limit?: number;
+  batch_size?: number;
+  rescan?: boolean;
+} = {}) {
+  return request<CategoryScanRun>(suggestionUrl('/scan'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+export function listCategoryScanRuns() {
+  return request<{ items: CategoryScanRun[] }>(suggestionUrl('/scan'));
+}
+
+export function getCategoryScanRun(id: string) {
+  return request<CategoryScanRun>(suggestionUrl(`/scan/${id}`));
+}
+
+export function listCategoryReviews(filters: CategoryReviewFilters = {}) {
+  const url = new URL(suggestionUrl('/reviews'));
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') {
+      return;
+    }
+    url.searchParams.set(key, String(value));
+  });
+  return request<{ items: ActivityCategoryReview[]; next_cursor?: string | null }>(
+    url.toString()
+  );
+}
+
+export function getCategoryReview(id: string) {
+  return request<ActivityCategoryReview>(suggestionUrl(`/reviews/${id}`));
+}
+
+export function decideCategoryReview(id: string, body: Record<string, unknown>) {
+  return request<ActivityCategoryReview>(suggestionUrl(`/reviews/${id}`), {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });

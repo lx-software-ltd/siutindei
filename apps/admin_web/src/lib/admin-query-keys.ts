@@ -9,6 +9,7 @@ export const adminQueryKeys = {
   auditLogs: () => ['admin', 'audit-logs'] as const,
   apiKeys: () => ['admin', 'api-keys'] as const,
   categorySuggestions: () => ['admin', 'category-suggestions'] as const,
+  categoryReviews: () => ['admin', 'category-reviews'] as const,
   orgReview: () => ['admin', 'org-review'] as const,
   importJobs: () => ['admin', 'import-jobs'] as const,
 };

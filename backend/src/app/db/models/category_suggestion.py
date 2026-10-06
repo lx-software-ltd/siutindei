@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 from uuid import UUID as UUIDType
 from uuid import uuid4
@@ -70,6 +71,18 @@ class CategorySuggestionSettings(Base):
         default=True,
         server_default=text("true"),
     )
+    auto_assign_threshold: Mapped[Decimal | None] = mapped_column(
+        Numeric(4, 3),
+        nullable=True,
+        default=Decimal("0.900"),
+        server_default=text("0.900"),
+    )
+    monthly_cost_limit_usd: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2),
+        nullable=False,
+        default=Decimal("25"),
+        server_default=text("25"),
+    )
     updated_by: Mapped[str | None] = mapped_column(Text(), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
@@ -81,6 +94,15 @@ class CategorySuggestionSettings(Base):
         CheckConstraint(
             "max_evidence_items BETWEEN 5 AND 50",
             name="cat_sug_settings_evidence_check",
+        ),
+        CheckConstraint(
+            "auto_assign_threshold IS NULL OR "
+            "(auto_assign_threshold >= 0.5 AND auto_assign_threshold <= 1)",
+            name="cat_sug_settings_threshold_check",
+        ),
+        CheckConstraint(
+            "monthly_cost_limit_usd > 0 AND monthly_cost_limit_usd <= 1000",
+            name="cat_sug_settings_cost_check",
         ),
     )
 

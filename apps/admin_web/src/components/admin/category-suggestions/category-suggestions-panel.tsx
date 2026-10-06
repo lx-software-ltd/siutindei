@@ -15,14 +15,15 @@ import { CategorySuggestionSettingsCard } from './settings-card';
 import { SuggestionsTable } from './suggestions-table';
 
 export function CategorySuggestionsPanel() {
-  const list = usePaginatedList<CategorySuggestion, Record<string, never>>({
+  const list = usePaginatedList<CategorySuggestion, { source: string }>({
     queryKey: adminQueryKeys.categorySuggestions(),
-    defaultFilters: {},
+    defaultFilters: { source: '' },
     errorPrefix: 'Could not load suggestions',
-    fetcher: async ({ cursor, limit }) => {
+    fetcher: async ({ cursor, limit, source }) => {
       const page = await listCategorySuggestions({
         cursor: cursor ?? undefined,
         limit,
+        source: source || undefined,
       });
       return {
         items: page.items,
@@ -91,6 +92,8 @@ export function CategorySuggestionsPanel() {
         isLoadingMore={list.isLoadingMore}
         error={list.error}
         summary={summaryText}
+        source={list.filters.source}
+        onSourceChange={(source) => list.setFilter('source', source)}
         onReload={reload}
         hasMore={list.hasMore}
         onLoadMore={() => {

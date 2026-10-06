@@ -58,8 +58,17 @@ def apply_decision(
         suggestion.merged_into_category_id = (
             UUID(str(target.id)) if target is not None else None
         )
-    if target is not None:
-        _reassign_pending(session, suggestion.id, UUID(str(target.id)))
+    target_id = UUID(str(target.id)) if target is not None else None
+    from app.services.category_suggestions.reviews import apply_suggestion_to_reviews
+
+    apply_suggestion_to_reviews(
+        session,
+        suggestion,
+        target_id=target_id,
+        decided_by=decided_by,
+    )
+    if target_id is not None:
+        _reassign_pending(session, suggestion.id, target_id)
     suggestion.decided_by = decided_by
     suggestion.decided_at = datetime.now(timezone.utc)
     suggestion.decision_notes = _notes(body.get("notes", body.get("decision_notes")))

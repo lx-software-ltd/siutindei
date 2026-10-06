@@ -123,6 +123,22 @@ def note_suggestion(suggestion_id: UUID, *, enqueue: bool) -> None:
         _batch.enqueue.add(str(suggestion_id))
 
 
+def matching_category_id(session: Session, name: str) -> UUID | None:
+    """Return one existing category for this name, or None when it is new."""
+    exact = _exact_ids(session, name)
+    if len(exact) == 1:
+        return exact[0]
+    if len(exact) > 1:
+        return None
+    alias = _alias_category_id(session, name)
+    if alias is not None:
+        return alias
+    normalized = _normalized_ids(session, name)
+    if len(normalized) == 1:
+        return next(iter(normalized))
+    return None
+
+
 def resolve_category_name(session: Session, category_name: str) -> CategoryResolution:
     """Map a category name to an id, or ask the caller to capture it."""
     if not isinstance(category_name, str) or not category_name.strip():

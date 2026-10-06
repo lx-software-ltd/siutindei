@@ -104,14 +104,20 @@ The processor checks if a ticket with the same `ticket_id` already exists before
 Live imports enqueue one message per new or reopened suggestion, and
 again when a suggestion's activity count crosses 5 or 25. Dry runs do
 not enqueue. The queue `category-suggestion-enrich` uses the shared SQS
-KMS key, visibility 180 seconds, and `maxReceiveCount` 3 into a 14-day
-DLQ with a CloudWatch alarm. `SiutindeiAdminFunction` consumes the
+KMS key, visibility 180 seconds, `maxReceiveCount` 3 into a 14-day
+DLQ with a CloudWatch alarm, and `maxConcurrency` 2 on the admin
+function event source. `SiutindeiAdminFunction` consumes the
 queue and makes one OpenRouter attempt per receive. An OpenRouter
 failure is recorded and the message is returned to the queue. On the third receive the suggestion is marked
 `failed` and the message is still not deleted, so SQS moves it to the
 DLQ and the alarm can fire. Poison JSON is acknowledged. Other
-exceptions use partial batch failures. Message body:
-`{"suggestion_id": "<uuid>", "force": false}`.
+exceptions use partial batch failures. Enrichment message body:
+`{"suggestion_id": "<uuid>", "force": false}`. Category-check batches
+use `{"scan_run_id": "<uuid>", "activity_ids": ["<uuid>"]}` on the
+same queue. The worker stores the SQS message id on the run so a
+redelivery does not apply the batch twice. An OpenRouter failure is
+retried; the third receive records the batch as failed and the
+message moves to the DLQ.
 
 ## Listing-events rollup
 
