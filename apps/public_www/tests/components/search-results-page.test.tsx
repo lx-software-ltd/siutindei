@@ -232,7 +232,7 @@ describe('SearchResultsPage', () => {
   it('pushes search after a successful fetch when consent is granted', async () => {
     window.localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, 'granted');
     currentSearchParams.value = new URLSearchParams(
-      'q=pottery&region=kowloon&age=3-6&types=workshop',
+      'q=pottery&region=kowloon&age=3-6&types=early-years',
     );
     vi.mocked(fetchActivitySearch).mockResolvedValue({
       items: [buildListing()],
@@ -246,9 +246,20 @@ describe('SearchResultsPage', () => {
         search_term: 'pottery',
         area_id: 'a1111111-1111-1111-1111-111111111102',
         age: 4,
-        category_id: 'c1111111-1111-1111-1111-111111111101',
+        category_id: 'c1111111-1111-1111-1111-111111111201',
       });
     });
+  });
+
+  it('explains results that still use the previous categories', async () => {
+    vi.mocked(fetchActivitySearch).mockResolvedValue({
+      items: [buildListing()],
+      nextCursor: null,
+      categoryMatch: 'legacy_fallback',
+    });
+    const copy = renderPage();
+
+    expect(await screen.findByText(copy.unsortedCategoryLabel)).toBeTruthy();
   });
 
   it('does not push search when the fetch fails', async () => {

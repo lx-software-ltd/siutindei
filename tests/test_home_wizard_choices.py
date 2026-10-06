@@ -55,3 +55,25 @@ def test_new_wizard_category_bumps_the_version() -> None:
     assert built["version"] == existing["version"] + 1
     assert built["activityTypes"][0]["labels"]["zh-HK"] == "陶藝"
     assert built["ageGroups"] == existing["ageGroups"]
+
+
+def test_category_export_accepts_an_items_object() -> None:
+    rows = _builder().rows_from_category_export(
+        {
+            "items": [
+                {
+                    "id": "c1111111-1111-1111-1111-111111111201",
+                    "name": "Early years and schools",
+                    "name_translations": {"zh-HK": "幼兒及學校"},
+                    "show_in_wizard": True,
+                },
+                {"name": "not a category"},
+            ]
+        }
+    )
+    assert len(rows) == 2
+    built = _builder().build_home_wizard_choices(
+        rows,
+        {"version": 2, "activityTypes": [], "ageGroups": [], "regions": []},
+    )
+    assert built["activityTypes"][0]["id"] == "early-years-and-schools"

@@ -491,7 +491,20 @@ an existing category when `maps_to_existing.confidence` is at or above
 waits for an admin. Rejected labels stay rejected until a new import
 reopens them. Home wizard activity types are the categories flagged
 `show_in_wizard`. `generate_home_wizard_choices.py --write` reads
-those rows and regenerates the static choices file.
+those rows and regenerates the static choices file. `--from-json`
+does the same from an admin category export.
+
+The home wizard groups are Early years and schools, Learning and
+tutoring, Arts and performance, Sports and movement, Play and
+outdoors, Culture, and Community and support. Activities are assigned
+to the leaves under those groups. Until a group has an activity on a
+leaf, public search for that group still returns activities on the
+legacy roots and marks the response `category_match: legacy_fallback`.
+A verify run with `ignore_current_category` rechecks activities
+without trusting the current category, a template description, or a
+description whose source was never recorded, and it always includes
+activities checked in the last 30 days. The monthly category-check
+budget defaults to 50 USD.
 Design notes:
 `docs/architecture/category-suggestions.md`. Endpoint shapes:
 `docs/api/admin.yaml` under `/v1/admin/category-suggestions`.

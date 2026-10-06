@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
@@ -8,17 +8,21 @@ import { buildApiUrl, request } from '../../../lib/api-client-core';
 import {
   getCategorySuggestionSettings,
   getCategorySuggestionSummary,
+  decideCategoryReviewsBulk,
   listCategoryReviews,
   startCategoryScan,
   type ActivityCategoryReview,
+  type CategoryReviewBulkResult,
   type CategorySuggestionSummary,
 } from '../../../lib/api-client-category-suggestions';
 import { StatusBanner } from '../../status-banner';
 import { AdminCreateButton } from '../../ui/admin-create-button';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
+import { Button } from '../../ui/button';
 import { ConfirmDialog } from '../../ui/confirm-dialog';
 import { Input } from '../../ui/input';
 import { Select } from '../../ui/select';
+import { decideMatchingPending } from './category-checks-bulk';
 import { CategoryChecksTable } from './category-checks-table';
 
 interface ReviewFilters {
@@ -26,6 +30,12 @@ interface ReviewFilters {
   verdict: string;
   q: string;
   org_id: string;
+  proposed_category_id: string;
+}
+
+interface CategoryOption {
+  id: string;
+  name: string;
 }
 
 interface PendingOrganization {
@@ -39,6 +49,7 @@ const DEFAULT_FILTERS: ReviewFilters = {
   verdict: '',
   q: '',
   org_id: '',
+  proposed_category_id: '',
 };
 
 export function CategoryChecksPanel() {
@@ -50,6 +61,7 @@ export function CategoryChecksPanel() {
       verdict,
       q,
       org_id,
+      proposed_category_id,
     }: ReviewFilters & { cursor: string | null; limit: number }) => {
       const page = await listCategoryReviews({
         cursor: cursor ?? undefined,
@@ -58,6 +70,7 @@ export function CategoryChecksPanel() {
         verdict: verdict || undefined,
         q: q || undefined,
         org_id: org_id || undefined,
+        proposed_category_id: proposed_category_id || undefined,
       });
       return { items: page.items, nextCursor: page.next_cursor || null };
     },
@@ -73,11 +86,20 @@ export function CategoryChecksPanel() {
   const [summary, setSummary] = useState<CategorySuggestionSummary | null>(null);
   const [organizations, setOrganizations] = useState<PendingOrganization[]>([]);
   const [threshold, setThreshold] = useState<number | null>(0.9);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [confirmMode, setConfirmMode] = useState<'discover' | 'verify' | null>(
     null
   );
+  const [ignoreCurrent, setIgnoreCurrent] = useState(false);
+  const [bulkAction, setBulkAction] = useState<'apply' | 'dismiss' | null>(null);
+  const [bulkPreview, setBulkPreview] = useState<CategoryReviewBulkResult | null>(
+    null
+  );
+  const [bulkProgress, setBulkProgress] = useState('');
   const [isStarting, setIsStarting] = useState(false);
+  const [isBulkRunning, setIsBulkRunning] = useState(false);
   const [error, setError] = useState('');
+  const bulkAbort = useRef<AbortController | null>(null);
 
   const { refetch } = list;
   const selectedOrgId = list.filters.org_id;
@@ -112,6 +134,17 @@ export function CategoryChecksPanel() {
         if (!cancelled) {
           setOrganizations(
             page.items.filter((item) => item.review_status === 'pending_review')
+          );
+        }
+      })
+      .catch(() => undefined);
+    const categoriesUrl = new URL(buildApiUrl('v1/admin/activity-categories'));
+    categoriesUrl.searchParams.set('limit', '200');
+    void request<{ items: CategoryOption[] }>(categoriesUrl.toString())
+      .then((page) => {
+        if (!cancelled) {
+          setCategories(
+            [...page.items].sort((left, right) => left.name.localeCompare(right.name))
           );
         }
       })
@@ -167,6 +200,9 @@ export function CategoryChecksPanel() {
       await startCategoryScan({
         org_id: selectedOrgId || undefined,
         mode,
+        rescan: mode === 'verify' && ignoreCurrent ? true : undefined,
+        ignore_current_category:
+          mode === 'verify' && ignoreCurrent ? true : undefined,
       });
       setConfirmMode(null);
       reload();
@@ -174,6 +210,96 @@ export function CategoryChecksPanel() {
       setError(err instanceof Error ? err.message : 'Scan failed.');
     } finally {
       setIsStarting(false);
+    }
+  }
+
+  const bulkFilters = {
+    verdict: list.filters.verdict || undefined,
+    q: list.filters.q || undefined,
+    org_id: list.filters.org_id || undefined,
+    proposed_category_id: list.filters.proposed_category_id || undefined,
+  };
+  const filtersAreBlank =
+    !list.filters.verdict &&
+    !list.filters.q &&
+    !list.filters.org_id &&
+    !list.filters.proposed_category_id;
+
+  useEffect(() => {
+    if (bulkAction === null) {
+      setBulkPreview(null);
+      setBulkProgress('');
+      return;
+    }
+    const controller = new AbortController();
+    let cancelled = false;
+    decideCategoryReviewsBulk(
+      {
+        action: bulkAction,
+        dry_run: true,
+        verdict: list.filters.verdict || undefined,
+        q: list.filters.q || undefined,
+        org_id: list.filters.org_id || undefined,
+        proposed_category_id: list.filters.proposed_category_id || undefined,
+      },
+      controller.signal
+    )
+      .then((result) => {
+        if (!cancelled) {
+          setBulkPreview(result);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBulkPreview(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [
+    bulkAction,
+    list.filters.org_id,
+    list.filters.proposed_category_id,
+    list.filters.q,
+    list.filters.verdict,
+  ]);
+
+  async function runBulk(action: 'apply' | 'dismiss') {
+    const controller = new AbortController();
+    bulkAbort.current = controller;
+    setIsBulkRunning(true);
+    setError('');
+    setBulkProgress('');
+    try {
+      const result = await decideMatchingPending(bulkFilters, action, {
+        signal: controller.signal,
+        onProgress: (progress) => {
+          setBulkProgress(
+            `${progress.decided} of ${progress.matched} updated. ` +
+              `${progress.failed} failed.`
+          );
+        },
+      });
+      setBulkAction(null);
+      const verb = action === 'apply' ? 'applied' : 'dismissed';
+      const details = result.failures.map((item) => item.message).join(' ');
+      if (result.cancelled) {
+        setError(`Stopped after ${result.decided} ${verb}.`);
+      } else if (result.truncated) {
+        setError(
+          `Stopped after ${result.decided} ${verb}. More matching reviews remain.`
+        );
+      } else if (result.failed > 0) {
+        setError(`${result.decided} ${verb}, ${result.failed} failed. ${details}`);
+      }
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bulk update failed.');
+    } finally {
+      bulkAbort.current = null;
+      setIsBulkRunning(false);
     }
   }
 
@@ -203,6 +329,28 @@ export function CategoryChecksPanel() {
             }
             trailing={
               <div className='flex flex-wrap gap-2'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  disabled={isRunning || isStarting || isBulkRunning}
+                  loading={isBulkRunning && bulkAction === 'apply'}
+                  loadingLabel='Applying…'
+                  onClick={() => setBulkAction('apply')}
+                >
+                  Apply matching
+                </Button>
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  disabled={isRunning || isStarting || isBulkRunning}
+                  loading={isBulkRunning && bulkAction === 'dismiss'}
+                  loadingLabel='Dismissing…'
+                  onClick={() => setBulkAction('dismiss')}
+                >
+                  Dismiss matching
+                </Button>
                 <AdminCreateButton
                   label='Discover categories'
                   disabled={
@@ -261,6 +409,25 @@ export function CategoryChecksPanel() {
                 <option value='propose'>Propose</option>
               </Select>
             </AdminFilterField>
+            <AdminFilterField
+              label='Proposed category'
+              htmlFor='check-proposed-filter'
+            >
+              <Select
+                id='check-proposed-filter'
+                value={list.filters.proposed_category_id}
+                onChange={(event) =>
+                  list.setFilter('proposed_category_id', event.target.value)
+                }
+              >
+                <option value=''>Any</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </Select>
+            </AdminFilterField>
             <AdminFilterField label='Search' htmlFor='check-search'>
               <Input
                 id='check-search'
@@ -301,7 +468,67 @@ export function CategoryChecksPanel() {
           }
         }}
         onCancel={() => setConfirmMode(null)}
-      />
+      >
+        {confirmMode === 'verify' ? (
+          <label className='mt-3 flex items-start gap-2 text-sm text-slate-700'>
+            <input
+              id='check-ignore-current'
+              type='checkbox'
+              className='mt-1'
+              checked={ignoreCurrent}
+              onChange={(event) => setIgnoreCurrent(event.target.checked)}
+            />
+            <span>
+              Ignore the current category. Template descriptions are omitted
+              and activities checked in the last 30 days are included.
+            </span>
+          </label>
+        ) : null}
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={bulkAction !== null}
+        title={
+          bulkAction === 'dismiss'
+            ? 'Dismiss matching reviews'
+            : 'Apply matching reviews'
+        }
+        message={
+          bulkAction === 'dismiss'
+            ? 'Dismiss every pending review that matches the current filters.'
+            : 'Apply every pending reassignment that matches the current filters.'
+        }
+        confirmLabel={bulkAction === 'dismiss' ? 'Dismiss pending' : 'Apply pending'}
+        confirmLoading={isBulkRunning}
+        confirmLoadingLabel={
+          bulkAction === 'dismiss' ? 'Dismissing…' : 'Applying…'
+        }
+        onConfirm={() => {
+          if (bulkAction) {
+            void runBulk(bulkAction);
+          }
+        }}
+        onCancel={() => {
+          if (isBulkRunning) {
+            bulkAbort.current?.abort();
+            return;
+          }
+          setBulkAction(null);
+        }}
+      >
+        <p>
+          {filtersAreBlank
+            ? 'No filters are set, so this includes every pending review.'
+            : 'Only reviews matching the current filters are included.'}
+        </p>
+        <p className='mt-2'>
+          {bulkPreview
+            ? `${bulkPreview.applicable} will be ${
+                bulkAction === 'dismiss' ? 'dismissed' : 'applied'
+              }. ${bulkPreview.skipped} will be skipped.`
+            : 'Counting matching reviews.'}
+        </p>
+        {bulkProgress ? <p className='mt-2'>{bulkProgress}</p> : null}
+      </ConfirmDialog>
     </div>
   );
 }

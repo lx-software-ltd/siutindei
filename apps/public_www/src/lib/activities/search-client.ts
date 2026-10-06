@@ -182,6 +182,7 @@ export async function fetchActivitySearch(
   const payload = (await response.json()) as {
     items?: unknown[];
     next_cursor?: string | null;
+    category_match?: 'exact' | 'legacy_fallback';
   };
 
   const items = (payload.items ?? []).map((item) =>
@@ -191,6 +192,7 @@ export async function fetchActivitySearch(
   return {
     items,
     nextCursor: payload.next_cursor ?? null,
+    categoryMatch: payload.category_match ?? 'exact',
   };
 }
 

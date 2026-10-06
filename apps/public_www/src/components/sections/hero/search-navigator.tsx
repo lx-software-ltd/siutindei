@@ -191,7 +191,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
         {step === 'activity' ? (
           <fieldset>
             <legend className="sr-only">{copy.steps.activity.label}</legend>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               {homeWizardChoices.activityTypes.map((type) => (
                 <ChoiceTile
                   key={type.id}

@@ -107,3 +107,4 @@ class ActivitySearchResponseSchema(BaseModel):
 
     items: List[ActivitySearchResultSchema]
     next_cursor: Optional[str] = None
+    category_match: str = "exact"

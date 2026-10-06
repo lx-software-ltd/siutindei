@@ -133,16 +133,24 @@ Columns:
 - `display_order` (integer, default 0)
 - `show_in_wizard` (boolean, default false) — home wizard activity type.
   Pending categorisation cannot set this. Delete is refused while it
-  is true. The four wizard roots are set true by migration.
-  `scripts/codegen/generate_home_wizard_choices.py --write` copies
-  flagged rows into the static wizard JSON.
+  is true. Migration `0040_recheck_taxonomy` flags seven groups
+  (early years, learning, arts, sports, play, culture, community) and
+  clears the flag on Workshop, Class, Outdoor activity, and Indoor fun.
+  Those four roots, plus Sport, stay in the table until activities
+  move onto the new leaves. `scripts/codegen/generate_home_wizard_choices.py --write`
+  copies flagged rows into the static wizard JSON. `--from-json` reads
+  an admin category export when the database is not reachable.
 
 Constraints:
 - UNIQUE(`parent_id`, `name`)
+- UNIQUE(`name`) WHERE `parent_id` IS NULL
+  (`uq_activity_category_root_name`). Postgres treats NULL as distinct
+  in the pair above, so this partial index stops two roots sharing a name.
 
 Indexes:
 - `activity_categories_parent_idx` on `parent_id`
 - `activity_categories_name_idx` on `name`
+- `uq_activity_category_root_name` on `name` where `parent_id` is null
 
 The system row Pending categorisation
 (`c1111111-1111-1111-1111-111111111199`, Chinese name 待分類,
@@ -165,7 +173,7 @@ Columns:
 - `deny_data_collection` (boolean, default true)
 - `auto_assign_threshold` (numeric(4,3), nullable, default 0.900;
   null turns auto-assign off; check 0.5–1)
-- `monthly_cost_limit_usd` (numeric(12,2), default 25, check greater
+- `monthly_cost_limit_usd` (numeric(12,2), default 50, check greater
   than 0 and at most 1000). A new category check is refused once this
   month's category-check spend reaches the limit.
 - `updated_by` (text, nullable)
@@ -203,6 +211,8 @@ pending-review organizations.
 Columns: `id`, `status` (`queued`, `running`, `done`, `failed`),
 `requested_by`, optional `org_id` (set null when the organization is
 removed), `mode` (`verify` or `discover`, default `verify`),
+`ignore_current_category` (boolean, default false) for a verify run
+that must not trust the current assignment,
 `labels_total` for a discover run, batch and result counters,
 `cost_usd`, `error`,
 `processed_message_ids` (JSON array of SQS message ids), and

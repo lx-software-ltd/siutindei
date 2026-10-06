@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate staging activity search fixture (~3000 HK, English-only rows)."""
+"""Generate staging activity search fixture (at least 3000 HK rows)."""
 
 from __future__ import annotations
 
@@ -22,10 +22,13 @@ NEW_TERRITORIES_REGION = "a1111111-1111-1111-1111-111111111103"
 ISLANDS_REGION = "a1111111-1111-1111-1111-111111111104"
 
 CATEGORIES: list[tuple[str, str]] = [
-    ("c1111111-1111-1111-1111-111111111101", "Workshop"),
-    ("c1111111-1111-1111-1111-111111111102", "Class"),
-    ("c1111111-1111-1111-1111-111111111103", "Outdoor activity"),
-    ("c1111111-1111-1111-1111-111111111104", "Indoor fun"),
+    ("c1111111-1111-1111-1111-111111111201", "Early years and schools"),
+    ("c1111111-1111-1111-1111-111111111202", "Learning and tutoring"),
+    ("c1111111-1111-1111-1111-111111111203", "Arts and performance"),
+    ("c1111111-1111-1111-1111-111111111204", "Sports and movement"),
+    ("c1111111-1111-1111-1111-111111111205", "Play and outdoors"),
+    ("c1111111-1111-1111-1111-111111111206", "Culture"),
+    ("c1111111-1111-1111-1111-111111111207", "Community and support"),
 ]
 
 AGE_GROUPS: list[tuple[str, int, int, int]] = [
@@ -63,9 +66,10 @@ DISTRICTS: list[tuple[str, str]] = [
     ("Yuen Long", NEW_TERRITORIES_REGION),
 ]
 
+# Two weekly slots keep every category, age, district, and price in the
+# fixture without doubling the file the staging site downloads.
 SCHEDULE_VARIANTS: list[tuple[int, int, int]] = [
     (1, 600, 660),
-    (3, 840, 900),
     (6, 540, 600),
 ]
 
@@ -104,7 +108,7 @@ def _build_area_descendants() -> dict[str, list[str]]:
 
 
 def _build_category_descendants() -> dict[str, list[str]]:
-    """Flat wizard categories match themselves until a tree is generated."""
+    """Wizard groups are stored directly on staging rows."""
     return {category_id: [category_id] for category_id, _label in CATEGORIES}
 
 
@@ -266,7 +270,7 @@ def main() -> None:
     payload = generate()
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(
-        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n",
         encoding="utf-8",
     )
     print(f"Wrote {payload['meta']['item_count']} items to {OUTPUT}")

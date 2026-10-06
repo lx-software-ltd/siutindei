@@ -65,6 +65,7 @@ export interface ActivityListing {
 export interface ActivitySearchResponse {
   readonly items: readonly ActivityListing[];
   readonly nextCursor: string | null;
+  readonly categoryMatch?: 'exact' | 'legacy_fallback';
 }
 
 export interface ActivitySearchParams {

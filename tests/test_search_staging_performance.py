@@ -30,7 +30,7 @@ def test_staging_search_returns_ten_listings_within_budget() -> None:
     response = staging_search_store.fetch_staging_search_response(
         ActivitySearchFilters(
             age=4,
-            category_ids=[UUID("c1111111-1111-1111-1111-111111111102")],
+            category_ids=[UUID("c1111111-1111-1111-1111-111111111201")],
             limit=MIN_PUBLIC_LISTINGS,
         ),
     )

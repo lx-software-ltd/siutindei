@@ -8,6 +8,7 @@ import {
   getCategoryReview,
   type ActivityCategoryReview,
 } from '../../../lib/api-client-category-suggestions';
+import { canApplyReview } from './category-checks-bulk';
 import { DeleteIcon, EditIcon, ReviewIcon } from '../../icons/action-icons';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import {
@@ -113,19 +114,6 @@ export function CategoryChecksTable({
       />
       {expanded.expandedId && !openInList && !isLoading ? detail : null}
     </div>
-  );
-}
-
-const PENDING_CATEGORY_ID = 'c1111111-1111-1111-1111-111111111199';
-
-function canApplyReview(item: ActivityCategoryReview): boolean {
-  if (item.proposed_category_id) {
-    return true;
-  }
-  return (
-    item.verdict === 'confirm' &&
-    Boolean(item.current_category_id) &&
-    item.current_category_id !== PENDING_CATEGORY_ID
   );
 }
 

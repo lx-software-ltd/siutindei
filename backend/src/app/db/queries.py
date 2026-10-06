@@ -12,9 +12,12 @@ from uuid import UUID
 
 import sqlalchemy as sa
 from sqlalchemy import and_
+from sqlalchemy import func
 from sqlalchemy import or_
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 from sqlalchemy.sql import Select
+from sqlalchemy.sql.selectable import CompoundSelect
 
 from app.db.models import Activity
 from app.db.models import ActivityCategory
@@ -26,7 +29,11 @@ from app.db.models import Location
 from app.db.models import Organization
 from app.db.models import PricingType
 from app.db.models import ScheduleType
-from app.db.models.category_suggestion import PENDING_CATEGORY_ID
+from app.db.models.category_suggestion import (
+    LEGACY_CATEGORY_IDS,
+    PENDING_CATEGORY_ID,
+    WIZARD_GROUP_IDS,
+)
 
 
 @dataclass(frozen=True)
@@ -254,11 +261,57 @@ def _cursor_values(cursor: ActivitySearchCursor) -> list:
     ]
 
 
+def _wizard_group_filter(category_ids: Sequence[UUID]) -> bool:
+    """True when every requested id is one of the seven wizard groups."""
+    return bool(category_ids) and all(item in WIZARD_GROUP_IDS for item in category_ids)
+
+
+def category_match_mode(session: Session, category_ids: Sequence[UUID]) -> str:
+    """Return exact, or legacy_fallback while a wizard group is still empty.
+
+    An empty group would otherwise hide every activity that is still on
+    Workshop, Class, Outdoor activity, Indoor fun, or Sport.
+    """
+    if not _wizard_group_filter(category_ids):
+        return "exact"
+    tree = _category_tree(category_ids)
+    assigned = session.scalar(
+        select(func.count())
+        .select_from(Activity)
+        .where(Activity.category_id.in_(select(tree.c.id)))
+        .where(Activity.category_id.notin_(tuple(LEGACY_CATEGORY_IDS)))
+    )
+    return "legacy_fallback" if not assigned else "exact"
+
+
 def _category_descendant_ids_subquery(
     category_ids: Sequence[UUID],
-) -> Select[Any]:
-    """Return a subquery of category IDs including descendants."""
+) -> Select[Any] | CompoundSelect[Any]:
+    """Return category ids, including descendants.
 
+    A wizard-group search with no activities on that subtree also
+    includes the legacy roots. The union drops out once any activity
+    sits on the group or one of its leaves.
+    """
+    tree = _category_tree(category_ids)
+    descendants = select(tree.c.id)
+    if not _wizard_group_filter(category_ids):
+        return descendants
+    assigned = (
+        select(Activity.id)
+        .where(Activity.category_id.in_(select(tree.c.id)))
+        .where(Activity.category_id.notin_(tuple(LEGACY_CATEGORY_IDS)))
+        .exists()
+    )
+    legacy = select(ActivityCategory.id).where(
+        ActivityCategory.id.in_(tuple(LEGACY_CATEGORY_IDS)),
+        ~assigned,
+    )
+    return descendants.union(legacy)
+
+
+def _category_tree(category_ids: Sequence[UUID]) -> Any:
+    """Recursive category ids starting at the requested rows."""
     base = (
         select(ActivityCategory.id)
         .where(ActivityCategory.id.in_(tuple(category_ids)))
@@ -270,8 +323,7 @@ def _category_descendant_ids_subquery(
         categories.c.parent_id == base.c.id,
         categories.c.id != PENDING_CATEGORY_ID,
     )
-    tree = base.union_all(recursive)
-    return select(tree.c.id)
+    return base.union_all(recursive)
 
 
 def _area_descendant_ids_subquery(area_id: UUID) -> Select[Any]:

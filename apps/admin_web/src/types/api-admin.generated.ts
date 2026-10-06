@@ -1336,6 +1336,8 @@ export interface paths {
                     verdict?: "confirm" | "reassign" | "propose";
                     org_id?: string;
                     scan_run_id?: string;
+                    /** @description Limit reviews to one proposed category, for a bulk apply or dismiss of that leaf. */
+                    proposed_category_id?: string;
                     q?: string;
                     cursor?: string;
                     limit?: number;
@@ -1359,6 +1361,61 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/category-suggestions/reviews/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply or dismiss matching pending category-check reviews
+         * @description One page of pending reviews that match the filters. `dry_run`
+         *     counts the full match and writes nothing. Otherwise the server
+         *     decides up to 100 reviews and returns `next_cursor` when more
+         *     remain. Skipped rows still advance the cursor. Apply skips a
+         *     pending confirm of Pending categorisation and a proposal that
+         *     has no category yet.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CategoryReviewBulkRequest"];
+                };
+            };
+            responses: {
+                /** @description Page of bulk decisions */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CategoryReviewBulkResponse"];
+                    };
+                };
+                /** @description Invalid bulk request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -6391,7 +6448,7 @@ export interface components {
             deny_data_collection: boolean;
             /** @description Null disables automatic reassignment. Default 0.9. */
             auto_assign_threshold?: number | null;
-            /** @description Category-check spend this month cannot start another run once it reaches this amount. Default 25. */
+            /** @description Category-check spend this month cannot start another run once it reaches this amount. Default 50. */
             monthly_cost_limit_usd?: number;
             updated_by?: string | null;
             /** Format: date-time */
@@ -6417,6 +6474,11 @@ export interface components {
             /** @default false */
             rescan: boolean;
             /**
+             * @description Verify only. Omit the current category and untrusted descriptions, and offer only non-legacy leaves. A confirm verdict is counted as failed. A propose or reassign onto a legacy root or a parent group is counted as failed. Setting this flag forces rescan, so activities checked in the last 30 days are included. A missing description_source is treated like template. Discover rejects this flag.
+             * @default false
+             */
+            ignore_current_category: boolean;
+            /**
              * @description verify checks the assigned category. discover groups the imported label, assigns an existing match, and asks the model only about labels that are not in the taxonomy. Omitted mode stays verify.
              * @default verify
              * @enum {string}
@@ -6433,6 +6495,8 @@ export interface components {
             org_id?: string | null;
             /** @enum {string} */
             mode?: "verify" | "discover";
+            /** @description Verify run that classifies without trusting the current category. Discover runs stay false. */
+            ignore_current_category?: boolean;
             batch_size?: number;
             total_activities: number;
             batches_total: number;
@@ -6496,6 +6560,38 @@ export interface components {
             action: "apply" | "dismiss" | "revert";
             /** Format: uuid */
             category_id?: string | null;
+        };
+        CategoryReviewBulkRequest: {
+            /** @enum {string} */
+            action: "apply" | "dismiss";
+            /** @default false */
+            dry_run: boolean;
+            /** @enum {string} */
+            verdict?: "confirm" | "reassign" | "propose";
+            /** Format: uuid */
+            org_id?: string;
+            /** Format: uuid */
+            scan_run_id?: string;
+            /** Format: uuid */
+            proposed_category_id?: string;
+            q?: string;
+            cursor?: string | null;
+        };
+        CategoryReviewBulkFailure: {
+            /** Format: uuid */
+            id: string;
+            message: string;
+        };
+        CategoryReviewBulkResponse: {
+            decided: number;
+            skipped: number;
+            failed: number;
+            /** @description Pending reviews that match the filters. */
+            matched: number;
+            /** @description Matching reviews an apply can assign. */
+            applicable: number;
+            failures: components["schemas"]["CategoryReviewBulkFailure"][];
+            next_cursor?: string | null;
         };
         CategorySuggestionDecision: {
             /** @enum {string} */

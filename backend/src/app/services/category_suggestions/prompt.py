@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from typing import Any
+from urllib.parse import urlparse
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -12,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.db.age_bounds import inclusive_age_bounds
 from app.db.models import Activity, ActivityCategory, Organization
 from app.db.models.category_suggestion import (
+    LEGACY_CATEGORY_IDS,
     PENDING_CATEGORY_ID,
     CategorySuggestion,
     CategorySuggestionActivity,
@@ -28,9 +30,18 @@ def redact_contacts(value: str) -> str:
     return _PHONE_RE.sub("[redacted-phone]", text)
 
 
+_RECHECK_NOTE = (
+    " The activity has no trusted category. Choose the best leaf in the "
+    "taxonomy. Reply reassign with that leaf's category_id. Reply propose "
+    "only when no leaf fits. Do not reply confirm."
+)
+
+
 def build_scan_prompt(
     session: Session,
     activities: list[Activity],
+    *,
+    ignore_current_category: bool = False,
 ) -> tuple[str, str]:
     """Return system and user prompts for one category-check batch."""
     rows = list(session.scalars(select(ActivityCategory)).all())
@@ -50,9 +61,19 @@ def build_scan_prompt(
         '"propose":{"name_en":string,"name_zh":string,"parent_id":string|null,'
         '"rationale":string}}]}'
     )
+    if ignore_current_category:
+        system += _RECHECK_NOTE
     user = {
-        "activities": [_scan_item(session, activity, by_id) for activity in activities],
-        "taxonomy": _taxonomy(session),
+        "activities": [
+            _scan_item(
+                session,
+                activity,
+                by_id,
+                ignore_current=ignore_current_category,
+            )
+            for activity in activities
+        ],
+        "taxonomy": _taxonomy(session, leaves_only=ignore_current_category),
         "do_not_propose": _rejected_names(session),
     }
     return system, json.dumps(user, ensure_ascii=False)
@@ -62,11 +83,30 @@ def _scan_item(
     session: Session,
     activity: Activity,
     by_id: dict,
+    *,
+    ignore_current: bool = False,
 ) -> dict[str, Any]:
     org = session.get(Organization, activity.org_id)
     category = by_id.get(activity.category_id)
     lower, upper = inclusive_age_bounds(activity.age_range)
-    description = (activity.description or "")[:_MAX_DESCRIPTION]
+    template = _description_is_untrusted(org)
+    description = "" if ignore_current and template else (activity.description or "")
+    description = description[:_MAX_DESCRIPTION]
+    item: dict[str, Any] = {
+        "activity_id": str(activity.id),
+        "activity_name": redact_contacts(activity.name),
+        "description": redact_contacts(description),
+        "age_min": lower,
+        "age_max": upper,
+        "organization": redact_contacts(org.name) if org is not None else "",
+        "organization_zh": _zh_name(org),
+        "source_label": redact_contacts(activity.source_category_name or ""),
+    }
+    if ignore_current:
+        item["description_is_template"] = template
+        item["organization_source"] = "" if org is None else (org.source or "")
+        item["source_url_host"] = _source_host(org)
+        return item
     path = ""
     category_id = None
     if category is not None:
@@ -76,18 +116,25 @@ def _scan_item(
             else _path(category, by_id)
         )
         category_id = str(category.id)
-    return {
-        "activity_id": str(activity.id),
-        "activity_name": redact_contacts(activity.name),
-        "description": redact_contacts(description),
-        "age_min": lower,
-        "age_max": upper,
-        "organization": redact_contacts(org.name) if org is not None else "",
-        "organization_zh": _zh_name(org),
-        "current_category_id": category_id,
-        "current_category": path,
-        "source_label": redact_contacts(activity.source_category_name or ""),
-    }
+    item["current_category_id"] = category_id
+    item["current_category"] = path
+    return item
+
+
+def _description_is_untrusted(org: Organization | None) -> bool:
+    """Template copy, or a missing source, must not steer a recheck."""
+    if org is None:
+        return False
+    return org.description_source in (None, "template")
+
+
+def _source_host(org: Organization | None) -> str:
+    if org is None or not org.source_url:
+        return ""
+    host = (urlparse(str(org.source_url)).hostname or "").lower()
+    if host.startswith("www."):
+        return host[4:]
+    return host
 
 
 def build_discovery_prompt(
@@ -203,7 +250,7 @@ def _zh_name(org: Organization | None) -> str:
     return redact_contacts(str(value))
 
 
-def _taxonomy(session: Session) -> list[dict[str, Any]]:
+def _taxonomy(session: Session, *, leaves_only: bool = False) -> list[dict[str, Any]]:
     rows = list(
         session.scalars(
             select(ActivityCategory).order_by(
@@ -213,9 +260,12 @@ def _taxonomy(session: Session) -> list[dict[str, Any]]:
         ).all()
     )
     by_id = {row.id: row for row in rows}
+    parent_ids = {row.parent_id for row in rows if row.parent_id is not None}
     items: list[dict[str, Any]] = []
     for row in rows:
         if row.id == PENDING_CATEGORY_ID:
+            continue
+        if leaves_only and (row.id in LEGACY_CATEGORY_IDS or row.id in parent_ids):
             continue
         items.append(
             {

@@ -105,7 +105,9 @@ describe('SearchNavigator', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
 
-    const workshop = screen.getByRole('button', { name: 'Workshop' });
+    const workshop = screen.getByRole('button', {
+      name: 'Early years and schools',
+    });
     expect(workshop).toHaveAttribute('aria-pressed', 'false');
     expect(workshop.querySelector('img')).toHaveAttribute(
       'src',
@@ -126,7 +128,7 @@ describe('SearchNavigator', () => {
       }),
     );
     expect(push).toHaveBeenCalledWith(
-      '/en/search/?age=3-6&region=kowloon&types=workshop&view=map',
+      '/en/search/?age=3-6&region=kowloon&types=early-years&view=map',
     );
   });
 

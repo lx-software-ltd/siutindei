@@ -55,13 +55,13 @@ describe('fetchStagingActivitySearch', () => {
   it('filters by wizard category and age', async () => {
     const response = await fetchStagingActivitySearch({
       age: 4,
-      categoryIds: ['c1111111-1111-1111-1111-111111111102'],
+      categoryIds: ['c1111111-1111-1111-1111-111111111201'],
       limit: 20,
     });
     expect(response.items.length).toBe(20);
     for (const item of response.items) {
       expect(item.activity.categoryId).toBe(
-        'c1111111-1111-1111-1111-111111111102',
+        'c1111111-1111-1111-1111-111111111201',
       );
       expect(item.activity.ageMin).toBeLessThanOrEqual(4);
       expect(item.activity.ageMax).toBeGreaterThanOrEqual(4);

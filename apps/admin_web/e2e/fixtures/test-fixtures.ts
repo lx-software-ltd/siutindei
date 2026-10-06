@@ -690,6 +690,27 @@ export async function setupApiMocks(page: Page): Promise<void> {
       });
       return;
     }
+    if (url.includes('/reviews/bulk')) {
+      const raw = route.request().postData() || '{}';
+      const body = JSON.parse(raw) as { dry_run?: boolean };
+      if (method === 'POST' && !body.dry_run) {
+        categoryReviewStatus = 'applied';
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          decided: body.dry_run ? 0 : 1,
+          skipped: 0,
+          failed: 0,
+          matched: 1,
+          applicable: 1,
+          failures: [],
+          next_cursor: null,
+        }),
+      });
+      return;
+    }
     if (url.includes('/reviews')) {
       if (method === 'POST') {
         categoryReviewStatus = 'applied';
@@ -739,7 +760,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
           max_evidence_items: 25,
           deny_data_collection: true,
           auto_assign_threshold: 0.9,
-          monthly_cost_limit_usd: 25,
+          monthly_cost_limit_usd: 50,
         }),
       });
       return;
