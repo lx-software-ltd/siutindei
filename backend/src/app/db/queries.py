@@ -17,6 +17,7 @@ from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import Select
+from sqlalchemy.sql.selectable import CompoundSelect
 
 from app.db.models import Activity
 from app.db.models import ActivityCategory
@@ -285,7 +286,7 @@ def category_match_mode(session: Session, category_ids: Sequence[UUID]) -> str:
 
 def _category_descendant_ids_subquery(
     category_ids: Sequence[UUID],
-) -> Select[Any]:
+) -> Select[Any] | CompoundSelect[Any]:
     """Return category ids, including descendants.
 
     A wizard-group search with no activities on that subtree also

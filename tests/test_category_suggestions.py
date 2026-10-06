@@ -332,7 +332,7 @@ def test_pending_category_cannot_be_edited_or_deleted(db_session) -> None:
         _validate_category_parent(repo, None, PENDING_CATEGORY_ID)
     payload = _serialize_activity_category(pending)
     assert payload["is_system"] is True
-    other = ActivityCategory(name="Workshop", display_order=1)
+    other = ActivityCategory(name="Sample workshop", display_order=1)
     db_session.add(other)
     db_session.flush()
     assert _serialize_activity_category(other)["is_system"] is False
@@ -392,7 +392,9 @@ def test_worker_success_repair_invalid_refusal_and_stale(
     category_id = uuid4()
     with Session(engine) as session:
         session.add(
-            ActivityCategory(id=category_id, name="Indoor fun", display_order=1)
+            ActivityCategory(
+                id=category_id, name="Sample indoor parent", display_order=1
+            )
         )
         session.add(
             CategorySuggestion(
