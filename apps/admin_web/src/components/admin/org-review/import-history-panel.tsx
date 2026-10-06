@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { useQueryState } from 'nuqs';
 
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
+import { runAdminImport } from '../../../lib/api-client-imports';
 import {
   listImportJobs,
   type ImportJobListItem,
@@ -17,7 +19,9 @@ import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminFieldGrid } from '../../ui/admin-field-grid';
 import { AdminReadOnlyValue } from '../../ui/admin-read-only-value';
 import { Button } from '../../ui/button';
+import { ConfirmDialog } from '../../ui/confirm-dialog';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
+import { StatusBanner } from '../../status-banner';
 
 function formatWhen(value?: string) {
   return value ? new Date(value).toLocaleString() : '—';
@@ -38,6 +42,14 @@ function organizationSummary(item: ImportJobListItem) {
 
 function modeLabel(item: ImportJobListItem) {
   return item.dry_run ? 'Dry run' : item.status;
+}
+
+function canRetry(item: ImportJobListItem) {
+  return (
+    !item.dry_run &&
+    item.status === 'completed' &&
+    (item.summary?.organizations?.failed ?? 0) > 0
+  );
 }
 
 function ImportJobSummary({ job }: { job: ImportJobListItem }) {
@@ -78,6 +90,9 @@ function ImportJobSummary({ job }: { job: ImportJobListItem }) {
 
 export function ImportHistoryPanel() {
   const [, setTab] = useQueryState('tab');
+  const [retryJob, setRetryJob] = useState<ImportJobListItem | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryError, setRetryError] = useState('');
   const [, setJob] = useQueryState('job');
   const expanded = useExpandedRecord({ paramName: 'import-job' });
   const list = usePaginatedList<ImportJobListItem, Record<string, never>>({
@@ -95,9 +110,34 @@ export function ImportHistoryPanel() {
   const expandedJob =
     list.items.find((item) => item.id === expanded.expandedId) ?? null;
 
+  async function retryFailed() {
+    if (!retryJob) {
+      return;
+    }
+    setIsRetrying(true);
+    setRetryError('');
+    try {
+      await runAdminImport({
+        object_key: retryJob.object_key,
+        retry_failed: true,
+      });
+      setRetryJob(null);
+      void list.refetch();
+    } catch (err) {
+      setRetryError(err instanceof Error ? err.message : 'Retry failed.');
+    } finally {
+      setIsRetrying(false);
+    }
+  }
+
   return (
     <div className='space-y-3'>
       <h2 className='sr-only'>Import history</h2>
+      {retryError ? (
+        <StatusBanner variant='error' title='Error'>
+          {retryError}
+        </StatusBanner>
+      ) : null}
       <p className='text-sm text-slate-600'>
         Open the organizations written by a previous import.
       </p>
@@ -147,19 +187,41 @@ export function ImportHistoryPanel() {
         )}
         renderActions={(item) =>
           item.dry_run ? null : (
-            <Button
-              type='button'
-              size='sm'
-              variant='secondary'
-              onClick={() => {
-                void setJob(item.id);
-                void setTab('review');
-              }}
-            >
-              View orgs
-            </Button>
+            <div className='flex flex-wrap gap-2'>
+              {canRetry(item) ? (
+                <Button
+                  type='button'
+                  size='sm'
+                  variant='secondary'
+                  onClick={() => setRetryJob(item)}
+                >
+                  Retry failed
+                </Button>
+              ) : null}
+              <Button
+                type='button'
+                size='sm'
+                variant='secondary'
+                onClick={() => {
+                  void setJob(item.id);
+                  void setTab('review');
+                }}
+              >
+                View orgs
+              </Button>
+            </div>
           )
         }
+      />
+      <ConfirmDialog
+        open={retryJob !== null}
+        title='Retry failed organizations'
+        message='Run the import again for organizations that failed. Organizations that already imported stay as they are.'
+        confirmLabel='Retry failed'
+        confirmLoading={isRetrying}
+        confirmLoadingLabel='Retrying…'
+        onConfirm={() => void retryFailed()}
+        onCancel={() => setRetryJob(null)}
       />
     </div>
   );

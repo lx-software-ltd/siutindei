@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.sql import Select
 
 from app.db.models import Activity
+from app.db.models import ActivityCategory
 from app.db.models import ActivityPricing
 from app.db.models import ActivitySchedule
 from app.db.models import ActivityScheduleEntry
@@ -116,7 +117,8 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
         conditions.append(Location.area_id.in_(area_ids))
 
     if filters.category_ids:
-        conditions.append(Activity.category_id.in_(filters.category_ids))
+        category_ids = _category_descendant_ids_subquery(filters.category_ids)
+        conditions.append(Activity.category_id.in_(category_ids))
 
     if filters.activity_id is not None:
         conditions.append(Activity.id == filters.activity_id)
@@ -250,6 +252,26 @@ def _cursor_values(cursor: ActivitySearchCursor) -> list:
         cursor.start_minutes_utc,
         cursor.schedule_id,
     ]
+
+
+def _category_descendant_ids_subquery(
+    category_ids: Sequence[UUID],
+) -> Select[Any]:
+    """Return a subquery of category IDs including descendants."""
+
+    base = (
+        select(ActivityCategory.id)
+        .where(ActivityCategory.id.in_(tuple(category_ids)))
+        .where(ActivityCategory.id != PENDING_CATEGORY_ID)
+        .cte(name="category_tree", recursive=True)
+    )
+    categories = ActivityCategory.__table__
+    recursive = select(categories.c.id).where(
+        categories.c.parent_id == base.c.id,
+        categories.c.id != PENDING_CATEGORY_ID,
+    )
+    tree = base.union_all(recursive)
+    return select(tree.c.id)
 
 
 def _area_descendant_ids_subquery(area_id: UUID) -> Select[Any]:

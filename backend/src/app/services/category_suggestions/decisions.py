@@ -109,6 +109,7 @@ def _approve_body(
     translations = body.get("name_translations")
     if translations is None:
         translations = suggestion.name_translations or {}
+    translations = _with_zh_hk(translations)
     if "parent_id" in body:
         parent_id = body.get("parent_id")
     elif suggestion.suggested_parent_id is not None:
@@ -125,6 +126,20 @@ def _approve_body(
         "parent_id": parent_id,
         "display_order": display_order,
     }
+
+
+def _with_zh_hk(translations: Any) -> dict[str, Any]:
+    """Copy a Chinese name into both zh and zh-HK when one of them is set."""
+    if not isinstance(translations, dict):
+        return {}
+    copied = dict(translations)
+    zh = copied.get("zh") if isinstance(copied.get("zh"), str) else ""
+    hk = copied.get("zh-HK") if isinstance(copied.get("zh-HK"), str) else ""
+    if zh and not hk:
+        copied["zh-HK"] = zh
+    elif hk and not zh:
+        copied["zh"] = hk
+    return copied
 
 
 def _require_target(session: Session, body: dict[str, Any]) -> ActivityCategory:

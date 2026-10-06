@@ -3027,6 +3027,14 @@ components:
             creates or updates, and without persisting audit_log rows.
             CloudWatch uses a distinct "dry-run completed" line. Same
             presign + PUT flow as a live import.
+        retry_failed:
+          type: boolean
+          default: false
+          description: |
+            When true on a completed live import, rerun only organizations
+            whose stored result failed and merge those rows back. A job
+            whose status is failed is rerun as a whole. Cannot be combined
+            with dry_run.
 
     AdminImportCounts:
       type: object
@@ -3961,6 +3969,14 @@ components:
           description: >
             Free-text note about where the activity came from. Admin-write
             only; manager routes ignore this field.
+        source_category_name:
+          type: string
+          nullable: true
+          readOnly: true
+          description: >
+            Category label from the import file. Stored even when the
+            activity is assigned to an existing category. Managers cannot
+            set it.
         age_min:
           type: integer
           minimum: 0
@@ -4003,6 +4019,11 @@ components:
           maxLength: 500
           nullable: true
           description: Admin-write only; manager routes ignore this field.
+        source_category_name:
+          type: string
+          nullable: true
+          readOnly: true
+          description: Imported category label. Managers cannot set it.
         age_min:
           type: integer
           minimum: 0
@@ -4054,6 +4075,11 @@ components:
         source_note:
           type: string
           nullable: true
+        source_category_name:
+          type: string
+          nullable: true
+          readOnly: true
+          description: Category label taken from the import file.
         age_min:
           type: integer
         age_max:
@@ -4968,6 +4994,12 @@ components:
           $ref: '#/components/schemas/TranslationMap'
         display_order:
           type: integer
+        show_in_wizard:
+          type: boolean
+          description: >
+            When true, the home wizard lists this category. Pending
+            categorisation cannot be shown. Search expands the category
+            to its descendants.
         is_system:
           type: boolean
           description: |
@@ -4999,6 +5031,9 @@ components:
         display_order:
           type: integer
           description: Sort order within the parent
+        show_in_wizard:
+          type: boolean
+          description: Include this category in the home wizard.
 
     ActivityCategoryUpdate:
       type: object
@@ -5018,6 +5053,9 @@ components:
         display_order:
           type: integer
           description: Sort order within the parent
+        show_in_wizard:
+          type: boolean
+          description: Include this category in the home wizard.
 
     ActivityCategoryListResponse:
       type: object
@@ -5333,6 +5371,16 @@ components:
         scan_limit:
           type: integer
           description: Maximum activities one run will enqueue.
+        discover_activity_total:
+          type: integer
+          description: >-
+            Pending-review activities that still carry an imported
+            category label. Not capped.
+        discover_label_total:
+          type: integer
+          description: >-
+            Distinct imported labels that are not already a category
+            and still need a model call. Not capped.
         active_scan_run:
           allOf:
             - $ref: '#/components/schemas/CategoryScanRun'
@@ -5441,6 +5489,15 @@ components:
         rescan:
           type: boolean
           default: false
+        mode:
+          type: string
+          enum: [verify, discover]
+          default: verify
+          description: >
+            verify checks the assigned category. discover groups the
+            imported label, assigns an existing match, and asks the
+            model only about labels that are not in the taxonomy.
+            Omitted mode stays verify.
 
     CategoryScanRun:
       type: object
@@ -5459,12 +5516,18 @@ components:
           type: string
           format: uuid
           nullable: true
+        mode:
+          type: string
+          enum: [verify, discover]
         batch_size:
           type: integer
         total_activities:
           type: integer
         batches_total:
           type: integer
+        labels_total:
+          type: integer
+          description: Unknown imported labels included in a discover run.
         batches_done:
           type: integer
         confirmed:

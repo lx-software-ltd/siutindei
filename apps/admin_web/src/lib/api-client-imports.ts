@@ -22,6 +22,8 @@ export interface AdminImportPresignResponse {
 
 export interface AdminImportRequest {
   object_key: string;
+  dry_run?: boolean;
+  retry_failed?: boolean;
 }
 
 export interface AdminImportError {

@@ -77,6 +77,11 @@ class ActivityCategoryRepository(BaseRepository[ActivityCategory]):
                 "Pending categorisation cannot be deleted",
                 field="id",
             )
+        if entity.show_in_wizard:
+            raise ValidationError(
+                "Remove this category from the home wizard before deleting it",
+                field="show_in_wizard",
+            )
         if self._has_children(category_id):
             raise ValidationError(
                 "Cannot delete a category with subcategories",

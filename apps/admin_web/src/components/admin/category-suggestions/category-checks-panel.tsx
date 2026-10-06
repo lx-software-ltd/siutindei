@@ -73,7 +73,9 @@ export function CategoryChecksPanel() {
   const [summary, setSummary] = useState<CategorySuggestionSummary | null>(null);
   const [organizations, setOrganizations] = useState<PendingOrganization[]>([]);
   const [threshold, setThreshold] = useState<number | null>(0.9);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmMode, setConfirmMode] = useState<'discover' | 'verify' | null>(
+    null
+  );
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState('');
 
@@ -145,6 +147,10 @@ export function CategoryChecksPanel() {
   const scanLimit = summary?.scan_limit ?? 500;
   const scanCount = Math.min(candidates, scanLimit);
   const batches = Math.max(1, Math.ceil(scanCount / 10));
+  const discoverActivities = summary?.discover_activity_total ?? 0;
+  const discoverLabels = summary?.discover_label_total ?? 0;
+  const discoverCount = Math.min(discoverLabels, scanLimit);
+  const discoverBatches = Math.ceil(discoverCount / 10);
   const thresholdText =
     threshold === null
       ? 'Auto-assign is off.'
@@ -153,14 +159,15 @@ export function CategoryChecksPanel() {
     ? `${active.batches_done} of ${active.batches_total} batches. ${active.failed} failed.`
     : '';
 
-  async function startScan() {
+  async function startScan(mode: 'discover' | 'verify') {
     setIsStarting(true);
     setError('');
     try {
       await startCategoryScan({
         org_id: selectedOrgId || undefined,
+        mode,
       });
-      setConfirmOpen(false);
+      setConfirmMode(null);
       reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Scan failed.');
@@ -194,11 +201,22 @@ export function CategoryChecksPanel() {
                 `${summary?.auto_applied_total ?? 0} auto-assigned.`
             }
             trailing={
-              <AdminCreateButton
-                label='Scan pending organizations'
-                disabled={scanCount === 0 || isRunning || isStarting}
-                onClick={() => setConfirmOpen(true)}
-              />
+              <div className='flex flex-wrap gap-2'>
+                <AdminCreateButton
+                  label='Discover categories'
+                  disabled={
+                    (discoverActivities === 0 && discoverLabels === 0) ||
+                    isRunning ||
+                    isStarting
+                  }
+                  onClick={() => setConfirmMode('discover')}
+                />
+                <AdminCreateButton
+                  label='Verify categories'
+                  disabled={scanCount === 0 || isRunning || isStarting}
+                  onClick={() => setConfirmMode('verify')}
+                />
+              </div>
             }
           >
             <AdminFilterField label='Organization' htmlFor='check-org-filter'>
@@ -254,20 +272,34 @@ export function CategoryChecksPanel() {
         }
       />
       <ConfirmDialog
-        open={confirmOpen}
-        title='Scan pending organizations'
+        open={confirmMode !== null}
+        title={
+          confirmMode === 'discover' ? 'Discover categories' : 'Verify categories'
+        }
         message={
-          `${
-            candidates > scanCount
-              ? `Scan ${scanCount} of ${candidates} activities`
-              : `Scan ${scanCount} activities`
-          } in ${batches} model ${batches === 1 ? 'call' : 'calls'}. ${thresholdText}`
+          confirmMode === 'discover'
+            ? `${discoverLabels} unknown ${
+                discoverLabels === 1 ? 'label' : 'labels'
+              } across ${discoverActivities} ${
+                discoverActivities === 1 ? 'activity' : 'activities'
+              } in ${discoverBatches} model ${
+                discoverBatches === 1 ? 'call' : 'calls'
+              }. Existing matches are assigned now. ${thresholdText}`
+            : `${
+                candidates > scanCount
+                  ? `Scan ${scanCount} of ${candidates} activities`
+                  : `Scan ${scanCount} activities`
+              } in ${batches} model ${batches === 1 ? 'call' : 'calls'}. ${thresholdText}`
         }
         confirmLabel='Start scan'
         confirmLoading={isStarting}
         confirmLoadingLabel='Starting…'
-        onConfirm={() => void startScan()}
-        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          if (confirmMode) {
+            void startScan(confirmMode);
+          }
+        }}
+        onCancel={() => setConfirmMode(null)}
       />
     </div>
   );

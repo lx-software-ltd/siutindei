@@ -134,6 +134,18 @@ def start_scan(
         MAX_BATCH_SIZE,
     )
     rescan = _parse_bool(body.get("rescan", False), "rescan")
+    mode = _parse_mode(body.get("mode", "verify"))
+    if mode == "discover":
+        from app.services.category_suggestions.scan_discover import start_discover
+
+        return start_discover(
+            session,
+            requested_by=requested_by,
+            org_id=org_id,
+            limit=limit,
+            batch_size=batch_size,
+            rescan=rescan,
+        )
     ids = select_candidate_ids(session, org_id=org_id, limit=limit, rescan=rescan)
     now = datetime.now(timezone.utc)
     batches = _chunks([str(item) for item in ids], batch_size)
@@ -174,6 +186,9 @@ def summary_counts(
         )
 
     _fail_stale_runs(session)
+    from app.services.category_suggestions.scan_discover import count_discover
+
+    discover_activities, discover_labels = count_discover(session, org_id=org_id)
     active = session.scalars(
         select(CategoryScanRun)
         .where(CategoryScanRun.status.in_(_ACTIVE))
@@ -185,6 +200,8 @@ def summary_counts(
         "auto_applied_total": _count("auto_applied"),
         "scan_candidate_total": count_candidates(session, org_id=org_id),
         "scan_limit": MAX_LIMIT,
+        "discover_activity_total": discover_activities,
+        "discover_label_total": discover_labels,
         "active_scan_run": None if active is None else serialize_run(active),
         "month_scan_cost_usd": _month_scan_cost(session),
     }
@@ -209,9 +226,11 @@ def serialize_run(run: CategoryScanRun) -> dict[str, Any]:
         "status": run.status,
         "requested_by": run.requested_by,
         "org_id": None if run.org_id is None else str(run.org_id),
+        "mode": run.mode or "verify",
         "batch_size": int(run.batch_size),
         "total_activities": int(run.total_activities or 0),
         "batches_total": int(run.batches_total or 0),
+        "labels_total": int(run.labels_total or 0),
         "batches_done": int(run.batches_done or 0),
         "confirmed": int(run.confirmed or 0),
         "auto_applied": int(run.auto_applied or 0),
@@ -415,6 +434,14 @@ def _bounded_int(value: Any, field: str, low: int, high: int) -> int:
             field=field,
         )
     return parsed
+
+
+def _parse_mode(value: Any) -> str:
+    if value in (None, ""):
+        return "verify"
+    if value in {"verify", "discover"}:
+        return str(value)
+    raise ValidationError("mode must be verify or discover", field="mode")
 
 
 def _parse_bool(value: Any, field: str) -> bool:

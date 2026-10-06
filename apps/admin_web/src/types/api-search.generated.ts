@@ -30,7 +30,8 @@ export interface paths {
                     activity_id?: string;
                     /**
                      * @description Filter by activity category UUID. Multiple values allowed; results
-                     *     match any listed category.
+                     *     match any listed category or one of its descendants. Pending
+                     *     categorisation is excluded.
                      */
                     category_id?: string[];
                     /**

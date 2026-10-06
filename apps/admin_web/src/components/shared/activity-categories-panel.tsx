@@ -37,6 +37,7 @@ interface ActivityCategoryFormState {
   name_translations: Record<TranslationLanguageCode, string>;
   parent_id: string;
   display_order: string;
+  show_in_wizard: boolean;
 }
 
 const emptyForm: ActivityCategoryFormState = {
@@ -44,6 +45,7 @@ const emptyForm: ActivityCategoryFormState = {
   name_translations: emptyTranslations(),
   parent_id: '',
   display_order: '0',
+  show_in_wizard: false,
 };
 
 function itemToForm(item: ActivityCategory): ActivityCategoryFormState {
@@ -53,6 +55,7 @@ function itemToForm(item: ActivityCategory): ActivityCategoryFormState {
     parent_id: item.parent_id ?? '',
     display_order:
       item.display_order !== undefined ? `${item.display_order}` : '0',
+    show_in_wizard: Boolean(item.show_in_wizard),
   };
 }
 
@@ -206,6 +209,7 @@ export function ActivityCategoriesPanel() {
       name_translations: buildTranslationsPayload(form.name_translations),
       parent_id: form.parent_id || null,
       display_order: displayOrder,
+      show_in_wizard: form.show_in_wizard,
     };
   };
 
@@ -315,6 +319,23 @@ export function ActivityCategoriesPanel() {
             <p className='text-xs text-red-600'>{displayOrderError}</p>
           ) : null}
         </div>
+        <label className='flex items-center gap-2 text-sm sm:col-span-2'>
+          <input
+            type='checkbox'
+            checked={panel.formState.show_in_wizard}
+            disabled={isSystemLocked}
+            onChange={(event) => {
+              if (isSystemLocked) {
+                return;
+              }
+              panel.setFormState((prev) => ({
+                ...prev,
+                show_in_wizard: event.target.checked,
+              }));
+            }}
+          />
+          Show in the home wizard
+        </label>
       </AdminFieldGrid>
     </AdminEditorPanel>
   );

@@ -5225,6 +5225,14 @@ export interface components {
              * @default false
              */
             dry_run: boolean;
+            /**
+             * @description When true on a completed live import, rerun only organizations
+             *     whose stored result failed and merge those rows back. A job
+             *     whose status is failed is rerun as a whole. Cannot be combined
+             *     with dry_run.
+             * @default false
+             */
+            retry_failed: boolean;
         };
         AdminImportCounts: {
             created: number;
@@ -5672,6 +5680,8 @@ export interface components {
             source_url?: string | null;
             /** @description Free-text note about where the activity came from. Admin-write only; manager routes ignore this field. */
             source_note?: string | null;
+            /** @description Category label from the import file. Stored even when the activity is assigned to an existing category. Managers cannot set it. */
+            readonly source_category_name?: string | null;
             /** @description Minimum age (required, 0-119, must be less than age_max) */
             age_min: number;
             /** @description Maximum age (required, 1-120, must be greater than age_min) */
@@ -5695,6 +5705,8 @@ export interface components {
             source_url?: string | null;
             /** @description Admin-write only; manager routes ignore this field. */
             source_note?: string | null;
+            /** @description Imported category label. Managers cannot set it. */
+            readonly source_category_name?: string | null;
             /** @description Minimum age (must provide both age_min and age_max together) */
             age_min?: number;
             /** @description Maximum age (must provide both age_min and age_max together) */
@@ -5713,6 +5725,8 @@ export interface components {
             description_translations: components["schemas"]["TranslationMap"];
             source_url?: string | null;
             source_note?: string | null;
+            /** @description Category label taken from the import file. */
+            readonly source_category_name?: string | null;
             age_min: number;
             age_max: number;
             /** Format: date-time */
@@ -6165,6 +6179,8 @@ export interface components {
             name: string;
             name_translations: components["schemas"]["TranslationMap"];
             display_order: number;
+            /** @description When true, the home wizard lists this category. Pending categorisation cannot be shown. Search expands the category to its descendants. */
+            show_in_wizard?: boolean;
             /**
              * @description True for Pending categorisation
              *     (`c1111111-1111-1111-1111-111111111199`). That row cannot
@@ -6186,6 +6202,8 @@ export interface components {
             parent_id?: string | null;
             /** @description Sort order within the parent */
             display_order?: number;
+            /** @description Include this category in the home wizard. */
+            show_in_wizard?: boolean;
         };
         ActivityCategoryUpdate: {
             /** @description Category name */
@@ -6199,6 +6217,8 @@ export interface components {
             parent_id?: string | null;
             /** @description Sort order within the parent */
             display_order?: number;
+            /** @description Include this category in the home wizard. */
+            show_in_wizard?: boolean;
         };
         ActivityCategoryListResponse: {
             items: components["schemas"]["ActivityCategory"][];
@@ -6344,6 +6364,10 @@ export interface components {
             scan_candidate_total?: number;
             /** @description Maximum activities one run will enqueue. */
             scan_limit?: number;
+            /** @description Pending-review activities that still carry an imported category label. Not capped. */
+            discover_activity_total?: number;
+            /** @description Distinct imported labels that are not already a category and still need a model call. Not capped. */
+            discover_label_total?: number;
             active_scan_run?: components["schemas"]["CategoryScanRun"] | null;
             /** @description OpenRouter cost recorded this month. Each enrichment stores its own cost, so earlier months are not included. */
             month_cost_usd: number;
@@ -6383,6 +6407,12 @@ export interface components {
             batch_size: number;
             /** @default false */
             rescan: boolean;
+            /**
+             * @description verify checks the assigned category. discover groups the imported label, assigns an existing match, and asks the model only about labels that are not in the taxonomy. Omitted mode stays verify.
+             * @default verify
+             * @enum {string}
+             */
+            mode: "verify" | "discover";
         };
         CategoryScanRun: {
             /** Format: uuid */
@@ -6392,9 +6422,13 @@ export interface components {
             requested_by?: string | null;
             /** Format: uuid */
             org_id?: string | null;
+            /** @enum {string} */
+            mode?: "verify" | "discover";
             batch_size?: number;
             total_activities: number;
             batches_total: number;
+            /** @description Unknown imported labels included in a discover run. */
+            labels_total?: number;
             batches_done: number;
             confirmed?: number;
             auto_applied?: number;

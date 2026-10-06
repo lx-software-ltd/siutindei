@@ -57,6 +57,8 @@ export interface CategorySuggestionSummary {
   auto_applied_total?: number;
   scan_candidate_total?: number;
   scan_limit?: number;
+  discover_activity_total?: number;
+  discover_label_total?: number;
   active_scan_run?: CategoryScanRun | null;
 }
 
@@ -89,8 +91,10 @@ export interface CategoryScanRun {
   status: 'queued' | 'running' | 'done' | 'failed';
   requested_by?: string | null;
   org_id?: string | null;
+  mode?: 'verify' | 'discover';
   batch_size: number;
   total_activities: number;
+  labels_total?: number;
   batches_total: number;
   batches_done: number;
   confirmed: number;
@@ -205,6 +209,7 @@ export function startCategoryScan(body: {
   limit?: number;
   batch_size?: number;
   rescan?: boolean;
+  mode?: 'verify' | 'discover';
 } = {}) {
   return request<CategoryScanRun>(suggestionUrl('/scan'), {
     method: 'POST',

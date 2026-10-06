@@ -86,7 +86,45 @@ def _scan_item(
         "organization_zh": _zh_name(org),
         "current_category_id": category_id,
         "current_category": path,
+        "source_label": redact_contacts(activity.source_category_name or ""),
     }
+
+
+def build_discovery_prompt(
+    session: Session,
+    suggestions: list[CategorySuggestion],
+) -> tuple[str, str]:
+    """Return one prompt for a batch of imported labels."""
+    system = (
+        "You categorise children's activities in Hong Kong for a directory. "
+        "Each item is an imported category label that is not in the taxonomy. "
+        "Prefer mapping it onto an existing category. Otherwise propose a "
+        "sub-category under an existing root unless the place clearly needs "
+        "a new root. Use Traditional Chinese for zh. Do not invent "
+        "near-duplicates of existing names. Reply with one JSON object and "
+        "no markdown. Schema: "
+        '{"results":[{"suggestion_id":string,'
+        '"maps_to_existing":{"category_id":string|null,"confidence":number},'
+        '"propose":{"name_en":string,"name_zh":string,"parent_id":string|null,'
+        '"rationale":string,"display_order_hint":number},'
+        '"confidence":number,"rationale":string,'
+        '"alternatives":[{"name_en":string,"parent_id":string|null,'
+        '"confidence":number}]}]}'
+    )
+    labels = [
+        {
+            "suggestion_id": str(suggestion.id),
+            "requested_name": redact_contacts(suggestion.requested_name),
+            "evidence": _evidence(session, suggestion, limit=5),
+        }
+        for suggestion in suggestions
+    ]
+    user = {
+        "labels": labels,
+        "taxonomy": _taxonomy(session),
+        "do_not_propose": _rejected_names(session),
+    }
+    return system, json.dumps(user, ensure_ascii=False)
 
 
 def build_enrichment_prompt(

@@ -26,6 +26,7 @@ import {
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
 import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { CascadingCategorySelect } from '../ui/cascading-category-select';
 import { Input } from '../ui/input';
@@ -298,6 +299,10 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     );
   };
 
+  const importedLabel =
+    panel.items.find((item) => item.id === panel.editingId)
+      ?.source_category_name ?? '';
+
   const formToPayload = (form: ActivityFormState) => ({
     org_id: form.org_id,
     category_id: form.category_id,
@@ -459,6 +464,13 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
         </div>
         {isAdmin ? (
           <>
+            {importedLabel ? (
+              <div className='sm:col-span-2'>
+                <AdminReadOnlyValue label='Imported as'>
+                  {importedLabel}
+                </AdminReadOnlyValue>
+              </div>
+            ) : null}
             <div className='space-y-1 sm:col-span-2'>
               <Label htmlFor='activity-source-url'>Source URL</Label>
               <Input

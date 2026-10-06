@@ -41,14 +41,14 @@ def fetch_staging_search_response(
 
     validate_filters(filters)
     payload = _load_fixture()
-    area_descendants: dict[str, list[str]] = payload.get("meta", {}).get(
-        "area_descendants", {}
-    )
+    meta = payload.get("meta", {})
+    area_descendants: dict[str, list[str]] = meta.get("area_descendants", {})
+    category_descendants = meta.get("category_descendants")
 
     matched = [
         item
         for item in _sorted_published_items()
-        if _matches(item, filters, area_descendants)
+        if _matches(item, filters, area_descendants, category_descendants)
     ]
 
     requested_limit = filters.limit
@@ -205,6 +205,7 @@ def _matches(
     item: dict[str, Any],
     filters: ActivitySearchFilters,
     area_descendants: dict[str, list[str]],
+    category_descendants: dict[str, list[str]] | None,
 ) -> bool:
     activity = item["activity"]
     location = item["location"]
@@ -229,7 +230,14 @@ def _matches(
             return False
 
     if filters.category_ids:
-        if activity.get("category_id") not in {
+        if category_descendants:
+            category_ids_allowed: set[str] = set()
+            for value in filters.category_ids:
+                key = str(value)
+                category_ids_allowed.update(category_descendants.get(key, [key]))
+            if activity.get("category_id") not in category_ids_allowed:
+                return False
+        elif activity.get("category_id") not in {
             str(value) for value in filters.category_ids
         }:
             return False
