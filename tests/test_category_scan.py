@@ -315,29 +315,36 @@ def test_dismissed_and_approved_org_are_not_auto_applied(
 def test_candidates_skip_recent_decisions_and_approved_orgs(
     db_session, sample_activity, sample_organization
 ) -> None:
-    assert select_candidate_ids(db_session) == [sample_activity.id]
+    org_id = sample_organization.id
+    assert select_candidate_ids(db_session, org_id=org_id) == [sample_activity.id]
     run = _run(db_session, status="done", batches_total=0)
     db_session.add(
         ActivityCategoryReview(
             scan_run_id=run.id,
             activity_id=sample_activity.id,
-            org_id=sample_organization.id,
+            org_id=org_id,
             verdict="confirm",
             status="confirmed",
         )
     )
     db_session.flush()
-    assert select_candidate_ids(db_session) == []
-    assert select_candidate_ids(db_session, rescan=True) == [sample_activity.id]
+    assert select_candidate_ids(db_session, org_id=org_id) == []
+    assert select_candidate_ids(db_session, org_id=org_id, rescan=True) == [
+        sample_activity.id
+    ]
     sample_organization.review_status = "approved"
     db_session.flush()
-    assert select_candidate_ids(db_session, rescan=True) == []
+    assert select_candidate_ids(db_session, org_id=org_id, rescan=True) == []
 
 
 def test_start_scan_queues_one_batch_and_rejects_a_second(
     db_session, sample_activity
 ) -> None:
-    run, batches = start_scan(db_session, {}, requested_by="admin-user")
+    run, batches = start_scan(
+        db_session,
+        {"org_id": str(sample_activity.org_id)},
+        requested_by="admin-user",
+    )
     assert run.status == "queued"
     assert batches == [[str(sample_activity.id)]]
     try:
@@ -477,25 +484,36 @@ def test_scan_route_enqueues_after_commit(monkeypatch, test_engine) -> None:
             )
         )
         session.commit()
-    response = lambda_handler(
-        {
-            "httpMethod": "POST",
-            "path": "/v1/admin/category-suggestions/scan",
-            "body": "{}",
-            "headers": {"Content-Type": "application/json"},
-            "requestContext": {"authorizer": {"groups": "admin", "userSub": "admin"}},
-        },
-        None,
-    )
-    assert response["statusCode"] == 202
-    body = json.loads(response["body"])
-    assert body["total_activities"] == 1
-    assert sent and sent[0][1] == [[str(activity_id)]]
-    with Session(test_engine) as session:
-        session.delete(session.get(Activity, activity_id))
-        session.delete(session.get(Organization, org_id))
-        session.delete(session.get(ActivityCategory, category_id))
-        run = session.get(CategoryScanRun, body["id"])
-        if run is not None:
-            session.delete(run)
-        session.commit()
+    body: dict | None = None
+    try:
+        response = lambda_handler(
+            {
+                "httpMethod": "POST",
+                "path": "/v1/admin/category-suggestions/scan",
+                "body": json.dumps({"org_id": str(org_id)}),
+                "headers": {"Content-Type": "application/json"},
+                "requestContext": {
+                    "authorizer": {"groups": "admin", "userSub": "admin"}
+                },
+            },
+            None,
+        )
+        assert response["statusCode"] == 202
+        body = json.loads(response["body"])
+        assert body["total_activities"] == 1
+        assert sent and sent[0][1] == [[str(activity_id)]]
+    finally:
+        with Session(test_engine) as session:
+            if body is not None:
+                run = session.get(CategoryScanRun, body["id"])
+                if run is not None:
+                    session.delete(run)
+            for model, row_id in (
+                (Activity, activity_id),
+                (Organization, org_id),
+                (ActivityCategory, category_id),
+            ):
+                row = session.get(model, row_id)
+                if row is not None:
+                    session.delete(row)
+            session.commit()

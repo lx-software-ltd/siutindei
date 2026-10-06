@@ -125,6 +125,7 @@ def _ensure_suggestion(
     suggestion = repo.get_by_fingerprint(fingerprint)
     name_zh = _name(propose.get("name_zh"))
     parent = _category(session, propose.get("parent_id"))
+    parent_id = None if parent is None else UUID(str(parent.id))
     confidence = max(
         (
             value
@@ -143,7 +144,7 @@ def _ensure_suggestion(
             enrichment_status="done",
             suggested_name=name,
             name_translations={"zh": name_zh} if name_zh else {},
-            suggested_parent_id=None if parent is None else parent.id,
+            suggested_parent_id=parent_id,
             confidence=confidence,
             rationale=rationale,
             enriched_at=now,
@@ -164,8 +165,8 @@ def _ensure_suggestion(
         suggestion.suggested_name = name
     if name_zh and not (suggestion.name_translations or {}).get("zh"):
         suggestion.name_translations = {"zh": name_zh}
-    if suggestion.suggested_parent_id is None and parent is not None:
-        suggestion.suggested_parent_id = parent.id
+    if suggestion.suggested_parent_id is None and parent_id is not None:
+        suggestion.suggested_parent_id = parent_id
     if suggestion.confidence is None:
         suggestion.confidence = confidence
     if not suggestion.rationale and rationale:
