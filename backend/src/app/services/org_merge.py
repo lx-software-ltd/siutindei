@@ -290,10 +290,14 @@ def _locations_overlap(session, survivor, sources) -> bool:
 
 
 def _close(left: Location, right: Location) -> bool:
-    if None in (left.lat, left.lng, right.lat, right.lng):
+    left_lat = left.lat
+    left_lng = left.lng
+    right_lat = right.lat
+    right_lng = right.lng
+    if left_lat is None or left_lng is None or right_lat is None or right_lng is None:
         return False
-    lat_m = (float(left.lat) - float(right.lat)) * 111_000
-    lng_m = (float(left.lng) - float(right.lng)) * 111_000 * 0.85
+    lat_m = (float(left_lat) - float(right_lat)) * 111_000
+    lng_m = (float(left_lng) - float(right_lng)) * 111_000 * 0.85
     return (lat_m * lat_m + lng_m * lng_m) ** 0.5 <= 50
 
 

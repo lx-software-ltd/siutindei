@@ -192,7 +192,8 @@ def _score_pairs(
     def add(left: str, right: str, signal: str, amount: float) -> None:
         if left == right:
             return
-        pair = tuple(sorted((left, right)))
+        low, high = sorted((left, right))
+        pair = (low, high)
         if frozenset(pair) in dismissed:
             return
         bucket = scores.setdefault(pair, {})
@@ -466,7 +467,7 @@ def _decode_cursor(value: str) -> dict:
 
 
 def _translation_values(org: Organization) -> list[str]:
-    values = []
+    values: list[str] = []
     raw = org.name_translations or {}
     if isinstance(raw, dict):
         values.extend(_text(value) for value in raw.values())

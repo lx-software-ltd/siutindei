@@ -391,7 +391,8 @@ def test_truncation_is_a_file_warning(
     sample_geographic_area,
 ) -> None:
     warnings: list[str] = []
-    long_name = "N" * 201
+    # Mixed case so import title-casing leaves the truncated name unchanged.
+    long_name = "Na" * 101
     process_import_payload(
         db_session,
         {

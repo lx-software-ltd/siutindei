@@ -540,9 +540,9 @@ paths:
         Groups organizations that share a normalized name, contact, source id,
         website host, or a pg_trgm name similarity at or above `min_score`
         (default 0.6). Pairs an admin dismissed are kept apart. Admin only.
-        Merge is `POST /v1/admin/org-duplicates/merge` so the route fits the
-        existing API Gateway proxy and stays under the CloudFormation
-        resource cap.
+        Merge is `POST /v1/admin/org-duplicates/merge`. Data-quality routes
+        share `/v1/admin/{proxy+}` so the stack stays under the
+        CloudFormation resource cap.
       parameters:
         - name: min_score
           in: query

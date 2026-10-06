@@ -112,12 +112,12 @@ def scan_names(
     seen = 0
     truncated = False
     if entity_type in (None, "organization"):
-        stmt = select(Organization).order_by(Organization.name)
+        org_stmt = select(Organization).order_by(Organization.name)
         if org_id is not None:
-            stmt = stmt.where(Organization.id == org_id)
+            org_stmt = org_stmt.where(Organization.id == org_id)
         if query:
-            stmt = stmt.where(Organization.name.ilike(f"%{query}%"))
-        for org in session.scalars(stmt).all():
+            org_stmt = org_stmt.where(Organization.name.ilike(f"%{query}%"))
+        for org in session.scalars(org_stmt).all():
             seen += 1
             if seen > _MAX_SCAN:
                 truncated = True
@@ -135,17 +135,17 @@ def scan_names(
                 ),
             )
     if entity_type in (None, "activity") and not truncated:
-        stmt = (
+        activity_stmt = (
             select(Activity)
             .join(Organization, Organization.id == Activity.org_id)
             .where(Organization.review_status == "pending_review")
             .order_by(Activity.name)
         )
         if org_id is not None:
-            stmt = stmt.where(Activity.org_id == org_id)
+            activity_stmt = activity_stmt.where(Activity.org_id == org_id)
         if query:
-            stmt = stmt.where(Activity.name.ilike(f"%{query}%"))
-        for activity in session.scalars(stmt).all():
+            activity_stmt = activity_stmt.where(Activity.name.ilike(f"%{query}%"))
+        for activity in session.scalars(activity_stmt).all():
             seen += 1
             if seen > _MAX_SCAN:
                 truncated = True

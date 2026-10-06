@@ -136,9 +136,10 @@ their primary responsibilities.
 - Hosts the organization review queue and import-job history. Shapes
   are in `docs/api/admin.yaml`.
 - Hosts data-quality routes under `/v1/admin/org-duplicates` and
-  `/v1/admin/name-fixes` (admin group only). Duplicate search, dismiss,
-  and merge share one `{proxy+}` method, as do name-fix scan, settings,
-  and apply. Shapes are in `docs/api/admin.yaml`. Design:
+  `/v1/admin/name-fixes` (admin group only). Both families share one
+  `/v1/admin/{proxy+}` method so the stack stays within the
+  CloudFormation 500-resource cap. Shapes are in `docs/api/admin.yaml`.
+  Design:
   `docs/architecture/data-quality.md`. Imports clean organization names
   on every write and activity names only while the organization is
   `pending_review`. A merged organization's `source_id` and `place_id`
