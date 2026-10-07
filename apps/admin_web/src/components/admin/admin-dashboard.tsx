@@ -34,7 +34,7 @@ import { AccountHome } from './user-dashboard';
 const sectionLabels = buildAdminNavSections([
   { sections: [{ key: 'catalog', label: 'Catalog' }] },
   {
-    label: 'Workspace',
+    dividerBefore: true,
     sections: [
       { key: 'organizations', label: 'Organization' },
       { key: 'media', label: 'Media' },
@@ -45,7 +45,7 @@ const sectionLabels = buildAdminNavSections([
     ],
   },
   {
-    label: 'Intake',
+    dividerBefore: true,
     sort: true,
     sections: [
       { key: 'imports', label: 'Imports' },
@@ -53,19 +53,15 @@ const sectionLabels = buildAdminNavSections([
     ],
   },
   {
-    label: 'Quality',
     sections: [{ key: 'data-quality', label: 'Data quality' }],
   },
   {
-    label: 'Categories',
     sections: [{ key: 'activity-categories', label: 'Categories' }],
   },
   {
-    label: 'Feedback',
     sections: [{ key: 'feedback', label: 'Feedback' }],
   },
   {
-    label: 'Access',
     sort: true,
     sections: [
       { key: 'api-keys', label: 'API Keys' },
@@ -73,7 +69,6 @@ const sectionLabels = buildAdminNavSections([
     ],
   },
   {
-    label: 'Audit',
     sections: [{ key: 'audit-logs', label: 'Audit Logs' }],
   },
 ]);

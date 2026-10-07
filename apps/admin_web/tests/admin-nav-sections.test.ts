@@ -6,7 +6,6 @@ describe('buildAdminNavSections', () => {
   it('keeps an unsorted group in declaration order', () => {
     const sections = buildAdminNavSections([
       {
-        label: 'Workspace',
         sections: [
           { key: 'organizations', label: 'Organization' },
           { key: 'media', label: 'Media' },
@@ -18,13 +17,12 @@ describe('buildAdminNavSections', () => {
       'Organization',
       'Media',
     ]);
-    expect(sections[0]?.group).toBe('Workspace');
+    expect(sections[0]?.dividerBefore).toBe(false);
   });
 
   it('sorts a group A-Z when asked', () => {
     const sections = buildAdminNavSections([
       {
-        label: 'Access',
         sort: true,
         sections: [
           { key: 'users', label: 'Users' },
@@ -39,11 +37,18 @@ describe('buildAdminNavSections', () => {
     ]);
   });
 
-  it('keeps group order and leaves an unlabeled item without a heading', () => {
+  it('draws a rule only before the first item of a marked group', () => {
     const sections = buildAdminNavSections([
       { sections: [{ key: 'catalog', label: 'Catalog' }] },
       {
-        label: 'Intake',
+        dividerBefore: true,
+        sections: [
+          { key: 'organizations', label: 'Organization' },
+          { key: 'schedules', label: 'Schedules' },
+        ],
+      },
+      {
+        dividerBefore: true,
         sort: true,
         sections: [
           { key: 'tickets', label: 'Tickets' },
@@ -54,10 +59,17 @@ describe('buildAdminNavSections', () => {
 
     expect(sections.map((section) => section.key)).toEqual([
       'catalog',
+      'organizations',
+      'schedules',
       'imports',
       'tickets',
     ]);
-    expect(sections[0]?.group).toBeUndefined();
-    expect(sections[1]?.group).toBe('Intake');
+    expect(sections.map((section) => section.dividerBefore)).toEqual([
+      false,
+      true,
+      false,
+      true,
+      false,
+    ]);
   });
 });
