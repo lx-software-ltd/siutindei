@@ -37,29 +37,38 @@ def merge_warnings(session, survivor, sources) -> list[str]:
     return warnings
 
 
-def assert_identity_unique(session: Session, survivor: Organization) -> None:
-    """Reject a survivor name or place id that belongs to a third organization."""
-    name = _text(survivor.name)
-    clash = session.scalar(
-        select(Organization.id).where(
-            Organization.id != survivor.id,
-            func.lower(func.trim(Organization.name)) == name.casefold(),
+def assert_identity_unique(
+    session: Session,
+    survivor: Organization,
+    name: str,
+    place_id: str,
+) -> None:
+    """Reject a planned name or place id that belongs to a third organization.
+
+    The check runs before those values are written. A query after the write
+    autoflushes the new name and hits the unique index before this can raise.
+    """
+    with session.no_autoflush:
+        clash = session.scalar(
+            select(Organization.id).where(
+                Organization.id != survivor.id,
+                func.lower(func.trim(Organization.name)) == name.casefold(),
+            )
         )
-    )
     if clash is not None:
         raise ValidationError(
             "This name matches another organization",
             field="name",
         )
-    place_id = _text(survivor.place_id)
     if not place_id:
         return
-    place_clash = session.scalar(
-        select(Organization.id).where(
-            Organization.id != survivor.id,
-            Organization.place_id == place_id,
+    with session.no_autoflush:
+        place_clash = session.scalar(
+            select(Organization.id).where(
+                Organization.id != survivor.id,
+                Organization.place_id == place_id,
+            )
         )
-    )
     if place_clash is not None:
         raise ValidationError(
             "This place id matches another organization",

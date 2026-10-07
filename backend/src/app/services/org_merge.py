@@ -315,9 +315,14 @@ def _apply(session, survivor, sources, plan, merged_by: str | None) -> None:
         source.place_id = None
         source.source_id = None
     session.flush()
+    assert_identity_unique(
+        session,
+        survivor,
+        _text(values.get("name", survivor.name)),
+        _text(values.get("place_id", survivor.place_id)),
+    )
     _write_scalars(survivor, values)
     _write_translations(survivor, values)
-    assert_identity_unique(session, survivor)
     pending: list[str] = []
     media = []
     for source in sources:
