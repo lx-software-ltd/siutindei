@@ -49,6 +49,18 @@ test.describe('Organizations Panel', () => {
 
   test('should display the catalog of organizations', async ({ adminPage }) => {
     await expect(adminPage.getByRole('table', { name: 'Catalog' })).toBeVisible();
+    const pendingReviewCard = adminPage
+      .getByText('Pending review', { exact: true })
+      .locator('..');
+    await expect(pendingReviewCard).toBeVisible();
+    await expect(pendingReviewCard).toHaveCSS(
+      'background-color',
+      'rgb(255, 255, 255)'
+    );
+    await expect(adminPage.getByText('With missing details')).toBeVisible();
+    await expect(
+      adminPage.getByText('Approved', { exact: true })
+    ).toBeVisible();
 
     await expect(adminPage.getByRole('columnheader', { name: 'Name' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Review' })).toBeVisible();

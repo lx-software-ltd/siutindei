@@ -504,7 +504,8 @@ screens from `apps/admin_web/src/components/ui/`:
   Locations, Activities, Pricing, Schedules) show the open organization's
   name and status badges above that card. Organization fields sit in the
   same white card; the name stays outside it. A new organization uses the
-  heading "New organization" with no badges.
+  heading "New organization" with no badges. KPI tiles (`AdminKpiCard`)
+  use that same white card surface.
 - **Filters** (`AdminFilterBar` + `AdminFilterField`) sit above the table.
   The create control (`AdminCreateButton`) spells out its label (`New
   organization`) at every breakpoint, lives in the trailing slot, and moves
