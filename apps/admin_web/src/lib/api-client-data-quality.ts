@@ -73,6 +73,8 @@ export interface NameFixSettings {
   bracket_suffixes: string[];
 }
 
+const jsonHeaders = { 'Content-Type': 'application/json' };
+
 function query(params: object) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -107,6 +109,7 @@ export function dismissOrgDuplicates(orgIds: string[]) {
     buildApiUrl('v1/admin/org-duplicates/dismiss'),
     {
       method: 'POST',
+      headers: jsonHeaders,
       body: JSON.stringify({ org_ids: orgIds }),
     }
   );
@@ -120,6 +123,7 @@ export function mergeOrganizations(body: {
 }) {
   return request<OrgMergeResult>(buildApiUrl('v1/admin/org-duplicates/merge'), {
     method: 'POST',
+    headers: jsonHeaders,
     body: JSON.stringify(body),
   });
 }
@@ -156,6 +160,7 @@ export function getNameFixSettings() {
 export function updateNameFixSettings(body: NameFixSettings) {
   return request<NameFixSettings>(buildApiUrl('v1/admin/name-fixes/settings'), {
     method: 'PUT',
+    headers: jsonHeaders,
     body: JSON.stringify(body),
   });
 }
@@ -169,6 +174,7 @@ export function scanNameFixes(body: { entity_type?: string; q?: string } = {}) {
     truncated: boolean;
   }>(buildApiUrl('v1/admin/name-fixes/scan'), {
     method: 'POST',
+    headers: jsonHeaders,
     body: JSON.stringify(body),
   });
 }
@@ -176,6 +182,7 @@ export function scanNameFixes(body: { entity_type?: string; q?: string } = {}) {
 export function decideNameFix(id: string, body: { action: 'apply' | 'dismiss'; value?: string }) {
   return request<NameFixProposal>(buildApiUrl(`v1/admin/name-fixes/${id}`), {
     method: 'POST',
+    headers: jsonHeaders,
     body: JSON.stringify(body),
   });
 }
@@ -196,6 +203,7 @@ export function decideNameFixesBulk(body: {
     failures: { id: string; message: string }[];
   }>(buildApiUrl('v1/admin/name-fixes/bulk'), {
     method: 'POST',
+    headers: jsonHeaders,
     body: JSON.stringify(body),
   });
 }

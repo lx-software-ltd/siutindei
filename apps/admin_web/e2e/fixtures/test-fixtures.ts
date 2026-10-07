@@ -1790,6 +1790,17 @@ export async function setupApiMocks(page: Page): Promise<void> {
       return;
     }
     if (method === 'POST' && url.includes('/org-duplicates/merge')) {
+      const contentType = route.request().headers()['content-type'] ?? '';
+      if (!contentType.includes('application/json')) {
+        await route.fulfill({
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error: 'Content-Type must be application/json',
+          }),
+        });
+        return;
+      }
       const body = route.request().postDataJSON() as { dry_run?: boolean };
       if (!body.dry_run) {
         duplicateGroups = [];
