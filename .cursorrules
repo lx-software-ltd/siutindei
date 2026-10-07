@@ -500,7 +500,11 @@ screens from `apps/admin_web/src/components/ui/`:
 
 - **Page order:** filters, then the table, inside one untitled white `Card`
   (`AdminRecordTable`). Do not render a listing card title. The section name
-  already appears in the nav.
+  already appears in the nav. Workspace pages (Organization, Media,
+  Locations, Activities, Pricing, Schedules) show the open organization's
+  name and status badges above that card. Organization fields sit in the
+  same white card; the name stays outside it. A new organization uses the
+  heading "New organization" with no badges.
 - **Filters** (`AdminFilterBar` + `AdminFilterField`) sit above the table.
   The create control (`AdminCreateButton`) spells out its label (`New
   organization`) at every breakpoint, lives in the trailing slot, and moves

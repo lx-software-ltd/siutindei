@@ -33,6 +33,7 @@ import {
   ResourceTableShell,
 } from '../ui/resource-table-shell';
 import { StatusBanner } from '../status-banner';
+import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 
 const MAP_ICON_BASE_URL =
@@ -443,7 +444,9 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
 
   return (
     <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='locations'>
-      <ResourceTableShell
+      <div className='space-y-4'>
+        <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
+        <ResourceTableShell
         ariaLabel={isAdmin ? 'Locations' : 'Your locations'}
         rows={filteredItems}
         getLabel={(item) => getAreaName(item.area_id)}
@@ -517,7 +520,8 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
           })
         }
       />
-      {panel.confirmDialog}
+        {panel.confirmDialog}
+      </div>
     </WorkspaceScopeGate>
   );
 }

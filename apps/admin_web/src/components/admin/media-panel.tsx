@@ -11,6 +11,7 @@ import { useConfirmDialog } from '../../hooks/use-confirm-dialog';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { getResourceApi } from '../../lib/resource-api';
 import type { Organization } from '../../types/admin';
+import { OrganizationWorkspaceTitle } from './organization-workspace-title';
 import { WorkspaceScopeGate } from './workspace-empty';
 import { AdminEditorPanel } from '../ui/admin-editor-panel';
 import { Button } from '../ui/button';
@@ -454,7 +455,11 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
   return (
     <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='media'>
     <div className='space-y-6'>
-      <h2 className='sr-only'>Organization Media</h2>
+      <OrganizationWorkspaceTitle
+        mode={mode}
+        orgId={scopedOrgId}
+        organization={organization}
+      />
       {error && (
         <StatusBanner variant='error' title='Error'>
           {error}

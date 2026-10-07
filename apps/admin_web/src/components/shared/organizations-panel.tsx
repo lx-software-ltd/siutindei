@@ -22,6 +22,7 @@ import {
 import type { CognitoUser, Organization } from '../../types/admin';
 import { OrganizationMergeDialog } from '../admin/data-quality/organization-merge-dialog';
 import { OrganizationReadiness } from '../admin/organization-readiness';
+import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
 import { WorkspaceEmpty } from '../admin/workspace-empty';
 import { useAuth } from '../auth-provider';
 import { Button } from '../ui/button';
@@ -30,9 +31,9 @@ import { AdminFieldGrid } from '../ui/admin-field-grid';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
+import { Card } from '../ui/card';
 import { Select } from '../ui/select';
 import { Textarea } from '../ui/textarea';
-import { StatusBadge } from '../ui/status-badge';
 import { StatusBanner } from '../status-banner';
 import {
   SOCIAL_FIELDS,
@@ -71,19 +72,6 @@ async function organizationNameTaken(
       item.id !== editingId &&
       Boolean(item.name) &&
       normalizeKey(item.name) === key
-  );
-}
-
-function OrganizationStatusBadges({ item }: { item: Organization }) {
-  return (
-    <span className='inline-flex flex-wrap items-center gap-1'>
-      <StatusBadge
-        status={(item.status ?? 'operational').replaceAll('_', ' ')}
-      />
-      <StatusBadge
-        status={(item.review_status ?? 'pending_review').replaceAll('_', ' ')}
-      />
-    </span>
   );
 }
 
@@ -867,14 +855,15 @@ export function OrganizationsPanel({
   return (
     <div className='space-y-4'>
       {current ? (
-        <div className='flex flex-wrap items-center gap-2'>
-          <h2 className='text-lg font-semibold text-slate-900'>{current.name}</h2>
-          <OrganizationStatusBadges item={current} />
-        </div>
+        <OrganizationWorkspaceTitle
+          mode={mode}
+          orgId={current.id}
+          organization={current}
+        />
       ) : (
         <h2 className='text-lg font-semibold text-slate-900'>New organization</h2>
       )}
-      {detail}
+      <Card>{detail}</Card>
       {isAdmin && panel.editingId ? (
         <OrganizationReadiness orgId={panel.editingId} />
       ) : null}
