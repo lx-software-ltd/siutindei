@@ -133,7 +133,7 @@ their primary responsibilities.
   - `ADMIN_IMPORT_EXPORT_BUCKET`
   - `BOARD_CATALOG_MANAGER_ID` (optional catalog manager sub)
   - `ORG_REVIEW_GATE_ENABLED` (same flag as search; default `false`)
-- Hosts the organization review queue and import-job history. Shapes
+- Hosts the organization review queue (Catalog) and import-job history. Shapes
   are in `docs/api/admin.yaml`.
 - Hosts data-quality routes under `/v1/admin/org-duplicates` and
   `/v1/admin/name-fixes` (admin group only). Both families share one

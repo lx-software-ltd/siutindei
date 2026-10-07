@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 
 import { useAdminSectionQuery } from '@/hooks/use-admin-section-query';
+import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { usePrefetchAdminSection } from '@/hooks/use-prefetch-admin-section';
 import { buildAdminNavSections } from '@/lib/admin-nav-sections';
 
@@ -24,34 +25,58 @@ import { CognitoUsersPanel } from './cognito-users-panel';
 import { FeedbackPage } from './feedback-page';
 import { DataQualityPage } from './data-quality/data-quality-page';
 import { ImportsPanel } from './imports-panel';
+import { CatalogPanel } from './org-review/review-queue-panel';
 import { MediaPanel } from './media-panel';
 import { ManagerDashboard } from './manager-dashboard';
 import { TicketsPanel } from './tickets-panel';
-import { UserDashboard } from './user-dashboard';
+import { AccountHome } from './user-dashboard';
 
-const primarySections = [
-  { key: 'organizations', label: 'Organizations' },
-  { key: 'media', label: 'Media' },
-  { key: 'locations', label: 'Locations' },
-  { key: 'activities', label: 'Activities' },
-  { key: 'pricing', label: 'Pricing' },
-  { key: 'schedules', label: 'Schedules' },
-];
-
-// Append second-group pages here. buildAdminNavSections sorts them A-Z
-// and places the divider before the first tool item.
-const toolSections = [
-  { key: 'api-keys', label: 'API Keys' },
-  { key: 'audit-logs', label: 'Audit Logs' },
-  { key: 'activity-categories', label: 'Categories' },
-  { key: 'data-quality', label: 'Data quality' },
-  { key: 'feedback', label: 'Feedback' },
-  { key: 'imports', label: 'Imports' },
-  { key: 'tickets', label: 'Tickets' },
-  { key: 'cognito-users', label: 'Users' },
-];
-
-const sectionLabels = buildAdminNavSections(primarySections, toolSections);
+const sectionLabels = buildAdminNavSections([
+  { sections: [{ key: 'catalog', label: 'Catalog' }] },
+  {
+    label: 'Workspace',
+    sections: [
+      { key: 'organizations', label: 'Organization' },
+      { key: 'media', label: 'Media' },
+      { key: 'locations', label: 'Locations' },
+      { key: 'activities', label: 'Activities' },
+      { key: 'pricing', label: 'Pricing' },
+      { key: 'schedules', label: 'Schedules' },
+    ],
+  },
+  {
+    label: 'Intake',
+    sort: true,
+    sections: [
+      { key: 'imports', label: 'Imports' },
+      { key: 'tickets', label: 'Tickets' },
+    ],
+  },
+  {
+    label: 'Quality',
+    sections: [{ key: 'data-quality', label: 'Data quality' }],
+  },
+  {
+    label: 'Categories',
+    sections: [{ key: 'activity-categories', label: 'Categories' }],
+  },
+  {
+    label: 'Feedback',
+    sections: [{ key: 'feedback', label: 'Feedback' }],
+  },
+  {
+    label: 'Access',
+    sort: true,
+    sections: [
+      { key: 'api-keys', label: 'API Keys' },
+      { key: 'cognito-users', label: 'Users' },
+    ],
+  },
+  {
+    label: 'Audit',
+    sections: [{ key: 'audit-logs', label: 'Audit Logs' }],
+  },
+]);
 
 const recognizedSections = [
   ...sectionLabels,
@@ -61,10 +86,11 @@ const recognizedSections = [
 
 export function AdminDashboard() {
   const { status, user, isAdmin, isManager, logout, error } = useAuth();
-  const prefetchSection = usePrefetchAdminSection('admin');
+  const { orgId } = useOrganizationScope();
+  const prefetchSection = usePrefetchAdminSection('admin', orgId);
   const { activeSection, selectSection } = useAdminSectionQuery(
     recognizedSections,
-    'organizations'
+    'catalog'
   );
 
   const activeContent = useMemo(() => {
@@ -84,6 +110,8 @@ export function AdminDashboard() {
         return <SchedulesPanel mode='admin' />;
       case 'imports':
         return <ImportsPanel />;
+      case 'catalog':
+        return <CatalogPanel />;
       case 'data-quality':
         return <DataQualityPage />;
       case 'tickets':
@@ -126,7 +154,7 @@ export function AdminDashboard() {
   // If user is neither admin nor manager, show the user dashboard
   // where they can request to become a manager
   if (!isAdmin && !isManager) {
-    return <UserDashboard />;
+    return <AccountHome />;
   }
 
   // Admin experience (full access)

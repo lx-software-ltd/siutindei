@@ -13,6 +13,7 @@ import {
 const parsers = {
   section: parseAsString,
   edit: parseAsString,
+  org: parseAsString,
   organization: parseAsString,
   location: parseAsString,
   activity: parseAsString,

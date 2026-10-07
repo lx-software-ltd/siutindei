@@ -6,7 +6,7 @@ test.describe('Organization review queue', () => {
   }) => {
     await adminPage.goto('/admin/dashboard?section=imports&tab=review');
     await expect(
-      adminPage.getByRole('heading', { name: 'Review queue' })
+      adminPage.getByRole('heading', { name: 'Catalog' })
     ).toBeVisible();
     await expect(
       adminPage.getByRole('cell', { name: 'Test Organization 1' })
@@ -40,7 +40,7 @@ test.describe('Organization review queue', () => {
   });
 
   test('filters the queue when the name is submitted', async ({ adminPage }) => {
-    await adminPage.goto('/admin/dashboard?section=imports&tab=review');
+    await adminPage.goto('/admin/dashboard?section=catalog');
     const requestPromise = adminPage.waitForRequest(
       (request) =>
         request.url().includes('/admin/org-review') &&
@@ -52,7 +52,7 @@ test.describe('Organization review queue', () => {
   });
 
   test('applies a bulk property and opens the fix link', async ({ adminPage }) => {
-    await adminPage.goto('/admin/dashboard?section=imports&tab=review');
+    await adminPage.goto('/admin/dashboard?section=catalog');
     await adminPage.getByRole('checkbox', { name: 'Select row' }).first().check();
     await adminPage.getByRole('button', { name: 'Apply properties' }).click();
     await adminPage.getByRole('checkbox', { name: 'Email' }).check();
@@ -64,5 +64,6 @@ test.describe('Organization review queue', () => {
     await adminPage.getByRole('button', { name: 'Fix' }).first().click();
     await expect(adminPage).toHaveURL(/section=locations/);
     await expect(adminPage).toHaveURL(/location=loc-1/);
+    await expect(adminPage).toHaveURL(/org=org-1/);
   });
 });

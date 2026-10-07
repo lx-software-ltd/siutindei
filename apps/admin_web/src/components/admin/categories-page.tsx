@@ -1,30 +1,40 @@
 'use client';
 
+import { useEffect } from 'react';
 import { parseAsString, useQueryStates } from 'nuqs';
 
 import { ActivityCategoriesPanel } from '../shared';
 import { AdminTabStrip } from '../ui/admin-tab-strip';
-import { CategoryChecksPanel } from './category-suggestions/category-checks-panel';
 import { CategorySuggestionsPanel } from './category-suggestions/category-suggestions-panel';
 
-type CategoryView = 'categories' | 'suggestions' | 'checks';
+type CategoryView = 'categories' | 'suggestions';
 
 const CATEGORY_VIEWS = [
   { key: 'categories' as const, label: 'Categories' },
   { key: 'suggestions' as const, label: 'Category Suggestions' },
-  { key: 'checks' as const, label: 'Category Checks' },
 ];
 
 export function CategoriesPage() {
   const [query, setQuery] = useQueryStates({
     section: parseAsString,
     categoryView: parseAsString,
+    tab: parseAsString,
   });
+
+  useEffect(() => {
+    if (query.categoryView !== 'checks') {
+      return;
+    }
+    void setQuery({
+      section: 'data-quality',
+      categoryView: null,
+      tab: 'checks',
+    });
+  }, [query.categoryView, setQuery]);
+
   const activeView: CategoryView =
-    query.categoryView === 'suggestions' ||
-    query.categoryView === 'categories' ||
-    query.categoryView === 'checks'
-      ? query.categoryView
+    query.categoryView === 'suggestions'
+      ? 'suggestions'
       : query.section === 'category-suggestions'
         ? 'suggestions'
         : 'categories';
@@ -44,8 +54,6 @@ export function CategoriesPage() {
       />
       {activeView === 'suggestions' ? (
         <CategorySuggestionsPanel />
-      ) : activeView === 'checks' ? (
-        <CategoryChecksPanel />
       ) : (
         <ActivityCategoriesPanel />
       )}

@@ -1,6 +1,7 @@
 /** Record ids mirrored in the dashboard URL. `edit` is the legacy alias. */
 export const ADMIN_RECORD_PARAMS = [
   'edit',
+  'org',
   'organization',
   'location',
   'activity',
@@ -25,11 +26,12 @@ export const ADMIN_RECORD_PARAMS = [
 export type AdminRecordParam = (typeof ADMIN_RECORD_PARAMS)[number];
 
 const KEEP_BY_SECTION: Record<string, readonly AdminRecordParam[]> = {
-  organizations: ['organization'],
-  locations: ['location'],
-  activities: ['activity'],
-  pricing: ['pricing'],
-  schedules: ['schedule'],
+  organizations: ['org', 'organization', 'edit'],
+  media: ['org'],
+  locations: ['location', 'org'],
+  activities: ['activity', 'org'],
+  pricing: ['pricing', 'org'],
+  schedules: ['schedule', 'org'],
   tickets: ['ticket'],
   feedback: ['feedback', 'feedback-label'],
   'feedback-labels': ['feedback-label', 'feedback'],
@@ -38,8 +40,9 @@ const KEEP_BY_SECTION: Record<string, readonly AdminRecordParam[]> = {
   'category-suggestions': ['suggestion', 'category', 'category-check'],
   'api-keys': ['api-key'],
   'audit-logs': ['audit-log'],
-  imports: ['review', 'job', 'import-job'],
-  'data-quality': ['duplicate', 'name-fix', 'organization'],
+  catalog: ['job'],
+  imports: ['job', 'import-job'],
+  'data-quality': ['duplicate', 'name-fix', 'organization', 'category-check'],
 };
 
 const LEGACY_EDIT_SECTIONS = new Set([

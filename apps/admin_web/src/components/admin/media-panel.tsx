@@ -3,22 +3,19 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent, SetStateAction } from 'react';
 
-import {
-  ApiError,
-  updateResource,
-} from '../../lib/api-client';
+import { ApiError } from '../../lib/api-client';
 import {
   deleteOrganizationMedia,
 } from '../../lib/api-client-media';
 import { useConfirmDialog } from '../../hooks/use-confirm-dialog';
-import { useOrganizationsByMode } from '../../hooks/use-organizations-by-mode';
+import { useOrganizationScope } from '../../hooks/use-organization-scope';
+import { getResourceApi } from '../../lib/resource-api';
 import type { Organization } from '../../types/admin';
+import { WorkspaceScopeGate } from './workspace-empty';
 import { AdminEditorPanel } from '../ui/admin-editor-panel';
-import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
-import { Select } from '../ui/select';
 import { StatusBanner } from '../status-banner';
 import { MediaGrid } from './media/media-grid';
 import {
@@ -52,20 +49,16 @@ function PlusIcon({ className }: { className?: string }) {
 
 export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
   const isAdmin = mode === 'admin';
-  const {
-    items: orgItems,
-    isLoading: isLoadingOrgs,
-    error: organizationsError,
-  } = useOrganizationsByMode(mode, { fetchAll: true, limit: 50 });
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const scope = useOrganizationScope();
+  const scopedOrgId = scope.orgId;
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [isLoadingOrg, setIsLoadingOrg] = useState(false);
   const [mediaState, dispatchMedia] = useReducer(
     mediaPanelReducer,
     initialMediaPanelState
   );
   const {
     selectedOrgId,
-    orgTouched,
-    orgActionAttempted,
     isSaving,
     isProcessingMedia,
     error,
@@ -95,10 +88,6 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
     dispatchMedia({ type: 'set-field', field, value });
   };
 
-  const setSelectedOrgId = (value: SetStateAction<string>) =>
-    setMediaField('selectedOrgId', value);
-  const setOrgTouched = (value: SetStateAction<boolean>) =>
-    setMediaField('orgTouched', value);
   const setOrgActionAttempted = (value: SetStateAction<boolean>) =>
     setMediaField('orgActionAttempted', value);
   const setIsSaving = (value: SetStateAction<boolean>) =>
@@ -125,95 +114,66 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
     setMediaField('dragIndex', value);
   const setDragOverIndex = (value: SetStateAction<number | null>) =>
     setMediaField('dragOverIndex', value);
-  const { confirm, confirmDialog } = useConfirmDialog();
+  const { confirmDialog } = useConfirmDialog();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const requiredIndicator = (
-    <span className='text-red-500' aria-hidden='true'>
-      *
-    </span>
-  );
-  const errorInputClassName =
-    'border-red-500 focus:border-red-500 focus:ring-red-500';
-
-  const showOrgError =
-    !selectedOrgId && (orgTouched || orgActionAttempted);
-  const orgErrorMessage = showOrgError ? 'Select an organization.' : '';
-
   const isMediaBusy = isSaving || isProcessingMedia;
-
-  // For managers with a single org, auto-select and disable the dropdown
-  const isSingleOrgManager = !isAdmin && organizations.length === 1;
-
-  const selectedOrganization = organizations.find(
-    (org) => org.id === selectedOrgId
-  );
+  const selectedOrganization = organization;
 
   useEffect(() => {
-    setOrganizations(orgItems);
-    if (isAdmin || selectedOrgId) {
+    if (!scopedOrgId) {
+      setOrganization(null);
+      setIsLoadingOrg(false);
       return;
     }
-    if (orgItems.length === 1) {
-      const singleOrg = orgItems[0];
-      const nextMediaUrls = singleOrg.media_urls ?? [];
-      dispatchMedia({
-        type: 'patch',
-        payload: {
-          selectedOrgId: singleOrg.id,
-          orgTouched: false,
-          orgActionAttempted: false,
-          mediaUrls: nextMediaUrls,
-          logoMediaUrl: resolveLogoMediaUrl(
-            nextMediaUrls,
-            singleOrg.logo_media_url
-          ),
-        },
+    let cancelled = false;
+    setIsLoadingOrg(true);
+    const api = getResourceApi<Organization>('organizations', mode);
+    void api
+      .get(scopedOrgId)
+      .then((org) => {
+        if (cancelled) {
+          return;
+        }
+        setOrganization(org);
+        const nextMediaUrls = org.media_urls ?? [];
+        dispatchMedia({
+          type: 'patch',
+          payload: {
+            selectedOrgId: org.id,
+            orgTouched: false,
+            orgActionAttempted: false,
+            mediaUrls: nextMediaUrls,
+            logoMediaUrl: resolveLogoMediaUrl(
+              nextMediaUrls,
+              org.logo_media_url
+            ),
+            hasUnsavedChanges: false,
+            pendingMediaDeletes: [],
+            uploadedMediaUrls: [],
+            error: '',
+          },
+        });
+      })
+      .catch((err: unknown) => {
+        if (cancelled) {
+          return;
+        }
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : 'Failed to load the organization.';
+        dispatchMedia({ type: 'set-field', field: 'error', value: message });
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingOrg(false);
+        }
       });
-    }
-  }, [isAdmin, orgItems, selectedOrgId]);
-
-  useEffect(() => {
-    if (organizationsError) {
-      dispatchMedia({
-        type: 'set-field',
-        field: 'error',
-        value: organizationsError,
-      });
-    }
-  }, [organizationsError]);
-
-  const handleSelectOrganization = async (orgId: string) => {
-    if (hasUnsavedChanges) {
-      const confirmed = await confirm(
-        'Switch organizations?',
-        'You have unsaved changes. Switch organizations and discard them?',
-        { confirmLabel: 'Switch', variant: 'danger' }
-      );
-      if (!confirmed) {
-        return;
-      }
-    }
-
-    setSelectedOrgId(orgId);
-    setOrgTouched(true);
-    setOrgActionAttempted(false);
-    setHasUnsavedChanges(false);
-    setPendingMediaDeletes([]);
-    setUploadedMediaUrls([]);
-    setNewMediaUrl('');
-    setError('');
-    setSuccessMessage('');
-    setDragIndex(null);
-    setDragOverIndex(null);
-
-    const org = organizations.find((o) => o.id === orgId);
-    const nextMediaUrls = org?.media_urls ?? [];
-    setMediaUrls(nextMediaUrls);
-    setLogoMediaUrl(
-      resolveLogoMediaUrl(nextMediaUrls, org?.logo_media_url)
-    );
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, scopedOrgId]);
 
   const handleAddMediaUrl = () => {
     const trimmed = newMediaUrl.trim();
@@ -429,16 +389,12 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
         logo_media_url: normalizedLogo,
       };
 
-      const updated = await updateResource<typeof payload, Organization>(
+      const updated = await getResourceApi<Organization>(
         'organizations',
-        selectedOrgId,
-        payload
-      );
+        mode
+      ).update(selectedOrgId, payload);
 
-      // Update the organizations list with updated media_urls
-      setOrganizations((prev) =>
-        prev.map((org) => (org.id === selectedOrgId ? updated : org))
-      );
+      setOrganization(updated);
       setLogoMediaUrl(updated.logo_media_url ?? null);
 
       await flushMediaDeletes(selectedOrgId, normalizedUrls);
@@ -481,7 +437,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
     }
 
     // Reset to original state
-    const org = organizations.find((o) => o.id === selectedOrgId);
+    const org = organization;
     const nextMediaUrls = org?.media_urls ?? [];
     setMediaUrls(nextMediaUrls);
     setLogoMediaUrl(
@@ -496,6 +452,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
   };
 
   return (
+    <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='media'>
     <div className='space-y-6'>
       <h2 className='sr-only'>Organization Media</h2>
       {error && (
@@ -508,41 +465,9 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
           {successMessage}
         </StatusBanner>
       )}
-      <AdminFilterBar>
-        <AdminFilterField
-          label={
-            <>
-              Organization <span className='ml-1'>{requiredIndicator}</span>
-            </>
-          }
-          htmlFor='org-select'
-        >
-          <Select
-            id='org-select'
-            value={selectedOrgId}
-            onChange={(event) => {
-              void handleSelectOrganization(event.target.value);
-            }}
-            disabled={isLoadingOrgs || isMediaBusy || isSingleOrgManager}
-            className={showOrgError ? errorInputClassName : ''}
-            aria-invalid={showOrgError || undefined}
-          >
-            <option value=''>
-              {isLoadingOrgs
-                ? 'Loading organizations...'
-                : 'Select an organization'}
-            </option>
-            {organizations.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name}
-              </option>
-            ))}
-          </Select>
-          {showOrgError ? (
-            <p className='text-xs text-red-600'>{orgErrorMessage}</p>
-          ) : null}
-        </AdminFilterField>
-      </AdminFilterBar>
+      {isLoadingOrg ? (
+        <p className='text-sm text-slate-600'>Loading media…</p>
+      ) : null}
 
       {selectedOrgId && (
         <Card>
@@ -651,37 +576,8 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
         </Card>
       )}
 
-      {!selectedOrgId && !isLoadingOrgs && organizations.length > 0 && (
-        <Card>
-          <p className='text-base font-semibold text-slate-900'>
-            Select an organization
-          </p>
-          <p className='mt-1 text-sm text-slate-600'>
-            Choose an organization from the dropdown above to manage its media.
-          </p>
-          <p className='mt-3 text-sm text-slate-600'>
-            You can upload images or add media URLs to any organization.
-            Media is saved when you click the &ldquo;Save media&rdquo;
-            button.
-          </p>
-        </Card>
-      )}
-
-      {!selectedOrgId && !isLoadingOrgs && organizations.length === 0 && (
-        <Card>
-          <p className='text-base font-semibold text-slate-900'>
-            No organizations found
-          </p>
-          <p className='mt-1 text-sm text-slate-600'>
-            Create an organization first to manage its media.
-          </p>
-          <p className='mt-3 text-sm text-slate-600'>
-            Go to the Organizations section to create a new organization, then
-            return here to add media.
-          </p>
-        </Card>
-      )}
       {confirmDialog}
     </div>
+    </WorkspaceScopeGate>
   );
 }

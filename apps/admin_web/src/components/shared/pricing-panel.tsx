@@ -8,6 +8,7 @@ import { useActivitiesByMode } from '../../hooks/use-activities-by-mode';
 import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useLocationsByMode } from '../../hooks/use-locations-by-mode';
+import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import {
   formatPriceAmount,
@@ -16,6 +17,7 @@ import {
 import type { ApiMode } from '../../lib/resource-api';
 import type { ActivityPricing } from '../../types/admin';
 import { StatusBanner } from '../status-banner';
+import { WorkspaceScopeGate } from '../admin/workspace-empty';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import {
   AdminDataTableCell,
@@ -76,6 +78,9 @@ function applyCreateDefaults(
 }
 
 export function PricingPanel({ mode }: PricingPanelProps) {
+  const isAdmin = mode === 'admin';
+  const scope = useOrganizationScope();
+  const scopedOrgId = scope.orgId;
   const panel = useResourceEditor<ActivityPricing, PricingFormState>({
     resource: 'pricing',
     mode,
@@ -83,11 +88,19 @@ export function PricingPanel({ mode }: PricingPanelProps) {
     itemToForm,
     paramName: 'pricing',
     legacyParam: 'edit',
+    listFilters: scopedOrgId ? { org_id: scopedOrgId } : {},
+    enabled: Boolean(scopedOrgId),
     noun: 'pricing',
   });
 
-  const { items: activities } = useActivitiesByMode(mode, { limit: 200 });
-  const { items: locations } = useLocationsByMode(mode, { limit: 200 });
+  const { items: activities } = useActivitiesByMode(mode, {
+    limit: 200,
+    orgId: scopedOrgId,
+  });
+  const { items: locations } = useLocationsByMode(mode, {
+    limit: 200,
+    orgId: scopedOrgId,
+  });
 
   const [searchQuery, setSearchQuery] = useState('');
   useExhaustPages(Boolean(searchQuery.trim()), {
@@ -513,7 +526,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
   );
 
   return (
-    <>
+    <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='pricing'>
       <ResourceTableShell
         ariaLabel='Pricing'
         rows={filteredItems}
@@ -601,6 +614,6 @@ export function PricingPanel({ mode }: PricingPanelProps) {
         }
       />
       {panel.confirmDialog}
-    </>
+    </WorkspaceScopeGate>
   );
 }

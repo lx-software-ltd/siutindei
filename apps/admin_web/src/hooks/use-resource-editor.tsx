@@ -21,6 +21,7 @@ import { adminQueryKeys } from '@/lib/admin-query-keys';
 import {
   getResourceApi,
   type ApiMode,
+  type ResourceListFilters,
   type ResourceType,
 } from '@/lib/resource-api';
 
@@ -41,6 +42,10 @@ interface UseResourceEditorOptions<T extends { id: string }, TForm> {
   /** Load every page (category tree). Stops at `ADMIN_LIST_AUTO_PAGE_CAP`. */
   fetchAll?: boolean;
   limit?: number;
+  /** Server filters, including `org_id` for a workspace-scoped list. */
+  listFilters?: ResourceListFilters;
+  /** Skip the list request until the caller has a scope. */
+  enabled?: boolean;
   noun: string;
 }
 
@@ -58,12 +63,15 @@ export function useResourceEditor<T extends { id: string }, TForm>({
   autoExpandFirst = false,
   fetchAll = false,
   limit = ADMIN_LIST_PAGE_SIZE,
+  listFilters,
+  enabled = true,
   noun,
 }: UseResourceEditorOptions<T, TForm>) {
   const api = useMemo(
     () => getResourceApi<T>(resource, mode),
     [resource, mode]
   );
+  const listFiltersKey = JSON.stringify(listFilters ?? {});
   const shell = useEntityPanelEditorShell({ paramName, legacyParam });
   const [formState, setFormStateRaw] = useState<TForm>(emptyForm);
   const [saveError, setSaveError] = useState('');
@@ -78,13 +86,19 @@ export function useResourceEditor<T extends { id: string }, TForm>({
   itemToFormRef.current = itemToForm;
 
   const list = usePaginatedList<T, Record<string, never>>({
-    queryKey: adminQueryKeys.resourceList(resource, mode),
+    queryKey: [...adminQueryKeys.resourceList(resource, mode), listFiltersKey],
     defaultFilters: {},
     fetchAll,
+    fetchOnMount: enabled,
     limit,
     errorPrefix: `Failed to load ${resource}`,
     fetcher: async ({ cursor, limit, signal }) => {
-      const response = await api.list(cursor ?? undefined, limit, signal);
+      const response = await api.list(
+        cursor ?? undefined,
+        limit,
+        signal,
+        listFilters
+      );
       return {
         items: response.items,
         nextCursor: response.next_cursor ?? null,

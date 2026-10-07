@@ -51,11 +51,17 @@ export type ResourceType =
   | 'feedback-labels'
   | 'organization-feedback';
 
+export interface ResourceListFilters {
+  org_id?: string;
+  [key: string]: string | undefined;
+}
+
 export interface ResourceApi<T> {
   list: (
     cursor?: string,
     limit?: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    filters?: ResourceListFilters
   ) => Promise<ListResponse<T>>;
   get: (id: string, signal?: AbortSignal) => Promise<T>;
   create?: <TInput>(payload: TInput) => Promise<T>;
@@ -72,8 +78,8 @@ export function getResourceApi<T>(
 ): ResourceApi<T> {
   if (mode === 'admin') {
     return {
-      list: (cursor?: string, limit?: number, signal?: AbortSignal) =>
-        listResource<T>(resource, cursor, limit, signal),
+      list: (cursor, limit, signal, filters) =>
+        listResource<T>(resource, cursor, limit, signal, filters),
       get: (id: string, signal?: AbortSignal) =>
         getResource<T>(resource, id, signal),
       create: <TInput>(payload: TInput) =>
@@ -88,7 +94,8 @@ export function getResourceApi<T>(
   switch (resource) {
     case 'organizations':
       return {
-        list: () => listManagerOrganizations<T>(),
+        list: (_cursor, _limit, _signal, filters) =>
+          listManagerOrganizations<T>(filters?.org_id),
         get: (id: string) => getManagerOrganization(id) as Promise<T>,
         // Managers cannot create organizations
         update: <TInput>(id: string, payload: TInput) =>
@@ -97,7 +104,8 @@ export function getResourceApi<T>(
       };
     case 'locations':
       return {
-        list: () => listManagerLocations<T>(),
+        list: (_cursor, _limit, _signal, filters) =>
+          listManagerLocations<T>(filters?.org_id),
         get: (id: string) => getManagerLocation(id) as Promise<T>,
         create: <TInput>(payload: TInput) =>
           createManagerLocation<TInput, T>(payload),
@@ -107,7 +115,8 @@ export function getResourceApi<T>(
       };
     case 'activities':
       return {
-        list: () => listManagerActivities<T>(),
+        list: (_cursor, _limit, _signal, filters) =>
+          listManagerActivities<T>(filters?.org_id),
         get: (id: string) => getManagerActivity(id) as Promise<T>,
         create: <TInput>(payload: TInput) =>
           createManagerActivity<TInput, T>(payload),
@@ -117,7 +126,8 @@ export function getResourceApi<T>(
       };
     case 'pricing':
       return {
-        list: () => listManagerPricing<T>(),
+        list: (_cursor, _limit, _signal, filters) =>
+          listManagerPricing<T>(filters?.org_id),
         get: (id: string) => getManagerPricing(id) as Promise<T>,
         create: <TInput>(payload: TInput) =>
           createManagerPricing<TInput, T>(payload),
@@ -127,7 +137,8 @@ export function getResourceApi<T>(
       };
     case 'schedules':
       return {
-        list: () => listManagerSchedules<T>(),
+        list: (_cursor, _limit, _signal, filters) =>
+          listManagerSchedules<T>(filters?.org_id),
         get: (id: string) => getManagerSchedule(id) as Promise<T>,
         create: <TInput>(payload: TInput) =>
           createManagerSchedule<TInput, T>(payload),

@@ -2,8 +2,7 @@ import { test, expect, mockOrganizations, mockCognitoUsers } from './fixtures/te
 
 test.describe('Organizations Panel', () => {
   test.beforeEach(async ({ adminPage }) => {
-  await adminPage.goto('/admin/dashboard');
-    // Organizations is the default section, so we should already be there
+  await adminPage.goto('/admin/dashboard?section=catalog');
   });
 
   test('should display the organizations form', async ({ adminPage }) => {
@@ -48,27 +47,16 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByRole('button', { name: 'Create' })).toBeVisible();
   });
 
-  test('should display existing organizations table', async ({ adminPage }) => {
-    await expect(adminPage.getByRole('table', { name: 'Organizations' })).toBeVisible();
+  test('should display the catalog of organizations', async ({ adminPage }) => {
+    await expect(adminPage.getByRole('table', { name: 'Catalog' })).toBeVisible();
 
-    // Check for table headers
     await expect(adminPage.getByRole('columnheader', { name: 'Name' })).toBeVisible();
-    await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toBeVisible();
-    await expect(adminPage.getByRole('columnheader', { name: 'Status' })).toBeVisible();
-    await expect(adminPage.getByRole('columnheader', { name: 'Review' })).toHaveCount(0);
-    await expect(adminPage.getByRole('columnheader', { name: 'Description' })).toHaveCount(0);
-    await expect(adminPage.getByRole('columnheader', { name: 'Operations' })).toBeVisible();
-
-    // Description stays in the editor and is not previewed in the row.
+    await expect(adminPage.getByRole('columnheader', { name: 'Review' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toHaveCount(0);
     await expect(adminPage.getByText('First test organization')).toHaveCount(0);
-    await expect(
-      adminPage.getByRole('cell', { name: /operational/ }).first()
-    ).toBeVisible();
     await expect(
       adminPage.getByRole('cell', { name: /pending review/ }).first()
     ).toBeVisible();
-
-    // Check for organization data
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
   });
@@ -96,16 +84,13 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Name is required.')).toBeVisible();
   });
 
-  test('should validate manager field on submit', async ({ adminPage }) => {
+  test('should create without a manager and default it on the server', async ({
+    adminPage,
+  }) => {
     await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
-    // Fill only name
-    await adminPage.getByLabel('Name').fill('Test Org');
-
-    // Try to submit without manager
+    await adminPage.locator('#org-name').fill('Test Org');
     await adminPage.getByRole('button', { name: 'Create' }).click();
-
-    // Should show error message for manager
-    await expect(adminPage.getByText('Manager is required.')).toBeVisible();
+    await expect(adminPage.getByText('Manager is required.')).toHaveCount(0);
   });
 
   test('should fill out the organization form', async ({ adminPage }) => {
@@ -185,39 +170,28 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByLabel('Description origin')).toHaveValue('official');
   });
 
-  test('should cancel editing and reset form', async ({ adminPage }) => {
-    // Wait for the table to load
+  test('should leave the organization workspace from the catalog', async ({
+    adminPage,
+  }) => {
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
-
-    // Click row
     await adminPage.getByRole('row', { name: /Test Organization 1/ }).first().click();
-
     await expect(adminPage.getByRole('button', { name: 'Update' })).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Catalog' }).click();
+    await expect(adminPage.getByRole('button', { name: 'Update' })).toHaveCount(0);
+  });
 
-    // Clicking the open row collapses the editor.
+  test('should have a delete button on the open organization', async ({
+    adminPage,
+  }) => {
+    await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
     await adminPage.getByRole('row', { name: /Test Organization 1/ }).first().click();
-
-    await expect(adminPage.getByLabel('Name')).toHaveCount(0);
+    await expect(adminPage.getByRole('button', { name: 'Delete' })).toBeVisible();
   });
 
-  test('should have delete button for each organization', async ({ adminPage }) => {
-    // Wait for the table to load
+  test('should have a name filter for the catalog', async ({ adminPage }) => {
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
-
-    // Each row should have a Delete button
-    const deleteButtons = adminPage.getByRole('button', { name: 'Delete' });
-    await expect(deleteButtons).toHaveCount(2); // We have 2 mock organizations
-  });
-
-  test('should have search input for organizations', async ({ adminPage }) => {
-    // Wait for the table to load
-    await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
-
-    // Check for search input
-    const searchInput = adminPage.getByPlaceholder('Search organizations...');
-    await expect(searchInput).toBeVisible();
+    await expect(adminPage.locator('#review-name-filter')).toBeVisible();
     await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
-    await expect(adminPage.locator('label', { hasText: /^Review$/ })).toHaveCount(0);
   });
 
   test('should filter organizations by search query', async ({ adminPage }) => {
@@ -226,12 +200,12 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
 
     // Type in search
-    const searchInput = adminPage.getByPlaceholder('Search organizations...');
+    const searchInput = adminPage.locator('#review-name-filter');
     await searchInput.fill('Organization 1');
+    await searchInput.press('Enter');
 
-    // Should only show matching organization
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
-    await expect(adminPage.getByText('Test Organization 2')).not.toBeVisible();
+    await expect(adminPage.getByText('Test Organization 2')).toHaveCount(0);
   });
 
   test('should show no results message when search has no matches', async ({ adminPage }) => {
@@ -239,11 +213,13 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
 
     // Type in search with no matches
-    const searchInput = adminPage.getByPlaceholder('Search organizations...');
+    const searchInput = adminPage.locator('#review-name-filter');
     await searchInput.fill('NonexistentOrganization');
+    await searchInput.press('Enter');
 
-    // Should show no results message
-    await expect(adminPage.getByText('No organizations match your search.')).toBeVisible();
+    await expect(
+      adminPage.getByText('No organizations match these filters.')
+    ).toBeVisible();
   });
 
   test('should clear search and show all organizations', async ({ adminPage }) => {
@@ -251,14 +227,13 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
 
     // Type in search
-    const searchInput = adminPage.getByPlaceholder('Search organizations...');
+    const searchInput = adminPage.locator('#review-name-filter');
     await searchInput.fill('Organization 1');
+    await searchInput.press('Enter');
+    await expect(adminPage.getByText('Test Organization 2')).toHaveCount(0);
 
-    // Should only show one
-    await expect(adminPage.getByText('Test Organization 2')).not.toBeVisible();
-
-    // Clear search
     await searchInput.fill('');
+    await searchInput.press('Enter');
 
     // Should show all again
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
@@ -275,11 +250,9 @@ test.describe('Organizations Panel - Admin vs Manager', () => {
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
   });
 
-  test('admin should see manager column', async ({ adminPage }) => {
-  await adminPage.goto('/admin/dashboard');
-
-    // Should see Manager column header
-    await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toBeVisible();
+  test('admin should see the review column', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=catalog');
+    await expect(adminPage.getByRole('columnheader', { name: 'Review' })).toBeVisible();
   });
 
   test('admin should see manager selector in form', async ({ adminPage }) => {

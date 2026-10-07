@@ -2,16 +2,12 @@ import { test, expect } from './fixtures/test-fixtures';
 
 test.describe('Activities Panel', () => {
   test.beforeEach(async ({ adminPage }) => {
-  await adminPage.goto('/admin/dashboard');
-    // Navigate to Activities section
-    await adminPage.getByRole('button', { name: 'Activities' }).click();
+  await adminPage.goto('/admin/dashboard?section=activities&org=org-1');
   });
 
   test('should display the activities form', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New activity' }).click();
 
-    // Check form fields
-    await expect(adminPage.locator('#activity-org')).toBeVisible();
     await expect(adminPage.getByLabel('Category')).toBeVisible();
     await expect(adminPage.getByLabel('Name')).toBeVisible();
     await expect(adminPage.getByLabel('Description')).toBeVisible();
@@ -52,18 +48,9 @@ test.describe('Activities Panel', () => {
     // Check for activity data
     await expect(adminPage.getByText('Swimming Class')).toBeVisible();
     await expect(adminPage.getByText('Art Workshop')).toBeVisible();
-    await expect(adminPage.getByText('Sport / Water Sports')).toBeVisible();
-  });
-
-  test('should display organization selector', async ({ adminPage }) => {
-    await adminPage.getByRole('button', { name: 'New activity' }).click();
-    const orgSelect = adminPage.locator('#activity-org');
-    await expect(orgSelect).toBeVisible();
-
-    // Should have default "Select organization" option
     await expect(
-      adminPage.locator('#activity-org option', { hasText: 'Select organization' })
-    ).toBeAttached();
+      adminPage.getByRole('cell', { name: 'Sport / Water Sports' })
+    ).toBeVisible();
   });
 
   test('should validate required fields on submit', async ({ adminPage }) => {
@@ -78,7 +65,6 @@ test.describe('Activities Panel', () => {
   test('should validate age range is numeric', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Fill required fields but leave age range empty
-    await adminPage.locator('#activity-org').selectOption({ index: 1 });
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
     await adminPage.getByLabel('Name').fill('Test Activity');
@@ -93,7 +79,6 @@ test.describe('Activities Panel', () => {
   test('should validate age min is less than age max', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Fill form with invalid age range
-    await adminPage.locator('#activity-org').selectOption({ index: 1 });
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
     await adminPage.getByLabel('Name').fill('Test Activity');
@@ -110,7 +95,6 @@ test.describe('Activities Panel', () => {
   test('should fill out the activity form', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Select organization
-    await adminPage.locator('#activity-org').selectOption({ index: 1 });
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
 
@@ -136,7 +120,6 @@ test.describe('Activities Panel', () => {
   test('should create a new activity', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Fill the form completely
-    await adminPage.locator('#activity-org').selectOption({ index: 1 });
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
     await adminPage.getByLabel('Name').fill('New Swimming Class');
@@ -252,14 +235,12 @@ test.describe('Activities Panel', () => {
 
 test.describe('Activities Panel - Form Validation', () => {
   test.beforeEach(async ({ adminPage }) => {
-  await adminPage.goto('/admin/dashboard');
-    await adminPage.getByRole('button', { name: 'Activities' }).click();
+    await adminPage.goto('/admin/dashboard?section=activities&org=org-1');
   });
 
   test('should accept valid age range with 0 as minimum', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Fill form with 0 as minimum age
-    await adminPage.locator('#activity-org').selectOption({ index: 1 });
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
     await adminPage.getByLabel('Name').fill('Baby Activity');
@@ -276,7 +257,6 @@ test.describe('Activities Panel - Form Validation', () => {
   test('should reject equal age min and max', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Fill form with equal min and max
-    await adminPage.locator('#activity-org').selectOption({ index: 1 });
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
     await adminPage.getByLabel('Name').fill('Test Activity');

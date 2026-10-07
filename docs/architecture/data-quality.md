@@ -57,7 +57,9 @@ are cleaned only when `review_status` is `pending_review`. If the
 cleaned name belongs to a different record, the original name is kept
 and the import records a warning.
 
-The Names tab scans stored rows with the same rules and writes
+Data quality has three tabs: Duplicates, Names, and Category Checks.
+Category checks moved here from Categories; `?categoryView=checks`
+opens this tab. The Names tab scans stored rows with the same rules and writes
 `name_fix_proposals`. The list is cursor paginated. Applying a
 proposal updates the record when the stored name still matches the
 proposal. A dismissed proposal with the same proposed value is not

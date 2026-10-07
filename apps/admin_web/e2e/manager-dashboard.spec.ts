@@ -16,7 +16,7 @@ test.describe('Manager Dashboard', () => {
 
     // Manager sections
     const managerSections = [
-      'Organizations',
+      'Organization',
       'Media',
       'Locations',
       'Activities',
@@ -74,17 +74,15 @@ test.describe('Manager Dashboard', () => {
     await expect(managerPage.getByRole('table', { name: 'Your locations' })).toBeVisible();
 
     // Navigate back to Organizations
-    await managerPage.getByRole('button', { name: 'Organizations' }).click();
+    await managerPage.getByRole('button', { name: 'Organization' }).click();
   });
 });
 
 test.describe('Manager Organizations Panel', () => {
-  test('should show "Your Organizations" heading', async ({ managerPage }) => {
+  test('should open the organization workspace', async ({ managerPage }) => {
     await managerPage.goto('/admin/dashboard');
 
-    await expect(
-      managerPage.getByRole('table', { name: 'Your organizations' })
-    ).toBeVisible();
+    await expect(managerPage.getByRole('button', { name: 'Update' })).toBeVisible();
   });
 
   test('should show edit form by default for manager', async ({ managerPage }) => {
@@ -111,16 +109,12 @@ test.describe('Manager Organizations Panel', () => {
     await expect(managerPage.getByRole('columnheader', { name: 'Manager' })).not.toBeVisible();
   });
 
-  test('should show selectable organization row', async ({ managerPage }) => {
+  test('should show the organization name on the workspace', async ({
+    managerPage,
+  }) => {
     await managerPage.goto('/admin/dashboard');
-
-    // Wait for org table to load
     await expect(managerPage.getByText('Test Organization 1').first()).toBeVisible();
-
-    // Should show organization row
-    await expect(
-      managerPage.getByRole('row', { name: /Test Organization 1/ }).first()
-    ).toBeVisible();
+    await expect(managerPage.getByLabel('Name')).toHaveValue('Test Organization 1');
   });
 
   test('should show edit form when clicking row', async ({ managerPage }) => {
@@ -218,6 +212,7 @@ test.describe('Manager Access Request Flow', () => {
     });
 
     await page.goto('/admin/dashboard');
+    await page.getByRole('button', { name: 'Become a Manager' }).click();
 
     await expect(
       page.getByRole('heading', { name: 'Request Organization Access' })
