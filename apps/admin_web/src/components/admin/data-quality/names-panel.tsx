@@ -1,14 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useQueryState } from 'nuqs';
+import { useRef, useState } from 'react';
 
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
+import { getAdminQueryClient } from '../../../lib/admin-query-client';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { ApiError } from '../../../lib/api-client';
 import {
   decideNameFix,
   decideNameFixesBulk,
+  getNameFix,
   getNameFixSettings,
   getNameFixSummary,
   listNameFixes,
@@ -41,9 +45,22 @@ const DEFAULT_FILTERS: NameFilters = {
 };
 
 export function NamesPanel() {
+  const [organization, setOrganization] = useQueryState('organization');
+  const orgIdRef = useRef(organization);
+  orgIdRef.current = organization;
   const expanded = useExpandedRecord({ paramName: 'name-fix' });
+  const summaryQuery = useQuery({
+    queryKey: [...adminQueryKeys.nameFixes(), 'summary'],
+    queryFn: getNameFixSummary,
+  });
+  const settingsQuery = useQuery({
+    queryKey: [...adminQueryKeys.nameFixes(), 'settings'],
+    queryFn: getNameFixSettings,
+  });
+  const [draft, setDraft] = useState<NameFixSettings | null>(null);
+  const settings = draft ?? settingsQuery.data ?? null;
   const list = usePaginatedList<NameFixProposal, NameFilters>({
-    queryKey: adminQueryKeys.nameFixes(),
+    queryKey: [...adminQueryKeys.nameFixes(), organization ?? ''],
     defaultFilters: DEFAULT_FILTERS,
     debounceKeys: ['q'],
     errorPrefix: 'Failed to load name fixes',
@@ -55,30 +72,25 @@ export function NamesPanel() {
         entity_type: entity_type || undefined,
         rule: rule || undefined,
         status: status || undefined,
+        org_id: orgIdRef.current || undefined,
       });
       return { items: page.items, nextCursor: page.next_cursor ?? null };
     },
   });
-  const [summary, setSummary] = useState('No pending names.');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [settings, setSettings] = useState<NameFixSettings | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const open = list.items.find((item) => item.id === expanded.expandedId) ?? null;
-
-  useEffect(() => {
-    void getNameFixSummary()
-      .then((row) => {
-        const pending = row.by_status.pending ?? 0;
-        setSummary(`${pending} pending`);
-      })
-      .catch(() => setSummary(''));
-    void getNameFixSettings()
-      .then(setSettings)
-      .catch(() => setSettings(null));
-  }, [notice]);
+  const listed = list.items.find((item) => item.id === expanded.expandedId) ?? null;
+  const detailQuery = useQuery({
+    queryKey: [...adminQueryKeys.nameFixes(), 'one', expanded.expandedId],
+    queryFn: () => getNameFix(expanded.expandedId as string),
+    enabled: Boolean(expanded.expandedId) && !list.isLoading && listed === null,
+  });
+  const open = listed ?? detailQuery.data ?? null;
+  const pending = summaryQuery.data?.by_status.pending ?? 0;
+  const summary = summaryQuery.data ? `${pending} pending` : 'No pending names.';
 
   async function scan() {
     setIsScanning(true);
@@ -89,9 +101,15 @@ export function NamesPanel() {
         entity_type: list.filters.entity_type || undefined,
         q: list.filters.q || undefined,
       });
+      const stopped = result.truncated
+        ? ' Scan stopped at the limit; run it again to continue.'
+        : '';
       setNotice(
-        `Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}.`
+        `Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}.${stopped}`
       );
+      await getAdminQueryClient().invalidateQueries({
+        queryKey: [...adminQueryKeys.nameFixes(), 'summary'],
+      });
       await list.refetch();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Scan failed.');
@@ -106,6 +124,9 @@ export function NamesPanel() {
     try {
       await decideNameFix(id, { action });
       setNotice(action === 'apply' ? 'Name updated.' : 'Proposal dismissed.');
+      await getAdminQueryClient().invalidateQueries({
+        queryKey: [...adminQueryKeys.nameFixes(), 'summary'],
+      });
       await list.refetch();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not update the name.');
@@ -125,6 +146,9 @@ export function NamesPanel() {
       const result = await decideNameFixesBulk({ action, ids });
       setNotice(`Updated ${result.decided}. ${result.failed} failed.`);
       setSelected(new Set());
+      await getAdminQueryClient().invalidateQueries({
+        queryKey: [...adminQueryKeys.nameFixes(), 'summary'],
+      });
       await list.refetch();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Bulk update failed.');
@@ -137,7 +161,9 @@ export function NamesPanel() {
     }
     setError('');
     try {
-      setSettings(await updateNameFixSettings(settings));
+      const saved = await updateNameFixSettings(settings);
+      getAdminQueryClient().setQueryData([...adminQueryKeys.nameFixes(), 'settings'], saved);
+      setDraft(null);
       setNotice('Name rules saved.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save rules.');
@@ -153,6 +179,20 @@ export function NamesPanel() {
         stored. Activity names are scanned only while the organization is
         pending review.
       </p>
+      {organization ? (
+        <p className='text-sm text-slate-600'>
+          Filtered to the organization from the review queue.{' '}
+          <button
+            type='button'
+            className='underline'
+            onClick={() => {
+              void setOrganization(null);
+            }}
+          >
+            Show all
+          </button>
+        </p>
+      ) : null}
       <p className='text-sm text-slate-700'>{summary}</p>
       {notice ? (
         <StatusBanner variant='info' title='Names'>
@@ -326,7 +366,7 @@ export function NamesPanel() {
                     const enabled = event.target.checked
                       ? [...settings.enabled_rules, rule]
                       : settings.enabled_rules.filter((item) => item !== rule);
-                    setSettings({ ...settings, enabled_rules: enabled });
+                    setDraft({ ...settings, enabled_rules: enabled });
                   }}
                 />
                 {rule}
@@ -338,9 +378,21 @@ export function NamesPanel() {
               id='name-fix-exceptions'
               value={settings.exception_words.join(' ')}
               onChange={(event) =>
-                setSettings({
+                setDraft({
                   ...settings,
                   exception_words: event.target.value.split(/\s+/).filter(Boolean),
+                })
+              }
+            />
+          </AdminFilterField>
+          <AdminFilterField label='Bracket suffixes to remove' htmlFor='name-fix-suffixes'>
+            <Input
+              id='name-fix-suffixes'
+              value={settings.bracket_suffixes.join(' ')}
+              onChange={(event) =>
+                setDraft({
+                  ...settings,
+                  bracket_suffixes: event.target.value.split(/\s+/).filter(Boolean),
                 })
               }
             />

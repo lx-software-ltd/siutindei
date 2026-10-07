@@ -15,6 +15,11 @@ def test_title_case_and_unchanged_sample() -> None:
     assert "title_case" in cleaned.rules
 
 
+def test_short_acronyms_stay_uppercase() -> None:
+    cleaned = sanitize_name("YWCA HARBOUR", {})
+    assert cleaned.name == "YWCA Harbour"
+
+
 def test_keeps_exception_words_and_strips_brackets() -> None:
     cleaned = sanitize_name("YMCA HARBOUR (LCSD)", {})
     assert cleaned.name == "YMCA Harbour"

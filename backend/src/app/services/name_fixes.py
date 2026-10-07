@@ -6,13 +6,22 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.admin_validators import MAX_NAME_LENGTH
 from app.db.models import Activity, NameFixProposal, NameFixSettings, Organization
 from app.db.repositories import OrganizationRepository
 from app.exceptions import NotFoundError, ValidationError
+from app.services.name_fix_query import (
+    decode_cursor,
+    encode_cursor,
+    entity_exists,
+    ilike_pattern,
+    proposal_stmt,
+    reject_stale_name,
+)
 from app.services.name_sanitizer import (
     RULE_CODES,
     NameSanitizeConfig,
@@ -116,7 +125,9 @@ def scan_names(
         if org_id is not None:
             org_stmt = org_stmt.where(Organization.id == org_id)
         if query:
-            org_stmt = org_stmt.where(Organization.name.ilike(f"%{query}%"))
+            org_stmt = org_stmt.where(
+                Organization.name.ilike(ilike_pattern(query), escape="\\")
+            )
         for org in session.scalars(org_stmt).all():
             seen += 1
             if seen > _MAX_SCAN:
@@ -144,7 +155,9 @@ def scan_names(
         if org_id is not None:
             activity_stmt = activity_stmt.where(Activity.org_id == org_id)
         if query:
-            activity_stmt = activity_stmt.where(Activity.name.ilike(f"%{query}%"))
+            activity_stmt = activity_stmt.where(
+                Activity.name.ilike(ilike_pattern(query), escape="\\")
+            )
         for activity in session.scalars(activity_stmt).all():
             seen += 1
             if seen > _MAX_SCAN:
@@ -174,34 +187,38 @@ def list_proposals(
     rule: str | None,
     org_id: UUID | None,
     query: str | None,
+    cursor: str | None,
     limit: int,
 ) -> dict[str, Any]:
-    stmt = select(NameFixProposal).order_by(
-        NameFixProposal.created_at.desc(), NameFixProposal.id
-    )
-    if status:
-        stmt = stmt.where(NameFixProposal.status == status)
-    if entity_type:
-        stmt = stmt.where(NameFixProposal.entity_type == entity_type)
-    if query:
-        pattern = f"%{query}%"
+    stmt = proposal_stmt(status, entity_type, rule, org_id, query)
+    if cursor:
+        stamp, last_id = decode_cursor(cursor)
         stmt = stmt.where(
             or_(
-                NameFixProposal.current_value.ilike(pattern),
-                NameFixProposal.proposed_value.ilike(pattern),
+                NameFixProposal.created_at < stamp,
+                and_(
+                    NameFixProposal.created_at == stamp,
+                    NameFixProposal.id < last_id,
+                ),
             )
         )
-    fetch_limit = 500 if rule or org_id is not None else limit + 1
-    rows = list(session.scalars(stmt.limit(fetch_limit)).all())
-    if rule:
-        rows = [row for row in rows if rule in (row.rules or [])]
-    if org_id is not None:
-        rows = [row for row in rows if _proposal_org_id(session, row) == str(org_id)]
+    rows = list(session.scalars(stmt.limit(limit + 1)).all())
     page = rows[:limit]
+    next_cursor = None
+    if len(rows) > limit and page:
+        last = page[-1]
+        next_cursor = encode_cursor(last.created_at, last.id)
     return {
         "items": [_serialize(row) for row in page],
-        "next_cursor": None,
+        "next_cursor": next_cursor,
     }
+
+
+def get_proposal(session: Session, proposal_id: UUID) -> dict[str, Any]:
+    row = session.get(NameFixProposal, proposal_id)
+    if row is None or not entity_exists(session, row):
+        raise NotFoundError("name_fix_proposals", str(proposal_id))
+    return _serialize(row)
 
 
 def summarize_proposals(session: Session) -> dict[str, Any]:
@@ -275,8 +292,9 @@ def decide_bulk(
                     row.proposed_value = row.proposed_value.strip()
                     _mark(row, "applied", decided_by)
             decided += 1
-        except (ValidationError, NotFoundError) as exc:
-            failures.append({"id": str(row.id), "message": exc.message})
+        except (ValidationError, NotFoundError, IntegrityError) as exc:
+            message = getattr(exc, "message", None) or "The name is already in use."
+            failures.append({"id": str(row.id), "message": message})
     session.flush()
     return {
         "dry_run": False,
@@ -304,11 +322,11 @@ def _bulk_rows(session: Session, body: dict[str, Any]) -> list[NameFixProposal]:
             stmt = stmt.where(NameFixProposal.entity_type == entity_type)
         query = body.get("q")
         if query:
-            pattern = f"%{query}%"
+            pattern = ilike_pattern(query)
             stmt = stmt.where(
                 or_(
-                    NameFixProposal.current_value.ilike(pattern),
-                    NameFixProposal.proposed_value.ilike(pattern),
+                    NameFixProposal.current_value.ilike(pattern, escape="\\"),
+                    NameFixProposal.proposed_value.ilike(pattern, escape="\\"),
                 )
             )
     rows = list(session.scalars(stmt.limit(_MAX_BULK + 1)).all())
@@ -371,6 +389,7 @@ def _apply_value(session: Session, row: NameFixProposal, proposed: str) -> None:
         org = session.get(Organization, row.entity_id)
         if org is None:
             raise NotFoundError("organizations", str(row.entity_id))
+        reject_stale_name(org.name, row.current_value)
         other = OrganizationRepository(session).find_by_name_case_insensitive(proposed)
         if other is not None and str(other.id) != str(org.id):
             raise ValidationError(
@@ -383,6 +402,19 @@ def _apply_value(session: Session, row: NameFixProposal, proposed: str) -> None:
     activity = session.get(Activity, row.entity_id)
     if activity is None:
         raise NotFoundError("activities", str(row.entity_id))
+    reject_stale_name(activity.name, row.current_value)
+    clash = session.scalar(
+        select(Activity.id).where(
+            Activity.org_id == activity.org_id,
+            Activity.id != activity.id,
+            func.lower(func.trim(Activity.name)) == proposed.casefold(),
+        )
+    )
+    if clash is not None:
+        raise ValidationError(
+            "This name matches another activity in the organization.",
+            field="name",
+        )
     activity.name = proposed
     _merge_patch(activity, "name_translations", row.translation_patch)
 
@@ -407,15 +439,6 @@ def _mark(row: NameFixProposal, status: str, decided_by: str | None) -> None:
 def _count(counts: dict[str, int], outcome: str) -> None:
     if outcome in counts:
         counts[outcome] += 1
-
-
-def _proposal_org_id(session: Session, row: NameFixProposal) -> str | None:
-    if row.entity_type == "organization":
-        return str(row.entity_id)
-    activity = session.get(Activity, row.entity_id)
-    if activity is None:
-        return None
-    return str(activity.org_id)
 
 
 def _serialize(row: NameFixProposal) -> dict[str, Any]:

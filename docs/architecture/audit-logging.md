@@ -136,7 +136,8 @@ with Session(get_engine()) as session:
 
     # Organization merge records source ids and filled field names.
     # Contact values stay out of this row; column changes are still
-    # captured by the organizations trigger.
+    # captured by the organizations trigger. Dismissing a duplicate
+    # pair uses action DISMISS_DUPLICATE and records organization ids.
     audit.log_custom(
         table_name="organizations",
         record_id=survivor_id,

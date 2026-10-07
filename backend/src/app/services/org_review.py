@@ -130,6 +130,21 @@ def collect_issues(
             org_id,
             "Name needs cleanup",
         )
+    if organization.review_status == "pending_review":
+        for activity in activities:
+            cleaned_activity = sanitize_name(
+                activity.name or "",
+                activity.name_translations or {},
+                name_config,
+            )
+            if cleaned_activity.changed:
+                add(
+                    "name_needs_cleanup",
+                    "warning",
+                    "activity",
+                    str(activity.id),
+                    "Name needs cleanup",
+                )
     if duplicate_ids and org_id in duplicate_ids:
         add(
             "possible_duplicate",

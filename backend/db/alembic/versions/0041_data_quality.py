@@ -243,6 +243,14 @@ def upgrade() -> None:
         )
         """
     )
+    op.execute(
+        """
+        GRANT SELECT, INSERT, UPDATE, DELETE
+        ON organization_merges, organization_duplicate_dismissals,
+           name_fix_proposals, name_fix_settings
+        TO siutindei_admin
+        """
+    )
 
 
 def downgrade() -> None:

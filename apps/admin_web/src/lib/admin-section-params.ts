@@ -39,7 +39,7 @@ const KEEP_BY_SECTION: Record<string, readonly AdminRecordParam[]> = {
   'api-keys': ['api-key'],
   'audit-logs': ['audit-log'],
   imports: ['review', 'job', 'import-job'],
-  'data-quality': ['duplicate', 'name-fix'],
+  'data-quality': ['duplicate', 'name-fix', 'organization'],
 };
 
 const LEGACY_EDIT_SECTIONS = new Set([

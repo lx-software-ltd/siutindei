@@ -302,14 +302,21 @@ export function ReviewQueuePanel() {
   }
 
   function openIssue(entry: OrgReviewIssue) {
+    const orgId = expanded.expandedId;
     if (entry.code === 'name_needs_cleanup') {
       void setSection('data-quality');
       void setTab('names');
+      if (orgId) {
+        void setOrganization(orgId);
+      }
       return;
     }
     if (entry.code === 'possible_duplicate') {
       void setSection('data-quality');
       void setTab(null);
+      if (orgId) {
+        void setOrganization(orgId);
+      }
       return;
     }
     if (entry.entity_type === 'organization') {

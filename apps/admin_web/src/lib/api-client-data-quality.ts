@@ -29,6 +29,7 @@ export interface OrgDuplicateFilters {
   source?: string;
   review_status?: string;
   q?: string;
+  org_id?: string;
   cursor?: string;
   limit?: number;
 }
@@ -89,6 +90,12 @@ export function listOrgDuplicates(filters: OrgDuplicateFilters = {}) {
   );
 }
 
+export function getOrgDuplicate(id: string) {
+  return request<OrgDuplicateGroup>(
+    buildApiUrl(`v1/admin/org-duplicates/${encodeURIComponent(id)}`)
+  );
+}
+
 export function searchOrganizationsForMerge(q: string) {
   return request<{ items: OrgDuplicateMember[] }>(
     buildApiUrl(`v1/admin/org-duplicates/search${query({ q })}`)
@@ -121,6 +128,7 @@ export function listNameFixes(filters: {
   status?: string;
   entity_type?: string;
   rule?: string;
+  org_id?: string;
   q?: string;
   cursor?: string;
   limit?: number;
@@ -128,6 +136,10 @@ export function listNameFixes(filters: {
   return request<ListResponse<NameFixProposal>>(
     buildApiUrl(`v1/admin/name-fixes${query(filters)}`)
   );
+}
+
+export function getNameFix(id: string) {
+  return request<NameFixProposal>(buildApiUrl(`v1/admin/name-fixes/${id}`));
 }
 
 export function getNameFixSummary() {

@@ -24,6 +24,8 @@ from app.db.models import (
     Ticket,
 )
 from app.exceptions import NotFoundError, ValidationError
+from app.services.org_merge_checks import assert_identity_unique, merge_warnings
+from app.services.org_merge_children import fold_merged_records
 from app.services.org_merge_media import copy_merged_media
 
 _FILL_FIELDS = (
@@ -170,7 +172,7 @@ def _plan(
         picked = _field_plan(survivor, sources, overrides, field, field)
         if picked["result"]:
             values[field] = picked["result"]
-    warnings = _warnings(session, survivor, sources)
+    warnings = merge_warnings(session, survivor, sources)
     media = _union_media(survivor, sources)
     return {
         "survivor_id": str(survivor.id),
@@ -253,54 +255,6 @@ def _translation_plans(survivor, sources, overrides) -> list[dict[str, Any]]:
     return plans
 
 
-def _warnings(session, survivor, sources) -> list[str]:
-    warnings: list[str] = []
-    if any(source.manager_id != survivor.manager_id for source in sources):
-        warnings.append(
-            "A merged organization has a different manager. That manager loses this record."
-        )
-    if survivor.review_status != "approved" and any(
-        source.review_status == "approved" for source in sources
-    ):
-        warnings.append(
-            "The survivor is still pending review while a merged organization is approved."
-        )
-    if _locations_overlap(session, survivor, sources):
-        warnings.append(
-            "Locations look like the same place and will both stay on the survivor."
-        )
-    return warnings
-
-
-def _locations_overlap(session, survivor, sources) -> bool:
-    ids = [survivor.id, *[source.id for source in sources]]
-    rows = list(session.scalars(select(Location).where(Location.org_id.in_(ids))).all())
-    for left in rows:
-        for right in rows:
-            if str(left.org_id) == str(right.org_id) or str(left.id) >= str(right.id):
-                continue
-            if (
-                _text(left.address)
-                and _text(left.address).casefold() == _text(right.address).casefold()
-            ):
-                return True
-            if _close(left, right):
-                return True
-    return False
-
-
-def _close(left: Location, right: Location) -> bool:
-    left_lat = left.lat
-    left_lng = left.lng
-    right_lat = right.lat
-    right_lng = right.lng
-    if left_lat is None or left_lng is None or right_lat is None or right_lng is None:
-        return False
-    lat_m = (float(left_lat) - float(right_lat)) * 111_000
-    lng_m = (float(left_lng) - float(right_lng)) * 111_000 * 0.85
-    return (lat_m * lat_m + lng_m * lng_m) ** 0.5 <= 50
-
-
 def _moved_counts(session: Session, source_ids: list) -> dict[str, int]:
     counts: dict[str, int] = {}
     for model, column, key in _REPARENT:
@@ -363,22 +317,34 @@ def _apply(session, survivor, sources, plan, merged_by: str | None) -> None:
     session.flush()
     _write_scalars(survivor, values)
     _write_translations(survivor, values)
+    assert_identity_unique(session, survivor)
+    pending: list[str] = []
     media = []
     for source in sources:
         for url in source.media_urls or []:
-            rewritten = copy_merged_media(url, str(source.id), str(survivor.id))
+            rewritten, delete_key = copy_merged_media(
+                url,
+                str(source.id),
+                str(survivor.id),
+            )
+            if delete_key:
+                pending.append(delete_key)
             if rewritten not in media and rewritten not in (survivor.media_urls or []):
                 media.append(rewritten)
     survivor.media_urls = [*(survivor.media_urls or []), *media]
     if not _text(survivor.logo_media_url):
         for source in sources:
             if _text(source.logo_media_url):
-                survivor.logo_media_url = copy_merged_media(
+                rewritten, delete_key = copy_merged_media(
                     source.logo_media_url,
                     str(source.id),
                     str(survivor.id),
                 )
+                survivor.logo_media_url = rewritten or None
+                if delete_key:
+                    pending.append(delete_key)
                 break
+    plan["pending_deletes"] = pending
     source_ids = [source.id for source in sources]
     session.execute(
         update(OrganizationMerge)
@@ -399,7 +365,10 @@ def _apply(session, survivor, sources, plan, merged_by: str | None) -> None:
             )
         )
     session.flush()
+    fold_merged_records(session, survivor, sources)
     for model, column, _key in _REPARENT:
+        if model in (Location, Activity):
+            continue
         rows = session.scalars(select(model).where(column.in_(source_ids))).all()
         for row in rows:
             setattr(row, column.key, survivor.id)
@@ -419,6 +388,9 @@ def _apply(session, survivor, sources, plan, merged_by: str | None) -> None:
     for source in sources:
         session.delete(source)
     session.flush()
+    from app.services.org_duplicates import invalidate_duplicate_cache
+
+    invalidate_duplicate_cache()
 
 
 def _changed(survivor, field: str, value: str) -> bool:

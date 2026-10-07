@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { getAdminQueryClient } from '../../../lib/admin-query-client';
 import {
   mergeOrganizations,
   type OrgDuplicateMember,
-  type OrgMergeResult,
 } from '../../../lib/api-client-data-quality';
 import { ApiError } from '../../../lib/api-client';
+import { useConfirmDialog } from '../../../hooks/use-confirm-dialog';
 import { Button } from '../../ui/button';
 import { StatusBanner } from '../../status-banner';
 
@@ -27,57 +28,45 @@ export function OrganizationMergeEditor({
   suggestedSurvivorId,
   onMerged,
 }: OrganizationMergeEditorProps) {
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [survivorId, setSurvivorId] = useState(
     suggestedSurvivorId || organizations[0]?.id || ''
   );
   const [overrides, setOverrides] = useState<Record<string, string>>({});
-  const [preview, setPreview] = useState<OrgMergeResult | null>(null);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
-
-  useEffect(() => {
-    setSurvivorId(suggestedSurvivorId || organizations[0]?.id || '');
-    setOverrides({});
-  }, [suggestedSurvivorId, organizations]);
-
-  useEffect(() => {
-    const sources = organizations.filter((org) => org.id !== survivorId);
-    if (!survivorId || sources.length === 0) {
-      setPreview(null);
-      return;
-    }
-    let cancelled = false;
-    setIsLoading(true);
-    setError('');
-    mergeOrganizations({
-      survivor_id: survivorId,
-      source_ids: sources.map((org) => org.id),
-      dry_run: true,
-      field_overrides: overrides,
-    })
-      .then((result) => {
-        if (!cancelled) {
-          setPreview(result);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : 'Preview failed.');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [organizations, survivorId, overrides]);
+  const sources = organizations.filter((org) => org.id !== survivorId);
+  const sourceKey = sources.map((org) => org.id).join(',');
+  const overrideKey = JSON.stringify(overrides);
+  const previewQuery = useQuery({
+    queryKey: ['admin', 'org-merge-preview', survivorId, sourceKey, overrideKey],
+    enabled: Boolean(survivorId) && sources.length > 0,
+    queryFn: () =>
+      mergeOrganizations({
+        survivor_id: survivorId,
+        source_ids: sources.map((org) => org.id),
+        dry_run: true,
+        field_overrides: overrides,
+      }),
+  });
+  const preview = previewQuery.data ?? null;
+  const previewError =
+    previewQuery.error instanceof ApiError
+      ? previewQuery.error.message
+      : previewQuery.error
+        ? 'Preview failed.'
+        : '';
 
   async function confirmMerge() {
     if (!preview) {
+      return;
+    }
+    const accepted = await confirm(
+      'Merge organizations',
+      'The other organizations are deleted. Matching addresses and activity names are combined.',
+      { confirmLabel: 'Merge organizations', variant: 'danger' }
+    );
+    if (!accepted) {
       return;
     }
     setIsMerging(true);
@@ -99,9 +88,10 @@ export function OrganizationMergeEditor({
 
   return (
     <div className='space-y-3'>
-      {error ? (
+      {confirmDialog}
+      {error || previewError ? (
         <StatusBanner variant='error' title='Merge'>
-          {error}
+          {error || previewError}
         </StatusBanner>
       ) : null}
       <fieldset className='space-y-2'>
@@ -122,7 +112,7 @@ export function OrganizationMergeEditor({
           </label>
         ))}
       </fieldset>
-      {isLoading ? <p className='text-sm text-slate-600'>Preparing preview...</p> : null}
+      {previewQuery.isLoading ? <p className='text-sm text-slate-600'>Preparing preview...</p> : null}
       {preview?.warnings.map((warning) => (
         <p key={warning} className='text-sm text-amber-800'>
           {warning}
@@ -167,13 +157,13 @@ export function OrganizationMergeEditor({
       {preview ? (
         <p className='text-sm text-slate-600'>
           Moves {preview.moved.locations ?? 0} locations and {preview.moved.activities ?? 0}{' '}
-          activities. Pricing and schedules stay on those activities.
+          activities. Matching addresses and activity names are combined.
         </p>
       ) : null}
       <Button
         type='button'
         onClick={() => void confirmMerge()}
-        disabled={!preview || isLoading}
+        disabled={!preview || previewQuery.isFetching}
         loading={isMerging}
         loadingLabel='Merging…'
       >

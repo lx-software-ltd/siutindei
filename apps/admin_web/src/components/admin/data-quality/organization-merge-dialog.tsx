@@ -106,6 +106,7 @@ function MergeSearch({
         </div>
       ) : (
         <OrganizationMergeEditor
+          key={`${organizations.map((org) => org.id).join(',')}:${anchor.id}`}
           organizations={organizations}
           suggestedSurvivorId={anchor.id}
           onMerged={onClose}

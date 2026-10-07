@@ -14,6 +14,7 @@ from app.exceptions import ValidationError
 from app.services.name_fixes import (
     decide_bulk,
     decide_proposal,
+    get_proposal,
     list_proposals,
     preview_name,
     scan_names,
@@ -49,6 +50,8 @@ def handle_name_fixes(
         return _scan(event)
     if method == "POST" and resource_id == "bulk" and sub_resource is None:
         return _bulk(event)
+    if method == "GET" and resource_id and sub_resource is None:
+        return _get(event, resource_id)
     if method == "POST" and resource_id and sub_resource is None:
         return _decide(event, resource_id)
     return json_response(404, {"error": "Not found"}, event=event)
@@ -68,8 +71,15 @@ def _list(event: Mapping[str, Any]) -> dict[str, Any]:
             rule=_choice(_query_param(event, "rule"), set(RULE_CODES), "rule"),
             org_id=_uuid(org_raw, "org_id") if org_raw else None,
             query=_blank(_query_param(event, "q")),
+            cursor=_blank(_query_param(event, "cursor")),
             limit=parse_limit(event),
         )
+    return json_response(200, payload, event=event)
+
+
+def _get(event: Mapping[str, Any], raw_id: str) -> dict[str, Any]:
+    with Session(get_engine()) as session:
+        payload = get_proposal(session, _uuid(raw_id, "id"))
     return json_response(200, payload, event=event)
 
 

@@ -260,6 +260,9 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
                 event,
             )
 
+    if sub_resource:
+        return json_response(404, {"error": "Not found"}, event=event)
+
     config = _RESOURCE_CONFIG.get(resource)
     if not config:
         return json_response(404, {"error": "Not found"}, event=event)

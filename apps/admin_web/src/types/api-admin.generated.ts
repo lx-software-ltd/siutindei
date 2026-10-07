@@ -843,6 +843,7 @@ export interface paths {
                     source?: string;
                     review_status?: "pending_review" | "approved" | "rejected";
                     q?: string;
+                    org_id?: string;
                     cursor?: string;
                     limit?: number;
                 };
@@ -975,10 +976,12 @@ export interface paths {
          * Merge organizations into one survivor
          * @description Fills blank survivor fields from the sources. `field_overrides`
          *     replaces a field with the given value. `dry_run` returns the same
-         *     preview without writing. Children move onto the survivor. Each
-         *     source's `source_id` and `place_id` are stored on
-         *     `organization_merges` so a later import resolves to the survivor.
-         *     The survivor's own values win unless overridden.
+         *     preview without writing. Children move onto the survivor.
+         *     Locations that share an address, and activities that share a
+         *     name, are combined. Each source's `source_id` and `place_id` are
+         *     stored on `organization_merges` so a later import resolves to
+         *     the survivor. The survivor's own values win unless overridden.
+         *     Copied media objects are deleted only after the merge commits.
          */
         post: {
             parameters: {
@@ -1019,6 +1022,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/org-duplicates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Load one duplicate group
+         * @description `id` is the comma-separated organization ids from the list.
+         *     The group is returned when those organizations still exist,
+         *     including when they are not on the current list page.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Duplicate group */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrgDuplicateGroup"];
+                    };
+                };
+                /** @description Fewer than two of the organizations exist */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/name-fixes": {
         parameters: {
             query?: never;
@@ -1040,6 +1093,7 @@ export interface paths {
                     rule?: string;
                     org_id?: string;
                     q?: string;
+                    cursor?: string;
                     limit?: number;
                 };
                 header?: never;
@@ -1301,7 +1355,36 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Load one name proposal */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Proposal */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NameFixProposal"];
+                    };
+                };
+                /** @description Proposal not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         put?: never;
         /** Apply or dismiss one name proposal */
         post: {

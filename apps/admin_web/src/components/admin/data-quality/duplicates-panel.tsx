@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useQueryState } from 'nuqs';
+import { useRef, useState } from 'react';
 
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import {
   dismissOrgDuplicates,
+  getOrgDuplicate,
   listOrgDuplicates,
   type OrgDuplicateGroup,
 } from '../../../lib/api-client-data-quality';
@@ -23,37 +26,47 @@ import { OrganizationMergeEditor } from './organization-merge-editor';
 
 interface DuplicateFilters {
   q: string;
-  signal: string;
+  matchSignal: string;
   review_status: string;
 }
 
 const DEFAULT_FILTERS: DuplicateFilters = {
   q: '',
-  signal: '',
+  matchSignal: '',
   review_status: '',
 };
 
 export function DuplicatesPanel() {
+  const [organization, setOrganization] = useQueryState('organization');
+  const orgIdRef = useRef(organization);
+  orgIdRef.current = organization;
   const expanded = useExpandedRecord({ paramName: 'duplicate' });
   const list = usePaginatedList<OrgDuplicateGroup, DuplicateFilters>({
-    queryKey: adminQueryKeys.orgDuplicates(),
+    queryKey: [...adminQueryKeys.orgDuplicates(), organization ?? ''],
     defaultFilters: DEFAULT_FILTERS,
     debounceKeys: ['q'],
     errorPrefix: 'Failed to load duplicates',
-    fetcher: async ({ cursor, limit, q, signal, review_status }) => {
+    fetcher: async ({ cursor, limit, q, matchSignal, review_status }) => {
       const page = await listOrgDuplicates({
         cursor: cursor ?? undefined,
         limit,
         q: q || undefined,
-        signal: signal || undefined,
+        signal: matchSignal || undefined,
         review_status: review_status || undefined,
+        org_id: orgIdRef.current || undefined,
       });
       return { items: page.items, nextCursor: page.next_cursor ?? null };
     },
   });
   const [error, setError] = useState('');
   const [isDismissing, setIsDismissing] = useState(false);
-  const open = list.items.find((item) => item.id === expanded.expandedId) ?? null;
+  const listed = list.items.find((item) => item.id === expanded.expandedId) ?? null;
+  const detailQuery = useQuery({
+    queryKey: ['admin', 'org-duplicates', 'one', expanded.expandedId],
+    queryFn: () => getOrgDuplicate(expanded.expandedId as string),
+    enabled: Boolean(expanded.expandedId) && !list.isLoading && listed === null,
+  });
+  const open = listed ?? detailQuery.data ?? null;
 
   async function dismiss(group: OrgDuplicateGroup) {
     setIsDismissing(true);
@@ -77,6 +90,20 @@ export function DuplicatesPanel() {
         Merging keeps one organization, moves its locations and activities, and
         sends later imports of the removed source id or place id to the survivor.
       </p>
+      {organization ? (
+        <p className='text-sm text-slate-600'>
+          Filtered to the organization from the review queue.{' '}
+          <button
+            type='button'
+            className='underline'
+            onClick={() => {
+              void setOrganization(null);
+            }}
+          >
+            Show all
+          </button>
+        </p>
+      ) : null}
       {error ? (
         <StatusBanner variant='error' title='Duplicates'>
           {error}
@@ -102,6 +129,7 @@ export function DuplicatesPanel() {
           open ? (
             <AdminEditorPanel>
               <OrganizationMergeEditor
+                key={`${open.organizations.map((org) => org.id).join(',')}:${open.suggested_survivor_id}`}
                 organizations={open.organizations}
                 suggestedSurvivorId={open.suggested_survivor_id}
                 onMerged={() => {
@@ -133,14 +161,15 @@ export function DuplicatesPanel() {
             <AdminFilterField label='Signal' htmlFor='duplicate-signal-filter'>
               <Select
                 id='duplicate-signal-filter'
-                value={list.filters.signal}
-                onChange={(event) => list.setFilter('signal', event.target.value)}
+                value={list.filters.matchSignal}
+                onChange={(event) => list.setFilter('matchSignal', event.target.value)}
               >
                 <option value=''>Any</option>
                 <option value='name'>Name</option>
                 <option value='phone'>Phone</option>
                 <option value='email'>Email</option>
                 <option value='source_id'>Source id</option>
+                <option value='social'>Social</option>
                 <option value='website'>Website</option>
                 <option value='translation'>Translation</option>
               </Select>

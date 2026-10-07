@@ -568,6 +568,11 @@ paths:
           in: query
           schema:
             type: string
+        - name: org_id
+          in: query
+          schema:
+            type: string
+            format: uuid
         - name: cursor
           in: query
           schema:
@@ -645,10 +650,12 @@ paths:
       description: |
         Fills blank survivor fields from the sources. `field_overrides`
         replaces a field with the given value. `dry_run` returns the same
-        preview without writing. Children move onto the survivor. Each
-        source's `source_id` and `place_id` are stored on
-        `organization_merges` so a later import resolves to the survivor.
-        The survivor's own values win unless overridden.
+        preview without writing. Children move onto the survivor.
+        Locations that share an address, and activities that share a
+        name, are combined. Each source's `source_id` and `place_id` are
+        stored on `organization_merges` so a later import resolves to
+        the survivor. The survivor's own values win unless overridden.
+        Copied media objects are deleted only after the merge commits.
       requestBody:
         required: true
         content:
@@ -668,6 +675,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrgMergeResult'
+
+  /v1/admin/org-duplicates/{id}:
+    get:
+      summary: Load one duplicate group
+      description: |
+        `id` is the comma-separated organization ids from the list.
+        The group is returned when those organizations still exist,
+        including when they are not on the current list page.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Duplicate group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgDuplicateGroup'
+        "404":
+          description: Fewer than two of the organizations exist
 
   /v1/admin/name-fixes:
     get:
@@ -698,6 +728,10 @@ paths:
             type: string
             format: uuid
         - name: q
+          in: query
+          schema:
+            type: string
+        - name: cursor
           in: query
           schema:
             type: string
@@ -819,6 +853,24 @@ paths:
                 $ref: '#/components/schemas/NameFixBulkResult'
 
   /v1/admin/name-fixes/{id}:
+    get:
+      summary: Load one name proposal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Proposal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NameFixProposal'
+        "404":
+          description: Proposal not found
     post:
       summary: Apply or dismiss one name proposal
       parameters:

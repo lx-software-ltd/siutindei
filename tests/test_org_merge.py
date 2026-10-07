@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from app.db.models import AuditLog, Location, Organization
+from app.db.models import Activity, AuditLog, Location, Organization
 from app.db.repositories.organization import OrganizationRepository
+from app.exceptions import ValidationError
 from app.services.org_merge import merge_organizations
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import Range
+import pytest
 
 
 def _org(db_session, name: str, **kwargs) -> Organization:
@@ -93,3 +96,94 @@ def test_merge_reparents_location_and_forwards_ids(
     audit = db_session.scalars(select(AuditLog).where(AuditLog.action == "MERGE")).one()
     assert audit.new_values["source_ids"] == [str(source.id)]
     assert "email" in audit.new_values["filled_fields"]
+
+
+def test_merge_folds_the_same_address(db_session, sample_geographic_area) -> None:
+    survivor = _org(db_session, "Harbour Club")
+    source = _org(db_session, "Harbour Club Limited")
+    kept = Location(
+        org_id=survivor.id,
+        area_id=sample_geographic_area.id,
+        address="1 Pier Road",
+    )
+    dropped = Location(
+        org_id=source.id,
+        area_id=sample_geographic_area.id,
+        address="1 pier road",
+    )
+    db_session.add_all([kept, dropped])
+    db_session.flush()
+    merge_organizations(db_session, survivor.id, [source.id])
+    rows = list(
+        db_session.scalars(select(Location).where(Location.org_id == survivor.id)).all()
+    )
+    assert len(rows) == 1
+    assert rows[0].id == kept.id
+
+
+def test_merge_keeps_different_addresses(db_session, sample_geographic_area) -> None:
+    survivor = _org(db_session, "Harbour Club")
+    source = _org(db_session, "Harbour Club Limited")
+    db_session.add_all(
+        [
+            Location(
+                org_id=survivor.id,
+                area_id=sample_geographic_area.id,
+                address="1 Pier Road",
+            ),
+            Location(
+                org_id=source.id,
+                area_id=sample_geographic_area.id,
+                address="9 Hill Street",
+            ),
+        ]
+    )
+    db_session.flush()
+    merge_organizations(db_session, survivor.id, [source.id])
+    count = db_session.scalar(
+        select(func.count()).select_from(Location).where(Location.org_id == survivor.id)
+    )
+    assert count == 2
+
+
+def test_merge_rejects_a_name_owned_by_a_third_organization(db_session) -> None:
+    survivor = _org(db_session, "Harbour Club")
+    source = _org(db_session, "Harbour Club Limited")
+    _org(db_session, "Taken Name")
+    with pytest.raises(ValidationError):
+        merge_organizations(
+            db_session,
+            survivor.id,
+            [source.id],
+            {"name": "Taken Name"},
+        )
+
+
+def test_merge_folds_matching_activity_names(
+    db_session,
+    sample_activity_category,
+) -> None:
+    survivor = _org(db_session, "Harbour Club")
+    source = _org(db_session, "Harbour Club Limited")
+    kept = Activity(
+        org_id=survivor.id,
+        category_id=sample_activity_category.id,
+        name="Harbour Sailing",
+        description="Sailing",
+        age_range=Range(0, 18, bounds="[]"),
+    )
+    dropped = Activity(
+        org_id=source.id,
+        category_id=sample_activity_category.id,
+        name="harbour sailing",
+        description="Sailing too",
+        age_range=Range(0, 18, bounds="[]"),
+    )
+    db_session.add_all([kept, dropped])
+    db_session.flush()
+    merge_organizations(db_session, survivor.id, [source.id])
+    rows = list(
+        db_session.scalars(select(Activity).where(Activity.org_id == survivor.id)).all()
+    )
+    assert len(rows) == 1
+    assert rows[0].id == kept.id

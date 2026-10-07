@@ -61,11 +61,11 @@ describe('admin section params', () => {
         'name-fix': 'fix-1',
         organization: 'org-1',
       })
-    ).toEqual({ organization: null });
+    ).toEqual({});
     const patch = patchForSectionChange('data-quality');
     expect(patch.section).toBe('data-quality');
     expect(patch).not.toHaveProperty('duplicate');
     expect(patch).not.toHaveProperty('name-fix');
-    expect(patch.organization).toBeNull();
+    expect(patch).not.toHaveProperty('organization');
   });
 });

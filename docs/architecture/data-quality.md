@@ -14,25 +14,32 @@ value. Blank contact, place, source, and translation fields are filled
 from the organizations being removed. Status and review status stay on
 the survivor. Locations, activities, tickets, feedback, API keys, and
 category-scan rows move onto the survivor before the source row is
-deleted. Media URLs are unioned. Object copy runs only when
-`ORGANIZATION_MEDIA_BUCKET` and `ORGANIZATION_MEDIA_BASE_URL` are set
-and the key is `organizations/{source id}/…`.
+deleted. Locations that share a non-empty address are combined, and
+activities that share a name are combined. Different addresses both
+stay, even when the places are close. Media URLs are unioned. Object
+copy runs only when `ORGANIZATION_MEDIA_BUCKET` and
+`ORGANIZATION_MEDIA_BASE_URL` are set and the key is
+`organizations/{source id}/…`. The source object is deleted only after
+the merge transaction commits.
 
 `organization_merges` stores the removed `source_id` and `place_id`.
 Later imports that look up those values load the survivor. The audit
 row uses action `MERGE` and records source ids, moved counts, and
-filled field names.
+filled field names. Dismissing a pair writes action `DISMISS_DUPLICATE`.
 
 A dry run returns the same plan and writes nothing. Dismissed pairs
-are stored on `organization_duplicate_dismissals` and are not grouped
-again.
+are stored on `organization_duplicate_dismissals`. A dismissed pair
+is a cannot-link: those two organizations are not placed in the same
+group even when a third organization matches both.
 
 Duplicate groups use exact name, phone, email, source id, social, and
 website buckets, plus spelling similarity. `pg_trgm` runs when the
-dialect is PostgreSQL and the extension exists. Otherwise scoring uses
-`difflib`. A shared location adds weight only when another signal is
-already present. The review queue warning `possible_duplicate` uses
-exact name, phone, email, or source id only.
+dialect is PostgreSQL and the extension exists. A failed similarity
+lookup is logged. Otherwise scoring uses `difflib`. A shared location
+adds weight only when another signal is already present. The review
+queue warning `possible_duplicate` uses the organization name key,
+phone, email, or source id, and it skips dismissed pairs. It is not
+part of the SQL summary predicates.
 
 ## Names
 
@@ -40,7 +47,9 @@ Rules run in a fixed order: HTML entities, Unicode NFKC, whitespace,
 trailing punctuation, spacing between Latin and CJK, known or numeric
 brackets, title case for all-caps Latin tokens, then a bilingual split
 that copies Chinese into `name_translations.zh` when that key is empty.
-An empty result keeps the original name.
+All-caps alphabetic tokens of two to five letters stay uppercase,
+except a short list of ordinary words such as Club. An empty result
+keeps the original name.
 
 Imports apply this to every organization name and append
 `Imported name: …` to `source_note` (500 characters). Activity names
@@ -49,6 +58,9 @@ cleaned name belongs to a different record, the original name is kept
 and the import records a warning.
 
 The Names tab scans stored rows with the same rules and writes
-`name_fix_proposals`. Applying a proposal updates the record. A
-dismissed proposal with the same proposed value is not created again.
-The review queue warning `name_needs_cleanup` links to this tab.
+`name_fix_proposals`. The list is cursor paginated. Applying a
+proposal updates the record when the stored name still matches the
+proposal. A dismissed proposal with the same proposed value is not
+created again. The review queue warning `name_needs_cleanup` covers
+the organization name, and activity names only while that organization
+is `pending_review`. The warning links to this tab.

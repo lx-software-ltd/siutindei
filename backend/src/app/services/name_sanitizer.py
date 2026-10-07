@@ -152,6 +152,36 @@ def _title_case(value: str, exceptions: frozenset[str]) -> str:
     return " ".join(_title_token(token, exceptions) for token in value.split(" "))
 
 
+_ORDINARY_SHORT = frozenset(
+    {
+        "CLASS",
+        "CLUB",
+        "SWIM",
+        "ARTS",
+        "KIDS",
+        "PLAY",
+        "PARK",
+        "CAMP",
+        "TEAM",
+        "CITY",
+        "EAST",
+        "WEST",
+        "NORTH",
+        "SOUTH",
+        "OPEN",
+        "HOME",
+        "BALL",
+        "GAME",
+        "POOL",
+        "GYM",
+        "BAND",
+        "CHOIR",
+        "DANCE",
+        "SPORT",
+    }
+)
+
+
 def _title_token(token: str, exceptions: frozenset[str]) -> str:
     letters = re.sub(r"[^A-Za-z]", "", token)
     if len(letters) < 2 or not letters.isupper():
@@ -162,6 +192,8 @@ def _title_token(token: str, exceptions: frozenset[str]) -> str:
     prefix, core, suffix = match.groups()
     upper = core.upper()
     if upper in exceptions or _ROMAN.match(upper):
+        return token
+    if 2 <= len(letters) <= 5 and letters.isalpha() and upper not in _ORDINARY_SHORT:
         return token
     pieces = re.split(r"(-)", core)
     titled = "".join(piece.capitalize() if piece != "-" else piece for piece in pieces)

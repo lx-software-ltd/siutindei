@@ -14,10 +14,12 @@ from app.exceptions import ValidationError
 from app.services.org_duplicates import (
     DEFAULT_MIN_SCORE,
     dismiss_pairs,
+    get_duplicate_group,
     list_duplicate_groups,
     search_organizations,
 )
 from app.services.org_merge import merge_organizations
+from app.services.org_merge_media import delete_merged_media
 from app.utils import json_response
 
 
@@ -34,6 +36,8 @@ def handle_org_duplicates(
         return _list(event)
     if method == "GET" and resource_id == "search":
         return _search(event)
+    if method == "GET" and resource_id:
+        return _get(event, resource_id)
     if method == "POST" and resource_id == "dismiss":
         return _dismiss(event)
     if method == "POST" and resource_id == "merge":
@@ -51,9 +55,16 @@ def _list(event: Mapping[str, Any]) -> dict[str, Any]:
             source=_blank(_query_param(event, "source")),
             review_status=_blank(_query_param(event, "review_status")),
             query=_blank(_query_param(event, "q")),
+            org_id=_blank(_query_param(event, "org_id")),
             cursor=_blank(_query_param(event, "cursor")),
             limit=parse_limit(event),
         )
+    return json_response(200, payload, event=event)
+
+
+def _get(event: Mapping[str, Any], group_id: str) -> dict[str, Any]:
+    with Session(get_engine()) as session:
+        payload = get_duplicate_group(session, group_id)
     return json_response(200, payload, event=event)
 
 
@@ -98,12 +109,14 @@ def _merge(event: Mapping[str, Any]) -> dict[str, Any]:
         )
         if not dry_run:
             session.commit()
+    if not dry_run:
+        delete_merged_media(list(payload.get("pending_deletes") or []))
     status = 200 if dry_run else 201
     return json_response(status, _public_plan(payload), event=event)
 
 
 def _public_plan(payload: dict[str, Any]) -> dict[str, Any]:
-    hidden = {"values"}
+    hidden = {"values", "pending_deletes"}
     return {key: value for key, value in payload.items() if key not in hidden}
 
 
