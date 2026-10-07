@@ -195,18 +195,18 @@ export function useResourceEditor<T extends { id: string }, TForm>({
   const handleSubmit = useCallback(
     async (
       formToPayload: (form: TForm) => unknown,
-      validate?: () => string | null
+      validate?: () => string | null | Promise<string | null>
     ) => {
-      if (validate) {
-        const validationError = validate();
-        if (validationError) {
-          setSaveError(validationError);
-          return;
-        }
-      }
       setIsSaving(true);
       setSaveError('');
       try {
+        if (validate) {
+          const validationError = await validate();
+          if (validationError) {
+            setSaveError(validationError);
+            return;
+          }
+        }
         const payload = formToPayload(formStateRef.current);
         if (selectedId) {
           const updated = await api.update(selectedId, payload);
@@ -247,7 +247,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
         { variant: 'danger', confirmLabel: 'Delete' }
       );
       if (!confirmed) {
-        return;
+        return false;
       }
       setSaveError('');
       try {
@@ -258,10 +258,12 @@ export function useResourceEditor<T extends { id: string }, TForm>({
           clearDirty();
           collapse();
         }
+        return true;
       } catch (err) {
         const message =
           err instanceof ApiError ? err.message : `Unable to delete ${noun}.`;
         setSaveError(message);
+        return false;
       }
     },
     [api, clearDirty, collapse, confirm, expandedId, list, noun]

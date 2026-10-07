@@ -1297,7 +1297,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          items: mockOrganizations.slice(0, 1),
+          items: mockOrganizations,
           next_cursor: null,
         }),
       });
@@ -1675,6 +1675,13 @@ export async function setupApiMocks(page: Page): Promise<void> {
               entity_id: 'org-1',
               message: 'No locations',
             },
+            {
+              code: 'category_check_pending',
+              severity: 'warning',
+              entity_type: 'activity',
+              entity_id: 'activity-1',
+              message: 'Category check is waiting',
+            },
           ],
           completeness: 0.5,
           blocker_count: 1,
@@ -1697,6 +1704,10 @@ export async function setupApiMocks(page: Page): Promise<void> {
             status: 'operational',
             review_status: 'pending_review',
             source: 'lcsd',
+            import_job_id: 'job-1',
+            manager_id: 'manager-user-id-456',
+            email: 'contact@org-one.test',
+            phone_number: '12345678',
             location_count: 0,
             activity_count: 0,
             pricing_count: 0,

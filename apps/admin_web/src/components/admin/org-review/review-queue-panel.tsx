@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueryState } from 'nuqs';
 
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
+import { useOrganizationScope } from '../../../hooks/use-organization-scope';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { ApiError } from '../../../lib/api-client';
 import {
@@ -58,7 +59,7 @@ interface ReviewQueueFilters {
 }
 
 const DEFAULT_REVIEW_FILTERS: ReviewQueueFilters = {
-  review_status: 'pending_review',
+  review_status: '',
   source: '',
   issue: '',
   has_blockers: '',
@@ -78,9 +79,8 @@ function issueSummary(item: OrgReviewListItem) {
 }
 
 export function CatalogPanel() {
+  const scope = useOrganizationScope();
   const [jobParam, setJobParam] = useQueryState('job');
-  const [, setSection] = useQueryState('section');
-  const [, setOrg] = useQueryState('org');
   const defaultFilters = useMemo(
     () => ({
       ...DEFAULT_REVIEW_FILTERS,
@@ -204,8 +204,7 @@ export function CatalogPanel() {
   }
 
   function openOrganization(orgId: string) {
-    void setSection('organizations');
-    void setOrg(orgId);
+    void scope.openWorkspace(orgId);
   }
 
   const pendingCount = summary?.by_review_status.pending_review ?? 0;
@@ -217,8 +216,8 @@ export function CatalogPanel() {
     <div className='space-y-4'>
       <h2 className='sr-only'>Catalog</h2>
       <p className='text-sm text-slate-600'>
-        Every organization starts in review, whether it was imported, created
-        here, or approved from a ticket. Public search keeps the current
+        Every organization is listed here. Imported, created, and suggested
+        organizations start in review. Public search keeps the current
         listings until ORG_REVIEW_GATE_ENABLED is turned on. After a release,
         search can stay cached for up to 5 minutes. Open a row to fix it.
       </p>
@@ -243,8 +242,8 @@ export function CatalogPanel() {
       <ResourceTableShell
         ariaLabel='Catalog'
         rows={items}
-        getLabel={(item) => `organization ${item.id}`}
-        middleColumnCount={5}
+        getLabel={(item) => item.name || `organization ${item.id}`}
+        middleColumnCount={7}
         hasActions={false}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
@@ -264,11 +263,12 @@ export function CatalogPanel() {
                 <AdminCreateButton
                   label='New organization'
                   onClick={() => {
-                    void setSection('organizations');
-                    void setOrg('new');
+                    void scope.openWorkspace('new');
                   }}
                 />
                 {jobParam ? (
+                  // Leaves the import-job URL scope. This is not a filter
+                  // field, so it is the one Clear control on this bar.
                   <Button
                     type='button'
                     variant='secondary'
@@ -474,6 +474,12 @@ export function CatalogPanel() {
             <AdminDataTableHeadCell priority='secondary'>
               Review
             </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Contact
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Import job
+            </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
               Missing
             </AdminDataTableHeadCell>
@@ -492,6 +498,18 @@ export function CatalogPanel() {
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               <StatusBadge status={item.review_status.replaceAll('_', ' ')} />
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              <span>{item.email || '—'}</span>
+              <span className='block text-xs text-slate-500'>
+                {item.phone_number || 'No phone'}
+              </span>
+              <span className='block text-xs text-slate-500'>
+                {item.manager_id ? `Manager ${item.manager_id}` : 'No manager'}
+              </span>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {item.import_job_id || '—'}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {issueSummary(item)}

@@ -56,3 +56,15 @@ test.describe('Category suggestions', () => {
     ).toBeVisible();
   });
 });
+
+test('legacy category checks link opens data quality', async ({ adminPage }) => {
+  await adminPage.goto(
+    '/admin/dashboard?section=activity-categories&categoryView=checks'
+  );
+  await expect(adminPage).toHaveURL(/section=data-quality/);
+  await expect(adminPage).toHaveURL(/tab=checks/);
+  await expect(adminPage).not.toHaveURL(/categoryView=/);
+  await expect(
+    adminPage.getByRole('button', { name: 'Category Checks', exact: true })
+  ).toBeVisible();
+});

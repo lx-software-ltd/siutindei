@@ -20,6 +20,7 @@ import type { Organization } from '../../types/admin';
 import { useAuth } from '../auth-provider';
 import { AppShell } from '../app-shell';
 import { StatusBanner } from '../status-banner';
+import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Select } from '../ui/select';
 import {
@@ -36,7 +37,7 @@ import { PendingFeedbackNotice } from './pending-feedback-notice';
 import { SuggestionForm } from './suggestion-form';
 import { PendingSuggestionNotice } from './pending-suggestion-notice';
 
-type ManagerView = 'loading' | 'request-form' | 'pending' | 'dashboard';
+type ManagerView = 'loading' | 'request-form' | 'pending' | 'dashboard' | 'error';
 
 const managerSectionLabels = [
   { key: 'organizations', label: 'Organization' },
@@ -68,12 +69,8 @@ export function ManagerDashboard() {
   );
 
   const loadManagerOrgs = useCallback(async (): Promise<Organization[]> => {
-    try {
-      const response = await listManagerOrganizations<Organization>();
-      return response.items;
-    } catch {
-      return [];
-    }
+    const response = await listManagerOrganizations<Organization>();
+    return response.items;
   }, []);
 
   const loadManagerStatus = useCallback(async () => {
@@ -108,9 +105,17 @@ export function ManagerDashboard() {
       if (status.organizations_count > 0) {
         const items = await loadManagerOrgs();
         setManagerOrgs(items);
+        if (items.length === 0) {
+          setManagerOrgName(null);
+          setError('No organization is assigned to this account.');
+          setView('error');
+          return;
+        }
         const orgName = items[0]?.name?.trim();
         setManagerOrgName(orgName ? orgName : null);
-        if (items[0] && !orgParam) {
+        const current =
+          orgParam !== null && items.some((org) => org.id === orgParam);
+        if (!current) {
           setOrg(items[0].id);
         }
         setView('dashboard');
@@ -125,7 +130,7 @@ export function ManagerDashboard() {
           ? err.message
           : 'Failed to load your account status.';
       setError(message);
-      setView('request-form');
+      setView('error');
     } finally {
       setIsLoading(false);
     }
@@ -183,9 +188,16 @@ export function ManagerDashboard() {
         return <FeedbackForm onFeedbackSubmitted={handleFeedbackSubmitted} />;
       case 'organizations':
       default:
-        return <OrganizationsPanel mode='manager' />;
+        return (
+          <OrganizationsPanel
+            mode='manager'
+            onOrganizationRemoved={() => {
+              void loadManagerStatus();
+            }}
+          />
+        );
     }
-  }, [activeSection, pendingFeedback, pendingSuggestion]);
+  }, [activeSection, loadManagerStatus, pendingFeedback, pendingSuggestion]);
 
   // Loading state
   if (view === 'loading' || isLoading) {
@@ -194,6 +206,27 @@ export function ManagerDashboard() {
         <StatusBanner variant='info' title='Loading'>
           Loading your account information...
         </StatusBanner>
+      </main>
+    );
+  }
+
+  if (view === 'error') {
+    return (
+      <main className='mx-auto flex min-h-screen max-w-lg items-center px-6'>
+        <div className='w-full space-y-4'>
+          <StatusBanner variant='error' title='Organization'>
+            {error || 'Failed to load your organization.'}
+          </StatusBanner>
+          <Button
+            type='button'
+            variant='secondary'
+            onClick={() => {
+              void loadManagerStatus();
+            }}
+          >
+            Retry
+          </Button>
+        </div>
       </main>
     );
   }

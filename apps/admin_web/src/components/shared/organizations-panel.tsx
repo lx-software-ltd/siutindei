@@ -11,6 +11,7 @@ import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { ApiError } from '../../lib/api-client';
+import { listResource } from '../../lib/api-client-admin';
 import { listCognitoUsers } from '../../lib/api-client-cognito';
 import type { ApiMode } from '../../lib/resource-api';
 import { normalizeKey } from '../../lib/string-utils';
@@ -50,6 +51,27 @@ import {
 
 interface OrganizationsPanelProps {
   mode: ApiMode;
+  onOrganizationRemoved?: () => void;
+}
+
+async function organizationNameTaken(
+  name: string,
+  editingId: string | null
+): Promise<boolean> {
+  const page = await listResource<Organization>(
+    'organizations',
+    undefined,
+    50,
+    undefined,
+    { q: name.trim() }
+  );
+  const key = normalizeKey(name);
+  return page.items.some(
+    (item) =>
+      item.id !== editingId &&
+      Boolean(item.name) &&
+      normalizeKey(item.name) === key
+  );
 }
 
 function OrganizationStatusBadges({ item }: { item: Organization }) {
@@ -65,7 +87,10 @@ function OrganizationStatusBadges({ item }: { item: Organization }) {
   );
 }
 
-export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
+export function OrganizationsPanel({
+  mode,
+  onOrganizationRemoved,
+}: OrganizationsPanelProps) {
   const isAdmin = mode === 'admin';
   const isManager = mode === 'manager';
   const { user } = useAuth();
@@ -88,6 +113,7 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
     id: string;
     name: string;
   } | null>(null);
+  const [remoteNameTaken, setRemoteNameTaken] = useState(false);
   const editorOpen = panel.isDraftOpen || Boolean(panel.editingId);
 
   const { orgParam, legacyOrgId, setOrg } = scope;
@@ -155,6 +181,34 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
     };
   }, [editorOpen, isAdmin, managerQuery, setError]);
 
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+    const trimmed = panel.formState.name.trim();
+    if (!trimmed) {
+      return;
+    }
+    let cancelled = false;
+    const handle = window.setTimeout(() => {
+      void organizationNameTaken(trimmed, panel.editingId)
+        .then((taken) => {
+          if (!cancelled) {
+            setRemoteNameTaken(taken);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setRemoteNameTaken(false);
+          }
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [isAdmin, panel.editingId, panel.formState.name]);
+
   const countryOptions = useMemo(() => {
     const display =
       typeof Intl !== 'undefined' &&
@@ -173,20 +227,22 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, []);
 
-  const validate = () => {
+  const validate = async () => {
     if (!panel.formState.name.trim()) {
       return 'Name is required.';
     }
     const normalizedName = normalizeKey(panel.formState.name);
-    const hasDuplicate = panel.items.some((item) => {
-      if (!item.name) {
-        return false;
-      }
-      if (panel.editingId && item.id === panel.editingId) {
-        return false;
-      }
-      return normalizeKey(item.name) === normalizedName;
-    });
+    const hasDuplicate = isAdmin
+      ? await organizationNameTaken(panel.formState.name, panel.editingId)
+      : panel.items.some((item) => {
+          if (!item.name) {
+            return false;
+          }
+          if (panel.editingId && item.id === panel.editingId) {
+            return false;
+          }
+          return normalizeKey(item.name) === normalizedName;
+        });
     if (hasDuplicate) {
       return 'Organization name must be unique (case-insensitive).';
     }
@@ -229,20 +285,22 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
       return 'Enter an organization name.';
     }
     const normalizedName = normalizeKey(trimmedName);
-    const hasDuplicate = panel.items.some((item) => {
-      if (!item.name) {
-        return false;
-      }
-      if (panel.editingId && item.id === panel.editingId) {
-        return false;
-      }
-      return normalizeKey(item.name) === normalizedName;
-    });
+    const hasDuplicate = isAdmin
+      ? remoteNameTaken
+      : panel.items.some((item) => {
+          if (!item.name) {
+            return false;
+          }
+          if (panel.editingId && item.id === panel.editingId) {
+            return false;
+          }
+          return normalizeKey(item.name) === normalizedName;
+        });
     if (hasDuplicate) {
       return 'Name already exists.';
     }
     return '';
-  }, [panel.editingId, panel.formState.name, panel.items]);
+  }, [isAdmin, panel.editingId, panel.formState.name, panel.items, remoteNameTaken]);
 
   const managerError =
     isAdmin && panel.editingId && !panel.formState.manager_id
@@ -436,9 +494,14 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
                 const current = panel.items.find(
                   (item) => item.id === panel.editingId
                 );
-                if (current) {
-                  void panel.handleDelete(current);
+                if (!current) {
+                  return;
                 }
+                void panel.handleDelete(current).then((removed) => {
+                  if (removed && isManager) {
+                    onOrganizationRemoved?.();
+                  }
+                });
               }}
             >
               Delete
@@ -774,6 +837,18 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
         </StatusBanner>
       );
     }
+    if (isManager) {
+      return (
+        <div className='rounded-lg border border-slate-200 bg-white p-6'>
+          <p className='text-base font-semibold text-slate-900'>
+            No organization is assigned
+          </p>
+          <p className='mt-1 text-sm text-slate-600'>
+            This account does not have an organization to manage.
+          </p>
+        </div>
+      );
+    }
     return (
       <>
         {panel.listError ? (
@@ -807,6 +882,9 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
         <OrganizationMergeDialog
           anchor={mergeAnchor}
           onClose={() => setMergeAnchor(null)}
+          onMerged={(survivorId) => {
+            scope.setOrg(survivorId);
+          }}
         />
       ) : null}
       {panel.confirmDialog}

@@ -23,6 +23,6 @@ Leave `SiutindeiBoardCatalogImportEnabled` false until a remote board
 Preview succeeds.
 
 Organizations created by that import are stored as `pending_review`.
-They are not a public listing until an admin releases them in the
-admin Imports review queue. Turning on `OrgReviewGateEnabled` in this
+They are not a public listing until an admin releases them from
+Catalog. Turning on `OrgReviewGateEnabled` in this
 repo's API stack is what makes public search enforce that release.

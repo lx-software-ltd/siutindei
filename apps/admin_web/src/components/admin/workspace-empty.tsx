@@ -27,7 +27,7 @@ export function WorkspaceEmpty({
   );
 }
 
-/** Admin without `?org=` sees the catalog prompt. Managers wait for their org. */
+/** Admin without `?org=` sees the catalog prompt. Managers see an empty state. */
 export function WorkspaceScopeGate({
   orgId,
   isAdmin,
@@ -46,6 +46,14 @@ export function WorkspaceScopeGate({
     return <WorkspaceEmpty noun={noun} />;
   }
   return (
-    <p className='text-sm text-slate-600'>Loading the organization…</p>
+    <div className='rounded-lg border border-slate-200 bg-white p-6'>
+      <p className='text-base font-semibold text-slate-900'>
+        No organization is selected
+      </p>
+      <p className='mt-1 text-sm text-slate-600'>
+        This account has no organization open. Refresh the page, or ask an
+        owner to assign one.
+      </p>
+    </div>
   );
 }

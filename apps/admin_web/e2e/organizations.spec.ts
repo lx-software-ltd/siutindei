@@ -52,13 +52,19 @@ test.describe('Organizations Panel', () => {
 
     await expect(adminPage.getByRole('columnheader', { name: 'Name' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Review' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Contact' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Import job' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toHaveCount(0);
+    await expect(adminPage.locator('#review-status-filter')).toHaveValue('');
     await expect(adminPage.getByText('First test organization')).toHaveCount(0);
     await expect(
       adminPage.getByRole('cell', { name: /pending review/ }).first()
     ).toBeVisible();
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
+    await expect(adminPage.getByText('contact@org-one.test')).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'job-1' })).toBeVisible();
+    await expect(adminPage.getByText('Manager manager-user-id-456')).toBeVisible();
   });
 
   test('should display manager selector with Cognito users', async ({ adminPage }) => {

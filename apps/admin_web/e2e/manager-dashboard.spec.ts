@@ -139,6 +139,32 @@ test.describe('Manager Organizations Panel', () => {
     await expect(managerSelect).toBeDisabled();
     await expect(managerSelect).toHaveValue('manager@example.com');
   });
+
+  test('switches the open organization', async ({ managerPage }) => {
+    await managerPage.goto('/admin/dashboard');
+    const switcher = managerPage.locator('#manager-org-switcher');
+    await expect(switcher).toBeVisible();
+    await switcher.selectOption('org-2');
+    await expect(managerPage).toHaveURL(/org=org-2/);
+    await expect(
+      managerPage.getByText('Manage your organization, Test Organization 2.')
+    ).toBeVisible();
+  });
+});
+
+test('shows an error when the organization list fails', async ({ managerPage }) => {
+  await managerPage.route('**/api/mock/**/manager/organizations*', async (route) => {
+    await route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Organization list failed' }),
+    });
+  });
+  await managerPage.goto('/admin/dashboard');
+  await expect(managerPage.getByText('Organization list failed')).toBeVisible();
+  await expect(managerPage.getByRole('button', { name: 'Retry' })).toBeVisible();
+  await expect(managerPage.getByText('Loading the organization…')).toHaveCount(0);
+  await expect(managerPage.getByText('Choose an organization')).toHaveCount(0);
 });
 
 test.describe('Manager Activities Panel', () => {
