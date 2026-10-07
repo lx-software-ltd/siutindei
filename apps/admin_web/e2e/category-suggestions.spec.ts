@@ -22,7 +22,7 @@ test.describe('Category suggestions', () => {
     adminPage,
   }) => {
     await adminPage.goto('/admin/dashboard');
-    await adminPage.getByRole('button', { name: 'Categories', exact: true }).click();
+    await adminPage.getByRole('button', { name: 'Data quality', exact: true }).click();
     await adminPage.getByRole('button', { name: 'Category Checks', exact: true }).click();
     await expect(adminPage.getByText('Clay club')).toBeVisible();
     const apply = adminPage.getByRole('button', { name: 'Apply' });
@@ -44,8 +44,8 @@ test.describe('Category suggestions', () => {
 
   test('admin can apply every matching pending check', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard');
-    await adminPage.getByRole('button', { name: 'Categories', exact: true }).click();
-    await adminPage.getByRole('button', { name: 'Category checks', exact: true }).click();
+    await adminPage.getByRole('button', { name: 'Data quality', exact: true }).click();
+    await adminPage.getByRole('button', { name: 'Category Checks', exact: true }).click();
     await adminPage.getByRole('button', { name: 'Apply matching' }).click();
     await expect(
       adminPage.getByText('Apply every pending reassignment')
@@ -55,4 +55,16 @@ test.describe('Category suggestions', () => {
       adminPage.getByTestId('admin-row-rev-1').getByText('applied', { exact: true })
     ).toBeVisible();
   });
+});
+
+test('legacy category checks link opens data quality', async ({ adminPage }) => {
+  await adminPage.goto(
+    '/admin/dashboard?section=activity-categories&categoryView=checks'
+  );
+  await expect(adminPage).toHaveURL(/section=data-quality/);
+  await expect(adminPage).toHaveURL(/tab=checks/);
+  await expect(adminPage).not.toHaveURL(/categoryView=/);
+  await expect(
+    adminPage.getByRole('button', { name: 'Category Checks', exact: true })
+  ).toBeVisible();
 });

@@ -24,9 +24,9 @@ test.describe('Data quality', () => {
     await expect(adminPage.getByText('Name updated.')).toBeVisible();
   });
 
-  test('admin can merge from the organizations table', async ({ adminPage }) => {
-    await adminPage.goto('/admin/dashboard');
-    await adminPage.getByRole('button', { name: 'Merge into…' }).first().click();
+  test('admin can merge from the organization workspace', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    await adminPage.getByRole('button', { name: 'Merge into…' }).click();
     await adminPage.getByLabel('Find organization').fill('Harbour');
     await adminPage.getByRole('button', { name: 'Find' }).click();
     await adminPage.getByRole('button', { name: 'Harbour Club Limited' }).click();

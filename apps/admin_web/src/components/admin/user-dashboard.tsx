@@ -7,7 +7,6 @@ import {
   getUserAccessStatus,
   getUserFeedback,
   getUserSuggestions,
-  type ManagerStatusResponse,
   type Ticket,
 } from '../../lib/api-client-user';
 import { useAuth } from '../auth-provider';
@@ -27,12 +26,10 @@ const sectionLabels = [
 ];
 
 /**
- * Dashboard for regular logged-in users who are not yet managers or admins.
- * Allows them to:
- * - Submit a request to become a manager of an organization
- * - Suggest new places/organizations for the platform
+ * Account home for people who do not manage an organization yet.
+ * Managers with no organization and plain users share this screen.
  */
-export function UserDashboard() {
+export function AccountHome() {
   const { user, logout, error: authError } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');

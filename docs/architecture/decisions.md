@@ -396,8 +396,10 @@ Listing `status` stays the business state (`operational`,
 whether an admin has released the organization. Re-importing an
 approved organization does not send it back to the queue; it stamps
 `last_imported_at` and leaves `import_job_id` pointing at the job
-that created the row. Admin-console creates and approved tickets are
-`approved` immediately. A live import commits its job as `running`
+that created the row. Owner creates, access-request creates, and
+suggestion creates also start as `pending_review`. A blank `manager_id`
+on an owner create defaults to the caller's Cognito sub. A live import
+commits its job as `running`
 before writing organizations and marks that job `failed` if the
 import raises, so the same object key can be retried.
 
@@ -408,9 +410,12 @@ CDK parameter `OrgReviewGateEnabled` (`ORG_REVIEW_GATE_ENABLED`) is
 a SQL view cannot read the Lambda flag. CloudFront caches public
 search for 5 minutes, so a release can lag by that long.
 
-The admin Imports section is the release tool: a review queue shows
-which details are missing, and bulk actions approve, reject, reopen,
-or set a whitelist of organization fields. Approve refuses while
+Catalog is the release tool. It lists every organization with stage,
+source, missing detail, and import job, and bulk actions approve,
+reject, reopen, or set a whitelist of organization fields. Opening a
+row sets `?org=` and shows the same readiness checklist on the
+Organization screen. Imports keeps upload, export, and history; history
+"View orgs" opens Catalog with `?job=`. Approve refuses while
 blockers remain unless `force` is set. Blockers are a missing
 description, no location, no activity, a location without coordinates,
 an activity without pricing or a schedule, and an activity still on

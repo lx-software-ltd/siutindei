@@ -90,6 +90,7 @@ function ImportJobSummary({ job }: { job: ImportJobListItem }) {
 
 export function ImportHistoryPanel() {
   const [, setTab] = useQueryState('tab');
+  const [, setSection] = useQueryState('section');
   const [retryJob, setRetryJob] = useState<ImportJobListItem | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryError, setRetryError] = useState('');
@@ -204,7 +205,8 @@ export function ImportHistoryPanel() {
                 variant='secondary'
                 onClick={() => {
                   void setJob(item.id);
-                  void setTab('review');
+                  void setTab(null);
+                  void setSection('catalog');
                 }}
               >
                 View orgs

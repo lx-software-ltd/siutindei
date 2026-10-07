@@ -2,7 +2,7 @@ import { test, expect } from './fixtures/test-fixtures';
 
 test.describe('Pricing Panel', () => {
   test('creates a pricing entry', async ({ adminPage }) => {
-    await adminPage.goto('/admin/dashboard?section=pricing');
+    await adminPage.goto('/admin/dashboard?section=pricing&org=org-1');
     await expect(adminPage.getByRole('table', { name: 'Pricing' })).toBeVisible();
     await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
     await adminPage.getByRole('button', { name: 'New pricing' }).click();

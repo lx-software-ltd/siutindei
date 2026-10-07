@@ -16,7 +16,7 @@ import { StatusBanner } from '../../status-banner';
 interface OrganizationMergeEditorProps {
   organizations: OrgDuplicateMember[];
   suggestedSurvivorId?: string;
-  onMerged: () => void;
+  onMerged: (survivorId: string) => void;
 }
 
 function invalidateCatalog() {
@@ -78,7 +78,7 @@ export function OrganizationMergeEditor({
         field_overrides: overrides,
       });
       invalidateCatalog();
-      onMerged();
+      onMerged(preview.survivor_id);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Merge failed.');
     } finally {

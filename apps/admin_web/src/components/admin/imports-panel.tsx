@@ -1,9 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQueryState } from 'nuqs';
 
-import { useOrganizationsByMode } from '../../hooks/use-organizations-by-mode';
 import {
   ApiError,
   createAdminExport,
@@ -17,19 +16,17 @@ import { AdminTabStrip } from '../ui/admin-tab-strip';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { FileUploadButton } from '../ui/file-upload-button';
-import { Select } from '../ui/select';
+import { Input } from '../ui/input';
 import { StatusBanner } from '../status-banner';
 import { ImportHistoryPanel } from './org-review/import-history-panel';
-import { ReviewQueuePanel } from './org-review/review-queue-panel';
 
-type ImportTab = 'import' | 'review' | 'history';
+type ImportTab = 'import' | 'history';
 type ImportStatus = 'idle' | 'uploading' | 'processing' | 'done' | 'error';
 type ExportStatus = 'idle' | 'loading' | 'done' | 'error';
 type ExportTarget = 'all' | 'selected';
 
 const IMPORT_TABS: { key: ImportTab; label: string }[] = [
   { key: 'import', label: 'Import' },
-  { key: 'review', label: 'Review' },
   { key: 'history', label: 'History' },
 ];
 
@@ -67,14 +64,17 @@ function downloadFile(url: string, fileName: string) {
 
 export function ImportsPanel() {
   const [tabParam, setTabParam] = useQueryState('tab');
+  const [, setSection] = useQueryState('section');
   const [, setJobParam] = useQueryState('job');
-  const activeTab: ImportTab =
-    tabParam === 'review' || tabParam === 'history' ? tabParam : 'import';
-  const {
-    items: organizations,
-    isLoading: isOrgLoading,
-    error: orgError,
-  } = useOrganizationsByMode('admin', { limit: 200, fetchAll: true });
+  const activeTab: ImportTab = tabParam === 'history' ? 'history' : 'import';
+
+  useEffect(() => {
+    if (tabParam !== 'review') {
+      return;
+    }
+    void setSection('catalog');
+    void setTabParam(null);
+  }, [setSection, setTabParam, tabParam]);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importTouched, setImportTouched] = useState(false);
@@ -193,7 +193,6 @@ export function ImportsPanel() {
           void setTabParam(key === 'import' ? null : key);
         }}
       />
-      {activeTab === 'review' && <ReviewQueuePanel />}
       {activeTab === 'history' && <ImportHistoryPanel />}
       {activeTab === 'import' && (
         <>
@@ -256,8 +255,9 @@ export function ImportsPanel() {
                       type='button'
                       variant='secondary'
                       onClick={() => {
-                        void setJobParam(importResult.id ?? null);
-                        void setTabParam('review');
+                      void setJobParam(importResult.id ?? null);
+                      void setTabParam(null);
+                      void setSection('catalog');
                       }}
                     >
                       Review organizations from this import
@@ -339,11 +339,6 @@ export function ImportsPanel() {
             <AdminEditorPanel
               status={
                 <>
-                  {orgError ? (
-                    <StatusBanner variant='error' title='Organization error'>
-                      {orgError}
-                    </StatusBanner>
-                  ) : null}
                   {exportError ? (
                     <StatusBanner variant='error' title='Export error'>
                       {exportError}
@@ -395,19 +390,13 @@ export function ImportsPanel() {
                   label='Organization (optional)'
                   htmlFor='admin-export-org'
                 >
-                  <Select
+                  <Input
                     id='admin-export-org'
                     value={selectedOrgName}
+                    aria-label='Organization name'
+                    placeholder='Leave blank to export every organization'
                     onChange={(event) => setSelectedOrgName(event.target.value)}
-                    disabled={isOrgLoading}
-                  >
-                    <option value=''>All organizations</option>
-                    {organizations.map((org) => (
-                      <option key={org.id} value={org.name}>
-                        {org.name}
-                      </option>
-                    ))}
-                  </Select>
+                  />
                 </AdminField>
               </AdminFieldGrid>
             </AdminEditorPanel>

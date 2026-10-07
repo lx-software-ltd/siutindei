@@ -2,12 +2,10 @@ import { test, expect } from './fixtures/test-fixtures';
 
 test.describe('Media Panel', () => {
   test('adds, reorders, removes, and saves media', async ({ adminPage }) => {
-    await adminPage.goto('/admin/dashboard?section=media');
+    await adminPage.goto('/admin/dashboard?section=media&org=org-1');
     await expect(
       adminPage.getByRole('heading', { name: 'Organization Media' })
     ).toBeVisible();
-
-    await adminPage.getByLabel('Organization').selectOption('org-1');
 
     const mediaInput = adminPage.locator('#media-url');
     await mediaInput.fill('https://example.com/media-one.jpg');

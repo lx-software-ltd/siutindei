@@ -1,21 +1,17 @@
 'use client';
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type ReactElement,
-} from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   getCountries,
   getCountryCallingCode,
 } from 'libphonenumber-js';
 
-import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
+import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { ApiError } from '../../lib/api-client';
+import { listResource } from '../../lib/api-client-admin';
 import { listCognitoUsers } from '../../lib/api-client-cognito';
 import type { ApiMode } from '../../lib/resource-api';
 import { normalizeKey } from '../../lib/string-utils';
@@ -25,40 +21,24 @@ import {
 } from '../../lib/translations';
 import type { CognitoUser, Organization } from '../../types/admin';
 import { OrganizationMergeDialog } from '../admin/data-quality/organization-merge-dialog';
+import { OrganizationReadiness } from '../admin/organization-readiness';
+import { WorkspaceEmpty } from '../admin/workspace-empty';
 import { useAuth } from '../auth-provider';
-import { DeleteIcon, MergeIcon } from '../icons/action-icons';
-import { AdminCreateButton } from '../ui/admin-create-button';
-import {
-  AdminDataTableCell,
-  AdminDataTableCellMeta,
-  AdminDataTableHeadCell,
-} from '../ui/admin-data-table';
+import { Button } from '../ui/button';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminFieldGrid } from '../ui/admin-field-grid';
-import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
-import {
-  deleteRowActions,
-  ResourceTableShell,
-  rowActions,
-} from '../ui/resource-table-shell';
 import { Select } from '../ui/select';
 import { Textarea } from '../ui/textarea';
 import { StatusBadge } from '../ui/status-badge';
 import { StatusBanner } from '../status-banner';
 import {
-  ContactIcon,
-  EmailIcon,
-  PhoneIcon,
-  ServiceIcon,
   SOCIAL_FIELDS,
   DESCRIPTION_SOURCE_OPTIONS,
   emptyForm,
-  getManagerDisplayName,
   ORG_SOURCE_OPTIONS,
-  hasValue,
   isValidEmail,
   isValidPhoneNumber,
   isValidSocialValue,
@@ -71,6 +51,27 @@ import {
 
 interface OrganizationsPanelProps {
   mode: ApiMode;
+  onOrganizationRemoved?: () => void;
+}
+
+async function organizationNameTaken(
+  name: string,
+  editingId: string | null
+): Promise<boolean> {
+  const page = await listResource<Organization>(
+    'organizations',
+    undefined,
+    50,
+    undefined,
+    { q: name.trim() }
+  );
+  const key = normalizeKey(name);
+  return page.items.some(
+    (item) =>
+      item.id !== editingId &&
+      Boolean(item.name) &&
+      normalizeKey(item.name) === key
+  );
 }
 
 function OrganizationStatusBadges({ item }: { item: Organization }) {
@@ -86,39 +87,42 @@ function OrganizationStatusBadges({ item }: { item: Organization }) {
   );
 }
 
-export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
+export function OrganizationsPanel({
+  mode,
+  onOrganizationRemoved,
+}: OrganizationsPanelProps) {
   const isAdmin = mode === 'admin';
   const isManager = mode === 'manager';
   const { user } = useAuth();
+  const scope = useOrganizationScope();
   const panel = useResourceEditor<Organization, OrganizationFormState>({
     resource: 'organizations',
     mode,
     emptyForm,
     itemToForm,
-    paramName: 'organization',
-    legacyParam: 'edit',
+    paramName: 'org',
     autoExpandFirst: isManager,
+    enabled: isManager,
     noun: 'organization',
   });
 
-  // Admin-only: Load Cognito users for manager selection
   const [cognitoUsers, setCognitoUsers] = useState<CognitoUser[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(isAdmin);
-
-  // Search state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [reviewFilter, setReviewFilter] = useState('all');
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [managerQuery, setManagerQuery] = useState('');
   const [mergeAnchor, setMergeAnchor] = useState<{
     id: string;
     name: string;
   } | null>(null);
-  useExhaustPages(Boolean(searchQuery.trim()), {
-    hasMore: panel.hasMore,
-    isLoading: panel.isLoading,
-    isLoadingMore: panel.isLoadingMore,
-    error: panel.listError,
-    loadMore: panel.loadMore,
-  });
+  const [remoteNameTaken, setRemoteNameTaken] = useState(false);
+  const editorOpen = panel.isDraftOpen || Boolean(panel.editingId);
+
+  const { orgParam, legacyOrgId, setOrg } = scope;
+  useEffect(() => {
+    if (orgParam || !legacyOrgId) {
+      return;
+    }
+    setOrg(legacyOrgId);
+  }, [legacyOrgId, orgParam, setOrg]);
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
@@ -143,34 +147,67 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
   const { setError } = panel;
 
   useEffect(() => {
-    if (!isAdmin) return;
-
-    const loadCognitoUsers = async () => {
+    if (!isAdmin || !editorOpen) {
+      return;
+    }
+    let cancelled = false;
+    const handle = window.setTimeout(() => {
       setIsLoadingUsers(true);
-      try {
-        const allUsers: CognitoUser[] = [];
-        let paginationToken: string | undefined;
-
-        do {
-          const response = await listCognitoUsers(paginationToken, 60);
-          allUsers.push(...response.items);
-          paginationToken = response.pagination_token ?? undefined;
-        } while (paginationToken);
-
-        setCognitoUsers(allUsers);
-      } catch (err) {
-        const message =
-          err instanceof ApiError
-            ? err.message
-            : 'Failed to load users for manager selection.';
-        setError(message);
-      } finally {
-        setIsLoadingUsers(false);
-      }
+      listCognitoUsers(undefined, 60, managerQuery)
+        .then((response) => {
+          if (!cancelled) {
+            setCognitoUsers(response.items);
+          }
+        })
+        .catch((err: unknown) => {
+          if (cancelled) {
+            return;
+          }
+          const message =
+            err instanceof ApiError
+              ? err.message
+              : 'Failed to load users for manager selection.';
+          setError(message);
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setIsLoadingUsers(false);
+          }
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
     };
+  }, [editorOpen, isAdmin, managerQuery, setError]);
 
-    loadCognitoUsers();
-  }, [isAdmin, setError]);
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+    const trimmed = panel.formState.name.trim();
+    if (!trimmed) {
+      return;
+    }
+    let cancelled = false;
+    const handle = window.setTimeout(() => {
+      void organizationNameTaken(trimmed, panel.editingId)
+        .then((taken) => {
+          if (!cancelled) {
+            setRemoteNameTaken(taken);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setRemoteNameTaken(false);
+          }
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [isAdmin, panel.editingId, panel.formState.name]);
 
   const countryOptions = useMemo(() => {
     const display =
@@ -190,24 +227,26 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, []);
 
-  const validate = () => {
+  const validate = async () => {
     if (!panel.formState.name.trim()) {
       return 'Name is required.';
     }
     const normalizedName = normalizeKey(panel.formState.name);
-    const hasDuplicate = panel.items.some((item) => {
-      if (!item.name) {
-        return false;
-      }
-      if (panel.editingId && item.id === panel.editingId) {
-        return false;
-      }
-      return normalizeKey(item.name) === normalizedName;
-    });
+    const hasDuplicate = isAdmin
+      ? await organizationNameTaken(panel.formState.name, panel.editingId)
+      : panel.items.some((item) => {
+          if (!item.name) {
+            return false;
+          }
+          if (panel.editingId && item.id === panel.editingId) {
+            return false;
+          }
+          return normalizeKey(item.name) === normalizedName;
+        });
     if (hasDuplicate) {
       return 'Organization name must be unique (case-insensitive).';
     }
-    if (isAdmin && !panel.formState.manager_id) {
+    if (isAdmin && panel.editingId && !panel.formState.manager_id) {
       return 'Manager is required.';
     }
     const email = panel.formState.email.trim();
@@ -246,23 +285,27 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
       return 'Enter an organization name.';
     }
     const normalizedName = normalizeKey(trimmedName);
-    const hasDuplicate = panel.items.some((item) => {
-      if (!item.name) {
-        return false;
-      }
-      if (panel.editingId && item.id === panel.editingId) {
-        return false;
-      }
-      return normalizeKey(item.name) === normalizedName;
-    });
+    const hasDuplicate = isAdmin
+      ? remoteNameTaken
+      : panel.items.some((item) => {
+          if (!item.name) {
+            return false;
+          }
+          if (panel.editingId && item.id === panel.editingId) {
+            return false;
+          }
+          return normalizeKey(item.name) === normalizedName;
+        });
     if (hasDuplicate) {
       return 'Name already exists.';
     }
     return '';
-  }, [panel.editingId, panel.formState.name, panel.items]);
+  }, [isAdmin, panel.editingId, panel.formState.name, panel.items, remoteNameTaken]);
 
   const managerError =
-    isAdmin && !panel.formState.manager_id ? 'Select a manager.' : '';
+    isAdmin && panel.editingId && !panel.formState.manager_id
+      ? 'Select a manager.'
+      : '';
 
   const emailError = useMemo(() => {
     const trimmed = panel.formState.email.trim();
@@ -377,7 +420,9 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
       wechat: normalizeSocialValue(form.wechat),
     };
     if (isAdmin) {
-      payload.manager_id = form.manager_id;
+      if (form.manager_id) {
+        payload.manager_id = form.manager_id;
+      }
       payload.status = form.status;
       payload.status_source = 'owner';
       payload.source = form.source || null;
@@ -395,34 +440,6 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
     return panel.handleSubmit(formToPayload, validate);
   };
 
-  // Filter items based on search query
-  const filteredItems = panel.items.filter((item) => {
-    if (
-      reviewFilter !== 'all' &&
-      (item.review_status ?? 'pending_review') !== reviewFilter
-    ) {
-      return false;
-    }
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const nameTranslations = Object.values(item.name_translations ?? {})
-      .join(' ')
-      .toLowerCase();
-    const descriptionTranslations = Object.values(
-      item.description_translations ?? {}
-    )
-      .join(' ')
-      .toLowerCase();
-    const managerDisplay = getManagerDisplayName(item.manager_id, cognitoUsers).toLowerCase();
-    return (
-      item.name?.toLowerCase().includes(query) ||
-      item.description?.toLowerCase().includes(query) ||
-      nameTranslations.includes(query) ||
-      descriptionTranslations.includes(query) ||
-      managerDisplay.includes(query)
-    );
-  });
-
   const showNameError = shouldShowError('name', nameError);
   const showManagerError = shouldShowError('manager_id', managerError);
   const showEmailError = shouldShowError('email', emailError);
@@ -438,43 +455,6 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
   const showSocialError = (key: SocialFieldKey) =>
     shouldShowError(key, socialErrors[key]);
 
-  const renderContactIcons = (item: Organization) => {
-    const icons: ReactElement[] = [];
-    if (hasValue(item.phone_country_code) && hasValue(item.phone_number)) {
-      icons.push(
-        <ContactIcon key='phone' label='Phone'>
-          <PhoneIcon className='h-4 w-4' />
-        </ContactIcon>
-      );
-    }
-    if (hasValue(item.email)) {
-      icons.push(
-        <ContactIcon key='email' label='Email'>
-          <EmailIcon className='h-4 w-4' />
-        </ContactIcon>
-      );
-    }
-    for (const field of SOCIAL_FIELDS) {
-      const value = item[field.key];
-      if (!hasValue(value)) {
-        continue;
-      }
-      icons.push(
-        <ContactIcon key={field.key} label={field.label}>
-          <ServiceIcon className='h-4 w-4' src={field.iconSrc} />
-        </ContactIcon>
-      );
-    }
-    if (icons.length === 0) {
-      return <span className='text-slate-400'>—</span>;
-    }
-    return (
-      <div className='flex flex-wrap items-center gap-2 text-slate-500'>
-        {icons}
-      </div>
-    );
-  };
-
   const detail = (
     <AdminEditorPanel
       status={
@@ -489,7 +469,45 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
           mode={panel.editorMode}
           onSubmit={handleSubmit}
           isSaving={panel.isSaving}
-        />
+        >
+          {isAdmin && panel.editingId ? (
+            <Button
+              type='button'
+              variant='secondary'
+              onClick={() => {
+                const current = panel.items.find(
+                  (item) => item.id === panel.editingId
+                );
+                if (current) {
+                  setMergeAnchor({ id: current.id, name: current.name });
+                }
+              }}
+            >
+              Merge into…
+            </Button>
+          ) : null}
+          {panel.editingId ? (
+            <Button
+              type='button'
+              variant='danger'
+              onClick={() => {
+                const current = panel.items.find(
+                  (item) => item.id === panel.editingId
+                );
+                if (!current) {
+                  return;
+                }
+                void panel.handleDelete(current).then((removed) => {
+                  if (removed && isManager) {
+                    onOrganizationRemoved?.();
+                  }
+                });
+              }}
+            >
+              Delete
+            </Button>
+          ) : null}
+        </AdminEditorActions>
       }
     >
       <AdminFieldGrid columns={2}>
@@ -514,11 +532,20 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
             <div>
               <Label htmlFor='org-manager'>
                 Manager
-                {isAdmin ? (
+                {isAdmin && panel.editingId ? (
                   <span className='ml-1'>{requiredIndicator}</span>
                 ) : null}
               </Label>
               {isAdmin ? (
+                <>
+                <Input
+                  id='org-manager-search'
+                  value={managerQuery}
+                  placeholder='Search by email'
+                  aria-label='Email prefix'
+                  onChange={(event) => setManagerQuery(event.target.value)}
+                  className='mb-2'
+                />
                 <Select
                   id='org-manager'
                   value={panel.formState.manager_id}
@@ -534,8 +561,20 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
                   aria-invalid={showManagerError || undefined}
                 >
                   <option value=''>
-                    {isLoadingUsers ? 'Loading users...' : 'Select a manager'}
+                    {isLoadingUsers
+                      ? 'Loading users...'
+                      : panel.editingId
+                        ? 'Select a manager'
+                        : 'You (leave blank)'}
                   </option>
+                  {panel.formState.manager_id &&
+                  !cognitoUsers.some(
+                    (cognitoUser) => cognitoUser.sub === panel.formState.manager_id
+                  ) ? (
+                    <option value={panel.formState.manager_id}>
+                      {panel.formState.manager_id}
+                    </option>
+                  ) : null}
                   {cognitoUsers.map((cognitoUser) => (
                     <option key={cognitoUser.sub} value={cognitoUser.sub}>
                       {cognitoUser.email || cognitoUser.username || cognitoUser.sub}
@@ -543,6 +582,7 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
                     </option>
                   ))}
                 </Select>
+                </>
               ) : (
                 <Select
                   id='org-manager'
@@ -746,8 +786,8 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
                 </Select>
                 {panel.editingId && (
                   <p className='text-xs text-slate-500'>
-                    Review state is changed from Imports → Review queue.
-                    Current review:{' '}
+                    Review state is changed from Readiness below. Current
+                    review:{' '}
                     {(
                       panel.items.find((item) => item.id === panel.editingId)
                         ?.review_status ?? 'pending_review'
@@ -789,134 +829,65 @@ export function OrganizationsPanel({ mode }: OrganizationsPanelProps) {
     </AdminEditorPanel>
   );
 
+  if (!editorOpen) {
+    if (panel.isLoading || (isManager && panel.items.length > 0)) {
+      return (
+        <StatusBanner variant='info' title='Loading'>
+          Loading the organization…
+        </StatusBanner>
+      );
+    }
+    if (isManager) {
+      return (
+        <div className='rounded-lg border border-slate-200 bg-white p-6'>
+          <p className='text-base font-semibold text-slate-900'>
+            No organization is assigned
+          </p>
+          <p className='mt-1 text-sm text-slate-600'>
+            This account does not have an organization to manage.
+          </p>
+        </div>
+      );
+    }
+    return (
+      <>
+        {panel.listError ? (
+          <StatusBanner variant='error' title='Organization'>
+            {panel.listError}
+          </StatusBanner>
+        ) : null}
+        <WorkspaceEmpty noun='the organization' />
+        {panel.confirmDialog}
+      </>
+    );
+  }
+
+  const current = panel.items.find((item) => item.id === panel.editingId);
+
   return (
-    <>
-      <ResourceTableShell
-        ariaLabel={isAdmin ? 'Organizations' : 'Your organizations'}
-        rows={filteredItems}
-        getLabel={(item) => item.name || 'Organization'}
-        middleColumnCount={isAdmin ? 4 : 3}
-        isLoading={panel.isLoading}
-        isLoadingMore={panel.isLoadingMore}
-        hasMore={panel.hasMore}
-        onLoadMore={panel.loadMore}
-        error={panel.listError}
-        emptyLabel={
-          searchQuery.trim()
-            ? 'No organizations match your search.'
-            : 'No organizations yet.'
-        }
-        isExpanded={panel.isExpanded}
-        onToggle={panel.toggle}
-        isDraftOpen={panel.isDraftOpen}
-        draftLabel='New organization'
-        onToggleDraft={panel.collapse}
-        detail={detail}
-        filters={
-          <AdminFilterBar
-            trailing={
-              panel.canCreate ? (
-                <AdminCreateButton
-                  label='New organization'
-                  active={panel.isDraftOpen}
-                  onClick={panel.openDraft}
-                />
-              ) : null
-            }
-          >
-            <AdminFilterField>
-              <Input
-                id='org-search'
-                placeholder='Search organizations...'
-                aria-label='Search organizations'
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-              />
-            </AdminFilterField>
-            <AdminFilterField>
-              <Select
-                id='org-review-filter'
-                aria-label='Review status'
-                value={reviewFilter}
-                onChange={(event) => setReviewFilter(event.target.value)}
-              >
-                <option value='all'>All</option>
-                <option value='pending_review'>Pending review</option>
-                <option value='approved'>Approved</option>
-                <option value='rejected'>Rejected</option>
-              </Select>
-            </AdminFilterField>
-          </AdminFilterBar>
-        }
-        head={
-          <>
-            <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
-            {isAdmin ? (
-              <AdminDataTableHeadCell priority='secondary'>
-                Manager
-              </AdminDataTableHeadCell>
-            ) : null}
-            <AdminDataTableHeadCell priority='secondary'>
-              Status
-            </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='secondary'>
-              Contact
-            </AdminDataTableHeadCell>
-          </>
-        }
-        renderCells={(item) => (
-          <>
-            <AdminDataTableCell>
-              {item.name}
-              <AdminDataTableCellMeta until='secondary'>
-                <OrganizationStatusBadges item={item} />
-                {isAdmin && item.source ? <span>{item.source}</span> : null}
-              </AdminDataTableCellMeta>
-            </AdminDataTableCell>
-            {isAdmin ? (
-              <AdminDataTableCell priority='secondary'>
-                {getManagerDisplayName(item.manager_id, cognitoUsers)}
-              </AdminDataTableCell>
-            ) : null}
-            <AdminDataTableCell priority='secondary'>
-              <OrganizationStatusBadges item={item} />
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='secondary'>
-              {renderContactIcons(item)}
-            </AdminDataTableCell>
-          </>
-        )}
-        renderActions={(item) =>
-          isAdmin
-            ? rowActions([
-                {
-                  key: 'delete',
-                  label: 'Delete',
-                  tone: 'danger',
-                  icon: <DeleteIcon className='h-4 w-4' />,
-                  onClick: () => {
-                    panel.handleDelete(item);
-                  },
-                },
-                {
-                  key: 'merge',
-                  label: 'Merge into…',
-                  icon: <MergeIcon className='h-4 w-4' />,
-                  onClick: () => {
-                    setMergeAnchor({ id: item.id, name: item.name });
-                  },
-                },
-              ])
-            : deleteRowActions(() => panel.handleDelete(item))
-        }
-      />
+    <div className='space-y-4'>
+      {current ? (
+        <div className='flex flex-wrap items-center gap-2'>
+          <h2 className='text-lg font-semibold text-slate-900'>{current.name}</h2>
+          <OrganizationStatusBadges item={current} />
+        </div>
+      ) : (
+        <h2 className='text-lg font-semibold text-slate-900'>New organization</h2>
+      )}
+      {detail}
+      {isAdmin && panel.editingId ? (
+        <OrganizationReadiness orgId={panel.editingId} />
+      ) : null}
       {isAdmin ? (
         <OrganizationMergeDialog
           anchor={mergeAnchor}
           onClose={() => setMergeAnchor(null)}
+          onMerged={(survivorId) => {
+            scope.setOrg(survivorId);
+          }}
         />
       ) : null}
       {panel.confirmDialog}
-    </>
+    </div>
   );
 }

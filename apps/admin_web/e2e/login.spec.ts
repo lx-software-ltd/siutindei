@@ -78,7 +78,7 @@ test.describe('Login Screen', () => {
     await adminPage.goto('/');
 
     await expect(adminPage.getByRole('heading', { name: 'Siu Tin Dei Admin' })).toBeVisible();
-    await expect(adminPage.getByRole('button', { name: 'Organizations' })).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Catalog' })).toBeVisible();
     await expect(adminPage.getByText('Redirecting')).toHaveCount(0);
   });
 

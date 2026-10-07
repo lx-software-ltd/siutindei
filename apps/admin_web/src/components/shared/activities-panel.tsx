@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useActivityCategories } from '../../hooks/use-activity-categories';
 import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
-import { useOrganizationsByMode } from '../../hooks/use-organizations-by-mode';
+import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { parseRequiredNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/resource-api';
@@ -36,9 +36,9 @@ import {
   deleteRowActions,
   ResourceTableShell,
 } from '../ui/resource-table-shell';
-import { Select } from '../ui/select';
 import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
+import { WorkspaceScopeGate } from '../admin/workspace-empty';
 
 interface ActivityFormState {
   org_id: string;
@@ -87,10 +87,10 @@ interface ActivitiesPanelProps {
 
 export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
   const isAdmin = mode === 'admin';
+  const scope = useOrganizationScope();
+  const scopedOrgId = scope.orgId;
   const { tree: categoryTree } = useActivityCategories();
-  const { items: organizations } = useOrganizationsByMode(mode, { limit: 200 });
-  const defaultOrgId =
-    !isAdmin && organizations.length === 1 ? organizations[0].id : '';
+  const defaultOrgId = scopedOrgId ?? '';
   const resolvedEmptyForm = useMemo(
     () => ({ ...emptyForm, org_id: defaultOrgId }),
     [defaultOrgId]
@@ -102,6 +102,8 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     itemToForm,
     paramName: 'activity',
     legacyParam: 'edit',
+    listFilters: scopedOrgId ? { org_id: scopedOrgId } : {},
+    enabled: Boolean(scopedOrgId),
     noun: 'activity',
   });
 
@@ -123,14 +125,6 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
   const getCategoryPath = (categoryId?: string) =>
     (categoryId ? categoryPathById.get(categoryId) : undefined) ?? '—';
 
-  const getOrgName = (orgId?: string) => {
-    if (!orgId) {
-      return '';
-    }
-    const match = organizations.find((org) => org.id === orgId);
-    return match?.name ?? orgId;
-  };
-
   const [searchQuery, setSearchQuery] = useState('');
   useExhaustPages(Boolean(searchQuery.trim()), {
     hasMore: panel.hasMore,
@@ -151,8 +145,6 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
   const { markTouched } = validation;
   const shouldShowError = (field: string, message: string) =>
     validation.shouldShowError(field, Boolean(message));
-
-  const isSingleOrgManager = !isAdmin && organizations.length === 1;
 
   const { setFormState } = panel;
 
@@ -213,8 +205,6 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     }
     return null;
   };
-
-  const orgError = panel.formState.org_id ? '' : 'Select an organization.';
 
   const nameError = useMemo(() => {
     const trimmedName = panel.formState.name.trim();
@@ -339,22 +329,16 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     )
       .join(' ')
       .toLowerCase();
-    const orgName =
-      organizations
-        .find((org) => org.id === item.org_id)
-        ?.name?.toLowerCase() || '';
     const categoryPath = getCategoryPath(item.category_id).toLowerCase();
     return (
       item.name?.toLowerCase().includes(query) ||
       item.description?.toLowerCase().includes(query) ||
       nameTranslations.includes(query) ||
       descriptionTranslations.includes(query) ||
-      orgName.includes(query) ||
       categoryPath.includes(query)
     );
   });
 
-  const showOrgError = shouldShowError('org_id', orgError);
   const showNameError = shouldShowError('name', nameError);
   const showCategoryError = shouldShowError('category_id', categoryError);
   const showAgeMinError = shouldShowError('age_min', ageMinError);
@@ -384,36 +368,6 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
       }
     >
       <AdminFieldGrid columns={2}>
-        <div className='space-y-1'>
-          <Label htmlFor='activity-org'>
-            Organization{' '}
-            <span className='ml-1'>{requiredIndicator}</span>
-          </Label>
-          <Select
-            id='activity-org'
-            value={panel.formState.org_id}
-            onChange={(e) => {
-              markTouched('org_id');
-              panel.setFormState((prev) => ({
-                ...prev,
-                org_id: e.target.value,
-              }));
-            }}
-            disabled={isSingleOrgManager}
-            className={showOrgError ? errorInputClassName : ''}
-            aria-invalid={showOrgError || undefined}
-          >
-            <option value=''>Select organization</option>
-            {organizations.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name}
-              </option>
-            ))}
-          </Select>
-          {showOrgError ? (
-            <p className='text-xs text-red-600'>{orgError}</p>
-          ) : null}
-        </div>
         <div className='space-y-1'>
           <LanguageToggleInput
             id='activity-name'
@@ -569,12 +523,12 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
   );
 
   return (
-    <>
+    <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='activities'>
       <ResourceTableShell
         ariaLabel={isAdmin ? 'Activities' : 'Your activities'}
         rows={filteredItems}
         getLabel={(item) => item.name || 'Activity'}
-        middleColumnCount={isAdmin ? 4 : 3}
+        middleColumnCount={3}
         isLoading={panel.isLoading}
         isLoadingMore={panel.isLoadingMore}
         hasMore={panel.hasMore}
@@ -617,11 +571,6 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
         head={
           <>
             <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
-            {isAdmin ? (
-              <AdminDataTableHeadCell priority='secondary'>
-                Organization
-              </AdminDataTableHeadCell>
-            ) : null}
             <AdminDataTableHeadCell priority='secondary'>
               Category
             </AdminDataTableHeadCell>
@@ -635,16 +584,9 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             <AdminDataTableCell>
               {item.name}
               <AdminDataTableCellMeta until='secondary'>
-                {isAdmin
-                  ? getOrgName(item.org_id)
-                  : getCategoryPath(item.category_id)}
+                {getCategoryPath(item.category_id)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
-            {isAdmin ? (
-              <AdminDataTableCell priority='secondary'>
-                {getOrgName(item.org_id)}
-              </AdminDataTableCell>
-            ) : null}
             <AdminDataTableCell priority='secondary'>
               {getCategoryPath(item.category_id)}
             </AdminDataTableCell>
@@ -658,6 +600,6 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
         }
       />
       {panel.confirmDialog}
-    </>
+    </WorkspaceScopeGate>
   );
 }

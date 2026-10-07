@@ -10,6 +10,7 @@ from typing import Any, Mapping, Optional
 from sqlalchemy.orm import Session
 
 from app.api.admin_auth import _get_user_sub, _set_session_audit_context
+from app.api.admin_list_filters import cognito_email_prefix_filter
 from app.api.admin_request import (
     _parse_group_name,
     _query_param,
@@ -210,6 +211,9 @@ def _handle_list_cognito_users(event: Mapping[str, Any]) -> dict[str, Any]:
     params: dict[str, Any] = {"UserPoolId": user_pool_id, "Limit": limit}
     if pagination_token:
         params["PaginationToken"] = pagination_token
+    email_filter = cognito_email_prefix_filter(_query_param(event, "q"))
+    if email_filter:
+        params["Filter"] = email_filter
 
     try:
         response = _cognito("list_users", **params)

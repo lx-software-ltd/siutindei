@@ -16,7 +16,7 @@ test.describe('Manager Dashboard', () => {
 
     // Manager sections
     const managerSections = [
-      'Organizations',
+      'Organization',
       'Media',
       'Locations',
       'Activities',
@@ -74,17 +74,15 @@ test.describe('Manager Dashboard', () => {
     await expect(managerPage.getByRole('table', { name: 'Your locations' })).toBeVisible();
 
     // Navigate back to Organizations
-    await managerPage.getByRole('button', { name: 'Organizations' }).click();
+    await managerPage.getByRole('button', { name: 'Organization' }).click();
   });
 });
 
 test.describe('Manager Organizations Panel', () => {
-  test('should show "Your Organizations" heading', async ({ managerPage }) => {
+  test('should open the organization workspace', async ({ managerPage }) => {
     await managerPage.goto('/admin/dashboard');
 
-    await expect(
-      managerPage.getByRole('table', { name: 'Your organizations' })
-    ).toBeVisible();
+    await expect(managerPage.getByRole('button', { name: 'Update' })).toBeVisible();
   });
 
   test('should show edit form by default for manager', async ({ managerPage }) => {
@@ -111,16 +109,12 @@ test.describe('Manager Organizations Panel', () => {
     await expect(managerPage.getByRole('columnheader', { name: 'Manager' })).not.toBeVisible();
   });
 
-  test('should show selectable organization row', async ({ managerPage }) => {
+  test('should show the organization name on the workspace', async ({
+    managerPage,
+  }) => {
     await managerPage.goto('/admin/dashboard');
-
-    // Wait for org table to load
     await expect(managerPage.getByText('Test Organization 1').first()).toBeVisible();
-
-    // Should show organization row
-    await expect(
-      managerPage.getByRole('row', { name: /Test Organization 1/ }).first()
-    ).toBeVisible();
+    await expect(managerPage.getByLabel('Name')).toHaveValue('Test Organization 1');
   });
 
   test('should show edit form when clicking row', async ({ managerPage }) => {
@@ -145,6 +139,32 @@ test.describe('Manager Organizations Panel', () => {
     await expect(managerSelect).toBeDisabled();
     await expect(managerSelect).toHaveValue('manager@example.com');
   });
+
+  test('switches the open organization', async ({ managerPage }) => {
+    await managerPage.goto('/admin/dashboard');
+    const switcher = managerPage.locator('#manager-org-switcher');
+    await expect(switcher).toBeVisible();
+    await switcher.selectOption('org-2');
+    await expect(managerPage).toHaveURL(/org=org-2/);
+    await expect(
+      managerPage.getByText('Manage your organization, Test Organization 2.')
+    ).toBeVisible();
+  });
+});
+
+test('shows an error when the organization list fails', async ({ managerPage }) => {
+  await managerPage.route('**/api/mock/**/manager/organizations*', async (route) => {
+    await route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Organization list failed' }),
+    });
+  });
+  await managerPage.goto('/admin/dashboard');
+  await expect(managerPage.getByText('Organization list failed')).toBeVisible();
+  await expect(managerPage.getByRole('button', { name: 'Retry' })).toBeVisible();
+  await expect(managerPage.getByText('Loading the organization…')).toHaveCount(0);
+  await expect(managerPage.getByText('Choose an organization')).toHaveCount(0);
 });
 
 test.describe('Manager Activities Panel', () => {
@@ -218,6 +238,7 @@ test.describe('Manager Access Request Flow', () => {
     });
 
     await page.goto('/admin/dashboard');
+    await page.getByRole('button', { name: 'Become a Manager' }).click();
 
     await expect(
       page.getByRole('heading', { name: 'Request Organization Access' })

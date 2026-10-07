@@ -93,6 +93,36 @@ paths:
             `vetting_note`.
           schema:
             type: string
+        - name: org_id
+          in: query
+          required: false
+          description: Limit the list to one organization.
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          required: false
+          description: Case-insensitive name search.
+          schema:
+            type: string
+        - name: review_status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending_review, approved, rejected]
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          description: Listing status filter.
+          schema:
+            type: string
       responses:
         "200":
           description: List of organizations
@@ -1294,6 +1324,13 @@ paths:
     get:
       summary: List locations
       parameters:
+        - name: org_id
+          in: query
+          required: false
+          description: Limit locations to one organization.
+          schema:
+            type: string
+            format: uuid
         - name: limit
           in: query
           required: false
@@ -1639,6 +1676,13 @@ paths:
     get:
       summary: List activities
       parameters:
+        - name: org_id
+          in: query
+          required: false
+          description: Limit activities to one organization.
+          schema:
+            type: string
+            format: uuid
         - name: limit
           in: query
           required: false
@@ -1723,6 +1767,13 @@ paths:
     get:
       summary: List pricing entries
       parameters:
+        - name: org_id
+          in: query
+          required: false
+          description: Limit pricing to one organization.
+          schema:
+            type: string
+            format: uuid
         - name: limit
           in: query
           required: false
@@ -1807,6 +1858,13 @@ paths:
     get:
       summary: List schedules
       parameters:
+        - name: org_id
+          in: query
+          required: false
+          description: Limit schedules to one organization.
+          schema:
+            type: string
+            format: uuid
         - name: limit
           in: query
           required: false
@@ -1938,6 +1996,15 @@ paths:
           description: Pagination token from previous response
           schema:
             type: string
+        - name: q
+          in: query
+          required: false
+          description: |
+            Email prefix. Sent to Cognito as `email ^= "value"` when
+            the value matches a short allow-list of characters.
+          schema:
+            type: string
+            maxLength: 80
       responses:
         "200":
           description: List of Cognito users
@@ -2247,6 +2314,13 @@ paths:
         List organizations managed by the authenticated user.
         Results are filtered by the user's organization management.
       parameters:
+        - name: org_id
+          in: query
+          required: false
+          description: Limit the list to one managed organization.
+          schema:
+            type: string
+            format: uuid
         - name: limit
           in: query
           required: false
@@ -2338,6 +2412,13 @@ paths:
     get:
       summary: List locations in managed organizations
       parameters:
+        - name: org_id
+          in: query
+          required: false
+          description: Limit locations to one managed organization.
+          schema:
+            type: string
+            format: uuid
         - name: limit
           in: query
           required: false
@@ -2422,6 +2503,13 @@ paths:
     get:
       summary: List activities in managed organizations
       parameters:
+        - name: org_id
+          in: query
+          required: false
+          description: Limit activities to one managed organization.
+          schema:
+            type: string
+            format: uuid
         - name: limit
           in: query
           required: false
@@ -2506,6 +2594,13 @@ paths:
     get:
       summary: List pricing in managed organizations
       parameters:
+        - name: org_id
+          in: query
+          required: false
+          description: Limit pricing to one managed organization.
+          schema:
+            type: string
+            format: uuid
         - name: limit
           in: query
           required: false
@@ -2590,6 +2685,13 @@ paths:
     get:
       summary: List schedules in managed organizations
       parameters:
+        - name: org_id
+          in: query
+          required: false
+          description: Limit schedules to one managed organization.
+          schema:
+            type: string
+            format: uuid
         - name: limit
           in: query
           required: false
@@ -3697,6 +3799,15 @@ components:
         place_id:
           type: string
           nullable: true
+        manager_id:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        phone_number:
+          type: string
+          nullable: true
         location_count:
           type: integer
         activity_count:
@@ -3864,7 +3975,6 @@ components:
       type: object
       required:
         - name
-        - manager_id
       properties:
         name:
           type: string
@@ -3882,7 +3992,10 @@ components:
           description: Non-English description translations (language map)
         manager_id:
           type: string
-          description: Cognito user sub of the organization manager (required)
+          description: |
+            Cognito user sub of the organization manager. Optional on
+            owner create; a blank value defaults to the caller. The new
+            organization starts as pending_review.
         phone_country_code:
           type: string
           maxLength: 2

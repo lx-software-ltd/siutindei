@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQueryState } from 'nuqs';
 
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
@@ -38,12 +39,6 @@ interface CategoryOption {
   name: string;
 }
 
-interface PendingOrganization {
-  id: string;
-  name: string;
-  review_status?: string;
-}
-
 const DEFAULT_FILTERS: ReviewFilters = {
   status: '',
   verdict: '',
@@ -53,6 +48,8 @@ const DEFAULT_FILTERS: ReviewFilters = {
 };
 
 export function CategoryChecksPanel() {
+  const [organizationParam] = useQueryState('organization');
+  const scopedOrgId = organizationParam ?? '';
   const fetchReviews = useCallback(
     async ({
       cursor,
@@ -84,7 +81,6 @@ export function CategoryChecksPanel() {
     fetcher: fetchReviews,
   });
   const [summary, setSummary] = useState<CategorySuggestionSummary | null>(null);
-  const [organizations, setOrganizations] = useState<PendingOrganization[]>([]);
   const [threshold, setThreshold] = useState<number | null>(0.9);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [confirmMode, setConfirmMode] = useState<'discover' | 'verify' | null>(
@@ -101,8 +97,16 @@ export function CategoryChecksPanel() {
   const [error, setError] = useState('');
   const bulkAbort = useRef<AbortController | null>(null);
 
-  const { refetch } = list;
-  const selectedOrgId = list.filters.org_id;
+  const { refetch, setFilter } = list;
+  const selectedOrgId = scopedOrgId || list.filters.org_id;
+
+  useEffect(() => {
+    if (list.filters.org_id === scopedOrgId) {
+      return;
+    }
+    setFilter('org_id', scopedOrgId);
+  }, [list.filters.org_id, scopedOrgId, setFilter]);
+
   const reload = useCallback(() => {
     void refetch();
     void getCategorySuggestionSummary(selectedOrgId || undefined)
@@ -126,18 +130,6 @@ export function CategoryChecksPanel() {
 
   useEffect(() => {
     let cancelled = false;
-    const url = new URL(buildApiUrl('v1/admin/organizations'));
-    url.searchParams.set('review_status', 'pending_review');
-    url.searchParams.set('limit', '100');
-    void request<{ items: PendingOrganization[] }>(url.toString())
-      .then((page) => {
-        if (!cancelled) {
-          setOrganizations(
-            page.items.filter((item) => item.review_status === 'pending_review')
-          );
-        }
-      })
-      .catch(() => undefined);
     const categoriesUrl = new URL(buildApiUrl('v1/admin/activity-categories'));
     categoriesUrl.searchParams.set('limit', '200');
     void request<{ items: CategoryOption[] }>(categoriesUrl.toString())
@@ -368,20 +360,15 @@ export function CategoryChecksPanel() {
               </div>
             }
           >
-            <AdminFilterField label='Organization' htmlFor='check-org-filter'>
-              <Select
-                id='check-org-filter'
-                value={selectedOrgId}
-                onChange={(event) => list.setFilter('org_id', event.target.value)}
-              >
-                <option value=''>All pending organizations</option>
-                {organizations.map((organization) => (
-                  <option key={organization.id} value={organization.id}>
-                    {organization.name}
-                  </option>
-                ))}
-              </Select>
-            </AdminFilterField>
+            {scopedOrgId ? (
+              <AdminFilterField label='Organization' htmlFor='check-org-filter'>
+                <Input
+                  id='check-org-filter'
+                  value={scopedOrgId}
+                  readOnly
+                />
+              </AdminFilterField>
+            ) : null}
             <AdminFilterField label='Status' htmlFor='check-status-filter'>
               <Select
                 id='check-status-filter'

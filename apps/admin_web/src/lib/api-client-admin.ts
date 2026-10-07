@@ -30,13 +30,19 @@ export async function listResource<T>(
   resource: ResourceName,
   cursor?: string,
   limit = ADMIN_LIST_PAGE_SIZE,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  filters?: Record<string, string | undefined>
 ): Promise<ListResponse<T>> {
   const url = new URL(buildResourceUrl(resource));
   if (cursor) {
     url.searchParams.set('cursor', cursor);
   }
   url.searchParams.set('limit', `${limit}`);
+  for (const [key, value] of Object.entries(filters ?? {})) {
+    if (value) {
+      url.searchParams.set(key, value);
+    }
+  }
   return request<ListResponse<T>>(url.toString(), { signal });
 }
 

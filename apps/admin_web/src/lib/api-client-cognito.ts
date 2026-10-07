@@ -29,12 +29,16 @@ function buildUserGroupsUrl(username: string) {
 
 export async function listCognitoUsers(
   paginationToken?: string,
-  limit = 50
+  limit = 50,
+  query?: string
 ): Promise<CognitoUsersResponse> {
   const url = new URL(buildCognitoUsersUrl());
   url.searchParams.set('limit', `${limit}`);
   if (paginationToken) {
     url.searchParams.set('pagination_token', paginationToken);
+  }
+  if (query?.trim()) {
+    url.searchParams.set('q', query.trim());
   }
   return request<CognitoUsersResponse>(url.toString());
 }

@@ -76,6 +76,7 @@ See `docs/architecture/database-schema.md` for the full `tickets` table schema.
 | **Ticket prefix** | R (R00001) | S (S00001) |
 | **Creates org on approval** | Optional | Optional |
 | **Manager assignment** | User becomes manager | Admin becomes temporary manager |
+| **Review state** | New organization starts `pending_review` | New organization starts `pending_review` |
 
 ## Migration
 

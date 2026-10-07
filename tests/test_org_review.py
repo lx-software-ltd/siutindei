@@ -110,7 +110,7 @@ def test_import_update_keeps_approved_review(db_session, sample_organization) ->
     assert sample_organization.last_imported_at is not None
 
 
-def test_admin_create_is_approved(db_session) -> None:
+def test_admin_create_starts_in_review(db_session) -> None:
     repo = OrganizationRepository(db_session)
     created = _create_organization(
         repo,
@@ -119,7 +119,19 @@ def test_admin_create_is_approved(db_session) -> None:
             "manager_id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
         },
     )
-    assert created.review_status == "approved"
+    assert created.review_status == "pending_review"
+
+
+def test_admin_create_defaults_manager_to_caller(db_session) -> None:
+    repo = OrganizationRepository(db_session)
+    caller = "dddddddd-dddd-dddd-dddd-dddddddddddd"
+    created = _create_organization(
+        repo,
+        {"name": "Caller Org"},
+        default_manager_id=caller,
+    )
+    assert created.manager_id == caller
+    assert created.review_status == "pending_review"
 
 
 def test_approve_blocks_until_forced(db_session, sample_organization) -> None:

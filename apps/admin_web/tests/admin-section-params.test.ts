@@ -54,6 +54,18 @@ describe('admin section params', () => {
     expect(patch.ticket).toBeNull();
   });
 
+  it('keeps the organization scope across workspace sections', () => {
+    const patch = patchForSectionChange('locations');
+    expect(patch).not.toHaveProperty('org');
+    expect(patch.organization).toBeNull();
+    expect(
+      staleRecordParams('media', { org: 'org-1', ticket: 't-1' })
+    ).toEqual({ ticket: null });
+    expect(staleRecordParams('imports', { org: 'org-1', job: 'job-1' })).toEqual({
+      org: null,
+    });
+  });
+
   it('keeps duplicate and name-fix links on data quality', () => {
     expect(
       staleRecordParams('data-quality', {
@@ -67,5 +79,15 @@ describe('admin section params', () => {
     expect(patch).not.toHaveProperty('duplicate');
     expect(patch).not.toHaveProperty('name-fix');
     expect(patch).not.toHaveProperty('organization');
+    expect(patch).not.toHaveProperty('category-check');
+  });
+
+  it('keeps an open category check on data quality', () => {
+    expect(
+      staleRecordParams('data-quality', {
+        'category-check': 'rev-1',
+        suggestion: 'sug-1',
+      })
+    ).toEqual({ suggestion: null });
   });
 });

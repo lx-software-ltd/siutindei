@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useGeographicAreas } from '../../hooks/use-geographic-areas';
 import { useFormValidation } from '../../hooks/use-form-validation';
-import { useOrganizationsByMode } from '../../hooks/use-organizations-by-mode';
+import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import type { GeographicAreaNode } from '../../lib/api-client';
 import { parseOptionalNumber } from '../../lib/number-parsers';
@@ -32,8 +32,8 @@ import {
   deleteRowActions,
   ResourceTableShell,
 } from '../ui/resource-table-shell';
-import { Select } from '../ui/select';
 import { StatusBanner } from '../status-banner';
+import { WorkspaceScopeGate } from '../admin/workspace-empty';
 
 const MAP_ICON_BASE_URL =
   'https://api.iconify.design/simple-icons';
@@ -132,10 +132,10 @@ interface LocationsPanelProps {
 
 export function LocationsPanel({ mode }: LocationsPanelProps) {
   const isAdmin = mode === 'admin';
+  const scope = useOrganizationScope();
+  const scopedOrgId = scope.orgId;
   const { tree, countryCodes, matchNominatimResult } = useGeographicAreas();
-  const { items: organizations } = useOrganizationsByMode(mode, { limit: 200 });
-  const defaultOrgId =
-    !isAdmin && organizations.length === 1 ? organizations[0].id : '';
+  const defaultOrgId = scopedOrgId ?? '';
   const resolvedEmptyForm = useMemo(
     () => ({ ...emptyForm, org_id: defaultOrgId }),
     [defaultOrgId]
@@ -147,6 +147,8 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     itemToForm,
     paramName: 'location',
     legacyParam: 'edit',
+    listFilters: scopedOrgId ? { org_id: scopedOrgId } : {},
+    enabled: Boolean(scopedOrgId),
     noun: 'location',
   });
 
@@ -184,14 +186,11 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     ['org_id', 'area_id', 'address'],
     formKey
   );
-  const requiredIndicator = validation.requiredIndicator;
   const errorInputClassName =
     'border-red-500 focus:border-red-500 focus:ring-red-500';
   const { markTouched } = validation;
   const shouldShowError = (field: string, message: string) =>
     validation.shouldShowError(field, Boolean(message));
-
-  const isSingleOrgManager = !isAdmin && organizations.length === 1;
 
   const { setFormState } = panel;
 
@@ -254,9 +253,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     return null;
   };
 
-  const orgError = panel.formState.org_id
-    ? ''
-    : 'Select an organization.';
   const areaError = panel.formState.area_id ? '' : 'Select an area.';
   const addressError = useMemo(() => {
     const normalizedAddress = normalizeKey(panel.formState.address);
@@ -348,24 +344,16 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   const filteredItems = panel.items.filter((item) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
-    const orgName =
-      organizations
-        .find((org) => org.id === item.org_id)
-        ?.name?.toLowerCase() || '';
     const areaName = getAreaName(item.area_id).toLowerCase();
     return (
       areaName.includes(query) ||
-      item.address?.toLowerCase().includes(query) ||
-      orgName.includes(query)
+      item.address?.toLowerCase().includes(query)
     );
   });
 
-  const showOrgError = shouldShowError('org_id', orgError);
   const showAreaError = shouldShowError('area_id', areaError);
   const showAddressError = shouldShowError('address', addressError);
-  // Area identifies the row. Address is the next column, except for admins
-  // where organization sits between them.
-  const addressColumnPriority = isAdmin ? 'tertiary' : 'secondary';
+  const addressColumnPriority = 'secondary' as const;
 
   const detail = (
     <AdminEditorPanel
@@ -385,36 +373,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
       }
     >
       <AdminFieldGrid columns={2}>
-        <div className='space-y-1'>
-          <Label htmlFor='location-org'>
-            Organization{' '}
-            <span className='ml-1'>{requiredIndicator}</span>
-          </Label>
-          <Select
-            id='location-org'
-            value={panel.formState.org_id}
-            onChange={(e) => {
-              markTouched('org_id');
-              panel.setFormState((prev) => ({
-                ...prev,
-                org_id: e.target.value,
-              }));
-            }}
-            disabled={isSingleOrgManager}
-            className={showOrgError ? errorInputClassName : ''}
-            aria-invalid={showOrgError || undefined}
-          >
-            <option value=''>Select organization</option>
-            {organizations.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name}
-              </option>
-            ))}
-          </Select>
-          {showOrgError ? (
-            <p className='text-xs text-red-600'>{orgError}</p>
-          ) : null}
-        </div>
         <div className='sm:col-span-2 space-y-1'>
           <Label htmlFor='location-address'>Address</Label>
           <AddressAutocomplete
@@ -484,12 +442,12 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   );
 
   return (
-    <>
+    <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='locations'>
       <ResourceTableShell
         ariaLabel={isAdmin ? 'Locations' : 'Your locations'}
         rows={filteredItems}
         getLabel={(item) => getAreaName(item.area_id)}
-        middleColumnCount={isAdmin ? 3 : 2}
+        middleColumnCount={2}
         isLoading={panel.isLoading}
         isLoadingMore={panel.isLoadingMore}
         hasMore={panel.hasMore}
@@ -532,11 +490,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
         head={
           <>
             <AdminDataTableHeadCell>Area</AdminDataTableHeadCell>
-            {isAdmin ? (
-              <AdminDataTableHeadCell priority='secondary'>
-                Organization
-              </AdminDataTableHeadCell>
-            ) : null}
             <AdminDataTableHeadCell priority={addressColumnPriority}>
               Address
             </AdminDataTableHeadCell>
@@ -550,12 +503,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
                 {item.address || '—'}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
-            {isAdmin ? (
-              <AdminDataTableCell priority='secondary'>
-                {organizations.find((org) => org.id === item.org_id)?.name ||
-                  item.org_id}
-              </AdminDataTableCell>
-            ) : null}
             <AdminDataTableCell priority={addressColumnPriority}>
               {renderAddressCell(item)}
             </AdminDataTableCell>
@@ -571,6 +518,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
         }
       />
       {panel.confirmDialog}
-    </>
+    </WorkspaceScopeGate>
   );
 }

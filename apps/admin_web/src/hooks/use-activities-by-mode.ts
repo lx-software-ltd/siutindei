@@ -12,6 +12,8 @@ import type { Activity } from '../types/admin';
 
 interface UseActivitiesByModeOptions {
   limit?: number;
+  /** `null` skips the request until a workspace organization is chosen. */
+  orgId?: string | null;
 }
 
 interface UseActivitiesByModeResult {
@@ -29,7 +31,14 @@ export function useActivitiesByMode(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const orgId = options.orgId;
   const loadActivities = useCallback(async () => {
+    if (orgId === null) {
+      setItems([]);
+      setError('');
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError('');
     try {
@@ -38,11 +47,13 @@ export function useActivitiesByMode(
         const response = await listResource<Activity>(
           'activities',
           undefined,
-          limit
+          limit,
+          undefined,
+          orgId ? { org_id: orgId } : undefined
         );
         setItems(response.items);
       } else {
-        const response = await listManagerActivities();
+        const response = await listManagerActivities(orgId ?? undefined);
         setItems(response.items);
       }
     } catch (err) {
@@ -53,7 +64,7 @@ export function useActivitiesByMode(
     } finally {
       setIsLoading(false);
     }
-  }, [mode, options.limit]);
+  }, [mode, options.limit, orgId]);
 
   useEffect(() => {
     loadActivities();

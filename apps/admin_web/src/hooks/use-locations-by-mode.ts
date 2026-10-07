@@ -12,6 +12,8 @@ import type { Location } from '../types/admin';
 
 interface UseLocationsByModeOptions {
   limit?: number;
+  /** `null` skips the request until a workspace organization is chosen. */
+  orgId?: string | null;
 }
 
 interface UseLocationsByModeResult {
@@ -29,7 +31,14 @@ export function useLocationsByMode(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const orgId = options.orgId;
   const loadLocations = useCallback(async () => {
+    if (orgId === null) {
+      setItems([]);
+      setError('');
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError('');
     try {
@@ -38,11 +47,13 @@ export function useLocationsByMode(
         const response = await listResource<Location>(
           'locations',
           undefined,
-          limit
+          limit,
+          undefined,
+          orgId ? { org_id: orgId } : undefined
         );
         setItems(response.items);
       } else {
-        const response = await listManagerLocations();
+        const response = await listManagerLocations(orgId ?? undefined);
         setItems(response.items);
       }
     } catch (err) {
@@ -53,7 +64,7 @@ export function useLocationsByMode(
     } finally {
       setIsLoading(false);
     }
-  }, [mode, options.limit]);
+  }, [mode, options.limit, orgId]);
 
   useEffect(() => {
     loadLocations();

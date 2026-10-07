@@ -152,7 +152,9 @@ def _update_organization_for_manager(
 
 
 def _create_organization(
-    repo: OrganizationRepository, body: dict[str, Any]
+    repo: OrganizationRepository,
+    body: dict[str, Any],
+    default_manager_id: str | None = None,
 ) -> Organization:
     """Create an organization."""
     name = _validate_string_length(
@@ -174,7 +176,11 @@ def _create_organization(
         "description_translations",
         MAX_DESCRIPTION_LENGTH,
     )
-    manager_id = _validate_manager_id(body.get("manager_id"), required=True)
+    supplied_manager = body.get("manager_id")
+    if supplied_manager is None or not str(supplied_manager).strip():
+        manager_id = _validate_manager_id(default_manager_id, required=True)
+    else:
+        manager_id = _validate_manager_id(supplied_manager, required=True)
     media_urls = _parse_media_urls(body.get("media_urls"))
     if media_urls:
         media_urls = _validate_media_urls(media_urls)
@@ -223,7 +229,7 @@ def _create_organization(
             MAX_VETTING_NOTE_LENGTH,
         ),
         description_source=parse_description_source(body.get("description_source")),
-        review_status="approved",
+        review_status="pending_review",
         **contact_fields,
     )
 

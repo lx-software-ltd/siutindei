@@ -3,17 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueryState } from 'nuqs';
 
-import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
+import { useOrganizationScope } from '../../../hooks/use-organization-scope';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { ApiError } from '../../../lib/api-client';
 import {
   bulkOrgReview,
-  getOrgReviewDetail,
   getOrgReviewSummary,
   listOrgReviews,
-  type OrgReviewDetail,
-  type OrgReviewIssue,
   type OrgReviewListItem,
   type OrgReviewSummary,
 } from '../../../lib/api-client-org-review';
@@ -22,7 +19,6 @@ import {
   AdminDataTableCell,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
-import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
 import { Button } from '../../ui/button';
 import { ConfirmDialog } from '../../ui/confirm-dialog';
@@ -30,6 +26,7 @@ import { Input } from '../../ui/input';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { Select } from '../../ui/select';
 import { StatusBadge } from '../../ui/status-badge';
+import { AdminCreateButton } from '../../ui/admin-create-button';
 import { BULK_FIELDS_FORM_ID, BulkFieldsDialog } from './bulk-fields-dialog';
 
 const ISSUE_OPTIONS = [
@@ -62,7 +59,7 @@ interface ReviewQueueFilters {
 }
 
 const DEFAULT_REVIEW_FILTERS: ReviewQueueFilters = {
-  review_status: 'pending_review',
+  review_status: '',
   source: '',
   issue: '',
   has_blockers: '',
@@ -70,16 +67,6 @@ const DEFAULT_REVIEW_FILTERS: ReviewQueueFilters = {
   import_job_id: '',
   sort: 'name',
 };
-
-function sectionForIssue(entityType: string) {
-  if (entityType === 'location') {
-    return 'locations';
-  }
-  if (entityType === 'activity') {
-    return 'activities';
-  }
-  return 'organizations';
-}
 
 function issueSummary(item: OrgReviewListItem) {
   if (item.issues.length === 0) {
@@ -91,59 +78,9 @@ function issueSummary(item: OrgReviewListItem) {
     .join('; ');
 }
 
-function ReviewDetail({
-  detail,
-  onOpenIssue,
-  onOpenOrganization,
-}: {
-  detail: OrgReviewDetail | null;
-  onOpenIssue: (entry: OrgReviewIssue) => void;
-  onOpenOrganization: () => void;
-}) {
-  if (!detail) {
-    return <p className='text-sm text-slate-600'>Loading details...</p>;
-  }
-
-  return (
-    <AdminEditorPanel>
-      <p className='text-sm text-slate-600'>
-        Fix a row by opening the record, then come back and approve.
-      </p>
-      <button
-        type='button'
-        className='text-sm text-slate-900 underline'
-        onClick={onOpenOrganization}
-      >
-        Edit organization
-      </button>
-      <ul className='space-y-2 text-sm text-slate-700'>
-        {detail.issues.length === 0 && <li>Nothing is missing.</li>}
-        {detail.issues.map((entry) => (
-          <li key={`${entry.entity_id}-${entry.code}`}>
-            <span className='font-medium'>{entry.message}</span>
-            <button
-              type='button'
-              className='ml-2 text-slate-900 underline'
-              onClick={() => onOpenIssue(entry)}
-            >
-              Fix
-            </button>
-          </li>
-        ))}
-      </ul>
-    </AdminEditorPanel>
-  );
-}
-
-export function ReviewQueuePanel() {
+export function CatalogPanel() {
+  const scope = useOrganizationScope();
   const [jobParam, setJobParam] = useQueryState('job');
-  const [, setSection] = useQueryState('section');
-  const [, setEdit] = useQueryState('edit');
-  const [, setOrganization] = useQueryState('organization');
-  const [, setLocation] = useQueryState('location');
-  const [, setActivity] = useQueryState('activity');
-  const [, setTab] = useQueryState('tab');
-  const expanded = useExpandedRecord({ paramName: 'review' });
   const defaultFilters = useMemo(
     () => ({
       ...DEFAULT_REVIEW_FILTERS,
@@ -189,7 +126,6 @@ export function ReviewQueuePanel() {
     },
   });
   const [summary, setSummary] = useState<OrgReviewSummary | null>(null);
-  const [detail, setDetail] = useState<OrgReviewDetail | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [force, setForce] = useState(false);
   const [showFields, setShowFields] = useState(false);
@@ -232,32 +168,6 @@ export function ReviewQueuePanel() {
     filters.sort,
   ]);
 
-  useEffect(() => {
-    const id = expanded.expandedId;
-    if (!id) {
-      setDetail(null);
-      return;
-    }
-    let cancelled = false;
-    setDetail(null);
-    getOrgReviewDetail(id)
-      .then((row) => {
-        if (!cancelled) {
-          setDetail(row);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(
-            err instanceof ApiError ? err.message : 'Failed to load details.'
-          );
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [expanded.expandedId]);
-
   async function runBulk(
     action: BulkAction,
     fields?: Record<string, string>
@@ -294,67 +204,22 @@ export function ReviewQueuePanel() {
   }
 
   function openOrganization(orgId: string) {
-    void setSection('organizations');
-    void setOrganization(orgId);
-    void setLocation(null);
-    void setActivity(null);
-    void setEdit(null);
-  }
-
-  function openIssue(entry: OrgReviewIssue) {
-    const orgId = expanded.expandedId;
-    if (entry.code === 'name_needs_cleanup') {
-      void setSection('data-quality');
-      void setTab('names');
-      if (orgId) {
-        void setOrganization(orgId);
-      }
-      return;
-    }
-    if (entry.code === 'possible_duplicate') {
-      void setSection('data-quality');
-      void setTab(null);
-      if (orgId) {
-        void setOrganization(orgId);
-      }
-      return;
-    }
-    if (entry.entity_type === 'organization') {
-      openOrganization(entry.entity_id);
-      return;
-    }
-    void setOrganization(null);
-    void setEdit(null);
-    void setSection(sectionForIssue(entry.entity_type));
-    if (entry.entity_type === 'location') {
-      void setLocation(entry.entity_id);
-      void setActivity(null);
-      return;
-    }
-    if (entry.entity_type === 'activity') {
-      void setActivity(entry.entity_id);
-      void setLocation(null);
-      return;
-    }
-    void setLocation(null);
-    void setActivity(null);
-    void setEdit(entry.entity_id);
+    void scope.openWorkspace(orgId);
   }
 
   const pendingCount = summary?.by_review_status.pending_review ?? 0;
   const isSaving = activeBulk !== null;
   const allSelected =
     items.length > 0 && items.every((item) => selected.has(item.id));
-  const openDetail =
-    detail && detail.id === expanded.expandedId ? detail : null;
 
   return (
     <div className='space-y-4'>
-      <h2 className='sr-only'>Review queue</h2>
+      <h2 className='sr-only'>Catalog</h2>
       <p className='text-sm text-slate-600'>
-        Imported organizations stay pending until you release them. Public
-        search keeps the current listings until ORG_REVIEW_GATE_ENABLED is
-        turned on. After a release, search can stay cached for up to 5 minutes.
+        Every organization is listed here. Imported, created, and suggested
+        organizations start in review. Public search keeps the current
+        listings until ORG_REVIEW_GATE_ENABLED is turned on. After a release,
+        search can stay cached for up to 5 minutes. Open a row to fix it.
       </p>
       <div className='grid gap-3 sm:grid-cols-3'>
         <div className='rounded-lg border border-slate-200 p-3'>
@@ -375,10 +240,10 @@ export function ReviewQueuePanel() {
         </div>
       </div>
       <ResourceTableShell
-        ariaLabel='Review queue'
+        ariaLabel='Catalog'
         rows={items}
-        getLabel={(item) => `organization ${item.id}`}
-        middleColumnCount={5}
+        getLabel={(item) => item.name || `organization ${item.id}`}
+        middleColumnCount={7}
         hasActions={false}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
@@ -388,33 +253,33 @@ export function ReviewQueuePanel() {
         }}
         error={list.error}
         emptyLabel='No organizations match these filters.'
-        isExpanded={expanded.isExpanded}
-        onToggle={expanded.toggle}
-        detail={
-          <ReviewDetail
-            detail={openDetail}
-            onOpenIssue={openIssue}
-            onOpenOrganization={() => {
-              if (openDetail) {
-                openOrganization(openDetail.id);
-              }
-            }}
-          />
-        }
+        isExpanded={() => false}
+        onToggle={openOrganization}
+        detail={null}
         filters={
           <AdminFilterBar
             trailing={
-              jobParam ? (
-                <Button
-                  type='button'
-                  variant='secondary'
+              <>
+                <AdminCreateButton
+                  label='New organization'
                   onClick={() => {
-                    void setJobParam(null);
+                    void scope.openWorkspace('new');
                   }}
-                >
-                  Clear import filter
-                </Button>
-              ) : null
+                />
+                {jobParam ? (
+                  // Leaves the import-job URL scope. This is not a filter
+                  // field, so it is the one Clear control on this bar.
+                  <Button
+                    type='button'
+                    variant='secondary'
+                    onClick={() => {
+                      void setJobParam(null);
+                    }}
+                  >
+                    Clear import filter
+                  </Button>
+                ) : null}
+              </>
             }
           >
             <AdminFilterField label='Review' htmlFor='review-status-filter'>
@@ -609,6 +474,12 @@ export function ReviewQueuePanel() {
             <AdminDataTableHeadCell priority='secondary'>
               Review
             </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Contact
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Import job
+            </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
               Missing
             </AdminDataTableHeadCell>
@@ -627,6 +498,18 @@ export function ReviewQueuePanel() {
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               <StatusBadge status={item.review_status.replaceAll('_', ' ')} />
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              <span>{item.email || '—'}</span>
+              <span className='block text-xs text-slate-500'>
+                {item.phone_number || 'No phone'}
+              </span>
+              <span className='block text-xs text-slate-500'>
+                {item.manager_id ? `Manager ${item.manager_id}` : 'No manager'}
+              </span>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {item.import_job_id || '—'}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {issueSummary(item)}

@@ -21,6 +21,9 @@ export interface OrgReviewListItem {
   reviewed_at?: string | null;
   reviewed_by?: string | null;
   place_id?: string | null;
+  manager_id?: string | null;
+  email?: string | null;
+  phone_number?: string | null;
   location_count: number;
   activity_count: number;
   pricing_count: number;

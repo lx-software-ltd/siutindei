@@ -6,6 +6,7 @@ import { useActivitiesByMode } from '../../hooks/use-activities-by-mode';
 import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useLocationsByMode } from '../../hooks/use-locations-by-mode';
+import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/resource-api';
@@ -13,6 +14,7 @@ import type { LanguageCode } from '../../lib/translations';
 import { languageOptions } from '../../lib/translations';
 import type { ActivitySchedule } from '../../types/admin';
 import { StatusBanner } from '../status-banner';
+import { WorkspaceScopeGate } from '../admin/workspace-empty';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import {
   AdminDataTableCell,
@@ -81,6 +83,9 @@ interface SchedulesPanelProps {
 }
 
 export function SchedulesPanel({ mode }: SchedulesPanelProps) {
+  const isAdmin = mode === 'admin';
+  const scope = useOrganizationScope();
+  const scopedOrgId = scope.orgId;
   const panel = useResourceEditor<ActivitySchedule, ScheduleFormState>({
     resource: 'schedules',
     mode,
@@ -88,11 +93,19 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     itemToForm,
     paramName: 'schedule',
     legacyParam: 'edit',
+    listFilters: scopedOrgId ? { org_id: scopedOrgId } : {},
+    enabled: Boolean(scopedOrgId),
     noun: 'schedule',
   });
 
-  const { items: activities } = useActivitiesByMode(mode, { limit: 200 });
-  const { items: locations } = useLocationsByMode(mode, { limit: 200 });
+  const { items: activities } = useActivitiesByMode(mode, {
+    limit: 200,
+    orgId: scopedOrgId,
+  });
+  const { items: locations } = useLocationsByMode(mode, {
+    limit: 200,
+    orgId: scopedOrgId,
+  });
   const entryIdRef = useRef(0);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -800,7 +813,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
   );
 
   return (
-    <>
+    <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='schedules'>
       <ResourceTableShell
         ariaLabel='Schedules'
         rows={filteredItems}
@@ -918,6 +931,6 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
         }
       />
       {panel.confirmDialog}
-    </>
+    </WorkspaceScopeGate>
   );
 }

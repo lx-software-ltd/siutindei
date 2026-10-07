@@ -22,35 +22,33 @@ test.describe('Admin Dashboard', () => {
 
     // Check all navigation buttons
     const expectedSections = [
-      'Organizations',
+      'Catalog',
+      'Organization',
       'Media',
       'Locations',
       'Activities',
       'Pricing',
       'Schedules',
-      'API Keys',
-      'Audit Logs',
-      'Categories',
-      'Data quality',
-      'Feedback',
       'Imports',
       'Tickets',
+      'Data quality',
+      'Categories',
+      'Feedback',
+      'API Keys',
       'Users',
+      'Audit Logs',
     ];
 
     const desktopNavButtons = adminPage.locator('aside.hidden nav button');
     await expect(desktopNavButtons).toHaveText(expectedSections);
   });
 
-  test('should highlight Organizations as default active section', async ({ adminPage }) => {
+  test('should highlight Catalog as the default active section', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard');
 
-    // Organizations should be selected by default
-    const organizationsButton = adminPage.getByRole('button', { name: 'Organizations' });
-    await expect(organizationsButton).toBeVisible();
-
-    // Check that Organizations panel is visible
-    await expect(adminPage.getByRole('table', { name: 'Organizations' })).toBeVisible();
+    const catalogButton = adminPage.getByRole('button', { name: 'Catalog' });
+    await expect(catalogButton).toBeVisible();
+    await expect(adminPage.getByRole('table', { name: 'Catalog' })).toBeVisible();
   });
 
   test('should navigate to Media section', async ({ adminPage }) => {
@@ -60,9 +58,7 @@ test.describe('Admin Dashboard', () => {
     await adminPage.getByRole('button', { name: 'Media' }).click();
 
     // Should show Media panel content
-    await expect(
-      adminPage.getByRole('heading', { name: 'Organization Media' })
-    ).toBeVisible();
+    await expect(adminPage.getByText('Choose an organization')).toBeVisible();
   });
 
   test('should navigate to Locations section', async ({ adminPage }) => {
@@ -71,8 +67,7 @@ test.describe('Admin Dashboard', () => {
     // Click Locations
     await adminPage.getByRole('button', { name: 'Locations' }).click();
 
-    // Should show Locations panel content
-    await expect(adminPage.getByRole('table', { name: 'Locations' })).toBeVisible();
+    await expect(adminPage.getByText('Choose an organization')).toBeVisible();
   });
 
   test('should navigate to Activities section', async ({ adminPage }) => {
@@ -81,8 +76,7 @@ test.describe('Admin Dashboard', () => {
     // Click Activities
     await adminPage.getByRole('button', { name: 'Activities' }).click();
 
-    // Should show Activities panel content
-    await expect(adminPage.getByRole('table', { name: 'Activities' })).toBeVisible();
+    await expect(adminPage.getByText('Choose an organization')).toBeVisible();
   });
 
   test('should navigate to Categories section', async ({ adminPage }) => {
@@ -102,7 +96,7 @@ test.describe('Admin Dashboard', () => {
     await adminPage.getByRole('button', { name: 'Pricing' }).click();
 
     // Should show Pricing panel content
-    await expect(adminPage.getByRole('table', { name: 'Pricing' })).toBeVisible();
+    await expect(adminPage.getByText('Choose an organization')).toBeVisible();
   });
 
   test('should navigate to Schedules section', async ({ adminPage }) => {
@@ -112,7 +106,7 @@ test.describe('Admin Dashboard', () => {
     await adminPage.getByRole('button', { name: 'Schedules' }).click();
 
     // Should show Schedules panel content
-    await expect(adminPage.getByRole('table', { name: 'Schedules' })).toBeVisible();
+    await expect(adminPage.getByText('Choose an organization')).toBeVisible();
   });
 
   test('should navigate to Imports section', async ({ adminPage }) => {
@@ -148,20 +142,16 @@ test.describe('Admin Dashboard', () => {
   test('should switch between sections correctly', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard');
 
-    // Start at Organizations (default)
-    await expect(adminPage.getByRole('table', { name: 'Organizations' })).toBeVisible();
+    await expect(adminPage.getByRole('table', { name: 'Catalog' })).toBeVisible();
 
-    // Switch to Activities
     await adminPage.getByRole('button', { name: 'Activities' }).click();
-    await expect(adminPage.getByRole('table', { name: 'Activities' })).toBeVisible();
+    await expect(adminPage.getByText('Choose an organization')).toBeVisible();
 
-    // Switch to Locations
     await adminPage.getByRole('button', { name: 'Locations' }).click();
-    await expect(adminPage.getByRole('table', { name: 'Locations' })).toBeVisible();
+    await expect(adminPage.getByText('Choose an organization')).toBeVisible();
 
-    // Switch back to Organizations
-    await adminPage.getByRole('button', { name: 'Organizations' }).click();
-    await expect(adminPage.getByRole('table', { name: 'Organizations' })).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Catalog', exact: true }).click();
+    await expect(adminPage.getByRole('table', { name: 'Catalog' })).toBeVisible();
   });
 
   test('should display user email in header', async ({ adminPage }) => {
@@ -183,10 +173,9 @@ test.describe('Admin Dashboard Layout', () => {
   test('should have sidebar navigation', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard');
 
-    // Check that nav element exists with buttons. Each of the 14 sections
-    // renders twice: desktop sidebar + mobile drawer.
+    // Each section renders twice: desktop sidebar and mobile drawer.
     const navButtons = adminPage.locator('nav button');
-    await expect(navButtons).toHaveCount(28);
+    await expect(navButtons).toHaveCount(30);
   });
 
   test('should have main content area', async ({ adminPage }) => {
@@ -197,11 +186,10 @@ test.describe('Admin Dashboard Layout', () => {
     await expect(mainContent).toBeVisible();
   });
 
-  test('should display divider before the second navigation group', async ({ adminPage }) => {
+  test('should label the workspace navigation group', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard');
 
-    // One divider per navigation (desktop sidebar + mobile drawer)
-    const dividers = adminPage.locator('nav hr');
-    await expect(dividers).toHaveCount(2);
+    await expect(adminPage.getByText('Workspace', { exact: true })).toHaveCount(2);
+    await expect(adminPage.locator('nav hr')).toHaveCount(0);
   });
 });

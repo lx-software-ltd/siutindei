@@ -16,8 +16,12 @@ function buildManagerUrl(resource: string, id?: string) {
 
 export async function listManagerOrganizations<
   T = Organization,
->(): Promise<ListResponse<T>> {
-  return request<ListResponse<T>>(buildManagerUrl('organizations'));
+>(orgId?: string): Promise<ListResponse<T>> {
+  const url = new URL(buildManagerUrl('organizations'));
+  if (orgId) {
+    url.searchParams.set('org_id', orgId);
+  }
+  return request<ListResponse<T>>(url.toString());
 }
 
 export async function getManagerOrganization(
@@ -48,8 +52,12 @@ export async function deleteManagerOrganization(id: string): Promise<void> {
 
 export async function listManagerLocations<
   T = Location,
->(): Promise<ListResponse<T>> {
-  return request<ListResponse<T>>(buildManagerUrl('locations'));
+>(orgId?: string): Promise<ListResponse<T>> {
+  const url = new URL(buildManagerUrl('locations'));
+  if (orgId) {
+    url.searchParams.set('org_id', orgId);
+  }
+  return request<ListResponse<T>>(url.toString());
 }
 
 export async function getManagerLocation(id: string): Promise<Location> {
@@ -91,8 +99,12 @@ export async function deleteManagerLocation(id: string): Promise<void> {
 
 export async function listManagerActivities<
   T = Activity,
->(): Promise<ListResponse<T>> {
-  return request<ListResponse<T>>(buildManagerUrl('activities'));
+>(orgId?: string): Promise<ListResponse<T>> {
+  const url = new URL(buildManagerUrl('activities'));
+  if (orgId) {
+    url.searchParams.set('org_id', orgId);
+  }
+  return request<ListResponse<T>>(url.toString());
 }
 
 export async function getManagerActivity(id: string): Promise<Activity> {
@@ -134,8 +146,12 @@ export async function deleteManagerActivity(id: string): Promise<void> {
 
 export async function listManagerPricing<
   T = ActivityPricing,
->(): Promise<ListResponse<T>> {
-  return request<ListResponse<T>>(buildManagerUrl('pricing'));
+>(orgId?: string): Promise<ListResponse<T>> {
+  const url = new URL(buildManagerUrl('pricing'));
+  if (orgId) {
+    url.searchParams.set('org_id', orgId);
+  }
+  return request<ListResponse<T>>(url.toString());
 }
 
 export async function getManagerPricing(id: string): Promise<ActivityPricing> {
@@ -177,8 +193,12 @@ export async function deleteManagerPricing(id: string): Promise<void> {
 
 export async function listManagerSchedules<
   T = ActivitySchedule,
->(): Promise<ListResponse<T>> {
-  return request<ListResponse<T>>(buildManagerUrl('schedules'));
+>(orgId?: string): Promise<ListResponse<T>> {
+  const url = new URL(buildManagerUrl('schedules'));
+  if (orgId) {
+    url.searchParams.set('org_id', orgId);
+  }
+  return request<ListResponse<T>>(url.toString());
 }
 
 export async function getManagerSchedule(id: string): Promise<ActivitySchedule> {

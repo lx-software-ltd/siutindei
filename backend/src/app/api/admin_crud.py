@@ -9,7 +9,12 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.admin_auth import _set_session_audit_context
+from app.api.admin_auth import _get_user_sub, _set_session_audit_context
+from app.api.admin_list_filters import (
+    list_organizations,
+    parse_organization_list_filters,
+    resolve_list_org_scope,
+)
 from app.api.admin_request import (
     _encode_cursor,
     _parse_body,
@@ -144,10 +149,20 @@ def _crud_get(
         if lookup is not None:
             return lookup
     cursor = _parse_cursor(_query_param(event, "cursor"))
-    if managed_org_ids is not None:
-        rows = _get_all_filtered_by_org(
-            session, config, managed_org_ids, limit + 1, cursor
+    scope, denied = resolve_list_org_scope(event, managed_org_ids)
+    if denied is not None:
+        return denied
+    rows: Sequence[Any]
+    if config.name == "organizations":
+        rows = list_organizations(
+            session,
+            scope,
+            parse_organization_list_filters(event),
+            limit + 1,
+            cursor,
         )
+    elif scope is not None:
+        rows = _get_all_filtered_by_org(session, config, scope, limit + 1, cursor)
     else:
         rows = repo.get_all(limit=limit + 1, cursor=cursor)
 
@@ -198,7 +213,14 @@ def _crud_post(
                     )
 
     repo = config.repository_class(session)
-    entity = config.create_handler(repo, body)
+    if config.name == "organizations":
+        entity = config.create_handler(
+            repo,
+            body,
+            default_manager_id=_get_user_sub(event),
+        )
+    else:
+        entity = config.create_handler(repo, body)
     repo.create(entity)
     session.commit()
     session.refresh(entity)

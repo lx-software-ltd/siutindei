@@ -15,11 +15,13 @@ import { OrganizationMergeEditor } from './organization-merge-editor';
 interface OrganizationMergeDialogProps {
   anchor: { id: string; name: string } | null;
   onClose: () => void;
+  onMerged?: (survivorId: string) => void;
 }
 
 export function OrganizationMergeDialog({
   anchor,
   onClose,
+  onMerged,
 }: OrganizationMergeDialogProps) {
   return (
     <AdminDialog
@@ -35,7 +37,12 @@ export function OrganizationMergeDialog({
       }
     >
       {anchor ? (
-        <MergeSearch key={anchor.id} anchor={anchor} onClose={onClose} />
+        <MergeSearch
+          key={anchor.id}
+          anchor={anchor}
+          onClose={onClose}
+          onMerged={onMerged}
+        />
       ) : null}
     </AdminDialog>
   );
@@ -44,9 +51,11 @@ export function OrganizationMergeDialog({
 function MergeSearch({
   anchor,
   onClose,
+  onMerged,
 }: {
   anchor: { id: string; name: string };
   onClose: () => void;
+  onMerged?: (survivorId: string) => void;
 }) {
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<OrgDuplicateMember[]>([]);
@@ -109,7 +118,10 @@ function MergeSearch({
           key={`${organizations.map((org) => org.id).join(',')}:${anchor.id}`}
           organizations={organizations}
           suggestedSurvivorId={anchor.id}
-          onMerged={onClose}
+          onMerged={(survivorId) => {
+            onMerged?.(survivorId);
+            onClose();
+          }}
         />
       )}
     </>

@@ -579,12 +579,28 @@ export async function setupAuth(page: Page, user: MockUser | null): Promise<void
 /**
  * Sets up API mocks for common endpoints
  */
+function resourceIdFromUrl(url: string): string {
+  const pathname = new URL(url).pathname.replace(/\/+$/, '');
+  return decodeURIComponent(pathname.split('/').pop() ?? '');
+}
+
 export async function setupApiMocks(page: Page): Promise<void> {
   // Mock organizations list
   await page.route('**/api/mock/**/admin/organizations*', async (route) => {
     const method = route.request().method();
 
     if (method === 'GET') {
+      const pathname = new URL(route.request().url()).pathname.replace(/\/+$/, '');
+      const idMatch = pathname.match(/\/organizations\/([^/]+)$/);
+      if (idMatch) {
+        const org = mockOrganizations.find((item) => item.id === idMatch[1]);
+        await route.fulfill({
+          status: org ? 200 : 404,
+          contentType: 'application/json',
+          body: JSON.stringify(org ?? { error: 'Not found' }),
+        });
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -612,13 +628,23 @@ export async function setupApiMocks(page: Page): Promise<void> {
   await page.route('**/api/mock/**/admin/organizations/*', async (route) => {
     const method = route.request().method();
 
+    if (method === 'GET') {
+      const orgId = resourceIdFromUrl(route.request().url());
+      const org = mockOrganizations.find((item) => item.id === orgId);
+      await route.fulfill({
+        status: org ? 200 : 404,
+        contentType: 'application/json',
+        body: JSON.stringify(org ?? { error: 'Not found' }),
+      });
+      return;
+    }
     if (method === 'DELETE') {
       await route.fulfill({
         status: 204,
       });
     } else if (method === 'PUT' || method === 'PATCH') {
       const body = route.request().postDataJSON();
-      const orgId = route.request().url().split('/').pop();
+      const orgId = resourceIdFromUrl(route.request().url());
       const updatedOrg = {
         id: orgId,
         ...body,
@@ -1256,12 +1282,35 @@ export async function setupApiMocks(page: Page): Promise<void> {
     const method = route.request().method();
 
     if (method === 'GET') {
+      const pathname = new URL(route.request().url()).pathname.replace(/\/+$/, '');
+      const idMatch = pathname.match(/\/organizations\/([^/]+)$/);
+      if (idMatch) {
+        const org = mockOrganizations.find((item) => item.id === idMatch[1]);
+        await route.fulfill({
+          status: org ? 200 : 404,
+          contentType: 'application/json',
+          body: JSON.stringify(org ?? { error: 'Not found' }),
+        });
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          items: mockOrganizations.slice(0, 1),
+          items: mockOrganizations,
           next_cursor: null,
+        }),
+      });
+    } else if (method === 'PUT' || method === 'PATCH') {
+      const body = route.request().postDataJSON();
+      const orgId = resourceIdFromUrl(route.request().url());
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: orgId,
+          ...body,
+          updated_at: new Date().toISOString(),
         }),
       });
     } else {
@@ -1626,6 +1675,13 @@ export async function setupApiMocks(page: Page): Promise<void> {
               entity_id: 'org-1',
               message: 'No locations',
             },
+            {
+              code: 'category_check_pending',
+              severity: 'warning',
+              entity_type: 'activity',
+              entity_id: 'activity-1',
+              message: 'Category check is waiting',
+            },
           ],
           completeness: 0.5,
           blocker_count: 1,
@@ -1648,6 +1704,10 @@ export async function setupApiMocks(page: Page): Promise<void> {
             status: 'operational',
             review_status: 'pending_review',
             source: 'lcsd',
+            import_job_id: 'job-1',
+            manager_id: 'manager-user-id-456',
+            email: 'contact@org-one.test',
+            phone_number: '12345678',
             location_count: 0,
             activity_count: 0,
             pricing_count: 0,
@@ -1665,7 +1725,25 @@ export async function setupApiMocks(page: Page): Promise<void> {
             blocker_count: 1,
             warning_count: 0,
           },
-        ],
+          {
+            id: 'org-2',
+            name: 'Test Organization 2',
+            status: 'operational',
+            review_status: 'pending_review',
+            source: 'manual',
+            location_count: 1,
+            activity_count: 1,
+            pricing_count: 1,
+            schedule_count: 1,
+            issues: [],
+            completeness: 1,
+            blocker_count: 0,
+            warning_count: 0,
+          },
+        ].filter((item) => {
+          const query = new URL(url).searchParams.get('q')?.toLowerCase() ?? '';
+          return query.length === 0 || item.name.toLowerCase().includes(query);
+        }),
         next_cursor: null,
       }),
     });

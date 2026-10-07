@@ -10,15 +10,19 @@ import {
   getUserAccessStatus,
   getUserFeedback,
   getUserSuggestions,
-  type ManagerStatusResponse,
   type Ticket,
 } from '../../lib/api-client-user';
 import { useAdminSectionQuery } from '@/hooks/use-admin-section-query';
+import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { usePrefetchAdminSection } from '@/hooks/use-prefetch-admin-section';
 
+import type { Organization } from '../../types/admin';
 import { useAuth } from '../auth-provider';
 import { AppShell } from '../app-shell';
 import { StatusBanner } from '../status-banner';
+import { Button } from '../ui/button';
+import { Label } from '../ui/label';
+import { Select } from '../ui/select';
 import {
   OrganizationsPanel,
   LocationsPanel,
@@ -26,18 +30,17 @@ import {
   PricingPanel,
   SchedulesPanel,
 } from '../shared';
-import { AccessRequestForm } from './access-request-form';
+import { AccountHome } from './user-dashboard';
 import { FeedbackForm } from './feedback-form';
-import { PendingRequestNotice } from './pending-request-notice';
 import { MediaPanel } from './media-panel';
 import { PendingFeedbackNotice } from './pending-feedback-notice';
 import { SuggestionForm } from './suggestion-form';
 import { PendingSuggestionNotice } from './pending-suggestion-notice';
 
-type ManagerView = 'loading' | 'request-form' | 'pending' | 'dashboard';
+type ManagerView = 'loading' | 'request-form' | 'pending' | 'dashboard' | 'error';
 
 const managerSectionLabels = [
-  { key: 'organizations', label: 'Organizations' },
+  { key: 'organizations', label: 'Organization' },
   { key: 'media', label: 'Media' },
   { key: 'locations', label: 'Locations' },
   { key: 'activities', label: 'Activities' },
@@ -49,14 +52,13 @@ const managerSectionLabels = [
 
 export function ManagerDashboard() {
   const { user, logout, error: authError } = useAuth();
-  const prefetchSection = usePrefetchAdminSection('manager');
-  const [managerStatus, setManagerStatus] = useState<ManagerStatusResponse | null>(
-    null
-  );
+  const scope = useOrganizationScope();
+  const { orgParam, setOrg } = scope;
+  const prefetchSection = usePrefetchAdminSection('manager', scope.orgId);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [view, setView] = useState<ManagerView>('loading');
-  const [pendingRequest, setPendingRequest] = useState<Ticket | null>(null);
+  const [managerOrgs, setManagerOrgs] = useState<Organization[]>([]);
   const [pendingSuggestion, setPendingSuggestion] =
     useState<Ticket | null>(null);
   const [pendingFeedback, setPendingFeedback] = useState<Ticket | null>(null);
@@ -66,14 +68,9 @@ export function ManagerDashboard() {
     'organizations'
   );
 
-  const loadManagerOrgName = useCallback(async (): Promise<string | null> => {
-    try {
-      const response = await listManagerOrganizations();
-      const name = response.items[0]?.name?.trim();
-      return name ? name : null;
-    } catch {
-      return null;
-    }
+  const loadManagerOrgs = useCallback(async (): Promise<Organization[]> => {
+    const response = await listManagerOrganizations<Organization>();
+    return response.items;
   }, []);
 
   const loadManagerStatus = useCallback(async () => {
@@ -86,8 +83,6 @@ export function ManagerDashboard() {
         getUserSuggestions(),
         getUserFeedback(),
       ]);
-      setManagerStatus(status);
-
       // Check for pending suggestion
       if (suggestionsStatus.has_pending_suggestion) {
         const pending = suggestionsStatus.suggestions.find(
@@ -108,17 +103,24 @@ export function ManagerDashboard() {
       }
 
       if (status.organizations_count > 0) {
-        // User has organizations, show the dashboard
-        const orgName = await loadManagerOrgName();
-        setManagerOrgName(orgName);
+        const items = await loadManagerOrgs();
+        setManagerOrgs(items);
+        if (items.length === 0) {
+          setManagerOrgName(null);
+          setError('No organization is assigned to this account.');
+          setView('error');
+          return;
+        }
+        const orgName = items[0]?.name?.trim();
+        setManagerOrgName(orgName ? orgName : null);
+        const current =
+          orgParam !== null && items.some((org) => org.id === orgParam);
+        if (!current) {
+          setOrg(items[0].id);
+        }
         setView('dashboard');
-      } else if (status.has_pending_request && status.pending_request) {
-        // User has a pending request
-        setManagerOrgName(null);
-        setPendingRequest(status.pending_request);
-        setView('pending');
       } else {
-        // User has no organizations and no pending request
+        setManagerOrgs([]);
         setManagerOrgName(null);
         setView('request-form');
       }
@@ -128,20 +130,22 @@ export function ManagerDashboard() {
           ? err.message
           : 'Failed to load your account status.';
       setError(message);
-      setView('request-form');
+      setView('error');
     } finally {
       setIsLoading(false);
     }
-  }, [loadManagerOrgName]);
+  }, [loadManagerOrgs, orgParam, setOrg]);
 
   useEffect(() => {
     loadManagerStatus();
   }, [loadManagerStatus]);
 
-  const handleRequestSubmitted = (request: Ticket) => {
-    setPendingRequest(request);
-    setView('pending');
-  };
+  useEffect(() => {
+    if (view !== 'dashboard' || orgParam || managerOrgs.length === 0) {
+      return;
+    }
+    setOrg(managerOrgs[0].id);
+  }, [managerOrgs, orgParam, setOrg, view]);
 
   const handleSuggestionSubmitted = (suggestion: Ticket) => {
     setPendingSuggestion(suggestion);
@@ -151,9 +155,13 @@ export function ManagerDashboard() {
     setPendingFeedback(feedback);
   };
 
-  const headerDescription = managerOrgName
-    ? `Manage your organization, ${managerOrgName}.`
-    : 'Manage your organization.';
+  const selectedOrg =
+    managerOrgs.find((org) => org.id === scope.orgId) ?? managerOrgs[0];
+  const headerDescription = selectedOrg?.name
+    ? `Manage your organization, ${selectedOrg.name}.`
+    : managerOrgName
+      ? `Manage your organization, ${managerOrgName}.`
+      : 'Manage your organization.';
 
   // Use shared components with mode='manager'
   const activeContent = useMemo(() => {
@@ -180,9 +188,16 @@ export function ManagerDashboard() {
         return <FeedbackForm onFeedbackSubmitted={handleFeedbackSubmitted} />;
       case 'organizations':
       default:
-        return <OrganizationsPanel mode='manager' />;
+        return (
+          <OrganizationsPanel
+            mode='manager'
+            onOrganizationRemoved={() => {
+              void loadManagerStatus();
+            }}
+          />
+        );
     }
-  }, [activeSection, pendingFeedback, pendingSuggestion]);
+  }, [activeSection, loadManagerStatus, pendingFeedback, pendingSuggestion]);
 
   // Loading state
   if (view === 'loading' || isLoading) {
@@ -195,70 +210,29 @@ export function ManagerDashboard() {
     );
   }
 
-  // Error state with request form fallback
-  if (error && view === 'request-form') {
+  if (view === 'error') {
     return (
-      <AppShell
-        sections={[]}
-        activeKey=''
-        onSelect={() => {}}
-        onLogout={logout}
-        userEmail={user?.email}
-        lastAuthTime={user?.lastAuthTime}
-        headerDescription={headerDescription}
-      >
-        <StatusBanner variant='error' title='Error'>
-          {error}
-        </StatusBanner>
-        <div className='mt-6'>
-          <AccessRequestForm onRequestSubmitted={handleRequestSubmitted} />
+      <main className='mx-auto flex min-h-screen max-w-lg items-center px-6'>
+        <div className='w-full space-y-4'>
+          <StatusBanner variant='error' title='Organization'>
+            {error || 'Failed to load your organization.'}
+          </StatusBanner>
+          <Button
+            type='button'
+            variant='secondary'
+            onClick={() => {
+              void loadManagerStatus();
+            }}
+          >
+            Retry
+          </Button>
         </div>
-      </AppShell>
+      </main>
     );
   }
 
-  // Pending request view
-  if (view === 'pending' && pendingRequest) {
-    return (
-      <AppShell
-        sections={[]}
-        activeKey=''
-        onSelect={() => {}}
-        onLogout={logout}
-        userEmail={user?.email}
-        lastAuthTime={user?.lastAuthTime}
-        headerDescription={headerDescription}
-      >
-        {authError && (
-          <StatusBanner variant='error' title='Session'>
-            {authError}
-          </StatusBanner>
-        )}
-        <PendingRequestNotice request={pendingRequest} />
-      </AppShell>
-    );
-  }
-
-  // Request form view (no organizations, no pending request)
-  if (view === 'request-form') {
-    return (
-      <AppShell
-        sections={[]}
-        activeKey=''
-        onSelect={() => {}}
-        onLogout={logout}
-        userEmail={user?.email}
-        lastAuthTime={user?.lastAuthTime}
-        headerDescription={headerDescription}
-      >
-        {authError && (
-          <StatusBanner variant='error' title='Session'>
-            {authError}
-          </StatusBanner>
-        )}
-        <AccessRequestForm onRequestSubmitted={handleRequestSubmitted} />
-      </AppShell>
-    );
+  if (view !== 'dashboard') {
+    return <AccountHome />;
   }
 
   // Dashboard view (manager has organizations)
@@ -278,6 +252,30 @@ export function ManagerDashboard() {
           {authError}
         </StatusBanner>
       )}
+      {error ? (
+        <StatusBanner variant='error' title='Error'>
+          {error}
+        </StatusBanner>
+      ) : null}
+      {managerOrgs.length > 1 ? (
+        <div className='mb-4 max-w-sm space-y-1'>
+          <Label htmlFor='manager-org-switcher'>Organization</Label>
+          <Select
+            id='manager-org-switcher'
+            aria-label='Organization'
+            value={scope.orgId ?? ''}
+            onChange={(event) => {
+              scope.setOrg(event.target.value);
+            }}
+          >
+            {managerOrgs.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+      ) : null}
       <div>{activeContent}</div>
     </AppShell>
   );
