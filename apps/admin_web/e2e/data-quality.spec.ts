@@ -6,6 +6,7 @@ test.describe('Data quality', () => {
     await adminPage.getByRole('button', { name: 'Data quality', exact: true }).click();
     await expect(adminPage.getByRole('table', { name: 'Duplicate organizations' })).toBeVisible();
     await adminPage.getByRole('cell', { name: 'Harbour Club · Harbour Club Limited' }).click();
+    await expect(adminPage.getByText('desk@example.com')).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'Merge' })).toBeEnabled();
     await adminPage.getByRole('button', { name: 'Merge' }).click();
     await adminPage.getByRole('button', { name: 'Merge organizations', exact: true }).click();
