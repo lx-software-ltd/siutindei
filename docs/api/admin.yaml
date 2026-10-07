@@ -533,6 +533,377 @@ paths:
         "404":
           description: Organization not found
 
+  /v1/admin/org-duplicates:
+    get:
+      summary: List likely duplicate organizations
+      description: |
+        Groups organizations that share a normalized name, contact, source id,
+        website host, or a pg_trgm name similarity at or above `min_score`
+        (default 0.6). Pairs an admin dismissed are kept apart. Admin only.
+        Merge is `POST /v1/admin/org-duplicates/merge`. Data-quality routes
+        share `/v1/admin/{proxy+}` so the stack stays under the
+        CloudFormation resource cap.
+      parameters:
+        - name: min_score
+          in: query
+          schema:
+            type: number
+            minimum: 0
+            maximum: 1
+        - name: signal
+          in: query
+          schema:
+            type: string
+            enum: [name, source_id, phone, email, social, website, translation, location]
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: review_status
+          in: query
+          schema:
+            type: string
+            enum: [pending_review, approved, rejected]
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: org_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Duplicate groups
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgDuplicateListResponse'
+        "403":
+          description: Admin group required
+
+  /v1/admin/org-duplicates/search:
+    get:
+      summary: Search organizations to merge
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+      responses:
+        "200":
+          description: Matching organizations
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrgDuplicateMember'
+
+  /v1/admin/org-duplicates/dismiss:
+    post:
+      summary: Mark organizations as not duplicates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [org_ids]
+              properties:
+                org_ids:
+                  type: array
+                  minItems: 2
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: Pairs stored
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dismissed_pairs]
+                properties:
+                  dismissed_pairs:
+                    type: integer
+
+  /v1/admin/org-duplicates/merge:
+    post:
+      summary: Merge organizations into one survivor
+      description: |
+        Fills blank survivor fields from the sources. `field_overrides`
+        replaces a field with the given value. `dry_run` returns the same
+        preview without writing. Children move onto the survivor.
+        Locations that share an address, and activities that share a
+        name, are combined. Each source's `source_id` and `place_id` are
+        stored on `organization_merges` so a later import resolves to
+        the survivor. The survivor's own values win unless overridden.
+        Copied media objects are deleted only after the merge commits.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgMergeRequest'
+      responses:
+        "200":
+          description: Dry-run preview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgMergeResult'
+        "201":
+          description: Organizations merged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgMergeResult'
+
+  /v1/admin/org-duplicates/{id}:
+    get:
+      summary: Load one duplicate group
+      description: |
+        `id` is the comma-separated organization ids from the list.
+        The group is returned when those organizations still exist,
+        including when they are not on the current list page.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Duplicate group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgDuplicateGroup'
+        "404":
+          description: Fewer than two of the organizations exist
+
+  /v1/admin/name-fixes:
+    get:
+      summary: List name cleanup proposals
+      description: |
+        Pending rows come from `POST /v1/admin/name-fixes/scan` and from
+        names the import cleaner would change. Activity proposals are
+        created only for organizations in `pending_review`.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, applied, dismissed]
+            default: pending
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+            enum: [organization, activity]
+        - name: rule
+          in: query
+          schema:
+            type: string
+        - name: org_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Proposals
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NameFixListResponse'
+
+  /v1/admin/name-fixes/summary:
+    get:
+      summary: Count name-fix proposals
+      responses:
+        "200":
+          description: Counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NameFixSummary'
+
+  /v1/admin/name-fixes/settings:
+    get:
+      summary: Read name cleanup rules
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NameFixSettings'
+    put:
+      summary: Replace name cleanup rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NameFixSettings'
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NameFixSettings'
+
+  /v1/admin/name-fixes/settings/preview:
+    post:
+      summary: Preview cleanup for one name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                name_translations:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        "200":
+          description: Cleaned name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NameFixPreview'
+
+  /v1/admin/name-fixes/scan:
+    post:
+      summary: Scan names and store proposals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                entity_type:
+                  type: string
+                  enum: [organization, activity]
+                org_id:
+                  type: string
+                  format: uuid
+                q:
+                  type: string
+      responses:
+        "200":
+          description: Scan counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NameFixScanResult'
+
+  /v1/admin/name-fixes/bulk:
+    post:
+      summary: Apply or dismiss name proposals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NameFixBulkRequest'
+      responses:
+        "200":
+          description: Bulk result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NameFixBulkResult'
+
+  /v1/admin/name-fixes/{id}:
+    get:
+      summary: Load one name proposal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Proposal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NameFixProposal'
+        "404":
+          description: Proposal not found
+    post:
+      summary: Apply or dismiss one name proposal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [apply, dismiss]
+                value:
+                  type: string
+                  description: Replacement name. Defaults to the proposal.
+      responses:
+        "200":
+          description: Updated proposal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NameFixProposal'
+        "400":
+          description: The name matches another organization
+
   /v1/admin/category-suggestions:
     get:
       summary: List category suggestions
@@ -5814,6 +6185,325 @@ components:
         usage:
           type: object
           additionalProperties: true
+
+    OrgDuplicateMember:
+      type: object
+      required: [id, name, review_status, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        review_status:
+          type: string
+        status:
+          type: string
+        source:
+          type: string
+          nullable: true
+        source_id:
+          type: string
+          nullable: true
+        place_id:
+          type: string
+          nullable: true
+        manager_id:
+          type: string
+        phone_country_code:
+          type: string
+          nullable: true
+        phone_number:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        location_count:
+          type: integer
+        activity_count:
+          type: integer
+
+    OrgDuplicateGroup:
+      type: object
+      required: [id, score, signals, suggested_survivor_id, organizations]
+      properties:
+        id:
+          type: string
+        score:
+          type: number
+        signals:
+          type: array
+          items:
+            type: string
+        suggested_survivor_id:
+          type: string
+          format: uuid
+        organizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgDuplicateMember'
+
+    OrgDuplicateListResponse:
+      type: object
+      required: [items, truncated]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgDuplicateGroup'
+        next_cursor:
+          type: string
+          nullable: true
+        truncated:
+          type: boolean
+
+    OrgMergeRequest:
+      type: object
+      required: [survivor_id, source_ids]
+      properties:
+        survivor_id:
+          type: string
+          format: uuid
+        source_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        dry_run:
+          type: boolean
+        field_overrides:
+          type: object
+          additionalProperties: true
+
+    OrgMergeField:
+      type: object
+      required: [field, label, conflict]
+      properties:
+        field:
+          type: string
+        label:
+          type: string
+        survivor_value:
+          nullable: true
+        source_values:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              value:
+                type: string
+        result:
+          nullable: true
+        conflict:
+          type: boolean
+
+    OrgMergeResult:
+      type: object
+      required: [survivor_id, source_ids, fields, moved, warnings, dry_run]
+      properties:
+        survivor_id:
+          type: string
+          format: uuid
+        source_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        suggested_survivor_id:
+          type: string
+          format: uuid
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgMergeField'
+        moved:
+          type: object
+          additionalProperties:
+            type: integer
+        warnings:
+          type: array
+          items:
+            type: string
+        media_urls:
+          type: array
+          items:
+            type: string
+        dry_run:
+          type: boolean
+        merged:
+          type: boolean
+
+    NameFixProposal:
+      type: object
+      required: [id, entity_type, entity_id, current_value, proposed_value, rules, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity_type:
+          type: string
+          enum: [organization, activity]
+        entity_id:
+          type: string
+          format: uuid
+        current_value:
+          type: string
+        proposed_value:
+          type: string
+        rules:
+          type: array
+          items:
+            type: string
+        translation_patch:
+          type: object
+          nullable: true
+          additionalProperties:
+            type: string
+        status:
+          type: string
+          enum: [pending, applied, dismissed]
+        scan_run_id:
+          type: string
+          format: uuid
+          nullable: true
+        decided_by:
+          type: string
+          nullable: true
+        decided_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    NameFixListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NameFixProposal'
+        next_cursor:
+          type: string
+          nullable: true
+
+    NameFixSummary:
+      type: object
+      required: [by_status, pending_by_entity]
+      properties:
+        by_status:
+          type: object
+          additionalProperties:
+            type: integer
+        pending_by_entity:
+          type: object
+          additionalProperties:
+            type: integer
+
+    NameFixSettings:
+      type: object
+      required: [enabled_rules, exception_words, bracket_suffixes]
+      properties:
+        enabled_rules:
+          type: array
+          items:
+            type: string
+        available_rules:
+          type: array
+          items:
+            type: string
+        exception_words:
+          type: array
+          items:
+            type: string
+        bracket_suffixes:
+          type: array
+          items:
+            type: string
+
+    NameFixPreview:
+      type: object
+      required: [name, rules, changed]
+      properties:
+        name:
+          type: string
+        rules:
+          type: array
+          items:
+            type: string
+        translation_patch:
+          type: object
+          additionalProperties:
+            type: string
+        changed:
+          type: boolean
+
+    NameFixScanResult:
+      type: object
+      required: [scan_run_id, created, updated, skipped, truncated]
+      properties:
+        scan_run_id:
+          type: string
+          format: uuid
+        created:
+          type: integer
+        updated:
+          type: integer
+        skipped:
+          type: integer
+        truncated:
+          type: boolean
+
+    NameFixBulkRequest:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [apply, dismiss]
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        entity_type:
+          type: string
+        rule:
+          type: string
+        q:
+          type: string
+        dry_run:
+          type: boolean
+
+    NameFixBulkResult:
+      type: object
+      required: [dry_run, matched, decided, failed, failures]
+      properties:
+        dry_run:
+          type: boolean
+        matched:
+          type: integer
+        decided:
+          type: integer
+        failed:
+          type: integer
+        failures:
+          type: array
+          items:
+            type: object
+            required: [id, message]
+            properties:
+              id:
+                type: string
+              message:
+                type: string
 
     HealthStatus:
       type: object

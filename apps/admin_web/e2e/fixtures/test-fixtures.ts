@@ -1730,6 +1730,192 @@ export async function setupApiMocks(page: Page): Promise<void> {
       }),
     });
   });
+
+  let duplicateGroups = [
+    {
+      id: 'org-1,org-2',
+      score: 0.95,
+      signals: ['name'],
+      suggested_survivor_id: 'org-1',
+      organizations: [
+        {
+          id: 'org-1',
+          name: 'Harbour Club',
+          review_status: 'approved',
+          status: 'operational',
+          location_count: 1,
+          activity_count: 0,
+        },
+        {
+          id: 'org-2',
+          name: 'Harbour Club Limited',
+          review_status: 'pending_review',
+          status: 'operational',
+          location_count: 0,
+          activity_count: 0,
+        },
+      ],
+    },
+  ];
+  await page.route('**/api/mock/**/admin/org-duplicates**', async (route) => {
+    const url = route.request().url();
+    const method = route.request().method();
+    if (method === 'GET' && url.includes('/org-duplicates/search')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              id: 'org-2',
+              name: 'Harbour Club Limited',
+              review_status: 'pending_review',
+              status: 'operational',
+            },
+          ],
+        }),
+      });
+      return;
+    }
+    if (method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: duplicateGroups,
+          next_cursor: null,
+          truncated: false,
+        }),
+      });
+      return;
+    }
+    if (method === 'POST' && url.includes('/org-duplicates/merge')) {
+      const body = route.request().postDataJSON() as { dry_run?: boolean };
+      if (!body.dry_run) {
+        duplicateGroups = [];
+      }
+      await route.fulfill({
+        status: body.dry_run ? 200 : 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          survivor_id: 'org-1',
+          source_ids: ['org-2'],
+          suggested_survivor_id: 'org-1',
+          fields: [
+            {
+              field: 'email',
+              label: 'Email',
+              survivor_value: null,
+              source_values: [
+                {
+                  id: 'org-2',
+                  name: 'Harbour Club Limited',
+                  value: 'desk@example.com',
+                },
+              ],
+              result: 'desk@example.com',
+              conflict: false,
+            },
+          ],
+          moved: { locations: 1, activities: 0 },
+          warnings: [],
+          dry_run: Boolean(body.dry_run),
+          merged: !body.dry_run,
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ dismissed_pairs: 1 }),
+    });
+  });
+
+  let nameFixes: {
+    id: string;
+    entity_type: 'organization';
+    entity_id: string;
+    current_value: string;
+    proposed_value: string;
+    rules: string[];
+    status: string;
+  }[] = [];
+  await page.route('**/api/mock/**/admin/name-fixes**', async (route) => {
+    const url = route.request().url();
+    const method = route.request().method();
+    if (url.includes('/name-fixes/summary')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          by_status: { pending: nameFixes.length },
+          pending_by_entity: { organization: nameFixes.length },
+        }),
+      });
+      return;
+    }
+    if (url.includes('/name-fixes/settings')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          enabled_rules: ['title_case'],
+          available_rules: ['title_case'],
+          exception_words: ['YMCA'],
+          bracket_suffixes: ['lcsd'],
+        }),
+      });
+      return;
+    }
+    if (method === 'POST' && url.includes('/name-fixes/scan')) {
+      nameFixes = [
+        {
+          id: 'fix-1',
+          entity_type: 'organization',
+          entity_id: 'org-1',
+          current_value: 'HARBOUR CLUB',
+          proposed_value: 'Harbour Club',
+          rules: ['title_case'],
+          status: 'pending',
+        },
+      ];
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          scan_run_id: 'scan-1',
+          created: 1,
+          updated: 0,
+          skipped: 0,
+          truncated: false,
+        }),
+      });
+      return;
+    }
+    if (method === 'POST' && url.includes('/name-fixes/fix-1')) {
+      nameFixes = [];
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'fix-1',
+          entity_type: 'organization',
+          entity_id: 'org-1',
+          current_value: 'HARBOUR CLUB',
+          proposed_value: 'Harbour Club',
+          rules: ['title_case'],
+          status: 'applied',
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: nameFixes, next_cursor: null }),
+    });
+  });
 }
 
 /**

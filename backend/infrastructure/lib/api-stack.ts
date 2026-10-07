@@ -2604,6 +2604,17 @@ export class ApiStack extends cdk.Stack {
       authorizer: adminAuthorizer,
     });
 
+    // org-duplicates and name-fixes share this greedy proxy. Two
+    // dedicated GET+{proxy+} pairs, plus the CORS OPTIONS methods CDK
+    // adds, push the stack past the CloudFormation 500-resource cap.
+    // Explicit admin resources registered above still win. The Lambda
+    // returns 404 for anything else this proxy matches.
+    const adminProxy = admin.addResource("{proxy+}");
+    adminProxy.addMethod("ANY", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
+
     // Manager-specific routes at /v1/manager (accessible by users in 'admin' OR 'manager' group)
     // All manager routes are filtered by organization management in the Lambda
     const manager = v1.addResource("manager");

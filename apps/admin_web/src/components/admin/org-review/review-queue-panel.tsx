@@ -45,6 +45,8 @@ const ISSUE_OPTIONS = [
   ['no_contact', 'No contact'],
   ['no_media', 'No photos'],
   ['source_attribution', 'Template or source line'],
+  ['name_needs_cleanup', 'Name needs cleanup'],
+  ['possible_duplicate', 'Possible duplicate'],
 ];
 
 type BulkAction = 'approve' | 'reject' | 'reopen' | 'set_fields';
@@ -140,6 +142,7 @@ export function ReviewQueuePanel() {
   const [, setOrganization] = useQueryState('organization');
   const [, setLocation] = useQueryState('location');
   const [, setActivity] = useQueryState('activity');
+  const [, setTab] = useQueryState('tab');
   const expanded = useExpandedRecord({ paramName: 'review' });
   const defaultFilters = useMemo(
     () => ({
@@ -299,6 +302,23 @@ export function ReviewQueuePanel() {
   }
 
   function openIssue(entry: OrgReviewIssue) {
+    const orgId = expanded.expandedId;
+    if (entry.code === 'name_needs_cleanup') {
+      void setSection('data-quality');
+      void setTab('names');
+      if (orgId) {
+        void setOrganization(orgId);
+      }
+      return;
+    }
+    if (entry.code === 'possible_duplicate') {
+      void setSection('data-quality');
+      void setTab(null);
+      if (orgId) {
+        void setOrganization(orgId);
+      }
+      return;
+    }
     if (entry.entity_type === 'organization') {
       openOrganization(entry.entity_id);
       return;

@@ -543,7 +543,7 @@ screens from `apps/admin_web/src/components/ui/`:
 - Deep links use `?<entity>=<id>` (`organization`, `location`, `activity`,
   `pricing`, `schedule`, `category`, `feedback`, `feedback-label`,
   `api-key`, `suggestion`, `category-check`, `ticket`, `user`,
-  `audit-log`). Organizations,
+  `audit-log`, `duplicate`, `name-fix`). Organizations,
   locations, activities, pricing, and schedules still accept legacy
   `?edit=`. An id that is not on the loaded page is fetched by id.
   Switching sections drops record params that belong to other sections.

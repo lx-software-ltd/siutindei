@@ -21,6 +21,24 @@ export function EditIcon({ className }: IconProps) {
   );
 }
 
+export function MergeIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <path d='M8 7H4v13h13v-4' />
+      <path d='M16 3h5v5' />
+      <path d='M10 14L21 3' />
+    </svg>
+  );
+}
+
 export function DeleteIcon({ className }: IconProps) {
   return (
     <svg

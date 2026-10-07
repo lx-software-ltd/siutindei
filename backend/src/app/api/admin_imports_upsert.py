@@ -11,7 +11,6 @@ from app.api.admin_imports_catalog import (
     CATALOG_MANAGER_REQUIRED,
     NO_MATCH_TO_CLOSE,
     coerce_uuid,
-    find_import_organization,
     parse_org_status,
     parse_place_id,
     stamp_imported_organization,
@@ -37,6 +36,10 @@ from app.api.admin_imports_utils import (
     persist_import_change,
 )
 from app.api.admin_resource_activity import _create_activity, _update_activity
+from app.services.import_names import (
+    prepare_imported_activity,
+    prepare_imported_organization,
+)
 from app.api.admin_resource_location import _create_location, _update_location
 from app.api.admin_resource_organization import (
     _create_organization,
@@ -161,15 +164,6 @@ def upsert_organization(
     )
     if name is None:
         raise ValidationError("name is required", field="name")
-    try:
-        existing = find_import_organization(session, raw_org)
-        if existing is None:
-            existing = repo.find_by_name_case_insensitive(name)
-    except MultipleResultsFound as exc:
-        raise ValidationError(
-            "Multiple organizations found",
-            field="name",
-        ) from exc
 
     body = filter_fields(raw_org, ALLOWED_ORG_FIELDS)
     for extra in (
@@ -188,6 +182,14 @@ def upsert_organization(
     ):
         body.pop(extra, None)
     prepare_listing_body(body)
+    existing = prepare_imported_organization(
+        session,
+        repo,
+        raw_org,
+        name,
+        body,
+        warnings,
+    )
     requested_status = parse_org_status(raw_org.get("status"))
 
     if existing:
@@ -334,21 +336,6 @@ def upsert_activity(
     )
     if name is None:
         raise ValidationError("name is required", field="name")
-    try:
-        existing = repo.find_by_org_and_name_case_insensitive(coerce_uuid(org.id), name)
-    except MultipleResultsFound as exc:
-        raise ValidationError(
-            "Multiple activities found",
-            field="name",
-        ) from exc
-
-    if existing and not allow_updates:
-        wrote_link = link_activity_to_venue(session, existing, venue)
-        if wrote_link:
-            if warnings is not None:
-                warnings.append(LINKED_VENUE_WARNING)
-            persist_import_change(session, dry_run=dry_run)
-        return existing, "skipped"
 
     body = filter_fields(raw_activity, ALLOWED_ACTIVITY_FIELDS)
     resolve_activity_category_fields(session, body)
@@ -358,6 +345,16 @@ def upsert_activity(
     body.pop("vetting_note", None)
     body.pop("name_zh", None)
     body.pop("description_zh", None)
+    existing = prepare_imported_activity(session, repo, org, name, body, warnings)
+
+    if existing and not allow_updates:
+        wrote_link = link_activity_to_venue(session, existing, venue)
+        if wrote_link:
+            if warnings is not None:
+                warnings.append(LINKED_VENUE_WARNING)
+            persist_import_change(session, dry_run=dry_run)
+        return existing, "skipped"
+
     if existing:
         updated = _update_activity(repo, existing, body)
         repo.update(updated)

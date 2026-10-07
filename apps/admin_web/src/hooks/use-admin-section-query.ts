@@ -30,6 +30,8 @@ const parsers = {
   review: parseAsString,
   job: parseAsString,
   'import-job': parseAsString,
+  duplicate: parseAsString,
+  'name-fix': parseAsString,
 };
 
 interface SectionLabel {

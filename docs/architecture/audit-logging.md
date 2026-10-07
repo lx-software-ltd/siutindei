@@ -134,6 +134,20 @@ with Session(get_engine()) as session:
         new_values={"status": "approved"},
     )
 
+    # Organization merge records source ids and filled field names.
+    # Contact values stay out of this row; column changes are still
+    # captured by the organizations trigger. Dismissing a duplicate
+    # pair uses action DISMISS_DUPLICATE and records organization ids.
+    audit.log_custom(
+        table_name="organizations",
+        record_id=survivor_id,
+        action="MERGE",
+        new_values={
+            "source_ids": ["source-org-id"],
+            "filled_fields": ["phone_number"],
+        },
+    )
+
     session.commit()
 ```
 

@@ -37,6 +37,8 @@ from app.api.admin_feedback import (
     _handle_user_feedback_labels,
 )
 from app.api.admin_imports import _handle_admin_imports
+from app.api.admin_name_fixes import handle_name_fixes
+from app.api.admin_org_duplicates import handle_org_duplicates
 from app.api.admin_org_review import _handle_admin_org_review
 from app.api.admin_media import _handle_organization_media
 from app.api.admin_request import (
@@ -220,6 +222,20 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
             ),
             event,
         )
+    if resource == "org-duplicates":
+        if not _is_admin(event):
+            return json_response(403, {"error": "Forbidden"}, event=event)
+        return _safe_handler(
+            lambda: handle_org_duplicates(event, method, resource_id, sub_resource),
+            event,
+        )
+    if resource == "name-fixes":
+        if not _is_admin(event):
+            return json_response(403, {"error": "Forbidden"}, event=event)
+        return _safe_handler(
+            lambda: handle_name_fixes(event, method, resource_id, sub_resource),
+            event,
+        )
 
     if (
         resource == "organizations"
@@ -243,6 +259,9 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
                 lambda: _handle_toggle_area(event, resource_id),
                 event,
             )
+
+    if sub_resource:
+        return json_response(404, {"error": "Not found"}, event=event)
 
     config = _RESOURCE_CONFIG.get(resource)
     if not config:

@@ -135,6 +135,17 @@ their primary responsibilities.
   - `ORG_REVIEW_GATE_ENABLED` (same flag as search; default `false`)
 - Hosts the organization review queue and import-job history. Shapes
   are in `docs/api/admin.yaml`.
+- Hosts data-quality routes under `/v1/admin/org-duplicates` and
+  `/v1/admin/name-fixes` (admin group only). Both families share one
+  `/v1/admin/{proxy+}` method so the stack stays within the
+  CloudFormation 500-resource cap. Get-by-id for a duplicate group or
+  a name proposal uses that same proxy. An unknown extra path segment
+  on a CRUD resource returns 404. Shapes are in `docs/api/admin.yaml`.
+  Design:
+  `docs/architecture/data-quality.md`. Imports clean organization names
+  on every write and activity names only while the organization is
+  `pending_review`. A merged organization's `source_id` and `place_id`
+  stay resolvable through `organization_merges`.
 - For the full endpoint list, see the OpenAPI spec:
   `docs/api/admin.yaml`
 

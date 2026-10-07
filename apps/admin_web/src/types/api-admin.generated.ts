@@ -819,6 +819,618 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/org-duplicates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List likely duplicate organizations
+         * @description Groups organizations that share a normalized name, contact, source id,
+         *     website host, or a pg_trgm name similarity at or above `min_score`
+         *     (default 0.6). Pairs an admin dismissed are kept apart. Admin only.
+         *     Merge is `POST /v1/admin/org-duplicates/merge`. Data-quality routes
+         *     share `/v1/admin/{proxy+}` so the stack stays under the
+         *     CloudFormation resource cap.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    min_score?: number;
+                    signal?: "name" | "source_id" | "phone" | "email" | "social" | "website" | "translation" | "location";
+                    source?: string;
+                    review_status?: "pending_review" | "approved" | "rejected";
+                    q?: string;
+                    org_id?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Duplicate groups */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrgDuplicateListResponse"];
+                    };
+                };
+                /** @description Admin group required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/org-duplicates/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search organizations to merge */
+        get: {
+            parameters: {
+                query: {
+                    q: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Matching organizations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["OrgDuplicateMember"][];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/org-duplicates/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark organizations as not duplicates */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        org_ids: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Pairs stored */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            dismissed_pairs: number;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/org-duplicates/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge organizations into one survivor
+         * @description Fills blank survivor fields from the sources. `field_overrides`
+         *     replaces a field with the given value. `dry_run` returns the same
+         *     preview without writing. Children move onto the survivor.
+         *     Locations that share an address, and activities that share a
+         *     name, are combined. Each source's `source_id` and `place_id` are
+         *     stored on `organization_merges` so a later import resolves to
+         *     the survivor. The survivor's own values win unless overridden.
+         *     Copied media objects are deleted only after the merge commits.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OrgMergeRequest"];
+                };
+            };
+            responses: {
+                /** @description Dry-run preview */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrgMergeResult"];
+                    };
+                };
+                /** @description Organizations merged */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrgMergeResult"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/org-duplicates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Load one duplicate group
+         * @description `id` is the comma-separated organization ids from the list.
+         *     The group is returned when those organizations still exist,
+         *     including when they are not on the current list page.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Duplicate group */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrgDuplicateGroup"];
+                    };
+                };
+                /** @description Fewer than two of the organizations exist */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/name-fixes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List name cleanup proposals
+         * @description Pending rows come from `POST /v1/admin/name-fixes/scan` and from
+         *     names the import cleaner would change. Activity proposals are
+         *     created only for organizations in `pending_review`.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "pending" | "applied" | "dismissed";
+                    entity_type?: "organization" | "activity";
+                    rule?: string;
+                    org_id?: string;
+                    q?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Proposals */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NameFixListResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/name-fixes/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Count name-fix proposals */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Counts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NameFixSummary"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/name-fixes/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read name cleanup rules */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Settings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NameFixSettings"];
+                    };
+                };
+            };
+        };
+        /** Replace name cleanup rules */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["NameFixSettings"];
+                };
+            };
+            responses: {
+                /** @description Updated settings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NameFixSettings"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/name-fixes/settings/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview cleanup for one name */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        name_translations?: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Cleaned name */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NameFixPreview"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/name-fixes/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Scan names and store proposals */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        entity_type?: "organization" | "activity";
+                        /** Format: uuid */
+                        org_id?: string;
+                        q?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Scan counts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NameFixScanResult"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/name-fixes/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply or dismiss name proposals */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["NameFixBulkRequest"];
+                };
+            };
+            responses: {
+                /** @description Bulk result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NameFixBulkResult"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/name-fixes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Load one name proposal */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Proposal */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NameFixProposal"];
+                    };
+                };
+                /** @description Proposal not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Apply or dismiss one name proposal */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        action: "apply" | "dismiss";
+                        /** @description Replacement name. Defaults to the proposal. */
+                        value?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Updated proposal */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NameFixProposal"];
+                    };
+                };
+                /** @description The name matches another organization */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/category-suggestions": {
         parameters: {
             query?: never;
@@ -6611,6 +7223,147 @@ export interface components {
             usage?: {
                 [key: string]: unknown;
             };
+        };
+        OrgDuplicateMember: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            review_status: string;
+            status: string;
+            source?: string | null;
+            source_id?: string | null;
+            place_id?: string | null;
+            manager_id?: string;
+            phone_country_code?: string | null;
+            phone_number?: string | null;
+            email?: string | null;
+            location_count?: number;
+            activity_count?: number;
+        };
+        OrgDuplicateGroup: {
+            id: string;
+            score: number;
+            signals: string[];
+            /** Format: uuid */
+            suggested_survivor_id: string;
+            organizations: components["schemas"]["OrgDuplicateMember"][];
+        };
+        OrgDuplicateListResponse: {
+            items: components["schemas"]["OrgDuplicateGroup"][];
+            next_cursor?: string | null;
+            truncated: boolean;
+        };
+        OrgMergeRequest: {
+            /** Format: uuid */
+            survivor_id: string;
+            source_ids: string[];
+            dry_run?: boolean;
+            field_overrides?: {
+                [key: string]: unknown;
+            };
+        };
+        OrgMergeField: {
+            field: string;
+            label: string;
+            survivor_value?: unknown;
+            source_values?: {
+                id?: string;
+                name?: string;
+                value?: string;
+            }[];
+            result?: unknown;
+            conflict: boolean;
+        };
+        OrgMergeResult: {
+            /** Format: uuid */
+            survivor_id: string;
+            source_ids: string[];
+            /** Format: uuid */
+            suggested_survivor_id?: string;
+            fields: components["schemas"]["OrgMergeField"][];
+            moved: {
+                [key: string]: number;
+            };
+            warnings: string[];
+            media_urls?: string[];
+            dry_run: boolean;
+            merged?: boolean;
+        };
+        NameFixProposal: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            entity_type: "organization" | "activity";
+            /** Format: uuid */
+            entity_id: string;
+            current_value: string;
+            proposed_value: string;
+            rules: string[];
+            translation_patch?: {
+                [key: string]: string;
+            } | null;
+            /** @enum {string} */
+            status: "pending" | "applied" | "dismissed";
+            /** Format: uuid */
+            scan_run_id?: string | null;
+            decided_by?: string | null;
+            /** Format: date-time */
+            decided_at?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        NameFixListResponse: {
+            items: components["schemas"]["NameFixProposal"][];
+            next_cursor?: string | null;
+        };
+        NameFixSummary: {
+            by_status: {
+                [key: string]: number;
+            };
+            pending_by_entity: {
+                [key: string]: number;
+            };
+        };
+        NameFixSettings: {
+            enabled_rules: string[];
+            available_rules?: string[];
+            exception_words: string[];
+            bracket_suffixes: string[];
+        };
+        NameFixPreview: {
+            name: string;
+            rules: string[];
+            translation_patch?: {
+                [key: string]: string;
+            };
+            changed: boolean;
+        };
+        NameFixScanResult: {
+            /** Format: uuid */
+            scan_run_id: string;
+            created: number;
+            updated: number;
+            skipped: number;
+            truncated: boolean;
+        };
+        NameFixBulkRequest: {
+            /** @enum {string} */
+            action: "apply" | "dismiss";
+            ids?: string[];
+            entity_type?: string;
+            rule?: string;
+            q?: string;
+            dry_run?: boolean;
+        };
+        NameFixBulkResult: {
+            dry_run: boolean;
+            matched: number;
+            decided: number;
+            failed: number;
+            failures: {
+                id: string;
+                message: string;
+            }[];
         };
         HealthStatus: {
             healthy: boolean;

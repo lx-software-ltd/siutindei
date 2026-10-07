@@ -11,5 +11,7 @@ export const adminQueryKeys = {
   categorySuggestions: () => ['admin', 'category-suggestions'] as const,
   categoryReviews: () => ['admin', 'category-reviews'] as const,
   orgReview: () => ['admin', 'org-review'] as const,
+  orgDuplicates: () => ['admin', 'org-duplicates'] as const,
+  nameFixes: () => ['admin', 'name-fixes'] as const,
   importJobs: () => ['admin', 'import-jobs'] as const,
 };

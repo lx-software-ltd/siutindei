@@ -21,6 +21,7 @@ import { AuditLogsPanel } from './audit-logs-panel';
 import { CategoriesPage } from './categories-page';
 import { CognitoUsersPanel } from './cognito-users-panel';
 import { FeedbackPage } from './feedback-page';
+import { DataQualityPage } from './data-quality/data-quality-page';
 import { ImportsPanel } from './imports-panel';
 import { MediaPanel } from './media-panel';
 import { ManagerDashboard } from './manager-dashboard';
@@ -41,6 +42,7 @@ const sectionLabels = [
   { key: 'api-keys', label: 'API Keys' },
   { key: 'audit-logs', label: 'Audit Logs' },
   { key: 'imports', label: 'Imports' },
+  { key: 'data-quality', label: 'Data quality' },
 ];
 
 const recognizedSections = [
@@ -74,6 +76,8 @@ export function AdminDashboard() {
         return <SchedulesPanel mode='admin' />;
       case 'imports':
         return <ImportsPanel />;
+      case 'data-quality':
+        return <DataQualityPage />;
       case 'tickets':
         return <TicketsPanel />;
       case 'feedback':

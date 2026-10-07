@@ -508,3 +508,20 @@ budget defaults to 50 USD.
 Design notes:
 `docs/architecture/category-suggestions.md`. Endpoint shapes:
 `docs/api/admin.yaml` under `/v1/admin/category-suggestions`.
+
+## Data quality
+
+**Decision:** Duplicate organizations and display-name cleanup live on
+a Data quality nav item, with Duplicates and Names tabs. Merge fills
+blank fields on the survivor and lets the admin override a field that
+conflicts. The removed organization's `source_id` and `place_id` are
+stored on `organization_merges` so a later import updates the survivor.
+Name rules are deterministic (no model call). Imports apply them to
+every organization name and keep the original spelling in
+`source_note`. Activity names are cleaned only while the organization
+is `pending_review`. Duplicate scoring uses exact identity fields,
+`difflib`, and `pg_trgm` when the extension is present.
+
+Design notes: `docs/architecture/data-quality.md`. Endpoint shapes:
+`docs/api/admin.yaml` under `/v1/admin/org-duplicates` and
+`/v1/admin/name-fixes`.
