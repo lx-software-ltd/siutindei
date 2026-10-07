@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 
 import { useAdminSectionQuery } from '@/hooks/use-admin-section-query';
 import { usePrefetchAdminSection } from '@/hooks/use-prefetch-admin-section';
+import { buildAdminNavSections } from '@/lib/admin-nav-sections';
 
 import { AppShell } from '../app-shell';
 import { useAuth } from '../auth-provider';
@@ -28,14 +29,19 @@ import { ManagerDashboard } from './manager-dashboard';
 import { TicketsPanel } from './tickets-panel';
 import { UserDashboard } from './user-dashboard';
 
-const sectionLabels = [
+const primarySections = [
   { key: 'organizations', label: 'Organizations' },
   { key: 'media', label: 'Media' },
   { key: 'locations', label: 'Locations' },
   { key: 'activities', label: 'Activities' },
   { key: 'pricing', label: 'Pricing' },
   { key: 'schedules', label: 'Schedules' },
-  { key: 'api-keys', label: 'API Keys', dividerBefore: true },
+];
+
+// Append second-group pages here. buildAdminNavSections sorts them A-Z
+// and places the divider before the first tool item.
+const toolSections = [
+  { key: 'api-keys', label: 'API Keys' },
   { key: 'audit-logs', label: 'Audit Logs' },
   { key: 'activity-categories', label: 'Categories' },
   { key: 'data-quality', label: 'Data quality' },
@@ -44,6 +50,8 @@ const sectionLabels = [
   { key: 'tickets', label: 'Tickets' },
   { key: 'cognito-users', label: 'Users' },
 ];
+
+const sectionLabels = buildAdminNavSections(primarySections, toolSections);
 
 const recognizedSections = [
   ...sectionLabels,
