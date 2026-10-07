@@ -186,10 +186,21 @@ test.describe('Admin Dashboard Layout', () => {
     await expect(mainContent).toBeVisible();
   });
 
-  test('should label the workspace navigation group', async ({ adminPage }) => {
+  test('separates catalog and schedules with rules', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard');
 
-    await expect(adminPage.getByText('Workspace', { exact: true })).toHaveCount(2);
-    await expect(adminPage.locator('nav hr')).toHaveCount(0);
+    await expect(adminPage.getByText('Workspace', { exact: true })).toHaveCount(0);
+    const desktopItems = adminPage.locator('aside.hidden nav').locator('button, hr');
+    await expect(desktopItems).toHaveCount(17);
+    const labels = await desktopItems.evaluateAll((elements) =>
+      elements.map((element) =>
+        element.tagName === 'HR' ? '---' : (element.textContent ?? '').trim()
+      )
+    );
+    expect(labels[0]).toBe('Catalog');
+    expect(labels[1]).toBe('---');
+    expect(labels[7]).toBe('Schedules');
+    expect(labels[8]).toBe('---');
+    expect(labels.filter((label) => label === '---')).toHaveLength(2);
   });
 });

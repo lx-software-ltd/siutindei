@@ -9,8 +9,6 @@ import { Button } from './ui/button';
 export interface NavSection {
   key: string;
   label: string;
-  /** Group heading. Rendered when it differs from the previous item. */
-  group?: string;
   dividerBefore?: boolean;
 }
 
@@ -233,20 +231,12 @@ export function AppShell({
           )}
           <nav className='flex-1 overflow-y-auto p-4'>
             <div className='space-y-1'>
-              {sections.map((section, index) => {
+              {sections.map((section) => {
                 const isActive = section.key === activeKey;
-                const showGroup =
-                  Boolean(section.group) &&
-                  section.group !== sections[index - 1]?.group;
                 return (
                   <div key={section.key}>
                     {section.dividerBefore && (
                       <hr className='my-3 border-slate-200' />
-                    )}
-                    {showGroup && (
-                      <p className='px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400'>
-                        {section.group}
-                      </p>
                     )}
                     <button
                       type='button'
@@ -275,20 +265,12 @@ export function AppShell({
         {sections.length > 0 && (
           <aside className='hidden w-56 shrink-0 lg:block'>
             <nav className='sticky top-20 space-y-1'>
-              {sections.map((section, index) => {
+              {sections.map((section) => {
                 const isActive = section.key === activeKey;
-                const showGroup =
-                  Boolean(section.group) &&
-                  section.group !== sections[index - 1]?.group;
                 return (
                   <div key={section.key}>
                     {section.dividerBefore && (
                       <hr className='my-3 border-slate-200' />
-                    )}
-                    {showGroup && (
-                      <p className='px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400'>
-                        {section.group}
-                      </p>
                     )}
                     <button
                       type='button'
