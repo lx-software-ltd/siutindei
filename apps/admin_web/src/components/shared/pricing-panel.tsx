@@ -17,6 +17,7 @@ import {
 import type { ApiMode } from '../../lib/resource-api';
 import type { ActivityPricing } from '../../types/admin';
 import { StatusBanner } from '../status-banner';
+import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import {
@@ -527,7 +528,9 @@ export function PricingPanel({ mode }: PricingPanelProps) {
 
   return (
     <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='pricing'>
-      <ResourceTableShell
+      <div className='space-y-4'>
+        <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
+        <ResourceTableShell
         ariaLabel='Pricing'
         rows={filteredItems}
         getLabel={(item) => getLocationName(item.location_id)}
@@ -613,7 +616,8 @@ export function PricingPanel({ mode }: PricingPanelProps) {
           )
         }
       />
-      {panel.confirmDialog}
+        {panel.confirmDialog}
+      </div>
     </WorkspaceScopeGate>
   );
 }

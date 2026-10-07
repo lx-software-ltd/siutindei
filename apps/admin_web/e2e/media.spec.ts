@@ -4,7 +4,7 @@ test.describe('Media Panel', () => {
   test('adds, reorders, removes, and saves media', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=media&org=org-1');
     await expect(
-      adminPage.getByRole('heading', { name: 'Organization Media' })
+      adminPage.getByRole('heading', { name: 'Test Organization 1' })
     ).toBeVisible();
 
     const mediaInput = adminPage.locator('#media-url');

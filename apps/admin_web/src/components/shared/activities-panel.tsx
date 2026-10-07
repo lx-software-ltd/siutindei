@@ -38,6 +38,7 @@ import {
 } from '../ui/resource-table-shell';
 import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
+import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 
 interface ActivityFormState {
@@ -524,7 +525,9 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
 
   return (
     <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='activities'>
-      <ResourceTableShell
+      <div className='space-y-4'>
+        <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
+        <ResourceTableShell
         ariaLabel={isAdmin ? 'Activities' : 'Your activities'}
         rows={filteredItems}
         getLabel={(item) => item.name || 'Activity'}
@@ -599,7 +602,8 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
           deleteRowActions(() => panel.handleDelete(item))
         }
       />
-      {panel.confirmDialog}
+        {panel.confirmDialog}
+      </div>
     </WorkspaceScopeGate>
   );
 }
