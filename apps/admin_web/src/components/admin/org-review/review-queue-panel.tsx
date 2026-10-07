@@ -27,6 +27,7 @@ import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { Select } from '../../ui/select';
 import { StatusBadge } from '../../ui/status-badge';
 import { AdminCreateButton } from '../../ui/admin-create-button';
+import { AdminKpiCard } from '../../ui/admin-kpi-card';
 import { BULK_FIELDS_FORM_ID, BulkFieldsDialog } from './bulk-fields-dialog';
 
 const ISSUE_OPTIONS = [
@@ -222,22 +223,15 @@ export function CatalogPanel() {
         search can stay cached for up to 5 minutes. Open a row to fix it.
       </p>
       <div className='grid gap-3 sm:grid-cols-3'>
-        <div className='rounded-lg border border-slate-200 p-3'>
-          <p className='text-xs text-slate-500'>Pending review</p>
-          <p className='text-2xl font-semibold text-slate-900'>{pendingCount}</p>
-        </div>
-        <div className='rounded-lg border border-slate-200 p-3'>
-          <p className='text-xs text-slate-500'>With missing details</p>
-          <p className='text-2xl font-semibold text-slate-900'>
-            {summary?.with_blockers ?? 0}
-          </p>
-        </div>
-        <div className='rounded-lg border border-slate-200 p-3'>
-          <p className='text-xs text-slate-500'>Approved</p>
-          <p className='text-2xl font-semibold text-slate-900'>
-            {summary?.by_review_status.approved ?? 0}
-          </p>
-        </div>
+        <AdminKpiCard label='Pending review' value={pendingCount} />
+        <AdminKpiCard
+          label='With missing details'
+          value={summary?.with_blockers ?? 0}
+        />
+        <AdminKpiCard
+          label='Approved'
+          value={summary?.by_review_status.approved ?? 0}
+        />
       </div>
       <ResourceTableShell
         ariaLabel='Catalog'
