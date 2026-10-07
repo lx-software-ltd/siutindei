@@ -153,6 +153,7 @@ def _crud_get(
     scope, denied = resolve_list_org_scope(event, managed_org_ids)
     if denied is not None:
         return denied
+    rows: Sequence[Any]
     if config.name == "organizations":
         rows = list_organizations(
             session,

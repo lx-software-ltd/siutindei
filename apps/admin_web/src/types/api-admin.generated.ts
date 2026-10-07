@@ -30,6 +30,14 @@ export interface paths {
                      *     `vetting_note`.
                      */
                     source_id?: string;
+                    /** @description Limit the list to one organization. */
+                    org_id?: string;
+                    /** @description Case-insensitive name search. */
+                    q?: string;
+                    review_status?: "pending_review" | "approved" | "rejected";
+                    source?: string;
+                    /** @description Listing status filter. */
+                    status?: string;
                 };
                 header?: never;
                 path?: never;
@@ -2138,6 +2146,8 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    /** @description Limit locations to one organization. */
+                    org_id?: string;
                     limit?: number;
                     cursor?: string;
                 };
@@ -2896,6 +2906,8 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    /** @description Limit activities to one organization. */
+                    org_id?: string;
                     limit?: number;
                     cursor?: string;
                 };
@@ -3078,6 +3090,8 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    /** @description Limit pricing to one organization. */
+                    org_id?: string;
                     limit?: number;
                     cursor?: string;
                 };
@@ -3260,6 +3274,8 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    /** @description Limit schedules to one organization. */
+                    org_id?: string;
                     limit?: number;
                     cursor?: string;
                 };
@@ -3515,6 +3531,11 @@ export interface paths {
                     limit?: number;
                     /** @description Pagination token from previous response */
                     pagination_token?: string;
+                    /**
+                     * @description Email prefix. Sent to Cognito as `email ^= "value"` when
+                     *     the value matches a short allow-list of characters.
+                     */
+                    q?: string;
                 };
                 header?: never;
                 path?: never;
@@ -4011,6 +4032,8 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    /** @description Limit the list to one managed organization. */
+                    org_id?: string;
                     limit?: number;
                     cursor?: string;
                 };
@@ -4217,6 +4240,8 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    /** @description Limit locations to one managed organization. */
+                    org_id?: string;
                     limit?: number;
                     cursor?: string;
                 };
@@ -4423,6 +4448,8 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    /** @description Limit activities to one managed organization. */
+                    org_id?: string;
                     limit?: number;
                     cursor?: string;
                 };
@@ -4629,6 +4656,8 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    /** @description Limit pricing to one managed organization. */
+                    org_id?: string;
                     limit?: number;
                     cursor?: string;
                 };
@@ -4835,6 +4864,8 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    /** @description Limit schedules to one managed organization. */
+                    org_id?: string;
                     limit?: number;
                     cursor?: string;
                 };
@@ -6023,6 +6054,9 @@ export interface components {
             reviewed_at?: string | null;
             reviewed_by?: string | null;
             place_id?: string | null;
+            manager_id?: string | null;
+            email?: string | null;
+            phone_number?: string | null;
             location_count?: number;
             activity_count?: number;
             pricing_count?: number;
@@ -6110,8 +6144,12 @@ export interface components {
             name_translations?: components["schemas"]["TranslationMap"];
             /** @description Non-English description translations (language map) */
             description_translations?: components["schemas"]["TranslationMap"];
-            /** @description Cognito user sub of the organization manager (required) */
-            manager_id: string;
+            /**
+             * @description Cognito user sub of the organization manager. Optional on
+             *     owner create; a blank value defaults to the caller. The new
+             *     organization starts as pending_review.
+             */
+            manager_id?: string;
             /** @description ISO 3166-1 alpha-2 country code for phone number */
             phone_country_code?: string;
             /** @description National phone number digits (no country code) */
