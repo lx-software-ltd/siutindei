@@ -35,14 +35,14 @@ const sectionLabels = [
   { key: 'activities', label: 'Activities' },
   { key: 'pricing', label: 'Pricing' },
   { key: 'schedules', label: 'Schedules' },
-  { key: 'tickets', label: 'Tickets', dividerBefore: true },
-  { key: 'feedback', label: 'Feedback' },
-  { key: 'cognito-users', label: 'Users' },
-  { key: 'activity-categories', label: 'Categories' },
-  { key: 'api-keys', label: 'API Keys' },
+  { key: 'api-keys', label: 'API Keys', dividerBefore: true },
   { key: 'audit-logs', label: 'Audit Logs' },
-  { key: 'imports', label: 'Imports' },
+  { key: 'activity-categories', label: 'Categories' },
   { key: 'data-quality', label: 'Data quality' },
+  { key: 'feedback', label: 'Feedback' },
+  { key: 'imports', label: 'Imports' },
+  { key: 'tickets', label: 'Tickets' },
+  { key: 'cognito-users', label: 'Users' },
 ];
 
 const recognizedSections = [

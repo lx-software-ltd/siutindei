@@ -25,24 +25,21 @@ test.describe('Admin Dashboard', () => {
       'Organizations',
       'Media',
       'Locations',
-      'Categories',
       'Activities',
       'Pricing',
       'Schedules',
-      'Imports',
-      'Data quality',
-      'Tickets',
-      'Feedback',
-      'Users',
       'API Keys',
       'Audit Logs',
+      'Categories',
+      'Data quality',
+      'Feedback',
+      'Imports',
+      'Tickets',
+      'Users',
     ];
 
-    for (const section of expectedSections) {
-      await expect(
-        adminPage.getByRole('button', { name: section, exact: true })
-      ).toBeVisible();
-    }
+    const desktopNavButtons = adminPage.locator('aside.hidden nav button');
+    await expect(desktopNavButtons).toHaveText(expectedSections);
   });
 
   test('should highlight Organizations as default active section', async ({ adminPage }) => {
@@ -200,7 +197,7 @@ test.describe('Admin Dashboard Layout', () => {
     await expect(mainContent).toBeVisible();
   });
 
-  test('should display divider before Tickets section', async ({ adminPage }) => {
+  test('should display divider before the second navigation group', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard');
 
     // One divider per navigation (desktop sidebar + mobile drawer)
