@@ -408,7 +408,7 @@ export function NamesPanel() {
         )}
       />
       {settings ? (
-        <div className='space-y-3 rounded-lg border border-slate-200 p-4'>
+        <div className='space-y-3 rounded-lg border border-slate-200 bg-white p-4'>
           <h3 className='text-sm font-medium text-slate-900'>Rules</h3>
           <div className='flex flex-wrap gap-3'>
             {(settings.available_rules ?? settings.enabled_rules).map((rule) => (
