@@ -7,6 +7,8 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
+from app.services.name_sanitizer_areas import HK_AREAS
+
 RULE_CODES = (
     "html_entities",
     "nfkc",
@@ -32,20 +34,59 @@ _DEFAULT_EXCEPTIONS = (
     "US",
     "HKD",
 )
+# Always kept in capitals, even when the saved settings list omits them.
+_BUILTIN_EXCEPTIONS = frozenset(
+    {
+        "CCC",
+        "ELCHK",
+        "HHCKLA",
+        "HKSKH",
+        "HKU",
+        "HKUST",
+        "SKH",
+        "TWGHS",
+        "UPC",
+        "YWCA",
+    }
+)
 _DEFAULT_SUFFIXES = ("lcsd", "edb", "swd")
-_ROMAN = re.compile(r"^(?=[IVXLCDM]+$)[IVXLCDM]{1,8}$")
+_ROMAN_NUMERALS = frozenset(
+    {
+        "I",
+        "II",
+        "III",
+        "IV",
+        "V",
+        "VI",
+        "VII",
+        "VIII",
+        "IX",
+        "X",
+        "XI",
+        "XII",
+        "XIII",
+        "XIV",
+        "XV",
+        "XVI",
+        "XVII",
+        "XVIII",
+        "XIX",
+        "XX",
+    }
+)
 _CJK = re.compile(r"[\u3400-\u9fff]")
 _LATIN = re.compile(r"[A-Za-z]")
 _TRAILING = " .,;:|/\\-–—·"
 _CODE_BRACKETS = re.compile(r"\s*[\(\[][^()\]]*\d[^()\]]*[\)\]]")
 _BRACKET_PAIRS = (("(", ")"), ("[", "]"), ("（", "）"), ("［", "］"))
+_DOTTED_INITIALISM = re.compile(r"^[A-Za-z](?:\.[A-Za-z])+\.?$")
+_BRANCH_SUFFIX = re.compile(r"(分店|分校|店)$")
 _SMALL_WORDS = frozenset(
     {
         "A",
         "AN",
         "THE",
         "AND",
-        "OR",
         "NOR",
         "BUT",
         "AS",
@@ -57,11 +98,9 @@ _SMALL_WORDS = frozenset(
         "INTO",
         "OF",
         "OFF",
-        "ON",
         "ONTO",
         "OUT",
         "OVER",
-        "TO",
         "UP",
         "WITH",
     }
@@ -166,7 +205,15 @@ def _space_before_brackets(value: str) -> str:
 
 
 def _strip_trailing(value: str) -> str:
-    return value.strip(_TRAILING)
+    """Trim trailing punctuation, but keep a dotted initialism period."""
+    text = value
+    while text and text[-1] in _TRAILING:
+        if text[-1] == ".":
+            last_word = text.split()[-1] if text.split() else ""
+            if _DOTTED_INITIALISM.match(last_word):
+                break
+        text = text[:-1]
+    return text
 
 
 def _space_cjk(value: str) -> str:
@@ -186,7 +233,12 @@ def _strip_brackets(value: str, suffixes: frozenset[str]) -> str:
     return _collapse_whitespace(updated)
 
 
+def _kept_exceptions(exceptions: frozenset[str]) -> frozenset[str]:
+    return frozenset(item.upper() for item in exceptions) | _BUILTIN_EXCEPTIONS
+
+
 def _title_case(value: str, exceptions: frozenset[str]) -> str:
+    kept = _kept_exceptions(exceptions)
     words = value.split(" ")
     titled: list[str] = []
     phrase_start = True
@@ -195,9 +247,13 @@ def _title_case(value: str, exceptions: frozenset[str]) -> str:
             titled.append(word)
             continue
         start = phrase_start or bool(_OPEN_BRACKET.match(word))
-        titled.append(_title_word(word, exceptions, start))
+        titled.append(_title_word(word, kept, start))
         phrase_start = word[-1] in _PHRASE_END
     return " ".join(titled)
+
+
+def _is_dotted_initialism(token: str) -> bool:
+    return bool(_DOTTED_INITIALISM.match(token))
 
 
 def _title_word(word: str, exceptions: frozenset[str], phrase_start: bool) -> str:
@@ -209,7 +265,14 @@ def _title_word(word: str, exceptions: frozenset[str], phrase_start: bool) -> st
         return word
     prefix, core, suffix = match.groups()
     upper = core.upper()
-    if upper in exceptions or _ROMAN.match(upper):
+    letters_upper = letters.upper()
+    if (
+        upper in exceptions
+        or letters_upper in exceptions
+        or upper in _ROMAN_NUMERALS
+        or _is_dotted_initialism(core)
+        or _is_dotted_initialism(word)
+    ):
         return word
     if not phrase_start and upper in _SMALL_WORDS:
         return f"{prefix}{core.lower()}{suffix}"
@@ -220,7 +283,12 @@ def _title_word(word: str, exceptions: frozenset[str], phrase_start: bool) -> st
         if piece == "-":
             titled.append(piece)
             continue
-        if not piece_start and piece.upper() in _SMALL_WORDS:
+        piece_upper = piece.upper()
+        if piece_upper in exceptions or piece_upper in _ROMAN_NUMERALS:
+            titled.append(piece)
+            piece_start = False
+            continue
+        if not piece_start and piece_upper in _SMALL_WORDS:
             titled.append(piece.lower())
         else:
             titled.append(piece.capitalize())
@@ -228,10 +296,56 @@ def _title_word(word: str, exceptions: frozenset[str], phrase_start: bool) -> st
     return f"{prefix}{''.join(titled)}{suffix}"
 
 
+def _cjk_only(value: str) -> str:
+    return "".join(char for char in value if _CJK.match(char))
+
+
+def _is_place_or_branch(inner: str) -> bool:
+    compact = _cjk_only(inner)
+    if not compact:
+        return False
+    if _BRANCH_SUFFIX.search(compact):
+        return True
+    return compact in HK_AREAS
+
+
+def _starts_with_cjk(value: str) -> bool:
+    stripped = value.lstrip()
+    return bool(stripped) and bool(_CJK.match(stripped[0]))
+
+
+def _should_keep_mixed(original: str, english: str, chinese: str) -> bool:
+    if _BRANCH_SUFFIX.search(chinese):
+        return True
+    if _starts_with_cjk(original) and len(chinese) >= 6 and len(english.split()) <= 2:
+        return True
+    return False
+
+
+def _restore_place_brackets(original: str, english: str) -> str:
+    restored = english
+    for opener, closer in _BRACKET_PAIRS:
+        pattern = re.compile(
+            re.escape(opener)
+            + r"([^"
+            + re.escape(opener + closer)
+            + r"]*)"
+            + re.escape(closer)
+        )
+        for match in pattern.finditer(original):
+            inner = match.group(1).strip()
+            if not _is_place_or_branch(inner):
+                continue
+            token = f"{opener}{inner}{closer}"
+            if token not in restored:
+                restored = f"{restored} {token}"
+    return _collapse_whitespace(restored)
+
+
 def _split_bilingual(value: str, translations: dict) -> tuple[str, dict[str, str]]:
     if not _CJK.search(value) or not _LATIN.search(value):
         return value, {}
-    chinese = "".join(char for char in value if _CJK.match(char))
+    chinese = _cjk_only(value)
     english = _tidy_split_brackets(
         "".join(char if not _CJK.match(char) else " " for char in value)
     )
@@ -243,6 +357,11 @@ def _split_bilingual(value: str, translations: dict) -> tuple[str, dict[str, str
     patch: dict[str, str] = {}
     if not existing:
         patch["zh"] = chinese
+    if _should_keep_mixed(value, english, chinese):
+        return value, patch
+    english = _restore_place_brackets(value, english)
+    if len(english) < 2:
+        return value, patch
     return english, patch
 
 
