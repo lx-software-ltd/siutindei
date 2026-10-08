@@ -13,8 +13,8 @@ class GeographicAreaNode {
   });
 
   factory GeographicAreaNode.fromJson(Map<String, dynamic> json) {
-    final translations = json['name_translations'] as Map<String, dynamic>? ??
-        {};
+    final translations =
+        json['name_translations'] as Map<String, dynamic>? ?? {};
     return GeographicAreaNode(
       id: json['id'] as String,
       parentId: json['parent_id'] as String?,

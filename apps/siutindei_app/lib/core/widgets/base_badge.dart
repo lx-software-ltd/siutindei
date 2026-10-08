@@ -35,10 +35,7 @@ class BaseBadge extends ConsumerWidget {
     final borderRadius = BorderRadius.circular(badgeTokens.borderRadius);
 
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: borderRadius,
-      ),
+      decoration: BoxDecoration(color: background, borderRadius: borderRadius),
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: badgeTokens.paddingHorizontal,
@@ -68,8 +65,14 @@ class BaseBadge extends ConsumerWidget {
   (Color, Color) _getColors(BadgeTokens tokens) {
     return switch (variant) {
       BadgeVariant.primary => (tokens.background, tokens.foreground),
-      BadgeVariant.success => (tokens.successBackground, tokens.successForeground),
-      BadgeVariant.warning => (tokens.warningBackground, tokens.warningForeground),
+      BadgeVariant.success => (
+        tokens.successBackground,
+        tokens.successForeground,
+      ),
+      BadgeVariant.warning => (
+        tokens.warningBackground,
+        tokens.warningForeground,
+      ),
       BadgeVariant.error => (tokens.errorBackground, tokens.errorForeground),
     };
   }

@@ -19,12 +19,14 @@ def _includes(ruleset: dict[str, Any]) -> list[str]:
     return [str(item) for item in include]
 
 
-def targets_main(ruleset: dict[str, Any]) -> bool:
+def _targets_main_ref(ruleset: dict[str, Any]) -> bool:
     if ruleset.get("target") != "branch":
         return False
-    if ruleset.get("enforcement") != "active":
-        return False
     return any(item in MAIN_INCLUDES for item in _includes(ruleset))
+
+
+def targets_main(ruleset: dict[str, Any]) -> bool:
+    return _targets_main_ref(ruleset) and ruleset.get("enforcement") == "active"
 
 
 def targets_release_tags(ruleset: dict[str, Any]) -> bool:
@@ -72,6 +74,21 @@ def _has_context(contexts: list[str], needle: str) -> bool:
 def evaluate_branch_rulesets(rulesets: list[dict[str, Any]]) -> list[str]:
     active = [ruleset for ruleset in rulesets if targets_main(ruleset)]
     if not active:
+        inactive = [
+            ruleset
+            for ruleset in rulesets
+            if _targets_main_ref(ruleset) and ruleset.get("enforcement") != "active"
+        ]
+        if inactive:
+            described = ", ".join(
+                f"{ruleset.get('name') or 'unnamed'} "
+                f"({ruleset.get('enforcement') or 'unset'})"
+                for ruleset in inactive
+            )
+            message = (
+                f"Ruleset targets main but enforcement is not active: {described}."
+            )
+            return [message]
         return ["No active ruleset targets main."]
     errors: list[str] = []
     rules = _rules(active)

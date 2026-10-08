@@ -11,3 +11,4 @@ alwaysApply: false
 - Files and directories use snake_case. Types use UpperCamelCase. Members use lowerCamelCase. [why: convention]
 - Auth feature code is red. Plan in chat and wait for approval. [why: convention]
 - Amplify config arrives via dart-define. Do not hardcode pool ids. [why: convention]
+- The analyzer enforces braces, single quotes, and 80-character lines. [why: convention]

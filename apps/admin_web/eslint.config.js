@@ -15,7 +15,22 @@ const adminUiPlugin = {
         },
       },
       create(context) {
+        function reportMinWidth(node, source) {
+          if (/min-w-(?!0\b)/.test(source)) {
+            context.report({ node, messageId: 'minWidth' });
+          }
+        }
+
         return {
+          JSXAttribute(node) {
+            if (
+              node.name.type !== 'JSXIdentifier' ||
+              node.name.name !== 'tableClassName'
+            ) {
+              return;
+            }
+            reportMinWidth(node, context.sourceCode.getText(node));
+          },
           JSXOpeningElement(node) {
             if (
               node.name.type !== 'JSXIdentifier' ||
@@ -32,10 +47,7 @@ const adminUiPlugin = {
             if (!classAttr) {
               return;
             }
-            const source = context.sourceCode.getText(classAttr);
-            if (/min-w-(?!0\b)/.test(source)) {
-              context.report({ node: classAttr, messageId: 'minWidth' });
-            }
+            reportMinWidth(classAttr, context.sourceCode.getText(classAttr));
           },
         };
       },
@@ -128,15 +140,6 @@ module.exports = [
     plugins: { 'admin-ui': adminUiPlugin },
     rules: {
       'admin-ui/no-hand-rolled-field-error': 'error',
-    },
-  },
-  {
-    files: [
-      'src/components/ui/admin-record-table.tsx',
-      'src/components/ui/admin-data-table.tsx',
-    ],
-    plugins: { 'admin-ui': adminUiPlugin },
-    rules: {
       'admin-ui/no-record-table-min-width': 'error',
     },
   },

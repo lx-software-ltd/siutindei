@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 /// Primitive design tokens - the raw building blocks.
 ///
 /// These are the foundational values that never change based on context.
-/// They represent the raw palette and measurements available to the design system.
+/// They represent the raw palette and measurements available to the
+/// design system.
 ///
 /// ## Token Hierarchy
 /// ```
@@ -55,7 +56,9 @@ class PrimitiveTokens {
           ? PrimitiveRadius.fromJson(json['radius'] as Map<String, dynamic>)
           : PrimitiveRadius.defaults,
       typography: json['typography'] != null
-          ? PrimitiveTypography.fromJson(json['typography'] as Map<String, dynamic>)
+          ? PrimitiveTypography.fromJson(
+              json['typography'] as Map<String, dynamic>,
+            )
           : PrimitiveTypography.defaults,
       shadows: json['shadows'] != null
           ? PrimitiveShadows.fromJson(json['shadows'] as Map<String, dynamic>)
@@ -64,12 +67,12 @@ class PrimitiveTokens {
   }
 
   Map<String, dynamic> toJson() => {
-        'colors': colors.toJson(),
-        'spacing': spacing.toJson(),
-        'radius': radius.toJson(),
-        'typography': typography.toJson(),
-        'shadows': shadows.toJson(),
-      };
+    'colors': colors.toJson(),
+    'spacing': spacing.toJson(),
+    'radius': radius.toJson(),
+    'typography': typography.toJson(),
+    'shadows': shadows.toJson(),
+  };
 }
 
 /// Primitive color palette.
@@ -224,13 +227,34 @@ class PrimitiveColors {
       indigo800: parseColor(json['indigo800'] as String?, defaults.indigo800),
       indigo900: parseColor(json['indigo900'] as String?, defaults.indigo900),
       emerald50: parseColor(json['emerald50'] as String?, defaults.emerald50),
-      emerald100: parseColor(json['emerald100'] as String?, defaults.emerald100),
-      emerald200: parseColor(json['emerald200'] as String?, defaults.emerald200),
-      emerald300: parseColor(json['emerald300'] as String?, defaults.emerald300),
-      emerald400: parseColor(json['emerald400'] as String?, defaults.emerald400),
-      emerald500: parseColor(json['emerald500'] as String?, defaults.emerald500),
-      emerald600: parseColor(json['emerald600'] as String?, defaults.emerald600),
-      emerald700: parseColor(json['emerald700'] as String?, defaults.emerald700),
+      emerald100: parseColor(
+        json['emerald100'] as String?,
+        defaults.emerald100,
+      ),
+      emerald200: parseColor(
+        json['emerald200'] as String?,
+        defaults.emerald200,
+      ),
+      emerald300: parseColor(
+        json['emerald300'] as String?,
+        defaults.emerald300,
+      ),
+      emerald400: parseColor(
+        json['emerald400'] as String?,
+        defaults.emerald400,
+      ),
+      emerald500: parseColor(
+        json['emerald500'] as String?,
+        defaults.emerald500,
+      ),
+      emerald600: parseColor(
+        json['emerald600'] as String?,
+        defaults.emerald600,
+      ),
+      emerald700: parseColor(
+        json['emerald700'] as String?,
+        defaults.emerald700,
+      ),
       slate50: parseColor(json['slate50'] as String?, defaults.slate50),
       slate100: parseColor(json['slate100'] as String?, defaults.slate100),
       slate200: parseColor(json['slate200'] as String?, defaults.slate200),
@@ -256,6 +280,7 @@ class PrimitiveColors {
       final argb = c.toARGB32();
       return '#${argb.toRadixString(16).padLeft(8, '0').substring(2)}';
     }
+
     return {
       'indigo50': colorToHex(indigo50),
       'indigo500': colorToHex(indigo500),
@@ -347,24 +372,24 @@ class PrimitiveSpacing {
   }
 
   Map<String, double> toJson() => {
-        'space0': space0,
-        'space1': space1,
-        'space2': space2,
-        'space3': space3,
-        'space4': space4,
-        'space5': space5,
-        'space6': space6,
-        'space8': space8,
-        'space10': space10,
-        'space12': space12,
-        'space16': space16,
-        'space20': space20,
-        'space24': space24,
-        'space32': space32,
-        'space40': space40,
-        'space48': space48,
-        'space64': space64,
-      };
+    'space0': space0,
+    'space1': space1,
+    'space2': space2,
+    'space3': space3,
+    'space4': space4,
+    'space5': space5,
+    'space6': space6,
+    'space8': space8,
+    'space10': space10,
+    'space12': space12,
+    'space16': space16,
+    'space20': space20,
+    'space24': space24,
+    'space32': space32,
+    'space40': space40,
+    'space48': space48,
+    'space64': space64,
+  };
 }
 
 /// Primitive border radius scale.
@@ -414,15 +439,15 @@ class PrimitiveRadius {
   }
 
   Map<String, double> toJson() => {
-        'none': none,
-        'sm': sm,
-        'md': md,
-        'lg': lg,
-        'xl': xl,
-        'xl2': xl2,
-        'xl3': xl3,
-        'full': full,
-      };
+    'none': none,
+    'sm': sm,
+    'md': md,
+    'lg': lg,
+    'xl': xl,
+    'xl2': xl2,
+    'xl3': xl3,
+    'full': full,
+  };
 }
 
 /// Primitive typography scale.
@@ -490,33 +515,58 @@ class PrimitiveTypography {
 
     return PrimitiveTypography(
       fontFamily: json['fontFamily'] as String? ?? defaults.fontFamily,
-      fontSizeXs: (json['fontSizeXs'] as num?)?.toDouble() ?? defaults.fontSizeXs,
-      fontSizeSm: (json['fontSizeSm'] as num?)?.toDouble() ?? defaults.fontSizeSm,
-      fontSizeMd: (json['fontSizeMd'] as num?)?.toDouble() ?? defaults.fontSizeMd,
-      fontSizeLg: (json['fontSizeLg'] as num?)?.toDouble() ?? defaults.fontSizeLg,
-      fontSizeXl: (json['fontSizeXl'] as num?)?.toDouble() ?? defaults.fontSizeXl,
-      fontSize2xl: (json['fontSize2xl'] as num?)?.toDouble() ?? defaults.fontSize2xl,
-      fontSize3xl: (json['fontSize3xl'] as num?)?.toDouble() ?? defaults.fontSize3xl,
-      fontWeightNormal: parseWeight(json['fontWeightNormal'] as int?, defaults.fontWeightNormal),
-      fontWeightMedium: parseWeight(json['fontWeightMedium'] as int?, defaults.fontWeightMedium),
-      fontWeightSemibold: parseWeight(json['fontWeightSemibold'] as int?, defaults.fontWeightSemibold),
-      fontWeightBold: parseWeight(json['fontWeightBold'] as int?, defaults.fontWeightBold),
-      lineHeightTight: (json['lineHeightTight'] as num?)?.toDouble() ?? defaults.lineHeightTight,
-      lineHeightNormal: (json['lineHeightNormal'] as num?)?.toDouble() ?? defaults.lineHeightNormal,
-      lineHeightRelaxed: (json['lineHeightRelaxed'] as num?)?.toDouble() ?? defaults.lineHeightRelaxed,
+      fontSizeXs:
+          (json['fontSizeXs'] as num?)?.toDouble() ?? defaults.fontSizeXs,
+      fontSizeSm:
+          (json['fontSizeSm'] as num?)?.toDouble() ?? defaults.fontSizeSm,
+      fontSizeMd:
+          (json['fontSizeMd'] as num?)?.toDouble() ?? defaults.fontSizeMd,
+      fontSizeLg:
+          (json['fontSizeLg'] as num?)?.toDouble() ?? defaults.fontSizeLg,
+      fontSizeXl:
+          (json['fontSizeXl'] as num?)?.toDouble() ?? defaults.fontSizeXl,
+      fontSize2xl:
+          (json['fontSize2xl'] as num?)?.toDouble() ?? defaults.fontSize2xl,
+      fontSize3xl:
+          (json['fontSize3xl'] as num?)?.toDouble() ?? defaults.fontSize3xl,
+      fontWeightNormal: parseWeight(
+        json['fontWeightNormal'] as int?,
+        defaults.fontWeightNormal,
+      ),
+      fontWeightMedium: parseWeight(
+        json['fontWeightMedium'] as int?,
+        defaults.fontWeightMedium,
+      ),
+      fontWeightSemibold: parseWeight(
+        json['fontWeightSemibold'] as int?,
+        defaults.fontWeightSemibold,
+      ),
+      fontWeightBold: parseWeight(
+        json['fontWeightBold'] as int?,
+        defaults.fontWeightBold,
+      ),
+      lineHeightTight:
+          (json['lineHeightTight'] as num?)?.toDouble() ??
+          defaults.lineHeightTight,
+      lineHeightNormal:
+          (json['lineHeightNormal'] as num?)?.toDouble() ??
+          defaults.lineHeightNormal,
+      lineHeightRelaxed:
+          (json['lineHeightRelaxed'] as num?)?.toDouble() ??
+          defaults.lineHeightRelaxed,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'fontFamily': fontFamily,
-        'fontSizeXs': fontSizeXs,
-        'fontSizeSm': fontSizeSm,
-        'fontSizeMd': fontSizeMd,
-        'fontSizeLg': fontSizeLg,
-        'fontSizeXl': fontSizeXl,
-        'fontSize2xl': fontSize2xl,
-        'fontSize3xl': fontSize3xl,
-      };
+    'fontFamily': fontFamily,
+    'fontSizeXs': fontSizeXs,
+    'fontSizeSm': fontSizeSm,
+    'fontSizeMd': fontSizeMd,
+    'fontSizeLg': fontSizeLg,
+    'fontSizeXl': fontSizeXl,
+    'fontSize2xl': fontSize2xl,
+    'fontSize3xl': fontSize3xl,
+  };
 }
 
 /// Primitive shadow definitions.
@@ -538,25 +588,13 @@ class PrimitiveShadows {
   static const PrimitiveShadows defaults = PrimitiveShadows(
     none: [],
     sm: [
-      BoxShadow(
-        color: Color(0x0D000000),
-        blurRadius: 2,
-        offset: Offset(0, 1),
-      ),
+      BoxShadow(color: Color(0x0D000000), blurRadius: 2, offset: Offset(0, 1)),
     ],
     md: [
-      BoxShadow(
-        color: Color(0x1A000000),
-        blurRadius: 6,
-        offset: Offset(0, 2),
-      ),
+      BoxShadow(color: Color(0x1A000000), blurRadius: 6, offset: Offset(0, 2)),
     ],
     lg: [
-      BoxShadow(
-        color: Color(0x1A000000),
-        blurRadius: 15,
-        offset: Offset(0, 4),
-      ),
+      BoxShadow(color: Color(0x1A000000), blurRadius: 15, offset: Offset(0, 4)),
     ],
     xl: [
       BoxShadow(

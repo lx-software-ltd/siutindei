@@ -36,24 +36,23 @@ class OrganizationScreen extends ConsumerWidget {
           _buildAppBar(context, semantic),
           SliverToBoxAdapter(child: _buildOrganizationInfo(semantic)),
           SliverToBoxAdapter(child: _buildImageGallery(semantic)),
-          SliverToBoxAdapter(child: _buildActivitiesHeader(orgActivities.length, semantic)),
+          SliverToBoxAdapter(
+            child: _buildActivitiesHeader(orgActivities.length, semantic),
+          ),
           if (orgActivities.isNotEmpty)
             SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final result = orgActivities[index];
-                  return ActivityCard(
-                    result: result,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ActivityDetailScreen(result: result),
-                      ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final result = orgActivities[index];
+                return ActivityCard(
+                  result: result,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ActivityDetailScreen(result: result),
                     ),
-                  );
-                },
-                childCount: orgActivities.length,
-              ),
+                  ),
+                );
+              }, childCount: orgActivities.length),
             )
           else
             SliverToBoxAdapter(child: _buildNoActivitiesMessage(semantic)),
@@ -88,7 +87,8 @@ class OrganizationScreen extends ConsumerWidget {
       return Image.network(
         imageUrl,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(semantic),
+        errorBuilder: (context, error, stackTrace) =>
+            _buildPlaceholderImage(semantic),
       );
     }
     return _buildPlaceholderImage(semantic);
@@ -113,10 +113,10 @@ class OrganizationScreen extends ConsumerWidget {
   Widget _buildInitialsAvatar(double size, SemanticTokens semantic) {
     final initials = organization.name.isNotEmpty
         ? organization.name
-            .split(' ')
-            .take(2)
-            .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
-            .join()
+              .split(' ')
+              .take(2)
+              .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
+              .join()
         : '?';
     return Container(
       width: size,
@@ -152,9 +152,17 @@ class OrganizationScreen extends ConsumerWidget {
           SizedBox(height: semantic.spacing.md),
           Row(
             children: [
-              BaseBadge(label: 'Verified', icon: Icons.verified, variant: BadgeVariant.success),
+              BaseBadge(
+                label: 'Verified',
+                icon: Icons.verified,
+                variant: BadgeVariant.success,
+              ),
               const SizedBox(width: 8),
-              BaseBadge(label: 'Top Rated', icon: Icons.star, variant: BadgeVariant.warning),
+              BaseBadge(
+                label: 'Top Rated',
+                icon: Icons.star,
+                variant: BadgeVariant.warning,
+              ),
             ],
           ),
         ],
@@ -193,7 +201,10 @@ class OrganizationScreen extends ConsumerWidget {
                       width: 160,
                       height: 120,
                       color: semantic.color.backgroundMuted,
-                      child: Icon(Icons.broken_image, color: semantic.color.textTertiary),
+                      child: Icon(
+                        Icons.broken_image,
+                        color: semantic.color.textTertiary,
+                      ),
                     ),
                   ),
                 ),
@@ -249,10 +260,14 @@ class OrganizationScreen extends ConsumerWidget {
             color: semantic.color.textTertiary.withValues(alpha: 0.5),
           ),
           SizedBox(height: semantic.spacing.md),
-          Text('No activities in current search', style: semantic.text.titleSmall),
+          Text(
+            'No activities in current search',
+            style: semantic.text.titleSmall,
+          ),
           SizedBox(height: semantic.spacing.sm),
           Text(
-            'Try adjusting your filters to see more activities from this organization',
+            'Try adjusting your filters to see more activities '
+            'from this organization',
             style: semantic.text.bodySmall,
             textAlign: TextAlign.center,
           ),

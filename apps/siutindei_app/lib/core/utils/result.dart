@@ -39,33 +39,33 @@ sealed class Result<T> {
 
   /// Returns the value if successful, null otherwise.
   T? get valueOrNull => switch (this) {
-        Ok(value: final v) => v,
-        Error() => null,
-      };
+    Ok(value: final v) => v,
+    Error() => null,
+  };
 
   /// Returns the error if failed, null otherwise.
   Exception? get errorOrNull => switch (this) {
-        Ok() => null,
-        Error(error: final e) => e,
-      };
+    Ok() => null,
+    Error(error: final e) => e,
+  };
 
   /// Returns the value if successful, throws the error otherwise.
   T get valueOrThrow => switch (this) {
-        Ok(value: final v) => v,
-        Error(error: final e) => throw e,
-      };
+    Ok(value: final v) => v,
+    Error(error: final e) => throw e,
+  };
 
   /// Maps the value if successful.
   Result<U> map<U>(U Function(T value) transform) => switch (this) {
-        Ok(value: final v) => Result.ok(transform(v)),
-        Error(error: final e) => Result.error(e),
-      };
+    Ok(value: final v) => Result.ok(transform(v)),
+    Error(error: final e) => Result.error(e),
+  };
 
   /// Maps the value if successful, with a function that returns a Result.
   Result<U> flatMap<U>(Result<U> Function(T value) transform) => switch (this) {
-        Ok(value: final v) => transform(v),
-        Error(error: final e) => Result.error(e),
-      };
+    Ok(value: final v) => transform(v),
+    Error(error: final e) => Result.error(e),
+  };
 
   /// Executes callback if successful.
   Result<T> onOk(void Function(T value) callback) {

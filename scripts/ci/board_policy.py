@@ -45,6 +45,7 @@ PROTECTED_FILES = frozenset(
     }
 )
 CONTENT_ROOT = "content"
+ALLOWED_KINDS = frozenset({"feature", "fix", "content"})
 LINE_LIMIT = 400
 CONTENT_LINE_LIMIT = 2000
 CI_OK = frozenset({"success", "neutral", "skipped"})
@@ -147,6 +148,14 @@ def files_outside_content(files: list[dict[str, Any]]) -> list[str]:
     ]
 
 
+def unknown_kind_reason(kind: str) -> str | None:
+    """Reject brief kinds outside feature, fix, and content."""
+    supplied = (kind or "").strip().lower()
+    if supplied and supplied not in ALLOWED_KINDS:
+        return f"unknown brief kind '{supplied}'; expected feature, fix, or content"
+    return None
+
+
 def resolved_kind(files: list[dict[str, Any]], kind: str = "") -> str:
     """Return feature, fix, or content. Content is inferred only for content/**."""
     resolved = (kind or "").strip().lower()
@@ -163,6 +172,8 @@ def zone_for_files(files: list[dict[str, Any]], *, kind: str = "") -> str:
     Content-kind briefs are exempt from the red-zone map. They are still
     confined to content/** by evaluate_files.
     """
+    if unknown_kind_reason(kind):
+        return "unknown"
     if resolved_kind(files, kind) == "content":
         return "content"
     if files_protected(files):
@@ -172,6 +183,9 @@ def zone_for_files(files: list[dict[str, Any]], *, kind: str = "") -> str:
 
 def evaluate_files(files: list[dict[str, Any]], *, kind: str = "") -> str | None:
     """Return a refusal reason, or None when the change set is allowed."""
+    unknown = unknown_kind_reason(kind)
+    if unknown:
+        return unknown
     lines = changed_lines(files)
     kind_name = resolved_kind(files, kind)
     # Content briefs stay exempt from the red-zone map. A path under

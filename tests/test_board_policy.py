@@ -179,6 +179,32 @@ def test_red_zone_doc_matches_policy() -> None:
         assert board_policy.path_is_protected(sample) is True, entry
 
 
+def test_unknown_kind_is_refused() -> None:
+    files = [
+        {
+            "filename": "README.md",
+            "additions": 1,
+            "deletions": 0,
+            "changes": 1,
+        }
+    ]
+    reason = board_policy.evaluate_files(files, kind="Bugfix")
+    assert reason == (
+        "unknown brief kind 'bugfix'; expected feature, fix, or content"
+    )
+    assert board_policy.zone_for_files(files, kind="contnet") == "unknown"
+    content_files = [
+        {
+            "filename": "content/en/guide.md",
+            "additions": 1,
+            "deletions": 0,
+            "changes": 1,
+        }
+    ]
+    assert board_policy.evaluate_files(content_files, kind=" Content ") is None
+    assert board_policy.zone_for_files(content_files, kind="Content") == "content"
+
+
 def test_content_kind_rejects_non_content() -> None:
     files = [
         {

@@ -193,10 +193,16 @@ class SemanticColors {
       errorMuted: Color.alphaBlend(p.red500.withValues(alpha: 0.1), p.white),
       onError: p.white,
       success: p.green500,
-      successMuted: Color.alphaBlend(p.green500.withValues(alpha: 0.1), p.white),
+      successMuted: Color.alphaBlend(
+        p.green500.withValues(alpha: 0.1),
+        p.white,
+      ),
       onSuccess: p.white,
       warning: p.amber500,
-      warningMuted: Color.alphaBlend(p.amber500.withValues(alpha: 0.1), p.white),
+      warningMuted: Color.alphaBlend(
+        p.amber500.withValues(alpha: 0.1),
+        p.white,
+      ),
       onWarning: p.slate800,
       // Interactive
       interactive: p.indigo500,

@@ -17,10 +17,8 @@ import '../mappers/activity_mapper.dart';
 ///
 /// See: https://docs.flutter.dev/app-architecture/recommendations
 class ActivityRepositoryImpl implements ActivityRepository {
-  ActivityRepositoryImpl(
-    this._apiService, {
-    CacheManager? cacheManager,
-  }) : _cache = cacheManager ?? CacheManager.instance;
+  ActivityRepositoryImpl(this._apiService, {CacheManager? cacheManager})
+    : _cache = cacheManager ?? CacheManager.instance;
 
   final ApiService _apiService;
   final CacheManager _cache;
@@ -84,9 +82,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
   ) async {
     // For now, we don't have a dedicated endpoint for single activity
     // This would typically call a specific API endpoint
-    return Result.error(
-      BusinessException.notFound('Activity'),
-    );
+    return Result.error(BusinessException.notFound('Activity'));
   }
 
   /// Invalidates search cache when filters change significantly.
@@ -106,10 +102,8 @@ class ActivityRepositoryImpl implements ActivityRepository {
 /// Follows the same patterns as ActivityRepositoryImpl with caching
 /// and proper error handling.
 class OrganizationRepositoryImpl implements OrganizationRepository {
-  OrganizationRepositoryImpl(
-    this._apiService, {
-    CacheManager? cacheManager,
-  }) : _cache = cacheManager ?? CacheManager.instance;
+  OrganizationRepositoryImpl(this._apiService, {CacheManager? cacheManager})
+    : _cache = cacheManager ?? CacheManager.instance;
 
   // ignore: unused_field - will be used when endpoints are implemented
   final ApiService _apiService;
@@ -132,9 +126,7 @@ class OrganizationRepositoryImpl implements OrganizationRepository {
     String organizationId,
   ) async {
     // For now, we don't have a dedicated endpoint for single organization
-    return Result.error(
-      BusinessException.notFound('Organization'),
-    );
+    return Result.error(BusinessException.notFound('Organization'));
   }
 
   @override
@@ -154,8 +146,6 @@ class OrganizationRepositoryImpl implements OrganizationRepository {
     String organizationId,
   ) async {
     // For now, we don't have a dedicated endpoint for organization activities
-    return Result.error(
-      BusinessException.notFound('Organization activities'),
-    );
+    return Result.error(BusinessException.notFound('Organization activities'));
   }
 }

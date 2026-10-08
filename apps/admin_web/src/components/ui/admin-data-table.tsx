@@ -23,7 +23,10 @@ const adminDataTableBodyCellBase = `px-4 py-3 ${adminDataTableCellMobileWrap}`;
 
 export interface AdminDataTableProps {
   children: ReactNode;
-  /** Applied to the table element (for example min width). */
+  /**
+   * Extra classes on the `<table>`. Do not pass min-w-*; the scroll
+   * container handles overflow.
+   */
   tableClassName?: string;
 }
 

@@ -126,14 +126,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         child: Column(
           children: [
             // Header is static except for auth state
-            _SearchHeader(
-              isSignedIn: isSignedIn,
-              onAuthTap: _handleAuthTap,
-            ),
-            _SearchBar(
-              controller: _searchController,
-              onSearch: _performSearch,
-            ),
+            _SearchHeader(isSignedIn: isSignedIn, onAuthTap: _handleAuthTap),
+            _SearchBar(controller: _searchController, onSearch: _performSearch),
             _QuickFilters(
               onFilterBadgeTap: _showFiltersSheet,
               onDayTap: _toggleDayFilter,
@@ -141,21 +135,29 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               onPricingTypeChanged: (value) {
                 final currentFilters = ref.read(activitiesFiltersProvider);
                 if (value == null) {
-                  _updateFilters(currentFilters.copyWith(clearPricingType: true));
+                  _updateFilters(
+                    currentFilters.copyWith(clearPricingType: true),
+                  );
                 } else {
-                  _updateFilters(currentFilters.copyWith(
-                    pricingType: PricingType.fromString(value),
-                  ));
+                  _updateFilters(
+                    currentFilters.copyWith(
+                      pricingType: PricingType.fromString(value),
+                    ),
+                  );
                 }
               },
               onScheduleTypeChanged: (value) {
                 final currentFilters = ref.read(activitiesFiltersProvider);
                 if (value == null) {
-                  _updateFilters(currentFilters.copyWith(clearScheduleType: true));
+                  _updateFilters(
+                    currentFilters.copyWith(clearScheduleType: true),
+                  );
                 } else {
-                  _updateFilters(currentFilters.copyWith(
-                    scheduleType: ScheduleType.fromString(value),
-                  ));
+                  _updateFilters(
+                    currentFilters.copyWith(
+                      scheduleType: ScheduleType.fromString(value),
+                    ),
+                  );
                 }
               },
             ),
@@ -187,10 +189,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
 /// Extracted header widget - rebuilds only when auth state changes.
 class _SearchHeader extends ConsumerWidget {
-  const _SearchHeader({
-    required this.isSignedIn,
-    required this.onAuthTap,
-  });
+  const _SearchHeader({required this.isSignedIn, required this.onAuthTap});
 
   final bool isSignedIn;
   final VoidCallback onAuthTap;
@@ -237,10 +236,7 @@ class _SearchHeader extends ConsumerWidget {
 
 /// Extracted search bar widget.
 class _SearchBar extends ConsumerWidget {
-  const _SearchBar({
-    required this.controller,
-    required this.onSearch,
-  });
+  const _SearchBar({required this.controller, required this.onSearch});
 
   final TextEditingController controller;
   final VoidCallback onSearch;
@@ -392,16 +388,11 @@ class _ResultsList extends ConsumerWidget {
     final spacing = ref.watch(semanticTokensProvider.select((s) => s.spacing));
 
     if (state.isLoading && state.items.isEmpty) {
-      return Center(
-        child: CircularProgressIndicator(color: colors.primary),
-      );
+      return Center(child: CircularProgressIndicator(color: colors.primary));
     }
 
     if (state.errorMessage != null && state.items.isEmpty) {
-      return _ErrorState(
-        message: state.errorMessage!,
-        onRetry: onRefresh,
-      );
+      return _ErrorState(message: state.errorMessage!, onRetry: onRefresh);
     }
 
     if (state.items.isEmpty) {
@@ -435,12 +426,13 @@ class _ResultsList extends ConsumerWidget {
     );
   }
 
-  void _navigateToDetail(BuildContext context, ActivitySearchResultEntity result) {
+  void _navigateToDetail(
+    BuildContext context,
+    ActivitySearchResultEntity result,
+  ) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => ActivityDetailScreen(result: result),
-      ),
+      MaterialPageRoute(builder: (_) => ActivityDetailScreen(result: result)),
     );
   }
 
@@ -521,10 +513,7 @@ class _EmptyState extends ConsumerWidget {
 
 /// Error state widget.
 class _ErrorState extends ConsumerWidget {
-  const _ErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _ErrorState({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
@@ -557,10 +546,7 @@ class _ErrorState extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: spacing.lg),
-            ElevatedButton(
-              onPressed: onRetry,
-              child: const Text('Try again'),
-            ),
+            ElevatedButton(onPressed: onRetry, child: const Text('Try again')),
           ],
         ),
       ),

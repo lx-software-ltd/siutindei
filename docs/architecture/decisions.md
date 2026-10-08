@@ -537,8 +537,8 @@ Design notes: `docs/architecture/data-quality.md`. Endpoint shapes:
 path-scoped rules and skills. `.cursorrules` is a pointer. Autonomy
 follows `docs/architecture/zones.md`: red work waits for a human, yellow
 work starts from a plan file and a research memo, green work implements
-and verifies. Content-kind board briefs stay exempt and may only change
-`content/**`.
+and verifies. Board brief kind is `feature`, `fix`, or `content`.
+Content-kind briefs stay exempt and may only change `content/**`.
 
 Repeated constraints are checks (`scripts/validate_agent_rules.py`,
 file length, focused tests, OpenAPI routes, Lambda catalog, CDK

@@ -61,6 +61,17 @@ def _body(text: str) -> str:
     return text[match.end() :]
 
 
+def _repo_is_shallow() -> bool:
+    result = subprocess.run(
+        ["git", "rev-parse", "--is-shallow-repository"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip() == "true"
+
+
 def _why_is_real(tag: str) -> bool:
     shas = WHY_SHA.findall(tag)
     if not shas:
@@ -94,17 +105,29 @@ def _check_rule(name: str, path: Path, *, always: bool) -> list[str]:
         errors.append(f"{name} must set globs")
     if always and fields.get("globs"):
         errors.append(f"{name} is always applied and must not set globs")
-    for line_number, line in enumerate(_body(text).splitlines(), start=1):
+    body = _body(text)
+    match = FRONT_MATTER.match(text)
+    start = text[: match.end()].count("\n") + 1 if match else 1
+    shallow = _repo_is_shallow()
+    for offset, line in enumerate(body.splitlines()):
         if not line.startswith("- "):
             continue
+        line_number = start + offset
         if "[why:" not in line:
             errors.append(f"{name}:{line_number} rule bullet is missing [why:]")
             continue
         tag = line.split("[why:", 1)[1]
-        if not _why_is_real(tag):
+        if _why_is_real(tag):
+            continue
+        if shallow and WHY_SHA.findall(tag):
             errors.append(
-                f"{name}:{line_number} [why:] is not a known commit or convention"
+                f"{name}:{line_number} [why:] commit is not in this shallow "
+                "clone; fetch full history (fetch-depth: 0)"
             )
+            continue
+        errors.append(
+            f"{name}:{line_number} [why:] is not a known commit or convention"
+        )
     return errors
 
 

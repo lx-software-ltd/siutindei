@@ -4,9 +4,10 @@ Autonomy follows blast radius. A person draws this map. A change that
 touches more than one zone uses the stricter zone. If implementation
 spreads into a stricter zone, stop and ask.
 
-Board briefs of `kind: content` stay exempt from this map. They may
-only change `content/**`, including paths that would otherwise be red
-because a directory name matches. The enforcer is
+Board brief kind is `feature`, `fix`, or `content`. Any other value
+is refused. Briefs of `kind: content` stay exempt from this map. They
+may only change `content/**`, including paths that would otherwise be
+red because a directory name matches. The enforcer is
 `scripts/ci/board_policy.py`.
 
 ## Red
@@ -62,3 +63,11 @@ Implement and verify. Summarise intent in the pull request.
 
 Hooks still format edits and block destructive commands in every zone.
 CI remains the merge gate.
+
+## Content
+
+`content/**` is editorial copy for a board brief whose kind is
+`content`. It is not application source, and the apps do not import
+it until a separate code change wires a file in. A content brief may
+not change code, config, fixtures, or `shared/**`. Add markdown under
+`content/`.

@@ -165,7 +165,9 @@ A CI workflow (`.github/workflows/verify-rulesets.yml`) runs weekly and on
 demand to verify that branch protection rules are correctly configured.
 
 The verification checks:
-- Branch protection exists for `main`
+- An **active** ruleset targets `main`. A ruleset whose enforcement is
+  `disabled` or `evaluate` fails this check. Classic branch protection
+  is not a substitute for that disabled ruleset.
 - Required status checks are configured
 - Force push protection is enabled
 - Deletion protection is enabled

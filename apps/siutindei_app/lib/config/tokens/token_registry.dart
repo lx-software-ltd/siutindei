@@ -127,9 +127,9 @@ class DesignTokens {
 
   /// Export tokens to JSON.
   Map<String, dynamic> toJson() => {
-        'primitive': primitive.toJson(),
-        // semantic and component can be derived, so optional to export
-      };
+    'primitive': primitive.toJson(),
+    // semantic and component can be derived, so optional to export
+  };
 
   /// Generate Flutter ThemeData from tokens.
   ThemeData toThemeData() {
@@ -227,9 +227,7 @@ class DesignTokens {
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: c.button.textForeground,
-        ),
+        style: TextButton.styleFrom(foregroundColor: c.button.textForeground),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: c.chip.background,
@@ -376,8 +374,8 @@ class DesignTokensNotifier extends Notifier<DesignTokens> {
 /// Notifier provider for dynamic token management.
 final designTokensNotifierProvider =
     NotifierProvider<DesignTokensNotifier, DesignTokens>(
-  DesignTokensNotifier.new,
-);
+      DesignTokensNotifier.new,
+    );
 
 // ============================================================
 // CONVENIENCE EXTENSIONS

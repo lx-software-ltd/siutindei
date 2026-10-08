@@ -27,10 +27,16 @@ def test_shell_guard_decisions() -> None:
     module = _load("guard_shell", ROOT / ".cursor" / "hooks" / "guard_shell.py")
     denied = [
         "git push --force origin feature",
+        "git push --force-with-lease origin cursor/x",
+        "git push origin +main",
+        "git push origin +feature",
+        "git push origin HEAD:+main",
+        "git push -uf origin feature",
         "git push origin main",
         "git push origin HEAD:staging",
         "git reset --hard HEAD",
         "rm -rf /workspace",
+        "rm -rf ../outside",
         "psql -c 'DROP TABLE users'",
         "npx cdk deploy",
         "aws s3 delete-bucket --bucket example",
@@ -48,6 +54,12 @@ def test_shell_guard_decisions() -> None:
     assert permission == "allow"
     permission, _message = module.decide("rm -rf /tmp/cursor-scratch")
     assert permission == "allow"
+    permission, _message = module.decide("rm -rf node_modules")
+    assert permission == "allow"
+    permission, _message = module.decide("rm -rf apps/admin_web/.next")
+    assert permission == "allow"
+    permission, message = module.decide("rm -f out.txt && git push origin feature")
+    assert permission == "allow", message
 
 
 def test_session_start_writes_marker(tmp_path: Path) -> None:
@@ -96,3 +108,49 @@ def test_ruleset_evaluator_reports_a_missing_main_ruleset() -> None:
     )
     assert module.evaluate_branch_rulesets([]) == ["No active ruleset targets main."]
     assert module.legacy_read_is_absent("gh api failed: HTTP 403") is True
+
+
+def test_disabled_main_ruleset_is_not_protection() -> None:
+    module = _load(
+        "verify_github_rulesets", ROOT / "scripts" / "verify_github_rulesets.py"
+    )
+    disabled = {
+        "name": "main-protection",
+        "target": "branch",
+        "enforcement": "disabled",
+        "conditions": {"ref_name": {"include": ["refs/heads/main"]}},
+        "rules": [
+            {
+                "type": "pull_request",
+                "parameters": {"required_approving_review_count": 1},
+            },
+            {
+                "type": "required_status_checks",
+                "parameters": {
+                    "required_status_checks": [
+                        {"context": "lint"},
+                        {"context": "test"},
+                    ]
+                },
+            },
+            {"type": "deletion"},
+            {"type": "non_fast_forward"},
+        ],
+    }
+    legacy = {
+        "required_pull_request_reviews": {"required_approving_review_count": 1},
+        "required_status_checks": {"contexts": ["lint", "test"]},
+        "allow_force_pushes": {"enabled": False},
+        "allow_deletions": {"enabled": False},
+    }
+    errors = module.evaluate(
+        rulesets=[disabled],
+        legacy_protection=legacy,
+        legacy_tags=["v1"],
+    )
+    assert errors == [
+        (
+            "Ruleset targets main but enforcement is not active: "
+            "main-protection (disabled)."
+        )
+    ]

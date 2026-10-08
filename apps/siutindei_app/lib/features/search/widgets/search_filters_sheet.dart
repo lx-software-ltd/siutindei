@@ -28,10 +28,8 @@ class SearchFiltersSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => SearchFiltersSheet(
-        initialFilters: initialFilters,
-        onApply: onApply,
-      ),
+      builder: (context) =>
+          SearchFiltersSheet(initialFilters: initialFilters, onApply: onApply),
     );
   }
 
@@ -196,10 +194,8 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
       selectedAreaId: _filters.areaId,
       onAreaChanged: (areaId) {
         _updateFilters(
-          (filters) => filters.copyWith(
-            areaId: areaId,
-            clearAreaId: areaId == null,
-          ),
+          (filters) =>
+              filters.copyWith(areaId: areaId, clearAreaId: areaId == null),
         );
       },
     );
@@ -246,10 +242,14 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
           label: Text(entry.value),
           selected: isSelected,
           onSelected: (selected) {
-            _updateFilters((f) => f.copyWith(
-                  pricingType: selected ? PricingType.fromString(entry.key) : null,
-                  clearPricingType: !selected,
-                ));
+            _updateFilters(
+              (f) => f.copyWith(
+                pricingType: selected
+                    ? PricingType.fromString(entry.key)
+                    : null,
+                clearPricingType: !selected,
+              ),
+            );
           },
         );
       }).toList(),
@@ -266,10 +266,12 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
           label: Text(AppConstants.daysOfWeekShort[index]),
           selected: isSelected,
           onSelected: (selected) {
-            _updateFilters((f) => f.copyWith(
-                  dayOfWeekUtc: selected ? index : null,
-                  clearDayOfWeekUtc: !selected,
-                ));
+            _updateFilters(
+              (f) => f.copyWith(
+                dayOfWeekUtc: selected ? index : null,
+                clearDayOfWeekUtc: !selected,
+              ),
+            );
           },
         );
       }),

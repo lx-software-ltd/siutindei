@@ -33,9 +33,7 @@ class _HomeWizardScreenState extends ConsumerState<HomeWizardScreen> {
     final textStyles = ref.watch(semanticTokensProvider.select((s) => s.text));
 
     if (wizardState.isLoadingChoices) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (wizardState.choices == null) {
@@ -64,10 +62,7 @@ class _HomeWizardScreenState extends ConsumerState<HomeWizardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Siu Tin Dei',
-                    style: textStyles.headlineMedium,
-                  ),
+                  Text('Siu Tin Dei', style: textStyles.headlineMedium),
                   SizedBox(height: spacing.sm),
                   _WizardSummaryBar(
                     choices: wizardState.choices!,
@@ -100,9 +95,7 @@ class _HomeWizardScreenState extends ConsumerState<HomeWizardScreen> {
                 ),
               ),
               SizedBox(height: spacing.sm),
-              Expanded(
-                child: _WizardResultsList(state: wizardState),
-              ),
+              Expanded(child: _WizardResultsList(state: wizardState)),
             ],
           ],
         ),
@@ -112,10 +105,7 @@ class _HomeWizardScreenState extends ConsumerState<HomeWizardScreen> {
 }
 
 class _WizardSummaryBar extends ConsumerWidget {
-  const _WizardSummaryBar({
-    required this.choices,
-    required this.state,
-  });
+  const _WizardSummaryBar({required this.choices, required this.state});
 
   final HomeWizardChoices choices;
   final HomeWizardState state;
@@ -187,10 +177,7 @@ class _WizardSummaryBar extends ConsumerWidget {
 }
 
 class _WizardStepContent extends ConsumerWidget {
-  const _WizardStepContent({
-    required this.choices,
-    required this.state,
-  });
+  const _WizardStepContent({required this.choices, required this.state});
 
   final HomeWizardChoices choices;
   final HomeWizardState state;
@@ -230,10 +217,7 @@ class _WizardStepContent extends ConsumerWidget {
         return ListView(
           padding: EdgeInsets.all(spacing.md),
           children: [
-            Text(
-              'How old is your child?',
-              style: textStyles.titleMedium,
-            ),
+            Text('How old is your child?', style: textStyles.titleMedium),
             SizedBox(height: spacing.md),
             for (final option in choices.ageGroups)
               _WizardOptionTile(
@@ -247,10 +231,7 @@ class _WizardStepContent extends ConsumerWidget {
         return ListView(
           padding: EdgeInsets.all(spacing.md),
           children: [
-            Text(
-              'Which area is near you?',
-              style: textStyles.titleMedium,
-            ),
+            Text('Which area is near you?', style: textStyles.titleMedium),
             if (state.prefetchStatus == HomeWizardPrefetchStatus.loading)
               Padding(
                 padding: EdgeInsets.only(top: spacing.md),
@@ -307,9 +288,7 @@ class _WizardResultsList extends ConsumerWidget {
     final textStyles = ref.watch(semanticTokensProvider.select((s) => s.text));
 
     if (state.prefetchStatus == HomeWizardPrefetchStatus.loading) {
-      return Center(
-        child: CircularProgressIndicator(color: colors.primary),
-      );
+      return Center(child: CircularProgressIndicator(color: colors.primary));
     }
 
     if (state.prefetchStatus == HomeWizardPrefetchStatus.error) {
@@ -361,9 +340,7 @@ class _WizardResultsList extends ConsumerWidget {
   void _openDetail(BuildContext context, ActivitySearchResultEntity result) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => ActivityDetailScreen(result: result),
-      ),
+      MaterialPageRoute(builder: (_) => ActivityDetailScreen(result: result)),
     );
   }
 

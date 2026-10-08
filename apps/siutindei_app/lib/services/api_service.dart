@@ -15,7 +15,9 @@ class ApiService {
   final AuthService _authService;
   final DeviceAttestationService _deviceAttestationService;
 
-  Future<ActivitySearchResponse> searchActivities(ActivitySearchFilters filters) async {
+  Future<ActivitySearchResponse> searchActivities(
+    ActivitySearchFilters filters,
+  ) async {
     if (AppAmplifyConfig.stagingSearchDataEnabled) {
       return StagingSearchService.searchActivities(filters);
     }
@@ -30,12 +32,14 @@ class ApiService {
     }
     final attestationToken = await _deviceAttestationService.getToken();
     headers['x-device-attestation'] = attestationToken;
-    final response = await Amplify.API.get(
-      '/v1/activities/search',
-      apiName: AppAmplifyConfig.apiName,
-      headers: headers,
-      queryParameters: filters.toQueryParameters(),
-    ).response;
+    final response = await Amplify.API
+        .get(
+          '/v1/activities/search',
+          apiName: AppAmplifyConfig.apiName,
+          headers: headers,
+          queryParameters: filters.toQueryParameters(),
+        )
+        .response;
     final decoded = jsonDecode(response.decodeBody()) as Map<String, dynamic>;
     return ActivitySearchResponse.fromJson(decoded);
   }
@@ -45,11 +49,13 @@ class ApiService {
     if (tokens == null) {
       throw StateError('Sign in required to load areas from the API');
     }
-    final response = await Amplify.API.get(
-      '/v1/user/areas',
-      apiName: AppAmplifyConfig.apiName,
-      headers: {'Authorization': tokens.idToken},
-    ).response;
+    final response = await Amplify.API
+        .get(
+          '/v1/user/areas',
+          apiName: AppAmplifyConfig.apiName,
+          headers: {'Authorization': tokens.idToken},
+        )
+        .response;
     return AreaTreeResponse.fromJson(
       jsonDecode(response.decodeBody()) as Map<String, dynamic>,
     );

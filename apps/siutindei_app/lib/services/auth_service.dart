@@ -41,9 +41,7 @@ class AuthService {
     }
   }
 
-  Future<SignInResult> startPasswordlessSignIn({
-    required String username,
-  }) {
+  Future<SignInResult> startPasswordlessSignIn({required String username}) {
     return Amplify.Auth.signIn(username: username);
   }
 
@@ -54,13 +52,16 @@ class AuthService {
     }
   }
 
-  Future<void> signUpWithEmail({required String username, required String password}) {
+  Future<void> signUpWithEmail({
+    required String username,
+    required String password,
+  }) {
     return Amplify.Auth.signUp(
       username: username,
       password: password,
-      options: SignUpOptions(userAttributes: {
-        AuthUserAttributeKey.email: username,
-      }),
+      options: SignUpOptions(
+        userAttributes: {AuthUserAttributeKey.email: username},
+      ),
     );
   }
 

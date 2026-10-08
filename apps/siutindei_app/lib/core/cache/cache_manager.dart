@@ -145,9 +145,9 @@ class CacheManager {
 
   /// Gets cache statistics.
   CacheStats get stats => CacheStats(
-        entryCount: _cache.length,
-        pendingFetches: _pendingFetches.length,
-      );
+    entryCount: _cache.length,
+    pendingFetches: _pendingFetches.length,
+  );
 
   Future<Result<T>> _fetchAndCache<T>(
     String key,
@@ -199,10 +199,7 @@ class CacheManager {
 
 /// Cache statistics.
 class CacheStats {
-  const CacheStats({
-    required this.entryCount,
-    required this.pendingFetches,
-  });
+  const CacheStats({required this.entryCount, required this.pendingFetches});
 
   final int entryCount;
   final int pendingFetches;
@@ -224,6 +221,5 @@ class CacheKeys {
   static String organization(String orgId) => 'organization_$orgId';
 
   /// Organization activities cache key.
-  static String organizationActivities(String orgId) =>
-      'org_activities_$orgId';
+  static String organizationActivities(String orgId) => 'org_activities_$orgId';
 }

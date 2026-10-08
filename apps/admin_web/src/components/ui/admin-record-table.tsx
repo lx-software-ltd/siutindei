@@ -32,7 +32,10 @@ export interface AdminRecordTableProps {
   footer?: ReactNode;
   /** Bulk actions or job status between the filters and the table. */
   toolbar?: ReactNode;
-  /** Applied to the `<table>`; use it for the minimum width. */
+  /**
+   * Extra classes on the `<table>`. Do not pass min-w-*; the scroll
+   * container handles overflow.
+   */
   tableClassName?: string;
   /**
    * Render without the white card. For nested record tables inside an open
