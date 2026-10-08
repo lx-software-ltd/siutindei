@@ -78,7 +78,8 @@ their primary responsibilities.
 - Purpose: admin CRUD (including activity categories, category
   suggestions, and partner API key
   management), manager CRUD (filtered by ownership), partner CRUD
-  (scope- and organization-filtered by API key), user self-service
+  (scope- and organization-filtered by API key; full-access keys list
+  every organization and `GET /v1/partner/name-fixes`), user self-service
   (tickets), Cognito user management, audit logs, media upload, admin
   import/export (`POST /v1/admin/imports` accepts `dry_run` to validate
   without commit or audit rows; `object_key` is idempotent via

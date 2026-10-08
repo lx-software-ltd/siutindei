@@ -59,6 +59,10 @@ from app.api.admin_resources import (
 )
 from app.api.admin_suggestions import _handle_user_organization_suggestion
 from app.api.partner_auth import SCOPE_CRUD, get_partner_context
+from app.api.partner_name_fixes import (
+    handle_partner_name_fixes,
+    partner_get_organizations,
+)
 from app.api.admin_tickets import (
     _handle_admin_tickets,
     _handle_user_access_request,
@@ -444,6 +448,14 @@ def _handle_partner_routes(
             event=event,
         )
 
+    if resource == "name-fixes":
+        if method != "GET":
+            return json_response(404, {"error": "Not found"}, event=event)
+        return _safe_handler(
+            lambda: handle_partner_name_fixes(event, partner.org_id),
+            event,
+        )
+
     if resource not in _PARTNER_RESOURCES:
         return json_response(404, {"error": "Not found"}, event=event)
 
@@ -458,6 +470,12 @@ def _handle_partner_routes(
                 {"error": "Organization-scoped keys cannot create organizations"},
                 event=event,
             )
+
+    if resource == "organizations" and method == "GET":
+        return _safe_handler(
+            lambda: partner_get_organizations(event, resource_id, managed_org_ids),
+            event,
+        )
 
     config = _RESOURCE_CONFIG.get(resource)
     if not config:

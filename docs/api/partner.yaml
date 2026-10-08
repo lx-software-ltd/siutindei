@@ -31,6 +31,11 @@ info:
     - Org-scoped keys cannot create organizations (`POST
       /v1/partner/organizations` returns `403`) and cannot change the
       organization manager.
+    - A full-access key lists every organization (`pending_review`,
+      `approved`, and `rejected`) and can read pending name-cleanup
+      proposals (`GET /v1/partner/name-fixes`). Organization list and
+      detail responses include `pending_name_fixes` with the record
+      type, current name, proposed name, and rules.
 
     ## Validation rules
 
@@ -177,21 +182,77 @@ paths:
         "403":
           description: Missing, invalid, revoked, or expired API key
 
+  /v1/partner/name-fixes:
+    get:
+      summary: List pending name cleanup proposals
+      description: |
+        Pending proposed names for organizations and activities, with
+        the record type (`entity_type`) and the rules that produced
+        each proposal. A full-access key sees every pending proposal.
+        An org-scoped key sees only that organization's records.
+        `review_status` is the owning organization's review status.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+            enum: [organization, activity]
+        - name: rule
+          in: query
+          schema:
+            type: string
+            enum:
+              - html_entities
+              - nfkc
+              - whitespace
+              - trailing_punctuation
+              - cjk_spacing
+              - title_case
+              - brackets
+              - split_bilingual
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pending name proposals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartnerNameFixListResponse"
+        "403":
+          description: Invalid API key
+
   /v1/partner/organizations:
     get:
       summary: List organizations
       description: |
-        Paginated list. Org-scoped keys only receive their organization.
+        Paginated list. A full-access key receives every organization
+        (`pending_review`, `approved`, and `rejected`). Org-scoped keys
+        only receive their organization. Each item includes
+        `pending_name_fixes` for that organization and its activities.
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Cursor"
+        - name: review_status
+          in: query
+          schema:
+            type: string
+            enum: [pending_review, approved, rejected]
+        - name: q
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: Organizations
           content:
             application/json:
               schema:
-                $ref: "./admin.yaml#/components/schemas/OrganizationListResponse"
+                $ref: "#/components/schemas/PartnerOrganizationListResponse"
         "403":
           description: Invalid API key
     post:
@@ -231,7 +292,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "./admin.yaml#/components/schemas/Organization"
+                $ref: "#/components/schemas/PartnerOrganization"
         "403":
           description: Invalid key or resource outside the key's organization
         "404":
@@ -704,3 +765,60 @@ components:
         error:
           type: string
           description: Human-readable error message
+    PartnerNameFix:
+      type: object
+      required:
+        [id, entity_type, entity_id, current_value, proposed_value, rules]
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity_type:
+          type: string
+          enum: [organization, activity]
+        entity_id:
+          type: string
+          format: uuid
+        current_value:
+          type: string
+        proposed_value:
+          type: string
+        rules:
+          type: array
+          items:
+            type: string
+        review_status:
+          type: string
+          enum: [pending_review, approved, rejected]
+          nullable: true
+    PartnerNameFixListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartnerNameFix"
+        next_cursor:
+          type: string
+          nullable: true
+    PartnerOrganization:
+      allOf:
+        - $ref: "./admin.yaml#/components/schemas/Organization"
+        - type: object
+          properties:
+            pending_name_fixes:
+              type: array
+              items:
+                $ref: "#/components/schemas/PartnerNameFix"
+    PartnerOrganizationListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartnerOrganization"
+        next_cursor:
+          type: string
+          nullable: true
