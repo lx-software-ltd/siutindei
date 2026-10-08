@@ -103,10 +103,13 @@ def sanitize_name(
     if "html_entities" in settings.enabled_rules:
         step("html_entities", html.unescape(text))
     step("nfkc", unicodedata.normalize("NFKC", text))
-    step("whitespace", _collapse_whitespace(text))
+    step("whitespace", _collapse_whitespace(_space_before_brackets(text)))
+    if "whitespace" not in settings.enabled_rules:
+        text = _space_before_brackets(text)
     step("trailing_punctuation", _strip_trailing(text))
     step("cjk_spacing", _space_cjk(text))
     step("brackets", _strip_brackets(text, settings.bracket_suffixes))
+    text = _space_before_brackets(text)
     step("title_case", _title_case(text, settings.exception_words))
     patch: dict[str, str] = {}
     if "split_bilingual" in settings.enabled_rules:
@@ -115,7 +118,7 @@ def sanitize_name(
             text = split_name
             patch = extracted
             applied.append("split_bilingual")
-    cleaned = _collapse_whitespace(_strip_trailing(text))
+    cleaned = _collapse_whitespace(_strip_trailing(_space_before_brackets(text)))
     if not cleaned:
         return NameSanitizeResult(original, original, (), {})
     if cleaned == original and not patch:
@@ -125,6 +128,11 @@ def sanitize_name(
 
 def _collapse_whitespace(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
+
+
+def _space_before_brackets(value: str) -> str:
+    """Put a space before '(' or '[' when one is missing."""
+    return re.sub(r"(?<!\s)([\(\[（［])", r" \1", value)
 
 
 def _strip_trailing(value: str) -> str:
@@ -152,36 +160,6 @@ def _title_case(value: str, exceptions: frozenset[str]) -> str:
     return " ".join(_title_token(token, exceptions) for token in value.split(" "))
 
 
-_ORDINARY_SHORT = frozenset(
-    {
-        "CLASS",
-        "CLUB",
-        "SWIM",
-        "ARTS",
-        "KIDS",
-        "PLAY",
-        "PARK",
-        "CAMP",
-        "TEAM",
-        "CITY",
-        "EAST",
-        "WEST",
-        "NORTH",
-        "SOUTH",
-        "OPEN",
-        "HOME",
-        "BALL",
-        "GAME",
-        "POOL",
-        "GYM",
-        "BAND",
-        "CHOIR",
-        "DANCE",
-        "SPORT",
-    }
-)
-
-
 def _title_token(token: str, exceptions: frozenset[str]) -> str:
     letters = re.sub(r"[^A-Za-z]", "", token)
     if len(letters) < 2 or not letters.isupper():
@@ -192,8 +170,6 @@ def _title_token(token: str, exceptions: frozenset[str]) -> str:
     prefix, core, suffix = match.groups()
     upper = core.upper()
     if upper in exceptions or _ROMAN.match(upper):
-        return token
-    if 2 <= len(letters) <= 5 and letters.isalpha() and upper not in _ORDINARY_SHORT:
         return token
     pieces = re.split(r"(-)", core)
     titled = "".join(piece.capitalize() if piece != "-" else piece for piece in pieces)
