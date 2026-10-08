@@ -85,7 +85,9 @@ test.describe('Organizations Panel', () => {
     await managerField.click();
 
     await expect(
-      adminPage.getByRole('option', { name: /manager@example.com/ })
+      adminPage.getByRole('option', {
+        name: 'manager@example.com (Manager User)',
+      })
     ).toBeVisible();
   });
 
@@ -115,7 +117,7 @@ test.describe('Organizations Panel', () => {
     const managerField = adminPage.getByLabel('Manager');
     await managerField.click();
     await adminPage
-      .getByRole('option', { name: /manager@example.com/ })
+      .getByRole('option', { name: 'manager@example.com (Manager User)' })
       .click();
     await expect(managerField).toHaveValue(
       'manager@example.com (Manager User)'
@@ -147,7 +149,7 @@ test.describe('Organizations Panel', () => {
     await adminPage.getByLabel('Name').fill('Brand New Organization');
     await adminPage.getByLabel('Manager').click();
     await adminPage
-      .getByRole('option', { name: /manager@example.com/ })
+      .getByRole('option', { name: 'manager@example.com (Manager User)' })
       .click();
     await adminPage
       .getByLabel('Description', { exact: true })
