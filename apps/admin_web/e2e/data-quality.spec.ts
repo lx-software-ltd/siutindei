@@ -24,6 +24,25 @@ test.describe('Data quality', () => {
     await expect(adminPage.getByText('Name updated.')).toBeVisible();
   });
 
+  test('admin can edit name rule word lists', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=data-quality&tab=names');
+    const exceptions = adminPage.getByLabel('Words to leave in capitals');
+    const suffixes = adminPage.getByLabel('Bracket suffixes to remove');
+    await expect(exceptions).toHaveValue('YMCA');
+    await exceptions.click();
+    await exceptions.press('End');
+    await exceptions.pressSequentially(' YWCA');
+    await expect(exceptions).toHaveValue('YMCA YWCA');
+    await suffixes.click();
+    await suffixes.press('End');
+    await suffixes.pressSequentially(' edb');
+    await expect(suffixes).toHaveValue('lcsd edb');
+    await adminPage.getByRole('button', { name: 'Save rules' }).click();
+    await expect(adminPage.getByText('Name rules saved.')).toBeVisible();
+    await expect(exceptions).toHaveValue('YMCA YWCA');
+    await expect(suffixes).toHaveValue('lcsd edb');
+  });
+
   test('admin can merge from the organization workspace', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
     await adminPage.getByRole('button', { name: 'Merge into…' }).click();
