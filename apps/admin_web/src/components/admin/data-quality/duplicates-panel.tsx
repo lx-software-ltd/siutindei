@@ -85,11 +85,6 @@ export function DuplicatesPanel() {
   return (
     <div className='space-y-4'>
       <h2 className='sr-only'>Duplicates</h2>
-      <p className='text-sm text-slate-600'>
-        Groups share a name, phone, email, source id, or a similar spelling.
-        Merging keeps one organization, moves its locations and activities, and
-        sends later imports of the removed source id or place id to the survivor.
-      </p>
       {organization ? (
         <p className='text-sm text-slate-600'>
           Filtered to the organization from the review queue.{' '}

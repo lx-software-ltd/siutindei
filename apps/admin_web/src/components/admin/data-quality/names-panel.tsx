@@ -100,10 +100,9 @@ export function NamesPanel() {
   });
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [isScanning, setIsScanning] = useState(false);
-  const [sweepScope, setSweepScope] = useState<'pending_review' | 'all'>(
-    'pending_review'
-  );
+  const [scanningScope, setScanningScope] = useState<
+    'pending_review' | 'all' | null
+  >(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const listed = list.items.find((item) => item.id === expanded.expandedId) ?? null;
@@ -116,14 +115,14 @@ export function NamesPanel() {
   const pending = summaryQuery.data?.by_status.pending ?? 0;
   const summary = summaryQuery.data ? `${pending} pending` : 'No pending names.';
 
-  async function sweep() {
-    setIsScanning(true);
+  async function sweep(reviewScope: 'pending_review' | 'all') {
+    setScanningScope(reviewScope);
     setError('');
     setNotice('');
     try {
       const result = await scanNameFixes({
         entity_type: list.filters.entity_type || undefined,
-        review_scope: sweepScope,
+        review_scope: reviewScope,
       });
       const stopped = result.truncated
         ? ' Scan stopped at the limit; run it again to continue.'
@@ -138,7 +137,7 @@ export function NamesPanel() {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Scan failed.');
     } finally {
-      setIsScanning(false);
+      setScanningScope(null);
     }
   }
 
@@ -206,9 +205,10 @@ export function NamesPanel() {
       <p className='text-sm text-slate-600'>
         Imports clean names as they are written and keep the original spelling
         in the source note. This list reviews the same rules for records already
-        stored. Sweep scan re-evaluates every organization in the chosen
-        scope from scratch and drops pending proposals the current rules no
-        longer change. Activity names follow that same scope.
+        stored. Sweep pending re-evaluates organizations still in review.
+        Sweep all orgs re-evaluates every organization from scratch and
+        drops pending proposals the current rules no longer change.
+        Activity names follow that same scope.
       </p>
       {organization ? (
         <p className='text-sm text-slate-600'>
@@ -236,25 +236,23 @@ export function NamesPanel() {
         </StatusBanner>
       ) : null}
       <div className='flex flex-wrap items-end gap-2'>
-        <AdminFilterField label='Sweep' htmlFor='name-fix-scope'>
-          <Select
-            id='name-fix-scope'
-            value={sweepScope}
-            onChange={(event) =>
-              setSweepScope(event.target.value === 'all' ? 'all' : 'pending_review')
-            }
-          >
-            <option value='pending_review'>Pending review</option>
-            <option value='all'>All organizations</option>
-          </Select>
-        </AdminFilterField>
         <Button
           type='button'
-          onClick={() => void sweep()}
-          loading={isScanning}
+          onClick={() => void sweep('pending_review')}
+          loading={scanningScope === 'pending_review'}
           loadingLabel='Scanning…'
+          disabled={scanningScope !== null}
         >
-          Sweep scan
+          Sweep pending
+        </Button>
+        <Button
+          type='button'
+          onClick={() => void sweep('all')}
+          loading={scanningScope === 'all'}
+          loadingLabel='Scanning…'
+          disabled={scanningScope !== null}
+        >
+          Sweep all orgs
         </Button>
         <Button type='button' variant='secondary' onClick={() => void bulk('apply')} disabled={selected.size === 0}>
           Apply selected
@@ -302,7 +300,7 @@ export function NamesPanel() {
         hasMore={list.hasMore}
         onLoadMore={() => void list.loadMore()}
         error={list.error}
-        emptyLabel='No names match these filters. Sweep scan to find some.'
+        emptyLabel='No names match these filters. Sweep pending or Sweep all orgs to find some.'
         filters={
           <AdminFilterBar>
             <AdminFilterField label='Name' htmlFor='name-fix-q'>

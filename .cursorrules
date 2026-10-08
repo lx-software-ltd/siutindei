@@ -538,7 +538,7 @@ screens from `apps/admin_web/src/components/ui/`:
   for them. `ConfirmDialog` is only for confirm/cancel.
 - **In-area switchers** use `AdminTabStrip` (button group, not ARIA tabs).
   Tab labels use Title Case: capitalize the first letter of every word
-  (`Category Checks`, `Category Suggestions`, `Feedback Labels`).
+  (`Category`, `Category Suggestions`, `Feedback Labels`).
   `AdminTabStrip` applies this when it renders, so new tabs match.
   Category suggestions stay on the Categories nav item. Category checks
   stay on Data quality, and `?category-check=` stays open on that page. Feedback labels stay on the Feedback nav item,
