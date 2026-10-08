@@ -12,6 +12,7 @@ import {
 } from '../../lib/api-client-user';
 import type { FeedbackLabel } from '../../types/admin';
 import { useFormValidation } from '../../hooks/use-form-validation';
+import { AdminToggleChip } from '../ui/admin-tab-strip';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
@@ -166,7 +167,7 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
     >
       {error && (
         <div className='mb-4'>
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner variant='error' kind='error'>
             {error}
           </StatusBanner>
         </div>
@@ -255,18 +256,13 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
               {labels.map((label) => {
                 const isSelected = selectedLabels.includes(label.id);
                 return (
-                  <button
+                  <AdminToggleChip
                     key={label.id}
-                    type='button'
+                    pressed={isSelected}
                     onClick={() => toggleLabel(label.id)}
-                    className={`rounded-full border px-3 py-1 text-sm ${
-                      isSelected
-                        ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-200 bg-white text-slate-600'
-                    }`}
                   >
                     {label.name}
-                  </button>
+                  </AdminToggleChip>
                 );
               })}
             </div>
@@ -294,10 +290,11 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
           <Button
             type='submit'
             variant='primary'
-            disabled={isSubmitting}
+            loading={isSubmitting}
+            loadingLabel='Submitting…'
             className='w-full sm:w-auto'
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
+            Submit Feedback
           </Button>
         </div>
       </form>

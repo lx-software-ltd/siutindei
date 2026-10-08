@@ -128,14 +128,14 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
       </p>
       {error ? (
         <div className='mt-3'>
-          <StatusBanner variant='error' title='Review'>
+          <StatusBanner variant='error' kind='error'>
             {error}
           </StatusBanner>
         </div>
       ) : null}
       {notice ? (
         <div className='mt-3'>
-          <StatusBanner variant='info' title='Review'>
+          <StatusBanner variant='info' kind='info'>
             {notice}
           </StatusBanner>
         </div>

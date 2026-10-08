@@ -1,34 +1,58 @@
-interface StatusBadgeProps {
-  status: string;
-}
+export type StatusBadgeTone =
+  | 'green'
+  | 'yellow'
+  | 'red'
+  | 'slate'
+  | 'blue'
+  | 'purple'
+  | 'amber';
 
-const statusColorClassByValue: Record<string, string> = {
-  approved: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800',
-  pending_review: 'bg-yellow-100 text-yellow-800',
-  'pending review': 'bg-yellow-100 text-yellow-800',
-  operational: 'bg-green-100 text-green-800',
-  closed_temporarily: 'bg-yellow-100 text-yellow-800',
-  'closed temporarily': 'bg-yellow-100 text-yellow-800',
-  closed_permanently: 'bg-red-100 text-red-800',
-  'closed permanently': 'bg-red-100 text-red-800',
-  hidden: 'bg-slate-200 text-slate-600',
-  active: 'bg-green-100 text-green-800',
-  revoked: 'bg-red-100 text-red-800',
-  expired: 'bg-slate-200 text-slate-600',
+const toneClass: Record<StatusBadgeTone, string> = {
+  green: 'bg-green-100 text-green-800',
+  yellow: 'bg-yellow-100 text-yellow-800',
+  red: 'bg-red-100 text-red-800',
+  slate: 'bg-slate-200 text-slate-600',
+  blue: 'bg-blue-100 text-blue-800',
+  purple: 'bg-purple-100 text-purple-800',
+  amber: 'bg-amber-100 text-amber-800',
 };
 
-export function StatusBadge({ status }: StatusBadgeProps) {
+const statusToneByValue: Record<string, StatusBadgeTone> = {
+  approved: 'green',
+  rejected: 'red',
+  pending_review: 'yellow',
+  'pending review': 'yellow',
+  operational: 'green',
+  closed_temporarily: 'yellow',
+  'closed temporarily': 'yellow',
+  closed_permanently: 'red',
+  'closed permanently': 'red',
+  hidden: 'slate',
+  active: 'green',
+  revoked: 'red',
+  expired: 'slate',
+};
+
+export interface StatusBadgeProps {
+  status: string;
+  /** Overrides the tone inferred from `status`. */
+  tone?: StatusBadgeTone;
+  /** Visible text. Defaults to the normalized status. */
+  label?: string;
+}
+
+export function StatusBadge({ status, tone, label }: StatusBadgeProps) {
   const normalizedStatus = status.trim().toLowerCase();
-  const colorClass =
-    statusColorClassByValue[normalizedStatus] ??
-    'bg-yellow-100 text-yellow-800';
+  const resolvedTone = tone ?? statusToneByValue[normalizedStatus] ?? 'yellow';
+  const text = label ?? (normalizedStatus || 'pending');
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${colorClass}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+        label ? '' : 'capitalize'
+      } ${toneClass[resolvedTone]}`}
     >
-      {normalizedStatus || 'pending'}
+      {text}
     </span>
   );
 }

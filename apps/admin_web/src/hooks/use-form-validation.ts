@@ -8,6 +8,11 @@ import {
   type ReactElement,
 } from 'react';
 
+import {
+  formErrorClassName,
+  requiredIndicatorClassName,
+} from '@/components/ui/admin-field-grid';
+
 interface UseFormValidationResult {
   touched: Record<string, boolean>;
   hasSubmitted: boolean;
@@ -25,9 +30,6 @@ interface ValidationState {
   touched: Record<string, boolean>;
   hasSubmitted: boolean;
 }
-
-const formErrorClassName =
-  'border-red-500 focus:border-red-500 focus:ring-red-500';
 
 export function useFormValidation(
   fields: readonly string[],
@@ -126,7 +128,7 @@ export function useFormValidation(
     () =>
       createElement(
         'span',
-        { className: 'ml-0.5 text-red-500', 'aria-hidden': true },
+        { className: requiredIndicatorClassName, 'aria-hidden': true },
         '*'
       ),
     []

@@ -90,7 +90,7 @@ export function CategorySuggestionSettingsCard() {
     return (
       <Card>
         {error ? (
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner variant='error' kind='error'>
             {error}
           </StatusBanner>
         ) : (
@@ -108,12 +108,12 @@ export function CategorySuggestionSettingsCard() {
         status={
           <>
             {error ? (
-              <StatusBanner variant='error' title='Error'>
+              <StatusBanner variant='error' kind='error'>
                 {error}
               </StatusBanner>
             ) : null}
             {notice ? (
-              <StatusBanner variant='success' title='Saved'>
+              <StatusBanner variant='success' kind='saved'>
                 {notice}
               </StatusBanner>
             ) : null}

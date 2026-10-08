@@ -38,11 +38,24 @@ export function AdminDialog({
       return;
     }
 
-    const previousActiveElement = document.activeElement as HTMLElement | null;
-    const focusableElements = dialogRef.current?.querySelectorAll<HTMLElement>(
-      'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'
-    );
-    focusableElements?.[0]?.focus();
+    const previousActiveElement =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+
+    const focusable = () => {
+      const dialog = dialogRef.current;
+      if (!dialog) {
+        return [];
+      }
+      return Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => !element.hasAttribute('disabled'));
+    };
+
+    focusable()[0]?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -51,12 +64,17 @@ export function AdminDialog({
         return;
       }
 
-      if (event.key !== 'Tab' || !focusableElements || focusableElements.length === 0) {
+      if (event.key !== 'Tab') {
         return;
       }
 
-      const firstFocusable = focusableElements[0];
-      const lastFocusable = focusableElements[focusableElements.length - 1];
+      const elements = focusable();
+      if (elements.length === 0) {
+        return;
+      }
+
+      const firstFocusable = elements[0];
+      const lastFocusable = elements[elements.length - 1];
 
       if (event.shiftKey && document.activeElement === firstFocusable) {
         event.preventDefault();
@@ -110,12 +128,14 @@ export function AdminDialog({
             ) : null}
           </div>
           {children}
-          {footer ?? (
+          {footer === undefined ? (
             <div className='flex justify-end'>
               <Button type='button' variant='primary' onClick={onClose}>
                 {closeLabel}
               </Button>
             </div>
+          ) : (
+            footer
           )}
         </Card>
       </div>

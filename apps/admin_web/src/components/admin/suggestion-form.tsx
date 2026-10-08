@@ -1,4 +1,5 @@
 'use client';
+import { AdminInlineError } from '../ui/admin-inline-error';
 
 import { useState } from 'react';
 
@@ -150,7 +151,7 @@ export function SuggestionForm({ onSuggestionSubmitted }: SuggestionFormProps) {
     >
       {error && (
         <div className='mb-4'>
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner variant='error' kind='error'>
             {error}
           </StatusBanner>
         </div>
@@ -181,7 +182,7 @@ export function SuggestionForm({ onSuggestionSubmitted }: SuggestionFormProps) {
             onBlur={() => validation.markTouched('organizationName')}
           />
           {showOrgNameError ? (
-            <p className='text-xs text-red-600'>{orgNameError}</p>
+            <AdminInlineError size='xs'>{orgNameError}</AdminInlineError>
           ) : null}
         </div>
 
@@ -235,10 +236,12 @@ export function SuggestionForm({ onSuggestionSubmitted }: SuggestionFormProps) {
           <Button
             type='submit'
             variant='primary'
-            disabled={isSubmitting || !organizationName.trim()}
+            disabled={!organizationName.trim()}
+            loading={isSubmitting}
+            loadingLabel='Submitting…'
             className='w-full sm:w-auto'
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Suggestion'}
+            Submit Suggestion
           </Button>
         </div>
       </form>

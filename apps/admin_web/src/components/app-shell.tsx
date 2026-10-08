@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import Image from 'next/image';
 
+import { CloseIcon, MenuIcon } from './icons/action-icons';
 import { LegalLinks } from './legal-links';
 import { Button } from './ui/button';
 
@@ -23,42 +24,6 @@ export interface AppShellProps {
   lastAuthTime?: string;
   headerDescription?: string;
   children: ReactNode;
-}
-
-function MenuIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      fill='none'
-      viewBox='0 0 24 24'
-      strokeWidth='1.5'
-      stroke='currentColor'
-    >
-      <path
-        strokeLinecap='round'
-        strokeLinejoin='round'
-        d='M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5'
-      />
-    </svg>
-  );
-}
-
-function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      fill='none'
-      viewBox='0 0 24 24'
-      strokeWidth='1.5'
-      stroke='currentColor'
-    >
-      <path
-        strokeLinecap='round'
-        strokeLinejoin='round'
-        d='M6 18L18 6M6 6l12 12'
-      />
-    </svg>
-  );
 }
 
 /**
@@ -291,7 +256,7 @@ export function AppShell({
             </nav>
           </aside>
         )}
-        <main className='min-w-0 flex-1 space-y-4 sm:space-y-6'>{children}</main>
+        <main className='min-w-0 flex-1 space-y-4'>{children}</main>
       </div>
 
       {/* Footer */}

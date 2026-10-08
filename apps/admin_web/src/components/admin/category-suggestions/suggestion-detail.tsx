@@ -13,13 +13,11 @@ import { DecisionDialog } from './decision-dialog';
 
 interface SuggestionDetailProps {
   suggestionId: string;
-  onClose: () => void;
   onReload?: () => void;
 }
 
 export function SuggestionDetail({
   suggestionId,
-  onClose,
   onReload,
 }: SuggestionDetailProps) {
   const [item, setItem] = useState<CategorySuggestion | null>(null);
@@ -81,9 +79,6 @@ export function SuggestionDetail({
               loadingLabel='Enriching…'
             >
               Enrich again
-            </Button>
-            <Button type='button' variant='secondary' onClick={onClose}>
-              Close
             </Button>
           </>
         }

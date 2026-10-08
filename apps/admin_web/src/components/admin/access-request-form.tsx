@@ -1,4 +1,5 @@
 'use client';
+import { AdminInlineError } from '../ui/admin-inline-error';
 
 import { useState } from 'react';
 
@@ -81,14 +82,14 @@ export function AccessRequestForm({ onRequestSubmitted }: AccessRequestFormProps
   };
 
   return (
-    <div className='mx-auto max-w-2xl'>
+    <div className='space-y-4'>
       <Card
         title='Request Organization Access'
         description='You are not currently associated with any organization. Please submit a request to be added to an existing organization or to create a new one.'
       >
         {error && (
           <div className='mb-4'>
-            <StatusBanner variant='error' title='Error'>
+            <StatusBanner variant='error' kind='error'>
               {error}
             </StatusBanner>
           </div>
@@ -121,7 +122,7 @@ export function AccessRequestForm({ onRequestSubmitted }: AccessRequestFormProps
               onBlur={() => validation.markTouched('organizationName')}
             />
             {showOrgNameError ? (
-              <p className='text-xs text-red-600'>{orgNameError}</p>
+              <AdminInlineError size='xs'>{orgNameError}</AdminInlineError>
             ) : null}
             <p className='text-sm text-slate-500'>
               Enter the exact name of an existing organization, or the name for a
@@ -148,10 +149,11 @@ export function AccessRequestForm({ onRequestSubmitted }: AccessRequestFormProps
           <div className='pt-2'>
             <Button
               type='submit'
-              disabled={isSubmitting}
+              loading={isSubmitting}
+              loadingLabel='Submitting…'
               className='w-full sm:w-auto'
             >
-              {isSubmitting ? 'Submitting...' : 'Submit Request'}
+              Submit Request
             </Button>
           </div>
         </form>

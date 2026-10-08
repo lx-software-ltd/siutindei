@@ -60,7 +60,6 @@ export function SuggestionsTable({
     <SuggestionDetail
       key={expanded.expandedId}
       suggestionId={expanded.expandedId}
-      onClose={() => expanded.collapse()}
       onReload={onReload}
     />
   ) : null;

@@ -203,7 +203,7 @@ export function ManagerDashboard() {
   if (view === 'loading' || isLoading) {
     return (
       <main className='mx-auto flex min-h-screen max-w-lg items-center px-6'>
-        <StatusBanner variant='info' title='Loading'>
+        <StatusBanner variant='info' kind='info'>
           Loading your account information...
         </StatusBanner>
       </main>
@@ -214,7 +214,7 @@ export function ManagerDashboard() {
     return (
       <main className='mx-auto flex min-h-screen max-w-lg items-center px-6'>
         <div className='w-full space-y-4'>
-          <StatusBanner variant='error' title='Organization'>
+          <StatusBanner variant='error' kind='error'>
             {error || 'Failed to load your organization.'}
           </StatusBanner>
           <Button
@@ -248,12 +248,12 @@ export function ManagerDashboard() {
       headerDescription={headerDescription}
     >
       {authError && (
-        <StatusBanner variant='error' title='Session'>
+        <StatusBanner variant='error' kind='error'>
           {authError}
         </StatusBanner>
       )}
       {error ? (
-        <StatusBanner variant='error' title='Error'>
+        <StatusBanner variant='error' kind='error'>
           {error}
         </StatusBanner>
       ) : null}

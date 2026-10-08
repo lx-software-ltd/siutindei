@@ -1,4 +1,5 @@
 'use client';
+import { AdminInlineError } from '../ui/admin-inline-error';
 
 import { useMemo } from 'react';
 
@@ -239,7 +240,7 @@ export function ActivityCategoriesPanel() {
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner variant='error' kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null
@@ -273,7 +274,7 @@ export function ActivityCategoriesPanel() {
             }
           />
           {showNameError ? (
-            <p className='text-xs text-red-600'>{nameError}</p>
+            <AdminInlineError size='xs'>{nameError}</AdminInlineError>
           ) : null}
         </div>
         <div>
@@ -323,7 +324,7 @@ export function ActivityCategoriesPanel() {
             aria-invalid={showDisplayOrderError || undefined}
           />
           {showDisplayOrderError ? (
-            <p className='text-xs text-red-600'>{displayOrderError}</p>
+            <AdminInlineError size='xs'>{displayOrderError}</AdminInlineError>
           ) : null}
         </div>
         <label className='flex items-center gap-2 text-sm sm:col-span-2'>

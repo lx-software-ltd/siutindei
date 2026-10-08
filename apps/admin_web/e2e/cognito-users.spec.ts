@@ -24,10 +24,10 @@ test.describe('Cognito Users Panel', () => {
     await adminPage.getByRole('button', { name: 'More actions' }).first().click();
     await adminPage.getByRole('menuitem', { name: 'Delete User' }).click();
     await adminPage
-      .getByRole('dialog')
+      .getByRole('alertdialog')
       .getByRole('button', { name: 'Delete User' })
       .click();
-    await expect(adminPage.getByRole('dialog')).not.toBeVisible();
+    await expect(adminPage.getByRole('alertdialog')).not.toBeVisible();
     await expect(
       adminPage.getByRole('row', { name: /manager@example.com Manager User/ })
     ).toHaveCount(0);

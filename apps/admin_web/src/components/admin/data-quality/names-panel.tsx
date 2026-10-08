@@ -203,13 +203,6 @@ export function NamesPanel() {
   return (
     <div className='space-y-4'>
       <h2 className='sr-only'>Names</h2>
-      <p className='text-sm text-slate-600'>
-        Imports clean names as they are written and keep the original spelling
-        in the source note. This list reviews the same rules for records already
-        stored. Sweep scan re-evaluates every organization in the chosen
-        scope from scratch and drops pending proposals the current rules no
-        longer change. Activity names follow that same scope.
-      </p>
       {organization ? (
         <p className='text-sm text-slate-600'>
           Filtered to the organization from the review queue.{' '}
@@ -224,47 +217,49 @@ export function NamesPanel() {
           </button>
         </p>
       ) : null}
-      <p className='text-sm text-slate-700'>{summary}</p>
       {notice ? (
-        <StatusBanner variant='info' title='Names'>
+        <StatusBanner variant='info' kind='info'>
           {notice}
         </StatusBanner>
       ) : null}
       {error ? (
-        <StatusBanner variant='error' title='Names'>
+        <StatusBanner variant='error' kind='error'>
           {error}
         </StatusBanner>
       ) : null}
-      <div className='flex flex-wrap items-end gap-2'>
-        <AdminFilterField label='Sweep' htmlFor='name-fix-scope'>
-          <Select
-            id='name-fix-scope'
-            value={sweepScope}
-            onChange={(event) =>
-              setSweepScope(event.target.value === 'all' ? 'all' : 'pending_review')
-            }
-          >
-            <option value='pending_review'>Pending review</option>
-            <option value='all'>All organizations</option>
-          </Select>
-        </AdminFilterField>
-        <Button
-          type='button'
-          onClick={() => void sweep()}
-          loading={isScanning}
-          loadingLabel='Scanning…'
-        >
-          Sweep scan
-        </Button>
-        <Button type='button' variant='secondary' onClick={() => void bulk('apply')} disabled={selected.size === 0}>
-          Apply selected
-        </Button>
-        <Button type='button' variant='secondary' onClick={() => void bulk('dismiss')} disabled={selected.size === 0}>
-          Dismiss selected
-        </Button>
-      </div>
       <ResourceTableShell
         ariaLabel='Name fixes'
+        toolbar={
+          <div className='mb-3 flex flex-wrap items-end gap-2'>
+            <p className='w-full text-sm text-slate-700'>{summary}</p>
+            <AdminFilterField label='Sweep' htmlFor='name-fix-scope'>
+              <Select
+                id='name-fix-scope'
+                value={sweepScope}
+                onChange={(event) =>
+                  setSweepScope(event.target.value === 'all' ? 'all' : 'pending_review')
+                }
+              >
+                <option value='pending_review'>Pending review</option>
+                <option value='all'>All organizations</option>
+              </Select>
+            </AdminFilterField>
+            <Button
+              type='button'
+              onClick={() => void sweep()}
+              loading={isScanning}
+              loadingLabel='Scanning…'
+            >
+              Sweep scan
+            </Button>
+            <Button type='button' variant='secondary' onClick={() => void bulk('apply')} disabled={selected.size === 0}>
+              Apply selected
+            </Button>
+            <Button type='button' variant='secondary' onClick={() => void bulk('dismiss')} disabled={selected.size === 0}>
+              Dismiss selected
+            </Button>
+          </div>
+        }
         rows={list.items}
         getLabel={(item) => item.current_value}
         middleColumnCount={4}

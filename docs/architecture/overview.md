@@ -35,6 +35,8 @@ Public Website (Next.js static export)        Flutter Mobile / Next.js Admin
 ### Admin console (Next.js App Router)
 - Admin users manage organizations, activities, schedules, and pricing.
 - Hosted on Amplify Hosting (release jobs triggered in CI).
+- See [`docs/architecture/admin-web-ui.md`](admin-web-ui.md) for the
+  shared layout primitives.
 
 ### Public website (Next.js static export)
 - Marketing/landing site for Siu Tin Dei (`apps/public_www`).

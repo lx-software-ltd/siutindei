@@ -27,7 +27,6 @@ export interface AdminRecordTableProps {
   hasMore?: boolean;
   onLoadMore?: () => void | Promise<void>;
   error?: string;
-  errorTitle?: string;
   emptyLabel?: string;
   /** Footer line under the table, for example a totals summary. */
   footer?: ReactNode;
@@ -59,7 +58,6 @@ export function AdminRecordTable({
   hasMore = false,
   onLoadMore,
   error,
-  errorTitle = 'Could not load records',
   emptyLabel = 'No records match the current filters.',
   footer,
   toolbar,
@@ -97,7 +95,7 @@ export function AdminRecordTable({
       {toolbar}
       {error ? (
         <div className='mb-3'>
-          <StatusBanner variant='error' title={errorTitle}>
+          <StatusBanner variant='error' kind='error'>
             {error}
           </StatusBanner>
         </div>

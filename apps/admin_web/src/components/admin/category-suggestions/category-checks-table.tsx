@@ -28,6 +28,7 @@ interface CategoryChecksTableProps {
   onLoadMore?: () => void;
   onReload: () => void;
   filters?: ReactNode;
+  toolbar?: ReactNode;
 }
 
 export function CategoryChecksTable({
@@ -39,6 +40,7 @@ export function CategoryChecksTable({
   onLoadMore,
   onReload,
   filters,
+  toolbar,
 }: CategoryChecksTableProps) {
   const expanded = useExpandedRecord({ paramName: 'category-check' });
   const openInList = items.some((item) => item.id === expanded.expandedId);
@@ -67,6 +69,7 @@ export function CategoryChecksTable({
         onToggle={expanded.toggle}
         detail={openInList ? detail : null}
         filters={filters}
+        toolbar={toolbar}
         renderActions={(item) => (
           <ReviewActions item={item} onReload={onReload} />
         )}

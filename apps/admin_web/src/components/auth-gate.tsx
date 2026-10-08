@@ -27,7 +27,7 @@ export function AuthGate({
   if (status === 'loading') {
     return (
       <main className='mx-auto flex min-h-screen max-w-lg items-center px-6'>
-        <StatusBanner variant='info' title='Loading'>
+        <StatusBanner variant='info' kind='info'>
           Preparing your admin session.
         </StatusBanner>
       </main>

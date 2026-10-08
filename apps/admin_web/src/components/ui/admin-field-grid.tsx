@@ -5,6 +5,21 @@ import { clsx } from 'clsx';
 import { AdminInlineError } from './admin-inline-error';
 import { Label } from './label';
 
+/** Invalid control border. Import this instead of copying the class string. */
+export const formErrorClassName =
+  'border-red-500 focus:border-red-500 focus:ring-red-500';
+
+export const requiredIndicatorClassName = 'ml-0.5 text-red-600';
+
+/** Required-field asterisk. One mark for every editor. */
+export function RequiredMark() {
+  return (
+    <span aria-hidden className={requiredIndicatorClassName}>
+      *
+    </span>
+  );
+}
+
 export type AdminFieldGridColumns = 1 | 2 | 4;
 
 const columnStyles: Record<AdminFieldGridColumns, string> = {
@@ -67,11 +82,7 @@ export function AdminField({
       {label ? (
         <Label htmlFor={htmlFor}>
           {label}
-          {required ? (
-            <span aria-hidden className='ml-0.5 text-red-600'>
-              *
-            </span>
-          ) : null}
+          {required ? <RequiredMark /> : null}
         </Label>
       ) : null}
       {children}

@@ -1,4 +1,5 @@
 'use client';
+import { AdminInlineError } from '../ui/admin-inline-error';
 
 import { useMemo } from 'react';
 
@@ -146,7 +147,7 @@ export function FeedbackLabelsPanel() {
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner variant='error' kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null
@@ -178,7 +179,7 @@ export function FeedbackLabelsPanel() {
             )}
           />
           {showNameError ? (
-            <p className='text-xs text-red-600'>{nameError}</p>
+            <AdminInlineError size='xs'>{nameError}</AdminInlineError>
           ) : null}
         </div>
         <div className='space-y-1'>
@@ -202,7 +203,7 @@ export function FeedbackLabelsPanel() {
             aria-invalid={showDisplayOrderError || undefined}
           />
           {showDisplayOrderError ? (
-            <p className='text-xs text-red-600'>{displayOrderError}</p>
+            <AdminInlineError size='xs'>{displayOrderError}</AdminInlineError>
           ) : null}
         </div>
       </AdminFieldGrid>

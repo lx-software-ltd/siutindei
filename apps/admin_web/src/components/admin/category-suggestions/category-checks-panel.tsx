@@ -17,7 +17,6 @@ import {
   type CategorySuggestionSummary,
 } from '../../../lib/api-client-category-suggestions';
 import { StatusBanner } from '../../status-banner';
-import { AdminCreateButton } from '../../ui/admin-create-button';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
 import { Button } from '../../ui/button';
 import { ConfirmDialog } from '../../ui/confirm-dialog';
@@ -298,7 +297,7 @@ export function CategoryChecksPanel() {
   return (
     <div className='space-y-4'>
       {error ? (
-        <StatusBanner variant='error' title='Error'>
+        <StatusBanner variant='error' kind='error'>
           {error}
         </StatusBanner>
       ) : null}
@@ -318,46 +317,6 @@ export function CategoryChecksPanel() {
               progress ||
               `${summary?.review_pending_total ?? 0} waiting. ` +
                 `${summary?.auto_applied_total ?? 0} auto-assigned.`
-            }
-            trailing={
-              <div className='flex flex-wrap gap-2'>
-                <Button
-                  type='button'
-                  variant='outline'
-                  size='sm'
-                  disabled={isRunning || isStarting || isBulkRunning}
-                  loading={isBulkRunning && bulkAction === 'apply'}
-                  loadingLabel='Applying…'
-                  onClick={() => setBulkAction('apply')}
-                >
-                  Apply matching
-                </Button>
-                <Button
-                  type='button'
-                  variant='outline'
-                  size='sm'
-                  disabled={isRunning || isStarting || isBulkRunning}
-                  loading={isBulkRunning && bulkAction === 'dismiss'}
-                  loadingLabel='Dismissing…'
-                  onClick={() => setBulkAction('dismiss')}
-                >
-                  Dismiss matching
-                </Button>
-                <AdminCreateButton
-                  label='Discover categories'
-                  disabled={
-                    (discoverActivities === 0 && discoverLabels === 0) ||
-                    isRunning ||
-                    isStarting
-                  }
-                  onClick={() => setConfirmMode('discover')}
-                />
-                <AdminCreateButton
-                  label='Verify categories'
-                  disabled={scanCount === 0 || isRunning || isStarting}
-                  onClick={() => setConfirmMode('verify')}
-                />
-              </div>
             }
           >
             {scopedOrgId ? (
@@ -424,6 +383,54 @@ export function CategoryChecksPanel() {
               />
             </AdminFilterField>
           </AdminFilterBar>
+        }
+        toolbar={
+          <div className='mb-3 flex flex-wrap gap-2'>
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              disabled={isRunning || isStarting || isBulkRunning}
+              loading={isBulkRunning && bulkAction === 'apply'}
+              loadingLabel='Applying…'
+              onClick={() => setBulkAction('apply')}
+            >
+              Apply matching
+            </Button>
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              disabled={isRunning || isStarting || isBulkRunning}
+              loading={isBulkRunning && bulkAction === 'dismiss'}
+              loadingLabel='Dismissing…'
+              onClick={() => setBulkAction('dismiss')}
+            >
+              Dismiss matching
+            </Button>
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              disabled={
+                (discoverActivities === 0 && discoverLabels === 0) ||
+                isRunning ||
+                isStarting
+              }
+              onClick={() => setConfirmMode('discover')}
+            >
+              Discover categories
+            </Button>
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              disabled={scanCount === 0 || isRunning || isStarting}
+              onClick={() => setConfirmMode('verify')}
+            >
+              Verify categories
+            </Button>
+          </div>
         }
       />
       <ConfirmDialog

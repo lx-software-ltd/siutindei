@@ -17,10 +17,10 @@ import {
   AdminDataTableHeadCell,
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
-import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminToggleChip } from '../ui/admin-tab-strip';
 import { AdminFilterBar } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import {
   deleteRowActions,
   ResourceTableShell,
@@ -147,7 +147,7 @@ export function FeedbackPanel() {
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner variant='error' kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null
@@ -161,8 +161,7 @@ export function FeedbackPanel() {
       }
     >
       <AdminFieldGrid columns={2}>
-        <div className='sm:col-span-2'>
-          <Label htmlFor='feedback-organization'>Organization</Label>
+        <AdminField label='Organization' htmlFor='feedback-organization' span={2}>
           <Select
             id='feedback-organization'
             value={panel.formState.organization_id}
@@ -180,9 +179,8 @@ export function FeedbackPanel() {
               </option>
             ))}
           </Select>
-        </div>
-        <div>
-          <Label htmlFor='feedback-stars'>Stars</Label>
+        </AdminField>
+        <AdminField label='Stars' htmlFor='feedback-stars'>
           <div className='mt-2 flex items-center gap-2'>
             <StarRating
               value={panel.formState.stars}
@@ -197,9 +195,8 @@ export function FeedbackPanel() {
               {panel.formState.stars}/5
             </span>
           </div>
-        </div>
-        <div>
-          <Label htmlFor='feedback-ticket-id'>Source Ticket ID</Label>
+        </AdminField>
+        <AdminField label='Source Ticket ID' htmlFor='feedback-ticket-id'>
           <Input
             id='feedback-ticket-id'
             type='text'
@@ -211,9 +208,8 @@ export function FeedbackPanel() {
               }))
             }
           />
-        </div>
-        <div>
-          <Label htmlFor='feedback-submit-id'>Submitter ID</Label>
+        </AdminField>
+        <AdminField label='Submitter ID' htmlFor='feedback-submit-id'>
           <Input
             id='feedback-submit-id'
             type='text'
@@ -225,9 +221,8 @@ export function FeedbackPanel() {
               }))
             }
           />
-        </div>
-        <div>
-          <Label htmlFor='feedback-submit-email'>Submitter Email</Label>
+        </AdminField>
+        <AdminField label='Submitter Email' htmlFor='feedback-submit-email'>
           <Input
             id='feedback-submit-email'
             type='email'
@@ -239,9 +234,8 @@ export function FeedbackPanel() {
               }))
             }
           />
-        </div>
-        <div className='sm:col-span-2'>
-          <Label>Labels</Label>
+        </AdminField>
+        <AdminField label='Labels' span={2}>
           {labels.length === 0 ? (
             <p className='text-sm text-slate-500'>
               No feedback labels available.
@@ -253,25 +247,19 @@ export function FeedbackPanel() {
                   label.id
                 );
                 return (
-                  <button
+                  <AdminToggleChip
                     key={label.id}
-                    type='button'
+                    pressed={isSelected}
                     onClick={() => toggleLabel(label.id)}
-                    className={`rounded-full border px-3 py-1 text-sm ${
-                      isSelected
-                        ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-200 bg-white text-slate-600'
-                    }`}
                   >
                     {label.name}
-                  </button>
+                  </AdminToggleChip>
                 );
               })}
             </div>
           )}
-        </div>
-        <div className='sm:col-span-2'>
-          <Label htmlFor='feedback-description'>Description</Label>
+        </AdminField>
+        <AdminField label='Description' htmlFor='feedback-description' span={2}>
           <Textarea
             id='feedback-description'
             rows={3}
@@ -283,7 +271,7 @@ export function FeedbackPanel() {
               }))
             }
           />
-        </div>
+        </AdminField>
       </AdminFieldGrid>
     </AdminEditorPanel>
   );
@@ -311,7 +299,7 @@ export function FeedbackPanel() {
         detail={detail}
         toolbar={
           lookupError ? (
-            <StatusBanner variant='error' title='Lookups'>
+            <StatusBanner variant='error' kind='error'>
               {lookupError}
             </StatusBanner>
           ) : null

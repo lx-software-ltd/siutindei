@@ -1,5 +1,7 @@
 'use client';
 
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
+
 import { clsx } from 'clsx';
 
 export interface AdminTabItem<T extends string = string> {
@@ -68,5 +70,40 @@ export function AdminTabStrip<T extends string>({
         );
       })}
     </div>
+  );
+}
+
+const toggleChipClassName = (pressed: boolean) =>
+  clsx(
+    'inline-flex h-8 items-center justify-center rounded-md border px-3 text-sm font-semibold transition',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400',
+    pressed
+      ? 'border-slate-300 bg-white text-slate-900 shadow-sm'
+      : 'border-transparent bg-slate-100 text-slate-600 hover:border-slate-300 hover:bg-white hover:text-slate-900'
+  );
+
+export interface AdminToggleChipProps
+  extends ButtonHTMLAttributes<HTMLButtonElement> {
+  pressed: boolean;
+  children: ReactNode;
+}
+
+/** Multi-select chip. Same surface as the active control in `AdminTabStrip`. */
+export function AdminToggleChip({
+  pressed,
+  className,
+  children,
+  type = 'button',
+  ...rest
+}: AdminToggleChipProps) {
+  return (
+    <button
+      type={type}
+      aria-pressed={pressed}
+      className={clsx(toggleChipClassName(pressed), className)}
+      {...rest}
+    >
+      {children}
+    </button>
   );
 }
