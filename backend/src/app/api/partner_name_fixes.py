@@ -106,9 +106,7 @@ def _add_review_status(session: Session, items: list[dict[str, Any]]) -> None:
         if item["entity_type"] == "organization"
     ]
     activity_ids = [
-        UUID(item["entity_id"])
-        for item in items
-        if item["entity_type"] == "activity"
+        UUID(item["entity_id"]) for item in items if item["entity_type"] == "activity"
     ]
     status_by_entity: dict[str, str] = {}
     if org_ids:
