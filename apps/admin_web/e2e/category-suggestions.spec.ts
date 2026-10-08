@@ -23,7 +23,10 @@ test.describe('Category suggestions', () => {
   }) => {
     await adminPage.goto('/admin/dashboard');
     await adminPage.getByRole('button', { name: 'Data quality', exact: true }).click();
-    await adminPage.getByRole('button', { name: 'Categories', exact: true }).click();
+    await adminPage
+      .getByRole('group', { name: 'Data quality' })
+      .getByRole('button', { name: 'Categories', exact: true })
+      .click();
     await expect(adminPage.getByText('Clay club')).toBeVisible();
     const apply = adminPage.getByRole('button', { name: 'Apply' });
     const applyIcon = await apply.locator('svg').boundingBox();
@@ -46,7 +49,10 @@ test.describe('Category suggestions', () => {
   test('admin can apply every matching pending check', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard');
     await adminPage.getByRole('button', { name: 'Data quality', exact: true }).click();
-    await adminPage.getByRole('button', { name: 'Categories', exact: true }).click();
+    await adminPage
+      .getByRole('group', { name: 'Data quality' })
+      .getByRole('button', { name: 'Categories', exact: true })
+      .click();
     await adminPage.getByRole('button', { name: 'Apply matching' }).click();
     await expect(
       adminPage.getByText('Apply every pending reassignment')
@@ -66,6 +72,8 @@ test('legacy category checks link opens data quality', async ({ adminPage }) => 
   await expect(adminPage).toHaveURL(/tab=checks/);
   await expect(adminPage).not.toHaveURL(/categoryView=/);
   await expect(
-    adminPage.getByRole('button', { name: 'Categories', exact: true })
+    adminPage
+      .getByRole('group', { name: 'Data quality' })
+      .getByRole('button', { name: 'Categories', exact: true })
   ).toBeVisible();
 });
