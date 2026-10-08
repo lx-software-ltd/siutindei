@@ -25,12 +25,11 @@ import {
   AdminDataTableHeadCell,
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
-import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
 import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
 import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { CascadingCategorySelect } from '../ui/cascading-category-select';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
 import {
   deleteRowActions,
@@ -140,9 +139,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     ['org_id', 'name', 'category_id', 'age_min', 'age_max'],
     formKey
   );
-  const requiredIndicator = validation.requiredIndicator;
-  const errorInputClassName =
-    'border-red-500 focus:border-red-500 focus:ring-red-500';
+  const errorInputClassName = formErrorClassName;
   const { markTouched } = validation;
   const shouldShowError = (field: string, message: string) =>
     validation.shouldShowError(field, Boolean(message));
@@ -355,7 +352,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null
@@ -369,7 +366,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
       }
     >
       <AdminFieldGrid columns={2}>
-        <div className='space-y-1'>
+        <AdminField error={showNameError ? nameError : undefined}>
           <LanguageToggleInput
             id='activity-name'
             label='Name'
@@ -383,11 +380,8 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             hasError={showNameError}
             inputClassName={showNameError ? errorInputClassName : ''}
           />
-          {showNameError ? (
-            <p className='text-xs text-red-600'>{nameError}</p>
-          ) : null}
-        </div>
-        <div className='sm:col-span-2'>
+        </AdminField>
+        <AdminField span={2}>
           <CascadingCategorySelect
             tree={categoryTree}
             value={panel.formState.category_id}
@@ -402,8 +396,8 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             hasError={showCategoryError}
             errorMessage={showCategoryError ? categoryError : undefined}
           />
-        </div>
-        <div className='sm:col-span-2'>
+        </AdminField>
+        <AdminField span={2}>
           <LanguageToggleInput
             id='activity-description'
             label='Description'
@@ -416,18 +410,15 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             }}
             onChange={handleDescriptionChange}
           />
-        </div>
+        </AdminField>
         {isAdmin ? (
           <>
             {importedLabel ? (
-              <div className='sm:col-span-2'>
-                <AdminReadOnlyValue label='Imported as'>
-                  {importedLabel}
-                </AdminReadOnlyValue>
-              </div>
+              <AdminReadOnlyValue label='Imported as' span={2}>
+                {importedLabel}
+              </AdminReadOnlyValue>
             ) : null}
-            <div className='space-y-1 sm:col-span-2'>
-              <Label htmlFor='activity-source-url'>Source URL</Label>
+            <AdminField label='Source URL' htmlFor='activity-source-url' span={2}>
               <Input
                 id='activity-source-url'
                 type='url'
@@ -440,9 +431,8 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
                 }
                 placeholder='https://'
               />
-            </div>
-            <div className='space-y-1 sm:col-span-2'>
-              <Label htmlFor='activity-source-note'>Source note</Label>
+            </AdminField>
+            <AdminField label='Source note' htmlFor='activity-source-note' span={2}>
               <Textarea
                 id='activity-source-note'
                 rows={2}
@@ -454,14 +444,15 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
                   }))
                 }
               />
-            </div>
+            </AdminField>
           </>
         ) : null}
-        <div className='space-y-1'>
-          <Label htmlFor='activity-age-min'>
-            Age Min{' '}
-            <span className='ml-1'>{requiredIndicator}</span>
-          </Label>
+        <AdminField
+          label='Age Min'
+          htmlFor='activity-age-min'
+          required
+          error={showAgeMinError ? ageMinError : undefined}
+        >
           <Input
             id='activity-age-min'
             type='number'
@@ -483,15 +474,19 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
               showAgeMinError || showAgeRangeError || undefined
             }
           />
-          {showAgeMinError ? (
-            <p className='text-xs text-red-600'>{ageMinError}</p>
-          ) : null}
-        </div>
-        <div className='space-y-1'>
-          <Label htmlFor='activity-age-max'>
-            Age Max{' '}
-            <span className='ml-1'>{requiredIndicator}</span>
-          </Label>
+        </AdminField>
+        <AdminField
+          label='Age Max'
+          htmlFor='activity-age-max'
+          required
+          error={
+            showAgeMaxError
+              ? ageMaxError
+              : showAgeRangeError
+                ? ageRangeError
+                : undefined
+          }
+        >
           <Input
             id='activity-age-max'
             type='number'
@@ -513,12 +508,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
               showAgeMaxError || showAgeRangeError || undefined
             }
           />
-          {showAgeMaxError ? (
-            <p className='text-xs text-red-600'>{ageMaxError}</p>
-          ) : showAgeRangeError ? (
-            <p className='text-xs text-red-600'>{ageRangeError}</p>
-          ) : null}
-        </div>
+        </AdminField>
       </AdminFieldGrid>
     </AdminEditorPanel>
   );

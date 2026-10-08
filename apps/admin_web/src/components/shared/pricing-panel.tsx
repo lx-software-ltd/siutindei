@@ -26,10 +26,9 @@ import {
   AdminDataTableHeadCell,
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
-import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
 import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import {
   deleteRowActions,
   ResourceTableShell,
@@ -132,9 +131,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
     ['location_id', 'activity_id', 'sessions_count', 'amount'],
     formKey
   );
-  const requiredIndicator = validation.requiredIndicator;
-  const errorInputClassName =
-    'border-red-500 focus:border-red-500 focus:ring-red-500';
+  const errorInputClassName = formErrorClassName;
   const { markTouched } = validation;
   const shouldShowError = (field: string, message: string) =>
     validation.shouldShowError(field, Boolean(message));
@@ -328,7 +325,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null
@@ -342,10 +339,12 @@ export function PricingPanel({ mode }: PricingPanelProps) {
       }
     >
       <AdminFieldGrid columns={2}>
-        <div className='space-y-1'>
-          <Label htmlFor='pricing-location'>
-            Location <span className='ml-1'>{requiredIndicator}</span>
-          </Label>
+        <AdminField
+          label='Location'
+          htmlFor='pricing-location'
+          required
+          error={showLocationError ? locationError : undefined}
+        >
           <Select
             id='pricing-location'
             value={formState.location_id}
@@ -366,14 +365,13 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               </option>
             ))}
           </Select>
-          {showLocationError ? (
-            <p className='text-xs text-red-600'>{locationError}</p>
-          ) : null}
-        </div>
-        <div className='space-y-1'>
-          <Label htmlFor='pricing-activity'>
-            Activity <span className='ml-1'>{requiredIndicator}</span>
-          </Label>
+        </AdminField>
+        <AdminField
+          label='Activity'
+          htmlFor='pricing-activity'
+          required
+          error={showActivityError ? activityError : undefined}
+        >
           <Select
             id='pricing-activity'
             value={formState.activity_id}
@@ -394,16 +392,12 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               </option>
             ))}
           </Select>
-          {showActivityError ? (
-            <p className='text-xs text-red-600'>{activityError}</p>
-          ) : null}
-        </div>
-        <div
-          className={
-            showSessionsField ? 'space-y-1' : 'space-y-1 sm:col-span-2'
-          }
+        </AdminField>
+        <AdminField
+          label='Pricing Type'
+          htmlFor='pricing-type'
+          span={showSessionsField ? 1 : 2}
         >
-          <Label htmlFor='pricing-type'>Pricing Type</Label>
           <Select
             id='pricing-type'
             value={formState.pricing_type}
@@ -430,12 +424,14 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               </option>
             ))}
           </Select>
-        </div>
+        </AdminField>
         {showSessionsField ? (
-          <div className='space-y-1'>
-            <Label htmlFor='pricing-sessions'>
-              Classes per term <span className='ml-1'>{requiredIndicator}</span>
-            </Label>
+          <AdminField
+            label='Classes per term'
+            htmlFor='pricing-sessions'
+            required
+            error={showSessionsError ? sessionsError : undefined}
+          >
             <Input
               id='pricing-sessions'
               type='number'
@@ -451,13 +447,10 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               className={showSessionsError ? errorInputClassName : ''}
               aria-invalid={showSessionsError || undefined}
             />
-            {showSessionsError ? (
-              <p className='text-xs text-red-600'>{sessionsError}</p>
-            ) : null}
-          </div>
+          </AdminField>
         ) : null}
         {showFreeTrialToggle ? (
-          <div className='sm:col-span-2'>
+          <AdminField span={2}>
             <label className='flex items-center gap-2 text-sm'>
               <input
                 id='pricing-free-trial'
@@ -473,10 +466,9 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               />
               <span>Free trial class offered</span>
             </label>
-          </div>
+          </AdminField>
         ) : null}
-        <div className='space-y-1'>
-          <Label htmlFor='pricing-currency'>Currency</Label>
+        <AdminField label='Currency' htmlFor='pricing-currency'>
           <Select
             id='pricing-currency'
             value={formState.currency}
@@ -494,14 +486,13 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               </option>
             ))}
           </Select>
-        </div>
-        <div className='space-y-1'>
-          <Label htmlFor='pricing-amount'>
-            Amount
-            {!isFreeType ? (
-              <span className='ml-1'>{requiredIndicator}</span>
-            ) : null}
-          </Label>
+        </AdminField>
+        <AdminField
+          label='Amount'
+          htmlFor='pricing-amount'
+          required={!isFreeType}
+          error={showAmountError ? amountError : undefined}
+        >
           <Input
             id='pricing-amount'
             type='number'
@@ -518,10 +509,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
             className={showAmountError ? errorInputClassName : ''}
             aria-invalid={showAmountError || undefined}
           />
-          {showAmountError ? (
-            <p className='text-xs text-red-600'>{amountError}</p>
-          ) : null}
-        </div>
+        </AdminField>
       </AdminFieldGrid>
     </AdminEditorPanel>
   );

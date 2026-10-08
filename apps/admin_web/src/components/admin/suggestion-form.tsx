@@ -13,14 +13,12 @@ import {
   type SubmitSuggestionPayload,
   type Ticket,
 } from '../../lib/api-client-user';
-import {
-  AddressAutocomplete,
-} from '../ui/address-autocomplete';
+import { AddressAutocomplete } from '../ui/address-autocomplete';
+import { AdminField } from '../ui/admin-field-grid';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { CascadingAreaSelect } from '../ui/cascading-area-select';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
 
@@ -150,18 +148,19 @@ export function SuggestionForm({ onSuggestionSubmitted }: SuggestionFormProps) {
     >
       {error && (
         <div className='mb-4'>
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner kind='error'>
             {error}
           </StatusBanner>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className='space-y-4'>
-        <div className='space-y-1'>
-          <Label htmlFor='organization-name'>
-            Organization/Place Name{' '}
-            {validation.requiredIndicator}
-          </Label>
+        <AdminField
+          label='Organization/Place Name'
+          htmlFor='organization-name'
+          required
+          error={showOrgNameError ? orgNameError : undefined}
+        >
           <Input
             id='organization-name'
             type='text'
@@ -180,13 +179,9 @@ export function SuggestionForm({ onSuggestionSubmitted }: SuggestionFormProps) {
             aria-invalid={showOrgNameError || undefined}
             onBlur={() => validation.markTouched('organizationName')}
           />
-          {showOrgNameError ? (
-            <p className='text-xs text-red-600'>{orgNameError}</p>
-          ) : null}
-        </div>
+        </AdminField>
 
-        <div>
-          <Label htmlFor='description'>Description</Label>
+        <AdminField label='Description' htmlFor='description'>
           <Textarea
             id='description'
             value={description}
@@ -195,10 +190,9 @@ export function SuggestionForm({ onSuggestionSubmitted }: SuggestionFormProps) {
             rows={3}
             maxLength={2000}
           />
-        </div>
+        </AdminField>
 
-        <div>
-          <Label htmlFor='address'>Address</Label>
+        <AdminField label='Address' htmlFor='address'>
           <AddressAutocomplete
             id='address'
             value={address}
@@ -208,19 +202,17 @@ export function SuggestionForm({ onSuggestionSubmitted }: SuggestionFormProps) {
             maxLength={500}
             countryCodes={countryCodes}
           />
-        </div>
-        <div>
-          <Label>Location</Label>
+        </AdminField>
+        <AdminField label='Location'>
           <CascadingAreaSelect
             tree={tree}
             value={areaId}
             onChange={handleAreaChange}
             disableCountry
           />
-        </div>
+        </AdminField>
 
-        <div>
-          <Label htmlFor='additional-notes'>Additional Notes</Label>
+        <AdminField label='Additional Notes' htmlFor='additional-notes'>
           <Textarea
             id='additional-notes'
             value={additionalNotes}
@@ -229,16 +221,18 @@ export function SuggestionForm({ onSuggestionSubmitted }: SuggestionFormProps) {
             rows={2}
             maxLength={2000}
           />
-        </div>
+        </AdminField>
 
         <div className='pt-2'>
           <Button
             type='submit'
             variant='primary'
-            disabled={isSubmitting || !organizationName.trim()}
+            disabled={!organizationName.trim()}
+            loading={isSubmitting}
+            loadingLabel='Submitting…'
             className='w-full sm:w-auto'
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Suggestion'}
+            Submit Suggestion
           </Button>
         </div>
       </form>

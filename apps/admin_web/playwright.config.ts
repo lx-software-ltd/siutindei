@@ -36,7 +36,11 @@ export default defineConfig({
     },
   ],
 
-  /* Run your local dev server before starting the tests */
+  /*
+   * Reuse skips `env` below. A server started with plain `npm run dev`
+   * has no mock Cognito config, and every authenticated spec stops on
+   * the login screen. Stop that process before running Playwright.
+   */
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',

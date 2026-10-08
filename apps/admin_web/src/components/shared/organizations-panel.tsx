@@ -25,9 +25,8 @@ import { WorkspaceEmpty } from '../admin/workspace-empty';
 import { useAuth } from '../auth-provider';
 import { Button } from '../ui/button';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
-import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
 import { Card } from '../ui/card';
 import { Select } from '../ui/select';
@@ -120,9 +119,7 @@ export function OrganizationsPanel({
     ],
     formKey
   );
-  const requiredIndicator = validation.requiredIndicator;
-  const errorInputClassName =
-    'border-red-500 focus:border-red-500 focus:ring-red-500';
+  const errorInputClassName = formErrorClassName;
   const { markTouched } = validation;
   const { setError } = panel;
   const shouldShowError = (field: string, message: string) =>
@@ -406,7 +403,7 @@ export function OrganizationsPanel({
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null
@@ -458,7 +455,7 @@ export function OrganizationsPanel({
       }
     >
       <AdminFieldGrid columns={2}>
-            <div className='space-y-1'>
+            <AdminField error={showNameError ? nameError : undefined}>
               <LanguageToggleInput
                 id='org-name'
                 label='Name'
@@ -472,17 +469,13 @@ export function OrganizationsPanel({
                 hasError={showNameError}
                 inputClassName={showNameError ? errorInputClassName : ''}
               />
-              {showNameError ? (
-                <p className='text-xs text-red-600'>{nameError}</p>
-              ) : null}
-            </div>
-            <div>
-              <Label htmlFor='org-manager'>
-                Manager
-                {isAdmin && panel.editingId ? (
-                  <span className='ml-1'>{requiredIndicator}</span>
-                ) : null}
-              </Label>
+            </AdminField>
+            <AdminField
+              label='Manager'
+              htmlFor='org-manager'
+              required={isAdmin && Boolean(panel.editingId)}
+              error={showManagerError ? managerError : undefined}
+            >
               {isAdmin ? (
                 <ManagerCombobox
                   key={formKey}
@@ -514,11 +507,8 @@ export function OrganizationsPanel({
                   </option>
                 </Select>
               )}
-              {showManagerError ? (
-                <p className='text-xs text-red-600'>{managerError}</p>
-              ) : null}
-            </div>
-            <div className='md:col-span-2'>
+            </AdminField>
+            <AdminField span={2}>
               <LanguageToggleInput
                 id='org-description'
                 label='Description'
@@ -531,9 +521,13 @@ export function OrganizationsPanel({
                 }}
                 onChange={handleDescriptionChange}
               />
-            </div>
-            <div className='md:col-span-2 space-y-1'>
-              <Label htmlFor='org-email'>Email</Label>
+            </AdminField>
+            <AdminField
+              label='Email'
+              htmlFor='org-email'
+              span={2}
+              error={showEmailError ? emailError : undefined}
+            >
               <Input
                 id='org-email'
                 type='email'
@@ -549,12 +543,12 @@ export function OrganizationsPanel({
                 className={showEmailError ? errorInputClassName : ''}
                 aria-invalid={showEmailError || undefined}
               />
-              {showEmailError ? (
-                <p className='text-xs text-red-600'>{emailError}</p>
-              ) : null}
-            </div>
-            <div className='space-y-1'>
-              <Label htmlFor='org-phone-country'>Phone country</Label>
+            </AdminField>
+            <AdminField
+              label='Phone country'
+              htmlFor='org-phone-country'
+              error={showPhoneCountryError ? phoneCountryError : undefined}
+            >
               <Select
                 id='org-phone-country'
                 value={panel.formState.phone_country_code}
@@ -574,12 +568,12 @@ export function OrganizationsPanel({
                   </option>
                 ))}
               </Select>
-              {showPhoneCountryError ? (
-                <p className='text-xs text-red-600'>{phoneCountryError}</p>
-              ) : null}
-            </div>
-            <div className='space-y-1'>
-              <Label htmlFor='org-phone-number'>Phone number</Label>
+            </AdminField>
+            <AdminField
+              label='Phone number'
+              htmlFor='org-phone-number'
+              error={showPhoneNumberError ? phoneNumberError : undefined}
+            >
               <Input
                 id='org-phone-number'
                 type='tel'
@@ -596,14 +590,10 @@ export function OrganizationsPanel({
                 className={showPhoneNumberError ? errorInputClassName : ''}
                 aria-invalid={showPhoneNumberError || undefined}
               />
-              {showPhoneNumberError ? (
-                <p className='text-xs text-red-600'>{phoneNumberError}</p>
-              ) : null}
-            </div>
+            </AdminField>
             {isAdmin && (
               <>
-              <div className='space-y-1'>
-                <Label htmlFor='org-source'>Source</Label>
+              <AdminField label='Source' htmlFor='org-source'>
                 <Select
                   id='org-source'
                   value={panel.formState.source}
@@ -621,9 +611,8 @@ export function OrganizationsPanel({
                     </option>
                   ))}
                 </Select>
-              </div>
-              <div className='space-y-1'>
-                <Label htmlFor='org-source-id'>Source ID</Label>
+              </AdminField>
+              <AdminField label='Source ID' htmlFor='org-source-id'>
                 <Input
                   id='org-source-id'
                   value={panel.formState.source_id}
@@ -634,11 +623,8 @@ export function OrganizationsPanel({
                     }))
                   }
                 />
-              </div>
-              <div className='space-y-1'>
-                <Label htmlFor='org-description-source'>
-                  Description origin
-                </Label>
+              </AdminField>
+              <AdminField label='Description origin' htmlFor='org-description-source'>
                 <Select
                   id='org-description-source'
                   value={panel.formState.description_source}
@@ -656,9 +642,8 @@ export function OrganizationsPanel({
                     </option>
                   ))}
                 </Select>
-              </div>
-              <div className='space-y-1'>
-                <Label htmlFor='org-source-url'>Source URL</Label>
+              </AdminField>
+              <AdminField label='Source URL' htmlFor='org-source-url'>
                 <Input
                   id='org-source-url'
                   type='url'
@@ -671,9 +656,8 @@ export function OrganizationsPanel({
                   }
                   placeholder='https://'
                 />
-              </div>
-              <div className='md:col-span-2 space-y-1'>
-                <Label htmlFor='org-source-note'>Source note</Label>
+              </AdminField>
+              <AdminField label='Source note' htmlFor='org-source-note' span={2}>
                 <Textarea
                   id='org-source-note'
                   rows={2}
@@ -685,9 +669,19 @@ export function OrganizationsPanel({
                     }))
                   }
                 />
-              </div>
-              <div className='space-y-1'>
-                <Label htmlFor='org-listing-status'>Listing status</Label>
+              </AdminField>
+              <AdminField
+                label='Listing status'
+                htmlFor='org-listing-status'
+                hint={
+                  panel.editingId
+                    ? `Review state is changed from Readiness below. Current review: ${(
+                        panel.items.find((item) => item.id === panel.editingId)
+                          ?.review_status ?? 'pending_review'
+                      ).replaceAll('_', ' ')}.`
+                    : undefined
+                }
+              >
                 <Select
                   id='org-listing-status'
                   value={panel.formState.status}
@@ -703,25 +697,18 @@ export function OrganizationsPanel({
                   <option value='closed_permanently'>Closed permanently</option>
                   <option value='hidden'>Hidden</option>
                 </Select>
-                {panel.editingId && (
-                  <p className='text-xs text-slate-500'>
-                    Review state is changed from Readiness below. Current
-                    review:{' '}
-                    {(
-                      panel.items.find((item) => item.id === panel.editingId)
-                        ?.review_status ?? 'pending_review'
-                    ).replaceAll('_', ' ')}
-                    .
-                  </p>
-                )}
-              </div>
+              </AdminField>
               </>
             )}
             {SOCIAL_FIELDS.map((field) => {
               const showError = showSocialError(field.key);
               return (
-                <div key={field.key} className='space-y-1'>
-                  <Label htmlFor={`org-${field.key}`}>{field.label}</Label>
+                <AdminField
+                  key={field.key}
+                  label={field.label}
+                  htmlFor={`org-${field.key}`}
+                  error={showError ? socialErrors[field.key] : undefined}
+                >
                   <Input
                     id={`org-${field.key}`}
                     value={panel.formState[field.key]}
@@ -736,12 +723,7 @@ export function OrganizationsPanel({
                     className={showError ? errorInputClassName : ''}
                     aria-invalid={showError || undefined}
                   />
-                  {showError ? (
-                    <p className='text-xs text-red-600'>
-                      {socialErrors[field.key]}
-                    </p>
-                  ) : null}
-                </div>
+                </AdminField>
               );
             })}
       </AdminFieldGrid>
@@ -751,7 +733,7 @@ export function OrganizationsPanel({
   if (!editorOpen) {
     if (panel.isLoading || (isManager && panel.items.length > 0)) {
       return (
-        <StatusBanner variant='info' title='Loading'>
+        <StatusBanner kind='info'>
           Loading the organization…
         </StatusBanner>
       );
@@ -771,7 +753,7 @@ export function OrganizationsPanel({
     return (
       <>
         {panel.listError ? (
-          <StatusBanner variant='error' title='Organization'>
+          <StatusBanner kind='error'>
             {panel.listError}
           </StatusBanner>
         ) : null}

@@ -30,11 +30,7 @@ export function OrganizationMergeDialog({
       description='Choose the other organization. Blank fields are filled from it. You choose the name when they differ.'
       onClose={onClose}
       contentClassName='w-full max-w-lg'
-      footer={
-        <Button type='button' variant='secondary' onClick={onClose}>
-          Close
-        </Button>
-      }
+      footer={null}
     >
       {anchor ? (
         <MergeSearch

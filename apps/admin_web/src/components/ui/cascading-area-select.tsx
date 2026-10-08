@@ -1,4 +1,6 @@
 'use client';
+import { formErrorClassName, RequiredMark } from './admin-field-grid';
+import { AdminInlineError } from './admin-inline-error';
 
 import { useMemo, useState } from 'react';
 
@@ -169,7 +171,7 @@ export function CascadingAreaSelect({
     ? `area-select-error-${value || 'new'}`
     : undefined;
   const errorClassName = hasError
-    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+    ? formErrorClassName
     : '';
   const selectClasses = [selectClassName, errorClassName]
     .filter(Boolean)
@@ -187,11 +189,7 @@ export function CascadingAreaSelect({
             <div key={`${level.label}-${level.index}`}>
               <Label htmlFor={`area-level-${level.index}`}>
                 {level.label}
-                {required ? (
-                  <span className='ml-1 text-red-500' aria-hidden='true'>
-                    *
-                  </span>
-                ) : null}
+                {required ? <RequiredMark /> : null}
               </Label>
               <Select
                 id={`area-level-${level.index}`}
@@ -218,9 +216,9 @@ export function CascadingAreaSelect({
         })}
       </div>
       {errorMessage ? (
-        <p id={errorId} className='text-xs text-red-600'>
+        <AdminInlineError id={errorId} size='xs'>
           {errorMessage}
-        </p>
+        </AdminInlineError>
       ) : null}
     </div>
   );

@@ -70,7 +70,7 @@ test.describe('API Keys Panel', () => {
 
     await adminPage.getByTitle('Revoke key').first().click();
 
-    const dialog = adminPage.getByRole('dialog');
+    const dialog = adminPage.getByRole('alertdialog');
     await expect(dialog.getByText('Revoke API key?')).toBeVisible();
     await dialog.getByRole('button', { name: 'Revoke Key' }).click();
 

@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 
 import type { LanguageCode } from '../../lib/translations';
 import { languageOptions } from '../../lib/translations';
+import { RequiredMark } from './admin-field-grid';
+import { AdminInlineError } from './admin-inline-error';
 import { Input } from './input';
 import { Label } from './label';
 import { Textarea } from './textarea';
@@ -18,6 +20,8 @@ interface LanguageToggleInputProps {
   rows?: number;
   required?: boolean;
   hasError?: boolean;
+  /** Field error rendered under the control. */
+  error?: string;
   inputClassName?: string;
   readOnly?: boolean;
 }
@@ -32,6 +36,7 @@ export function LanguageToggleInput({
   rows = 3,
   required = false,
   hasError = false,
+  error = '',
   inputClassName = '',
   readOnly = false,
 }: LanguageToggleInputProps) {
@@ -87,11 +92,7 @@ export function LanguageToggleInput({
       <div className='flex flex-wrap items-start justify-between gap-3'>
         <Label className='mb-0' htmlFor={id}>
           {label}
-          {required ? (
-            <span className='ml-1 text-red-500' aria-hidden='true'>
-              *
-            </span>
-          ) : null}
+          {required ? <RequiredMark /> : null}
         </Label>
         <div className='flex items-center gap-2'>
           {languageOptions.map((option) => {
@@ -131,6 +132,11 @@ export function LanguageToggleInput({
         <p className='text-xs text-slate-500'>{description}</p>
       ) : null}
       {input}
+      {error ? (
+        <AdminInlineError size='xs' className='mt-1'>
+          {error}
+        </AdminInlineError>
+      ) : null}
     </div>
   );
 }

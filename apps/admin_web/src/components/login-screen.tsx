@@ -1,4 +1,6 @@
 'use client';
+import { formErrorClassName, RequiredMark } from './ui/admin-field-grid';
+import { AdminInlineError } from './ui/admin-inline-error';
 
 import { useState, type FormEvent } from 'react';
 
@@ -50,13 +52,7 @@ export function LoginScreen() {
   const [emailSubmitted, setEmailSubmitted] = useState(false);
   const [codeSubmitted, setCodeSubmitted] = useState(false);
 
-  const requiredIndicator = (
-    <span className='text-red-500' aria-hidden='true'>
-      *
-    </span>
-  );
-  const errorInputClassName =
-    'border-red-500 focus:border-red-500 focus:ring-red-500';
+  const errorInputClassName = formErrorClassName;
 
   const hasConfigErrors = configErrors.length > 0;
   const hasError = error.length > 0;
@@ -167,20 +163,19 @@ export function LoginScreen() {
               {(hasError || hasConfigErrors || hasPasswordlessError) && (
                 <div className='mb-4 space-y-2'>
                   {hasError && (
-                    <StatusBanner variant='error' title='Login'>
+                    <StatusBanner kind='error'>
                       {error}
                     </StatusBanner>
                   )}
                   {hasPasswordlessError && (
-                    <StatusBanner variant='error' title='Email sign in'>
+                    <StatusBanner kind='error'>
                       {passwordlessError}
                     </StatusBanner>
                   )}
                   {configErrors.map((configError) => (
                     <StatusBanner
                       key={configError}
-                      variant='error'
-                      title='Config'
+                      kind='error'
                     >
                       {configError}
                     </StatusBanner>
@@ -222,8 +217,7 @@ export function LoginScreen() {
                 <form onSubmit={handleEmailSubmit} className='space-y-4'>
                   <div className='space-y-2'>
                     <Label htmlFor='email'>
-                      Work email{' '}
-                      <span className='ml-1'>{requiredIndicator}</span>
+                      Work email <RequiredMark />
                     </Label>
                     <Input
                       id='email'
@@ -242,15 +236,17 @@ export function LoginScreen() {
                       aria-invalid={showEmailError || undefined}
                     />
                     {showEmailError ? (
-                      <p className='text-xs text-red-600'>{emailError}</p>
+                      <AdminInlineError size='xs'>{emailError}</AdminInlineError>
                     ) : null}
                   </div>
                   <Button
                     type='submit'
-                    disabled={isLoading || hasConfigErrors || !email.trim()}
+                    disabled={hasConfigErrors || !email.trim()}
+                    loading={isSending}
+                    loadingLabel='Sending link…'
                     className='h-11 w-full text-base sm:text-sm'
                   >
-                    {isSending ? 'Sending link...' : 'Email me a magic link'}
+                    Email me a magic link
                   </Button>
                   <p className='text-center text-xs text-slate-600'>
                     We&apos;ll send a one-time code if links are blocked.
@@ -260,8 +256,7 @@ export function LoginScreen() {
                 <form onSubmit={handleCodeSubmit} className='space-y-4'>
                   <div className='space-y-2'>
                     <Label htmlFor='code'>
-                      Verification code{' '}
-                      <span className='ml-1'>{requiredIndicator}</span>
+                      Verification code <RequiredMark />
                     </Label>
                     <Input
                       id='code'
@@ -282,7 +277,7 @@ export function LoginScreen() {
                       aria-invalid={showCodeError || undefined}
                     />
                     {showCodeError ? (
-                      <p className='text-xs text-red-600'>{codeError}</p>
+                      <AdminInlineError size='xs'>{codeError}</AdminInlineError>
                     ) : null}
                     <p className='text-xs text-slate-600'>
                       Enter the 6-digit code sent to{' '}
@@ -291,10 +286,12 @@ export function LoginScreen() {
                   </div>
                   <Button
                     type='submit'
-                    disabled={isLoading || !code.trim()}
+                    disabled={!code.trim()}
+                    loading={isVerifying}
+                    loadingLabel='Verifying…'
                     className='h-11 w-full text-base sm:text-sm'
                   >
-                    {isVerifying ? 'Verifying...' : 'Verify code'}
+                    Verify code
                   </Button>
                   <button
                     type='button'

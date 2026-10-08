@@ -24,7 +24,9 @@ import {
 } from '@/components/ui/admin-filter-bar';
 import { Input } from '@/components/ui/input';
 import { ResourceTableShell } from '@/components/ui/resource-table-shell';
+import { AdminReadOnlyValue } from '@/components/ui/admin-read-only-value';
 import { Select } from '@/components/ui/select';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Textarea } from '@/components/ui/textarea';
 
 type ActionFilter = 'all' | 'INSERT' | 'UPDATE' | 'DELETE';
@@ -104,19 +106,9 @@ function formatJson(obj: Record<string, unknown> | null | undefined): string {
 }
 
 function ActionBadge({ action }: { action: AuditLog['action'] }) {
-  const colors = {
-    INSERT: 'bg-green-100 text-green-800',
-    UPDATE: 'bg-blue-100 text-blue-800',
-    DELETE: 'bg-red-100 text-red-800',
-  };
+  const tone = action === 'INSERT' ? 'green' : action === 'DELETE' ? 'red' : 'blue';
 
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[action]}`}
-    >
-      {action}
-    </span>
-  );
+  return <StatusBadge status={action} tone={tone} label={action} />;
 }
 
 export function AuditLogsPanel() {
@@ -261,7 +253,7 @@ export function AuditLogsPanel() {
       toolbar={
         userLookupError ? (
           <div className='mb-3'>
-            <StatusBanner variant='error' title='User Lookup'>
+            <StatusBanner kind='error'>
               {userLookupError}
             </StatusBanner>
           </div>
@@ -363,73 +355,42 @@ export function AuditLogsPanel() {
 }
 
 function AuditLogDetail({ log, userEmail }: { log: AuditLog; userEmail: string }) {
-  const fieldId = (name: string) => `audit-${log.id}-${name}`;
   const hasOldValues = Boolean(log.old_values && Object.keys(log.old_values).length > 0);
   const hasNewValues = Boolean(log.new_values && Object.keys(log.new_values).length > 0);
 
   return (
     <AdminEditorPanel>
       <AdminFieldGrid columns={2}>
-        <AdminField label='ID' htmlFor={fieldId('id')}>
-          <Input id={fieldId('id')} value={log.id} readOnly />
-        </AdminField>
-        <AdminField label='Timestamp' htmlFor={fieldId('timestamp')}>
-          <Input id={fieldId('timestamp')} value={formatDateTime(log.timestamp)} readOnly />
-        </AdminField>
-        <AdminField label='Table' htmlFor={fieldId('table')}>
-          <Input id={fieldId('table')} value={log.table_name} readOnly />
-        </AdminField>
-        <AdminField label='Record ID' htmlFor={fieldId('record')}>
-          <Input id={fieldId('record')} value={log.record_id} readOnly />
-        </AdminField>
-        <AdminField label='Action' htmlFor={fieldId('action')}>
-          <Input id={fieldId('action')} value={log.action} readOnly />
-        </AdminField>
-        <AdminField label='Source' htmlFor={fieldId('source')}>
-          <Input id={fieldId('source')} value={log.source} readOnly />
-        </AdminField>
-        <AdminField label='User Email' htmlFor={fieldId('email')}>
-          <Input id={fieldId('email')} value={userEmail} readOnly />
-        </AdminField>
-        <AdminField label='Request ID' htmlFor={fieldId('request')}>
-          <Input id={fieldId('request')} value={log.request_id || '—'} readOnly />
-        </AdminField>
+        <AdminReadOnlyValue label='ID' mono>{log.id}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Timestamp'>{formatDateTime(log.timestamp)}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Table'>{log.table_name}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Record ID' mono>{log.record_id}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Action'>{log.action}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Source'>{log.source}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='User Email'>{userEmail}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Request ID' mono>{log.request_id || '—'}</AdminReadOnlyValue>
         {log.changed_fields && log.changed_fields.length > 0 ? (
-          <AdminField label='Changed Fields' htmlFor={fieldId('changed')} span='full'>
-            <Input id={fieldId('changed')} value={log.changed_fields.join(', ')} readOnly />
-          </AdminField>
+          <AdminReadOnlyValue label='Changed Fields' span='full'>{log.changed_fields.join(', ')}</AdminReadOnlyValue>
         ) : null}
         {hasOldValues ? (
-          <AdminField label='Old Values' htmlFor={fieldId('old')} span='full'>
-            <Textarea
-              id={fieldId('old')}
-              readOnly
-              rows={6}
-              value={formatJson(log.old_values)}
-              className='max-h-40 bg-red-50 font-mono text-xs text-red-900'
-            />
-          </AdminField>
+          <AdminReadOnlyValue label='Old Values' span='full' mono>
+            <span className='block max-h-40 overflow-auto rounded bg-red-50 p-2 text-red-900'>
+              {formatJson(log.old_values)}
+            </span>
+          </AdminReadOnlyValue>
         ) : null}
         {hasNewValues ? (
-          <AdminField label='New Values' htmlFor={fieldId('new')} span='full'>
-            <Textarea
-              id={fieldId('new')}
-              readOnly
-              rows={6}
-              value={formatJson(log.new_values)}
-              className='max-h-40 bg-green-50 font-mono text-xs text-green-900'
-            />
-          </AdminField>
+          <AdminReadOnlyValue label='New Values' span='full' mono>
+            <span className='block max-h-40 overflow-auto rounded bg-green-50 p-2 text-green-900'>
+              {formatJson(log.new_values)}
+            </span>
+          </AdminReadOnlyValue>
         ) : null}
         {log.ip_address ? (
-          <AdminField label='IP' htmlFor={fieldId('ip')}>
-            <Input id={fieldId('ip')} value={log.ip_address} readOnly />
-          </AdminField>
+          <AdminReadOnlyValue label='IP'>{log.ip_address}</AdminReadOnlyValue>
         ) : null}
         {log.user_agent ? (
-          <AdminField label='User agent' htmlFor={fieldId('agent')} span='full'>
-            <Input id={fieldId('agent')} value={log.user_agent} readOnly />
-          </AdminField>
+          <AdminReadOnlyValue label='User agent' span='full'>{log.user_agent}</AdminReadOnlyValue>
         ) : null}
       </AdminFieldGrid>
     </AdminEditorPanel>

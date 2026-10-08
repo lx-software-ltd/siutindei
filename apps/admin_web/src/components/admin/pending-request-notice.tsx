@@ -14,8 +14,8 @@ export function PendingRequestNotice({ request }: PendingRequestNoticeProps) {
   const formattedDate = formatDateTime(request.created_at);
 
   return (
-    <div className='mx-auto max-w-2xl'>
-      <StatusBanner variant='info' title='Request Pending'>
+    <div className='space-y-4'>
+      <StatusBanner kind='pending-review'>
         Your organization access request has been submitted and is pending review.
       </StatusBanner>
 

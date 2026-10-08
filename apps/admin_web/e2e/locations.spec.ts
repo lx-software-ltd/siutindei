@@ -14,9 +14,9 @@ test.describe('Locations Panel', () => {
 
     await adminPage.getByRole('button', { name: 'Delete' }).first().click();
     await adminPage
-      .getByRole('dialog')
+      .getByRole('alertdialog')
       .getByRole('button', { name: 'Delete' })
       .click();
-    await expect(adminPage.getByRole('dialog')).not.toBeVisible();
+    await expect(adminPage.getByRole('alertdialog')).not.toBeVisible();
   });
 });

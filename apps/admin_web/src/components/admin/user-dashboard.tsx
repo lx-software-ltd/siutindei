@@ -109,7 +109,7 @@ export function AccountHome() {
   if (isLoading) {
     return (
       <main className='mx-auto flex min-h-screen max-w-lg items-center px-6'>
-        <StatusBanner variant='info' title='Loading'>
+        <StatusBanner kind='info'>
           Loading your account information...
         </StatusBanner>
       </main>
@@ -152,12 +152,12 @@ export function AccountHome() {
       lastAuthTime={user?.lastAuthTime}
     >
       {authError && (
-        <StatusBanner variant='error' title='Session'>
+        <StatusBanner kind='error'>
           {authError}
         </StatusBanner>
       )}
       {error && (
-        <StatusBanner variant='error' title='Error'>
+        <StatusBanner kind='error'>
           {error}
         </StatusBanner>
       )}

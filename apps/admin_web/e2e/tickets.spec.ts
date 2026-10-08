@@ -20,7 +20,7 @@ test.describe('Tickets Panel', () => {
 
   test('reviews a pending ticket', async ({ adminPage }) => {
     await adminPage.getByRole('row', { name: /T00001/ }).click();
-    await expect(adminPage.getByLabel('Ticket ID')).toHaveValue('T00001');
+    await expect(adminPage.getByLabel('Ticket ID')).toHaveText('T00001');
     await expect(adminPage.getByText('Create new')).toBeVisible();
 
     await adminPage.getByRole('button', { name: 'Approve' }).click();

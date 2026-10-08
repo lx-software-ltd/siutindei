@@ -21,10 +21,9 @@ import {
   AdminDataTableHeadCell,
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
-import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
 import { AdminFilterBar } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
 import {
   deleteRowActions,
@@ -239,7 +238,7 @@ export function ActivityCategoriesPanel() {
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null
@@ -253,7 +252,7 @@ export function ActivityCategoriesPanel() {
       }
     >
       <AdminFieldGrid columns={2}>
-        <div className='space-y-1'>
+        <AdminField>
           <LanguageToggleInput
             id='category-name'
             label='Name'
@@ -266,18 +265,15 @@ export function ActivityCategoriesPanel() {
             }}
             onChange={handleNameChange}
             hasError={showNameError}
+            error={showNameError ? nameError : ''}
             inputClassName={
               isSystemLocked
                 ? 'bg-slate-100'
                 : validation.errorClassName('name', Boolean(nameError))
             }
           />
-          {showNameError ? (
-            <p className='text-xs text-red-600'>{nameError}</p>
-          ) : null}
-        </div>
-        <div>
-          <Label htmlFor='category-parent'>Parent</Label>
+        </AdminField>
+        <AdminField label='Parent' htmlFor='category-parent'>
           <Select
             id='category-parent'
             value={panel.formState.parent_id}
@@ -300,9 +296,12 @@ export function ActivityCategoriesPanel() {
               </option>
             ))}
           </Select>
-        </div>
-        <div className='space-y-1'>
-          <Label htmlFor='category-order'>Display Order</Label>
+        </AdminField>
+        <AdminField
+          label='Display Order'
+          htmlFor='category-order'
+          error={showDisplayOrderError ? displayOrderError : undefined}
+        >
           <Input
             id='category-order'
             type='number'
@@ -322,10 +321,7 @@ export function ActivityCategoriesPanel() {
             )}
             aria-invalid={showDisplayOrderError || undefined}
           />
-          {showDisplayOrderError ? (
-            <p className='text-xs text-red-600'>{displayOrderError}</p>
-          ) : null}
-        </div>
+        </AdminField>
         <label className='flex items-center gap-2 text-sm sm:col-span-2'>
           <input
             type='checkbox'

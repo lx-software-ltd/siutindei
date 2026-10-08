@@ -7,10 +7,10 @@ import {
 } from '../../lib/api-client';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { submitAccessRequest, type Ticket } from '../../lib/api-client-user';
+import { AdminField } from '../ui/admin-field-grid';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
 
@@ -81,25 +81,26 @@ export function AccessRequestForm({ onRequestSubmitted }: AccessRequestFormProps
   };
 
   return (
-    <div className='mx-auto max-w-2xl'>
+    <div className='space-y-4'>
       <Card
         title='Request Organization Access'
         description='You are not currently associated with any organization. Please submit a request to be added to an existing organization or to create a new one.'
       >
         {error && (
           <div className='mb-4'>
-            <StatusBanner variant='error' title='Error'>
+            <StatusBanner kind='error'>
               {error}
             </StatusBanner>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className='space-y-4'>
-          <div className='space-y-1'>
-            <Label htmlFor='organization-name'>
-              Organization Name{' '}
-              {validation.requiredIndicator}
-            </Label>
+          <AdminField
+            label='Organization Name'
+            htmlFor='organization-name'
+            required
+            error={showOrgNameError ? orgNameError : undefined}
+          >
             <Input
               id='organization-name'
               type='text'
@@ -120,17 +121,13 @@ export function AccessRequestForm({ onRequestSubmitted }: AccessRequestFormProps
               aria-invalid={showOrgNameError || undefined}
               onBlur={() => validation.markTouched('organizationName')}
             />
-            {showOrgNameError ? (
-              <p className='text-xs text-red-600'>{orgNameError}</p>
-            ) : null}
-            <p className='text-sm text-slate-500'>
+            <p className='mt-1 text-sm text-slate-500'>
               Enter the exact name of an existing organization, or the name for a
               new organization you would like to create.
             </p>
-          </div>
+          </AdminField>
 
-          <div>
-            <Label htmlFor='request-message'>Request Message (Optional)</Label>
+          <AdminField label='Request Message (Optional)' htmlFor='request-message'>
             <Textarea
               id='request-message'
               rows={4}
@@ -143,15 +140,16 @@ export function AccessRequestForm({ onRequestSubmitted }: AccessRequestFormProps
               Explain why you need access to this organization or provide
               additional context for your request.
             </p>
-          </div>
+          </AdminField>
 
           <div className='pt-2'>
             <Button
               type='submit'
-              disabled={isSubmitting}
+              loading={isSubmitting}
+              loadingLabel='Submitting…'
               className='w-full sm:w-auto'
             >
-              {isSubmitting ? 'Submitting...' : 'Submit Request'}
+              Submit Request
             </Button>
           </div>
         </form>

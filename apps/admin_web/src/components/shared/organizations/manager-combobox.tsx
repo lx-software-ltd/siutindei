@@ -11,6 +11,7 @@ import {
 import { ApiError } from '../../../lib/api-client';
 import { listCognitoUsers } from '../../../lib/api-client-cognito';
 import type { CognitoUser } from '../../../types/admin';
+import { ChevronDownIcon, SpinnerIcon } from '../../icons/action-icons';
 import { Input } from '../../ui/input';
 
 interface ManagerComboboxProps {
@@ -30,48 +31,6 @@ export function formatManagerLabel(user: Pick<
 >): string {
   const primary = user.email || user.username || user.sub;
   return user.name ? `${primary} (${user.name})` : primary;
-}
-
-function ChevronIcon() {
-  return (
-    <svg
-      className='h-4 w-4 text-slate-400'
-      viewBox='0 0 20 20'
-      fill='currentColor'
-      aria-hidden='true'
-    >
-      <path
-        fillRule='evenodd'
-        d='M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z'
-        clipRule='evenodd'
-      />
-    </svg>
-  );
-}
-
-function SpinnerIcon() {
-  return (
-    <svg
-      className='h-4 w-4 animate-spin text-slate-400'
-      viewBox='0 0 24 24'
-      fill='none'
-      aria-hidden='true'
-    >
-      <circle
-        className='opacity-25'
-        cx='12'
-        cy='12'
-        r='10'
-        stroke='currentColor'
-        strokeWidth='4'
-      />
-      <path
-        className='opacity-75'
-        fill='currentColor'
-        d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z'
-      />
-    </svg>
-  );
 }
 
 export function ManagerCombobox({
@@ -257,7 +216,11 @@ export function ManagerCombobox({
           aria-invalid={hasError || undefined}
         />
         <span className='pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3'>
-          {isLoading ? <SpinnerIcon /> : <ChevronIcon />}
+          {isLoading ? (
+            <SpinnerIcon className='h-4 w-4 animate-spin text-slate-400' />
+          ) : (
+            <ChevronDownIcon className='h-4 w-4 text-slate-400' />
+          )}
         </span>
       </div>
       {isOpen ? (

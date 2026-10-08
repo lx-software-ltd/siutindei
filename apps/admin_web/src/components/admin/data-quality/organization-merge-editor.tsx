@@ -90,7 +90,7 @@ export function OrganizationMergeEditor({
     <div className='space-y-3'>
       {confirmDialog}
       {error || previewError ? (
-        <StatusBanner variant='error' title='Merge'>
+        <StatusBanner kind='error'>
           {error || previewError}
         </StatusBanner>
       ) : null}

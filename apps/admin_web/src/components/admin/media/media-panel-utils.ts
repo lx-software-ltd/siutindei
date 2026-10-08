@@ -1,4 +1,7 @@
-import { createOrganizationMediaUpload } from '../../../lib/api-client-media';
+import {
+  createOrganizationMediaUpload,
+  deleteOrganizationMedia,
+} from '../../../lib/api-client-media';
 import type { ApiMode } from '../../../lib/resource-api';
 
 export interface MediaPanelProps {
@@ -152,4 +155,22 @@ export async function uploadMediaFile(
   }
 
   return upload.media_url;
+}
+
+/** Deletes uploads that were never written onto the organization. */
+export function discardUnsavedMediaUploads(
+  organizationId: string,
+  urls: string[]
+): void {
+  const unique = normalizeMediaUrls(urls);
+  if (!organizationId || unique.length === 0) {
+    return;
+  }
+  void Promise.all(
+    unique.map((url) =>
+      deleteOrganizationMedia(organizationId, { media_url: url }).catch(
+        () => undefined
+      )
+    )
+  );
 }
