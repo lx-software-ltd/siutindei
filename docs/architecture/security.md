@@ -171,8 +171,8 @@ in the `x-partner-key` header:
   partner routes, **scope and organization enforcement is re-checked in
   the handlers** (defense in depth, same pattern as the Cognito group
   checks). A full-access key lists every organization review status and
-  can read pending name-cleanup proposals. Org-scoped keys only see
-  that organization's proposals.
+  can read pending name-cleanup proposals and category-check reviews.
+  Org-scoped keys only see that organization's proposals and reviews.
 - Writes performed with a key are attributed to `api-key:<id>` in the
   audit log.
 - Admins manage keys via `/v1/admin/api-keys` (generate, list, revoke);

@@ -59,6 +59,10 @@ from app.api.admin_resources import (
 )
 from app.api.admin_suggestions import _handle_user_organization_suggestion
 from app.api.partner_auth import SCOPE_CRUD, get_partner_context
+from app.api.partner_category_reviews import (
+    handle_partner_category_reviews,
+    partner_get_activities,
+)
 from app.api.partner_name_fixes import (
     handle_partner_name_fixes,
     partner_get_organizations,
@@ -448,13 +452,15 @@ def _handle_partner_routes(
             event=event,
         )
 
-    if resource == "name-fixes":
+    partner_reads = {
+        "name-fixes": handle_partner_name_fixes,
+        "category-reviews": handle_partner_category_reviews,
+    }
+    if resource in partner_reads:
         if method != "GET":
             return json_response(404, {"error": "Not found"}, event=event)
-        return _safe_handler(
-            lambda: handle_partner_name_fixes(event, partner.org_id),
-            event,
-        )
+        reader = partner_reads[resource]
+        return _safe_handler(lambda: reader(event, partner.org_id), event)
 
     if resource not in _PARTNER_RESOURCES:
         return json_response(404, {"error": "Not found"}, event=event)
@@ -474,6 +480,12 @@ def _handle_partner_routes(
     if resource == "organizations" and method == "GET":
         return _safe_handler(
             lambda: partner_get_organizations(event, resource_id, managed_org_ids),
+            event,
+        )
+
+    if resource == "activities" and method == "GET":
+        return _safe_handler(
+            lambda: partner_get_activities(event, resource_id, managed_org_ids),
             event,
         )
 

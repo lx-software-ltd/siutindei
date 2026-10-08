@@ -356,7 +356,7 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/manager/{resource}/{id}` | ANY | Manager Group | `SiutindeiAdminFunction` | Filtered CRUD by ID. One method stays under the CloudFormation resource cap; the Lambda rejects methods it does not implement. |
 | `/v1/partner/activities/search` | GET | Partner API Key | `SiutindeiSearchFunction` | Partner search (org-filtered) |
 | `/v1/partner/activities` | GET, POST | Partner API Key | `SiutindeiAdminFunction` | Partner activities CRUD (explicit; literal resource shadows the proxy) |
-| `/v1/partner/{proxy+}` | ANY | Partner API Key | `SiutindeiAdminFunction` | Greedy proxy for remaining partner CRUD (orgs, locations, activities/{id}, pricing, schedules) and `GET /name-fixes`; scope/org enforced in Lambda |
+| `/v1/partner/{proxy+}` | ANY | Partner API Key | `SiutindeiAdminFunction` | Greedy proxy for remaining partner CRUD (orgs, locations, activities/{id}, pricing, schedules), `GET /name-fixes`, and `GET /category-reviews`; scope/org enforced in Lambda |
 | `/v1/user/access-request` | GET, POST | User Auth | `SiutindeiAdminFunction` | Access request |
 | `/v1/user/organization-suggestion` | GET, POST | User Auth | `SiutindeiAdminFunction` | Org suggestion |
 

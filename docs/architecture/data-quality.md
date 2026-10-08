@@ -8,7 +8,10 @@ Endpoint shapes live in `docs/api/admin.yaml` under
 `/v1/admin/org-duplicates` and `/v1/admin/name-fixes`. A full-access
 partner API key can read pending proposals at
 `GET /v1/partner/name-fixes` and sees `pending_name_fixes` on
-`GET /v1/partner/organizations`. See `docs/api/partner.yaml`.
+`GET /v1/partner/organizations`. The same key can read category-check
+reviews at `GET /v1/partner/category-reviews` and sees
+`category_review` on `GET /v1/partner/activities`. See
+`docs/api/partner.yaml`.
 
 ## Merge
 
@@ -76,7 +79,9 @@ Category checks moved here from the Categories nav item;
 `?categoryView=checks` opens this tab. Sweep pending re-evaluates
 activities on organizations still in review. Sweep all orgs includes
 approved organizations. Auto-assign still applies only while the
-organization is `pending_review`.
+organization is `pending_review`. A full-access partner API key can
+read confirmed and pending reviews; see
+`docs/architecture/category-suggestions.md`.
 
 The Names tab sweeps stored rows with the same rules and writes
 `name_fix_proposals`. The list is cursor paginated. Sweep pending
