@@ -10,16 +10,14 @@ import {
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
-import { ApiError } from '../../lib/api-client';
 import { listResource } from '../../lib/api-client-admin';
-import { listCognitoUsers } from '../../lib/api-client-cognito';
 import type { ApiMode } from '../../lib/resource-api';
 import { normalizeKey } from '../../lib/string-utils';
 import {
   buildTranslationsPayload,
   type LanguageCode,
 } from '../../lib/translations';
-import type { CognitoUser, Organization } from '../../types/admin';
+import type { Organization } from '../../types/admin';
 import { OrganizationMergeDialog } from '../admin/data-quality/organization-merge-dialog';
 import { OrganizationReadiness } from '../admin/organization-readiness';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
@@ -35,6 +33,7 @@ import { Card } from '../ui/card';
 import { Select } from '../ui/select';
 import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
+import { ManagerCombobox } from './organizations/manager-combobox';
 import {
   SOCIAL_FIELDS,
   DESCRIPTION_SOURCE_OPTIONS,
@@ -94,9 +93,6 @@ export function OrganizationsPanel({
     noun: 'organization',
   });
 
-  const [cognitoUsers, setCognitoUsers] = useState<CognitoUser[]>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-  const [managerQuery, setManagerQuery] = useState('');
   const [mergeAnchor, setMergeAnchor] = useState<{
     id: string;
     name: string;
@@ -128,46 +124,9 @@ export function OrganizationsPanel({
   const errorInputClassName =
     'border-red-500 focus:border-red-500 focus:ring-red-500';
   const { markTouched } = validation;
+  const { setError } = panel;
   const shouldShowError = (field: string, message: string) =>
     validation.shouldShowError(field, Boolean(message));
-
-  // Extract setError for stable reference in useEffect
-  const { setError } = panel;
-
-  useEffect(() => {
-    if (!isAdmin || !editorOpen) {
-      return;
-    }
-    let cancelled = false;
-    const handle = window.setTimeout(() => {
-      setIsLoadingUsers(true);
-      listCognitoUsers(undefined, 60, managerQuery)
-        .then((response) => {
-          if (!cancelled) {
-            setCognitoUsers(response.items);
-          }
-        })
-        .catch((err: unknown) => {
-          if (cancelled) {
-            return;
-          }
-          const message =
-            err instanceof ApiError
-              ? err.message
-              : 'Failed to load users for manager selection.';
-          setError(message);
-        })
-        .finally(() => {
-          if (!cancelled) {
-            setIsLoadingUsers(false);
-          }
-        });
-    }, 250);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(handle);
-    };
-  }, [editorOpen, isAdmin, managerQuery, setError]);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -525,52 +484,24 @@ export function OrganizationsPanel({
                 ) : null}
               </Label>
               {isAdmin ? (
-                <>
-                <Input
-                  id='org-manager-search'
-                  value={managerQuery}
-                  placeholder='Search by email'
-                  aria-label='Email prefix'
-                  onChange={(event) => setManagerQuery(event.target.value)}
-                  className='mb-2'
-                />
-                <Select
+                <ManagerCombobox
+                  key={formKey}
                   id='org-manager'
                   value={panel.formState.manager_id}
-                  onChange={(e) => {
+                  onChange={(managerId) => {
                     markTouched('manager_id');
                     panel.setFormState((prev) => ({
                       ...prev,
-                      manager_id: e.target.value,
+                      manager_id: managerId,
                     }));
                   }}
-                  disabled={isLoadingUsers}
-                  className={showManagerError ? errorInputClassName : ''}
-                  aria-invalid={showManagerError || undefined}
-                >
-                  <option value=''>
-                    {isLoadingUsers
-                      ? 'Loading users...'
-                      : panel.editingId
-                        ? 'Select a manager'
-                        : 'You (leave blank)'}
-                  </option>
-                  {panel.formState.manager_id &&
-                  !cognitoUsers.some(
-                    (cognitoUser) => cognitoUser.sub === panel.formState.manager_id
-                  ) ? (
-                    <option value={panel.formState.manager_id}>
-                      {panel.formState.manager_id}
-                    </option>
-                  ) : null}
-                  {cognitoUsers.map((cognitoUser) => (
-                    <option key={cognitoUser.sub} value={cognitoUser.sub}>
-                      {cognitoUser.email || cognitoUser.username || cognitoUser.sub}
-                      {cognitoUser.name ? ` (${cognitoUser.name})` : ''}
-                    </option>
-                  ))}
-                </Select>
-                </>
+                  onError={setError}
+                  hasError={showManagerError}
+                  allowEmpty={!panel.editingId}
+                  inputClassName={
+                    showManagerError ? errorInputClassName : ''
+                  }
+                />
               ) : (
                 <Select
                   id='org-manager'
