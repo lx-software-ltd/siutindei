@@ -47,9 +47,12 @@ Rules run in a fixed order: HTML entities, Unicode NFKC, whitespace
 (including a space before `(` or `[`), trailing punctuation, spacing
 between Latin and CJK, known or numeric brackets, title case for
 all-caps Latin tokens, then a bilingual split that copies Chinese into
-`name_translations.zh` when that key is empty. Title case keeps only
-configured exception words, and Roman numerals, in capitals. An empty
-result keeps the original name.
+`name_translations.zh` when that key is empty. After that split, brackets
+that only held the extracted Chinese are removed (`Harbour Club (海港會)`
+becomes `Harbour Club`); brackets that still have English stay
+(`Harbour Club (Central 海港)` becomes `Harbour Club (Central)`). Title
+case keeps only configured exception words, and Roman numerals, in
+capitals. An empty result keeps the original name.
 
 Imports apply this to every organization name and append
 `Imported name: …` to `source_note` (500 characters). Activity names
