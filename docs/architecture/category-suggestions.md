@@ -84,10 +84,12 @@ reassignment. The allowed range is 0.50 to 1.
 
 ## Category check
 
-The Category tab on Data quality scans activities whose organization is still
-`pending_review`. The organization filter limits one run to a single
-organization; the default is every pending organization. It does not
-include approved organizations. A run skips an activity that was
+The Categories tab on Data quality scans activities. Sweep pending
+limits the run to organizations still `pending_review`. Sweep all orgs
+includes approved organizations. The organization filter limits one
+run to a single organization; the default is every organization in
+that scope. Auto-assign still applies only while the organization is
+`pending_review`. A run skips an activity that was
 confirmed, applied, or auto-applied in the last 30 days unless the
 request sets `rescan`. An activity with a review still `pending` is
 skipped even on rescan, so a second run does not open a duplicate
@@ -144,13 +146,14 @@ match count before anything is written. Revert restores
 `previous_category_id`.
 
 A pending review is the organization-review warning
-`category_check_pending`. It does not block approval. The scan button
-is the only trigger. `scan_candidate_total` is the full candidate
-count; a run still stops at `scan_limit` (500).
+`category_check_pending`. It does not block approval. Sweep pending
+and Sweep all orgs are the verify triggers. `scan_candidate_total` is
+the pending-review candidate count; `scan_candidate_total_all` is the
+all-orgs count. A run still stops at `scan_limit` (500).
 
 ## Discover
 
-Discover is the primary button. It groups activities that are still on
+Discover all categories groups activities that are still on
 Pending categorisation, on organizations in `pending_review`, by the
 imported label. An activity already placed on a real category is left
 alone; verify checks those. A label that already matches a category is

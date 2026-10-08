@@ -57,6 +57,26 @@ def test_known_label_is_assigned_without_a_model_call(
     assert review.decided_by == f"category-scan:{run.id}"
 
 
+def test_discover_all_includes_approved_orgs(
+    db_session, sample_activity, sample_activity_category, sample_organization
+) -> None:
+    _leave_pending(db_session, sample_activity)
+    sample_activity.source_category_name = sample_activity_category.name
+    sample_organization.review_status = "approved"
+    db_session.flush()
+    skipped, _ = start_scan(db_session, {"mode": "discover"}, requested_by="admin")
+    assert skipped.total_activities == 0
+    run, batches = start_scan(
+        db_session,
+        {"mode": "discover", "review_scope": "all"},
+        requested_by="admin",
+    )
+    db_session.refresh(sample_activity)
+    assert batches == []
+    assert run.total_activities == 1
+    assert str(sample_activity.category_id) == str(PENDING_CATEGORY_ID)
+
+
 def test_categorised_activity_is_left_alone(
     db_session, sample_activity, sample_activity_category
 ) -> None:

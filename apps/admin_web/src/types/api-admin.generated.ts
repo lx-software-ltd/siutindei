@@ -1850,13 +1850,15 @@ export interface paths {
         };
         put?: never;
         /**
-         * Scan activities in pending-review organizations
-         * @description Admin group only. Selects activities whose organization
-         *     `review_status` is `pending_review`, skipping ones confirmed,
-         *     applied, or auto-applied in the last 30 days unless `rescan`
-         *     is true. Returns 202 with the run. An empty selection is a
-         *     finished run with zero batches. 409 when a run is already
-         *     queued or running.
+         * Sweep activity categories and store reviews
+         * @description Admin group only. Selects activities in `review_scope`,
+         *     skipping ones confirmed, applied, or auto-applied in the last
+         *     30 days unless `rescan` is true. `pending_review` limits the
+         *     run to organizations still in review. `all` includes approved
+         *     organizations. Auto-assign still applies only while the
+         *     organization is `pending_review`. Returns 202 with the run.
+         *     An empty selection is a finished run with zero batches. 409
+         *     when a run is already queued or running.
          */
         post: {
             parameters: {
@@ -7082,8 +7084,10 @@ export interface components {
             stranded_activity_total: number;
             review_pending_total?: number;
             auto_applied_total?: number;
-            /** @description Activities a new scan would check. Optional query org_id limits the count to one organization. The count is not capped. */
+            /** @description Activities a `review_scope=pending_review` scan would check. Optional query org_id limits the count to one organization. The count is not capped. */
             scan_candidate_total?: number;
+            /** @description Activities a `review_scope=all` scan would check. Optional query org_id still limits the count to one organization. */
+            scan_candidate_total_all?: number;
             /** @description Maximum activities one run will enqueue. */
             scan_limit?: number;
             /** @description Default number of activities or labels in one model call. A request can still pass a different batch_size. */
@@ -7142,6 +7146,12 @@ export interface components {
              * @enum {string}
              */
             mode: "verify" | "discover";
+            /**
+             * @description pending_review limits the run to organizations still in review. all includes approved organizations. Omitted stays pending_review. Auto-assign still applies only while the organization is pending_review.
+             * @default pending_review
+             * @enum {string}
+             */
+            review_scope: "pending_review" | "all";
         };
         CategoryScanRun: {
             /** Format: uuid */

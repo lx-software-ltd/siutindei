@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -39,8 +37,6 @@ from app.utils.logging import get_logger
 logger = get_logger(__name__)
 
 SKIP_WINDOW = timedelta(days=30)
-# Three SQS receives can each sit for the 180s visibility timeout, plus
-# the 120s Lambda timeout, before the message reaches the DLQ.
 STALE_AFTER = timedelta(seconds=660)
 DEFAULT_LIMIT = 500
 MAX_LIMIT = 500
@@ -60,9 +56,10 @@ def select_candidate_ids(
     org_id: UUID | None = None,
     limit: int = DEFAULT_LIMIT,
     rescan: bool = False,
+    review_scope: str = "pending_review",
 ) -> list[UUID]:
-    """Activities in pending-review organizations that still need a check."""
-    query = _candidate_stmt(org_id=org_id, rescan=rescan)
+    """Activities that still need a check in ``review_scope``."""
+    query = _candidate_stmt(org_id=org_id, rescan=rescan, review_scope=review_scope)
     rows = session.scalars(
         query.order_by(Activity.created_at, Activity.id).limit(limit)
     ).all()
@@ -74,23 +71,22 @@ def count_candidates(
     *,
     org_id: UUID | None = None,
     rescan: bool = False,
+    review_scope: str = "pending_review",
 ) -> int:
     """How many activities a scan would see, without the per-run cap."""
-    stmt = _candidate_stmt(org_id=org_id, rescan=rescan).subquery()
+    stmt = _candidate_stmt(
+        org_id=org_id, rescan=rescan, review_scope=review_scope
+    ).subquery()
     return int(session.scalar(select(func.count()).select_from(stmt)) or 0)
 
 
-def _candidate_stmt(*, org_id: UUID | None, rescan: bool):
-    """Pending-review activities with no open review."""
-    query = (
-        select(Activity.id)
-        .join(Organization, Organization.id == Activity.org_id)
-        .where(Organization.review_status == "pending_review")
-    )
+def _candidate_stmt(*, org_id: UUID | None, rescan: bool, review_scope: str):
+    """Activities with no open review, limited by ``review_scope``."""
+    query = select(Activity.id).join(Organization, Organization.id == Activity.org_id)
+    if review_scope != "all":
+        query = query.where(Organization.review_status == "pending_review")
     if org_id is not None:
         query = query.where(Activity.org_id == org_id)
-    # An open review is already waiting on an admin. Scanning it again
-    # would add a second pending row for the same activity.
     pending = (
         select(ActivityCategoryReview.id)
         .where(ActivityCategoryReview.activity_id == Activity.id)
@@ -138,6 +134,7 @@ def start_scan(
         body.get("ignore_current_category", False),
         "ignore_current_category",
     )
+    review_scope = _parse_review_scope(body.get("review_scope"))
     mode = _parse_mode(body.get("mode", "verify"))
     if mode == "discover":
         if ignore_current:
@@ -154,12 +151,17 @@ def start_scan(
             limit=limit,
             batch_size=batch_size,
             rescan=rescan,
+            review_scope=review_scope,
         )
-    # A recheck that kept the 30-day skip would leave the old taxonomy
-    # in place for anything checked recently.
     if ignore_current:
         rescan = True
-    ids = select_candidate_ids(session, org_id=org_id, limit=limit, rescan=rescan)
+    ids = select_candidate_ids(
+        session,
+        org_id=org_id,
+        limit=limit,
+        rescan=rescan,
+        review_scope=review_scope,
+    )
     now = datetime.now(timezone.utc)
     batches = _chunks([str(item) for item in ids], batch_size)
     run = CategoryScanRun(
@@ -213,6 +215,9 @@ def summary_counts(
         "review_pending_total": _count("pending"),
         "auto_applied_total": _count("auto_applied"),
         "scan_candidate_total": count_candidates(session, org_id=org_id),
+        "scan_candidate_total_all": count_candidates(
+            session, org_id=org_id, review_scope="all"
+        ),
         "scan_limit": MAX_LIMIT,
         "scan_batch_size": DEFAULT_BATCH_SIZE,
         "discover_activity_total": discover_activities,
@@ -462,6 +467,14 @@ def _parse_mode(value: Any) -> str:
     if value in {"verify", "discover"}:
         return str(value)
     raise ValidationError("mode must be verify or discover", field="mode")
+
+
+def _parse_review_scope(value: Any) -> str:
+    if value in (None, "", "pending_review"):
+        return "pending_review"
+    if value == "all":
+        return "all"
+    raise ValidationError("Invalid review_scope", field="review_scope")
 
 
 def _parse_bool(value: Any, field: str) -> bool:

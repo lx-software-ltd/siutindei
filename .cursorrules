@@ -529,9 +529,10 @@ screens from `apps/admin_web/src/components/ui/`:
   heading. Pass `title` only to override that heading. Do not also pass
   `variant`.
 - **Chips** for multi-select use `AdminToggleChip`.
-- **Bulk and scan actions** go in the table `toolbar`. Discover, Verify,
-  and Sweep scan stay primary buttons. Scope filters such as Sweep stay
-  in `AdminFilterBar` above the table.
+- **Bulk and scan actions** go in the table `toolbar`. Sweep pending,
+  Sweep all orgs, and Discover all categories stay primary. Apply and
+  Dismiss follow. Scope filters stay in `AdminFilterBar` above the
+  table.
 - **Dialogs** use `AdminDialog`, which always shows a header Close
   control. `ConfirmDialog` is the confirm/cancel footer on that shell.
   `footer={null}` omits the footer and keeps the header Close.

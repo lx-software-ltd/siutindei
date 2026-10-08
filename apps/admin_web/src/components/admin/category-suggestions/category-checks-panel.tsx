@@ -82,9 +82,9 @@ export function CategoryChecksPanel() {
   const [summary, setSummary] = useState<CategorySuggestionSummary | null>(null);
   const [threshold, setThreshold] = useState<number | null>(0.9);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [confirmMode, setConfirmMode] = useState<'discover' | 'verify' | null>(
-    null
-  );
+  const [confirmMode, setConfirmMode] = useState<
+    'discover' | 'pending_review' | 'all' | null
+  >(null);
   const [ignoreCurrent, setIgnoreCurrent] = useState(false);
   const [bulkAction, setBulkAction] = useState<'apply' | 'dismiss' | null>(null);
   const [bulkPreview, setBulkPreview] = useState<CategoryReviewBulkResult | null>(
@@ -167,7 +167,11 @@ export function CategoryChecksPanel() {
     return () => window.clearInterval(timer);
   }, [isRunning, reload]);
 
-  const candidates = summary?.scan_candidate_total ?? 0;
+  const pendingCandidates = summary?.scan_candidate_total ?? 0;
+  const allCandidates = summary?.scan_candidate_total_all ?? pendingCandidates;
+  const sweepScope = confirmMode === 'all' ? 'all' : 'pending_review';
+  const candidates =
+    sweepScope === 'all' ? allCandidates : pendingCandidates;
   const scanLimit = summary?.scan_limit ?? 500;
   const batchSize = summary?.scan_batch_size ?? 10;
   const scanCount = Math.min(candidates, scanLimit);
@@ -184,13 +188,17 @@ export function CategoryChecksPanel() {
     ? `${active.batches_done} of ${active.batches_total} batches. ${active.failed} failed.`
     : '';
 
-  async function startScan(mode: 'discover' | 'verify') {
+  async function startScan(
+    mode: 'discover' | 'verify',
+    reviewScope: 'pending_review' | 'all'
+  ) {
     setIsStarting(true);
     setError('');
     try {
       await startCategoryScan({
         org_id: selectedOrgId || undefined,
         mode,
+        review_scope: reviewScope,
         rescan: mode === 'verify' && ignoreCurrent ? true : undefined,
         ignore_current_category:
           mode === 'verify' && ignoreCurrent ? true : undefined,
@@ -388,6 +396,38 @@ export function CategoryChecksPanel() {
           <div className='mb-3 flex flex-wrap gap-2'>
             <Button
               type='button'
+              size='sm'
+              disabled={pendingCandidates === 0 || isRunning || isStarting}
+              loading={isStarting && confirmMode === 'pending_review'}
+              loadingLabel='Scanning…'
+              onClick={() => setConfirmMode('pending_review')}
+            >
+              Sweep pending
+            </Button>
+            <Button
+              type='button'
+              size='sm'
+              disabled={allCandidates === 0 || isRunning || isStarting}
+              loading={isStarting && confirmMode === 'all'}
+              loadingLabel='Scanning…'
+              onClick={() => setConfirmMode('all')}
+            >
+              Sweep all orgs
+            </Button>
+            <Button
+              type='button'
+              size='sm'
+              disabled={
+                (discoverActivities === 0 && discoverLabels === 0) ||
+                isRunning ||
+                isStarting
+              }
+              onClick={() => setConfirmMode('discover')}
+            >
+              Discover all categories
+            </Button>
+            <Button
+              type='button'
               variant='outline'
               size='sm'
               disabled={isRunning || isStarting || isBulkRunning}
@@ -408,33 +448,17 @@ export function CategoryChecksPanel() {
             >
               Dismiss matching
             </Button>
-            <Button
-              type='button'
-              size='sm'
-              disabled={
-                (discoverActivities === 0 && discoverLabels === 0) ||
-                isRunning ||
-                isStarting
-              }
-              onClick={() => setConfirmMode('discover')}
-            >
-              Discover categories
-            </Button>
-            <Button
-              type='button'
-              size='sm'
-              disabled={scanCount === 0 || isRunning || isStarting}
-              onClick={() => setConfirmMode('verify')}
-            >
-              Verify categories
-            </Button>
           </div>
         }
       />
       <ConfirmDialog
         open={confirmMode !== null}
         title={
-          confirmMode === 'discover' ? 'Discover categories' : 'Verify categories'
+          confirmMode === 'discover'
+            ? 'Discover all categories'
+            : confirmMode === 'all'
+              ? 'Sweep all orgs'
+              : 'Sweep pending'
         }
         message={
           confirmMode === 'discover'
@@ -449,19 +473,27 @@ export function CategoryChecksPanel() {
                 candidates > scanCount
                   ? `Scan ${scanCount} of ${candidates} activities`
                   : `Scan ${scanCount} activities`
-              } in ${batches} model ${batches === 1 ? 'call' : 'calls'}. ${thresholdText}`
+              } in ${batches} model ${batches === 1 ? 'call' : 'calls'}. ${
+                confirmMode === 'all'
+                  ? 'Includes approved organizations. '
+                  : 'Organizations still in review. '
+              }${thresholdText}`
         }
         confirmLabel='Start scan'
         confirmLoading={isStarting}
         confirmLoadingLabel='Starting…'
         onConfirm={() => {
+          if (confirmMode === 'discover') {
+            void startScan('discover', 'pending_review');
+            return;
+          }
           if (confirmMode) {
-            void startScan(confirmMode);
+            void startScan('verify', confirmMode);
           }
         }}
         onCancel={() => setConfirmMode(null)}
       >
-        {confirmMode === 'verify' ? (
+        {confirmMode === 'pending_review' || confirmMode === 'all' ? (
           <label className='mt-3 flex items-start gap-2 text-sm text-slate-700'>
             <input
               id='check-ignore-current'
