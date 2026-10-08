@@ -1930,6 +1930,12 @@ export async function setupApiMocks(page: Page): Promise<void> {
     rules: string[];
     status: string;
   }[] = [];
+  let nameFixSettings = {
+    enabled_rules: ['title_case'],
+    available_rules: ['title_case'],
+    exception_words: ['YMCA'],
+    bracket_suffixes: ['lcsd'],
+  };
   await page.route('**/api/mock/**/admin/name-fixes**', async (route) => {
     const url = route.request().url();
     const method = route.request().method();
@@ -1945,15 +1951,24 @@ export async function setupApiMocks(page: Page): Promise<void> {
       return;
     }
     if (url.includes('/name-fixes/settings')) {
+      if (method === 'PUT') {
+        const body = route.request().postDataJSON() as {
+          enabled_rules?: string[];
+          exception_words?: string[];
+          bracket_suffixes?: string[];
+        };
+        nameFixSettings = {
+          ...nameFixSettings,
+          enabled_rules: body.enabled_rules ?? nameFixSettings.enabled_rules,
+          exception_words: body.exception_words ?? nameFixSettings.exception_words,
+          bracket_suffixes:
+            body.bracket_suffixes ?? nameFixSettings.bracket_suffixes,
+        };
+      }
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          enabled_rules: ['title_case'],
-          available_rules: ['title_case'],
-          exception_words: ['YMCA'],
-          bracket_suffixes: ['lcsd'],
-        }),
+        body: JSON.stringify(nameFixSettings),
       });
       return;
     }
