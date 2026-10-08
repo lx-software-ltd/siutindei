@@ -28,6 +28,20 @@ test.describe('Data quality', () => {
     await expect(adminPage.getByText('Name updated.')).toBeVisible();
   });
 
+  test('admin can select every matching name from the header checkbox', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=data-quality&tab=names');
+    await adminPage.getByRole('button', { name: 'Sweep pending' }).click();
+    await adminPage.getByRole('checkbox', { name: 'Select visible rows' }).click();
+    await adminPage.getByRole('checkbox', { name: 'Select all matching rows' }).click();
+    await expect(
+      adminPage.getByText(/All matching records are selected/)
+    ).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Apply selected' }).click();
+    await expect(adminPage.getByText('Updated 1. 0 failed.')).toBeVisible();
+  });
+
   test('admin can sweep names and filter by rule', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=names');
     await expect(adminPage.getByLabel('Rule')).toHaveValue('');

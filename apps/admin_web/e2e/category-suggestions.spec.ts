@@ -54,9 +54,13 @@ test.describe('Category suggestions', () => {
       .getByRole('button', { name: 'Categories', exact: true })
       .click();
     await adminPage.getByRole('checkbox', { name: 'Select visible rows' }).click();
+    await adminPage.getByRole('checkbox', { name: 'Select all matching rows' }).click();
+    await expect(
+      adminPage.getByText(/All matching records are selected/)
+    ).toBeVisible();
     await adminPage.getByRole('button', { name: 'Apply matching' }).click();
     await expect(
-      adminPage.getByText('Apply the 1 selected pending reviews.')
+      adminPage.getByText('Apply every pending reassignment')
     ).toBeVisible();
     await adminPage.getByRole('button', { name: 'Apply pending' }).click();
     await expect(

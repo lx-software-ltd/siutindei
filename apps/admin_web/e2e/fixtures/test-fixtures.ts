@@ -760,7 +760,9 @@ export async function setupApiMocks(page: Page): Promise<void> {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(
-          url.includes('/reviews/') ? review : { items: [review], next_cursor: null }
+          url.includes('/reviews/')
+            ? review
+            : { items: [review], next_cursor: 'page-2' }
         ),
       });
       return;
@@ -1972,6 +1974,31 @@ export async function setupApiMocks(page: Page): Promise<void> {
       });
       return;
     }
+    if (method === 'POST' && url.includes('/name-fixes/bulk')) {
+      const body = (route.request().postDataJSON() || {}) as {
+        dry_run?: boolean;
+        ids?: string[];
+      };
+      if (!body.dry_run) {
+        if (body.ids?.length) {
+          nameFixes = nameFixes.filter((item) => !body.ids?.includes(item.id));
+        } else {
+          nameFixes = [];
+        }
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          dry_run: Boolean(body.dry_run),
+          matched: 1,
+          decided: body.dry_run ? 0 : 1,
+          failed: 0,
+          failures: [],
+        }),
+      });
+      return;
+    }
     if (method === 'POST' && url.includes('/name-fixes/scan')) {
       const body = (route.request().postDataJSON() || {}) as {
         review_scope?: 'pending_review' | 'all';
@@ -2021,7 +2048,10 @@ export async function setupApiMocks(page: Page): Promise<void> {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ items: nameFixes, next_cursor: null }),
+      body: JSON.stringify({
+        items: nameFixes,
+        next_cursor: nameFixes.length ? 'page-2' : null,
+      }),
     });
   });
 }
