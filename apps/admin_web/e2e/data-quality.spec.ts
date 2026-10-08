@@ -5,6 +5,8 @@ test.describe('Data quality', () => {
     await adminPage.goto('/admin/dashboard');
     await adminPage.getByRole('button', { name: 'Data quality', exact: true }).click();
     await expect(adminPage.getByRole('table', { name: 'Duplicate organizations' })).toBeVisible();
+    await expect(adminPage.getByText(/Groups share a name/)).toHaveCount(0);
+    await expect(adminPage.getByText(/to the survivor/)).toHaveCount(0);
     await adminPage.getByRole('cell', { name: 'Harbour Club · Harbour Club Limited' }).click();
     await expect(adminPage.getByText('desk@example.com')).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'Merge' })).toBeEnabled();
@@ -17,7 +19,7 @@ test.describe('Data quality', () => {
 
   test('admin can scan and apply a name fix', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=names');
-    await adminPage.getByRole('button', { name: 'Sweep scan' }).click();
+    await adminPage.getByRole('button', { name: 'Sweep pending' }).click();
     await expect(
       adminPage.getByText('Created 1, updated 0, skipped 0, cleared 0.')
     ).toBeVisible();
@@ -30,9 +32,8 @@ test.describe('Data quality', () => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=names');
     await expect(adminPage.getByLabel('Rule')).toHaveValue('');
     await adminPage.getByLabel('Rule').selectOption('title_case');
-    await expect(adminPage.getByLabel('Sweep')).toHaveValue('pending_review');
-    await adminPage.getByLabel('Sweep').selectOption('all');
-    await adminPage.getByRole('button', { name: 'Sweep scan' }).click();
+    await expect(adminPage.getByRole('button', { name: 'Sweep pending' })).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Sweep all orgs' }).click();
     await expect(
       adminPage.getByText('Created 0, updated 1, skipped 0, cleared 1.')
     ).toBeVisible();

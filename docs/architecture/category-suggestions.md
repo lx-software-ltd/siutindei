@@ -84,7 +84,7 @@ reassignment. The allowed range is 0.50 to 1.
 
 ## Category check
 
-The Category Checks tab on Data quality scans activities whose organization is still
+The Category tab on Data quality scans activities whose organization is still
 `pending_review`. The organization filter limits one run to a single
 organization; the default is every pending organization. It does not
 include approved organizations. A run skips an activity that was

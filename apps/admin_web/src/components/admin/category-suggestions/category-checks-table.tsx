@@ -56,7 +56,7 @@ export function CategoryChecksTable({
   return (
     <div className='space-y-4'>
       <ResourceTableShell
-        ariaLabel='Category Checks'
+        ariaLabel='Category'
         rows={items}
         getLabel={(item) => item.activity_name || item.activity_id}
         middleColumnCount={5}

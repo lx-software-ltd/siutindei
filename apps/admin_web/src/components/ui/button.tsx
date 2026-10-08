@@ -7,18 +7,18 @@ import { clsx } from 'clsx';
 import { SpinnerIcon } from '@/components/icons/action-icons';
 
 const baseStyles =
-  'inline-flex items-center justify-center rounded-md text-sm ' +
+  'inline-flex items-center justify-center rounded-md border text-sm ' +
   'font-semibold transition focus-visible:outline-none ' +
   'focus-visible:ring-2 focus-visible:ring-slate-400 ' +
   'disabled:cursor-not-allowed disabled:opacity-60';
 
 const variantStyles = {
-  primary: 'bg-slate-900 text-white hover:bg-slate-800',
-  secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200',
-  outline: 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
-  ghost: 'text-slate-700 hover:bg-slate-100',
-  danger: 'bg-red-600 text-white hover:bg-red-500',
-  success: 'bg-emerald-600 text-white hover:bg-emerald-500',
+  primary: 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800',
+  secondary: 'border-slate-900 bg-slate-100 text-slate-900 hover:bg-slate-200',
+  outline: 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
+  ghost: 'border-transparent text-slate-700 hover:bg-slate-100',
+  danger: 'border-red-600 bg-red-600 text-white hover:bg-red-500',
+  success: 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-500',
 };
 
 export const BUTTON_DEFAULT_LOADING_LABEL = 'Saving…';

@@ -10,7 +10,7 @@ import { NamesPanel } from './names-panel';
 const TABS = [
   { key: 'duplicates', label: 'Duplicates' },
   { key: 'names', label: 'Names' },
-  { key: 'checks', label: 'Category Checks' },
+  { key: 'checks', label: 'Category' },
 ] as const;
 
 export function DataQualityPage() {

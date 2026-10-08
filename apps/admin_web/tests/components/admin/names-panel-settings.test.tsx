@@ -11,6 +11,7 @@ import {
   getNameFixSettings,
   getNameFixSummary,
   listNameFixes,
+  scanNameFixes,
   updateNameFixSettings,
 } from '@/lib/api-client-data-quality';
 
@@ -52,12 +53,39 @@ describe('NamesPanel settings lists', () => {
     });
     vi.mocked(listNameFixes).mockResolvedValue({ items: [], next_cursor: null });
     vi.mocked(updateNameFixSettings).mockImplementation(async (body) => body);
+    vi.mocked(scanNameFixes).mockResolvedValue({
+      scan_run_id: 'scan-1',
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      cleared: 0,
+      truncated: false,
+    });
   });
 
-  it('offers sweep scan and not a regular scan', async () => {
+  it('offers pending and all-orgs sweep buttons and not a regular scan', async () => {
     render(<NamesPanel />, { wrapper });
-    expect(await screen.findByRole('button', { name: 'Sweep scan' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Sweep pending' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sweep all orgs' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Sweep')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Scan names' })).not.toBeInTheDocument();
+  });
+
+  it('sweeps pending review or all organizations from the matching button', async () => {
+    const user = userEvent.setup();
+    render(<NamesPanel />, { wrapper });
+    await user.click(await screen.findByRole('button', { name: 'Sweep pending' }));
+    await waitFor(() =>
+      expect(scanNameFixes).toHaveBeenCalledWith(
+        expect.objectContaining({ review_scope: 'pending_review' })
+      )
+    );
+    await user.click(screen.getByRole('button', { name: 'Sweep all orgs' }));
+    await waitFor(() =>
+      expect(scanNameFixes).toHaveBeenCalledWith(
+        expect.objectContaining({ review_scope: 'all' })
+      )
+    );
   });
 
   it('keeps a space so a new exception word can be typed', async () => {
