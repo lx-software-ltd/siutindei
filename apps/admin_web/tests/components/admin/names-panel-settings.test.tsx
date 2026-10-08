@@ -58,6 +58,8 @@ describe('NamesPanel settings lists', () => {
     const user = userEvent.setup();
     render(<NamesPanel />, { wrapper });
     const exceptions = await screen.findByLabelText('Words to leave in capitals');
+    expect(exceptions.tagName).toBe('TEXTAREA');
+    expect(exceptions).toHaveAttribute('rows', '3');
     await user.click(exceptions);
     await user.type(exceptions, ' YWCA');
     expect(exceptions).toHaveValue('YMCA YWCA');

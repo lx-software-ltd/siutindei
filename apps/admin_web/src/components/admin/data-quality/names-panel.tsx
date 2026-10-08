@@ -30,6 +30,7 @@ import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { Select } from '../../ui/select';
+import { Textarea } from '../../ui/textarea';
 
 function splitNameSettingList(value: string): string[] {
   return value.split(/\s+/).filter(Boolean);
@@ -442,10 +443,11 @@ export function NamesPanel() {
             <AdminField
               label='Words to leave in capitals'
               htmlFor='name-fix-exceptions'
-              hint='Separate words with spaces.'
+              hint='Separate words with spaces or new lines.'
             >
-              <Input
+              <Textarea
                 id='name-fix-exceptions'
+                rows={3}
                 value={exceptionValue}
                 onChange={(event) => setExceptionText(event.target.value)}
               />

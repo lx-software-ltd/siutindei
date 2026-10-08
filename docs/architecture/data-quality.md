@@ -52,7 +52,9 @@ that only held the extracted Chinese are removed (`Harbour Club (海港會)`
 becomes `Harbour Club`); brackets that still have English stay
 (`Harbour Club (Central 海港)` becomes `Harbour Club (Central)`). Title
 case keeps only configured exception words, and Roman numerals, in
-capitals. An empty result keeps the original name.
+capitals. Short particles such as in, of, and the are lowercased
+unless they start the name or a bracketed phrase. An empty result
+keeps the original name.
 
 Imports apply this to every organization name and append
 `Imported name: …` to `source_note` (500 characters). Activity names

@@ -39,6 +39,35 @@ _LATIN = re.compile(r"[A-Za-z]")
 _TRAILING = " .,;:|/\\-–—·"
 _CODE_BRACKETS = re.compile(r"\s*[\(\[][^()\]]*\d[^()\]]*[\)\]]")
 _BRACKET_PAIRS = (("(", ")"), ("[", "]"), ("（", "）"), ("［", "］"))
+_SMALL_WORDS = frozenset(
+    {
+        "A",
+        "AN",
+        "THE",
+        "AND",
+        "OR",
+        "NOR",
+        "BUT",
+        "AS",
+        "AT",
+        "BY",
+        "FOR",
+        "FROM",
+        "IN",
+        "INTO",
+        "OF",
+        "OFF",
+        "ON",
+        "ONTO",
+        "OUT",
+        "OVER",
+        "TO",
+        "UP",
+        "WITH",
+    }
+)
+_PHRASE_END = frozenset(":.;!?")
+_OPEN_BRACKET = re.compile(r"^[\(\[（［]")
 
 
 @dataclass(frozen=True)
@@ -158,10 +187,20 @@ def _strip_brackets(value: str, suffixes: frozenset[str]) -> str:
 
 
 def _title_case(value: str, exceptions: frozenset[str]) -> str:
-    return " ".join(_title_token(token, exceptions) for token in value.split(" "))
+    tokens = value.split(" ")
+    titled: list[str] = []
+    phrase_start = True
+    for token in tokens:
+        if token == "":
+            titled.append(token)
+            continue
+        start = phrase_start or bool(_OPEN_BRACKET.match(token))
+        titled.append(_title_token(token, exceptions, start))
+        phrase_start = token[-1] in _PHRASE_END
+    return " ".join(titled)
 
 
-def _title_token(token: str, exceptions: frozenset[str]) -> str:
+def _title_token(token: str, exceptions: frozenset[str], phrase_start: bool) -> str:
     letters = re.sub(r"[^A-Za-z]", "", token)
     if len(letters) < 2 or not letters.isupper():
         return token
@@ -172,9 +211,21 @@ def _title_token(token: str, exceptions: frozenset[str]) -> str:
     upper = core.upper()
     if upper in exceptions or _ROMAN.match(upper):
         return token
+    if not phrase_start and upper in _SMALL_WORDS:
+        return f"{prefix}{core.lower()}{suffix}"
     pieces = re.split(r"(-)", core)
-    titled = "".join(piece.capitalize() if piece != "-" else piece for piece in pieces)
-    return f"{prefix}{titled}{suffix}"
+    titled: list[str] = []
+    piece_start = True
+    for piece in pieces:
+        if piece == "-":
+            titled.append(piece)
+            continue
+        if not piece_start and piece.upper() in _SMALL_WORDS:
+            titled.append(piece.lower())
+        else:
+            titled.append(piece.capitalize())
+        piece_start = False
+    return f"{prefix}{''.join(titled)}{suffix}"
 
 
 def _split_bilingual(value: str, translations: dict) -> tuple[str, dict[str, str]]:
