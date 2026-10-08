@@ -21,6 +21,7 @@ from app.db.models.category_suggestion import (
 from app.services.category_suggestions.capture import ensure_pending_category
 from app.services.category_suggestions.decisions import apply_decision
 from app.services.category_suggestions.reviews import apply_review_decision
+from app.exceptions import ValidationError
 from app.services.category_suggestions.scan import (
     CategoryScanBusy,
     select_candidate_ids,
@@ -335,6 +336,46 @@ def test_candidates_skip_recent_decisions_and_approved_orgs(
     sample_organization.review_status = "approved"
     db_session.flush()
     assert select_candidate_ids(db_session, org_id=org_id, rescan=True) == []
+    assert select_candidate_ids(
+        db_session, org_id=org_id, rescan=True, review_scope="all"
+    ) == [sample_activity.id]
+
+
+def test_sweep_pending_skips_approved_orgs(
+    db_session, sample_activity, sample_organization
+) -> None:
+    sample_organization.review_status = "approved"
+    db_session.flush()
+    run, batches = start_scan(
+        db_session,
+        {"org_id": str(sample_organization.id), "review_scope": "pending_review"},
+        requested_by="admin",
+    )
+    assert run.status == "done"
+    assert batches == []
+    assert run.total_activities == 0
+
+
+def test_sweep_all_includes_approved_orgs(
+    db_session, sample_activity, sample_organization
+) -> None:
+    sample_organization.review_status = "approved"
+    db_session.flush()
+    run, batches = start_scan(
+        db_session,
+        {"org_id": str(sample_organization.id), "review_scope": "all"},
+        requested_by="admin",
+    )
+    assert run.status == "queued"
+    assert batches == [[str(sample_activity.id)]]
+
+
+def test_scan_rejects_unknown_review_scope(db_session) -> None:
+    try:
+        start_scan(db_session, {"review_scope": "nope"}, requested_by="admin")
+        raise AssertionError("unknown review_scope should fail")
+    except ValidationError as exc:
+        assert exc.field == "review_scope"
 
 
 def test_start_scan_queues_one_batch_and_rejects_a_second(

@@ -248,6 +248,7 @@ def test_candidate_count_is_not_capped_at_the_scan_limit(
     assert len(select_candidate_ids(db_session, org_id=org_id, limit=1)) == 1
     counts = summary_counts(db_session, org_id=org_id)
     assert counts["scan_candidate_total"] == 2
+    assert counts["scan_candidate_total_all"] == 2
     assert counts["scan_limit"] == 500
 
 

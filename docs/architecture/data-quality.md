@@ -71,9 +71,14 @@ are cleaned only when `review_status` is `pending_review`. If the
 cleaned name belongs to a different record, the original name is kept
 and the import records a warning.
 
-Data quality has three tabs: Duplicates, Names, and Category.
-Category checks moved here from Categories; `?categoryView=checks`
-opens this tab. The Names tab sweeps stored rows with the same rules and writes
+Data quality has three tabs: Duplicates, Names, and Categories.
+Category checks moved here from the Categories nav item;
+`?categoryView=checks` opens this tab. Sweep pending re-evaluates
+activities on organizations still in review. Sweep all orgs includes
+approved organizations. Auto-assign still applies only while the
+organization is `pending_review`.
+
+The Names tab sweeps stored rows with the same rules and writes
 `name_fix_proposals`. The list is cursor paginated. Sweep pending
 re-evaluates names on organizations still in review. Sweep all orgs
 re-evaluates every name and deletes pending proposals the current

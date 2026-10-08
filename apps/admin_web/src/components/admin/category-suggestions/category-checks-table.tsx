@@ -56,7 +56,7 @@ export function CategoryChecksTable({
   return (
     <div className='space-y-4'>
       <ResourceTableShell
-        ariaLabel='Category'
+        ariaLabel='Categories'
         rows={items}
         getLabel={(item) => item.activity_name || item.activity_id}
         middleColumnCount={5}
@@ -65,7 +65,7 @@ export function CategoryChecksTable({
         hasMore={hasMore}
         onLoadMore={onLoadMore}
         error={error}
-        emptyLabel='No category checks yet.'
+        emptyLabel='No category checks yet. Sweep pending or Sweep all orgs to find some.'
         isExpanded={expanded.isExpanded}
         onToggle={expanded.toggle}
         detail={openInList ? detail : null}

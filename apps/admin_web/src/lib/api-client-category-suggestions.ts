@@ -56,6 +56,7 @@ export interface CategorySuggestionSummary {
   review_pending_total?: number;
   auto_applied_total?: number;
   scan_candidate_total?: number;
+  scan_candidate_total_all?: number;
   scan_limit?: number;
   scan_batch_size?: number;
   discover_activity_total?: number;
@@ -213,6 +214,7 @@ export function startCategoryScan(body: {
   batch_size?: number;
   rescan?: boolean;
   mode?: 'verify' | 'discover';
+  review_scope?: 'pending_review' | 'all';
   ignore_current_category?: boolean;
 } = {}) {
   return request<CategoryScanRun>(suggestionUrl('/scan'), {

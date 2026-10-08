@@ -49,9 +49,10 @@ def count_discover(
     session: Session,
     *,
     org_id: UUID | None = None,
+    review_scope: str = "pending_review",
 ) -> tuple[int, int]:
     """Pending activities and labels a default discover run would model."""
-    groups = _groups(session, org_id=org_id)
+    groups = _groups(session, org_id=org_id, review_scope=review_scope)
     catalog = _catalog(session, list(groups))
     activities = sum(len(rows) for rows in groups.values())
     labels = sum(
@@ -70,6 +71,7 @@ def start_discover(
     limit: int,
     batch_size: int,
     rescan: bool,
+    review_scope: str = "pending_review",
 ) -> tuple[CategoryScanRun, list[list[str]]]:
     """Assign known labels now and queue unknown labels for the model."""
     now = datetime.now(timezone.utc)
@@ -90,7 +92,7 @@ def start_discover(
     except IntegrityError as exc:
         session.rollback()
         raise CategoryScanBusy() from exc
-    groups = _groups(session, org_id=org_id)
+    groups = _groups(session, org_id=org_id, review_scope=review_scope)
     catalog = _catalog(session, list(groups))
     orgs = _orgs(session, groups)
     known, unknown = _split(catalog, groups)
@@ -136,6 +138,7 @@ def _groups(
     session: Session,
     *,
     org_id: UUID | None,
+    review_scope: str = "pending_review",
 ) -> dict[str, list[Activity]]:
     pending_review = (
         select(ActivityCategoryReview.id)
@@ -145,11 +148,12 @@ def _groups(
     query = (
         select(Activity)
         .join(Organization, Organization.id == Activity.org_id)
-        .where(Organization.review_status == "pending_review")
         .where(Activity.category_id == PENDING_CATEGORY_ID)
         .where(Activity.source_category_name.is_not(None))
         .where(~pending_review.exists())
     )
+    if review_scope != "all":
+        query = query.where(Organization.review_status == "pending_review")
     if org_id is not None:
         query = query.where(Activity.org_id == org_id)
     grouped: dict[str, list[Activity]] = defaultdict(list)
