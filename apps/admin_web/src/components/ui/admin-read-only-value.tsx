@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { clsx } from 'clsx';
 
@@ -18,9 +18,18 @@ export interface AdminReadOnlyValueProps {
   className?: string;
 }
 
+function textValue(children: ReactNode): string | null {
+  if (typeof children === 'string' || typeof children === 'number') {
+    return String(children);
+  }
+  return null;
+}
+
 /**
  * Labelled read-only value for detail panels (audit logs, issued
  * certificates). Sits inside `AdminFieldGrid` next to editable fields.
+ * Text values stay associated with the label so assistive tech and
+ * tests can address them by name.
  */
 export function AdminReadOnlyValue({
   label,
@@ -29,12 +38,37 @@ export function AdminReadOnlyValue({
   span = 1,
   className,
 }: AdminReadOnlyValueProps) {
+  const valueId = useId();
+  const value = textValue(children);
+  const isMultiline = value?.includes('\n') ?? false;
+  const valueClassName = clsx(
+    'mt-1 w-full border-0 bg-transparent p-0 text-slate-800 focus:outline-none',
+    mono ? 'font-mono text-xs wrap-anywhere' : undefined
+  );
+
   return (
     <div className={clsx('min-w-0 text-sm', spanStyles[span], className)}>
-      <span className='block text-xs font-medium text-slate-500'>{label}</span>
-      <div className={mono ? 'mt-1 wrap-anywhere font-mono text-xs text-slate-800' : 'mt-1 text-slate-800'}>
-        {children}
-      </div>
+      <label
+        htmlFor={valueId}
+        className='block text-xs font-medium text-slate-500'
+      >
+        {label}
+      </label>
+      {value === null ? (
+        <div id={valueId} className={valueClassName}>
+          {children}
+        </div>
+      ) : isMultiline ? (
+        <textarea
+          id={valueId}
+          readOnly
+          rows={Math.min(8, value.split('\n').length)}
+          value={value}
+          className={clsx(valueClassName, 'resize-none')}
+        />
+      ) : (
+        <input id={valueId} readOnly value={value} className={valueClassName} />
+      )}
     </div>
   );
 }

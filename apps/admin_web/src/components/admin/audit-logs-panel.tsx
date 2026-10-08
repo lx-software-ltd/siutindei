@@ -355,7 +355,6 @@ export function AuditLogsPanel() {
 }
 
 function AuditLogDetail({ log, userEmail }: { log: AuditLog; userEmail: string }) {
-  const fieldId = (name: string) => `audit-${log.id}-${name}`;
   const hasOldValues = Boolean(log.old_values && Object.keys(log.old_values).length > 0);
   const hasNewValues = Boolean(log.new_values && Object.keys(log.new_values).length > 0);
 
