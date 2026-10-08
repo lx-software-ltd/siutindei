@@ -1,0 +1,2 @@
+# Paths relative to the repo root. An entry must still be over 500 lines.
+# Remove a path once the file is split. Do not add one without a plan note.

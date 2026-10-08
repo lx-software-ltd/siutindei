@@ -30,6 +30,20 @@ board_policy = _load_module()
         "apps/admin_web/src/auth/login.ts",
         "backend/src/payments/stripe.py",
         "backend/db/migrations/0010_add_audit.sql",
+        "backend/db/alembic/versions/0041_data_quality.py",
+        "backend/db/seed/seed_data.sql",
+        "backend/infrastructure/lib/api-stack.ts",
+        "backend/lambda/authorizers/device_attestation/handler.py",
+        "backend/lambda/aws_proxy/handler.py",
+        "backend/src/app/services/aws_proxy.py",
+        "backend/src/app/services/openrouter_client.py",
+        "apps/admin_web/src/app/auth/login/page.tsx",
+        "apps/siutindei_app/lib/features/auth/login.dart",
+        "shared/fixtures/activity_search_staging.json",
+        "scripts/deploy/deploy-public-www.sh",
+        "scripts/pii-denylist.sha256",
+        ".cursor/hooks.json",
+        ".pre-commit-config.yaml",
     ],
 )
 def test_protected_paths(path: str) -> None:
@@ -76,7 +90,11 @@ def test_board_agent_declares_revision_inputs() -> None:
         assert f"\n      {key}\n" in text
         assert f"# {key}" not in text
     assert "POSTGRES_DB: backend_test" in text
-    assert "python-version: \"3.12\"" in text
+    assert 'python-version: "3.12"' in text
+    assert "persist-credentials: false" in text
+    assert "--output-format stream-json" in text
+    assert "docs/architecture/zones.md" in text
+    assert "CURSOR_HOOK_MARKER" in text
 
 
 def test_lockfile_lines_are_excluded() -> None:
@@ -122,6 +140,43 @@ def test_content_kind_allows_larger_diff() -> None:
         }
     ]
     assert board_policy.evaluate_files(files, kind="content") is None
+
+
+def test_content_kind_is_exempt_from_red_zone() -> None:
+    files = [
+        {
+            "filename": "content/auth/page.md",
+            "additions": 10,
+            "deletions": 0,
+            "changes": 10,
+        }
+    ]
+    assert board_policy.path_is_protected("content/auth/page.md") is True
+    assert board_policy.evaluate_files(files, kind="content") is None
+    assert board_policy.zone_for_files(files, kind="content") == "content"
+    assert board_policy.evaluate_files(files, kind="feature") == (
+        "protected path content/auth/page.md"
+    )
+
+
+def test_red_zone_doc_matches_policy() -> None:
+    doc = Path(__file__).resolve().parents[1] / "docs" / "architecture" / "zones.md"
+    text = doc.read_text(encoding="utf-8")
+    red = text.split("## Red", 1)[1].split("## Yellow", 1)[0]
+    entries = [
+        line.split("`", 2)[1]
+        for line in red.splitlines()
+        if line.strip().startswith("- `") and "`" in line[3:]
+    ]
+    assert entries
+    for entry in entries:
+        if entry.endswith("/**"):
+            sample = entry[:-3] + "/probe.txt"
+        elif "*" in entry:
+            sample = entry.replace("*", "backend")
+        else:
+            sample = entry
+        assert board_policy.path_is_protected(sample) is True, entry
 
 
 def test_content_kind_rejects_non_content() -> None:

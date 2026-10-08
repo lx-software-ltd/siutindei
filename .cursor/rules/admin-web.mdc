@@ -1,0 +1,13 @@
+---
+description: Admin console constraints
+globs: apps/admin_web/**
+alwaysApply: false
+---
+
+# Admin web
+
+- Build list screens from `apps/admin_web/src/components/ui/` using the `admin-crud-screen` skill. [why: 6cf29cf table-first admin console]
+- Server state is TanStack Query. Do not add `useEffect` plus `useState` list loops. [why: 6cf29cf table-first admin console]
+- When UI behavior changes, update Playwright specs and fixtures under `apps/admin_web/e2e`. [why: convention]
+- Keep `npm run generate:api` output committed when OpenAPI changes. [why: 1f0b8c7 generated OpenAPI types]
+- Auth routes under `src/app/auth/` are red. Plan in chat and wait for approval. [why: c37612e admin login redirect loop]

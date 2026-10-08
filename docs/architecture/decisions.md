@@ -530,3 +530,20 @@ is `pending_review`. Duplicate scoring uses exact identity fields,
 Design notes: `docs/architecture/data-quality.md`. Endpoint shapes:
 `docs/api/admin.yaml` under `/v1/admin/org-duplicates` and
 `/v1/admin/name-fixes`.
+
+## 10) Agent harness
+
+**Decision:** Agent instructions are a short always-on checklist plus
+path-scoped rules and skills. `.cursorrules` is a pointer. Autonomy
+follows `docs/architecture/zones.md`: red work waits for a human, yellow
+work starts from a plan file and a research memo, green work implements
+and verifies. Content-kind board briefs stay exempt and may only change
+`content/**`.
+
+Repeated constraints are checks (`scripts/validate_agent_rules.py`,
+file length, focused tests, OpenAPI routes, Lambda catalog, CDK
+invariants), not extra prose. Hooks block destructive shell commands.
+The board runner attaches git credentials only in the commit step and
+uploads the agent transcript.
+
+Design notes: `docs/plans/agent-harness.md` and `docs/architecture/security.md`.

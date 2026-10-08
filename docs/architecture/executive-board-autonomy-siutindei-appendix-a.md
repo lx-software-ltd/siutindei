@@ -103,9 +103,11 @@ Task: ${{ inputs.task_id }}"
 Secrets on the runner: `CURSOR_API_KEY` plus `BOARD_PR_TOKEN` (falls back
 to `GITHUB_TOKEN`). No AWS credentials.
 
-Repo-level `AGENTS.md` must require acceptance-criteria discipline and forbid
-touching `**/auth/**`, `**/payments/**`, `**/migrations/**`, `infra/**`,
-`.github/**`.
+Repo-level `AGENTS.md` requires acceptance-criteria discipline. Red-zone
+paths are `docs/architecture/zones.md`, enforced by
+`scripts/ci/board_policy.py` (this repo's real paths, plus the generic
+`auth`, `payments`, `migrations`, `infra`, and `.github` names).
+Content-kind briefs stay exempt and may only change `content/**`.
 
 ## `.github/workflows/board-merge-staging.yml`
 

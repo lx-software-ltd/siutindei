@@ -1,110 +1,37 @@
-# Agents
+# Agent Operating Instructions
 
-## Board agent constraints
+Applies to Cursor agents working in this repository.
 
-Board / Cursor Actions runners treat the task brief as **acceptance
-criteria**. Do not expand scope past the brief.
+## Bootstrap
 
-Never modify files matching:
+1. Always-applied constraints are in `.cursor/rules/00-repository-core.mdc`. Path-scoped rules in `.cursor/rules/` attach for the area you edit.
+2. Procedures live in `.cursor/skills/*/SKILL.md`: `db-migration`, `admin-api-endpoint`, `admin-crud-screen`, `public-www-section`, `verify-change`, and `cursor-cloud`.
+3. `.cursorrules` is a legacy pointer. Do not add rules there.
 
-- `**/auth/**`
-- `**/payments/**`
-- `**/migrations/**`
-- `infra/**`
-- `.github/**`
+## Zones
 
-Evaluate both old and new path names (renames count). Leave auth,
-payments, migrations, infrastructure, and GitHub workflow changes to an
-owner. Do not commit, push, or open pull requests; the workflow does
-that after tests.
+Autonomy follows blast radius. The map is `docs/architecture/zones.md`. The stricter zone wins. If scope grows into a stricter zone, stop and ask.
 
-## Cursor Cloud specific instructions
+- **Red.** Plan in chat and wait for explicit approval before any write. A human pairs on the change.
+- **Yellow.** Write a short plan under `docs/plans/` from `docs/plans/_template.md`, add or update tests first, then implement. A read-only pass leaves a memo under `docs/research/`.
+- **Green.** Implement and verify. Summarise intent in the pull request.
 
-### Services overview
+Board agents do not edit red-zone paths and do not commit, push, or open pull requests. The enforcer is `scripts/ci/board_policy.py`. Briefs of `kind: content` stay exempt and may only change `content/**`.
 
-| Service | Directory | Runtime | Purpose |
-|---------|-----------|---------|---------|
-| Python backend | `backend/` | Python 3.12 | Lambda handlers, DB migrations, tests |
-| Admin web | `apps/admin_web/` | Node.js 24 (npm) | Next.js admin SPA |
-| Public website | `apps/public_www/` | Node.js 24 (npm) | Next.js static marketing site |
-| CDK infrastructure | `backend/infrastructure/` | Node.js 24 (npm) | AWS CDK IaC |
-| Flutter app | `apps/siutindei_app/` | Flutter stable | Mobile app (not set up in cloud) |
+## Cursor Cloud
 
-### Running services
+| Service | Path | Dev command | Port |
+| --- | --- | --- | --- |
+| Admin web | `apps/admin_web/` | `npm run dev` | 3000 |
+| Public website | `apps/public_www/` | `npm run dev -- -p 3100` | 3100 |
+| Backend | `backend/` | `pytest tests backend` | n/a |
 
-- **Admin web dev server**: `cd apps/admin_web && npm run dev` (port 3000)
-- **Public www dev server**: `cd apps/public_www && npm run dev` (port 3000)
-- **PostgreSQL**: `service postgresql start` then connect at `postgresql+psycopg://postgres:postgres@localhost:5432/backend_test`
+PostgreSQL is `postgresql+psycopg://postgres:postgres@localhost:5432/backend_test`. Source nvm before Node. Before committing Python, run `pre-commit run ruff-format --all-files`. Read `.cursor/skills/cursor-cloud/SKILL.md` before running services.
 
-### Lint / test / build (run before commit)
+## Evidence
 
-Source Node from nvm first:
+A change is done when the `verify-change` skill's checks pass and the pull request template is filled in. Hooks format edits and block destructive shell commands. Cloud agents do not fire the `stop` hook; CI remains the merge gate.
 
-```bash
-export NVM_DIR="/home/ubuntu/.nvm" && . "$NVM_DIR/nvm.sh"
-```
+## Hooks
 
-#### All projects (matches CI `lint.yml` + `test.yml`)
-
-```bash
-# Python — format, lint, unit tests
-pre-commit run --all-files
-PYTHONPATH=backend/src DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/backend_test \
-  python3 -m pytest tests backend -q
-
-# Admin web
-cd apps/admin_web && npm ci && npm run lint && npm run typecheck
-cd apps/admin_web && npm run generate:api  # then verify generated types are committed
-
-# Public website
-cd apps/public_www && npm ci && npm run lint && npm run typecheck && npm test
-
-# CDK infrastructure
-cd backend/infrastructure && npm ci && npm run lint && npm run build
-
-# Flutter (when SDK is available)
-cd apps/siutindei_app && flutter pub get && flutter analyze && flutter test
-```
-
-#### Quick per-package shortcuts
-
-| Package | Lint | Typecheck | Unit tests |
-|---------|------|-----------|------------|
-| Backend | `ruff check backend/` · `ruff format --check backend/` | — | `pytest tests backend` (see above) |
-| Admin web | `npm run lint` | `npm run typecheck` | — |
-| Public www | `npm run lint` | `npm run typecheck` | `npm test` |
-| CDK | `npm run lint` | `npm run build` | — |
-| Flutter | `flutter analyze` | — | `flutter test` |
-
-Public www production build (requires env contract):
-
-```bash
-cd apps/public_www
-NEXT_PUBLIC_SITE_ORIGIN=http://localhost:3000 \
-NEXT_PUBLIC_SITE_NAME="Siu Tin Dei" \
-npm run build
-```
-
-Admin web E2E (Chromium + dev server on port 3000):
-
-```bash
-cd apps/admin_web && npx playwright test
-```
-
-### Non-obvious caveats
-
-- The system Python has debian-managed packages (PyJWT, etc.) that conflict with pip. Use `pip install --ignore-installed` when installing backend deps to avoid "Cannot uninstall" errors.
-- Alembic migrations require `DATABASE_URL` env var. Run from workspace root: `python3 -m alembic -c backend/db/alembic.ini upgrade head`.
-- Node.js is installed via nvm at `/home/ubuntu/.nvm`. Source it before using node/npm: `export NVM_DIR="/home/ubuntu/.nvm" && . "$NVM_DIR/nvm.sh"`.
-- PostgreSQL pg_hba.conf must be set to `md5` auth (not `peer`) for password-based connections. After install, run: `sed -i 's/local\s*all\s*all\s*peer/local all all md5/' /etc/postgresql/16/main/pg_hba.conf && service postgresql restart`.
-- E2E tests for login/auth-related flows require Cognito env vars. Tests that don't need real auth sessions pass; authenticated flow tests fail without a real Cognito pool. The test fixtures mock auth via `test-fixtures.ts`.
-- Admin Playwright reuses a server already listening on port 3000 when not in CI, and that reuse skips the mock `NEXT_PUBLIC_*` values in `playwright.config.ts`. Stop a plain `npm run dev` before `npx playwright test`, or the specs stop on the login screen.
-- The admin web `.env.local` needs `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_COGNITO_DOMAIN`, `NEXT_PUBLIC_COGNITO_CLIENT_ID`, `NEXT_PUBLIC_COGNITO_USER_POOL_ID` for full functionality. The dev server starts without them (shows config warnings).
-- Public www copies `shared/home_wizard/home_wizard_choices.json` into `apps/public_www/src/data/` for TypeScript bundling; keep both in sync when editing choices.
-- Staging activity search fixture: canonical file is `shared/fixtures/activity_search_staging.json` (Git LFS). Generate with `python3 scripts/codegen/generate_activity_search_staging.py`, then `bash scripts/codegen/sync-activity-search-staging-fixture.sh` (copies to `backend/fixtures/` for Lambda bundle/synth and `apps/public_www/public/fixtures/` for static CDN). After clone run `git lfs pull`. Set GitHub Environment variable `STAGING_SEARCH_DATA_ENABLED=true` on the **staging** environment only (public www); production always uses Aurora + live API. Optional: `NEXT_PUBLIC_STAGING_SEARCH_FIXTURE_URL` (staging www) or `STAGING_SEARCH_FIXTURE_URL` dart-define (Flutter).
-- Python formatting rule: run `pre-commit run ruff-format --all-files` before any Python commit (per `.cursorrules`).
-- PII denylist: `scripts/check-pii.sh` (pre-commit, Test, and Security Scanning) fails when tracked source matches SHA-256 digests in `scripts/pii-denylist.sha256`. The file stores digests only. Role mailboxes stay in source; personal names, phones, street addresses, and personal inboxes do not. Git author trailers are outside the check.
-- Do not file GitHub issues from `NOTE:`, `SECURITY NOTE:`, or
-  `next-env.d.ts` comments. Those are documented architecture, not
-  defects. See `docs/architecture/security.md` and
-  `.github/workflows/close-note-tag-issues.yml`.
+`.cursor/hooks.json` denies force-push, pushes to `main` or `staging`, `git reset --hard`, deleting those refs, `rm -rf` outside `/tmp`, destructive SQL, `cdk deploy` or `destroy`, and `aws delete-*`. It asks before `git commit --amend` and `alembic downgrade`.

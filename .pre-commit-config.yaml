@@ -46,6 +46,48 @@ repos:
 
   - repo: local
     hooks:
+      - id: validate-agent-rules
+        name: Validate agent rules
+        entry: python3 scripts/validate_agent_rules.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-python-file-length
+        name: Check Python file length
+        entry: python3 scripts/check_python_file_length.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-test-focus
+        name: Check focused or skipped tests
+        entry: python3 scripts/check_test_focus.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-lambda-docs
+        name: Check Lambda docs
+        entry: node scripts/check-lambda-docs.mjs
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-openapi-routes
+        name: Check OpenAPI routes
+        entry: python3 scripts/check_openapi_routes.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-stack-invariants
+        name: Check CDK stack invariants
+        entry: python3 scripts/check_stack_invariants.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: check-pii
         name: Check hashed PII denylist
         entry: bash scripts/check-pii.sh
@@ -58,7 +100,7 @@ repos:
     hooks:
       - id: eslint-cdk
         name: ESLint CDK
-        entry: bash -c 'cd backend/infrastructure && npm run lint --if-present || true'
+        entry: bash -c 'cd backend/infrastructure && npm run lint --if-present'
         language: system
         files: ^backend/infrastructure/.*\.(ts|js)$
         pass_filenames: false
@@ -68,7 +110,7 @@ repos:
     hooks:
       - id: flutter-analyze
         name: Flutter Analyze
-        entry: bash -c 'cd apps/siutindei_app && flutter analyze --no-fatal-infos || true'
+        entry: bash -c 'if command -v flutter >/dev/null 2>&1; then cd apps/siutindei_app && flutter analyze --no-fatal-infos; else echo "flutter not installed; skipping (enforced by CI lint-dart job)"; fi'
         language: system
         files: ^apps/siutindei_app/.*\.dart$
         pass_filenames: false

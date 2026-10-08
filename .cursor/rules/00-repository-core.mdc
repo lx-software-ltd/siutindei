@@ -1,0 +1,21 @@
+---
+description: Repository-wide constraints for every Cursor session
+alwaysApply: true
+---
+
+# Repository core
+
+Path-scoped rules and `.cursor/skills/` add procedures. The more specific path rule wins. Follow the zones in `AGENTS.md`. [why: convention]
+
+- Never hardcode secrets, API keys, passwords, or tokens. [why: 52d61c0 masked secrets and PII]
+- Never log unmasked PII. Use `mask_email()` and `mask_pii()`. [why: 52d61c0 masked secrets and PII]
+- Do not put real personal names, phones, emails, street addresses, bank numbers, or business-registration numbers in source or docs. Tests use fictional fixtures. `scripts/check-pii.sh` enforces the hash list. [why: 57b1099 hashed PII denylist]
+- Never use `print()` in production Python. Use `get_logger()`. [why: convention]
+- Never use `random` for security tokens. Use `secrets`. [why: 52d61c0 masked secrets and PII]
+- Never use `Cors.ALL_ORIGINS`. [why: 52d61c0 masked secrets and PII]
+- Use `noEcho: true` for secret CDK parameters. [why: convention]
+- Keep production attestation fail-closed (`ATTESTATION_FAIL_CLOSED=true`). [why: 52d61c0 masked secrets and PII]
+- Require SSL for database connections (`sslmode=require`). [why: 52d61c0 masked secrets and PII]
+- Do not add a file when the same behavior already exists. [why: convention]
+- S3 bucket names must be 63 characters or fewer. [why: convention]
+- Do not file GitHub issues from `NOTE:`, `SECURITY NOTE:`, or `next-env.d.ts` comments. [why: convention]
