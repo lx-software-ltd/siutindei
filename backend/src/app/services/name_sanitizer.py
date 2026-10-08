@@ -187,30 +187,30 @@ def _strip_brackets(value: str, suffixes: frozenset[str]) -> str:
 
 
 def _title_case(value: str, exceptions: frozenset[str]) -> str:
-    tokens = value.split(" ")
+    words = value.split(" ")
     titled: list[str] = []
     phrase_start = True
-    for token in tokens:
-        if token == "":
-            titled.append(token)
+    for word in words:
+        if not word:
+            titled.append(word)
             continue
-        start = phrase_start or bool(_OPEN_BRACKET.match(token))
-        titled.append(_title_token(token, exceptions, start))
-        phrase_start = token[-1] in _PHRASE_END
+        start = phrase_start or bool(_OPEN_BRACKET.match(word))
+        titled.append(_title_word(word, exceptions, start))
+        phrase_start = word[-1] in _PHRASE_END
     return " ".join(titled)
 
 
-def _title_token(token: str, exceptions: frozenset[str], phrase_start: bool) -> str:
-    letters = re.sub(r"[^A-Za-z]", "", token)
+def _title_word(word: str, exceptions: frozenset[str], phrase_start: bool) -> str:
+    letters = re.sub(r"[^A-Za-z]", "", word)
     if len(letters) < 2 or not letters.isupper():
-        return token
-    match = re.match(r"^([^A-Za-z0-9]*)(.*?)([^A-Za-z0-9]*)$", token)
+        return word
+    match = re.match(r"^([^A-Za-z0-9]*)(.*?)([^A-Za-z0-9]*)$", word)
     if match is None:
-        return token
+        return word
     prefix, core, suffix = match.groups()
     upper = core.upper()
     if upper in exceptions or _ROMAN.match(upper):
-        return token
+        return word
     if not phrase_start and upper in _SMALL_WORDS:
         return f"{prefix}{core.lower()}{suffix}"
     pieces = re.split(r"(-)", core)
