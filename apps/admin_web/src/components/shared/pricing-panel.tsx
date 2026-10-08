@@ -325,7 +325,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' kind='error'>
+          <StatusBanner kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null

@@ -16,7 +16,7 @@ function ImportsRedirect() {
 
   return (
     <main className='mx-auto flex min-h-screen max-w-lg items-center px-6'>
-      <StatusBanner variant='info' kind='info'>
+      <StatusBanner kind='info'>
         Opening the imports section.
       </StatusBanner>
     </main>

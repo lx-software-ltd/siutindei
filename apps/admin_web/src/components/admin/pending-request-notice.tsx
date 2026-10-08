@@ -15,7 +15,7 @@ export function PendingRequestNotice({ request }: PendingRequestNoticeProps) {
 
   return (
     <div className='space-y-4'>
-      <StatusBanner variant='info' kind='pending-review'>
+      <StatusBanner kind='pending-review'>
         Your organization access request has been submitted and is pending review.
       </StatusBanner>
 

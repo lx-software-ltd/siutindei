@@ -129,7 +129,7 @@ export function AdminDashboard() {
   if (status === 'loading') {
     return (
       <main className='mx-auto flex min-h-screen max-w-lg items-center px-6'>
-        <StatusBanner variant='info' kind='info'>
+        <StatusBanner kind='info'>
           Preparing your admin session.
         </StatusBanner>
       </main>
@@ -170,7 +170,7 @@ export function AdminDashboard() {
       lastAuthTime={user?.lastAuthTime}
     >
       {error && (
-        <StatusBanner variant='error' kind='error'>
+        <StatusBanner kind='error'>
           {error}
         </StatusBanner>
       )}

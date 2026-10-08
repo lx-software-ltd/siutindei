@@ -359,7 +359,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' kind='error'>
+          <StatusBanner kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null

@@ -81,7 +81,7 @@ export function CategorySuggestionsPanel() {
   return (
     <div className='space-y-4'>
       {summaryError ? (
-        <StatusBanner variant='error' kind='error'>
+        <StatusBanner kind='error'>
           {summaryError}
         </StatusBanner>
       ) : null}

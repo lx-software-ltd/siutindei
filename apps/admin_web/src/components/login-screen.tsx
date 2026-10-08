@@ -163,19 +163,19 @@ export function LoginScreen() {
               {(hasError || hasConfigErrors || hasPasswordlessError) && (
                 <div className='mb-4 space-y-2'>
                   {hasError && (
-                    <StatusBanner variant='error' kind='error'>
+                    <StatusBanner kind='error'>
                       {error}
                     </StatusBanner>
                   )}
                   {hasPasswordlessError && (
-                    <StatusBanner variant='error' kind='error'>
+                    <StatusBanner kind='error'>
                       {passwordlessError}
                     </StatusBanner>
                   )}
                   {configErrors.map((configError) => (
                     <StatusBanner
                       key={configError}
-                      variant='error' kind='error'
+                      kind='error'
                     >
                       {configError}
                     </StatusBanner>

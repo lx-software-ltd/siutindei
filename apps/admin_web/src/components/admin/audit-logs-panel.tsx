@@ -253,7 +253,7 @@ export function AuditLogsPanel() {
       toolbar={
         userLookupError ? (
           <div className='mb-3'>
-            <StatusBanner variant='error' kind='error'>
+            <StatusBanner kind='error'>
               {userLookupError}
             </StatusBanner>
           </div>

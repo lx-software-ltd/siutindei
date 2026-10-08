@@ -95,7 +95,7 @@ export function AdminRecordTable({
       {toolbar}
       {error ? (
         <div className='mb-3'>
-          <StatusBanner variant='error' kind='error'>
+          <StatusBanner kind='error'>
             {error}
           </StatusBanner>
         </div>

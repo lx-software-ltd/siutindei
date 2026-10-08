@@ -18,6 +18,7 @@ import {
 import { AdminRowActions } from '../../ui/admin-row-actions';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { StatusBadge } from '../../ui/status-badge';
+import { StatusBanner } from '../../status-banner';
 
 interface CategoryChecksTableProps {
   items: ActivityCategoryReview[];
@@ -220,7 +221,7 @@ function CheckDetail({
           Suggested category is waiting in Category Suggestions.
         </p>
       ) : null}
-      {error ? <p className='text-sm text-red-600'>{error}</p> : null}
+      {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
     </AdminEditorPanel>
   );
 }

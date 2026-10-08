@@ -297,7 +297,7 @@ export function CategoryChecksPanel() {
   return (
     <div className='space-y-4'>
       {error ? (
-        <StatusBanner variant='error' kind='error'>
+        <StatusBanner kind='error'>
           {error}
         </StatusBanner>
       ) : null}
@@ -410,7 +410,6 @@ export function CategoryChecksPanel() {
             </Button>
             <Button
               type='button'
-              variant='outline'
               size='sm'
               disabled={
                 (discoverActivities === 0 && discoverLabels === 0) ||
@@ -423,7 +422,6 @@ export function CategoryChecksPanel() {
             </Button>
             <Button
               type='button'
-              variant='outline'
               size='sm'
               disabled={scanCount === 0 || isRunning || isStarting}
               onClick={() => setConfirmMode('verify')}

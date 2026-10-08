@@ -173,7 +173,7 @@ export function ApiKeysPanel() {
     <AdminEditorPanel
       status={
         formError ? (
-          <StatusBanner variant='error' kind='error'>
+          <StatusBanner kind='error'>
             {formError}
           </StatusBanner>
         ) : null
@@ -302,7 +302,7 @@ export function ApiKeysPanel() {
         toolbar={
           createdKey ? (
             <div className='mb-3'>
-              <StatusBanner variant='success' kind='saved'>
+              <StatusBanner kind='saved'>
                 <span className='mb-2 block'>
                   API key created. Copy the key now. It is shown only once
                   and cannot be retrieved later.
@@ -417,7 +417,7 @@ export function ApiKeysPanel() {
       <AdminDiscardChangesDialog prompt={shell.expanded.discardPrompt} />
       {formError && !showCreateForm ? (
         <div className='mt-3'>
-          <StatusBanner variant='error' kind='error'>
+          <StatusBanner kind='error'>
             {formError}
           </StatusBanner>
         </div>

@@ -347,12 +347,12 @@ export function CatalogPanel() {
         toolbar={
           <div className='mb-3 space-y-3'>
             {notice ? (
-              <StatusBanner variant='info' kind='info'>
+              <StatusBanner kind='info'>
                 {notice}
               </StatusBanner>
             ) : null}
             {error ? (
-              <StatusBanner variant='error' kind='error'>
+              <StatusBanner kind='error'>
                 {error}
               </StatusBanner>
             ) : null}
@@ -524,7 +524,7 @@ export function CatalogPanel() {
         }}
         onCancel={() => setShowFields(false)}
       >
-        {error ? <p className='mb-3 text-sm text-red-600'>{error}</p> : null}
+        {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
         <BulkFieldsDialog
           isSaving={isSaving}
           onInvalid={(message) => setError(message)}

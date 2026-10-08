@@ -18,8 +18,8 @@ test.describe('Audit Logs Panel', () => {
     await expect(adminPage.getByRole('table')).toContainText('UPDATE');
 
     await adminPage.getByRole('row').nth(1).click();
-    await expect(adminPage.getByLabel('Record ID')).toBeVisible();
+    await expect(adminPage.getByText('Record ID', { exact: true })).toBeVisible();
     await adminPage.getByRole('row').nth(1).click();
-    await expect(adminPage.getByLabel('Record ID')).toHaveCount(0);
+    await expect(adminPage.getByText('Record ID', { exact: true })).toHaveCount(0);
   });
 });

@@ -403,7 +403,7 @@ export function OrganizationsPanel({
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' kind='error'>
+          <StatusBanner kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null
@@ -733,7 +733,7 @@ export function OrganizationsPanel({
   if (!editorOpen) {
     if (panel.isLoading || (isManager && panel.items.length > 0)) {
       return (
-        <StatusBanner variant='info' kind='info'>
+        <StatusBanner kind='info'>
           Loading the organization…
         </StatusBanner>
       );
@@ -753,7 +753,7 @@ export function OrganizationsPanel({
     return (
       <>
         {panel.listError ? (
-          <StatusBanner variant='error' kind='error'>
+          <StatusBanner kind='error'>
             {panel.listError}
           </StatusBanner>
         ) : null}

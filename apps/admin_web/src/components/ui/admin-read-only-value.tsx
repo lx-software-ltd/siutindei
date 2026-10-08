@@ -18,18 +18,9 @@ export interface AdminReadOnlyValueProps {
   className?: string;
 }
 
-function textValue(children: ReactNode): string | null {
-  if (typeof children === 'string' || typeof children === 'number') {
-    return String(children);
-  }
-  return null;
-}
-
 /**
- * Labelled read-only value for detail panels (audit logs, issued
- * certificates). Sits inside `AdminFieldGrid` next to editable fields.
- * Text values stay associated with the label so assistive tech and
- * tests can address them by name.
+ * Labelled read-only text for detail panels. The value is not a form
+ * control, so long tokens wrap. The label matches `Label`.
  */
 export function AdminReadOnlyValue({
   label,
@@ -38,37 +29,26 @@ export function AdminReadOnlyValue({
   span = 1,
   className,
 }: AdminReadOnlyValueProps) {
-  const valueId = useId();
-  const value = textValue(children);
-  const isMultiline = value?.includes('\n') ?? false;
-  const valueClassName = clsx(
-    'mt-1 w-full border-0 bg-transparent p-0 text-slate-800 focus:outline-none',
-    mono ? 'font-mono text-xs wrap-anywhere' : undefined
-  );
+  const labelId = useId();
 
   return (
     <div className={clsx('min-w-0 text-sm', spanStyles[span], className)}>
-      <label
-        htmlFor={valueId}
-        className='block text-xs font-medium text-slate-500'
+      <span
+        id={labelId}
+        className='mb-1 block text-sm font-medium text-slate-700'
       >
         {label}
-      </label>
-      {value === null ? (
-        <div id={valueId} className={valueClassName}>
-          {children}
-        </div>
-      ) : isMultiline ? (
-        <textarea
-          id={valueId}
-          readOnly
-          rows={Math.min(8, value.split('\n').length)}
-          value={value}
-          className={clsx(valueClassName, 'resize-none')}
-        />
-      ) : (
-        <input id={valueId} readOnly value={value} className={valueClassName} />
-      )}
+      </span>
+      <div
+        aria-labelledby={labelId}
+        className={
+          mono
+            ? 'wrap-anywhere font-mono text-xs text-slate-800'
+            : 'text-slate-800'
+        }
+      >
+        {children}
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 
+import { CloseIcon } from '@/components/icons/action-icons';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -117,15 +118,25 @@ export function AdminDialog({
         className={contentClassName}
       >
         <Card className='space-y-4'>
-          <div className='space-y-2'>
-            <h2 id={titleId} className='text-base font-semibold text-slate-900'>
-              {title}
-            </h2>
-            {description ? (
-              <p id={descriptionId} className='text-sm text-slate-600'>
-                {description}
-              </p>
-            ) : null}
+          <div className='flex items-start justify-between gap-3'>
+            <div className='space-y-2'>
+              <h2 id={titleId} className='text-base font-semibold text-slate-900'>
+                {title}
+              </h2>
+              {description ? (
+                <p id={descriptionId} className='text-sm text-slate-600'>
+                  {description}
+                </p>
+              ) : null}
+            </div>
+            <button
+              type='button'
+              aria-label='Close'
+              onClick={onClose}
+              className='inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100'
+            >
+              <CloseIcon className='h-4 w-4' />
+            </button>
           </div>
           {children}
           {footer === undefined ? (

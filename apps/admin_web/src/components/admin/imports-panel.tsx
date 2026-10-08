@@ -201,7 +201,7 @@ export function ImportsPanel() {
             <AdminEditorPanel
               status={
                 importError ? (
-                  <StatusBanner variant='error' kind='error'>
+                  <StatusBanner kind='error'>
                     {importError}
                   </StatusBanner>
                 ) : null
@@ -340,12 +340,12 @@ export function ImportsPanel() {
               status={
                 <>
                   {exportError ? (
-                    <StatusBanner variant='error' kind='error'>
+                    <StatusBanner kind='error'>
                       {exportError}
                     </StatusBanner>
                   ) : null}
                   {exportWarnings.length > 0 ? (
-                    <StatusBanner variant='info' kind='info'>
+                    <StatusBanner kind='info'>
                       {exportWarnings.length} warning(s) encountered. See file
                       for details.
                     </StatusBanner>

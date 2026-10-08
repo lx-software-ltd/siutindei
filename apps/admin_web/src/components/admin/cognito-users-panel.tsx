@@ -161,7 +161,7 @@ export function CognitoUsersPanel() {
         toolbar={
           actionError ? (
             <div className='mb-3'>
-              <StatusBanner variant='error' kind='error'>
+              <StatusBanner kind='error'>
                 {actionError}
               </StatusBanner>
             </div>

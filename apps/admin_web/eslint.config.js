@@ -1,5 +1,42 @@
 const nextConfig = require('eslint-config-next');
 
+const adminUiPlugin = {
+  rules: {
+    'no-hand-rolled-field-error': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description:
+            'Field errors go through AdminInlineError or AdminField.',
+        },
+        schema: [],
+        messages: {
+          handRolled:
+            'Use AdminInlineError or AdminField for field errors.',
+        },
+      },
+      create(context) {
+        return {
+          JSXAttribute(node) {
+            if (
+              node.name.type !== 'JSXIdentifier' ||
+              node.name.name !== 'className'
+            ) {
+              return;
+            }
+            const source = context.sourceCode.getText(node);
+            const hasSize = /text-(xs|sm)\b/.test(source);
+            const hasRed = /text-red-600\b/.test(source);
+            if (hasSize && hasRed) {
+              context.report({ node, messageId: 'handRolled' });
+            }
+          },
+        };
+      },
+    },
+  },
+};
+
 module.exports = [
   ...nextConfig,
   {
@@ -12,15 +49,9 @@ module.exports = [
   },
   {
     files: ['src/**/*.{ts,tsx}'],
+    plugins: { 'admin-ui': adminUiPlugin },
     rules: {
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: 'Literal[value=/text-xs text-red-600/]',
-          message:
-            'Use AdminInlineError or AdminField for field errors.',
-        },
-      ],
+      'admin-ui/no-hand-rolled-field-error': 'error',
     },
   },
   {
@@ -30,14 +61,8 @@ module.exports = [
       'no-restricted-syntax': [
         'error',
         {
-          selector: 'Literal[value=/text-xs text-red-600/]',
-          message:
-            'Use AdminInlineError or AdminField for field errors.',
-        },
-        {
           selector: 'JSXOpeningElement[name.name="svg"]',
-          message:
-            'Add icons in src/components/icons/action-icons.tsx.',
+          message: 'Add icons in src/components/icons/action-icons.tsx.',
         },
       ],
     },

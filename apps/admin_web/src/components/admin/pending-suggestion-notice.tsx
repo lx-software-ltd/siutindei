@@ -15,7 +15,7 @@ export function PendingSuggestionNotice({
 }: PendingSuggestionNoticeProps) {
   return (
     <div className='space-y-4'>
-      <StatusBanner variant='info' kind='pending-review'>
+      <StatusBanner kind='pending-review'>
         Your suggestion is being reviewed by our team. We&apos;ll notify you once
         it&apos;s been processed.
       </StatusBanner>

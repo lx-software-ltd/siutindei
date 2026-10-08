@@ -14,9 +14,9 @@ test.describe('Cognito Users Panel', () => {
     ).toBeVisible();
 
     await adminPage.getByRole('row', { name: /manager@example.com/ }).first().click();
-    await expect(adminPage.getByLabel('Raw Attributes')).toBeVisible();
+    await expect(adminPage.getByText('Raw Attributes', { exact: true })).toBeVisible();
     await adminPage.getByRole('row', { name: /manager@example.com/ }).first().click();
-    await expect(adminPage.getByLabel('Raw Attributes')).toHaveCount(0);
+    await expect(adminPage.getByText('Raw Attributes', { exact: true })).toHaveCount(0);
 
     await adminPage.getByTitle('Make Admin').first().click();
     await expect(adminPage.getByTitle('Remove Admin').first()).toBeVisible();

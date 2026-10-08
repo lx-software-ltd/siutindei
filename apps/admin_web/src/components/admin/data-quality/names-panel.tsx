@@ -218,12 +218,12 @@ export function NamesPanel() {
         </p>
       ) : null}
       {notice ? (
-        <StatusBanner variant='info' kind='info'>
+        <StatusBanner kind='info' title='Names'>
           {notice}
         </StatusBanner>
       ) : null}
       {error ? (
-        <StatusBanner variant='error' kind='error'>
+        <StatusBanner kind='error'>
           {error}
         </StatusBanner>
       ) : null}
@@ -232,18 +232,6 @@ export function NamesPanel() {
         toolbar={
           <div className='mb-3 flex flex-wrap items-end gap-2'>
             <p className='w-full text-sm text-slate-700'>{summary}</p>
-            <AdminFilterField label='Sweep' htmlFor='name-fix-scope'>
-              <Select
-                id='name-fix-scope'
-                value={sweepScope}
-                onChange={(event) =>
-                  setSweepScope(event.target.value === 'all' ? 'all' : 'pending_review')
-                }
-              >
-                <option value='pending_review'>Pending review</option>
-                <option value='all'>All organizations</option>
-              </Select>
-            </AdminFilterField>
             <Button
               type='button'
               onClick={() => void sweep()}
@@ -341,6 +329,18 @@ export function NamesPanel() {
                     {rule}
                   </option>
                 ))}
+              </Select>
+            </AdminFilterField>
+            <AdminFilterField label='Sweep' htmlFor='name-fix-scope'>
+              <Select
+                id='name-fix-scope'
+                value={sweepScope}
+                onChange={(event) =>
+                  setSweepScope(event.target.value === 'all' ? 'all' : 'pending_review')
+                }
+              >
+                <option value='pending_review'>Pending review</option>
+                <option value='all'>All organizations</option>
               </Select>
             </AdminFilterField>
           </AdminFilterBar>

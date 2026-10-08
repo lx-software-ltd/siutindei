@@ -271,12 +271,12 @@ export function TicketsPanel() {
           pendingCount > 0 || showToolbarError ? (
             <div className='mb-3 space-y-3'>
               {pendingCount > 0 ? (
-                <StatusBanner variant='info' kind='pending-review'>
+                <StatusBanner kind='pending-review'>
                   {pendingCount} ticket{pendingCount !== 1 ? 's' : ''} awaiting review.
                 </StatusBanner>
               ) : null}
               {showToolbarError ? (
-                <StatusBanner variant='error' kind='error'>
+                <StatusBanner kind='error'>
                   {reviewError}
                 </StatusBanner>
               ) : null}
@@ -389,7 +389,7 @@ function TicketDetail({
     <AdminEditorPanel
       status={
         reviewError ? (
-          <StatusBanner variant='error' kind='error'>
+          <StatusBanner kind='error'>
             {reviewError}
           </StatusBanner>
         ) : null

@@ -25,12 +25,10 @@ import {
 import { AdminDisclosure } from '../ui/admin-disclosure';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
-import { AdminInlineError } from '../ui/admin-inline-error';
 import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { AdminToggleChip } from '../ui/admin-tab-strip';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import {
   deleteRowActions,
   ResourceTableShell,
@@ -140,7 +138,6 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     ['location_id', 'activity_id', 'days', 'languages'],
     formKey
   );
-  const requiredIndicator = validation.requiredIndicator;
   const errorInputClassName = formErrorClassName;
   const { markTouched } = validation;
 
@@ -480,7 +477,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' kind='error'>
+          <StatusBanner kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null
@@ -560,10 +557,12 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
             }
           >
             <div className='space-y-4'>
-              <div className='space-y-2'>
-                <Label id='schedule-days-label'>
-                  Days of Week <span className='ml-1'>{requiredIndicator}</span>
-                </Label>
+              <AdminField
+                label='Days of Week'
+                labelId='schedule-days-label'
+                required
+                error={showDaysError ? daysError : undefined}
+              >
                 <p id='schedule-days-help' className='text-xs text-slate-500'>
                   Select one or more days, then add timeslots.
                 </p>
@@ -571,7 +570,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                   role='group'
                   aria-labelledby='schedule-days-label'
                   aria-describedby='schedule-days-help'
-                  className={`flex flex-wrap items-center gap-2 ${
+                  className={`mt-2 flex flex-wrap items-center gap-2 ${
                     showDaysError ? 'ring-1 ring-red-500 rounded-md p-2' : ''
                   }`}
                 >
@@ -588,10 +587,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                     );
                   })}
                 </div>
-                {showDaysError ? (
-                  <AdminInlineError size='xs'>{daysError}</AdminInlineError>
-                ) : null}
-              </div>
+              </AdminField>
               {entriesByDay
                 .filter((day) => day.entries.length > 0)
                 .map((day) => (
@@ -651,11 +647,12 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                               key={entry.id}
                               className='grid gap-3 md:grid-cols-[1fr_1fr_auto]'
                             >
-                              <div>
-                                <Label htmlFor={startId}>
-                                  Start Time (Local){' '}
-                                  <span className='ml-1'>{requiredIndicator}</span>
-                                </Label>
+                              <AdminField
+                                label='Start Time (Local)'
+                                htmlFor={startId}
+                                required
+                                error={showStartError ? entryError.start : undefined}
+                              >
                                 <Select
                                   id={startId}
                                   value={entry.start_minutes_local}
@@ -678,17 +675,19 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                                     </option>
                                   ))}
                                 </Select>
-                                {showStartError ? (
-                                  <AdminInlineError size='xs'>
-                                    {entryError.start}
-                                  </AdminInlineError>
-                                ) : null}
-                              </div>
-                              <div>
-                                <Label htmlFor={endId}>
-                                  End Time (Local){' '}
-                                  <span className='ml-1'>{requiredIndicator}</span>
-                                </Label>
+                              </AdminField>
+                              <AdminField
+                                label='End Time (Local)'
+                                htmlFor={endId}
+                                required
+                                error={
+                                  showEndError
+                                    ? entryError.end
+                                    : showRangeError
+                                      ? entryError.range
+                                      : undefined
+                                }
+                              >
                                 <Select
                                   id={endId}
                                   value={entry.end_minutes_local}
@@ -714,16 +713,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                                     </option>
                                   ))}
                                 </Select>
-                                {showEndError ? (
-                                  <AdminInlineError size='xs'>
-                                    {entryError.end}
-                                  </AdminInlineError>
-                                ) : showRangeError ? (
-                                  <AdminInlineError size='xs'>
-                                    {entryError.range}
-                                  </AdminInlineError>
-                                ) : null}
-                              </div>
+                              </AdminField>
                               <div className='flex items-end'>
                                 <Button
                                   type='button'
@@ -755,10 +745,12 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
           </AdminDisclosure>
         </div>
         <div className='sm:col-span-2'>
-          <div className='space-y-2'>
-            <Label id='schedule-languages-label'>
-              Languages <span className='ml-1'>{requiredIndicator}</span>
-            </Label>
+          <AdminField
+            label='Languages'
+            labelId='schedule-languages-label'
+            required
+            error={showLanguagesError ? languagesError : undefined}
+          >
             <p id='schedule-languages-help' className='text-xs text-slate-500'>
               Select one or more flags.
             </p>
@@ -766,7 +758,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
               role='group'
               aria-labelledby='schedule-languages-label'
               aria-describedby='schedule-languages-help'
-              className={`flex flex-wrap items-center gap-2 ${
+              className={`mt-2 flex flex-wrap items-center gap-2 ${
                 showLanguagesError ? 'ring-1 ring-red-500 rounded-md p-2' : ''
               }`}
             >
@@ -792,10 +784,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                 );
               })}
             </div>
-            {showLanguagesError ? (
-              <AdminInlineError size='xs'>{languagesError}</AdminInlineError>
-            ) : null}
-          </div>
+          </AdminField>
         </div>
       </AdminFieldGrid>
     </AdminEditorPanel>

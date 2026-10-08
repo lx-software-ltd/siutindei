@@ -53,6 +53,8 @@ const spanStyles = {
 export interface AdminFieldProps {
   /** Visible label; omit when the control renders its own (for example checkbox groups). */
   label?: ReactNode;
+  /** Id for the label when a group is labelled with `aria-labelledby`. */
+  labelId?: string;
   htmlFor?: string;
   /** Columns to span inside the parent grid. */
   span?: keyof typeof spanStyles;
@@ -68,6 +70,7 @@ export interface AdminFieldProps {
 /** One labelled control inside `AdminFieldGrid`. */
 export function AdminField({
   label,
+  labelId,
   htmlFor,
   span = 1,
   hint,
@@ -80,7 +83,7 @@ export function AdminField({
   return (
     <div className={clsx('min-w-0', spanStyles[span], className)}>
       {label ? (
-        <Label htmlFor={htmlFor}>
+        <Label id={labelId} htmlFor={htmlFor}>
           {label}
           {required ? <RequiredMark /> : null}
         </Label>

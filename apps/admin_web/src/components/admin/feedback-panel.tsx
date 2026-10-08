@@ -147,7 +147,7 @@ export function FeedbackPanel() {
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' kind='error'>
+          <StatusBanner kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null
@@ -299,7 +299,7 @@ export function FeedbackPanel() {
         detail={detail}
         toolbar={
           lookupError ? (
-            <StatusBanner variant='error' kind='error'>
+            <StatusBanner kind='error'>
               {lookupError}
             </StatusBanner>
           ) : null

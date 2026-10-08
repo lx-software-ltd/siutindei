@@ -136,7 +136,7 @@ export function ImportHistoryPanel() {
     <div className='space-y-4'>
       <h2 className='sr-only'>Import history</h2>
       {retryError ? (
-        <StatusBanner variant='error' kind='error'>
+        <StatusBanner kind='error'>
           {retryError}
         </StatusBanner>
       ) : null}

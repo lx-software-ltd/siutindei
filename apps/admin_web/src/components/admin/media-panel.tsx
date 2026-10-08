@@ -24,6 +24,7 @@ import {
   initialMediaPanelState,
   isManagedMediaUrl,
   mediaPanelReducer,
+  discardUnsavedMediaUploads,
   normalizeMediaUrls,
   reorderMediaUrls,
   resolveLogoMediaUrl,
@@ -52,6 +53,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
     logoMediaUrl,
     newMediaUrl,
     pendingMediaDeletes,
+    uploadedMediaUrls,
     hasUnsavedChanges,
     dragIndex,
     dragOverIndex,
@@ -100,6 +102,50 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
     setMediaField('dragOverIndex', value);
   const { confirmDialog } = useConfirmDialog();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingUploadsRef = useRef({ orgId: '', urls: [] as string[] });
+  const previousOrgIdRef = useRef(scopedOrgId ?? '');
+  const panelAliveRef = useRef(false);
+
+  useEffect(() => {
+    pendingUploadsRef.current = {
+      orgId: selectedOrgId,
+      urls: uploadedMediaUrls,
+    };
+  }, [selectedOrgId, uploadedMediaUrls]);
+
+  useEffect(() => {
+    const previousOrgId = previousOrgIdRef.current;
+    previousOrgIdRef.current = scopedOrgId ?? '';
+    if (!previousOrgId || previousOrgId === (scopedOrgId ?? '')) {
+      return;
+    }
+    const pending = pendingUploadsRef.current;
+    if (pending.orgId === previousOrgId && pending.urls.length > 0) {
+      discardUnsavedMediaUploads(pending.orgId, pending.urls);
+      pendingUploadsRef.current = { orgId: '', urls: [] };
+    }
+  }, [scopedOrgId]);
+
+  useEffect(() => {
+    panelAliveRef.current = true;
+    return () => {
+      panelAliveRef.current = false;
+      const pending = pendingUploadsRef.current;
+      if (!pending.orgId || pending.urls.length === 0) {
+        return;
+      }
+      const snapshot = {
+        orgId: pending.orgId,
+        urls: [...pending.urls],
+      };
+      window.setTimeout(() => {
+        if (panelAliveRef.current) {
+          return;
+        }
+        discardUnsavedMediaUploads(snapshot.orgId, snapshot.urls);
+      }, 0);
+    };
+  }, []);
 
   const isMediaBusy = isSaving || isProcessingMedia;
   const selectedOrganization = organization;
@@ -404,12 +450,12 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
         organization={organization}
       />
       {error && (
-        <StatusBanner variant='error' kind='error'>
+        <StatusBanner kind='error'>
           {error}
         </StatusBanner>
       )}
       {successMessage && (
-        <StatusBanner variant='success' kind='saved'>
+        <StatusBanner kind='saved'>
           {successMessage}
         </StatusBanner>
       )}

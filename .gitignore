@@ -269,3 +269,9 @@ backend/fixtures/activity_search_staging.json
 apps/public_www/public/fixtures/activity_search_staging.json
 apps/public_www/src/data/activity_search_staging.json
 apps/siutindei_app/assets/fixtures/activity_search_staging.json
+
+# Recreated by `next dev`; not part of the app
+apps/admin_web/AGENTS.md
+apps/admin_web/CLAUDE.md
+apps/public_www/AGENTS.md
+apps/public_www/CLAUDE.md
