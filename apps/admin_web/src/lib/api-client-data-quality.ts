@@ -165,12 +165,20 @@ export function updateNameFixSettings(body: NameFixSettings) {
   });
 }
 
-export function scanNameFixes(body: { entity_type?: string; q?: string } = {}) {
+export function scanNameFixes(
+  body: {
+    entity_type?: string;
+    q?: string;
+    from_scratch?: boolean;
+    review_scope?: 'pending_review' | 'all';
+  } = {}
+) {
   return request<{
     scan_run_id: string;
     created: number;
     updated: number;
     skipped: number;
+    cleared: number;
     truncated: boolean;
   }>(buildApiUrl('v1/admin/name-fixes/scan'), {
     method: 'POST',

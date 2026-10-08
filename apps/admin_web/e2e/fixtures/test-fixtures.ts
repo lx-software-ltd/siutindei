@@ -1973,6 +1973,9 @@ export async function setupApiMocks(page: Page): Promise<void> {
       return;
     }
     if (method === 'POST' && url.includes('/name-fixes/scan')) {
+      const body = (route.request().postDataJSON() || {}) as {
+        from_scratch?: boolean;
+      };
       nameFixes = [
         {
           id: 'fix-1',
@@ -1989,9 +1992,10 @@ export async function setupApiMocks(page: Page): Promise<void> {
         contentType: 'application/json',
         body: JSON.stringify({
           scan_run_id: 'scan-1',
-          created: 1,
-          updated: 0,
+          created: body.from_scratch ? 0 : 1,
+          updated: body.from_scratch ? 1 : 0,
           skipped: 0,
+          cleared: body.from_scratch ? 1 : 0,
           truncated: false,
         }),
       });

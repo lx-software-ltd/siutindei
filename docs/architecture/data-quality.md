@@ -63,7 +63,11 @@ and the import records a warning.
 Data quality has three tabs: Duplicates, Names, and Category Checks.
 Category checks moved here from Categories; `?categoryView=checks`
 opens this tab. The Names tab scans stored rows with the same rules and writes
-`name_fix_proposals`. The list is cursor paginated. Applying a
+`name_fix_proposals`. The list is cursor paginated. A regular scan
+refreshes matching rows and still skips approved organizations'
+activities. Sweep scan (`from_scratch`) re-evaluates every name in
+the chosen scope (`pending_review` or `all`) and deletes pending
+proposals the current rules no longer change. Applying a
 proposal updates the record when the stored name still matches the
 proposal. A dismissed proposal with the same proposed value is not
 created again. The review queue warning `name_needs_cleanup` covers
