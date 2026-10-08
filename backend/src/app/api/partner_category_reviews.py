@@ -122,8 +122,7 @@ def _latest_by_activity(
             proposed_category_id=None,
             query_text="",
             cursor=None,
-        )
-        .where(ActivityCategoryReview.activity_id.in_(activity_ids))
+        ).where(ActivityCategoryReview.activity_id.in_(activity_ids))
     ).all()
     for row in rows:
         review = row[0]
