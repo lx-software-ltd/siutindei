@@ -63,7 +63,9 @@ describe('NamesPanel settings lists', () => {
   it('keeps a space so a new exception word can be typed', async () => {
     const user = userEvent.setup();
     render(<NamesPanel />, { wrapper });
-    const exceptions = await screen.findByLabelText('Words to leave in capitals');
+    const heading = await screen.findByRole('heading', { name: 'Rules' });
+    expect(heading.parentElement).toHaveClass('bg-white');
+    const exceptions = screen.getByLabelText('Words to leave in capitals');
     expect(exceptions.tagName).toBe('TEXTAREA');
     expect(exceptions).toHaveAttribute('rows', '3');
     await user.click(exceptions);
