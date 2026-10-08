@@ -83,6 +83,7 @@ def test_full_access_lists_confirmed_and_suggested_reviews(
                 total_activities=2,
             )
         )
+        session.flush()
         session.add(
             CategorySuggestion(
                 id=suggestion_id,
@@ -94,6 +95,7 @@ def test_full_access_lists_confirmed_and_suggested_reviews(
                 suggested_name="Pottery",
             )
         )
+        session.flush()
         session.add(
             _review(
                 run_id=run_id,
@@ -171,6 +173,7 @@ def test_org_scoped_key_sees_only_its_category_reviews(
                 total_activities=2,
             )
         )
+        session.flush()
         session.add(
             _review(
                 run_id=run_id,
@@ -231,6 +234,7 @@ def test_activity_detail_embeds_latest_review(monkeypatch, test_engine) -> None:
                 total_activities=1,
             )
         )
+        session.flush()
         session.add(
             _review(
                 run_id=run_id,
