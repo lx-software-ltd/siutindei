@@ -24,11 +24,16 @@ import {
 import { StatusBanner } from '../../status-banner';
 import { AdminDataTableCell, AdminDataTableHeadCell } from '../../ui/admin-data-table';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
+import { AdminField, AdminFieldGrid } from '../../ui/admin-field-grid';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { Select } from '../../ui/select';
+
+function splitNameSettingList(value: string): string[] {
+  return value.split(/\s+/).filter(Boolean);
+}
 
 interface NameFilters {
   q: string;
@@ -58,7 +63,11 @@ export function NamesPanel() {
     queryFn: getNameFixSettings,
   });
   const [draft, setDraft] = useState<NameFixSettings | null>(null);
+  const [exceptionText, setExceptionText] = useState<string | null>(null);
+  const [suffixText, setSuffixText] = useState<string | null>(null);
   const settings = draft ?? settingsQuery.data ?? null;
+  const exceptionValue = exceptionText ?? settings?.exception_words.join(' ') ?? '';
+  const suffixValue = suffixText ?? settings?.bracket_suffixes.join(' ') ?? '';
   const list = usePaginatedList<NameFixProposal, NameFilters>({
     queryKey: [...adminQueryKeys.nameFixes(), organization ?? ''],
     defaultFilters: DEFAULT_FILTERS,
@@ -161,9 +170,15 @@ export function NamesPanel() {
     }
     setError('');
     try {
-      const saved = await updateNameFixSettings(settings);
+      const saved = await updateNameFixSettings({
+        ...settings,
+        exception_words: splitNameSettingList(exceptionValue),
+        bracket_suffixes: splitNameSettingList(suffixValue),
+      });
       getAdminQueryClient().setQueryData([...adminQueryKeys.nameFixes(), 'settings'], saved);
       setDraft(null);
+      setExceptionText(null);
+      setSuffixText(null);
       setNotice('Name rules saved.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save rules.');
@@ -373,30 +388,30 @@ export function NamesPanel() {
               </label>
             ))}
           </div>
-          <AdminFilterField label='Words to leave in capitals' htmlFor='name-fix-exceptions'>
-            <Input
-              id='name-fix-exceptions'
-              value={settings.exception_words.join(' ')}
-              onChange={(event) =>
-                setDraft({
-                  ...settings,
-                  exception_words: event.target.value.split(/\s+/).filter(Boolean),
-                })
-              }
-            />
-          </AdminFilterField>
-          <AdminFilterField label='Bracket suffixes to remove' htmlFor='name-fix-suffixes'>
-            <Input
-              id='name-fix-suffixes'
-              value={settings.bracket_suffixes.join(' ')}
-              onChange={(event) =>
-                setDraft({
-                  ...settings,
-                  bracket_suffixes: event.target.value.split(/\s+/).filter(Boolean),
-                })
-              }
-            />
-          </AdminFilterField>
+          <AdminFieldGrid columns={1}>
+            <AdminField
+              label='Words to leave in capitals'
+              htmlFor='name-fix-exceptions'
+              hint='Separate words with spaces.'
+            >
+              <Input
+                id='name-fix-exceptions'
+                value={exceptionValue}
+                onChange={(event) => setExceptionText(event.target.value)}
+              />
+            </AdminField>
+            <AdminField
+              label='Bracket suffixes to remove'
+              htmlFor='name-fix-suffixes'
+              hint='Separate suffixes with spaces.'
+            >
+              <Input
+                id='name-fix-suffixes'
+                value={suffixValue}
+                onChange={(event) => setSuffixText(event.target.value)}
+              />
+            </AdminField>
+          </AdminFieldGrid>
           <Button type='button' variant='secondary' onClick={() => void saveSettings()}>
             Save rules
           </Button>
