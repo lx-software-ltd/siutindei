@@ -77,16 +77,16 @@ test.describe('Organizations Panel', () => {
 
   test('should display manager selector with Cognito users', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
-    const managerSelect = adminPage.getByLabel('Manager');
-    await expect(managerSelect).toBeVisible();
+    const managerField = adminPage.getByLabel('Manager');
+    await expect(managerField).toBeVisible();
+    await expect(adminPage.locator('#org-manager-search')).toHaveCount(0);
+    await expect(adminPage.getByLabel('Email prefix')).toHaveCount(0);
 
-    // Click to open the select
-    await managerSelect.click();
+    await managerField.click();
 
-    // Check that users are available in the dropdown
     await expect(
-      adminPage.locator('#org-manager option[value="manager-user-id-456"]')
-    ).toBeAttached();
+      adminPage.getByRole('option', { name: /manager@example.com/ })
+    ).toBeVisible();
   });
 
   test('should validate required fields on submit', async ({ adminPage }) => {
@@ -112,9 +112,14 @@ test.describe('Organizations Panel', () => {
     // Fill name
     await adminPage.getByLabel('Name').fill('New Test Organization');
 
-    // Select manager
-    const managerSelect = adminPage.getByLabel('Manager');
-    await managerSelect.selectOption({ index: 1 });
+    const managerField = adminPage.getByLabel('Manager');
+    await managerField.click();
+    await adminPage
+      .getByRole('option', { name: /manager@example.com/ })
+      .click();
+    await expect(managerField).toHaveValue(
+      'manager@example.com (Manager User)'
+    );
 
     // Fill description
     await adminPage
@@ -140,7 +145,10 @@ test.describe('Organizations Panel', () => {
     await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
     // Fill the form
     await adminPage.getByLabel('Name').fill('Brand New Organization');
-    await adminPage.getByLabel('Manager').selectOption({ index: 1 }); // Select first user
+    await adminPage.getByLabel('Manager').click();
+    await adminPage
+      .getByRole('option', { name: /manager@example.com/ })
+      .click();
     await adminPage
       .getByLabel('Description', { exact: true })
       .fill('A brand new organization');
@@ -182,6 +190,9 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByLabel('Source note')).toHaveValue('Checked listing');
     await expect(adminPage.getByLabel('Source', { exact: true })).toHaveValue('lcsd');
     await expect(adminPage.getByLabel('Description origin')).toHaveValue('official');
+    await expect(adminPage.getByLabel('Manager')).toHaveValue(
+      'manager@example.com (Manager User)'
+    );
   });
 
   test('should leave the organization workspace from the catalog', async ({
