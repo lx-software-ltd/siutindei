@@ -39,12 +39,8 @@ class ActivityCard extends ConsumerWidget {
     final priceTokens = ref.watch(
       componentTokensProvider.select((t) => t.priceTag),
     );
-    final spacing = ref.watch(
-      semanticTokensProvider.select((s) => s.spacing),
-    );
-    final textStyles = ref.watch(
-      semanticTokensProvider.select((s) => s.text),
-    );
+    final spacing = ref.watch(semanticTokensProvider.select((s) => s.spacing));
+    final textStyles = ref.watch(semanticTokensProvider.select((s) => s.text));
 
     // Cache border radius to avoid recreating
     final borderRadius = BorderRadius.circular(tokens.borderRadius);
@@ -208,10 +204,7 @@ class _ActivityCardHeader extends StatelessWidget {
 
 /// Activity name and age info.
 class _ActivityCardInfo extends StatelessWidget {
-  const _ActivityCardInfo({
-    required this.result,
-    required this.tokens,
-  });
+  const _ActivityCardInfo({required this.result, required this.tokens});
 
   final ActivitySearchResultEntity result;
   final ActivityCardTokens tokens;
@@ -237,10 +230,7 @@ class _ActivityCardInfo extends StatelessWidget {
         if (ageRange != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: _AgeTag(
-              ageRange: ageRange,
-              tokens: tokens,
-            ),
+            child: _AgeTag(ageRange: ageRange, tokens: tokens),
           ),
       ],
     );
@@ -266,16 +256,10 @@ class _ActivityCardSchedulePrice extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _ScheduleInfo(
-            schedule: result.schedule,
-            tokens: tokens,
-          ),
+          child: _ScheduleInfo(schedule: result.schedule, tokens: tokens),
         ),
         SizedBox(width: spacing.md),
-        _PriceTag(
-          pricing: result.pricing,
-          tokens: priceTokens,
-        ),
+        _PriceTag(pricing: result.pricing, tokens: priceTokens),
       ],
     );
   }
@@ -316,10 +300,7 @@ class _ActivityCardTags extends StatelessWidget {
 
 /// Age display tag - extracted as StatelessWidget.
 class _AgeTag extends StatelessWidget {
-  const _AgeTag({
-    required this.ageRange,
-    required this.tokens,
-  });
+  const _AgeTag({required this.ageRange, required this.tokens});
 
   final String ageRange;
   final ActivityCardTokens tokens;
@@ -329,11 +310,7 @@ class _AgeTag extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          Icons.child_care,
-          size: 14,
-          color: tokens.ageForeground,
-        ),
+        Icon(Icons.child_care, size: 14, color: tokens.ageForeground),
         const SizedBox(width: 4),
         Text(
           ageRange,
@@ -349,10 +326,7 @@ class _AgeTag extends StatelessWidget {
 
 /// Schedule info display - extracted as StatelessWidget.
 class _ScheduleInfo extends StatelessWidget {
-  const _ScheduleInfo({
-    required this.schedule,
-    required this.tokens,
-  });
+  const _ScheduleInfo({required this.schedule, required this.tokens});
 
   final ScheduleEntity schedule;
   final ActivityCardTokens tokens;
@@ -361,11 +335,7 @@ class _ScheduleInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(
-          Icons.schedule,
-          size: 16,
-          color: tokens.scheduleIconColor,
-        ),
+        Icon(Icons.schedule, size: 16, color: tokens.scheduleIconColor),
         const SizedBox(width: 4),
         Expanded(
           child: Text(
@@ -412,10 +382,7 @@ class _ScheduleInfo extends StatelessWidget {
 
 /// Price tag display - extracted as StatelessWidget.
 class _PriceTag extends StatelessWidget {
-  const _PriceTag({
-    required this.pricing,
-    required this.tokens,
-  });
+  const _PriceTag({required this.pricing, required this.tokens});
 
   final PricingEntity pricing;
   final PriceTagTokens tokens;

@@ -1,0 +1,13 @@
+---
+description: CDK constraints for infrastructure edits
+globs: backend/infrastructure/**
+alwaysApply: false
+---
+
+# Infrastructure
+
+- Set `secretName` with the stack `name()` helper (`${resourcePrefix}-<suffix>`). [why: convention]
+- Use `noEcho: true` on CfnParameter logical ids that contain Secret, Password, or ApiKey. [why: convention]
+- Do not use `Cors.ALL_ORIGINS`. [why: 52d61c0 masked secrets and PII]
+- Keep new S3 bucket names at or under 63 characters. [why: convention]
+- Deploy and destroy through the GitHub workflows, not `cdk deploy` from an agent shell. [why: convention]

@@ -109,9 +109,11 @@ class LoadMoreActivitiesUseCase {
 
     final result = await _repository.searchActivities(currentFilters);
 
-    return result.map((newResults) => SearchResultsEntity(
-          items: [...existingResults.items, ...newResults.items],
-          nextCursor: newResults.nextCursor,
-        ));
+    return result.map(
+      (newResults) => SearchResultsEntity(
+        items: [...existingResults.items, ...newResults.items],
+        nextCursor: newResults.nextCursor,
+      ),
+    );
   }
 }

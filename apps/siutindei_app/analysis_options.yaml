@@ -8,3 +8,12 @@ analyzer:
     - macos/**
     - linux/**
 include: package:flutter_lints/flutter.yaml
+
+formatter:
+  page_width: 80
+
+linter:
+  rules:
+    curly_braces_in_flow_control_structures: true
+    lines_longer_than_80_chars: true
+    prefer_single_quotes: true

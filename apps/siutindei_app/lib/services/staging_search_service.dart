@@ -110,18 +110,14 @@ class StagingSearchService {
     return ActivitySearchResponse(
       items: page
           .map(
-            (item) => ActivitySearchResult.fromJson(
-              _apiItemFromFixture(item),
-            ),
+            (item) => ActivitySearchResult.fromJson(_apiItemFromFixture(item)),
           )
           .toList(),
       nextCursor: nextCursor,
     );
   }
 
-  static Map<String, dynamic> _apiItemFromFixture(
-    Map<String, dynamic> item,
-  ) {
+  static Map<String, dynamic> _apiItemFromFixture(Map<String, dynamic> item) {
     final schedule = Map<String, dynamic>.from(
       item['schedule'] as Map<String, dynamic>,
     );
@@ -150,7 +146,8 @@ class StagingSearchService {
     final location = item['location'] as Map<String, dynamic>;
 
     if (filters.areaId != null && filters.areaId!.isNotEmpty) {
-      final allowed = (areaDescendants[filters.areaId] as List<dynamic>?)
+      final allowed =
+          (areaDescendants[filters.areaId] as List<dynamic>?)
               ?.map((value) => value as String)
               .toList() ??
           [filters.areaId!];

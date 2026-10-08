@@ -8,6 +8,12 @@ GitHub rulesets protect critical branches and tags from accidental or malicious
 changes. These rules enforce code review, CI checks, and prevent destructive
 operations.
 
+`.github/workflows/verify-rulesets.yml` runs `scripts/verify_github_rulesets.py`
+weekly. A 403 from the classic branch-protection API is treated as
+unreadable, and the ruleset API is still evaluated. The job fails while no
+active ruleset targets `main`. Activating that ruleset is a repository
+admin action.
+
 ---
 
 ## Branch Protection: `main`
@@ -159,7 +165,9 @@ A CI workflow (`.github/workflows/verify-rulesets.yml`) runs weekly and on
 demand to verify that branch protection rules are correctly configured.
 
 The verification checks:
-- Branch protection exists for `main`
+- An **active** ruleset targets `main`. A ruleset whose enforcement is
+  `disabled` or `evaluate` fails this check. Classic branch protection
+  is not a substitute for that disabled ruleset.
 - Required status checks are configured
 - Force push protection is enabled
 - Deletion protection is enabled

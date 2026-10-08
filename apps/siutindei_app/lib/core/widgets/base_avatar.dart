@@ -58,8 +58,10 @@ class BaseAvatar extends ConsumerWidget {
           imageUrl!,
           fit: BoxFit.cover,
           // Use cacheWidth/cacheHeight for memory optimization
-          cacheWidth: (dimension * MediaQuery.devicePixelRatioOf(context)).toInt(),
-          cacheHeight: (dimension * MediaQuery.devicePixelRatioOf(context)).toInt(),
+          cacheWidth: (dimension * MediaQuery.devicePixelRatioOf(context))
+              .toInt(),
+          cacheHeight: (dimension * MediaQuery.devicePixelRatioOf(context))
+              .toInt(),
           errorBuilder: (context, error, stackTrace) => _InitialsAvatar(
             name: name,
             dimension: dimension,

@@ -39,7 +39,9 @@ void main() {
 
   test('bundled home wizard tree exposes region area ids', () async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    final options = leafAreaFilterOptions(await AreasService.loadBundledAreas());
+    final options = leafAreaFilterOptions(
+      await AreasService.loadBundledAreas(),
+    );
     expect(options, isNotEmpty);
     expect(
       options.map((o) => o.id),

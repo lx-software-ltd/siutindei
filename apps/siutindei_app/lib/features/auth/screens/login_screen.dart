@@ -53,11 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Header
-              Icon(
-                Icons.child_care,
-                size: 64,
-                color: semantic.color.primary,
-              ),
+              Icon(Icons.child_care, size: 64, color: semantic.color.primary),
               SizedBox(height: semantic.spacing.md),
               Text(
                 'Welcome to Siu Tin Dei',
@@ -66,7 +62,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               SizedBox(height: semantic.spacing.sm),
               Text(
-                'Sign in to save favorites and get personalized recommendations',
+                'Sign in to save favorites and get '
+                'personalized recommendations',
                 style: semantic.text.bodyMedium,
                 textAlign: TextAlign.center,
               ),
@@ -182,7 +179,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   Expanded(child: Divider(color: semantic.color.border)),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: semantic.spacing.md),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: semantic.spacing.md,
+                    ),
                     child: Text('or', style: semantic.text.caption),
                   ),
                   Expanded(child: Divider(color: semantic.color.border)),
@@ -196,8 +195,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 onPressed: authState.isLoading
                     ? null
                     : () => ref
-                        .read(authViewModelProvider.notifier)
-                        .signInWithProvider(AuthProvider.google),
+                          .read(authViewModelProvider.notifier)
+                          .signInWithProvider(AuthProvider.google),
                 icon: Icons.g_mobiledata,
                 label: 'Continue with Google',
                 semantic: semantic,
@@ -207,8 +206,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 onPressed: authState.isLoading
                     ? null
                     : () => ref
-                        .read(authViewModelProvider.notifier)
-                        .signInWithProvider(AuthProvider.apple),
+                          .read(authViewModelProvider.notifier)
+                          .signInWithProvider(AuthProvider.apple),
                 icon: Icons.apple,
                 label: 'Continue with Apple',
                 semantic: semantic,
@@ -276,10 +275,7 @@ class _LegalLink extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => openExternalUrl(url),
-      child: Semantics(
-        link: true,
-        child: Text(label, style: style),
-      ),
+      child: Semantics(link: true, child: Text(label, style: style)),
     );
   }
 }

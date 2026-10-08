@@ -31,10 +31,10 @@ void main() {
       ),
     ]);
     expect(index.chipOptions().map((n) => n.name), ['Island', 'Kowloon']);
-    expect(
-      index.chipOptions(selectedAreaId: 'a').map((n) => n.name),
-      ['Island', 'Kowloon'],
-    );
+    expect(index.chipOptions(selectedAreaId: 'a').map((n) => n.name), [
+      'Island',
+      'Kowloon',
+    ]);
   });
 
   test('chipOptions drills into children after parent selection', () {
@@ -55,10 +55,10 @@ void main() {
         ],
       ),
     ]);
-    expect(
-      index.chipOptions(selectedAreaId: 'region').map((n) => n.name),
-      ['Mong Kok', 'Tsim Sha Tsui'],
-    );
+    expect(index.chipOptions(selectedAreaId: 'region').map((n) => n.name), [
+      'Mong Kok',
+      'Tsim Sha Tsui',
+    ]);
   });
 
   test('backTarget clears single-country first level selection', () {

@@ -62,14 +62,18 @@ class ActivitySearchFilters {
       pricingType: clearPricingType ? null : (pricingType ?? this.pricingType),
       priceMin: clearPriceMin ? null : (priceMin ?? this.priceMin),
       priceMax: clearPriceMax ? null : (priceMax ?? this.priceMax),
-      scheduleType:
-          clearScheduleType ? null : (scheduleType ?? this.scheduleType),
-      dayOfWeekUtc:
-          clearDayOfWeekUtc ? null : (dayOfWeekUtc ?? this.dayOfWeekUtc),
-      startMinutesUtc:
-          clearStartMinutesUtc ? null : (startMinutesUtc ?? this.startMinutesUtc),
-      endMinutesUtc:
-          clearEndMinutesUtc ? null : (endMinutesUtc ?? this.endMinutesUtc),
+      scheduleType: clearScheduleType
+          ? null
+          : (scheduleType ?? this.scheduleType),
+      dayOfWeekUtc: clearDayOfWeekUtc
+          ? null
+          : (dayOfWeekUtc ?? this.dayOfWeekUtc),
+      startMinutesUtc: clearStartMinutesUtc
+          ? null
+          : (startMinutesUtc ?? this.startMinutesUtc),
+      endMinutesUtc: clearEndMinutesUtc
+          ? null
+          : (endMinutesUtc ?? this.endMinutesUtc),
       languages: languages ?? this.languages,
       cursor: clearCursor ? null : (cursor ?? this.cursor),
       limit: limit ?? this.limit,
@@ -158,9 +162,8 @@ class ActivitySearchResponse {
     return ActivitySearchResponse(
       items: itemsJson
           .map(
-            (item) => ActivitySearchResult.fromJson(
-              item as Map<String, dynamic>,
-            ),
+            (item) =>
+                ActivitySearchResult.fromJson(item as Map<String, dynamic>),
           )
           .toList(),
       nextCursor: json['next_cursor'] as String?,
@@ -187,7 +190,9 @@ class ActivitySearchResult {
   factory ActivitySearchResult.fromJson(Map<String, dynamic> json) {
     return ActivitySearchResult(
       activity: Activity.fromJson(json['activity'] as Map<String, dynamic>),
-      organization: Organization.fromJson(json['organization'] as Map<String, dynamic>),
+      organization: Organization.fromJson(
+        json['organization'] as Map<String, dynamic>,
+      ),
       location: Location.fromJson(json['location'] as Map<String, dynamic>),
       pricing: Pricing.fromJson(json['pricing'] as Map<String, dynamic>),
       schedule: Schedule.fromJson(json['schedule'] as Map<String, dynamic>),
@@ -306,8 +311,7 @@ class Pricing {
       amount: (json['amount'] as num).toDouble(),
       currency: json['currency'] as String,
       sessionsCount: json['sessions_count'] as int?,
-      freeTrialClassOffered:
-          json['free_trial_class_offered'] as bool? ?? false,
+      freeTrialClassOffered: json['free_trial_class_offered'] as bool? ?? false,
     );
   }
 }

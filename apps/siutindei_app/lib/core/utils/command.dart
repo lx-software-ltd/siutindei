@@ -18,11 +18,15 @@ import 'result.dart';
 /// }
 ///
 /// // In UI
-/// final isLoading = ref.watch(viewModel.select((vm) => vm.searchCommand.isRunning));
+/// final isLoading = ref.watch(
+///   viewModel.select((vm) => vm.searchCommand.isRunning),
+/// );
 /// final error = ref.watch(viewModel.select((vm) => vm.searchCommand.error));
 ///
 /// ElevatedButton(
-///   onPressed: isLoading ? null : () => viewModel.searchCommand.execute(filters),
+///   onPressed: isLoading
+///       ? null
+///       : () => viewModel.searchCommand.execute(filters),
 ///   child: Text(isLoading ? 'Loading...' : 'Search'),
 /// )
 /// ```

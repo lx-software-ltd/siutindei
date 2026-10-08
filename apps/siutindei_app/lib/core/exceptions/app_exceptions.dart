@@ -31,10 +31,7 @@ final class NetworkException extends AppException {
 
   /// Creates from a generic error.
   factory NetworkException.fromError(Object error) {
-    return NetworkException(
-      'Network error: ${error.toString()}',
-      error,
-    );
+    return NetworkException('Network error: ${error.toString()}', error);
   }
 
   /// No internet connection.
@@ -161,7 +158,11 @@ final class ValidationException extends AppException {
   }
 
   /// Range validation failed.
-  factory ValidationException.outOfRange(String fieldName, {num? min, num? max}) {
+  factory ValidationException.outOfRange(
+    String fieldName, {
+    num? min,
+    num? max,
+  }) {
     if (min != null && max != null) {
       return ValidationException('$fieldName must be between $min and $max');
     } else if (min != null) {

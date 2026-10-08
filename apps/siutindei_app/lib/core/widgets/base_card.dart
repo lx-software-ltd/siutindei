@@ -10,12 +10,7 @@ import '../../config/tokens/tokens.dart';
 /// - Caches BorderRadius to avoid recreation
 /// - Uses DecoratedBox instead of Container where possible
 class BaseCard extends ConsumerWidget {
-  const BaseCard({
-    super.key,
-    required this.child,
-    this.onTap,
-    this.padding,
-  });
+  const BaseCard({super.key, required this.child, this.onTap, this.padding});
 
   final Widget child;
   final VoidCallback? onTap;
@@ -97,10 +92,7 @@ class SectionCard extends ConsumerWidget {
                   SizedBox(width: cardTokens.gap),
                 ],
                 Text(title, style: textStyles.labelLarge),
-                if (action != null) ...[
-                  const Spacer(),
-                  action!,
-                ],
+                if (action != null) ...[const Spacer(), action!],
               ],
             ),
           ),

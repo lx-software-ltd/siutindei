@@ -34,10 +34,7 @@ class ActivitySearchResultEntity {
 
 /// Domain entity representing a paginated search response.
 class SearchResultsEntity {
-  const SearchResultsEntity({
-    required this.items,
-    this.nextCursor,
-  });
+  const SearchResultsEntity({required this.items, this.nextCursor});
 
   final List<ActivitySearchResultEntity> items;
   final String? nextCursor;
@@ -171,15 +168,19 @@ class SearchFilters {
       pricingType: clearPricingType ? null : (pricingType ?? this.pricingType),
       priceMin: clearPriceMin ? null : (priceMin ?? this.priceMin),
       priceMax: clearPriceMax ? null : (priceMax ?? this.priceMax),
-      scheduleType:
-          clearScheduleType ? null : (scheduleType ?? this.scheduleType),
-      dayOfWeekUtc:
-          clearDayOfWeekUtc ? null : (dayOfWeekUtc ?? this.dayOfWeekUtc),
+      scheduleType: clearScheduleType
+          ? null
+          : (scheduleType ?? this.scheduleType),
+      dayOfWeekUtc: clearDayOfWeekUtc
+          ? null
+          : (dayOfWeekUtc ?? this.dayOfWeekUtc),
       dayOfMonth: clearDayOfMonth ? null : (dayOfMonth ?? this.dayOfMonth),
-      startMinutesUtc:
-          clearStartMinutesUtc ? null : (startMinutesUtc ?? this.startMinutesUtc),
-      endMinutesUtc:
-          clearEndMinutesUtc ? null : (endMinutesUtc ?? this.endMinutesUtc),
+      startMinutesUtc: clearStartMinutesUtc
+          ? null
+          : (startMinutesUtc ?? this.startMinutesUtc),
+      endMinutesUtc: clearEndMinutesUtc
+          ? null
+          : (endMinutesUtc ?? this.endMinutesUtc),
       startAtUtc: clearStartAtUtc ? null : (startAtUtc ?? this.startAtUtc),
       endAtUtc: clearEndAtUtc ? null : (endAtUtc ?? this.endAtUtc),
       languages: languages ?? this.languages,
@@ -213,14 +214,14 @@ class SearchFilters {
 
   @override
   int get hashCode => Object.hash(
-        searchQuery,
-        age,
-        areaId,
-        pricingType,
-        priceMin,
-        priceMax,
-        scheduleType,
-        cursor,
-        limit,
-      );
+    searchQuery,
+    age,
+    areaId,
+    pricingType,
+    priceMin,
+    priceMax,
+    scheduleType,
+    cursor,
+    limit,
+  );
 }

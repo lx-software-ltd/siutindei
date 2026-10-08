@@ -47,7 +47,7 @@ sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'"
 
 echo "==> Python backend dependencies"
 python3 -m pip install --break-system-packages --ignore-installed -q \
-  -r backend/requirements.txt 'pytest>=8.0' 'pytest-cov>=5.0' pre-commit
+  -r backend/requirements.txt 'pytest>=8.0' 'pytest-cov>=5.0' 'ruff>=0.3.0' pre-commit
 
 echo "==> Apply database migrations (schema only, no seed)"
 # If a base snapshot carries an alembic_version stamped at head but is missing

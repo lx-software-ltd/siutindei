@@ -69,8 +69,9 @@ class HomeWizardState {
       selectedAgeGroupId: clearAgeGroup
           ? null
           : (selectedAgeGroupId ?? this.selectedAgeGroupId),
-      selectedRegionId:
-          clearRegion ? null : (selectedRegionId ?? this.selectedRegionId),
+      selectedRegionId: clearRegion
+          ? null
+          : (selectedRegionId ?? this.selectedRegionId),
       prefetchStatus: prefetchStatus ?? this.prefetchStatus,
       prefetchedResults: prefetchedResults ?? this.prefetchedResults,
       filteredResults: filteredResults ?? this.filteredResults,
@@ -93,10 +94,7 @@ class HomeWizardViewModel extends Notifier<HomeWizardState> {
   Future<void> _loadChoices() async {
     try {
       final choices = await HomeWizardChoices.loadFromAsset();
-      state = state.copyWith(
-        choices: choices,
-        isLoadingChoices: false,
-      );
+      state = state.copyWith(choices: choices, isLoadingChoices: false);
     } on Exception {
       state = state.copyWith(
         isLoadingChoices: false,
@@ -161,10 +159,7 @@ class HomeWizardViewModel extends Notifier<HomeWizardState> {
         filteredResults: const [],
       );
     } else if (step == HomeWizardStep.ageGroup) {
-      state = state.copyWith(
-        clearRegion: true,
-        filteredResults: const [],
-      );
+      state = state.copyWith(clearRegion: true, filteredResults: const []);
     }
   }
 
@@ -230,8 +225,7 @@ class HomeWizardViewModel extends Notifier<HomeWizardState> {
     final region = choices.regions.firstWhere((item) => item.id == regionId);
     final query = state.searchQuery.trim().toLowerCase();
     final filtered = state.prefetchedResults.where((result) {
-      final matchesRegion =
-          result.location.regionAreaId == region.areaId;
+      final matchesRegion = result.location.regionAreaId == region.areaId;
       if (!matchesRegion) {
         return false;
       }
@@ -252,5 +246,5 @@ class HomeWizardViewModel extends Notifier<HomeWizardState> {
 
 final homeWizardViewModelProvider =
     NotifierProvider<HomeWizardViewModel, HomeWizardState>(
-  HomeWizardViewModel.new,
-);
+      HomeWizardViewModel.new,
+    );

@@ -9,6 +9,13 @@ on:
       - "backend/**"
       - "tests/**"
       - "scripts/**"
+      - ".cursor/**"
+      - "AGENTS.md"
+      - ".cursorrules"
+      - "BUGBOT.md"
+      - "docs/plans/**"
+      - "docs/research/**"
+      - "docs/architecture/zones.md"
       - ".github/workflows/lint.yml"
   push:
     branches:
@@ -19,9 +26,49 @@ on:
       - "backend/**"
       - "tests/**"
       - "scripts/**"
+      - ".cursor/**"
+      - "AGENTS.md"
+      - ".cursorrules"
+      - "BUGBOT.md"
+      - "docs/plans/**"
+      - "docs/research/**"
+      - "docs/architecture/zones.md"
       - ".github/workflows/lint.yml"
 
 jobs:
+  validate-agent-harness:
+    name: Validate agent harness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Install pytest
+        run: python -m pip install 'pytest>=8.0'
+
+      - name: Run harness checks
+        run: |
+          set -euo pipefail
+          python3 scripts/validate_agent_rules.py
+          python3 scripts/check_python_file_length.py
+          python3 scripts/check_test_focus.py
+          python3 scripts/check_openapi_routes.py
+          python3 scripts/check_stack_invariants.py
+          node scripts/check-lambda-docs.mjs
+          python3 -m pytest tests/test_board_policy.py tests/test_agent_harness_checks.py tests/test_alembic_revision_contract.py -q
+
   lint-dart:
     name: Lint Dart
     runs-on: ubuntu-latest
@@ -95,12 +142,18 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
           cache: pip
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
 
       - name: Install pre-commit
         run: |

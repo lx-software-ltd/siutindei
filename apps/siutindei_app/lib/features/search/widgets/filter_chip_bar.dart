@@ -8,11 +8,7 @@ import '../../../core/core.dart';
 ///
 /// Performance: Uses RepaintBoundary to isolate scroll repaints.
 class FilterChipBar extends ConsumerWidget {
-  const FilterChipBar({
-    super.key,
-    required this.children,
-    this.padding,
-  });
+  const FilterChipBar({super.key, required this.children, this.padding});
 
   final List<Widget> children;
   final EdgeInsets? padding;
@@ -86,7 +82,9 @@ class TokenFilterChip extends ConsumerWidget {
             style: TextStyle(
               color: selected ? tokens.textSelected : tokens.text,
               fontSize: tokens.fontSize,
-              fontWeight: selected ? tokens.fontWeightSelected : tokens.fontWeight,
+              fontWeight: selected
+                  ? tokens.fontWeightSelected
+                  : tokens.fontWeight,
             ),
           ),
         ),
@@ -151,7 +149,9 @@ class DropdownFilterChip extends ConsumerWidget {
                 style: TextStyle(
                   color: hasValue ? tokens.textSelected : tokens.text,
                   fontSize: tokens.fontSize,
-                  fontWeight: hasValue ? tokens.fontWeightSelected : tokens.fontWeight,
+                  fontWeight: hasValue
+                      ? tokens.fontWeightSelected
+                      : tokens.fontWeight,
                 ),
               ),
               const SizedBox(width: 4),
@@ -272,11 +272,7 @@ class _DropdownOptionsSheet extends StatelessWidget {
 ///
 /// Performance: Uses `select` for granular token watching.
 class FilterBadge extends ConsumerWidget {
-  const FilterBadge({
-    super.key,
-    required this.count,
-    required this.onTap,
-  });
+  const FilterBadge({super.key, required this.count, required this.onTap});
 
   final int count;
   final VoidCallback onTap;
@@ -319,7 +315,9 @@ class FilterBadge extends ConsumerWidget {
                 style: TextStyle(
                   color: hasFilters ? tokens.textSelected : tokens.text,
                   fontSize: tokens.fontSize,
-                  fontWeight: hasFilters ? tokens.fontWeightSelected : tokens.fontWeight,
+                  fontWeight: hasFilters
+                      ? tokens.fontWeightSelected
+                      : tokens.fontWeight,
                 ),
               ),
               if (hasFilters) ...[

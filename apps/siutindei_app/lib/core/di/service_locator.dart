@@ -54,7 +54,9 @@ class ServiceLocator {
         if (activityRepository != null)
           activityRepositoryProvider.overrideWithValue(activityRepository),
         if (organizationRepository != null)
-          organizationRepositoryProvider.overrideWithValue(organizationRepository),
+          organizationRepositoryProvider.overrideWithValue(
+            organizationRepository,
+          ),
         if (searchUseCase != null)
           searchActivitiesUseCaseProvider.overrideWithValue(searchUseCase),
         if (loadMoreUseCase != null)

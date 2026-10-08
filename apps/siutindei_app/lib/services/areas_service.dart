@@ -6,7 +6,7 @@ import 'api_service.dart';
 
 class AreasService {
   AreasService(this._apiService, {CacheManager? cacheManager})
-      : _cache = cacheManager ?? CacheManager.instance;
+    : _cache = cacheManager ?? CacheManager.instance;
 
   final ApiService _apiService;
   final CacheManager _cache;

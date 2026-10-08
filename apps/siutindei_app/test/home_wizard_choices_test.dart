@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+// ignore: lines_longer_than_80_chars
 import 'package:siutindei_app/features/home_wizard/models/home_wizard_choices.dart';
 
 void main() {

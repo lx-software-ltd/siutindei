@@ -134,7 +134,8 @@ class AppConstants {
     final mins = minutes % 60;
     final period = hours >= 12 ? 'PM' : 'AM';
     final displayHours = hours == 0 ? 12 : (hours > 12 ? hours - 12 : hours);
-    return '${displayHours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')} $period';
+    return '${displayHours.toString().padLeft(2, '0')}:'
+        '${mins.toString().padLeft(2, '0')} $period';
   }
 
   /// Converts hour and minute to minutes from midnight.

@@ -79,9 +79,9 @@ class ActivityDetailScreen extends ConsumerWidget {
       actions: [
         IconButton(
           onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Share coming soon!')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Share coming soon!')));
           },
           icon: Container(
             padding: const EdgeInsets.all(8),
@@ -103,7 +103,8 @@ class ActivityDetailScreen extends ConsumerWidget {
       return Image.network(
         imageUrl,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(semantic),
+        errorBuilder: (context, error, stackTrace) =>
+            _buildPlaceholderImage(semantic),
       );
     }
     return _buildPlaceholderImage(semantic);
@@ -151,7 +152,11 @@ class ActivityDetailScreen extends ConsumerWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.child_care, size: 16, color: activityTokens.ageForeground),
+                  Icon(
+                    Icons.child_care,
+                    size: 16,
+                    color: activityTokens.ageForeground,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     ageRange,
@@ -169,7 +174,11 @@ class ActivityDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildOrganizationCard(BuildContext context, WidgetRef ref, SemanticTokens semantic) {
+  Widget _buildOrganizationCard(
+    BuildContext context,
+    WidgetRef ref,
+    SemanticTokens semantic,
+  ) {
     return BaseCard(
       onTap: () => Navigator.push(
         context,
@@ -189,7 +198,10 @@ class ActivityDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(result.organization.name, style: semantic.text.titleMedium),
+                Text(
+                  result.organization.name,
+                  style: semantic.text.titleMedium,
+                ),
                 if (result.organization.description != null)
                   Text(
                     result.organization.description!,
@@ -206,7 +218,10 @@ class ActivityDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildScheduleSection(SemanticTokens semantic, ComponentTokens tokens) {
+  Widget _buildScheduleSection(
+    SemanticTokens semantic,
+    ComponentTokens tokens,
+  ) {
     final schedule = result.schedule;
 
     return SectionCard(
@@ -279,7 +294,11 @@ class ActivityDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildLocationSection(BuildContext context, SemanticTokens semantic, ComponentTokens tokens) {
+  Widget _buildLocationSection(
+    BuildContext context,
+    SemanticTokens semantic,
+    ComponentTokens tokens,
+  ) {
     final location = result.location;
 
     return SectionCard(
@@ -290,14 +309,20 @@ class ActivityDetailScreen extends ConsumerWidget {
         children: [
           _DetailRow(label: 'Area', value: location.areaId, semantic: semantic),
           if (location.address != null)
-            _DetailRow(label: 'Address', value: location.address!, semantic: semantic),
+            _DetailRow(
+              label: 'Address',
+              value: location.address!,
+              semantic: semantic,
+            ),
           if (location.hasCoordinates)
             Padding(
               padding: EdgeInsets.only(top: semantic.spacing.sm),
               child: OutlinedButton.icon(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Maps integration coming soon!')),
+                    const SnackBar(
+                      content: Text('Maps integration coming soon!'),
+                    ),
                   );
                 },
                 icon: const Icon(Icons.map_outlined, size: 18),
@@ -309,11 +334,17 @@ class ActivityDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDescriptionSection(SemanticTokens semantic, ComponentTokens tokens) {
+  Widget _buildDescriptionSection(
+    SemanticTokens semantic,
+    ComponentTokens tokens,
+  ) {
     return SectionCard(
       title: 'About',
       icon: Icons.info_outline,
-      child: Text(result.activity.description!, style: semantic.text.bodyMedium),
+      child: Text(
+        result.activity.description!,
+        style: semantic.text.bodyMedium,
+      ),
     );
   }
 
@@ -333,7 +364,11 @@ class ActivityDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBottomBar(BuildContext context, SemanticTokens semantic, ComponentTokens tokens) {
+  Widget _buildBottomBar(
+    BuildContext context,
+    SemanticTokens semantic,
+    ComponentTokens tokens,
+  ) {
     final priceTokens = tokens.priceTag;
     final pricing = result.pricing;
 
@@ -368,7 +403,10 @@ class ActivityDetailScreen extends ConsumerWidget {
                 );
               },
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
               ),
               child: const Text('Book Now'),
             ),
@@ -401,9 +439,7 @@ class _DetailRow extends StatelessWidget {
             width: 100,
             child: Text(label, style: semantic.text.caption),
           ),
-          Expanded(
-            child: Text(value, style: semantic.text.bodyMedium),
-          ),
+          Expanded(child: Text(value, style: semantic.text.bodyMedium)),
         ],
       ),
     );

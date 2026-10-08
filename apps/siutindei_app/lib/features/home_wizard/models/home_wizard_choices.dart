@@ -98,9 +98,8 @@ class HomeWizardChoices {
     return HomeWizardChoices(
       activityTypes: activityTypesJson
           .map(
-            (item) => WizardActivityTypeOption.fromJson(
-              item as Map<String, dynamic>,
-            ),
+            (item) =>
+                WizardActivityTypeOption.fromJson(item as Map<String, dynamic>),
           )
           .toList(),
       ageGroups: ageGroupsJson

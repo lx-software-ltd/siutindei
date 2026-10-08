@@ -10,6 +10,7 @@ This document outlines security best practices and requirements for the Siu Tin 
 - [API Security](#api-security)
 - [Infrastructure Security](#infrastructure-security)
 - [Code Review Checklist](#code-review-checklist)
+- [Agent harness](#agent-harness)
 - [Reporting Security Issues](#reporting-security-issues)
 
 ---
@@ -446,6 +447,24 @@ Before approving any PR, verify:
 - [ ] Workflow permissions are minimal
 
 ---
+
+## Agent harness
+
+The board runner and interactive agents share one red-zone map,
+`docs/architecture/zones.md`, enforced by `scripts/ci/board_policy.py`.
+Admin auth, mobile auth, authorizers, the AWS proxy, database
+migrations, CDK, deploy scripts, `shared/` fixtures, and PII tooling
+are red. Content-kind briefs are exempt and confined to `content/**`.
+
+`.cursor/hooks/guard_shell.py` denies force-push, pushes to `main` or
+`staging`, hard reset, recursive delete outside `/tmp`, destructive
+SQL, `cdk deploy`/`destroy`, and `aws delete-*` before the command
+runs. The checkout step in `board-agent.yml` does not persist
+credentials; the commit step sends the token only on `git fetch` and
+`git push`.
+
+Rule bullets cite a commit or `convention`. `scripts/validate_agent_rules.py`
+rejects a `[why:]` tag whose commit does not exist.
 
 ## Reporting Security Issues
 

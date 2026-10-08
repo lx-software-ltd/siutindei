@@ -82,16 +82,14 @@ class GeographicAreaTreeIndex {
   bool get _hideRoot => roots.length == 1 && roots.first.hasChildren;
 
   List<GeographicArea> _sorted(List<GeographicArea> nodes) {
-    return [...nodes]
-      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    return [...nodes]..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
   }
 
   List<GeographicArea> chipOptions({String? selectedAreaId}) {
     if (roots.isEmpty) {
       return const [];
     }
-    final selected =
-        selectedAreaId == null ? null : _byId[selectedAreaId];
+    final selected = selectedAreaId == null ? null : _byId[selectedAreaId];
     if (selected == null) {
       return _hideRoot ? _sorted(roots.first.children) : _sorted(roots);
     }

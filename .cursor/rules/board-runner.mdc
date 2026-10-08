@@ -1,0 +1,12 @@
+---
+description: Board runner policy
+globs: scripts/ci/**,.github/workflows/**
+alwaysApply: false
+---
+
+# Board runner
+
+- Red-zone paths live in `docs/architecture/zones.md` and `scripts/ci/board_policy.py`. Keep them in agreement. [why: convention]
+- Content-kind briefs may only change `content/**` and stay exempt from the red-zone refusal. [why: convention]
+- Do not loosen a protected path here unless the lx-software admin Lambda copy is updated first. Siutindei may be stricter. [why: convention]
+- The runner does not commit with the checkout token. Credentials are attached only in the commit step. [why: convention]

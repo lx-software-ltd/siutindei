@@ -5,7 +5,8 @@
 ///
 /// ## Structure
 ///
-/// - **entities/**: Pure business objects (ActivityEntity, OrganizationEntity, etc.)
+/// - **entities/**: Pure business objects
+///   (ActivityEntity, OrganizationEntity, etc.)
 /// - **repositories/**: Interfaces for data access (implemented in data layer)
 /// - **use_cases/**: Application-specific business rules
 ///

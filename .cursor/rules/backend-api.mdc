@@ -1,0 +1,17 @@
+---
+description: API, Lambda, and database rules for backend changes
+globs: backend/**,docs/api/**
+alwaysApply: false
+---
+
+# Backend and API
+
+- Register new routes in `backend/infrastructure/lib/api-stack.ts` and keep API Gateway paths aligned with Lambda handlers. [why: convention]
+- For every new or changed endpoint, update the CDK route, `docs/api/*.yaml`, and `docs/architecture/lambdas.md` in the same change. [why: convention]
+- Do not call boto3 `cognito-idp` directly from in-VPC Lambdas. Use `app.services.aws_proxy.invoke()` or `http_invoke()`. [why: 918d0c2 AWS API proxy]
+- Call OpenRouter only through `app.services.openrouter_client`. [why: 17f3bef category suggestions via the proxy]
+- Pending categorisation (`c1111111-1111-1111-1111-111111111199`) cannot be renamed, re-parented, deleted, or used as a parent, and public search excludes it. [why: 17f3bef category suggestions via the proxy]
+- Alembic revision ids are at most 32 characters and match `NNNN_short_description`. [why: convention]
+- Every schema change assesses `backend/db/seed/seed_data.sql`. Say in the PR when no seed change is needed. [why: convention]
+- Follow the `db-migration` skill for schema work and the `admin-api-endpoint` skill for routes. [why: convention]
+- Endpoint details belong in OpenAPI specs. Architecture docs describe design and decisions. [why: convention]

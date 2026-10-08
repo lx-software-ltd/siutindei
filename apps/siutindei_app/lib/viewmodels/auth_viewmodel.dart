@@ -23,10 +23,10 @@ class AuthState {
   final String? errorMessage;
 
   factory AuthState.initial() => const AuthState(
-        isLoading: true,
-        isSignedIn: false,
-        needsChallenge: false,
-      );
+    isLoading: true,
+    isSignedIn: false,
+    needsChallenge: false,
+  );
 
   AuthState copyWith({
     bool? isLoading,
@@ -47,7 +47,7 @@ class AuthState {
 
 class AuthViewModel extends StateNotifier<AuthState> {
   AuthViewModel(this._amplifyService, this._authService)
-      : super(AuthState.initial()) {
+    : super(AuthState.initial()) {
     _initialize();
   }
 
@@ -77,7 +77,9 @@ class AuthViewModel extends StateNotifier<AuthState> {
       pendingEmail: null,
     );
     try {
-      final result = await _authService.startPasswordlessSignIn(username: email);
+      final result = await _authService.startPasswordlessSignIn(
+        username: email,
+      );
       _handleSignInResult(result, email);
     } on UserNotFoundException {
       try {
@@ -88,7 +90,9 @@ class AuthViewModel extends StateNotifier<AuthState> {
       } on UsernameExistsException {
         // No-op: another client created the user in the meantime.
       }
-      final result = await _authService.startPasswordlessSignIn(username: email);
+      final result = await _authService.startPasswordlessSignIn(
+        username: email,
+      );
       _handleSignInResult(result, email);
     } catch (error) {
       state = state.copyWith(isLoading: false, errorMessage: error.toString());
@@ -182,8 +186,9 @@ class AuthViewModel extends StateNotifier<AuthState> {
 ///
 /// Uses [amplifyServiceProvider] and [authServiceProvider] for
 /// dependency injection, enabling easier testing through provider overrides.
-final authViewModelProvider =
-    StateNotifierProvider<AuthViewModel, AuthState>((ref) {
+final authViewModelProvider = StateNotifierProvider<AuthViewModel, AuthState>((
+  ref,
+) {
   return AuthViewModel(
     ref.watch(amplifyServiceProvider),
     ref.watch(authServiceProvider),

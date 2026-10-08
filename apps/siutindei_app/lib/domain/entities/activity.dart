@@ -176,22 +176,22 @@ enum PricingType {
 
   /// Creates from API string value.
   static PricingType fromString(String value) => switch (value) {
-        'per_class' => PricingType.perClass,
-        'per_sessions' => PricingType.perSessions,
-        'per_hour' => PricingType.perHour,
-        'per_day' => PricingType.perDay,
-        'free' => PricingType.free,
-        _ => PricingType.perClass,
-      };
+    'per_class' => PricingType.perClass,
+    'per_sessions' => PricingType.perSessions,
+    'per_hour' => PricingType.perHour,
+    'per_day' => PricingType.perDay,
+    'free' => PricingType.free,
+    _ => PricingType.perClass,
+  };
 
   /// Returns the API string value.
   String toApiString() => switch (this) {
-        PricingType.perClass => 'per_class',
-        PricingType.perSessions => 'per_sessions',
-        PricingType.perHour => 'per_hour',
-        PricingType.perDay => 'per_day',
-        PricingType.free => 'free',
-      };
+    PricingType.perClass => 'per_class',
+    PricingType.perSessions => 'per_sessions',
+    PricingType.perHour => 'per_hour',
+    PricingType.perDay => 'per_day',
+    PricingType.free => 'free',
+  };
 }
 
 /// Domain entity representing a schedule.
@@ -222,13 +222,15 @@ class ScheduleEntity {
     final startHour = startMinutesUtc! ~/ 60;
     final startMin = startMinutesUtc! % 60;
     final startStr =
-        '${startHour.toString().padLeft(2, '0')}:${startMin.toString().padLeft(2, '0')}';
+        '${startHour.toString().padLeft(2, '0')}:'
+        '${startMin.toString().padLeft(2, '0')}';
 
     if (endMinutesUtc == null) return startStr;
     final endHour = endMinutesUtc! ~/ 60;
     final endMin = endMinutesUtc! % 60;
     final endStr =
-        '${endHour.toString().padLeft(2, '0')}:${endMin.toString().padLeft(2, '0')}';
+        '${endHour.toString().padLeft(2, '0')}:'
+        '${endMin.toString().padLeft(2, '0')}';
     return '$startStr - $endStr';
   }
 
@@ -242,7 +244,7 @@ class ScheduleEntity {
       'Thursday',
       'Friday',
       'Saturday',
-      'Sunday'
+      'Sunday',
     ];
     if (dayOfWeekUtc! >= 0 && dayOfWeekUtc! < 7) {
       return days[dayOfWeekUtc!];
@@ -273,16 +275,16 @@ enum ScheduleType {
 
   /// Creates from API string value.
   static ScheduleType fromString(String value) => switch (value) {
-        'weekly' => ScheduleType.weekly,
-        'monthly' => ScheduleType.monthly,
-        'date_specific' => ScheduleType.dateSpecific,
-        _ => ScheduleType.weekly,
-      };
+    'weekly' => ScheduleType.weekly,
+    'monthly' => ScheduleType.monthly,
+    'date_specific' => ScheduleType.dateSpecific,
+    _ => ScheduleType.weekly,
+  };
 
   /// Returns the API string value.
   String toApiString() => switch (this) {
-        ScheduleType.weekly => 'weekly',
-        ScheduleType.monthly => 'monthly',
-        ScheduleType.dateSpecific => 'date_specific',
-      };
+    ScheduleType.weekly => 'weekly',
+    ScheduleType.monthly => 'monthly',
+    ScheduleType.dateSpecific => 'date_specific',
+  };
 }

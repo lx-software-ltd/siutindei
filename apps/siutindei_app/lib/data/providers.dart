@@ -20,13 +20,17 @@ final organizationRepositoryProvider = Provider<OrganizationRepository>((ref) {
 });
 
 /// Provider for [SearchActivitiesUseCase].
-final searchActivitiesUseCaseProvider = Provider<SearchActivitiesUseCase>((ref) {
+final searchActivitiesUseCaseProvider = Provider<SearchActivitiesUseCase>((
+  ref,
+) {
   final repository = ref.watch(activityRepositoryProvider);
   return SearchActivitiesUseCase(repository);
 });
 
 /// Provider for [LoadMoreActivitiesUseCase].
-final loadMoreActivitiesUseCaseProvider = Provider<LoadMoreActivitiesUseCase>((ref) {
+final loadMoreActivitiesUseCaseProvider = Provider<LoadMoreActivitiesUseCase>((
+  ref,
+) {
   final repository = ref.watch(activityRepositoryProvider);
   return LoadMoreActivitiesUseCase(repository);
 });
@@ -46,6 +50,6 @@ final getOrganizationUseCaseProvider = Provider<GetOrganizationUseCase>((ref) {
 /// Provider for [GetOrganizationActivitiesUseCase].
 final getOrganizationActivitiesUseCaseProvider =
     Provider<GetOrganizationActivitiesUseCase>((ref) {
-  final repository = ref.watch(organizationRepositoryProvider);
-  return GetOrganizationActivitiesUseCase(repository);
-});
+      final repository = ref.watch(organizationRepositoryProvider);
+      return GetOrganizationActivitiesUseCase(repository);
+    });

@@ -1,0 +1,13 @@
+---
+description: Public website constraints
+globs: apps/public_www/**
+alwaysApply: false
+---
+
+# Public website
+
+- The site is a Next.js static export. Read domains and emails from `src/lib/site-config.ts`, not from components. [why: b27f5fa public website scaffold]
+- Do not use `dangerouslySetInnerHTML`, `eval`, `new Function`, inline `<svg>`, or `style=` JSX. [why: b27f5fa public website scaffold]
+- Keep `npm run csp:inject && npm run csp:validate` in the build script. [why: b27f5fa public website scaffold]
+- GA4 `G-` and Google Ads `AW-` ids stay out of git. Push analytics through `src/lib/analytics/data-layer.ts`. [why: convention]
+- Follow the `public-www-section` skill for pages, maintenance placeholders, and the env contract. [why: convention]

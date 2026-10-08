@@ -16,7 +16,36 @@ from typing import Any
 
 PROTECTED_DIR_NAMES = frozenset({"auth", "payments", "migrations"})
 PROTECTED_ROOTS = frozenset({"infra", ".github"})
+# Prefixes and files are this repo's real red zone. The generic names above
+# stay so the lx-software mirror remains a subset. See docs/architecture/zones.md.
+PROTECTED_PREFIXES = (
+    "backend/db/",
+    "backend/infrastructure/",
+    "backend/lambda/authorizers/",
+    "backend/lambda/auth/",
+    "backend/lambda/aws_proxy/",
+    "backend/src/app/auth/",
+    "apps/admin_web/src/app/auth/",
+    "apps/siutindei_app/lib/features/auth/",
+    "shared/",
+    "scripts/deploy/",
+    "scripts/ci/",
+    ".cursor/hooks/",
+)
+PROTECTED_FILES = frozenset(
+    {
+        "backend/src/app/services/aws_proxy.py",
+        "backend/src/app/services/openrouter_client.py",
+        "scripts/check-pii.sh",
+        "scripts/check_pii.py",
+        "scripts/pii-denylist.sha256",
+        "scripts/test_check_pii.py",
+        ".cursor/hooks.json",
+        ".pre-commit-config.yaml",
+    }
+)
 CONTENT_ROOT = "content"
+ALLOWED_KINDS = frozenset({"feature", "fix", "content"})
 LINE_LIMIT = 400
 CONTENT_LINE_LIMIT = 2000
 CI_OK = frozenset({"success", "neutral", "skipped"})
@@ -46,10 +75,22 @@ def path_parts(path: str) -> list[str]:
     return [part for part in normalized.split("/") if part]
 
 
+def _normalized(path: str) -> str:
+    normalized = str(path or "").replace("\\", "/").lstrip("/")
+    return normalized.removeprefix("./")
+
+
 def path_is_protected(path: str) -> bool:
-    parts = path_parts(path)
-    if not parts:
+    normalized = _normalized(path)
+    if not normalized:
         return False
+    if normalized in PROTECTED_FILES:
+        return True
+    for prefix in PROTECTED_PREFIXES:
+        root = prefix.rstrip("/")
+        if normalized == root or normalized.startswith(prefix):
+            return True
+    parts = path_parts(normalized)
     if parts[0] in PROTECTED_ROOTS:
         return True
     return any(part in PROTECTED_DIR_NAMES for part in parts)
@@ -103,30 +144,59 @@ def files_protected(files: list[dict[str, Any]]) -> list[str]:
 
 def files_outside_content(files: list[dict[str, Any]]) -> list[str]:
     return [
-        path
-        for row in files
-        for path in file_paths(row)
-        if not path_is_content(path)
+        path for row in files for path in file_paths(row) if not path_is_content(path)
     ]
+
+
+def unknown_kind_reason(kind: str) -> str | None:
+    """Reject brief kinds outside feature, fix, and content."""
+    supplied = (kind or "").strip().lower()
+    if supplied and supplied not in ALLOWED_KINDS:
+        return f"unknown brief kind '{supplied}'; expected feature, fix, or content"
+    return None
+
+
+def resolved_kind(files: list[dict[str, Any]], kind: str = "") -> str:
+    """Return feature, fix, or content. Content is inferred only for content/**."""
+    resolved = (kind or "").strip().lower()
+    if resolved:
+        return resolved
+    if files and not files_outside_content(files):
+        return "content"
+    return "feature"
+
+
+def zone_for_files(files: list[dict[str, Any]], *, kind: str = "") -> str:
+    """Label a diff for the pull request.
+
+    Content-kind briefs are exempt from the red-zone map. They are still
+    confined to content/** by evaluate_files.
+    """
+    if unknown_kind_reason(kind):
+        return "unknown"
+    if resolved_kind(files, kind) == "content":
+        return "content"
+    if files_protected(files):
+        return "red"
+    return "open"
 
 
 def evaluate_files(files: list[dict[str, Any]], *, kind: str = "") -> str | None:
     """Return a refusal reason, or None when the change set is allowed."""
+    unknown = unknown_kind_reason(kind)
+    if unknown:
+        return unknown
     lines = changed_lines(files)
-    resolved_kind = (kind or "").strip().lower()
-    if not resolved_kind:
-        if files and not files_outside_content(files):
-            resolved_kind = "content"
-        else:
-            resolved_kind = "feature"
-    if resolved_kind == "content":
+    kind_name = resolved_kind(files, kind)
+    # Content briefs stay exempt from the red-zone map. A path under
+    # content/** is not refused for containing a protected directory name.
+    if kind_name == "content":
         extra = files_outside_content(files)
         if extra:
             return f"content kind may only change content/** ({extra[0]})"
         if lines > CONTENT_LINE_LIMIT:
             return (
-                f"content pull request changes {lines} lines "
-                f"(max {CONTENT_LINE_LIMIT})"
+                f"content pull request changes {lines} lines (max {CONTENT_LINE_LIMIT})"
             )
         return None
     protected = files_protected(files)
@@ -221,6 +291,11 @@ def main(argv: list[str] | None = None) -> int:
         "--files-json",
         help="Evaluate a GitHub PR files JSON array from a file or stdin (-)",
     )
+    parser.add_argument(
+        "--zone",
+        metavar="BASE",
+        help="Print content, red, or open for the worktree vs BASE",
+    )
     args = parser.parse_args(argv)
 
     if args.files_json:
@@ -237,6 +312,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ok lines={changed_lines(files)}")
         return 0
 
+    if args.zone:
+        files = worktree_files(args.zone)
+        print(zone_for_files(files, kind=args.kind))
+        return 0
+
     if args.check_worktree:
         files = worktree_files(args.check_worktree)
         reason = evaluate_files(files, kind=args.kind)
@@ -249,7 +329,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ok lines={changed_lines(files)} files={len(files)}")
         return 0
 
-    parser.error("pass --check-worktree BASE or --files-json")
+    parser.error("pass --check-worktree BASE, --zone BASE, or --files-json")
     return 2
 
 

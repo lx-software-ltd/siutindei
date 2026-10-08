@@ -14,8 +14,13 @@ on:
         required: true
         type: string
       kind:
+        description: feature, fix, or content. content may only change content/**
         required: true
-        type: string
+        type: choice
+        options:
+          - feature
+          - fix
+          - content
       pr_number:
         required: false
         type: string
@@ -72,6 +77,7 @@ jobs:
           lfs: true
           ref: staging
           fetch-depth: 0
+          persist-credentials: false
           token: ${{ secrets.BOARD_PR_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Branch
@@ -124,6 +130,7 @@ jobs:
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           BOARD_KIND: ${{ inputs.kind }}
+          CURSOR_HOOK_MARKER: ${{ runner.temp }}/cursor-hook-session-start
         run: |
           set -euo pipefail
           if [ -z "${CURSOR_API_KEY:-}" ]; then
@@ -132,15 +139,30 @@ jobs:
           fi
           {
             echo "Follow AGENTS.md. Treat the brief as acceptance criteria."
-            echo "Do not modify **/auth/**, **/payments/**, **/migrations/**,"
-            echo "infra/**, or .github/**."
+            echo "Do not modify red-zone paths listed in docs/architecture/zones.md."
+            echo "Content-kind briefs may only change content/**."
             echo "Do not commit, push, or open pull requests. Only edit files."
             echo "Kind: ${BOARD_KIND}"
             echo
             cat "${RUNNER_TEMP}/brief.txt"
           } > "${RUNNER_TEMP}/prompt.txt"
           cursor-agent -p "$(cat "${RUNNER_TEMP}/prompt.txt")" \
-            --model composer-2.5 --yolo
+            --model composer-2.5 --yolo --output-format stream-json \
+            | tee "${RUNNER_TEMP}/agent-transcript.jsonl"
+
+      - name: Upload agent transcript
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: board-agent-transcript-${{ inputs.task_id }}
+          path: ${{ runner.temp }}/agent-transcript.jsonl
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Require sessionStart hook
+        run: |
+          set -euo pipefail
+          test -f "${RUNNER_TEMP}/cursor-hook-session-start"
 
       - name: Guard protected paths
         env:
@@ -159,6 +181,7 @@ jobs:
       - name: Test
         run: |
           set -euo pipefail
+          exec > >(tee "${RUNNER_TEMP}/board-test.log") 2>&1
           if git diff --quiet origin/staging -- \
             && [ -z "$(git ls-files --others --exclude-standard)" ]; then
             echo "No changes from staging; skip repo tests"
@@ -186,6 +209,7 @@ jobs:
           PR_NUMBER: ${{ inputs.pr_number }}
           TASK_ID: ${{ inputs.task_id }}
           ISSUE: ${{ inputs.issue }}
+          BOARD_KIND: ${{ inputs.kind }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -194,21 +218,31 @@ jobs:
           git add -A
           title="board: #${ISSUE} $(head -n 1 "${RUNNER_TEMP}/brief.txt")"
           git commit -m "${title}" || true
-          git fetch origin staging
+          git -c "http.extraheader=AUTHORIZATION: bearer ${GH_TOKEN}" \
+            fetch origin staging
           ahead="$(git rev-list --count "origin/staging..HEAD")"
           if [ "${ahead}" = "0" ]; then
             echo "No unique commits vs staging; skip draft PR (dry-run / no-op)"
             exit 0
           fi
+          git_auth() {
+            git -c "http.extraheader=AUTHORIZATION: bearer ${GH_TOKEN}" "$@"
+          }
           if [ -n "${PR_NUMBER:-}" ]; then
-            git push -u origin HEAD
+            git_auth push -u origin HEAD
             echo "Updated existing PR #${PR_NUMBER}"
             exit 0
           fi
-          git push -u origin "HEAD:board/${TASK_ID}" --force-with-lease
-          body="$(cat "${RUNNER_TEMP}/brief.txt")
-
-          Task: ${TASK_ID}"
+          git_auth push -u origin "HEAD:board/${TASK_ID}" --force-with-lease
+          zone="$(python3 scripts/ci/board_policy.py --zone origin/staging \
+            --kind "${BOARD_KIND}")"
+          body="$(
+            BOARD_ZONE="${zone}" \
+            BOARD_BRIEF_FILE="${RUNNER_TEMP}/brief.txt" \
+            BOARD_EVIDENCE_FILE="${RUNNER_TEMP}/board-test.log" \
+            BOARD_TASK_ID="${TASK_ID}" \
+            python3 scripts/ci/board_pr_body.py
+          )"
           existing="$(gh pr list --head "board/${TASK_ID}" --base staging \
             --json number --jq '.[0].number // empty')"
           if [ -n "${existing}" ]; then

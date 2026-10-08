@@ -12,10 +12,7 @@ class AmplifyService {
       return;
     }
     try {
-      Amplify.addPlugins([
-        AmplifyAuthCognito(),
-        AmplifyAPI(),
-      ]);
+      Amplify.addPlugins([AmplifyAuthCognito(), AmplifyAPI()]);
       await Amplify.configure(AppAmplifyConfig.requireJson());
       _configured = true;
     } on AmplifyAlreadyConfiguredException {

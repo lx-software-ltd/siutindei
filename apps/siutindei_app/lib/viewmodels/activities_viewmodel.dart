@@ -106,15 +106,9 @@ class ActivitiesViewModel extends Notifier<ActivitiesState> {
 
     switch (result) {
       case Ok(value: final data):
-        state = state.copyWith(
-          results: data,
-          isLoading: false,
-        );
+        state = state.copyWith(results: data, isLoading: false);
       case Error(error: final e):
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: _formatError(e),
-        );
+        state = state.copyWith(isLoading: false, errorMessage: _formatError(e));
     }
   }
 
@@ -129,10 +123,7 @@ class ActivitiesViewModel extends Notifier<ActivitiesState> {
       cursor: state.results.nextCursor,
     );
 
-    state = state.copyWith(
-      isLoadingMore: true,
-      clearError: true,
-    );
+    state = state.copyWith(isLoadingMore: true, clearError: true);
 
     final result = await _loadMoreUseCase.execute(
       filtersWithCursor,
@@ -141,10 +132,7 @@ class ActivitiesViewModel extends Notifier<ActivitiesState> {
 
     switch (result) {
       case Ok(value: final data):
-        state = state.copyWith(
-          results: data,
-          isLoadingMore: false,
-        );
+        state = state.copyWith(results: data, isLoadingMore: false);
       case Error(error: final e):
         state = state.copyWith(
           isLoadingMore: false,
@@ -197,11 +185,13 @@ class ActivitiesViewModel extends Notifier<ActivitiesState> {
 /// Override providers in tests to mock dependencies.
 final activitiesViewModelProvider =
     NotifierProvider<ActivitiesViewModel, ActivitiesState>(
-  ActivitiesViewModel.new,
-);
+      ActivitiesViewModel.new,
+    );
 
 /// Selector for items only - minimizes rebuilds.
-final activitiesItemsProvider = Provider<List<ActivitySearchResultEntity>>((ref) {
+final activitiesItemsProvider = Provider<List<ActivitySearchResultEntity>>((
+  ref,
+) {
   return ref.watch(activitiesViewModelProvider.select((s) => s.items));
 });
 
