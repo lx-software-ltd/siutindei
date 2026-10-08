@@ -33,9 +33,12 @@ info:
       organization manager.
     - A full-access key lists every organization (`pending_review`,
       `approved`, and `rejected`) and can read pending name-cleanup
-      proposals (`GET /v1/partner/name-fixes`). Organization list and
-      detail responses include `pending_name_fixes` with the record
-      type, current name, proposed name, and rules.
+      proposals (`GET /v1/partner/name-fixes`) and category-check
+      reviews (`GET /v1/partner/category-reviews`). Organization list
+      and detail responses include `pending_name_fixes` with the record
+      type, current name, proposed name, and rules. Activity list and
+      detail responses include `category_review` for the latest check
+      on that activity (`null` when none exists).
 
     ## Validation rules
 
@@ -223,6 +226,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PartnerNameFixListResponse"
+        "403":
+          description: Invalid API key
+
+  /v1/partner/category-reviews:
+    get:
+      summary: List category-check reviews
+      description: |
+        Category-check reviews for activities, including confirmed
+        assignments and pending suggestions. `status` is the review
+        decision (`confirmed`, `pending`, `auto_applied`, `applied`,
+        `dismissed`, or `reverted`). `verdict` is `confirm`,
+        `reassign`, or `propose`. A pending `propose` is a suggested
+        new leaf; a pending `reassign` is a suggested existing leaf.
+        A full-access key sees every review. An org-scoped key sees
+        only that organization's reviews. Optional `org_id` limits a
+        full-access key to one organization.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              [confirmed, pending, auto_applied, applied, dismissed, reverted]
+        - name: verdict
+          in: query
+          schema:
+            type: string
+            enum: [confirm, reassign, propose]
+        - name: org_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: proposed_category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Category-check reviews
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartnerCategoryReviewListResponse"
         "403":
           description: Invalid API key
 
@@ -439,7 +493,9 @@ paths:
       summary: List activities
       description: |
         Paginated list. Org-scoped keys only receive activities of their
-        organization.
+        organization. Each item includes `category_review` for the
+        latest category check (`null` when the activity has not been
+        checked).
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Cursor"
@@ -449,7 +505,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "./admin.yaml#/components/schemas/ActivityListResponse"
+                $ref: "#/components/schemas/PartnerActivityListResponse"
         "403":
           description: Invalid API key
     post:
@@ -490,7 +546,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "./admin.yaml#/components/schemas/Activity"
+                $ref: "#/components/schemas/PartnerActivity"
         "403":
           description: Invalid key or resource outside the key's organization
         "404":
@@ -811,6 +867,97 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/PartnerNameFix"
+    PartnerCategoryReview:
+      type: object
+      required:
+        [
+          id,
+          activity_id,
+          activity_name,
+          org_id,
+          org_name,
+          verdict,
+          status,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        activity_id:
+          type: string
+          format: uuid
+        activity_name:
+          type: string
+        org_id:
+          type: string
+          format: uuid
+        org_name:
+          type: string
+        current_category_id:
+          type: string
+          format: uuid
+          nullable: true
+        current_category_name:
+          type: string
+          nullable: true
+        verdict:
+          type: string
+          enum: [confirm, reassign, propose]
+        proposed_category_id:
+          type: string
+          format: uuid
+          nullable: true
+        proposed_category_name:
+          type: string
+          nullable: true
+          description: >
+            Existing leaf name for a reassign, or the suggested new
+            leaf name for a propose.
+        suggestion_id:
+          type: string
+          format: uuid
+          nullable: true
+        confidence:
+          type: number
+          nullable: true
+        status:
+          type: string
+          enum: [confirmed, pending, auto_applied, applied, dismissed, reverted]
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+    PartnerCategoryReviewListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartnerCategoryReview"
+        next_cursor:
+          type: string
+          nullable: true
+    PartnerActivity:
+      allOf:
+        - $ref: "./admin.yaml#/components/schemas/Activity"
+        - type: object
+          properties:
+            category_review:
+              allOf:
+                - $ref: "#/components/schemas/PartnerCategoryReview"
+              nullable: true
+    PartnerActivityListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartnerActivity"
+        next_cursor:
+          type: string
+          nullable: true
     PartnerOrganizationListResponse:
       type: object
       required: [items]

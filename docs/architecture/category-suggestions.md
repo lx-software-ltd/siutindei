@@ -152,6 +152,12 @@ and Sweep all orgs are the verify triggers. `scan_candidate_total` is
 the pending-review candidate count; `scan_candidate_total_all` is the
 all-orgs count. A run still stops at `scan_limit` (500).
 
+A full-access partner API key can read those reviews at
+`GET /v1/partner/category-reviews` and sees `category_review` on
+`GET /v1/partner/activities`. An org-scoped key sees only that
+organization. Shapes live in `docs/api/partner.yaml`. Write and
+decide routes stay on the admin API.
+
 ## Discover
 
 Discover is no longer a console button; Sweep pending and Sweep

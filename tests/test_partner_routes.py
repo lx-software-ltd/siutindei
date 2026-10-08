@@ -150,8 +150,8 @@ def test_partner_routes_pass_org_scope_to_crud(monkeypatch) -> None:
         return {"statusCode": 200, "body": "{}"}
 
     monkeypatch.setattr(admin_module, "_handle_crud", fake_crud)
-    event = _partner_event("GET", "/v1/partner/activities", "crud", org_id)
-    response = _handle_partner_routes(event, "GET", "activities", None)
+    event = _partner_event("GET", "/v1/partner/locations", "crud", org_id)
+    response = _handle_partner_routes(event, "GET", "locations", None)
     assert response["statusCode"] == 200
     assert captured["managed_org_ids"] == {org_id}
 
