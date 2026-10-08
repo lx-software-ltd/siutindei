@@ -87,6 +87,19 @@ describe('AdminEditorActions', () => {
 });
 
 describe('Button loading', () => {
+  it('gives grey secondary buttons the dark slate border', () => {
+    render(
+      <Button type='button' variant='secondary'>
+        Test model
+      </Button>
+    );
+
+    expect(screen.getByRole('button', { name: 'Test model' })).toHaveClass(
+      'border-slate-900',
+      'bg-slate-100'
+    );
+  });
+
   it('swaps the label for a busy saving state', () => {
     render(
       <Button type='button' loading>
