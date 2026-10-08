@@ -15,15 +15,26 @@ def test_title_case_and_unchanged_sample() -> None:
     assert "title_case" in cleaned.rules
 
 
-def test_short_acronyms_stay_uppercase() -> None:
+def test_title_case_uses_exception_list_only() -> None:
     cleaned = sanitize_name("YWCA HARBOUR", {})
-    assert cleaned.name == "YWCA Harbour"
+    assert cleaned.name == "Ywca Harbour"
+    kept = sanitize_name("YMCA HARBOUR", {})
+    assert kept.name == "YMCA Harbour"
 
 
 def test_keeps_exception_words_and_strips_brackets() -> None:
     cleaned = sanitize_name("YMCA HARBOUR (LCSD)", {})
     assert cleaned.name == "YMCA Harbour"
     assert "brackets" in cleaned.rules
+
+
+def test_spaces_before_brackets() -> None:
+    cleaned = sanitize_name("bla bla bla(xx xx)", {})
+    assert cleaned.name == "bla bla bla (xx xx)"
+    assert "whitespace" in cleaned.rules
+    assert sanitize_name("Harbour Club[Hall A]", {}).name == "Harbour Club [Hall A]"
+    titled = sanitize_name("HARBOUR CLUB(HK)", {})
+    assert titled.name == "Harbour Club (HK)"
 
 
 def test_splits_bilingual_name_into_translation() -> None:

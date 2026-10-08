@@ -43,13 +43,13 @@ part of the SQL summary predicates.
 
 ## Names
 
-Rules run in a fixed order: HTML entities, Unicode NFKC, whitespace,
-trailing punctuation, spacing between Latin and CJK, known or numeric
-brackets, title case for all-caps Latin tokens, then a bilingual split
-that copies Chinese into `name_translations.zh` when that key is empty.
-All-caps alphabetic tokens of two to five letters stay uppercase,
-except a short list of ordinary words such as Club. An empty result
-keeps the original name.
+Rules run in a fixed order: HTML entities, Unicode NFKC, whitespace
+(including a space before `(` or `[`), trailing punctuation, spacing
+between Latin and CJK, known or numeric brackets, title case for
+all-caps Latin tokens, then a bilingual split that copies Chinese into
+`name_translations.zh` when that key is empty. Title case keeps only
+configured exception words, and Roman numerals, in capitals. An empty
+result keeps the original name.
 
 Imports apply this to every organization name and append
 `Imported name: …` to `source_note` (500 characters). Activity names
