@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryState } from 'nuqs';
 
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
@@ -218,13 +218,23 @@ export function CategoryChecksPanel() {
 
   const visibleIds = list.items.map((item) => item.id);
   const hasSelection = selectScope === 'all' || selected.size > 0;
-  const bulkFilters = {
-    verdict: list.filters.verdict || undefined,
-    q: list.filters.q || undefined,
-    org_id: list.filters.org_id || undefined,
-    proposed_category_id: list.filters.proposed_category_id || undefined,
-    ...(selectScope === 'all' ? {} : { ids: Array.from(selected) }),
-  };
+  const bulkFilters = useMemo(
+    () => ({
+      verdict: list.filters.verdict || undefined,
+      q: list.filters.q || undefined,
+      org_id: list.filters.org_id || undefined,
+      proposed_category_id: list.filters.proposed_category_id || undefined,
+      ...(selectScope === 'all' ? {} : { ids: Array.from(selected) }),
+    }),
+    [
+      list.filters.org_id,
+      list.filters.proposed_category_id,
+      list.filters.q,
+      list.filters.verdict,
+      selectScope,
+      selected,
+    ]
+  );
   const filtersAreBlank =
     selectScope === 'all' &&
     !list.filters.verdict &&
@@ -304,15 +314,7 @@ export function CategoryChecksPanel() {
       cancelled = true;
       controller.abort();
     };
-  }, [
-    bulkAction,
-    list.filters.org_id,
-    list.filters.proposed_category_id,
-    list.filters.q,
-    list.filters.verdict,
-    selectScope,
-    selected,
-  ]);
+  }, [bulkAction, bulkFilters]);
 
   async function runBulk(action: 'apply' | 'dismiss') {
     const controller = new AbortController();
