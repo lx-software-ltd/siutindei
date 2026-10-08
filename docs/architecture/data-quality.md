@@ -53,11 +53,17 @@ all-caps Latin tokens, then a bilingual split that copies Chinese into
 `name_translations.zh` when that key is empty. After that split, brackets
 that only held the extracted Chinese are removed (`Harbour Club (海港會)`
 becomes `Harbour Club`); brackets that still have English stay
-(`Harbour Club (Central 海港)` becomes `Harbour Club (Central)`). Title
-case keeps only configured exception words, and Roman numerals, in
-capitals. Short particles such as in, of, and the are lowercased
-unless they start the name or a bracketed phrase. An empty result
-keeps the original name.
+(`Harbour Club (Central 海港)` becomes `Harbour Club (Central)`). A
+Chinese-only place or branch tag stays on the English name
+(`Fantasy World (深水埗)`, `Super Cube 銅鑼灣店`). A long Chinese venue
+prefix with a short English fragment stays mixed
+(`荃灣廣場空中樂園 PLAY GARDEN`). Title case keeps configured exception
+words, a small built-in set (`SKH`, `HKU`, `YWCA`, and similar), dotted
+initialisms (`S.K.H.`, `Y.M.C.A.`), and Roman numerals I–XX in capitals.
+Short particles such as in, of, and the are lowercased unless they
+start the name or a bracketed phrase. Cantonese romanizations `On`,
+`To`, and `Or` stay capitalized. A trailing period on a dotted
+initialism is kept (`U.S.A.`). An empty result keeps the original name.
 
 Imports apply this to every organization name and append
 `Imported name: …` to `source_note` (500 characters). Activity names
