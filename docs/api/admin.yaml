@@ -734,8 +734,9 @@ paths:
       summary: List name cleanup proposals
       description: |
         Pending rows come from `POST /v1/admin/name-fixes/scan` and from
-        names the import cleaner would change. Activity proposals are
-        created only for organizations in `pending_review`.
+        names the import cleaner would change. A regular scan writes
+        activity proposals only for organizations in `pending_review`.
+        A from-scratch sweep uses `review_scope`.
       parameters:
         - name: status
           in: query
@@ -752,6 +753,15 @@ paths:
           in: query
           schema:
             type: string
+            enum:
+              - html_entities
+              - nfkc
+              - whitespace
+              - trailing_punctuation
+              - cjk_spacing
+              - title_case
+              - brackets
+              - split_bilingual
         - name: org_id
           in: query
           schema:
@@ -842,6 +852,12 @@ paths:
   /v1/admin/name-fixes/scan:
     post:
       summary: Scan names and store proposals
+      description: |
+        A regular scan refreshes pending proposals. `from_scratch` plus
+        `review_scope` re-evaluates every name in that scope and deletes
+        pending rows the current rules no longer change. `pending_review`
+        limits organizations and their activities to that review status.
+        `all` includes every organization and activity.
       requestBody:
         required: true
         content:
@@ -857,6 +873,12 @@ paths:
                   format: uuid
                 q:
                   type: string
+                from_scratch:
+                  type: boolean
+                  default: false
+                review_scope:
+                  type: string
+                  enum: [pending_review, all]
       responses:
         "200":
           description: Scan counts
@@ -6560,7 +6582,7 @@ components:
 
     NameFixScanResult:
       type: object
-      required: [scan_run_id, created, updated, skipped, truncated]
+      required: [scan_run_id, created, updated, skipped, cleared, truncated]
       properties:
         scan_run_id:
           type: string
@@ -6570,6 +6592,8 @@ components:
         updated:
           type: integer
         skipped:
+          type: integer
+        cleared:
           type: integer
         truncated:
           type: boolean

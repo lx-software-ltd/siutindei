@@ -35,6 +35,17 @@ function splitNameSettingList(value: string): string[] {
   return value.split(/\s+/).filter(Boolean);
 }
 
+const NAME_RULES = [
+  'html_entities',
+  'nfkc',
+  'whitespace',
+  'trailing_punctuation',
+  'cjk_spacing',
+  'title_case',
+  'brackets',
+  'split_bilingual',
+] as const;
+
 interface NameFilters {
   q: string;
   entity_type: string;
@@ -89,6 +100,9 @@ export function NamesPanel() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [isScanning, setIsScanning] = useState(false);
+  const [sweepScope, setSweepScope] = useState<'pending_review' | 'all'>(
+    'pending_review'
+  );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const listed = list.items.find((item) => item.id === expanded.expandedId) ?? null;
@@ -101,20 +115,22 @@ export function NamesPanel() {
   const pending = summaryQuery.data?.by_status.pending ?? 0;
   const summary = summaryQuery.data ? `${pending} pending` : 'No pending names.';
 
-  async function scan() {
+  async function runScan(fromScratch: boolean) {
     setIsScanning(true);
     setError('');
     setNotice('');
     try {
       const result = await scanNameFixes({
         entity_type: list.filters.entity_type || undefined,
-        q: list.filters.q || undefined,
+        q: fromScratch ? undefined : list.filters.q || undefined,
+        from_scratch: fromScratch || undefined,
+        review_scope: fromScratch ? sweepScope : undefined,
       });
       const stopped = result.truncated
         ? ' Scan stopped at the limit; run it again to continue.'
         : '';
       setNotice(
-        `Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}.${stopped}`
+        `Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}, cleared ${result.cleared ?? 0}.${stopped}`
       );
       await getAdminQueryClient().invalidateQueries({
         queryKey: [...adminQueryKeys.nameFixes(), 'summary'],
@@ -191,8 +207,10 @@ export function NamesPanel() {
       <p className='text-sm text-slate-600'>
         Imports clean names as they are written and keep the original spelling
         in the source note. This list reviews the same rules for records already
-        stored. Activity names are scanned only while the organization is
-        pending review.
+        stored. Scan names refreshes matching rows. Sweep scan re-evaluates
+        every organization in the chosen scope from scratch and drops pending
+        proposals the current rules no longer change. Activity names follow
+        that same scope.
       </p>
       {organization ? (
         <p className='text-sm text-slate-600'>
@@ -219,9 +237,35 @@ export function NamesPanel() {
           {error}
         </StatusBanner>
       ) : null}
-      <div className='flex flex-wrap gap-2'>
-        <Button type='button' onClick={() => void scan()} loading={isScanning} loadingLabel='Scanning…'>
+      <div className='flex flex-wrap items-end gap-2'>
+        <Button
+          type='button'
+          onClick={() => void runScan(false)}
+          loading={isScanning}
+          loadingLabel='Scanning…'
+        >
           Scan names
+        </Button>
+        <AdminFilterField label='Sweep' htmlFor='name-fix-scope'>
+          <Select
+            id='name-fix-scope'
+            value={sweepScope}
+            onChange={(event) =>
+              setSweepScope(event.target.value === 'all' ? 'all' : 'pending_review')
+            }
+          >
+            <option value='pending_review'>Pending review</option>
+            <option value='all'>All organizations</option>
+          </Select>
+        </AdminFilterField>
+        <Button
+          type='button'
+          variant='secondary'
+          onClick={() => void runScan(true)}
+          loading={isScanning}
+          loadingLabel='Scanning…'
+        >
+          Sweep scan
         </Button>
         <Button type='button' variant='secondary' onClick={() => void bulk('apply')} disabled={selected.size === 0}>
           Apply selected
@@ -302,12 +346,18 @@ export function NamesPanel() {
               </Select>
             </AdminFilterField>
             <AdminFilterField label='Rule' htmlFor='name-fix-rule'>
-              <Input
+              <Select
                 id='name-fix-rule'
                 value={list.filters.rule}
-                placeholder='title_case'
                 onChange={(event) => list.setFilter('rule', event.target.value)}
-              />
+              >
+                <option value=''>All rules</option>
+                {(settings?.available_rules ?? NAME_RULES).map((rule) => (
+                  <option key={rule} value={rule}>
+                    {rule}
+                  </option>
+                ))}
+              </Select>
             </AdminFilterField>
           </AdminFilterBar>
         }

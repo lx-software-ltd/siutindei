@@ -18,10 +18,24 @@ test.describe('Data quality', () => {
   test('admin can scan and apply a name fix', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=names');
     await adminPage.getByRole('button', { name: 'Scan names' }).click();
-    await expect(adminPage.getByText('Created 1, updated 0, skipped 0.')).toBeVisible();
+    await expect(
+      adminPage.getByText('Created 1, updated 0, skipped 0, cleared 0.')
+    ).toBeVisible();
     await adminPage.getByRole('cell', { name: 'HARBOUR CLUB', exact: true }).click();
     await adminPage.getByRole('button', { name: 'Apply', exact: true }).click();
     await expect(adminPage.getByText('Name updated.')).toBeVisible();
+  });
+
+  test('admin can sweep names and filter by rule', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=data-quality&tab=names');
+    await expect(adminPage.getByLabel('Rule')).toHaveValue('');
+    await adminPage.getByLabel('Rule').selectOption('title_case');
+    await expect(adminPage.getByLabel('Sweep')).toHaveValue('pending_review');
+    await adminPage.getByLabel('Sweep').selectOption('all');
+    await adminPage.getByRole('button', { name: 'Sweep scan' }).click();
+    await expect(
+      adminPage.getByText('Created 0, updated 1, skipped 0, cleared 1.')
+    ).toBeVisible();
   });
 
   test('admin can edit name rule word lists', async ({ adminPage }) => {

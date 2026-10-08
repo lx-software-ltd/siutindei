@@ -1090,15 +1090,16 @@ export interface paths {
         /**
          * List name cleanup proposals
          * @description Pending rows come from `POST /v1/admin/name-fixes/scan` and from
-         *     names the import cleaner would change. Activity proposals are
-         *     created only for organizations in `pending_review`.
+         *     names the import cleaner would change. A regular scan writes
+         *     activity proposals only for organizations in `pending_review`.
+         *     A from-scratch sweep uses `review_scope`.
          */
         get: {
             parameters: {
                 query?: {
                     status?: "pending" | "applied" | "dismissed";
                     entity_type?: "organization" | "activity";
-                    rule?: string;
+                    rule?: "html_entities" | "nfkc" | "whitespace" | "trailing_punctuation" | "cjk_spacing" | "title_case" | "brackets" | "split_bilingual";
                     org_id?: string;
                     q?: string;
                     cursor?: string;
@@ -1279,7 +1280,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Scan names and store proposals */
+        /**
+         * Scan names and store proposals
+         * @description A regular scan refreshes pending proposals. `from_scratch` plus
+         *     `review_scope` re-evaluates every name in that scope and deletes
+         *     pending rows the current rules no longer change. `pending_review`
+         *     limits organizations and their activities to that review status.
+         *     `all` includes every organization and activity.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1295,6 +1303,10 @@ export interface paths {
                         /** Format: uuid */
                         org_id?: string;
                         q?: string;
+                        /** @default false */
+                        from_scratch?: boolean;
+                        /** @enum {string} */
+                        review_scope?: "pending_review" | "all";
                     };
                 };
             };
@@ -7382,6 +7394,7 @@ export interface components {
             created: number;
             updated: number;
             skipped: number;
+            cleared: number;
             truncated: boolean;
         };
         NameFixBulkRequest: {

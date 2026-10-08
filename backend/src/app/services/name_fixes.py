@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -28,7 +28,6 @@ from app.services.name_sanitizer import (
     sanitize_name,
 )
 
-_MAX_SCAN = 2000
 _MAX_BULK = 200
 
 
@@ -105,78 +104,6 @@ def preview_name(
         "translation_patch": result.translation_patch,
         "changed": result.changed,
     }
-
-
-def scan_names(
-    session: Session,
-    *,
-    entity_type: str | None = None,
-    org_id: UUID | None = None,
-    query: str | None = None,
-) -> dict[str, Any]:
-    """Create or refresh pending proposals. Approved organizations' activities are skipped."""
-    config = load_name_fix_config(session)
-    run_id = uuid4()
-    counts = {"created": 0, "updated": 0, "skipped": 0}
-    seen = 0
-    truncated = False
-    if entity_type in (None, "organization"):
-        org_stmt = select(Organization).order_by(Organization.name)
-        if org_id is not None:
-            org_stmt = org_stmt.where(Organization.id == org_id)
-        if query:
-            org_stmt = org_stmt.where(
-                Organization.name.ilike(ilike_pattern(query), escape="\\")
-            )
-        for org in session.scalars(org_stmt).all():
-            seen += 1
-            if seen > _MAX_SCAN:
-                truncated = True
-                break
-            _count(
-                counts,
-                _propose(
-                    session,
-                    "organization",
-                    org.id,
-                    org.name,
-                    org.name_translations,
-                    config,
-                    run_id,
-                ),
-            )
-    if entity_type in (None, "activity") and not truncated:
-        activity_stmt = (
-            select(Activity)
-            .join(Organization, Organization.id == Activity.org_id)
-            .where(Organization.review_status == "pending_review")
-            .order_by(Activity.name)
-        )
-        if org_id is not None:
-            activity_stmt = activity_stmt.where(Activity.org_id == org_id)
-        if query:
-            activity_stmt = activity_stmt.where(
-                Activity.name.ilike(ilike_pattern(query), escape="\\")
-            )
-        for activity in session.scalars(activity_stmt).all():
-            seen += 1
-            if seen > _MAX_SCAN:
-                truncated = True
-                break
-            _count(
-                counts,
-                _propose(
-                    session,
-                    "activity",
-                    activity.id,
-                    activity.name,
-                    activity.name_translations,
-                    config,
-                    run_id,
-                ),
-            )
-    session.flush()
-    return {"scan_run_id": str(run_id), "truncated": truncated, **counts}
 
 
 def list_proposals(
@@ -336,52 +263,6 @@ def _bulk_rows(session: Session, body: dict[str, Any]) -> list[NameFixProposal]:
     return rows
 
 
-def _propose(
-    session, entity_type, entity_id, current, translations, config, run_id
-) -> str:
-    result = sanitize_name(current or "", translations or {}, config)
-    if not result.changed:
-        return "unchanged"
-    pending = session.scalars(
-        select(NameFixProposal).where(
-            NameFixProposal.entity_type == entity_type,
-            NameFixProposal.entity_id == entity_id,
-            NameFixProposal.field == "name",
-            NameFixProposal.status == "pending",
-        )
-    ).first()
-    if pending is not None:
-        pending.current_value = current
-        pending.proposed_value = result.name
-        pending.rules = list(result.rules)
-        pending.translation_patch = result.translation_patch or None
-        pending.scan_run_id = run_id
-        pending.updated_at = datetime.now(timezone.utc)
-        return "updated"
-    dismissed = session.scalars(
-        select(NameFixProposal.id).where(
-            NameFixProposal.entity_type == entity_type,
-            NameFixProposal.entity_id == entity_id,
-            NameFixProposal.status == "dismissed",
-            NameFixProposal.proposed_value == result.name,
-        )
-    ).first()
-    if dismissed is not None:
-        return "skipped"
-    session.add(
-        NameFixProposal(
-            entity_type=entity_type,
-            entity_id=entity_id,
-            current_value=current,
-            proposed_value=result.name,
-            rules=list(result.rules),
-            translation_patch=result.translation_patch or None,
-            scan_run_id=run_id,
-        )
-    )
-    return "created"
-
-
 def _apply_value(session: Session, row: NameFixProposal, proposed: str) -> None:
     if not proposed or len(proposed) > MAX_NAME_LENGTH:
         raise ValidationError("name length is invalid", field="name")
@@ -434,11 +315,6 @@ def _mark(row: NameFixProposal, status: str, decided_by: str | None) -> None:
     row.decided_by = decided_by
     row.decided_at = datetime.now(timezone.utc)
     row.updated_at = row.decided_at
-
-
-def _count(counts: dict[str, int], outcome: str) -> None:
-    if outcome in counts:
-        counts[outcome] += 1
 
 
 def _serialize(row: NameFixProposal) -> dict[str, Any]:

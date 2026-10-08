@@ -11,13 +11,13 @@ from app.api.admin_auth import _get_user_sub, _set_session_audit_context
 from app.api.admin_request import _query_param, parse_limit, parse_object_body
 from app.db.engine import get_engine
 from app.exceptions import ValidationError
+from app.services.name_fix_scan import scan_names
 from app.services.name_fixes import (
     decide_bulk,
     decide_proposal,
     get_proposal,
     list_proposals,
     preview_name,
-    scan_names,
     settings_payload,
     summarize_proposals,
     update_settings,
@@ -27,6 +27,7 @@ from app.utils import json_response
 
 _STATUSES = {"pending", "applied", "dismissed"}
 _ENTITY_TYPES = {"organization", "activity"}
+_REVIEW_SCOPES = {"pending_review", "all"}
 
 
 def handle_name_fixes(
@@ -124,6 +125,12 @@ def _scan(event: Mapping[str, Any]) -> dict[str, Any]:
     entity_type = _choice(body.get("entity_type"), _ENTITY_TYPES, "entity_type")
     org_raw = body.get("org_id")
     query = body.get("q")
+    from_scratch = body.get("from_scratch")
+    if from_scratch is None:
+        from_scratch = False
+    elif not isinstance(from_scratch, bool):
+        raise ValidationError("from_scratch must be a boolean", field="from_scratch")
+    review_scope = _choice(body.get("review_scope"), _REVIEW_SCOPES, "review_scope")
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event)
         payload = scan_names(
@@ -131,6 +138,8 @@ def _scan(event: Mapping[str, Any]) -> dict[str, Any]:
             entity_type=entity_type,
             org_id=_uuid(str(org_raw), "org_id") if org_raw else None,
             query=query.strip() if isinstance(query, str) and query.strip() else None,
+            from_scratch=from_scratch,
+            review_scope=review_scope,
         )
         session.commit()
     return json_response(200, payload, event=event)

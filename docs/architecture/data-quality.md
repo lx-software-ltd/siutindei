@@ -47,9 +47,12 @@ Rules run in a fixed order: HTML entities, Unicode NFKC, whitespace
 (including a space before `(` or `[`), trailing punctuation, spacing
 between Latin and CJK, known or numeric brackets, title case for
 all-caps Latin tokens, then a bilingual split that copies Chinese into
-`name_translations.zh` when that key is empty. Title case keeps only
-configured exception words, and Roman numerals, in capitals. An empty
-result keeps the original name.
+`name_translations.zh` when that key is empty. After that split, brackets
+that only held the extracted Chinese are removed (`Harbour Club (海港會)`
+becomes `Harbour Club`); brackets that still have English stay
+(`Harbour Club (Central 海港)` becomes `Harbour Club (Central)`). Title
+case keeps only configured exception words, and Roman numerals, in
+capitals. An empty result keeps the original name.
 
 Imports apply this to every organization name and append
 `Imported name: …` to `source_note` (500 characters). Activity names
@@ -60,7 +63,11 @@ and the import records a warning.
 Data quality has three tabs: Duplicates, Names, and Category Checks.
 Category checks moved here from Categories; `?categoryView=checks`
 opens this tab. The Names tab scans stored rows with the same rules and writes
-`name_fix_proposals`. The list is cursor paginated. Applying a
+`name_fix_proposals`. The list is cursor paginated. A regular scan
+refreshes matching rows and still skips approved organizations'
+activities. Sweep scan (`from_scratch`) re-evaluates every name in
+the chosen scope (`pending_review` or `all`) and deletes pending
+proposals the current rules no longer change. Applying a
 proposal updates the record when the stored name still matches the
 proposal. A dismissed proposal with the same proposed value is not
 created again. The review queue warning `name_needs_cleanup` covers

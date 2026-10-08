@@ -43,6 +43,22 @@ def test_splits_bilingual_name_into_translation() -> None:
     assert cleaned.translation_patch == {"zh": "海港會"}
 
 
+def test_split_drops_brackets_that_only_held_chinese() -> None:
+    cleaned = sanitize_name("Harbour Club (海港會)", {})
+    assert cleaned.name == "Harbour Club"
+    assert cleaned.translation_patch == {"zh": "海港會"}
+    assert sanitize_name("Harbour Club[海港會]", {}).name == "Harbour Club"
+
+
+def test_split_keeps_brackets_that_still_have_english() -> None:
+    cleaned = sanitize_name("Harbour Club (Central 海港)", {})
+    assert cleaned.name == "Harbour Club (Central)"
+    assert cleaned.translation_patch == {"zh": "海港"}
+    mixed = sanitize_name("Harbour Club (海港 Hall A)", {})
+    assert mixed.name == "Harbour Club (Hall A)"
+    assert mixed.translation_patch == {"zh": "海港"}
+
+
 def test_empty_cleanup_keeps_original() -> None:
     assert sanitize_name("...", {}).name == "..."
 

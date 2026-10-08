@@ -38,6 +38,7 @@ _CJK = re.compile(r"[\u3400-\u9fff]")
 _LATIN = re.compile(r"[A-Za-z]")
 _TRAILING = " .,;:|/\\-–—·"
 _CODE_BRACKETS = re.compile(r"\s*[\(\[][^()\]]*\d[^()\]]*[\)\]]")
+_BRACKET_PAIRS = (("(", ")"), ("[", "]"), ("（", "）"), ("［", "］"))
 
 
 @dataclass(frozen=True)
@@ -180,7 +181,7 @@ def _split_bilingual(value: str, translations: dict) -> tuple[str, dict[str, str
     if not _CJK.search(value) or not _LATIN.search(value):
         return value, {}
     chinese = "".join(char for char in value if _CJK.match(char))
-    english = _collapse_whitespace(
+    english = _tidy_split_brackets(
         "".join(char if not _CJK.match(char) else " " for char in value)
     )
     if len(chinese) < 2 or len(english) < 2:
@@ -192,3 +193,30 @@ def _split_bilingual(value: str, translations: dict) -> tuple[str, dict[str, str
     if not existing:
         patch["zh"] = chinese
     return english, patch
+
+
+def _tidy_split_brackets(value: str) -> str:
+    """Remove brackets emptied by pulling Chinese into translations."""
+    updated = value
+    for opener, closer in _BRACKET_PAIRS:
+        pattern = re.compile(
+            re.escape(opener)
+            + r"([^"
+            + re.escape(opener + closer)
+            + r"]*)"
+            + re.escape(closer)
+        )
+
+        def _replace(
+            match: re.Match[str],
+            *,
+            open_b: str = opener,
+            close_b: str = closer,
+        ) -> str:
+            inner = match.group(1).strip()
+            if not inner:
+                return ""
+            return f"{open_b}{inner}{close_b}"
+
+        updated = pattern.sub(_replace, updated)
+    return _collapse_whitespace(updated)
