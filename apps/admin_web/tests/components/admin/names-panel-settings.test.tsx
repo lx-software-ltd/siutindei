@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NamesPanel } from '@/components/admin/data-quality/names-panel';
 import { resetAdminQueryClientForTests } from '@/lib/admin-query-client';
 import {
+  decideNameFixesBulk,
   getNameFixSettings,
   getNameFixSummary,
   listNameFixes,
@@ -61,6 +62,13 @@ describe('NamesPanel settings lists', () => {
       cleared: 0,
       truncated: false,
     });
+    vi.mocked(decideNameFixesBulk).mockResolvedValue({
+      dry_run: false,
+      matched: 1,
+      decided: 1,
+      failed: 0,
+      failures: [],
+    });
   });
 
   it('offers pending and all-orgs sweep buttons and not a regular scan', async () => {
@@ -108,5 +116,41 @@ describe('NamesPanel settings lists', () => {
         })
       )
     );
+  });
+
+  it('cycles the header checkbox from visible rows to all matching rows', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listNameFixes).mockResolvedValue({
+      items: [
+        {
+          id: 'fix-1',
+          entity_type: 'organization',
+          entity_id: 'org-1',
+          current_value: 'HARBOUR CLUB',
+          proposed_value: 'Harbour Club',
+          rules: ['title_case'],
+          status: 'pending',
+        },
+      ],
+      next_cursor: 'page-2',
+    });
+    render(<NamesPanel />, { wrapper });
+    const header = await screen.findByRole('checkbox', { name: 'Select visible rows' });
+    await user.click(header);
+    expect(screen.getByRole('checkbox', { name: 'Select all matching rows' })).toBeChecked();
+    await user.click(screen.getByRole('checkbox', { name: 'Select all matching rows' }));
+    expect(screen.getByRole('checkbox', { name: 'Clear selection' })).toBeChecked();
+    expect(
+      screen.getByText(/All matching records are selected/)
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Apply selected' }));
+    await waitFor(() =>
+      expect(decideNameFixesBulk).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'apply',
+        })
+      )
+    );
+    expect(vi.mocked(decideNameFixesBulk).mock.calls[0][0]).not.toHaveProperty('ids');
   });
 });

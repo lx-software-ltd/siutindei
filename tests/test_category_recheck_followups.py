@@ -217,6 +217,53 @@ def test_bulk_apply_advances_past_a_skipped_review(
     assert other.category_id == sample_activity_category.id
 
 
+def test_bulk_ids_limit_matching_reviews(
+    db_session, sample_activity, sample_organization, sample_activity_category
+) -> None:
+    from app.db.models import Activity
+    from psycopg.types.range import Range
+
+    other = Activity(
+        org_id=sample_organization.id,
+        category_id=sample_activity_category.id,
+        name="Second class",
+        age_range=Range(5, 9, bounds="[]"),
+    )
+    db_session.add(other)
+    db_session.flush()
+    run = _run(db_session, status="done", batches_total=0)
+    keep = ActivityCategoryReview(
+        scan_run_id=run.id,
+        activity_id=sample_activity.id,
+        org_id=sample_organization.id,
+        verdict="reassign",
+        status="pending",
+        proposed_category_id=sample_activity_category.id,
+    )
+    chosen = ActivityCategoryReview(
+        scan_run_id=run.id,
+        activity_id=other.id,
+        org_id=sample_organization.id,
+        verdict="reassign",
+        status="pending",
+        proposed_category_id=sample_activity_category.id,
+    )
+    db_session.add_all([keep, chosen])
+    db_session.flush()
+    result = review_service.decide_matching_reviews(
+        db_session,
+        {"action": "dismiss", "ids": [str(chosen.id)]},
+        decided_by="admin",
+        cursor=None,
+    )
+    assert result["decided"] == 1
+    assert result["matched"] == 1
+    db_session.refresh(keep)
+    db_session.refresh(chosen)
+    assert keep.status == "pending"
+    assert chosen.status == "dismissed"
+
+
 def test_empty_wizard_group_search_includes_legacy_roots(
     db_session, sample_activity
 ) -> None:

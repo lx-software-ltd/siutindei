@@ -6260,6 +6260,14 @@ components:
           format: uuid
         q:
           type: string
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: >
+            When set, only these pending reviews are decided. Used
+            when the header checkbox selected the visible page.
         cursor:
           type: string
           nullable: true
@@ -6629,6 +6637,9 @@ components:
           type: string
         q:
           type: string
+        org_id:
+          type: string
+          format: uuid
         dry_run:
           type: boolean
 

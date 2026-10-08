@@ -232,6 +232,7 @@ def decide_matching_reviews(
 
 def _bulk_filters(body: dict[str, Any]) -> dict[str, Any]:
     return {
+        "ids": _id_list(body.get("ids")),
         "verdict": _choice(body.get("verdict"), {"confirm", "reassign", "propose"}),
         "org_id": _optional_uuid(body.get("org_id"), "org_id"),
         "scan_run_id": _optional_uuid(body.get("scan_run_id"), "scan_run_id"),
@@ -241,6 +242,20 @@ def _bulk_filters(body: dict[str, Any]) -> dict[str, Any]:
         ),
         "query_text": str(body.get("q") or "").strip(),
     }
+
+
+def _id_list(value: Any) -> list[UUID] | None:
+    if value in (None, ""):
+        return None
+    if not isinstance(value, list) or not value:
+        raise ValidationError("ids must be a non-empty list", field="ids")
+    parsed: list[UUID] = []
+    for item in value:
+        uid = _optional_uuid(item, "ids")
+        if uid is None:
+            raise ValidationError("Invalid ids", field="ids")
+        parsed.append(uid)
+    return parsed
 
 
 def _choice(value: Any, allowed: set[str]) -> str | None:
@@ -288,6 +303,8 @@ def _pending_stmt(
     query = select(ActivityCategoryReview).where(
         ActivityCategoryReview.status == "pending"
     )
+    if filters.get("ids"):
+        query = query.where(ActivityCategoryReview.id.in_(filters["ids"]))
     if filters["verdict"]:
         query = query.where(ActivityCategoryReview.verdict == filters["verdict"])
     if filters["org_id"] is not None:

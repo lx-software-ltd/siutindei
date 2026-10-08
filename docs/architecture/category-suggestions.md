@@ -138,9 +138,10 @@ Approving or mapping a scan suggestion assigns linked activities whose
 review is still pending. Rejecting without a target dismisses those
 reviews and leaves the category unchanged. Apply, dismiss, and revert
 are `POST /v1/admin/category-suggestions/reviews/{id}`. The checks
-table can apply or dismiss every pending review that matches the
-current filters, including `proposed_category_id`, through
-`POST /v1/admin/category-suggestions/reviews/bulk`. Each call decides
+table header checkbox selects the visible page, then all matching
+rows. Apply and dismiss use `POST /v1/admin/category-suggestions/reviews/bulk`.
+Visible selection sends `ids`. All-matching selection uses the current
+filters, including `proposed_category_id`. Each call decides
 one page and the console follows `next_cursor`. A dry run returns the
 match count before anything is written. Revert restores
 `previous_category_id`.
@@ -153,7 +154,9 @@ all-orgs count. A run still stops at `scan_limit` (500).
 
 ## Discover
 
-Discover all categories groups activities that are still on
+Discover is no longer a console button; Sweep pending and Sweep
+all orgs cover confirm and reassignment. Discover still groups
+activities that are still on
 Pending categorisation, on organizations in `pending_review`, by the
 imported label. An activity already placed on a real category is left
 alone; verify checks those. A label that already matches a category is

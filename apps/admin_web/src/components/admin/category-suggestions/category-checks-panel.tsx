@@ -83,8 +83,12 @@ export function CategoryChecksPanel() {
   const [threshold, setThreshold] = useState<number | null>(0.9);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [confirmMode, setConfirmMode] = useState<
-    'discover' | 'pending_review' | 'all' | null
+    'pending_review' | 'all' | null
   >(null);
+  const [selectScope, setSelectScope] = useState<'none' | 'visible' | 'all'>(
+    'none'
+  );
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [ignoreCurrent, setIgnoreCurrent] = useState(false);
   const [bulkAction, setBulkAction] = useState<'apply' | 'dismiss' | null>(null);
   const [bulkPreview, setBulkPreview] = useState<CategoryReviewBulkResult | null>(
@@ -95,6 +99,14 @@ export function CategoryChecksPanel() {
   const [isBulkRunning, setIsBulkRunning] = useState(false);
   const [error, setError] = useState('');
   const bulkAbort = useRef<AbortController | null>(null);
+  const selectAllRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate =
+        selectScope === 'visible' && list.hasMore;
+    }
+  }, [list.hasMore, selectScope]);
 
   const { refetch, setFilter } = list;
   const selectedOrgId = scopedOrgId || list.filters.org_id;
@@ -176,10 +188,6 @@ export function CategoryChecksPanel() {
   const batchSize = summary?.scan_batch_size ?? 10;
   const scanCount = Math.min(candidates, scanLimit);
   const batches = Math.max(1, Math.ceil(scanCount / batchSize));
-  const discoverActivities = summary?.discover_activity_total ?? 0;
-  const discoverLabels = summary?.discover_label_total ?? 0;
-  const discoverCount = Math.min(discoverLabels, scanLimit);
-  const discoverBatches = Math.ceil(discoverCount / batchSize);
   const thresholdText =
     threshold === null
       ? 'Auto-assign is off.'
@@ -188,20 +196,16 @@ export function CategoryChecksPanel() {
     ? `${active.batches_done} of ${active.batches_total} batches. ${active.failed} failed.`
     : '';
 
-  async function startScan(
-    mode: 'discover' | 'verify',
-    reviewScope: 'pending_review' | 'all'
-  ) {
+  async function startScan(reviewScope: 'pending_review' | 'all') {
     setIsStarting(true);
     setError('');
     try {
       await startCategoryScan({
         org_id: selectedOrgId || undefined,
-        mode,
+        mode: 'verify',
         review_scope: reviewScope,
-        rescan: mode === 'verify' && ignoreCurrent ? true : undefined,
-        ignore_current_category:
-          mode === 'verify' && ignoreCurrent ? true : undefined,
+        rescan: ignoreCurrent ? true : undefined,
+        ignore_current_category: ignoreCurrent ? true : undefined,
       });
       setConfirmMode(null);
       reload();
@@ -212,17 +216,63 @@ export function CategoryChecksPanel() {
     }
   }
 
+  const visibleIds = list.items.map((item) => item.id);
+  const hasSelection = selectScope === 'all' || selected.size > 0;
   const bulkFilters = {
     verdict: list.filters.verdict || undefined,
     q: list.filters.q || undefined,
     org_id: list.filters.org_id || undefined,
     proposed_category_id: list.filters.proposed_category_id || undefined,
+    ...(selectScope === 'all' ? {} : { ids: Array.from(selected) }),
   };
   const filtersAreBlank =
+    selectScope === 'all' &&
     !list.filters.verdict &&
     !list.filters.q &&
     !list.filters.org_id &&
     !list.filters.proposed_category_id;
+
+  useEffect(() => {
+    setSelectScope('none');
+    setSelected(new Set());
+  }, [
+    list.filters.status,
+    list.filters.verdict,
+    list.filters.q,
+    list.filters.org_id,
+    list.filters.proposed_category_id,
+  ]);
+
+  useEffect(() => {
+    if (selectScope !== 'visible') {
+      return;
+    }
+    setSelected((current) => {
+      let changed = false;
+      const next = new Set(current);
+      for (const item of list.items) {
+        if (!next.has(item.id)) {
+          next.add(item.id);
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [list.items, selectScope]);
+
+  function cycleSelectScope() {
+    if (selectScope === 'none') {
+      setSelected(new Set(visibleIds));
+      setSelectScope('visible');
+      return;
+    }
+    if (selectScope === 'visible' && list.hasMore) {
+      setSelectScope('all');
+      return;
+    }
+    setSelected(new Set());
+    setSelectScope('none');
+  }
 
   useEffect(() => {
     if (bulkAction === null) {
@@ -236,10 +286,7 @@ export function CategoryChecksPanel() {
       {
         action: bulkAction,
         dry_run: true,
-        verdict: list.filters.verdict || undefined,
-        q: list.filters.q || undefined,
-        org_id: list.filters.org_id || undefined,
-        proposed_category_id: list.filters.proposed_category_id || undefined,
+        ...bulkFilters,
       },
       controller.signal
     )
@@ -263,6 +310,8 @@ export function CategoryChecksPanel() {
     list.filters.proposed_category_id,
     list.filters.q,
     list.filters.verdict,
+    selectScope,
+    selected,
   ]);
 
   async function runBulk(action: 'apply' | 'dismiss') {
@@ -282,6 +331,8 @@ export function CategoryChecksPanel() {
         },
       });
       setBulkAction(null);
+      setSelectScope('none');
+      setSelected(new Set());
       const verb = action === 'apply' ? 'applied' : 'dismissed';
       const details = result.failures.map((item) => item.message).join(' ');
       if (result.cancelled) {
@@ -309,6 +360,11 @@ export function CategoryChecksPanel() {
           {error}
         </StatusBanner>
       ) : null}
+      {selectScope === 'all' ? (
+        <StatusBanner kind='info' title='Selection'>
+          All matching records are selected, including rows not on this page.
+        </StatusBanner>
+      ) : null}
       <CategoryChecksTable
         items={list.items}
         isLoading={list.isLoading}
@@ -319,6 +375,44 @@ export function CategoryChecksPanel() {
           void list.loadMore();
         }}
         onReload={reload}
+        leadingHead={
+          <input
+            ref={selectAllRef}
+            type='checkbox'
+            aria-label={
+              selectScope === 'all'
+                ? 'Clear selection'
+                : selectScope === 'visible' && list.hasMore
+                  ? 'Select all matching rows'
+                  : 'Select visible rows'
+            }
+            checked={selectScope === 'all' || selectScope === 'visible'}
+            onChange={() => cycleSelectScope()}
+          />
+        }
+        renderLeading={(item) => (
+          <input
+            type='checkbox'
+            aria-label='Select row'
+            checked={selectScope === 'all' || selected.has(item.id)}
+            onClick={(event) => event.stopPropagation()}
+            onChange={(event) => {
+              setSelectScope('visible');
+              setSelected((current) => {
+                const next = new Set(current);
+                if (event.target.checked) {
+                  next.add(item.id);
+                } else {
+                  next.delete(item.id);
+                }
+                if (next.size === 0) {
+                  setSelectScope('none');
+                }
+                return next;
+              });
+            }}
+          />
+        )}
         filters={
           <AdminFilterBar
             summary={
@@ -416,21 +510,9 @@ export function CategoryChecksPanel() {
             </Button>
             <Button
               type='button'
-              size='sm'
-              disabled={
-                (discoverActivities === 0 && discoverLabels === 0) ||
-                isRunning ||
-                isStarting
-              }
-              onClick={() => setConfirmMode('discover')}
-            >
-              Discover all categories
-            </Button>
-            <Button
-              type='button'
               variant='outline'
               size='sm'
-              disabled={isRunning || isStarting || isBulkRunning}
+              disabled={!hasSelection || isRunning || isStarting || isBulkRunning}
               loading={isBulkRunning && bulkAction === 'apply'}
               loadingLabel='Applying…'
               onClick={() => setBulkAction('apply')}
@@ -441,7 +523,7 @@ export function CategoryChecksPanel() {
               type='button'
               variant='outline'
               size='sm'
-              disabled={isRunning || isStarting || isBulkRunning}
+              disabled={!hasSelection || isRunning || isStarting || isBulkRunning}
               loading={isBulkRunning && bulkAction === 'dismiss'}
               loadingLabel='Dismissing…'
               onClick={() => setBulkAction('dismiss')}
@@ -453,42 +535,22 @@ export function CategoryChecksPanel() {
       />
       <ConfirmDialog
         open={confirmMode !== null}
-        title={
-          confirmMode === 'discover'
-            ? 'Discover all categories'
-            : confirmMode === 'all'
-              ? 'Sweep all orgs'
-              : 'Sweep pending'
-        }
-        message={
-          confirmMode === 'discover'
-            ? `${discoverLabels} unknown ${
-                discoverLabels === 1 ? 'label' : 'labels'
-              } across ${discoverActivities} ${
-                discoverActivities === 1 ? 'activity' : 'activities'
-              } in ${discoverBatches} model ${
-                discoverBatches === 1 ? 'call' : 'calls'
-              }. Existing matches are assigned now. ${thresholdText}`
-            : `${
-                candidates > scanCount
-                  ? `Scan ${scanCount} of ${candidates} activities`
-                  : `Scan ${scanCount} activities`
-              } in ${batches} model ${batches === 1 ? 'call' : 'calls'}. ${
-                confirmMode === 'all'
-                  ? 'Includes approved organizations. '
-                  : 'Organizations still in review. '
-              }${thresholdText}`
-        }
+        title={confirmMode === 'all' ? 'Sweep all orgs' : 'Sweep pending'}
+        message={`${
+          candidates > scanCount
+            ? `Scan ${scanCount} of ${candidates} activities`
+            : `Scan ${scanCount} activities`
+        } in ${batches} model ${batches === 1 ? 'call' : 'calls'}. ${
+          confirmMode === 'all'
+            ? 'Includes approved organizations. '
+            : 'Organizations still in review. '
+        }${thresholdText}`}
         confirmLabel='Start scan'
         confirmLoading={isStarting}
         confirmLoadingLabel='Starting…'
         onConfirm={() => {
-          if (confirmMode === 'discover') {
-            void startScan('discover', 'pending_review');
-            return;
-          }
           if (confirmMode) {
-            void startScan('verify', confirmMode);
+            void startScan(confirmMode);
           }
         }}
         onCancel={() => setConfirmMode(null)}
@@ -517,9 +579,13 @@ export function CategoryChecksPanel() {
             : 'Apply matching reviews'
         }
         message={
-          bulkAction === 'dismiss'
-            ? 'Dismiss every pending review that matches the current filters.'
-            : 'Apply every pending reassignment that matches the current filters.'
+          selectScope === 'all'
+            ? bulkAction === 'dismiss'
+              ? 'Dismiss every pending review that matches the current filters.'
+              : 'Apply every pending reassignment that matches the current filters.'
+            : bulkAction === 'dismiss'
+              ? `Dismiss the ${selected.size} selected pending reviews.`
+              : `Apply the ${selected.size} selected pending reviews.`
         }
         confirmLabel={bulkAction === 'dismiss' ? 'Dismiss pending' : 'Apply pending'}
         confirmLoading={isBulkRunning}
@@ -540,9 +606,11 @@ export function CategoryChecksPanel() {
         }}
       >
         <p>
-          {filtersAreBlank
-            ? 'No filters are set, so this includes every pending review.'
-            : 'Only reviews matching the current filters are included.'}
+          {selectScope === 'all'
+            ? filtersAreBlank
+              ? 'No filters are set, so this includes every pending review.'
+              : 'Only reviews matching the current filters are included.'
+            : 'Only the selected visible rows are included.'}
         </p>
         <p className='mt-2'>
           {bulkPreview
