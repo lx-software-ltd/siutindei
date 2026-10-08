@@ -9,6 +9,7 @@ import { CategoryChecksPanel } from '@/components/admin/category-suggestions/cat
 import { resetAdminQueryClientForTests } from '@/lib/admin-query-client';
 import { request } from '@/lib/api-client-core';
 import {
+  decideCategoryReviewsBulk,
   getCategorySuggestionSettings,
   getCategorySuggestionSummary,
   listCategoryReviews,
@@ -69,6 +70,14 @@ describe('CategoryChecksPanel sweep buttons', () => {
       discover_activity_total: 1,
       discover_label_total: 1,
     });
+    vi.mocked(decideCategoryReviewsBulk).mockResolvedValue({
+      decided: 0,
+      skipped: 0,
+      failed: 0,
+      matched: 0,
+      applicable: 0,
+      failures: [],
+    });
     vi.mocked(startCategoryScan).mockResolvedValue({
       id: 'run-1',
       status: 'queued',
@@ -86,23 +95,19 @@ describe('CategoryChecksPanel sweep buttons', () => {
     });
   });
 
-  it('offers pending and all-orgs sweep buttons and not verify', async () => {
+  it('offers sweep buttons and not discover', async () => {
     render(<CategoryChecksPanel />, { wrapper });
     const sweepPending = await screen.findByRole('button', { name: 'Sweep pending' });
     const sweepAll = screen.getByRole('button', { name: 'Sweep all orgs' });
-    const discover = screen.getByRole('button', { name: 'Discover all categories' });
     const apply = screen.getByRole('button', { name: 'Apply matching' });
     const dismiss = screen.getByRole('button', { name: 'Dismiss matching' });
-    expect(screen.queryByRole('button', { name: 'Verify categories' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Discover all categories' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Discover categories' })).not.toBeInTheDocument();
     expect(
       sweepPending.compareDocumentPosition(sweepAll) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
     expect(
-      sweepAll.compareDocumentPosition(discover) & Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
-    expect(
-      discover.compareDocumentPosition(apply) & Node.DOCUMENT_POSITION_FOLLOWING
+      sweepAll.compareDocumentPosition(apply) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
     expect(
       apply.compareDocumentPosition(dismiss) & Node.DOCUMENT_POSITION_FOLLOWING
@@ -132,5 +137,31 @@ describe('CategoryChecksPanel sweep buttons', () => {
         })
       )
     );
+  });
+  it('cycles the header checkbox from visible rows to all matching rows', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listCategoryReviews).mockResolvedValue({
+      items: [
+        {
+          id: 'rev-1',
+          scan_run_id: 'run-1',
+          activity_id: 'act-1',
+          activity_name: 'Clay club',
+          org_id: 'org-1',
+          verdict: 'reassign',
+          status: 'pending',
+        },
+      ],
+      next_cursor: 'page-2',
+    });
+    render(<CategoryChecksPanel />, { wrapper });
+    const header = await screen.findByRole('checkbox', { name: 'Select visible rows' });
+    await user.click(header);
+    expect(screen.getByRole('checkbox', { name: 'Select all matching rows' })).toBeChecked();
+    await user.click(screen.getByRole('checkbox', { name: 'Select all matching rows' }));
+    expect(screen.getByRole('checkbox', { name: 'Clear selection' })).toBeChecked();
+    expect(
+      screen.getByText(/All matching records are selected/)
+    ).toBeInTheDocument();
   });
 });

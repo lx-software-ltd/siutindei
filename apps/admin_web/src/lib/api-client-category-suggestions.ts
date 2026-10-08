@@ -260,6 +260,7 @@ export function decideCategoryReview(id: string, body: Record<string, unknown>) 
 export interface CategoryReviewBulkBody {
   action: 'apply' | 'dismiss';
   dry_run?: boolean;
+  ids?: string[];
   verdict?: string;
   org_id?: string;
   scan_run_id?: string;

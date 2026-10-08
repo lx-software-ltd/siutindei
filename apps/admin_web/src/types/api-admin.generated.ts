@@ -7243,6 +7243,8 @@ export interface components {
             /** Format: uuid */
             proposed_category_id?: string;
             q?: string;
+            /** @description When set, only these pending reviews are decided. Used when the header checkbox selected the visible page. */
+            ids?: string[];
             cursor?: string | null;
         };
         CategoryReviewBulkFailure: {
@@ -7410,6 +7412,8 @@ export interface components {
             entity_type?: string;
             rule?: string;
             q?: string;
+            /** Format: uuid */
+            org_id?: string;
             dry_run?: boolean;
         };
         NameFixBulkResult: {

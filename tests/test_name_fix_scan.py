@@ -87,3 +87,39 @@ def test_scan_rejects_unknown_review_scope(db_session) -> None:
     with pytest.raises(ValidationError) as exc_info:
         scan_names(db_session, review_scope="nope")
     assert exc_info.value.field == "review_scope"
+
+
+def test_bulk_filter_respects_org_id(db_session) -> None:
+    from app.services.name_fixes import decide_bulk
+
+    keep = _dirty_org(db_session, "HARBOUR CLUB")
+    other = _dirty_org(db_session, "YWCA HARBOUR")
+    db_session.add_all(
+        [
+            NameFixProposal(
+                entity_type="organization",
+                entity_id=keep.id,
+                current_value="HARBOUR CLUB",
+                proposed_value="Harbour Club",
+                rules=["title_case"],
+            ),
+            NameFixProposal(
+                entity_type="organization",
+                entity_id=other.id,
+                current_value="YWCA HARBOUR",
+                proposed_value="YWCA Harbour",
+                rules=["title_case"],
+            ),
+        ]
+    )
+    db_session.flush()
+    result = decide_bulk(
+        db_session,
+        {"action": "dismiss", "org_id": str(keep.id)},
+        "admin",
+    )
+    assert result["decided"] == 1
+    rows = list(db_session.scalars(select(NameFixProposal)).all())
+    statuses = {row.entity_id: row.status for row in rows}
+    assert statuses[keep.id] == "dismissed"
+    assert statuses[other.id] == "pending"

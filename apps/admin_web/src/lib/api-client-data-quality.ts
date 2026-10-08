@@ -200,6 +200,7 @@ export function decideNameFixesBulk(body: {
   entity_type?: string;
   rule?: string;
   q?: string;
+  org_id?: string;
   dry_run?: boolean;
 }) {
   return request<{

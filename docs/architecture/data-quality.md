@@ -82,7 +82,10 @@ The Names tab sweeps stored rows with the same rules and writes
 `name_fix_proposals`. The list is cursor paginated. Sweep pending
 re-evaluates names on organizations still in review. Sweep all orgs
 re-evaluates every name and deletes pending proposals the current
-rules no longer change. Applying a
+rules no longer change. The header checkbox selects the visible
+page, then all matching rows. Apply and dismiss send `ids` for
+visible rows, or the current filters (including `org_id`) for
+all-matching. Applying a
 proposal updates the record when the stored name still matches the
 proposal. A dismissed proposal with the same proposed value is not
 created again. The review queue warning `name_needs_cleanup` covers

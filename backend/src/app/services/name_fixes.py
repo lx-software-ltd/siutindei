@@ -256,6 +256,25 @@ def _bulk_rows(session: Session, body: dict[str, Any]) -> list[NameFixProposal]:
                     NameFixProposal.proposed_value.ilike(pattern, escape="\\"),
                 )
             )
+        org_id = body.get("org_id")
+        if org_id not in (None, ""):
+            try:
+                parsed_org = UUID(str(org_id))
+            except ValueError as exc:
+                raise ValidationError("Invalid org_id", field="org_id") from exc
+            activity_ids = select(Activity.id).where(Activity.org_id == parsed_org)
+            stmt = stmt.where(
+                or_(
+                    and_(
+                        NameFixProposal.entity_type == "organization",
+                        NameFixProposal.entity_id == parsed_org,
+                    ),
+                    and_(
+                        NameFixProposal.entity_type == "activity",
+                        NameFixProposal.entity_id.in_(activity_ids),
+                    ),
+                )
+            )
     rows = list(session.scalars(stmt.limit(_MAX_BULK + 1)).all())
     rule = body.get("rule")
     if rule and not (isinstance(ids, list) and ids):

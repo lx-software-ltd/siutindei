@@ -53,6 +53,11 @@ test.describe('Category suggestions', () => {
       .getByRole('group', { name: 'Data quality' })
       .getByRole('button', { name: 'Categories', exact: true })
       .click();
+    await adminPage.getByRole('checkbox', { name: 'Select visible rows' }).click();
+    await adminPage.getByRole('checkbox', { name: 'Select all matching rows' }).click();
+    await expect(
+      adminPage.getByText(/All matching records are selected/)
+    ).toBeVisible();
     await adminPage.getByRole('button', { name: 'Apply matching' }).click();
     await expect(
       adminPage.getByText('Apply every pending reassignment')
