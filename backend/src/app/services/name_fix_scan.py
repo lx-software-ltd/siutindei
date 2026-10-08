@@ -14,7 +14,6 @@ from app.exceptions import ValidationError
 from app.services.name_fix_query import ilike_pattern
 from app.services.name_sanitizer import sanitize_name
 
-_MAX_SCAN = 2000
 _MAX_SWEEP = 10000
 _REVIEW_SCOPES = frozenset({"pending_review", "all"})
 
@@ -25,21 +24,15 @@ def scan_names(
     entity_type: str | None = None,
     org_id: UUID | None = None,
     query: str | None = None,
-    from_scratch: bool = False,
-    review_scope: str | None = None,
+    review_scope: str,
 ) -> dict[str, Any]:
-    """Create or refresh pending proposals.
+    """Sweep names and refresh pending proposals.
 
-    A regular scan skips approved organizations' activities. A from-scratch
-    sweep uses ``review_scope``: ``pending_review`` or ``all``. Sweep also
-    deletes pending rows the current rules no longer change.
+    ``review_scope`` is ``pending_review`` or ``all``. Pending rows the
+    current rules no longer change are deleted.
     """
-    if review_scope is not None and review_scope not in _REVIEW_SCOPES:
+    if review_scope not in _REVIEW_SCOPES:
         raise ValidationError("Invalid review_scope", field="review_scope")
-    if from_scratch and review_scope is None:
-        raise ValidationError(
-            "review_scope is required for a sweep", field="review_scope"
-        )
     from app.services.name_fixes import load_name_fix_config
 
     config = load_name_fix_config(session)
@@ -47,11 +40,10 @@ def scan_names(
     counts = {"created": 0, "updated": 0, "skipped": 0, "cleared": 0}
     seen = 0
     truncated = False
-    limit = _MAX_SWEEP if from_scratch else _MAX_SCAN
     if entity_type in (None, "organization"):
         for org in session.scalars(_org_stmt(org_id, query, review_scope)).all():
             seen += 1
-            if seen > limit:
+            if seen > _MAX_SWEEP:
                 truncated = True
                 break
             _count(
@@ -64,7 +56,6 @@ def scan_names(
                     org.name_translations,
                     config,
                     run_id,
-                    from_scratch,
                 ),
             )
     if entity_type in (None, "activity") and not truncated:
@@ -72,7 +63,7 @@ def scan_names(
             _activity_stmt(org_id, query, review_scope)
         ).all():
             seen += 1
-            if seen > limit:
+            if seen > _MAX_SWEEP:
                 truncated = True
                 break
             _count(
@@ -85,7 +76,6 @@ def scan_names(
                     activity.name_translations,
                     config,
                     run_id,
-                    from_scratch,
                 ),
             )
     session.flush()
@@ -126,7 +116,6 @@ def _propose(
     translations,
     config,
     run_id,
-    from_scratch,
 ) -> str:
     result = sanitize_name(current or "", translations or {}, config)
     pending = session.scalars(
@@ -138,7 +127,7 @@ def _propose(
         )
     ).first()
     if not result.changed:
-        if from_scratch and pending is not None:
+        if pending is not None:
             session.delete(pending)
             return "cleared"
         return "unchanged"

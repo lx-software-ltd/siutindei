@@ -54,6 +54,12 @@ describe('NamesPanel settings lists', () => {
     vi.mocked(updateNameFixSettings).mockImplementation(async (body) => body);
   });
 
+  it('offers sweep scan and not a regular scan', async () => {
+    render(<NamesPanel />, { wrapper });
+    expect(await screen.findByRole('button', { name: 'Sweep scan' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Scan names' })).not.toBeInTheDocument();
+  });
+
   it('keeps a space so a new exception word can be typed', async () => {
     const user = userEvent.setup();
     render(<NamesPanel />, { wrapper });

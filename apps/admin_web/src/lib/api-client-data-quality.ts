@@ -169,9 +169,8 @@ export function scanNameFixes(
   body: {
     entity_type?: string;
     q?: string;
-    from_scratch?: boolean;
-    review_scope?: 'pending_review' | 'all';
-  } = {}
+    review_scope: 'pending_review' | 'all';
+  }
 ) {
   return request<{
     scan_run_id: string;

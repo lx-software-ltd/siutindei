@@ -1974,7 +1974,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
     }
     if (method === 'POST' && url.includes('/name-fixes/scan')) {
       const body = (route.request().postDataJSON() || {}) as {
-        from_scratch?: boolean;
+        review_scope?: 'pending_review' | 'all';
       };
       nameFixes = [
         {
@@ -1992,10 +1992,10 @@ export async function setupApiMocks(page: Page): Promise<void> {
         contentType: 'application/json',
         body: JSON.stringify({
           scan_run_id: 'scan-1',
-          created: body.from_scratch ? 0 : 1,
-          updated: body.from_scratch ? 1 : 0,
+          created: body.review_scope === 'all' ? 0 : 1,
+          updated: body.review_scope === 'all' ? 1 : 0,
           skipped: 0,
-          cleared: body.from_scratch ? 1 : 0,
+          cleared: body.review_scope === 'all' ? 1 : 0,
           truncated: false,
         }),
       });

@@ -734,9 +734,8 @@ paths:
       summary: List name cleanup proposals
       description: |
         Pending rows come from `POST /v1/admin/name-fixes/scan` and from
-        names the import cleaner would change. A regular scan writes
-        activity proposals only for organizations in `pending_review`.
-        A from-scratch sweep uses `review_scope`.
+        names the import cleaner would change. Scan uses `review_scope`
+        (`pending_review` or `all`).
       parameters:
         - name: status
           in: query
@@ -851,11 +850,10 @@ paths:
 
   /v1/admin/name-fixes/scan:
     post:
-      summary: Scan names and store proposals
+      summary: Sweep names and store proposals
       description: |
-        A regular scan refreshes pending proposals. `from_scratch` plus
-        `review_scope` re-evaluates every name in that scope and deletes
-        pending rows the current rules no longer change. `pending_review`
+        Re-evaluates every name in `review_scope` and deletes pending
+        rows the current rules no longer change. `pending_review`
         limits organizations and their activities to that review status.
         `all` includes every organization and activity.
       requestBody:
@@ -864,6 +862,7 @@ paths:
           application/json:
             schema:
               type: object
+              required: [review_scope]
               properties:
                 entity_type:
                   type: string
@@ -873,9 +872,6 @@ paths:
                   format: uuid
                 q:
                   type: string
-                from_scratch:
-                  type: boolean
-                  default: false
                 review_scope:
                   type: string
                   enum: [pending_review, all]

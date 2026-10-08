@@ -116,16 +116,14 @@ export function NamesPanel() {
   const pending = summaryQuery.data?.by_status.pending ?? 0;
   const summary = summaryQuery.data ? `${pending} pending` : 'No pending names.';
 
-  async function runScan(fromScratch: boolean) {
+  async function sweep() {
     setIsScanning(true);
     setError('');
     setNotice('');
     try {
       const result = await scanNameFixes({
         entity_type: list.filters.entity_type || undefined,
-        q: fromScratch ? undefined : list.filters.q || undefined,
-        from_scratch: fromScratch || undefined,
-        review_scope: fromScratch ? sweepScope : undefined,
+        review_scope: sweepScope,
       });
       const stopped = result.truncated
         ? ' Scan stopped at the limit; run it again to continue.'
@@ -208,10 +206,9 @@ export function NamesPanel() {
       <p className='text-sm text-slate-600'>
         Imports clean names as they are written and keep the original spelling
         in the source note. This list reviews the same rules for records already
-        stored. Scan names refreshes matching rows. Sweep scan re-evaluates
-        every organization in the chosen scope from scratch and drops pending
-        proposals the current rules no longer change. Activity names follow
-        that same scope.
+        stored. Sweep scan re-evaluates every organization in the chosen
+        scope from scratch and drops pending proposals the current rules no
+        longer change. Activity names follow that same scope.
       </p>
       {organization ? (
         <p className='text-sm text-slate-600'>
@@ -239,14 +236,6 @@ export function NamesPanel() {
         </StatusBanner>
       ) : null}
       <div className='flex flex-wrap items-end gap-2'>
-        <Button
-          type='button'
-          onClick={() => void runScan(false)}
-          loading={isScanning}
-          loadingLabel='Scanning…'
-        >
-          Scan names
-        </Button>
         <AdminFilterField label='Sweep' htmlFor='name-fix-scope'>
           <Select
             id='name-fix-scope'
@@ -261,8 +250,7 @@ export function NamesPanel() {
         </AdminFilterField>
         <Button
           type='button'
-          variant='secondary'
-          onClick={() => void runScan(true)}
+          onClick={() => void sweep()}
           loading={isScanning}
           loadingLabel='Scanning…'
         >
@@ -314,7 +302,7 @@ export function NamesPanel() {
         hasMore={list.hasMore}
         onLoadMore={() => void list.loadMore()}
         error={list.error}
-        emptyLabel='No names match these filters. Scan names to find some.'
+        emptyLabel='No names match these filters. Sweep scan to find some.'
         filters={
           <AdminFilterBar>
             <AdminFilterField label='Name' htmlFor='name-fix-q'>
