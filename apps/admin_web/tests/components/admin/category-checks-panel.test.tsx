@@ -138,7 +138,6 @@ describe('CategoryChecksPanel sweep buttons', () => {
       )
     );
   });
-
   it('cycles the header checkbox from visible rows to all matching rows', async () => {
     const user = userEvent.setup();
     vi.mocked(listCategoryReviews).mockResolvedValue({
