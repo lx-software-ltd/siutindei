@@ -125,12 +125,9 @@ def _scan(event: Mapping[str, Any]) -> dict[str, Any]:
     entity_type = _choice(body.get("entity_type"), _ENTITY_TYPES, "entity_type")
     org_raw = body.get("org_id")
     query = body.get("q")
-    from_scratch = body.get("from_scratch")
-    if from_scratch is None:
-        from_scratch = False
-    elif not isinstance(from_scratch, bool):
-        raise ValidationError("from_scratch must be a boolean", field="from_scratch")
     review_scope = _choice(body.get("review_scope"), _REVIEW_SCOPES, "review_scope")
+    if review_scope is None:
+        raise ValidationError("review_scope is required", field="review_scope")
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event)
         payload = scan_names(
@@ -138,7 +135,6 @@ def _scan(event: Mapping[str, Any]) -> dict[str, Any]:
             entity_type=entity_type,
             org_id=_uuid(str(org_raw), "org_id") if org_raw else None,
             query=query.strip() if isinstance(query, str) and query.strip() else None,
-            from_scratch=from_scratch,
             review_scope=review_scope,
         )
         session.commit()

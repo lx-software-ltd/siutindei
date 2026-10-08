@@ -54,10 +54,18 @@ describe('NamesPanel settings lists', () => {
     vi.mocked(updateNameFixSettings).mockImplementation(async (body) => body);
   });
 
+  it('offers sweep scan and not a regular scan', async () => {
+    render(<NamesPanel />, { wrapper });
+    expect(await screen.findByRole('button', { name: 'Sweep scan' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Scan names' })).not.toBeInTheDocument();
+  });
+
   it('keeps a space so a new exception word can be typed', async () => {
     const user = userEvent.setup();
     render(<NamesPanel />, { wrapper });
     const exceptions = await screen.findByLabelText('Words to leave in capitals');
+    expect(exceptions.tagName).toBe('TEXTAREA');
+    expect(exceptions).toHaveAttribute('rows', '3');
     await user.click(exceptions);
     await user.type(exceptions, ' YWCA');
     expect(exceptions).toHaveValue('YMCA YWCA');

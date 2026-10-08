@@ -52,7 +52,9 @@ that only held the extracted Chinese are removed (`Harbour Club (海港會)`
 becomes `Harbour Club`); brackets that still have English stay
 (`Harbour Club (Central 海港)` becomes `Harbour Club (Central)`). Title
 case keeps only configured exception words, and Roman numerals, in
-capitals. An empty result keeps the original name.
+capitals. Short particles such as in, of, and the are lowercased
+unless they start the name or a bracketed phrase. An empty result
+keeps the original name.
 
 Imports apply this to every organization name and append
 `Imported name: …` to `source_note` (500 characters). Activity names
@@ -62,12 +64,11 @@ and the import records a warning.
 
 Data quality has three tabs: Duplicates, Names, and Category Checks.
 Category checks moved here from Categories; `?categoryView=checks`
-opens this tab. The Names tab scans stored rows with the same rules and writes
-`name_fix_proposals`. The list is cursor paginated. A regular scan
-refreshes matching rows and still skips approved organizations'
-activities. Sweep scan (`from_scratch`) re-evaluates every name in
-the chosen scope (`pending_review` or `all`) and deletes pending
-proposals the current rules no longer change. Applying a
+opens this tab. The Names tab sweeps stored rows with the same rules and writes
+`name_fix_proposals`. The list is cursor paginated. Sweep scan
+re-evaluates every name in the chosen scope (`pending_review` or
+`all`) and deletes pending proposals the current rules no longer
+change. Applying a
 proposal updates the record when the stored name still matches the
 proposal. A dismissed proposal with the same proposed value is not
 created again. The review queue warning `name_needs_cleanup` covers

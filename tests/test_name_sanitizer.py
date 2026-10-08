@@ -15,6 +15,17 @@ def test_title_case_and_unchanged_sample() -> None:
     assert "title_case" in cleaned.rules
 
 
+def test_title_case_lowercases_particles() -> None:
+    cleaned = sanitize_name("SCHOOL OF THE ARTS", {})
+    assert cleaned.name == "School of the Arts"
+    leading = sanitize_name("THE HARBOUR CLUB", {})
+    assert leading.name == "The Harbour Club"
+    bracketed = sanitize_name("HARBOUR (THE CLUB OF THE BAY)", {})
+    assert bracketed.name == "Harbour (The Club of the Bay)"
+    hyphen = sanitize_name("OUT-OF-SCHOOL CLUB", {})
+    assert hyphen.name == "Out-of-School Club"
+
+
 def test_title_case_uses_exception_list_only() -> None:
     cleaned = sanitize_name("YWCA HARBOUR", {})
     assert cleaned.name == "Ywca Harbour"

@@ -1090,9 +1090,8 @@ export interface paths {
         /**
          * List name cleanup proposals
          * @description Pending rows come from `POST /v1/admin/name-fixes/scan` and from
-         *     names the import cleaner would change. A regular scan writes
-         *     activity proposals only for organizations in `pending_review`.
-         *     A from-scratch sweep uses `review_scope`.
+         *     names the import cleaner would change. Scan uses `review_scope`
+         *     (`pending_review` or `all`).
          */
         get: {
             parameters: {
@@ -1281,10 +1280,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Scan names and store proposals
-         * @description A regular scan refreshes pending proposals. `from_scratch` plus
-         *     `review_scope` re-evaluates every name in that scope and deletes
-         *     pending rows the current rules no longer change. `pending_review`
+         * Sweep names and store proposals
+         * @description Re-evaluates every name in `review_scope` and deletes pending
+         *     rows the current rules no longer change. `pending_review`
          *     limits organizations and their activities to that review status.
          *     `all` includes every organization and activity.
          */
@@ -1303,10 +1301,8 @@ export interface paths {
                         /** Format: uuid */
                         org_id?: string;
                         q?: string;
-                        /** @default false */
-                        from_scratch?: boolean;
                         /** @enum {string} */
-                        review_scope?: "pending_review" | "all";
+                        review_scope: "pending_review" | "all";
                     };
                 };
             };

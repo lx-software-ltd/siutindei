@@ -144,8 +144,8 @@ their primary responsibilities.
   Design:
   `docs/architecture/data-quality.md`. Imports clean organization names
   on every write and activity names only while the organization is
-  `pending_review`. Name-fix scan can sweep from scratch with
-  `review_scope` `pending_review` or `all`. A merged organization's
+  `pending_review`.   Name-fix scan sweeps with `review_scope` `pending_review` or
+  `all`. A merged organization's
   `source_id` and `place_id` stay resolvable through
   `organization_merges`.
 - For the full endpoint list, see the OpenAPI spec:

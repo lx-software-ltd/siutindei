@@ -17,7 +17,7 @@ test.describe('Data quality', () => {
 
   test('admin can scan and apply a name fix', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=names');
-    await adminPage.getByRole('button', { name: 'Scan names' }).click();
+    await adminPage.getByRole('button', { name: 'Sweep scan' }).click();
     await expect(
       adminPage.getByText('Created 1, updated 0, skipped 0, cleared 0.')
     ).toBeVisible();
