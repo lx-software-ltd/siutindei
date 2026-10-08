@@ -5,7 +5,10 @@ display names that still need the import cleanup rules. Both tools live
 on the Data quality nav item: Duplicates, then Names.
 
 Endpoint shapes live in `docs/api/admin.yaml` under
-`/v1/admin/org-duplicates` and `/v1/admin/name-fixes`.
+`/v1/admin/org-duplicates` and `/v1/admin/name-fixes`. A full-access
+partner API key can read pending proposals at
+`GET /v1/partner/name-fixes` and sees `pending_name_fixes` on
+`GET /v1/partner/organizations`. See `docs/api/partner.yaml`.
 
 ## Merge
 
