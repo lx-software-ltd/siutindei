@@ -12,10 +12,11 @@ import {
 } from '../../lib/api-client-user';
 import type { FeedbackLabel } from '../../types/admin';
 import { useFormValidation } from '../../hooks/use-form-validation';
+import { AdminField } from '../ui/admin-field-grid';
+import { AdminToggleChip } from '../ui/admin-tab-strip';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { StarRating } from '../ui/star-rating';
 import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
@@ -166,18 +167,19 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
     >
       {error && (
         <div className='mb-4'>
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner kind='error'>
             {error}
           </StatusBanner>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className='space-y-4'>
-        <div>
-          <Label htmlFor='feedback-org'>
-            Organization
-            {validation.requiredIndicator}
-          </Label>
+        <AdminField
+          label='Organization'
+          htmlFor='feedback-org'
+          required
+          error={hasOrganizationError ? 'Please select an organization.' : undefined}
+        >
           <Input
             id='feedback-org'
             className={validation.errorClassName('organization', !selectedOrganization)}
@@ -189,11 +191,6 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
             onBlur={() => validation.markTouched('organization')}
             placeholder='Search organizations...'
           />
-          {hasOrganizationError && (
-            <p className='mt-1 text-sm text-red-600'>
-              Please select an organization.
-            </p>
-          )}
           {isSearching && (
             <p className='mt-1 text-xs text-slate-500'>Searching...</p>
           )}
@@ -220,13 +217,17 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
               Selected: {selectedOrganization.name}
             </p>
           )}
-        </div>
+        </AdminField>
 
-        <div>
-          <Label htmlFor='feedback-stars'>
-            Stars
-            {validation.requiredIndicator}
-          </Label>
+        <AdminField
+          label='Stars'
+          required
+          error={
+            hasStarsError
+              ? 'Stars must be a whole number between 1 and 5.'
+              : undefined
+          }
+        >
           <div className='mt-2 flex items-center gap-2'>
             <StarRating
               value={stars}
@@ -237,15 +238,9 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
             />
             <span className='text-sm text-slate-500'>{stars}/5</span>
           </div>
-          {hasStarsError && (
-            <p className='mt-1 text-sm text-red-600'>
-              Stars must be a whole number between 1 and 5.
-            </p>
-          )}
-        </div>
+        </AdminField>
 
-        <div>
-          <Label>Labels</Label>
+        <AdminField label='Labels'>
           {labels.length === 0 ? (
             <p className='text-sm text-slate-500'>
               No labels available.
@@ -255,18 +250,13 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
               {labels.map((label) => {
                 const isSelected = selectedLabels.includes(label.id);
                 return (
-                  <button
+                  <AdminToggleChip
                     key={label.id}
-                    type='button'
+                    pressed={isSelected}
                     onClick={() => toggleLabel(label.id)}
-                    className={`rounded-full border px-3 py-1 text-sm ${
-                      isSelected
-                        ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-200 bg-white text-slate-600'
-                    }`}
                   >
                     {label.name}
-                  </button>
+                  </AdminToggleChip>
                 );
               })}
             </div>
@@ -276,10 +266,9 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
               Selected: {selectedLabelNames.join(', ')}
             </p>
           )}
-        </div>
+        </AdminField>
 
-        <div>
-          <Label htmlFor='feedback-description'>Description</Label>
+        <AdminField label='Description' htmlFor='feedback-description'>
           <Textarea
             id='feedback-description'
             rows={3}
@@ -288,16 +277,17 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
             placeholder='Share details about your experience...'
             maxLength={5000}
           />
-        </div>
+        </AdminField>
 
         <div className='pt-2'>
           <Button
             type='submit'
             variant='primary'
-            disabled={isSubmitting}
+            loading={isSubmitting}
+            loadingLabel='Submitting…'
             className='w-full sm:w-auto'
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
+            Submit Feedback
           </Button>
         </div>
       </form>

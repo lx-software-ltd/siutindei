@@ -100,7 +100,7 @@ export function DuplicatesPanel() {
         </p>
       ) : null}
       {error ? (
-        <StatusBanner variant='error' title='Duplicates'>
+        <StatusBanner kind='error'>
           {error}
         </StatusBanner>
       ) : null}

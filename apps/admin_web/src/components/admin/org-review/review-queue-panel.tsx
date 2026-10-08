@@ -216,12 +216,6 @@ export function CatalogPanel() {
   return (
     <div className='space-y-4'>
       <h2 className='sr-only'>Catalog</h2>
-      <p className='text-sm text-slate-600'>
-        Every organization is listed here. Imported, created, and suggested
-        organizations start in review. Public search keeps the current
-        listings until ORG_REVIEW_GATE_ENABLED is turned on. After a release,
-        search can stay cached for up to 5 minutes. Open a row to fix it.
-      </p>
       <div className='grid gap-3 sm:grid-cols-3'>
         <AdminKpiCard label='Pending review' value={pendingCount} />
         <AdminKpiCard
@@ -353,12 +347,12 @@ export function CatalogPanel() {
         toolbar={
           <div className='mb-3 space-y-3'>
             {notice ? (
-              <StatusBanner variant='info' title='Bulk result'>
+              <StatusBanner kind='info'>
                 {notice}
               </StatusBanner>
             ) : null}
             {error ? (
-              <StatusBanner variant='error' title='Review queue'>
+              <StatusBanner kind='error'>
                 {error}
               </StatusBanner>
             ) : null}
@@ -530,7 +524,7 @@ export function CatalogPanel() {
         }}
         onCancel={() => setShowFields(false)}
       >
-        {error ? <p className='mb-3 text-sm text-red-600'>{error}</p> : null}
+        {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
         <BulkFieldsDialog
           isSaving={isSaving}
           onInvalid={(message) => setError(message)}

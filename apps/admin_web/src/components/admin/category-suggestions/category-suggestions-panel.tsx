@@ -79,10 +79,9 @@ export function CategorySuggestionsPanel() {
     `$${(summary?.month_cost_usd ?? 0).toFixed(4)}.`;
 
   return (
-    <div className='space-y-6'>
-      <CategorySuggestionSettingsCard />
+    <div className='space-y-4'>
       {summaryError ? (
-        <StatusBanner variant='error' title='Error'>
+        <StatusBanner kind='error'>
           {summaryError}
         </StatusBanner>
       ) : null}
@@ -100,6 +99,7 @@ export function CategorySuggestionsPanel() {
           void list.loadMore();
         }}
       />
+      <CategorySuggestionSettingsCard />
     </div>
   );
 }

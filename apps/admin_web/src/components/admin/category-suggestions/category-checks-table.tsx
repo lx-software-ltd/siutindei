@@ -18,6 +18,7 @@ import {
 import { AdminRowActions } from '../../ui/admin-row-actions';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { StatusBadge } from '../../ui/status-badge';
+import { StatusBanner } from '../../status-banner';
 
 interface CategoryChecksTableProps {
   items: ActivityCategoryReview[];
@@ -28,6 +29,7 @@ interface CategoryChecksTableProps {
   onLoadMore?: () => void;
   onReload: () => void;
   filters?: ReactNode;
+  toolbar?: ReactNode;
 }
 
 export function CategoryChecksTable({
@@ -39,6 +41,7 @@ export function CategoryChecksTable({
   onLoadMore,
   onReload,
   filters,
+  toolbar,
 }: CategoryChecksTableProps) {
   const expanded = useExpandedRecord({ paramName: 'category-check' });
   const openInList = items.some((item) => item.id === expanded.expandedId);
@@ -67,6 +70,7 @@ export function CategoryChecksTable({
         onToggle={expanded.toggle}
         detail={openInList ? detail : null}
         filters={filters}
+        toolbar={toolbar}
         renderActions={(item) => (
           <ReviewActions item={item} onReload={onReload} />
         )}
@@ -217,7 +221,7 @@ function CheckDetail({
           Suggested category is waiting in Category Suggestions.
         </p>
       ) : null}
-      {error ? <p className='text-sm text-red-600'>{error}</p> : null}
+      {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
     </AdminEditorPanel>
   );
 }

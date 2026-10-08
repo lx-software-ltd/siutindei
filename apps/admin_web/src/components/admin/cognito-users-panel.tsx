@@ -16,7 +16,7 @@ import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { formatDate, formatDateTime } from '@/lib/date-utils';
 import type { CognitoUser } from '@/types/admin';
 import { useAuth } from '@/components/auth-provider';
-import { DeleteIcon } from '@/components/icons/action-icons';
+import { BriefcaseIcon, DeleteIcon, ShieldIcon } from '@/components/icons/action-icons';
 import { StatusBanner } from '@/components/status-banner';
 import {
   AdminDataTableCell,
@@ -24,16 +24,12 @@ import {
   AdminDataTableHeadCell,
 } from '@/components/ui/admin-data-table';
 import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminReadOnlyValue } from '@/components/ui/admin-read-only-value';
 import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { Input } from '@/components/ui/input';
 import { ResourceTableShell, rowActions } from '@/components/ui/resource-table-shell';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  BriefcaseIcon,
-  IdentityProviderBadge,
-  RoleBadge,
-  ShieldIcon,
-} from './cognito-users/badges';
+import { IdentityProviderBadge, RoleBadge } from './cognito-users/badges';
 
 interface CognitoUserRow extends CognitoUser {
   id: string;
@@ -165,7 +161,7 @@ export function CognitoUsersPanel() {
         toolbar={
           actionError ? (
             <div className='mb-3'>
-              <StatusBanner variant='error' title='Action Failed'>
+              <StatusBanner kind='error'>
                 {actionError}
               </StatusBanner>
             </div>
@@ -282,42 +278,20 @@ export function CognitoUsersPanel() {
 function UserAttributesDetail({ user }: { user: CognitoUserRow }) {
   const attributes = user.attributes ?? {};
   const attributeEntries = Object.entries(attributes).sort((a, b) => a[0].localeCompare(b[0]));
-  const fieldId = (name: string) => `cognito-${user.id}-${name}`;
-
   return (
     <AdminEditorPanel>
       <AdminFieldGrid columns={2}>
-        <AdminField label='Email' htmlFor={fieldId('email')}>
-          <Input id={fieldId('email')} value={user.email || '—'} readOnly />
-        </AdminField>
-        <AdminField label='Username' htmlFor={fieldId('username')}>
-          <Input id={fieldId('username')} value={user.username || '—'} readOnly />
-        </AdminField>
-        <AdminField label='Status' htmlFor={fieldId('status')}>
-          <Input id={fieldId('status')} value={user.status} readOnly />
-        </AdminField>
-        <AdminField label='Groups' htmlFor={fieldId('groups')}>
-          <Input id={fieldId('groups')} value={user.groups?.join(', ') || '—'} readOnly />
-        </AdminField>
-        <AdminField label='Created' htmlFor={fieldId('created')}>
-          <Input id={fieldId('created')} value={user.created_at || '—'} readOnly />
-        </AdminField>
-        <AdminField label='Last Login' htmlFor={fieldId('login')}>
-          <Input id={fieldId('login')} value={user.last_auth_time || '—'} readOnly />
-        </AdminField>
-        <AdminField label='Raw Attributes' htmlFor={fieldId('attributes')} span='full'>
-          <Textarea
-            id={fieldId('attributes')}
-            readOnly
-            rows={attributeEntries.length === 0 ? 2 : 8}
-            value={
-              attributeEntries.length === 0
-                ? 'No attributes found.'
-                : JSON.stringify(attributes, null, 2)
-            }
-            className='max-h-64 bg-slate-50 font-mono text-xs text-slate-700'
-          />
-        </AdminField>
+        <AdminReadOnlyValue label='Email'>{user.email || '—'}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Username'>{user.username || '—'}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Status'>{user.status}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Groups'>{user.groups?.join(', ') || '—'}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Created'>{user.created_at || '—'}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Last Login'>{user.last_auth_time || '—'}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Raw Attributes' span='full' mono>
+          {attributeEntries.length === 0
+            ? 'No attributes found.'
+            : JSON.stringify(attributes, null, 2)}
+        </AdminReadOnlyValue>
       </AdminFieldGrid>
     </AdminEditorPanel>
   );

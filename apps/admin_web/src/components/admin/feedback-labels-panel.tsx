@@ -19,10 +19,9 @@ import {
   AdminDataTableHeadCell,
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
-import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
 import { AdminFilterBar } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
 import {
   deleteRowActions,
@@ -146,7 +145,7 @@ export function FeedbackLabelsPanel() {
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null
@@ -160,7 +159,7 @@ export function FeedbackLabelsPanel() {
       }
     >
       <AdminFieldGrid columns={2}>
-        <div className='space-y-1'>
+        <AdminField>
           <LanguageToggleInput
             id='label-name'
             label='Label Name'
@@ -172,17 +171,18 @@ export function FeedbackLabelsPanel() {
             }}
             onChange={handleNameChange}
             hasError={showNameError}
+            error={showNameError ? nameError : ''}
             inputClassName={validation.errorClassName(
               'name',
               Boolean(nameError)
             )}
           />
-          {showNameError ? (
-            <p className='text-xs text-red-600'>{nameError}</p>
-          ) : null}
-        </div>
-        <div className='space-y-1'>
-          <Label htmlFor='display-order'>Display Order</Label>
+        </AdminField>
+        <AdminField
+          label='Display Order'
+          htmlFor='display-order'
+          error={showDisplayOrderError ? displayOrderError : undefined}
+        >
           <Input
             id='display-order'
             type='number'
@@ -201,10 +201,7 @@ export function FeedbackLabelsPanel() {
             )}
             aria-invalid={showDisplayOrderError || undefined}
           />
-          {showDisplayOrderError ? (
-            <p className='text-xs text-red-600'>{displayOrderError}</p>
-          ) : null}
-        </div>
+        </AdminField>
       </AdminFieldGrid>
     </AdminEditorPanel>
   );

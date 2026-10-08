@@ -51,7 +51,9 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByRole('table', { name: 'Catalog' })).toBeVisible();
     const kpiCards = adminPage.getByTestId('admin-kpi-card');
     await expect(kpiCards).toHaveCount(3);
-    await expect(kpiCards).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    for (const card of await kpiCards.all()) {
+      await expect(card).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+    }
     await expect(kpiCards).toContainText([
       'Pending review',
       'With missing details',

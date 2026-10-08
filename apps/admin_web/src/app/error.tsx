@@ -1,5 +1,7 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
+
 interface GlobalErrorProps {
   error: Error & { digest?: string };
   reset: () => void;
@@ -12,13 +14,9 @@ export default function GlobalError({ error: _error, reset }: GlobalErrorProps) 
       <p className='text-sm text-slate-600'>
         We could not load this page. Please try again.
       </p>
-      <button
-        type='button'
-        onClick={reset}
-        className='rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700'
-      >
+      <Button type='button' onClick={reset}>
         Try Again
-      </button>
+      </Button>
     </main>
   );
 }

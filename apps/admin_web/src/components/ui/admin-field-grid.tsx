@@ -5,6 +5,21 @@ import { clsx } from 'clsx';
 import { AdminInlineError } from './admin-inline-error';
 import { Label } from './label';
 
+/** Invalid control border. Import this instead of copying the class string. */
+export const formErrorClassName =
+  'border-red-500 focus:border-red-500 focus:ring-red-500';
+
+export const requiredIndicatorClassName = 'ml-0.5 text-red-600';
+
+/** Required-field asterisk. One mark for every editor. */
+export function RequiredMark() {
+  return (
+    <span aria-hidden className={requiredIndicatorClassName}>
+      *
+    </span>
+  );
+}
+
 export type AdminFieldGridColumns = 1 | 2 | 4;
 
 const columnStyles: Record<AdminFieldGridColumns, string> = {
@@ -38,6 +53,8 @@ const spanStyles = {
 export interface AdminFieldProps {
   /** Visible label; omit when the control renders its own (for example checkbox groups). */
   label?: ReactNode;
+  /** Id for the label when a group is labelled with `aria-labelledby`. */
+  labelId?: string;
   htmlFor?: string;
   /** Columns to span inside the parent grid. */
   span?: keyof typeof spanStyles;
@@ -53,6 +70,7 @@ export interface AdminFieldProps {
 /** One labelled control inside `AdminFieldGrid`. */
 export function AdminField({
   label,
+  labelId,
   htmlFor,
   span = 1,
   hint,
@@ -65,13 +83,9 @@ export function AdminField({
   return (
     <div className={clsx('min-w-0', spanStyles[span], className)}>
       {label ? (
-        <Label htmlFor={htmlFor}>
+        <Label id={labelId} htmlFor={htmlFor}>
           {label}
-          {required ? (
-            <span aria-hidden className='ml-0.5 text-red-600'>
-              *
-            </span>
-          ) : null}
+          {required ? <RequiredMark /> : null}
         </Label>
       ) : null}
       {children}

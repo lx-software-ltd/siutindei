@@ -9,17 +9,16 @@ import {
 } from '../../../lib/api-client-category-suggestions';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { Button } from '../../ui/button';
+import { StatusBanner } from '../../status-banner';
 import { DecisionDialog } from './decision-dialog';
 
 interface SuggestionDetailProps {
   suggestionId: string;
-  onClose: () => void;
   onReload?: () => void;
 }
 
 export function SuggestionDetail({
   suggestionId,
-  onClose,
   onReload,
 }: SuggestionDetailProps) {
   const [item, setItem] = useState<CategorySuggestion | null>(null);
@@ -62,7 +61,7 @@ export function SuggestionDetail({
     return (
       <AdminEditorPanel>
         <p className='text-sm text-slate-600'>Loading suggestion.</p>
-        {error ? <p className='text-sm text-red-600'>{error}</p> : null}
+        {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
       </AdminEditorPanel>
     );
   }
@@ -82,13 +81,10 @@ export function SuggestionDetail({
             >
               Enrich again
             </Button>
-            <Button type='button' variant='secondary' onClick={onClose}>
-              Close
-            </Button>
           </>
         }
       >
-        {error ? <p className='text-sm text-red-600'>{error}</p> : null}
+        {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
         <p className='text-sm text-slate-600'>
           {item.rationale || 'No rationale yet.'}
         </p>

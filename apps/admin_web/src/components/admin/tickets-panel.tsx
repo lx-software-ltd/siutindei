@@ -16,6 +16,7 @@ import {
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { formatDateTime } from '@/lib/date-utils';
 import type { FeedbackLabel, Organization } from '@/types/admin';
+import { ApproveIcon, RejectIcon } from '@/components/icons/action-icons';
 import { StatusBanner } from '@/components/status-banner';
 import {
   AdminDataTableCell,
@@ -24,7 +25,8 @@ import {
 } from '@/components/ui/admin-data-table';
 import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
 import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
-import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
+import { AdminField, AdminFieldGrid, formErrorClassName } from '@/components/ui/admin-field-grid';
+import { AdminReadOnlyValue } from '@/components/ui/admin-read-only-value';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ResourceTableShell, rowActions } from '@/components/ui/resource-table-shell';
@@ -58,52 +60,19 @@ const TICKET_TYPE_LABELS: Record<TicketType, string> = {
   organization_feedback: 'Feedback',
 };
 
-const TICKET_TYPE_COLORS: Record<TicketType, string> = {
-  access_request: 'bg-blue-100 text-blue-800',
-  organization_suggestion: 'bg-purple-100 text-purple-800',
-  organization_feedback: 'bg-amber-100 text-amber-800',
-};
+const TICKET_TYPE_TONE = {
+  access_request: 'blue',
+  organization_suggestion: 'purple',
+  organization_feedback: 'amber',
+} as const;
 
 function TicketTypeBadge({ type }: { type: TicketType }) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${TICKET_TYPE_COLORS[type]}`}
-    >
-      {TICKET_TYPE_LABELS[type]}
-    </span>
-  );
-}
-
-function ApproveIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox='0 0 24 24'
-      fill='none'
-      stroke='currentColor'
-      strokeWidth='2'
-      strokeLinecap='round'
-      strokeLinejoin='round'
-    >
-      <path d='M20 6 9 17l-5-5' />
-    </svg>
-  );
-}
-
-function RejectIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox='0 0 24 24'
-      fill='none'
-      stroke='currentColor'
-      strokeWidth='2'
-      strokeLinecap='round'
-      strokeLinejoin='round'
-    >
-      <path d='M18 6 6 18' />
-      <path d='m6 6 12 12' />
-    </svg>
+    <StatusBadge
+      status={type}
+      tone={TICKET_TYPE_TONE[type]}
+      label={TICKET_TYPE_LABELS[type]}
+    />
   );
 }
 
@@ -302,12 +271,12 @@ export function TicketsPanel() {
           pendingCount > 0 || showToolbarError ? (
             <div className='mb-3 space-y-3'>
               {pendingCount > 0 ? (
-                <StatusBanner variant='info' title='Pending Review'>
+                <StatusBanner kind='pending-review'>
                   {pendingCount} ticket{pendingCount !== 1 ? 's' : ''} awaiting review.
                 </StatusBanner>
               ) : null}
               {showToolbarError ? (
-                <StatusBanner variant='error' title='Error'>
+                <StatusBanner kind='error'>
                   {reviewError}
                 </StatusBanner>
               ) : null}
@@ -420,75 +389,53 @@ function TicketDetail({
     <AdminEditorPanel
       status={
         reviewError ? (
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner kind='error'>
             {reviewError}
           </StatusBanner>
         ) : null
       }
     >
       <AdminFieldGrid columns={2}>
-        <AdminField label='Ticket ID' htmlFor={fieldId('ticket-id')}>
-          <Input id={fieldId('ticket-id')} value={ticket.ticket_id} readOnly />
-        </AdminField>
-        <AdminField label='Type' htmlFor={fieldId('type')}>
-          <Input id={fieldId('type')} value={TICKET_TYPE_LABELS[ticket.ticket_type]} readOnly />
-        </AdminField>
-        <AdminField label='Organization' htmlFor={fieldId('organization')}>
-          <Input id={fieldId('organization')} value={ticket.organization_name} readOnly />
-        </AdminField>
-        <AdminField label='Submitted by' htmlFor={fieldId('submitter')}>
-          <Input id={fieldId('submitter')} value={ticket.submitter_email} readOnly />
-        </AdminField>
-        <AdminField label='Status' htmlFor={fieldId('status')}>
-          <Input id={fieldId('status')} value={ticket.status} readOnly />
-        </AdminField>
-        <AdminField label='Submitted' htmlFor={fieldId('submitted')}>
-          <Input id={fieldId('submitted')} value={formatDateTime(ticket.created_at)} readOnly />
-        </AdminField>
+        <AdminReadOnlyValue label='Ticket ID' mono>{ticket.ticket_id}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Type'>{TICKET_TYPE_LABELS[ticket.ticket_type]}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Organization'>{ticket.organization_name}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Submitted by'>{ticket.submitter_email}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Status'>{ticket.status}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Submitted'>{formatDateTime(ticket.created_at)}</AdminReadOnlyValue>
         {ticket.message ? (
-          <AdminField label='Message' htmlFor={fieldId('message')} span='full'>
-            <Textarea id={fieldId('message')} value={ticket.message} readOnly rows={3} />
-          </AdminField>
+          <AdminReadOnlyValue label='Message' span='full'>
+            {ticket.message}
+          </AdminReadOnlyValue>
         ) : null}
         {ticket.feedback_stars !== null && ticket.feedback_stars !== undefined ? (
-          <AdminField label='Stars' htmlFor={fieldId('stars')}>
-            <Input id={fieldId('stars')} value={String(ticket.feedback_stars)} readOnly />
-          </AdminField>
+          <AdminReadOnlyValue label='Stars'>{String(ticket.feedback_stars)}</AdminReadOnlyValue>
         ) : null}
         {feedbackLabelNames.length > 0 ? (
-          <AdminField label='Labels' htmlFor={fieldId('labels')} span='full'>
-            <Input id={fieldId('labels')} value={feedbackLabelNames.join(', ')} readOnly />
-          </AdminField>
+          <AdminReadOnlyValue label='Labels' span='full'>{feedbackLabelNames.join(', ')}</AdminReadOnlyValue>
         ) : null}
         {ticket.feedback_text ? (
-          <AdminField label='Feedback' htmlFor={fieldId('feedback')} span='full'>
-            <Textarea id={fieldId('feedback')} value={ticket.feedback_text} readOnly rows={3} />
-          </AdminField>
+          <AdminReadOnlyValue label='Feedback' span='full'>
+            {ticket.feedback_text}
+          </AdminReadOnlyValue>
         ) : null}
         {ticket.description ? (
-          <AdminField label='Description' htmlFor={fieldId('description')} span='full'>
-            <Textarea id={fieldId('description')} value={ticket.description} readOnly rows={3} />
-          </AdminField>
+          <AdminReadOnlyValue label='Description' span='full'>
+            {ticket.description}
+          </AdminReadOnlyValue>
         ) : null}
         {ticket.suggested_district ? (
-          <AdminField label='District' htmlFor={fieldId('district')}>
-            <Input id={fieldId('district')} value={ticket.suggested_district} readOnly />
-          </AdminField>
+          <AdminReadOnlyValue label='District'>{ticket.suggested_district}</AdminReadOnlyValue>
         ) : null}
         {ticket.suggested_address ? (
-          <AdminField label='Address' htmlFor={fieldId('address')} span='full'>
-            <Input id={fieldId('address')} value={ticket.suggested_address} readOnly />
-          </AdminField>
+          <AdminReadOnlyValue label='Address' span='full'>{ticket.suggested_address}</AdminReadOnlyValue>
         ) : null}
         {!isPending && ticket.admin_notes ? (
-          <AdminField label='Admin Notes' htmlFor={fieldId('notes-ro')} span='full'>
-            <Textarea id={fieldId('notes-ro')} value={ticket.admin_notes} readOnly rows={3} />
-          </AdminField>
+          <AdminReadOnlyValue label='Admin Notes' span='full'>
+            {ticket.admin_notes}
+          </AdminReadOnlyValue>
         ) : null}
         {!isPending && ticket.reviewed_at ? (
-          <AdminField label='Reviewed' htmlFor={fieldId('reviewed')}>
-            <Input id={fieldId('reviewed')} value={formatDateTime(ticket.reviewed_at)} readOnly />
-          </AdminField>
+          <AdminReadOnlyValue label='Reviewed'>{formatDateTime(ticket.reviewed_at)}</AdminReadOnlyValue>
         ) : null}
       </AdminFieldGrid>
 
@@ -554,7 +501,7 @@ function TicketDetail({
                 onChange={(event) => {
                   onChange({ orgTouched: true, selectedOrgId: event.target.value });
                 }}
-                className={showOrgError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
+                className={showOrgError ? formErrorClassName : ''}
                 aria-invalid={showOrgError || undefined}
               >
                 <option value=''>Select an organization...</option>

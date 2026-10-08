@@ -30,6 +30,7 @@ import {
   AdminEditorPanel,
 } from '@/components/ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
+import { AdminReadOnlyValue } from '@/components/ui/admin-read-only-value';
 import { AdminFilterBar } from '@/components/ui/admin-filter-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -172,7 +173,7 @@ export function ApiKeysPanel() {
     <AdminEditorPanel
       status={
         formError ? (
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner kind='error'>
             {formError}
           </StatusBanner>
         ) : null
@@ -261,40 +262,20 @@ export function ApiKeysPanel() {
   ) : selected ? (
     <AdminEditorPanel>
       <AdminFieldGrid columns={4}>
-        <AdminField label='Name' htmlFor='api-key-detail-name' span={2}>
-          <Input id='api-key-detail-name' value={selected.name} readOnly />
-        </AdminField>
-        <AdminField label='Scope' htmlFor='api-key-detail-scope'>
-          <Input id='api-key-detail-scope' value={selected.scope} readOnly />
-        </AdminField>
-        <AdminField label='Status' htmlFor='api-key-detail-status'>
-          <Input id='api-key-detail-status' value={selected.status} readOnly />
-        </AdminField>
-        <AdminField label='Prefix' htmlFor='api-key-detail-prefix' span={2}>
-          <Input
-            id='api-key-detail-prefix'
-            value={`${selected.key_prefix}...`}
-            readOnly
-          />
-        </AdminField>
-        <AdminField label='Expires' htmlFor='api-key-detail-expires'>
-          <Input
-            id='api-key-detail-expires'
-            value={
-              selected.expires_at
-                ? formatDateTime(selected.expires_at)
-                : 'Never'
-            }
-            readOnly
-          />
-        </AdminField>
-        <AdminField label='Last used' htmlFor='api-key-detail-used'>
-          <Input
-            id='api-key-detail-used'
-            value={formatDateTime(selected.last_used_at)}
-            readOnly
-          />
-        </AdminField>
+        <AdminReadOnlyValue label='Name' span={2}>
+          {selected.name}
+        </AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Scope'>{selected.scope}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Status'>{selected.status}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Prefix' span={2} mono>
+          {`${selected.key_prefix}...`}
+        </AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Expires'>
+          {selected.expires_at ? formatDateTime(selected.expires_at) : 'Never'}
+        </AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Last used'>
+          {formatDateTime(selected.last_used_at)}
+        </AdminReadOnlyValue>
       </AdminFieldGrid>
     </AdminEditorPanel>
   ) : null;
@@ -321,10 +302,10 @@ export function ApiKeysPanel() {
         toolbar={
           createdKey ? (
             <div className='mb-3'>
-              <StatusBanner variant='success' title='API key created'>
+              <StatusBanner kind='saved'>
                 <span className='mb-2 block'>
-                  Copy the key now. It is shown only once and cannot be
-                  retrieved later.
+                  API key created. Copy the key now. It is shown only once
+                  and cannot be retrieved later.
                 </span>
                 <span className='flex flex-wrap items-center gap-2'>
                   <code
@@ -436,7 +417,7 @@ export function ApiKeysPanel() {
       <AdminDiscardChangesDialog prompt={shell.expanded.discardPrompt} />
       {formError && !showCreateForm ? (
         <div className='mt-3'>
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner kind='error'>
             {formError}
           </StatusBanner>
         </div>

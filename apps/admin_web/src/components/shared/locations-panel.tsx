@@ -19,7 +19,7 @@ import {
   AdminDataTableHeadCell,
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
-import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
 import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import {
   AddressAutocomplete,
@@ -27,7 +27,6 @@ import {
 } from '../ui/address-autocomplete';
 import { CascadingAreaSelect } from '../ui/cascading-area-select';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import {
   deleteRowActions,
   ResourceTableShell,
@@ -188,7 +187,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     formKey
   );
   const errorInputClassName =
-    'border-red-500 focus:border-red-500 focus:ring-red-500';
+    formErrorClassName;
   const { markTouched } = validation;
   const shouldShowError = (field: string, message: string) =>
     validation.shouldShowError(field, Boolean(message));
@@ -360,7 +359,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     <AdminEditorPanel
       status={
         panel.error ? (
-          <StatusBanner variant='error' title='Error'>
+          <StatusBanner kind='error'>
             {panel.error}
           </StatusBanner>
         ) : null
@@ -374,8 +373,12 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
       }
     >
       <AdminFieldGrid columns={2}>
-        <div className='sm:col-span-2 space-y-1'>
-          <Label htmlFor='location-address'>Address</Label>
+        <AdminField
+          label='Address'
+          htmlFor='location-address'
+          span={2}
+          error={showAddressError ? addressError : undefined}
+        >
           <AddressAutocomplete
             id='location-address'
             value={panel.formState.address}
@@ -393,11 +396,8 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             hasError={showAddressError}
             onBlur={() => markTouched('address')}
           />
-          {showAddressError ? (
-            <p className='text-xs text-red-600'>{addressError}</p>
-          ) : null}
-        </div>
-        <div className='sm:col-span-2'>
+        </AdminField>
+        <AdminField span={2}>
           <CascadingAreaSelect
             tree={tree}
             value={panel.formState.area_id}
@@ -407,9 +407,8 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             hasError={showAreaError}
             errorMessage={showAreaError ? areaError : undefined}
           />
-        </div>
-        <div>
-          <Label htmlFor='location-lat'>Latitude</Label>
+        </AdminField>
+        <AdminField label='Latitude' htmlFor='location-lat'>
           <Input
             id='location-lat'
             type='number'
@@ -422,9 +421,8 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
               }))
             }
           />
-        </div>
-        <div>
-          <Label htmlFor='location-lng'>Longitude</Label>
+        </AdminField>
+        <AdminField label='Longitude' htmlFor='location-lng'>
           <Input
             id='location-lng'
             type='number'
@@ -437,7 +435,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
               }))
             }
           />
-        </div>
+        </AdminField>
       </AdminFieldGrid>
     </AdminEditorPanel>
   );

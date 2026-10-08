@@ -184,7 +184,7 @@ export function ImportsPanel() {
     importStatus === 'processing' ? 'Processing…' : 'Uploading…';
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-4'>
       <AdminTabStrip
         aria-label='Imports'
         items={IMPORT_TABS}
@@ -201,7 +201,7 @@ export function ImportsPanel() {
             <AdminEditorPanel
               status={
                 importError ? (
-                  <StatusBanner variant='error' title='Import error'>
+                  <StatusBanner kind='error'>
                     {importError}
                   </StatusBanner>
                 ) : null
@@ -340,12 +340,12 @@ export function ImportsPanel() {
               status={
                 <>
                   {exportError ? (
-                    <StatusBanner variant='error' title='Export error'>
+                    <StatusBanner kind='error'>
                       {exportError}
                     </StatusBanner>
                   ) : null}
                   {exportWarnings.length > 0 ? (
-                    <StatusBanner variant='info' title='Export warnings'>
+                    <StatusBanner kind='info'>
                       {exportWarnings.length} warning(s) encountered. See file
                       for details.
                     </StatusBanner>

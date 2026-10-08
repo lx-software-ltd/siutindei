@@ -11,6 +11,7 @@ import { useConfirmDialog } from '../../hooks/use-confirm-dialog';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { getResourceApi } from '../../lib/resource-api';
 import type { Organization } from '../../types/admin';
+import { PlusIcon } from '../icons/action-icons';
 import { OrganizationWorkspaceTitle } from './organization-workspace-title';
 import { WorkspaceScopeGate } from './workspace-empty';
 import { AdminEditorPanel } from '../ui/admin-editor-panel';
@@ -23,6 +24,7 @@ import {
   initialMediaPanelState,
   isManagedMediaUrl,
   mediaPanelReducer,
+  discardUnsavedMediaUploads,
   normalizeMediaUrls,
   reorderMediaUrls,
   resolveLogoMediaUrl,
@@ -30,23 +32,6 @@ import {
   type MediaPanelState,
   uploadMediaFile,
 } from './media/media-panel-utils';
-
-function PlusIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox='0 0 24 24'
-      fill='none'
-      stroke='currentColor'
-      strokeWidth='2'
-      strokeLinecap='round'
-      strokeLinejoin='round'
-    >
-      <line x1='12' y1='5' x2='12' y2='19' />
-      <line x1='5' y1='12' x2='19' y2='12' />
-    </svg>
-  );
-}
 
 export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
   const isAdmin = mode === 'admin';
@@ -117,6 +102,50 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
     setMediaField('dragOverIndex', value);
   const { confirmDialog } = useConfirmDialog();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingUploadsRef = useRef({ orgId: '', urls: [] as string[] });
+  const previousOrgIdRef = useRef(scopedOrgId ?? '');
+  const panelAliveRef = useRef(false);
+
+  useEffect(() => {
+    pendingUploadsRef.current = {
+      orgId: selectedOrgId,
+      urls: uploadedMediaUrls,
+    };
+  }, [selectedOrgId, uploadedMediaUrls]);
+
+  useEffect(() => {
+    const previousOrgId = previousOrgIdRef.current;
+    previousOrgIdRef.current = scopedOrgId ?? '';
+    if (!previousOrgId || previousOrgId === (scopedOrgId ?? '')) {
+      return;
+    }
+    const pending = pendingUploadsRef.current;
+    if (pending.orgId === previousOrgId && pending.urls.length > 0) {
+      discardUnsavedMediaUploads(pending.orgId, pending.urls);
+      pendingUploadsRef.current = { orgId: '', urls: [] };
+    }
+  }, [scopedOrgId]);
+
+  useEffect(() => {
+    panelAliveRef.current = true;
+    return () => {
+      panelAliveRef.current = false;
+      const pending = pendingUploadsRef.current;
+      if (!pending.orgId || pending.urls.length === 0) {
+        return;
+      }
+      const snapshot = {
+        orgId: pending.orgId,
+        urls: [...pending.urls],
+      };
+      window.setTimeout(() => {
+        if (panelAliveRef.current) {
+          return;
+        }
+        discardUnsavedMediaUploads(snapshot.orgId, snapshot.urls);
+      }, 0);
+    };
+  }, []);
 
   const isMediaBusy = isSaving || isProcessingMedia;
   const selectedOrganization = organization;
@@ -412,61 +441,21 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
     }
   };
 
-  const handleCancelChanges = async () => {
-    if (!selectedOrgId) {
-      return;
-    }
-
-    // Clean up uploaded media that haven't been saved
-    if (uploadedMediaUrls.length > 0) {
-      setIsProcessingMedia(true);
-      try {
-        await Promise.all(
-          uploadedMediaUrls.map((url) =>
-            deleteOrganizationMedia(selectedOrgId, { media_url: url })
-          )
-        );
-      } catch (err) {
-        const message =
-          err instanceof ApiError
-            ? err.message
-            : 'Unable to clean up uploaded media.';
-        setError(message);
-      } finally {
-        setIsProcessingMedia(false);
-      }
-    }
-
-    // Reset to original state
-    const org = organization;
-    const nextMediaUrls = org?.media_urls ?? [];
-    setMediaUrls(nextMediaUrls);
-    setLogoMediaUrl(
-      resolveLogoMediaUrl(nextMediaUrls, org?.logo_media_url)
-    );
-    setPendingMediaDeletes([]);
-    setUploadedMediaUrls([]);
-    setHasUnsavedChanges(false);
-    setSuccessMessage('');
-    setDragIndex(null);
-    setDragOverIndex(null);
-  };
-
   return (
     <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='media'>
-    <div className='space-y-6'>
+    <div className='space-y-4'>
       <OrganizationWorkspaceTitle
         mode={mode}
         orgId={scopedOrgId}
         organization={organization}
       />
       {error && (
-        <StatusBanner variant='error' title='Error'>
+        <StatusBanner kind='error'>
           {error}
         </StatusBanner>
       )}
       {successMessage && (
-        <StatusBanner variant='success' title='Success'>
+        <StatusBanner kind='saved'>
           {successMessage}
         </StatusBanner>
       )}
@@ -491,17 +480,6 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
                 >
                   Save media
                 </Button>
-                {hasUnsavedChanges && (
-                  <Button
-                    type='button'
-                    variant='secondary'
-                    onClick={() => void handleCancelChanges()}
-                    disabled={isMediaBusy}
-                    className='w-full sm:w-auto'
-                  >
-                    Cancel changes
-                  </Button>
-                )}
               </>
             }
           >

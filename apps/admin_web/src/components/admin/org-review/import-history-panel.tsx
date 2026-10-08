@@ -15,11 +15,12 @@ import {
   AdminDataTableCell,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
+import { RetryIcon, ViewIcon } from '../../icons/action-icons';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminFieldGrid } from '../../ui/admin-field-grid';
 import { AdminReadOnlyValue } from '../../ui/admin-read-only-value';
-import { Button } from '../../ui/button';
 import { ConfirmDialog } from '../../ui/confirm-dialog';
+import { AdminRowActions } from '../../ui/admin-row-actions';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { StatusBanner } from '../../status-banner';
 
@@ -132,16 +133,13 @@ export function ImportHistoryPanel() {
   }
 
   return (
-    <div className='space-y-3'>
+    <div className='space-y-4'>
       <h2 className='sr-only'>Import history</h2>
       {retryError ? (
-        <StatusBanner variant='error' title='Error'>
+        <StatusBanner kind='error'>
           {retryError}
         </StatusBanner>
       ) : null}
-      <p className='text-sm text-slate-600'>
-        Open the organizations written by a previous import.
-      </p>
       <ResourceTableShell
         ariaLabel='Import history'
         rows={list.items}
@@ -188,30 +186,27 @@ export function ImportHistoryPanel() {
         )}
         renderActions={(item) =>
           item.dry_run ? null : (
-            <div className='flex flex-wrap gap-2'>
-              {canRetry(item) ? (
-                <Button
-                  type='button'
-                  size='sm'
-                  variant='secondary'
-                  onClick={() => setRetryJob(item)}
-                >
-                  Retry failed
-                </Button>
-              ) : null}
-              <Button
-                type='button'
-                size='sm'
-                variant='secondary'
-                onClick={() => {
-                  void setJob(item.id);
-                  void setTab(null);
-                  void setSection('catalog');
-                }}
-              >
-                View orgs
-              </Button>
-            </div>
+            <AdminRowActions
+              actions={[
+                {
+                  key: 'retry',
+                  label: 'Retry failed',
+                  icon: <RetryIcon className='h-4 w-4' />,
+                  hidden: !canRetry(item),
+                  onClick: () => setRetryJob(item),
+                },
+                {
+                  key: 'view',
+                  label: 'View orgs',
+                  icon: <ViewIcon className='h-4 w-4' />,
+                  onClick: () => {
+                    void setJob(item.id);
+                    void setTab(null);
+                    void setSection('catalog');
+                  },
+                },
+              ]}
+            />
           )
         }
       />
