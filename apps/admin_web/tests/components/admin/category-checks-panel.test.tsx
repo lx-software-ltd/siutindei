@@ -88,10 +88,25 @@ describe('CategoryChecksPanel sweep buttons', () => {
 
   it('offers pending and all-orgs sweep buttons and not verify', async () => {
     render(<CategoryChecksPanel />, { wrapper });
-    expect(await screen.findByRole('button', { name: 'Sweep pending' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sweep all orgs' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Discover categories' })).toBeInTheDocument();
+    const sweepPending = await screen.findByRole('button', { name: 'Sweep pending' });
+    const sweepAll = screen.getByRole('button', { name: 'Sweep all orgs' });
+    const discover = screen.getByRole('button', { name: 'Discover all categories' });
+    const apply = screen.getByRole('button', { name: 'Apply matching' });
+    const dismiss = screen.getByRole('button', { name: 'Dismiss matching' });
     expect(screen.queryByRole('button', { name: 'Verify categories' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Discover categories' })).not.toBeInTheDocument();
+    expect(
+      sweepPending.compareDocumentPosition(sweepAll) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      sweepAll.compareDocumentPosition(discover) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      discover.compareDocumentPosition(apply) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      apply.compareDocumentPosition(dismiss) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
   it('sweeps pending review or all organizations from the matching button', async () => {

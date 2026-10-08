@@ -153,7 +153,7 @@ all-orgs count. A run still stops at `scan_limit` (500).
 
 ## Discover
 
-Discover is the primary button. It groups activities that are still on
+Discover all categories groups activities that are still on
 Pending categorisation, on organizations in `pending_review`, by the
 imported label. An activity already placed on a real category is left
 alone; verify checks those. A label that already matches a category is

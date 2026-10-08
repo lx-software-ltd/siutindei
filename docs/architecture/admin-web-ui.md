@@ -14,7 +14,7 @@ pattern**. This page names the primitives those rules use.
 | --- | --- |
 | Page shell | Filters, then the table, inside one untitled `Card` (`AdminRecordTable`) |
 | Create | `AdminCreateButton`, label `New <noun>`, trailing slot of `AdminFilterBar` |
-| Bulk and scan actions | `toolbar` slot. Discover, Sweep pending, and Sweep all orgs stay primary. Scope filters stay in `AdminFilterBar` |
+| Bulk and scan actions | `toolbar` slot. Sweep pending, Sweep all orgs, then Discover all categories stay primary. Apply and Dismiss follow. Scope filters stay in `AdminFilterBar` |
 | Fields | `AdminField` inside `AdminFieldGrid` (1, 2, or 4 columns) |
 | Required mark and invalid border | `RequiredMark` and `formErrorClassName` from `admin-field-grid.tsx` |
 | Field errors | `error` on `AdminField`, which renders `AdminInlineError` |

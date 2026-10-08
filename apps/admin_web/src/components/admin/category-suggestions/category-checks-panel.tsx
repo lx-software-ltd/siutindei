@@ -396,6 +396,38 @@ export function CategoryChecksPanel() {
           <div className='mb-3 flex flex-wrap gap-2'>
             <Button
               type='button'
+              size='sm'
+              disabled={pendingCandidates === 0 || isRunning || isStarting}
+              loading={isStarting && confirmMode === 'pending_review'}
+              loadingLabel='Scanning…'
+              onClick={() => setConfirmMode('pending_review')}
+            >
+              Sweep pending
+            </Button>
+            <Button
+              type='button'
+              size='sm'
+              disabled={allCandidates === 0 || isRunning || isStarting}
+              loading={isStarting && confirmMode === 'all'}
+              loadingLabel='Scanning…'
+              onClick={() => setConfirmMode('all')}
+            >
+              Sweep all orgs
+            </Button>
+            <Button
+              type='button'
+              size='sm'
+              disabled={
+                (discoverActivities === 0 && discoverLabels === 0) ||
+                isRunning ||
+                isStarting
+              }
+              onClick={() => setConfirmMode('discover')}
+            >
+              Discover all categories
+            </Button>
+            <Button
+              type='button'
               variant='outline'
               size='sm'
               disabled={isRunning || isStarting || isBulkRunning}
@@ -416,38 +448,6 @@ export function CategoryChecksPanel() {
             >
               Dismiss matching
             </Button>
-            <Button
-              type='button'
-              size='sm'
-              disabled={
-                (discoverActivities === 0 && discoverLabels === 0) ||
-                isRunning ||
-                isStarting
-              }
-              onClick={() => setConfirmMode('discover')}
-            >
-              Discover categories
-            </Button>
-            <Button
-              type='button'
-              size='sm'
-              disabled={pendingCandidates === 0 || isRunning || isStarting}
-              loading={isStarting && confirmMode === 'pending_review'}
-              loadingLabel='Scanning…'
-              onClick={() => setConfirmMode('pending_review')}
-            >
-              Sweep pending
-            </Button>
-            <Button
-              type='button'
-              size='sm'
-              disabled={allCandidates === 0 || isRunning || isStarting}
-              loading={isStarting && confirmMode === 'all'}
-              loadingLabel='Scanning…'
-              onClick={() => setConfirmMode('all')}
-            >
-              Sweep all orgs
-            </Button>
           </div>
         }
       />
@@ -455,7 +455,7 @@ export function CategoryChecksPanel() {
         open={confirmMode !== null}
         title={
           confirmMode === 'discover'
-            ? 'Discover categories'
+            ? 'Discover all categories'
             : confirmMode === 'all'
               ? 'Sweep all orgs'
               : 'Sweep pending'
