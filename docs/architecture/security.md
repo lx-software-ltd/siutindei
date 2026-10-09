@@ -173,7 +173,10 @@ in the `x-partner-key` header:
   the handlers** (defense in depth, same pattern as the Cognito group
   checks). A full-access key lists every organization review status and
   can read pending name-cleanup proposals and category-check reviews.
-  Org-scoped keys only see that organization's proposals and reviews.
+  Full-access `crud` keys can decide category-check reviews and list
+  or delete leftover activity categories. Org-scoped keys only see
+  that organization's proposals and reviews, and those write and
+  category routes return `403`.
 - Writes performed with a key are attributed to `api-key:<id>` in the
   audit log.
 - Admins manage keys via `/v1/admin/api-keys` (generate, list, revoke);

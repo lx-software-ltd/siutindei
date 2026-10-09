@@ -1,4 +1,4 @@
-"""Partner read access to category-check reviews."""
+"""Partner access to category-check reviews."""
 
 from __future__ import annotations
 
@@ -8,22 +8,30 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.api.admin_auth import _get_user_sub, _set_session_audit_context
 from app.api.admin_category_reviews import (
     _STATUSES,
     _VERDICTS,
     _choice,
     _encode_cursor,
+    _one,
     _optional_uuid,
     _parse_cursor,
+    _parse_uuid,
     _query,
     _serialize,
 )
 from app.api.admin_crud import _handle_crud
-from app.api.admin_request import parse_limit, _query_param
+from app.api.admin_request import parse_limit, parse_object_body, _query_param
 from app.api.admin_resources import _RESOURCE_CONFIG
+from app.api.partner_auth import PartnerContext, require_full_access
 from app.db.engine import get_engine
 from app.db.models.category_scan import ActivityCategoryReview
-from app.exceptions import ValidationError
+from app.exceptions import NotFoundError, ValidationError
+from app.services.category_suggestions.reviews import (
+    apply_review_decision,
+    decide_matching_reviews,
+)
 from app.utils import json_response
 
 
@@ -63,6 +71,61 @@ def handle_partner_category_reviews(
                 "items": [_partner_item(_serialize(session, *row)) for row in page],
                 "next_cursor": next_cursor,
             },
+            event=event,
+        )
+
+
+def handle_partner_category_review_write(
+    event: Mapping[str, Any],
+    partner: PartnerContext,
+    resource_id: str,
+) -> dict[str, Any]:
+    """Apply, dismiss, or revert reviews. Full-access keys only."""
+    require_full_access(partner)
+    if resource_id == "bulk":
+        return _bulk(event)
+    return _decide(event, resource_id)
+
+
+def _bulk(event: Mapping[str, Any]) -> dict[str, Any]:
+    body = parse_object_body(event)
+    raw_cursor = body.get("cursor")
+    cursor = _parse_cursor(raw_cursor if isinstance(raw_cursor, str) else None)
+    with Session(get_engine()) as session:
+        _set_session_audit_context(session, event)
+        result = decide_matching_reviews(
+            session,
+            body,
+            decided_by=_get_user_sub(event),
+            cursor=cursor,
+        )
+        review = result.pop("next_review", None)
+        session.commit()
+        result["next_cursor"] = None if review is None else _encode_cursor(review)
+        return json_response(200, result, event=event)
+
+
+def _decide(event: Mapping[str, Any], raw_id: str) -> dict[str, Any]:
+    review_id = _parse_uuid(raw_id)
+    body = parse_object_body(event)
+    with Session(get_engine()) as session:
+        _set_session_audit_context(session, event)
+        review = session.get(ActivityCategoryReview, review_id)
+        if review is None:
+            raise NotFoundError("category review", str(review_id))
+        apply_review_decision(
+            session,
+            review,
+            body,
+            decided_by=_get_user_sub(event),
+        )
+        session.commit()
+        row = _one(session, review_id)
+        if row is None:
+            raise NotFoundError("category review", str(review_id))
+        return json_response(
+            200,
+            _partner_item(_serialize(session, *row)),
             event=event,
         )
 

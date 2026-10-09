@@ -34,7 +34,13 @@ info:
     - A full-access key lists every organization (`pending_review`,
       `approved`, and `rejected`) and can read pending name-cleanup
       proposals (`GET /v1/partner/name-fixes`) and category-check
-      reviews (`GET /v1/partner/category-reviews`). Organization list
+      reviews (`GET /v1/partner/category-reviews`). A full-access `crud`
+      key can also decide those reviews (`POST
+      /v1/partner/category-reviews/{id}` and `POST
+      /v1/partner/category-reviews/bulk`) and list or delete activity
+      categories (`GET` / `DELETE /v1/partner/activity-categories`).
+      Organization-scoped keys receive `403` on those write and
+      category routes. Organization list
       and detail responses include `pending_name_fixes` with the record
       type, current name, proposed name, and rules. Activity list and
       detail responses include `category_review` for the latest check
@@ -279,6 +285,110 @@ paths:
                 $ref: "#/components/schemas/PartnerCategoryReviewListResponse"
         "403":
           description: Invalid API key
+
+  /v1/partner/category-reviews/bulk:
+    post:
+      summary: Apply or dismiss matching pending reviews
+      description: |
+        Full-access `crud` keys only. Same body and paging as
+        `POST /v1/admin/category-suggestions/reviews/bulk`.
+        Organization-scoped keys receive `403`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./admin.yaml#/components/schemas/CategoryReviewBulkRequest"
+      responses:
+        "200":
+          description: Page of bulk decisions
+          content:
+            application/json:
+              schema:
+                $ref: "./admin.yaml#/components/schemas/CategoryReviewBulkResponse"
+        "400":
+          description: Invalid bulk request
+        "403":
+          description: Read-only key or organization-scoped key
+
+  /v1/partner/category-reviews/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    post:
+      summary: Apply, dismiss, or revert one category-check review
+      description: |
+        Full-access `crud` keys only. Same body as
+        `POST /v1/admin/category-suggestions/reviews/{id}`.
+        Organization-scoped keys receive `403`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./admin.yaml#/components/schemas/ActivityCategoryReviewDecision"
+      responses:
+        "200":
+          description: Updated review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartnerCategoryReview"
+        "400":
+          description: Invalid decision
+        "403":
+          description: Read-only key or organization-scoped key
+        "404":
+          description: Review not found
+
+  /v1/partner/activity-categories:
+    get:
+      summary: List the activity category tree
+      description: |
+        Full-access keys only. Returns the nested tree, including
+        empty leftover categories. Organization-scoped keys receive
+        `403`.
+      responses:
+        "200":
+          description: Category tree
+          content:
+            application/json:
+              schema:
+                $ref: "./admin.yaml#/components/schemas/ActivityCategoryTreeResponse"
+        "403":
+          description: Organization-scoped key
+
+  /v1/partner/activity-categories/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    get:
+      summary: Get one activity category
+      description: Full-access keys only.
+      responses:
+        "200":
+          description: Category
+          content:
+            application/json:
+              schema:
+                $ref: "./admin.yaml#/components/schemas/ActivityCategory"
+        "403":
+          description: Organization-scoped key
+        "404":
+          description: Not found
+    delete:
+      summary: Delete an empty activity category
+      description: |
+        Full-access `crud` keys only. Refused when the category is
+        Pending categorisation, appears in the home wizard, has
+        children, or is assigned to an activity.
+      responses:
+        "204":
+          description: Deleted
+        "400":
+          description: Category cannot be deleted
+        "403":
+          description: Read-only key or organization-scoped key
+        "404":
+          description: Not found
 
   /v1/partner/organizations:
     get:

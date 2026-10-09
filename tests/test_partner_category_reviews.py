@@ -285,10 +285,140 @@ def test_activity_detail_embeds_latest_review(monkeypatch, test_engine) -> None:
         )
 
 
-def test_partner_cannot_write_category_reviews() -> None:
+def test_partner_cannot_write_category_reviews_without_id() -> None:
     event = _partner_event("POST", "/v1/partner/category-reviews", "crud", "")
     response = _handle_partner_routes(event, "POST", "category-reviews", None)
     assert response["statusCode"] == 404
+
+
+def test_org_scoped_key_cannot_decide_category_reviews() -> None:
+    org_id = str(uuid4())
+    review_id = str(uuid4())
+    event = _partner_event(
+        "POST",
+        f"/v1/partner/category-reviews/{review_id}",
+        "crud",
+        org_id,
+    )
+    event["body"] = json.dumps({"action": "dismiss"})
+    response = _handle_partner_routes(
+        event, "POST", "category-reviews", review_id
+    )
+    assert response["statusCode"] == 403
+    assert "limited to one organization" in json.loads(response["body"])["error"]
+
+    bulk = _partner_event(
+        "POST", "/v1/partner/category-reviews/bulk", "crud", org_id
+    )
+    bulk["body"] = json.dumps({"action": "dismiss"})
+    response = _handle_partner_routes(bulk, "POST", "category-reviews", "bulk")
+    assert response["statusCode"] == 403
+
+
+def test_full_access_dismisses_a_pending_propose(
+    monkeypatch, test_engine
+) -> None:
+    _patch_engines(monkeypatch, test_engine)
+    org_id = uuid4()
+    category_id = uuid4()
+    activity_id = uuid4()
+    review_id = uuid4()
+    run_id = uuid4()
+    with Session(test_engine) as session:
+        session.add(ActivityCategory(id=category_id, name="Playhouse"))
+        session.add(_org(org_id, "Play Club", "pending_review"))
+        session.add(_activity(activity_id, org_id, category_id, "Arcade"))
+        session.add(
+            CategoryScanRun(
+                id=run_id,
+                status="done",
+                batch_size=10,
+                batches_total=1,
+                total_activities=1,
+            )
+        )
+        session.flush()
+        session.add(
+            _review(
+                run_id=run_id,
+                activity_id=activity_id,
+                org_id=org_id,
+                id=review_id,
+                verdict="propose",
+                status="pending",
+                current_category_id=category_id,
+            )
+        )
+        session.commit()
+    try:
+        event = _partner_event(
+            "POST",
+            f"/v1/partner/category-reviews/{review_id}",
+            "crud",
+            "",
+        )
+        event["body"] = json.dumps({"action": "dismiss"})
+        response = _handle_partner_routes(
+            event, "POST", "category-reviews", str(review_id)
+        )
+        assert response["statusCode"] == 200
+        body = json.loads(response["body"])
+        assert body["status"] == "dismissed"
+        assert body["id"] == str(review_id)
+        assert "decided_by" not in body
+    finally:
+        _cleanup(test_engine, org_id, category_id, activity_id, review_id, run_id)
+
+
+def test_full_access_bulk_dismisses_pending_proposes(
+    monkeypatch, test_engine
+) -> None:
+    _patch_engines(monkeypatch, test_engine)
+    org_id = uuid4()
+    category_id = uuid4()
+    activity_id = uuid4()
+    review_id = uuid4()
+    run_id = uuid4()
+    with Session(test_engine) as session:
+        session.add(ActivityCategory(id=category_id, name="Cafe"))
+        session.add(_org(org_id, "Cafe Club", "pending_review"))
+        session.add(_activity(activity_id, org_id, category_id, "Family Cafe"))
+        session.add(
+            CategoryScanRun(
+                id=run_id,
+                status="done",
+                batch_size=10,
+                batches_total=1,
+                total_activities=1,
+            )
+        )
+        session.flush()
+        session.add(
+            _review(
+                run_id=run_id,
+                activity_id=activity_id,
+                org_id=org_id,
+                id=review_id,
+                verdict="propose",
+                status="pending",
+                current_category_id=category_id,
+            )
+        )
+        session.commit()
+    try:
+        event = _partner_event(
+            "POST", "/v1/partner/category-reviews/bulk", "crud", ""
+        )
+        event["body"] = json.dumps({"action": "dismiss", "verdict": "propose"})
+        response = _handle_partner_routes(
+            event, "POST", "category-reviews", "bulk"
+        )
+        assert response["statusCode"] == 200
+        body = json.loads(response["body"])
+        assert body["decided"] == 1
+        assert body["failed"] == 0
+    finally:
+        _cleanup(test_engine, org_id, category_id, activity_id, review_id, run_id)
 
 
 def _cleanup(engine, *ids) -> None:

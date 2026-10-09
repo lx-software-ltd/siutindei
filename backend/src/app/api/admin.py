@@ -58,15 +58,7 @@ from app.api.admin_resources import (
     _validate_sessions_count,
 )
 from app.api.admin_suggestions import _handle_user_organization_suggestion
-from app.api.partner_auth import SCOPE_CRUD, get_partner_context
-from app.api.partner_category_reviews import (
-    handle_partner_category_reviews,
-    partner_get_activities,
-)
-from app.api.partner_name_fixes import (
-    handle_partner_name_fixes,
-    partner_get_organizations,
-)
+from app.api.partner_routes import handle_partner_routes as _handle_partner_routes
 from app.api.admin_tickets import (
     _handle_admin_tickets,
     _handle_user_access_request,
@@ -405,88 +397,6 @@ def _handle_manager_routes(
             return json_response(200, {"items": [], "next_cursor": None}, event=event)
         return json_response(
             403, {"error": "You don't manage any organizations"}, event=event
-        )
-
-    config = _RESOURCE_CONFIG.get(resource)
-    if not config:
-        return json_response(404, {"error": "Not found"}, event=event)
-
-    return _safe_handler(
-        lambda: _handle_crud(event, method, config, resource_id, managed_org_ids),
-        event,
-    )
-
-
-_PARTNER_RESOURCES = {
-    "organizations",
-    "locations",
-    "activities",
-    "pricing",
-    "schedules",
-}
-
-
-def _handle_partner_routes(
-    event: Mapping[str, Any],
-    method: str,
-    resource: str,
-    resource_id: Optional[str],
-) -> dict[str, Any]:
-    """Handle CRUD routes authenticated with a partner API key.
-
-    Keys with the ``read`` scope may only perform GET requests; ``crud``
-    keys get full CRUD. Org-scoped keys are restricted to their
-    organization's data (same filtering as manager routes); full-access
-    keys behave like admin CRUD.
-    """
-    partner = get_partner_context(event)
-    if partner is None:
-        logger.warning("Partner route called without API-key context")
-        return json_response(403, {"error": "Forbidden"}, event=event)
-
-    if method != "GET" and partner.scope != SCOPE_CRUD:
-        logger.warning("Partner key without crud scope attempted a write")
-        return json_response(
-            403,
-            {"error": "This API key does not allow write access"},
-            event=event,
-        )
-
-    partner_reads = {
-        "name-fixes": handle_partner_name_fixes,
-        "category-reviews": handle_partner_category_reviews,
-    }
-    if resource in partner_reads:
-        if method != "GET":
-            return json_response(404, {"error": "Not found"}, event=event)
-        reader = partner_reads[resource]
-        return _safe_handler(lambda: reader(event, partner.org_id), event)
-
-    if resource not in _PARTNER_RESOURCES:
-        return json_response(404, {"error": "Not found"}, event=event)
-
-    managed_org_ids = {partner.org_id} if partner.org_id else None
-
-    # An org-scoped key cannot create organizations: any new organization
-    # would fall outside the key's scope.
-    if managed_org_ids is not None and resource == "organizations":
-        if method == "POST":
-            return json_response(
-                403,
-                {"error": "Organization-scoped keys cannot create organizations"},
-                event=event,
-            )
-
-    if resource == "organizations" and method == "GET":
-        return _safe_handler(
-            lambda: partner_get_organizations(event, resource_id, managed_org_ids),
-            event,
-        )
-
-    if resource == "activities" and method == "GET":
-        return _safe_handler(
-            lambda: partner_get_activities(event, resource_id, managed_org_ids),
-            event,
         )
 
     config = _RESOURCE_CONFIG.get(resource)

@@ -8,7 +8,7 @@ from uuid import uuid4
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "backend" / "src"))
 
-import app.api.admin as admin_module  # noqa: E402
+import app.api.partner_routes as partner_routes  # noqa: E402
 from app.api.admin import _handle_partner_routes  # noqa: E402
 from app.api.admin_request import _parse_path  # noqa: E402
 from app.api.partner_auth import get_partner_context  # noqa: E402
@@ -149,7 +149,7 @@ def test_partner_routes_pass_org_scope_to_crud(monkeypatch) -> None:
         captured["managed_org_ids"] = managed_org_ids
         return {"statusCode": 200, "body": "{}"}
 
-    monkeypatch.setattr(admin_module, "_handle_crud", fake_crud)
+    monkeypatch.setattr(partner_routes, "_handle_crud", fake_crud)
     event = _partner_event("GET", "/v1/partner/locations", "crud", org_id)
     response = _handle_partner_routes(event, "GET", "locations", None)
     assert response["statusCode"] == 200
@@ -164,7 +164,7 @@ def test_full_access_key_has_no_org_filter(monkeypatch) -> None:
         captured["managed_org_ids"] = managed_org_ids
         return {"statusCode": 200, "body": "{}"}
 
-    monkeypatch.setattr(admin_module, "_handle_crud", fake_crud)
+    monkeypatch.setattr(partner_routes, "_handle_crud", fake_crud)
     event = _partner_event("POST", "/v1/partner/organizations", "crud", "")
     response = _handle_partner_routes(event, "POST", "organizations", None)
     assert response["statusCode"] == 200
@@ -174,7 +174,7 @@ def test_full_access_key_has_no_org_filter(monkeypatch) -> None:
 def test_read_key_can_list_resources(monkeypatch) -> None:
     """Read-scoped keys may perform GET on partner resources."""
     monkeypatch.setattr(
-        admin_module,
+        partner_routes,
         "_handle_crud",
         lambda *args, **kwargs: {"statusCode": 200, "body": "{}"},
     )
