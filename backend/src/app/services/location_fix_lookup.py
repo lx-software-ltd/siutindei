@@ -19,9 +19,10 @@ from app.db.models import Location, Organization
 from app.db.models.location_fix import LocationFixProposal
 from app.services.aws_proxy import AwsProxyError, http_invoke
 from app.services.location_fix_districts import in_hong_kong_bbox, pin_consistency
-from app.services.location_fix_geocode import lookup_address
+from app.services.location_fix_geocode import AddressLookupFailed, lookup_address
 from app.services.location_fix_model import _finish_batch
 from app.services.location_fix_quality import area_chains
+from app.services.location_fix_query import load_settings, month_cost
 from app.services.name_fix_query import ilike_pattern
 from app.utils.logging import get_logger
 
@@ -33,6 +34,11 @@ _GOOGLE_URL = "https://places.googleapis.com/v1/places/"
 _GOOGLE_USD = Decimal("0.017")
 _PRECISE_RANK = 28
 _STREET_RANK = 26
+_LOOKUP_SOURCES = (
+    "rule:missing_coordinates",
+    "lookup:nominatim",
+    "lookup:google",
+)
 
 
 def lookup_location_ids(
@@ -56,7 +62,7 @@ def lookup_location_ids(
             LocationFixProposal.status == "pending",
             LocationFixProposal.entity_type == "location",
             LocationFixProposal.kind == "update_location",
-            LocationFixProposal.source == "rule:missing_coordinates",
+            LocationFixProposal.source.in_(_LOOKUP_SOURCES),
         )
         .order_by(Location.address, Location.id)
     )
@@ -76,10 +82,26 @@ def lookup_location_ids(
     for entity_id, proposed, place_id in session.execute(stmt):
         if provider == "google" and not str(place_id or "").strip():
             continue
-        if _fresh(proposed, provider):
+        if _blocked(proposed, provider) or _fresh(proposed, provider):
             continue
         found.append(str(entity_id))
     return found
+
+
+def affordable_google_lookups(session: Session) -> int:
+    """How many Place Details calls the remaining monthly budget can pay."""
+    limit = Decimal(str(load_settings(session).monthly_cost_limit_usd))
+    room = limit - Decimal(str(month_cost(session)))
+    if room < _GOOGLE_USD:
+        return 0
+    return int(room / _GOOGLE_USD)
+
+
+def within_google_budget(session: Session, spent_here: Decimal) -> bool:
+    """True when one more Place Details call still fits the monthly limit."""
+    limit = Decimal(str(load_settings(session).monthly_cost_limit_usd))
+    spent = Decimal(str(month_cost(session))) + spent_here
+    return spent + _GOOGLE_USD <= limit
 
 
 def process_lookup_batch(
@@ -104,6 +126,9 @@ def process_lookup_batch(
                 proposal = _pending(session, entity_id)
                 if venue is None or proposal is None:
                     continue
+                if provider == "google" and not within_google_budget(session, cost):
+                    logger.warning("Google pin lookup stopped at the monthly budget")
+                    break
                 hit, spent, problem = _resolve(provider, venue)
                 cost += spent
                 if problem:
@@ -153,7 +178,10 @@ def _resolve(
 ) -> tuple[dict[str, Any] | None, Decimal, str | None]:
     if provider == "google":
         return _google(str(venue.place_id or "").strip())
-    return lookup_address(str(venue.address or "")), Decimal("0"), None
+    try:
+        return lookup_address(str(venue.address or "")), Decimal("0"), None
+    except AddressLookupFailed:
+        return None, Decimal("0"), "Address lookup failed"
 
 
 def _google(place_id: str) -> tuple[dict[str, Any] | None, Decimal, str | None]:
@@ -183,7 +211,7 @@ def _google(place_id: str) -> tuple[dict[str, Any] | None, Decimal, str | None]:
     try:
         payload = json.loads(result.get("body") or "")
     except json.JSONDecodeError:
-        return None, _GOOGLE_USD, None
+        return None, _GOOGLE_USD, "Google place lookup failed"
     if not isinstance(payload, dict):
         return None, _GOOGLE_USD, None
     location = payload.get("location") or {}
@@ -195,7 +223,7 @@ def _google(place_id: str) -> tuple[dict[str, Any] | None, Decimal, str | None]:
     except (KeyError, TypeError, ValueError):
         return None, _GOOGLE_USD, None
     returned = str(payload.get("id") or "")
-    if place_id not in returned and not returned.endswith(place_id):
+    if not returned.endswith(place_id):
         return None, _GOOGLE_USD, None
     if not in_hong_kong_bbox(lat, lng):
         return None, _GOOGLE_USD, None
@@ -221,6 +249,8 @@ def _store(
     areas: list,
 ) -> None:
     proposed = dict(proposal.proposed_location or {})
+    if _blocked(proposed, provider):
+        return
     lookup: dict[str, Any] = {
         "provider": provider,
         "looked_up_at": datetime.now(timezone.utc).isoformat(),
@@ -248,6 +278,7 @@ def _store(
             proposed["lng"] = round(float(hit["lng"]), 6)
     proposed["lookup"] = lookup
     proposal.proposed_location = proposed
+    proposal.source = f"lookup:{provider}"
 
 
 def _venues(session: Session, entity_ids: list[str]) -> dict[str, Location]:
@@ -275,6 +306,18 @@ def _pending(session: Session, entity_id: str) -> LocationFixProposal | None:
             LocationFixProposal.status == "pending",
         )
     ).first()
+
+
+def _blocked(proposed: dict | None, provider: str) -> bool:
+    """A pasted pin, and a Google pin, are not replaced by Nominatim."""
+    lookup = (proposed or {}).get("lookup") or {}
+    existing = lookup.get("provider")
+    if existing == "manual":
+        return True
+    has_pin = (proposed or {}).get("lat") is not None and (proposed or {}).get(
+        "lng"
+    ) is not None
+    return bool(provider == "nominatim" and existing == "google" and has_pin)
 
 
 def _fresh(proposed: dict | None, provider: str) -> bool:

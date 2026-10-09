@@ -145,7 +145,8 @@ not call Nominatim. Look up pins queues those rows on the same
 category-suggestion queue with `lookup` set to `nominatim`. Look up
 with Google does the same for rows that already have `place_id`, and
 stays disabled until `GOOGLE_PLACES_API_KEY` is set. A lookup fresher
-than 90 days for the same provider is skipped. Nominatim waits 2.2
+than 90 days for the same provider is skipped. A later sweep keeps
+that lookup, its pin, and its source. Nominatim waits 2.2
 seconds between calls in a batch. Grades are `precise`, `street`,
 `coarse`, or `miss`. The pin is stored on the proposal for `precise`
 and `street`. Bulk apply writes a `precise` pin that sits in the
@@ -168,14 +169,24 @@ organization warning and is not a location finding.
 
 A venue-less organization whose `source` is `edb` is matched to the
 EDB school register by school number. Name similarity of at least 0.95
-creates the venue during the sweep, at most 200 creates per sweep.
-The rest of those confident matches are stored as pending
-`create_location` from `rule:open_data`, and the sweep is truncated so
-the next run continues. Similarity from 0.80 up to 0.95 stays pending.
-A weaker name is left for the model. The register is fetched through
-the HTTP proxy. School phone numbers are not stored. Nominatim queries
-omit `countrycodes` and append Hong Kong, then drop hits outside the
-Hong Kong box, because Nominatim files Hong Kong under China.
+creates the venue during the sweep, at most 200 creates per sweep, and
+only while the request is inside an 18 second budget so the API
+Gateway limit still holds. Further confident matches are stored as
+pending `create_location` from `rule:open_data`. The activity pass
+still runs. Similarity from 0.80 up to 0.95 stays pending. A weaker
+name is left for the model. A failed register download is not cached
+and those organizations are left for the next sweep; the run records
+that the register could not be loaded. The register is fetched through
+the HTTP proxy. School phone numbers are not stored.
+
+Nominatim queries omit `countrycodes` and append Hong Kong, then drop
+hits outside the Hong Kong box, because Nominatim files Hong Kong under
+China. The admin address search omits `countrycodes` when Hong Kong is
+an active country, for the same reason. A Nominatim or Google transport
+failure is not stored as a miss. A stored lookup sets the proposal
+source to `lookup:nominatim` or `lookup:google`. Nominatim does not
+replace a Google pin or a pin an admin pasted. Google lookups are
+capped to what the remaining monthly budget can pay at 0.017 USD each.
 
 When the model names more than one venue, apply can take
 `target_location_id` for one listed candidate and creates the same join

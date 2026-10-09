@@ -10,7 +10,13 @@ from app.db.models import (
     LocationFixProposal,
     Organization,
 )
-from app.services.location_fix_registers import name_similarity, parse_edb_csv
+from app.services.aws_proxy import AwsProxyError
+from app.services.location_fix_registers import (
+    clear_edb_cache,
+    edb_register,
+    name_similarity,
+    parse_edb_csv,
+)
 from app.services.location_fix_scan import start_location_scan
 from psycopg.types.range import Range
 from sqlalchemy import select
@@ -143,7 +149,9 @@ def test_low_similarity_is_left_for_the_model(db_session, monkeypatch) -> None:
     assert rows == []
 
 
-def test_auto_apply_cap_stores_the_rest_pending(db_session, monkeypatch) -> None:
+def test_auto_apply_cap_stores_the_rest_pending(
+    db_session, monkeypatch, sample_activity_category
+) -> None:
     monkeypatch.setattr("app.services.location_fix_registers._MAX_AUTO_APPLY", 1)
     monkeypatch.setattr(
         "app.services.location_fix_registers.name_similarity",
@@ -156,21 +164,103 @@ def test_auto_apply_cap_stores_the_rest_pending(db_session, monkeypatch) -> None
     token = "Registercapfixture"
     first = _org(db_session, f"Aa {token} Harbour Kindergarten", "100000000001")
     second = _org(db_session, f"Bb {token} Harbour Kindergarten", "100000000001")
+    activity = _activity(db_session, second, sample_activity_category)
     db_session.flush()
     result, _batches = start_location_scan(
         db_session, review_scope="pending_review", query=token
     )
     assert result["auto_applied"] == 1
-    assert result["truncated"] is True
+    assert result["truncated"] is False
+    activity_row = db_session.scalars(
+        select(LocationFixProposal).where(LocationFixProposal.entity_id == activity.id)
+    ).one()
+    assert activity_row.source == "rule:no_venue"
     first_row = db_session.scalars(
         select(LocationFixProposal).where(LocationFixProposal.org_id == first.id)
     ).one()
     second_row = db_session.scalars(
-        select(LocationFixProposal).where(LocationFixProposal.org_id == second.id)
+        select(LocationFixProposal).where(
+            LocationFixProposal.org_id == second.id,
+            LocationFixProposal.entity_type == "organization",
+        )
     ).one()
     assert first_row.status == "applied"
     assert second_row.status == "pending"
     assert second_row.source == "rule:open_data"
+
+
+def test_create_budget_stores_a_confident_match_pending(
+    db_session, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        "app.services.location_fix_scan._SWEEP_CREATE_BUDGET_SECONDS",
+        -1,
+    )
+    _register(monkeypatch)
+    db_session.add(
+        GeographicArea(name="Central and Western", level="district", active=True)
+    )
+    org = _org(db_session, "Harbour Kindergarten", "100000000001")
+    db_session.flush()
+    result, _batches = start_location_scan(
+        db_session, review_scope="pending_review", org_id=org.id
+    )
+    assert result["auto_applied"] == 0
+    assert result["truncated"] is False
+    proposal = db_session.scalars(
+        select(LocationFixProposal).where(LocationFixProposal.org_id == org.id)
+    ).one()
+    assert proposal.status == "pending"
+    assert proposal.source == "rule:open_data"
+    assert (
+        db_session.scalars(select(Location).where(Location.org_id == org.id)).first()
+        is None
+    )
+
+
+def test_failed_register_fetch_is_retried(monkeypatch) -> None:
+    clear_edb_cache()
+    calls = {"n": 0}
+
+    def fake_invoke(*_args, **_kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise AwsProxyError("Timeout", "timed out")
+        return {"status": 200, "body": _CSV}
+
+    monkeypatch.setattr("app.services.location_fix_registers.http_invoke", fake_invoke)
+    try:
+        assert edb_register() is None
+        assert "100000000001" in edb_register()
+        assert calls["n"] == 2
+    finally:
+        clear_edb_cache()
+
+
+def test_register_outage_leaves_the_organization(db_session, monkeypatch) -> None:
+    clear_edb_cache()
+
+    def fake_invoke(*_args, **_kwargs):
+        raise AwsProxyError("Timeout", "timed out")
+
+    monkeypatch.setattr("app.services.location_fix_registers.http_invoke", fake_invoke)
+    org = _org(db_session, "Harbour Kindergarten", "100000000001")
+    db_session.flush()
+    try:
+        result, batches = start_location_scan(
+            db_session, review_scope="pending_review", org_id=org.id
+        )
+    finally:
+        clear_edb_cache()
+    assert result["queued_for_model"] == 0
+    assert result["error"] == "EDB school register could not be loaded"
+    assert batches == []
+    assert (
+        db_session.scalars(
+            select(LocationFixProposal).where(LocationFixProposal.org_id == org.id)
+        ).first()
+        is None
+    )
 
 
 def test_other_sources_do_not_fetch_the_register(

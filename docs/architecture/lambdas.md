@@ -109,7 +109,9 @@ their primary responsibilities.
   same queue and spend `location_fix_settings.monthly_cost_limit_usd`,
   which is separate from category-check spend. Pin lookups on that
   queue set `entity_type` to `location` and `lookup` to `nominatim` or
-  `google`. A successful Google call counts 0.017 USD. The worker handles
+  `google`. A successful Google call counts 0.017 USD, and the sweep
+  queues only as many calls as the remaining monthly budget can pay.
+  The worker handles
   `location_scan_run_id` before `scan_run_id`. The sweep also loads the
   EDB school register through the HTTP proxy.
   After a live import commits, the function sends SQS messages when

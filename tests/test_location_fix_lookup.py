@@ -12,11 +12,14 @@ from app.db.models import (
     GeographicArea,
     Location,
     LocationFixProposal,
+    LocationFixSettings,
     LocationScanRun,
     Organization,
 )
 from app.exceptions import ValidationError
+from app.services.location_fix_geocode import AddressLookupFailed
 from app.services.location_fix_lookup import _google, process_lookup_batch
+from app.services.location_fix_query import load_settings
 from app.services.location_fix_scan import start_location_scan
 from app.services.location_fixes import decide_bulk, decide_proposal
 from sqlalchemy import select
@@ -58,7 +61,7 @@ def _pinless(db_session, org, area, **kwargs) -> Location:
     venue = Location(
         org_id=org.id,
         area_id=area.id,
-        address="8 Harbour Road",
+        address=kwargs.pop("address", "8 Harbour Road"),
         **kwargs,
     )
     db_session.add(venue)
@@ -322,3 +325,211 @@ def test_nominatim_batch_pauses_between_requests(monkeypatch) -> None:
     assert process_lookup_batch(uuid4(), "nominatim", ["one", "two"], message_id="m")
     assert sleeps == [2.2]
     assert proposals["one"].proposed_location["lookup"]["grade"] == "precise"
+    assert proposals["one"].source == "lookup:nominatim"
+
+
+def _finish(db_session, result) -> None:
+    run = db_session.get(LocationScanRun, result["scan_run_id"])
+    assert run is not None
+    run.status = "done"
+    db_session.flush()
+
+
+def test_nominatim_failure_is_not_stored_as_a_miss(monkeypatch) -> None:
+    proposal = SimpleNamespace(proposed_location={"address": "8 Harbour Road"})
+    finished: dict[str, object] = {}
+
+    def fail(_address):
+        raise AddressLookupFailed("timeout")
+
+    def finish(*_args, **kwargs):
+        finished["failed"] = kwargs.get("failed")
+        finished["error"] = kwargs.get("error")
+
+    monkeypatch.setattr("app.services.location_fix_lookup.lookup_address", fail)
+    monkeypatch.setattr(
+        "app.services.location_fix_lookup._venues",
+        lambda _session, _ids: {
+            "one": SimpleNamespace(id="one", area_id="area", address="8 Harbour Road")
+        },
+    )
+    monkeypatch.setattr(
+        "app.services.location_fix_lookup._pending",
+        lambda _session, _entity_id: proposal,
+    )
+    monkeypatch.setattr(
+        "app.services.location_fix_lookup.area_chains",
+        lambda _session, _ids: {},
+    )
+    monkeypatch.setattr("app.services.location_fix_lookup._finish_batch", finish)
+
+    class _Session:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def commit(self):
+            return None
+
+    monkeypatch.setattr(
+        "app.services.location_fix_lookup.Session", lambda _engine: _Session()
+    )
+    monkeypatch.setattr("app.services.location_fix_lookup.get_engine", lambda: object())
+    assert process_lookup_batch(uuid4(), "nominatim", ["one"], message_id="m")
+    assert "lookup" not in proposal.proposed_location
+    assert finished["failed"] is True
+    assert finished["error"] == "Address lookup failed"
+
+
+def test_lookup_keeps_a_manual_pin_and_a_google_pin(db_session, monkeypatch) -> None:
+    monkeypatch.setenv("GOOGLE_PLACES_API_KEY", "test-key")
+    org = _org(db_session)
+    area = _district(db_session, _country(db_session), "Central and Western")
+    venue = _pinless(db_session, org, area, place_id="ChIJfixture")
+    result, _batches = start_location_scan(
+        db_session,
+        review_scope="pending_review",
+        entity_type="location",
+        org_id=org.id,
+    )
+    _finish(db_session, result)
+    proposal = _proposal(db_session, org)
+    proposal.proposed_location = {
+        "address": "8 Harbour Road",
+        "lat": 22.28,
+        "lng": 114.15,
+        "lookup": {
+            "provider": "manual",
+            "grade": "manual",
+            "looked_up_at": "2020-01-01T00:00:00+00:00",
+        },
+    }
+    db_session.flush()
+    nominatim, nominatim_batches = start_location_scan(
+        db_session,
+        review_scope="pending_review",
+        entity_type="location",
+        org_id=org.id,
+        lookup="nominatim",
+    )
+    assert nominatim["queued_for_lookup"] == 0
+    assert nominatim_batches == []
+    _finish(db_session, nominatim)
+    proposal.proposed_location = {
+        "address": "8 Harbour Road",
+        "lat": 22.28,
+        "lng": 114.15,
+        "lookup": {
+            "provider": "google",
+            "grade": "precise",
+            "looked_up_at": "2020-01-01T00:00:00+00:00",
+        },
+    }
+    proposal.source = "lookup:google"
+    db_session.flush()
+    again, later = start_location_scan(
+        db_session,
+        review_scope="pending_review",
+        entity_type="location",
+        org_id=org.id,
+        lookup="nominatim",
+    )
+    assert again["queued_for_lookup"] == 0
+    assert later == []
+    assert venue.lat is None
+
+
+def test_later_sweep_keeps_the_lookup_pin(db_session) -> None:
+    org = _org(db_session)
+    area = _district(db_session, _country(db_session), "Central and Western")
+    _pinless(db_session, org, area)
+    result, _batches = start_location_scan(
+        db_session,
+        review_scope="pending_review",
+        entity_type="location",
+        org_id=org.id,
+    )
+    _finish(db_session, result)
+    proposal = _proposal(db_session, org)
+    proposal.source = "lookup:nominatim"
+    proposal.proposed_location = {
+        "address": "8 Harbour Road",
+        "area_id": str(area.id),
+        "lat": 22.28,
+        "lng": 114.15,
+        "lookup": {
+            "provider": "nominatim",
+            "grade": "precise",
+            "district_consistent": True,
+            "looked_up_at": "2020-01-01T00:00:00+00:00",
+        },
+    }
+    db_session.flush()
+    start_location_scan(
+        db_session,
+        review_scope="pending_review",
+        entity_type="location",
+        org_id=org.id,
+    )
+    kept = _proposal(db_session, org)
+    assert kept.source == "lookup:nominatim"
+    assert kept.proposed_location["lat"] == 22.28
+    assert kept.proposed_location["lookup"]["grade"] == "precise"
+
+
+def test_google_lookup_stays_inside_the_remaining_budget(
+    db_session, monkeypatch
+) -> None:
+    monkeypatch.setenv("GOOGLE_PLACES_API_KEY", "test-key")
+    org = _org(db_session)
+    area = _district(db_session, _country(db_session), "Central and Western")
+    _pinless(db_session, org, area, place_id="ChIJone")
+    _pinless(db_session, org, area, address="9 Harbour Road", place_id="ChIJtwo")
+    result, _batches = start_location_scan(
+        db_session,
+        review_scope="pending_review",
+        entity_type="location",
+        org_id=org.id,
+    )
+    _finish(db_session, result)
+    settings = load_settings(db_session)
+    assert isinstance(settings, LocationFixSettings)
+    settings.monthly_cost_limit_usd = Decimal("0.017")
+    db_session.flush()
+    queued, batches = start_location_scan(
+        db_session,
+        review_scope="pending_review",
+        entity_type="location",
+        org_id=org.id,
+        lookup="google",
+    )
+    assert queued["queued_for_lookup"] == 1
+    assert queued["truncated"] is True
+    assert len(batches) == 1
+    assert len(batches[0]["entity_ids"]) == 1
+
+
+def test_lookup_run_counts_venues_it_does_not_scan(db_session) -> None:
+    org = _org(db_session)
+    area = _district(db_session, _country(db_session), "Central and Western")
+    _pinless(db_session, org, area)
+    result, _batches = start_location_scan(
+        db_session,
+        review_scope="pending_review",
+        entity_type="location",
+        org_id=org.id,
+    )
+    _finish(db_session, result)
+    queued, batches = start_location_scan(
+        db_session,
+        review_scope="pending_review",
+        entity_type="organization",
+        org_id=org.id,
+        query="8 Harbour",
+        lookup="nominatim",
+    )
+    assert queued["queued_for_lookup"] == 1
+    assert queued["total_entities"] == 1
+    assert batches[-1]["entity_ids"]

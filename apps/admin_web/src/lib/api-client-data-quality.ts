@@ -319,6 +319,7 @@ export function scanLocationFixes(body: {
     queued_for_lookup?: number;
     truncated: boolean;
     status: string;
+    error?: string | null;
   }>(buildApiUrl('v1/admin/location-fixes/scan'), {
     method: 'POST',
     headers: jsonHeaders,

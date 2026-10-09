@@ -20,9 +20,16 @@ logger = get_logger(__name__)
 _HONG_KONG = re.compile(r"hong kong|香港", re.IGNORECASE)
 
 
+class AddressLookupFailed(Exception):
+    """Nominatim did not answer. Callers must not cache this as a miss."""
+
+
 def geocode_address(address: str) -> tuple[float, float] | None:
     """Return a map pin for an address, or None when lookup finds nothing."""
-    found = lookup_address(address)
+    try:
+        found = lookup_address(address)
+    except AddressLookupFailed:
+        return None
     if found is None:
         return None
     return found["lat"], found["lng"]
@@ -40,7 +47,7 @@ def lookup_address(address: str) -> dict[str, Any] | None:
     headers = _get_nominatim_headers()
     if headers is None:
         logger.warning("Nominatim headers are not configured")
-        return None
+        raise AddressLookupFailed("Nominatim headers are not configured")
     query = text if _HONG_KONG.search(text) else f"{text}, Hong Kong"
     params = urlencode(
         {
@@ -54,16 +61,16 @@ def lookup_address(address: str) -> dict[str, Any] | None:
         result = http_invoke("GET", url, headers=headers, timeout=10)
     except AwsProxyError as exc:
         logger.warning("Address geocode failed: %s", exc.code)
-        return None
+        raise AddressLookupFailed(exc.code) from exc
     status = int(result.get("status") or 0)
     if status != 200:
         logger.warning("Address geocode failed with status %s", status)
-        return None
+        raise AddressLookupFailed(f"status {status}")
     try:
         payload = json.loads(result.get("body") or "")
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
         logger.warning("Address geocode returned invalid JSON")
-        return None
+        raise AddressLookupFailed("invalid JSON") from exc
     if not isinstance(payload, list) or not payload:
         return None
     first = payload[0]
@@ -73,8 +80,8 @@ def lookup_address(address: str) -> dict[str, Any] | None:
         lat = float(first["lat"])
         lng = float(first["lon"])
         rank = int(first.get("place_rank") or 0)
-    except (KeyError, TypeError, ValueError):
-        return None
+    except (KeyError, TypeError, ValueError) as exc:
+        raise AddressLookupFailed("invalid coordinates") from exc
     if not in_hong_kong_bbox(lat, lng):
         return None
     display = str(first.get("display_name") or "")

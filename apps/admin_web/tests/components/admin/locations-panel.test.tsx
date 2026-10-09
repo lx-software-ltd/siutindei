@@ -144,6 +144,26 @@ describe('LocationsPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows a register load error from the sweep', async () => {
+    vi.mocked(scanLocationFixes).mockResolvedValue({
+      scan_run_id: 'scan-err',
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      cleared: 0,
+      auto_applied: 0,
+      queued_for_model: 0,
+      truncated: false,
+      status: 'done',
+      error: 'EDB school register could not be loaded',
+    });
+    render(<LocationsPanel />, { wrapper });
+    fireEvent.click(await screen.findByRole('button', { name: 'Sweep pending' }));
+    expect(
+      await screen.findByText(/EDB school register could not be loaded/)
+    ).toBeInTheDocument();
+  });
+
   it('queues a Nominatim lookup and shows the pin grade', async () => {
     vi.mocked(getLocationFixSummary).mockResolvedValue({
       by_status: { pending: 1 },

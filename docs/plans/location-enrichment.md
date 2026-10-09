@@ -74,3 +74,7 @@ rows that use the new sources. Locations and pins already written stay.
 ## Open questions
 
 None. The Google key is supplied at deploy time; see the pull request.
+
+## Follow-up
+
+Corrections after review are in `docs/plans/location-enrichment-fixes.md`.

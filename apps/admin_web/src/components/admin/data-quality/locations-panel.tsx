@@ -243,8 +243,9 @@ export function LocationsPanel() {
       const lookedUp = result.queued_for_lookup
         ? ` Queued ${result.queued_for_lookup} pin lookups.`
         : '';
+      const warning = result.error ? ` ${result.error}` : '';
       setNotice(
-        `Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}, cleared ${result.cleared}, linked ${result.auto_applied}, queued ${result.queued_for_model}.${lookedUp}${stopped}`
+        `Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}, cleared ${result.cleared}, linked ${result.auto_applied}, queued ${result.queued_for_model}.${lookedUp}${stopped}${warning}`
       );
       await refresh();
     } catch (err) {
@@ -269,7 +270,10 @@ export function LocationsPanel() {
       const stopped = result.truncated
         ? ' Scan stopped at the limit; run it again to continue.'
         : '';
-      setNotice(`Queued ${result.queued_for_lookup ?? 0} pin lookups.${stopped}`);
+      const warning = result.error ? ` ${result.error}` : '';
+      setNotice(
+        `Queued ${result.queued_for_lookup ?? 0} pin lookups.${stopped}${warning}`
+      );
       await refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Lookup failed.');

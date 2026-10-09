@@ -5,7 +5,13 @@ from __future__ import annotations
 import json
 from urllib.parse import parse_qs, urlparse
 
-from app.services.location_fix_geocode import geocode_address, lookup_address
+import pytest
+from app.services.aws_proxy import AwsProxyError
+from app.services.location_fix_geocode import (
+    AddressLookupFailed,
+    geocode_address,
+    lookup_address,
+)
 
 
 def _headers(monkeypatch) -> None:
@@ -71,3 +77,26 @@ def test_lookup_keeps_an_address_that_already_names_hong_kong(monkeypatch) -> No
     assert lookup_address("8 Harbour Road, Hong Kong") is None
     query = parse_qs(urlparse(seen["url"]).query)
     assert query["q"] == ["8 Harbour Road, Hong Kong"]
+
+
+def test_transport_failure_is_not_a_miss(monkeypatch) -> None:
+    _headers(monkeypatch)
+
+    def fake_invoke(*_args, **_kwargs):
+        raise AwsProxyError("Timeout", "timed out")
+
+    monkeypatch.setattr("app.services.location_fix_geocode.http_invoke", fake_invoke)
+    with pytest.raises(AddressLookupFailed):
+        lookup_address("8 Harbour Road")
+    assert geocode_address("8 Harbour Road") is None
+
+
+def test_bad_status_is_not_a_miss(monkeypatch) -> None:
+    _headers(monkeypatch)
+
+    def fake_invoke(*_args, **_kwargs):
+        return {"status": 429, "body": ""}
+
+    monkeypatch.setattr("app.services.location_fix_geocode.http_invoke", fake_invoke)
+    with pytest.raises(AddressLookupFailed):
+        lookup_address("8 Harbour Road")

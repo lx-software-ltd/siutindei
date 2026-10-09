@@ -99,9 +99,18 @@ def _keep_lookup(session: Session, location_id, finding: dict[str, Any]) -> None
     if not isinstance(proposed, dict) or proposed.get("lookup"):
         return
     existing = pending_row(session, "location", location_id)
-    lookup = ((existing.proposed_location or {}) if existing else {}).get("lookup")
-    if lookup:
-        proposed["lookup"] = lookup
+    if existing is None:
+        return
+    stored = existing.proposed_location or {}
+    lookup = stored.get("lookup")
+    if not lookup:
+        return
+    proposed["lookup"] = lookup
+    for key in ("lat", "lng"):
+        if stored.get(key) is not None:
+            proposed[key] = stored[key]
+    if existing.source in {"lookup:nominatim", "lookup:google"}:
+        finding["source"] = existing.source
 
 
 def _missing_coordinates(location: Location, address: str) -> dict[str, Any]:

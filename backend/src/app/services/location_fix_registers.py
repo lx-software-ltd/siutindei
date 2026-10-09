@@ -6,6 +6,7 @@ import csv
 import difflib
 import io
 import re
+import time
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -38,11 +39,18 @@ _TOKEN = re.compile(r"[^a-z0-9]+")
 _ROWS: dict[str, dict[str, Any]] | None = None
 
 
-def edb_register() -> dict[str, dict[str, Any]]:
-    """School number to register row. Empty when the file cannot be loaded."""
+def edb_register() -> dict[str, dict[str, Any]] | None:
+    """School number to register row.
+
+    None when the file could not be loaded. An empty dict means the file
+    loaded and had no usable rows. A failure is not cached.
+    """
     global _ROWS
     if _ROWS is None:
-        _ROWS = _load_register()
+        loaded = _load_register()
+        if loaded is None:
+            return None
+        _ROWS = loaded
     return _ROWS
 
 
@@ -96,7 +104,13 @@ def consider_open_data(
     """Propose or create a venue from the register. None leaves the model path."""
     if (org.source or "") != "edb" or not str(org.source_id or "").strip():
         return None
-    row = edb_register().get(str(org.source_id).strip())
+    if auto_budget.get("register_unavailable"):
+        return "unchanged"
+    register = edb_register()
+    if register is None:
+        auto_budget["register_unavailable"] = True
+        return "unchanged"
+    row = register.get(str(org.source_id).strip())
     if row is None:
         return None
     similarity = name_similarity(org.name, row["name"])
@@ -122,6 +136,10 @@ def consider_open_data(
     if int(auto_budget.get("applied") or 0) >= _MAX_AUTO_APPLY:
         auto_budget["capped"] = True
         return _store(session, org, run_id, proposed, similarity, applied=False)
+    deadline = auto_budget.get("deadline")
+    if deadline is not None and time.monotonic() >= float(deadline):
+        auto_budget["capped"] = True
+        return _store(session, org, run_id, proposed, similarity, applied=False)
     location = _create(session, org, proposed)
     if location is None:
         return _store(session, org, run_id, proposed, similarity, applied=False)
@@ -145,15 +163,15 @@ def _remember_venue(session: Session, org_id, location, context) -> None:
     context.setdefault("linked", set()).update(linked)
 
 
-def _load_register() -> dict[str, dict[str, Any]]:
+def _load_register() -> dict[str, dict[str, Any]] | None:
     try:
         result = http_invoke("GET", EDB_SCHOOLS_URL, timeout=20)
     except Exception as exc:
         logger.warning("EDB register lookup failed: %s", type(exc).__name__)
-        return {}
+        return None
     if int(result.get("status") or 0) != 200:
         logger.warning("EDB register lookup failed")
-        return {}
+        return None
     return parse_edb_csv(str(result.get("body") or ""))
 
 
