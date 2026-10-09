@@ -17,10 +17,8 @@ from app.db.models import (
 )
 from app.exceptions import ValidationError
 from app.services.location_fix_geocode import geocode_address
-from app.services.location_fix_model import (
-    build_organization_prompt,
-    store_model_items,
-)
+from app.services.location_fix_model import store_model_items
+from app.services.location_fix_prompt import build_organization_prompt
 from app.services.location_fixes import decide_bulk, decide_proposal
 from psycopg.types.range import Range
 from sqlalchemy import select
@@ -77,17 +75,22 @@ def test_apply_create_geocodes_and_links_orphan_activities(
     )
     db_session.flush()
     monkeypatch.setattr(
-        "app.services.location_fixes.geocode_address",
+        "app.services.location_fix_apply.geocode_address",
         lambda _address: (22.28, 114.17),
     )
     decide_proposal(db_session, proposal.id, "apply", "admin")
-    location = db_session.scalars(select(Location)).one()
+    location = db_session.scalars(
+        select(Location).where(Location.org_id == org.id)
+    ).one()
     assert location.address == "10 Harbour Road"
     assert float(location.lat) == 22.28
     assert float(location.lng) == 114.17
     assert db_session.get(ActivityLocation, (activity.id, location.id)) is not None
     pending = db_session.scalars(
-        select(LocationFixProposal).where(LocationFixProposal.status == "pending")
+        select(LocationFixProposal).where(
+            LocationFixProposal.org_id == org.id,
+            LocationFixProposal.status == "pending",
+        )
     ).all()
     assert pending == []
     assert proposal.status == "applied"
@@ -178,7 +181,11 @@ def test_bulk_dismiss_respects_org_id(db_session) -> None:
     assert result["decided"] == 1
     statuses = {
         row.org_id: row.status
-        for row in db_session.scalars(select(LocationFixProposal)).all()
+        for row in db_session.scalars(
+            select(LocationFixProposal).where(
+                LocationFixProposal.org_id.in_([keep.id, other.id])
+            )
+        ).all()
     }
     assert statuses[keep.id] == "dismissed"
     assert statuses[other.id] == "pending"
@@ -209,7 +216,7 @@ def test_model_create_location_uses_nominatim(db_session, monkeypatch) -> None:
                 {
                     "entity_id": str(org.id),
                     "kind": "create_location",
-                    "address": "8 Queen's Road East",
+                    "address": "8 Harbour Road",
                     "area_name": "灣仔",
                     "confidence": 0.8,
                     "rationale": "Named on the source page",
@@ -217,7 +224,9 @@ def test_model_create_location_uses_nominatim(db_session, monkeypatch) -> None:
             ]
         },
     )
-    proposal = db_session.scalars(select(LocationFixProposal)).one()
+    proposal = db_session.scalars(
+        select(LocationFixProposal).where(LocationFixProposal.org_id == org.id)
+    ).one()
     assert proposal.kind == "create_location"
     assert proposal.proposed_location["area_id"] == str(area.id)
     assert proposal.proposed_location["lat"] == 22.11
@@ -267,7 +276,9 @@ def test_model_activity_links_one_index(db_session, sample_activity_category) ->
             ]
         },
     )
-    proposal = db_session.scalars(select(LocationFixProposal)).one()
+    proposal = db_session.scalars(
+        select(LocationFixProposal).where(LocationFixProposal.org_id == org.id)
+    ).one()
     assert proposal.target_location_id == second.id
     assert proposal.kind == "link_existing"
 

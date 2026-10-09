@@ -9,24 +9,27 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.age_bounds import inclusive_age_bounds
 from app.db.models import (
     Activity,
-    ActivityLocation,
     ActivityPricing,
     ActivitySchedule,
     Location,
 )
 from app.db.models import Organization
-from app.db.models.category_scan import ActivityCategoryReview
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.services.name_sanitizer import NameSanitizeConfig, sanitize_name
+from app.services.org_review_children import (
+    counts_by_activity,
+    linked_activity_ids,
+    pending_category_check_ids,
+)
 
 REVIEW_STATUSES = ("pending_review", "approved", "rejected")
 MAX_REVIEW_NOTES_LENGTH = 2000
@@ -335,15 +338,11 @@ def load_snapshots(
         session.scalars(select(Activity).where(Activity.org_id.in_(org_ids))).all()
     )
     activity_ids = [activity.id for activity in activities]
-    pricing_counts = _counts_by_activity(
-        session,
-        ActivityPricing.activity_id,
-        activity_ids,
+    pricing_counts = counts_by_activity(
+        session, ActivityPricing.activity_id, activity_ids
     )
-    schedule_counts = _counts_by_activity(
-        session,
-        ActivitySchedule.activity_id,
-        activity_ids,
+    schedule_counts = counts_by_activity(
+        session, ActivitySchedule.activity_id, activity_ids
     )
     locations_by_org: dict[str, list[Location]] = defaultdict(list)
     activities_by_org: dict[str, list[Activity]] = defaultdict(list)
@@ -351,8 +350,8 @@ def load_snapshots(
         locations_by_org[str(location.org_id)].append(location)
     for activity in activities:
         activities_by_org[str(activity.org_id)].append(activity)
-    pending_checks = _pending_category_checks(session, activity_ids)
-    linked_activity_ids = _linked_activity_ids(session, activity_ids)
+    pending_checks = pending_category_check_ids(session, activity_ids)
+    linked_ids = linked_activity_ids(session, activity_ids)
     from app.services.name_fixes import load_name_fix_config
     from app.services.org_duplicates import orgs_with_duplicate_signals
 
@@ -384,7 +383,7 @@ def load_snapshots(
             {
                 str(activity.id)
                 for activity in org_activities
-                if str(activity.id) in linked_activity_ids
+                if str(activity.id) in linked_ids
             },
         )
         snapshots.append(
@@ -398,29 +397,6 @@ def load_snapshots(
             )
         )
     return snapshots
-
-
-def _linked_activity_ids(session: Session, activity_ids: list) -> set[str]:
-    if not activity_ids:
-        return set()
-    rows = session.scalars(
-        select(ActivityLocation.activity_id).where(
-            ActivityLocation.activity_id.in_(activity_ids)
-        )
-    ).all()
-    return {str(item) for item in rows}
-
-
-def _pending_category_checks(session: Session, activity_ids: list) -> set[str]:
-    if not activity_ids:
-        return set()
-    rows = session.scalars(
-        select(ActivityCategoryReview.activity_id).where(
-            ActivityCategoryReview.activity_id.in_(activity_ids),
-            ActivityCategoryReview.status == "pending",
-        )
-    ).all()
-    return {str(item) for item in rows}
 
 
 def summarize_snapshots(snapshots: list[OrgReviewSnapshot]) -> dict[str, Any]:
@@ -464,21 +440,6 @@ def snapshot_for_org(
     """Load one organization snapshot."""
     loaded = load_snapshots(session, [organization])
     return loaded[0]
-
-
-def _counts_by_activity(
-    session: Session,
-    activity_id_column: Any,
-    activity_ids: list[Any],
-) -> dict[str, int]:
-    if not activity_ids:
-        return {}
-    rows = session.execute(
-        select(activity_id_column, func.count())
-        .where(activity_id_column.in_(activity_ids))
-        .group_by(activity_id_column)
-    ).all()
-    return {str(activity_id): cast(int, count) for activity_id, count in rows}
 
 
 def _passed_checks(snapshot: OrgReviewSnapshot) -> int:

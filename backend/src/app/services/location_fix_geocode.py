@@ -52,9 +52,13 @@ def geocode_address(address: str) -> tuple[float, float] | None:
     first = payload[0]
     if not isinstance(first, dict):
         return None
+    raw_lat = first.get("lat")
+    raw_lng = first.get("lon")
+    if raw_lat is None or raw_lng is None:
+        return None
     try:
-        lat = float(first.get("lat"))
-        lng = float(first.get("lon"))
+        lat = float(raw_lat)
+        lng = float(raw_lng)
     except (TypeError, ValueError):
         return None
     if not -90 <= lat <= 90 or not -180 <= lng <= 180:

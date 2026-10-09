@@ -21,11 +21,10 @@ from app.db.models import (
 )
 from app.db.models.location_fix import LocationScanRun
 from app.exceptions import ValidationError
+from app.services.location_fix_query import over_budget, serialize_run
 from app.services.location_fixes import (
     clear_pending,
     dismissed_same,
-    over_budget,
-    serialize_run,
     upsert_proposal,
 )
 from app.services.name_fix_query import ilike_pattern

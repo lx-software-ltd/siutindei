@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import os
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
-from urllib.parse import urlparse
 from uuid import UUID
 
 from sqlalchemy import select
@@ -16,14 +14,18 @@ from sqlalchemy.orm import Session
 from app.db.engine import get_engine
 from app.db.models import Activity, GeographicArea, Location, Organization
 from app.db.models.location_fix import LocationScanRun
-from app.services.category_suggestions.prompt import redact_contacts
 from app.services.category_suggestions.settings import (
     get_settings,
     resolved_fallback_models,
     resolved_model_name,
 )
 from app.services.location_fix_geocode import geocode_address
-from app.services.location_fixes import over_budget, upsert_proposal
+from app.services.location_fix_prompt import (
+    build_activity_prompt,
+    build_organization_prompt,
+)
+from app.services.location_fix_query import over_budget
+from app.services.location_fixes import upsert_proposal
 from app.services.openrouter_client import (
     OpenRouterError,
     extract_message_text,
@@ -36,7 +38,6 @@ from app.utils.logging import get_logger
 logger = get_logger(__name__)
 
 WORKLOAD_LOCATION_FIX = "location-fix"
-_MAX_DESCRIPTION = 300
 
 
 def process_location_batch(
@@ -125,76 +126,6 @@ def store_model_items(
         return
     if entity_type == "activity":
         _store_activities(session, scan_run_id, wanted, by_id)
-
-
-def build_organization_prompt(
-    session: Session, organizations: list[Organization]
-) -> tuple[str, str]:
-    districts = _districts(session)
-    system = (
-        "You propose a venue address for organizations in Hong Kong. "
-        "Reply with one JSON object only. Use an area_name from the "
-        "district list exactly. If the text does not support an address, "
-        "set kind to unresolved. Do not invent a district."
-    )
-    user = {
-        "districts": districts,
-        "organizations": [
-            {
-                "entity_id": str(org.id),
-                "name": redact_contacts(org.name or ""),
-                "name_zh": redact_contacts(_translation(org.name_translations, "zh")),
-                "description": redact_contacts(_clip(org.description)),
-                "source_host": _source_host(org.source_url),
-            }
-            for org in organizations
-        ],
-    }
-    return system, json.dumps(user, ensure_ascii=False)
-
-
-def build_activity_prompt(
-    session: Session,
-    activities: list[Activity],
-    locations_by_org: dict[Any, list[Location]],
-    area_names: dict[Any, str],
-) -> tuple[str, str]:
-    orgs = {
-        org.id: org
-        for org in session.scalars(
-            select(Organization).where(
-                Organization.id.in_({activity.org_id for activity in activities})
-            )
-        ).all()
-    }
-    system = (
-        "You choose the venue for a children's activity in Hong Kong. "
-        "Reply with one JSON object only. location_indexes must contain "
-        "exactly one index from that activity's locations list, or be "
-        "empty when you set kind to unresolved. Do not invent venues."
-    )
-    rows = []
-    for activity in activities:
-        org = orgs.get(activity.org_id)
-        venues = []
-        for index, location in enumerate(locations_by_org.get(activity.org_id, [])):
-            venues.append(
-                {
-                    "index": index,
-                    "address": redact_contacts(location.address or ""),
-                    "area": area_names.get(location.area_id, ""),
-                }
-            )
-        rows.append(
-            {
-                "entity_id": str(activity.id),
-                "name": redact_contacts(activity.name or ""),
-                "description": redact_contacts(_clip(activity.description)),
-                "org_name": redact_contacts(org.name if org else ""),
-                "locations": venues,
-            }
-        )
-    return system, json.dumps({"activities": rows}, ensure_ascii=False)
 
 
 def record_batch_failure(
@@ -438,23 +369,6 @@ def _finish_batch(
     run.finished_at = now
 
 
-def _districts(session: Session) -> list[dict[str, str]]:
-    rows = session.scalars(
-        select(GeographicArea)
-        .where(GeographicArea.level == "district", GeographicArea.active.is_(True))
-        .order_by(GeographicArea.name)
-    ).all()
-    districts = []
-    for area in rows:
-        districts.append(
-            {
-                "name": area.name,
-                "name_zh": _translation(area.name_translations, "zh"),
-            }
-        )
-    return districts
-
-
 def _areas_by_label(session: Session) -> dict[str, GeographicArea]:
     rows = session.scalars(
         select(GeographicArea).where(
@@ -494,23 +408,6 @@ def _rationale(value: Any) -> str | None:
         return None
     text = value.strip()
     return text[:500] or None
-
-
-def _clip(value: str | None) -> str:
-    return (value or "")[:_MAX_DESCRIPTION]
-
-
-def _translation(values: dict[str, str] | None, language: str) -> str:
-    if not values:
-        return ""
-    return str(values.get(language) or "")
-
-
-def _source_host(url: str | None) -> str:
-    if not url:
-        return ""
-    host = urlparse(url).hostname or ""
-    return host.removeprefix("www.")
 
 
 def _timeout_seconds() -> int:

@@ -14,34 +14,25 @@ from app.db.models.location_fix import LocationScanRun
 from app.exceptions import ValidationError
 from app.services.category_suggestions.events import enqueue_location_batches
 from app.services.location_fix_scan import LocationScanBusy, start_location_scan
-from app.services.location_fixes import (
-    decide_bulk,
-    decide_proposal,
+from app.services.location_fix_query import (
+    ENTITY_TYPES,
+    KINDS,
+    SOURCES,
+    STATUSES,
+    choice,
     get_proposal,
     list_proposals,
     parse_uuid,
-    choice,
     settings_payload,
     summarize_proposals,
     update_settings,
 )
+from app.services.location_fixes import decide_bulk, decide_proposal
 from app.utils import json_response
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-_STATUSES = frozenset({"pending", "applied", "dismissed"})
-_ENTITY_TYPES = frozenset({"organization", "activity"})
-_KINDS = frozenset({"link_existing", "create_location", "unresolved"})
-_SOURCES = frozenset(
-    {
-        "rule:single_location",
-        "rule:pricing_schedule",
-        "rule:name_area",
-        "rule:no_venue",
-        "model",
-    }
-)
 _REVIEW_SCOPES = frozenset({"pending_review", "all"})
 
 
@@ -72,17 +63,17 @@ def handle_location_fixes(
 
 
 def _list(event: Mapping[str, Any]) -> dict[str, Any]:
-    status = choice(_query_param(event, "status"), _STATUSES, "status") or "pending"
+    status = choice(_query_param(event, "status"), STATUSES, "status") or "pending"
     org_raw = _blank(_query_param(event, "org_id"))
     with Session(get_engine()) as session:
         payload = list_proposals(
             session,
             status=status,
             entity_type=choice(
-                _query_param(event, "entity_type"), _ENTITY_TYPES, "entity_type"
+                _query_param(event, "entity_type"), ENTITY_TYPES, "entity_type"
             ),
-            kind=choice(_query_param(event, "kind"), _KINDS, "kind"),
-            source=choice(_query_param(event, "source"), _SOURCES, "source"),
+            kind=choice(_query_param(event, "kind"), KINDS, "kind"),
+            source=choice(_query_param(event, "source"), SOURCES, "source"),
             org_id=parse_uuid(org_raw, "org_id") if org_raw else None,
             query=_blank(_query_param(event, "q")),
             cursor=_blank(_query_param(event, "cursor")),
@@ -132,7 +123,7 @@ def _scan(event: Mapping[str, Any]) -> dict[str, Any]:
                 session,
                 review_scope=review_scope,
                 entity_type=choice(
-                    body.get("entity_type"), _ENTITY_TYPES, "entity_type"
+                    body.get("entity_type"), ENTITY_TYPES, "entity_type"
                 ),
                 org_id=parse_uuid(str(org_raw), "org_id") if org_raw else None,
                 query=query.strip()

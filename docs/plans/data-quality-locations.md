@@ -129,13 +129,13 @@ Backend (yellow unless noted):
 
 - `backend/db/alembic/versions/0042_location_fixes.py` (red)
 - `backend/src/app/db/models/location_fix.py`, export in `models/__init__.py`
-- `backend/src/app/services/location_fixes.py` (list, get, summary, decide, bulk)
+- `backend/src/app/services/location_fixes.py` (decide, bulk, upsert), `location_fix_query.py` (list, get, summary, settings, serializers), `location_fix_apply.py` (link or create the venue), `location_fix_geocode.py` (Nominatim)
 - `backend/src/app/services/location_fix_scan.py` (rules, candidate selection, run creation)
-- `backend/src/app/services/location_fix_model.py` (prompt, batch processing, parsing)
+- `backend/src/app/services/location_fix_model.py` (batch processing, parsing) and `location_fix_prompt.py` (prompts)
 - `backend/src/app/api/admin_location_fixes.py`; dispatch in `admin.py`
 - `backend/src/app/api/partner_location_fixes.py`; dispatch in `partner_routes.py`; keys in `partner_name_fixes.partner_get_organizations` and `partner_category_reviews.partner_get_activities`
 - `backend/lambda/category_suggestions/handler.py` (new message key)
-- `backend/src/app/services/org_review.py`, `org_review_sql.py`
+- `backend/src/app/services/org_review.py`, `org_review_children.py`, `org_review_sql.py`
 
 Admin web:
 

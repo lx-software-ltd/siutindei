@@ -12,13 +12,13 @@ from app.db.models import (
     GeographicArea,
     Location,
     LocationFixProposal,
-    LocationFixSettings,
     LocationScanRun,
     Organization,
 )
 from app.db.models.category_scan import CategoryScanRun
 from app.db.models.enums import PricingType
 from app.exceptions import ValidationError
+from app.services.location_fix_query import load_settings
 from app.services.location_fix_scan import start_location_scan
 from psycopg.types.range import Range
 from sqlalchemy import select
@@ -205,7 +205,7 @@ def test_unknown_scope_is_rejected(db_session) -> None:
 
 def test_location_budget_is_separate_from_category_checks(db_session) -> None:
     db_session.add(CategoryScanRun(status="done", cost_usd=Decimal(400)))
-    db_session.add(LocationFixSettings(id=1, monthly_cost_limit_usd=Decimal(50)))
+    load_settings(db_session).monthly_cost_limit_usd = Decimal(50)
     org = _org(db_session, "Still In Budget")
     db_session.flush()
     result, batches = start_location_scan(
@@ -216,7 +216,7 @@ def test_location_budget_is_separate_from_category_checks(db_session) -> None:
 
 
 def test_location_budget_blocks_its_own_spend(db_session) -> None:
-    db_session.add(LocationFixSettings(id=1, monthly_cost_limit_usd=Decimal(50)))
+    load_settings(db_session).monthly_cost_limit_usd = Decimal(50)
     db_session.add(
         LocationScanRun(
             status="done",
