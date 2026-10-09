@@ -27,7 +27,7 @@ from app.db.base import Base
 _SOURCES = (
     "'rule:single_location', 'rule:pricing_schedule', 'rule:name_area', "
     "'rule:no_venue', 'model', 'rule:missing_coordinates', "
-    "'rule:empty_address', 'rule:pin_outside_area', 'rule:no_place_id'"
+    "'rule:empty_address', 'rule:pin_outside_area'"
 )
 
 

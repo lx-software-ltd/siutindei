@@ -50,7 +50,6 @@ const SOURCES = [
   'rule:missing_coordinates',
   'rule:empty_address',
   'rule:pin_outside_area',
-  'rule:no_place_id',
 ] as const;
 
 interface LocationFilters {
@@ -426,7 +425,9 @@ export function LocationsPanel() {
                     variant='secondary'
                     onClick={() => openWorkspace(open.org_id, 'locations')}
                   >
-                    Create a location
+                    {open.entity_type === 'location'
+                      ? 'Edit location'
+                      : 'Create a location'}
                   </Button>
                 ) : (
                   <Button

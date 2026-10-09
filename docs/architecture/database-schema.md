@@ -211,7 +211,7 @@ Columns:
 - `proposed_location` (jsonb, optional)
 - `source` (text) — `rule:single_location`, `rule:pricing_schedule`,
   `rule:name_area`, `rule:no_venue`, `model`, `rule:missing_coordinates`,
-  `rule:empty_address`, `rule:pin_outside_area`, or `rule:no_place_id`
+  `rule:empty_address`, or `rule:pin_outside_area`
 - `confidence` (numeric, optional)
 - `rationale` (text, optional)
 - `status` (text) — `pending`, `applied`, or `dismissed`

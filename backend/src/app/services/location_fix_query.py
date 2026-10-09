@@ -36,7 +36,6 @@ SOURCES = frozenset(
         "rule:missing_coordinates",
         "rule:empty_address",
         "rule:pin_outside_area",
-        "rule:no_place_id",
     }
 )
 STATUSES = frozenset({"pending", "applied", "dismissed"})
@@ -378,12 +377,11 @@ def _serialize(
         if lat is None or lng is None:
             proposed_label = "Look up map pin"
         else:
-            proposed_label = f"{lat}, {lng}"
+            proposed_label = f"{float(lat):.6f}, {float(lng):.6f}"
     elif row.entity_type == "location":
         proposed_label = {
             "rule:empty_address": "Add an address",
             "rule:pin_outside_area": "Check the map pin",
-            "rule:no_place_id": "Add a place id",
         }.get(row.source, "Needs review")
     else:
         proposed_label = "Needs a location"
@@ -393,7 +391,6 @@ def _serialize(
             "rule:empty_address": "No address",
             "rule:missing_coordinates": "No map pin",
             "rule:pin_outside_area": "Pin outside district",
-            "rule:no_place_id": "No place id",
         }.get(row.source, "Location")
     elif row.entity_type == "organization":
         current_label = "No location" if venue_count == 0 else f"{venue_count} venues"

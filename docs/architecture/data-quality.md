@@ -138,20 +138,26 @@ monthly model budget is
 category-check spend. The model and fallbacks still come from
 category-check settings.
 
-A sweep also checks each location. An empty address, a map pin that
-falls in a different Hong Kong district or outside Hong Kong, or a
-missing Google place id stays unresolved. A location with an address
-and no coordinates is `update_location` from `rule:missing_coordinates`.
-The sweep geocodes at most 20 of those addresses. Apply writes `lat`
-and `lng` and leaves `place_id` unchanged, looking the pin up when the
-proposal does not have one yet. A dismissed finding for the same
-source, or the same address for a geocode, is not created again.
-District boxes are approximate and match the area name or a translation.
+A sweep also checks each location. An empty address stays unresolved.
+A location with an address and no coordinates is `update_location`
+from `rule:missing_coordinates`. The sweep stores the address and does
+not call Nominatim. Apply on one row looks the pin up, writes `lat`
+and `lng` to six decimal places, and leaves `place_id` unchanged.
+Apply does not replace a pin that is already stored. Bulk apply does
+not look pins up; those rows fail and ask for a single apply. A pin
+that falls in a different Hong Kong district, or outside Hong Kong,
+stays unresolved as `rule:pin_outside_area`. The area chain must
+include Hong Kong. District boxes are approximate, match the area
+name or a translation, and overlap at a shared boundary so a pin in
+both boxes is not flagged. A dismissed location finding matches the
+same source. A dismissed pin also matches the rounded coordinates, so
+a moved pin is flagged again. A missing Google place id stays an
+organization warning and is not a location finding.
 
 When the model names more than one venue, apply can take
 `target_location_id` for one listed candidate and creates the same join
-as `link_existing`.
+as `link_existing`. The proposal kind stays `unresolved`.
 
 `no_locations` stays a blocker. `activity_no_location` is a warning.
 `missing_coordinates` stays a blocker until the pin is stored.
-Both open this tab.
+All three open this tab.

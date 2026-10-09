@@ -26,7 +26,7 @@ _SOURCE = (
     "'rule:single_location', 'rule:pricing_schedule', "
     "'rule:name_area', 'rule:no_venue', 'model', "
     "'rule:missing_coordinates', 'rule:empty_address', "
-    "'rule:pin_outside_area', 'rule:no_place_id')"
+    "'rule:pin_outside_area')"
 )
 _SCAN_ENTITY = (
     "entity_type IS NULL OR entity_type IN ('organization', 'activity', 'location')"

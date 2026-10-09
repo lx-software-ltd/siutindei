@@ -1468,7 +1468,7 @@ export interface paths {
                     status?: "pending" | "applied" | "dismissed";
                     entity_type?: "organization" | "activity" | "location";
                     kind?: "link_existing" | "create_location" | "unresolved" | "update_location";
-                    source?: "rule:single_location" | "rule:pricing_schedule" | "rule:name_area" | "rule:no_venue" | "model" | "rule:missing_coordinates" | "rule:empty_address" | "rule:pin_outside_area" | "rule:no_place_id";
+                    source?: "rule:single_location" | "rule:pricing_schedule" | "rule:name_area" | "rule:no_venue" | "model" | "rule:missing_coordinates" | "rule:empty_address" | "rule:pin_outside_area";
                     org_id?: string;
                     q?: string;
                     cursor?: string;
@@ -1609,8 +1609,8 @@ export interface paths {
          * @description Applies venue rules for `review_scope` (`pending_review` or
          *     `all`). An organization with one location is linked immediately.
          *     Rows the rules cannot decide are queued for the model. Existing
-         *     locations are checked for an empty address, a missing pin, a pin
-         *     outside the district, and a missing Google place id. One
+         *     locations are checked for an empty address, a missing pin, and a
+         *     pin outside its Hong Kong district. One
          *     location sweep runs at a time.
          */
         post: {

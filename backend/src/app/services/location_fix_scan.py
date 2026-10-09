@@ -95,11 +95,11 @@ def start_location_scan(
     queued: dict[str, list[str]] = {"organization": [], "activity": []}
     if entity_type != "location":
         orgs = list(session.scalars(_org_stmt(org_id, query, review_scope)).all())
-    else:
-        orgs = []
         if len(orgs) > _MAX_SWEEP:
             orgs = orgs[:_MAX_SWEEP]
             truncated = True
+    else:
+        orgs = []
     activities: list[Activity] = []
     if entity_type in (None, "activity") and not truncated:
         activities = list(
@@ -136,7 +136,6 @@ def start_location_scan(
         chains = location_quality.area_chains(
             session, [venue.area_id for venue in venues]
         )
-        geocodes_left = [location_quality.GEOCODE_CAP]
         for venue in venues:
             if seen >= _MAX_SWEEP:
                 truncated = True
@@ -149,7 +148,6 @@ def start_location_scan(
                     venue,
                     chains.get(venue.area_id, []),
                     run.id,
-                    geocodes_left,
                 ),
             )
     batches = _batches(queued)

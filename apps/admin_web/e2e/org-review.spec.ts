@@ -61,10 +61,14 @@ test.describe('Organization review queue', () => {
     await expect(adminPage.getByText(/Updated 1/)).toBeVisible();
 
     await adminPage.getByRole('cell', { name: 'Test Organization 1', exact: true }).click();
-    await adminPage.getByRole('button', { name: 'Fix' }).first().click();
-    await expect(adminPage).toHaveURL(/section=locations/);
-    await expect(adminPage).toHaveURL(/location=loc-1/);
-    await expect(adminPage).toHaveURL(/org=org-1/);
+    await adminPage
+      .getByRole('listitem')
+      .filter({ hasText: 'Location is missing a map pin' })
+      .getByRole('button', { name: 'Fix' })
+      .click();
+    await expect(adminPage).toHaveURL(/section=data-quality/);
+    await expect(adminPage).toHaveURL(/tab=locations/);
+    await expect(adminPage).toHaveURL(/organization=org-1/);
   });
 
   test('releases one organization from readiness and opens its category check', async ({

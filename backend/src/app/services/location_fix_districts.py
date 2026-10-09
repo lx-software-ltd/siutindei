@@ -14,9 +14,9 @@ _Box = tuple[float, float, float, float]
 _BOXES: dict[str, _Box] = {
     "central-and-western": (22.268, 22.296, 114.122, 114.164),
     "wan-chai": (22.268, 22.288, 114.164, 114.210),
-    "eastern": (22.268, 22.298, 114.200, 114.255),
+    "eastern": (22.250, 22.298, 114.200, 114.255),
     "southern": (22.205, 22.268, 114.115, 114.255),
-    "yau-tsim-mong": (22.293, 22.322, 114.158, 114.182),
+    "yau-tsim-mong": (22.293, 22.330, 114.158, 114.182),
     "sham-shui-po": (22.322, 22.348, 114.130, 114.175),
     "kowloon-city": (22.308, 22.348, 114.175, 114.210),
     "wong-tai-sin": (22.332, 22.358, 114.180, 114.220),
@@ -75,7 +75,13 @@ _ALIASES = {
 
 
 def district_key(areas: list[GeographicArea]) -> str | None:
-    """First official district named by this area or one of its parents."""
+    """First official district named by this area or one of its parents.
+
+    English names such as North and Eastern also exist outside Hong Kong,
+    so the chain must include Hong Kong before any alias matches.
+    """
+    if not _in_hong_kong(areas):
+        return None
     for area in areas:
         for label in _labels(area):
             key = _ALIASES.get(label.casefold())
@@ -95,6 +101,15 @@ def pin_is_outside(lat: float, lng: float, key: str) -> bool:
         return True
     south, north, west, east = _HONG_KONG
     return not (south <= lat <= north and west <= lng <= east)
+
+
+def _in_hong_kong(areas: list[GeographicArea]) -> bool:
+    for area in areas:
+        if str(area.code or "").strip().upper() == "HK":
+            return True
+        if str(area.name or "").strip().casefold() in {"hong kong", "香港"}:
+            return True
+    return False
 
 
 def _labels(area: GeographicArea) -> list[str]:

@@ -991,7 +991,6 @@ paths:
               - rule:missing_coordinates
               - rule:empty_address
               - rule:pin_outside_area
-              - rule:no_place_id
         - name: org_id
           in: query
           schema:
@@ -1061,8 +1060,8 @@ paths:
         Applies venue rules for `review_scope` (`pending_review` or
         `all`). An organization with one location is linked immediately.
         Rows the rules cannot decide are queued for the model. Existing
-        locations are checked for an empty address, a missing pin, a pin
-        outside the district, and a missing Google place id. One
+        locations are checked for an empty address, a missing pin, and a
+        pin outside its Hong Kong district. One
         location sweep runs at a time.
       requestBody:
         required: true

@@ -85,7 +85,9 @@ def decide_bulk(
                 if action == "dismiss":
                     _mark(row, "dismissed", decided_by)
                 else:
-                    apply_proposal(session, row, address=None, area_id=None)
+                    apply_proposal(
+                        session, row, address=None, area_id=None, geocode=False
+                    )
                     _mark(row, "applied", decided_by)
             decided += 1
         except (ValidationError, NotFoundError, IntegrityError) as exc:
@@ -134,9 +136,24 @@ def dismissed_same(
         stmt = stmt.where(LocationFixProposal.target_location_id == target_location_id)
         return session.scalar(stmt) is not None
     if kind == "unresolved":
-        if source:
-            stmt = stmt.where(LocationFixProposal.source == source)
-        return session.scalar(stmt) is not None
+        if entity_type != "location" or not source:
+            return session.scalar(stmt) is not None
+        stmt = stmt.where(LocationFixProposal.source == source)
+        if source != "rule:pin_outside_area":
+            return session.scalar(stmt) is not None
+        stored_rows = session.scalars(
+            select(LocationFixProposal).where(
+                LocationFixProposal.entity_type == entity_type,
+                LocationFixProposal.entity_id == entity_id,
+                LocationFixProposal.status == "dismissed",
+                LocationFixProposal.kind == "unresolved",
+                LocationFixProposal.source == source,
+            )
+        ).all()
+        wanted_pin = _pin_key(proposed_location)
+        return any(
+            _pin_key(item.proposed_location) == wanted_pin for item in stored_rows
+        )
     if kind == "update_location":
         if target_location_id is None:
             return False
@@ -149,11 +166,12 @@ def dismissed_same(
                 LocationFixProposal.target_location_id == target_location_id,
             )
         ).all()
-        wanted_pin = _location_key(proposed_location)
-        if wanted_pin is None:
+        wanted_location = _location_key(proposed_location)
+        if wanted_location is None:
             return bool(stored_rows)
         return any(
-            _location_key(item.proposed_location) == wanted_pin for item in stored_rows
+            _location_key(item.proposed_location) == wanted_location
+            for item in stored_rows
         )
     wanted = _location_key(proposed_location)
     if wanted is None:
@@ -279,6 +297,12 @@ def _mark(row: LocationFixProposal, status: str, decided_by: str | None) -> None
     row.decided_by = decided_by
     row.decided_at = datetime.now(timezone.utc)
     row.updated_at = row.decided_at
+
+
+def _pin_key(proposed: dict[str, Any] | None) -> tuple[float, float] | None:
+    if not proposed or proposed.get("lat") is None or proposed.get("lng") is None:
+        return None
+    return (round(float(proposed["lat"]), 5), round(float(proposed["lng"]), 5))
 
 
 def _location_key(proposed: dict[str, Any] | None) -> tuple[str, str] | None:

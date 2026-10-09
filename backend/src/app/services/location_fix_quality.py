@@ -10,10 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import GeographicArea, Location
 from app.services.location_fix_districts import district_key, pin_is_outside
-from app.services.location_fix_geocode import geocode_address
 from app.services.location_fixes import clear_pending, upsert_proposal
-
-GEOCODE_CAP = 20
 
 
 def area_chains(
@@ -51,22 +48,26 @@ def area_chains(
 def assess_location(
     location: Location,
     areas: list[GeographicArea],
-    geocodes_left: list[int],
 ) -> dict[str, Any] | None:
     """Highest-priority finding for one venue, or None when it is usable."""
     address = str(location.address or "").strip()
     if not address:
         return _unresolved("rule:empty_address", "Location has no address")
     if location.lat is None or location.lng is None:
-        return _missing_coordinates(location, address, geocodes_left)
+        return _missing_coordinates(location, address)
     key = district_key(areas)
     if key is not None and pin_is_outside(
         float(location.lat), float(location.lng), key
     ):
         name = areas[0].name if areas else key
-        return _unresolved("rule:pin_outside_area", f"Map pin is outside {name}")
-    if not str(location.place_id or "").strip():
-        return _unresolved("rule:no_place_id", "Location has no Google place id")
+        return _unresolved(
+            "rule:pin_outside_area",
+            f"Map pin is outside {name}",
+            proposed_location={
+                "lat": float(location.lat),
+                "lng": float(location.lng),
+            },
+        )
     return None
 
 
@@ -75,9 +76,8 @@ def record_location_finding(
     location: Location,
     areas: list[GeographicArea],
     run_id: str | UUID,
-    geocodes_left: list[int],
 ) -> str:
-    finding = assess_location(location, areas, geocodes_left)
+    finding = assess_location(location, areas)
     if finding is None:
         if clear_pending(session, "location", location.id):
             return "cleared"
@@ -92,43 +92,29 @@ def record_location_finding(
     )
 
 
-def _missing_coordinates(
-    location: Location,
-    address: str,
-    geocodes_left: list[int],
-) -> dict[str, Any]:
-    lat = None
-    lng = None
-    rationale = "Map pin will be looked up when you apply"
-    if geocodes_left[0] > 0:
-        geocodes_left[0] -= 1
-        coords = geocode_address(address)
-        if coords is None:
-            rationale = "Address could not be geocoded; apply tries again"
-        else:
-            lat, lng = coords
-            rationale = "Geocoded the stored address"
-    proposed: dict[str, Any] = {
-        "address": address,
-        "area_id": str(location.area_id),
-    }
-    if lat is not None and lng is not None:
-        proposed["lat"] = lat
-        proposed["lng"] = lng
+def _missing_coordinates(location: Location, address: str) -> dict[str, Any]:
+    """Store the address only. A single apply looks up the pin."""
     return {
         "kind": "update_location",
         "source": "rule:missing_coordinates",
-        "rationale": rationale,
+        "rationale": "Map pin will be looked up when you apply",
         "target_location_id": location.id,
-        "proposed_location": proposed,
+        "proposed_location": {
+            "address": address,
+            "area_id": str(location.area_id),
+        },
     }
 
 
-def _unresolved(source: str, rationale: str) -> dict[str, Any]:
+def _unresolved(
+    source: str,
+    rationale: str,
+    proposed_location: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     return {
         "kind": "unresolved",
         "source": source,
         "rationale": rationale,
         "target_location_id": None,
-        "proposed_location": None,
+        "proposed_location": proposed_location,
     }

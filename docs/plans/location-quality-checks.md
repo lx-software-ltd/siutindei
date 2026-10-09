@@ -9,17 +9,21 @@ Extend the Locations sweep so an existing venue can be fixed, and so an
 admin can link one of several model candidates without leaving the row.
 
 - A location with an address and no coordinates becomes
-  `update_location` / `rule:missing_coordinates`. The sweep geocodes at
-  most 20 of those addresses. Apply writes `lat` and `lng` and leaves
-  `place_id` unchanged. Apply geocodes when the pin is still missing.
-- Rules only, no model: empty address (`rule:empty_address`), a pin
+  `update_location` / `rule:missing_coordinates`. The sweep stores the
+  address and does not call Nominatim. Apply on one row looks the pin
+  up, writes `lat` and `lng` to six decimal places, and leaves
+  `place_id` unchanged. Apply does not replace a pin that is already
+  stored. Bulk apply does not look pins up.
+- Rules only, no model: empty address (`rule:empty_address`) and a pin
   that falls in a different Hong Kong district or outside Hong Kong
-  (`rule:pin_outside_area`), and a missing Google place id
-  (`rule:no_place_id`). These stay `unresolved`. One pending row per
-  location, highest issue first.
+  (`rule:pin_outside_area`). The area chain must include Hong Kong.
+  Boxes overlap at a shared boundary, so a pin in both boxes is not
+  flagged. These stay `unresolved`. One pending row per location,
+  highest issue first. A missing Google place id is not a location
+  finding.
 - An unresolved activity row that lists candidates accepts
   `target_location_id` on apply and creates the same join as
-  `link_existing`.
+  `link_existing`. The proposal kind stays `unresolved`.
 
 ## Non-goals
 
@@ -45,8 +49,10 @@ admin can link one of several model candidates without leaving the row.
 ## Invariants this change preserves
 
 - `rule:single_location` still links immediately. Other activity rules
-  stay pending. Dismissed unresolved rows are still not sent to the
-  model.
+  stay pending. A dismissed unresolved activity or organization is
+  still not sent to the model. A dismissed location finding matches
+  the same source, and a dismissed pin also matches the rounded
+  coordinates.
 - One pending proposal per `(entity_type, entity_id)`.
 - Category-check spend is still not counted against the location budget.
 - Applying a new sole venue still links activities that have no join.

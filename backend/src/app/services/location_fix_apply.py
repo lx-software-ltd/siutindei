@@ -17,6 +17,9 @@ from app.services.location_fix_geocode import geocode_address
 from app.services.location_fix_query import pending_row
 
 
+_PIN = Decimal("0.000001")
+
+
 def apply_proposal(
     session: Session,
     row: LocationFixProposal,
@@ -24,6 +27,7 @@ def apply_proposal(
     address: str | None,
     area_id: str | None,
     target_location_id: str | UUID | None = None,
+    geocode: bool = True,
 ) -> None:
     if row.kind == "unresolved":
         if target_location_id is not None:
@@ -37,7 +41,7 @@ def apply_proposal(
         _apply_create(session, row, address=address, area_id=area_id)
         return
     if row.kind == "update_location":
-        _apply_update(session, row)
+        _apply_update(session, row, geocode=geocode)
         return
     raise ValidationError("Invalid kind", field="kind")
 
@@ -55,12 +59,11 @@ def _apply_candidate(
     }
     if str(target_location_id) not in allowed:
         raise ValidationError("Location is not a candidate", field="target_location_id")
-    row.kind = "link_existing"
     row.target_location_id = str(target_location_id)
     _apply_link(session, row)
 
 
-def _apply_update(session: Session, row: LocationFixProposal) -> None:
+def _apply_update(session: Session, row: LocationFixProposal, *, geocode: bool) -> None:
     if row.entity_type != "location":
         raise ValidationError("Only a location can be geocoded", field="entity_type")
     location = session.get(Location, row.entity_id)
@@ -73,17 +76,21 @@ def _apply_update(session: Session, row: LocationFixProposal) -> None:
         raise ValidationError("address is required", field="address")
     if proposed_address and proposed_address != stored_address:
         raise ValidationError("Address changed since the sweep", field="address")
+    if location.lat is not None and location.lng is not None:
+        return
     lat = proposed.get("lat")
     lng = proposed.get("lng")
     if lat is None or lng is None:
+        if not geocode:
+            raise ValidationError("Look up this map pin on its own", field="address")
         coords = geocode_address(stored_address)
         if coords is None:
             raise ValidationError("Address could not be geocoded", field="address")
         lat, lng = coords
-    location.lat = Decimal(str(lat))
-    location.lng = Decimal(str(lng))
-    proposed["lat"] = float(lat)
-    proposed["lng"] = float(lng)
+    location.lat = Decimal(str(lat)).quantize(_PIN)
+    location.lng = Decimal(str(lng)).quantize(_PIN)
+    proposed["lat"] = float(location.lat)
+    proposed["lng"] = float(location.lng)
     proposed["address"] = stored_address
     row.proposed_location = proposed
     row.target_location_id = location.id
