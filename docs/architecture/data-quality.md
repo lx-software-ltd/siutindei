@@ -169,11 +169,12 @@ organization warning and is not a location finding.
 
 A venue-less organization whose `source` is `edb` is matched to the
 EDB school register by school number. Name similarity of at least 0.95
-creates the venue during the sweep, at most 200 creates per sweep, and
-only while the request is inside an 18 second budget so the API
-Gateway limit still holds. Further confident matches are stored as
-pending `create_location` from `rule:open_data`. The activity pass
-still runs. Similarity from 0.80 up to 0.95 stays pending. A weaker
+creates the venue during the sweep, at most 200 creates per sweep.
+Further confident matches are stored as pending `create_location` from
+`rule:open_data`. The activity pass still runs. The whole sweep request
+stops scanning after 20 seconds and reports `truncated`, because API
+Gateway cuts the request at 29 seconds; the next sweep continues. A
+504 in the Locations tab means the sweep ran but answered late. Similarity from 0.80 up to 0.95 stays pending. A weaker
 name is left for the model. A failed register download is not cached
 and those organizations are left for the next sweep; the run records
 that the register could not be loaded. The register is fetched through
