@@ -80,6 +80,16 @@ test.describe('Data quality', () => {
     await expect(adminPage.getByText('Location updated.')).toBeVisible();
   });
 
+  test('admin can link one model candidate from the row', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=data-quality&tab=locations');
+    await adminPage.getByRole('button', { name: 'Sweep pending' }).click();
+    await adminPage.getByRole('cell', { name: 'Art Class', exact: true }).click();
+    await expect(adminPage.getByText('Model named more than one venue')).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Link 8 Harbour Road' }).click();
+    await expect(adminPage.getByText('Location updated.')).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'Art Class', exact: true })).toHaveCount(0);
+  });
+
   test('admin can select every matching location from the header checkbox', async ({
     adminPage,
   }) => {

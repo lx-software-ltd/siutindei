@@ -84,7 +84,9 @@ def test_single_location_is_linked_immediately(
     assert result[1] == []
     join = db_session.get(ActivityLocation, (activity.id, venue.id))
     assert join is not None
-    proposal = db_session.scalars(select(LocationFixProposal)).one()
+    proposal = db_session.scalars(
+        select(LocationFixProposal).where(LocationFixProposal.entity_id == activity.id)
+    ).one()
     assert proposal.status == "applied"
     assert proposal.source == "rule:single_location"
 
@@ -146,9 +148,11 @@ def test_pricing_location_stays_pending(db_session, sample_activity_category) ->
     result, batches = start_location_scan(
         db_session, review_scope="pending_review", org_id=org.id
     )
-    assert result["created"] == 1
+    assert result["created"] == 3
     assert batches == []
-    proposal = db_session.scalars(select(LocationFixProposal)).one()
+    proposal = db_session.scalars(
+        select(LocationFixProposal).where(LocationFixProposal.entity_id == activity.id)
+    ).one()
     assert proposal.source == "rule:pricing_schedule"
     assert proposal.target_location_id == first.id
     assert proposal.status == "pending"

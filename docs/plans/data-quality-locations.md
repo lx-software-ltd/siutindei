@@ -26,8 +26,10 @@ organization and activity payloads and on a list route.
 ## Non-goals
 
 - Changing the `locations` schema or the `activity_locations` join.
-- Geocoding every location or fixing `missing_coordinates` (stays an
-  org-review blocker; a Nominatim lookup is an optional follow-up).
+- Geocoding every location during one request. `missing_coordinates`
+  stays an org-review blocker. Filling a pin from the stored address,
+  plus empty-address, pin, and place-id findings, is specified in
+  `docs/plans/location-quality-checks.md`.
 - Duplicate-location detection or merging locations.
 - Auto-applying model verdicts, or any rule other than
   `rule:single_location`. Those proposals wait for an admin decision.

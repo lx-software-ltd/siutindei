@@ -260,12 +260,12 @@ paths:
           in: query
           schema:
             type: string
-            enum: [organization, activity]
+            enum: [organization, activity, location]
         - name: kind
           in: query
           schema:
             type: string
-            enum: [link_existing, create_location, unresolved]
+            enum: [link_existing, create_location, unresolved, update_location]
         - name: source
           in: query
           schema:
@@ -336,6 +336,10 @@ paths:
                 area_id:
                   type: string
                   format: uuid
+                target_location_id:
+                  type: string
+                  format: uuid
+                  description: One candidate venue when the proposal is unresolved.
       responses:
         "200":
           description: Updated proposal
@@ -1081,7 +1085,7 @@ components:
           format: uuid
         entity_type:
           type: string
-          enum: [organization, activity]
+          enum: [organization, activity, location]
         entity_id:
           type: string
           format: uuid
@@ -1090,7 +1094,7 @@ components:
           format: uuid
         kind:
           type: string
-          enum: [link_existing, create_location, unresolved]
+          enum: [link_existing, create_location, unresolved, update_location]
         target_location_id:
           type: string
           format: uuid

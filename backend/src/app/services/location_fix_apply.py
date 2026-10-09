@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -22,8 +23,12 @@ def apply_proposal(
     *,
     address: str | None,
     area_id: str | None,
+    target_location_id: str | UUID | None = None,
 ) -> None:
     if row.kind == "unresolved":
+        if target_location_id is not None:
+            _apply_candidate(session, row, target_location_id)
+            return
         raise ValidationError("Nothing to apply", field="kind")
     if row.kind == "link_existing":
         _apply_link(session, row)
@@ -31,7 +36,57 @@ def apply_proposal(
     if row.kind == "create_location":
         _apply_create(session, row, address=address, area_id=area_id)
         return
+    if row.kind == "update_location":
+        _apply_update(session, row)
+        return
     raise ValidationError("Invalid kind", field="kind")
+
+
+def _apply_candidate(
+    session: Session, row: LocationFixProposal, target_location_id: str | UUID
+) -> None:
+    if row.entity_type != "activity":
+        raise ValidationError("Only an activity can link a venue", field="entity_type")
+    candidates = (row.proposed_location or {}).get("candidates") or []
+    allowed = {
+        str(item.get("location_id"))
+        for item in candidates
+        if isinstance(item, dict) and item.get("location_id")
+    }
+    if str(target_location_id) not in allowed:
+        raise ValidationError("Location is not a candidate", field="target_location_id")
+    row.kind = "link_existing"
+    row.target_location_id = target_location_id
+    _apply_link(session, row)
+
+
+def _apply_update(session: Session, row: LocationFixProposal) -> None:
+    if row.entity_type != "location":
+        raise ValidationError("Only a location can be geocoded", field="entity_type")
+    location = session.get(Location, row.entity_id)
+    if location is None:
+        raise NotFoundError("locations", str(row.entity_id))
+    proposed = dict(row.proposed_location or {})
+    stored_address = str(location.address or "").strip()
+    proposed_address = str(proposed.get("address") or "").strip()
+    if not stored_address:
+        raise ValidationError("address is required", field="address")
+    if proposed_address and proposed_address != stored_address:
+        raise ValidationError("Address changed since the sweep", field="address")
+    lat = proposed.get("lat")
+    lng = proposed.get("lng")
+    if lat is None or lng is None:
+        coords = geocode_address(stored_address)
+        if coords is None:
+            raise ValidationError("Address could not be geocoded", field="address")
+        lat, lng = coords
+    location.lat = Decimal(str(lat))
+    location.lng = Decimal(str(lng))
+    proposed["lat"] = float(lat)
+    proposed["lng"] = float(lng)
+    proposed["address"] = stored_address
+    row.proposed_location = proposed
+    row.target_location_id = location.id
 
 
 def _apply_link(session: Session, row: LocationFixProposal) -> None:

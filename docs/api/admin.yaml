@@ -972,12 +972,12 @@ paths:
           in: query
           schema:
             type: string
-            enum: [organization, activity]
+            enum: [organization, activity, location]
         - name: kind
           in: query
           schema:
             type: string
-            enum: [link_existing, create_location, unresolved]
+            enum: [link_existing, create_location, unresolved, update_location]
         - name: source
           in: query
           schema:
@@ -988,6 +988,10 @@ paths:
               - rule:name_area
               - rule:no_venue
               - model
+              - rule:missing_coordinates
+              - rule:empty_address
+              - rule:pin_outside_area
+              - rule:no_place_id
         - name: org_id
           in: query
           schema:
@@ -1056,7 +1060,9 @@ paths:
       description: |
         Applies venue rules for `review_scope` (`pending_review` or
         `all`). An organization with one location is linked immediately.
-        Rows the rules cannot decide are queued for the model. One
+        Rows the rules cannot decide are queued for the model. Existing
+        locations are checked for an empty address, a missing pin, a pin
+        outside the district, and a missing Google place id. One
         location sweep runs at a time.
       requestBody:
         required: true
@@ -1068,7 +1074,7 @@ paths:
               properties:
                 entity_type:
                   type: string
-                  enum: [organization, activity]
+                  enum: [organization, activity, location]
                 org_id:
                   type: string
                   format: uuid
@@ -1150,6 +1156,10 @@ paths:
                 area_id:
                   type: string
                   format: uuid
+                target_location_id:
+                  type: string
+                  format: uuid
+                  description: One candidate venue when the proposal is unresolved.
       responses:
         "200":
           description: Updated proposal
@@ -6892,7 +6902,7 @@ components:
           format: uuid
         entity_type:
           type: string
-          enum: [organization, activity]
+          enum: [organization, activity, location]
         entity_id:
           type: string
           format: uuid
@@ -6907,7 +6917,7 @@ components:
           nullable: true
         kind:
           type: string
-          enum: [link_existing, create_location, unresolved]
+          enum: [link_existing, create_location, unresolved, update_location]
         target_location_id:
           type: string
           format: uuid

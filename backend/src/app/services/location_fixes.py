@@ -36,6 +36,7 @@ def decide_proposal(
     *,
     address: str | None = None,
     area_id: str | None = None,
+    target_location_id: str | UUID | None = None,
 ) -> dict[str, Any]:
     row = session.get(LocationFixProposal, proposal_id)
     if row is None:
@@ -48,7 +49,13 @@ def decide_proposal(
         return serialize_many(session, [row])[0]
     if action != "apply":
         raise ValidationError("action must be apply or dismiss", field="action")
-    apply_proposal(session, row, address=address, area_id=area_id)
+    apply_proposal(
+        session,
+        row,
+        address=address,
+        area_id=area_id,
+        target_location_id=target_location_id,
+    )
     _mark(row, "applied", decided_by)
     session.flush()
     return serialize_many(session, [row])[0]
@@ -112,6 +119,7 @@ def dismissed_same(
     kind: str,
     target_location_id: str | UUID | None,
     proposed_location: dict[str, Any] | None,
+    source: str | None = None,
 ) -> bool:
     """True when an admin already dismissed this same suggestion."""
     stmt = select(LocationFixProposal.id).where(
@@ -126,7 +134,27 @@ def dismissed_same(
         stmt = stmt.where(LocationFixProposal.target_location_id == target_location_id)
         return session.scalar(stmt) is not None
     if kind == "unresolved":
+        if source:
+            stmt = stmt.where(LocationFixProposal.source == source)
         return session.scalar(stmt) is not None
+    if kind == "update_location":
+        if target_location_id is None:
+            return False
+        stored_rows = session.scalars(
+            select(LocationFixProposal).where(
+                LocationFixProposal.entity_type == entity_type,
+                LocationFixProposal.entity_id == entity_id,
+                LocationFixProposal.status == "dismissed",
+                LocationFixProposal.kind == "update_location",
+                LocationFixProposal.target_location_id == target_location_id,
+            )
+        ).all()
+        wanted_pin = _location_key(proposed_location)
+        if wanted_pin is None:
+            return bool(stored_rows)
+        return any(
+            _location_key(item.proposed_location) == wanted_pin for item in stored_rows
+        )
     wanted = _location_key(proposed_location)
     if wanted is None:
         return False
@@ -165,6 +193,7 @@ def upsert_proposal(
         kind=kind,
         target_location_id=target_location_id,
         proposed_location=proposed_location,
+        source=source,
     ):
         clear_pending(session, entity_type, entity_id)
         return "skipped"

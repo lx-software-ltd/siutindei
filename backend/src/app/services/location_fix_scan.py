@@ -21,7 +21,8 @@ from app.db.models import (
 )
 from app.db.models.location_fix import LocationScanRun
 from app.exceptions import ValidationError
-from app.services.location_fix_query import over_budget, serialize_run
+from app.services import location_fix_quality as location_quality
+from app.services.location_fix_query import ENTITY_TYPES, over_budget, serialize_run
 from app.services.location_fixes import (
     clear_pending,
     dismissed_same,
@@ -34,7 +35,6 @@ _MAX_SWEEP = 10000
 _MAX_MODEL = 500
 _BATCH_SIZE = 10
 _REVIEW_SCOPES = frozenset({"pending_review", "all"})
-_ENTITY_TYPES = frozenset({"organization", "activity"})
 _ACTIVE = ("queued", "running")
 STALE_AFTER = timedelta(seconds=660)
 
@@ -55,7 +55,7 @@ def start_location_scan(
     """Run venue rules and return model batches to enqueue after commit."""
     if review_scope not in _REVIEW_SCOPES:
         raise ValidationError("Invalid review_scope", field="review_scope")
-    if entity_type is not None and entity_type not in _ENTITY_TYPES:
+    if entity_type is not None and entity_type not in ENTITY_TYPES:
         raise ValidationError("Invalid entity_type", field="entity_type")
     _fail_stale_runs(session)
     if over_budget(session):
@@ -93,10 +93,12 @@ def start_location_scan(
     }
     truncated = False
     queued: dict[str, list[str]] = {"organization": [], "activity": []}
-    orgs = list(session.scalars(_org_stmt(org_id, query, review_scope)).all())
-    if len(orgs) > _MAX_SWEEP:
-        orgs = orgs[:_MAX_SWEEP]
-        truncated = True
+    orgs: list[Organization] = []
+    if entity_type != "location":
+        orgs = list(session.scalars(_org_stmt(org_id, query, review_scope)).all())
+        if len(orgs) > _MAX_SWEEP:
+            orgs = orgs[:_MAX_SWEEP]
+            truncated = True
     activities: list[Activity] = []
     if entity_type in (None, "activity") and not truncated:
         activities = list(
@@ -126,6 +128,29 @@ def start_location_scan(
             if len(queued["activity"]) >= _MAX_MODEL:
                 truncated = True
                 break
+    if entity_type in (None, "location") and not truncated:
+        venues = list(
+            session.scalars(_location_stmt(org_id, query, review_scope)).all()
+        )
+        chains = location_quality.area_chains(
+            session, [venue.area_id for venue in venues]
+        )
+        geocodes_left = [location_quality.GEOCODE_CAP]
+        for venue in venues:
+            if seen >= _MAX_SWEEP:
+                truncated = True
+                break
+            seen += 1
+            _count(
+                counts,
+                location_quality.record_location_finding(
+                    session,
+                    venue,
+                    chains.get(venue.area_id, []),
+                    run.id,
+                    geocodes_left,
+                ),
+            )
     batches = _batches(queued)
     run.total_entities = seen
     run.batches_total = len(batches)
@@ -316,6 +341,27 @@ def _org_stmt(org_id, query, review_scope):
         stmt = stmt.where(Organization.name.ilike(ilike_pattern(query), escape="\\"))
     if review_scope == "pending_review":
         stmt = stmt.where(Organization.review_status == "pending_review")
+    return stmt
+
+
+def _location_stmt(org_id, query, review_scope):
+    stmt = (
+        select(Location)
+        .join(Organization, Organization.id == Location.org_id)
+        .order_by(Location.address, Location.id)
+    )
+    if review_scope != "all":
+        stmt = stmt.where(Organization.review_status == "pending_review")
+    if org_id is not None:
+        stmt = stmt.where(Location.org_id == org_id)
+    if query:
+        pattern = ilike_pattern(query)
+        stmt = stmt.where(
+            or_(
+                Location.address.ilike(pattern, escape="\\"),
+                Organization.name.ilike(pattern, escape="\\"),
+            )
+        )
     return stmt
 
 

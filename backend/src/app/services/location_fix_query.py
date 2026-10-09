@@ -25,7 +25,7 @@ from app.db.models.location_fix import (
 from app.exceptions import NotFoundError, ValidationError
 from app.services.name_fix_query import decode_cursor, encode_cursor, ilike_pattern
 
-KINDS = frozenset({"link_existing", "create_location", "unresolved"})
+KINDS = frozenset({"link_existing", "create_location", "unresolved", "update_location"})
 SOURCES = frozenset(
     {
         "rule:single_location",
@@ -33,10 +33,14 @@ SOURCES = frozenset(
         "rule:name_area",
         "rule:no_venue",
         "model",
+        "rule:missing_coordinates",
+        "rule:empty_address",
+        "rule:pin_outside_area",
+        "rule:no_place_id",
     }
 )
 STATUSES = frozenset({"pending", "applied", "dismissed"})
-ENTITY_TYPES = frozenset({"organization", "activity"})
+ENTITY_TYPES = frozenset({"organization", "activity", "location"})
 
 
 def load_settings(session: Session) -> LocationFixSettings:
@@ -208,6 +212,12 @@ def filtered_stmt(
         activity_ids = select(Activity.id).where(
             Activity.name.ilike(pattern, escape="\\")
         )
+        location_ids = select(Location.id).where(
+            or_(
+                Location.address.ilike(pattern, escape="\\"),
+                Location.org_id.in_(org_ids),
+            )
+        )
         stmt = stmt.where(
             or_(
                 and_(
@@ -217,6 +227,10 @@ def filtered_stmt(
                 and_(
                     LocationFixProposal.entity_type == "activity",
                     LocationFixProposal.entity_id.in_(activity_ids),
+                ),
+                and_(
+                    LocationFixProposal.entity_type == "location",
+                    LocationFixProposal.entity_id.in_(location_ids),
                 ),
             )
         )
@@ -272,6 +286,7 @@ def serialize_many(
     location_ids = [
         row.target_location_id for row in rows if row.target_location_id is not None
     ]
+    location_ids.extend(row.entity_id for row in rows if row.entity_type == "location")
     locations = {}
     if location_ids:
         locations = {
@@ -338,11 +353,13 @@ def _serialize(
     linked_counts: dict[Any, int],
 ) -> dict[str, Any]:
     proposed = row.proposed_location or {}
-    entity_name = (
-        activity_names.get(row.entity_id)
-        if row.entity_type == "activity"
-        else org_names.get(row.entity_id)
-    )
+    if row.entity_type == "activity":
+        entity_name = activity_names.get(row.entity_id)
+    elif row.entity_type == "location":
+        venue = locations.get(row.entity_id)
+        entity_name = (venue.address if venue and venue.address else None) or "Location"
+    else:
+        entity_name = org_names.get(row.entity_id)
     target = locations.get(row.target_location_id) if row.target_location_id else None
     area_name = proposed.get("area_name") or areas.get(
         str(proposed.get("area_id") or "")
@@ -355,10 +372,30 @@ def _serialize(
             str(area_name or "").strip(),
         ]
         proposed_label = " · ".join(bit for bit in bits if bit) or "New location"
+    elif row.kind == "update_location":
+        lat = proposed.get("lat")
+        lng = proposed.get("lng")
+        if lat is None or lng is None:
+            proposed_label = "Look up map pin"
+        else:
+            proposed_label = f"{lat}, {lng}"
+    elif row.entity_type == "location":
+        proposed_label = {
+            "rule:empty_address": "Add an address",
+            "rule:pin_outside_area": "Check the map pin",
+            "rule:no_place_id": "Add a place id",
+        }.get(row.source, "Needs review")
     else:
         proposed_label = "Needs a location"
     venue_count = int(location_counts.get(row.org_id, 0))
-    if row.entity_type == "organization":
+    if row.entity_type == "location":
+        current_label = {
+            "rule:empty_address": "No address",
+            "rule:missing_coordinates": "No map pin",
+            "rule:pin_outside_area": "Pin outside district",
+            "rule:no_place_id": "No place id",
+        }.get(row.source, "Location")
+    elif row.entity_type == "organization":
         current_label = "No location" if venue_count == 0 else f"{venue_count} venues"
     else:
         linked = int(linked_counts.get(row.entity_id, 0))

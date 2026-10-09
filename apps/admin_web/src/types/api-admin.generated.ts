@@ -1466,9 +1466,9 @@ export interface paths {
             parameters: {
                 query?: {
                     status?: "pending" | "applied" | "dismissed";
-                    entity_type?: "organization" | "activity";
-                    kind?: "link_existing" | "create_location" | "unresolved";
-                    source?: "rule:single_location" | "rule:pricing_schedule" | "rule:name_area" | "rule:no_venue" | "model";
+                    entity_type?: "organization" | "activity" | "location";
+                    kind?: "link_existing" | "create_location" | "unresolved" | "update_location";
+                    source?: "rule:single_location" | "rule:pricing_schedule" | "rule:name_area" | "rule:no_venue" | "model" | "rule:missing_coordinates" | "rule:empty_address" | "rule:pin_outside_area" | "rule:no_place_id";
                     org_id?: string;
                     q?: string;
                     cursor?: string;
@@ -1608,7 +1608,9 @@ export interface paths {
          * Sweep venues and store proposals
          * @description Applies venue rules for `review_scope` (`pending_review` or
          *     `all`). An organization with one location is linked immediately.
-         *     Rows the rules cannot decide are queued for the model. One
+         *     Rows the rules cannot decide are queued for the model. Existing
+         *     locations are checked for an empty address, a missing pin, a pin
+         *     outside the district, and a missing Google place id. One
          *     location sweep runs at a time.
          */
         post: {
@@ -1622,7 +1624,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        entity_type?: "organization" | "activity";
+                        entity_type?: "organization" | "activity" | "location";
                         /** Format: uuid */
                         org_id?: string;
                         q?: string;
@@ -1759,6 +1761,11 @@ export interface paths {
                         address?: string;
                         /** Format: uuid */
                         area_id?: string;
+                        /**
+                         * Format: uuid
+                         * @description One candidate venue when the proposal is unresolved.
+                         */
+                        target_location_id?: string;
                     };
                 };
             };
@@ -7770,7 +7777,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            entity_type: "organization" | "activity";
+            entity_type: "organization" | "activity" | "location";
             /** Format: uuid */
             entity_id: string;
             entity_name?: string | null;
@@ -7778,7 +7785,7 @@ export interface components {
             org_id: string;
             org_name?: string | null;
             /** @enum {string} */
-            kind: "link_existing" | "create_location" | "unresolved";
+            kind: "link_existing" | "create_location" | "unresolved" | "update_location";
             /** Format: uuid */
             target_location_id?: string | null;
             proposed_location?: {

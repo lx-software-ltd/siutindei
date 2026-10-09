@@ -185,7 +185,7 @@ Columns:
 - `requested_by` (text, optional)
 - `org_id` (UUID, optional, FK → `organizations.id`, ON DELETE SET NULL)
 - `review_scope` (text) — `pending_review` or `all`
-- `entity_type` (text, optional) — `organization` or `activity`
+- `entity_type` (text, optional) — `organization`, `activity`, or `location`
 - `total_entities`, `batches_total`, `batches_done` (integer)
 - `created_count`, `updated_count`, `skipped_count`, `cleared_count`, `auto_applied_count`, `queued_count`, `failed_count` (integer)
 - `cost_usd` (numeric)
@@ -198,18 +198,20 @@ Constraints: partial unique index so only one `queued` or `running` row exists.
 
 ## Table: location_fix_proposals
 
-Purpose: A suggested venue link or a new location for an organization
-or activity.
+Purpose: A suggested venue link, a new location, or a fix for an
+existing location.
 
 Columns:
 - `id` (UUID, PK)
-- `entity_type` (text) — `organization` or `activity`
+- `entity_type` (text) — `organization`, `activity`, or `location`
 - `entity_id` (UUID, required)
 - `org_id` (UUID, required, FK → `organizations.id`, ON DELETE CASCADE)
-- `kind` (text) — `link_existing`, `create_location`, or `unresolved`
+- `kind` (text) — `link_existing`, `create_location`, `unresolved`, or `update_location`
 - `target_location_id` (UUID, optional, FK → `locations.id`, ON DELETE SET NULL)
 - `proposed_location` (jsonb, optional)
-- `source` (text) — `rule:single_location`, `rule:pricing_schedule`, `rule:name_area`, `rule:no_venue`, or `model`
+- `source` (text) — `rule:single_location`, `rule:pricing_schedule`,
+  `rule:name_area`, `rule:no_venue`, `model`, `rule:missing_coordinates`,
+  `rule:empty_address`, `rule:pin_outside_area`, or `rule:no_place_id`
 - `confidence` (numeric, optional)
 - `rationale` (text, optional)
 - `status` (text) — `pending`, `applied`, or `dismissed`
