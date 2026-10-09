@@ -307,8 +307,11 @@ def test_location_filter_checks_venues_only(db_session) -> None:
 
 def test_org_cap_skips_later_locations(db_session, monkeypatch) -> None:
     monkeypatch.setattr("app.services.location_fix_scan._MAX_SWEEP", 1)
-    alpha = _org(db_session, "Alpha Club")
-    beta = _org(db_session, "Beta Club")
+    # Other tests commit pending organizations. The name filter keeps this
+    # cap check on these two rows when the suite shares one database.
+    token = "Sweepcapfixture"
+    alpha = _org(db_session, f"Aa {token}")
+    beta = _org(db_session, f"Bb {token}")
     area = _area(db_session)
     db_session.add(
         Location(
@@ -320,7 +323,9 @@ def test_org_cap_skips_later_locations(db_session, monkeypatch) -> None:
         )
     )
     db_session.flush()
-    result, batches = start_location_scan(db_session, review_scope="pending_review")
+    result, batches = start_location_scan(
+        db_session, review_scope="pending_review", query=token
+    )
     assert result["truncated"] is True
     queued_ids = [entity_id for batch in batches for entity_id in batch["entity_ids"]]
     assert queued_ids == [str(alpha.id)]
