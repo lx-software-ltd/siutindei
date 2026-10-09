@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
@@ -21,7 +22,7 @@ from app.exceptions import ValidationError
 from app.services.location_fix_query import load_settings
 from app.services.location_fix_scan import start_location_scan
 from psycopg.types.range import Range
-from sqlalchemy import select
+from sqlalchemy import event, select
 
 _MANAGER = "00000000-0000-0000-0000-000000000001"
 
@@ -335,6 +336,118 @@ def test_org_cap_skips_later_locations(db_session, monkeypatch) -> None:
         ).all()
     )
     assert beta_rows == []
+
+
+def test_truncated_sweep_continues_with_the_unscanned_org(
+    db_session, monkeypatch
+) -> None:
+    """The next sweep starts with entities the last one did not reach."""
+    monkeypatch.setattr("app.services.location_fix_scan._MAX_SWEEP", 1)
+    token = "Resumefixture"
+    alpha = _org(db_session, f"Aa {token}")
+    beta = _org(db_session, f"Bb {token}")
+    first, batches = start_location_scan(
+        db_session, review_scope="pending_review", query=token
+    )
+    assert first["truncated"] is True
+    assert [entity_id for batch in batches for entity_id in batch["entity_ids"]] == [
+        str(alpha.id)
+    ]
+    # The worker stores the model answer for the queued organization.
+    db_session.add(
+        LocationFixProposal(
+            entity_type="organization",
+            entity_id=alpha.id,
+            org_id=alpha.id,
+            kind="unresolved",
+            source="model",
+            status="pending",
+        )
+    )
+    run = db_session.get(LocationScanRun, first["scan_run_id"])
+    run.status = "done"
+    db_session.flush()
+    second, batches = start_location_scan(
+        db_session, review_scope="pending_review", query=token
+    )
+    assert second["truncated"] is True
+    assert [entity_id for batch in batches for entity_id in batch["entity_ids"]] == [
+        str(beta.id)
+    ]
+    alpha_rows = list(
+        db_session.scalars(
+            select(LocationFixProposal).where(LocationFixProposal.org_id == alpha.id)
+        ).all()
+    )
+    assert len(alpha_rows) == 1
+
+
+def test_sweep_order_puts_the_oldest_finding_first(db_session, monkeypatch) -> None:
+    monkeypatch.setattr("app.services.location_fix_scan._MAX_SWEEP", 1)
+    token = "Orderfixture"
+    recent = _org(db_session, f"Aa {token}")
+    stale = _org(db_session, f"Bb {token}")
+    for org, day in ((recent, 9), (stale, 1)):
+        db_session.add(
+            LocationFixProposal(
+                entity_type="organization",
+                entity_id=org.id,
+                org_id=org.id,
+                kind="create_location",
+                source="model",
+                status="dismissed",
+                proposed_location={"address": f"{day} Old Street"},
+                updated_at=datetime(2026, 10, day, tzinfo=timezone.utc),
+            )
+        )
+    db_session.flush()
+    _result, batches = start_location_scan(
+        db_session, review_scope="pending_review", query=token
+    )
+    assert [entity_id for batch in batches for entity_id in batch["entity_ids"]] == [
+        str(stale.id)
+    ]
+
+
+def test_entities_with_nothing_pending_cost_no_proposal_query(
+    db_session, sample_activity_category
+) -> None:
+    org = _org(db_session, "Quiet Club")
+    area = _area(db_session)
+    venue = _location(db_session, org, area, "1 Quiet Road")
+    activity = _activity(db_session, org, sample_activity_category, "Quiet Class")
+    db_session.add(ActivityLocation(activity_id=activity.id, location_id=venue.id))
+    db_session.flush()
+    per_entity: list[str] = []
+
+    def record(_conn, _cursor, statement, *_args) -> None:
+        if "location_fix_proposals.entity_id = " in statement:
+            per_entity.append(statement)
+
+    engine = db_session.get_bind().engine
+    event.listen(engine, "before_cursor_execute", record)
+    try:
+        result, batches = start_location_scan(
+            db_session, review_scope="pending_review", org_id=org.id
+        )
+    finally:
+        event.remove(engine, "before_cursor_execute", record)
+    assert batches == []
+    assert result["total_entities"] == 3
+    assert per_entity == []
+
+
+def test_sweep_reports_how_many_entities_it_scanned(
+    db_session, sample_activity_category
+) -> None:
+    org = _org(db_session, "Counted Club")
+    area = _area(db_session)
+    _location(db_session, org, area, "1 Counted Road")
+    _activity(db_session, org, sample_activity_category, "Counted Class")
+    result, _batches = start_location_scan(
+        db_session, review_scope="pending_review", org_id=org.id
+    )
+    assert result["total_entities"] == 3
 
 
 def test_model_cap_still_records_a_later_location(db_session, monkeypatch) -> None:

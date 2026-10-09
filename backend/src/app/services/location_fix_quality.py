@@ -76,9 +76,13 @@ def record_location_finding(
     location: Location,
     areas: list[GeographicArea],
     run_id: str | UUID,
+    pending: set[tuple[str, Any]] | None = None,
 ) -> str:
+    """Store or clear the venue finding. `pending` is the sweep's preloaded set."""
     finding = assess_location(location, areas)
     if finding is None:
+        if pending is not None and ("location", location.id) not in pending:
+            return "unchanged"
         if clear_pending(session, "location", location.id):
             return "cleared"
         return "unchanged"

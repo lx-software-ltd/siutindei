@@ -237,15 +237,19 @@ export function LocationsPanel() {
         org_id: organization || undefined,
         review_scope: reviewScope,
       });
+      const scanned =
+        result.total_entities == null
+          ? ''
+          : ` Scanned ${result.total_entities} entities.`;
       const stopped = result.truncated
-        ? ' Scan stopped at the limit; run it again to continue.'
+        ? ' Stopped at the limit; sweep again to continue with the rest. The pending count falls when you apply or dismiss findings, not when you sweep.'
         : '';
       const lookedUp = result.queued_for_lookup
         ? ` Queued ${result.queued_for_lookup} pin lookups.`
         : '';
       const warning = result.error ? ` ${result.error}` : '';
       setNotice(
-        `Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}, cleared ${result.cleared}, linked ${result.auto_applied}, queued ${result.queued_for_model}.${lookedUp}${stopped}${warning}`
+        `Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}, cleared ${result.cleared}, linked ${result.auto_applied}, queued ${result.queued_for_model}.${scanned}${lookedUp}${stopped}${warning}`
       );
       await refresh();
     } catch (err) {

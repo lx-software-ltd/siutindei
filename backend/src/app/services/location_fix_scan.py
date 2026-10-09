@@ -174,6 +174,7 @@ def start_location_scan(
                     venue,
                     chains.get(venue.area_id, []),
                     run.id,
+                    pending=context["pending"],
                 ),
             )
     lookup_ids = (
@@ -229,10 +230,18 @@ def start_location_scan(
     return payload, batches
 
 
+def _clear(session, context, entity_type: str, entity_id) -> bool:
+    """Drop a pending row. The preloaded set saves a query when there is none."""
+    pending = context.get("pending")
+    if pending is not None and (entity_type, entity_id) not in pending:
+        return False
+    return clear_pending(session, entity_type, entity_id)
+
+
 def _scan_org(session, org, context, run_id, queued, auto_budget) -> str:
     locations = context["locations"].get(org.id, [])
     if locations:
-        if clear_pending(session, "organization", org.id):
+        if _clear(session, context, "organization", org.id):
             return "cleared"
         return "unchanged"
     register_outcome = consider_open_data(session, org, run_id, auto_budget, context)
@@ -242,7 +251,7 @@ def _scan_org(session, org, context, run_id, queued, auto_budget) -> str:
         return "unchanged"
     if _dismissed_unresolved(session, "organization", org.id):
         return "skipped"
-    if clear_pending(session, "organization", org.id):
+    if _clear(session, context, "organization", org.id):
         queued["organization"].append(str(org.id))
         return "cleared"
     queued["organization"].append(str(org.id))
@@ -251,7 +260,7 @@ def _scan_org(session, org, context, run_id, queued, auto_budget) -> str:
 
 def _scan_activity(session, activity, context, run_id, queued) -> str:
     if activity.id in context["linked"]:
-        if clear_pending(session, "activity", activity.id):
+        if _clear(session, context, "activity", activity.id):
             return "cleared"
         return "unchanged"
     locations = context["locations"].get(activity.org_id, [])
@@ -305,7 +314,7 @@ def _scan_activity(session, activity, context, run_id, queued) -> str:
         return "unchanged"
     if _dismissed_unresolved(session, "activity", activity.id):
         return "skipped"
-    cleared = clear_pending(session, "activity", activity.id)
+    cleared = _clear(session, context, "activity", activity.id)
     queued["activity"].append(str(activity.id))
     return "cleared" if cleared else "unchanged"
 

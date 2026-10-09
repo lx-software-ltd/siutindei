@@ -317,6 +317,7 @@ export function scanLocationFixes(body: {
     auto_applied: number;
     queued_for_model: number;
     queued_for_lookup?: number;
+    total_entities?: number;
     truncated: boolean;
     status: string;
     error?: string | null;
