@@ -16,19 +16,23 @@ from app.services.category_suggestions.events import enqueue_location_batches
 from app.services.location_fix_scan import LocationScanBusy, start_location_scan
 from app.services.location_fix_query import (
     ENTITY_TYPES,
+    GRADES,
     KINDS,
     SOURCES,
     STATUSES,
     choice,
+    filtered_stmt,
     get_proposal,
     list_proposals,
     parse_uuid,
+    serialize_many,
     settings_payload,
     summarize_proposals,
     update_settings,
 )
 from app.services.location_fixes import decide_bulk, decide_proposal
 from app.utils import json_response
+from app.utils.responses import text_response
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -45,6 +49,8 @@ def handle_location_fixes(
     """Dispatch /v1/admin/location-fixes routes."""
     if method == "GET" and resource_id is None:
         return _list(event)
+    if method == "GET" and resource_id == "export" and sub_resource is None:
+        return _export(event)
     if method == "GET" and resource_id == "summary" and sub_resource is None:
         return _summary(event)
     if resource_id == "settings" and sub_resource is None and method == "GET":
@@ -78,6 +84,7 @@ def _list(event: Mapping[str, Any]) -> dict[str, Any]:
             query=_blank(_query_param(event, "q")),
             cursor=_blank(_query_param(event, "cursor")),
             limit=parse_limit(event),
+            grade=choice(_query_param(event, "grade"), GRADES, "grade"),
         )
     return json_response(200, payload, event=event)
 
@@ -129,6 +136,7 @@ def _scan(event: Mapping[str, Any]) -> dict[str, Any]:
                 query=query.strip()
                 if isinstance(query, str) and query.strip()
                 else None,
+                lookup=_lookup(body.get("lookup")),
                 requested_by=_get_user_sub(event),
             )
         except LocationScanBusy:
@@ -185,6 +193,8 @@ def _decide_body(
     if area_id is not None and not isinstance(area_id, str):
         raise ValidationError("area_id must be a string", field="area_id")
     target_location_id = None
+    lat = _coord(body.get("lat"), "lat")
+    lng = _coord(body.get("lng"), "lng")
     if target_raw is not None:
         if not isinstance(target_raw, str) or not target_raw.strip():
             raise ValidationError(
@@ -201,6 +211,8 @@ def _decide_body(
             address=address,
             area_id=area_id,
             target_location_id=target_location_id,
+            lat=lat,
+            lng=lng,
         )
         session.commit()
     return json_response(200, payload, event=event)
@@ -214,6 +226,80 @@ def _mark_enqueue_failed(run_id: str) -> None:
         run.status = "failed"
         run.error = "Location sweep could not be queued"
         session.commit()
+
+
+def _export(event: Mapping[str, Any]) -> dict[str, Any]:
+    import csv
+    import io
+
+    status = choice(_query_param(event, "status"), STATUSES, "status") or "pending"
+    org_raw = _blank(_query_param(event, "org_id"))
+    with Session(get_engine()) as session:
+        stmt = filtered_stmt(
+            status=status,
+            entity_type=choice(
+                _query_param(event, "entity_type"), ENTITY_TYPES, "entity_type"
+            ),
+            kind=choice(_query_param(event, "kind"), KINDS, "kind"),
+            source=choice(_query_param(event, "source"), SOURCES, "source"),
+            org_id=parse_uuid(org_raw, "org_id") if org_raw else None,
+            query=_blank(_query_param(event, "q")),
+            grade=choice(_query_param(event, "grade"), GRADES, "grade"),
+        )
+        rows = list(session.scalars(stmt.limit(5000)).all())
+        items = serialize_many(session, rows)
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(
+        [
+            "entity_type",
+            "entity_id",
+            "organization",
+            "address",
+            "kind",
+            "source",
+            "grade",
+            "lat",
+            "lng",
+            "district_consistent",
+            "display_name",
+        ]
+    )
+    for item in items:
+        proposed = item.get("proposed_location") or {}
+        lookup = proposed.get("lookup") or {}
+        writer.writerow(
+            [
+                item.get("entity_type"),
+                item.get("entity_id"),
+                item.get("org_name") or "",
+                proposed.get("address") or "",
+                item.get("kind"),
+                item.get("source"),
+                lookup.get("grade") or "",
+                proposed.get("lat") if proposed.get("lat") is not None else "",
+                proposed.get("lng") if proposed.get("lng") is not None else "",
+                lookup.get("district_consistent"),
+                lookup.get("display_name") or "",
+            ]
+        )
+    return text_response(200, buffer.getvalue(), content_type="text/csv", event=event)
+
+
+def _lookup(value: Any) -> str | None:
+    if value is None or value == "":
+        return None
+    if not isinstance(value, str):
+        raise ValidationError("lookup must be a string", field="lookup")
+    return value.strip() or None
+
+
+def _coord(value: Any, field: str) -> float | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValidationError(f"{field} must be a number", field=field)
+    return float(value)
 
 
 def _blank(value: str | None) -> str | None:

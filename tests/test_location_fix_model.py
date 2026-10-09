@@ -148,6 +148,43 @@ def test_location_message_is_handled_before_a_category_scan(monkeypatch) -> None
     assert result == {"batchItemFailures": []}
 
 
+def test_lookup_message_is_routed_before_the_model(monkeypatch) -> None:
+    worker = _worker()
+    called: dict[str, object] = {}
+
+    def fake_lookup(scan_run_id, provider, entity_ids, *, message_id, receive_count):
+        called["lookup"] = (provider, entity_ids, message_id, receive_count)
+        return True
+
+    def fail_location(*_args, **_kwargs):
+        raise AssertionError("lookup payload should not call the model")
+
+    monkeypatch.setattr(worker, "process_lookup_batch", fake_lookup)
+    monkeypatch.setattr(worker, "process_location_batch", fail_location)
+    entity_id = str(uuid4())
+    result = worker.lambda_handler(
+        {
+            "Records": [
+                {
+                    "messageId": "m-lookup",
+                    "body": json.dumps(
+                        {
+                            "location_scan_run_id": str(uuid4()),
+                            "entity_type": "location",
+                            "lookup": "nominatim",
+                            "entity_ids": [entity_id],
+                        }
+                    ),
+                    "attributes": {"ApproximateReceiveCount": "1"},
+                }
+            ]
+        },
+        None,
+    )
+    assert called["lookup"] == ("nominatim", [entity_id], "m-lookup", 1)
+    assert result == {"batchItemFailures": []}
+
+
 def test_invalid_location_message_is_acknowledged(monkeypatch) -> None:
     worker = _worker()
 

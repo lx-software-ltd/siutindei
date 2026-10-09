@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.admin_resource_location import _create_location
-from app.db.models import Activity, ActivityLocation, Location
+from app.api.admin_resource_location import _create_location, _validate_coordinates
+from app.db.models import Activity, ActivityLocation, GeographicArea, Location
 from app.db.models.location_fix import LocationFixProposal
 from app.db.repositories import LocationRepository
 from app.exceptions import NotFoundError, ValidationError
+from app.services.location_fix_districts import in_hong_kong_bbox, pin_consistency
 from app.services.location_fix_geocode import geocode_address
 from app.services.location_fix_query import pending_row
 
@@ -28,6 +30,8 @@ def apply_proposal(
     area_id: str | None,
     target_location_id: str | UUID | None = None,
     geocode: bool = True,
+    lat: float | None = None,
+    lng: float | None = None,
 ) -> None:
     if row.kind == "unresolved":
         if target_location_id is not None:
@@ -41,7 +45,9 @@ def apply_proposal(
         _apply_create(session, row, address=address, area_id=area_id)
         return
     if row.kind == "update_location":
-        _apply_update(session, row, geocode=geocode)
+        if lat is not None or lng is not None:
+            _set_manual_pin(session, row, lat, lng)
+        _apply_update(session, row, geocode=geocode, area_id=area_id)
         return
     raise ValidationError("Invalid kind", field="kind")
 
@@ -63,7 +69,13 @@ def _apply_candidate(
     _apply_link(session, row)
 
 
-def _apply_update(session: Session, row: LocationFixProposal, *, geocode: bool) -> None:
+def _apply_update(
+    session: Session,
+    row: LocationFixProposal,
+    *,
+    geocode: bool,
+    area_id: str | None = None,
+) -> None:
     if row.entity_type != "location":
         raise ValidationError("Only a location can be geocoded", field="entity_type")
     location = session.get(Location, row.entity_id)
@@ -78,6 +90,13 @@ def _apply_update(session: Session, row: LocationFixProposal, *, geocode: bool) 
         raise ValidationError("Address changed since the sweep", field="address")
     if location.lat is not None and location.lng is not None:
         return
+    lookup = proposed.get("lookup") or {}
+    if not geocode:
+        precise = lookup.get("grade") == "precise"
+        if not precise or lookup.get("district_consistent") is not True:
+            raise ValidationError("Look up this map pin on its own", field="address")
+    elif lookup.get("district_consistent") is False and not str(area_id or "").strip():
+        raise ValidationError("Pin is outside this district", field="area_id")
     lat = proposed.get("lat")
     lng = proposed.get("lng")
     if lat is None or lng is None:
@@ -87,6 +106,12 @@ def _apply_update(session: Session, row: LocationFixProposal, *, geocode: bool) 
         if coords is None:
             raise ValidationError("Address could not be geocoded", field="address")
         lat, lng = coords
+    chosen_area = str(area_id or "").strip()
+    if chosen_area:
+        area = session.get(GeographicArea, UUID(chosen_area))
+        if area is None:
+            raise ValidationError("area_id not found", field="area_id")
+        location.area_id = area.id
     location.lat = Decimal(str(lat)).quantize(_PIN)
     location.lng = Decimal(str(lng)).quantize(_PIN)
     proposed["lat"] = float(location.lat)
@@ -94,6 +119,48 @@ def _apply_update(session: Session, row: LocationFixProposal, *, geocode: bool) 
     proposed["address"] = stored_address
     row.proposed_location = proposed
     row.target_location_id = location.id
+
+
+def _set_manual_pin(
+    session: Session, row: LocationFixProposal, lat: float | None, lng: float | None
+) -> None:
+    if lat is None or lng is None:
+        raise ValidationError("lat and lng are required together", field="lat")
+    _validate_coordinates(lat, lng)
+    lat_f = float(lat)
+    lng_f = float(lng)
+    if not in_hong_kong_bbox(lat_f, lng_f):
+        raise ValidationError("Pin is outside Hong Kong", field="lat")
+    location = session.get(Location, row.entity_id)
+    if location is None:
+        raise NotFoundError("locations", str(row.entity_id))
+    chain = _area_chain(session, location.area_id)
+    consistent, other = pin_consistency(lat_f, lng_f, chain)
+    proposed = dict(row.proposed_location or {})
+    proposed["lat"] = lat_f
+    proposed["lng"] = lng_f
+    proposed["lookup"] = {
+        "provider": "manual",
+        "grade": "manual",
+        "district_consistent": consistent,
+        "other_district": other,
+        "looked_up_at": datetime.now(timezone.utc).isoformat(),
+    }
+    row.proposed_location = proposed
+
+
+def _area_chain(session: Session, area_id) -> list[GeographicArea]:
+    chain: list[GeographicArea] = []
+    seen: set = set()
+    current_id = area_id
+    while current_id is not None and current_id not in seen:
+        area = session.get(GeographicArea, current_id)
+        if area is None:
+            break
+        chain.append(area)
+        seen.add(area.id)
+        current_id = area.parent_id
+    return chain
 
 
 def _apply_link(session: Session, row: LocationFixProposal) -> None:

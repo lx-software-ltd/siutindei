@@ -27,6 +27,7 @@ This document outlines security best practices and requirements for the Siu Tin 
 ### DO
 
 - Use AWS Secrets Manager for database credentials and the OpenRouter API key (`OpenRouterApiKey`, noEcho, secret `openrouter-api-key`). An empty parameter stores the placeholder `pending` so the stack can deploy before the key exists.
+- The Google Places API key (`GooglePlacesApiKey`, noEcho) is a CloudFormation parameter passed through as the admin Lambda environment variable `GOOGLE_PLACES_API_KEY`. It is not stored in Secrets Manager. Pin lookup sends it as the `X-Goog-Api-Key` header, never in the URL, because the HTTP proxy logs URLs. An empty value disables Google lookup. Restrict the key to Places API (New). `lambda:GetFunctionConfiguration` can read the variable, so the key stays limited to that API.
 - Category suggestion and category-check prompts redact emails and phone numbers before they leave the VPC. `provider.data_collection` stays `deny` unless an admin turns that setting off.
 - Use GitHub Secrets for CI/CD sensitive values
 - Use CDK parameters with `noEcho: true` for secrets

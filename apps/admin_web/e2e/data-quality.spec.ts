@@ -104,6 +104,14 @@ test.describe('Data quality', () => {
     await expect(adminPage.getByText('Updated 1. 0 failed.')).toBeVisible();
   });
 
+  test('admin can queue a pin lookup from the locations tab', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=data-quality&tab=locations');
+    await expect(adminPage.getByRole('button', { name: 'Look up with Google' })).toBeDisabled();
+    await expect(adminPage.getByRole('button', { name: 'Export CSV' })).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Look up pins' }).click();
+    await expect(adminPage.getByText('Queued 0 pin lookups.')).toBeVisible();
+  });
+
   test('admin can edit name rule word lists', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=names');
     const exceptions = adminPage.getByLabel('Words to leave in capitals');

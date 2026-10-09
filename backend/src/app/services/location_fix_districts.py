@@ -90,6 +90,30 @@ def district_key(areas: list[GeographicArea]) -> str | None:
     return None
 
 
+def in_hong_kong_bbox(lat: float, lng: float) -> bool:
+    """True when the pin sits in the Hong Kong bounding box."""
+    south, north, west, east = _HONG_KONG
+    return south <= lat <= north and west <= lng <= east
+
+
+def districts_containing(lat: float, lng: float) -> set[str]:
+    """District keys whose boxes contain this pin."""
+    return set(_containing(lat, lng))
+
+
+def pin_consistency(
+    lat: float, lng: float, areas: list[GeographicArea]
+) -> tuple[bool, str | None]:
+    """Whether the pin sits in this area's district, and the other district."""
+    key = district_key(areas)
+    if key is None:
+        return True, None
+    found = districts_containing(lat, lng)
+    if key in found or not found:
+        return True, None
+    return False, sorted(found)[0]
+
+
 def pin_is_outside(lat: float, lng: float, key: str) -> bool:
     """True when the pin is in another district, or outside Hong Kong."""
     if key not in _BOXES:

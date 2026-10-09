@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import GeographicArea, Location
 from app.services.location_fix_districts import district_key, pin_is_outside
-from app.services.location_fixes import clear_pending, upsert_proposal
+from app.services.location_fixes import clear_pending, pending_row, upsert_proposal
 
 
 def area_chains(
@@ -82,6 +82,7 @@ def record_location_finding(
         if clear_pending(session, "location", location.id):
             return "cleared"
         return "unchanged"
+    _keep_lookup(session, location.id, finding)
     return upsert_proposal(
         session,
         entity_type="location",
@@ -90,6 +91,26 @@ def record_location_finding(
         scan_run_id=run_id,
         **finding,
     )
+
+
+def _keep_lookup(session: Session, location_id, finding: dict[str, Any]) -> None:
+    """A later sweep must not drop a pin lookup that is still fresh."""
+    proposed = finding.get("proposed_location")
+    if not isinstance(proposed, dict) or proposed.get("lookup"):
+        return
+    existing = pending_row(session, "location", location_id)
+    if existing is None:
+        return
+    stored = existing.proposed_location or {}
+    lookup = stored.get("lookup")
+    if not lookup:
+        return
+    proposed["lookup"] = lookup
+    for key in ("lat", "lng"):
+        if stored.get(key) is not None:
+            proposed[key] = stored[key]
+    if existing.source in {"lookup:nominatim", "lookup:google"}:
+        finding["source"] = existing.source
 
 
 def _missing_coordinates(location: Location, address: str) -> dict[str, Any]:
