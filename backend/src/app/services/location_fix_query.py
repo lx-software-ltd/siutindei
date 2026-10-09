@@ -10,7 +10,13 @@ from uuid import UUID
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.db.models import Activity, GeographicArea, Location, Organization
+from app.db.models import (
+    Activity,
+    ActivityLocation,
+    GeographicArea,
+    Location,
+    Organization,
+)
 from app.db.models.location_fix import (
     LocationFixProposal,
     LocationFixSettings,
@@ -282,6 +288,16 @@ def serialize_many(
             .group_by(Location.org_id)
         ).all()
     }
+    linked_counts: dict[Any, int] = {}
+    if activity_ids:
+        linked_counts = {
+            activity_id: int(count)
+            for activity_id, count in session.execute(
+                select(ActivityLocation.activity_id, func.count())
+                .where(ActivityLocation.activity_id.in_(activity_ids))
+                .group_by(ActivityLocation.activity_id)
+            ).all()
+        }
     area_ids = set()
     for row in rows:
         proposed = row.proposed_location or {}
@@ -299,7 +315,15 @@ def serialize_many(
             ).all()
         }
     return [
-        _serialize(row, org_names, activity_names, locations, areas, location_counts)
+        _serialize(
+            row,
+            org_names,
+            activity_names,
+            locations,
+            areas,
+            location_counts,
+            linked_counts,
+        )
         for row in rows
     ]
 
@@ -311,6 +335,7 @@ def _serialize(
     locations: dict[Any, Location],
     areas: dict[str, str],
     location_counts: dict[Any, int],
+    linked_counts: dict[Any, int],
 ) -> dict[str, Any]:
     proposed = row.proposed_location or {}
     entity_name = (
@@ -335,10 +360,12 @@ def _serialize(
     venue_count = int(location_counts.get(row.org_id, 0))
     if row.entity_type == "organization":
         current_label = "No location" if venue_count == 0 else f"{venue_count} venues"
-    elif venue_count == 0:
-        current_label = "No venue"
     else:
-        current_label = f"0 of {venue_count} venues"
+        linked = int(linked_counts.get(row.entity_id, 0))
+        if venue_count == 0 and linked == 0:
+            current_label = "No venue"
+        else:
+            current_label = f"{linked} of {venue_count} venues"
     confidence = None if row.confidence is None else float(row.confidence)
     return {
         "id": str(row.id),

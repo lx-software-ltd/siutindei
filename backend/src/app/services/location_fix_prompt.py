@@ -57,9 +57,10 @@ def build_activity_prompt(
     }
     system = (
         "You choose the venue for a children's activity in Hong Kong. "
-        "Reply with one JSON object only. location_indexes must contain "
-        "exactly one index from that activity's locations list, or be "
-        "empty when you set kind to unresolved. Do not invent venues."
+        "Reply with one JSON object only. location_indexes lists every "
+        "index from that activity's locations list that fits. One index "
+        "links that venue. More than one, or none, is unresolved. "
+        "Do not invent venues."
     )
     rows = []
     for activity in activities:

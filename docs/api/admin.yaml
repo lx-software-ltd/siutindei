@@ -7084,6 +7084,10 @@ components:
           type: boolean
         matched:
           type: integer
+          description: Rows this call will decide, at most 200.
+        truncated:
+          type: boolean
+          description: True when more pending rows match than this call decides.
         decided:
           type: integer
         failed:

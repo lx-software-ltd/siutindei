@@ -78,6 +78,7 @@ class OrgReviewSnapshot:
     pricing_counts: dict[str, int]
     schedule_counts: dict[str, int]
     issues: list[ReviewIssue]
+    check_count: int
 
     @property
     def blocker_count(self) -> int:
@@ -105,10 +106,15 @@ def collect_issues(
     name_config: NameSanitizeConfig | None = None,
     duplicate_ids: set[str] | None = None,
     linked_activity_ids: set[str] | None = None,
-) -> list[ReviewIssue]:
-    """Return blocker and warning issues for one organization."""
+) -> tuple[list[ReviewIssue], int]:
+    """Return issues and how many checks ran, so completeness can reach 1."""
     org_id = str(organization.id)
     issues: list[ReviewIssue] = []
+    checks = 0
+
+    def note() -> None:
+        nonlocal checks
+        checks += 1
 
     def add(
         code: str,
@@ -127,6 +133,7 @@ def collect_issues(
             )
         )
 
+    note()
     cleaned = sanitize_name(
         organization.name or "",
         organization.name_translations or {},
@@ -142,6 +149,7 @@ def collect_issues(
         )
     if organization.review_status == "pending_review":
         for activity in activities:
+            note()
             cleaned_activity = sanitize_name(
                 activity.name or "",
                 activity.name_translations or {},
@@ -155,6 +163,7 @@ def collect_issues(
                     str(activity.id),
                     "Name needs cleanup",
                 )
+    note()
     if duplicate_ids and org_id in duplicate_ids:
         add(
             "possible_duplicate",
@@ -163,6 +172,7 @@ def collect_issues(
             org_id,
             "Another organization has the same name, phone, email, or source id",
         )
+    note()
     if not _text(organization.description):
         add(
             "missing_description",
@@ -171,6 +181,7 @@ def collect_issues(
             org_id,
             "Description is missing",
         )
+    note()
     if organization.description_source == "template":
         add(
             "source_attribution",
@@ -187,6 +198,7 @@ def collect_issues(
             org_id,
             "Description still contains a source line",
         )
+    note()
     if not _translation(organization.name_translations, "zh"):
         add(
             "missing_zh_name",
@@ -195,6 +207,7 @@ def collect_issues(
             org_id,
             "Chinese name is missing",
         )
+    note()
     if not _translation(organization.description_translations, "zh"):
         add(
             "missing_zh_description",
@@ -203,6 +216,7 @@ def collect_issues(
             org_id,
             "Chinese description is missing",
         )
+    note()
     if not any(_text(getattr(organization, field)) for field in _CONTACT_FIELDS):
         add(
             "no_contact",
@@ -211,6 +225,7 @@ def collect_issues(
             org_id,
             "No phone, email, or social contact",
         )
+    note()
     if not organization.media_urls:
         add(
             "no_media",
@@ -219,6 +234,7 @@ def collect_issues(
             org_id,
             "No photos",
         )
+    note()
     if not _text(organization.logo_media_url):
         add(
             "no_logo",
@@ -227,6 +243,7 @@ def collect_issues(
             org_id,
             "No logo",
         )
+    note()
     if not _text(organization.place_id):
         add(
             "no_place_id",
@@ -235,6 +252,7 @@ def collect_issues(
             org_id,
             "No Google place id",
         )
+    note()
     if not locations:
         add(
             "no_locations",
@@ -243,6 +261,7 @@ def collect_issues(
             org_id,
             "No locations",
         )
+    note()
     if not activities:
         add(
             "no_activities",
@@ -253,6 +272,7 @@ def collect_issues(
         )
 
     for location in locations:
+        note()
         if location.lat is None or location.lng is None:
             add(
                 "missing_coordinates",
@@ -263,6 +283,7 @@ def collect_issues(
             )
     for activity in activities:
         activity_id = str(activity.id)
+        note()
         if pricing_counts.get(activity_id, 0) <= 0:
             add(
                 "missing_pricing",
@@ -271,6 +292,7 @@ def collect_issues(
                 activity_id,
                 "Activity has no price",
             )
+        note()
         if schedule_counts.get(activity_id, 0) <= 0:
             add(
                 "missing_schedule",
@@ -279,6 +301,7 @@ def collect_issues(
                 activity_id,
                 "Activity has no schedule",
             )
+        note()
         if str(activity.category_id) == str(PENDING_CATEGORY_ID):
             add(
                 "pending_category",
@@ -287,6 +310,7 @@ def collect_issues(
                 activity_id,
                 "Activity is waiting for a category",
             )
+        note()
         if activity_id in (pending_category_check_ids or set()):
             add(
                 "category_check_pending",
@@ -295,6 +319,8 @@ def collect_issues(
                 activity_id,
                 "Category check is waiting for a decision",
             )
+        if linked_activity_ids is not None:
+            note()
         if linked_activity_ids is not None and activity_id not in linked_activity_ids:
             add(
                 "activity_no_location",
@@ -303,6 +329,7 @@ def collect_issues(
                 activity_id,
                 "Activity has no location",
             )
+        note()
         if not _text(activity.description):
             add(
                 "missing_activity_description",
@@ -311,6 +338,7 @@ def collect_issues(
                 activity_id,
                 "Activity description is missing",
             )
+        note()
         lower, upper = _age_bounds(activity)
         if lower == 0 and upper == 18:
             add(
@@ -320,7 +348,7 @@ def collect_issues(
                 activity_id,
                 "Activity age range is still the import default (0-18)",
             )
-    return issues
+    return issues, checks
 
 
 def load_snapshots(
@@ -371,7 +399,7 @@ def load_snapshots(
             str(activity.id): schedule_counts.get(str(activity.id), 0)
             for activity in org_activities
         }
-        issues = collect_issues(
+        issues, check_count = collect_issues(
             organization,
             org_locations,
             org_activities,
@@ -394,6 +422,7 @@ def load_snapshots(
                 pricing_counts=org_pricing,
                 schedule_counts=org_schedules,
                 issues=issues,
+                check_count=check_count,
             )
         )
     return snapshots
@@ -444,11 +473,7 @@ def snapshot_for_org(
 
 def _passed_checks(snapshot: OrgReviewSnapshot) -> int:
     """Checks that did not produce an issue, so completeness can reach 1."""
-    org_checks = 9
-    location_checks = len(snapshot.locations)
-    activity_checks = len(snapshot.activities) * 5
-    total = org_checks + location_checks + activity_checks
-    return max(total - len(snapshot.issues), 0)
+    return max(snapshot.check_count - len(snapshot.issues), 0)
 
 
 def _translation(value: Any, language: str) -> str:

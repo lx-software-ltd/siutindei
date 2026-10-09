@@ -28,6 +28,7 @@ from app.services.location_fixes import (
     upsert_proposal,
 )
 from app.services.name_fix_query import ilike_pattern
+from app.services.name_sanitizer_areas import HK_AREAS
 
 _MAX_SWEEP = 10000
 _MAX_MODEL = 500
@@ -155,6 +156,8 @@ def _scan_org(session, org, context, run_id, queued) -> str:
         return "unchanged"
     if len(queued["organization"]) >= _MAX_MODEL:
         return "unchanged"
+    if _dismissed_unresolved(session, "organization", org.id):
+        return "skipped"
     if clear_pending(session, "organization", org.id):
         queued["organization"].append(str(org.id))
         return "cleared"
@@ -216,6 +219,8 @@ def _scan_activity(session, activity, context, run_id, queued) -> str:
         )
     if len(queued["activity"]) >= _MAX_MODEL:
         return "unchanged"
+    if _dismissed_unresolved(session, "activity", activity.id):
+        return "skipped"
     cleared = clear_pending(session, "activity", activity.id)
     queued["activity"].append(str(activity.id))
     return "cleared" if cleared else "unchanged"
@@ -325,20 +330,53 @@ def _activity_stmt(org_id, query, review_scope):
     if org_id is not None:
         stmt = stmt.where(Activity.org_id == org_id)
     if query:
-        stmt = stmt.where(Activity.name.ilike(ilike_pattern(query), escape="\\"))
+        pattern = ilike_pattern(query)
+        stmt = stmt.where(
+            or_(
+                Activity.name.ilike(pattern, escape="\\"),
+                Organization.name.ilike(pattern, escape="\\"),
+            )
+        )
     return stmt
 
 
+def _dismissed_unresolved(session: Session, entity_type: str, entity_id) -> bool:
+    """A dismissed 'nothing to propose' row is not sent to the model again."""
+    return dismissed_same(
+        session,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        kind="unresolved",
+        target_location_id=None,
+        proposed_location=None,
+    )
+
+
 def _area_labels(area: GeographicArea | None) -> list[str]:
+    """District tags a name can carry: HK area tags, plus Latin district names."""
     if area is None:
         return []
-    labels = [area.name]
-    labels.extend((area.name_translations or {}).values())
-    return [label.strip() for label in labels if label and len(label.strip()) >= 2]
+    found: list[str] = []
+    raw = [area.name, *(area.name_translations or {}).values()]
+    for label in raw:
+        text = str(label or "").strip()
+        if len(text) < 2:
+            continue
+        if text in HK_AREAS:
+            found.append(text.casefold())
+            continue
+        found.extend(tag.casefold() for tag in HK_AREAS if tag in text)
+        if not _has_cjk(text):
+            found.append(text.casefold())
+    return list(dict.fromkeys(found))
+
+
+def _has_cjk(text: str) -> bool:
+    return any("\u4e00" <= char <= "\u9fff" for char in text)
 
 
 def _name_matches(name: str | None, labels: list[str]) -> bool:
-    text = name or ""
+    text = (name or "").casefold()
     return any(label in text for label in labels)
 
 

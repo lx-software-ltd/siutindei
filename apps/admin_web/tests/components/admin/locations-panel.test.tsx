@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -33,13 +33,14 @@ vi.mock('@/hooks/use-geographic-areas', () => ({
 }));
 
 function wrapper({ children }: { children: ReactNode }) {
+  return renderPanel(children, '?section=data-quality&tab=locations');
+}
+
+function renderPanel(children: ReactNode, searchParams: string) {
   const client = resetAdminQueryClientForTests();
   return (
     <QueryClientProvider client={client}>
-      <NuqsTestingAdapter
-        hasMemory
-        searchParams='?section=data-quality&tab=locations'
-      >
+      <NuqsTestingAdapter hasMemory searchParams={searchParams}>
         {children}
       </NuqsTestingAdapter>
     </QueryClientProvider>
@@ -70,5 +71,44 @@ describe('LocationsPanel', () => {
     expect(screen.getByLabelText('Kind')).toBeInTheDocument();
     expect(screen.getByLabelText('Source')).toBeInTheDocument();
     expect(await screen.findByLabelText('Monthly limit (USD)')).toHaveValue('50');
+  });
+
+  it('explains that sweep pending skips an approved organization', async () => {
+    render(<LocationsPanel />, {
+      wrapper: ({ children }) =>
+        renderPanel(
+          children,
+          '?section=data-quality&tab=locations&organization=org-1'
+        ),
+    });
+    expect(
+      await screen.findByText(/Sweep pending only includes organizations still in review/)
+    ).toBeInTheDocument();
+  });
+
+  it('offers the locations screen for an unresolved row', async () => {
+    vi.mocked(listLocationFixes).mockResolvedValue({
+      items: [
+        {
+          id: 'loc-fix-9',
+          entity_type: 'organization',
+          entity_id: 'org-9',
+          entity_name: 'Harbour Club',
+          org_id: 'org-9',
+          kind: 'unresolved',
+          source: 'model',
+          status: 'pending',
+          current_label: 'No location',
+          proposed_label: 'Needs a location',
+          rationale: 'Model could not propose an address',
+        },
+      ],
+      next_cursor: null,
+    });
+    render(<LocationsPanel />, { wrapper });
+    fireEvent.click(await screen.findByText('Harbour Club'));
+    expect(
+      await screen.findByRole('button', { name: 'Create a location' })
+    ).toBeInTheDocument();
   });
 });

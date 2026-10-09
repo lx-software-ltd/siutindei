@@ -29,8 +29,8 @@ organization and activity payloads and on a list route.
 - Geocoding every location or fixing `missing_coordinates` (stays an
   org-review blocker; a Nominatim lookup is an optional follow-up).
 - Duplicate-location detection or merging locations.
-- Auto-applying model verdicts. Rule and model proposals both wait for
-  an admin decision.
+- Auto-applying model verdicts, or any rule other than
+  `rule:single_location`. Those proposals wait for an admin decision.
 - New API Gateway resources. `/v1/admin/location-fixes*` and
   `/v1/partner/location-fixes*` ride the existing greedy
   `admin/{proxy+}` and `partner/{proxy+}` routes.
@@ -44,9 +44,9 @@ A sweep looks at organizations (and their activities) in
 | --- | --- | --- |
 | Activity has no `activity_locations` row, org has exactly one location | `link_existing` to that location, source `rule:single_location` | – |
 | Activity has no join row but pricing or schedule rows name a location | `link_existing` to that location, source `rule:pricing_schedule` | – |
-| Activity has no join row, org has several locations | Activity name carries an HK area tag (`name_sanitizer_areas.HK_AREAS`) matching exactly one location's district → `link_existing`, source `rule:name_area` | Model picks one or more org locations by index from name, description, source URL host; `link_existing`, source `model`, with confidence and rationale |
-| Organization has no locations | – | Model infers address and district from org name, translations, description, source URL host; district must be one of the active `geographic_areas` leaves sent in the prompt → `create_location`, source `model` |
-| Nothing resolves | – | `unresolved` row so the admin sees the gap and can create a location by hand (link to the Locations CRUD screen) |
+| Activity has no join row, org has several locations | Activity name carries one `name_sanitizer_areas.HK_AREAS` tag, or a Latin district name, matching exactly one location's district (case-insensitive) → `link_existing`, source `rule:name_area` | One venue index → `link_existing`, source `model`. Several indexes stay `unresolved` and name every candidate so the admin can see them |
+| Organization has no locations | Activity rows are `unresolved`, source `rule:no_venue`, so the gap is visible while the organization waits | Model infers address and district from org name, translations, description, source URL host; district must be one of the active `geographic_areas` leaves sent in the prompt → `create_location`, source `model` |
+| Nothing resolves | A dismissed `unresolved` row is not sent to the model again | `unresolved` row so the admin sees the gap. The expanded row links to the Locations screen for that organization |
 
 Prompts redact contacts and reuse the taxonomy-list pattern from
 `category_suggestions/prompt.py`: the model chooses from a closed list
@@ -54,14 +54,15 @@ Prompts redact contacts and reuse the taxonomy-list pattern from
 
 ## Storage (red: one migration)
 
-`0042_location_fixes` adds two tables. No seed change.
+`0042_location_fixes` adds three tables. No `seed_data.sql` change.
+The migration inserts the settings singleton.
 
 `location_fix_proposals`: `id`, `entity_type`
 (`organization|activity`), `entity_id`, `org_id` (FK CASCADE), `kind`
 (`link_existing|create_location|unresolved`), `target_location_id`
 (FK locations SET NULL), `proposed_location` JSONB (`address`,
 `area_id`, `area_name`, `lat`, `lng`, `place_id`), `source`
-(`rule:single_location|rule:pricing_schedule|rule:name_area|model`),
+(`rule:single_location|rule:pricing_schedule|rule:name_area|rule:no_venue|model`),
 `confidence` Numeric(4,3), `rationale`, `status`
 (`pending|applied|dismissed`), `scan_run_id`, `decided_by`,
 `decided_at`, `created_at`, `updated_at`. Partial unique index: one
@@ -72,6 +73,10 @@ Prompts redact contacts and reuse the taxonomy-list pattern from
 counts per kind, `cost_usd`, `error`, `processed_message_ids`,
 timestamps) with the same partial unique index that allows one queued
 or running run.
+
+`location_fix_settings`: singleton `id = 1`,
+`monthly_cost_limit_usd` default 50. Category-check spend is not
+counted against it.
 
 ## Flow
 
@@ -85,9 +90,11 @@ org_id?, q?}`:
 2. Remaining gaps are chunked into SQS messages
    `{"location_scan_run_id", "entity_type", "entity_ids"}` on the
    existing category-suggestions queue. `backend/lambda/category_suggestions/handler.py`
-   dispatches on the new key. Model and fallbacks come from
-   `category_suggestion_settings`; spend counts toward the same
-   `monthly_cost_limit_usd`.
+   dispatches on the new key before `scan_run_id`. Model and fallbacks
+   come from `category_suggestion_settings`. Spend counts toward
+   `location_fix_settings.monthly_cost_limit_usd`. `q` matches an
+   organization by its name and includes that organization's
+   activities. A dismissed `unresolved` proposal is not queued.
 3. Response: `{scan_run_id, truncated, created, updated, skipped,
    cleared, queued_for_model}`. The summary endpoint reports the active
    run so the tab can poll, as the Categories tab does.
@@ -103,13 +110,17 @@ Decide (`POST /v1/admin/location-fixes/{id}` and `/bulk`, with
   orphan activities when that location is now the org's only one. The
   admin may override `address` and `area_id` in the request body.
 - `dismiss` marks the row. `unresolved` rows accept only dismiss.
+  Bulk `matched` is the number of rows the call decides (at most 200).
+  `truncated` is true when more pending rows match.
 - Audit context is set with `_set_session_audit_context`; table
   triggers record the writes.
 
-Org review: add activity blocker `activity_no_location` ("Activity has
-no location") in `org_review.py` and `org_review_sql.py`, linking to
+Org review: `activity_no_location` ("Activity has no location") is a
+warning in `org_review.py` and `org_review_sql.py`. It is included in
+the completeness check count. It links to
 `section=data-quality&tab=locations&organization=…`. `no_locations`
-stays as is.
+stays a blocker. An activity's current label counts that activity's
+own joins (`1 of 3 venues`).
 
 ## Partner API
 
@@ -120,8 +131,9 @@ stays as is.
   and `pending_location_fix`, so a key can tell whether an activity
   has a venue at all.
 - `GET /v1/partner/location-fixes` lists pending proposals, filtered
-  to the key's org when org-scoped. Writes for full-access `crud`
-  keys are an open question below.
+  to the key's org when org-scoped. Full-access `crud` keys can
+  `POST /v1/partner/location-fixes/{id}` and `/bulk`. Org-scoped keys
+  receive `403` on writes.
 
 ## Files
 
@@ -151,7 +163,7 @@ Docs and specs:
 
 Tests (written first):
 
-- `tests/test_location_fix_scan.py`, `tests/test_location_fixes.py`, `tests/test_location_fix_model.py`, `tests/test_partner_location_fixes.py`, `tests/test_org_review.py` (new blocker)
+- `tests/test_location_fix_scan.py`, `tests/test_location_fixes.py`, `tests/test_location_fix_model.py` (store plus SQS routing), `tests/test_partner_location_fixes.py`, `tests/test_org_review.py` (warning)
 - `apps/admin_web/tests/components/admin/locations-panel.test.tsx`
 - `apps/admin_web/e2e/data-quality.spec.ts` and mock routes in `e2e/fixtures/test-fixtures.ts`
 
@@ -194,23 +206,9 @@ summary shows batch progress.
 
 ## Rollback
 
-Revert the pull request. Downgrade drops the two tables; applied join
-rows and created locations are valid catalog data and stay.
+Revert the pull request. Downgrade drops the three tables; applied
+join rows and created locations are valid catalog data and stay.
 
 ## Open questions
 
-1. Red-zone approval for `0042_location_fixes`.
-2. Should `rule:single_location` proposals auto-apply (as the 0031
-   backfill did) or wait for Apply like every other row?
-3. Keep "Apply selected" / "Dismiss selected" with the select-all
-   checkbox, or add literal "Apply all" / "Dismiss all" buttons that
-   skip selection?
-4. For orgs with no locations, should `create_location` also geocode
-   the proposed address through the Nominatim proxy to fill `lat` and
-   `lng`?
-5. Partner writes (`POST /v1/partner/location-fixes/{id}` and
-   `/bulk` for full-access `crud` keys) in this change or later?
-6. Is `activity_no_location` a blocker (prevents approval without
-   force) or a warning?
-7. Share `monthly_cost_limit_usd` with category checks, or a separate
-   limit?
+Settled in Decisions above.

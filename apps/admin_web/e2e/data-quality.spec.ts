@@ -53,6 +53,19 @@ test.describe('Data quality', () => {
     ).toBeVisible();
   });
 
+  test('admin sees which sweep includes an approved organization', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto(
+      '/admin/dashboard?section=data-quality&tab=locations&organization=org-1'
+    );
+    await expect(
+      adminPage.getByText(
+        'Sweep pending only includes organizations still in review.'
+      )
+    ).toBeVisible();
+  });
+
   test('admin can sweep and apply a location fix', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=locations');
     await adminPage.getByRole('button', { name: 'Sweep pending' }).click();

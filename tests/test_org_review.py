@@ -55,7 +55,7 @@ def test_collect_issues_flags_blockers() -> None:
         manager_id="manager-1",
         description=None,
     )
-    issues = collect_issues(organization, [], [], {}, {})
+    issues, _checks = collect_issues(organization, [], [], {}, {})
     codes = {issue.code for issue in issues}
     assert "missing_description" in codes
     assert "no_locations" in codes
@@ -79,7 +79,7 @@ def test_activity_without_a_location_is_a_warning() -> None:
         description="Lane swimming",
         age_range=Range(5, 12, bounds="[]"),
     )
-    issues = collect_issues(
+    issues, checks = collect_issues(
         organization,
         [],
         [activity],
@@ -87,6 +87,14 @@ def test_activity_without_a_location_is_a_warning() -> None:
         {str(activity.id): 1},
         linked_activity_ids=set(),
     )
+    _issues_without, checks_without = collect_issues(
+        organization,
+        [],
+        [activity],
+        {str(activity.id): 1},
+        {str(activity.id): 1},
+    )
+    assert checks == checks_without + 1
     match = next(issue for issue in issues if issue.code == "activity_no_location")
     assert match.severity == "warning"
     assert match.message == "Activity has no location"
@@ -241,7 +249,7 @@ def test_default_age_range_matches_database_upper(
     db_session.add(activity)
     db_session.flush()
     db_session.refresh(activity)
-    issues = collect_issues(
+    issues, _checks = collect_issues(
         sample_organization,
         [],
         [activity],

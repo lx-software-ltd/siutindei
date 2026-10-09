@@ -16,6 +16,7 @@ from app.db.models import (
     Organization,
 )
 from app.exceptions import ValidationError
+from app.services import location_fixes as location_fix_service
 from app.services.location_fix_geocode import geocode_address
 from app.services.location_fix_model import store_model_items
 from app.services.location_fix_prompt import build_organization_prompt
@@ -125,9 +126,10 @@ def test_apply_link_inserts_the_join(db_session, sample_activity_category) -> No
     )
     db_session.add(proposal)
     db_session.flush()
-    decide_proposal(db_session, proposal.id, "apply", "admin")
+    payload = decide_proposal(db_session, proposal.id, "apply", "admin")
     assert db_session.get(ActivityLocation, (activity.id, venue.id)) is not None
     assert proposal.status == "applied"
+    assert payload["current_label"] == "1 of 1 venues"
 
 
 def test_unresolved_cannot_be_applied(db_session) -> None:
@@ -145,6 +147,46 @@ def test_unresolved_cannot_be_applied(db_session) -> None:
     with pytest.raises(ValidationError) as exc_info:
         decide_proposal(db_session, proposal.id, "apply", "admin")
     assert exc_info.value.field == "kind"
+
+
+def test_bulk_matched_counts_only_rows_it_decides(db_session, monkeypatch) -> None:
+    monkeypatch.setattr(location_fix_service, "_MAX_BULK", 1)
+    first = _org(db_session)
+    second = Organization(name="Second Club", manager_id=_MANAGER)
+    db_session.add(second)
+    db_session.flush()
+    db_session.add_all(
+        [
+            LocationFixProposal(
+                entity_type="organization",
+                entity_id=first.id,
+                org_id=first.id,
+                kind="unresolved",
+                source="model",
+                status="pending",
+            ),
+            LocationFixProposal(
+                entity_type="organization",
+                entity_id=second.id,
+                org_id=second.id,
+                kind="unresolved",
+                source="model",
+                status="pending",
+            ),
+        ]
+    )
+    db_session.flush()
+    result = decide_bulk(db_session, {"action": "dismiss"}, "admin")
+    assert result["matched"] == 1
+    assert result["decided"] == 1
+    assert result["truncated"] is True
+    pending = db_session.scalars(
+        select(LocationFixProposal).where(
+            LocationFixProposal.status == "pending",
+            LocationFixProposal.org_id.in_([first.id, second.id]),
+        )
+    ).all()
+    assert len(pending) == 1
 
 
 def test_bulk_dismiss_respects_org_id(db_session) -> None:

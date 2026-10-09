@@ -209,6 +209,7 @@ export interface LocationFixProposal {
     area_name?: string;
     lat?: number | null;
     lng?: number | null;
+    candidates?: { location_id: string; address?: string | null }[];
   } | null;
   source: string;
   confidence?: number | null;
@@ -318,6 +319,7 @@ export function decideLocationFixesBulk(body: {
   return request<{
     dry_run: boolean;
     matched: number;
+    truncated?: boolean;
     decided: number;
     failed: number;
     failures: { id: string; message: string }[];

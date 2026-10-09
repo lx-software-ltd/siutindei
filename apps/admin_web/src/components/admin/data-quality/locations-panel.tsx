@@ -5,6 +5,7 @@ import { useQueryState } from 'nuqs';
 import { useEffect, useRef, useState } from 'react';
 
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
+import { useOrganizationScope } from '../../../hooks/use-organization-scope';
 import { useGeographicAreas } from '../../../hooks/use-geographic-areas';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
 import { getAdminQueryClient } from '../../../lib/admin-query-client';
@@ -65,6 +66,7 @@ const DEFAULT_FILTERS: LocationFilters = {
 
 export function LocationsPanel() {
   const [organization, setOrganization] = useQueryState('organization');
+  const { openWorkspace } = useOrganizationScope();
   const orgIdRef = useRef(organization);
   orgIdRef.current = organization;
   const expanded = useExpandedRecord({ paramName: 'location-fix' });
@@ -295,7 +297,9 @@ export function LocationsPanel() {
       <h2 className='sr-only'>Locations</h2>
       {organization ? (
         <p className='text-sm text-slate-600'>
-          Filtered to the organization from the review queue.{' '}
+          Filtered to the organization from the review queue. Sweep pending
+          only includes organizations still in review. Sweep all orgs includes
+          this organization when it is already approved.{' '}
           <button
             type='button'
             className='underline'
@@ -371,6 +375,15 @@ export function LocationsPanel() {
               {open.rationale ? (
                 <p className='text-sm text-slate-700'>{open.rationale}</p>
               ) : null}
+              {open.proposed_location?.candidates?.length ? (
+                <ul className='list-disc pl-5 text-sm text-slate-700'>
+                  {open.proposed_location.candidates.map((candidate) => (
+                    <li key={candidate.location_id}>
+                      {candidate.address || 'Venue'}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               {open.kind === 'create_location' ? (
                 <AdminFieldGrid columns={1}>
                   <AdminField label='Address' htmlFor='location-fix-address'>
@@ -390,7 +403,15 @@ export function LocationsPanel() {
                 </AdminFieldGrid>
               ) : null}
               <div className='flex gap-2'>
-                {open.kind === 'unresolved' ? null : (
+                {open.kind === 'unresolved' ? (
+                  <Button
+                    type='button'
+                    variant='secondary'
+                    onClick={() => openWorkspace(open.org_id, 'locations')}
+                  >
+                    Create a location
+                  </Button>
+                ) : (
                   <Button
                     type='button'
                     onClick={() => void decide(open, 'apply')}

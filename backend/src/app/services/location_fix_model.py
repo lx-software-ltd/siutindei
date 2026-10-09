@@ -222,20 +222,8 @@ def _store_activities(session, scan_run_id, activity_ids, by_id) -> None:
             continue
         item = by_id.get(str(activity_id), {})
         venues = locations.get(activity.org_id, [])
-        indexes = item.get("location_indexes")
-        chosen = None
-        if (
-            item.get("kind") == "link_existing"
-            and isinstance(indexes, list)
-            and len(indexes) == 1
-        ):
-            try:
-                index = int(indexes[0])
-            except (TypeError, ValueError):
-                index = -1
-            if 0 <= index < len(venues):
-                chosen = venues[index]
-        if chosen is not None:
+        chosen = _chosen_venues(venues, item)
+        if len(chosen) == 1:
             upsert_proposal(
                 session,
                 entity_type="activity",
@@ -243,12 +231,24 @@ def _store_activities(session, scan_run_id, activity_ids, by_id) -> None:
                 org_id=activity.org_id,
                 kind="link_existing",
                 source="model",
-                target_location_id=chosen.id,
+                target_location_id=chosen[0].id,
                 confidence=_confidence(item.get("confidence")),
                 rationale=_rationale(item.get("rationale")),
                 scan_run_id=scan_run_id,
             )
             continue
+        rationale = _rationale(item.get("rationale"))
+        proposed = None
+        if len(chosen) > 1:
+            names = "; ".join(venue.address or "Venue" for venue in chosen)
+            detail = f"Model named more than one venue: {names}"
+            rationale = f"{rationale} {detail}" if rationale else detail
+            proposed = {
+                "candidates": [
+                    {"location_id": str(venue.id), "address": venue.address}
+                    for venue in chosen
+                ]
+            }
         upsert_proposal(
             session,
             entity_type="activity",
@@ -256,11 +256,33 @@ def _store_activities(session, scan_run_id, activity_ids, by_id) -> None:
             org_id=activity.org_id,
             kind="unresolved",
             source="model",
+            proposed_location=proposed,
             confidence=_confidence(item.get("confidence")),
-            rationale=_rationale(item.get("rationale"))
-            or "Model could not choose a venue",
+            rationale=rationale or "Model could not choose a venue",
             scan_run_id=scan_run_id,
         )
+
+
+def _chosen_venues(venues: list[Location], item: dict[str, Any]) -> list[Location]:
+    """Valid venue indexes from one model item. Duplicates collapse."""
+    indexes = item.get("location_indexes")
+    if item.get("kind") != "link_existing" or not isinstance(indexes, list):
+        return []
+    chosen: list[Location] = []
+    seen: set[str] = set()
+    for raw in indexes:
+        try:
+            index = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if index < 0 or index >= len(venues):
+            continue
+        venue = venues[index]
+        if str(venue.id) in seen:
+            continue
+        seen.add(str(venue.id))
+        chosen.append(venue)
+    return chosen
 
 
 def _prepare(scan_run_id, entity_type, entity_ids, message_id):

@@ -60,18 +60,19 @@ def decide_bulk(
     action = body.get("action")
     if action not in {"apply", "dismiss"}:
         raise ValidationError("action must be apply or dismiss", field="action")
-    rows = _bulk_rows(session, body)
+    rows, truncated = _bulk_rows(session, body)
     if body.get("dry_run"):
         return {
             "dry_run": True,
             "matched": len(rows),
+            "truncated": truncated,
             "decided": 0,
             "failed": 0,
             "failures": [],
         }
     decided = 0
     failures: list[dict[str, str]] = []
-    for row in rows[:_MAX_BULK]:
+    for row in rows:
         try:
             with session.begin_nested():
                 if action == "dismiss":
@@ -87,6 +88,7 @@ def decide_bulk(
     return {
         "dry_run": False,
         "matched": len(rows),
+        "truncated": truncated,
         "decided": decided,
         "failed": len(failures),
         "failures": failures,
@@ -208,7 +210,9 @@ def upsert_proposal(
     return "updated"
 
 
-def _bulk_rows(session: Session, body: dict[str, Any]) -> list[LocationFixProposal]:
+def _bulk_rows(
+    session: Session, body: dict[str, Any]
+) -> tuple[list[LocationFixProposal], bool]:
     ids = body.get("ids")
     stmt = select(LocationFixProposal).where(LocationFixProposal.status == "pending")
     if isinstance(ids, list) and ids:
@@ -228,11 +232,12 @@ def _bulk_rows(session: Session, body: dict[str, Any]) -> list[LocationFixPropos
             org_id=optional_uuid(body.get("org_id"), "org_id"),
             query=body.get("q") if isinstance(body.get("q"), str) else None,
         )
-    return list(
+    rows = list(
         session.scalars(
             stmt.order_by(LocationFixProposal.created_at.desc()).limit(_MAX_BULK + 1)
         ).all()
     )
+    return rows[:_MAX_BULK], len(rows) > _MAX_BULK
 
 
 def _fill(row: LocationFixProposal, **kwargs: Any) -> None:

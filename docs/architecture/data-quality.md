@@ -113,19 +113,27 @@ Activities must be linked to a venue. The Locations tab lists
 review. Sweep all orgs includes approved organizations. An organization
 with exactly one location is linked immediately and the proposal is
 stored as applied, unless that same venue was dismissed. Pricing or
-schedule rows that name one venue, and an activity name that contains
-exactly one venue district, stay pending. An activity whose
-organization has no venue is `rule:no_venue`. Anything else is queued
-for the model on the category-suggestion queue, using the message key
-`location_scan_run_id`. The model chooses a district or a venue index
-from a closed list. Proposed addresses are geocoded through the
+schedule rows that name one venue stay pending. An activity name
+matches a district when it contains one Hong Kong area tag, or the
+district's Latin name, ignoring case. An activity whose organization
+has no venue is `rule:no_venue`. A name filter matches the
+organization and its activities. Anything else is queued for the
+model on the category-suggestion queue. The worker reads
+`location_scan_run_id` before `scan_run_id`. A dismissed unresolved
+row is not queued again. One venue index links that venue. Several
+indexes stay unresolved and list every candidate address. The
+expanded row links to the Locations screen for that organization.
+Proposed addresses are geocoded through the
 Nominatim proxy, and again on apply when coordinates are missing or
 the address changed. Applying a new location that becomes the
 organization's only venue links activities that have no join.
 
 The header checkbox selects the visible page, then all matching rows.
 Apply selected and Dismiss selected send `ids`, or the current filters
-when every matching row is selected. The monthly model budget is
+when every matching row is selected. `matched` counts the rows that
+call decides, and `truncated` is set when more than 200 match. An
+activity row's current label counts that activity's own joins. The
+monthly model budget is
 `location_fix_settings.monthly_cost_limit_usd` and does not include
 category-check spend. The model and fallbacks still come from
 category-check settings.

@@ -3,16 +3,10 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
-from psycopg.types.range import Range
-from sqlalchemy import delete
-from sqlalchemy.orm import Session
-
 from app.api.admin import lambda_handler
 from app.api.admin_imports_importer import process_import_payload
 from app.api.admin_imports_upsert import upsert_activity
@@ -21,14 +15,12 @@ from app.api.admin_resource_activity_category import (
     _update_activity_category,
     _validate_category_parent,
 )
-from app.db.models import Activity
-from app.db.models import ActivityCategory
+from app.db.models import Activity, ActivityCategory
 from app.db.models.category_suggestion import (
     PENDING_CATEGORY_ID,
     CategorySuggestion,
 )
-from app.db.queries import ActivitySearchFilters
-from app.db.queries import build_search_query
+from app.db.queries import ActivitySearchFilters, build_search_query
 from app.db.repositories.activity_category import ActivityCategoryRepository
 from app.exceptions import ValidationError
 from app.services.category_suggestions.capture import (
@@ -50,6 +42,9 @@ from app.services.category_suggestions.settings import (
 )
 from app.services.org_review import collect_issues
 from app.services.org_review_sql import BLOCKER_ISSUE_CODES
+from psycopg.types.range import Range
+from sqlalchemy import delete
+from sqlalchemy.orm import Session
 
 
 @pytest.fixture(autouse=True)
@@ -307,7 +302,7 @@ def test_review_blocker_and_search_exclusion(
     ensure_pending_category(db_session)
     sample_activity.category_id = PENDING_CATEGORY_ID
     db_session.flush()
-    issues = collect_issues(
+    issues, _checks = collect_issues(
         sample_organization,
         [],
         [sample_activity],

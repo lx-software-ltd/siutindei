@@ -170,6 +170,83 @@ def test_name_area_matches_one_district(db_session, sample_activity_category) ->
     assert proposal.target_location_id == match.id
 
 
+def test_name_area_matches_an_english_district_ignoring_case(
+    db_session, sample_activity_category
+) -> None:
+    org = _org(db_session, "English District Club")
+    wan = _area(db_session, "灣仔")
+    wan.name_translations = {"en": "Wan Chai"}
+    other = _area(db_session, "中環")
+    match = _location(db_session, org, wan, "10 Wan Chai Road")
+    _location(db_session, org, other, "10 Central Road")
+    activity = _activity(db_session, org, sample_activity_category, "wan chai swim")
+    start_location_scan(db_session, review_scope="pending_review", org_id=org.id)
+    proposal = db_session.scalars(
+        select(LocationFixProposal).where(LocationFixProposal.entity_id == activity.id)
+    ).one()
+    assert proposal.source == "rule:name_area"
+    assert proposal.target_location_id == match.id
+
+
+def test_name_area_ignores_a_label_outside_the_area_list(
+    db_session, sample_activity_category
+) -> None:
+    org = _org(db_session, "Plain Club")
+    plain = _area(db_session, "會所")
+    other = _area(db_session, "中環")
+    _location(db_session, org, plain, "1 Club Street")
+    _location(db_session, org, other, "2 Central Road")
+    activity = _activity(db_session, org, sample_activity_category, "會所班")
+    result, batches = start_location_scan(
+        db_session, review_scope="pending_review", org_id=org.id
+    )
+    assert result["queued_for_model"] == 1
+    assert batches[0]["entity_ids"] == [str(activity.id)]
+    assert (
+        db_session.scalars(
+            select(LocationFixProposal).where(
+                LocationFixProposal.entity_id == activity.id
+            )
+        ).first()
+        is None
+    )
+
+
+def test_query_includes_activities_of_a_matching_organization(
+    db_session, sample_activity_category
+) -> None:
+    org = _org(db_session, "Harbour Search Club")
+    activity = _activity(db_session, org, sample_activity_category, "Swim Class")
+    start_location_scan(
+        db_session, review_scope="pending_review", query="Harbour Search"
+    )
+    proposal = db_session.scalars(
+        select(LocationFixProposal).where(LocationFixProposal.entity_id == activity.id)
+    ).one()
+    assert proposal.source == "rule:no_venue"
+
+
+def test_dismissed_unresolved_is_not_sent_to_the_model(db_session) -> None:
+    org = _org(db_session, "Already Dismissed")
+    db_session.add(
+        LocationFixProposal(
+            entity_type="organization",
+            entity_id=org.id,
+            org_id=org.id,
+            kind="unresolved",
+            source="model",
+            status="dismissed",
+        )
+    )
+    db_session.flush()
+    result, batches = start_location_scan(
+        db_session, review_scope="pending_review", org_id=org.id
+    )
+    assert result["queued_for_model"] == 0
+    assert batches == []
+    assert result["skipped"] == 1
+
+
 def test_dismissed_single_venue_is_not_linked_again(
     db_session, sample_activity_category
 ) -> None:

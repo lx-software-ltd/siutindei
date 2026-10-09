@@ -7859,6 +7859,8 @@ export interface components {
         LocationFixBulkResult: {
             dry_run: boolean;
             matched: number;
+            /** Rows beyond the 200 this call decides */
+            truncated?: boolean;
             decided: number;
             failed: number;
             failures: {
