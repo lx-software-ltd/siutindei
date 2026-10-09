@@ -27,6 +27,7 @@ test.describe('Category suggestions', () => {
       .getByRole('group', { name: 'Data quality' })
       .getByRole('button', { name: 'Categories', exact: true })
       .click();
+    await expect(adminPage.locator('#check-status-filter')).toHaveValue('pending');
     await expect(adminPage.getByText('Clay club')).toBeVisible();
     const apply = adminPage.getByRole('button', { name: 'Apply' });
     const applyIcon = await apply.locator('svg').boundingBox();

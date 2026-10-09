@@ -39,7 +39,7 @@ interface CategoryOption {
 }
 
 const DEFAULT_FILTERS: ReviewFilters = {
-  status: '',
+  status: 'pending',
   verdict: '',
   q: '',
   org_id: '',
