@@ -15,6 +15,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional
 
+from app.exceptions import AuthorizationError
+
 SCOPE_READ = "read"
 SCOPE_CRUD = "crud"
 
@@ -45,3 +47,9 @@ def get_partner_context(event: Mapping[str, Any]) -> Optional[PartnerContext]:
         scope=str(scope),
         org_id=str(authorizer.get("orgId")) if authorizer.get("orgId") else None,
     )
+
+
+def require_full_access(partner: PartnerContext) -> None:
+    """Reject organization-scoped keys on full-catalog partner routes."""
+    if partner.org_id:
+        raise AuthorizationError("This API key is limited to one organization")

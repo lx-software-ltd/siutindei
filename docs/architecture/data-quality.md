@@ -10,8 +10,9 @@ partner API key can read pending proposals at
 `GET /v1/partner/name-fixes` and sees `pending_name_fixes` on
 `GET /v1/partner/organizations`. The same key can read category-check
 reviews at `GET /v1/partner/category-reviews` and sees
-`category_review` on `GET /v1/partner/activities`. See
-`docs/api/partner.yaml`.
+`category_review` on `GET /v1/partner/activities`. A full-access
+`crud` key can also decide those reviews and list or delete empty
+leftover categories. See `docs/api/partner.yaml`.
 
 ## Merge
 

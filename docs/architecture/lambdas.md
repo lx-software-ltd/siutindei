@@ -80,7 +80,9 @@ their primary responsibilities.
   management), manager CRUD (filtered by ownership), partner CRUD
   (scope- and organization-filtered by API key; full-access keys list
   every organization, `GET /v1/partner/name-fixes`, and
-  `GET /v1/partner/category-reviews`), user self-service
+  `GET /v1/partner/category-reviews`; a full-access `crud` key can
+  also `POST` review decisions and bulk apply/dismiss, and `GET` /
+  `DELETE` `/v1/partner/activity-categories`), user self-service
   (tickets), Cognito user management, audit logs, media upload, admin
   import/export (`POST /v1/admin/imports` accepts `dry_run` to validate
   without commit or audit rows; `object_key` is idempotent via
@@ -97,7 +99,11 @@ their primary responsibilities.
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - Category suggestions and category checks: admin-only routes under
   `/v1/admin/category-suggestions` (see `docs/api/admin.yaml`),
-  including `/scan` and `/reviews`. Discover batches send
+  including `/scan` and `/reviews`. Full-access partner keys can
+  decide reviews and delete empty leftover categories on
+  `/v1/partner/category-reviews` and
+  `/v1/partner/activity-categories`; org-scoped keys cannot.
+  Discover batches send
   `suggestion_ids` on the same queue; verify batches send
   `activity_ids`.
   After a live import commits, the function sends SQS messages when

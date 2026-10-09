@@ -154,9 +154,14 @@ all-orgs count. A run still stops at `scan_limit` (500).
 
 A full-access partner API key can read those reviews at
 `GET /v1/partner/category-reviews` and sees `category_review` on
-`GET /v1/partner/activities`. An org-scoped key sees only that
-organization. Shapes live in `docs/api/partner.yaml`. Write and
-decide routes stay on the admin API.
+`GET /v1/partner/activities`. The same full-access `crud` key can
+apply, dismiss, or revert a review (`POST
+/v1/partner/category-reviews/{id}` and `POST
+/v1/partner/category-reviews/bulk`) and list or delete empty leftover
+categories (`GET` / `DELETE /v1/partner/activity-categories`).
+An org-scoped key sees only that organization's reviews and receives
+`403` on those write and category routes. Shapes live in
+`docs/api/partner.yaml`.
 
 ## Discover
 

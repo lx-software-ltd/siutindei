@@ -58,8 +58,12 @@ from app.api.admin_resources import (
     _validate_sessions_count,
 )
 from app.api.admin_suggestions import _handle_user_organization_suggestion
+from app.api.partner_activity_categories import (
+    handle_partner_activity_categories,
+)
 from app.api.partner_auth import SCOPE_CRUD, get_partner_context
 from app.api.partner_category_reviews import (
+    handle_partner_category_review_write,
     handle_partner_category_reviews,
     partner_get_activities,
 )
@@ -90,7 +94,7 @@ from app.api.admin_validators import (
     _validate_url,
 )
 from app.api.user_organizations import _handle_user_organizations
-from app.exceptions import NotFoundError, ValidationError
+from app.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.utils import json_response
 from app.utils.logging import configure_logging, get_logger, set_request_context
 from app.utils.responses import validate_content_type
@@ -315,6 +319,9 @@ def _safe_handler(
     except ValidationError as exc:
         logger.warning(f"Validation error: {exc.message}")
         return json_response(exc.status_code, exc.to_dict(), event=event)
+    except AuthorizationError as exc:
+        logger.warning(f"Authorization error: {exc.message}")
+        return json_response(exc.status_code, exc.to_dict(), event=event)
     except NotFoundError as exc:
         return json_response(exc.status_code, exc.to_dict(), event=event)
     except ValueError as exc:
@@ -452,15 +459,36 @@ def _handle_partner_routes(
             event=event,
         )
 
-    partner_reads = {
-        "name-fixes": handle_partner_name_fixes,
-        "category-reviews": handle_partner_category_reviews,
-    }
-    if resource in partner_reads:
+    if resource == "name-fixes":
         if method != "GET":
             return json_response(404, {"error": "Not found"}, event=event)
-        reader = partner_reads[resource]
-        return _safe_handler(lambda: reader(event, partner.org_id), event)
+        return _safe_handler(
+            lambda: handle_partner_name_fixes(event, partner.org_id),
+            event,
+        )
+
+    if resource == "category-reviews":
+        if method == "GET" and resource_id is None:
+            return _safe_handler(
+                lambda: handle_partner_category_reviews(event, partner.org_id),
+                event,
+            )
+        if method == "POST" and resource_id:
+            return _safe_handler(
+                lambda: handle_partner_category_review_write(
+                    event, partner, resource_id
+                ),
+                event,
+            )
+        return json_response(404, {"error": "Not found"}, event=event)
+
+    if resource == "activity-categories":
+        return _safe_handler(
+            lambda: handle_partner_activity_categories(
+                event, method, partner, resource_id
+            ),
+            event,
+        )
 
     if resource not in _PARTNER_RESOURCES:
         return json_response(404, {"error": "Not found"}, event=event)
