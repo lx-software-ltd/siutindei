@@ -196,12 +196,12 @@ export function decideNameFix(id: string, body: { action: 'apply' | 'dismiss'; v
 
 export interface LocationFixProposal {
   id: string;
-  entity_type: 'organization' | 'activity';
+  entity_type: 'organization' | 'activity' | 'location';
   entity_id: string;
   entity_name?: string | null;
   org_id: string;
   org_name?: string | null;
-  kind: 'link_existing' | 'create_location' | 'unresolved';
+  kind: 'link_existing' | 'create_location' | 'unresolved' | 'update_location';
   target_location_id?: string | null;
   proposed_location?: {
     address?: string;
@@ -297,7 +297,12 @@ export function scanLocationFixes(body: {
 
 export function decideLocationFix(
   id: string,
-  body: { action: 'apply' | 'dismiss'; address?: string; area_id?: string }
+  body: {
+    action: 'apply' | 'dismiss';
+    address?: string;
+    area_id?: string;
+    target_location_id?: string;
+  }
 ) {
   return request<LocationFixProposal>(buildApiUrl(`v1/admin/location-fixes/${id}`), {
     method: 'POST',

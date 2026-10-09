@@ -111,4 +111,30 @@ describe('LocationsPanel', () => {
       await screen.findByRole('button', { name: 'Create a location' })
     ).toBeInTheDocument();
   });
+
+  it('offers the location editor for an unresolved venue', async () => {
+    vi.mocked(listLocationFixes).mockResolvedValue({
+      items: [
+        {
+          id: 'loc-fix-10',
+          entity_type: 'location',
+          entity_id: 'venue-1',
+          entity_name: '8 Harbour Road',
+          org_id: 'org-9',
+          kind: 'unresolved',
+          source: 'rule:empty_address',
+          status: 'pending',
+          current_label: 'No address',
+          proposed_label: 'Add an address',
+          rationale: 'Location has no address',
+        },
+      ],
+      next_cursor: null,
+    });
+    render(<LocationsPanel />, { wrapper });
+    fireEvent.click(await screen.findByText('8 Harbour Road'));
+    expect(
+      await screen.findByRole('button', { name: 'Edit location' })
+    ).toBeInTheDocument();
+  });
 });

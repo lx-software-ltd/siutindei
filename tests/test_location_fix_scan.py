@@ -84,7 +84,9 @@ def test_single_location_is_linked_immediately(
     assert result[1] == []
     join = db_session.get(ActivityLocation, (activity.id, venue.id))
     assert join is not None
-    proposal = db_session.scalars(select(LocationFixProposal)).one()
+    proposal = db_session.scalars(
+        select(LocationFixProposal).where(LocationFixProposal.entity_id == activity.id)
+    ).one()
     assert proposal.status == "applied"
     assert proposal.source == "rule:single_location"
 
@@ -148,7 +150,9 @@ def test_pricing_location_stays_pending(db_session, sample_activity_category) ->
     )
     assert result["created"] == 1
     assert batches == []
-    proposal = db_session.scalars(select(LocationFixProposal)).one()
+    proposal = db_session.scalars(
+        select(LocationFixProposal).where(LocationFixProposal.entity_id == activity.id)
+    ).one()
     assert proposal.source == "rule:pricing_schedule"
     assert proposal.target_location_id == first.id
     assert proposal.status == "pending"
@@ -272,6 +276,96 @@ def test_dismissed_single_venue_is_not_linked_again(
     assert result["skipped"] == 1
     assert result["auto_applied"] == 0
     assert db_session.get(ActivityLocation, (activity.id, venue.id)) is None
+
+
+def test_location_filter_checks_venues_only(db_session) -> None:
+    org = _org(db_session, "Pin Club")
+    area = _area(db_session)
+    venue = Location(
+        org_id=org.id,
+        area_id=area.id,
+        address=None,
+        lat=Decimal("22.280000"),
+        lng=Decimal("114.150000"),
+    )
+    db_session.add(venue)
+    db_session.flush()
+    result, batches = start_location_scan(
+        db_session,
+        review_scope="pending_review",
+        entity_type="location",
+        org_id=org.id,
+    )
+    assert batches == []
+    assert result["queued_for_model"] == 0
+    proposal = db_session.scalars(
+        select(LocationFixProposal).where(LocationFixProposal.org_id == org.id)
+    ).one()
+    assert proposal.entity_type == "location"
+    assert proposal.source == "rule:empty_address"
+
+
+def test_org_cap_skips_later_locations(db_session, monkeypatch) -> None:
+    monkeypatch.setattr("app.services.location_fix_scan._MAX_SWEEP", 1)
+    # Other tests commit pending organizations. The name filter keeps this
+    # cap check on these two rows when the suite shares one database.
+    token = "Sweepcapfixture"
+    alpha = _org(db_session, f"Aa {token}")
+    beta = _org(db_session, f"Bb {token}")
+    area = _area(db_session)
+    db_session.add(
+        Location(
+            org_id=beta.id,
+            area_id=area.id,
+            address=None,
+            lat=Decimal("22.280000"),
+            lng=Decimal("114.150000"),
+        )
+    )
+    db_session.flush()
+    result, batches = start_location_scan(
+        db_session, review_scope="pending_review", query=token
+    )
+    assert result["truncated"] is True
+    queued_ids = [entity_id for batch in batches for entity_id in batch["entity_ids"]]
+    assert queued_ids == [str(alpha.id)]
+    beta_rows = list(
+        db_session.scalars(
+            select(LocationFixProposal).where(LocationFixProposal.org_id == beta.id)
+        ).all()
+    )
+    assert beta_rows == []
+
+
+def test_dismissed_activity_unresolved_blocks_every_source(
+    db_session, sample_activity_category
+) -> None:
+    org = _org(db_session, "Skipped Class Club")
+    activity = _activity(db_session, org, sample_activity_category, "Art Class")
+    db_session.add(
+        LocationFixProposal(
+            entity_type="activity",
+            entity_id=activity.id,
+            org_id=org.id,
+            kind="unresolved",
+            source="model",
+            status="dismissed",
+        )
+    )
+    db_session.flush()
+    result, _batches = start_location_scan(
+        db_session, review_scope="pending_review", org_id=org.id
+    )
+    assert result["skipped"] >= 1
+    pending = list(
+        db_session.scalars(
+            select(LocationFixProposal).where(
+                LocationFixProposal.entity_id == activity.id,
+                LocationFixProposal.status == "pending",
+            )
+        ).all()
+    )
+    assert pending == []
 
 
 def test_unknown_scope_is_rejected(db_session) -> None:

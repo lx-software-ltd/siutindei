@@ -37,6 +37,7 @@ import { Select } from '../../ui/select';
 const KINDS = [
   ['link_existing', 'Link existing'],
   ['create_location', 'Create location'],
+  ['update_location', 'Update location'],
   ['unresolved', 'Unresolved'],
 ] as const;
 
@@ -46,6 +47,9 @@ const SOURCES = [
   'rule:name_area',
   'rule:no_venue',
   'model',
+  'rule:missing_coordinates',
+  'rule:empty_address',
+  'rule:pin_outside_area',
 ] as const;
 
 interface LocationFilters {
@@ -223,12 +227,17 @@ export function LocationsPanel() {
     }
   }
 
-  async function decide(item: LocationFixProposal, action: 'apply' | 'dismiss') {
-    setActiveId(item.id);
+  async function decide(
+    item: LocationFixProposal,
+    action: 'apply' | 'dismiss',
+    targetLocationId?: string
+  ) {
+    setActiveId(targetLocationId ? `${item.id}:${targetLocationId}` : item.id);
     setError('');
     try {
       await decideLocationFix(item.id, {
         action,
+        ...(targetLocationId ? { target_location_id: targetLocationId } : {}),
         ...(item.kind === 'create_location' && action === 'apply'
           ? { address, area_id: areaId }
           : {}),
@@ -376,13 +385,20 @@ export function LocationsPanel() {
                 <p className='text-sm text-slate-700'>{open.rationale}</p>
               ) : null}
               {open.proposed_location?.candidates?.length ? (
-                <ul className='list-disc pl-5 text-sm text-slate-700'>
+                <div className='flex flex-col items-start gap-2'>
                   {open.proposed_location.candidates.map((candidate) => (
-                    <li key={candidate.location_id}>
-                      {candidate.address || 'Venue'}
-                    </li>
+                    <Button
+                      key={candidate.location_id}
+                      type='button'
+                      variant='secondary'
+                      onClick={() => void decide(open, 'apply', candidate.location_id)}
+                      loading={activeId === `${open.id}:${candidate.location_id}`}
+                      loadingLabel='Saving…'
+                    >
+                      Link {candidate.address || 'venue'}
+                    </Button>
                   ))}
-                </ul>
+                </div>
               ) : null}
               {open.kind === 'create_location' ? (
                 <AdminFieldGrid columns={1}>
@@ -409,7 +425,9 @@ export function LocationsPanel() {
                     variant='secondary'
                     onClick={() => openWorkspace(open.org_id, 'locations')}
                   >
-                    Create a location
+                    {open.entity_type === 'location'
+                      ? 'Edit location'
+                      : 'Create a location'}
                   </Button>
                 ) : (
                   <Button
@@ -453,9 +471,10 @@ export function LocationsPanel() {
                 value={list.filters.entity_type}
                 onChange={(event) => list.setFilter('entity_type', event.target.value)}
               >
-                <option value=''>Organizations and activities</option>
+                <option value=''>All records</option>
                 <option value='organization'>Organizations</option>
                 <option value='activity'>Activities</option>
+                <option value='location'>Locations</option>
               </Select>
             </AdminFilterField>
             <AdminFilterField label='Kind' htmlFor='location-fix-kind'>

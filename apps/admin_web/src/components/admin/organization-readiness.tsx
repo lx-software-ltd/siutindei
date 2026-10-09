@@ -60,7 +60,11 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
   }, [orgId, notice]);
 
   function openIssue(entry: OrgReviewIssue) {
-    if (entry.code === 'activity_no_location' || entry.code === 'no_locations') {
+    if (
+      entry.code === 'activity_no_location' ||
+      entry.code === 'no_locations' ||
+      entry.code === 'missing_coordinates'
+    ) {
       void setSection('data-quality');
       void setTab('locations');
       void setOrganization(orgId);

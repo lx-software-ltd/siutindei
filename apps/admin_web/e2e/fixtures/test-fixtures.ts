@@ -2062,9 +2062,11 @@ export async function setupApiMocks(page: Page): Promise<void> {
     entity_name: string;
     org_id: string;
     org_name: string;
-    kind: 'link_existing';
-    target_location_id: string;
-    proposed_location: null;
+    kind: 'link_existing' | 'unresolved';
+    target_location_id: string | null;
+    proposed_location: {
+      candidates: { location_id: string; address: string }[];
+    } | null;
     source: string;
     confidence: number;
     rationale: string;
@@ -2141,6 +2143,28 @@ export async function setupApiMocks(page: Page): Promise<void> {
           current_label: '0 of 2 venues',
           proposed_label: '10 Sham Street',
         },
+        {
+          id: 'loc-fix-2',
+          entity_type: 'activity',
+          entity_id: 'act-2',
+          entity_name: 'Art Class',
+          org_id: 'org-1',
+          org_name: 'Harbour Club',
+          kind: 'unresolved',
+          target_location_id: null,
+          proposed_location: {
+            candidates: [
+              { location_id: 'loc-1', address: '8 Harbour Road' },
+              { location_id: 'loc-2', address: '9 Pier Street' },
+            ],
+          },
+          source: 'model',
+          confidence: 0.4,
+          rationale: 'Model named more than one venue',
+          status: 'pending',
+          current_label: '0 of 2 venues',
+          proposed_label: 'Needs a location',
+        },
       ];
       await route.fulfill({
         status: 200,
@@ -2159,13 +2183,28 @@ export async function setupApiMocks(page: Page): Promise<void> {
       });
       return;
     }
-    if (method === 'POST' && url.includes('/location-fixes/loc-fix-1')) {
-      locationFixes = [];
+    if (
+      method === 'POST' &&
+      /\/location-fixes\/[^/]+$/.test(url.split('?')[0])
+    ) {
+      const id = url.split('?')[0].split('/').pop();
+      const body = (route.request().postDataJSON() || {}) as {
+        target_location_id?: string;
+      };
+      if (id === 'loc-fix-2' && body.target_location_id !== 'loc-1') {
+        await route.fulfill({
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Location is not a candidate' }),
+        });
+        return;
+      }
+      locationFixes = locationFixes.filter((item) => item.id !== id);
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          id: 'loc-fix-1',
+          id,
           status: 'applied',
         }),
       });

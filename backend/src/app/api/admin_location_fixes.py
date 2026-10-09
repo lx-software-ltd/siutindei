@@ -179,10 +179,18 @@ def _decide_body(
         raise ValidationError("action must be apply or dismiss", field="action")
     address = body.get("address")
     area_id = body.get("area_id")
+    target_raw = body.get("target_location_id")
     if address is not None and not isinstance(address, str):
         raise ValidationError("address must be a string", field="address")
     if area_id is not None and not isinstance(area_id, str):
         raise ValidationError("area_id must be a string", field="area_id")
+    target_location_id = None
+    if target_raw is not None:
+        if not isinstance(target_raw, str) or not target_raw.strip():
+            raise ValidationError(
+                "target_location_id must be a UUID", field="target_location_id"
+            )
+        target_location_id = parse_uuid(target_raw, "target_location_id")
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event)
         payload = decide_proposal(
@@ -192,6 +200,7 @@ def _decide_body(
             decided_by,
             address=address,
             area_id=area_id,
+            target_location_id=target_location_id,
         )
         session.commit()
     return json_response(200, payload, event=event)

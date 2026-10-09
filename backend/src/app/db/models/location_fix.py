@@ -26,7 +26,8 @@ from app.db.base import Base
 
 _SOURCES = (
     "'rule:single_location', 'rule:pricing_schedule', 'rule:name_area', "
-    "'rule:no_venue', 'model'"
+    "'rule:no_venue', 'model', 'rule:missing_coordinates', "
+    "'rule:empty_address', 'rule:pin_outside_area'"
 )
 
 
@@ -133,7 +134,8 @@ class LocationScanRun(Base):
             name="location_scan_scope_check",
         ),
         CheckConstraint(
-            "entity_type IS NULL OR entity_type IN ('organization', 'activity')",
+            "entity_type IS NULL OR entity_type IN "
+            "('organization', 'activity', 'location')",
             name="location_scan_entity_check",
         ),
         Index(
@@ -206,11 +208,12 @@ class LocationFixProposal(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "entity_type IN ('organization', 'activity')",
+            "entity_type IN ('organization', 'activity', 'location')",
             name="location_fix_entity_type_check",
         ),
         CheckConstraint(
-            "kind IN ('link_existing', 'create_location', 'unresolved')",
+            "kind IN ("
+            "'link_existing', 'create_location', 'unresolved', 'update_location')",
             name="location_fix_kind_check",
         ),
         CheckConstraint(
