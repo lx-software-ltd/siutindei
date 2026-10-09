@@ -61,8 +61,12 @@ Already shipped, and kept:
   Google may replace a Nominatim pin. A stored lookup sets
   `source` to `lookup:nominatim` or `lookup:google`. A later sweep
   keeps that source and pin.
-- The 200-create cap does not skip the activity pass. Creates also
-  stop once the sweep has used 18 seconds, and the rest stay pending.
+- The 200-create cap does not skip the activity pass. The sweep stops
+  scanning after 20 seconds, stores a confident match pending instead
+  of creating it, and reports `truncated`. The first production sweep
+  ran 30.4 seconds and API Gateway answered 504 at 29 seconds while
+  the Lambda committed. EDB district labels are resolved once per
+  sweep. The Locations tab explains a 504.
 - Google lookups are capped to the remaining monthly budget at
   0.017 USD each. The run is truncated when the cap cuts the queue.
 - A lookup run that does not scan locations still counts the queued

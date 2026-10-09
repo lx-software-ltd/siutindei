@@ -116,7 +116,7 @@ def consider_open_data(
     similarity = name_similarity(org.name, row["name"])
     if similarity < _MIN_SIMILARITY or not row["address"]:
         return None
-    area = _district_area(session, row["district"])
+    area = _district_area(session, row["district"], auto_budget)
     if area is None:
         return None
     proposed = _proposed(row, area, similarity)
@@ -238,10 +238,20 @@ def _create(session: Session, org: Organization, proposed: dict[str, Any]):
     return location
 
 
-def _district_area(session: Session, district: str) -> GeographicArea | None:
+def _district_area(
+    session: Session, district: str, cache: dict[str, Any]
+) -> GeographicArea | None:
+    """Resolve an EDB district label once per sweep."""
     wanted = district.strip().casefold()
     if not wanted:
         return None
+    found = cache.setdefault("districts", {})
+    if wanted not in found:
+        found[wanted] = _load_district_matches(session, wanted)
+    return found[wanted]
+
+
+def _load_district_matches(session: Session, wanted: str) -> GeographicArea | None:
     rows = list(
         session.scalars(
             select(GeographicArea).where(

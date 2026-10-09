@@ -249,7 +249,14 @@ export function LocationsPanel() {
       );
       await refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Scan failed.');
+      if (err instanceof ApiError && err.status === 504) {
+        setError(
+          'The sweep did not answer in time. It may still have run; refresh in a moment and sweep again to continue.'
+        );
+        await refresh();
+      } else {
+        setError(err instanceof ApiError ? err.message : 'Scan failed.');
+      }
     } finally {
       setScanningScope(null);
     }

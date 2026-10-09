@@ -38,9 +38,9 @@ from app.services.location_fixes import (
 _MAX_SWEEP = 10000
 _MAX_MODEL = 500
 _BATCH_SIZE = 10
-# API Gateway stops the admin request at 29 seconds. Leave room for the
-# register download and the activity pass after the creates.
-_SWEEP_CREATE_BUDGET_SECONDS = 18
+# API Gateway stops the admin request at 29 seconds. The sweep stops
+# scanning at this point and leaves room for the commit and the enqueue.
+_SWEEP_BUDGET_SECONDS = 20
 _REVIEW_SCOPES = frozenset({"pending_review", "all"})
 _LOOKUPS = frozenset({"nominatim", "google"})
 _ACTIVE = ("queued", "running")
@@ -62,6 +62,7 @@ def start_location_scan(
     requested_by: str | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Run venue rules and return model batches to enqueue after commit."""
+    deadline = time.monotonic() + _SWEEP_BUDGET_SECONDS
     if review_scope not in _REVIEW_SCOPES:
         raise ValidationError("Invalid review_scope", field="review_scope")
     if entity_type is not None and entity_type not in ENTITY_TYPES:
@@ -105,6 +106,7 @@ def start_location_scan(
         "auto_applied": 0,
     }
     truncated = False
+    out_of_time = False
     queued: dict[str, list[str]] = {"organization": [], "activity": []}
     if entity_type != "location":
         orgs = list(session.scalars(org_stmt(org_id, query, review_scope)).all())
@@ -125,7 +127,7 @@ def start_location_scan(
     auto_budget: dict[str, Any] = {
         "applied": 0,
         "capped": False,
-        "deadline": time.monotonic() + _SWEEP_CREATE_BUDGET_SECONDS,
+        "deadline": deadline,
     }
     if entity_type in (None, "organization"):
         for org in orgs:
@@ -136,10 +138,16 @@ def start_location_scan(
             )
             if len(queued["organization"]) >= _MAX_MODEL:
                 truncated = True
+            if time.monotonic() >= deadline:
+                truncated = out_of_time = True
+                break
     if activities and not truncated:
         for activity in activities:
             if seen >= _MAX_SWEEP:
                 truncated = True
+                break
+            if time.monotonic() >= deadline:
+                truncated = out_of_time = True
                 break
             seen += 1
             _count(
@@ -149,13 +157,13 @@ def start_location_scan(
             if len(queued["activity"]) >= _MAX_MODEL:
                 truncated = True
                 break
-    if entity_type in (None, "location"):
+    if entity_type in (None, "location") and not out_of_time:
         venues = list(session.scalars(location_stmt(org_id, query, review_scope)).all())
         chains = location_quality.area_chains(
             session, [venue.area_id for venue in venues]
         )
         for venue in venues:
-            if seen >= _MAX_SWEEP:
+            if seen >= _MAX_SWEEP or time.monotonic() >= deadline:
                 truncated = True
                 break
             seen += 1

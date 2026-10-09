@@ -10,6 +10,7 @@ from app.db.models import (
     LocationFixProposal,
     Organization,
 )
+from app.services import location_fix_registers as registers
 from app.services.aws_proxy import AwsProxyError
 from app.services.location_fix_registers import (
     clear_edb_cache,
@@ -189,33 +190,71 @@ def test_auto_apply_cap_stores_the_rest_pending(
     assert second_row.source == "rule:open_data"
 
 
-def test_create_budget_stores_a_confident_match_pending(
+def test_time_budget_stores_a_confident_match_and_truncates(
     db_session, monkeypatch
 ) -> None:
+    monkeypatch.setattr("app.services.location_fix_scan._SWEEP_BUDGET_SECONDS", -1)
     monkeypatch.setattr(
-        "app.services.location_fix_scan._SWEEP_CREATE_BUDGET_SECONDS",
-        -1,
+        "app.services.location_fix_registers.name_similarity",
+        lambda _left, _right: 1.0,
     )
     _register(monkeypatch)
     db_session.add(
         GeographicArea(name="Central and Western", level="district", active=True)
     )
-    org = _org(db_session, "Harbour Kindergarten", "100000000001")
+    token = "Registertimefixture"
+    first = _org(db_session, f"Aa {token} Harbour Kindergarten", "100000000001")
+    second = _org(db_session, f"Bb {token} Harbour Kindergarten", "100000000002")
     db_session.flush()
     result, _batches = start_location_scan(
-        db_session, review_scope="pending_review", org_id=org.id
+        db_session, review_scope="pending_review", query=token
     )
     assert result["auto_applied"] == 0
-    assert result["truncated"] is False
+    assert result["truncated"] is True
+    assert result["total_entities"] == 1
     proposal = db_session.scalars(
-        select(LocationFixProposal).where(LocationFixProposal.org_id == org.id)
+        select(LocationFixProposal).where(LocationFixProposal.org_id == first.id)
     ).one()
     assert proposal.status == "pending"
     assert proposal.source == "rule:open_data"
     assert (
-        db_session.scalars(select(Location).where(Location.org_id == org.id)).first()
+        db_session.scalars(select(Location).where(Location.org_id == first.id)).first()
         is None
     )
+    assert (
+        db_session.scalars(
+            select(LocationFixProposal).where(LocationFixProposal.org_id == second.id)
+        ).first()
+        is None
+    )
+
+
+def test_district_lookup_runs_once_per_sweep(db_session, monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.location_fix_registers.name_similarity",
+        lambda _left, _right: 0.9,
+    )
+    _register(monkeypatch)
+    db_session.add(
+        GeographicArea(name="Central and Western", level="district", active=True)
+    )
+    calls = {"n": 0}
+    real = registers._load_district_matches
+
+    def counted(session, wanted):
+        calls["n"] += 1
+        return real(session, wanted)
+
+    monkeypatch.setattr(registers, "_load_district_matches", counted)
+    token = "Registercachefixture"
+    _org(db_session, f"Aa {token} Harbour Kindergarten", "100000000001")
+    _org(db_session, f"Bb {token} Harbour Kindergarten", "100000000002")
+    db_session.flush()
+    result, _batches = start_location_scan(
+        db_session, review_scope="pending_review", query=token
+    )
+    assert result["created"] == 2
+    assert calls["n"] == 1
 
 
 def test_failed_register_fetch_is_retried(monkeypatch) -> None:
