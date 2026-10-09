@@ -1,4 +1,4 @@
-import { buildApiUrl, request, type ListResponse } from './api-client-core';
+import { buildApiUrl, request, requestText, type ListResponse } from './api-client-core';
 
 export interface OrgDuplicateMember {
   id: string;
@@ -210,6 +210,20 @@ export interface LocationFixProposal {
     lat?: number | null;
     lng?: number | null;
     candidates?: { location_id: string; address?: string | null }[];
+    register?: {
+      name?: string;
+      name_zh?: string;
+      school_no?: string;
+      category?: string;
+      name_similarity?: number;
+    };
+    lookup?: {
+      provider?: string;
+      grade?: string;
+      display_name?: string;
+      district_consistent?: boolean | null;
+      other_district?: string | null;
+    };
   } | null;
   source: string;
   confidence?: number | null;
@@ -236,6 +250,7 @@ export function listLocationFixes(filters: {
   entity_type?: string;
   kind?: string;
   source?: string;
+  grade?: string;
   org_id?: string;
   q?: string;
   cursor?: string;
@@ -244,6 +259,18 @@ export function listLocationFixes(filters: {
   return request<ListResponse<LocationFixProposal>>(
     buildApiUrl(`v1/admin/location-fixes${query(filters)}`)
   );
+}
+
+export function exportLocationFixes(filters: {
+  status?: string;
+  entity_type?: string;
+  kind?: string;
+  source?: string;
+  grade?: string;
+  org_id?: string;
+  q?: string;
+} = {}) {
+  return requestText(buildApiUrl(`v1/admin/location-fixes/export${query(filters)}`));
 }
 
 export function getLocationFix(id: string) {
@@ -256,6 +283,8 @@ export function getLocationFixSummary() {
     pending_by_kind: Record<string, number>;
     month_cost_usd: number;
     monthly_cost_limit_usd: number;
+    google_places_configured?: boolean;
+    pending_by_grade?: Record<string, number>;
     active_run?: LocationScanRun | null;
   }>(buildApiUrl('v1/admin/location-fixes/summary'));
 }
@@ -277,6 +306,7 @@ export function scanLocationFixes(body: {
   q?: string;
   org_id?: string;
   review_scope: 'pending_review' | 'all';
+  lookup?: 'nominatim' | 'google';
 }) {
   return request<{
     scan_run_id: string;
@@ -286,6 +316,7 @@ export function scanLocationFixes(body: {
     cleared: number;
     auto_applied: number;
     queued_for_model: number;
+    queued_for_lookup?: number;
     truncated: boolean;
     status: string;
   }>(buildApiUrl('v1/admin/location-fixes/scan'), {
@@ -302,6 +333,8 @@ export function decideLocationFix(
     address?: string;
     area_id?: string;
     target_location_id?: string;
+    lat?: number;
+    lng?: number;
   }
 ) {
   return request<LocationFixProposal>(buildApiUrl(`v1/admin/location-fixes/${id}`), {
@@ -317,6 +350,7 @@ export function decideLocationFixesBulk(body: {
   entity_type?: string;
   kind?: string;
   source?: string;
+  grade?: string;
   q?: string;
   org_id?: string;
   dry_run?: boolean;

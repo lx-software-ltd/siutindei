@@ -141,10 +141,22 @@ category-check settings.
 A sweep also checks each location. An empty address stays unresolved.
 A location with an address and no coordinates is `update_location`
 from `rule:missing_coordinates`. The sweep stores the address and does
-not call Nominatim. Apply on one row looks the pin up, writes `lat`
-and `lng` to six decimal places, and leaves `place_id` unchanged.
-Apply does not replace a pin that is already stored. Bulk apply does
-not look pins up; those rows fail and ask for a single apply. A pin
+not call Nominatim. Look up pins queues those rows on the same
+category-suggestion queue with `lookup` set to `nominatim`. Look up
+with Google does the same for rows that already have `place_id`, and
+stays disabled until `GOOGLE_PLACES_API_KEY` is set. A lookup fresher
+than 90 days for the same provider is skipped. Nominatim waits 2.2
+seconds between calls in a batch. Grades are `precise`, `street`,
+`coarse`, or `miss`. The pin is stored on the proposal for `precise`
+and `street`. Bulk apply writes a `precise` pin that sits in the
+location's district. Other grades, and a pin in another district, fail
+bulk apply and ask for a single apply. Single apply of a pin outside
+the district requires `area_id`. A manual `lat` and `lng` on apply
+stores a `manual` grade inside the Hong Kong box. Apply on one row
+still looks the pin up when no lookup coordinates are stored, writes
+`lat` and `lng` to six decimal places, and leaves `place_id` unchanged.
+Apply does not replace a pin that is already stored. Export CSV uses
+the current filters. A pin
 that falls in a different Hong Kong district, or outside Hong Kong,
 stays unresolved as `rule:pin_outside_area`. The area chain must
 include Hong Kong. District boxes are approximate, match the area
@@ -153,6 +165,17 @@ both boxes is not flagged. A dismissed location finding matches the
 same source. A dismissed pin also matches the rounded coordinates, so
 a moved pin is flagged again. A missing Google place id stays an
 organization warning and is not a location finding.
+
+A venue-less organization whose `source` is `edb` is matched to the
+EDB school register by school number. Name similarity of at least 0.95
+creates the venue during the sweep, at most 200 creates per sweep.
+The rest of those confident matches are stored as pending
+`create_location` from `rule:open_data`, and the sweep is truncated so
+the next run continues. Similarity from 0.80 up to 0.95 stays pending.
+A weaker name is left for the model. The register is fetched through
+the HTTP proxy. School phone numbers are not stored. Nominatim queries
+omit `countrycodes` and append Hong Kong, then drop hits outside the
+Hong Kong box, because Nominatim files Hong Kong under China.
 
 When the model names more than one venue, apply can take
 `target_location_id` for one listed candidate and creates the same join

@@ -28,11 +28,12 @@ export function useGeographicAreas() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  /** All active country codes (lowercase) for Nominatim scoping. */
-  const countryCodes = tree
+  // Nominatim files Hong Kong under China, so countrycodes=hk matches
+  // nothing. When Hong Kong is in the tree, omit the filter.
+  const codes = tree
     .filter((n) => n.level === 'country' && n.code)
-    .map((n) => n.code!.toLowerCase())
-    .join(',');
+    .map((n) => n.code!.toLowerCase());
+  const countryCodes = codes.includes('hk') ? '' : codes.join(',');
 
   /**
    * Walk the tree and collect all nodes as a flat list.

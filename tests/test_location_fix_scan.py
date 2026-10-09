@@ -337,6 +337,36 @@ def test_org_cap_skips_later_locations(db_session, monkeypatch) -> None:
     assert beta_rows == []
 
 
+def test_model_cap_still_records_a_later_location(db_session, monkeypatch) -> None:
+    monkeypatch.setattr("app.services.location_fix_scan._MAX_MODEL", 1)
+    token = "Modelcapfixture"
+    alpha = _org(db_session, f"Aa {token}")
+    beta = _org(db_session, f"Bb {token}")
+    area = _area(db_session)
+    db_session.add(
+        Location(
+            org_id=beta.id,
+            area_id=area.id,
+            address="8 Harbour Road",
+        )
+    )
+    db_session.flush()
+    result, batches = start_location_scan(
+        db_session, review_scope="pending_review", query=token
+    )
+    assert result["truncated"] is True
+    queued_ids = [entity_id for batch in batches for entity_id in batch["entity_ids"]]
+    assert str(alpha.id) in queued_ids
+    beta_rows = list(
+        db_session.scalars(
+            select(LocationFixProposal).where(LocationFixProposal.org_id == beta.id)
+        ).all()
+    )
+    assert len(beta_rows) == 1
+    assert beta_rows[0].entity_type == "location"
+    assert beta_rows[0].source == "rule:missing_coordinates"
+
+
 def test_dismissed_activity_unresolved_blocks_every_source(
     db_session, sample_activity_category
 ) -> None:

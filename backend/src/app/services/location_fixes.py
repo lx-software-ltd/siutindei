@@ -16,6 +16,7 @@ from app.exceptions import NotFoundError, ValidationError
 from app.services.location_fix_apply import apply_proposal
 from app.services.location_fix_query import (
     ENTITY_TYPES,
+    GRADES,
     KINDS,
     SOURCES,
     choice,
@@ -37,6 +38,8 @@ def decide_proposal(
     address: str | None = None,
     area_id: str | None = None,
     target_location_id: str | UUID | None = None,
+    lat: float | None = None,
+    lng: float | None = None,
 ) -> dict[str, Any]:
     row = session.get(LocationFixProposal, proposal_id)
     if row is None:
@@ -55,6 +58,8 @@ def decide_proposal(
         address=address,
         area_id=area_id,
         target_location_id=target_location_id,
+        lat=lat,
+        lng=lng,
     )
     _mark(row, "applied", decided_by)
     session.flush()
@@ -278,6 +283,7 @@ def _bulk_rows(
             source=choice(body.get("source"), SOURCES, "source"),
             org_id=optional_uuid(body.get("org_id"), "org_id"),
             query=body.get("q") if isinstance(body.get("q"), str) else None,
+            grade=choice(body.get("grade"), GRADES, "grade"),
         )
     rows = list(
         session.scalars(

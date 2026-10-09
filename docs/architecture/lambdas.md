@@ -107,8 +107,11 @@ their primary responsibilities.
   `suggestion_ids` on the same queue; verify batches send
   `activity_ids`. Location sweeps send `location_scan_run_id` on that
   same queue and spend `location_fix_settings.monthly_cost_limit_usd`,
-  which is separate from category-check spend. The worker handles
-  `location_scan_run_id` before `scan_run_id`.
+  which is separate from category-check spend. Pin lookups on that
+  queue set `entity_type` to `location` and `lookup` to `nominatim` or
+  `google`. A successful Google call counts 0.017 USD. The worker handles
+  `location_scan_run_id` before `scan_run_id`. The sweep also loads the
+  EDB school register through the HTTP proxy.
   After a live import commits, the function sends SQS messages when
   `CATEGORY_SUGGESTION_QUEUE_URL` is set. OpenRouter calls go through
   `app.services.openrouter_client` and the HTTP proxy. The settings
@@ -117,7 +120,9 @@ their primary responsibilities.
 - Environment additions: `CATEGORY_SUGGESTION_QUEUE_URL`,
   `OPENROUTER_API_KEY_SECRET_ARN`, `OPENROUTER_CHAT_COMPLETIONS_URL`,
   `OPENROUTER_MODEL`, `CATEGORY_SUGGESTION_LAMBDA_TIMEOUT_SECONDS`,
-  `CATEGORY_SUGGESTION_OPENROUTER_TIMEOUT_SECONDS`
+  `CATEGORY_SUGGESTION_OPENROUTER_TIMEOUT_SECONDS`,
+  `GOOGLE_PLACES_API_KEY` (CDK parameter `GooglePlacesApiKey`,
+  `noEcho`; empty disables Google pin lookup)
 - Memory: 1024 MB (cold start is import-bound; CPU scales with memory)
 - Timeout: 120 seconds so one SQS enrichment can wait on a 90-second
   OpenRouter attempt. API Gateway still limits HTTP to 29 seconds, so
@@ -330,8 +335,10 @@ their primary responsibilities.
 - Client: in-VPC Lambdas import `app.services.aws_proxy.invoke` (for
   AWS calls) or `app.services.aws_proxy.http_invoke` (for HTTP calls)
 - Timeout: 120 seconds. Outbound HTTP is capped at 90 seconds in
-  `app.services.aws_proxy`. `ALLOWED_HTTP_URLS` includes Nominatim and
-  the OpenRouter chat completions URL.
+  `app.services.aws_proxy`. `ALLOWED_HTTP_URLS` includes Nominatim,
+  the EDB school-location CSV, the Places API (New) place prefix, and
+  the OpenRouter chat completions URL. Google calls send the key as
+  `X-Goog-Api-Key`, not in the URL.
 - OpenRouter: the proxy does not inject the API key. Callers pass
   `Authorization` from Secrets Manager via `app.services.openrouter_client`.
 
@@ -344,7 +351,8 @@ their primary responsibilities.
 - Purpose: ask OpenRouter where an unknown imported category name
   should sit, run category-check batches for activities in
   organizations that are still pending review, and run location-sweep
-  batches whose messages carry `location_scan_run_id`
+  batches whose messages carry `location_scan_run_id`, including pin
+  lookups whose `lookup` is `nominatim` or `google`
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - VPC: Yes
 - Timeout: 120 seconds on the admin function. One OpenRouter attempt

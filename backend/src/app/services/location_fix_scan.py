@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
@@ -22,7 +23,9 @@ from app.db.models import (
 from app.db.models.location_fix import LocationScanRun
 from app.exceptions import ValidationError
 from app.services import location_fix_quality as location_quality
+from app.services.location_fix_lookup import lookup_location_ids
 from app.services.location_fix_query import ENTITY_TYPES, over_budget, serialize_run
+from app.services.location_fix_registers import consider_open_data
 from app.services.location_fixes import (
     clear_pending,
     dismissed_same,
@@ -35,6 +38,7 @@ _MAX_SWEEP = 10000
 _MAX_MODEL = 500
 _BATCH_SIZE = 10
 _REVIEW_SCOPES = frozenset({"pending_review", "all"})
+_LOOKUPS = frozenset({"nominatim", "google"})
 _ACTIVE = ("queued", "running")
 STALE_AFTER = timedelta(seconds=660)
 
@@ -50,6 +54,7 @@ def start_location_scan(
     entity_type: str | None = None,
     org_id: UUID | None = None,
     query: str | None = None,
+    lookup: str | None = None,
     requested_by: str | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Run venue rules and return model batches to enqueue after commit."""
@@ -57,6 +62,10 @@ def start_location_scan(
         raise ValidationError("Invalid review_scope", field="review_scope")
     if entity_type is not None and entity_type not in ENTITY_TYPES:
         raise ValidationError("Invalid entity_type", field="entity_type")
+    if lookup is not None and lookup not in _LOOKUPS:
+        raise ValidationError("Invalid lookup", field="lookup")
+    if lookup == "google" and not os.getenv("GOOGLE_PLACES_API_KEY", "").strip():
+        raise ValidationError("Google Places is not configured", field="lookup")
     _fail_stale_runs(session)
     if over_budget(session):
         raise ValidationError(
@@ -109,13 +118,16 @@ def start_location_scan(
     org_ids.update(activity.org_id for activity in activities)
     context = _load_context(session, list(org_ids))
     seen = 0
+    auto_budget: dict[str, Any] = {"applied": 0, "capped": False}
     if entity_type in (None, "organization"):
         for org in orgs:
             seen += 1
-            _count(counts, _scan_org(session, org, context, run.id, queued))
-            if len(queued["organization"]) >= _MAX_MODEL:
+            _count(
+                counts,
+                _scan_org(session, org, context, run.id, queued, auto_budget),
+            )
+            if len(queued["organization"]) >= _MAX_MODEL or auto_budget["capped"]:
                 truncated = True
-                break
     if activities and not truncated:
         for activity in activities:
             if seen >= _MAX_SWEEP:
@@ -129,7 +141,7 @@ def start_location_scan(
             if len(queued["activity"]) >= _MAX_MODEL:
                 truncated = True
                 break
-    if entity_type in (None, "location") and not truncated:
+    if entity_type in (None, "location"):
         venues = list(
             session.scalars(_location_stmt(org_id, query, review_scope)).all()
         )
@@ -150,7 +162,26 @@ def start_location_scan(
                     run.id,
                 ),
             )
+    lookup_ids = (
+        lookup_location_ids(
+            session,
+            review_scope=review_scope,
+            org_id=org_id,
+            query=query,
+            provider=lookup,
+        )
+        if lookup
+        else []
+    )
     batches = _batches(queued)
+    for index in range(0, len(lookup_ids), _BATCH_SIZE):
+        batches.append(
+            {
+                "entity_type": "location",
+                "entity_ids": lookup_ids[index : index + _BATCH_SIZE],
+                "lookup": lookup,
+            }
+        )
     run.total_entities = seen
     run.batches_total = len(batches)
     run.created_count = counts["created"]
@@ -158,7 +189,8 @@ def start_location_scan(
     run.skipped_count = counts["skipped"]
     run.cleared_count = counts["cleared"]
     run.auto_applied_count = counts["auto_applied"]
-    run.queued_count = sum(len(ids) for ids in queued.values())
+    model_queued = sum(len(ids) for ids in queued.values())
+    run.queued_count = model_queued + len(lookup_ids)
     run.truncated = truncated
     run.updated_at = datetime.now(timezone.utc)
     if batches:
@@ -169,15 +201,20 @@ def start_location_scan(
     session.flush()
     payload = serialize_run(run)
     payload["scan_run_id"] = str(run.id)
+    payload["queued_for_model"] = model_queued
+    payload["queued_for_lookup"] = len(lookup_ids)
     return payload, batches
 
 
-def _scan_org(session, org, context, run_id, queued) -> str:
+def _scan_org(session, org, context, run_id, queued, auto_budget) -> str:
     locations = context["locations"].get(org.id, [])
     if locations:
         if clear_pending(session, "organization", org.id):
             return "cleared"
         return "unchanged"
+    register_outcome = consider_open_data(session, org, run_id, auto_budget, context)
+    if register_outcome is not None:
+        return register_outcome
     if len(queued["organization"]) >= _MAX_MODEL:
         return "unchanged"
     if _dismissed_unresolved(session, "organization", org.id):

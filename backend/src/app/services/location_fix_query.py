@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -36,8 +37,12 @@ SOURCES = frozenset(
         "rule:missing_coordinates",
         "rule:empty_address",
         "rule:pin_outside_area",
+        "rule:open_data",
+        "lookup:nominatim",
+        "lookup:google",
     }
 )
+GRADES = frozenset({"precise", "street", "coarse", "miss", "manual", "not_looked_up"})
 STATUSES = frozenset({"pending", "applied", "dismissed"})
 ENTITY_TYPES = frozenset({"organization", "activity", "location"})
 
@@ -98,6 +103,7 @@ def list_proposals(
     query: str | None,
     cursor: str | None,
     limit: int,
+    grade: str | None = None,
 ) -> dict[str, Any]:
     stmt = filtered_stmt(
         status=status,
@@ -106,6 +112,7 @@ def list_proposals(
         source=source,
         org_id=org_id,
         query=query,
+        grade=grade,
     )
     if cursor:
         stamp, last_id = decode_cursor(cursor)
@@ -168,7 +175,21 @@ def summarize_proposals(session: Session) -> dict[str, Any]:
         "month_cost_usd": month_cost(session),
         "monthly_cost_limit_usd": float(settings.monthly_cost_limit_usd),
         "active_run": None if active is None else serialize_run(active),
+        "google_places_configured": bool(
+            os.getenv("GOOGLE_PLACES_API_KEY", "").strip()
+        ),
+        "pending_by_grade": _pending_grades(session),
     }
+
+
+def _pending_grades(session: Session) -> dict[str, int]:
+    column = LocationFixProposal.proposed_location["lookup"]["grade"].astext
+    rows = session.execute(
+        select(column, func.count())
+        .where(LocationFixProposal.status == "pending")
+        .group_by(column)
+    ).all()
+    return {str(grade): int(count) for grade, count in rows if grade}
 
 
 def pending_row(
@@ -191,6 +212,7 @@ def filtered_stmt(
     source: str | None,
     org_id: UUID | None,
     query: str | None,
+    grade: str | None = None,
 ):
     stmt = select(LocationFixProposal)
     if status:
@@ -201,6 +223,12 @@ def filtered_stmt(
         stmt = stmt.where(LocationFixProposal.kind == kind)
     if source:
         stmt = stmt.where(LocationFixProposal.source == source)
+    if grade:
+        column = LocationFixProposal.proposed_location["lookup"]["grade"].astext
+        if grade == "not_looked_up":
+            stmt = stmt.where(or_(column.is_(None), column == ""))
+        else:
+            stmt = stmt.where(column == grade)
     if org_id is not None:
         stmt = stmt.where(LocationFixProposal.org_id == org_id)
     if query and query.strip():

@@ -67,3 +67,36 @@ export async function request<T>(
 
   return data as T;
 }
+
+export async function requestText(
+  url: string,
+  options: RequestInit = {}
+): Promise<string> {
+  const authHeader = await getAuthHeader();
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...authHeader,
+      ...(options.headers ?? {}),
+    },
+  });
+  const raw = await response.text();
+  if (!response.ok) {
+    let message = response.statusText;
+    try {
+      const data = raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+      if (data && typeof data === 'object') {
+        message =
+          (data.error as string | undefined) ||
+          (data.message as string | undefined) ||
+          message;
+      }
+    } catch {
+      if (raw) {
+        message = raw;
+      }
+    }
+    throw new ApiError(message, response.status);
+  }
+  return raw;
+}

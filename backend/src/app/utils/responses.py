@@ -178,6 +178,20 @@ def json_response(
     }
 
 
+def text_response(
+    status_code: int,
+    body: str,
+    *,
+    content_type: str,
+    event: Optional[Mapping[str, Any]] = None,
+) -> dict[str, Any]:
+    """API Gateway response whose body is already text."""
+    headers = {"Content-Type": content_type}
+    headers.update(get_security_headers())
+    headers.update(get_cors_headers(event))
+    return {"statusCode": status_code, "headers": headers, "body": body}
+
+
 def _serialize_body(body: Any) -> Any:
     """Serialize response body to JSON-compatible format.
 

@@ -991,6 +991,14 @@ paths:
               - rule:missing_coordinates
               - rule:empty_address
               - rule:pin_outside_area
+              - rule:open_data
+              - lookup:nominatim
+              - lookup:google
+        - name: grade
+          in: query
+          schema:
+            type: string
+            enum: [precise, street, coarse, miss, manual, not_looked_up]
         - name: org_id
           in: query
           schema:
@@ -1015,6 +1023,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LocationFixListResponse'
+
+  /v1/admin/location-fixes/export:
+    get:
+      summary: Export venue proposals as CSV
+      description: |
+        Same filters as the list, at most 5000 rows. The body is
+        `text/csv`.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, applied, dismissed]
+            default: pending
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+            enum: [organization, activity, location]
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [link_existing, create_location, unresolved, update_location]
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: grade
+          in: query
+          schema:
+            type: string
+            enum: [precise, street, coarse, miss, manual, not_looked_up]
+        - name: org_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
 
   /v1/admin/location-fixes/summary:
     get:
@@ -1082,6 +1139,12 @@ paths:
                 review_scope:
                   type: string
                   enum: [pending_review, all]
+                lookup:
+                  type: string
+                  enum: [nominatim, google]
+                  description: |
+                    Queue a pin lookup for pending missing-coordinate
+                    venues. `google` is rejected when the Places key is empty.
       responses:
         "200":
           description: Sweep counts
@@ -1159,6 +1222,12 @@ paths:
                   type: string
                   format: uuid
                   description: One candidate venue when the proposal is unresolved.
+                lat:
+                  type: number
+                  description: Manual pin latitude. Send with lng.
+                lng:
+                  type: number
+                  description: Manual pin longitude. Send with lat.
       responses:
         "200":
           description: Updated proposal
@@ -6983,6 +7052,12 @@ components:
           type: number
         monthly_cost_limit_usd:
           type: number
+        google_places_configured:
+          type: boolean
+        pending_by_grade:
+          type: object
+          additionalProperties:
+            type: integer
         active_run:
           allOf:
             - $ref: '#/components/schemas/LocationFixScanResult'
@@ -7042,6 +7117,8 @@ components:
           type: integer
         queued_for_model:
           type: integer
+        queued_for_lookup:
+          type: integer
         failed:
           type: integer
         cost_usd:
@@ -7076,6 +7153,8 @@ components:
         kind:
           type: string
         source:
+          type: string
+        grade:
           type: string
         q:
           type: string

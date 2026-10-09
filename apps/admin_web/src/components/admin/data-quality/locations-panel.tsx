@@ -14,6 +14,7 @@ import { ApiError } from '../../../lib/api-client';
 import {
   decideLocationFix,
   decideLocationFixesBulk,
+  exportLocationFixes,
   getLocationFix,
   getLocationFixSettings,
   getLocationFixSummary,
@@ -50,13 +51,19 @@ const SOURCES = [
   'rule:missing_coordinates',
   'rule:empty_address',
   'rule:pin_outside_area',
+  'rule:open_data',
+  'lookup:nominatim',
+  'lookup:google',
 ] as const;
+
+const GRADES = ['precise', 'street', 'coarse', 'miss', 'manual', 'not_looked_up'] as const;
 
 interface LocationFilters {
   q: string;
   entity_type: string;
   kind: string;
   source: string;
+  grade: string;
   status: string;
 }
 
@@ -65,6 +72,7 @@ const DEFAULT_FILTERS: LocationFilters = {
   entity_type: '',
   kind: '',
   source: '',
+  grade: '',
   status: 'pending',
 };
 
@@ -97,7 +105,7 @@ export function LocationsPanel() {
     defaultFilters: DEFAULT_FILTERS,
     debounceKeys: ['q'],
     errorPrefix: 'Failed to load location fixes',
-    fetcher: async ({ cursor, limit, q, entity_type, kind, source, status }) => {
+    fetcher: async ({ cursor, limit, q, entity_type, kind, source, grade, status }) => {
       const page = await listLocationFixes({
         cursor: cursor ?? undefined,
         limit,
@@ -105,6 +113,7 @@ export function LocationsPanel() {
         entity_type: entity_type || undefined,
         kind: kind || undefined,
         source: source || undefined,
+        grade: grade || undefined,
         status: status || undefined,
         org_id: orgIdRef.current || undefined,
       });
@@ -114,7 +123,7 @@ export function LocationsPanel() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [scanningScope, setScanningScope] = useState<
-    'pending_review' | 'all' | null
+    'pending_review' | 'all' | 'nominatim' | 'google' | null
   >(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -123,6 +132,8 @@ export function LocationsPanel() {
   );
   const [address, setAddress] = useState('');
   const [areaId, setAreaId] = useState('');
+  const [pinLat, setPinLat] = useState('');
+  const [pinLng, setPinLng] = useState('');
   const selectAllRef = useRef<HTMLInputElement>(null);
   const activeRun = summaryQuery.data?.active_run ?? null;
   const sweepBusy =
@@ -145,6 +156,7 @@ export function LocationsPanel() {
     list.filters.entity_type,
     list.filters.kind,
     list.filters.source,
+    list.filters.grade,
     list.filters.status,
     organization,
   ]);
@@ -178,13 +190,25 @@ export function LocationsPanel() {
   const openProposalKind = open?.kind;
   const openProposalAddress = open?.proposed_location?.address ?? '';
   const openProposalArea = open?.proposed_location?.area_id ?? '';
+  const openProposalLat = open?.proposed_location?.lat;
+  const openProposalLng = open?.proposed_location?.lng;
   useEffect(() => {
-    if (openProposalKind !== 'create_location') {
-      return;
+    if (openProposalKind === 'create_location') {
+      setAddress(openProposalAddress);
+      setAreaId(openProposalArea);
     }
-    setAddress(openProposalAddress);
-    setAreaId(openProposalArea);
-  }, [openProposalId, openProposalKind, openProposalAddress, openProposalArea]);
+    if (openProposalKind === 'update_location') {
+      setPinLat(openProposalLat == null ? '' : String(openProposalLat));
+      setPinLng(openProposalLng == null ? '' : String(openProposalLng));
+    }
+  }, [
+    openProposalId,
+    openProposalKind,
+    openProposalAddress,
+    openProposalArea,
+    openProposalLat,
+    openProposalLng,
+  ]);
 
   const pending = summaryQuery.data?.by_status.pending ?? 0;
   const progress =
@@ -216,14 +240,64 @@ export function LocationsPanel() {
       const stopped = result.truncated
         ? ' Scan stopped at the limit; run it again to continue.'
         : '';
+      const lookedUp = result.queued_for_lookup
+        ? ` Queued ${result.queued_for_lookup} pin lookups.`
+        : '';
       setNotice(
-        `Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}, cleared ${result.cleared}, linked ${result.auto_applied}, queued ${result.queued_for_model}.${stopped}`
+        `Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}, cleared ${result.cleared}, linked ${result.auto_applied}, queued ${result.queued_for_model}.${lookedUp}${stopped}`
       );
       await refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Scan failed.');
     } finally {
       setScanningScope(null);
+    }
+  }
+
+  async function lookUp(provider: 'nominatim' | 'google') {
+    setScanningScope(provider);
+    setError('');
+    setNotice('');
+    try {
+      const result = await scanLocationFixes({
+        entity_type: 'location',
+        q: list.filters.q || undefined,
+        org_id: organization || undefined,
+        review_scope: 'pending_review',
+        lookup: provider,
+      });
+      const stopped = result.truncated
+        ? ' Scan stopped at the limit; run it again to continue.'
+        : '';
+      setNotice(`Queued ${result.queued_for_lookup ?? 0} pin lookups.${stopped}`);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Lookup failed.');
+    } finally {
+      setScanningScope(null);
+    }
+  }
+
+  async function exportCsv() {
+    setError('');
+    try {
+      const csv = await exportLocationFixes({
+        status: list.filters.status || undefined,
+        entity_type: list.filters.entity_type || undefined,
+        kind: list.filters.kind || undefined,
+        source: list.filters.source || undefined,
+        grade: list.filters.grade || undefined,
+        q: list.filters.q || undefined,
+        org_id: organization || undefined,
+      });
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'location-fixes.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Export failed.');
     }
   }
 
@@ -235,11 +309,21 @@ export function LocationsPanel() {
     setActiveId(targetLocationId ? `${item.id}:${targetLocationId}` : item.id);
     setError('');
     try {
+      const lat = Number(pinLat);
+      const lng = Number(pinLng);
       await decideLocationFix(item.id, {
         action,
         ...(targetLocationId ? { target_location_id: targetLocationId } : {}),
         ...(item.kind === 'create_location' && action === 'apply'
           ? { address, area_id: areaId }
+          : {}),
+        ...(item.kind === 'update_location' &&
+        action === 'apply' &&
+        pinLat.trim() &&
+        pinLng.trim() &&
+        Number.isFinite(lat) &&
+        Number.isFinite(lng)
+          ? { lat, lng }
           : {}),
       });
       setNotice(action === 'apply' ? 'Location updated.' : 'Proposal dismissed.');
@@ -265,6 +349,7 @@ export function LocationsPanel() {
               entity_type: list.filters.entity_type || undefined,
               kind: list.filters.kind || undefined,
               source: list.filters.source || undefined,
+              grade: list.filters.grade || undefined,
               q: list.filters.q || undefined,
               org_id: organization || undefined,
             }
@@ -370,11 +455,34 @@ export function LocationsPanel() {
             >
               Dismiss selected
             </Button>
+            <Button
+              type='button'
+              variant='secondary'
+              onClick={() => void lookUp('nominatim')}
+              loading={scanningScope === 'nominatim'}
+              loadingLabel='Looking up…'
+              disabled={sweepBusy}
+            >
+              Look up pins
+            </Button>
+            <Button
+              type='button'
+              variant='secondary'
+              onClick={() => void lookUp('google')}
+              loading={scanningScope === 'google'}
+              loadingLabel='Looking up…'
+              disabled={sweepBusy || !summaryQuery.data?.google_places_configured}
+            >
+              Look up with Google
+            </Button>
+            <Button type='button' variant='secondary' onClick={() => void exportCsv()}>
+              Export CSV
+            </Button>
           </div>
         }
         rows={list.items}
         getLabel={(item) => item.entity_name || item.current_label}
-        middleColumnCount={4}
+        middleColumnCount={5}
         hasActions={false}
         isExpanded={expanded.isExpanded}
         onToggle={expanded.toggle}
@@ -383,6 +491,35 @@ export function LocationsPanel() {
             <AdminEditorPanel>
               {open.rationale ? (
                 <p className='text-sm text-slate-700'>{open.rationale}</p>
+              ) : null}
+              {open.proposed_location?.register?.name ? (
+                <p className='text-sm text-slate-700'>
+                  Register {open.proposed_location.register.name}
+                  {open.proposed_location.register.name_similarity == null
+                    ? ''
+                    : ` (${open.proposed_location.register.name_similarity})`}
+                </p>
+              ) : null}
+              {open.proposed_location?.lookup?.grade ? (
+                <p className='text-sm text-slate-700'>
+                  Lookup {open.proposed_location.lookup.grade}
+                  {open.proposed_location.lookup.display_name
+                    ? `: ${open.proposed_location.lookup.display_name}`
+                    : ''}
+                </p>
+              ) : null}
+              {open.proposed_location?.lookup?.district_consistent === false ? (
+                <p className='text-sm text-slate-700'>Pin is outside this district.</p>
+              ) : null}
+              {open.proposed_location?.lat != null && open.proposed_location?.lng != null ? (
+                <a
+                  className='text-sm underline'
+                  href={`https://www.google.com/maps/search/?api=1&query=${open.proposed_location.lat},${open.proposed_location.lng}`}
+                  target='_blank'
+                  rel='noreferrer'
+                >
+                  Open in Google Maps
+                </a>
               ) : null}
               {open.proposed_location?.candidates?.length ? (
                 <div className='flex flex-col items-start gap-2'>
@@ -414,6 +551,26 @@ export function LocationsPanel() {
                       tree={areas.tree}
                       value={areaId}
                       onChange={(next) => setAreaId(next)}
+                    />
+                  </AdminField>
+                </AdminFieldGrid>
+              ) : null}
+              {open.kind === 'update_location' ? (
+                <AdminFieldGrid columns={2}>
+                  <AdminField label='Latitude' htmlFor='location-fix-lat'>
+                    <Input
+                      id='location-fix-lat'
+                      inputMode='decimal'
+                      value={pinLat}
+                      onChange={(event) => setPinLat(event.target.value)}
+                    />
+                  </AdminField>
+                  <AdminField label='Longitude' htmlFor='location-fix-lng'>
+                    <Input
+                      id='location-fix-lng'
+                      inputMode='decimal'
+                      value={pinLng}
+                      onChange={(event) => setPinLng(event.target.value)}
                     />
                   </AdminField>
                 </AdminFieldGrid>
@@ -505,6 +662,20 @@ export function LocationsPanel() {
                 ))}
               </Select>
             </AdminFilterField>
+            <AdminFilterField label='Grade' htmlFor='location-fix-grade'>
+              <Select
+                id='location-fix-grade'
+                value={list.filters.grade}
+                onChange={(event) => list.setFilter('grade', event.target.value)}
+              >
+                <option value=''>All grades</option>
+                {GRADES.map((grade) => (
+                  <option key={grade} value={grade}>
+                    {grade}
+                  </option>
+                ))}
+              </Select>
+            </AdminFilterField>
             <AdminFilterField label='Status' htmlFor='location-fix-status'>
               <Select
                 id='location-fix-status'
@@ -574,6 +745,7 @@ export function LocationsPanel() {
             <AdminDataTableHeadCell>Current</AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Proposed</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Source</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Lookup</AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
@@ -586,6 +758,9 @@ export function LocationsPanel() {
             <AdminDataTableCell priority='secondary'>
               {item.source}
               {item.confidence == null ? '' : ` ${item.confidence}`}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {item.proposed_location?.lookup?.grade || ''}
             </AdminDataTableCell>
           </>
         )}

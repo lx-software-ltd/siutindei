@@ -36,16 +36,14 @@ def enqueue_location_batches(scan_run_id: str, batches: list[dict]) -> None:
         raise RuntimeError("CATEGORY_SUGGESTION_QUEUE_URL is not configured")
     client = get_client("sqs")
     for batch in batches:
-        client.send_message(
-            QueueUrl=queue_url,
-            MessageBody=json.dumps(
-                {
-                    "location_scan_run_id": scan_run_id,
-                    "entity_type": batch["entity_type"],
-                    "entity_ids": batch["entity_ids"],
-                }
-            ),
-        )
+        body = {
+            "location_scan_run_id": scan_run_id,
+            "entity_type": batch["entity_type"],
+            "entity_ids": batch["entity_ids"],
+        }
+        if batch.get("lookup"):
+            body["lookup"] = batch["lookup"]
+        client.send_message(QueueUrl=queue_url, MessageBody=json.dumps(body))
 
 
 def _send_batches(
