@@ -7858,8 +7858,9 @@ export interface components {
         };
         LocationFixBulkResult: {
             dry_run: boolean;
+            /** @description Rows this call will decide, at most 200. */
             matched: number;
-            /** Rows beyond the 200 this call decides */
+            /** @description True when more pending rows match than this call decides. */
             truncated?: boolean;
             decided: number;
             failed: number;
