@@ -25,6 +25,10 @@ from app.api.admin_crud import _handle_crud
 from app.api.admin_request import parse_limit, parse_object_body, _query_param
 from app.api.admin_resources import _RESOURCE_CONFIG
 from app.api.partner_auth import PartnerContext, require_full_access
+from app.api.partner_location_fixes import (
+    location_ids_by_activity,
+    pending_location_fix_by_activity,
+)
 from app.db.engine import get_engine
 from app.db.models.category_scan import ActivityCategoryReview
 from app.exceptions import NotFoundError, ValidationError
@@ -147,11 +151,21 @@ def partner_get_activities(
                 session,
                 [UUID(item["id"]) for item in payload["items"]],
             )
+            activity_ids = [UUID(item["id"]) for item in payload["items"]]
+            venues = location_ids_by_activity(session, activity_ids)
+            fixes = pending_location_fix_by_activity(session, activity_ids)
             for item in payload["items"]:
                 item["category_review"] = reviews.get(item["id"])
+                item["location_ids"] = venues.get(item["id"], [])
+                item["pending_location_fix"] = fixes.get(item["id"])
         elif payload.get("id"):
-            reviews = _latest_by_activity(session, [UUID(payload["id"])])
+            activity_ids = [UUID(payload["id"])]
+            reviews = _latest_by_activity(session, activity_ids)
+            venues = location_ids_by_activity(session, activity_ids)
+            fixes = pending_location_fix_by_activity(session, activity_ids)
             payload["category_review"] = reviews.get(payload["id"])
+            payload["location_ids"] = venues.get(payload["id"], [])
+            payload["pending_location_fix"] = fixes.get(payload["id"])
     response["body"] = json.dumps(payload, default=str)
     return response
 

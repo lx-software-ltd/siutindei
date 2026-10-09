@@ -21,6 +21,7 @@ export const ADMIN_RECORD_PARAMS = [
   'import-job',
   'duplicate',
   'name-fix',
+  'location-fix',
 ] as const;
 
 export type AdminRecordParam = (typeof ADMIN_RECORD_PARAMS)[number];
@@ -42,7 +43,13 @@ const KEEP_BY_SECTION: Record<string, readonly AdminRecordParam[]> = {
   'audit-logs': ['audit-log'],
   catalog: ['job'],
   imports: ['job', 'import-job'],
-  'data-quality': ['duplicate', 'name-fix', 'organization', 'category-check'],
+  'data-quality': [
+    'duplicate',
+    'name-fix',
+    'location-fix',
+    'organization',
+    'category-check',
+  ],
 };
 
 const LEGACY_EDIT_SECTIONS = new Set([

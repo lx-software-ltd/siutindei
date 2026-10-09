@@ -15,6 +15,7 @@ from app.api.admin_resources import _RESOURCE_CONFIG
 from app.db.engine import get_engine
 from app.db.models import Activity, NameFixProposal, Organization
 from app.exceptions import ValidationError
+from app.api.partner_location_fixes import pending_location_fixes_by_org
 from app.services.name_fixes import list_proposals
 from app.utils import json_response
 
@@ -63,11 +64,18 @@ def partner_get_organizations(
                 session,
                 [UUID(item["id"]) for item in payload["items"]],
             )
+            locations = pending_location_fixes_by_org(
+                session,
+                [UUID(item["id"]) for item in payload["items"]],
+            )
             for item in payload["items"]:
                 item["pending_name_fixes"] = grouped.get(item["id"], [])
+                item["pending_location_fixes"] = locations.get(item["id"], [])
         elif payload.get("id"):
             grouped = _fixes_by_org(session, [UUID(payload["id"])])
+            locations = pending_location_fixes_by_org(session, [UUID(payload["id"])])
             payload["pending_name_fixes"] = grouped.get(payload["id"], [])
+            payload["pending_location_fixes"] = locations.get(payload["id"], [])
     response["body"] = json.dumps(payload, default=str)
     return response
 

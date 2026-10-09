@@ -174,6 +174,66 @@ Columns:
 Seed assessment: the migration inserts the default row. No
 `seed_data.sql` change.
 
+## Table: location_scan_runs
+
+Purpose: One venue sweep. Rules run in the request. Model batches
+continue on the category-suggestion queue.
+
+Columns:
+- `id` (UUID, PK)
+- `status` (text) — `queued`, `running`, `done`, or `failed`
+- `requested_by` (text, optional)
+- `org_id` (UUID, optional, FK → `organizations.id`, ON DELETE SET NULL)
+- `review_scope` (text) — `pending_review` or `all`
+- `entity_type` (text, optional) — `organization` or `activity`
+- `total_entities`, `batches_total`, `batches_done` (integer)
+- `created_count`, `updated_count`, `skipped_count`, `cleared_count`, `auto_applied_count`, `queued_count`, `failed_count` (integer)
+- `cost_usd` (numeric)
+- `truncated` (boolean)
+- `error` (text, optional)
+- `processed_message_ids` (jsonb, default `[]`)
+- `created_at` / `updated_at` / `finished_at` (timestamptz)
+
+Constraints: partial unique index so only one `queued` or `running` row exists.
+
+## Table: location_fix_proposals
+
+Purpose: A suggested venue link or a new location for an organization
+or activity.
+
+Columns:
+- `id` (UUID, PK)
+- `entity_type` (text) — `organization` or `activity`
+- `entity_id` (UUID, required)
+- `org_id` (UUID, required, FK → `organizations.id`, ON DELETE CASCADE)
+- `kind` (text) — `link_existing`, `create_location`, or `unresolved`
+- `target_location_id` (UUID, optional, FK → `locations.id`, ON DELETE SET NULL)
+- `proposed_location` (jsonb, optional)
+- `source` (text) — `rule:single_location`, `rule:pricing_schedule`, `rule:name_area`, `rule:no_venue`, or `model`
+- `confidence` (numeric, optional)
+- `rationale` (text, optional)
+- `status` (text) — `pending`, `applied`, or `dismissed`
+- `scan_run_id` (UUID, optional, FK → `location_scan_runs.id`, ON DELETE SET NULL)
+- `decided_by` (text, optional)
+- `decided_at` (timestamptz, optional)
+- `created_at` / `updated_at` (timestamptz)
+
+Constraints: partial unique index on pending `(entity_type, entity_id)`.
+
+## Table: location_fix_settings
+
+Purpose: Singleton (`id = 1`) monthly budget for location-model sweeps.
+Category-check spend is not included.
+
+Columns:
+- `id` (integer, PK)
+- `monthly_cost_limit_usd` (numeric, required, greater than 0 and at most 1000)
+- `updated_at` (timestamptz)
+
+Seed assessment: migration `0042_location_fixes` inserts the default
+row. `location_scan_runs` and `location_fix_proposals` stay empty. No
+`seed_data.sql` change.
+
 ## Table: geographic_areas
 
 Purpose: Hierarchical lookup of valid geographic areas (country > region > city > district).

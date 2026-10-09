@@ -33,18 +33,23 @@ info:
       organization manager.
     - A full-access key lists every organization (`pending_review`,
       `approved`, and `rejected`) and can read pending name-cleanup
-      proposals (`GET /v1/partner/name-fixes`) and category-check
+      proposals (`GET /v1/partner/name-fixes`), venue proposals
+      (`GET /v1/partner/location-fixes`), and category-check
       reviews (`GET /v1/partner/category-reviews`). A full-access `crud`
       key can also decide those reviews (`POST
       /v1/partner/category-reviews/{id}` and `POST
-      /v1/partner/category-reviews/bulk`) and list or delete activity
+      /v1/partner/category-reviews/bulk`), decide venue proposals
+      (`POST /v1/partner/location-fixes/{id}` and `POST
+      /v1/partner/location-fixes/bulk`), and list or delete activity
       categories (`GET` / `DELETE /v1/partner/activity-categories`).
       Organization-scoped keys receive `403` on those write and
       category routes. Organization list
       and detail responses include `pending_name_fixes` with the record
-      type, current name, proposed name, and rules. Activity list and
-      detail responses include `category_review` for the latest check
-      on that activity (`null` when none exists).
+      type, current name, proposed name, and rules, and
+      `pending_location_fixes` for that organization and its activities.
+      Activity list and detail responses include `category_review` for
+      the latest check on that activity (`null` when none exists),
+      `location_ids`, and `pending_location_fix` (`null` when none).
 
     ## Validation rules
 
@@ -235,6 +240,114 @@ paths:
         "403":
           description: Invalid API key
 
+  /v1/partner/location-fixes:
+    get:
+      summary: List venue proposals
+      description: |
+        Pending venue links and new-location proposals. A full-access
+        key sees every proposal. An org-scoped key sees only that
+        organization's records.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, applied, dismissed]
+            default: pending
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+            enum: [organization, activity]
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [link_existing, create_location, unresolved]
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: org_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Venue proposals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartnerLocationFixListResponse"
+        "403":
+          description: Invalid API key
+
+  /v1/partner/location-fixes/bulk:
+    post:
+      summary: Apply or dismiss matching venue proposals
+      description: Full-access `crud` keys only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./admin.yaml#/components/schemas/LocationFixBulkRequest"
+      responses:
+        "200":
+          description: Bulk result
+          content:
+            application/json:
+              schema:
+                $ref: "./admin.yaml#/components/schemas/LocationFixBulkResult"
+        "403":
+          description: Read-only key or organization-scoped key
+
+  /v1/partner/location-fixes/{id}:
+    post:
+      summary: Apply or dismiss one venue proposal
+      description: Full-access `crud` keys only.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [apply, dismiss]
+                address:
+                  type: string
+                area_id:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: Updated proposal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartnerLocationFix"
+        "403":
+          description: Read-only key or organization-scoped key
+        "404":
+          description: Proposal not found
+
   /v1/partner/category-reviews:
     get:
       summary: List category-check reviews
@@ -397,7 +510,8 @@ paths:
         Paginated list. A full-access key receives every organization
         (`pending_review`, `approved`, and `rejected`). Org-scoped keys
         only receive their organization. Each item includes
-        `pending_name_fixes` for that organization and its activities.
+        `pending_name_fixes` and `pending_location_fixes` for that
+        organization and its activities.
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Cursor"
@@ -605,7 +719,8 @@ paths:
         Paginated list. Org-scoped keys only receive activities of their
         organization. Each item includes `category_review` for the
         latest category check (`null` when the activity has not been
-        checked).
+        checked), `location_ids`, and `pending_location_fix` (`null`
+        when none).
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Cursor"
@@ -957,6 +1072,55 @@ components:
           type: string
           enum: [pending_review, approved, rejected]
           nullable: true
+    PartnerLocationFix:
+      type: object
+      required: [id, entity_type, entity_id, org_id, kind, source, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity_type:
+          type: string
+          enum: [organization, activity]
+        entity_id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [link_existing, create_location, unresolved]
+        target_location_id:
+          type: string
+          format: uuid
+          nullable: true
+        proposed_location:
+          type: object
+          nullable: true
+          additionalProperties: true
+        source:
+          type: string
+        confidence:
+          type: number
+          nullable: true
+        rationale:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, applied, dismissed]
+    PartnerLocationFixListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartnerLocationFix"
+        next_cursor:
+          type: string
+          nullable: true
     PartnerNameFixListResponse:
       type: object
       required: [items]
@@ -977,6 +1141,10 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/PartnerNameFix"
+            pending_location_fixes:
+              type: array
+              items:
+                $ref: "#/components/schemas/PartnerLocationFix"
     PartnerCategoryReview:
       type: object
       required:
@@ -1056,6 +1224,15 @@ components:
             category_review:
               allOf:
                 - $ref: "#/components/schemas/PartnerCategoryReview"
+              nullable: true
+            location_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+            pending_location_fix:
+              allOf:
+                - $ref: "#/components/schemas/PartnerLocationFix"
               nullable: true
     PartnerActivityListResponse:
       type: object

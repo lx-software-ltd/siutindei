@@ -71,6 +71,7 @@ describe('admin section params', () => {
       staleRecordParams('data-quality', {
         duplicate: 'org-a,org-b',
         'name-fix': 'fix-1',
+        'location-fix': 'loc-1',
         organization: 'org-1',
       })
     ).toEqual({});
@@ -78,6 +79,7 @@ describe('admin section params', () => {
     expect(patch.section).toBe('data-quality');
     expect(patch).not.toHaveProperty('duplicate');
     expect(patch).not.toHaveProperty('name-fix');
+    expect(patch).not.toHaveProperty('location-fix');
     expect(patch).not.toHaveProperty('organization');
     expect(patch).not.toHaveProperty('category-check');
   });

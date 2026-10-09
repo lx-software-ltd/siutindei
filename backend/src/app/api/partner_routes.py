@@ -15,6 +15,10 @@ from app.api.partner_category_reviews import (
     handle_partner_category_reviews,
     partner_get_activities,
 )
+from app.api.partner_location_fixes import (
+    handle_partner_location_fix_write,
+    handle_partner_location_fixes,
+)
 from app.api.partner_name_fixes import (
     handle_partner_name_fixes,
     partner_get_organizations,
@@ -67,6 +71,19 @@ def handle_partner_routes(
             lambda: handle_partner_name_fixes(event, partner.org_id),
             event,
         )
+
+    if resource == "location-fixes":
+        if method == "GET" and resource_id is None:
+            return _safe_handler(
+                lambda: handle_partner_location_fixes(event, partner.org_id),
+                event,
+            )
+        if method == "POST" and resource_id:
+            return _safe_handler(
+                lambda: handle_partner_location_fix_write(event, partner, resource_id),
+                event,
+            )
+        return json_response(404, {"error": "Not found"}, event=event)
 
     if resource == "category-reviews":
         if method == "GET" and resource_id is None:

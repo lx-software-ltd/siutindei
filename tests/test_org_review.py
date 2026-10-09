@@ -43,7 +43,7 @@ from app.db.queries import ActivitySearchFilters, build_search_query
 from app.db.repositories import OrganizationRepository
 from app.exceptions import ValidationError
 from app.services.org_review import collect_issues, load_snapshots, summarize_snapshots
-from app.services.org_review_sql import summarize_catalog
+from app.services.org_review_sql import BLOCKER_ISSUE_CODES, summarize_catalog
 from psycopg.types.range import Range
 from sqlalchemy import select
 
@@ -55,12 +55,50 @@ def test_collect_issues_flags_blockers() -> None:
         manager_id="manager-1",
         description=None,
     )
-    issues = collect_issues(organization, [], [], {}, {})
+    issues, _checks = collect_issues(organization, [], [], {}, {})
     codes = {issue.code for issue in issues}
     assert "missing_description" in codes
     assert "no_locations" in codes
     assert "no_activities" in codes
     assert any(issue.severity == "blocker" for issue in issues)
+
+
+def test_activity_without_a_location_is_a_warning() -> None:
+    organization = Organization(
+        id=uuid4(),
+        name="Harbour Club",
+        manager_id="manager-1",
+        description="Classes",
+        review_status="approved",
+    )
+    activity = Activity(
+        id=uuid4(),
+        org_id=organization.id,
+        category_id=uuid4(),
+        name="Swim Class",
+        description="Lane swimming",
+        age_range=Range(5, 12, bounds="[]"),
+    )
+    issues, checks = collect_issues(
+        organization,
+        [],
+        [activity],
+        {str(activity.id): 1},
+        {str(activity.id): 1},
+        linked_activity_ids=set(),
+    )
+    _issues_without, checks_without = collect_issues(
+        organization,
+        [],
+        [activity],
+        {str(activity.id): 1},
+        {str(activity.id): 1},
+    )
+    assert checks == checks_without + 1
+    match = next(issue for issue in issues if issue.code == "activity_no_location")
+    assert match.severity == "warning"
+    assert match.message == "Activity has no location"
+    assert "activity_no_location" not in BLOCKER_ISSUE_CODES
 
 
 def test_import_create_is_pending_and_ignores_review_status(db_session) -> None:
@@ -211,7 +249,7 @@ def test_default_age_range_matches_database_upper(
     db_session.add(activity)
     db_session.flush()
     db_session.refresh(activity)
-    issues = collect_issues(
+    issues, _checks = collect_issues(
         sample_organization,
         [],
         [activity],

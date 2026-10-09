@@ -105,7 +105,10 @@ their primary responsibilities.
   `/v1/partner/activity-categories`; org-scoped keys cannot.
   Discover batches send
   `suggestion_ids` on the same queue; verify batches send
-  `activity_ids`.
+  `activity_ids`. Location sweeps send `location_scan_run_id` on that
+  same queue and spend `location_fix_settings.monthly_cost_limit_usd`,
+  which is separate from category-check spend. The worker handles
+  `location_scan_run_id` before `scan_run_id`.
   After a live import commits, the function sends SQS messages when
   `CATEGORY_SUGGESTION_QUEUE_URL` is set. OpenRouter calls go through
   `app.services.openrouter_client` and the HTTP proxy. The settings
@@ -143,11 +146,13 @@ their primary responsibilities.
   - `ORG_REVIEW_GATE_ENABLED` (same flag as search; default `false`)
 - Hosts the organization review queue (Catalog) and import-job history. Shapes
   are in `docs/api/admin.yaml`.
-- Hosts data-quality routes under `/v1/admin/org-duplicates` and
-  `/v1/admin/name-fixes` (admin group only). Both families share one
-  `/v1/admin/{proxy+}` method so the stack stays within the
-  CloudFormation 500-resource cap. Get-by-id for a duplicate group or
-  a name proposal uses that same proxy. An unknown extra path segment
+- Hosts data-quality routes under `/v1/admin/org-duplicates`,
+  `/v1/admin/name-fixes`, and `/v1/admin/location-fixes` (admin group
+  only). These families share one `/v1/admin/{proxy+}` method so the
+  stack stays within the CloudFormation 500-resource cap. Partner
+  venue reads and writes use the existing `/v1/partner/{proxy+}`.
+  Get-by-id for a duplicate group, a name proposal, or a venue
+  proposal uses that same proxy. An unknown extra path segment
   on a CRUD resource returns 404. Shapes are in `docs/api/admin.yaml`.
   Design:
   `docs/architecture/data-quality.md`. Imports clean organization names
@@ -337,8 +342,9 @@ their primary responsibilities.
 - Trigger: SQS `category-suggestion-enrich` (batch size 1, max
   concurrency 2, partial batch failures)
 - Purpose: ask OpenRouter where an unknown imported category name
-  should sit, and run category-check batches for activities in
-  organizations that are still pending review
+  should sit, run category-check batches for activities in
+  organizations that are still pending review, and run location-sweep
+  batches whose messages carry `location_scan_run_id`
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - VPC: Yes
 - Timeout: 120 seconds on the admin function. One OpenRouter attempt

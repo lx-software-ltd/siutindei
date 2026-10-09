@@ -9,18 +9,27 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.age_bounds import inclusive_age_bounds
-from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
+from app.db.models import (
+    Activity,
+    ActivityPricing,
+    ActivitySchedule,
+    Location,
+)
 from app.db.models import Organization
-from app.db.models.category_scan import ActivityCategoryReview
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.services.name_sanitizer import NameSanitizeConfig, sanitize_name
+from app.services.org_review_children import (
+    counts_by_activity,
+    linked_activity_ids,
+    pending_category_check_ids,
+)
 
 REVIEW_STATUSES = ("pending_review", "approved", "rejected")
 MAX_REVIEW_NOTES_LENGTH = 2000
@@ -69,6 +78,7 @@ class OrgReviewSnapshot:
     pricing_counts: dict[str, int]
     schedule_counts: dict[str, int]
     issues: list[ReviewIssue]
+    check_count: int
 
     @property
     def blocker_count(self) -> int:
@@ -95,10 +105,16 @@ def collect_issues(
     pending_category_check_ids: set[str] | None = None,
     name_config: NameSanitizeConfig | None = None,
     duplicate_ids: set[str] | None = None,
-) -> list[ReviewIssue]:
-    """Return blocker and warning issues for one organization."""
+    linked_activity_ids: set[str] | None = None,
+) -> tuple[list[ReviewIssue], int]:
+    """Return issues and how many checks ran, so completeness can reach 1."""
     org_id = str(organization.id)
     issues: list[ReviewIssue] = []
+    checks = 0
+
+    def note() -> None:
+        nonlocal checks
+        checks += 1
 
     def add(
         code: str,
@@ -117,6 +133,7 @@ def collect_issues(
             )
         )
 
+    note()
     cleaned = sanitize_name(
         organization.name or "",
         organization.name_translations or {},
@@ -132,6 +149,7 @@ def collect_issues(
         )
     if organization.review_status == "pending_review":
         for activity in activities:
+            note()
             cleaned_activity = sanitize_name(
                 activity.name or "",
                 activity.name_translations or {},
@@ -145,6 +163,7 @@ def collect_issues(
                     str(activity.id),
                     "Name needs cleanup",
                 )
+    note()
     if duplicate_ids and org_id in duplicate_ids:
         add(
             "possible_duplicate",
@@ -153,6 +172,7 @@ def collect_issues(
             org_id,
             "Another organization has the same name, phone, email, or source id",
         )
+    note()
     if not _text(organization.description):
         add(
             "missing_description",
@@ -161,6 +181,7 @@ def collect_issues(
             org_id,
             "Description is missing",
         )
+    note()
     if organization.description_source == "template":
         add(
             "source_attribution",
@@ -177,6 +198,7 @@ def collect_issues(
             org_id,
             "Description still contains a source line",
         )
+    note()
     if not _translation(organization.name_translations, "zh"):
         add(
             "missing_zh_name",
@@ -185,6 +207,7 @@ def collect_issues(
             org_id,
             "Chinese name is missing",
         )
+    note()
     if not _translation(organization.description_translations, "zh"):
         add(
             "missing_zh_description",
@@ -193,6 +216,7 @@ def collect_issues(
             org_id,
             "Chinese description is missing",
         )
+    note()
     if not any(_text(getattr(organization, field)) for field in _CONTACT_FIELDS):
         add(
             "no_contact",
@@ -201,6 +225,7 @@ def collect_issues(
             org_id,
             "No phone, email, or social contact",
         )
+    note()
     if not organization.media_urls:
         add(
             "no_media",
@@ -209,6 +234,7 @@ def collect_issues(
             org_id,
             "No photos",
         )
+    note()
     if not _text(organization.logo_media_url):
         add(
             "no_logo",
@@ -217,6 +243,7 @@ def collect_issues(
             org_id,
             "No logo",
         )
+    note()
     if not _text(organization.place_id):
         add(
             "no_place_id",
@@ -225,6 +252,7 @@ def collect_issues(
             org_id,
             "No Google place id",
         )
+    note()
     if not locations:
         add(
             "no_locations",
@@ -233,6 +261,7 @@ def collect_issues(
             org_id,
             "No locations",
         )
+    note()
     if not activities:
         add(
             "no_activities",
@@ -243,6 +272,7 @@ def collect_issues(
         )
 
     for location in locations:
+        note()
         if location.lat is None or location.lng is None:
             add(
                 "missing_coordinates",
@@ -253,6 +283,7 @@ def collect_issues(
             )
     for activity in activities:
         activity_id = str(activity.id)
+        note()
         if pricing_counts.get(activity_id, 0) <= 0:
             add(
                 "missing_pricing",
@@ -261,6 +292,7 @@ def collect_issues(
                 activity_id,
                 "Activity has no price",
             )
+        note()
         if schedule_counts.get(activity_id, 0) <= 0:
             add(
                 "missing_schedule",
@@ -269,6 +301,7 @@ def collect_issues(
                 activity_id,
                 "Activity has no schedule",
             )
+        note()
         if str(activity.category_id) == str(PENDING_CATEGORY_ID):
             add(
                 "pending_category",
@@ -277,6 +310,7 @@ def collect_issues(
                 activity_id,
                 "Activity is waiting for a category",
             )
+        note()
         if activity_id in (pending_category_check_ids or set()):
             add(
                 "category_check_pending",
@@ -285,6 +319,17 @@ def collect_issues(
                 activity_id,
                 "Category check is waiting for a decision",
             )
+        if linked_activity_ids is not None:
+            note()
+        if linked_activity_ids is not None and activity_id not in linked_activity_ids:
+            add(
+                "activity_no_location",
+                "warning",
+                "activity",
+                activity_id,
+                "Activity has no location",
+            )
+        note()
         if not _text(activity.description):
             add(
                 "missing_activity_description",
@@ -293,6 +338,7 @@ def collect_issues(
                 activity_id,
                 "Activity description is missing",
             )
+        note()
         lower, upper = _age_bounds(activity)
         if lower == 0 and upper == 18:
             add(
@@ -302,7 +348,7 @@ def collect_issues(
                 activity_id,
                 "Activity age range is still the import default (0-18)",
             )
-    return issues
+    return issues, checks
 
 
 def load_snapshots(
@@ -320,15 +366,11 @@ def load_snapshots(
         session.scalars(select(Activity).where(Activity.org_id.in_(org_ids))).all()
     )
     activity_ids = [activity.id for activity in activities]
-    pricing_counts = _counts_by_activity(
-        session,
-        ActivityPricing.activity_id,
-        activity_ids,
+    pricing_counts = counts_by_activity(
+        session, ActivityPricing.activity_id, activity_ids
     )
-    schedule_counts = _counts_by_activity(
-        session,
-        ActivitySchedule.activity_id,
-        activity_ids,
+    schedule_counts = counts_by_activity(
+        session, ActivitySchedule.activity_id, activity_ids
     )
     locations_by_org: dict[str, list[Location]] = defaultdict(list)
     activities_by_org: dict[str, list[Activity]] = defaultdict(list)
@@ -336,7 +378,8 @@ def load_snapshots(
         locations_by_org[str(location.org_id)].append(location)
     for activity in activities:
         activities_by_org[str(activity.org_id)].append(activity)
-    pending_checks = _pending_category_checks(session, activity_ids)
+    pending_checks = pending_category_check_ids(session, activity_ids)
+    linked_ids = linked_activity_ids(session, activity_ids)
     from app.services.name_fixes import load_name_fix_config
     from app.services.org_duplicates import orgs_with_duplicate_signals
 
@@ -356,7 +399,7 @@ def load_snapshots(
             str(activity.id): schedule_counts.get(str(activity.id), 0)
             for activity in org_activities
         }
-        issues = collect_issues(
+        issues, check_count = collect_issues(
             organization,
             org_locations,
             org_activities,
@@ -365,6 +408,11 @@ def load_snapshots(
             pending_checks,
             name_config,
             duplicate_ids,
+            {
+                str(activity.id)
+                for activity in org_activities
+                if str(activity.id) in linked_ids
+            },
         )
         snapshots.append(
             OrgReviewSnapshot(
@@ -374,21 +422,10 @@ def load_snapshots(
                 pricing_counts=org_pricing,
                 schedule_counts=org_schedules,
                 issues=issues,
+                check_count=check_count,
             )
         )
     return snapshots
-
-
-def _pending_category_checks(session: Session, activity_ids: list) -> set[str]:
-    if not activity_ids:
-        return set()
-    rows = session.scalars(
-        select(ActivityCategoryReview.activity_id).where(
-            ActivityCategoryReview.activity_id.in_(activity_ids),
-            ActivityCategoryReview.status == "pending",
-        )
-    ).all()
-    return {str(item) for item in rows}
 
 
 def summarize_snapshots(snapshots: list[OrgReviewSnapshot]) -> dict[str, Any]:
@@ -434,28 +471,9 @@ def snapshot_for_org(
     return loaded[0]
 
 
-def _counts_by_activity(
-    session: Session,
-    activity_id_column: Any,
-    activity_ids: list[Any],
-) -> dict[str, int]:
-    if not activity_ids:
-        return {}
-    rows = session.execute(
-        select(activity_id_column, func.count())
-        .where(activity_id_column.in_(activity_ids))
-        .group_by(activity_id_column)
-    ).all()
-    return {str(activity_id): cast(int, count) for activity_id, count in rows}
-
-
 def _passed_checks(snapshot: OrgReviewSnapshot) -> int:
     """Checks that did not produce an issue, so completeness can reach 1."""
-    org_checks = 9
-    location_checks = len(snapshot.locations)
-    activity_checks = len(snapshot.activities) * 5
-    total = org_checks + location_checks + activity_checks
-    return max(total - len(snapshot.issues), 0)
+    return max(snapshot.check_count - len(snapshot.issues), 0)
 
 
 def _translation(value: Any, language: str) -> str:
