@@ -74,12 +74,33 @@ Already shipped, and kept:
 - The Places key stays a noEcho CloudFormation parameter on the admin
   Lambda. Security docs say it is not in Secrets Manager, and why.
 
+## Follow-up: a truncated sweep must continue
+
+After the 20-second budget shipped, nine production sweeps in eight
+minutes each ran 20.1 seconds, each queued one model batch, and the
+pending count stayed above 700. The sweep ordered entities by name, so
+every sweep rescanned the same alphabetical prefix, cleared and
+re-queued the same ten model organizations, and never reached the
+rest.
+
+- Organizations, activities, and locations are scanned least recently
+  scanned first: entities with no proposal row come first, then by the
+  oldest `location_fix_proposals.updated_at`, then by name. A sweep
+  that stops at the limit therefore continues on the next click.
+- The ids with a pending proposal are loaded once per sweep. An entity
+  with nothing to report and nothing pending costs no query.
+- The sweep response reports `total_entities`, and the Locations tab
+  notice says how many entities were scanned, so progress is visible.
+- The pending count is reduced by decisions, by Apply selected, and by
+  confident register matches, not by the sweep itself. The notice
+  says so when a sweep was truncated.
+
 ## Done when
 
 `pytest` covers a failed register fetch, the create cap, the time
-budget, lookup grades, overwrite protection, the Google budget, and
-apply guard rails. Admin lint, typecheck, and the Locations panel
-tests pass.
+budget, lookup grades, overwrite protection, the Google budget, apply
+guard rails, and the scan order after a truncated sweep. Admin lint,
+typecheck, and the Locations panel tests pass.
 
 ## Rollback
 

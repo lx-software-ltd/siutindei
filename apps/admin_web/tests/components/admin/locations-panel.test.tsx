@@ -164,6 +164,27 @@ describe('LocationsPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('says how far a truncated sweep got and that pending needs decisions', async () => {
+    vi.mocked(scanLocationFixes).mockResolvedValue({
+      scan_run_id: 'scan-cut',
+      created: 4,
+      updated: 0,
+      skipped: 0,
+      cleared: 0,
+      auto_applied: 0,
+      queued_for_model: 10,
+      total_entities: 640,
+      truncated: true,
+      status: 'queued',
+    });
+    render(<LocationsPanel />, { wrapper });
+    fireEvent.click(await screen.findByRole('button', { name: 'Sweep pending' }));
+    const notice = await screen.findByText(/Scanned 640 entities/);
+    expect(notice).toHaveTextContent(
+      'Stopped at the limit; sweep again to continue with the rest. The pending count falls when you apply or dismiss findings, not when you sweep.'
+    );
+  });
+
   it('queues a Nominatim lookup and shows the pin grade', async () => {
     vi.mocked(getLocationFixSummary).mockResolvedValue({
       by_status: { pending: 1 },

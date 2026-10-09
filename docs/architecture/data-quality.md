@@ -173,7 +173,14 @@ creates the venue during the sweep, at most 200 creates per sweep.
 Further confident matches are stored as pending `create_location` from
 `rule:open_data`. The activity pass still runs. The whole sweep request
 stops scanning after 20 seconds and reports `truncated`, because API
-Gateway cuts the request at 29 seconds; the next sweep continues. A
+Gateway cuts the request at 29 seconds. Organizations, activities, and
+locations are scanned least recently scanned first: entities with no
+proposal row, then the oldest `updated_at`, then name. The next sweep
+therefore continues with the entities the last one did not reach. The
+ids with a pending proposal are read once per sweep, so an entity with
+nothing to report costs no query. The notice shows how many entities
+were scanned. The pending count falls through decisions, Apply
+selected, and confident register matches, not through the sweep. A
 504 in the Locations tab means the sweep ran but answered late. Similarity from 0.80 up to 0.95 stays pending. A weaker
 name is left for the model. A failed register download is not cached
 and those organizations are left for the next sweep; the run records
