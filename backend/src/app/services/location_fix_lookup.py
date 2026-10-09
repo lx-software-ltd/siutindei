@@ -187,10 +187,12 @@ def _google(place_id: str) -> tuple[dict[str, Any] | None, Decimal, str | None]:
     if not isinstance(payload, dict):
         return None, _GOOGLE_USD, None
     location = payload.get("location") or {}
+    if not isinstance(location, dict):
+        return None, _GOOGLE_USD, None
     try:
-        lat = float(location.get("latitude"))
-        lng = float(location.get("longitude"))
-    except (TypeError, ValueError):
+        lat = float(location["latitude"])
+        lng = float(location["longitude"])
+    except (KeyError, TypeError, ValueError):
         return None, _GOOGLE_USD, None
     returned = str(payload.get("id") or "")
     if place_id not in returned and not returned.endswith(place_id):

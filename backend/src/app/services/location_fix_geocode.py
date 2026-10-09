@@ -70,10 +70,10 @@ def lookup_address(address: str) -> dict[str, Any] | None:
     if not isinstance(first, dict):
         return None
     try:
-        lat = float(first.get("lat"))
-        lng = float(first.get("lon"))
+        lat = float(first["lat"])
+        lng = float(first["lon"])
         rank = int(first.get("place_rank") or 0)
-    except (TypeError, ValueError):
+    except (KeyError, TypeError, ValueError):
         return None
     if not in_hong_kong_bbox(lat, lng):
         return None
