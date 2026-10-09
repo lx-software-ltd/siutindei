@@ -77,7 +77,9 @@ and the import records a warning.
 
 Data quality has three tabs: Duplicates, Names, and Categories.
 Category checks moved here from the Categories nav item;
-`?categoryView=checks` opens this tab. Sweep pending re-evaluates
+`?categoryView=checks` opens this tab. The Status filter defaults to
+Pending so the table is the work queue; Any still lists the full
+check history. Sweep pending re-evaluates
 activities on organizations still in review. Sweep all orgs includes
 approved organizations. Auto-assign still applies only while the
 organization is `pending_review`. A full-access partner API key can

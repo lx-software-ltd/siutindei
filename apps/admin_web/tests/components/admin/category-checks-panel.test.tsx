@@ -95,6 +95,16 @@ describe('CategoryChecksPanel sweep buttons', () => {
     });
   });
 
+  it('defaults the status filter to pending', async () => {
+    render(<CategoryChecksPanel />, { wrapper });
+    expect(await screen.findByLabelText('Status')).toHaveValue('pending');
+    await waitFor(() =>
+      expect(listCategoryReviews).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'pending' })
+      )
+    );
+  });
+
   it('offers sweep buttons and not discover', async () => {
     render(<CategoryChecksPanel />, { wrapper });
     const sweepPending = await screen.findByRole('button', { name: 'Sweep pending' });

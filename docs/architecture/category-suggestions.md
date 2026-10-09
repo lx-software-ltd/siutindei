@@ -84,7 +84,9 @@ reassignment. The allowed range is 0.50 to 1.
 
 ## Category check
 
-The Categories tab on Data quality scans activities. Sweep pending
+The Categories tab on Data quality scans activities. The Status
+filter defaults to Pending (the work queue); Any lists the full
+check history. Sweep pending
 limits the run to organizations still `pending_review`. Sweep all orgs
 includes approved organizations. The organization filter limits one
 run to a single organization; the default is every organization in
