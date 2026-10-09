@@ -56,7 +56,7 @@ def _apply_candidate(
     if str(target_location_id) not in allowed:
         raise ValidationError("Location is not a candidate", field="target_location_id")
     row.kind = "link_existing"
-    row.target_location_id = target_location_id
+    row.target_location_id = str(target_location_id)
     _apply_link(session, row)
 
 

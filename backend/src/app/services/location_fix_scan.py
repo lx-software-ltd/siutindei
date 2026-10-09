@@ -93,9 +93,10 @@ def start_location_scan(
     }
     truncated = False
     queued: dict[str, list[str]] = {"organization": [], "activity": []}
-    orgs: list[Organization] = []
     if entity_type != "location":
         orgs = list(session.scalars(_org_stmt(org_id, query, review_scope)).all())
+    else:
+        orgs = []
         if len(orgs) > _MAX_SWEEP:
             orgs = orgs[:_MAX_SWEEP]
             truncated = True
