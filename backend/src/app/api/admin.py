@@ -37,6 +37,7 @@ from app.api.admin_feedback import (
     _handle_user_feedback_labels,
 )
 from app.api.admin_imports import _handle_admin_imports
+from app.api.admin_location_fixes import handle_location_fixes
 from app.api.admin_name_fixes import handle_name_fixes
 from app.api.admin_org_duplicates import handle_org_duplicates
 from app.api.admin_org_review import _handle_admin_org_review
@@ -234,6 +235,13 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
             return json_response(403, {"error": "Forbidden"}, event=event)
         return _safe_handler(
             lambda: handle_name_fixes(event, method, resource_id, sub_resource),
+            event,
+        )
+    if resource == "location-fixes":
+        if not _is_admin(event):
+            return json_response(403, {"error": "Forbidden"}, event=event)
+        return _safe_handler(
+            lambda: handle_location_fixes(event, method, resource_id, sub_resource),
             event,
         )
 

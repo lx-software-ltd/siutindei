@@ -2054,6 +2054,132 @@ export async function setupApiMocks(page: Page): Promise<void> {
       }),
     });
   });
+
+  let locationFixes: {
+    id: string;
+    entity_type: 'activity';
+    entity_id: string;
+    entity_name: string;
+    org_id: string;
+    org_name: string;
+    kind: 'link_existing';
+    target_location_id: string;
+    proposed_location: null;
+    source: string;
+    confidence: number;
+    rationale: string;
+    status: string;
+    current_label: string;
+    proposed_label: string;
+  }[] = [];
+  await page.route('**/api/mock/**/admin/location-fixes**', async (route) => {
+    const url = route.request().url();
+    const method = route.request().method();
+    if (url.includes('/location-fixes/summary')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          by_status: { pending: locationFixes.length },
+          pending_by_kind: { link_existing: locationFixes.length },
+          month_cost_usd: 0,
+          monthly_cost_limit_usd: 50,
+          active_run: null,
+        }),
+      });
+      return;
+    }
+    if (url.includes('/location-fixes/settings')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ monthly_cost_limit_usd: 50 }),
+      });
+      return;
+    }
+    if (method === 'POST' && url.includes('/location-fixes/bulk')) {
+      const body = (route.request().postDataJSON() || {}) as {
+        dry_run?: boolean;
+        ids?: string[];
+      };
+      if (!body.dry_run) {
+        if (body.ids?.length) {
+          locationFixes = locationFixes.filter((item) => !body.ids?.includes(item.id));
+        } else {
+          locationFixes = [];
+        }
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          dry_run: Boolean(body.dry_run),
+          matched: 1,
+          decided: body.dry_run ? 0 : 1,
+          failed: 0,
+          failures: [],
+        }),
+      });
+      return;
+    }
+    if (method === 'POST' && url.includes('/location-fixes/scan')) {
+      locationFixes = [
+        {
+          id: 'loc-fix-1',
+          entity_type: 'activity',
+          entity_id: 'act-1',
+          entity_name: 'Swim Class',
+          org_id: 'org-1',
+          org_name: 'Harbour Club',
+          kind: 'link_existing',
+          target_location_id: 'loc-1',
+          proposed_location: null,
+          source: 'rule:name_area',
+          confidence: 0.9,
+          rationale: 'Name matches the district',
+          status: 'pending',
+          current_label: '0 of 2 venues',
+          proposed_label: '10 Sham Street',
+        },
+      ];
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          scan_run_id: 'scan-1',
+          created: 1,
+          updated: 0,
+          skipped: 0,
+          cleared: 0,
+          auto_applied: 0,
+          queued_for_model: 0,
+          truncated: false,
+          status: 'done',
+        }),
+      });
+      return;
+    }
+    if (method === 'POST' && url.includes('/location-fixes/loc-fix-1')) {
+      locationFixes = [];
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'loc-fix-1',
+          status: 'applied',
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: locationFixes,
+        next_cursor: locationFixes.length ? 'page-2' : null,
+      }),
+    });
+  });
 }
 
 /**

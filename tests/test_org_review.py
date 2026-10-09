@@ -43,7 +43,7 @@ from app.db.queries import ActivitySearchFilters, build_search_query
 from app.db.repositories import OrganizationRepository
 from app.exceptions import ValidationError
 from app.services.org_review import collect_issues, load_snapshots, summarize_snapshots
-from app.services.org_review_sql import summarize_catalog
+from app.services.org_review_sql import BLOCKER_ISSUE_CODES, summarize_catalog
 from psycopg.types.range import Range
 from sqlalchemy import select
 
@@ -61,6 +61,36 @@ def test_collect_issues_flags_blockers() -> None:
     assert "no_locations" in codes
     assert "no_activities" in codes
     assert any(issue.severity == "blocker" for issue in issues)
+
+
+def test_activity_without_a_location_is_a_warning() -> None:
+    organization = Organization(
+        id=uuid4(),
+        name="Harbour Club",
+        manager_id="manager-1",
+        description="Classes",
+        review_status="approved",
+    )
+    activity = Activity(
+        id=uuid4(),
+        org_id=organization.id,
+        category_id=uuid4(),
+        name="Swim Class",
+        description="Lane swimming",
+        age_range=Range(5, 12, bounds="[]"),
+    )
+    issues = collect_issues(
+        organization,
+        [],
+        [activity],
+        {str(activity.id): 1},
+        {str(activity.id): 1},
+        linked_activity_ids=set(),
+    )
+    match = next(issue for issue in issues if issue.code == "activity_no_location")
+    assert match.severity == "warning"
+    assert match.message == "Activity has no location"
+    assert "activity_no_location" not in BLOCKER_ISSUE_CODES
 
 
 def test_import_create_is_pending_and_ignores_review_status(db_session) -> None:

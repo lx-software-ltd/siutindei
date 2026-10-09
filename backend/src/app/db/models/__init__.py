@@ -28,6 +28,11 @@ from app.db.models.geographic_area import GeographicArea
 from app.db.models.import_job import ImportJob
 from app.db.models.listing_event import ListingEvent, ListingEventsDaily
 from app.db.models.location import Location
+from app.db.models.location_fix import (
+    LocationFixProposal,
+    LocationFixSettings,
+    LocationScanRun,
+)
 from app.db.models.organization_feedback import OrganizationFeedback
 from app.db.models.organization import Organization
 from app.db.models.ticket import Ticket
@@ -52,6 +57,9 @@ __all__ = [
     "ListingEvent",
     "ListingEventsDaily",
     "Location",
+    "LocationFixProposal",
+    "LocationFixSettings",
+    "LocationScanRun",
     "NameFixProposal",
     "NameFixSettings",
     "Organization",

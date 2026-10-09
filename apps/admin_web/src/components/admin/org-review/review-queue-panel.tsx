@@ -34,6 +34,7 @@ const ISSUE_OPTIONS = [
   ['', 'Any issue'],
   ['missing_description', 'Missing description'],
   ['no_locations', 'No locations'],
+  ['activity_no_location', 'Activity has no location'],
   ['no_activities', 'No activities'],
   ['missing_coordinates', 'Missing map pin'],
   ['missing_pricing', 'Missing price'],

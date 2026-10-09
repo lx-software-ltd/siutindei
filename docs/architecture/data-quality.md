@@ -1,18 +1,24 @@
 # Data quality
 
-Admins merge organizations that are the same provider, and they review
-display names that still need the import cleanup rules. Both tools live
-on the Data quality nav item: Duplicates, then Names.
+Admins merge organizations that are the same provider, review display
+names that still need the import cleanup rules, and give every
+activity a venue. The tools live on the Data quality nav item:
+Duplicates, Names, Locations, then Categories.
 
 Endpoint shapes live in `docs/api/admin.yaml` under
-`/v1/admin/org-duplicates` and `/v1/admin/name-fixes`. A full-access
-partner API key can read pending proposals at
-`GET /v1/partner/name-fixes` and sees `pending_name_fixes` on
-`GET /v1/partner/organizations`. The same key can read category-check
+`/v1/admin/org-duplicates`, `/v1/admin/name-fixes`, and
+`/v1/admin/location-fixes`. A full-access partner API key can read
+pending proposals at `GET /v1/partner/name-fixes` and sees
+`pending_name_fixes` on `GET /v1/partner/organizations`. The same key
+can read venue proposals at `GET /v1/partner/location-fixes`, sees
+`pending_location_fixes` on organizations, and sees `location_ids`
+plus `pending_location_fix` on activities. It can read category-check
 reviews at `GET /v1/partner/category-reviews` and sees
 `category_review` on `GET /v1/partner/activities`. A full-access
-`crud` key can also decide those reviews and list or delete empty
-leftover categories. See `docs/api/partner.yaml`.
+`crud` key can decide category reviews, decide venue proposals, and
+list or delete empty leftover categories. An org-scoped key can read
+its own venue rows and receives `403` on those writes. See
+`docs/api/partner.yaml`.
 
 ## Merge
 
@@ -75,7 +81,7 @@ are cleaned only when `review_status` is `pending_review`. If the
 cleaned name belongs to a different record, the original name is kept
 and the import records a warning.
 
-Data quality has three tabs: Duplicates, Names, and Categories.
+Data quality has four tabs: Duplicates, Names, Locations, and Categories.
 Category checks moved here from the Categories nav item;
 `?categoryView=checks` opens this tab. The Status filter defaults to
 Pending so the table is the work queue; Any still lists the full
@@ -99,3 +105,30 @@ proposal. A dismissed proposal with the same proposed value is not
 created again. The review queue warning `name_needs_cleanup` covers
 the organization name, and activity names only while that organization
 is `pending_review`. The warning links to this tab.
+
+## Locations
+
+Activities must be linked to a venue. The Locations tab lists
+`location_fix_proposals`. Sweep pending covers organizations still in
+review. Sweep all orgs includes approved organizations. An organization
+with exactly one location is linked immediately and the proposal is
+stored as applied, unless that same venue was dismissed. Pricing or
+schedule rows that name one venue, and an activity name that contains
+exactly one venue district, stay pending. An activity whose
+organization has no venue is `rule:no_venue`. Anything else is queued
+for the model on the category-suggestion queue, using the message key
+`location_scan_run_id`. The model chooses a district or a venue index
+from a closed list. Proposed addresses are geocoded through the
+Nominatim proxy, and again on apply when coordinates are missing or
+the address changed. Applying a new location that becomes the
+organization's only venue links activities that have no join.
+
+The header checkbox selects the visible page, then all matching rows.
+Apply selected and Dismiss selected send `ids`, or the current filters
+when every matching row is selected. The monthly model budget is
+`location_fix_settings.monthly_cost_limit_usd` and does not include
+category-check spend. The model and fallbacks still come from
+category-check settings.
+
+`no_locations` stays a blocker. `activity_no_location` is a warning.
+Both open this tab.

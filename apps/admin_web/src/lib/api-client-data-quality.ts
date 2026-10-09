@@ -194,6 +194,140 @@ export function decideNameFix(id: string, body: { action: 'apply' | 'dismiss'; v
   });
 }
 
+export interface LocationFixProposal {
+  id: string;
+  entity_type: 'organization' | 'activity';
+  entity_id: string;
+  entity_name?: string | null;
+  org_id: string;
+  org_name?: string | null;
+  kind: 'link_existing' | 'create_location' | 'unresolved';
+  target_location_id?: string | null;
+  proposed_location?: {
+    address?: string;
+    area_id?: string;
+    area_name?: string;
+    lat?: number | null;
+    lng?: number | null;
+  } | null;
+  source: string;
+  confidence?: number | null;
+  rationale?: string | null;
+  status: string;
+  current_label: string;
+  proposed_label: string;
+}
+
+export interface LocationFixSettings {
+  monthly_cost_limit_usd: number;
+}
+
+export interface LocationScanRun {
+  id: string;
+  status: string;
+  batches_total: number;
+  batches_done: number;
+  queued_for_model: number;
+}
+
+export function listLocationFixes(filters: {
+  status?: string;
+  entity_type?: string;
+  kind?: string;
+  source?: string;
+  org_id?: string;
+  q?: string;
+  cursor?: string;
+  limit?: number;
+} = {}) {
+  return request<ListResponse<LocationFixProposal>>(
+    buildApiUrl(`v1/admin/location-fixes${query(filters)}`)
+  );
+}
+
+export function getLocationFix(id: string) {
+  return request<LocationFixProposal>(buildApiUrl(`v1/admin/location-fixes/${id}`));
+}
+
+export function getLocationFixSummary() {
+  return request<{
+    by_status: Record<string, number>;
+    pending_by_kind: Record<string, number>;
+    month_cost_usd: number;
+    monthly_cost_limit_usd: number;
+    active_run?: LocationScanRun | null;
+  }>(buildApiUrl('v1/admin/location-fixes/summary'));
+}
+
+export function getLocationFixSettings() {
+  return request<LocationFixSettings>(buildApiUrl('v1/admin/location-fixes/settings'));
+}
+
+export function updateLocationFixSettings(body: LocationFixSettings) {
+  return request<LocationFixSettings>(buildApiUrl('v1/admin/location-fixes/settings'), {
+    method: 'PUT',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+}
+
+export function scanLocationFixes(body: {
+  entity_type?: string;
+  q?: string;
+  org_id?: string;
+  review_scope: 'pending_review' | 'all';
+}) {
+  return request<{
+    scan_run_id: string;
+    created: number;
+    updated: number;
+    skipped: number;
+    cleared: number;
+    auto_applied: number;
+    queued_for_model: number;
+    truncated: boolean;
+    status: string;
+  }>(buildApiUrl('v1/admin/location-fixes/scan'), {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+}
+
+export function decideLocationFix(
+  id: string,
+  body: { action: 'apply' | 'dismiss'; address?: string; area_id?: string }
+) {
+  return request<LocationFixProposal>(buildApiUrl(`v1/admin/location-fixes/${id}`), {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+}
+
+export function decideLocationFixesBulk(body: {
+  action: 'apply' | 'dismiss';
+  ids?: string[];
+  entity_type?: string;
+  kind?: string;
+  source?: string;
+  q?: string;
+  org_id?: string;
+  dry_run?: boolean;
+}) {
+  return request<{
+    dry_run: boolean;
+    matched: number;
+    decided: number;
+    failed: number;
+    failures: { id: string; message: string }[];
+  }>(buildApiUrl('v1/admin/location-fixes/bulk'), {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+}
+
 export function decideNameFixesBulk(body: {
   action: 'apply' | 'dismiss';
   ids?: string[];

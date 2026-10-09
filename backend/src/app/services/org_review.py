@@ -16,7 +16,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.age_bounds import inclusive_age_bounds
-from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
+from app.db.models import (
+    Activity,
+    ActivityLocation,
+    ActivityPricing,
+    ActivitySchedule,
+    Location,
+)
 from app.db.models import Organization
 from app.db.models.category_scan import ActivityCategoryReview
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
@@ -95,6 +101,7 @@ def collect_issues(
     pending_category_check_ids: set[str] | None = None,
     name_config: NameSanitizeConfig | None = None,
     duplicate_ids: set[str] | None = None,
+    linked_activity_ids: set[str] | None = None,
 ) -> list[ReviewIssue]:
     """Return blocker and warning issues for one organization."""
     org_id = str(organization.id)
@@ -285,6 +292,14 @@ def collect_issues(
                 activity_id,
                 "Category check is waiting for a decision",
             )
+        if linked_activity_ids is not None and activity_id not in linked_activity_ids:
+            add(
+                "activity_no_location",
+                "warning",
+                "activity",
+                activity_id,
+                "Activity has no location",
+            )
         if not _text(activity.description):
             add(
                 "missing_activity_description",
@@ -337,6 +352,7 @@ def load_snapshots(
     for activity in activities:
         activities_by_org[str(activity.org_id)].append(activity)
     pending_checks = _pending_category_checks(session, activity_ids)
+    linked_activity_ids = _linked_activity_ids(session, activity_ids)
     from app.services.name_fixes import load_name_fix_config
     from app.services.org_duplicates import orgs_with_duplicate_signals
 
@@ -365,6 +381,11 @@ def load_snapshots(
             pending_checks,
             name_config,
             duplicate_ids,
+            {
+                str(activity.id)
+                for activity in org_activities
+                if str(activity.id) in linked_activity_ids
+            },
         )
         snapshots.append(
             OrgReviewSnapshot(
@@ -377,6 +398,17 @@ def load_snapshots(
             )
         )
     return snapshots
+
+
+def _linked_activity_ids(session: Session, activity_ids: list) -> set[str]:
+    if not activity_ids:
+        return set()
+    rows = session.scalars(
+        select(ActivityLocation.activity_id).where(
+            ActivityLocation.activity_id.in_(activity_ids)
+        )
+    ).all()
+    return {str(item) for item in rows}
 
 
 def _pending_category_checks(session: Session, activity_ids: list) -> set[str]:

@@ -53,6 +53,34 @@ test.describe('Data quality', () => {
     ).toBeVisible();
   });
 
+  test('admin can sweep and apply a location fix', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=data-quality&tab=locations');
+    await adminPage.getByRole('button', { name: 'Sweep pending' }).click();
+    await expect(
+      adminPage.getByText(
+        'Created 1, updated 0, skipped 0, cleared 0, linked 0, queued 0.'
+      )
+    ).toBeVisible();
+    await adminPage.getByRole('cell', { name: 'Swim Class', exact: true }).click();
+    await expect(adminPage.getByText('Name matches the district')).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Apply', exact: true }).click();
+    await expect(adminPage.getByText('Location updated.')).toBeVisible();
+  });
+
+  test('admin can select every matching location from the header checkbox', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=data-quality&tab=locations');
+    await adminPage.getByRole('button', { name: 'Sweep pending' }).click();
+    await adminPage.getByRole('checkbox', { name: 'Select visible rows' }).click();
+    await adminPage.getByRole('checkbox', { name: 'Select all matching rows' }).click();
+    await expect(
+      adminPage.getByText(/All matching records are selected/)
+    ).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Apply selected' }).click();
+    await expect(adminPage.getByText('Updated 1. 0 failed.')).toBeVisible();
+  });
+
   test('admin can edit name rule word lists', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=names');
     const exceptions = adminPage.getByLabel('Words to leave in capitals');

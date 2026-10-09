@@ -952,6 +952,214 @@ paths:
         "400":
           description: The name matches another organization
 
+  /v1/admin/location-fixes:
+    get:
+      summary: List venue proposals
+      description: |
+        Pending rows come from `POST /v1/admin/location-fixes/scan`.
+        Rules that can decide a venue write a proposal immediately.
+        A single venue on the organization is linked during the sweep.
+        Everything else waits for the model, which runs on the category
+        suggestion queue.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, applied, dismissed]
+            default: pending
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+            enum: [organization, activity]
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [link_existing, create_location, unresolved]
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum:
+              - rule:single_location
+              - rule:pricing_schedule
+              - rule:name_area
+              - rule:no_venue
+              - model
+        - name: org_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Proposals
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationFixListResponse'
+
+  /v1/admin/location-fixes/summary:
+    get:
+      summary: Count venue proposals and the active sweep
+      responses:
+        "200":
+          description: Counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationFixSummary'
+
+  /v1/admin/location-fixes/settings:
+    get:
+      summary: Read the location-sweep monthly budget
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationFixSettings'
+    put:
+      summary: Replace the location-sweep monthly budget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationFixSettings'
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationFixSettings'
+
+  /v1/admin/location-fixes/scan:
+    post:
+      summary: Sweep venues and store proposals
+      description: |
+        Applies venue rules for `review_scope` (`pending_review` or
+        `all`). An organization with one location is linked immediately.
+        Rows the rules cannot decide are queued for the model. One
+        location sweep runs at a time.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [review_scope]
+              properties:
+                entity_type:
+                  type: string
+                  enum: [organization, activity]
+                org_id:
+                  type: string
+                  format: uuid
+                q:
+                  type: string
+                review_scope:
+                  type: string
+                  enum: [pending_review, all]
+      responses:
+        "200":
+          description: Sweep counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationFixScanResult'
+        "409":
+          description: A location sweep is already running
+        "502":
+          description: The model batches could not be queued
+
+  /v1/admin/location-fixes/bulk:
+    post:
+      summary: Apply or dismiss venue proposals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationFixBulkRequest'
+      responses:
+        "200":
+          description: Bulk result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationFixBulkResult'
+
+  /v1/admin/location-fixes/{id}:
+    get:
+      summary: Load one venue proposal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Proposal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationFixProposal'
+        "404":
+          description: Proposal not found
+    post:
+      summary: Apply or dismiss one venue proposal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [apply, dismiss]
+                address:
+                  type: string
+                area_id:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: Updated proposal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationFixProposal'
+        "404":
+          description: Proposal not found
+
   /v1/admin/category-suggestions:
     get:
       summary: List category suggestions
@@ -6644,6 +6852,231 @@ components:
           type: boolean
 
     NameFixBulkResult:
+      type: object
+      required: [dry_run, matched, decided, failed, failures]
+      properties:
+        dry_run:
+          type: boolean
+        matched:
+          type: integer
+        decided:
+          type: integer
+        failed:
+          type: integer
+        failures:
+          type: array
+          items:
+            type: object
+            required: [id, message]
+            properties:
+              id:
+                type: string
+              message:
+                type: string
+
+    LocationFixProposal:
+      type: object
+      required:
+        - id
+        - entity_type
+        - entity_id
+        - org_id
+        - kind
+        - source
+        - status
+        - current_label
+        - proposed_label
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity_type:
+          type: string
+          enum: [organization, activity]
+        entity_id:
+          type: string
+          format: uuid
+        entity_name:
+          type: string
+          nullable: true
+        org_id:
+          type: string
+          format: uuid
+        org_name:
+          type: string
+          nullable: true
+        kind:
+          type: string
+          enum: [link_existing, create_location, unresolved]
+        target_location_id:
+          type: string
+          format: uuid
+          nullable: true
+        proposed_location:
+          type: object
+          nullable: true
+          additionalProperties: true
+        source:
+          type: string
+        confidence:
+          type: number
+          nullable: true
+        rationale:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, applied, dismissed]
+        current_label:
+          type: string
+        proposed_label:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        decided_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    LocationFixListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationFixProposal'
+        next_cursor:
+          type: string
+          nullable: true
+
+    LocationFixSummary:
+      type: object
+      required:
+        - by_status
+        - pending_by_kind
+        - month_cost_usd
+        - monthly_cost_limit_usd
+      properties:
+        by_status:
+          type: object
+          additionalProperties:
+            type: integer
+        pending_by_kind:
+          type: object
+          additionalProperties:
+            type: integer
+        month_cost_usd:
+          type: number
+        monthly_cost_limit_usd:
+          type: number
+        active_run:
+          allOf:
+            - $ref: '#/components/schemas/LocationFixScanResult'
+          nullable: true
+
+    LocationFixSettings:
+      type: object
+      required: [monthly_cost_limit_usd]
+      properties:
+        monthly_cost_limit_usd:
+          type: number
+        updated_at:
+          type: string
+          format: date-time
+
+    LocationFixScanResult:
+      type: object
+      required:
+        - scan_run_id
+        - created
+        - updated
+        - skipped
+        - cleared
+        - auto_applied
+        - queued_for_model
+        - truncated
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        scan_run_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        review_scope:
+          type: string
+        entity_type:
+          type: string
+          nullable: true
+        total_entities:
+          type: integer
+        batches_total:
+          type: integer
+        batches_done:
+          type: integer
+        created:
+          type: integer
+        updated:
+          type: integer
+        skipped:
+          type: integer
+        cleared:
+          type: integer
+        auto_applied:
+          type: integer
+        queued_for_model:
+          type: integer
+        failed:
+          type: integer
+        cost_usd:
+          type: number
+        truncated:
+          type: boolean
+        error:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    LocationFixBulkRequest:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [apply, dismiss]
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        entity_type:
+          type: string
+        kind:
+          type: string
+        source:
+          type: string
+        q:
+          type: string
+        org_id:
+          type: string
+          format: uuid
+        dry_run:
+          type: boolean
+
+    LocationFixBulkResult:
       type: object
       required: [dry_run, matched, decided, failed, failures]
       properties:

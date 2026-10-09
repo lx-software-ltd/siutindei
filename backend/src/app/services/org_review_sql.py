@@ -14,7 +14,13 @@ from sqlalchemy import case, func, literal, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
-from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
+from app.db.models import (
+    Activity,
+    ActivityLocation,
+    ActivityPricing,
+    ActivitySchedule,
+    Location,
+)
 from app.db.models import Organization
 from app.db.models.category_scan import ActivityCategoryReview
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
@@ -137,6 +143,7 @@ def _issue_predicates() -> dict[str, ColumnElement[bool]]:
             .where(ActivityCategoryReview.status == "pending")
             .exists(),
         ),
+        "activity_no_location": _activity_missing_location(),
         "missing_activity_description": _child_exists(
             Activity,
             _blank(Activity.description),
@@ -201,6 +208,15 @@ def _child_exists(model: Any, extra: ColumnElement[bool] | None = None) -> Any:
     if extra is not None:
         conditions.append(extra)
     return select(model.id).where(*conditions).exists()
+
+
+def _activity_missing_location() -> Any:
+    missing = (
+        ~select(ActivityLocation.activity_id)
+        .where(ActivityLocation.activity_id == Activity.id)
+        .exists()
+    )
+    return _child_exists(Activity, missing)
 
 
 def _activity_missing(child: Any) -> Any:

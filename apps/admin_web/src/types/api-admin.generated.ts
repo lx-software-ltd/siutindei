@@ -1447,6 +1447,346 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/location-fixes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List venue proposals
+         * @description Pending rows come from `POST /v1/admin/location-fixes/scan`.
+         *     Rules that can decide a venue write a proposal immediately.
+         *     A single venue on the organization is linked during the sweep.
+         *     Everything else waits for the model, which runs on the category
+         *     suggestion queue.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "pending" | "applied" | "dismissed";
+                    entity_type?: "organization" | "activity";
+                    kind?: "link_existing" | "create_location" | "unresolved";
+                    source?: "rule:single_location" | "rule:pricing_schedule" | "rule:name_area" | "rule:no_venue" | "model";
+                    org_id?: string;
+                    q?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Proposals */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LocationFixListResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/location-fixes/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Count venue proposals and the active sweep */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Counts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LocationFixSummary"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/location-fixes/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the location-sweep monthly budget */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Settings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LocationFixSettings"];
+                    };
+                };
+            };
+        };
+        /** Replace the location-sweep monthly budget */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LocationFixSettings"];
+                };
+            };
+            responses: {
+                /** @description Updated settings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LocationFixSettings"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/location-fixes/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sweep venues and store proposals
+         * @description Applies venue rules for `review_scope` (`pending_review` or
+         *     `all`). An organization with one location is linked immediately.
+         *     Rows the rules cannot decide are queued for the model. One
+         *     location sweep runs at a time.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        entity_type?: "organization" | "activity";
+                        /** Format: uuid */
+                        org_id?: string;
+                        q?: string;
+                        /** @enum {string} */
+                        review_scope: "pending_review" | "all";
+                    };
+                };
+            };
+            responses: {
+                /** @description Sweep counts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LocationFixScanResult"];
+                    };
+                };
+                /** @description A location sweep is already running */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description The model batches could not be queued */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/location-fixes/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply or dismiss venue proposals */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LocationFixBulkRequest"];
+                };
+            };
+            responses: {
+                /** @description Bulk result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LocationFixBulkResult"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/location-fixes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Load one venue proposal */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Proposal */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LocationFixProposal"];
+                    };
+                };
+                /** @description Proposal not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Apply or dismiss one venue proposal */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        action: "apply" | "dismiss";
+                        address?: string;
+                        /** Format: uuid */
+                        area_id?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Updated proposal */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LocationFixProposal"];
+                    };
+                };
+                /** @description Proposal not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/category-suggestions": {
         parameters: {
             query?: never;
@@ -7417,6 +7757,106 @@ export interface components {
             dry_run?: boolean;
         };
         NameFixBulkResult: {
+            dry_run: boolean;
+            matched: number;
+            decided: number;
+            failed: number;
+            failures: {
+                id: string;
+                message: string;
+            }[];
+        };
+        LocationFixProposal: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            entity_type: "organization" | "activity";
+            /** Format: uuid */
+            entity_id: string;
+            entity_name?: string | null;
+            /** Format: uuid */
+            org_id: string;
+            org_name?: string | null;
+            /** @enum {string} */
+            kind: "link_existing" | "create_location" | "unresolved";
+            /** Format: uuid */
+            target_location_id?: string | null;
+            proposed_location?: {
+                [key: string]: unknown;
+            } | null;
+            source: string;
+            confidence?: number | null;
+            rationale?: string | null;
+            /** @enum {string} */
+            status: "pending" | "applied" | "dismissed";
+            current_label: string;
+            proposed_label: string;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: date-time */
+            decided_at?: string | null;
+        };
+        LocationFixListResponse: {
+            items: components["schemas"]["LocationFixProposal"][];
+            next_cursor?: string | null;
+        };
+        LocationFixSummary: {
+            by_status: {
+                [key: string]: number;
+            };
+            pending_by_kind: {
+                [key: string]: number;
+            };
+            month_cost_usd: number;
+            monthly_cost_limit_usd: number;
+            active_run?: components["schemas"]["LocationFixScanResult"] | null;
+        };
+        LocationFixSettings: {
+            monthly_cost_limit_usd: number;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        LocationFixScanResult: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            scan_run_id: string;
+            status: string;
+            review_scope?: string;
+            entity_type?: string | null;
+            total_entities?: number;
+            batches_total?: number;
+            batches_done?: number;
+            created: number;
+            updated: number;
+            skipped: number;
+            cleared: number;
+            auto_applied: number;
+            queued_for_model: number;
+            failed?: number;
+            cost_usd?: number;
+            truncated: boolean;
+            error?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            finished_at?: string | null;
+        };
+        LocationFixBulkRequest: {
+            /** @enum {string} */
+            action: "apply" | "dismiss";
+            ids?: string[];
+            entity_type?: string;
+            kind?: string;
+            source?: string;
+            q?: string;
+            /** Format: uuid */
+            org_id?: string;
+            dry_run?: boolean;
+        };
+        LocationFixBulkResult: {
             dry_run: boolean;
             matched: number;
             decided: number;
