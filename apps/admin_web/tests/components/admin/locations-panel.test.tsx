@@ -16,7 +16,6 @@ import {
 vi.mock('@/lib/api-client-data-quality', () => ({
   decideLocationFix: vi.fn(),
   decideLocationFixesBulk: vi.fn(),
-  exportLocationFixes: vi.fn(),
   getLocationFix: vi.fn(),
   getLocationFixSettings: vi.fn(),
   getLocationFixSummary: vi.fn(),
@@ -72,7 +71,7 @@ describe('LocationsPanel', () => {
     expect(screen.getByRole('button', { name: 'Dismiss selected' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Look up pins' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Look up with Google' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Grade')).toBeInTheDocument();
     expect(screen.getByLabelText('Kind')).toBeInTheDocument();
     expect(screen.getByLabelText('Source')).toBeInTheDocument();

@@ -107,7 +107,7 @@ test.describe('Data quality', () => {
   test('admin can queue a pin lookup from the locations tab', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=locations');
     await expect(adminPage.getByRole('button', { name: 'Look up with Google' })).toBeDisabled();
-    await expect(adminPage.getByRole('button', { name: 'Export CSV' })).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Export CSV' })).toHaveCount(0);
     await adminPage.getByRole('button', { name: 'Look up pins' }).click();
     await expect(adminPage.getByText('Queued 0 pin lookups.')).toBeVisible();
   });

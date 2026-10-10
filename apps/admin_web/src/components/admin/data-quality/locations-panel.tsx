@@ -14,7 +14,6 @@ import { ApiError } from '../../../lib/api-client';
 import {
   decideLocationFix,
   decideLocationFixesBulk,
-  exportLocationFixes,
   getLocationFix,
   getLocationFixSettings,
   getLocationFixSummary,
@@ -293,29 +292,6 @@ export function LocationsPanel() {
     }
   }
 
-  async function exportCsv() {
-    setError('');
-    try {
-      const csv = await exportLocationFixes({
-        status: list.filters.status || undefined,
-        entity_type: list.filters.entity_type || undefined,
-        kind: list.filters.kind || undefined,
-        source: list.filters.source || undefined,
-        grade: list.filters.grade || undefined,
-        q: list.filters.q || undefined,
-        org_id: organization || undefined,
-      });
-      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'location-fixes.csv';
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Export failed.');
-    }
-  }
-
   async function decide(
     item: LocationFixProposal,
     action: 'apply' | 'dismiss',
@@ -489,9 +465,6 @@ export function LocationsPanel() {
               disabled={sweepBusy || !summaryQuery.data?.google_places_configured}
             >
               Look up with Google
-            </Button>
-            <Button type='button' variant='secondary' onClick={() => void exportCsv()}>
-              Export CSV
             </Button>
           </div>
         }
