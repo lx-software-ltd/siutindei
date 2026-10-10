@@ -56,10 +56,11 @@ def handle_location_fixes(
         return _scan(event)
     if method == "POST" and resource_id == "bulk" and sub_resource is None:
         return _bulk(event)
-    if method == "GET" and _item_id(resource_id) and sub_resource is None:
-        return _get(event, resource_id)
-    if method == "POST" and _item_id(resource_id) and sub_resource is None:
-        return _decide(event, resource_id)
+    item_id = _parse_item_id(resource_id)
+    if method == "GET" and item_id and sub_resource is None:
+        return _get(event, item_id)
+    if method == "POST" and item_id and sub_resource is None:
+        return _decide(event, item_id)
     return json_response(404, {"error": "Not found"}, event=event)
 
 
@@ -223,14 +224,14 @@ def _mark_enqueue_failed(run_id: str) -> None:
         session.commit()
 
 
-def _item_id(resource_id: str | None) -> bool:
+def _parse_item_id(resource_id: str | None) -> str | None:
     if resource_id is None:
-        return False
+        return None
     try:
         UUID(resource_id)
     except ValueError:
-        return False
-    return True
+        return None
+    return resource_id
 
 
 def _lookup(value: Any) -> str | None:
