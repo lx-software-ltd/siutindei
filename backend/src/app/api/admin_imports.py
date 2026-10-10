@@ -30,6 +30,7 @@ from app.api.admin_imports_jobs import (
     finish_import_job,
     job_allow_updates,
     list_import_jobs,
+    stored_job_answers_request,
     serialize_import_job,
     serialize_import_job_summary,
     store_import_job,
@@ -127,24 +128,6 @@ def _handle_import_presign(event: Mapping[str, Any]) -> dict[str, Any]:
     )
 
 
-def _stored_job_answers_request(
-    job: Any,
-    dry_run: bool,
-    allow_updates: bool,
-) -> bool:
-    """Return True when the stored job should be returned as-is.
-
-    A dry run does not block a later live import. A failed live import
-    can be retried with the same object key. A different
-    ``allow_updates`` value runs the file again.
-    """
-    if job.dry_run and not dry_run:
-        return False
-    if not dry_run and getattr(job, "status", None) == "failed":
-        return False
-    return job_allow_updates(job) == allow_updates
-
-
 def _record_import_failure(
     job_id: Any,
     exc: BaseException,
@@ -213,7 +196,7 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
         if (
             existing_job is not None
             and not retry_failed
-            and _stored_job_answers_request(existing_job, dry_run, allow_org_updates)
+            and stored_job_answers_request(existing_job, dry_run, allow_org_updates)
         ):
             return json_response(
                 200,

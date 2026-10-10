@@ -34,6 +34,7 @@ from app.api.admin_imports_utils import (
 )
 from app.api.admin_resource_activity import _create_activity, _update_activity
 from app.services.import_names import (
+    activity_name_translations,
     find_cleaned_activity,
     prepare_imported_activity,
     prepare_imported_organization,
@@ -314,19 +315,6 @@ def upsert_location(
     return created, "created"
 
 
-def _activity_translations(body: dict[str, Any]) -> dict[str, Any]:
-    """Name translations plus a blank-safe Chinese name from the file."""
-    translations = dict(body.get("name_translations") or {})
-    name_zh = body.get("name_zh")
-    if (
-        isinstance(name_zh, str)
-        and name_zh.strip()
-        and not str(translations.get("zh") or "").strip()
-    ):
-        translations["zh"] = name_zh.strip()
-    return translations
-
-
 def upsert_activity(
     session: Session,
     org: Organization,
@@ -349,7 +337,7 @@ def upsert_activity(
         raise ValidationError("name is required", field="name")
 
     body = filter_fields(raw_activity, ALLOWED_ACTIVITY_FIELDS)
-    translations = _activity_translations(body)
+    translations = activity_name_translations(body)
     body.pop("pricing", None)
     body.pop("schedules", None)
     body.pop("vetting_note", None)

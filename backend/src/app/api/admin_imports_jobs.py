@@ -197,6 +197,24 @@ def job_allow_updates(job: ImportJob) -> bool:
     return bool(summary.get("allow_updates"))
 
 
+def stored_job_answers_request(
+    job: Any,
+    dry_run: bool,
+    allow_updates: bool,
+) -> bool:
+    """Return True when the stored job should be returned as-is.
+
+    A dry run does not block a later live import. A failed live import
+    can be retried with the same object key. A different
+    ``allow_updates`` value runs the file again.
+    """
+    if job.dry_run and not dry_run:
+        return False
+    if not dry_run and getattr(job, "status", None) == "failed":
+        return False
+    return job_allow_updates(job) == allow_updates
+
+
 def serialize_import_job(job: ImportJob) -> dict[str, Any]:
     """Serialize a stored import job for the owner UI."""
     return {

@@ -49,6 +49,19 @@ def prepare_imported_organization(
     )
 
 
+def activity_name_translations(body: dict[str, Any]) -> dict[str, Any]:
+    """Name translations plus a blank-safe Chinese name from the file."""
+    translations = dict(body.get("name_translations") or {})
+    name_zh = body.get("name_zh")
+    if (
+        isinstance(name_zh, str)
+        and name_zh.strip()
+        and not str(translations.get("zh") or "").strip()
+    ):
+        translations["zh"] = name_zh.strip()
+    return translations
+
+
 def find_cleaned_activity(
     session: Session,
     repo: ActivityRepository,

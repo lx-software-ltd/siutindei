@@ -11,7 +11,6 @@ import pytest
 from app.api.admin_imports import (
     _parse_allow_updates,
     _parse_dry_run,
-    _stored_job_answers_request,
 )
 from app.api.admin_imports_catalog import apply_vetting_columns
 from app.api.admin_imports_fields import (
@@ -19,6 +18,7 @@ from app.api.admin_imports_fields import (
     collect_flat_org_warnings,
 )
 from app.api.admin_imports_importer import process_import_payload
+from app.api.admin_imports_jobs import stored_job_answers_request
 from app.api.admin_imports_upsert import (
     upsert_activity,
     upsert_location,
@@ -520,11 +520,11 @@ def test_stored_job_reruns_when_allow_updates_differs() -> None:
             self.summary = summary
 
     skipped = _Job({"allow_updates": False})
-    assert _stored_job_answers_request(skipped, False, False) is True
-    assert _stored_job_answers_request(skipped, False, True) is False
+    assert stored_job_answers_request(skipped, False, False) is True
+    assert stored_job_answers_request(skipped, False, True) is False
     older = _Job({})
-    assert _stored_job_answers_request(older, False, True) is True
-    assert _stored_job_answers_request(older, False, False) is False
+    assert stored_job_answers_request(older, False, True) is True
+    assert stored_job_answers_request(older, False, False) is False
 
 
 def test_dry_run_reports_created_without_persisting(test_engine) -> None:
