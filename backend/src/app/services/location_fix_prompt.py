@@ -19,7 +19,8 @@ def build_organization_prompt(
     session: Session, organizations: list[Organization]
 ) -> tuple[str, str]:
     areas = _area_choices(session)
-    label = "neighbourhood" if areas and "district" in areas[0] else "district"
+    grouped = bool(areas and "neighbourhoods" in areas[0])
+    label = "neighbourhood" if grouped else "district"
     system = (
         "You propose a venue address for organizations in Hong Kong. "
         "Reply with one JSON object only. Use an area_name from the "
@@ -93,8 +94,13 @@ def translation(values: dict[str, str] | None, language: str) -> str:
     return str(values.get(language) or "")
 
 
-def _area_choices(session: Session) -> list[dict[str, str]]:
-    """Neighbourhoods when Hong Kong has them, otherwise leaf districts."""
+def translation_zh(values: dict[str, str] | None) -> str:
+    """Traditional Chinese name, then the generic zh key."""
+    return translation(values, "zh-HK") or translation(values, "zh")
+
+
+def _area_choices(session: Session) -> list[dict[str, Any]]:
+    """Neighbourhoods grouped by district, or leaf districts when none exist."""
     rows = session.scalars(
         select(GeographicArea)
         .where(
@@ -110,30 +116,39 @@ def _area_choices(session: Session) -> list[dict[str, str]]:
             .order_by(GeographicArea.name)
         ).all()
         return [
-            {
-                "name": area.name,
-                "name_zh": translation(area.name_translations, "zh"),
-            }
+            {"name": area.name, "name_zh": translation_zh(area.name_translations)}
             for area in districts
         ]
     parent_ids = {area.parent_id for area in rows if area.parent_id}
-    parents = {}
+    parents: dict[Any, GeographicArea] = {}
     if parent_ids:
         parents = {
-            parent.id: parent.name
+            parent.id: parent
             for parent in session.scalars(
                 select(GeographicArea).where(GeographicArea.id.in_(parent_ids))
             ).all()
         }
-    return [
-        {
-            "name": area.name,
-            "name_zh": translation(area.name_translations, "zh-HK")
-            or translation(area.name_translations, "zh"),
-            "district": parents.get(area.parent_id, ""),
-        }
-        for area in rows
-    ]
+    grouped: dict[str, dict[str, Any]] = {}
+    for area in rows:
+        parent = parents.get(area.parent_id)
+        district = parent.name if parent is not None else ""
+        bucket = grouped.setdefault(
+            district,
+            {
+                "district": district,
+                "district_zh": translation_zh(
+                    parent.name_translations if parent is not None else None
+                ),
+                "neighbourhoods": [],
+            },
+        )
+        bucket["neighbourhoods"].append(
+            {
+                "name": area.name,
+                "name_zh": translation_zh(area.name_translations),
+            }
+        )
+    return [grouped[name] for name in sorted(grouped)]
 
 
 def _clip(value: str | None) -> str:

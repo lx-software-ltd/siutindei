@@ -5942,6 +5942,16 @@ components:
           description: Whether this area (and its children) is available
         display_order:
           type: integer
+        lat:
+          type: number
+          format: double
+          nullable: true
+          description: Centroid latitude. Set for neighbourhoods.
+        lng:
+          type: number
+          format: double
+          nullable: true
+          description: Centroid longitude. Set for neighbourhoods.
         children:
           type: array
           items:

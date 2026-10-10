@@ -379,7 +379,9 @@ components:
         area_id:
           type: string
           format: uuid
-          description: Geographic area UUID (leaf district node)
+          description: |
+            Leaf area UUID. A neighbourhood in Hong Kong, or a district
+            that has no smaller areas.
         region_area_id:
           type: string
           format: uuid

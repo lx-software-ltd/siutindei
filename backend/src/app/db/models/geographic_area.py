@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 import sqlalchemy as sa
-from sqlalchemy import ForeignKey, Integer, Text, text
+from sqlalchemy import ForeignKey, Integer, Numeric, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -60,6 +60,16 @@ class GeographicArea(Base):
         Integer(),
         nullable=False,
         server_default=text("0"),
+    )
+    lat: Mapped[Optional[float]] = mapped_column(
+        Numeric(9, 6),
+        nullable=True,
+        comment="Centroid latitude for neighbourhood matching",
+    )
+    lng: Mapped[Optional[float]] = mapped_column(
+        Numeric(9, 6),
+        nullable=True,
+        comment="Centroid longitude for neighbourhood matching",
     )
 
     parent: Mapped[Optional["GeographicArea"]] = relationship(

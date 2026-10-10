@@ -272,7 +272,8 @@ export interface components {
             id: string;
             /**
              * Format: uuid
-             * @description Geographic area UUID (leaf district node)
+             * @description Leaf area UUID. A neighbourhood in Hong Kong, or a district
+             *     that has no smaller areas.
              */
             area_id: string;
             /**

@@ -7,6 +7,7 @@ and the migration share one identifier.
 
 from __future__ import annotations
 
+import math
 import re
 import uuid
 from dataclasses import dataclass
@@ -163,6 +164,35 @@ DISTRICT_REGION_ID: dict[str, str] = {
 
 HK_DISTRICTS: tuple[str, ...] = tuple(DISTRICT_REGION_ID)
 
+# Official Traditional Chinese district names. District rows created before
+# neighbourhoods stored an empty translation map.
+DISTRICT_NAME_ZH: dict[str, str] = {
+    "Central and Western": "中西區",
+    "Eastern": "東區",
+    "Southern": "南區",
+    "Wan Chai": "灣仔區",
+    "Kowloon City": "九龍城區",
+    "Kwun Tong": "觀塘區",
+    "Sham Shui Po": "深水埗區",
+    "Wong Tai Sin": "黃大仙區",
+    "Yau Tsim Mong": "油尖旺區",
+    "Kwai Tsing": "葵青區",
+    "North": "北區",
+    "Sai Kung": "西貢區",
+    "Sha Tin": "沙田區",
+    "Tai Po": "大埔區",
+    "Tsuen Wan": "荃灣區",
+    "Tuen Mun": "屯門區",
+    "Yuen Long": "元朗區",
+    "Islands": "離島區",
+}
+
+HK_COUNTRY_NAME_ZH = "香港"
+
+# A pin farther than this from every neighbourhood centroid is still stored
+# on the nearest one, and the caller records that the snap needs review.
+CONFIDENT_RADIUS_KM = 5.0
+
 
 def neighbourhood_uuid(district: str, name: str) -> uuid.UUID:
     """Stable id shared by the migration, wizard, and staging fixture."""
@@ -223,18 +253,62 @@ def neighbourhoods_for(district: str) -> tuple[Neighbourhood, ...]:
     return tuple(item for item in NEIGHBOURHOODS if item.district == district)
 
 
+def distance_km(lat: float, lng: float, other_lat: float, other_lng: float) -> float:
+    """Kilometres between two WGS84 points, with longitude scaled by latitude."""
+    mid = math.radians((lat + other_lat) / 2.0)
+    north = (lat - other_lat) * 110.574
+    east = (lng - other_lng) * 111.320 * math.cos(mid)
+    return math.hypot(north, east)
+
+
+@dataclass(frozen=True)
+class NeighbourhoodAssignment:
+    """Nearest neighbourhood and whether the pin is close enough to trust."""
+
+    neighbourhood: Neighbourhood
+    distance_km: float | None
+    confident: bool
+
+
+def assign_in_district(
+    district: str,
+    lat: float | None,
+    lng: float | None,
+) -> NeighbourhoodAssignment | None:
+    """Closest neighbourhood. Unpinned or far pins are not confident."""
+    return assign_among(neighbourhoods_for(district), lat, lng)
+
+
+def assign_among(
+    choices: tuple[Neighbourhood, ...] | list[Neighbourhood],
+    lat: float | None,
+    lng: float | None,
+) -> NeighbourhoodAssignment | None:
+    """Closest entry. Missing coordinates use display order and are not confident."""
+    if not choices:
+        return None
+    ordered = tuple(choices)
+    if lat is None or lng is None:
+        return NeighbourhoodAssignment(ordered[0], None, False)
+    nearest = min(
+        ordered,
+        key=lambda item: distance_km(item.lat, item.lng, lat, lng),
+    )
+    kilometres = distance_km(nearest.lat, nearest.lng, lat, lng)
+    return NeighbourhoodAssignment(
+        nearest,
+        kilometres,
+        kilometres <= CONFIDENT_RADIUS_KM,
+    )
+
+
 def nearest_in_district(
     district: str,
     lat: float | None,
     lng: float | None,
 ) -> Neighbourhood | None:
     """Closest neighbourhood in this district, or the first when unpinned."""
-    choices = neighbourhoods_for(district)
-    if not choices:
+    assigned = assign_in_district(district, lat, lng)
+    if assigned is None:
         return None
-    if lat is None or lng is None:
-        return choices[0]
-    return min(
-        choices,
-        key=lambda item: (item.lat - lat) ** 2 + (item.lng - lng) ** 2,
-    )
+    return assigned.neighbourhood

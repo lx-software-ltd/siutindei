@@ -257,9 +257,13 @@ Columns:
 - `code` (text, optional — ISO 3166-1 alpha-2 for countries)
 - `active` (boolean, default true — controls country visibility)
 - `display_order` (integer, default 0)
+- `lat` (numeric(9,6), optional) — neighbourhood centroid
+- `lng` (numeric(9,6), optional) — neighbourhood centroid
 
 Constraints:
 - UNIQUE(`parent_id`, `name`)
+- `locations_area_leaf` rejects a location whose `area_id` still has children
+- `geographic_area_parent_unused` rejects a new child under an area a location already uses
 
 Indexes:
 - `geo_areas_parent_idx` on `parent_id`
@@ -383,7 +387,7 @@ Purpose: Physical or logical locations for an organization.
 Columns:
 - `id` (UUID, PK, default `gen_random_uuid()`)
 - `org_id` (UUID, FK -> organizations.id, cascade delete)
-- `area_id` (UUID, FK -> geographic_areas.id, required)
+- `area_id` (UUID, FK -> geographic_areas.id, required, must be a leaf)
 - `address` (text, optional)
 - `lat` (numeric(9,6), optional)
 - `lng` (numeric(9,6), optional)

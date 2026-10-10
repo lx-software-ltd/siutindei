@@ -77,6 +77,8 @@ def _serialize_area(area: GeographicArea) -> dict[str, Any]:
         "code": area.code,
         "active": area.active,
         "display_order": area.display_order,
+        "lat": None if area.lat is None else float(area.lat),
+        "lng": None if area.lng is None else float(area.lng),
     }
 
 

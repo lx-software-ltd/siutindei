@@ -7376,6 +7376,16 @@ export interface components {
             /** @description Whether this area (and its children) is available */
             active: boolean;
             display_order: number;
+            /**
+             * Format: double
+             * @description Centroid latitude. Set for neighbourhoods.
+             */
+            lat?: number | null;
+            /**
+             * Format: double
+             * @description Centroid longitude. Set for neighbourhoods.
+             */
+            lng?: number | null;
             /** @description Nested child areas (populated in tree responses) */
             children?: components["schemas"]["GeographicArea"][];
         };
