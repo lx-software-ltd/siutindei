@@ -77,6 +77,7 @@ export function ImportsPanel() {
   }, [setSection, setTabParam, tabParam]);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [skipExisting, setSkipExisting] = useState(false);
   const [importTouched, setImportTouched] = useState(false);
   const [importStatus, setImportStatus] = useState<ImportStatus>('idle');
   const [importError, setImportError] = useState('');
@@ -149,6 +150,7 @@ export function ImportsPanel() {
       setImportStatus('processing');
       const result = await runAdminImport({
         object_key: presign.object_key,
+        allow_updates: !skipExisting,
       });
       setImportResult(result);
       setImportStatus('done');
@@ -244,6 +246,21 @@ export function ImportsPanel() {
                       showImportFileError ? 'text-red-600' : 'text-slate-600'
                     }
                   />
+                </AdminField>
+                <AdminField span='full'>
+                  <label className='flex items-center gap-2 text-sm text-slate-700'>
+                    <input
+                      id='admin-import-skip-existing'
+                      type='checkbox'
+                      checked={skipExisting}
+                      onChange={(event) => setSkipExisting(event.target.checked)}
+                    />
+                    Skip records that already exist
+                  </label>
+                  <p className='mt-1 text-sm text-slate-600'>
+                    Existing organizations, venues, and activities stay
+                    unchanged. New rows are still added.
+                  </p>
                 </AdminField>
               </AdminFieldGrid>
             </AdminEditorPanel>

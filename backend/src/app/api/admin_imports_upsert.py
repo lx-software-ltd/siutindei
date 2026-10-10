@@ -37,6 +37,7 @@ from app.api.admin_imports_utils import (
 )
 from app.api.admin_resource_activity import _create_activity, _update_activity
 from app.services.import_names import (
+    find_cleaned_activity,
     prepare_imported_activity,
     prepare_imported_organization,
 )
@@ -346,6 +347,14 @@ def upsert_activity(
     body.pop("name_zh", None)
     body.pop("description_zh", None)
     existing = prepare_imported_activity(session, repo, org, name, body, warnings)
+    if existing is None and not allow_updates:
+        try:
+            existing = find_cleaned_activity(session, repo, org, name)
+        except MultipleResultsFound as exc:
+            raise ValidationError(
+                "Multiple activities found",
+                field="name",
+            ) from exc
 
     if existing and not allow_updates:
         wrote_link = link_activity_to_venue(session, existing, venue)

@@ -228,7 +228,7 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
         raise ValidationError("Import file must be a JSON object")
 
     file_warnings: list[str] = []
-    allow_org_updates = True
+    allow_org_updates = _parse_allow_updates(body)
     catalog_manager_id = os.getenv("BOARD_CATALOG_MANAGER_ID", "").strip() or None
     if _is_admin(event):
         catalog_manager_id = None
@@ -423,6 +423,19 @@ def _parse_retry_failed(body: dict[str, Any]) -> bool:
             field="retry_failed",
         )
     return retry_failed
+
+
+def _parse_allow_updates(body: dict[str, Any]) -> bool:
+    """True keeps today's update behaviour. False skips existing rows."""
+    allow_updates = body.get("allow_updates", True)
+    if allow_updates is None:
+        allow_updates = True
+    if not isinstance(allow_updates, bool):
+        raise ValidationError(
+            "allow_updates must be a boolean",
+            field="allow_updates",
+        )
+    return allow_updates
 
 
 def _parse_dry_run(body: dict[str, Any]) -> bool:

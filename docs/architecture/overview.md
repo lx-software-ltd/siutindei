@@ -159,10 +159,11 @@ pull requests for dependency updates:
 - Admin routes require membership in the Cognito `admin` group.
 - Catalog import (`POST /v1/admin/imports` and `/presign`) also allows
   the `importer` group via a dedicated password-auth app client.
-  Importer-only tokens create organizations, or skip an existing org
-  when `manager_id` matches so missing venues, activities, pricing,
-  and schedules can be created. They cannot update or reassign an
-  existing provider org.
+  Imports update a matching organization when `allow_updates` is true
+  (the default) and the payload `manager_id` matches. `allow_updates`
+  false skips existing organizations, venues, activities, pricing, and
+  schedules, and still creates missing children. Import never changes
+  `manager_id`.
 - Manager routes require `admin` or `manager` group membership.
 - User routes require any valid Cognito JWT (no group requirement).
 - API keys are rotated every 90 days via a scheduled Lambda.

@@ -49,6 +49,26 @@ def prepare_imported_organization(
     )
 
 
+def find_cleaned_activity(
+    session: Session,
+    repo: ActivityRepository,
+    org: Organization,
+    name: str,
+):
+    """Find an activity by its cleaned name when the raw name missed.
+
+    Used only when the import is leaving existing rows unchanged. An
+    approved organization does not clean activity names on the way in,
+    so a later file can still carry the spelling from before a name fix.
+    """
+    if org.review_status == "pending_review":
+        return None
+    result = sanitize_name(name, {}, load_name_fix_config(session))
+    if result.name.casefold() == name.casefold():
+        return None
+    return repo.find_by_org_and_name_case_insensitive(coerce_uuid(org.id), result.name)
+
+
 def prepare_imported_activity(
     session: Session,
     repo: ActivityRepository,
