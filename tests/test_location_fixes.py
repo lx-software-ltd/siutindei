@@ -357,3 +357,15 @@ def test_geocode_reads_the_first_nominatim_hit(monkeypatch) -> None:
         fake_invoke,
     )
     assert geocode_address("10 Harbour Road") == (22.28, 114.15)
+
+
+def test_location_csv_export_route_is_gone() -> None:
+    from app.api.admin_location_fixes import handle_location_fixes
+
+    response = handle_location_fixes(
+        {"httpMethod": "GET", "path": "/v1/admin/location-fixes/export"},
+        "GET",
+        "export",
+        None,
+    )
+    assert response["statusCode"] == 404

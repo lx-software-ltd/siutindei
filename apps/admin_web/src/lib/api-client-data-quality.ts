@@ -1,4 +1,4 @@
-import { buildApiUrl, request, requestText, type ListResponse } from './api-client-core';
+import { buildApiUrl, request, type ListResponse } from './api-client-core';
 
 export interface OrgDuplicateMember {
   id: string;
@@ -259,18 +259,6 @@ export function listLocationFixes(filters: {
   return request<ListResponse<LocationFixProposal>>(
     buildApiUrl(`v1/admin/location-fixes${query(filters)}`)
   );
-}
-
-export function exportLocationFixes(filters: {
-  status?: string;
-  entity_type?: string;
-  kind?: string;
-  source?: string;
-  grade?: string;
-  org_id?: string;
-  q?: string;
-} = {}) {
-  return requestText(buildApiUrl(`v1/admin/location-fixes/export${query(filters)}`));
 }
 
 export function getLocationFix(id: string) {

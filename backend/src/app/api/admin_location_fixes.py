@@ -21,18 +21,15 @@ from app.services.location_fix_query import (
     SOURCES,
     STATUSES,
     choice,
-    filtered_stmt,
     get_proposal,
     list_proposals,
     parse_uuid,
-    serialize_many,
     settings_payload,
     summarize_proposals,
     update_settings,
 )
 from app.services.location_fixes import decide_bulk, decide_proposal
 from app.utils import json_response
-from app.utils.responses import text_response
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -49,8 +46,6 @@ def handle_location_fixes(
     """Dispatch /v1/admin/location-fixes routes."""
     if method == "GET" and resource_id is None:
         return _list(event)
-    if method == "GET" and resource_id == "export" and sub_resource is None:
-        return _export(event)
     if method == "GET" and resource_id == "summary" and sub_resource is None:
         return _summary(event)
     if resource_id == "settings" and sub_resource is None and method == "GET":
@@ -61,9 +56,9 @@ def handle_location_fixes(
         return _scan(event)
     if method == "POST" and resource_id == "bulk" and sub_resource is None:
         return _bulk(event)
-    if method == "GET" and resource_id and sub_resource is None:
+    if method == "GET" and _item_id(resource_id) and sub_resource is None:
         return _get(event, resource_id)
-    if method == "POST" and resource_id and sub_resource is None:
+    if method == "POST" and _item_id(resource_id) and sub_resource is None:
         return _decide(event, resource_id)
     return json_response(404, {"error": "Not found"}, event=event)
 
@@ -228,62 +223,14 @@ def _mark_enqueue_failed(run_id: str) -> None:
         session.commit()
 
 
-def _export(event: Mapping[str, Any]) -> dict[str, Any]:
-    import csv
-    import io
-
-    status = choice(_query_param(event, "status"), STATUSES, "status") or "pending"
-    org_raw = _blank(_query_param(event, "org_id"))
-    with Session(get_engine()) as session:
-        stmt = filtered_stmt(
-            status=status,
-            entity_type=choice(
-                _query_param(event, "entity_type"), ENTITY_TYPES, "entity_type"
-            ),
-            kind=choice(_query_param(event, "kind"), KINDS, "kind"),
-            source=choice(_query_param(event, "source"), SOURCES, "source"),
-            org_id=parse_uuid(org_raw, "org_id") if org_raw else None,
-            query=_blank(_query_param(event, "q")),
-            grade=choice(_query_param(event, "grade"), GRADES, "grade"),
-        )
-        rows = list(session.scalars(stmt.limit(5000)).all())
-        items = serialize_many(session, rows)
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(
-        [
-            "entity_type",
-            "entity_id",
-            "organization",
-            "address",
-            "kind",
-            "source",
-            "grade",
-            "lat",
-            "lng",
-            "district_consistent",
-            "display_name",
-        ]
-    )
-    for item in items:
-        proposed = item.get("proposed_location") or {}
-        lookup = proposed.get("lookup") or {}
-        writer.writerow(
-            [
-                item.get("entity_type"),
-                item.get("entity_id"),
-                item.get("org_name") or "",
-                proposed.get("address") or "",
-                item.get("kind"),
-                item.get("source"),
-                lookup.get("grade") or "",
-                proposed.get("lat") if proposed.get("lat") is not None else "",
-                proposed.get("lng") if proposed.get("lng") is not None else "",
-                lookup.get("district_consistent"),
-                lookup.get("display_name") or "",
-            ]
-        )
-    return text_response(200, buffer.getvalue(), content_type="text/csv", event=event)
+def _item_id(resource_id: str | None) -> bool:
+    if resource_id is None:
+        return False
+    try:
+        UUID(resource_id)
+    except ValueError:
+        return False
+    return True
 
 
 def _lookup(value: Any) -> str | None:

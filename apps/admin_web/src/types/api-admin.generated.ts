@@ -1500,54 +1500,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/location-fixes/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Export venue proposals as CSV
-         * @description Same filters as the list, at most 5000 rows. The body is
-         *     `text/csv`.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    status?: "pending" | "applied" | "dismissed";
-                    entity_type?: "organization" | "activity" | "location";
-                    kind?: "link_existing" | "create_location" | "unresolved" | "update_location";
-                    source?: string;
-                    grade?: "precise" | "street" | "coarse" | "miss" | "manual" | "not_looked_up";
-                    org_id?: string;
-                    q?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description CSV export */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/csv": string;
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/admin/location-fixes/summary": {
         parameters: {
             query?: never;

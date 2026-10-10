@@ -1024,55 +1024,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/LocationFixListResponse'
 
-  /v1/admin/location-fixes/export:
-    get:
-      summary: Export venue proposals as CSV
-      description: |
-        Same filters as the list, at most 5000 rows. The body is
-        `text/csv`.
-      parameters:
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [pending, applied, dismissed]
-            default: pending
-        - name: entity_type
-          in: query
-          schema:
-            type: string
-            enum: [organization, activity, location]
-        - name: kind
-          in: query
-          schema:
-            type: string
-            enum: [link_existing, create_location, unresolved, update_location]
-        - name: source
-          in: query
-          schema:
-            type: string
-        - name: grade
-          in: query
-          schema:
-            type: string
-            enum: [precise, street, coarse, miss, manual, not_looked_up]
-        - name: org_id
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: q
-          in: query
-          schema:
-            type: string
-      responses:
-        "200":
-          description: CSV export
-          content:
-            text/csv:
-              schema:
-                type: string
-
   /v1/admin/location-fixes/summary:
     get:
       summary: Count venue proposals and the active sweep

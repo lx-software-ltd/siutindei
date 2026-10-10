@@ -156,9 +156,8 @@ the district requires `area_id`. A manual `lat` and `lng` on apply
 stores a `manual` grade inside the Hong Kong box. Apply on one row
 still looks the pin up when no lookup coordinates are stored, writes
 `lat` and `lng` to six decimal places, and leaves `place_id` unchanged.
-Apply does not replace a pin that is already stored. Export CSV uses
-the current filters. A pin
-that falls in a different Hong Kong district, or outside Hong Kong,
+Apply does not replace a pin that is already stored. A pin that
+falls in a different Hong Kong district, or outside Hong Kong,
 stays unresolved as `rule:pin_outside_area`. The area chain must
 include Hong Kong. District boxes are approximate, match the area
 name or a translation, and overlap at a shared boundary so a pin in
