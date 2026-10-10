@@ -27,6 +27,8 @@
     "searchPanel": {
       "title": "Search activities",
       "whereLabel": "Area",
+      "neighbourhoodLabel": "Neighbourhood",
+      "anywhereInRegionLabel": "Anywhere in this area",
       "childAgeLabel": "Child age",
       "activityTypesLabel": "Activity types",
       "searchLabel": "Search"
@@ -154,6 +156,7 @@
     "navigator": {
       "buttonLabel": "Help me find something for my kid!",
       "allHongKongLabel": "All Hong Kong",
+      "anywhereInRegionTemplate": "Anywhere in {region}",
       "backLabel": "Back",
       "seeActivitiesLabel": "See activities",
       "stepProgressTemplate": "Step {current} of {total}",
@@ -161,6 +164,10 @@
         "location": {
           "title": "Where should we look?",
           "label": "Area"
+        },
+        "neighbourhood": {
+          "title": "Which neighbourhood?",
+          "label": "Neighbourhood"
         },
         "age": {
           "title": "How old is your child?",

@@ -229,6 +229,21 @@ describe('SearchResultsPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('searches the neighbourhood named in the query', async () => {
+    currentSearchParams.value = new URLSearchParams(
+      'region=kowloon&neighbourhood=yau-tsim-mong-mong-kok&age=3-6',
+    );
+    renderPage();
+
+    await waitFor(() => {
+      expect(fetchActivitySearch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          areaId: '817456a3-b9ae-5b02-9e2b-f88caafe4f72',
+        }),
+      );
+    });
+  });
+
   it('pushes search after a successful fetch when consent is granted', async () => {
     window.localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, 'granted');
     currentSearchParams.value = new URLSearchParams(

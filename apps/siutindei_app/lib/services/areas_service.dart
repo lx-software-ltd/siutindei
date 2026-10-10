@@ -34,7 +34,8 @@ class AreasService {
   }
 
   static Future<List<GeographicAreaNode>> loadBundledAreas() async {
-    final regions = (await HomeWizardChoices.loadFromAsset()).regions;
+    final choices = await HomeWizardChoices.loadFromAsset();
+    final regions = choices.regions;
     if (regions.isEmpty) {
       return const [];
     }
@@ -60,6 +61,22 @@ class AreasService {
               level: 'region',
               active: true,
               displayOrder: i,
+              children: [
+                for (final neighbourhood in choices.neighbourhoods)
+                  if (neighbourhood.regionId == regions[i].id)
+                    GeographicAreaNode(
+                      id: neighbourhood.areaId,
+                      parentId: regions[i].areaId,
+                      name: neighbourhood.labels.en,
+                      nameTranslations: {
+                        'en': neighbourhood.labels.en,
+                        'zh-HK': neighbourhood.labels.zhHk,
+                      },
+                      level: 'neighbourhood',
+                      active: true,
+                      displayOrder: 0,
+                    ),
+              ],
             ),
         ],
       ),

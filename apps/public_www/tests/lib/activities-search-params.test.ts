@@ -22,6 +22,7 @@ describe('search-params', () => {
     const parsed = parseSearchFiltersFromQuery(params);
     expect(parsed.ageGroupId).toBe('3-6');
     expect(parsed.regionId).toBe('kowloon');
+    expect(parsed.neighbourhoodId).toBeNull();
     expect(parsed.activityTypeIds).toEqual(['early-years', 'learning']);
     expect(parsed.textQuery).toBe('music');
     expect(params.get('view')).toBe('map');

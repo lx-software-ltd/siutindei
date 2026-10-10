@@ -5,6 +5,7 @@ export type SearchViewMode = 'list' | 'map';
 export interface SearchFiltersState {
   readonly ageGroupId: string | null;
   readonly regionId: string | null;
+  readonly neighbourhoodId?: string | null;
   readonly activityTypeIds: readonly string[];
   readonly textQuery: string;
 }
@@ -34,6 +35,20 @@ export function areaIdForRegion(regionId: string | null): string | undefined {
     (entry) => entry.id === regionId,
   );
   return region?.areaId;
+}
+
+export function areaIdForFilters(
+  filters: SearchFiltersState,
+): string | undefined {
+  if (filters.neighbourhoodId) {
+    const neighbourhood = homeWizardChoices.neighbourhoods.find(
+      (entry) => entry.id === filters.neighbourhoodId,
+    );
+    if (neighbourhood && neighbourhood.regionId === filters.regionId) {
+      return neighbourhood.areaId;
+    }
+  }
+  return areaIdForRegion(filters.regionId);
 }
 
 export function toggleActivityTypeId(
@@ -72,6 +87,7 @@ export function parseSearchFiltersFromQuery(
 ): SearchFiltersState {
   const ageGroupId = searchParams.get('age') ?? DEFAULT_SEARCH_FILTERS.ageGroupId;
   const regionId = searchParams.get('region') || null;
+  const neighbourhoodId = searchParams.get('neighbourhood') || null;
   const typesParam = searchParams.get('types');
   const activityTypeIds = typesParam
     ? typesParam.split(',').filter((value) => value.length > 0)
@@ -81,6 +97,7 @@ export function parseSearchFiltersFromQuery(
   return {
     ageGroupId,
     regionId,
+    neighbourhoodId,
     activityTypeIds,
     textQuery,
   };
@@ -103,6 +120,9 @@ export function buildSearchQueryString(
   if (filters.regionId) {
     params.set('region', filters.regionId);
   }
+  if (filters.neighbourhoodId) {
+    params.set('neighbourhood', filters.neighbourhoodId);
+  }
   if (filters.activityTypeIds.length > 0) {
     params.set('types', filters.activityTypeIds.join(','));
   }
@@ -121,7 +141,7 @@ export function filtersToApiParams(filters: SearchFiltersState): {
 } {
   return {
     age: searchAgeForGroup(filters.ageGroupId),
-    areaId: areaIdForRegion(filters.regionId),
+    areaId: areaIdForFilters(filters),
     categoryIds: categoryIdsForTypes(filters.activityTypeIds),
   };
 }

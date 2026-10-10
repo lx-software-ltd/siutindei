@@ -136,7 +136,7 @@ class _WizardSummaryBar extends ConsumerWidget {
         if (regionLabel != null)
           ActionChip(
             label: Text(regionLabel),
-            onPressed: () => notifier.goToStep(HomeWizardStep.region),
+            onPressed: () => notifier.goToStep(HomeWizardStep.neighbourhood),
           ),
       ],
     );
@@ -169,10 +169,20 @@ class _WizardSummaryBar extends ConsumerWidget {
     if (regionId == null) {
       return null;
     }
-    return choices.regions
-        .firstWhere((region) => region.id == regionId)
+    final region = choices.regions
+        .firstWhere((item) => item.id == regionId)
         .labels
         .en;
+    final neighbourhoodId = state.selectedNeighbourhoodId;
+    if (neighbourhoodId == null) {
+      return region;
+    }
+    for (final item in choices.neighbourhoods) {
+      if (item.id == neighbourhoodId) {
+        return item.labels.en;
+      }
+    }
+    return region;
   }
 }
 
@@ -243,6 +253,29 @@ class _WizardStepContent extends ConsumerWidget {
                 label: option.labels.en,
                 selected: state.selectedRegionId == option.id,
                 onTap: () => notifier.selectRegion(option.id),
+              ),
+          ],
+        );
+      case HomeWizardStep.neighbourhood:
+        final regionId = state.selectedRegionId;
+        final options = choices.neighbourhoods
+            .where((item) => item.regionId == regionId)
+            .toList();
+        return ListView(
+          padding: EdgeInsets.all(spacing.md),
+          children: [
+            Text('Which neighbourhood?', style: textStyles.titleMedium),
+            SizedBox(height: spacing.md),
+            _WizardOptionTile(
+              label: 'Anywhere in this area',
+              selected: state.selectedNeighbourhoodId == null,
+              onTap: () => notifier.selectNeighbourhood(null),
+            ),
+            for (final option in options)
+              _WizardOptionTile(
+                label: option.labels.en,
+                selected: state.selectedNeighbourhoodId == option.id,
+                onTap: () => notifier.selectNeighbourhood(option.id),
               ),
           ],
         );

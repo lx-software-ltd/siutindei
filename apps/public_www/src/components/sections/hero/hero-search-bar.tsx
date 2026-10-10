@@ -48,13 +48,18 @@ export function HeroSearchBar({ locale, labels }: HeroSearchBarProps) {
   const region = homeWizardChoices.regions.find(
     (entry) => entry.id === filters.regionId,
   );
+  const neighbourhood = homeWizardChoices.neighbourhoods.find(
+    (entry) => entry.id === filters.neighbourhoodId,
+  );
   const ageGroup = homeWizardChoices.ageGroups.find(
     (entry) => entry.id === filters.ageGroupId,
   );
 
-  const whereLabel = region
-    ? labelForLocale(region.labels, locale)
-    : labels.anywhere;
+  const whereLabel = neighbourhood
+    ? labelForLocale(neighbourhood.labels, locale)
+    : region
+      ? labelForLocale(region.labels, locale)
+      : labels.anywhere;
   const ageLabel = ageGroup
     ? labelForLocale(ageGroup.labels, locale)
     : labels.anyAge;

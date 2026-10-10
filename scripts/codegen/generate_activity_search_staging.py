@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -11,6 +12,10 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "backend" / "src"))
+
+from app.data.hk_neighbourhoods import neighbourhoods_for
+
 OUTPUT = ROOT / "shared" / "fixtures" / "activity_search_staging.json"
 
 NAMESPACE = uuid.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
@@ -96,14 +101,17 @@ def _build_area_descendants() -> dict[str, list[str]]:
         NEW_TERRITORIES_REGION: [],
         ISLANDS_REGION: [],
     }
+    descendants: dict[str, list[str]] = {}
     for name, region_id in DISTRICTS:
         district_id = _district_id(name)
+        hood_ids = [str(item.id) for item in neighbourhoods_for(name)]
         by_region[region_id].append(district_id)
-    descendants: dict[str, list[str]] = {}
-    for region_id, district_ids in by_region.items():
-        descendants[region_id] = list(district_ids)
-        for district_id in district_ids:
-            descendants[district_id] = [district_id]
+        by_region[region_id].extend(hood_ids)
+        descendants[district_id] = [district_id, *hood_ids]
+        for hood_id in hood_ids:
+            descendants[hood_id] = [hood_id]
+    for region_id, area_ids in by_region.items():
+        descendants[region_id] = list(area_ids)
     return descendants
 
 
@@ -130,7 +138,8 @@ def _build_item(
     start: int,
     end: int,
 ) -> dict[str, Any]:
-    district_id = _district_id(district_name)
+    hoods = neighbourhoods_for(district_name)
+    hood = hoods[variant % len(hoods)]
     cell_key = f"{cat_id}:{age_key}:{district_name}:{pricing_type}:{variant}"
     activity_id = _uuid(f"siutindei.staging.activity.{cell_key}")
     org_id = _uuid(f"siutindei.staging.org.{cat_id}:{district_name}")
@@ -138,8 +147,7 @@ def _build_item(
     schedule_id = _uuid(f"siutindei.staging.schedule.{cell_key}")
 
     title = (
-        f"{cat_label} in {district_name} "
-        f"(ages {age_min}–{age_max}, {pricing_label})"
+        f"{cat_label} in {district_name} (ages {age_min}–{age_max}, {pricing_label})"
     )
     description = (
         f"Staging listing for {cat_label.lower()} in {district_name}, "
@@ -167,9 +175,7 @@ def _build_item(
                 "en": f"{cat_label} Studio — {district_name}",
             },
             "description_translations": {
-                "en": (
-                    f"English-language {cat_label.lower()} " f"provider in Hong Kong."
-                ),
+                "en": (f"English-language {cat_label.lower()} provider in Hong Kong."),
             },
             "manager_id": MANAGER_ID,
             "media_urls": ["https://placekitten.com/400/300"],
@@ -177,9 +183,9 @@ def _build_item(
         },
         "location": {
             "id": location_id,
-            "area_id": district_id,
+            "area_id": str(hood.id),
             "region_area_id": region_id,
-            "address": f"1 Example Road, {district_name}, Hong Kong",
+            "address": f"1 Example Road, {hood.name}, {district_name}, Hong Kong",
             "lat": "22.3000",
             "lng": "114.1700",
         },

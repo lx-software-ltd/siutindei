@@ -15,6 +15,7 @@ import {
 import {
   homeWizardChoices,
   labelForLocale,
+  neighbourhoodsForRegion,
 } from '@/lib/home-wizard/choices';
 import {
   ALL_HONG_KONG_ICON_SRC,
@@ -30,6 +31,8 @@ import { SearchChoiceButton } from './search-choice-button';
 interface SearchPanelCopy {
   readonly title: string;
   readonly whereLabel: string;
+  readonly neighbourhoodLabel: string;
+  readonly anywhereInRegionLabel: string;
   readonly childAgeLabel: string;
   readonly activityTypesLabel: string;
   readonly searchLabel: string;
@@ -101,7 +104,9 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
               iconSrc={ALL_HONG_KONG_ICON_SRC}
               iconShape="flag"
               isSelected={draft.regionId === null}
-              onClick={() => updateDraft({ regionId: null })}
+              onClick={() =>
+                updateDraft({ regionId: null, neighbourhoodId: null })
+              }
             />
             {REGION_ROW_ORDER.map((regionId) => {
               const region = regionsById.get(regionId);
@@ -118,11 +123,40 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
                   label={labelForLocale(region.labels, locale)}
                   iconSrc={iconSrc}
                   isSelected={draft.regionId === region.id}
-                  onClick={() => updateDraft({ regionId: region.id })}
+                  onClick={() =>
+                    updateDraft({
+                      regionId: region.id,
+                      neighbourhoodId:
+                        draft.regionId === region.id
+                          ? draft.neighbourhoodId
+                          : null,
+                    })
+                  }
                 />
               );
             })}
           </div>
+          {draft.regionId ? (
+            <label className="mt-3 block text-sm font-semibold text-ink-900">
+              {copy.neighbourhoodLabel}
+              <select
+                className="mt-2 w-full rounded-xl border border-brand-100 bg-white px-3 py-2 text-sm font-medium text-ink-900"
+                value={draft.neighbourhoodId ?? ''}
+                onChange={(event) =>
+                  updateDraft({
+                    neighbourhoodId: event.target.value || null,
+                  })
+                }
+              >
+                <option value="">{copy.anywhereInRegionLabel}</option>
+                {neighbourhoodsForRegion(draft.regionId).map((neighbourhood) => (
+                  <option key={neighbourhood.id} value={neighbourhood.id}>
+                    {labelForLocale(neighbourhood.labels, locale)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
         </fieldset>
         <fieldset>
           <legend className="mb-2 text-sm font-semibold text-ink-900">

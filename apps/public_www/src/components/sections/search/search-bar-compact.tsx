@@ -8,7 +8,7 @@ import { useSearchContext } from '@/components/shared/search/search-context';
 import { buildMapSearchHref } from '@/lib/activities/map-search-url';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 import {
-  areaIdForRegion,
+  areaIdForFilters,
   buildSearchQueryString,
   searchAgeForGroup,
 } from '@/lib/activities/search-params';
@@ -59,20 +59,25 @@ export function SearchBarCompact({ locale, labels }: SearchBarCompactProps) {
   const region = homeWizardChoices.regions.find(
     (entry) => entry.id === filters.regionId,
   );
+  const neighbourhood = homeWizardChoices.neighbourhoods.find(
+    (entry) => entry.id === filters.neighbourhoodId,
+  );
   const ageGroup = homeWizardChoices.ageGroups.find(
     (entry) => entry.id === filters.ageGroupId,
   );
 
-  const whereLabel = region
-    ? labelForLocale(region.labels, locale)
-    : labels.anywhere;
+  const whereLabel = neighbourhood
+    ? labelForLocale(neighbourhood.labels, locale)
+    : region
+      ? labelForLocale(region.labels, locale)
+      : labels.anywhere;
   const ageLabel = ageGroup
     ? labelForLocale(ageGroup.labels, locale)
     : labels.anyAge;
   const typesLabel =
     summarizeTypes(locale, filters.activityTypeIds) || labels.anyType;
 
-  const hasArea = Boolean(areaIdForRegion(filters.regionId));
+  const hasArea = Boolean(areaIdForFilters(filters));
   const hasAge = Boolean(searchAgeForGroup(filters.ageGroupId));
   const mapHref = buildMapSearchHref(locale, filters);
   const searchHref = (() => {

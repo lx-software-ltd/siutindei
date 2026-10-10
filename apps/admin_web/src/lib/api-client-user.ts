@@ -102,7 +102,7 @@ export interface GeographicAreaNode {
   parent_id: string | null;
   name: string;
   name_translations: Record<string, string>;
-  level: 'country' | 'region' | 'city' | 'district';
+  level: 'country' | 'region' | 'city' | 'district' | 'neighbourhood';
   code: string | null;
   active: boolean;
   display_order: number;
