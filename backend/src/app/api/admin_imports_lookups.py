@@ -52,17 +52,21 @@ def guard_existing_org(
     allow_updates: bool,
     catalog_manager_id: str | None,
 ) -> None:
-    """Skip or fail when the match is owned by another manager."""
-    payload_manager = body.get("manager_id")
+    """Reject a catalog import that matches another manager.
+
+    Skip mode does not fail a different or missing ``manager_id``.
+    The organization is left unchanged and its children are still
+    imported. Update mode checks a manager change later and never
+    writes ``manager_id``.
+    """
+    del body
     if catalog_manager_id and not manager_ids_match(
         existing.manager_id,
         catalog_manager_id,
     ):
         raise ValidationError(MANAGED_BY_PROVIDER, field="manager_id")
-    if allow_updates:
+    if not allow_updates:
         return
-    if not manager_ids_match(existing.manager_id, payload_manager):
-        raise ValidationError("exists", field="name")
 
 
 def resolve_location_area_fields(

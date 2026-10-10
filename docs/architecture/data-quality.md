@@ -79,7 +79,12 @@ Imports apply this to every organization name and append
 `Imported name: …` to `source_note` (500 characters). Activity names
 are cleaned only when `review_status` is `pending_review`. If the
 cleaned name belongs to a different record, the original name is kept
-and the import records a warning.
+and the import records a warning. An import with `allow_updates` false
+leaves an existing organization or activity unchanged, including a
+name or category already fixed. It still matches an activity whose
+stored name is the cleaned form of the name in the file, using the
+file's name translations. A skipped activity is not joined to the
+imported venue. A new venue on a skipped organization is still created.
 
 Data quality has four tabs: Duplicates, Names, Locations, and Categories.
 Category checks moved here from the Categories nav item;

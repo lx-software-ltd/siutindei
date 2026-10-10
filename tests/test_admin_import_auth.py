@@ -120,8 +120,7 @@ def test_importer_can_get_import_job(mock_imports) -> None:
 def test_importer_can_patch_organization(mock_crud) -> None:
     response = lambda_handler(
         _event(
-            "/v1/admin/organizations/"
-            "00000000-0000-0000-0000-000000000001",
+            "/v1/admin/organizations/00000000-0000-0000-0000-000000000001",
             method="PATCH",
         ),
         None,
@@ -248,9 +247,7 @@ def test_importer_process_allows_updates_and_skips_audit(
 
     from app.api.admin_imports import _handle_import_process
 
-    response = _handle_import_process(
-        _process_event(groups="importer", dry_run=True)
-    )
+    response = _handle_import_process(_process_event(groups="importer", dry_run=True))
     assert response["statusCode"] == 200
     assert captured["allow_org_updates"] is True
     assert captured["dry_run"] is True
@@ -315,30 +312,29 @@ def test_admin_process_allows_updates_and_sets_audit(
 
     from app.api.admin_imports import _handle_import_process
 
-    response = _handle_import_process(
-        _process_event(groups="admin", dry_run=False)
-    )
+    response = _handle_import_process(_process_event(groups="admin", dry_run=False))
     assert response["statusCode"] == 200
     assert captured["allow_org_updates"] is True
     assert captured["dry_run"] is False
-    assert captured["import_job_id"] == (
-        "00000000-0000-0000-0000-000000000010"
-    )
+    assert captured["import_job_id"] == ("00000000-0000-0000-0000-000000000010")
     assert "rolled_back" not in captured
     assert audit_calls == [True]
 
 
 def test_repeat_object_key_returns_stored_job(monkeypatch) -> None:
     class _Job:
-        id = "00000000-0000-0000-0000-000000000011"
-        object_key = "admin/imports/file.json"
-        dry_run = False
-        status = "completed"
-        summary = {"organizations": {"created": 48, "updated": 1, "failed": 1}}
-        results = [{"type": "organizations", "key": "Park", "status": "created"}]
-        file_warnings = []
-        created_at = "2026-01-01T00:00:00+00:00"
-        updated_at = "2026-01-01T00:00:00+00:00"
+        def __init__(self) -> None:
+            self.id = "00000000-0000-0000-0000-000000000011"
+            self.object_key = "admin/imports/file.json"
+            self.dry_run = False
+            self.status = "completed"
+            self.summary = {"organizations": {"created": 48, "updated": 1, "failed": 1}}
+            self.results = [
+                {"type": "organizations", "key": "Park", "status": "created"}
+            ]
+            self.file_warnings: list[str] = []
+            self.created_at = "2026-01-01T00:00:00+00:00"
+            self.updated_at = "2026-01-01T00:00:00+00:00"
 
     class _Session:
         def __enter__(self):
@@ -364,13 +360,192 @@ def test_repeat_object_key_returns_stored_job(monkeypatch) -> None:
 
     from app.api.admin_imports import _handle_import_process
 
-    response = _handle_import_process(
-        _process_event(groups="importer", dry_run=False)
-    )
+    response = _handle_import_process(_process_event(groups="importer", dry_run=False))
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
     assert body["summary"]["organizations"]["created"] == 48
+    assert body["allow_updates"] is True
     assert process_calls == []
+
+
+def test_different_allow_updates_reruns_stored_job(monkeypatch) -> None:
+    class _Job:
+        def __init__(self) -> None:
+            self.id = "00000000-0000-0000-0000-000000000013"
+            self.object_key = "admin/imports/file.json"
+            self.dry_run = False
+            self.status = "completed"
+            self.summary = {"organizations": {"created": 1}}
+            self.results: list[dict] = []
+            self.file_warnings: list[str] = []
+            self.created_at = "2026-01-01T00:00:00+00:00"
+            self.updated_at = "2026-01-01T00:00:00+00:00"
+
+    class _Session:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def rollback(self):
+            return None
+
+        def commit(self):
+            return None
+
+    monkeypatch.setattr(
+        "app.api.admin_imports.Session",
+        lambda *args, **kwargs: _Session(),
+    )
+    monkeypatch.setattr("app.api.admin_imports.get_engine", lambda: None)
+    monkeypatch.setattr(
+        "app.api.admin_imports.find_import_job_by_key",
+        lambda session, key: _Job(),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports._load_import_payload",
+        lambda key: {"organizations": []},
+    )
+    captured: dict = {}
+
+    def fake_process(*args, **kwargs):
+        captured["allow_org_updates"] = kwargs.get("allow_org_updates")
+        return {"warnings": 0}, []
+
+    monkeypatch.setattr(
+        "app.api.admin_imports.process_import_payload",
+        fake_process,
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.begin_import_job",
+        lambda session, object_key: _Job(),
+    )
+
+    def fake_finish(*args, **kwargs):
+        captured["summary"] = kwargs.get("summary")
+        return _Job()
+
+    monkeypatch.setattr(
+        "app.api.admin_imports.finish_import_job",
+        fake_finish,
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports._set_session_audit_context",
+        lambda session, event: None,
+    )
+
+    from app.api.admin_imports import _handle_import_process
+
+    event = _process_event(groups="importer", dry_run=False)
+    body = json.loads(event["body"])
+    body["allow_updates"] = False
+    event["body"] = json.dumps(body)
+    response = _handle_import_process(event)
+    assert response["statusCode"] == 200
+    assert captured["allow_org_updates"] is False
+    assert captured["summary"]["allow_updates"] is False
+    payload = json.loads(response["body"])
+    assert payload["allow_updates"] is False
+
+
+def test_retry_without_allow_updates_uses_stored_flag(monkeypatch) -> None:
+    class _Job:
+        def __init__(self) -> None:
+            self.id = "00000000-0000-0000-0000-000000000021"
+            self.object_key = "admin/imports/file.json"
+            self.dry_run = False
+            self.status = "completed"
+            self.summary = {
+                "allow_updates": False,
+                "organizations": {
+                    "created": 0,
+                    "updated": 0,
+                    "failed": 1,
+                    "skipped": 0,
+                },
+            }
+            self.results = [
+                {
+                    "type": "organizations",
+                    "key": "Park",
+                    "status": "failed",
+                    "path": "organizations[0]",
+                    "warnings": [],
+                    "errors": [{"message": "name is required"}],
+                }
+            ]
+            self.file_warnings: list[str] = []
+            self.created_at = "2026-01-01T00:00:00+00:00"
+            self.updated_at = "2026-01-01T00:00:00+00:00"
+
+    captured: dict = {}
+
+    class _Session:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def rollback(self):
+            return None
+
+        def commit(self):
+            return None
+
+    monkeypatch.setattr(
+        "app.api.admin_imports.Session",
+        lambda *args, **kwargs: _Session(),
+    )
+    monkeypatch.setattr("app.api.admin_imports.get_engine", lambda: None)
+    monkeypatch.setattr(
+        "app.api.admin_imports.find_import_job_by_key",
+        lambda session, key: _Job(),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports._load_import_payload",
+        lambda key: {"organizations": [{"name": "Park"}]},
+    )
+
+    def fake_process(*args, **kwargs):
+        captured["allow_org_updates"] = kwargs.get("allow_org_updates")
+        return {"warnings": 0, "errors": 0}, []
+
+    monkeypatch.setattr(
+        "app.api.admin_imports.process_import_payload",
+        fake_process,
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.begin_import_retry",
+        lambda session, job: _Job(),
+    )
+
+    def fake_finish(*args, **kwargs):
+        captured["summary"] = kwargs.get("summary")
+        return _Job()
+
+    monkeypatch.setattr(
+        "app.api.admin_imports.finish_import_job",
+        fake_finish,
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports._set_session_audit_context",
+        lambda session, event: None,
+    )
+
+    from app.api.admin_imports import _handle_import_process
+
+    event = _process_event(groups="admin", dry_run=False)
+    body = json.loads(event["body"])
+    body["retry_failed"] = True
+    event["body"] = json.dumps(body)
+    response = _handle_import_process(event)
+    assert response["statusCode"] == 200
+    assert captured["allow_org_updates"] is False
+    assert captured["summary"]["allow_updates"] is False
+    payload = json.loads(response["body"])
+    assert payload["allow_updates"] is False
 
 
 def test_dry_run_job_does_not_block_live_import(monkeypatch) -> None:
@@ -378,15 +553,16 @@ def test_dry_run_job_does_not_block_live_import(monkeypatch) -> None:
         dry_run = True
 
     class _LiveJob:
-        id = "00000000-0000-0000-0000-000000000012"
-        object_key = "admin/imports/file.json"
-        dry_run = False
-        status = "completed"
-        summary = {"organizations": {"created": 1}}
-        results = []
-        file_warnings = []
-        created_at = "2026-01-01T00:00:00+00:00"
-        updated_at = "2026-01-01T00:00:00+00:00"
+        def __init__(self) -> None:
+            self.id = "00000000-0000-0000-0000-000000000012"
+            self.object_key = "admin/imports/file.json"
+            self.dry_run = False
+            self.status = "completed"
+            self.summary = {"organizations": {"created": 1}}
+            self.results: list[dict] = []
+            self.file_warnings: list[str] = []
+            self.created_at = "2026-01-01T00:00:00+00:00"
+            self.updated_at = "2026-01-01T00:00:00+00:00"
 
     class _Session:
         def __enter__(self):
@@ -434,9 +610,7 @@ def test_dry_run_job_does_not_block_live_import(monkeypatch) -> None:
 
     from app.api.admin_imports import _handle_import_process
 
-    response = _handle_import_process(
-        _process_event(groups="importer", dry_run=False)
-    )
+    response = _handle_import_process(_process_event(groups="importer", dry_run=False))
     assert response["statusCode"] == 200
     assert process_calls == [True]
     body = json.loads(response["body"])
@@ -494,13 +668,9 @@ def test_importer_uses_board_catalog_manager_id(monkeypatch) -> None:
 
     from app.api.admin_imports import _handle_import_process
 
-    response = _handle_import_process(
-        _process_event(groups="importer", dry_run=True)
-    )
+    response = _handle_import_process(_process_event(groups="importer", dry_run=True))
     assert response["statusCode"] == 200
-    assert captured["catalog_manager_id"] == (
-        "00000000-0000-0000-0000-000000000088"
-    )
+    assert captured["catalog_manager_id"] == ("00000000-0000-0000-0000-000000000088")
 
 
 def test_handle_import_process_survives_expire_on_commit(
@@ -568,9 +738,7 @@ def test_handle_import_process_survives_expire_on_commit(
 
     from app.api.admin_imports import _handle_import_process
 
-    response = _handle_import_process(
-        _process_event(groups="importer", dry_run=True)
-    )
+    response = _handle_import_process(_process_event(groups="importer", dry_run=True))
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
     assert body["id"] == job._id
@@ -606,9 +774,7 @@ def test_handle_import_process_reads_job_before_session_close(
     from app.api.admin_imports import _handle_import_process
 
     event = _process_event(groups="importer", dry_run=True)
-    event["body"] = json.dumps(
-        {"object_key": object_key, "dry_run": True}
-    )
+    event["body"] = json.dumps({"object_key": object_key, "dry_run": True})
     response = _handle_import_process(event)
     assert response["statusCode"] == 200
     body = json.loads(response["body"])

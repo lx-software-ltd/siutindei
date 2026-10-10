@@ -79,10 +79,12 @@ export interface ImportJobListItem {
   id: string;
   object_key: string;
   dry_run: boolean;
+  allow_updates?: boolean;
   status: string;
   summary: {
     organizations?: { created: number; updated: number; failed: number; skipped: number };
     captured_categories?: number;
+    allow_updates?: boolean;
   };
   file_warnings: string[];
   result_count?: number;

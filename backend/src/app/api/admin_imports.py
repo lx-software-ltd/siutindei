@@ -28,7 +28,9 @@ from app.api.admin_imports_jobs import (
     find_import_job_by_id,
     find_import_job_by_key,
     finish_import_job,
+    job_allow_updates,
     list_import_jobs,
+    stored_job_answers_request,
     serialize_import_job,
     serialize_import_job_summary,
     store_import_job,
@@ -126,19 +128,6 @@ def _handle_import_presign(event: Mapping[str, Any]) -> dict[str, Any]:
     )
 
 
-def _stored_job_answers_request(job: Any, dry_run: bool) -> bool:
-    """Return True when the stored job should be returned as-is.
-
-    A dry run does not block a later live import. A failed live import
-    can be retried with the same object key.
-    """
-    if job.dry_run and not dry_run:
-        return False
-    if not dry_run and getattr(job, "status", None) == "failed":
-        return False
-    return True
-
-
 def _record_import_failure(
     job_id: Any,
     exc: BaseException,
@@ -178,6 +167,8 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
     validate_object_key(object_key, IMPORT_PREFIX)
     dry_run = _parse_dry_run(body)
     retry_failed = _parse_retry_failed(body)
+    allow_specified = "allow_updates" in body and body.get("allow_updates") is not None
+    allow_org_updates = _parse_allow_updates(body)
     if retry_failed and dry_run:
         raise ValidationError(
             "retry_failed cannot be used with dry_run",
@@ -205,7 +196,7 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
         if (
             existing_job is not None
             and not retry_failed
-            and _stored_job_answers_request(existing_job, dry_run)
+            and stored_job_answers_request(existing_job, dry_run, allow_org_updates)
         ):
             return json_response(
                 200,
@@ -218,6 +209,8 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
                     "No completed import to retry",
                     field="object_key",
                 )
+            if not allow_specified:
+                allow_org_updates = job_allow_updates(existing_job)
             if existing_job.status != "failed":
                 retry_subset = True
                 previous_results = list(existing_job.results or [])
@@ -228,7 +221,6 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
         raise ValidationError("Import file must be a JSON object")
 
     file_warnings: list[str] = []
-    allow_org_updates = True
     catalog_manager_id = os.getenv("BOARD_CATALOG_MANAGER_ID", "").strip() or None
     if _is_admin(event):
         catalog_manager_id = None
@@ -284,6 +276,7 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
                     names=retry_names,
                     unmatched=unmatched,
                 )
+            summary["allow_updates"] = allow_org_updates
             if dry_run:
                 session.rollback()
                 job = store_import_job(
@@ -312,6 +305,7 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
                 "results": results,
                 "file_warnings": file_warnings,
                 "dry_run": dry_run,
+                "allow_updates": allow_org_updates,
             }
             session.commit()
         except Exception as exc:
@@ -423,6 +417,19 @@ def _parse_retry_failed(body: dict[str, Any]) -> bool:
             field="retry_failed",
         )
     return retry_failed
+
+
+def _parse_allow_updates(body: dict[str, Any]) -> bool:
+    """True keeps today's update behaviour. False skips existing rows."""
+    allow_updates = body.get("allow_updates", True)
+    if allow_updates is None:
+        allow_updates = True
+    if not isinstance(allow_updates, bool):
+        raise ValidationError(
+            "allow_updates must be a boolean",
+            field="allow_updates",
+        )
+    return allow_updates
 
 
 def _parse_dry_run(body: dict[str, Any]) -> bool:

@@ -8,13 +8,17 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from app.api.admin_imports import _parse_dry_run
+from app.api.admin_imports import (
+    _parse_allow_updates,
+    _parse_dry_run,
+)
 from app.api.admin_imports_catalog import apply_vetting_columns
 from app.api.admin_imports_fields import (
     apply_source_fields,
     collect_flat_org_warnings,
 )
 from app.api.admin_imports_importer import process_import_payload
+from app.api.admin_imports_jobs import stored_job_answers_request
 from app.api.admin_imports_upsert import (
     upsert_activity,
     upsert_location,
@@ -29,7 +33,13 @@ from app.api.admin_imports_utils import (
     to_utc_weekly,
 )
 from app.api.admin_imports_venues import LINKED_VENUE_WARNING
-from app.db.models import Activity, ActivityLocation, Location, Organization
+from app.db.models import (
+    Activity,
+    ActivityCategory,
+    ActivityLocation,
+    Location,
+    Organization,
+)
 from app.exceptions import ValidationError
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -231,8 +241,6 @@ def test_upsert_activity_category_id_wins_over_category_name(
     sample_organization,
     sample_activity_category,
 ) -> None:
-    from app.db.models import ActivityCategory
-
     other = ActivityCategory(name="Other Category", display_order=1)
     db_session.add(other)
     db_session.flush()
@@ -294,8 +302,7 @@ def test_apply_source_fields_strips_catalog_pairs() -> None:
     record = {
         "description": "Hello",
         "vetting_note": (
-            "source=lcsd; sourceId=lcsd-1; descriptionSource=template; "
-            "age_range=5-12"
+            "source=lcsd; sourceId=lcsd-1; descriptionSource=template; age_range=5-12"
         ),
     }
     apply_vetting_columns(record)
@@ -493,6 +500,33 @@ def test_parse_dry_run_rejects_non_bool() -> None:
     assert exc_info.value.field == "dry_run"
 
 
+def test_parse_allow_updates_defaults_true() -> None:
+    assert _parse_allow_updates({}) is True
+    assert _parse_allow_updates({"allow_updates": None}) is True
+    assert _parse_allow_updates({"allow_updates": False}) is False
+
+
+def test_parse_allow_updates_rejects_non_bool() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        _parse_allow_updates({"allow_updates": "false"})
+    assert exc_info.value.field == "allow_updates"
+
+
+def test_stored_job_reruns_when_allow_updates_differs() -> None:
+    class _Job:
+        def __init__(self, summary: dict) -> None:
+            self.dry_run = False
+            self.status = "completed"
+            self.summary = summary
+
+    skipped = _Job({"allow_updates": False})
+    assert stored_job_answers_request(skipped, False, False) is True
+    assert stored_job_answers_request(skipped, False, True) is False
+    older = _Job({})
+    assert stored_job_answers_request(older, False, True) is True
+    assert stored_job_answers_request(older, False, False) is False
+
+
 def test_dry_run_reports_created_without_persisting(test_engine) -> None:
     org_name = f"Dry Run Org {uuid4()}"
     payload = {
@@ -592,9 +626,10 @@ def test_dry_run_child_failure_keeps_sibling_results(
     assert found is None
 
 
-def test_importer_create_only_rejects_existing_org(
+def test_importer_create_only_skips_org_with_a_different_manager(
     db_session,
     sample_organization,
+    sample_activity_category,
 ) -> None:
     payload = {
         "organizations": [
@@ -602,19 +637,28 @@ def test_importer_create_only_rejects_existing_org(
                 "name": sample_organization.name,
                 "description": "Takeover attempt",
                 "manager_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                "activities": [
+                    {
+                        "name": "New Catalog Class",
+                        "category_id": str(sample_activity_category.id),
+                        "age_min": 4,
+                        "age_max": 8,
+                    }
+                ],
             }
         ]
     }
-    _summary, results = process_import_payload(
+    summary, results = process_import_payload(
         db_session,
         payload,
         [],
         dry_run=True,
         allow_org_updates=False,
     )
-    assert results[0]["status"] == "failed"
-    assert results[0]["errors"][0]["message"] == "exists"
-    assert results[0]["errors"][0]["field"] == "name"
+    by_type = {item["type"]: item for item in results}
+    assert by_type["organizations"]["status"] == "skipped"
+    assert by_type["activities"]["status"] == "created"
+    assert summary["allow_updates"] is False
     db_session.refresh(sample_organization)
     assert sample_organization.description == ("A test organization for unit tests")
     assert str(sample_organization.manager_id) == (
@@ -691,21 +735,22 @@ def test_admin_import_rejects_manager_id_reassign(
     )
 
 
-def test_upsert_organization_create_only_raises(
+def test_upsert_organization_create_only_skips_a_different_manager(
     db_session,
     sample_organization,
 ) -> None:
-    with pytest.raises(ValidationError) as exc_info:
-        upsert_organization(
-            db_session,
-            {
-                "name": sample_organization.name,
-                "manager_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-            },
-            allow_updates=False,
-        )
-    assert exc_info.value.message == "exists"
-    assert exc_info.value.field == "name"
+    org, status = upsert_organization(
+        db_session,
+        {
+            "name": sample_organization.name,
+            "manager_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "description": "Should not overwrite",
+        },
+        allow_updates=False,
+    )
+    assert status == "skipped"
+    assert org.id == sample_organization.id
+    assert sample_organization.description == "A test organization for unit tests"
 
 
 def test_persist_import_change_dry_run_discards_audit(test_engine) -> None:
@@ -837,14 +882,162 @@ def test_importer_skips_existing_venue_and_activity(
     assert by_type["organizations"]["status"] == "skipped"
     assert by_type["locations"]["status"] == "skipped"
     assert by_type["activities"]["status"] == "skipped"
-    assert LINKED_VENUE_WARNING in by_type["activities"]["warnings"]
+    assert LINKED_VENUE_WARNING not in by_type["activities"]["warnings"]
     db_session.refresh(sample_activity)
     assert sample_activity.description == ("Learn to swim in our heated pool")
     link = db_session.get(
         ActivityLocation,
         (sample_activity.id, sample_location.id),
     )
-    assert link is not None
+    assert link is None
+
+
+def test_create_only_keeps_cleaned_name_and_category(
+    db_session,
+    sample_organization,
+    sample_activity,
+    sample_activity_category,
+) -> None:
+    ceramics = ActivityCategory(name="Ceramics Studio", display_order=2)
+    db_session.add(ceramics)
+    db_session.flush()
+    sample_organization.name = "Harbour Club"
+    sample_activity.name = "Swim Class"
+    sample_activity.category_id = ceramics.id
+    db_session.flush()
+    payload = {
+        "organizations": [
+            {
+                "name": "HARBOUR CLUB",
+                "manager_id": str(sample_organization.manager_id),
+                "description": "Should not overwrite",
+                "activities": [
+                    {
+                        "name": "SWIM CLASS",
+                        "category_id": str(sample_activity_category.id),
+                        "description": "Should not overwrite",
+                        "age_min": 1,
+                        "age_max": 2,
+                    }
+                ],
+            }
+        ]
+    }
+    summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=False,
+    )
+    by_type = {item["type"]: item for item in results}
+    assert by_type["organizations"]["status"] == "skipped"
+    assert by_type["activities"]["status"] == "skipped"
+    assert summary["activities"]["created"] == 0
+    db_session.refresh(sample_organization)
+    db_session.refresh(sample_activity)
+    assert sample_organization.name == "Harbour Club"
+    assert sample_organization.description == "A test organization for unit tests"
+    assert sample_activity.name == "Swim Class"
+    assert str(sample_activity.category_id) == str(ceramics.id)
+    names = db_session.scalars(
+        select(Activity.name).where(Activity.org_id == sample_organization.id)
+    ).all()
+    assert names == ["Swim Class"]
+
+
+def test_create_only_matches_cleaned_activity_on_approved_org(
+    db_session,
+    sample_organization,
+    sample_activity,
+    sample_activity_category,
+) -> None:
+    sample_organization.review_status = "approved"
+    sample_organization.name = "Harbour Club"
+    sample_activity.name = "Harbour Club"
+    sample_activity.category_id = sample_activity_category.id
+    db_session.flush()
+    payload = {
+        "organizations": [
+            {
+                "name": "HARBOUR CLUB",
+                "manager_id": str(sample_organization.manager_id),
+                "activities": [
+                    {
+                        "name": "Harbour Club (海港會)",
+                        "name_translations": {"zh": "海港會"},
+                        "category_name": "Missing Category",
+                        "description": "Should not overwrite",
+                        "age_min": 1,
+                        "age_max": 2,
+                    }
+                ],
+            }
+        ]
+    }
+    from app.services.category_suggestions.settings import get_settings
+
+    settings = get_settings(db_session)
+    settings.on_import_enabled = False
+    db_session.flush()
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=False,
+    )
+    activity_rows = [item for item in results if item["type"] == "activities"]
+    assert activity_rows[0]["status"] == "skipped"
+    assert activity_rows[0]["errors"] == []
+    db_session.refresh(sample_activity)
+    assert sample_activity.name == "Harbour Club"
+    assert sample_activity.description == "Learn to swim in our heated pool"
+    assert str(sample_activity.category_id) == str(sample_activity_category.id)
+    names = db_session.scalars(
+        select(Activity.name).where(Activity.org_id == sample_organization.id)
+    ).all()
+    assert names == ["Harbour Club"]
+
+
+def test_update_import_does_not_match_cleaned_activity_on_approved_org(
+    db_session,
+    sample_organization,
+    sample_activity,
+    sample_activity_category,
+) -> None:
+    sample_organization.review_status = "approved"
+    sample_organization.name = "Harbour Club"
+    sample_activity.name = "Harbour Club"
+    db_session.flush()
+    payload = {
+        "organizations": [
+            {
+                "name": "HARBOUR CLUB",
+                "manager_id": str(sample_organization.manager_id),
+                "activities": [
+                    {
+                        "name": "Harbour Club (海港會)",
+                        "category_id": str(sample_activity_category.id),
+                        "age_min": 5,
+                        "age_max": 12,
+                    }
+                ],
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=True,
+    )
+    activity_rows = [item for item in results if item["type"] == "activities"]
+    assert activity_rows[0]["status"] == "created"
+    names = set(
+        db_session.scalars(
+            select(Activity.name).where(Activity.org_id == sample_organization.id)
+        ).all()
+    )
+    assert names == {"Harbour Club", "Harbour Club (海港會)"}
 
 
 def test_first_import_links_activity_to_single_venue(

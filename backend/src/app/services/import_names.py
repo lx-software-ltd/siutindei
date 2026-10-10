@@ -49,6 +49,49 @@ def prepare_imported_organization(
     )
 
 
+def activity_name_translations(body: dict[str, Any]) -> dict[str, Any]:
+    """Name translations plus a blank-safe Chinese name from the file."""
+    translations = dict(body.get("name_translations") or {})
+    name_zh = body.get("name_zh")
+    if (
+        isinstance(name_zh, str)
+        and name_zh.strip()
+        and not str(translations.get("zh") or "").strip()
+    ):
+        translations["zh"] = name_zh.strip()
+    return translations
+
+
+def find_cleaned_activity(
+    session: Session,
+    repo: ActivityRepository,
+    org: Organization,
+    name: str,
+    translations: dict[str, Any] | None = None,
+):
+    """Find an activity by its cleaned name when the raw name missed.
+
+    Used only when the import is leaving existing rows unchanged. An
+    approved organization does not clean activity names on the way in,
+    so a later file can still carry the spelling from before a name fix.
+    ``translations`` is the file's map, including a Chinese name, so the
+    lookup uses the same rules as a normal import.
+    """
+    if org.review_status == "pending_review":
+        return None
+    result = sanitize_name(
+        name,
+        translations or {},
+        load_name_fix_config(session),
+    )
+    if result.name.casefold() == name.casefold():
+        return None
+    return repo.find_by_org_and_name_case_insensitive(
+        coerce_uuid(org.id),
+        result.name,
+    )
+
+
 def prepare_imported_activity(
     session: Session,
     repo: ActivityRepository,

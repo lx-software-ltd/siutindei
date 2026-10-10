@@ -24,6 +24,7 @@ export interface AdminImportRequest {
   object_key: string;
   dry_run?: boolean;
   retry_failed?: boolean;
+  allow_updates?: boolean;
 }
 
 export interface AdminImportError {

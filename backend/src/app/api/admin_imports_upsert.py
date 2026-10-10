@@ -27,16 +27,15 @@ from app.api.admin_imports_lookups import (
     resolve_activity_category_fields,
     resolve_location_area_fields,
 )
-from app.api.admin_imports_venues import (
-    LINKED_VENUE_WARNING,
-    link_activity_to_venue,
-)
+from app.api.admin_imports_venues import link_activity_to_venue
 from app.api.admin_imports_utils import (
     parse_timezone,
     persist_import_change,
 )
 from app.api.admin_resource_activity import _create_activity, _update_activity
 from app.services.import_names import (
+    activity_name_translations,
+    find_cleaned_activity,
     prepare_imported_activity,
     prepare_imported_organization,
 )
@@ -338,22 +337,35 @@ def upsert_activity(
         raise ValidationError("name is required", field="name")
 
     body = filter_fields(raw_activity, ALLOWED_ACTIVITY_FIELDS)
-    resolve_activity_category_fields(session, body)
-    capture_name = body.pop("_capture_category_name", None)
+    translations = activity_name_translations(body)
     body.pop("pricing", None)
     body.pop("schedules", None)
     body.pop("vetting_note", None)
     body.pop("name_zh", None)
     body.pop("description_zh", None)
+    if translations:
+        body["name_translations"] = translations
     existing = prepare_imported_activity(session, repo, org, name, body, warnings)
+    if existing is None and not allow_updates:
+        try:
+            existing = find_cleaned_activity(
+                session,
+                repo,
+                org,
+                name,
+                translations,
+            )
+        except MultipleResultsFound as exc:
+            raise ValidationError(
+                "Multiple activities found",
+                field="name",
+            ) from exc
 
     if existing and not allow_updates:
-        wrote_link = link_activity_to_venue(session, existing, venue)
-        if wrote_link:
-            if warnings is not None:
-                warnings.append(LINKED_VENUE_WARNING)
-            persist_import_change(session, dry_run=dry_run)
         return existing, "skipped"
+
+    resolve_activity_category_fields(session, body)
+    capture_name = body.pop("_capture_category_name", None)
 
     if existing:
         updated = _update_activity(repo, existing, body)
