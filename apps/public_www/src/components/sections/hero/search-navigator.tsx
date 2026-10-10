@@ -15,7 +15,11 @@ import {
   toggleActivityTypeId,
   type SearchFiltersState,
 } from '@/lib/activities/search-params';
-import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
+import {
+  homeWizardChoices,
+  labelForLocale,
+  neighbourhoodsForRegion,
+} from '@/lib/home-wizard/choices';
 import {
   ALL_HONG_KONG_ICON_SRC,
   REGION_ROW_ORDER,
@@ -25,13 +29,34 @@ import {
 } from '@/lib/home-wizard/choice-icons';
 import { localizePath } from '@/lib/locale-routing';
 
-type NavigatorStep = 'location' | 'age' | 'activity';
+function regionLabel(regionId: string | null, locale: Locale): string {
+  const region = homeWizardChoices.regions.find((entry) => entry.id === regionId);
+  return region ? labelForLocale(region.labels, locale) : '';
+}
 
-const STEP_ORDER = ['location', 'age', 'activity'] as const;
+function neighbourhoodButtonClass(isSelected: boolean): string {
+  const selected = isSelected
+    ? 'border-accent-500 bg-brand-50'
+    : 'border-brand-100 bg-white hover:border-brand-200';
+  return (
+    'rounded-full border px-4 py-2 text-sm font-semibold text-ink-900 ' +
+    selected
+  );
+}
+
+type NavigatorStep = 'location' | 'neighbourhood' | 'age' | 'activity';
+
+function stepsFor(regionId: string | null): readonly NavigatorStep[] {
+  if (regionId) {
+    return ['location', 'neighbourhood', 'age', 'activity'];
+  }
+  return ['location', 'age', 'activity'];
+}
 
 const EMPTY_NAVIGATOR_FILTERS: SearchFiltersState = {
   ageGroupId: null,
   regionId: null,
+  neighbourhoodId: null,
   activityTypeIds: [],
   textQuery: '',
 };
@@ -41,8 +66,8 @@ interface SearchNavigatorProps {
   readonly copy: SiteContent['smallWorld']['navigator'];
 }
 
-function stepIndex(step: NavigatorStep): number {
-  return STEP_ORDER.indexOf(step) + 1;
+function stepIndex(step: NavigatorStep, regionId: string | null): number {
+  return stepsFor(regionId).indexOf(step) + 1;
 }
 
 export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
@@ -72,8 +97,17 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   }
 
   function selectLocation(regionId: string | null) {
-    setDraft((current) => ({ ...current, regionId }));
+    setDraft((current) => ({
+      ...current,
+      regionId,
+      neighbourhoodId: null,
+    }));
     setHasSelectedLocation(true);
+    setStep(regionId ? 'neighbourhood' : 'age');
+  }
+
+  function selectNeighbourhood(neighbourhoodId: string | null) {
+    setDraft((current) => ({ ...current, neighbourhoodId }));
     setStep('age');
   }
 
@@ -87,12 +121,10 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   }
 
   function goBack() {
-    if (step === 'activity') {
-      setStep('age');
-      return;
-    }
-    if (step === 'age') {
-      setStep('location');
+    const steps = stepsFor(draft.regionId);
+    const index = steps.indexOf(step);
+    if (index > 0) {
+      setStep(steps[index - 1]);
     }
   }
 
@@ -131,8 +163,8 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
       >
         <p className="mb-4 text-sm text-ink-500">
           {formatContentTemplate(copy.stepProgressTemplate, {
-            current: stepIndex(step),
-            total: STEP_ORDER.length,
+            current: stepIndex(step, hasSelectedLocation ? draft.regionId : null),
+            total: stepsFor(hasSelectedLocation ? draft.regionId : null).length,
           })}
         </p>
         {step === 'location' ? (
@@ -162,6 +194,38 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
                   />
                 );
               })}
+            </div>
+          </fieldset>
+        ) : null}
+        {step === 'neighbourhood' ? (
+          <fieldset>
+            <legend className="sr-only">
+              {copy.steps.neighbourhood.label}
+            </legend>
+            <div className="flex max-h-80 flex-wrap gap-2 overflow-y-auto">
+              <button
+                type="button"
+                className={neighbourhoodButtonClass(draft.neighbourhoodId == null)}
+                aria-pressed={draft.neighbourhoodId == null}
+                onClick={() => selectNeighbourhood(null)}
+              >
+                {formatContentTemplate(copy.anywhereInRegionTemplate, {
+                  region: regionLabel(draft.regionId, locale),
+                })}
+              </button>
+              {neighbourhoodsForRegion(draft.regionId).map((neighbourhood) => (
+                <button
+                  key={neighbourhood.id}
+                  type="button"
+                  className={neighbourhoodButtonClass(
+                    draft.neighbourhoodId === neighbourhood.id,
+                  )}
+                  aria-pressed={draft.neighbourhoodId === neighbourhood.id}
+                  onClick={() => selectNeighbourhood(neighbourhood.id)}
+                >
+                  {labelForLocale(neighbourhood.labels, locale)}
+                </button>
+              ))}
             </div>
           </fieldset>
         ) : null}

@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.db.engine import get_engine
 from app.db.models import Activity, GeographicArea, Location, Organization
+from app.services.area_assignment import resolve_leaf
 from app.db.models.location_fix import LocationScanRun
 from app.services.category_suggestions.settings import (
     get_settings,
@@ -166,12 +167,15 @@ def _store_organizations(session, scan_run_id, org_ids, by_id) -> None:
         address = str(item.get("address") or "").strip()
         if kind == "create_location" and area is not None and address:
             coords = geocode_address(address)
+            lat = None if coords is None else coords[0]
+            lng = None if coords is None else coords[1]
+            area = resolve_leaf(session, area, lat, lng) or area
             proposed = {
                 "address": address,
                 "area_id": str(area.id),
                 "area_name": area.name,
-                "lat": None if coords is None else coords[0],
-                "lng": None if coords is None else coords[1],
+                "lat": lat,
+                "lng": lng,
             }
             upsert_proposal(
                 session,
@@ -392,19 +396,46 @@ def _finish_batch(
 
 
 def _areas_by_label(session: Session) -> dict[str, GeographicArea]:
-    rows = session.scalars(
-        select(GeographicArea).where(
-            GeographicArea.level == "district",
-            GeographicArea.active.is_(True),
-        )
-    ).all()
+    """Map a label to an area the sweep can store or snap.
+
+    A neighbourhood whose name matches its district keeps the district
+    label, so a later pin can choose among that district's neighbourhoods.
+    Every other neighbourhood label wins.
+    """
+    rows = list(
+        session.scalars(
+            select(GeographicArea).where(GeographicArea.active.is_(True))
+        ).all()
+    )
+    by_id = {area.id: area for area in rows}
     found: dict[str, GeographicArea] = {}
     for area in rows:
-        found[_label_key(area.name)] = area
-        for value in (area.name_translations or {}).values():
-            found[_label_key(value)] = area
+        if area.level == "district":
+            _index_area(found, area)
+    for area in rows:
+        if area.level != "neighbourhood":
+            continue
+        parent = by_id.get(area.parent_id)
+        if parent is not None and _label_key(area.name) == _label_key(parent.name):
+            for value in (area.name_translations or {}).values():
+                key = _label_key(value)
+                if key and key != _label_key(parent.name):
+                    found[key] = area
+            continue
+        _index_area(found, area)
+    parent_ids = {area.parent_id for area in rows if area.parent_id}
+    for area in rows:
+        if area.id in parent_ids or area.level in {"district", "neighbourhood"}:
+            continue
+        _index_area(found, area)
     found.pop("", None)
     return found
+
+
+def _index_area(found: dict[str, GeographicArea], area: GeographicArea) -> None:
+    found[_label_key(area.name)] = area
+    for value in (area.name_translations or {}).values():
+        found[_label_key(value)] = area
 
 
 def _label_key(value: Any) -> str:

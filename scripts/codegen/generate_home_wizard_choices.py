@@ -62,6 +62,7 @@ def build_home_wizard_choices(
         "activityTypes": types,
         "ageGroups": existing.get("ageGroups") or [],
         "regions": existing.get("regions") or [],
+        "neighbourhoods": existing.get("neighbourhoods") or [],
     }
 
 
@@ -108,7 +109,7 @@ def rows_from_category_export(payload: Any) -> list[dict[str, Any]]:
     """Accept an admin category list or ``{"items": [...]}`` export."""
     items = payload.get("items") if isinstance(payload, dict) else payload
     if not isinstance(items, list):
-        raise ValueError("category export must be a list or an items object")
+        raise TypeError("category export must be a list or an items object")
     return [row for row in items if isinstance(row, dict)]
 
 

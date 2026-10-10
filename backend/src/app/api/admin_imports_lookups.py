@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -26,6 +27,8 @@ from app.db.models import ActivityCategory, ActivitySchedule, GeographicArea
 from app.db.models import Location, Organization
 from app.db.repositories import LocationRepository
 from app.exceptions import ValidationError
+from app.services.area_assignment import is_leaf
+from app.services.area_assignment import resolve_leaf
 
 ALLOWED_ENTRY_FIELDS = {"day_of_week", "start_time", "end_time"}
 
@@ -74,11 +77,14 @@ def resolve_location_area_fields(
     body: dict[str, Any],
 ) -> None:
     area_name = body.pop("area_name", None)
+    lat = _optional_float(body.get("lat"))
+    lng = _optional_float(body.get("lng"))
     if body.get("area_id") is not None:
+        body["area_id"] = snap_area_id(session, body.get("area_id"), lat, lng)
         return
     if area_name is None:
         return
-    body["area_id"] = lookup_district_area_id(session, area_name)
+    body["area_id"] = lookup_district_area_id(session, area_name, lat, lng)
 
 
 def resolve_activity_category_fields(
@@ -107,19 +113,69 @@ def resolve_activity_category_fields(
     body["category_id"] = str(resolution.category_id)
 
 
-def lookup_district_area_id(session: Session, area_name: Any) -> str:
-    if not isinstance(area_name, str) or not area_name:
+def lookup_district_area_id(
+    session: Session,
+    area_name: Any,
+    lat: float | None = None,
+    lng: float | None = None,
+) -> str:
+    """Resolve a location area by name.
+
+    A name that still has smaller areas is snapped to the nearest
+    neighbourhood using the pin. A childless district is returned as-is.
+    """
+    if not isinstance(area_name, str) or not area_name.strip():
         raise ValidationError("unknown area_name", field="area_name")
-    query = (
-        select(GeographicArea.id)
-        .where(GeographicArea.name == area_name)
-        .where(GeographicArea.level == "district")
-        .limit(2)
+    matches = list(
+        session.scalars(
+            select(GeographicArea).where(GeographicArea.name == area_name.strip())
+        ).all()
     )
-    matches = session.execute(query).scalars().all()
-    if len(matches) != 1:
+    if not matches:
         raise ValidationError("unknown area_name", field="area_name")
-    return str(matches[0])
+    parents = [area for area in matches if not is_leaf(session, area.id)]
+    leaves = [area for area in matches if is_leaf(session, area.id)]
+    if len(parents) == 1:
+        resolved = resolve_leaf(session, parents[0], lat, lng)
+        if resolved is not None and is_leaf(session, resolved.id):
+            return str(resolved.id)
+    if len(parents) == 0 and len(leaves) == 1:
+        return str(leaves[0].id)
+    raise ValidationError("unknown area_name", field="area_name")
+
+
+def snap_area_id(
+    session: Session,
+    area_id: Any,
+    lat: float | None = None,
+    lng: float | None = None,
+) -> str:
+    """Keep a leaf id, or the nearest neighbourhood under a larger area."""
+    if not isinstance(area_id, str) or not area_id.strip():
+        raise ValidationError("area_id not found", field="area_id")
+    try:
+        parsed = UUID(area_id)
+    except ValueError as exc:
+        raise ValidationError("area_id not found", field="area_id") from exc
+    area = session.get(GeographicArea, parsed)
+    if area is None:
+        raise ValidationError("area_id not found", field="area_id")
+    resolved = resolve_leaf(session, area, lat, lng)
+    if resolved is None or not is_leaf(session, resolved.id):
+        raise ValidationError(
+            "area_id must be a neighbourhood or other area with no smaller areas",
+            field="area_id",
+        )
+    return str(resolved.id)
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def lookup_category_id(session: Session, category_name: Any) -> str:

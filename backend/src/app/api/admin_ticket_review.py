@@ -22,6 +22,7 @@ from app.db.repositories import (
     OrganizationRepository,
 )
 from app.exceptions import NotFoundError, ValidationError
+from app.services.area_assignment import resolve_leaf
 from app.utils.feedback import feedback_stars_per_approval
 from app.utils.logging import get_logger
 
@@ -200,6 +201,14 @@ def _approve_location_creation(
             None,
         )
 
+    if matched_area is None:
+        return
+    matched_area = resolve_leaf(
+        session,
+        matched_area,
+        None if ticket.suggested_lat is None else float(ticket.suggested_lat),
+        None if ticket.suggested_lng is None else float(ticket.suggested_lng),
+    )
     if matched_area is None:
         return
 

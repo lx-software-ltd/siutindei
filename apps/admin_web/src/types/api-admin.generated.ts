@@ -6219,9 +6219,10 @@ export interface components {
             /** Format: uuid */
             area_id: string;
             /**
-             * @description Alternative to area_id. Resolved by exact match on
-             *     geographic_areas.name where level is district. area_id wins
-             *     when both are set.
+             * @description Alternative to area_id. Resolved by exact match on a leaf
+             *     geographic_areas.name. In Hong Kong that is a neighbourhood.
+             *     A district name matches only when it has no neighbourhoods.
+             *     area_id wins when both are set.
              */
             area_name?: string;
             lat?: number;
@@ -7371,12 +7372,22 @@ export interface components {
             name: string;
             name_translations: components["schemas"]["TranslationMap"];
             /** @enum {string} */
-            level: "country" | "region" | "city" | "district";
+            level: "country" | "region" | "city" | "district" | "neighbourhood";
             /** @description ISO 3166-1 alpha-2 for countries (HK, SG, AE) */
             code?: string | null;
             /** @description Whether this area (and its children) is available */
             active: boolean;
             display_order: number;
+            /**
+             * Format: double
+             * @description Centroid latitude. Set for neighbourhoods.
+             */
+            lat?: number | null;
+            /**
+             * Format: double
+             * @description Centroid longitude. Set for neighbourhoods.
+             */
+            lng?: number | null;
             /** @description Nested child areas (populated in tree responses) */
             children?: components["schemas"]["GeographicArea"][];
         };

@@ -44,6 +44,7 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
 
   const ageParam = searchParams.get('age');
   const regionParam = searchParams.get('region');
+  const neighbourhoodParam = searchParams.get('neighbourhood');
   const typesParam = searchParams.get('types');
   const queryParam = searchParams.get('q');
   const urlFilters = useMemo(() => {
@@ -54,6 +55,9 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
     if (regionParam) {
       params.set('region', regionParam);
     }
+    if (neighbourhoodParam) {
+      params.set('neighbourhood', neighbourhoodParam);
+    }
     if (typesParam) {
       params.set('types', typesParam);
     }
@@ -61,7 +65,7 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
       params.set('q', queryParam);
     }
     return parseSearchFiltersFromQuery(params);
-  }, [ageParam, queryParam, regionParam, typesParam]);
+  }, [ageParam, neighbourhoodParam, queryParam, regionParam, typesParam]);
   const urlViewMode = useMemo(
     () => parseSearchViewMode(searchParams),
     [searchParams],

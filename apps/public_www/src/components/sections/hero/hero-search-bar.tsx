@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import type { Locale, NavbarContent } from '@/content';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
-import { buildSearchQueryString } from '@/lib/activities/search-params';
+import {
+  buildSearchQueryString,
+  placeLabelForFilters,
+} from '@/lib/activities/search-params';
 import { HERO_SEARCH_SENTINEL_ATTR } from '@/lib/home-header-reveal';
 import { localizePath } from '@/lib/locale-routing';
 
@@ -45,16 +48,11 @@ export function HeroSearchBar({ locale, labels }: HeroSearchBarProps) {
   const router = useRouter();
   const { filters, openSearch } = useSearchContext();
 
-  const region = homeWizardChoices.regions.find(
-    (entry) => entry.id === filters.regionId,
-  );
   const ageGroup = homeWizardChoices.ageGroups.find(
     (entry) => entry.id === filters.ageGroupId,
   );
 
-  const whereLabel = region
-    ? labelForLocale(region.labels, locale)
-    : labels.anywhere;
+  const whereLabel = placeLabelForFilters(filters, locale) ?? labels.anywhere;
   const ageLabel = ageGroup
     ? labelForLocale(ageGroup.labels, locale)
     : labels.anyAge;

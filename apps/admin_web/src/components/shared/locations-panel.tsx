@@ -154,11 +154,15 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
 
   const areaNameById = useMemo(() => {
     const map = new Map<string, string>();
-    function walkTree(nodes: GeographicAreaNode[]) {
+    function walkTree(nodes: GeographicAreaNode[], parent?: GeographicAreaNode) {
       for (const node of nodes) {
-        map.set(node.id, node.name);
+        const label =
+          parent && parent.level === 'district'
+            ? `${node.name}, ${parent.name}`
+            : node.name;
+        map.set(node.id, label);
         if (node.children) {
-          walkTree(node.children);
+          walkTree(node.children, node);
         }
       }
     }
@@ -213,7 +217,10 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   ]);
 
   const handleAddressSelect = (selection: AddressSelection) => {
-    const match = matchNominatimResult(selection.raw);
+    const match = matchNominatimResult(selection.raw, {
+      lat: selection.lat,
+      lng: selection.lng,
+    });
     panel.setFormState((prev) => ({
       ...prev,
       address: selection.displayName,

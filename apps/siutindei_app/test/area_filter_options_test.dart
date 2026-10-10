@@ -45,7 +45,8 @@ void main() {
     expect(options, isNotEmpty);
     expect(
       options.map((o) => o.id),
-      contains('a1111111-1111-1111-1111-111111111101'),
+      isNot(contains('a1111111-1111-1111-1111-111111111101')),
     );
+    expect(options.length, greaterThan(18));
   });
 }
