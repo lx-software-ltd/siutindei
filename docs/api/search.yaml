@@ -51,7 +51,7 @@ paths:
           required: false
           description: |
             Filter by geographic area UUID. Matches activities in the given area
-            or any descendant area (for example a region or district).
+            or any descendant area (for example a region, district, or neighbourhood).
           schema:
             type: string
             format: uuid

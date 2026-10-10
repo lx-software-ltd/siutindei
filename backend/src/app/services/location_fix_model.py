@@ -392,14 +392,16 @@ def _finish_batch(
 
 
 def _areas_by_label(session: Session) -> dict[str, GeographicArea]:
+    """Map a label to a leaf area. Neighbourhoods win over a same-named district."""
     rows = session.scalars(
-        select(GeographicArea).where(
-            GeographicArea.level == "district",
-            GeographicArea.active.is_(True),
-        )
+        select(GeographicArea).where(GeographicArea.active.is_(True))
     ).all()
+    parent_ids = {area.parent_id for area in rows if area.parent_id}
+    leaves = [area for area in rows if area.id not in parent_ids]
+    ordered = [area for area in leaves if area.level != "neighbourhood"]
+    ordered.extend(area for area in leaves if area.level == "neighbourhood")
     found: dict[str, GeographicArea] = {}
-    for area in rows:
+    for area in ordered:
         found[_label_key(area.name)] = area
         for value in (area.name_translations or {}).values():
             found[_label_key(value)] = area

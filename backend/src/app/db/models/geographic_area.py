@@ -13,7 +13,11 @@ from app.db.base import Base
 
 
 class GeographicArea(Base):
-    """Hierarchical geographic area (country > region > city > district)."""
+    """Hierarchical geographic area.
+
+    Hong Kong is country, region, district, then neighbourhood.
+    A location stores a leaf: a neighbourhood where those exist.
+    """
 
     __tablename__ = "geographic_areas"
 
@@ -39,7 +43,7 @@ class GeographicArea(Base):
     level: Mapped[str] = mapped_column(
         Text(),
         nullable=False,
-        comment="country | region | city | district",
+        comment="country | region | city | district | neighbourhood",
     )
     code: Mapped[Optional[str]] = mapped_column(
         Text(),

@@ -14,6 +14,7 @@ from app.db.models import Activity, ActivityLocation, GeographicArea, Location
 from app.db.models.location_fix import LocationFixProposal
 from app.db.repositories import LocationRepository
 from app.exceptions import NotFoundError, ValidationError
+from app.services.area_assignment import is_leaf
 from app.services.location_fix_districts import in_hong_kong_bbox, pin_consistency
 from app.services.location_fix_geocode import geocode_address
 from app.services.location_fix_query import pending_row
@@ -109,8 +110,11 @@ def _apply_update(
     chosen_area = str(area_id or "").strip()
     if chosen_area:
         area = session.get(GeographicArea, UUID(chosen_area))
-        if area is None:
-            raise ValidationError("area_id not found", field="area_id")
+        if area is None or not is_leaf(session, area.id):
+            raise ValidationError(
+                "area_id must be a neighbourhood or other area with no smaller areas",
+                field="area_id",
+            )
         location.area_id = area.id
     location.lat = Decimal(str(lat)).quantize(_PIN)
     location.lng = Decimal(str(lng)).quantize(_PIN)

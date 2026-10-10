@@ -18,15 +18,16 @@ _MAX_DESCRIPTION = 300
 def build_organization_prompt(
     session: Session, organizations: list[Organization]
 ) -> tuple[str, str]:
-    districts = _districts(session)
+    areas = _area_choices(session)
+    label = "neighbourhood" if areas and "district" in areas[0] else "district"
     system = (
         "You propose a venue address for organizations in Hong Kong. "
         "Reply with one JSON object only. Use an area_name from the "
-        "district list exactly. If the text does not support an address, "
-        "set kind to unresolved. Do not invent a district."
+        f"{label} list exactly. If the text does not support an address, "
+        "set kind to unresolved. Do not invent an area."
     )
     user = {
-        "districts": districts,
+        "areas": areas,
         "organizations": [
             {
                 "entity_id": str(org.id),
@@ -92,14 +93,45 @@ def translation(values: dict[str, str] | None, language: str) -> str:
     return str(values.get(language) or "")
 
 
-def _districts(session: Session) -> list[dict[str, str]]:
+def _area_choices(session: Session) -> list[dict[str, str]]:
+    """Neighbourhoods when Hong Kong has them, otherwise leaf districts."""
     rows = session.scalars(
         select(GeographicArea)
-        .where(GeographicArea.level == "district", GeographicArea.active.is_(True))
+        .where(
+            GeographicArea.level == "neighbourhood",
+            GeographicArea.active.is_(True),
+        )
         .order_by(GeographicArea.name)
     ).all()
+    if not rows:
+        districts = session.scalars(
+            select(GeographicArea)
+            .where(GeographicArea.level == "district", GeographicArea.active.is_(True))
+            .order_by(GeographicArea.name)
+        ).all()
+        return [
+            {
+                "name": area.name,
+                "name_zh": translation(area.name_translations, "zh"),
+            }
+            for area in districts
+        ]
+    parent_ids = {area.parent_id for area in rows if area.parent_id}
+    parents = {}
+    if parent_ids:
+        parents = {
+            parent.id: parent.name
+            for parent in session.scalars(
+                select(GeographicArea).where(GeographicArea.id.in_(parent_ids))
+            ).all()
+        }
     return [
-        {"name": area.name, "name_zh": translation(area.name_translations, "zh")}
+        {
+            "name": area.name,
+            "name_zh": translation(area.name_translations, "zh-HK")
+            or translation(area.name_translations, "zh"),
+            "district": parents.get(area.parent_id, ""),
+        }
         for area in rows
     ]
 

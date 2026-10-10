@@ -239,18 +239,21 @@ row. `location_scan_runs` and `location_fix_proposals` stay empty. No
 
 ## Table: geographic_areas
 
-Purpose: Hierarchical lookup of valid geographic areas (country > region > city > district).
+Purpose: Hierarchical lookup of valid geographic areas
+(country > region > city > district > neighbourhood).
 
 Hong Kong uses four `level=region` nodes (Hong Kong Island, Kowloon, New Territories,
-Islands) between the `HK` country row and the 18 district rows. Home wizard region
-choices reference these region UUIDs; search matches any descendant district.
+Islands) between the `HK` country row and the 18 district rows. Each district has
+`level=neighbourhood` children. A Hong Kong location stores a neighbourhood.
+Search still matches an area and any descendant. Home wizard region choices
+reference the region UUIDs; neighbourhood choices reference the neighbourhood UUIDs.
 
 Columns:
 - `id` (UUID, PK, default `gen_random_uuid()`)
 - `parent_id` (UUID, FK -> geographic_areas.id, cascade delete, nullable for countries)
 - `name` (text, required)
 - `name_translations` (jsonb, default `{}`) — non-English name translations
-- `level` (text, required — `country`, `region`, `city`, or `district`)
+- `level` (text, required — `country`, `region`, `city`, `district`, or `neighbourhood`)
 - `code` (text, optional — ISO 3166-1 alpha-2 for countries)
 - `active` (boolean, default true — controls country visibility)
 - `display_order` (integer, default 0)

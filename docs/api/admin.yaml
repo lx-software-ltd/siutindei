@@ -3677,9 +3677,10 @@ components:
         area_name:
           type: string
           description: |
-            Alternative to area_id. Resolved by exact match on
-            geographic_areas.name where level is district. area_id wins
-            when both are set.
+            Alternative to area_id. Resolved by exact match on a leaf
+            geographic_areas.name. In Hong Kong that is a neighbourhood.
+            A district name matches only when it has no neighbourhoods.
+            area_id wins when both are set.
         lat:
           type: number
           minimum: -90
@@ -5931,7 +5932,7 @@ components:
           $ref: '#/components/schemas/TranslationMap'
         level:
           type: string
-          enum: [country, region, city, district]
+          enum: [country, region, city, district, neighbourhood]
         code:
           type: string
           nullable: true

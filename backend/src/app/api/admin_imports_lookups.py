@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import aliased
 
 from app.api.admin_imports_catalog import (
     MANAGED_BY_PROVIDER,
@@ -104,12 +105,19 @@ def resolve_activity_category_fields(
 
 
 def lookup_district_area_id(session: Session, area_name: Any) -> str:
+    """Resolve a location area by name.
+
+    Hong Kong names match a neighbourhood. A district name matches only
+    when that district has no neighbourhoods under it.
+    """
     if not isinstance(area_name, str) or not area_name:
         raise ValidationError("unknown area_name", field="area_name")
+    child = aliased(GeographicArea)
     query = (
         select(GeographicArea.id)
+        .outerjoin(child, child.parent_id == GeographicArea.id)
         .where(GeographicArea.name == area_name)
-        .where(GeographicArea.level == "district")
+        .where(child.id.is_(None))
         .limit(2)
     )
     matches = session.execute(query).scalars().all()
