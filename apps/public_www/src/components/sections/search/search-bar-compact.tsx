@@ -10,6 +10,7 @@ import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 import {
   areaIdForFilters,
   buildSearchQueryString,
+  placeLabelForFilters,
   searchAgeForGroup,
 } from '@/lib/activities/search-params';
 import { localizePath } from '@/lib/locale-routing';
@@ -56,21 +57,11 @@ export function SearchBarCompact({ locale, labels }: SearchBarCompactProps) {
   const router = useRouter();
   const { filters, openSearch } = useSearchContext();
 
-  const region = homeWizardChoices.regions.find(
-    (entry) => entry.id === filters.regionId,
-  );
-  const neighbourhood = homeWizardChoices.neighbourhoods.find(
-    (entry) => entry.id === filters.neighbourhoodId,
-  );
   const ageGroup = homeWizardChoices.ageGroups.find(
     (entry) => entry.id === filters.ageGroupId,
   );
 
-  const whereLabel = neighbourhood
-    ? labelForLocale(neighbourhood.labels, locale)
-    : region
-      ? labelForLocale(region.labels, locale)
-      : labels.anywhere;
+  const whereLabel = placeLabelForFilters(filters, locale) ?? labels.anywhere;
   const ageLabel = ageGroup
     ? labelForLocale(ageGroup.labels, locale)
     : labels.anyAge;

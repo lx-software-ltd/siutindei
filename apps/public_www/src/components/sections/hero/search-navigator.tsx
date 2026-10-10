@@ -56,6 +56,7 @@ function stepsFor(regionId: string | null): readonly NavigatorStep[] {
 const EMPTY_NAVIGATOR_FILTERS: SearchFiltersState = {
   ageGroupId: null,
   regionId: null,
+  neighbourhoodId: null,
   activityTypeIds: [],
   textQuery: '',
 };

@@ -8,7 +8,9 @@ function area(
   name: string,
   level: GeographicAreaNode['level'],
   children: GeographicAreaNode[] = [],
-  code: string | null = null
+  code: string | null = null,
+  lat: number | null = null,
+  lng: number | null = null
 ): GeographicAreaNode {
   return {
     id,
@@ -19,11 +21,13 @@ function area(
     code,
     active: true,
     display_order: 1,
+    lat,
+    lng,
     children,
   };
 }
 
-const causewayBay = area('hood-cb', 'Causeway Bay', 'neighbourhood');
+const causewayBay = area('hood-cb', 'Causeway Bay', 'neighbourhood', [], null, 22.2803, 114.1846);
 const wanChai = area('district-wc', 'Wan Chai', 'district', [causewayBay]);
 const island = area('region-hki', 'Hong Kong Island', 'region', [wanChai]);
 const hongKong = area('country-hk', 'Hong Kong', 'country', [island], 'HK');
@@ -46,6 +50,20 @@ describe('matchNominatimAddress', () => {
       'Wan Chai',
       'Causeway Bay',
     ]);
+  });
+
+  it('snaps a district match to the nearest neighbourhood when a pin is set', () => {
+    const match = matchNominatimAddress(
+      [hongKong],
+      {
+        country_code: 'hk',
+        state: 'Hong Kong Island',
+        city_district: 'Wan Chai',
+      },
+      { lat: 22.2803, lng: 114.1846 }
+    );
+
+    expect(match?.areaId).toBe('hood-cb');
   });
 
   it('drops a district match when that district still has neighbourhoods', () => {

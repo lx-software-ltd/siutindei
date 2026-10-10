@@ -14,6 +14,7 @@ describe('search-params', () => {
       buildSearchQueryString({
         ageGroupId: '3-6',
         regionId: 'kowloon',
+        neighbourhoodId: null,
         activityTypeIds: ['early-years', 'learning'],
         textQuery: 'music',
       }),
@@ -41,6 +42,7 @@ describe('search-params', () => {
       {
         ageGroupId: '3-6',
         regionId: null,
+        neighbourhoodId: null,
         activityTypeIds: [],
         textQuery: '',
       },
@@ -59,6 +61,7 @@ describe('search-params', () => {
     const base = {
       ageGroupId: '3-6',
       regionId: 'kowloon',
+      neighbourhoodId: null,
       activityTypeIds: [] as const,
       textQuery: 'music',
     };

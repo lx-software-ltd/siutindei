@@ -106,6 +106,8 @@ export interface GeographicAreaNode {
   code: string | null;
   active: boolean;
   display_order: number;
+  lat?: number | null;
+  lng?: number | null;
   children: GeographicAreaNode[];
 }
 

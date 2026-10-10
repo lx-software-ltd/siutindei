@@ -70,6 +70,7 @@ class WizardNeighbourhoodOption {
     required this.regionId,
     required this.areaId,
     required this.labels,
+    this.district = '',
   });
 
   factory WizardNeighbourhoodOption.fromJson(Map<String, dynamic> json) {
@@ -77,6 +78,7 @@ class WizardNeighbourhoodOption {
       id: json['id'] as String,
       regionId: json['regionId'] as String? ?? '',
       areaId: json['areaId'] as String,
+      district: json['district'] as String? ?? '',
       labels: WizardLabels.fromJson(json['labels'] as Map<String, dynamic>),
     );
   }
@@ -84,6 +86,7 @@ class WizardNeighbourhoodOption {
   final String id;
   final String regionId;
   final String areaId;
+  final String district;
   final WizardLabels labels;
 }
 

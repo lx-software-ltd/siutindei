@@ -25,6 +25,11 @@ export interface NominatimAreaMatch {
   chain: GeographicAreaNode[];
 }
 
+export interface AreaPin {
+  lat: number;
+  lng: number;
+}
+
 function areaNameMatches(name: string, term: string): boolean {
   const normalized = name.toLowerCase();
   return (
@@ -34,15 +39,54 @@ function areaNameMatches(name: string, term: string): boolean {
   );
 }
 
+function distanceKm(
+  lat: number,
+  lng: number,
+  otherLat: number,
+  otherLng: number
+): number {
+  const mid = ((lat + otherLat) / 2) * (Math.PI / 180);
+  const north = (lat - otherLat) * 110.574;
+  const east = (lng - otherLng) * 111.32 * Math.cos(mid);
+  return Math.hypot(north, east);
+}
+
+function nearestLeaf(
+  root: GeographicAreaNode,
+  pin: AreaPin
+): GeographicAreaNode[] | null {
+  const best: { chain: GeographicAreaNode[]; distance: number }[] = [];
+
+  function walk(node: GeographicAreaNode, chain: GeographicAreaNode[]) {
+    if (node.children.length === 0) {
+      if (node.lat == null || node.lng == null) return;
+      const distance = distanceKm(node.lat, node.lng, pin.lat, pin.lng);
+      const current = best[0];
+      if (current === undefined || distance < current.distance) {
+        best[0] = { chain, distance };
+      }
+      return;
+    }
+    for (const child of node.children) {
+      walk(child, [...chain, child]);
+    }
+  }
+
+  walk(root, [root]);
+  return best[0]?.chain ?? null;
+}
+
 /**
  * Match a Nominatim address to a leaf area.
  *
- * A district that still has neighbourhoods is not a location target, so
- * the match is dropped unless the walk reaches a childless area.
+ * A district that still has neighbourhoods is not a location target.
+ * When the walk stops on that district, a map pin selects the nearest
+ * neighbourhood that has a centroid.
  */
 export function matchNominatimAddress(
   tree: GeographicAreaNode[],
-  address: NominatimAddress
+  address: NominatimAddress,
+  pin?: AreaPin | null
 ): NominatimAreaMatch | null {
   if (!address.country_code) return null;
 
@@ -77,7 +121,13 @@ export function matchNominatimAddress(
     current = match;
   }
 
-  if (current.children.length > 0) return null;
+  if (current.children.length > 0) {
+    if (!pin) return null;
+    const snapped = nearestLeaf(current, pin);
+    if (!snapped || snapped.length === 0) return null;
+    const leaf = snapped[snapped.length - 1];
+    return { areaId: leaf.id, chain: [...chain.slice(0, -1), ...snapped] };
+  }
   return { areaId: current.id, chain };
 }
 
@@ -125,8 +175,8 @@ export function useGeographicAreas() {
   }, [tree]);
 
   const matchNominatimResult = useCallback(
-    (address: NominatimAddress): NominatimAreaMatch | null =>
-      matchNominatimAddress(tree, address),
+    (address: NominatimAddress, pin?: AreaPin | null): NominatimAreaMatch | null =>
+      matchNominatimAddress(tree, address, pin),
     [tree]
   );
 

@@ -1,11 +1,12 @@
-import { homeWizardChoices } from '@/lib/home-wizard/choices';
+import type { Locale } from '@/content';
+import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 
 export type SearchViewMode = 'list' | 'map';
 
 export interface SearchFiltersState {
   readonly ageGroupId: string | null;
   readonly regionId: string | null;
-  readonly neighbourhoodId?: string | null;
+  readonly neighbourhoodId: string | null;
   readonly activityTypeIds: readonly string[];
   readonly textQuery: string;
 }
@@ -13,9 +14,27 @@ export interface SearchFiltersState {
 export const DEFAULT_SEARCH_FILTERS: SearchFiltersState = {
   ageGroupId: homeWizardChoices.ageGroups[1]?.id ?? null,
   regionId: null,
+  neighbourhoodId: null,
   activityTypeIds: [],
   textQuery: '',
 };
+
+export function placeLabelForFilters(
+  filters: SearchFiltersState,
+  locale: Locale,
+): string | null {
+  const neighbourhood = homeWizardChoices.neighbourhoods.find(
+    (entry) =>
+      entry.id === filters.neighbourhoodId && entry.regionId === filters.regionId,
+  );
+  if (neighbourhood) {
+    return labelForLocale(neighbourhood.labels, locale);
+  }
+  const region = homeWizardChoices.regions.find(
+    (entry) => entry.id === filters.regionId,
+  );
+  return region ? labelForLocale(region.labels, locale) : null;
+}
 
 export function searchAgeForGroup(ageGroupId: string | null): number | undefined {
   if (!ageGroupId) {

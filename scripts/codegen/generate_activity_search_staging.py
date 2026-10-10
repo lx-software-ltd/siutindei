@@ -14,7 +14,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend" / "src"))
 
-from app.data.hk_neighbourhoods import neighbourhoods_for
+from app.data.hk_neighbourhoods import NEIGHBOURHOODS, neighbourhoods_for
 
 OUTPUT = ROOT / "shared" / "fixtures" / "activity_search_staging.json"
 
@@ -137,13 +137,14 @@ def _build_item(
     day: int,
     start: int,
     end: int,
+    hood_index: int,
 ) -> dict[str, Any]:
     hoods = neighbourhoods_for(district_name)
-    hood = hoods[variant % len(hoods)]
+    hood = hoods[hood_index % len(hoods)]
     cell_key = f"{cat_id}:{age_key}:{district_name}:{pricing_type}:{variant}"
     activity_id = _uuid(f"siutindei.staging.activity.{cell_key}")
     org_id = _uuid(f"siutindei.staging.org.{cat_id}:{district_name}")
-    location_id = _uuid(f"siutindei.staging.location.{district_name}")
+    location_id = _uuid(f"siutindei.staging.location.{district_name}.{hood.name}")
     schedule_id = _uuid(f"siutindei.staging.schedule.{cell_key}")
 
     title = (
@@ -186,8 +187,8 @@ def _build_item(
             "area_id": str(hood.id),
             "region_area_id": region_id,
             "address": f"1 Example Road, {hood.name}, {district_name}, Hong Kong",
-            "lat": "22.3000",
-            "lng": "114.1700",
+            "lat": f"{hood.lat:.4f}",
+            "lng": f"{hood.lng:.4f}",
         },
         "pricing": {
             "pricing_type": pricing_type,
@@ -221,11 +222,14 @@ def _build_item(
 
 def generate() -> dict[str, Any]:
     items: list[dict[str, Any]] = []
+    hood_counts: dict[str, int] = {}
     for cat_id, cat_label in CATEGORIES:
         for age_key, _search_age, age_min, age_max in AGE_GROUPS:
             for district_name, region_id in DISTRICTS:
                 for pricing_type, pricing_label, amount, sessions in PRICING_TYPES:
                     for variant, (day, start, end) in enumerate(SCHEDULE_VARIANTS):
+                        hood_index = hood_counts.get(district_name, 0)
+                        hood_counts[district_name] = hood_index + 1
                         items.append(
                             _build_item(
                                 cat_id=cat_id,
@@ -243,6 +247,7 @@ def generate() -> dict[str, Any]:
                                 day=day,
                                 start=start,
                                 end=end,
+                                hood_index=hood_index,
                             )
                         )
 
@@ -257,6 +262,10 @@ def generate() -> dict[str, Any]:
         raise RuntimeError(f"Expected {expected} items, got {len(items)}")
     if len(items) < 3000:
         raise RuntimeError(f"Item count {len(items)} is below 3000")
+    covered = {item["location"]["area_id"] for item in items}
+    missing = [item.name for item in NEIGHBOURHOODS if str(item.id) not in covered]
+    if missing:
+        raise RuntimeError(f"Neighbourhoods missing from staging: {missing}")
 
     return {
         "version": 1,
