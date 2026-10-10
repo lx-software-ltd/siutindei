@@ -92,9 +92,10 @@ def process_import_payload(
             )
 
         finish_import_batch(session, dry_run=dry_run)
-        return summary, results
     finally:
         finish_capture_batch(summary, session)
+        summary["allow_updates"] = allow_org_updates
+    return summary, results
 
 
 def _review_status_needs_warning(
@@ -179,7 +180,8 @@ def process_organization(
         return
 
     try:
-        prevalidate_activity_categories(session, raw_org)
+        if allow_updates:
+            prevalidate_activity_categories(session, raw_org)
         org, status = run_import_upsert(
             session,
             dry_run,

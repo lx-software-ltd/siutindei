@@ -34,9 +34,33 @@ test.describe('Organization review queue', () => {
     await expect(
       adminPage.getByRole('cell', { name: 'admin/imports/dry-run.json' })
     ).toBeVisible();
+    await expect(adminPage.getByText('completed · skip existing')).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'View orgs' })).toHaveCount(
-      1
+      2
     );
+  });
+
+  test('retries a skip-existing import with the stored flag', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=imports&tab=history');
+    await adminPage.getByRole('button', { name: 'Retry failed' }).click();
+    const requestPromise = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'POST' &&
+        request.url().includes('/admin/imports') &&
+        !request.url().includes('/presign')
+    );
+    await adminPage
+      .getByRole('alertdialog')
+      .getByRole('button', { name: 'Retry failed' })
+      .click();
+    const request = await requestPromise;
+    expect(request.postDataJSON()).toMatchObject({
+      object_key: 'admin/imports/skip.json',
+      retry_failed: true,
+      allow_updates: false,
+    });
   });
 
   test('filters the queue when the name is submitted', async ({ adminPage }) => {

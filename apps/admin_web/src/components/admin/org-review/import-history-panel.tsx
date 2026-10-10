@@ -42,7 +42,13 @@ function organizationSummary(item: ImportJobListItem) {
 }
 
 function modeLabel(item: ImportJobListItem) {
-  return item.dry_run ? 'Dry run' : item.status;
+  if (item.dry_run) {
+    return 'Dry run';
+  }
+  if (item.allow_updates === false) {
+    return `${item.status} · skip existing`;
+  }
+  return item.status;
 }
 
 function canRetry(item: ImportJobListItem) {
@@ -122,6 +128,7 @@ export function ImportHistoryPanel() {
       await runAdminImport({
         object_key: retryJob.object_key,
         retry_failed: true,
+        allow_updates: retryJob.allow_updates !== false,
       });
       setRetryJob(null);
       void list.refetch();

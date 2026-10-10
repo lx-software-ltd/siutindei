@@ -436,20 +436,28 @@ export interface paths {
          *     `manager_id` is never changed on update. A different
          *     `manager_id` fails that organization.
          *     When `allow_updates` is false, those existing rows are skipped
-         *     and missing children are still created. The skip happens before
-         *     `area_name` / `category_name` resolution. An activity whose
-         *     stored name is the cleaned form of the file name is treated as
-         *     the same activity. A name match owned by another manager fails
-         *     with `exists` and skips children.
-         *     After each activity upsert the single venue from this import's
-         *     `locations[]` (or the expanded flat location) is attached on
-         *     `activity_locations`. Import does not look up other venues
-         *     already on the org; Alembic `0031_link_orphan_activities`
+         *     and missing children are still created. A skipped organization
+         *     stays unchanged when `manager_id` is missing or belongs to
+         *     someone else, and its missing children are still imported. A
+         *     catalog row owned by the board manager still fails with
+         *     `managed by provider`. `area_name` and `category_name` are
+         *     resolved only for rows that will be created or updated. An
+         *     activity whose stored name is the cleaned form of the file
+         *     name, using the file's name translations, is the same activity.
+         *     A skipped activity is not joined to the imported venue. A newly
+         *     created activity still is. A new venue on a skipped organization
+         *     is still created.
+         *     After each created or updated activity the single venue from
+         *     this import's `locations[]` (or the expanded flat location) is
+         *     attached on `activity_locations`. Import does not look up other
+         *     venues already on the org; Alembic `0031_link_orphan_activities`
          *     backfills historical orphans when an org has exactly one
-         *     location. A skipped activity that gains a join reports warning
-         *     `linked existing activity to imported venue`.
-         *     The same `object_key` returns the stored job and does not run
-         *     again.
+         *     location.
+         *     The same `object_key` returns the stored job when `dry_run` and
+         *     `allow_updates` match. A different `allow_updates` runs the file
+         *     again. Jobs stored before the flag updated existing rows.
+         *     `retry_failed` without `allow_updates` uses the stored flag.
+         *     The flag is echoed on the response and stored on the job summary.
          *     When `dry_run` is true the file is validated the same way as a live
          *     import (presign → PUT → POST) but no rows or audit entries are
          *     committed.
@@ -6147,9 +6155,11 @@ export interface components {
              *     ignored; a different value fails the record with
              *     `manager_id cannot be changed on update`. Import never writes
              *     manager_id on update. When `allow_updates` is false, a
-             *     matching manager_id skips the organization (compared
-             *     case-insensitively; children still import) and a foreign
-             *     name match still fails with `exists`.
+             *     matching organization is skipped whether `manager_id` matches,
+             *     differs, or is omitted (compared case-insensitively when
+             *     present). Children that do not exist are still imported. A
+             *     catalog row owned by the board manager still fails with
+             *     `managed by provider`.
              */
             manager_id?: string;
             /** @description Stored on the organization. Not appended to description. */
@@ -6357,8 +6367,14 @@ export interface components {
             /**
              * @description When false, an organization, venue, activity, pricing row,
              *     or schedule that already exists is left unchanged and
-             *     reported as skipped. Rows that do not exist are still
-             *     created. Omitted or true updates matching rows.
+             *     reported as skipped, including when `manager_id` is missing
+             *     or different. Rows that do not exist are still created,
+             *     including a new venue on a skipped organization. A skipped
+             *     activity is not joined to the imported venue. Omitted or
+             *     true updates matching rows. The value is stored on the job
+             *     summary. The same `object_key` is returned only when this
+             *     flag and `dry_run` match the stored job. `retry_failed`
+             *     without this field uses the stored value.
              * @default true
              */
             allow_updates: boolean;
@@ -6389,6 +6405,12 @@ export interface components {
              *     existed.
              */
             captured_category_ids?: string[];
+            /**
+             * @description Whether this run updated existing rows. Omitted on jobs
+             *     stored before the flag existed; those runs updated
+             *     existing rows.
+             */
+            allow_updates?: boolean;
         };
         AdminImportError: {
             message: string;
@@ -6421,12 +6443,22 @@ export interface components {
             file_warnings: string[];
             /** @description Echo of the request dry_run flag. */
             dry_run?: boolean;
+            /**
+             * @description Echo of the flag used for this run. A job stored before
+             *     the flag existed reports true.
+             */
+            allow_updates: boolean;
         };
         AdminImportJob: {
             /** Format: uuid */
             id: string;
             object_key: string;
             dry_run: boolean;
+            /**
+             * @description Whether this run updated existing rows. Jobs stored before
+             *     the flag existed report true.
+             */
+            allow_updates: boolean;
             summary: components["schemas"]["AdminImportSummary"];
             results: components["schemas"]["AdminImportResult"][];
             file_warnings: string[];
@@ -6442,6 +6474,11 @@ export interface components {
             id: string;
             object_key: string;
             dry_run: boolean;
+            /**
+             * @description Whether this run updated existing rows. Jobs stored before
+             *     the flag existed report true.
+             */
+            allow_updates: boolean;
             /** @enum {string} */
             status: "running" | "completed" | "failed";
             summary: components["schemas"]["AdminImportSummary"];

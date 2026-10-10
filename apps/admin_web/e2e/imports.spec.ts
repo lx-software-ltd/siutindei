@@ -13,6 +13,9 @@ test.describe('Imports Panel', () => {
     };
 
     await adminPage.setInputFiles('#admin-import-file', jsonFile);
+    await adminPage
+      .getByRole('checkbox', { name: 'Skip records that already exist' })
+      .uncheck();
     const requestPromise = adminPage.waitForRequest(
       (request) =>
         request.method() === 'POST' &&
@@ -37,7 +40,9 @@ test.describe('Imports Panel', () => {
       buffer: Buffer.from(JSON.stringify({ organizations: [] })),
     };
     await adminPage.setInputFiles('#admin-import-file', jsonFile);
-    await adminPage.getByRole('checkbox', { name: 'Skip records that already exist' }).check();
+    await expect(
+      adminPage.getByRole('checkbox', { name: 'Skip records that already exist' })
+    ).toBeChecked();
     const requestPromise = adminPage.waitForRequest(
       (request) =>
         request.method() === 'POST' &&

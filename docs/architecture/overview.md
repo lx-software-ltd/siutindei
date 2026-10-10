@@ -162,8 +162,12 @@ pull requests for dependency updates:
   Imports update a matching organization when `allow_updates` is true
   (the default) and the payload `manager_id` matches. `allow_updates`
   false skips existing organizations, venues, activities, pricing, and
-  schedules, and still creates missing children. Import never changes
-  `manager_id`.
+  schedules, and still creates missing children, including a new venue
+  on a skipped organization. A skipped organization stays unchanged
+  when `manager_id` is missing or different. A skipped activity is not
+  joined to the imported venue. Import never changes `manager_id`.
+  The flag is stored on the job summary. The same `object_key` is
+  returned only when `dry_run` and `allow_updates` match.
 - Manager routes require `admin` or `manager` group membership.
 - User routes require any valid Cognito JWT (no group requirement).
 - API keys are rotated every 90 days via a scheduled Lambda.

@@ -7,14 +7,15 @@
 
 Let an admin import a file without rewriting organizations, venues,
 activities, pricing, or schedules that already exist. New rows are
-still created. The default stays "update existing rows".
+still created. The API still updates when `allow_updates` is omitted.
+The admin checkbox defaults to skip.
 
 ## Non-goals
 
 - Changing merge. A merge still deletes the source organization.
 - Matching activities by a stable source id.
-- Storing the flag on `import_jobs`. The same `object_key` still
-  returns the stored job.
+- Adding a column on `import_jobs`. The flag is stored on the job
+  summary JSON. Jobs without the key updated existing rows.
 
 ## Files
 
@@ -31,10 +32,16 @@ still created. The default stays "update existing rows".
 ## Invariants this change preserves
 
 - Omitting `allow_updates` still updates a matching row.
-- `manager_id` is never written on update.
-- A name owned by another manager still fails with `exists`.
-- The same uploaded `object_key` still returns the stored job.
+- `manager_id` is never written on update. Update mode still rejects
+  a different `manager_id`.
+- Skip mode leaves an existing organization unchanged when
+  `manager_id` is missing or different, and still imports missing
+  children. A catalog row owned by the board manager still fails.
+- The same uploaded `object_key` returns the stored job when
+  `dry_run` and `allow_updates` match. A different flag runs again.
 - Name cleanup on a normal import is unchanged.
+- Skip mode does not join a skipped activity to the imported venue.
+  A new activity still gets that join.
 
 ## Done when
 
@@ -50,4 +57,5 @@ Revert the branch. No schema change.
 
 ## Open questions
 
-None. The checkbox sends `allow_updates: false`.
+None. The checkbox defaults to checked and sends `allow_updates: false`.
+History retry sends the stored flag.

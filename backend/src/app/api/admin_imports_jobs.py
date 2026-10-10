@@ -186,12 +186,24 @@ def list_import_jobs(
     return list(session.scalars(query.limit(limit)).all())
 
 
+def job_allow_updates(job: ImportJob) -> bool:
+    """Whether the stored run updated existing rows.
+
+    Jobs saved before the flag existed updated existing rows.
+    """
+    summary = job.summary if isinstance(job.summary, dict) else {}
+    if "allow_updates" not in summary:
+        return True
+    return bool(summary.get("allow_updates"))
+
+
 def serialize_import_job(job: ImportJob) -> dict[str, Any]:
     """Serialize a stored import job for the owner UI."""
     return {
         "id": str(job.id),
         "object_key": job.object_key,
         "dry_run": job.dry_run,
+        "allow_updates": job_allow_updates(job),
         "status": job.status,
         "summary": job.summary,
         "results": job.results,

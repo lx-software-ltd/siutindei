@@ -77,7 +77,7 @@ export function ImportsPanel() {
   }, [setSection, setTabParam, tabParam]);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [skipExisting, setSkipExisting] = useState(false);
+  const [skipExisting, setSkipExisting] = useState(true);
   const [importTouched, setImportTouched] = useState(false);
   const [importStatus, setImportStatus] = useState<ImportStatus>('idle');
   const [importError, setImportError] = useState('');
@@ -259,7 +259,8 @@ export function ImportsPanel() {
                   </label>
                   <p className='mt-1 text-sm text-slate-600'>
                     Existing organizations, venues, and activities stay
-                    unchanged. New rows are still added.
+                    unchanged. New rows are still added, including a new
+                    venue on an organization that already exists.
                   </p>
                 </AdminField>
               </AdminFieldGrid>

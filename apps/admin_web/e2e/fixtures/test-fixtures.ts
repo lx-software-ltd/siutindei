@@ -1771,6 +1771,20 @@ export async function setupApiMocks(page: Page): Promise<void> {
               created_at: '2024-02-01T00:00:00Z',
             },
             {
+              id: 'job-skip',
+              object_key: 'admin/imports/skip.json',
+              dry_run: false,
+              allow_updates: false,
+              status: 'completed',
+              summary: {
+                organizations: { created: 0, updated: 0, failed: 1, skipped: 2 },
+                allow_updates: false,
+              },
+              file_warnings: [],
+              result_count: 1,
+              created_at: '2024-01-15T00:00:00Z',
+            },
+            {
               id: 'job-dry',
               object_key: 'admin/imports/dry-run.json',
               dry_run: true,
