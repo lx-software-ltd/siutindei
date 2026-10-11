@@ -648,6 +648,16 @@ def test_review_list_filters_by_neighbourhood(db_session) -> None:
     assert unplaced.name not in names(district.id)
     with pytest.raises(ValidationError, match="area_id not found"):
         names(uuid4())
+    inactive = GeographicArea(
+        name=f"Retired {suffix}",
+        level="neighbourhood",
+        parent_id=district.id,
+        active=False,
+    )
+    db_session.add(inactive)
+    db_session.flush()
+    with pytest.raises(ValidationError, match="area_id not found"):
+        names(inactive.id)
 
     matched = _load_filtered_organizations(
         db_session,

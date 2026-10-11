@@ -27,7 +27,7 @@ from app.api.admin_resource_location import _serialize_location
 from app.api.admin_resource_organization import _serialize_organization
 from app.db.engine import get_engine
 from app.db.models import GeographicArea, Location, Organization
-from app.db.queries import _area_descendant_ids_subquery
+from app.db.queries import area_descendant_ids_subquery
 from app.exceptions import NotFoundError, ValidationError
 from app.services.org_review import (
     REVIEW_STATUSES,
@@ -87,17 +87,11 @@ def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
     cursor = _parse_review_cursor(_query_param(event, "cursor"), filters.sort)
     warning_scan = _needs_warning_scan(filters)
     with Session(get_engine()) as session:
-        area_ids = (
-            _area_ids_for_filter(session, filters.area_id)
-            if filters.area_id is not None
-            else None
-        )
         organizations = _load_filtered_organizations(
             session,
             filters,
             cursor,
             None if warning_scan else limit + 1,
-            area_ids,
         )
         snapshots = load_snapshots(session, organizations)
         matched = (
@@ -110,6 +104,11 @@ def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
         next_cursor = (
             _encode_review_cursor(page[-1].organization, filters.sort)
             if has_more and page
+            else None
+        )
+        area_ids = (
+            set(session.scalars(area_descendant_ids_subquery(filters.area_id)).all())
+            if filters.include_locations and filters.area_id is not None
             else None
         )
         area_names = (
@@ -155,11 +154,11 @@ def _handle_detail(event: Mapping[str, Any], resource_id: str) -> dict[str, Any]
         return json_response(200, _serialize_detail(snapshot), event=event)
 
 
-def _area_ids_for_filter(session: Session, area_id: UUID) -> set[UUID]:
-    """Neighbourhood id plus descendants. Unknown ids are rejected."""
-    if session.get(GeographicArea, area_id) is None:
+def _require_active_area(session: Session, area_id: UUID) -> None:
+    """Reject an unknown or inactive area before it filters the queue."""
+    area = session.get(GeographicArea, area_id)
+    if area is None or not area.active:
         raise ValidationError("area_id not found", field="area_id")
-    return set(session.scalars(_area_descendant_ids_subquery(area_id)).all())
 
 
 def _load_filtered_organizations(
@@ -167,18 +166,15 @@ def _load_filtered_organizations(
     filters: ReviewListFilters,
     cursor: _ReviewCursor | None,
     limit: int | None,
-    area_ids: set[UUID] | None = None,
 ) -> list[Organization]:
     stmt = select(Organization)
     if filters.area_id is not None:
-        matched_areas = (
-            area_ids
-            if area_ids is not None
-            else _area_ids_for_filter(session, filters.area_id)
-        )
+        _require_active_area(session, filters.area_id)
         stmt = stmt.where(
             Organization.id.in_(
-                select(Location.org_id).where(Location.area_id.in_(matched_areas))
+                select(Location.org_id).where(
+                    Location.area_id.in_(area_descendant_ids_subquery(filters.area_id))
+                )
             )
         )
     if filters.review_status:
