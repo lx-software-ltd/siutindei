@@ -16,9 +16,9 @@ website.
   exist under the 18 Hong Kong districts.
 - A new API Gateway route. `area_id` and `include` are query parameters
   on `GET /v1/admin/org-review`.
-- Editing the admin deploy workflow. That file is red. Production
-  admin builds need the same variable passed through before the map
-  appears there.
+- A new Google Cloud key. Catalog reuses the public website key.
+  The admin deploy workflow now passes that same variable. The key's
+  allowed websites still have to include the admin host.
 
 ## Files
 
@@ -46,7 +46,7 @@ website.
 - `pytest tests/test_org_review.py`
 - `pre-commit run ruff-format --all-files`
 - `npm run lint` and `npm run typecheck` in `apps/admin_web`
-- Playwright covers the neighbourhood select and the map links
+- Playwright covers the neighbourhood combobox and the map links
 - No seed change
 
 ## Rollback
