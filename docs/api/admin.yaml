@@ -436,7 +436,10 @@ paths:
         matched after the SQL filters. Public search hides
         rows that are not `approved` only when `ORG_REVIEW_GATE_ENABLED`
         is true. After a release, CloudFront may serve the previous
-        search response for up to 5 minutes.
+        search response for up to 5 minutes. `area_id` keeps an
+        organization when any location is in that area or a descendant.
+        `include=locations` adds `map_locations` for the map. Those pins
+        are limited to the selected area.
       parameters:
         - name: limit
           in: query
@@ -482,6 +485,17 @@ paths:
             type: boolean
         - name: q
           in: query
+          schema:
+            type: string
+        - name: area_id
+          in: query
+          description: Geographic area. Matches locations in that area and its descendants.
+          schema:
+            type: string
+            format: uuid
+        - name: include
+          in: query
+          description: Set to `locations` to include map pins on each row.
           schema:
             type: string
       responses:
@@ -4142,6 +4156,31 @@ components:
           type: integer
         warning_count:
           type: integer
+        map_locations:
+          type: array
+          description: Present when `include=locations`. Pins for the map.
+          items:
+            $ref: '#/components/schemas/OrgReviewMapLocation'
+
+    OrgReviewMapLocation:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        address:
+          type: string
+          nullable: true
+        area_name:
+          type: string
+          nullable: true
+        lat:
+          type: number
+          nullable: true
+        lng:
+          type: number
+          nullable: true
 
     OrgReviewList:
       type: object

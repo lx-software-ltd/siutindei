@@ -4,6 +4,8 @@ export interface AppConfig {
   cognitoClientId: string;
   cognitoUserPoolId: string;
   publicWwwBaseUrl: string;
+  /** Same variable as the public website. Empty hides the catalog map. */
+  googleMapsApiKey: string;
 }
 
 const DEFAULT_PUBLIC_WWW_BASE_URL = 'https://siutindei.com';
@@ -15,6 +17,7 @@ export const appConfig: AppConfig = {
   cognitoUserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? '',
   publicWwwBaseUrl:
     process.env.NEXT_PUBLIC_PUBLIC_WWW_URL ?? DEFAULT_PUBLIC_WWW_BASE_URL,
+  googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
 };
 
 function trimTrailingSlashes(value: string) {
@@ -47,6 +50,10 @@ export function getCognitoDomain() {
     ? trimmed
     : `https://${trimmed}`;
   return trimTrailingSlashes(withScheme);
+}
+
+export function getGoogleMapsApiKey() {
+  return appConfig.googleMapsApiKey.trim();
 }
 
 export function getApiBaseUrl() {

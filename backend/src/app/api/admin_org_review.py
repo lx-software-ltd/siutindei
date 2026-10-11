@@ -26,7 +26,8 @@ from app.api.admin_resource_activity import _serialize_activity
 from app.api.admin_resource_location import _serialize_location
 from app.api.admin_resource_organization import _serialize_organization
 from app.db.engine import get_engine
-from app.db.models import Organization
+from app.db.models import GeographicArea, Location, Organization
+from app.db.queries import _area_descendant_ids_subquery
 from app.exceptions import NotFoundError, ValidationError
 from app.services.org_review import (
     REVIEW_STATUSES,
@@ -56,6 +57,8 @@ class ReviewListFilters:
     has_blockers: bool | None
     query: str | None
     sort: str
+    area_id: UUID | None = None
+    include_locations: bool = False
 
 
 def _handle_admin_org_review(
@@ -84,11 +87,17 @@ def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
     cursor = _parse_review_cursor(_query_param(event, "cursor"), filters.sort)
     warning_scan = _needs_warning_scan(filters)
     with Session(get_engine()) as session:
+        area_ids = (
+            _area_ids_for_filter(session, filters.area_id)
+            if filters.area_id is not None
+            else None
+        )
         organizations = _load_filtered_organizations(
             session,
             filters,
             cursor,
             None if warning_scan else limit + 1,
+            area_ids,
         )
         snapshots = load_snapshots(session, organizations)
         matched = (
@@ -103,10 +112,23 @@ def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
             if has_more and page
             else None
         )
+        area_names = (
+            _area_names(session, page, area_ids) if filters.include_locations else {}
+        )
         return json_response(
             200,
             {
-                "items": [_serialize_queue_item(item) for item in page],
+                "items": [
+                    _serialize_queue_item(
+                        item,
+                        map_locations=(
+                            _map_locations(item, area_ids, area_names)
+                            if filters.include_locations
+                            else None
+                        ),
+                    )
+                    for item in page
+                ],
                 "next_cursor": next_cursor,
             },
             event=event,
@@ -133,13 +155,32 @@ def _handle_detail(event: Mapping[str, Any], resource_id: str) -> dict[str, Any]
         return json_response(200, _serialize_detail(snapshot), event=event)
 
 
+def _area_ids_for_filter(session: Session, area_id: UUID) -> set[UUID]:
+    """Neighbourhood id plus descendants. Unknown ids are rejected."""
+    if session.get(GeographicArea, area_id) is None:
+        raise ValidationError("area_id not found", field="area_id")
+    return set(session.scalars(_area_descendant_ids_subquery(area_id)).all())
+
+
 def _load_filtered_organizations(
     session: Session,
     filters: ReviewListFilters,
     cursor: _ReviewCursor | None,
     limit: int | None,
+    area_ids: set[UUID] | None = None,
 ) -> list[Organization]:
     stmt = select(Organization)
+    if filters.area_id is not None:
+        matched_areas = (
+            area_ids
+            if area_ids is not None
+            else _area_ids_for_filter(session, filters.area_id)
+        )
+        stmt = stmt.where(
+            Organization.id.in_(
+                select(Location.org_id).where(Location.area_id.in_(matched_areas))
+            )
+        )
     if filters.review_status:
         stmt = stmt.where(Organization.review_status == filters.review_status)
     if filters.source:
@@ -196,6 +237,7 @@ def _parse_filters(event: Mapping[str, Any]) -> ReviewListFilters:
     import_job_id = _parse_uuid(import_job_raw) if import_job_raw else None
     has_blockers = _parse_optional_bool(_query_param(event, "has_blockers"))
     sort = _optional_choice(_query_param(event, "sort"), _REVIEW_SORTS, "sort")
+    area_raw = _blank_to_none(_query_param(event, "area_id"))
     return ReviewListFilters(
         review_status=review_status,
         source=source,
@@ -205,12 +247,77 @@ def _parse_filters(event: Mapping[str, Any]) -> ReviewListFilters:
         has_blockers=has_blockers,
         query=query,
         sort=sort or "name",
+        area_id=_parse_area_id(area_raw),
+        include_locations=_parse_include_locations(_query_param(event, "include")),
     )
 
 
-def _serialize_queue_item(snapshot: OrgReviewSnapshot) -> dict[str, Any]:
+def _parse_area_id(value: str | None) -> UUID | None:
+    if value is None:
+        return None
+    try:
+        return UUID(value)
+    except (TypeError, ValueError) as exc:
+        raise ValidationError("area_id must be a UUID", field="area_id") from exc
+
+
+def _parse_include_locations(value: str | None) -> bool:
+    text = _blank_to_none(value)
+    if text is None:
+        return False
+    parts = {part.strip() for part in text.split(",") if part.strip()}
+    unknown = parts - {"locations"}
+    if unknown:
+        raise ValidationError("Invalid include", field="include")
+    return "locations" in parts
+
+
+def _area_names(
+    session: Session,
+    snapshots: list[OrgReviewSnapshot],
+    area_ids: set[UUID] | None,
+) -> dict[UUID, str]:
+    wanted: list[UUID] = []
+    for snapshot in snapshots:
+        for location in snapshot.locations:
+            if area_ids is not None and location.area_id not in area_ids:
+                continue
+            wanted.append(location.area_id)
+    if not wanted:
+        return {}
+    rows = session.scalars(
+        select(GeographicArea).where(GeographicArea.id.in_(wanted))
+    ).all()
+    return {row.id: row.name for row in rows}
+
+
+def _map_locations(
+    snapshot: OrgReviewSnapshot,
+    area_ids: set[UUID] | None,
+    area_names: Mapping[UUID, str],
+) -> list[dict[str, Any]]:
+    pins: list[dict[str, Any]] = []
+    for location in sorted(snapshot.locations, key=lambda item: str(item.id)):
+        if area_ids is not None and location.area_id not in area_ids:
+            continue
+        pins.append(
+            {
+                "id": str(location.id),
+                "address": location.address,
+                "area_name": area_names.get(location.area_id),
+                "lat": float(location.lat) if location.lat is not None else None,
+                "lng": float(location.lng) if location.lng is not None else None,
+            }
+        )
+    return pins
+
+
+def _serialize_queue_item(
+    snapshot: OrgReviewSnapshot,
+    map_locations: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     org = snapshot.organization
-    return {
+    body = {
         "id": str(org.id),
         "name": org.name,
         "status": org.status,
@@ -235,6 +342,9 @@ def _serialize_queue_item(snapshot: OrgReviewSnapshot) -> dict[str, Any]:
         "blocker_count": snapshot.blocker_count,
         "warning_count": snapshot.warning_count,
     }
+    if map_locations is not None:
+        body["map_locations"] = map_locations
+    return body
 
 
 def _serialize_detail(snapshot: OrgReviewSnapshot) -> dict[str, Any]:

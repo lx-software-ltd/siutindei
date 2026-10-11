@@ -217,6 +217,32 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByRole('button', { name: 'Delete' })).toBeVisible();
   });
 
+  test('filters organizations by neighbourhood and maps them', async ({
+    adminPage,
+  }) => {
+    await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
+    await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
+    await adminPage
+      .getByLabel('Neighbourhood')
+      .selectOption({ label: 'Causeway Bay' });
+    await expect(adminPage.getByText('Test Organization 1')).toHaveCount(0);
+    await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
+
+    await adminPage.getByRole('button', { name: 'Map' }).click();
+    await expect(
+      adminPage.getByRole('application', { name: 'Filtered organizations' })
+    ).toBeVisible();
+    const mapsLink = adminPage.getByRole('link', {
+      name: 'Open Test Organization 2 in Google Maps',
+    });
+    await expect(mapsLink).toBeVisible();
+    await expect(mapsLink).toHaveAttribute(
+      'href',
+      'https://www.google.com/maps/search/?api=1&query=22.2803,114.1846'
+    );
+    await expect(adminPage.getByText('Test Organization 1')).toHaveCount(0);
+  });
+
   test('should have a name filter for the catalog', async ({ adminPage }) => {
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
     await expect(adminPage.locator('#review-name-filter')).toBeVisible();

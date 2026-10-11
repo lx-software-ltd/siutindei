@@ -1,11 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryState } from 'nuqs';
 
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
+import { useGeographicAreas } from '../../../hooks/use-geographic-areas';
 import { useOrganizationScope } from '../../../hooks/use-organization-scope';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
+import {
+  organizationsWithoutMapPins,
+  pinsForOrganizations,
+} from '../../../lib/catalog-map-pins';
+import { neighbourhoodOptionGroups } from '../../../lib/neighbourhood-options';
 import { ApiError } from '../../../lib/api-client';
 import {
   bulkOrgReview,
@@ -28,7 +34,10 @@ import { Select } from '../../ui/select';
 import { StatusBadge } from '../../ui/status-badge';
 import { AdminCreateButton } from '../../ui/admin-create-button';
 import { AdminKpiCard } from '../../ui/admin-kpi-card';
+import { AdminTabStrip } from '../../ui/admin-tab-strip';
+import { Card } from '../../ui/card';
 import { BULK_FIELDS_FORM_ID, BulkFieldsDialog } from './bulk-fields-dialog';
+import { CatalogOrgMap } from './catalog-org-map';
 
 const ISSUE_OPTIONS = [
   ['', 'Any issue'],
@@ -57,6 +66,7 @@ interface ReviewQueueFilters {
   has_blockers: string;
   q: string;
   import_job_id: string;
+  area_id: string;
   sort: 'name' | 'last_imported_at';
 }
 
@@ -67,8 +77,26 @@ const DEFAULT_REVIEW_FILTERS: ReviewQueueFilters = {
   has_blockers: '',
   q: '',
   import_job_id: '',
+  area_id: '',
   sort: 'name',
 };
+
+function reviewListParams(filters: ReviewQueueFilters) {
+  return {
+    review_status: filters.review_status || undefined,
+    source: filters.source || undefined,
+    issue: filters.issue || undefined,
+    has_blockers:
+      filters.has_blockers === '' ? undefined : filters.has_blockers === 'true',
+    q: filters.q || undefined,
+    import_job_id: filters.import_job_id || undefined,
+    area_id: filters.area_id || undefined,
+    sort:
+      filters.sort === 'last_imported_at'
+        ? ('last_imported_at' as const)
+        : undefined,
+  };
+}
 
 function issueSummary(item: OrgReviewListItem) {
   if (item.issues.length === 0) {
@@ -98,26 +126,29 @@ export function CatalogPanel() {
     limit: 50,
     debounceKeys: ['q', 'source'],
     errorPrefix: 'Failed to load the review queue',
-    fetcher: async ({
-      cursor,
-      limit,
-      review_status,
-      source,
-      issue,
-      has_blockers,
-      q,
-      import_job_id,
-      sort,
-    }) => {
+    fetcher: async ({ cursor, limit, ...filters }) => {
       const page = await listOrgReviews({
-        review_status: review_status || undefined,
-        source: source || undefined,
-        issue: issue || undefined,
-        has_blockers:
-          has_blockers === '' ? undefined : has_blockers === 'true',
-        q: q || undefined,
-        import_job_id: import_job_id || undefined,
-        sort: sort === 'last_imported_at' ? sort : undefined,
+        ...reviewListParams(filters),
+        cursor: cursor ?? undefined,
+        limit,
+      });
+      return {
+        items: page.items,
+        nextCursor: page.next_cursor ?? null,
+      };
+    },
+  });
+  const mapList = usePaginatedList<OrgReviewListItem, ReviewQueueFilters>({
+    queryKey: adminQueryKeys.orgReviewMap(),
+    defaultFilters,
+    limit: 50,
+    fetchOnMount: false,
+    fetchAll: true,
+    errorPrefix: 'Failed to load the map',
+    fetcher: async ({ cursor, limit, ...filters }) => {
+      const page = await listOrgReviews({
+        ...reviewListParams(filters),
+        include: 'locations',
         cursor: cursor ?? undefined,
         limit,
       });
@@ -134,6 +165,8 @@ export function CatalogPanel() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [activeBulk, setActiveBulk] = useState<BulkAction | null>(null);
+  const [view, setView] = useState<'table' | 'map'>('table');
+  const areas = useGeographicAreas();
   const { items, filters, setFilter, refetch, loadMore, hasMore, isLoading, isLoadingMore } =
     list;
 
@@ -167,7 +200,39 @@ export function CatalogPanel() {
     filters.has_blockers,
     filters.q,
     filters.import_job_id,
+    filters.area_id,
     filters.sort,
+  ]);
+
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+  const textFiltersRef = useRef({ q: filters.q, source: filters.source });
+  const mapRefetch = mapList.refetch;
+  useEffect(() => {
+    const textChanged =
+      textFiltersRef.current.q !== filters.q ||
+      textFiltersRef.current.source !== filters.source;
+    textFiltersRef.current = { q: filters.q, source: filters.source };
+    if (view !== 'map') {
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      void mapRefetch(filtersRef.current);
+    }, textChanged ? 300 : 0);
+    return () => {
+      window.clearTimeout(handle);
+    };
+  }, [
+    view,
+    filters.review_status,
+    filters.source,
+    filters.issue,
+    filters.has_blockers,
+    filters.q,
+    filters.import_job_id,
+    filters.area_id,
+    filters.sort,
+    mapRefetch,
   ]);
 
   async function runBulk(
@@ -213,39 +278,10 @@ export function CatalogPanel() {
   const isSaving = activeBulk !== null;
   const allSelected =
     items.length > 0 && items.every((item) => selected.has(item.id));
+  const mapPins = pinsForOrganizations(mapList.items);
+  const missingPinCount = organizationsWithoutMapPins(mapList.items);
 
-  return (
-    <div className='space-y-4'>
-      <h2 className='sr-only'>Catalog</h2>
-      <div className='grid gap-3 sm:grid-cols-3'>
-        <AdminKpiCard label='Pending review' value={pendingCount} />
-        <AdminKpiCard
-          label='With missing details'
-          value={summary?.with_blockers ?? 0}
-        />
-        <AdminKpiCard
-          label='Approved'
-          value={summary?.by_review_status.approved ?? 0}
-        />
-      </div>
-      <ResourceTableShell
-        ariaLabel='Catalog'
-        rows={items}
-        getLabel={(item) => item.name || `organization ${item.id}`}
-        middleColumnCount={7}
-        hasActions={false}
-        isLoading={isLoading}
-        isLoadingMore={isLoadingMore}
-        hasMore={hasMore}
-        onLoadMore={() => {
-          void loadMore();
-        }}
-        error={list.error}
-        emptyLabel='No organizations match these filters.'
-        isExpanded={() => false}
-        onToggle={openOrganization}
-        detail={null}
-        filters={
+  const filterBar = (
           <AdminFilterBar
             trailing={
               <>
@@ -319,6 +355,27 @@ export function CatalogPanel() {
                 onChange={(event) => setFilter('source', event.target.value)}
               />
             </AdminFilterField>
+            <AdminFilterField label='Neighbourhood' htmlFor='review-neighbourhood-filter'>
+              <Select
+                id='review-neighbourhood-filter'
+                value={filters.area_id}
+                onChange={(event) => setFilter('area_id', event.target.value)}
+              >
+                <option value=''>All neighbourhoods</option>
+                {neighbourhoodOptionGroups(areas.tree).map(([group, options]) => (
+                  <optgroup
+                    key={group || 'neighbourhood'}
+                    label={group || 'Neighbourhood'}
+                  >
+                    {options.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </Select>
+            </AdminFilterField>
             <AdminFilterField label='Name' htmlFor='review-name-filter'>
               <Input
                 id='review-name-filter'
@@ -344,7 +401,61 @@ export function CatalogPanel() {
               </Select>
             </AdminFilterField>
           </AdminFilterBar>
-        }
+  );
+
+  return (
+    <div className='space-y-4'>
+      <h2 className='sr-only'>Catalog</h2>
+      <div className='grid gap-3 sm:grid-cols-3'>
+        <AdminKpiCard label='Pending review' value={pendingCount} />
+        <AdminKpiCard
+          label='With missing details'
+          value={summary?.with_blockers ?? 0}
+        />
+        <AdminKpiCard
+          label='Approved'
+          value={summary?.by_review_status.approved ?? 0}
+        />
+      </div>
+      <AdminTabStrip
+        aria-label='Catalog view'
+        activeKey={view}
+        onChange={setView}
+        items={[
+          { key: 'table', label: 'Table' },
+          { key: 'map', label: 'Map' },
+        ]}
+      />
+      {view === 'map' ? (
+        <Card>
+          {filterBar}
+          <CatalogOrgMap
+            pins={mapPins}
+            missingPinCount={missingPinCount}
+            truncated={mapList.hasMore && !mapList.isLoading && !mapList.isLoadingMore}
+            isLoading={mapList.isLoading || mapList.isLoadingMore}
+            error={mapList.error}
+          />
+        </Card>
+      ) : (
+      <ResourceTableShell
+        ariaLabel='Catalog'
+        rows={items}
+        getLabel={(item) => item.name || `organization ${item.id}`}
+        middleColumnCount={7}
+        hasActions={false}
+        isLoading={isLoading}
+        isLoadingMore={isLoadingMore}
+        hasMore={hasMore}
+        onLoadMore={() => {
+          void loadMore();
+        }}
+        error={list.error}
+        emptyLabel='No organizations match these filters.'
+        isExpanded={() => false}
+        onToggle={openOrganization}
+        detail={null}
+        filters={filterBar}
         toolbar={
           <div className='mb-3 space-y-3'>
             {notice ? (
@@ -509,6 +620,7 @@ export function CatalogPanel() {
           </>
         )}
       />
+      )}
       <ConfirmDialog
         open={showFields}
         title='Apply properties'

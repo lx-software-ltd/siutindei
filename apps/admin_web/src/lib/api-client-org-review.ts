@@ -32,6 +32,15 @@ export interface OrgReviewListItem {
   completeness: number;
   blocker_count: number;
   warning_count: number;
+  map_locations?: OrgReviewMapLocation[] | null;
+}
+
+export interface OrgReviewMapLocation {
+  id: string;
+  address?: string | null;
+  area_name?: string | null;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export interface OrgReviewListResponse {
@@ -62,6 +71,8 @@ export interface OrgReviewFilters {
   issue?: string;
   has_blockers?: boolean;
   q?: string;
+  area_id?: string;
+  include?: 'locations';
   sort?: 'name' | 'last_imported_at';
   cursor?: string;
   limit?: number;

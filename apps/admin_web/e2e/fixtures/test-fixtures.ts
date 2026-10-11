@@ -636,6 +636,25 @@ function resourceIdFromUrl(url: string): string {
 }
 
 export async function setupApiMocks(page: Page): Promise<void> {
+  await page.route('https://maps.googleapis.com/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: [
+        'window.google = window.google || {};',
+        'window.google.maps = {',
+        '  Map: class { constructor() {} fitBounds() {} setCenter() {} setZoom() {} },',
+        '  Marker: class { constructor() {} setMap() {} addListener() {} },',
+        '  InfoWindow: class { constructor() {} open() {} close() {} setContent() {} },',
+        '  LatLng: class { constructor(lat, lng) { this.lat = lat; this.lng = lng; } },',
+        '  LatLngBounds: class { extend() {} },',
+        '  event: { trigger() {} },',
+        '  importLibrary: async function () { return {}; },',
+        '};',
+      ].join('\n'),
+    });
+  });
+
   // Mock organizations list
   await page.route('**/api/mock/**/admin/organizations*', async (route) => {
     const method = route.request().method();
@@ -1777,6 +1796,8 @@ export async function setupApiMocks(page: Page): Promise<void> {
             completeness: 0.5,
             blocker_count: 1,
             warning_count: 0,
+            area_id: null,
+            map_locations: [],
           },
           {
             id: 'org-2',
@@ -1792,11 +1813,36 @@ export async function setupApiMocks(page: Page): Promise<void> {
             completeness: 1,
             blocker_count: 0,
             warning_count: 0,
+            area_id: 'area-hk-causeway',
+            map_locations: [
+              {
+                id: 'loc-2',
+                address: '18 Nathan Road',
+                area_name: 'Causeway Bay',
+                lat: 22.2803,
+                lng: 114.1846,
+              },
+            ],
           },
-        ].filter((item) => {
-          const query = new URL(url).searchParams.get('q')?.toLowerCase() ?? '';
-          return query.length === 0 || item.name.toLowerCase().includes(query);
-        }),
+        ]
+          .filter((item) => {
+            const params = new URL(url).searchParams;
+            const query = params.get('q')?.toLowerCase() ?? '';
+            const areaId = params.get('area_id') ?? '';
+            const nameMatches =
+              query.length === 0 || item.name.toLowerCase().includes(query);
+            const areaMatches = areaId.length === 0 || item.area_id === areaId;
+            return nameMatches && areaMatches;
+          })
+          .map((item) => {
+            const include = new URL(url).searchParams.get('include') ?? '';
+            if (!include.includes('locations')) {
+              const { map_locations: _pins, area_id: _area, ...rest } = item;
+              return rest;
+            }
+            const { area_id: _area, ...rest } = item;
+            return rest;
+          }),
         next_cursor: null,
       }),
     });

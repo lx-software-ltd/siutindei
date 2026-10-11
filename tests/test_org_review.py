@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
+import pytest
 from app.api.admin_imports_export import serialize_export_organization
 from app.api.admin_imports_importer import process_import_payload
 from app.api.admin_imports_jobs import (
@@ -19,7 +20,10 @@ from app.api.admin_org_review import (
     ReviewListFilters,
     _encode_review_cursor,
     _load_filtered_organizations,
+    _map_locations,
+    _parse_filters,
     _parse_review_cursor,
+    _serialize_queue_item,
 )
 from app.api.admin_org_review_actions import (
     ReviewBlockedError,
@@ -34,6 +38,7 @@ from app.db.models import (
     Activity,
     ActivityPricing,
     ActivitySchedule,
+    GeographicArea,
     ImportJob,
     Location,
     Organization,
@@ -460,7 +465,7 @@ def test_import_job_failure_and_history_cursor(db_session) -> None:
         summary={"organizations": {"created": 0}},
         results=[],
         file_warnings=[],
-        created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        created_at=datetime(2026, 1, 1, tzinfo=UTC),
     )
     db_session.add(older)
     db_session.flush()
@@ -496,7 +501,7 @@ def test_import_job_failure_and_history_cursor(db_session) -> None:
         summary={},
         results=[],
         file_warnings=[],
-        created_at=datetime(2099, 2, 1, tzinfo=timezone.utc),
+        created_at=datetime(2099, 2, 1, tzinfo=UTC),
     )
     db_session.add(newer)
     db_session.flush()
@@ -514,3 +519,153 @@ def test_search_gate_is_opt_in(monkeypatch) -> None:
     monkeypatch.setenv("ORG_REVIEW_GATE_ENABLED", "true")
     opened = str(build_search_query(ActivitySearchFilters()).whereclause)
     assert "review_status" in opened
+
+
+def _review_filters(**overrides: object) -> ReviewListFilters:
+    values: dict[str, object] = {
+        "review_status": None,
+        "source": None,
+        "import_job_id": None,
+        "status": None,
+        "issue": None,
+        "has_blockers": None,
+        "query": None,
+        "sort": "name",
+    }
+    values.update(overrides)
+    return ReviewListFilters(**values)  # type: ignore[arg-type]
+
+
+def test_parse_filters_reads_neighbourhood_and_map_pins() -> None:
+    area_id = uuid4()
+    parsed = _parse_filters(
+        {
+            "queryStringParameters": {
+                "area_id": str(area_id),
+                "include": "locations",
+            }
+        }
+    )
+    assert parsed.area_id == area_id
+    assert parsed.include_locations is True
+    with pytest.raises(ValidationError, match="area_id must be a UUID"):
+        _parse_filters({"queryStringParameters": {"area_id": "not-a-uuid"}})
+    with pytest.raises(ValidationError, match="Invalid include"):
+        _parse_filters({"queryStringParameters": {"include": "pins"}})
+
+
+def test_review_list_filters_by_neighbourhood(db_session) -> None:
+    suffix = uuid4().hex[:8]
+    source = f"neighbourhood-{suffix}"
+    region = GeographicArea(name=f"Region {suffix}", level="region", active=True)
+    db_session.add(region)
+    db_session.flush()
+    district = GeographicArea(
+        name=f"District {suffix}",
+        level="district",
+        parent_id=region.id,
+        active=True,
+    )
+    db_session.add(district)
+    db_session.flush()
+    causeway = GeographicArea(
+        name=f"Causeway {suffix}",
+        level="neighbourhood",
+        parent_id=district.id,
+        active=True,
+    )
+    wanchai = GeographicArea(
+        name=f"Wanchai {suffix}",
+        level="neighbourhood",
+        parent_id=district.id,
+        active=True,
+    )
+    db_session.add_all([causeway, wanchai])
+    db_session.flush()
+    causeway_only = Organization(
+        name=f"AAA Causeway {suffix}",
+        manager_id="00000000-0000-0000-0000-000000000041",
+        description="Described",
+        source=source,
+        review_status="pending_review",
+    )
+    both = Organization(
+        name=f"MMM Both {suffix}",
+        manager_id="00000000-0000-0000-0000-000000000042",
+        description="Described",
+        source=source,
+        review_status="pending_review",
+    )
+    unplaced = Organization(
+        name=f"ZZZ Unplaced {suffix}",
+        manager_id="00000000-0000-0000-0000-000000000043",
+        description="Described",
+        source=source,
+        review_status="pending_review",
+    )
+    db_session.add_all([causeway_only, both, unplaced])
+    db_session.flush()
+    db_session.add_all(
+        [
+            Location(
+                org_id=causeway_only.id,
+                area_id=causeway.id,
+                address="1 Causeway Road",
+                lat=Decimal("22.280300"),
+                lng=Decimal("114.184600"),
+            ),
+            Location(
+                org_id=both.id,
+                area_id=causeway.id,
+                address="2 Causeway Road",
+                lat=Decimal("22.280400"),
+                lng=Decimal("114.184700"),
+            ),
+            Location(
+                org_id=both.id,
+                area_id=wanchai.id,
+                address="8 Hennessy Road",
+                lat=Decimal("22.277200"),
+                lng=Decimal("114.172800"),
+            ),
+        ]
+    )
+    db_session.flush()
+
+    def names(area_id):
+        found = _load_filtered_organizations(
+            db_session,
+            _review_filters(source=source, area_id=area_id),
+            None,
+            10,
+        )
+        return [org.name for org in found]
+
+    assert names(causeway.id) == [causeway_only.name, both.name]
+    assert names(wanchai.id) == [both.name]
+    assert names(district.id) == [causeway_only.name, both.name]
+    assert names(region.id) == [causeway_only.name, both.name]
+    assert unplaced.name not in names(district.id)
+    with pytest.raises(ValidationError, match="area_id not found"):
+        names(uuid4())
+
+    matched = _load_filtered_organizations(
+        db_session,
+        _review_filters(source=source, area_id=causeway.id),
+        None,
+        10,
+    )
+    both_org = next(org for org in matched if org.id == both.id)
+    snapshot = load_snapshots(db_session, [both_org])[0]
+    pins = _map_locations(
+        snapshot,
+        {causeway.id},
+        {causeway.id: causeway.name, wanchai.id: wanchai.name},
+    )
+    assert [pin["address"] for pin in pins] == ["2 Causeway Road"]
+    assert pins[0]["area_name"] == causeway.name
+    assert pins[0]["lat"] == pytest.approx(22.2804)
+    assert pins[0]["lng"] == pytest.approx(114.1847)
+    body = _serialize_queue_item(snapshot, map_locations=pins)
+    assert body["map_locations"] == pins
+    assert "map_locations" not in _serialize_queue_item(snapshot)
