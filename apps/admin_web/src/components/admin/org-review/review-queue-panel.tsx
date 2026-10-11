@@ -207,7 +207,8 @@ export function CatalogPanel() {
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
   const textFiltersRef = useRef({ q: filters.q, source: filters.source });
-  const mapRefetch = mapList.refetch;
+  const mapRefetchRef = useRef(mapList.refetch);
+  mapRefetchRef.current = mapList.refetch;
   useEffect(() => {
     const textChanged =
       textFiltersRef.current.q !== filters.q ||
@@ -217,7 +218,7 @@ export function CatalogPanel() {
       return;
     }
     const handle = window.setTimeout(() => {
-      void mapRefetch(filtersRef.current);
+      void mapRefetchRef.current(filtersRef.current);
     }, textChanged ? 300 : 0);
     return () => {
       window.clearTimeout(handle);
@@ -232,7 +233,6 @@ export function CatalogPanel() {
     filters.import_job_id,
     filters.area_id,
     filters.sort,
-    mapRefetch,
   ]);
 
   async function runBulk(

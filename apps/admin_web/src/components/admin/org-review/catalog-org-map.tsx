@@ -157,7 +157,9 @@ export function CatalogOrgMap({
   return (
     <div className='space-y-3'>
       {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
-      {isLoading ? <p className='text-sm text-slate-500'>Loading the map…</p> : null}
+      {isLoading && pins.length === 0 ? (
+        <p className='text-sm text-slate-500'>Loading the map…</p>
+      ) : null}
       {truncated ? (
         <StatusBanner kind='info'>
           The map stops after the first 2,000 matching organizations.
