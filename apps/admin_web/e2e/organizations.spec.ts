@@ -222,9 +222,8 @@ test.describe('Organizations Panel', () => {
   }) => {
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
-    await adminPage
-      .getByLabel('Neighbourhood')
-      .selectOption({ label: 'Causeway Bay' });
+    await adminPage.getByLabel('Neighbourhood').click();
+    await adminPage.getByRole('option', { name: 'Causeway Bay' }).click();
     await expect(adminPage.getByText('Test Organization 1')).toHaveCount(0);
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
 

@@ -58,6 +58,9 @@ async function loadMapsLibraries(): Promise<void> {
   if (importLibrary && !hasMapsConstructor()) {
     await importLibrary('maps');
   }
+  if (importLibrary) {
+    await importLibrary('marker');
+  }
   if (!hasMapsConstructor()) {
     throw new Error('Google Maps failed to load.');
   }

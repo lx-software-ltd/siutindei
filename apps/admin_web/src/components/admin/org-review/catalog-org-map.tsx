@@ -3,16 +3,29 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { StatusBanner } from '../../status-banner';
-import { getGoogleMapsApiKey } from '../../../lib/config';
+import { getGoogleMapsApiKey, getGoogleMapsMapId } from '../../../lib/config';
 import { loadGoogleMapsScript } from '../../../lib/google-maps-script';
-import type { CatalogMapPin } from '../../../lib/catalog-map-pins';
+import {
+  CATALOG_MAP_ORG_CAP,
+  type CatalogMapPin,
+} from '../../../lib/catalog-map-pins';
 
 interface CatalogOrgMapProps {
   pins: readonly CatalogMapPin[];
   missingPinCount: number;
   truncated: boolean;
+  /** More pages are still arriving. Stays true between those requests. */
+  loadingMore: boolean;
   isLoading: boolean;
+  /** False while the Table view is showing, so the map instance can stay alive. */
+  active: boolean;
   error: string;
+  orgCap?: number;
+}
+
+interface PinMarker {
+  marker: google.maps.marker.AdvancedMarkerElement;
+  listener: google.maps.MapsEventListener;
 }
 
 function pinContent(pin: CatalogMapPin): HTMLElement {
@@ -39,16 +52,22 @@ function pinContent(pin: CatalogMapPin): HTMLElement {
   return content;
 }
 
+function clearMarkers(markers: PinMarker[]) {
+  for (const entry of markers) {
+    entry.listener.remove();
+    entry.marker.map = null;
+  }
+  markers.length = 0;
+}
+
 function syncMarkers(
   map: google.maps.Map,
   info: google.maps.InfoWindow,
-  markers: google.maps.Marker[],
-  pins: readonly CatalogMapPin[]
+  markers: PinMarker[],
+  pins: readonly CatalogMapPin[],
+  Marker: typeof google.maps.marker.AdvancedMarkerElement
 ) {
-  for (const marker of markers) {
-    marker.setMap(null);
-  }
-  markers.length = 0;
+  clearMarkers(markers);
   if (pins.length === 0) {
     return;
   }
@@ -56,16 +75,16 @@ function syncMarkers(
   for (const pin of pins) {
     const position = new google.maps.LatLng(pin.lat, pin.lng);
     bounds.extend(position);
-    const marker = new google.maps.Marker({
+    const marker = new Marker({
       map,
       position,
       title: pin.orgName,
     });
-    marker.addListener('click', () => {
+    const listener = marker.addListener('click', () => {
       info.setContent(pinContent(pin));
       info.open({ map, anchor: marker });
     });
-    markers.push(marker);
+    markers.push({ marker, listener });
   }
   if (pins.length === 1) {
     map.setCenter(new google.maps.LatLng(pins[0].lat, pins[0].lng));
@@ -75,13 +94,23 @@ function syncMarkers(
   map.fitBounds(bounds, 48);
 }
 
-function CatalogGoogleMap({ pins }: { pins: readonly CatalogMapPin[] }) {
+function CatalogGoogleMap({
+  pins,
+  active,
+}: {
+  pins: readonly CatalogMapPin[];
+  active: boolean;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
+  const markersRef = useRef<PinMarker[]>([]);
   const infoRef = useRef<google.maps.InfoWindow | null>(null);
+  const markerCtorRef = useRef<typeof google.maps.marker.AdvancedMarkerElement | null>(
+    null
+  );
   const pinsRef = useRef(pins);
   const [failed, setFailed] = useState(false);
+  const [authRefused, setAuthRefused] = useState(false);
   const apiKey = getGoogleMapsApiKey();
   const pinKey = pins.map((pin) => `${pin.id}:${pin.lat}:${pin.lng}`).join('|');
 
@@ -90,29 +119,56 @@ function CatalogGoogleMap({ pins }: { pins: readonly CatalogMapPin[] }) {
   }, [pins]);
 
   useEffect(() => {
+    const previous = window.gm_authFailure;
+    window.gm_authFailure = () => {
+      setAuthRefused(true);
+      previous?.();
+    };
+    return () => {
+      window.gm_authFailure = previous;
+    };
+  }, []);
+
+  useEffect(() => {
     const container = containerRef.current;
     if (!container || !apiKey) {
       return;
     }
     let cancelled = false;
     loadGoogleMapsScript(apiKey)
-      .then(() => {
-        if (cancelled || !containerRef.current) {
+      .then(async () => {
+        const library = (await google.maps.importLibrary('marker')) as {
+          AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement;
+        };
+        if (cancelled || !containerRef.current || !library.AdvancedMarkerElement) {
+          if (!cancelled && !library.AdvancedMarkerElement) {
+            setFailed(true);
+          }
           return;
         }
+        markerCtorRef.current = library.AdvancedMarkerElement;
         const map =
           mapRef.current ??
           new google.maps.Map(containerRef.current, {
             center: new google.maps.LatLng(22.3193, 114.1694),
             zoom: 11,
+            mapId: getGoogleMapsMapId(),
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: false,
           });
         mapRef.current = map;
         infoRef.current = infoRef.current ?? new google.maps.InfoWindow();
-        syncMarkers(map, infoRef.current, markersRef.current, pinsRef.current);
-        google.maps.event.trigger(map, 'resize');
+        syncMarkers(
+          map,
+          infoRef.current,
+          markersRef.current,
+          pinsRef.current,
+          library.AdvancedMarkerElement
+        );
+        if (active) {
+          google.maps.event.trigger(map, 'resize');
+        }
       })
       .catch(() => {
         if (!cancelled) {
@@ -122,13 +178,21 @@ function CatalogGoogleMap({ pins }: { pins: readonly CatalogMapPin[] }) {
     return () => {
       cancelled = true;
     };
-  }, [apiKey, pinKey]);
+  }, [active, apiKey, pinKey]);
 
   if (!apiKey) {
     return (
       <StatusBanner kind='info'>
         The map uses the public website Google Maps key. It is not set for
         this admin app.
+      </StatusBanner>
+    );
+  }
+  if (authRefused) {
+    return (
+      <StatusBanner kind='error'>
+        Google Maps refused the key for this site. Add this admin address to
+        the key&apos;s allowed websites.
       </StatusBanner>
     );
   }
@@ -151,18 +215,27 @@ export function CatalogOrgMap({
   pins,
   missingPinCount,
   truncated,
+  loadingMore,
   isLoading,
+  active,
   error,
+  orgCap = CATALOG_MAP_ORG_CAP,
 }: CatalogOrgMapProps) {
+  const capLabel = orgCap.toLocaleString('en-US');
+  const showFirstLoad = isLoading && pins.length === 0;
+  const showEmpty = !isLoading && !loadingMore && pins.length === 0;
   return (
     <div className='space-y-3'>
       {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
-      {isLoading && pins.length === 0 ? (
+      {showFirstLoad ? (
         <p className='text-sm text-slate-500'>Loading the map…</p>
+      ) : null}
+      {loadingMore ? (
+        <p className='text-sm text-slate-500'>Loading more locations…</p>
       ) : null}
       {truncated ? (
         <StatusBanner kind='info'>
-          The map stops after the first 2,000 matching organizations.
+          {`The map stops after the first ${capLabel} matching organizations.`}
         </StatusBanner>
       ) : null}
       {missingPinCount > 0 ? (
@@ -172,12 +245,12 @@ export function CatalogOrgMap({
             : `${missingPinCount} organizations have no map pin.`}
         </StatusBanner>
       ) : null}
-      {!isLoading && pins.length === 0 ? (
+      {showEmpty ? (
         <p className='text-sm text-slate-500'>
           No mapped locations match these filters.
         </p>
       ) : null}
-      {pins.length > 0 ? <CatalogGoogleMap pins={pins} /> : null}
+      <CatalogGoogleMap pins={pins} active={active} />
       {pins.length > 0 ? (
         <ul className='space-y-2'>
           {pins.map((pin) => (

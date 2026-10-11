@@ -18,6 +18,7 @@ declare namespace google.maps {
   interface MapOptions {
     center?: LatLng;
     zoom?: number;
+    mapId?: string;
     mapTypeControl?: boolean;
     streetViewControl?: boolean;
     fullscreenControl?: boolean;
@@ -45,8 +46,26 @@ declare namespace google.maps {
   class InfoWindow {
     constructor();
     setContent(content: HTMLElement | string): void;
-    open(options: { map: Map; anchor: Marker }): void;
+    open(options: { map: Map; anchor: marker.AdvancedMarkerElement }): void;
     close(): void;
+  }
+
+  interface MapsEventListener {
+    remove(): void;
+  }
+
+  namespace marker {
+    interface AdvancedMarkerOptions {
+      map?: Map | null;
+      position?: LatLng;
+      title?: string;
+    }
+
+    class AdvancedMarkerElement {
+      constructor(options?: AdvancedMarkerOptions);
+      map: Map | null;
+      addListener(eventName: string, handler: () => void): MapsEventListener;
+    }
   }
 
   const event: {
@@ -60,4 +79,5 @@ interface Window {
   google?: {
     maps: typeof google.maps;
   };
+  gm_authFailure?: () => void;
 }

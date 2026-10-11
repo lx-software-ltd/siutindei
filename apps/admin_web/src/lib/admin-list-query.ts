@@ -10,16 +10,26 @@ export const ADMIN_LIST_PAGE_SIZE = 25;
  */
 export const ADMIN_LIST_AUTO_PAGE_CAP = 40;
 
-/** Matches backend `MAX_LIST_LIMIT` in `app.api.admin_request.parse_limit`. */
+/**
+ * Shared client cap. The API allows 200 (`DEFAULT_MAX_LIMIT`). Callers that
+ * need the full API maximum pass that number to `clampAdminListLimit`.
+ */
 export const ADMIN_API_MAX_LIST_LIMIT = 100;
 
-/** Clamp page size so admin list requests never exceed the API cap. */
-export function clampAdminListLimit(limit: number): number {
+/** Clamp page size. `maxLimit` defaults to the shared client cap. */
+export function clampAdminListLimit(
+  limit: number,
+  maxLimit: number = ADMIN_API_MAX_LIST_LIMIT,
+): number {
   const n = Math.floor(limit);
+  const cap = Math.floor(maxLimit);
   if (!Number.isFinite(n) || n < 1) {
     return 1;
   }
-  return Math.min(n, ADMIN_API_MAX_LIST_LIMIT);
+  if (!Number.isFinite(cap) || cap < 1) {
+    return 1;
+  }
+  return Math.min(n, cap);
 }
 
 export type AdminQueryValue = string | number | boolean | null | undefined | readonly string[];

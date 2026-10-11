@@ -8,10 +8,13 @@ import { useGeographicAreas } from '../../../hooks/use-geographic-areas';
 import { useOrganizationScope } from '../../../hooks/use-organization-scope';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import {
+  CATALOG_MAP_ORG_CAP,
+  CATALOG_MAP_PAGE_CAP,
+  CATALOG_MAP_PAGE_SIZE,
   organizationsWithoutMapPins,
   pinsForOrganizations,
 } from '../../../lib/catalog-map-pins';
-import { neighbourhoodOptionGroups } from '../../../lib/neighbourhood-options';
+import { neighbourhoodFilterOptions } from '../../../lib/neighbourhood-options';
 import { ApiError } from '../../../lib/api-client';
 import {
   bulkOrgReview,
@@ -38,6 +41,7 @@ import { AdminTabStrip } from '../../ui/admin-tab-strip';
 import { Card } from '../../ui/card';
 import { BULK_FIELDS_FORM_ID, BulkFieldsDialog } from './bulk-fields-dialog';
 import { CatalogOrgMap } from './catalog-org-map';
+import { NeighbourhoodFilter } from './neighbourhood-filter';
 
 const ISSUE_OPTIONS = [
   ['', 'Any issue'],
@@ -141,7 +145,9 @@ export function CatalogPanel() {
   const mapList = usePaginatedList<OrgReviewListItem, ReviewQueueFilters>({
     queryKey: adminQueryKeys.orgReviewMap(),
     defaultFilters,
-    limit: 50,
+    limit: CATALOG_MAP_PAGE_SIZE,
+    maxLimit: CATALOG_MAP_PAGE_SIZE,
+    autoPageCap: CATALOG_MAP_PAGE_CAP,
     fetchOnMount: false,
     fetchAll: true,
     errorPrefix: 'Failed to load the map',
@@ -165,7 +171,23 @@ export function CatalogPanel() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [activeBulk, setActiveBulk] = useState<BulkAction | null>(null);
-  const [view, setView] = useState<'table' | 'map'>('table');
+  const [viewParam, setViewParam] = useQueryState('view');
+  const view = viewParam === 'map' ? 'map' : 'table';
+  const [mapMounted, setMapMounted] = useState(view === 'map');
+  const setView = useCallback(
+    (next: 'table' | 'map') => {
+      if (next === 'map') {
+        setMapMounted(true);
+      }
+      void setViewParam(next === 'map' ? 'map' : null);
+    },
+    [setViewParam]
+  );
+  useEffect(() => {
+    if (view === 'map') {
+      setMapMounted(true);
+    }
+  }, [view]);
   const areas = useGeographicAreas();
   const { items, filters, setFilter, refetch, loadMore, hasMore, isLoading, isLoadingMore } =
     list;
@@ -356,25 +378,12 @@ export function CatalogPanel() {
               />
             </AdminFilterField>
             <AdminFilterField label='Neighbourhood' htmlFor='review-neighbourhood-filter'>
-              <Select
+              <NeighbourhoodFilter
                 id='review-neighbourhood-filter'
                 value={filters.area_id}
-                onChange={(event) => setFilter('area_id', event.target.value)}
-              >
-                <option value=''>All neighbourhoods</option>
-                {neighbourhoodOptionGroups(areas.tree).map(([group, options]) => (
-                  <optgroup
-                    key={group || 'neighbourhood'}
-                    label={group || 'Neighbourhood'}
-                  >
-                    {options.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </Select>
+                options={neighbourhoodFilterOptions(areas.tree)}
+                onChange={(areaId) => setFilter('area_id', areaId)}
+              />
             </AdminFilterField>
             <AdminFilterField label='Name' htmlFor='review-name-filter'>
               <Input
@@ -426,18 +435,31 @@ export function CatalogPanel() {
           { key: 'map', label: 'Map' },
         ]}
       />
-      {view === 'map' ? (
+      {notice ? <StatusBanner kind='info'>{notice}</StatusBanner> : null}
+      {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
+      {filterBar}
+      <div className={view === 'map' ? undefined : 'hidden'}>
+        {mapMounted ? (
         <Card>
-          {filterBar}
           <CatalogOrgMap
             pins={mapPins}
             missingPinCount={missingPinCount}
-            truncated={mapList.hasMore && !mapList.isLoading && !mapList.isLoadingMore}
+            truncated={mapList.truncated}
+            loadingMore={
+              mapPins.length > 0 &&
+              mapList.hasMore &&
+              !mapList.truncated &&
+              !mapList.error
+            }
             isLoading={mapList.isLoading || mapList.isLoadingMore}
+            active={view === 'map'}
             error={mapList.error}
+            orgCap={CATALOG_MAP_ORG_CAP}
           />
         </Card>
-      ) : (
+        ) : null}
+      </div>
+      {view === 'table' ? (
       <ResourceTableShell
         ariaLabel='Catalog'
         rows={items}
@@ -455,19 +477,8 @@ export function CatalogPanel() {
         isExpanded={() => false}
         onToggle={openOrganization}
         detail={null}
-        filters={filterBar}
         toolbar={
           <div className='mb-3 space-y-3'>
-            {notice ? (
-              <StatusBanner kind='info'>
-                {notice}
-              </StatusBanner>
-            ) : null}
-            {error ? (
-              <StatusBanner kind='error'>
-                {error}
-              </StatusBanner>
-            ) : null}
             <div className='flex flex-wrap items-center gap-2'>
               <Button
                 type='button'
@@ -620,7 +631,7 @@ export function CatalogPanel() {
           </>
         )}
       />
-      )}
+      ) : null}
       <ConfirmDialog
         open={showFields}
         title='Apply properties'

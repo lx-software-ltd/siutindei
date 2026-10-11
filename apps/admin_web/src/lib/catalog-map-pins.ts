@@ -1,3 +1,11 @@
+/** Backend `DEFAULT_MAX_LIMIT`. Larger pages mean fewer review-queue calls. */
+export const CATALOG_MAP_PAGE_SIZE = 200;
+
+/** 10 pages of 200 keeps the map near 2,000 organizations. */
+export const CATALOG_MAP_PAGE_CAP = 10;
+
+export const CATALOG_MAP_ORG_CAP = CATALOG_MAP_PAGE_SIZE * CATALOG_MAP_PAGE_CAP;
+
 export interface CatalogMapLocation {
   id: string;
   address?: string | null;
