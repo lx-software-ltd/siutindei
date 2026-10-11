@@ -271,9 +271,9 @@ def _parse_include_locations(value: str | None) -> bool:
 def _area_names(
     session: Session,
     snapshots: list[OrgReviewSnapshot],
-    area_ids: set[UUID] | None,
-) -> dict[UUID, str]:
-    wanted: list[UUID] = []
+    area_ids: set[str] | None,
+) -> dict[str, str]:
+    wanted: list[str] = []
     for snapshot in snapshots:
         for location in snapshot.locations:
             if area_ids is not None and location.area_id not in area_ids:
@@ -289,8 +289,8 @@ def _area_names(
 
 def _map_locations(
     snapshot: OrgReviewSnapshot,
-    area_ids: set[UUID] | None,
-    area_names: Mapping[UUID, str],
+    area_ids: set[str] | None,
+    area_names: Mapping[str, str],
 ) -> list[dict[str, Any]]:
     pins: list[dict[str, Any]] = []
     for location in sorted(snapshot.locations, key=lambda item: str(item.id)):
