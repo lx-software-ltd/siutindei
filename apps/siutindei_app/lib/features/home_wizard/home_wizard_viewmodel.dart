@@ -7,7 +7,13 @@ import '../../domain/entities/entities.dart';
 import '../../domain/use_cases/use_cases.dart';
 import 'models/home_wizard_choices.dart';
 
-enum HomeWizardStep { activityTypes, ageGroup, region, results }
+enum HomeWizardStep {
+  activityTypes,
+  ageGroup,
+  region,
+  neighbourhood,
+  results,
+}
 
 enum HomeWizardPrefetchStatus { idle, loading, ready, error }
 
@@ -20,6 +26,7 @@ class HomeWizardState {
     this.selectedActivityTypeIds = const {},
     this.selectedAgeGroupId,
     this.selectedRegionId,
+    this.selectedNeighbourhoodId,
     this.prefetchStatus = HomeWizardPrefetchStatus.idle,
     this.prefetchedResults = const [],
     this.filteredResults = const [],
@@ -33,6 +40,7 @@ class HomeWizardState {
   final Set<String> selectedActivityTypeIds;
   final String? selectedAgeGroupId;
   final String? selectedRegionId;
+  final String? selectedNeighbourhoodId;
   final HomeWizardPrefetchStatus prefetchStatus;
   final List<ActivitySearchResultEntity> prefetchedResults;
   final List<ActivitySearchResultEntity> filteredResults;
@@ -51,6 +59,7 @@ class HomeWizardState {
     Set<String>? selectedActivityTypeIds,
     String? selectedAgeGroupId,
     String? selectedRegionId,
+    String? selectedNeighbourhoodId,
     HomeWizardPrefetchStatus? prefetchStatus,
     List<ActivitySearchResultEntity>? prefetchedResults,
     List<ActivitySearchResultEntity>? filteredResults,
@@ -59,6 +68,7 @@ class HomeWizardState {
     bool clearError = false,
     bool clearAgeGroup = false,
     bool clearRegion = false,
+    bool clearNeighbourhood = false,
   }) {
     return HomeWizardState(
       choices: choices ?? this.choices,
@@ -72,6 +82,9 @@ class HomeWizardState {
       selectedRegionId: clearRegion
           ? null
           : (selectedRegionId ?? this.selectedRegionId),
+      selectedNeighbourhoodId: clearRegion || clearNeighbourhood
+          ? null
+          : (selectedNeighbourhoodId ?? this.selectedNeighbourhoodId),
       prefetchStatus: prefetchStatus ?? this.prefetchStatus,
       prefetchedResults: prefetchedResults ?? this.prefetchedResults,
       filteredResults: filteredResults ?? this.filteredResults,
@@ -143,6 +156,15 @@ class HomeWizardViewModel extends Notifier<HomeWizardState> {
   void selectRegion(String regionId) {
     state = state.copyWith(
       selectedRegionId: regionId,
+      clearNeighbourhood: true,
+      currentStep: HomeWizardStep.neighbourhood,
+    );
+  }
+
+  void selectNeighbourhood(String? neighbourhoodId) {
+    state = state.copyWith(
+      selectedNeighbourhoodId: neighbourhoodId,
+      clearNeighbourhood: neighbourhoodId == null,
       currentStep: HomeWizardStep.results,
     );
     _applyRegionAndTextFilters();
@@ -160,6 +182,11 @@ class HomeWizardViewModel extends Notifier<HomeWizardState> {
       );
     } else if (step == HomeWizardStep.ageGroup) {
       state = state.copyWith(clearRegion: true, filteredResults: const []);
+    } else if (step == HomeWizardStep.region) {
+      state = state.copyWith(
+        clearNeighbourhood: true,
+        filteredResults: const [],
+      );
     }
   }
 
@@ -223,10 +250,23 @@ class HomeWizardViewModel extends Notifier<HomeWizardState> {
     }
 
     final region = choices.regions.firstWhere((item) => item.id == regionId);
+    final neighbourhoodId = state.selectedNeighbourhoodId;
+    String? neighbourhoodAreaId;
+    if (neighbourhoodId != null) {
+      for (final item in choices.neighbourhoods) {
+        if (item.id == neighbourhoodId) {
+          neighbourhoodAreaId = item.areaId;
+        }
+      }
+    }
     final query = state.searchQuery.trim().toLowerCase();
     final filtered = state.prefetchedResults.where((result) {
       final matchesRegion = result.location.regionAreaId == region.areaId;
       if (!matchesRegion) {
+        return false;
+      }
+      if (neighbourhoodAreaId != null &&
+          result.location.areaId != neighbourhoodAreaId) {
         return false;
       }
       if (query.isEmpty) {

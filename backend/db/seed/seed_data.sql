@@ -29,7 +29,11 @@ WHERE NOT EXISTS (
 
 INSERT INTO locations (id, org_id, area_id, address, lat, lng)
 SELECT 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111',
-       (SELECT id FROM geographic_areas WHERE name = 'Central and Western' AND level = 'district' LIMIT 1),
+       (SELECT n.id FROM geographic_areas n
+        JOIN geographic_areas d ON n.parent_id = d.id
+        WHERE n.name = 'Central' AND n.level = 'neighbourhood'
+          AND d.name = 'Central and Western' AND d.level = 'district'
+        LIMIT 1),
        '10 Example Lane', 22.282, 114.158
 WHERE NOT EXISTS (
   SELECT 1 FROM locations WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -37,7 +41,11 @@ WHERE NOT EXISTS (
 
 INSERT INTO locations (id, org_id, area_id, address, lat, lng)
 SELECT 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '11111111-1111-1111-1111-111111111111',
-       (SELECT id FROM geographic_areas WHERE name = 'Wan Chai' AND level = 'district' LIMIT 1),
+       (SELECT n.id FROM geographic_areas n
+        JOIN geographic_areas d ON n.parent_id = d.id
+        WHERE n.name = 'Wan Chai' AND n.level = 'neighbourhood'
+          AND d.name = 'Wan Chai' AND d.level = 'district'
+        LIMIT 1),
        '88 Hennessy Road', 22.276, 114.172
 WHERE NOT EXISTS (
   SELECT 1 FROM locations WHERE id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
@@ -45,7 +53,11 @@ WHERE NOT EXISTS (
 
 INSERT INTO locations (id, org_id, area_id, address, lat, lng)
 SELECT 'cccccccc-cccc-cccc-cccc-cccccccccccc', '22222222-2222-2222-2222-222222222222',
-       (SELECT id FROM geographic_areas WHERE name = 'Yau Tsim Mong' AND level = 'district' LIMIT 1),
+       (SELECT n.id FROM geographic_areas n
+        JOIN geographic_areas d ON n.parent_id = d.id
+        WHERE n.name = 'Tsim Sha Tsui' AND n.level = 'neighbourhood'
+          AND d.name = 'Yau Tsim Mong' AND d.level = 'district'
+        LIMIT 1),
        '18 Nathan Road', 22.298, 114.172
 WHERE NOT EXISTS (
   SELECT 1 FROM locations WHERE id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'

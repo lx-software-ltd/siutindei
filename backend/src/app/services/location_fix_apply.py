@@ -14,6 +14,8 @@ from app.db.models import Activity, ActivityLocation, GeographicArea, Location
 from app.db.models.location_fix import LocationFixProposal
 from app.db.repositories import LocationRepository
 from app.exceptions import NotFoundError, ValidationError
+from app.services.area_assignment import get_leaf
+from app.services.area_assignment import resolve_leaf
 from app.services.location_fix_districts import in_hong_kong_bbox, pin_consistency
 from app.services.location_fix_geocode import geocode_address
 from app.services.location_fix_query import pending_row
@@ -108,10 +110,12 @@ def _apply_update(
         lat, lng = coords
     chosen_area = str(area_id or "").strip()
     if chosen_area:
-        area = session.get(GeographicArea, UUID(chosen_area))
-        if area is None:
-            raise ValidationError("area_id not found", field="area_id")
-        location.area_id = area.id
+        location.area_id = _stored_leaf_id(
+            session,
+            chosen_area,
+            None if lat is None else float(lat),
+            None if lng is None else float(lng),
+        )
     location.lat = Decimal(str(lat)).quantize(_PIN)
     location.lng = Decimal(str(lng)).quantize(_PIN)
     proposed["lat"] = float(location.lat)
@@ -195,10 +199,10 @@ def _apply_create(
     proposed = dict(row.proposed_location or {})
     stored_address = str(proposed.get("address") or "").strip()
     chosen_address = stored_address if address is None else address.strip()
-    chosen_area = str(area_id or proposed.get("area_id") or "").strip()
+    raw_area = str(area_id or proposed.get("area_id") or "").strip()
     if not chosen_address:
         raise ValidationError("address is required", field="address")
-    if not chosen_area:
+    if not raw_area:
         raise ValidationError("area_id is required", field="area_id")
     lat = proposed.get("lat")
     lng = proposed.get("lng")
@@ -209,6 +213,14 @@ def _apply_create(
         coords = geocode_address(chosen_address)
         if coords is not None:
             lat, lng = coords
+    chosen_area = str(
+        _stored_leaf_id(
+            session,
+            raw_area,
+            None if lat is None else float(lat),
+            None if lng is None else float(lng),
+        )
+    )
     location = _create_location(
         LocationRepository(session),
         {
@@ -253,3 +265,26 @@ def _link_sole_venue(
         if pending is not None:
             session.delete(pending)
     session.flush()
+
+
+def _stored_leaf_id(
+    session: Session,
+    area_id: str,
+    lat: float | None,
+    lng: float | None,
+):
+    """Leaf id for a proposal, snapping a district onto its nearest neighbourhood."""
+    try:
+        parsed = UUID(str(area_id))
+    except ValueError as exc:
+        raise ValidationError("area_id not found", field="area_id") from exc
+    area = session.get(GeographicArea, parsed)
+    if area is None:
+        raise ValidationError("area_id not found", field="area_id")
+    resolved = resolve_leaf(session, area, lat, lng)
+    if resolved is None or get_leaf(session, resolved.id) is None:
+        raise ValidationError(
+            "area_id must be a neighbourhood or other area with no smaller areas",
+            field="area_id",
+        )
+    return resolved.id

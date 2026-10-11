@@ -144,6 +144,7 @@ describe('dataLayer helpers', () => {
       searchFieldsFromFilters({
         ageGroupId: '3-6',
         regionId: 'kowloon',
+        neighbourhoodId: null,
         activityTypeIds: ['early-years', 'learning'],
         textQuery: '  pottery  ',
       }),
@@ -162,6 +163,7 @@ describe('dataLayer helpers', () => {
     trackSearch({
       ageGroupId: '6-12',
       regionId: null,
+      neighbourhoodId: null,
       activityTypeIds: [],
       textQuery: '',
     });

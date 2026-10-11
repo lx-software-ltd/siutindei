@@ -20,6 +20,7 @@ from app.db.repositories import LocationRepository
 from app.exceptions import ValidationError
 from app.services.aws_proxy import http_invoke
 from app.services.location_fix_apply import _link_sole_venue
+from app.services.area_assignment import resolve_leaf
 from app.services.location_fix_districts import in_hong_kong_bbox
 from app.services.location_fix_quality import area_chains
 from app.services.location_fixes import clear_pending, dismissed_same, upsert_proposal
@@ -117,6 +118,12 @@ def consider_open_data(
     if similarity < _MIN_SIMILARITY or not row["address"]:
         return None
     area = _district_area(session, row["district"], auto_budget)
+    area = resolve_leaf(
+        session,
+        area,
+        float(row["lat"]),
+        float(row["lng"]),
+    )
     if area is None:
         return None
     proposed = _proposed(row, area, similarity)

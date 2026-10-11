@@ -35,9 +35,9 @@ interface CascadingAreaSelectProps {
  * Renders a dynamic set of cascading <select> dropdowns that adapt
  * to the depth of the selected country in the geographic area tree.
  *
- * - Hong Kong / Singapore: Country > District (2 dropdowns)
- * - UAE: Country > Region > District (3 dropdowns)
- * - Future countries may have 4 levels (Country > Region > City > District)
+ * - Hong Kong: Country > Region > District > Neighbourhood
+ * - Singapore: Country > District
+ * - UAE: Country > Region > District
  */
 export function CascadingAreaSelect({
   tree,
@@ -120,12 +120,15 @@ export function CascadingAreaSelect({
         break;
       }
 
+      const childLevel = parent.children[0]?.level;
       const levelLabel =
-        parent.children[0]?.level === 'region'
+        childLevel === 'region'
           ? 'Region'
-          : parent.children[0]?.level === 'city'
+          : childLevel === 'city'
             ? 'City'
-            : 'District';
+            : childLevel === 'neighbourhood'
+              ? 'Neighbourhood'
+              : 'District';
 
       nextLevels.push({
         label: levelLabel,

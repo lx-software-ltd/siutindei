@@ -239,24 +239,31 @@ row. `location_scan_runs` and `location_fix_proposals` stay empty. No
 
 ## Table: geographic_areas
 
-Purpose: Hierarchical lookup of valid geographic areas (country > region > city > district).
+Purpose: Hierarchical lookup of valid geographic areas
+(country > region > city > district > neighbourhood).
 
 Hong Kong uses four `level=region` nodes (Hong Kong Island, Kowloon, New Territories,
-Islands) between the `HK` country row and the 18 district rows. Home wizard region
-choices reference these region UUIDs; search matches any descendant district.
+Islands) between the `HK` country row and the 18 district rows. Each district has
+`level=neighbourhood` children. A Hong Kong location stores a neighbourhood.
+Search still matches an area and any descendant. Home wizard region choices
+reference the region UUIDs; neighbourhood choices reference the neighbourhood UUIDs.
 
 Columns:
 - `id` (UUID, PK, default `gen_random_uuid()`)
 - `parent_id` (UUID, FK -> geographic_areas.id, cascade delete, nullable for countries)
 - `name` (text, required)
 - `name_translations` (jsonb, default `{}`) — non-English name translations
-- `level` (text, required — `country`, `region`, `city`, or `district`)
+- `level` (text, required — `country`, `region`, `city`, `district`, or `neighbourhood`)
 - `code` (text, optional — ISO 3166-1 alpha-2 for countries)
 - `active` (boolean, default true — controls country visibility)
 - `display_order` (integer, default 0)
+- `lat` (numeric(9,6), optional) — neighbourhood centroid
+- `lng` (numeric(9,6), optional) — neighbourhood centroid
 
 Constraints:
 - UNIQUE(`parent_id`, `name`)
+- `locations_area_leaf` rejects a location whose `area_id` still has children
+- `geographic_area_parent_unused` rejects a new child under an area a location already uses
 
 Indexes:
 - `geo_areas_parent_idx` on `parent_id`
@@ -380,7 +387,7 @@ Purpose: Physical or logical locations for an organization.
 Columns:
 - `id` (UUID, PK, default `gen_random_uuid()`)
 - `org_id` (UUID, FK -> organizations.id, cascade delete)
-- `area_id` (UUID, FK -> geographic_areas.id, required)
+- `area_id` (UUID, FK -> geographic_areas.id, required, must be a leaf)
 - `address` (text, optional)
 - `lat` (numeric(9,6), optional)
 - `lng` (numeric(9,6), optional)

@@ -23,7 +23,7 @@ export interface paths {
                     age?: number;
                     /**
                      * @description Filter by geographic area UUID. Matches activities in the given area
-                     *     or any descendant area (for example a region or district).
+                     *     or any descendant area (for example a region, district, or neighbourhood).
                      */
                     area_id?: string;
                     /** @description Return results for a single activity UUID (at most one row). */
@@ -272,7 +272,8 @@ export interface components {
             id: string;
             /**
              * Format: uuid
-             * @description Geographic area UUID (leaf district node)
+             * @description Leaf area UUID. A neighbourhood in Hong Kong, or a district
+             *     that has no smaller areas.
              */
             area_id: string;
             /**

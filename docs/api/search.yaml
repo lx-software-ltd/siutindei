@@ -51,7 +51,7 @@ paths:
           required: false
           description: |
             Filter by geographic area UUID. Matches activities in the given area
-            or any descendant area (for example a region or district).
+            or any descendant area (for example a region, district, or neighbourhood).
           schema:
             type: string
             format: uuid
@@ -379,7 +379,9 @@ components:
         area_id:
           type: string
           format: uuid
-          description: Geographic area UUID (leaf district node)
+          description: |
+            Leaf area UUID. A neighbourhood in Hong Kong, or a district
+            that has no smaller areas.
         region_area_id:
           type: string
           format: uuid

@@ -64,6 +64,32 @@ class WizardAgeGroupOption {
   final WizardLabels labels;
 }
 
+class WizardNeighbourhoodOption {
+  const WizardNeighbourhoodOption({
+    required this.id,
+    required this.regionId,
+    required this.areaId,
+    required this.labels,
+    this.district = '',
+  });
+
+  factory WizardNeighbourhoodOption.fromJson(Map<String, dynamic> json) {
+    return WizardNeighbourhoodOption(
+      id: json['id'] as String,
+      regionId: json['regionId'] as String? ?? '',
+      areaId: json['areaId'] as String,
+      district: json['district'] as String? ?? '',
+      labels: WizardLabels.fromJson(json['labels'] as Map<String, dynamic>),
+    );
+  }
+
+  final String id;
+  final String regionId;
+  final String areaId;
+  final String district;
+  final WizardLabels labels;
+}
+
 class WizardRegionOption {
   const WizardRegionOption({
     required this.id,
@@ -89,12 +115,14 @@ class HomeWizardChoices {
     required this.activityTypes,
     required this.ageGroups,
     required this.regions,
+    this.neighbourhoods = const [],
   });
 
   factory HomeWizardChoices.fromJson(Map<String, dynamic> json) {
     final activityTypesJson = json['activityTypes'] as List<dynamic>? ?? [];
     final ageGroupsJson = json['ageGroups'] as List<dynamic>? ?? [];
     final regionsJson = json['regions'] as List<dynamic>? ?? [];
+    final neighbourhoodsJson = json['neighbourhoods'] as List<dynamic>? ?? [];
     return HomeWizardChoices(
       activityTypes: activityTypesJson
           .map(
@@ -113,12 +141,20 @@ class HomeWizardChoices {
             (item) => WizardRegionOption.fromJson(item as Map<String, dynamic>),
           )
           .toList(),
+      neighbourhoods: neighbourhoodsJson
+          .map(
+            (item) => WizardNeighbourhoodOption.fromJson(
+              item as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
     );
   }
 
   final List<WizardActivityTypeOption> activityTypes;
   final List<WizardAgeGroupOption> ageGroups;
   final List<WizardRegionOption> regions;
+  final List<WizardNeighbourhoodOption> neighbourhoods;
 
   static Future<HomeWizardChoices> loadFromAsset() async {
     final raw = await rootBundle.loadString(

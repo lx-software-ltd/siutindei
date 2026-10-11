@@ -84,10 +84,17 @@ describe('SearchNavigator', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Kowloon' }));
     expect(
       screen.getByRole('heading', {
+        name: content.smallWorld.navigator.steps.neighbourhood.title,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Step 2 of 4')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Anywhere in Kowloon' }));
+    expect(
+      screen.getByRole('heading', {
         name: content.smallWorld.navigator.steps.age.title,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Step 2 of 3')).toBeInTheDocument();
+    expect(screen.getByText('Step 3 of 4')).toBeInTheDocument();
     expect(choiceImage('3–6 years')).toHaveAttribute(
       'src',
       AGE_ICON_SRC['3-6'],
@@ -103,7 +110,7 @@ describe('SearchNavigator', () => {
         name: content.smallWorld.navigator.steps.activity.title,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
+    expect(screen.getByText('Step 4 of 4')).toBeInTheDocument();
 
     const workshop = screen.getByRole('button', {
       name: 'Early years and schools',
@@ -129,6 +136,28 @@ describe('SearchNavigator', () => {
     );
     expect(push).toHaveBeenCalledWith(
       '/en/search/?age=3-6&region=kowloon&types=early-years&view=map',
+    );
+  });
+
+  it('puts the chosen neighbourhood on the search URL', () => {
+    const content = openNavigator();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kowloon' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mong Kok' }));
+    fireEvent.click(screen.getByRole('button', { name: '3–6 years' }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Early years and schools',
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: content.smallWorld.navigator.seeActivitiesLabel,
+      }),
+    );
+
+    expect(push).toHaveBeenCalledWith(
+      '/en/search/?age=3-6&region=kowloon&neighbourhood=yau-tsim-mong-mong-kok&types=early-years&view=map',
     );
   });
 

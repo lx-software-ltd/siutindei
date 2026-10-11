@@ -27,6 +27,8 @@
     "searchPanel": {
       "title": "搜尋活動",
       "whereLabel": "地區",
+      "neighbourhoodLabel": "社區",
+      "anywhereInRegionLabel": "呢個地區任何地方",
       "childAgeLabel": "子女年齡",
       "activityTypesLabel": "活動類型",
       "searchLabel": "搜尋"
@@ -154,6 +156,7 @@
     "navigator": {
       "buttonLabel": "幫我為小朋友搵活動！",
       "allHongKongLabel": "全港",
+      "anywhereInRegionTemplate": "{region}任何地方",
       "backLabel": "返回",
       "seeActivitiesLabel": "查看活動",
       "stepProgressTemplate": "第 {current} 步，共 {total} 步",
@@ -161,6 +164,10 @@
         "location": {
           "title": "想去邊度？",
           "label": "地區"
+        },
+        "neighbourhood": {
+          "title": "邊個社區？",
+          "label": "社區"
         },
         "age": {
           "title": "小朋友幾歲？",

@@ -9,8 +9,9 @@ from app.api.admin_imports_catalog import parse_place_id
 from app.api.admin_request import _parse_uuid
 from app.api.admin_validators import MAX_ADDRESS_LENGTH, _validate_string_length
 from app.db.models import Location
-from app.db.repositories import GeographicAreaRepository, LocationRepository
+from app.db.repositories import LocationRepository
 from app.exceptions import ValidationError
+from app.services.area_assignment import get_leaf
 
 
 def _create_location(repo: LocationRepository, body: dict[str, Any]) -> Location:
@@ -24,10 +25,7 @@ def _create_location(repo: LocationRepository, body: dict[str, Any]) -> Location
         raise ValidationError("area_id is required", field="area_id")
     area_uuid = _parse_uuid(area_id_raw)
 
-    # Validate area_id exists
-    geo_repo = GeographicAreaRepository(repo._session)
-    if geo_repo.get_by_id(area_uuid) is None:
-        raise ValidationError("area_id not found", field="area_id")
+    _require_leaf_area(repo._session, area_uuid)
 
     address = _validate_string_length(
         body.get("address"), "address", MAX_ADDRESS_LENGTH
@@ -59,9 +57,7 @@ def _update_location(
     """Update a location."""
     if "area_id" in body:
         area_uuid = _parse_uuid(body["area_id"])
-        geo_repo = GeographicAreaRepository(repo._session)
-        if geo_repo.get_by_id(area_uuid) is None:
-            raise ValidationError("area_id not found", field="area_id")
+        _require_leaf_area(repo._session, area_uuid)
         entity.area_id = area_uuid  # type: ignore[assignment]
 
     if "address" in body:
@@ -90,6 +86,15 @@ def _update_location(
     if "place_id" in body:
         entity.place_id = parse_place_id(body.get("place_id"))
     return entity
+
+
+def _require_leaf_area(session: Any, area_id: Any) -> None:
+    """Reject a missing area or one that still has smaller areas under it."""
+    if get_leaf(session, area_id) is None:
+        raise ValidationError(
+            "area_id must be a neighbourhood or other area with no smaller areas",
+            field="area_id",
+        )
 
 
 def _validate_coordinates(lat: Any, lng: Any) -> None:

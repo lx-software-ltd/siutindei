@@ -115,30 +115,34 @@ export function ListingCard({
             mapAltLabel={mapAltLabel}
           />
         </div>
-        <div className="mt-3 space-y-1">
+      </Link>
+      <div className="mt-3 space-y-1">
+        <Link href={href} className="link-unadorned">
           <h3 className="line-clamp-2 text-[15px] font-semibold text-ink-900">
             {title}
           </h3>
-          <p className="text-sm text-ink-500">
-            {orgName}
-            {orgName && (region || schedule) ? ' · ' : ''}
-            {region && regionId ? (
-              <RegionMapLink
-                locale={locale}
-                label={region}
-                filters={filters}
-                regionId={regionId}
-              />
-            ) : (
-              region
-            )}
-            {schedule ? ` · ${schedule}` : ''}
-          </p>
+        </Link>
+        <p className="text-sm text-ink-500">
+          {orgName}
+          {orgName && (region || schedule) ? ' · ' : ''}
+          {region && regionId ? (
+            <RegionMapLink
+              locale={locale}
+              label={region}
+              filters={filters}
+              regionId={regionId}
+            />
+          ) : (
+            region
+          )}
+          {schedule ? ` · ${schedule}` : ''}
+        </p>
+        <Link href={href} className="link-unadorned">
           <p className="text-sm font-semibold text-ink-900">
             <span>{price}</span>
           </p>
-        </div>
-      </Link>
+        </Link>
+      </div>
     </article>
   );
 }

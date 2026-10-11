@@ -39,6 +39,7 @@ def test_current_wizard_categories_keep_the_committed_file() -> None:
     assert built["version"] == existing["version"]
     assert built["ageGroups"] == existing["ageGroups"]
     assert built["regions"] == existing["regions"]
+    assert built["neighbourhoods"] == existing["neighbourhoods"]
 
 
 def test_new_wizard_category_bumps_the_version() -> None:

@@ -56,7 +56,10 @@ export function SuggestionForm({ onSuggestionSubmitted }: SuggestionFormProps) {
     setSelectedLat(selection.lat);
     setSelectedLng(selection.lng);
     // Try to reverse-match area from Nominatim
-    const match = matchNominatimResult(selection.raw);
+    const match = matchNominatimResult(selection.raw, {
+      lat: selection.lat,
+      lng: selection.lng,
+    });
     if (match) {
       setAreaId(match.areaId);
     }

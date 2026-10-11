@@ -123,5 +123,1237 @@
         "zh-HK": "離島"
       }
     }
+  ],
+  "neighbourhoods": [
+    {
+      "id": "central-and-western-kennedy-town",
+      "regionId": "hong_kong_island",
+      "district": "Central and Western",
+      "areaId": "4800fff7-4d9b-54df-b2a6-144788bd4a33",
+      "labels": {
+        "en": "Kennedy Town",
+        "zh-HK": "堅尼地城"
+      }
+    },
+    {
+      "id": "central-and-western-shek-tong-tsui",
+      "regionId": "hong_kong_island",
+      "district": "Central and Western",
+      "areaId": "28b5a275-6c45-5812-9b0d-68ecb3151245",
+      "labels": {
+        "en": "Shek Tong Tsui",
+        "zh-HK": "石塘咀"
+      }
+    },
+    {
+      "id": "central-and-western-sai-ying-pun",
+      "regionId": "hong_kong_island",
+      "district": "Central and Western",
+      "areaId": "bc0287d0-b618-589f-bfba-df8b344ea33b",
+      "labels": {
+        "en": "Sai Ying Pun",
+        "zh-HK": "西營盤"
+      }
+    },
+    {
+      "id": "central-and-western-sheung-wan",
+      "regionId": "hong_kong_island",
+      "district": "Central and Western",
+      "areaId": "45d914d4-2076-573f-8b56-db680feb6521",
+      "labels": {
+        "en": "Sheung Wan",
+        "zh-HK": "上環"
+      }
+    },
+    {
+      "id": "central-and-western-central",
+      "regionId": "hong_kong_island",
+      "district": "Central and Western",
+      "areaId": "e723b5d0-2a65-55a1-8a8d-eb09b4f80348",
+      "labels": {
+        "en": "Central",
+        "zh-HK": "中環"
+      }
+    },
+    {
+      "id": "central-and-western-admiralty",
+      "regionId": "hong_kong_island",
+      "district": "Central and Western",
+      "areaId": "2964b9f2-8d72-5370-8def-4d9662981086",
+      "labels": {
+        "en": "Admiralty",
+        "zh-HK": "金鐘"
+      }
+    },
+    {
+      "id": "central-and-western-mid-levels",
+      "regionId": "hong_kong_island",
+      "district": "Central and Western",
+      "areaId": "ce9f3304-9d20-55af-b669-434eda7ee903",
+      "labels": {
+        "en": "Mid-Levels",
+        "zh-HK": "半山"
+      }
+    },
+    {
+      "id": "central-and-western-the-peak",
+      "regionId": "hong_kong_island",
+      "district": "Central and Western",
+      "areaId": "99e8a019-c973-5f07-b56c-eea47235b418",
+      "labels": {
+        "en": "The Peak",
+        "zh-HK": "山頂"
+      }
+    },
+    {
+      "id": "wan-chai-wan-chai",
+      "regionId": "hong_kong_island",
+      "district": "Wan Chai",
+      "areaId": "66225562-5ec6-58ef-bb50-66a7ca740623",
+      "labels": {
+        "en": "Wan Chai",
+        "zh-HK": "灣仔"
+      }
+    },
+    {
+      "id": "wan-chai-causeway-bay",
+      "regionId": "hong_kong_island",
+      "district": "Wan Chai",
+      "areaId": "9a760beb-f5a8-531d-bf47-4b91ea048eb9",
+      "labels": {
+        "en": "Causeway Bay",
+        "zh-HK": "銅鑼灣"
+      }
+    },
+    {
+      "id": "wan-chai-happy-valley",
+      "regionId": "hong_kong_island",
+      "district": "Wan Chai",
+      "areaId": "52ab536b-bc03-5ae9-826f-a88ebdcfd565",
+      "labels": {
+        "en": "Happy Valley",
+        "zh-HK": "跑馬地"
+      }
+    },
+    {
+      "id": "wan-chai-tai-hang",
+      "regionId": "hong_kong_island",
+      "district": "Wan Chai",
+      "areaId": "4bc05f22-f9b8-5090-8be4-55ffa937cb0c",
+      "labels": {
+        "en": "Tai Hang",
+        "zh-HK": "大坑"
+      }
+    },
+    {
+      "id": "wan-chai-jardine-s-lookout",
+      "regionId": "hong_kong_island",
+      "district": "Wan Chai",
+      "areaId": "6d9746d7-9956-5503-9957-67ffd9dd71d0",
+      "labels": {
+        "en": "Jardine's Lookout",
+        "zh-HK": "渣甸山"
+      }
+    },
+    {
+      "id": "eastern-north-point",
+      "regionId": "hong_kong_island",
+      "district": "Eastern",
+      "areaId": "db6aa254-d327-5ae3-9bcd-f11c67098e5b",
+      "labels": {
+        "en": "North Point",
+        "zh-HK": "北角"
+      }
+    },
+    {
+      "id": "eastern-quarry-bay",
+      "regionId": "hong_kong_island",
+      "district": "Eastern",
+      "areaId": "48d0a387-b390-5c7e-97c5-d3702711a7bf",
+      "labels": {
+        "en": "Quarry Bay",
+        "zh-HK": "鰂魚涌"
+      }
+    },
+    {
+      "id": "eastern-tai-koo",
+      "regionId": "hong_kong_island",
+      "district": "Eastern",
+      "areaId": "0cc2b98d-2396-5d8a-a751-5b9e3af5a283",
+      "labels": {
+        "en": "Tai Koo",
+        "zh-HK": "太古"
+      }
+    },
+    {
+      "id": "eastern-sai-wan-ho",
+      "regionId": "hong_kong_island",
+      "district": "Eastern",
+      "areaId": "036c5484-3399-567d-ab55-1dd5e08753bd",
+      "labels": {
+        "en": "Sai Wan Ho",
+        "zh-HK": "西灣河"
+      }
+    },
+    {
+      "id": "eastern-shau-kei-wan",
+      "regionId": "hong_kong_island",
+      "district": "Eastern",
+      "areaId": "e079895d-6d33-5ce6-b493-8f2f5e249b59",
+      "labels": {
+        "en": "Shau Kei Wan",
+        "zh-HK": "筲箕灣"
+      }
+    },
+    {
+      "id": "eastern-heng-fa-chuen",
+      "regionId": "hong_kong_island",
+      "district": "Eastern",
+      "areaId": "02e46b3a-2b0b-5c5c-aef0-6439be0ea6b5",
+      "labels": {
+        "en": "Heng Fa Chuen",
+        "zh-HK": "杏花邨"
+      }
+    },
+    {
+      "id": "eastern-chai-wan",
+      "regionId": "hong_kong_island",
+      "district": "Eastern",
+      "areaId": "8ebcebb1-f579-5c01-9801-45bc4e2db565",
+      "labels": {
+        "en": "Chai Wan",
+        "zh-HK": "柴灣"
+      }
+    },
+    {
+      "id": "eastern-siu-sai-wan",
+      "regionId": "hong_kong_island",
+      "district": "Eastern",
+      "areaId": "fd57fee1-2fd5-53ab-8a32-82baa14d697b",
+      "labels": {
+        "en": "Siu Sai Wan",
+        "zh-HK": "小西灣"
+      }
+    },
+    {
+      "id": "southern-pok-fu-lam",
+      "regionId": "hong_kong_island",
+      "district": "Southern",
+      "areaId": "d7167d39-7569-5ee5-a0c9-32c93f177926",
+      "labels": {
+        "en": "Pok Fu Lam",
+        "zh-HK": "薄扶林"
+      }
+    },
+    {
+      "id": "southern-aberdeen",
+      "regionId": "hong_kong_island",
+      "district": "Southern",
+      "areaId": "d7157964-d8a9-567d-9370-d799512cf27c",
+      "labels": {
+        "en": "Aberdeen",
+        "zh-HK": "香港仔"
+      }
+    },
+    {
+      "id": "southern-ap-lei-chau",
+      "regionId": "hong_kong_island",
+      "district": "Southern",
+      "areaId": "9d0e1db3-b2bc-5ef8-b2d4-d9a3f591c37a",
+      "labels": {
+        "en": "Ap Lei Chau",
+        "zh-HK": "鴨脷洲"
+      }
+    },
+    {
+      "id": "southern-wong-chuk-hang",
+      "regionId": "hong_kong_island",
+      "district": "Southern",
+      "areaId": "ae5bca3f-b241-5fa9-ac9c-c22ad79f5742",
+      "labels": {
+        "en": "Wong Chuk Hang",
+        "zh-HK": "黃竹坑"
+      }
+    },
+    {
+      "id": "southern-repulse-bay",
+      "regionId": "hong_kong_island",
+      "district": "Southern",
+      "areaId": "a2ef7a71-db21-5544-b70e-41f9e53984dd",
+      "labels": {
+        "en": "Repulse Bay",
+        "zh-HK": "淺水灣"
+      }
+    },
+    {
+      "id": "southern-stanley",
+      "regionId": "hong_kong_island",
+      "district": "Southern",
+      "areaId": "8e20eb5e-f30a-5b98-b60c-6c9b4b4a81e3",
+      "labels": {
+        "en": "Stanley",
+        "zh-HK": "赤柱"
+      }
+    },
+    {
+      "id": "southern-chung-hom-kok",
+      "regionId": "hong_kong_island",
+      "district": "Southern",
+      "areaId": "d261be74-8039-57aa-8e8d-cef162f24c22",
+      "labels": {
+        "en": "Chung Hom Kok",
+        "zh-HK": "舂坎角"
+      }
+    },
+    {
+      "id": "southern-shek-o",
+      "regionId": "hong_kong_island",
+      "district": "Southern",
+      "areaId": "22053c8f-c473-58de-b931-dcc73c40e89c",
+      "labels": {
+        "en": "Shek O",
+        "zh-HK": "石澳"
+      }
+    },
+    {
+      "id": "yau-tsim-mong-tsim-sha-tsui",
+      "regionId": "kowloon",
+      "district": "Yau Tsim Mong",
+      "areaId": "04b2626f-2edf-52ed-9d82-ff5bc08dcc6f",
+      "labels": {
+        "en": "Tsim Sha Tsui",
+        "zh-HK": "尖沙咀"
+      }
+    },
+    {
+      "id": "yau-tsim-mong-jordan",
+      "regionId": "kowloon",
+      "district": "Yau Tsim Mong",
+      "areaId": "0b744925-cc28-500b-a878-82fa0617eb0a",
+      "labels": {
+        "en": "Jordan",
+        "zh-HK": "佐敦"
+      }
+    },
+    {
+      "id": "yau-tsim-mong-yau-ma-tei",
+      "regionId": "kowloon",
+      "district": "Yau Tsim Mong",
+      "areaId": "73723f77-e131-56f2-a2f1-6dc4fa15ee95",
+      "labels": {
+        "en": "Yau Ma Tei",
+        "zh-HK": "油麻地"
+      }
+    },
+    {
+      "id": "yau-tsim-mong-mong-kok",
+      "regionId": "kowloon",
+      "district": "Yau Tsim Mong",
+      "areaId": "817456a3-b9ae-5b02-9e2b-f88caafe4f72",
+      "labels": {
+        "en": "Mong Kok",
+        "zh-HK": "旺角"
+      }
+    },
+    {
+      "id": "yau-tsim-mong-prince-edward",
+      "regionId": "kowloon",
+      "district": "Yau Tsim Mong",
+      "areaId": "57b714f2-9dfe-597d-a656-e9d5413a3e24",
+      "labels": {
+        "en": "Prince Edward",
+        "zh-HK": "太子"
+      }
+    },
+    {
+      "id": "yau-tsim-mong-tai-kok-tsui",
+      "regionId": "kowloon",
+      "district": "Yau Tsim Mong",
+      "areaId": "6c45a945-9003-5d28-b5ab-419d12f912d7",
+      "labels": {
+        "en": "Tai Kok Tsui",
+        "zh-HK": "大角咀"
+      }
+    },
+    {
+      "id": "sham-shui-po-sham-shui-po",
+      "regionId": "kowloon",
+      "district": "Sham Shui Po",
+      "areaId": "3f5e0e24-8c63-5abd-8dda-4a045a986101",
+      "labels": {
+        "en": "Sham Shui Po",
+        "zh-HK": "深水埗"
+      }
+    },
+    {
+      "id": "sham-shui-po-cheung-sha-wan",
+      "regionId": "kowloon",
+      "district": "Sham Shui Po",
+      "areaId": "e34b0e85-373e-55dd-8bb7-6821b2df0cfb",
+      "labels": {
+        "en": "Cheung Sha Wan",
+        "zh-HK": "長沙灣"
+      }
+    },
+    {
+      "id": "sham-shui-po-lai-chi-kok",
+      "regionId": "kowloon",
+      "district": "Sham Shui Po",
+      "areaId": "d1e983ae-0318-5f4a-8f1e-22afb1265275",
+      "labels": {
+        "en": "Lai Chi Kok",
+        "zh-HK": "荔枝角"
+      }
+    },
+    {
+      "id": "sham-shui-po-mei-foo",
+      "regionId": "kowloon",
+      "district": "Sham Shui Po",
+      "areaId": "fe749391-36e2-50ee-aa8d-cf2fd8c03510",
+      "labels": {
+        "en": "Mei Foo",
+        "zh-HK": "美孚"
+      }
+    },
+    {
+      "id": "sham-shui-po-shek-kip-mei",
+      "regionId": "kowloon",
+      "district": "Sham Shui Po",
+      "areaId": "ce719eda-03cd-57b0-bf8f-3a87de0c9c5c",
+      "labels": {
+        "en": "Shek Kip Mei",
+        "zh-HK": "石硤尾"
+      }
+    },
+    {
+      "id": "sham-shui-po-nam-cheong",
+      "regionId": "kowloon",
+      "district": "Sham Shui Po",
+      "areaId": "f8e3294f-7d9e-5223-9bef-1a6fcf6f854a",
+      "labels": {
+        "en": "Nam Cheong",
+        "zh-HK": "南昌"
+      }
+    },
+    {
+      "id": "kowloon-city-hung-hom",
+      "regionId": "kowloon",
+      "district": "Kowloon City",
+      "areaId": "8ef8055a-e8eb-5cc3-b2b5-2293130fc602",
+      "labels": {
+        "en": "Hung Hom",
+        "zh-HK": "紅磡"
+      }
+    },
+    {
+      "id": "kowloon-city-to-kwa-wan",
+      "regionId": "kowloon",
+      "district": "Kowloon City",
+      "areaId": "6a09a01e-ad37-5b23-b7fb-fdfe0236e04e",
+      "labels": {
+        "en": "To Kwa Wan",
+        "zh-HK": "土瓜灣"
+      }
+    },
+    {
+      "id": "kowloon-city-ma-tau-wai",
+      "regionId": "kowloon",
+      "district": "Kowloon City",
+      "areaId": "b134d442-cb6c-569c-a913-701d22593adc",
+      "labels": {
+        "en": "Ma Tau Wai",
+        "zh-HK": "馬頭圍"
+      }
+    },
+    {
+      "id": "kowloon-city-kowloon-city",
+      "regionId": "kowloon",
+      "district": "Kowloon City",
+      "areaId": "5d9abacd-7696-57bc-94c8-76790aabac8a",
+      "labels": {
+        "en": "Kowloon City",
+        "zh-HK": "九龍城"
+      }
+    },
+    {
+      "id": "kowloon-city-ho-man-tin",
+      "regionId": "kowloon",
+      "district": "Kowloon City",
+      "areaId": "f43b48cf-46cf-5ed2-9e7e-905c07a85a8e",
+      "labels": {
+        "en": "Ho Man Tin",
+        "zh-HK": "何文田"
+      }
+    },
+    {
+      "id": "kowloon-city-kowloon-tong",
+      "regionId": "kowloon",
+      "district": "Kowloon City",
+      "areaId": "cffdab91-25d6-5003-b990-8935c073e7cf",
+      "labels": {
+        "en": "Kowloon Tong",
+        "zh-HK": "九龍塘"
+      }
+    },
+    {
+      "id": "kowloon-city-kai-tak",
+      "regionId": "kowloon",
+      "district": "Kowloon City",
+      "areaId": "d929ee8f-b67c-53ff-bb6e-34c712b48b9d",
+      "labels": {
+        "en": "Kai Tak",
+        "zh-HK": "啟德"
+      }
+    },
+    {
+      "id": "wong-tai-sin-wong-tai-sin",
+      "regionId": "kowloon",
+      "district": "Wong Tai Sin",
+      "areaId": "1a81eab8-11f0-5567-adfb-c49e219d9fbd",
+      "labels": {
+        "en": "Wong Tai Sin",
+        "zh-HK": "黃大仙"
+      }
+    },
+    {
+      "id": "wong-tai-sin-diamond-hill",
+      "regionId": "kowloon",
+      "district": "Wong Tai Sin",
+      "areaId": "05d843d2-f874-54d6-918f-07e6d533d897",
+      "labels": {
+        "en": "Diamond Hill",
+        "zh-HK": "鑽石山"
+      }
+    },
+    {
+      "id": "wong-tai-sin-san-po-kong",
+      "regionId": "kowloon",
+      "district": "Wong Tai Sin",
+      "areaId": "a88135c0-0016-5f96-ad65-273346fbc0e4",
+      "labels": {
+        "en": "San Po Kong",
+        "zh-HK": "新蒲崗"
+      }
+    },
+    {
+      "id": "wong-tai-sin-lok-fu",
+      "regionId": "kowloon",
+      "district": "Wong Tai Sin",
+      "areaId": "bed204d2-3793-54a2-9660-69e536ad3089",
+      "labels": {
+        "en": "Lok Fu",
+        "zh-HK": "樂富"
+      }
+    },
+    {
+      "id": "wong-tai-sin-tsz-wan-shan",
+      "regionId": "kowloon",
+      "district": "Wong Tai Sin",
+      "areaId": "bba23ce6-bf6e-51f6-bbf1-0f8f79d68b97",
+      "labels": {
+        "en": "Tsz Wan Shan",
+        "zh-HK": "慈雲山"
+      }
+    },
+    {
+      "id": "wong-tai-sin-choi-hung",
+      "regionId": "kowloon",
+      "district": "Wong Tai Sin",
+      "areaId": "fa0099eb-ba2f-5924-b984-556eb148c145",
+      "labels": {
+        "en": "Choi Hung",
+        "zh-HK": "彩虹"
+      }
+    },
+    {
+      "id": "wong-tai-sin-ngau-chi-wan",
+      "regionId": "kowloon",
+      "district": "Wong Tai Sin",
+      "areaId": "f77bd522-37be-51c2-b930-a70c197f7f07",
+      "labels": {
+        "en": "Ngau Chi Wan",
+        "zh-HK": "牛池灣"
+      }
+    },
+    {
+      "id": "kwun-tong-kowloon-bay",
+      "regionId": "kowloon",
+      "district": "Kwun Tong",
+      "areaId": "26123e57-6f8f-5010-8407-7a072a5218cd",
+      "labels": {
+        "en": "Kowloon Bay",
+        "zh-HK": "九龍灣"
+      }
+    },
+    {
+      "id": "kwun-tong-ngau-tau-kok",
+      "regionId": "kowloon",
+      "district": "Kwun Tong",
+      "areaId": "2bcd1d20-fb0e-537d-97c3-8fd5da47bbed",
+      "labels": {
+        "en": "Ngau Tau Kok",
+        "zh-HK": "牛頭角"
+      }
+    },
+    {
+      "id": "kwun-tong-kwun-tong",
+      "regionId": "kowloon",
+      "district": "Kwun Tong",
+      "areaId": "4516de09-0271-5364-a777-beebe59fd213",
+      "labels": {
+        "en": "Kwun Tong",
+        "zh-HK": "觀塘"
+      }
+    },
+    {
+      "id": "kwun-tong-lam-tin",
+      "regionId": "kowloon",
+      "district": "Kwun Tong",
+      "areaId": "14d2d6a3-31e7-5832-8d60-9fe9d3ea0d34",
+      "labels": {
+        "en": "Lam Tin",
+        "zh-HK": "藍田"
+      }
+    },
+    {
+      "id": "kwun-tong-yau-tong",
+      "regionId": "kowloon",
+      "district": "Kwun Tong",
+      "areaId": "0ac17bd2-0142-5b18-bbc0-8723d5bf2660",
+      "labels": {
+        "en": "Yau Tong",
+        "zh-HK": "油塘"
+      }
+    },
+    {
+      "id": "kwun-tong-sau-mau-ping",
+      "regionId": "kowloon",
+      "district": "Kwun Tong",
+      "areaId": "8522cdda-eb5e-59ab-9d7e-68f3d6ade27a",
+      "labels": {
+        "en": "Sau Mau Ping",
+        "zh-HK": "秀茂坪"
+      }
+    },
+    {
+      "id": "kwun-tong-shun-lee",
+      "regionId": "kowloon",
+      "district": "Kwun Tong",
+      "areaId": "5e0a0628-7624-5598-8824-50f5d6ff2a3c",
+      "labels": {
+        "en": "Shun Lee",
+        "zh-HK": "順利"
+      }
+    },
+    {
+      "id": "kwai-tsing-kwai-hing",
+      "regionId": "new_territories",
+      "district": "Kwai Tsing",
+      "areaId": "9df34501-7931-5c58-8491-0bd378c4c4e2",
+      "labels": {
+        "en": "Kwai Hing",
+        "zh-HK": "葵興"
+      }
+    },
+    {
+      "id": "kwai-tsing-kwai-fong",
+      "regionId": "new_territories",
+      "district": "Kwai Tsing",
+      "areaId": "af05da15-1966-504b-99a4-211e07b30a79",
+      "labels": {
+        "en": "Kwai Fong",
+        "zh-HK": "葵芳"
+      }
+    },
+    {
+      "id": "kwai-tsing-kwai-chung",
+      "regionId": "new_territories",
+      "district": "Kwai Tsing",
+      "areaId": "beff22c3-0e0d-5e69-a139-f4758aa7487c",
+      "labels": {
+        "en": "Kwai Chung",
+        "zh-HK": "葵涌"
+      }
+    },
+    {
+      "id": "kwai-tsing-lai-king",
+      "regionId": "new_territories",
+      "district": "Kwai Tsing",
+      "areaId": "da03601a-f8f0-538a-95d0-6c6757113ea9",
+      "labels": {
+        "en": "Lai King",
+        "zh-HK": "荔景"
+      }
+    },
+    {
+      "id": "kwai-tsing-tsing-yi",
+      "regionId": "new_territories",
+      "district": "Kwai Tsing",
+      "areaId": "9da058eb-5284-57e8-ac0f-a6223fd0a1b7",
+      "labels": {
+        "en": "Tsing Yi",
+        "zh-HK": "青衣"
+      }
+    },
+    {
+      "id": "tsuen-wan-tsuen-wan",
+      "regionId": "new_territories",
+      "district": "Tsuen Wan",
+      "areaId": "5d908894-9767-55ff-84ac-f739ad79721c",
+      "labels": {
+        "en": "Tsuen Wan",
+        "zh-HK": "荃灣"
+      }
+    },
+    {
+      "id": "tsuen-wan-tsuen-wan-west",
+      "regionId": "new_territories",
+      "district": "Tsuen Wan",
+      "areaId": "ae30af39-bb83-5239-b68d-92f059bdd318",
+      "labels": {
+        "en": "Tsuen Wan West",
+        "zh-HK": "荃灣西"
+      }
+    },
+    {
+      "id": "tsuen-wan-tai-wo-hau",
+      "regionId": "new_territories",
+      "district": "Tsuen Wan",
+      "areaId": "53cf30c3-b59f-55cf-bb2a-8a837d8fa2ed",
+      "labels": {
+        "en": "Tai Wo Hau",
+        "zh-HK": "大窩口"
+      }
+    },
+    {
+      "id": "tsuen-wan-sham-tseng",
+      "regionId": "new_territories",
+      "district": "Tsuen Wan",
+      "areaId": "1053e002-1f8a-557a-9a06-9057d00d33b6",
+      "labels": {
+        "en": "Sham Tseng",
+        "zh-HK": "深井"
+      }
+    },
+    {
+      "id": "tsuen-wan-ting-kau",
+      "regionId": "new_territories",
+      "district": "Tsuen Wan",
+      "areaId": "6038b733-a2ab-5ae4-8321-ac5e3cad37b8",
+      "labels": {
+        "en": "Ting Kau",
+        "zh-HK": "汀九"
+      }
+    },
+    {
+      "id": "tsuen-wan-ma-wan",
+      "regionId": "new_territories",
+      "district": "Tsuen Wan",
+      "areaId": "43dfaf0e-9b57-5da2-9625-ebe7aa6004e2",
+      "labels": {
+        "en": "Ma Wan",
+        "zh-HK": "馬灣"
+      }
+    },
+    {
+      "id": "tuen-mun-tuen-mun-town-centre",
+      "regionId": "new_territories",
+      "district": "Tuen Mun",
+      "areaId": "638105f2-9f80-5a03-afdb-76b3f089ced9",
+      "labels": {
+        "en": "Tuen Mun Town Centre",
+        "zh-HK": "屯門市中心"
+      }
+    },
+    {
+      "id": "tuen-mun-tuen-mun-san-hui",
+      "regionId": "new_territories",
+      "district": "Tuen Mun",
+      "areaId": "1754b26d-88b1-550d-a62d-957d7ff887a5",
+      "labels": {
+        "en": "Tuen Mun San Hui",
+        "zh-HK": "屯門新墟"
+      }
+    },
+    {
+      "id": "tuen-mun-siu-hong",
+      "regionId": "new_territories",
+      "district": "Tuen Mun",
+      "areaId": "69efbc2f-c9b1-51fb-90b4-f4bff938fb38",
+      "labels": {
+        "en": "Siu Hong",
+        "zh-HK": "兆康"
+      }
+    },
+    {
+      "id": "tuen-mun-butterfly",
+      "regionId": "new_territories",
+      "district": "Tuen Mun",
+      "areaId": "b6dd0336-ad27-5d0a-b938-ab6eb03e8dc7",
+      "labels": {
+        "en": "Butterfly",
+        "zh-HK": "蝴蝶"
+      }
+    },
+    {
+      "id": "tuen-mun-so-kwun-wat",
+      "regionId": "new_territories",
+      "district": "Tuen Mun",
+      "areaId": "add0d575-0280-586a-bc5c-410142d8dc71",
+      "labels": {
+        "en": "So Kwun Wat",
+        "zh-HK": "掃管笏"
+      }
+    },
+    {
+      "id": "tuen-mun-tai-lam",
+      "regionId": "new_territories",
+      "district": "Tuen Mun",
+      "areaId": "8ed675e1-c7fe-52a0-be9e-d698bf1193b1",
+      "labels": {
+        "en": "Tai Lam",
+        "zh-HK": "大欖"
+      }
+    },
+    {
+      "id": "tuen-mun-lam-tei",
+      "regionId": "new_territories",
+      "district": "Tuen Mun",
+      "areaId": "d4161428-a177-5027-a873-28c8b1a6033c",
+      "labels": {
+        "en": "Lam Tei",
+        "zh-HK": "藍地"
+      }
+    },
+    {
+      "id": "yuen-long-yuen-long-town",
+      "regionId": "new_territories",
+      "district": "Yuen Long",
+      "areaId": "fb0dda63-d93b-577d-a42c-f1a78dabbfd1",
+      "labels": {
+        "en": "Yuen Long Town",
+        "zh-HK": "元朗市"
+      }
+    },
+    {
+      "id": "yuen-long-long-ping",
+      "regionId": "new_territories",
+      "district": "Yuen Long",
+      "areaId": "73146d08-d61e-587e-bc52-514f182efc1a",
+      "labels": {
+        "en": "Long Ping",
+        "zh-HK": "朗屏"
+      }
+    },
+    {
+      "id": "yuen-long-tin-shui-wai",
+      "regionId": "new_territories",
+      "district": "Yuen Long",
+      "areaId": "25933095-83b4-545d-9fcd-152481dd93c6",
+      "labels": {
+        "en": "Tin Shui Wai",
+        "zh-HK": "天水圍"
+      }
+    },
+    {
+      "id": "yuen-long-hung-shui-kiu",
+      "regionId": "new_territories",
+      "district": "Yuen Long",
+      "areaId": "651c241a-5394-58ab-9e7f-51c510015b93",
+      "labels": {
+        "en": "Hung Shui Kiu",
+        "zh-HK": "洪水橋"
+      }
+    },
+    {
+      "id": "yuen-long-kam-tin",
+      "regionId": "new_territories",
+      "district": "Yuen Long",
+      "areaId": "609a0854-13aa-5890-8dd7-0110dd862416",
+      "labels": {
+        "en": "Kam Tin",
+        "zh-HK": "錦田"
+      }
+    },
+    {
+      "id": "yuen-long-pat-heung",
+      "regionId": "new_territories",
+      "district": "Yuen Long",
+      "areaId": "e735a628-a661-5ade-a73b-f00c35b483e5",
+      "labels": {
+        "en": "Pat Heung",
+        "zh-HK": "八鄉"
+      }
+    },
+    {
+      "id": "yuen-long-lau-fau-shan",
+      "regionId": "new_territories",
+      "district": "Yuen Long",
+      "areaId": "f9aa47a0-18df-5b50-b2e0-4376976b432c",
+      "labels": {
+        "en": "Lau Fau Shan",
+        "zh-HK": "流浮山"
+      }
+    },
+    {
+      "id": "yuen-long-san-tin",
+      "regionId": "new_territories",
+      "district": "Yuen Long",
+      "areaId": "7faad47b-4310-5e0a-863d-f0637744b660",
+      "labels": {
+        "en": "San Tin",
+        "zh-HK": "新田"
+      }
+    },
+    {
+      "id": "north-sheung-shui",
+      "regionId": "new_territories",
+      "district": "North",
+      "areaId": "1bed1be9-86f2-5be5-9248-6a22c4881277",
+      "labels": {
+        "en": "Sheung Shui",
+        "zh-HK": "上水"
+      }
+    },
+    {
+      "id": "north-fanling",
+      "regionId": "new_territories",
+      "district": "North",
+      "areaId": "bbb57f5b-ba03-5c40-852e-5a5f8bd8ce5c",
+      "labels": {
+        "en": "Fanling",
+        "zh-HK": "粉嶺"
+      }
+    },
+    {
+      "id": "north-luen-wo-hui",
+      "regionId": "new_territories",
+      "district": "North",
+      "areaId": "adb95d1c-c5ab-5ea8-ab5d-c002e62d3c6d",
+      "labels": {
+        "en": "Luen Wo Hui",
+        "zh-HK": "聯和墟"
+      }
+    },
+    {
+      "id": "north-kwu-tung",
+      "regionId": "new_territories",
+      "district": "North",
+      "areaId": "91c52e61-8d8d-5ada-b12b-bd3395ddd961",
+      "labels": {
+        "en": "Kwu Tung",
+        "zh-HK": "古洞"
+      }
+    },
+    {
+      "id": "north-ta-kwu-ling",
+      "regionId": "new_territories",
+      "district": "North",
+      "areaId": "17103a50-15d9-5f9f-9dc8-a0d1ad8865c7",
+      "labels": {
+        "en": "Ta Kwu Ling",
+        "zh-HK": "打鼓嶺"
+      }
+    },
+    {
+      "id": "north-sha-tau-kok",
+      "regionId": "new_territories",
+      "district": "North",
+      "areaId": "cfc49aae-1dab-55a7-9c44-c41c1f1d5dbd",
+      "labels": {
+        "en": "Sha Tau Kok",
+        "zh-HK": "沙頭角"
+      }
+    },
+    {
+      "id": "tai-po-tai-po-market",
+      "regionId": "new_territories",
+      "district": "Tai Po",
+      "areaId": "b171fe24-ef25-58b6-823c-e55afa5fc6a7",
+      "labels": {
+        "en": "Tai Po Market",
+        "zh-HK": "大埔墟"
+      }
+    },
+    {
+      "id": "tai-po-tai-po-centre",
+      "regionId": "new_territories",
+      "district": "Tai Po",
+      "areaId": "18ae03ea-d478-5047-9938-f25d5acee52b",
+      "labels": {
+        "en": "Tai Po Centre",
+        "zh-HK": "大埔中心"
+      }
+    },
+    {
+      "id": "tai-po-tai-wo",
+      "regionId": "new_territories",
+      "district": "Tai Po",
+      "areaId": "8580244d-8a56-533b-8f44-d7000a51c91e",
+      "labels": {
+        "en": "Tai Wo",
+        "zh-HK": "太和"
+      }
+    },
+    {
+      "id": "tai-po-lam-tsuen",
+      "regionId": "new_territories",
+      "district": "Tai Po",
+      "areaId": "4440bc2f-c239-5880-bfda-267e9ec31d78",
+      "labels": {
+        "en": "Lam Tsuen",
+        "zh-HK": "林村"
+      }
+    },
+    {
+      "id": "tai-po-tai-mei-tuk",
+      "regionId": "new_territories",
+      "district": "Tai Po",
+      "areaId": "c40a8856-d63e-50dc-9b8b-b67cc232d2b5",
+      "labels": {
+        "en": "Tai Mei Tuk",
+        "zh-HK": "大美督"
+      }
+    },
+    {
+      "id": "tai-po-shuen-wan",
+      "regionId": "new_territories",
+      "district": "Tai Po",
+      "areaId": "ab3abd62-3661-59f4-9b2c-bd3a37e82fb0",
+      "labels": {
+        "en": "Shuen Wan",
+        "zh-HK": "船灣"
+      }
+    },
+    {
+      "id": "sha-tin-tai-wai",
+      "regionId": "new_territories",
+      "district": "Sha Tin",
+      "areaId": "ed1d2d60-2a09-53c6-a076-a57392f6bf79",
+      "labels": {
+        "en": "Tai Wai",
+        "zh-HK": "大圍"
+      }
+    },
+    {
+      "id": "sha-tin-hin-keng",
+      "regionId": "new_territories",
+      "district": "Sha Tin",
+      "areaId": "1387ae6e-529a-5595-b965-6d2bcc8b1619",
+      "labels": {
+        "en": "Hin Keng",
+        "zh-HK": "顯徑"
+      }
+    },
+    {
+      "id": "sha-tin-sha-tin-town-centre",
+      "regionId": "new_territories",
+      "district": "Sha Tin",
+      "areaId": "e8f5888c-7db1-5323-b233-3defe1c96544",
+      "labels": {
+        "en": "Sha Tin Town Centre",
+        "zh-HK": "沙田市中心"
+      }
+    },
+    {
+      "id": "sha-tin-fo-tan",
+      "regionId": "new_territories",
+      "district": "Sha Tin",
+      "areaId": "15ed035d-dc18-5bf6-8b31-b497a8d951e7",
+      "labels": {
+        "en": "Fo Tan",
+        "zh-HK": "火炭"
+      }
+    },
+    {
+      "id": "sha-tin-tai-shui-hang",
+      "regionId": "new_territories",
+      "district": "Sha Tin",
+      "areaId": "b5adf9c4-5a94-5b74-b9d3-49c41ab0d6c9",
+      "labels": {
+        "en": "Tai Shui Hang",
+        "zh-HK": "大水坑"
+      }
+    },
+    {
+      "id": "sha-tin-ma-on-shan",
+      "regionId": "new_territories",
+      "district": "Sha Tin",
+      "areaId": "ac4dcfe7-22d6-5574-8924-ffaa0256d677",
+      "labels": {
+        "en": "Ma On Shan",
+        "zh-HK": "馬鞍山"
+      }
+    },
+    {
+      "id": "sha-tin-wu-kai-sha",
+      "regionId": "new_territories",
+      "district": "Sha Tin",
+      "areaId": "f8700e68-3f43-5855-8edc-9603eeae187c",
+      "labels": {
+        "en": "Wu Kai Sha",
+        "zh-HK": "烏溪沙"
+      }
+    },
+    {
+      "id": "sha-tin-che-kung-temple",
+      "regionId": "new_territories",
+      "district": "Sha Tin",
+      "areaId": "b6d06180-9871-547c-9a17-0ac86de8e862",
+      "labels": {
+        "en": "Che Kung Temple",
+        "zh-HK": "車公廟"
+      }
+    },
+    {
+      "id": "sai-kung-tseung-kwan-o",
+      "regionId": "new_territories",
+      "district": "Sai Kung",
+      "areaId": "45ac0b5e-6036-582d-9d98-25116a787ac2",
+      "labels": {
+        "en": "Tseung Kwan O",
+        "zh-HK": "將軍澳"
+      }
+    },
+    {
+      "id": "sai-kung-hang-hau",
+      "regionId": "new_territories",
+      "district": "Sai Kung",
+      "areaId": "067be345-6ea9-562e-b1cf-ec2efc65e3da",
+      "labels": {
+        "en": "Hang Hau",
+        "zh-HK": "坑口"
+      }
+    },
+    {
+      "id": "sai-kung-po-lam",
+      "regionId": "new_territories",
+      "district": "Sai Kung",
+      "areaId": "8a31aafb-3aae-5d86-be45-83dea614fa1c",
+      "labels": {
+        "en": "Po Lam",
+        "zh-HK": "寶琳"
+      }
+    },
+    {
+      "id": "sai-kung-lohas-park",
+      "regionId": "new_territories",
+      "district": "Sai Kung",
+      "areaId": "5f74857d-2fce-5503-b29a-7a70018ad164",
+      "labels": {
+        "en": "LOHAS Park",
+        "zh-HK": "康城"
+      }
+    },
+    {
+      "id": "sai-kung-sai-kung-town",
+      "regionId": "new_territories",
+      "district": "Sai Kung",
+      "areaId": "1baee784-ab0c-5efd-a54b-b28874cf152d",
+      "labels": {
+        "en": "Sai Kung Town",
+        "zh-HK": "西貢市"
+      }
+    },
+    {
+      "id": "sai-kung-clear-water-bay",
+      "regionId": "new_territories",
+      "district": "Sai Kung",
+      "areaId": "cef8efcb-2999-5927-8d1d-dfd25c30f6cc",
+      "labels": {
+        "en": "Clear Water Bay",
+        "zh-HK": "清水灣"
+      }
+    },
+    {
+      "id": "sai-kung-pak-tam-chung",
+      "regionId": "new_territories",
+      "district": "Sai Kung",
+      "areaId": "c5f30a8d-f68f-56bf-ac3a-17217bf6dbfd",
+      "labels": {
+        "en": "Pak Tam Chung",
+        "zh-HK": "北潭涌"
+      }
+    },
+    {
+      "id": "islands-tung-chung",
+      "regionId": "islands",
+      "district": "Islands",
+      "areaId": "aa467ff6-5caf-53e4-af15-d735a909344c",
+      "labels": {
+        "en": "Tung Chung",
+        "zh-HK": "東涌"
+      }
+    },
+    {
+      "id": "islands-discovery-bay",
+      "regionId": "islands",
+      "district": "Islands",
+      "areaId": "a3a3b0a5-f3d8-5746-b7bd-cd73920a39e7",
+      "labels": {
+        "en": "Discovery Bay",
+        "zh-HK": "愉景灣"
+      }
+    },
+    {
+      "id": "islands-mui-wo",
+      "regionId": "islands",
+      "district": "Islands",
+      "areaId": "f17c1892-802b-57fd-93ec-3e1b03c270d5",
+      "labels": {
+        "en": "Mui Wo",
+        "zh-HK": "梅窩"
+      }
+    },
+    {
+      "id": "islands-pui-o",
+      "regionId": "islands",
+      "district": "Islands",
+      "areaId": "e5910e26-4f4c-55dd-9fb0-53fc90a33d60",
+      "labels": {
+        "en": "Pui O",
+        "zh-HK": "貝澳"
+      }
+    },
+    {
+      "id": "islands-tai-o",
+      "regionId": "islands",
+      "district": "Islands",
+      "areaId": "71d025f7-6bd3-5338-8997-e663e3c560b8",
+      "labels": {
+        "en": "Tai O",
+        "zh-HK": "大澳"
+      }
+    },
+    {
+      "id": "islands-cheung-chau",
+      "regionId": "islands",
+      "district": "Islands",
+      "areaId": "5db180c1-1b46-530b-9424-53cff9d6af7c",
+      "labels": {
+        "en": "Cheung Chau",
+        "zh-HK": "長洲"
+      }
+    },
+    {
+      "id": "islands-peng-chau",
+      "regionId": "islands",
+      "district": "Islands",
+      "areaId": "cffbec37-4779-58a3-9e7e-9986484cc9b3",
+      "labels": {
+        "en": "Peng Chau",
+        "zh-HK": "坪洲"
+      }
+    },
+    {
+      "id": "islands-lamma-island",
+      "regionId": "islands",
+      "district": "Islands",
+      "areaId": "00a5512d-d033-511a-a050-83126230cc2d",
+      "labels": {
+        "en": "Lamma Island",
+        "zh-HK": "南丫島"
+      }
+    }
   ]
 }

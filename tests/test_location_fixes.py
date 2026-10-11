@@ -34,7 +34,7 @@ def _org(db_session) -> Organization:
     return org
 
 
-def _area(db_session, name: str = "灣仔") -> GeographicArea:
+def _area(db_session, name: str = "Harbour Test Bay") -> GeographicArea:
     area = GeographicArea(name=name, level="district", active=True)
     db_session.add(area)
     db_session.flush()
@@ -242,7 +242,7 @@ def _run(db_session) -> LocationScanRun:
 
 def test_model_create_location_uses_nominatim(db_session, monkeypatch) -> None:
     org = _org(db_session)
-    area = _area(db_session, "灣仔")
+    area = _area(db_session, "Harbour Test Bay")
     run_id = _run(db_session).id
     monkeypatch.setattr(
         "app.services.location_fix_model.geocode_address",
@@ -259,7 +259,7 @@ def test_model_create_location_uses_nominatim(db_session, monkeypatch) -> None:
                     "entity_id": str(org.id),
                     "kind": "create_location",
                     "address": "8 Harbour Road",
-                    "area_name": "灣仔",
+                    "area_name": "Harbour Test Bay",
                     "confidence": 0.8,
                     "rationale": "Named on the source page",
                 }
