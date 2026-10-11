@@ -415,7 +415,11 @@ def _areas_by_label(session: Session) -> dict[str, GeographicArea]:
     for area in rows:
         if area.level != "neighbourhood":
             continue
-        parent = by_id.get(area.parent_id)
+        parent_id = area.parent_id
+        if parent_id is None:
+            _index_area(found, area)
+            continue
+        parent = by_id.get(parent_id)
         if parent is not None and _label_key(area.name) == _label_key(parent.name):
             for value in (area.name_translations or {}).values():
                 key = _label_key(value)

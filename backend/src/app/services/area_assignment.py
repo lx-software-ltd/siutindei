@@ -32,7 +32,7 @@ def neighbourhood_children(
     )
 
 
-def is_leaf(session: Session, area_id: UUID) -> bool:
+def is_leaf(session: Session, area_id: str | UUID) -> bool:
     """True when no geographic area lists this id as its parent."""
     child = session.scalar(
         select(GeographicArea.id).where(GeographicArea.parent_id == area_id).limit(1)
@@ -40,7 +40,7 @@ def is_leaf(session: Session, area_id: UUID) -> bool:
     return child is None
 
 
-def get_leaf(session: Session, area_id: UUID) -> GeographicArea | None:
+def get_leaf(session: Session, area_id: str | UUID) -> GeographicArea | None:
     """The area when it exists and has no children."""
     child = aliased(GeographicArea)
     return session.scalar(
@@ -83,21 +83,17 @@ def assignment_is_confident(
     if choices:
         assigned = assign_among(choices, lat, lng)
         return assigned is not None and assigned.confident
-    pinned = [row for row in leaves if row.lat is not None and row.lng is not None]
+    pinned = [row for row in leaves if _centroid(row) is not None]
     if not pinned:
         return False
-    nearest = min(
-        pinned,
-        key=lambda row: distance_km(float(row.lat), float(row.lng), lat, lng),
-    )
-    kilometres = distance_km(float(nearest.lat), float(nearest.lng), lat, lng)
-    return kilometres <= CONFIDENT_RADIUS_KM
+    nearest = min(pinned, key=lambda row: _distance_to_pin(row, lat, lng))
+    return _distance_to_pin(nearest, lat, lng) <= CONFIDENT_RADIUS_KM
 
 
 def _leaves_under(session: Session, area: GeographicArea) -> list[GeographicArea]:
     pending = [area.id]
     found: list[GeographicArea] = []
-    seen: set[UUID] = set()
+    seen: set[str] = set()
     while pending:
         rows = list(
             session.scalars(
@@ -138,15 +134,25 @@ def _closest_leaf(
             )
             if match is not None:
                 return match
-    pinned = [
-        row for row in neighbourhoods if row.lat is not None and row.lng is not None
-    ]
+    pinned = [row for row in neighbourhoods if _centroid(row) is not None]
     if lat is not None and lng is not None and pinned:
-        return min(
-            pinned,
-            key=lambda row: distance_km(float(row.lat), float(row.lng), lat, lng),
-        )
+        return min(pinned, key=lambda row: _distance_to_pin(row, lat, lng))
     return neighbourhoods[0]
+
+
+def _centroid(area: GeographicArea) -> tuple[float, float] | None:
+    lat = area.lat
+    lng = area.lng
+    if lat is None or lng is None:
+        return None
+    return float(lat), float(lng)
+
+
+def _distance_to_pin(area: GeographicArea, lat: float, lng: float) -> float:
+    coords = _centroid(area)
+    if coords is None:
+        return float("inf")
+    return distance_km(coords[0], coords[1], lat, lng)
 
 
 def _catalog_choices(area: GeographicArea, leaves: list[GeographicArea]):
