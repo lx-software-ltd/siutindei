@@ -63,6 +63,29 @@ describe('usePaginatedList', () => {
 
     await waitFor(() => expect(result.current.items.map((item) => item.id)).toEqual(['a', 'b']));
     expect(result.current.hasMore).toBe(false);
+    expect(result.current.truncated).toBe(false);
+  });
+
+  it('stops automatic paging at the cap and marks the list truncated', async () => {
+    const fetcher = vi.fn(async ({ cursor }: { cursor: string | null }) => {
+      if (!cursor) {
+        return { items: [{ id: 'a' }], nextCursor: 'p2' };
+      }
+      return { items: [{ id: 'b' }], nextCursor: 'p3' };
+    });
+    const { result } = renderHook(() =>
+      usePaginatedList<{ id: string }, Record<string, never>>({
+        queryKey: ['fetch-all-cap'],
+        defaultFilters: {},
+        fetchAll: true,
+        autoPageCap: 1,
+        fetcher,
+      })
+    );
+
+    await waitFor(() => expect(result.current.truncated).toBe(true));
+    expect(result.current.items.map((item) => item.id)).toEqual(['a']);
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });
 

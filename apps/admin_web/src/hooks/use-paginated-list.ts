@@ -20,6 +20,7 @@ import {
 } from '@tanstack/react-query';
 
 import {
+  ADMIN_API_MAX_LIST_LIMIT,
   ADMIN_LIST_AUTO_PAGE_CAP,
   ADMIN_LIST_PAGE_SIZE,
   clampAdminListLimit,
@@ -48,6 +49,13 @@ export interface UsePaginatedListOptions<TItem, TFilters extends object> {
   fetcher: (params: PaginatedFetcherParams<TFilters>) => Promise<PaginatedResponse<TItem>>;
   defaultFilters: TFilters;
   limit?: number;
+  /**
+   * Upper bound for `limit`. Defaults to the shared admin cap. The catalog
+   * map passes the backend maximum, which is higher than that shared cap.
+   */
+  maxLimit?: number;
+  /** Pages `fetchAll` will follow before it stops. Defaults to the shared cap. */
+  autoPageCap?: number;
   errorPrefix?: string;
   debounceKeys?: (keyof TFilters)[];
   debounceMs?: number;
@@ -75,6 +83,8 @@ export interface UsePaginatedListReturn<TItem, TFilters extends object> {
   refetch: (nextFilters?: Partial<TFilters>) => Promise<void>;
   loadMore: () => Promise<void>;
   hasMore: boolean;
+  /** `fetchAll` stopped because the page cap was hit and more rows remain. */
+  truncated: boolean;
   /** `null` when the list API omitted `totalCount` (unknown). */
   totalCount: number | null;
   /** `null` when the page omitted `pendingCount`. */
@@ -186,6 +196,8 @@ export function usePaginatedList<TItem, TFilters extends object>({
   fetcher,
   defaultFilters,
   limit = ADMIN_LIST_PAGE_SIZE,
+  maxLimit = ADMIN_API_MAX_LIST_LIMIT,
+  autoPageCap = ADMIN_LIST_AUTO_PAGE_CAP,
   errorPrefix = 'Failed to load',
   debounceKeys = [],
   debounceMs = 300,
@@ -194,7 +206,7 @@ export function usePaginatedList<TItem, TFilters extends object>({
   fetchAll = false,
 }: UsePaginatedListOptions<TItem, TFilters>): UsePaginatedListReturn<TItem, TFilters> {
   const queryClient = getAdminQueryClient();
-  const pageSize = clampAdminListLimit(limit);
+  const pageSize = clampAdminListLimit(limit, maxLimit);
   const instanceId = useId();
   // Without an explicit key the cache is private to this hook instance and a
   // new fetcher identity (closure params changed) starts a fresh list, which
@@ -307,11 +319,12 @@ export function usePaginatedList<TItem, TFilters extends object>({
     if (!fetchAll || !enabled || !hasNextPage || isFetchingNextPage || query.isFetching) {
       return;
     }
-    if (query.error || loadedPageCount >= ADMIN_LIST_AUTO_PAGE_CAP) {
+    if (query.error || loadedPageCount >= autoPageCap) {
       return;
     }
     void fetchNextPage();
   }, [
+    autoPageCap,
     enabled,
     fetchAll,
     fetchNextPage,
@@ -400,6 +413,7 @@ export function usePaginatedList<TItem, TFilters extends object>({
     refetch,
     loadMore,
     hasMore: Boolean(hasNextPage),
+    truncated: fetchAll && loadedPageCount >= autoPageCap && Boolean(hasNextPage),
     totalCount,
     pendingCount,
   };

@@ -4,6 +4,10 @@ export interface AppConfig {
   cognitoClientId: string;
   cognitoUserPoolId: string;
   publicWwwBaseUrl: string;
+  /** Same variable as the public website. Empty hides the catalog map. */
+  googleMapsApiKey: string;
+  /** Optional Cloud map id. Empty uses Google's demo id for advanced markers. */
+  googleMapsMapId: string;
 }
 
 const DEFAULT_PUBLIC_WWW_BASE_URL = 'https://siutindei.com';
@@ -15,6 +19,8 @@ export const appConfig: AppConfig = {
   cognitoUserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? '',
   publicWwwBaseUrl:
     process.env.NEXT_PUBLIC_PUBLIC_WWW_URL ?? DEFAULT_PUBLIC_WWW_BASE_URL,
+  googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
+  googleMapsMapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? '',
 };
 
 function trimTrailingSlashes(value: string) {
@@ -47,6 +53,15 @@ export function getCognitoDomain() {
     ? trimmed
     : `https://${trimmed}`;
   return trimTrailingSlashes(withScheme);
+}
+
+export function getGoogleMapsApiKey() {
+  return appConfig.googleMapsApiKey.trim();
+}
+
+/** Advanced markers require a map id. The demo id is Google's published fallback. */
+export function getGoogleMapsMapId() {
+  return appConfig.googleMapsMapId.trim() || 'DEMO_MAP_ID';
 }
 
 export function getApiBaseUrl() {

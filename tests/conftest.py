@@ -35,6 +35,37 @@ def test_database_url() -> str:
     return os.getenv('TEST_DATABASE_URL', 'sqlite:///:memory:')
 
 
+def _enable_sqlite_postgres_ddl() -> None:
+    """Let create_all build Postgres column defaults on SQLite.
+
+    Models keep ``::jsonb`` and ``gen_random_uuid()`` server defaults.
+    SQLite rejects the cast token, so tests rewrite those defaults and
+    the Postgres-only column types before creating tables.
+    """
+    from sqlalchemy.dialects.postgresql import ARRAY, INT4RANGE, JSONB
+    from sqlalchemy.ext.compiler import compiles
+    from sqlalchemy.sql.elements import TextClause
+
+    @compiles(JSONB, 'sqlite')
+    def _compile_jsonb_sqlite(_element, _compiler, **_kw):
+        return 'JSON'
+
+    @compiles(ARRAY, 'sqlite')
+    def _compile_array_sqlite(_element, _compiler, **_kw):
+        return 'JSON'
+
+    @compiles(INT4RANGE, 'sqlite')
+    def _compile_int4range_sqlite(_element, _compiler, **_kw):
+        return 'TEXT'
+
+    @compiles(TextClause, 'sqlite')
+    def _compile_text_sqlite(element, _compiler, **_kw):
+        # Column defaults are compiled as text, not as DefaultClause.
+        import re
+
+        return re.sub(r'::[A-Za-z0-9_\[\]]+', '', element.text)
+
+
 @pytest.fixture(scope='session')
 def test_engine(test_database_url: str):
     """Create a test database engine and schema.
@@ -42,7 +73,7 @@ def test_engine(test_database_url: str):
     This fixture creates all tables at the start of the test session
     and tears them down at the end.
     """
-    from sqlalchemy import create_engine
+    from sqlalchemy import create_engine, event
 
     from app.db.base import Base
 
@@ -50,6 +81,24 @@ def test_engine(test_database_url: str):
         test_database_url,
         echo=os.getenv('TEST_SQL_ECHO', '').lower() == 'true',
     )
+    if engine.dialect.name == 'sqlite':
+        _enable_sqlite_postgres_ddl()
+
+        @event.listens_for(engine, 'connect')
+        def _sqlite_functions(dbapi_connection, _connection_record):
+            import uuid
+            from datetime import datetime, timezone
+
+            # UUID binds on SQLite are 32-character hex. A dashed default
+            # never matches those binds, so area and org filters miss.
+            dbapi_connection.create_function(
+                'gen_random_uuid', 0, lambda: uuid.uuid4().hex
+            )
+            dbapi_connection.create_function(
+                'now',
+                0,
+                lambda: datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
+            )
 
     # Create all tables
     Base.metadata.create_all(engine)

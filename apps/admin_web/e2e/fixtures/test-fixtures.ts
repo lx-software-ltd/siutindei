@@ -636,6 +636,69 @@ function resourceIdFromUrl(url: string): string {
 }
 
 export async function setupApiMocks(page: Page): Promise<void> {
+  await page.route('https://maps.googleapis.com/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: [
+        'window.google = window.google || {};',
+        'window.google.maps = {',
+        '  Map: class {',
+        '    constructor(el) {',
+        '      this.el = el;',
+        '      el.style.position = "relative";',
+        '      el.style.background = "#dbe7f3";',
+        '    }',
+        '    fitBounds() {}',
+        '    setCenter() {}',
+        '    setZoom() {}',
+        '  },',
+        '  marker: {',
+        '    AdvancedMarkerElement: class {',
+        '      constructor(opts) {',
+        '        this.el = document.createElement("button");',
+        '        this.el.type = "button";',
+        '        this.el.textContent = opts.title || "Pin";',
+        '        this.el.style.cssText = "position:absolute;left:45%;top:45%;background:#fff;border:1px solid #334155;border-radius:999px;padding:4px 10px;font:14px sans-serif;";',
+        '        this._map = opts.map || null;',
+        '        if (opts.map && opts.map.el) opts.map.el.appendChild(this.el);',
+        '      }',
+        '      set map(value) {',
+        '        this._map = value;',
+        '        if (!value && this.el) this.el.remove();',
+        '      }',
+        '      get map() { return this._map; }',
+        '      addListener(name, fn) {',
+        '        const el = this.el;',
+        '        if (name === "click") el.addEventListener("click", fn);',
+        '        return { remove() { el.removeEventListener("click", fn); } };',
+        '      }',
+        '    }',
+        '  },',
+        '  InfoWindow: class {',
+        '    constructor() {}',
+        '    setContent(node) { this.node = node; }',
+        '    open(opts) {',
+        '      if (!opts || !opts.map || !this.node) return;',
+        '      const host = document.createElement("div");',
+        '      host.style.cssText = "position:absolute;left:45%;top:30%;background:#fff;padding:8px;border:1px solid #334155;";',
+        '      host.append(this.node);',
+        '      opts.map.el.appendChild(host);',
+        '    }',
+        '    close() {}',
+        '  },',
+        '  LatLng: class { constructor(lat, lng) { this.lat = lat; this.lng = lng; } },',
+        '  LatLngBounds: class { extend() {} },',
+        '  event: { trigger() {} },',
+        '  importLibrary: async function (name) {',
+        '    if (name === "marker") return { AdvancedMarkerElement: window.google.maps.marker.AdvancedMarkerElement };',
+        '    return window.google.maps;',
+        '  },',
+        '};',
+      ].join('\n'),
+    });
+  });
+
   // Mock organizations list
   await page.route('**/api/mock/**/admin/organizations*', async (route) => {
     const method = route.request().method();
@@ -1777,6 +1840,8 @@ export async function setupApiMocks(page: Page): Promise<void> {
             completeness: 0.5,
             blocker_count: 1,
             warning_count: 0,
+            area_id: null,
+            map_locations: [],
           },
           {
             id: 'org-2',
@@ -1792,11 +1857,36 @@ export async function setupApiMocks(page: Page): Promise<void> {
             completeness: 1,
             blocker_count: 0,
             warning_count: 0,
+            area_id: 'area-hk-causeway',
+            map_locations: [
+              {
+                id: 'loc-2',
+                address: '18 Example Lane',
+                area_name: 'Causeway Bay',
+                lat: 22.2803,
+                lng: 114.1846,
+              },
+            ],
           },
-        ].filter((item) => {
-          const query = new URL(url).searchParams.get('q')?.toLowerCase() ?? '';
-          return query.length === 0 || item.name.toLowerCase().includes(query);
-        }),
+        ]
+          .filter((item) => {
+            const params = new URL(url).searchParams;
+            const query = params.get('q')?.toLowerCase() ?? '';
+            const areaId = params.get('area_id') ?? '';
+            const nameMatches =
+              query.length === 0 || item.name.toLowerCase().includes(query);
+            const areaMatches = areaId.length === 0 || item.area_id === areaId;
+            return nameMatches && areaMatches;
+          })
+          .map((item) => {
+            const include = new URL(url).searchParams.get('include') ?? '';
+            if (!include.includes('locations')) {
+              const { map_locations: _pins, area_id: _area, ...rest } = item;
+              return rest;
+            }
+            const { area_id: _area, ...rest } = item;
+            return rest;
+          }),
         next_cursor: null,
       }),
     });

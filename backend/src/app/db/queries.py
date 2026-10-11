@@ -120,7 +120,7 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
         conditions.append(Activity.age_range.contains(filters.age))
 
     if filters.area_id is not None:
-        area_ids = _area_descendant_ids_subquery(filters.area_id)
+        area_ids = area_descendant_ids_subquery(filters.area_id)
         conditions.append(Location.area_id.in_(area_ids))
 
     if filters.category_ids:
@@ -326,7 +326,7 @@ def _category_tree(category_ids: Sequence[UUID]) -> Any:
     return base.union_all(recursive)
 
 
-def _area_descendant_ids_subquery(area_id: UUID) -> Select[Any]:
+def area_descendant_ids_subquery(area_id: UUID) -> Select[Any]:
     """Return a subquery of area IDs including descendants."""
 
     base = (
