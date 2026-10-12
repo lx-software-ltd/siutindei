@@ -237,8 +237,21 @@ CREATE OR REPLACE FUNCTION catalog_upsert_version(
 )
 RETURNS void
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
 AS $$
+DECLARE
+    existing_txid bigint;
 BEGIN
+    SELECT txid INTO existing_txid
+    FROM catalog_versions
+    WHERE entity_type = etype
+      AND entity_id = eid
+      AND version = ver;
+    IF existing_txid IS NOT NULL AND existing_txid <> txid_current() THEN
+        RAISE EXCEPTION 'catalog version % of % is immutable', ver, etype
+            USING ERRCODE = 'check_violation';
+    END IF;
     INSERT INTO catalog_versions (
         entity_type,
         entity_id,
@@ -291,6 +304,8 @@ $$;
 CREATE OR REPLACE FUNCTION catalog_rewrite_open_snapshot(etable text, eid uuid)
 RETURNS void
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
 AS $$
 DECLARE
     data jsonb;
@@ -330,11 +345,14 @@ BEGIN
       AND txid = txid_current()
     ORDER BY version DESC
     LIMIT 1;
-    IF existing_action = 'created' THEN
-        PERFORM catalog_rewrite_open_snapshot(parent_table, parent_id);
-        RETURN;
-    END IF;
+    -- The organization row does not embed its children, so rewriting
+    -- that snapshot once per child only locks history. Activities and
+    -- schedules do embed joins and entries, including after the parent
+    -- was already edited in this transaction.
     IF existing_action IS NOT NULL THEN
+        IF parent_table IN ('activities', 'activity_schedule') THEN
+            PERFORM catalog_rewrite_open_snapshot(parent_table, parent_id);
+        END IF;
         RETURN;
     END IF;
     PERFORM set_config('app.catalog_version_reason', 'children', true);
@@ -356,6 +374,9 @@ DECLARE
     media_changed boolean;
     media_already boolean;
 BEGIN
+    IF current_setting('app.catalog_backfill', true) = 'on' THEN
+        RETURN NEW;
+    END IF;
     tracked_changed := catalog_tracked(to_jsonb(OLD))
         IS DISTINCT FROM catalog_tracked(to_jsonb(NEW));
     SELECT EXISTS (
@@ -364,6 +385,8 @@ BEGIN
           AND entity_id = NEW.id
           AND txid = txid_current()
     ) INTO already;
+    -- A roll-up sets version itself. That statement must not move
+    -- updated_at; only a change to a tracked column does.
     IF tracked_changed AND NOT already AND NEW.version IS NOT DISTINCT FROM OLD.version THEN
         NEW.version := OLD.version + 1;
         IF TG_TABLE_NAME IN ('organizations', 'locations', 'activities') THEN
@@ -405,6 +428,9 @@ DECLARE
     snap jsonb;
     media_snap jsonb;
 BEGIN
+    IF current_setting('app.catalog_backfill', true) = 'on' THEN
+        RETURN COALESCE(NEW, OLD);
+    END IF;
     IF TG_OP = 'DELETE' THEN
         data := to_jsonb(OLD);
         ver := COALESCE(OLD.version, 1) + 1;
@@ -476,6 +502,9 @@ AS $$
 DECLARE
     activity uuid;
 BEGIN
+    IF current_setting('app.catalog_backfill', true) = 'on' THEN
+        RETURN COALESCE(NEW, OLD);
+    END IF;
     activity := COALESCE(NEW.activity_id, OLD.activity_id);
     PERFORM catalog_note_child('activities', activity);
     RETURN COALESCE(NEW, OLD);
@@ -489,11 +518,162 @@ AS $$
 DECLARE
     sid uuid;
 BEGIN
+    IF current_setting('app.catalog_backfill', true) = 'on' THEN
+        RETURN COALESCE(NEW, OLD);
+    END IF;
     sid := COALESCE(NEW.schedule_id, OLD.schedule_id);
     PERFORM catalog_note_child('activity_schedule', sid);
     RETURN COALESCE(NEW, OLD);
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION catalog_contact_keys()
+RETURNS text[]
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT ARRAY[
+        'phone_country_code',
+        'phone_number',
+        'email',
+        'whatsapp',
+        'facebook',
+        'instagram',
+        'tiktok',
+        'twitter',
+        'xiaohongshu',
+        'wechat'
+    ]::text[]
+$$;
+
+CREATE OR REPLACE FUNCTION catalog_snapshot_is_contact_redaction(
+    previous jsonb,
+    next jsonb
+)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT (next - catalog_contact_keys())
+            IS NOT DISTINCT FROM (previous - catalog_contact_keys())
+        AND NOT EXISTS (
+            SELECT 1
+            FROM unnest(catalog_contact_keys()) AS key
+            WHERE next ? key
+              AND next -> key IS DISTINCT FROM 'null'::jsonb
+        )
+$$;
+
+CREATE OR REPLACE FUNCTION catalog_versions_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF OLD.txid = txid_current() THEN
+        RETURN NEW;
+    END IF;
+    IF NEW.entity_type IS DISTINCT FROM OLD.entity_type
+        OR NEW.entity_id IS DISTINCT FROM OLD.entity_id
+        OR NEW.org_id IS DISTINCT FROM OLD.org_id
+        OR NEW.version IS DISTINCT FROM OLD.version
+        OR NEW.action IS DISTINCT FROM OLD.action
+        OR NEW.changed_fields IS DISTINCT FROM OLD.changed_fields
+        OR NEW.txid IS DISTINCT FROM OLD.txid
+        OR NEW.user_id IS DISTINCT FROM OLD.user_id
+        OR NEW.request_id IS DISTINCT FROM OLD.request_id
+        OR NEW.import_job_id IS DISTINCT FROM OLD.import_job_id
+        OR NEW.created_at IS DISTINCT FROM OLD.created_at
+    THEN
+        RAISE EXCEPTION 'catalog version % is immutable', OLD.version
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF OLD.reason = 'merged' AND NEW.reason IS DISTINCT FROM OLD.reason THEN
+        RAISE EXCEPTION 'merged catalog version is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.reason IS DISTINCT FROM OLD.reason
+        AND NEW.reason IS NOT NULL
+        AND NEW.reason NOT IN ('forgotten', 'merged', 'children')
+    THEN
+        RAISE EXCEPTION 'catalog version reason cannot be changed'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.reason = 'forgotten'
+        AND OLD.reason IS DISTINCT FROM 'forgotten'
+        AND EXISTS (
+            SELECT 1
+            FROM catalog_versions
+            WHERE entity_type = NEW.entity_type
+              AND entity_id = NEW.entity_id
+              AND reason = 'merged'
+        )
+    THEN
+        RAISE EXCEPTION 'merged catalog version cannot be forgotten'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.snapshot IS DISTINCT FROM OLD.snapshot
+        AND NOT catalog_snapshot_is_contact_redaction(OLD.snapshot, NEW.snapshot)
+    THEN
+        RAISE EXCEPTION 'catalog version snapshot is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION catalog_versions_delete_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF OLD.txid = txid_current() THEN
+        RETURN OLD;
+    END IF;
+    RAISE EXCEPTION 'catalog version % is immutable', OLD.version
+        USING ERRCODE = 'check_violation';
+END;
+$$;
+
+-- Forget hides version 1 from import and strips contact fields.
+-- A merged organization keeps its history.
+CREATE OR REPLACE FUNCTION catalog_forget_entity(etype text, eid uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+BEGIN
+    UPDATE catalog_versions AS row
+    SET reason = 'forgotten',
+        snapshot = row.snapshot - catalog_contact_keys()
+    WHERE row.version = 1
+      AND row.reason IS DISTINCT FROM 'merged'
+      AND NOT EXISTS (
+          SELECT 1
+          FROM catalog_versions AS other
+          WHERE other.entity_type = row.entity_type
+            AND other.entity_id = row.entity_id
+            AND other.reason = 'merged'
+      )
+      AND (
+          (row.entity_type = etype AND row.entity_id = eid)
+          OR (etype = 'organization' AND row.org_id = eid)
+      );
+    UPDATE catalog_versions AS row
+    SET snapshot = row.snapshot - catalog_contact_keys()
+    WHERE (row.entity_type = etype AND row.entity_id = eid)
+       OR (etype = 'organization' AND row.org_id = eid);
+END;
+$$;
+
+DROP TRIGGER IF EXISTS catalog_versions_guard ON catalog_versions;
+DROP TRIGGER IF EXISTS catalog_versions_delete_guard ON catalog_versions;
+CREATE TRIGGER catalog_versions_guard
+BEFORE UPDATE ON catalog_versions
+FOR EACH ROW EXECUTE FUNCTION catalog_versions_guard();
+CREATE TRIGGER catalog_versions_delete_guard
+BEFORE DELETE ON catalog_versions
+FOR EACH ROW EXECUTE FUNCTION catalog_versions_delete_guard();
 
 DROP TRIGGER IF EXISTS organizations_version_bump ON organizations;
 DROP TRIGGER IF EXISTS organizations_version_record ON organizations;
@@ -551,8 +731,11 @@ CREATE TRIGGER activity_schedule_entries_version_touch
 AFTER INSERT OR UPDATE OR DELETE ON activity_schedule_entries
 FOR EACH ROW EXECUTE FUNCTION catalog_entry_touch();
 
-CREATE INDEX IF NOT EXISTS catalog_versions_v1_name_idx
-ON catalog_versions (lower(btrim(snapshot ->> 'name')))
+DROP INDEX IF EXISTS catalog_versions_v1_name_idx;
+CREATE INDEX catalog_versions_v1_name_idx
+ON catalog_versions (
+    lower(regexp_replace(btrim(snapshot ->> 'name'), '\s+', ' ', 'g'))
+)
 WHERE version = 1 AND entity_type IN ('organization', 'activity');
 
 CREATE INDEX IF NOT EXISTS catalog_versions_v1_place_idx

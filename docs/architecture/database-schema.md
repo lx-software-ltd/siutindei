@@ -769,8 +769,22 @@ Indexes:
 - `catalog_versions_txid_idx` on (`txid`, `entity_type`, `org_id`)
 - Partial version-1 indexes on name, place id, source id, and address
 
+A committed row is immutable. The open transaction may finish its
+snapshot. A later transaction may change `reason` and `related_id`,
+or strip contact fields when an admin forgets the record. `merged`
+cannot be overwritten. Deletes are allowed only for rows written by
+the current transaction.
+
 Grants: `siutindei_app` and `siutindei_admin` get `SELECT`, `INSERT`,
-and `UPDATE`. Triggers run as the caller.
+and `DELETE`, plus `UPDATE` on `reason` and `related_id` only.
+Snapshot writes run as security-definer functions. `DELETE` of a
+committed row is rejected by `catalog_versions_delete_guard`.
+
+Backfill runs in revision `0048_catalog_version_fixes`, 200 rows at a
+time, and commits each batch. It does not disable triggers and does
+not set `session_replication_role`. Catalog triggers no-op while
+`app.catalog_backfill` is on. Audit triggers keep running. A child
+roll-up bumps `version` and does not move the parent's `updated_at`.
 
 Seed: `seed_data.sql` does not change. `version` defaults to 1.
 Triggers write the version-1 rows when the seed inserts catalog rows.

@@ -1,7 +1,32 @@
 # Plan: Catalog versioning
 
-**Status**: Implemented
-**Zone**: red (one Alembic revision), then yellow for backend and admin
+**Status**: Implemented, with review fixes in revision `0048_catalog_version_fixes`
+**Zone**: red (Alembic revisions), then yellow for backend and admin
+
+## Review fixes
+
+Committed history rows stay immutable. A guard trigger allows an open
+transaction to finish its snapshot, and later transactions may change
+only `reason` and `related_id`, or strip contact fields when an admin
+forgets a removed record. `merged` cannot be overwritten. The app and
+admin roles lose table-wide `UPDATE`. Snapshot writes from triggers go
+through definer functions. Deletes are limited to the current
+transaction so a dry-run can drop its own rows.
+
+History for one entity is ordered by version and the console follows
+the cursor, so version 1 stays reachable. The import warning names an
+admin, an earlier import, or another catalog change. A file that
+matches version 1 keeps later edits and says so. Version-1 lookup and
+merge-by-name run in SQL. Child edits lock the organization, then the
+activity, before the flush. A child roll-up does not move the parent's
+`updated_at`. Removed activities, locations, pricing, and schedules can
+be forgotten from the organization history so a later import can create
+them. Forgetting a record also strips contact fields from its snapshots.
+
+Backfill no longer uses `session_replication_role` or disables triggers.
+Revision `0048` fills missing history in batches of 200 and commits each
+batch, so a retry continues where it stopped. Catalog triggers no-op
+while that flag is set; audit triggers keep running.
 
 Decisions below are approved: review fields bump the version, pricing
 and schedule changes bump the parent activity, a changed file overwrites

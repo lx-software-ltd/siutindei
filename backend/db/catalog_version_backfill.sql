@@ -1,8 +1,8 @@
--- One-shot history for rows that already exist. Triggers are disabled
--- by the migration while this runs, so the version updates do not
--- write a second history row.
+-- One-shot history for rows that already exist. Catalog triggers see
+-- app.catalog_backfill and do not write a second history row. Audit
+-- triggers stay enabled. Callers commit between batches.
 
-CREATE OR REPLACE FUNCTION catalog_backfill_live(etable text)
+CREATE OR REPLACE FUNCTION catalog_backfill_live(etable text, ids uuid[] DEFAULT NULL)
 RETURNS void
 LANGUAGE plpgsql
 AS $$
@@ -16,7 +16,12 @@ DECLARE
     media_now jsonb;
     media_then jsonb;
 BEGIN
-    FOR rec IN EXECUTE format('SELECT to_jsonb(t) AS data FROM %I t', etable)
+    PERFORM set_config('app.catalog_backfill', 'on', true);
+    FOR rec IN EXECUTE format(
+        'SELECT to_jsonb(t) AS data FROM %I t '
+        'WHERE ($1::uuid[] IS NULL OR id = ANY($1::uuid[]))',
+        etable
+    ) USING ids
     LOOP
         eid := (rec.data ->> 'id')::uuid;
         etype := catalog_entity_type(etable);
@@ -78,7 +83,42 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION catalog_backfill_deleted(etable text)
+CREATE OR REPLACE FUNCTION catalog_backfill_live_batch(etable text)
+RETURNS integer
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    ids uuid[];
+BEGIN
+    EXECUTE format(
+        'SELECT array_agg(id) FROM ('
+        '    SELECT id FROM %1$I '
+        '    WHERE NOT EXISTS ('
+        '        SELECT 1 FROM catalog_versions '
+        '        WHERE entity_id = %1$I.id '
+        '          AND entity_type = catalog_entity_type($1) '
+        '          AND version = 1'
+        '    ) '
+        '    ORDER BY id '
+        '    LIMIT 200 '
+        '    FOR UPDATE SKIP LOCKED'
+        ') picked',
+        etable
+    )
+    INTO ids
+    USING etable;
+    IF ids IS NULL THEN
+        RETURN 0;
+    END IF;
+    PERFORM catalog_backfill_live(etable, ids);
+    RETURN cardinality(ids);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION catalog_backfill_deleted(
+    etable text,
+    ids text[] DEFAULT NULL
+)
 RETURNS void
 LANGUAGE plpgsql
 AS $$
@@ -96,11 +136,13 @@ DECLARE
     org_place text;
     still_there boolean;
 BEGIN
+    PERFORM set_config('app.catalog_backfill', 'on', true);
     FOR rec IN
         SELECT DISTINCT record_id
         FROM audit_log
         WHERE table_name = etable
           AND action = 'DELETE'
+          AND (ids IS NULL OR record_id = ANY(ids))
     LOOP
         BEGIN
             eid := rec.record_id::uuid;
@@ -206,28 +248,34 @@ BEGIN
 END;
 $$;
 
-ALTER TABLE organizations DISABLE TRIGGER USER;
-ALTER TABLE locations DISABLE TRIGGER USER;
-ALTER TABLE activities DISABLE TRIGGER USER;
-ALTER TABLE activity_pricing DISABLE TRIGGER USER;
-ALTER TABLE activity_schedule DISABLE TRIGGER USER;
-
-SELECT catalog_backfill_live('organizations');
-SELECT catalog_backfill_live('locations');
-SELECT catalog_backfill_live('activities');
-SELECT catalog_backfill_live('activity_pricing');
-SELECT catalog_backfill_live('activity_schedule');
-SELECT catalog_backfill_deleted('organizations');
-SELECT catalog_backfill_deleted('locations');
-SELECT catalog_backfill_deleted('activities');
-SELECT catalog_backfill_deleted('activity_pricing');
-SELECT catalog_backfill_deleted('activity_schedule');
-
-ALTER TABLE organizations ENABLE TRIGGER USER;
-ALTER TABLE locations ENABLE TRIGGER USER;
-ALTER TABLE activities ENABLE TRIGGER USER;
-ALTER TABLE activity_pricing ENABLE TRIGGER USER;
-ALTER TABLE activity_schedule ENABLE TRIGGER USER;
-
-DROP FUNCTION catalog_backfill_live(text);
-DROP FUNCTION catalog_backfill_deleted(text);
+CREATE OR REPLACE FUNCTION catalog_backfill_deleted_batch(etable text)
+RETURNS integer
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    ids text[];
+BEGIN
+    SELECT array_agg(record_id) INTO ids
+    FROM (
+        SELECT DISTINCT record_id
+        FROM audit_log
+        WHERE table_name = etable
+          AND action = 'DELETE'
+          AND record_id ~* '^[0-9a-f-]{36}$'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM catalog_versions
+              WHERE entity_id = audit_log.record_id::uuid
+                AND entity_type = catalog_entity_type(etable)
+                AND version = 1
+          )
+        ORDER BY record_id
+        LIMIT 200
+    ) picked;
+    IF ids IS NULL THEN
+        RETURN 0;
+    END IF;
+    PERFORM catalog_backfill_deleted(etable, ids);
+    RETURN cardinality(ids);
+END;
+$$;

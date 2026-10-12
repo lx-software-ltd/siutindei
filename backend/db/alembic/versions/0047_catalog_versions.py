@@ -7,9 +7,10 @@ Seed assessment: ``version`` and ``media_version`` are NOT NULL with
 server default 1. seed_data.sql omits both columns and stays valid.
 ``catalog_versions`` is not seeded; the triggers fill it when the seed
 inserts organizations. No seed column is renamed or dropped, and no
-enum used by seed rows changes. The backfill may insert
-``organization_merges`` rows with ``kind = 'delete'`` for organizations
-already removed. Those rows are empty on a fresh database.
+enum used by seed rows changes. Historical rows are filled by
+``0048_catalog_version_fixes``, which may insert ``organization_merges``
+rows with ``kind = 'delete'`` for organizations already removed. Those
+rows are empty on a fresh database.
 """
 
 from __future__ import annotations
@@ -112,18 +113,31 @@ def upgrade() -> None:
         ["txid", "entity_type", "org_id"],
     )
     op.execute((_DB / "catalog_version_triggers.sql").read_text(encoding="utf-8"))
-    # Backfill updates version columns. Replica role skips the bump
-    # triggers so that update does not write a second history row.
-    op.execute("SET session_replication_role = replica")
-    op.execute((_DB / "catalog_version_backfill.sql").read_text(encoding="utf-8"))
-    op.execute("SET session_replication_role = origin")
-    op.execute("GRANT SELECT, INSERT, UPDATE ON catalog_versions TO siutindei_app;")
-    op.execute("GRANT SELECT, INSERT, UPDATE ON catalog_versions TO siutindei_admin;")
+    _grant_catalog_versions()
+
+
+def _grant_catalog_versions() -> None:
+    """History writes go through triggers. Callers may not rewrite them.
+
+    ``DELETE`` is limited by ``catalog_versions_delete_guard`` to the
+    open transaction, which is how a dry-run drops its own rows.
+    ``UPDATE`` is limited to the annotation columns. Snapshot rewrites
+    and contact redaction run as security definer functions.
+    """
+    for role in ("siutindei_app", "siutindei_admin"):
+        op.execute(f"REVOKE UPDATE ON catalog_versions FROM {role}")
+        op.execute(f"GRANT SELECT, INSERT, DELETE ON catalog_versions TO {role}")
+        op.execute(f"GRANT UPDATE (reason, related_id) ON catalog_versions TO {role}")
+        op.execute(
+            f"GRANT EXECUTE ON FUNCTION catalog_forget_entity(text, uuid) TO {role}"
+        )
 
 
 def downgrade() -> None:
     """Drop version history. Catalog rows keep their current values."""
     for name, table in (
+        ("catalog_versions_delete_guard", "catalog_versions"),
+        ("catalog_versions_guard", "catalog_versions"),
         ("activity_schedule_entries_version_touch", "activity_schedule_entries"),
         ("activity_locations_version_touch", "activity_locations"),
         ("activity_schedule_version_record", "activity_schedule"),
@@ -139,6 +153,15 @@ def downgrade() -> None:
     ):
         op.execute(f"DROP TRIGGER IF EXISTS {name} ON {table}")
     for function in (
+        "catalog_backfill_deleted_batch(text)",
+        "catalog_backfill_deleted(text, text[])",
+        "catalog_backfill_live_batch(text)",
+        "catalog_backfill_live(text, uuid[])",
+        "catalog_forget_entity(text, uuid)",
+        "catalog_versions_delete_guard()",
+        "catalog_versions_guard()",
+        "catalog_snapshot_is_contact_redaction(jsonb, jsonb)",
+        "catalog_contact_keys()",
         "catalog_entry_touch()",
         "catalog_join_touch()",
         "catalog_version_record()",
@@ -156,8 +179,8 @@ def downgrade() -> None:
         "catalog_entity_type(text)",
     ):
         op.execute(f"DROP FUNCTION IF EXISTS {function}")
-    op.drop_index("catalog_versions_txid_idx", table_name="catalog_versions")
-    op.drop_index("catalog_versions_org_created_idx", table_name="catalog_versions")
+    op.execute("DROP INDEX IF EXISTS catalog_versions_txid_idx")
+    op.execute("DROP INDEX IF EXISTS catalog_versions_org_created_idx")
     op.drop_table("catalog_versions")
     op.drop_column("organizations", "media_version")
     for table in _VERSIONED:
