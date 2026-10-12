@@ -1,12 +1,14 @@
 """Copy organization websites out of stored import files.
 
-Completed live imports are applied oldest first. A created or updated
-row writes the website from that file. A skipped row fills the website
-only while it is empty. A merged-away id fills the survivor only while
-the survivor's website is empty. A deleted organization is left alone.
+Completed jobs that still carry the discarded-website warning are
+applied by completion time. A created or updated row writes the website
+from that file, unless the organization already has one this pass did
+not write. A skipped row fills the website only while it is empty. A
+merged-away id fills the survivor only while the survivor's website is
+empty. A deleted organization is left alone.
 
-Every non-running job then loses the warning that said the website was
-accepted but not stored. A missing file still drops that warning.
+The warning is removed only after the file is read. A missing file
+keeps the warning. Failed and running jobs are left alone.
 """
 
 from __future__ import annotations
@@ -46,23 +48,36 @@ def backfill_import_websites(
     session: Session,
     load_payload: Callable[[str], dict[str, Any] | None],
 ) -> WebsiteBackfillReport:
-    """Apply stored import websites and drop the discard warning."""
+    """Apply stored import websites and drop the discard warning.
+
+    Jobs that no longer carry the warning are skipped, so a website
+    typed after the import is not replaced and a second run is a no-op.
+    """
     report = WebsiteBackfillReport()
     jobs = list(
         session.scalars(
             select(ImportJob)
-            .where(ImportJob.status != "running")
-            .order_by(ImportJob.created_at.asc(), ImportJob.id.asc())
+            .where(ImportJob.status == "completed")
+            .order_by(
+                ImportJob.updated_at.asc(),
+                ImportJob.created_at.asc(),
+                ImportJob.id.asc(),
+            )
         ).all()
     )
-    report.jobs_seen = len(jobs)
+    written_ids: set[UUID] = set()
     for job in jobs:
-        if job.status == "completed" and not job.dry_run:
-            payload = load_payload(job.object_key)
-            if payload is None:
-                report.payloads_missing.append(job.object_key)
-            else:
-                report.websites_written += _apply_payload(session, job, payload)
+        if not _job_has_discard_warning(job):
+            continue
+        report.jobs_seen += 1
+        payload = load_payload(job.object_key)
+        if payload is None:
+            report.payloads_missing.append(job.object_key)
+            continue
+        if not job.dry_run:
+            report.websites_written += _apply_payload(
+                session, job, payload, written_ids
+            )
         report.warnings_removed += _strip_discard_warnings(job)
     return report
 
@@ -91,6 +106,7 @@ def _apply_payload(
     session: Session,
     job: ImportJob,
     payload: dict[str, Any],
+    written_ids: set[UUID],
 ) -> int:
     raw_orgs = payload.get("organizations")
     if not isinstance(raw_orgs, list):
@@ -110,12 +126,16 @@ def _apply_payload(
         org, followed_merge = _load_org(session, row.get("id"))
         if org is None:
             continue
+        current = _text(org.website)
         if status == "skipped" or followed_merge:
-            if _text(org.website):
+            if current:
                 continue
-        elif _text(org.website) == website:
+        elif org.id not in written_ids and current:
+            continue
+        elif current == website:
             continue
         org.website = website
+        written_ids.add(org.id)
         written += 1
     return written
 
@@ -208,6 +228,20 @@ def _strip_discard_warnings(job: ImportJob) -> int:
         summary["warnings"] = max(0, current - removed)
         job.summary = summary
     return removed
+
+
+def _job_has_discard_warning(job: ImportJob) -> bool:
+    if any(_is_discard_warning(item) for item in job.file_warnings or []):
+        return True
+    for row in job.results or []:
+        if not isinstance(row, dict):
+            continue
+        warnings = row.get("warnings")
+        if not isinstance(warnings, list):
+            continue
+        if any(_is_discard_warning(item) for item in warnings):
+            return True
+    return False
 
 
 def _website_value(raw_org: Any) -> str | None:

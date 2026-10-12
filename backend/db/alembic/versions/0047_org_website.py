@@ -21,7 +21,12 @@ def upgrade() -> None:
     """Add the organization website column."""
     op.add_column(
         "organizations",
-        sa.Column("website", sa.Text(), nullable=True),
+        sa.Column(
+            "website",
+            sa.Text(),
+            nullable=True,
+            comment="Organization website",
+        ),
     )
 
 

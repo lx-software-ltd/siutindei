@@ -57,9 +57,20 @@ Revert the branch and drop `organizations.website`. Values stored only
 in that column go with it. `source_url` stays. Restoring the discarded
 warning text needs the previous job JSON.
 
-## Open questions
+## Backfill rules
 
-None. The backfill reads `ADMIN_IMPORT_EXPORT_BUCKET`. A missing
-object still drops the warning, and that organization's website stays
-empty. Jobs run oldest first. A later update replaces an earlier
-website. A skipped row fills `website` only while it is empty.
+The script reads `ADMIN_IMPORT_EXPORT_BUCKET` and only completed jobs
+that still carry the discard warning. Import files expire after 7 days,
+so older jobs often have nothing to read.
+
+- A missing file keeps the warning, and that organization's website
+  stays empty.
+- A readable file stores the website, then the warning is removed.
+- Jobs run by completion time, so a retry replaces an earlier pass in
+  the same run.
+- A website already stored, including one typed after deploy, is left
+  in place. A later file in the same run may replace a website this
+  run wrote.
+- A skipped row fills `website` only while it is empty.
+- Dry runs remove the warning only when the file is still readable.
+- Failed and running jobs are left alone.

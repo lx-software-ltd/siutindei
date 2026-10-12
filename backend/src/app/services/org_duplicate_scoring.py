@@ -24,6 +24,33 @@ _SOCIALS = (
     "wechat",
 )
 
+# Hosts shared by unrelated organizations. Matching the host alone would
+# group every studio that linked a Facebook page or a Linktree.
+_SHARED_WEBSITE_HOSTS = frozenset(
+    {
+        "bit.ly",
+        "facebook.com",
+        "fb.com",
+        "fb.me",
+        "forms.gle",
+        "goo.gl",
+        "google.com",
+        "instagram.com",
+        "linktr.ee",
+        "linkedin.com",
+        "t.me",
+        "threads.net",
+        "tiktok.com",
+        "twitter.com",
+        "wa.me",
+        "whatsapp.com",
+        "x.com",
+        "xiaohongshu.com",
+        "youtu.be",
+        "youtube.com",
+    }
+)
+
 
 def score_pairs(
     session,
@@ -195,7 +222,16 @@ def _host(value: str | None) -> str:
     if not text_value:
         return ""
     parsed = urlparse(text_value if "://" in text_value else f"https://{text_value}")
-    return (parsed.netloc or "").casefold().removeprefix("www.")
+    host = (parsed.netloc or "").casefold().removeprefix("www.").split(":", 1)[0]
+    if _shared_host(host):
+        return ""
+    return host
+
+
+def _shared_host(host: str) -> bool:
+    return any(
+        host == name or host.endswith("." + name) for name in _SHARED_WEBSITE_HOSTS
+    )
 
 
 def _text(value) -> str:

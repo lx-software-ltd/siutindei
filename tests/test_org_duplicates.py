@@ -46,6 +46,20 @@ def test_shared_website_host_is_a_duplicate_signal(db_session) -> None:
     assert "website" in scores[pair][1]
 
 
+def test_shared_social_host_is_not_a_duplicate_signal(db_session) -> None:
+    from app.services.org_duplicate_scoring import score_pairs
+
+    left = _org(db_session, f"Alpha {uuid4().hex[:8]} Pottery")
+    right = _org(db_session, f"Zebra {uuid4().hex[:8]} Kites")
+    left.website = "https://facebook.com/alpha"
+    right.website = "https://m.facebook.com/zebra"
+    left.source_url = "https://www.instagram.com/alpha"
+    right.source_url = "https://linktr.ee/zebra"
+    scores = score_pairs(db_session, [left, right], set())
+    pair = tuple(sorted((str(left.id), str(right.id))))
+    assert pair not in scores
+
+
 def test_blank_socials_do_not_group(db_session) -> None:
     left = f"Alpha {uuid4().hex[:8]} Pottery"
     _org(db_session, left)

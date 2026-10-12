@@ -1,8 +1,9 @@
 """Write organization websites from stored import files.
 
-Reads each completed import in ADMIN_IMPORT_EXPORT_BUCKET, stores
-website on the organization, and removes the warning that said the
-website was accepted but not stored.
+Reads each completed import that still warns the website was not
+stored. A readable file stores the website and then the warning is
+removed. A missing file keeps the warning. A website already stored
+is left in place.
 
 Run from the repo root with DATABASE_URL and
 ADMIN_IMPORT_EXPORT_BUCKET set:
@@ -50,7 +51,7 @@ def main() -> int:
     )
     for object_key in report.payloads_missing:
         logger.warning(
-            "Import file missing; website warning removed without a URL",
+            "Import file missing; website warning kept",
             extra={"object_key": object_key},
         )
     return 0

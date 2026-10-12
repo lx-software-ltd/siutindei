@@ -69,7 +69,9 @@ group even when a third organization matches both.
 
 Duplicate groups use exact name, phone, email, source id, social, and
 website buckets, plus spelling similarity. The website bucket matches
-the organization's website host and the catalog page host. `pg_trgm`
+the organization's website host and the catalog page host. Shared
+social and link hosts, such as facebook.com, instagram.com, and
+linktr.ee, are not scored. `pg_trgm`
 runs when the dialect is PostgreSQL and the extension exists. A failed similarity
 lookup is logged. Otherwise scoring uses `difflib`. A shared location
 adds weight only when another signal is already present. The review
