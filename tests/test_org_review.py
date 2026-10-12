@@ -222,6 +222,16 @@ def test_bulk_fields_sets_source_url_and_note(db_session, sample_organization) -
     assert sample_organization.source_note == "called the venue"
 
 
+def test_bulk_fields_sets_website(db_session, sample_organization) -> None:
+    repo = OrganizationRepository(db_session)
+    _apply_fields(
+        repo,
+        sample_organization,
+        {"website": " https://review.example "},
+    )
+    assert sample_organization.website == "https://review.example"
+
+
 def test_bulk_fields_sets_email(db_session, sample_organization) -> None:
     repo = OrganizationRepository(db_session)
     _apply_fields(

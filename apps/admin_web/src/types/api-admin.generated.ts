@@ -6291,8 +6291,9 @@ export interface components {
             lat?: number;
             lng?: number;
             /**
-             * @description Accepted on board-flat orgs and recorded as a warning;
-             *     not stored on the organization.
+             * @description Organization website. Stored on the organization. A blank
+             *     value clears it when updates are allowed. Skip mode leaves
+             *     an existing organization unchanged.
              */
             website?: string;
             /**
@@ -6674,8 +6675,8 @@ export interface components {
             /**
              * @description Whitelist for `set_fields`: status, manager_id, source,
              *     source_url, source_note, description_source, review_notes,
-             *     phone fields, email, and social fields. Only supplied keys
-             *     are written.
+             *     phone fields, email, website, and social fields. Only
+             *     supplied keys are written.
              */
             fields?: {
                 [key: string]: unknown;
@@ -6721,6 +6722,8 @@ export interface components {
             phone_number?: string;
             /** @description Contact email address */
             email?: string;
+            /** @description The organization's own website. */
+            website?: string | null;
             /** @description WhatsApp handle or URL */
             whatsapp?: string;
             /** @description Facebook handle or URL */
@@ -6793,6 +6796,8 @@ export interface components {
             phone_number?: string;
             /** @description Contact email address */
             email?: string;
+            /** @description The organization's own website. */
+            website?: string | null;
             /** @description WhatsApp handle or URL */
             whatsapp?: string;
             /** @description Facebook handle or URL */
@@ -6854,6 +6859,8 @@ export interface components {
             phone_number?: string | null;
             /** @description Contact email address */
             email?: string | null;
+            /** @description The organization's own website. */
+            website?: string | null;
             /** @description WhatsApp handle or URL */
             whatsapp?: string | null;
             /** @description Facebook handle or URL */

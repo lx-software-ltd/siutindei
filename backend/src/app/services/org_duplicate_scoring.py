@@ -81,6 +81,7 @@ def _bucket_pairs(orgs, add) -> None:
             value = _text(getattr(org, field)).casefold()
             if value:
                 put("social", f"{field}:{value}", org_id)
+        put("website", _host(org.website), org_id)
         put("website", _host(org.source_url), org_id)
         for value in _translation_values(org):
             put("translation", value, org_id)

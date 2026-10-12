@@ -5,8 +5,6 @@ from __future__ import annotations
 from unittest.mock import patch
 from uuid import uuid4
 
-from sqlalchemy import select
-
 from app.api.admin_crud import (
     _drop_admin_only_write_fields,
     _lookup_organization,
@@ -20,6 +18,7 @@ from app.api.admin_resource_organization import (
 )
 from app.db.models import Organization
 from app.db.repositories import OrganizationRepository
+from sqlalchemy import select
 
 
 def test_patch_status_and_place_id(db_session, sample_organization) -> None:
@@ -96,18 +95,22 @@ def test_get_import_job_returns_stored_result(db_session) -> None:
     )
     db_session.flush()
 
-    with patch("app.api.admin_imports.get_engine", return_value=db_session.get_bind()):
-        with patch("app.api.admin_imports.Session", return_value=db_session):
-            # Session() used as context manager; reuse db_session.
-            class _Ctx:
-                def __enter__(self):
-                    return db_session
+    # Session() is used as a context manager; reuse db_session.
+    class _Ctx:
+        def __enter__(self):
+            return db_session
 
-                def __exit__(self, *args):
-                    return False
+        def __exit__(self, *args):
+            return False
 
-            with patch("app.api.admin_imports.Session", return_value=_Ctx()):
-                response = _handle_get_import_job({}, str(job.id))
+    with (
+        patch(
+            "app.api.admin_imports.get_engine",
+            return_value=db_session.get_bind(),
+        ),
+        patch("app.api.admin_imports.Session", return_value=_Ctx()),
+    ):
+        response = _handle_get_import_job({}, str(job.id))
     assert response["statusCode"] == 200
     body = __import__("json").loads(response["body"])
     assert body["object_key"] == "admin/imports/progress.json"
@@ -279,9 +282,7 @@ def test_catalog_health_view_replaces_integer_counts(db_session) -> None:
         text("SELECT COUNT(*)::integer FROM organizations")
     ).scalar_one()
     assert org_count >= 3
-    row = db_session.execute(
-        text("SELECT activities FROM v_catalog_health")
-    ).one()
+    row = db_session.execute(text("SELECT activities FROM v_catalog_health")).one()
     assert row.activities == org_count
     col_type = db_session.execute(
         text(
@@ -299,9 +300,7 @@ def test_catalog_health_view_replaces_integer_counts(db_session) -> None:
     assert col_type == "integer"
 
 
-def test_manager_update_ignores_source_fields(
-    db_session, sample_organization
-) -> None:
+def test_manager_update_ignores_source_fields(db_session, sample_organization) -> None:
     sample_organization.source_url = "https://old.test"
     sample_organization.source_note = "keep"
     repo = OrganizationRepository(db_session)
@@ -311,11 +310,13 @@ def test_manager_update_ignores_source_fields(
         {
             "source_url": "https://evil.test",
             "source_note": "overwrite",
+            "website": " https://studio.example ",
             "description": "Manager description",
         },
     )
     assert sample_organization.source_url == "https://old.test"
     assert sample_organization.source_note == "keep"
+    assert sample_organization.website == "https://studio.example"
     assert sample_organization.description == "Manager description"
 
 

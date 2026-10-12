@@ -111,7 +111,7 @@ def collect_flat_org_warnings(
     path: str,
     warnings: list[str],
 ) -> None:
-    """Warn when flat fields are ignored or website is discarded."""
+    """Warn when flat location or activity fields are ignored."""
     locations = raw_org.get("locations")
     has_locations = isinstance(locations, list) and bool(locations)
     if has_locations:
@@ -135,9 +135,6 @@ def collect_flat_org_warnings(
                 f"{path}: ignored flat activity fields "
                 f"{', '.join(used)} because activities[] is present"
             )
-
-    if raw_org.get("website") not in (None, ""):
-        warnings.append(f"{path}: website is accepted but not stored")
 
 
 def expand_board_flat_org(raw_org: dict[str, Any]) -> None:

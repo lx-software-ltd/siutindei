@@ -71,6 +71,11 @@ class Organization(Base):
     twitter: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     xiaohongshu: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     wechat: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    website: Mapped[Optional[str]] = mapped_column(
+        Text(),
+        nullable=True,
+        comment="Organization website",
+    )
     media_urls: Mapped[List[str]] = mapped_column(
         ARRAY(Text()),
         nullable=False,

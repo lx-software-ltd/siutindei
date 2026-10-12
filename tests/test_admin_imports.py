@@ -330,7 +330,39 @@ def test_collect_flat_org_warnings_for_nested_and_website() -> None:
     )
     assert any("ignored flat location fields" in item for item in warnings)
     assert any("ignored flat activity fields" in item for item in warnings)
-    assert any("website is accepted but not stored" in item for item in warnings)
+    assert warnings == [
+        (
+            "organizations[0]: ignored flat location fields area_name, address "
+            "because locations[] is present"
+        ),
+        (
+            "organizations[0]: ignored flat activity fields category_name "
+            "because activities[] is present"
+        ),
+    ]
+
+
+def test_import_stores_website_separately_from_source_url(db_session) -> None:
+    org_name = f"Website Org {uuid4()}"
+    payload = {
+        "organizations": [
+            {
+                "name": org_name,
+                "manager_id": "00000000-0000-0000-0000-000000000091",
+                "website": " https://studio.example/home ",
+                "source_url": "https://catalog.example/listing",
+            }
+        ]
+    }
+    summary, results = process_import_payload(db_session, payload, [])
+    assert results[0]["status"] == "created"
+    assert results[0]["warnings"] == []
+    org = db_session.execute(
+        select(Organization).where(Organization.name == org_name)
+    ).scalar_one()
+    assert org.website == "https://studio.example/home"
+    assert org.source_url == "https://catalog.example/listing"
+    assert summary["warnings"] == 0
 
 
 def test_default_manager_id_fills_missing_manager(db_session) -> None:

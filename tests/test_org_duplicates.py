@@ -34,6 +34,18 @@ def test_limited_suffix_groups_with_the_short_name(db_session) -> None:
     assert str(limited.id) in ids
 
 
+def test_shared_website_host_is_a_duplicate_signal(db_session) -> None:
+    from app.services.org_duplicate_scoring import score_pairs
+
+    left = _org(db_session, f"Alpha {uuid4().hex[:8]} Pottery")
+    right = _org(db_session, f"Zebra {uuid4().hex[:8]} Kites")
+    left.website = "https://www.harbour.example/classes"
+    right.website = "http://harbour.example"
+    scores = score_pairs(db_session, [left, right], set())
+    pair = tuple(sorted((str(left.id), str(right.id))))
+    assert "website" in scores[pair][1]
+
+
 def test_blank_socials_do_not_group(db_session) -> None:
     left = f"Alpha {uuid4().hex[:8]} Pottery"
     _org(db_session, left)

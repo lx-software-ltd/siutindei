@@ -68,8 +68,9 @@ is a cannot-link: those two organizations are not placed in the same
 group even when a third organization matches both.
 
 Duplicate groups use exact name, phone, email, source id, social, and
-website buckets, plus spelling similarity. `pg_trgm` runs when the
-dialect is PostgreSQL and the extension exists. A failed similarity
+website buckets, plus spelling similarity. The website bucket matches
+the organization's website host and the catalog page host. `pg_trgm`
+runs when the dialect is PostgreSQL and the extension exists. A failed similarity
 lookup is logged. Otherwise scoring uses `difflib`. A shared location
 adds weight only when another signal is already present. The review
 queue warning `possible_duplicate` uses the organization name key,

@@ -164,6 +164,7 @@ def serialize_export_organization(
         "phone_country_code": org.phone_country_code,
         "phone_number": org.phone_number,
         "email": org.email,
+        "website": org.website,
         "whatsapp": org.whatsapp,
         "facebook": org.facebook,
         "instagram": org.instagram,
