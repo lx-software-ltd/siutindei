@@ -39,19 +39,29 @@ the merge transaction commits.
 Later imports that look up those values load the survivor. An admin
 delete writes a row with `kind` `delete` and no survivor. The row
 keeps the place id, catalog source, source id, and names, including
-names the organization used before it was renamed. It does not keep
-email, phone, or manager id. A later import skips that organization
-and its children when the place id matches, when the source id matches
-the same catalog, or when a remembered name matches and either the
-file or the deleted organization has no place id and no source id.
-A manager delete does not write this row. If the organization has no
-catalog version 1, a later import can create it again. Once version 1
-exists, an import that matches that snapshot does not recreate the
-organization, including after a manager delete. An admin forgets one
-identity from Data quality, which also marks the organization's
-catalog versions `forgotten`, and the next import can create it. Creating the
-organization by hand still leaves a live row, and the next import
-follows that row. The audit
+names the organization used before it was renamed, plus the
+normalized form of those names. It does not keep email, phone, or
+manager id. A later import skips that organization and its children
+when the place id matches, when the source id matches the same
+catalog, or when a remembered name matches and the file does not
+carry a different place id or a different source id for the same
+catalog. Names are compared after case-folding and collapsed
+whitespace. When catalog version 1 exists, an import that matches
+that snapshot is not created again, including after a manager delete.
+A manager delete does not write the deletion row, so an organization
+with no version 1 can be imported again.
+
+Deleting the survivor converts each merge that pointed at it. Those
+rows keep names only, record the person and time of the delete, and
+share one deletion group. Forgetting the deleted organization from
+Data quality forgets that whole group and marks each organization's
+catalog versions `forgotten`. Forgetting one previously merged
+identity forgets only that identity. Remember, conversion, and forget
+each write an audit row with names and identifiers, not contact
+fields. A stored import that skipped the organization as deleted runs
+again after the identity is forgotten, including the same uploaded
+file. Creating the organization by hand still leaves a live row, and
+the next import follows that row. The merge audit
 row uses action `MERGE` and records source ids, moved counts, and
 filled field names. Dismissing a pair writes action `DISMISS_DUPLICATE`.
 

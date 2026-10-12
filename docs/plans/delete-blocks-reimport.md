@@ -1,7 +1,7 @@
 # Plan: Deleted organizations stay deleted on import
 
 **Status**: Done
-**Zone**: yellow, plus `backend/db/alembic/versions/0046_deleted_org_import.py`
+**Zone**: yellow. This follow-up does not edit `backend/db/`.
 
 The nullable survivor column and the `kind` column were requested when
 the review fixes were asked for. That request is the approval to edit
@@ -48,22 +48,41 @@ remembered identity and allow that import again.
 - Place id matches that place id.
 - Source id matches only when the catalog source is the same.
 - A name, including a name the organization used before it was
-  renamed, matches only when the file has no place id and no source
-  id, or the deleted organization had neither.
+  renamed, matches when the identifiers do not contradict. A
+  different place id, or the same catalog with a different source
+  id, is a different organization. A file that only has a source id
+  still matches a deleted organization that only had a place id
+  when the name is the same.
+- Names are compared after the same cleanup import uses:
+  case-folding and collapsed whitespace, including tabs.
+- Place id and source id are queried on their own so the existing
+  indexes apply. The name check is a separate statement. No new
+  index, because that would be a red-zone migration.
 - A live organization still wins.
 
 ## Stored identity
 
-Name, earlier names, place id, source, and source id. No email, phone,
-or manager id. `kind` is `delete`. `merged_by` and `merged_at` are the
-actor and time for both merges and deletes.
+Name, earlier names, the normalized form of those names, place id,
+source, and source id. No email, phone, or manager id. `kind` is
+`delete`. `merged_by` and `merged_at` are the actor and time.
+
+Deleting a survivor converts each merge that pointed at it into a
+deletion, stamps the delete actor and time, and shares a
+`deletion_group`. Forgetting the deleted organization forgets that
+group. Forgetting one previously merged identity forgets only that
+row. Each remember, conversion, and forget writes an `audit_log`
+row with names and identifiers only.
+
+A stored import that skipped an organization as deleted is run
+again after that identity is forgotten, including the same file.
 
 ## Invariants this change preserves
 
 - A live organization still wins. Import updates or skips that row.
 - A merge still forwards place id and source id to the survivor.
 - Deleting the survivor keeps the merged-away place ids from being
-  imported as new organizations.
+  imported as new organizations, and forgetting that delete releases
+  those identities together.
 - `manager_id` is still never written onto an existing organization.
 - Venues and activities still disappear with the deleted organization.
 

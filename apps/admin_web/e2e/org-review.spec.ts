@@ -29,18 +29,26 @@ test.describe('Organization review queue', () => {
       adminPage.getByRole('heading', { name: 'Import history' })
     ).toBeVisible();
     await expect(
-      adminPage.getByRole('cell', { name: 'admin/imports/catalog.json' })
+      adminPage.getByRole('columnheader', { name: 'File' })
+    ).toHaveCount(0);
+    await expect(
+      adminPage.getByRole('link', { name: 'admin/imports/catalog.json' })
     ).toBeVisible();
     await expect(
-      adminPage.getByRole('cell', { name: 'admin/imports/dry-run.json' })
+      adminPage.getByRole('link', { name: 'admin/imports/dry-run.json' })
     ).toBeVisible();
-    await expect(
-      adminPage.getByRole('cell', { name: 'admin/imports/expired.json' })
-    ).toBeVisible();
+    await expect(adminPage.getByText('admin/imports/expired.json')).toBeVisible();
     await expect(
       adminPage.getByRole('link', { name: 'admin/imports/expired.json' })
     ).toHaveCount(0);
-    await expect(adminPage.getByText('completed · skip existing')).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'Live execution', exact: true })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'Live execution · skip existing' })
+    ).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'Dry run' })).toHaveCount(2);
+    await expect(adminPage.getByText('completed', { exact: true })).toHaveCount(0);
     await expect(adminPage.getByRole('button', { name: 'View orgs' })).toHaveCount(
       2
     );

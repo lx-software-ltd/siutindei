@@ -48,6 +48,8 @@ interface UseResourceEditorOptions<T extends { id: string }, TForm> {
   /** Skip the list request until the caller has a scope. */
   enabled?: boolean;
   noun: string;
+  /** Replaces the generic delete warning for this resource. */
+  deleteMessage?: string;
 }
 
 /**
@@ -67,6 +69,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
   listFilters,
   enabled = true,
   noun,
+  deleteMessage,
 }: UseResourceEditorOptions<T, TForm>) {
   const api = useMemo(
     () => getResourceApi<T>(resource, mode),
@@ -246,7 +249,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
       const displayName = item.name || item.id;
       const confirmed = await confirm(
         `Delete ${noun} "${displayName}"?`,
-        'This action cannot be undone.',
+        deleteMessage ?? 'This action cannot be undone.',
         { variant: 'danger', confirmLabel: 'Delete' }
       );
       if (!confirmed) {
@@ -270,7 +273,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
         return false;
       }
     },
-    [api, clearDirty, collapse, confirm, expandedId, list, noun]
+    [api, clearDirty, collapse, confirm, deleteMessage, expandedId, list, noun]
   );
 
   const confirmDialog: ReactElement = (

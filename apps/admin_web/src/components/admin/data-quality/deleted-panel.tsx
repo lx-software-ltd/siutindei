@@ -8,6 +8,7 @@ import { useConfirmDialog } from '../../../hooks/use-confirm-dialog';
 import { getAdminQueryClient } from '../../../lib/admin-query-client';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { ApiError } from '../../../lib/api-client';
+import { formatDateTime } from '../../../lib/date-utils';
 import {
   forgetDeletedOrganization,
   listDeletedOrganizations,
@@ -70,6 +71,7 @@ export function DeletedPanel() {
             <AdminDataTableHeadCell priority='secondary'>Place id</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Source</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>Source id</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Deleted</AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
@@ -78,6 +80,9 @@ export function DeletedPanel() {
             <AdminDataTableCell priority='secondary'>{item.place_id || '—'}</AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>{item.source || '—'}</AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>{item.source_id || '—'}</AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              {formatDateTime(item.deleted_at)}
+            </AdminDataTableCell>
           </>
         )}
         detail={
@@ -94,7 +99,7 @@ export function DeletedPanel() {
         }
         rows={list.items}
         getLabel={(item) => item.name || 'Deleted organization'}
-        middleColumnCount={4}
+        middleColumnCount={5}
         isLoading={list.isLoading}
         isLoadingMore={list.isLoadingMore}
         hasMore={list.hasMore}
@@ -109,6 +114,18 @@ export function DeletedPanel() {
       {confirmDialog}
     </>
   );
+}
+
+function forgetMessage(item: DeletedOrganization): string {
+  const again =
+    'Run the import again, including the same file. The earlier result is not reused.';
+  if (item.also_forgets && item.also_forgets.length > 0) {
+    return `This also allows import of ${item.also_forgets.join(', ')}. ${again}`;
+  }
+  if (item.was_merge) {
+    return `Only this previously merged identity can be imported again. ${again}`;
+  }
+  return `A later import can create this organization. ${again}`;
 }
 
 function DeletedDetail({
@@ -126,7 +143,7 @@ function DeletedDetail({
   async function forget() {
     const accepted = await confirm(
       'Allow import again',
-      'A later import can create this organization.',
+      forgetMessage(item),
       { confirmLabel: 'Allow import', variant: 'danger' }
     );
     if (!accepted) {
@@ -167,6 +184,18 @@ function DeletedDetail({
         <AdminReadOnlyValue label='Source id' mono>
           {item.source_id || '—'}
         </AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Deleted by'>{item.deleted_by || '—'}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Deleted'>{formatDateTime(item.deleted_at)}</AdminReadOnlyValue>
+        {item.was_merge ? (
+          <AdminReadOnlyValue label='History' span='full'>
+            Merged into an organization that was later deleted.
+          </AdminReadOnlyValue>
+        ) : null}
+        {item.also_forgets && item.also_forgets.length > 0 ? (
+          <AdminReadOnlyValue label='Also released' span='full'>
+            {item.also_forgets.join(', ')}
+          </AdminReadOnlyValue>
+        ) : null}
       </AdminFieldGrid>
     </AdminEditorPanel>
   );

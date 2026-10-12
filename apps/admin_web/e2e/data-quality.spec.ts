@@ -158,7 +158,9 @@ test.describe('Data quality', () => {
     await expect(adminPage.getByRole('table', { name: 'Deleted organizations' })).toBeVisible();
     await adminPage.getByRole('cell', { name: 'Harbour Club', exact: true }).click();
     await expect(adminPage.getByText('Old Harbour')).toBeVisible();
+    await expect(adminPage.getByText('admin-sub')).toBeVisible();
     await adminPage.getByRole('button', { name: 'Forget' }).click();
+    await expect(adminPage.getByText(/same file/)).toBeVisible();
     await adminPage.getByRole('button', { name: 'Allow import' }).click();
     await expect(
       adminPage.getByText('No deleted organizations are blocking import.')

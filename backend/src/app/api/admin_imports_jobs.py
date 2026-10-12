@@ -10,6 +10,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.db.models import ImportJob
+from app.services.org_delete import stored_deletion_skips_still_match
 
 
 def find_import_job_by_key(
@@ -213,6 +214,22 @@ def stored_job_answers_request(
     if not dry_run and getattr(job, "status", None) == "failed":
         return False
     return job_allow_updates(job) == allow_updates
+
+
+def reuse_stored_import_job(
+    session: Session,
+    job: Any,
+    dry_run: bool,
+    allow_updates: bool,
+) -> bool:
+    """Return True when the stored job is still the right response.
+
+    A job that skipped an organization because an admin deleted it is
+    stale once that identity is forgotten. The same file then runs again.
+    """
+    if not stored_job_answers_request(job, dry_run, allow_updates):
+        return False
+    return stored_deletion_skips_still_match(session, getattr(job, "results", None))
 
 
 def serialize_import_job(job: ImportJob) -> dict[str, Any]:

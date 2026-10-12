@@ -28,7 +28,7 @@ from app.api.admin_imports_jobs import (
     finish_import_job,
     job_allow_updates,
     list_import_jobs,
-    stored_job_answers_request,
+    reuse_stored_import_job,
     serialize_import_job,
     serialize_import_job_summary,
     store_import_job,
@@ -198,7 +198,12 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
         if (
             existing_job is not None
             and not retry_failed
-            and stored_job_answers_request(existing_job, dry_run, allow_org_updates)
+            and reuse_stored_import_job(
+                session,
+                existing_job,
+                dry_run,
+                allow_org_updates,
+            )
         ):
             return json_response(
                 200,
