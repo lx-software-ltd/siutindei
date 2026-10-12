@@ -69,6 +69,9 @@ export interface UsePaginatedListOptions<TItem, TFilters extends object> {
   queryKey?: readonly unknown[];
   /** Keep requesting pages until the cursor is exhausted or the auto-page cap is hit. */
   fetchAll?: boolean;
+  /** Background refetch while this list is mounted. */
+  refetchInterval?: number | false;
+  refetchOnWindowFocus?: boolean;
 }
 
 export interface UsePaginatedListReturn<TItem, TFilters extends object> {
@@ -204,6 +207,8 @@ export function usePaginatedList<TItem, TFilters extends object>({
   fetchOnMount = true,
   queryKey,
   fetchAll = false,
+  refetchInterval = false,
+  refetchOnWindowFocus,
 }: UsePaginatedListOptions<TItem, TFilters>): UsePaginatedListReturn<TItem, TFilters> {
   const queryClient = getAdminQueryClient();
   const pageSize = clampAdminListLimit(limit, maxLimit);
@@ -270,6 +275,8 @@ export function usePaginatedList<TItem, TFilters extends object>({
       getNextPageParam,
       enabled,
       placeholderData: keepPreviousData,
+      refetchInterval,
+      refetchOnWindowFocus,
     },
     queryClient
   );

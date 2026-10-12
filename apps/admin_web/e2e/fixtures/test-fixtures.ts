@@ -1902,6 +1902,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
             {
               id: 'job-1',
               object_key: 'admin/imports/catalog.json',
+              download_url: 'https://imports.example/admin/imports/catalog.json',
               dry_run: false,
               status: 'completed',
               summary: {
@@ -1914,6 +1915,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
             {
               id: 'job-skip',
               object_key: 'admin/imports/skip.json',
+              download_url: 'https://imports.example/admin/imports/skip.json',
               dry_run: false,
               allow_updates: false,
               status: 'completed',
@@ -1926,8 +1928,21 @@ export async function setupApiMocks(page: Page): Promise<void> {
               created_at: '2024-01-15T00:00:00Z',
             },
             {
+              id: 'job-old',
+              object_key: 'admin/imports/expired.json',
+              dry_run: true,
+              status: 'completed',
+              summary: {
+                organizations: { created: 0, updated: 0, failed: 0, skipped: 0 },
+              },
+              file_warnings: [],
+              result_count: 0,
+              created_at: '2024-01-01T00:00:00Z',
+            },
+            {
               id: 'job-dry',
               object_key: 'admin/imports/dry-run.json',
+              download_url: 'https://imports.example/admin/imports/dry-run.json',
               dry_run: true,
               status: 'completed',
               summary: {

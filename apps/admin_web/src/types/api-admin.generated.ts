@@ -412,6 +412,12 @@ export interface paths {
          * List import jobs
          * @description Newest-first cursor page of stored import jobs. Admin only.
          *     Per-row results stay on `GET /v1/admin/imports/{job_id}`.
+         *     Each item includes `download_url`, a presigned GET for that
+         *     import file, when the stored key is under `admin/imports/`
+         *     and the job is at most 7 days old. Older jobs omit the URL
+         *     because the bucket lifecycle has deleted the object. The URL
+         *     expires after 3600 seconds. A signing failure still returns
+         *     the page without `download_url`.
          */
         get: {
             parameters: {
@@ -6546,6 +6552,12 @@ export interface components {
             /** Format: uuid */
             id: string;
             object_key: string;
+            /**
+             * @description Presigned GET for this import file in S3. Present when
+             *     `object_key` is under `admin/imports/` and the job is
+             *     at most 7 days old. Expires after 3600 seconds.
+             */
+            download_url?: string;
             dry_run: boolean;
             /**
              * @description Whether this run updated existing rows. Jobs stored before

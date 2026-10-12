@@ -34,10 +34,65 @@ test.describe('Organization review queue', () => {
     await expect(
       adminPage.getByRole('cell', { name: 'admin/imports/dry-run.json' })
     ).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'admin/imports/expired.json' })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('link', { name: 'admin/imports/expired.json' })
+    ).toHaveCount(0);
     await expect(adminPage.getByText('completed · skip existing')).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'View orgs' })).toHaveCount(
       2
     );
+  });
+
+  test('opens the stored import file from history', async ({ adminPage }) => {
+    await adminPage.context().route('https://imports.example/**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: '{"organizations":[]}',
+      });
+    });
+    await adminPage.goto('/admin/dashboard?section=imports&tab=history');
+    const fileLink = adminPage.getByRole('link', {
+      name: 'admin/imports/catalog.json',
+    });
+    await expect(fileLink).toHaveAttribute(
+      'href',
+      'https://imports.example/admin/imports/catalog.json'
+    );
+    await expect(adminPage.getByTestId('admin-row-job-1')).toHaveAttribute(
+      'data-expanded',
+      'false'
+    );
+    const popupPromise = adminPage.waitForEvent('popup');
+    await fileLink.click();
+    const popup = await popupPromise;
+    await expect(popup).toHaveURL(
+      'https://imports.example/admin/imports/catalog.json'
+    );
+    await expect(adminPage.getByTestId('admin-row-job-1')).toHaveAttribute(
+      'data-expanded',
+      'false'
+    );
+
+    await adminPage.getByRole('cell', { name: 'created 1, updated 0' }).click();
+    await expect(
+      adminPage
+        .getByTestId('admin-row-job-1-detail')
+        .getByRole('link', { name: 'admin/imports/catalog.json' })
+    ).toHaveAttribute(
+      'href',
+      'https://imports.example/admin/imports/catalog.json'
+    );
+
+    await adminPage.setViewportSize({ width: 390, height: 800 });
+    await expect(
+      adminPage
+        .getByTestId('admin-row-job-1')
+        .getByRole('link', { name: 'admin/imports/catalog.json' })
+    ).toBeVisible();
   });
 
   test('retries a skip-existing import with the stored flag', async ({

@@ -87,6 +87,28 @@ describe('usePaginatedList', () => {
     expect(result.current.items.map((item) => item.id)).toEqual(['a']);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+
+  it('refetches on the configured interval', async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn(async () => ({ items: [{ id: 'a' }], nextCursor: null }));
+    try {
+      renderHook(() =>
+        usePaginatedList<{ id: string }, Record<string, never>>({
+          queryKey: ['refetch-interval'],
+          defaultFilters: {},
+          refetchInterval: 50,
+          fetcher,
+        })
+      );
+      await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(50);
+      });
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('useExhaustPages', () => {

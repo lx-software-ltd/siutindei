@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import os
 from typing import Any, Mapping
 from uuid import UUID
 
-from botocore.exceptions import ClientError
 from sqlalchemy.orm import Session
 
 from app.api.admin_auth import _is_admin, _set_session_audit_context
@@ -35,9 +33,17 @@ from app.api.admin_imports_jobs import (
     serialize_import_job_summary,
     store_import_job,
 )
+from app.api.admin_imports_objects import (
+    EXPORT_PREFIX,
+    IMPORT_PREFIX,
+    PRESIGN_EXPIRY_SECONDS,
+    build_download_url as _build_download_url,
+    load_import_payload as _load_import_payload,
+    presign_import_downloads as _presign_import_downloads,
+    write_export_payload as _write_export_payload,
+)
 from app.api.admin_imports_utils import (
     build_object_key,
-    sanitize_filename,
     validate_object_key,
 )
 from app.api.admin_request import (
@@ -55,10 +61,6 @@ from app.utils import json_response
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
-
-IMPORT_PREFIX = "admin/imports"
-EXPORT_PREFIX = "admin/exports"
-PRESIGN_EXPIRY_SECONDS = 900
 
 
 def _handle_admin_imports(
@@ -348,10 +350,18 @@ def _handle_list_import_jobs(event: Mapping[str, Any]) -> dict[str, Any]:
         has_more = len(rows) > limit
         page = rows[:limit]
         next_cursor = _encode_cursor(page[-1].id) if has_more and page else None
+        downloads = _presign_import_downloads(page)
+        items = []
+        for job in page:
+            item = serialize_import_job_summary(job)
+            download_url = downloads.get(job.object_key)
+            if download_url:
+                item["download_url"] = download_url
+            items.append(item)
         return json_response(
             200,
             {
-                "items": [serialize_import_job_summary(job) for job in page],
+                "items": items,
                 "next_cursor": next_cursor,
             },
             event=event,
@@ -439,52 +449,3 @@ def _parse_dry_run(body: dict[str, Any]) -> bool:
     if not isinstance(dry_run, bool):
         raise ValidationError("dry_run must be a boolean", field="dry_run")
     return dry_run
-
-
-def _load_import_payload(object_key: str) -> dict[str, Any]:
-    bucket = _require_env("ADMIN_IMPORT_EXPORT_BUCKET")
-    client = get_s3_client()
-    try:
-        response = client.get_object(Bucket=bucket, Key=object_key)
-    except ClientError as exc:
-        code = exc.response.get("Error", {}).get("Code")
-        if code == "NoSuchKey":
-            raise ValidationError(
-                "object_key not found",
-                field="object_key",
-            ) from exc
-        raise
-    body = response["Body"].read().decode("utf-8")
-    try:
-        return json.loads(body)
-    except json.JSONDecodeError as exc:
-        raise ValidationError("Import file must be valid JSON") from exc
-
-
-def _write_export_payload(object_key: str, payload: dict[str, Any]) -> None:
-    bucket = _require_env("ADMIN_IMPORT_EXPORT_BUCKET")
-    client = get_s3_client()
-    body = json.dumps(payload, ensure_ascii=True, default=str).encode("utf-8")
-    client.put_object(
-        Bucket=bucket,
-        Key=object_key,
-        Body=body,
-        ContentType="application/json",
-    )
-
-
-def _build_download_url(object_key: str, file_name: str) -> str:
-    bucket = _require_env("ADMIN_IMPORT_EXPORT_BUCKET")
-    client = get_s3_client()
-    return client.generate_presigned_url(
-        "get_object",
-        Params={
-            "Bucket": bucket,
-            "Key": object_key,
-            "ResponseContentDisposition": (
-                f'attachment; filename="{sanitize_filename(file_name)}"'
-            ),
-            "ResponseContentType": "application/json",
-        },
-        ExpiresIn=PRESIGN_EXPIRY_SECONDS,
-    )

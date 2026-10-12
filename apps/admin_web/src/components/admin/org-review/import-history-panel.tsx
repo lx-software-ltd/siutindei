@@ -13,6 +13,7 @@ import {
 } from '../../../lib/api-client-org-review';
 import {
   AdminDataTableCell,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
 import { RetryIcon, ViewIcon } from '../../icons/action-icons';
@@ -23,6 +24,8 @@ import { ConfirmDialog } from '../../ui/confirm-dialog';
 import { AdminRowActions } from '../../ui/admin-row-actions';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { StatusBanner } from '../../status-banner';
+
+const HISTORY_LINK_REFRESH_MS = 30 * 60 * 1000;
 
 function formatWhen(value?: string) {
   return value ? new Date(value).toLocaleString() : '—';
@@ -51,6 +54,25 @@ function modeLabel(item: ImportJobListItem) {
   return item.status;
 }
 
+function ImportFileLink({ job }: { job: ImportJobListItem }) {
+  if (!job.download_url) {
+    return <>{job.object_key}</>;
+  }
+  return (
+    <a
+      href={job.download_url}
+      target='_blank'
+      rel='noreferrer'
+      className='underline underline-offset-2 hover:text-slate-900'
+      onClick={(event) => {
+        event.stopPropagation();
+      }}
+    >
+      {job.object_key}
+    </a>
+  );
+}
+
 function canRetry(item: ImportJobListItem) {
   return (
     !item.dry_run &&
@@ -68,7 +90,7 @@ function ImportJobSummary({ job }: { job: ImportJobListItem }) {
           {formatWhen(job.created_at)}
         </AdminReadOnlyValue>
         <AdminReadOnlyValue label='File' mono>
-          {job.object_key}
+          <ImportFileLink job={job} />
         </AdminReadOnlyValue>
         <AdminReadOnlyValue label='Mode'>{modeLabel(job)}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Organizations'>
@@ -107,6 +129,8 @@ export function ImportHistoryPanel() {
     queryKey: adminQueryKeys.importJobs(),
     defaultFilters: {},
     errorPrefix: 'Failed to load imports',
+    refetchInterval: HISTORY_LINK_REFRESH_MS,
+    refetchOnWindowFocus: true,
     fetcher: async ({ cursor }) => {
       const response = await listImportJobs(cursor ?? undefined);
       return {
@@ -179,9 +203,14 @@ export function ImportHistoryPanel() {
         }
         renderCells={(item) => (
           <>
-            <AdminDataTableCell>{formatWhen(item.created_at)}</AdminDataTableCell>
+            <AdminDataTableCell>
+              {formatWhen(item.created_at)}
+              <AdminDataTableCellMeta until='secondary'>
+                <ImportFileLink job={item} />
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {item.object_key}
+              <ImportFileLink job={item} />
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {modeLabel(item)}
