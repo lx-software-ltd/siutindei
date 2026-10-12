@@ -106,13 +106,17 @@ valid. It also inserts the `name_fix_settings` singleton. No
 
 ## Table: organization_merges
 
-Purpose: Remember a removed organization's `source_id` and `place_id`
-so a later import resolves to the survivor.
+Purpose: Remember a removed organization's `source_id`, `place_id`,
+and name. A merge resolves a later import to the survivor. A delete
+leaves `survivor_org_id` null so a later import does not create the
+organization again.
 
 Columns:
 - `id` (UUID, PK)
-- `merged_org_id` (UUID, required) — id of the deleted organization
-- `survivor_org_id` (UUID, FK → `organizations.id`, ON DELETE CASCADE)
+- `merged_org_id` (UUID, required) — id of the removed organization
+- `survivor_org_id` (UUID, nullable, FK → `organizations.id`,
+  ON DELETE CASCADE) — organization that kept the record. Null means
+  the organization was deleted.
 - `source` (text, optional)
 - `source_id` (text, optional)
 - `place_id` (text, optional)

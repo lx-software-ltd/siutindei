@@ -215,6 +215,11 @@ paths:
           description: Organization not found
     delete:
       summary: Delete organization
+      description: |
+        Removes the organization and its venues and activities.
+        The place id, source id, and name are remembered. A later
+        import that matches any of those does not create the
+        organization again.
       responses:
         "204":
           description: Organization deleted
@@ -2683,6 +2688,11 @@ paths:
           description: Organization not found
     delete:
       summary: Delete managed organization
+      description: |
+        Removes the organization and its venues and activities.
+        The place id, source id, and name are remembered. A later
+        import that matches any of those does not create the
+        organization again.
       responses:
         "204":
           description: Organization deleted

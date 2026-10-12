@@ -36,7 +36,11 @@ copy runs only when `ORGANIZATION_MEDIA_BUCKET` and
 the merge transaction commits.
 
 `organization_merges` stores the removed `source_id` and `place_id`.
-Later imports that look up those values load the survivor. The audit
+Later imports that look up those values load the survivor. Deleting
+an organization writes the same kind of row with no survivor. A later
+import that matches the removed place id, source id, or name skips
+that organization and its children. Creating the organization by hand
+still leaves a live row, and the next import follows that row. The audit
 row uses action `MERGE` and records source ids, moved counts, and
 filled field names. Dismissing a pair writes action `DISMISS_DUPLICATE`.
 

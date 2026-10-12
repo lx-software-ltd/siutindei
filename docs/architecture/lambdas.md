@@ -167,7 +167,8 @@ their primary responsibilities.
   `pending_review`.   Name-fix and category-check scans sweep with
   `review_scope` `pending_review` or `all`. A merged organization's
   `source_id` and `place_id` stay resolvable through
-  `organization_merges`.
+  `organization_merges`. A deleted organization is stored the same way
+  with no survivor, so a later import does not create it again.
 - For the full endpoint list, see the OpenAPI spec:
   `docs/api/admin.yaml`
 

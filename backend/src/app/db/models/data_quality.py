@@ -22,7 +22,11 @@ from app.db.base import Base
 
 
 class OrganizationMerge(Base):
-    """Forwarding row for an organization removed by a merge."""
+    """Forwarding row for an organization removed by a merge or delete.
+
+    A null ``survivor_org_id`` means the organization was deleted.
+    Import must not create that place id, source id, or name again.
+    """
 
     __tablename__ = "organization_merges"
 
@@ -32,10 +36,10 @@ class OrganizationMerge(Base):
         default=uuid4,
     )
     merged_org_id: Mapped[str] = mapped_column(UUID(as_uuid=True), nullable=False)
-    survivor_org_id: Mapped[str] = mapped_column(
+    survivor_org_id: Mapped[Optional[str]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     source: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     source_id: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)

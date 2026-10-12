@@ -27,6 +27,7 @@ from app.db.engine import get_engine
 from app.db.models import Activity, Organization
 from app.db.repositories import ActivityRepository
 from app.exceptions import NotFoundError, ValidationError
+from app.services.org_delete import remember_deleted_organization
 from app.utils import json_response
 from app.utils.logging import get_logger
 
@@ -298,6 +299,12 @@ def _crud_delete(
                 event=event,
             )
 
+    if config.name == "organizations":
+        remember_deleted_organization(
+            session,
+            entity,
+            _get_user_sub(event),
+        )
     repo.delete(entity)
     session.commit()
     logger.info(f"Deleted {config.name}: {resource_id}")
