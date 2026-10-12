@@ -13,7 +13,6 @@ import {
 } from '../../../lib/api-client-org-review';
 import {
   AdminDataTableCell,
-  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
 import { RetryIcon, ViewIcon } from '../../icons/action-icons';
@@ -210,9 +209,6 @@ export function ImportHistoryPanel() {
               <span className='mt-0.5 block wrap-anywhere text-xs font-normal text-slate-500'>
                 <ImportFileLink job={item} />
               </span>
-              <AdminDataTableCellMeta until='secondary'>
-                {modeLabel(item)}
-              </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               {modeLabel(item)}
