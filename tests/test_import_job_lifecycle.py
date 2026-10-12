@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
-from app.api.admin_imports import _handle_import_process
+from app.api.admin_imports import (
+    _handle_import_process,
+    _handle_list_import_jobs,
+)
 
 
 def _event() -> dict:
@@ -146,3 +150,107 @@ def test_failed_job_can_be_retried(monkeypatch) -> None:
     response = _handle_import_process(_event())
     assert response["statusCode"] == 200
     assert calls == ["begin", "process", "finish"]
+
+
+def _history_job(object_key: str, job_id: str) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=job_id,
+        object_key=object_key,
+        dry_run=False,
+        status="completed",
+        summary={"allow_updates": True},
+        results=[],
+        file_warnings=[],
+        created_at="2024-02-01T00:00:00Z",
+        updated_at="2024-02-01T00:00:00Z",
+    )
+
+
+def _stub_history_list(monkeypatch, jobs: list[object]) -> None:
+    monkeypatch.setattr(
+        "app.api.admin_imports.Session",
+        lambda *args, **kwargs: _Session(),
+    )
+    monkeypatch.setattr("app.api.admin_imports.get_engine", lambda: None)
+    monkeypatch.setattr(
+        "app.api.admin_imports.list_import_jobs",
+        lambda session, limit, cursor: jobs,
+    )
+
+
+def _list_event() -> dict:
+    return {
+        "httpMethod": "GET",
+        "path": "/v1/admin/imports",
+    }
+
+
+def test_history_list_links_each_file_to_s3(monkeypatch) -> None:
+    signed: list[dict] = []
+
+    class _S3:
+        def generate_presigned_url(self, operation, Params, ExpiresIn):
+            signed.append(
+                {
+                    "operation": operation,
+                    "params": Params,
+                    "expires": ExpiresIn,
+                }
+            )
+            key = Params["Key"]
+            return f"https://s3.example/{key}"
+
+    monkeypatch.setenv("ADMIN_IMPORT_EXPORT_BUCKET", "import-bucket")
+    _stub_history_list(
+        monkeypatch,
+        [
+            _history_job(
+                "admin/imports/abc-catalog.json",
+                "00000000-0000-0000-0000-000000000021",
+            )
+        ],
+    )
+    monkeypatch.setattr("app.api.admin_imports.get_s3_client", lambda: _S3())
+
+    response = _handle_list_import_jobs(_list_event())
+    body = json.loads(response["body"])
+    assert response["statusCode"] == 200
+    assert body["items"][0]["download_url"] == (
+        "https://s3.example/admin/imports/abc-catalog.json"
+    )
+    assert signed == [
+        {
+            "operation": "get_object",
+            "params": {
+                "Bucket": "import-bucket",
+                "Key": "admin/imports/abc-catalog.json",
+                "ResponseContentDisposition": (
+                    'attachment; filename="abc-catalog.json"'
+                ),
+                "ResponseContentType": "application/json",
+            },
+            "expires": 900,
+        }
+    ]
+
+
+def test_history_list_skips_download_url_for_foreign_key(monkeypatch) -> None:
+    def _boom():
+        raise AssertionError("foreign keys are not signed")
+
+    _stub_history_list(
+        monkeypatch,
+        [
+            _history_job(
+                "other/secret.json",
+                "00000000-0000-0000-0000-000000000022",
+            )
+        ],
+    )
+    monkeypatch.setattr("app.api.admin_imports.get_s3_client", _boom)
+
+    response = _handle_list_import_jobs(_list_event())
+    body = json.loads(response["body"])
+    assert response["statusCode"] == 200
+    assert "download_url" not in body["items"][0]
+    assert body["items"][0]["object_key"] == "other/secret.json"

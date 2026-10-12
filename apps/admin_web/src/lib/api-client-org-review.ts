@@ -89,6 +89,7 @@ export interface OrgReviewBulkResult {
 export interface ImportJobListItem {
   id: string;
   object_key: string;
+  download_url?: string;
   dry_run: boolean;
   allow_updates?: boolean;
   status: string;

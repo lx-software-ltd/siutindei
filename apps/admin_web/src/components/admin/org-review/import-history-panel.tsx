@@ -13,6 +13,7 @@ import {
 } from '../../../lib/api-client-org-review';
 import {
   AdminDataTableCell,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
 import { RetryIcon, ViewIcon } from '../../icons/action-icons';
@@ -51,6 +52,25 @@ function modeLabel(item: ImportJobListItem) {
   return item.status;
 }
 
+function ImportFileLink({ job }: { job: ImportJobListItem }) {
+  if (!job.download_url) {
+    return <>{job.object_key}</>;
+  }
+  return (
+    <a
+      href={job.download_url}
+      target='_blank'
+      rel='noreferrer'
+      className='underline underline-offset-2 hover:text-slate-900'
+      onClick={(event) => {
+        event.stopPropagation();
+      }}
+    >
+      {job.object_key}
+    </a>
+  );
+}
+
 function canRetry(item: ImportJobListItem) {
   return (
     !item.dry_run &&
@@ -68,7 +88,7 @@ function ImportJobSummary({ job }: { job: ImportJobListItem }) {
           {formatWhen(job.created_at)}
         </AdminReadOnlyValue>
         <AdminReadOnlyValue label='File' mono>
-          {job.object_key}
+          <ImportFileLink job={job} />
         </AdminReadOnlyValue>
         <AdminReadOnlyValue label='Mode'>{modeLabel(job)}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Organizations'>
@@ -179,9 +199,14 @@ export function ImportHistoryPanel() {
         }
         renderCells={(item) => (
           <>
-            <AdminDataTableCell>{formatWhen(item.created_at)}</AdminDataTableCell>
+            <AdminDataTableCell>
+              {formatWhen(item.created_at)}
+              <AdminDataTableCellMeta until='secondary'>
+                <ImportFileLink job={item} />
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {item.object_key}
+              <ImportFileLink job={item} />
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {modeLabel(item)}

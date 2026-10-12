@@ -92,7 +92,9 @@ their primary responsibilities.
   `name_zh` / `description_zh` map to translations.zh;
   re-imports update description/hours/price; `closed_permanently`
   updates an existing match only; `GET /v1/admin/imports/{job_id}`
-  returns the stored result). Live imports commit once per batch
+  returns the stored result; `GET /v1/admin/imports` includes a
+  15-minute presigned download URL for each file under
+  `admin/imports/`). Live imports commit once per batch
   after per-row SAVEPOINTs, so a Lambda timeout mid-batch rolls
   back the whole file),
   and address autocomplete (Nominatim via the AWS/HTTP proxy)

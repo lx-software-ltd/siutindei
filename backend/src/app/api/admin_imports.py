@@ -348,10 +348,18 @@ def _handle_list_import_jobs(event: Mapping[str, Any]) -> dict[str, Any]:
         has_more = len(rows) > limit
         page = rows[:limit]
         next_cursor = _encode_cursor(page[-1].id) if has_more and page else None
+        downloads = _presign_import_downloads(page)
+        items = []
+        for job in page:
+            item = serialize_import_job_summary(job)
+            download_url = downloads.get(job.object_key)
+            if download_url:
+                item["download_url"] = download_url
+            items.append(item)
         return json_response(
             200,
             {
-                "items": [serialize_import_job_summary(job) for job in page],
+                "items": items,
                 "next_cursor": next_cursor,
             },
             event=event,
@@ -473,9 +481,37 @@ def _write_export_payload(object_key: str, payload: dict[str, Any]) -> None:
     )
 
 
-def _build_download_url(object_key: str, file_name: str) -> str:
-    bucket = _require_env("ADMIN_IMPORT_EXPORT_BUCKET")
+def _presign_import_downloads(jobs: list[Any]) -> dict[str, str]:
+    """Presigned GET URLs for import files stored under the import prefix."""
+    keys: list[str] = []
+    for job in jobs:
+        object_key = str(job.object_key)
+        try:
+            validate_object_key(object_key, IMPORT_PREFIX)
+        except ValidationError:
+            continue
+        keys.append(object_key)
+    if not keys:
+        return {}
     client = get_s3_client()
+    return {
+        object_key: _build_download_url(
+            object_key,
+            object_key.rsplit("/", 1)[-1] or "import.json",
+            client,
+        )
+        for object_key in keys
+    }
+
+
+def _build_download_url(
+    object_key: str,
+    file_name: str,
+    client: Any | None = None,
+) -> str:
+    bucket = _require_env("ADMIN_IMPORT_EXPORT_BUCKET")
+    if client is None:
+        client = get_s3_client()
     return client.generate_presigned_url(
         "get_object",
         Params={
