@@ -1,6 +1,6 @@
 # Plan: Data quality location row checkbox
 
-**Status**: Draft
+**Status**: Accepted
 **Zone**: yellow
 
 ## Goal

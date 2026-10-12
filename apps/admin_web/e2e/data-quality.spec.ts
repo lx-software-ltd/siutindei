@@ -104,10 +104,12 @@ test.describe('Data quality', () => {
       adminPage.getByText(/All matching records are selected/)
     ).toHaveCount(0);
     await adminPage.getByRole('button', { name: 'Apply selected' }).click();
-    await expect(adminPage.getByRole('cell', { name: 'Swim Class' })).toHaveCount(
-      0
-    );
-    await expect(adminPage.getByRole('cell', { name: 'Art Class' })).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'Swim Class', exact: true })
+    ).toHaveCount(0);
+    await expect(
+      adminPage.getByRole('cell', { name: 'Art Class', exact: true })
+    ).toBeVisible();
   });
 
   test('admin can select every matching location from the header checkbox', async ({
