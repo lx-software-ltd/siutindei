@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useQueryState } from 'nuqs';
 import { useEffect, useRef, useState } from 'react';
 
+import { useBulkRowSelection } from '../../../hooks/use-bulk-row-selection';
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
 import { getAdminQueryClient } from '../../../lib/admin-query-client';
@@ -104,46 +105,28 @@ export function NamesPanel() {
     'pending_review' | 'all' | null
   >(null);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [selectScope, setSelectScope] = useState<'none' | 'visible' | 'all'>(
-    'none'
-  );
-  const selectAllRef = useRef<HTMLInputElement>(null);
+  const {
+    selected,
+    selectScope,
+    selectAllRef,
+    headerChecked,
+    headerLabel,
+    cycleHeader,
+    toggleRow,
+    resetSelection,
+  } = useBulkRowSelection(list.items, list.hasMore);
 
   useEffect(() => {
-    if (selectAllRef.current) {
-      selectAllRef.current.indeterminate =
-        selectScope === 'visible' && list.hasMore;
-    }
-  }, [list.hasMore, selectScope]);
-
-  useEffect(() => {
-    setSelectScope('none');
-    setSelected(new Set());
+    resetSelection();
   }, [
     list.filters.q,
     list.filters.entity_type,
     list.filters.rule,
     list.filters.status,
     organization,
+    resetSelection,
   ]);
 
-  useEffect(() => {
-    if (selectScope !== 'visible') {
-      return;
-    }
-    setSelected((current) => {
-      let changed = false;
-      const next = new Set(current);
-      for (const item of list.items) {
-        if (!next.has(item.id)) {
-          next.add(item.id);
-          changed = true;
-        }
-      }
-      return changed ? next : current;
-    });
-  }, [list.items, selectScope]);
   const listed = list.items.find((item) => item.id === expanded.expandedId) ?? null;
   const detailQuery = useQuery({
     queryKey: [...adminQueryKeys.nameFixes(), 'one', expanded.expandedId],
@@ -216,8 +199,7 @@ export function NamesPanel() {
           : { action, ids: Array.from(selected) }
       );
       setNotice(`Updated ${result.decided}. ${result.failed} failed.`);
-      setSelected(new Set());
-      setSelectScope('none');
+      resetSelection();
       await getAdminQueryClient().invalidateQueries({
         queryKey: [...adminQueryKeys.nameFixes(), 'summary'],
       });
@@ -410,27 +392,9 @@ export function NamesPanel() {
           <input
             ref={selectAllRef}
             type='checkbox'
-            aria-label={
-              selectScope === 'all'
-                ? 'Clear selection'
-                : selectScope === 'visible' && list.hasMore
-                  ? 'Select all matching rows'
-                  : 'Select visible rows'
-            }
-            checked={selectScope === 'all' || selectScope === 'visible'}
-            onChange={() => {
-              if (selectScope === 'none') {
-                setSelected(new Set(list.items.map((item) => item.id)));
-                setSelectScope('visible');
-                return;
-              }
-              if (selectScope === 'visible' && list.hasMore) {
-                setSelectScope('all');
-                return;
-              }
-              setSelected(new Set());
-              setSelectScope('none');
-            }}
+            aria-label={headerLabel}
+            checked={headerChecked}
+            onChange={cycleHeader}
           />
         }
         renderLeading={(item) => (
@@ -440,19 +404,7 @@ export function NamesPanel() {
             checked={selectScope === 'all' || selected.has(item.id)}
             onClick={(event) => event.stopPropagation()}
             onChange={(event) => {
-              setSelectScope('visible');
-              setSelected((current) => {
-                const next = new Set(current);
-                if (event.target.checked) {
-                  next.add(item.id);
-                } else {
-                  next.delete(item.id);
-                }
-                if (next.size === 0) {
-                  setSelectScope('none');
-                }
-                return next;
-              });
+              toggleRow(item.id, event.target.checked);
             }}
           />
         )}

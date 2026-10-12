@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryState } from 'nuqs';
 
+import { useBulkRowSelection } from '../../../hooks/use-bulk-row-selection';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { buildApiUrl, request } from '../../../lib/api-client-core';
@@ -85,10 +86,16 @@ export function CategoryChecksPanel() {
   const [confirmMode, setConfirmMode] = useState<
     'pending_review' | 'all' | null
   >(null);
-  const [selectScope, setSelectScope] = useState<'none' | 'visible' | 'all'>(
-    'none'
-  );
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const {
+    selected,
+    selectScope,
+    selectAllRef,
+    headerChecked,
+    headerLabel,
+    cycleHeader,
+    toggleRow,
+    resetSelection,
+  } = useBulkRowSelection(list.items, list.hasMore);
   const [ignoreCurrent, setIgnoreCurrent] = useState(false);
   const [bulkAction, setBulkAction] = useState<'apply' | 'dismiss' | null>(null);
   const [bulkPreview, setBulkPreview] = useState<CategoryReviewBulkResult | null>(
@@ -99,14 +106,6 @@ export function CategoryChecksPanel() {
   const [isBulkRunning, setIsBulkRunning] = useState(false);
   const [error, setError] = useState('');
   const bulkAbort = useRef<AbortController | null>(null);
-  const selectAllRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (selectAllRef.current) {
-      selectAllRef.current.indeterminate =
-        selectScope === 'visible' && list.hasMore;
-    }
-  }, [list.hasMore, selectScope]);
 
   const { refetch, setFilter } = list;
   const selectedOrgId = scopedOrgId || list.filters.org_id;
@@ -216,7 +215,6 @@ export function CategoryChecksPanel() {
     }
   }
 
-  const visibleIds = list.items.map((item) => item.id);
   const hasSelection = selectScope === 'all' || selected.size > 0;
   const bulkFilters = useMemo(
     () => ({
@@ -243,46 +241,15 @@ export function CategoryChecksPanel() {
     !list.filters.proposed_category_id;
 
   useEffect(() => {
-    setSelectScope('none');
-    setSelected(new Set());
+    resetSelection();
   }, [
     list.filters.status,
     list.filters.verdict,
     list.filters.q,
     list.filters.org_id,
     list.filters.proposed_category_id,
+    resetSelection,
   ]);
-
-  useEffect(() => {
-    if (selectScope !== 'visible') {
-      return;
-    }
-    setSelected((current) => {
-      let changed = false;
-      const next = new Set(current);
-      for (const item of list.items) {
-        if (!next.has(item.id)) {
-          next.add(item.id);
-          changed = true;
-        }
-      }
-      return changed ? next : current;
-    });
-  }, [list.items, selectScope]);
-
-  function cycleSelectScope() {
-    if (selectScope === 'none') {
-      setSelected(new Set(visibleIds));
-      setSelectScope('visible');
-      return;
-    }
-    if (selectScope === 'visible' && list.hasMore) {
-      setSelectScope('all');
-      return;
-    }
-    setSelected(new Set());
-    setSelectScope('none');
-  }
 
   useEffect(() => {
     if (bulkAction === null) {
@@ -333,8 +300,7 @@ export function CategoryChecksPanel() {
         },
       });
       setBulkAction(null);
-      setSelectScope('none');
-      setSelected(new Set());
+      resetSelection();
       const verb = action === 'apply' ? 'applied' : 'dismissed';
       const details = result.failures.map((item) => item.message).join(' ');
       if (result.cancelled) {
@@ -381,15 +347,9 @@ export function CategoryChecksPanel() {
           <input
             ref={selectAllRef}
             type='checkbox'
-            aria-label={
-              selectScope === 'all'
-                ? 'Clear selection'
-                : selectScope === 'visible' && list.hasMore
-                  ? 'Select all matching rows'
-                  : 'Select visible rows'
-            }
-            checked={selectScope === 'all' || selectScope === 'visible'}
-            onChange={() => cycleSelectScope()}
+            aria-label={headerLabel}
+            checked={headerChecked}
+            onChange={cycleHeader}
           />
         }
         renderLeading={(item) => (
@@ -399,19 +359,7 @@ export function CategoryChecksPanel() {
             checked={selectScope === 'all' || selected.has(item.id)}
             onClick={(event) => event.stopPropagation()}
             onChange={(event) => {
-              setSelectScope('visible');
-              setSelected((current) => {
-                const next = new Set(current);
-                if (event.target.checked) {
-                  next.add(item.id);
-                } else {
-                  next.delete(item.id);
-                }
-                if (next.size === 0) {
-                  setSelectScope('none');
-                }
-                return next;
-              });
+              toggleRow(item.id, event.target.checked);
             }}
           />
         )}
