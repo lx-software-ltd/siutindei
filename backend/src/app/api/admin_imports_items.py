@@ -22,6 +22,7 @@ from app.api.admin_imports_utils import (
 from app.api.admin_validators import MAX_ADDRESS_LENGTH, _validate_string_length
 from app.db.models import Activity, Location, Organization
 from app.exceptions import ValidationError
+from app.services.catalog_version_match import ImportRowOutcome
 
 
 def process_pricing(
@@ -94,6 +95,19 @@ def process_pricing(
                 allow_updates=allow_updates,
             ),
         )
+    except ImportRowOutcome as outcome:
+        warnings.extend(outcome.warnings)
+        record_result(
+            results,
+            summary,
+            "pricing",
+            f"{activity.name} / {location_name}",
+            outcome.status,
+            entity_id=outcome.entity_id,
+            warnings=warnings,
+            path=path,
+        )
+        return
     except ValidationError as exc:
         record_result(
             results,
@@ -195,6 +209,19 @@ def process_schedule(
                 allow_updates=allow_updates,
             ),
         )
+    except ImportRowOutcome as outcome:
+        warnings.extend(outcome.warnings)
+        record_result(
+            results,
+            summary,
+            "schedules",
+            f"{activity.name} / {location_name}",
+            outcome.status,
+            entity_id=outcome.entity_id,
+            warnings=warnings,
+            path=path,
+        )
+        return
     except ValidationError as exc:
         record_result(
             results,

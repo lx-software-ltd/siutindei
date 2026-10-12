@@ -61,6 +61,7 @@ from app.api.admin_resources import (
 )
 from app.api.admin_suggestions import _handle_user_organization_suggestion
 from app.api.partner_routes import handle_partner_routes as _handle_partner_routes
+from app.api.admin_versions import handle_versions
 from app.api.admin_tickets import (
     _handle_admin_tickets,
     _handle_user_access_request,
@@ -222,6 +223,13 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
                 resource_id,
                 sub_resource,
             ),
+            event,
+        )
+    if resource == "versions":
+        if not _is_admin(event):
+            return json_response(403, {"error": "Forbidden"}, event=event)
+        return _safe_handler(
+            lambda: handle_versions(event, method, resource_id),
             event,
         )
     if resource == "deleted-organizations":

@@ -7,6 +7,13 @@ from typing import Any
 from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
+from app.api.admin_imports_allowed import (
+    ALLOWED_ACTIVITY_FIELDS,
+    ALLOWED_LOCATION_FIELDS,
+    ALLOWED_ORG_FIELDS,
+    ALLOWED_PRICING_FIELDS,
+    ALLOWED_SCHEDULE_FIELDS,  # noqa: F401  re-exported
+)
 from app.api.admin_imports_catalog import (
     CATALOG_MANAGER_REQUIRED,
     NO_MATCH_TO_CLOSE,
@@ -61,87 +68,16 @@ from app.db.repositories import (
     LocationRepository,
     OrganizationRepository,
 )
+from app.api.admin_imports_version import (
+    activity_terminal,
+    hold_existing,
+    location_terminal,
+    pricing_terminal,
+    schedule_terminal,
+)
 from app.exceptions import ValidationError
+from app.services.catalog_version_match import apply_org_gate
 from app.services.category_suggestions.capture import record_import_capture
-
-ALLOWED_ORG_FIELDS = {
-    "name",
-    "description",
-    "name_translations",
-    "description_translations",
-    "manager_id",
-    "phone_country_code",
-    "phone_number",
-    "email",
-    "whatsapp",
-    "facebook",
-    "instagram",
-    "tiktok",
-    "twitter",
-    "xiaohongshu",
-    "wechat",
-    "media_urls",
-    "logo_media_url",
-    "locations",
-    "activities",
-    "source_url",
-    "vetting_note",
-    "area_name",
-    "category_name",
-    "address",
-    "lat",
-    "lng",
-    "website",
-    "phone",
-    "name_zh",
-    "description_zh",
-    "place_id",
-    "status",
-    "source",
-    "source_id",
-    "source_note",
-    "description_source",
-}
-ALLOWED_LOCATION_FIELDS = {
-    "name",
-    "address",
-    "area_id",
-    "area_name",
-    "lat",
-    "lng",
-    "place_id",
-}
-ALLOWED_ACTIVITY_FIELDS = {
-    "name",
-    "description",
-    "name_translations",
-    "description_translations",
-    "age_min",
-    "age_max",
-    "category_id",
-    "category_name",
-    "source_url",
-    "source_note",
-    "vetting_note",
-    "name_zh",
-    "description_zh",
-    "pricing",
-    "schedules",
-}
-ALLOWED_PRICING_FIELDS = {
-    "location_name",
-    "pricing_type",
-    "amount",
-    "currency",
-    "sessions_count",
-    "free_trial_class_offered",
-}
-ALLOWED_SCHEDULE_FIELDS = {
-    "location_name",
-    "timezone",
-    "languages",
-    "weekly_entries",
-}
 
 
 def upsert_organization(
@@ -190,7 +126,16 @@ def upsert_organization(
         warnings,
     )
     requested_status = parse_org_status(raw_org.get("status"))
-
+    adopted, terminal = apply_org_gate(
+        session,
+        raw_org,
+        body,
+        existing,
+        allow_updates,
+        warnings,
+    )
+    if adopted is not None:
+        existing = adopted
     if existing:
         guard_existing_org(
             existing,
@@ -198,6 +143,12 @@ def upsert_organization(
             allow_updates=allow_updates,
             catalog_manager_id=catalog_manager_id,
         )
+        if allow_updates:
+            guard_import_organization_update(existing, body)
+    if terminal:
+        return existing, terminal
+
+    if existing:
         if not allow_updates:
             return existing, "skipped"
         guard_import_organization_update(existing, body)
@@ -292,13 +243,25 @@ def upsert_location(
     except MultipleResultsFound as exc:
         raise ValidationError("Multiple locations found", field="name") from exc
 
-    if existing and not allow_updates:
-        return existing, "skipped"
-
     body = filter_fields(raw_location, ALLOWED_LOCATION_FIELDS)
-    resolve_location_area_fields(session, body)
     if raw_location.get("name") is not None or raw_location.get("address") is not None:
         body["address"] = address_value
+    held = hold_existing(
+        existing,
+        location_terminal(
+            session,
+            org,
+            existing,
+            body,
+            address_value,
+            allow_updates,
+            warnings,
+        ),
+        allow_updates,
+    )
+    if held:
+        return held
+    resolve_location_area_fields(session, body)
     if existing:
         updated = _update_location(repo, existing, body)
         repo.update(updated)
@@ -361,9 +324,22 @@ def upsert_activity(
                 field="name",
             ) from exc
 
-    if existing and not allow_updates:
-        return existing, "skipped"
-
+    held = hold_existing(
+        existing,
+        activity_terminal(
+            session,
+            org,
+            existing,
+            raw_activity,
+            body,
+            name,
+            allow_updates,
+            warnings,
+        ),
+        allow_updates,
+    )
+    if held:
+        return held
     resolve_activity_category_fields(session, body)
     capture_name = body.pop("_capture_category_name", None)
 
@@ -421,11 +397,22 @@ def upsert_pricing(
             field="pricing_type",
         ) from exc
 
-    if existing and not allow_updates:
-        return existing, "skipped"
-
     body = filter_fields(raw_pricing, ALLOWED_PRICING_FIELDS)
     body["pricing_type"] = pricing_enum.value
+    held = hold_existing(
+        existing,
+        pricing_terminal(
+            session,
+            activity,
+            location,
+            existing,
+            body,
+            allow_updates,
+        ),
+        allow_updates,
+    )
+    if held:
+        return held
     if existing:
         updated = _update_pricing(repo, existing, body)
         repo.update(updated)
@@ -460,9 +447,6 @@ def upsert_schedule(
         coerce_uuid(location.id),
         languages,
     )
-    if existing and not allow_updates:
-        return existing, "skipped"
-
     entries = parse_weekly_entries_local(
         raw_schedule.get("weekly_entries"),
         tzinfo,
@@ -473,6 +457,22 @@ def upsert_schedule(
             "weekly_entries must include at least one entry",
             field="weekly_entries",
         )
+    held = hold_existing(
+        existing,
+        schedule_terminal(
+            session,
+            activity,
+            location,
+            existing,
+            languages,
+            entries,
+            allow_updates,
+            warnings,
+        ),
+        allow_updates,
+    )
+    if held:
+        return held
 
     body = {
         "activity_id": str(activity.id),

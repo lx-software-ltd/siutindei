@@ -33,12 +33,20 @@ const IMPORT_TABS: { key: ImportTab; label: string }[] = [
 const emptyImportSummary = {
   created: 0,
   updated: 0,
+  unchanged: 0,
   failed: 0,
   skipped: 0,
 };
 
-function formatCountLabel(counts: typeof emptyImportSummary) {
+function formatCountLabel(counts: {
+  created: number;
+  updated: number;
+  unchanged?: number;
+  failed: number;
+  skipped: number;
+}) {
   return `created ${counts.created}, updated ${counts.updated}, ` +
+    `unchanged ${counts.unchanged ?? 0}, ` +
     `failed ${counts.failed}, skipped ${counts.skipped}`;
 }
 

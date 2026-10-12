@@ -879,7 +879,7 @@ def test_importer_skips_existing_venue_and_activity(
         allow_org_updates=False,
     )
     by_type = {item["type"]: item for item in results}
-    assert by_type["organizations"]["status"] == "skipped"
+    assert by_type["organizations"]["status"] == "unchanged"
     assert by_type["locations"]["status"] == "skipped"
     assert by_type["activities"]["status"] == "skipped"
     assert LINKED_VENUE_WARNING not in by_type["activities"]["warnings"]
@@ -1153,7 +1153,7 @@ def test_importer_matching_manager_id_is_case_insensitive(
         allow_org_updates=False,
     )
     by_type = {item["type"]: item for item in results}
-    assert by_type["organizations"]["status"] == "skipped"
+    assert by_type["organizations"]["status"] == "unchanged"
     assert by_type["locations"]["status"] == "created"
     assert by_type["activities"]["status"] == "created"
 
@@ -1229,7 +1229,7 @@ def test_activity_only_import_does_not_link_db_venues(
         allow_org_updates=False,
     )
     by_type = {item["type"]: item for item in results}
-    assert by_type["activities"]["status"] == "skipped"
+    assert by_type["activities"]["status"] == "unchanged"
     assert (
         db_session.get(
             ActivityLocation,
@@ -1276,7 +1276,7 @@ def test_upsert_schedule_reimport_is_idempotent(
         warnings,
         allow_updates=True,
     )
-    assert status_again == "updated"
+    assert status_again == "unchanged"
     assert schedule_again.id == schedule_id
     assert [entry.id for entry in schedule_again.entries] == entry_ids
 

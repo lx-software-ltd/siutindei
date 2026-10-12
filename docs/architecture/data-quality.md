@@ -44,9 +44,12 @@ email, phone, or manager id. A later import skips that organization
 and its children when the place id matches, when the source id matches
 the same catalog, or when a remembered name matches and either the
 file or the deleted organization has no place id and no source id.
-A manager delete does not write this row, so a catalog import can
-create the organization again. An admin forgets one identity from
-Data quality, and the next import can create it. Creating the
+A manager delete does not write this row. If the organization has no
+catalog version 1, a later import can create it again. Once version 1
+exists, an import that matches that snapshot does not recreate the
+organization, including after a manager delete. An admin forgets one
+identity from Data quality, which also marks the organization's
+catalog versions `forgotten`, and the next import can create it. Creating the
 organization by hand still leaves a live row, and the next import
 follows that row. The audit
 row uses action `MERGE` and records source ids, moved counts, and

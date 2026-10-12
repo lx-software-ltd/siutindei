@@ -16,6 +16,7 @@ from app.db.models.category_suggestion import (
     CategorySuggestionSettings,
 )
 from app.db.models.audit_log import AuditLog
+from app.db.models.catalog_version import CatalogVersion
 from app.db.models.data_quality import (
     NameFixProposal,
     NameFixSettings,
@@ -47,6 +48,7 @@ __all__ = [
     "ActivityScheduleEntry",
     "ApiKey",
     "AuditLog",
+    "CatalogVersion",
     "CategoryScanRun",
     "CategorySuggestion",
     "CategorySuggestionActivity",

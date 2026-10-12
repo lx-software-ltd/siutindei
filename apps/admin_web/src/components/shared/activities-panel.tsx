@@ -38,6 +38,7 @@ import {
 import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
+import { VersionHistory } from '../admin/version-history';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 
 interface ActivityFormState {
@@ -510,6 +511,16 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
           />
         </AdminField>
       </AdminFieldGrid>
+      {panel.editingId ? (
+        <VersionHistory
+          mode={mode}
+          entityType='activity'
+          entityId={panel.editingId}
+          version={
+            panel.items.find((item) => item.id === panel.editingId)?.version
+          }
+        />
+      ) : null}
     </AdminEditorPanel>
   );
 
@@ -570,6 +581,9 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             <AdminDataTableHeadCell priority='tertiary'>
               Age Range
             </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Version
+            </AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
@@ -585,6 +599,9 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {`${item.age_min} - ${item.age_max}`}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {item.version ? `v${item.version}` : '—'}
             </AdminDataTableCell>
           </>
         )}

@@ -379,4 +379,6 @@ def _serialize_organization(entity: Organization) -> dict[str, Any]:
         "last_imported_at": entity.last_imported_at,
         "created_at": entity.created_at,
         "updated_at": entity.updated_at,
+        "version": entity.version,
+        "media_version": entity.media_version,
     }

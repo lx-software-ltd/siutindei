@@ -155,4 +155,5 @@ def _serialize_location(entity: Location) -> dict[str, Any]:
         "place_id": entity.place_id,
         "created_at": entity.created_at,
         "updated_at": entity.updated_at,
+        "version": entity.version,
     }

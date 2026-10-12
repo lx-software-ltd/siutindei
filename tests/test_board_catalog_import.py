@@ -4,17 +4,15 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from app.api.admin_imports_importer import process_import_payload
 from app.api.admin_imports_jobs import (
     find_import_job_by_key,
     serialize_import_job,
     store_import_job,
 )
-from app.db.models import Activity, Organization
-
+from app.db.models import Activity, CatalogVersion, Organization
+from sqlalchemy import delete, select
+from sqlalchemy.orm import Session
 
 CATALOG_MANAGER = "00000000-0000-0000-0000-000000000088"
 
@@ -51,7 +49,7 @@ def _board_org(
                 "category_name": category_name,
                 "description": f"{org_name} is a public outdoor venue.",
                 "vetting_note": (
-                    f"source=lcsd; sourceId=lcsd-{index}; " "descriptionSource=template"
+                    f"source=lcsd; sourceId=lcsd-{index}; descriptionSource=template"
                 ),
             }
         ],
@@ -238,7 +236,7 @@ def test_provider_owned_org_is_skipped(
     db_session,
     sample_organization,
 ) -> None:
-    summary, results = process_import_payload(
+    _summary, results = process_import_payload(
         db_session,
         {
             "organizations": [
@@ -314,6 +312,11 @@ def test_dry_run_place_id_match_reports_update_without_write(
             select(Organization).where(Organization.place_id == "ChIJ-dry-place")
         ).scalar_one()
         assert org.name == name
+        org_id = org.id
+        session.delete(org)
+        session.flush()
+        session.execute(delete(CatalogVersion).where(CatalogVersion.org_id == org_id))
+        session.commit()
 
 
 def test_activity_created_without_schedule(

@@ -393,6 +393,11 @@ def _apply(session, survivor, sources, plan, merged_by: str | None) -> None:
     for source in sources:
         session.delete(source)
     session.flush()
+    from app.services.catalog_version_match import annotate_merged_tombstones
+
+    for source in sources:
+        annotate_merged_tombstones(session, source.id, survivor.id)
+    session.flush()
     from app.services.org_duplicates import invalidate_duplicate_cache
 
     invalidate_duplicate_cache()

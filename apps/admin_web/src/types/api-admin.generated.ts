@@ -661,6 +661,11 @@ export interface paths {
                     area_id?: string;
                     /** @description Set to `locations` to include map pins on each row. */
                     include?: string;
+                    /**
+                     * @description `unchanged` keeps organizations still on version 1.
+                     *     `changed` keeps organizations above version 1.
+                     */
+                    changed?: "unchanged" | "changed";
                 };
                 header?: never;
                 path?: never;
@@ -4242,6 +4247,99 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List catalog versions
+         * @description History of organizations, media, locations, activities, pricing,
+         *     and schedules. Newest first. Admin only.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    entity_type?: "organization" | "media" | "location" | "activity" | "pricing" | "schedule";
+                    entity_id?: string;
+                    org_id?: string;
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Catalog version page */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CatalogVersionListResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/versions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get one catalog version */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Catalog version */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CatalogVersion"];
+                    };
+                };
+                /** @description Version not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/audit-logs": {
         parameters: {
             query?: never;
@@ -6461,6 +6559,11 @@ export interface components {
         AdminImportCounts: {
             created: number;
             updated: number;
+            /**
+             * @description Rows whose file matched version 1, so the import wrote
+             *     nothing. Omitted on jobs stored before catalog versions.
+             */
+            unchanged?: number;
             failed: number;
             skipped: number;
         };
@@ -6500,7 +6603,7 @@ export interface components {
             type: "organizations" | "locations" | "activities" | "pricing" | "schedules";
             key: string;
             /** @enum {string} */
-            status: "created" | "updated" | "failed" | "skipped";
+            status: "created" | "updated" | "unchanged" | "failed" | "skipped";
             id?: string | null;
             path?: string | null;
             warnings: string[];
@@ -6612,6 +6715,11 @@ export interface components {
             activity_count?: number;
             pricing_count?: number;
             schedule_count?: number;
+            /**
+             * @description Catalog version of the organization. Omitted on responses
+             *     stored before catalog versions.
+             */
+            version?: number;
             issues: components["schemas"]["OrgReviewIssue"][];
             completeness: number;
             blocker_count?: number;
@@ -6874,6 +6982,10 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            /** @description Current catalog version. Starts at 1. */
+            version?: number;
+            /** @description Version of the media set (media_urls and logo). */
+            media_version?: number;
         };
         OrganizationListResponse: {
             items: components["schemas"]["Organization"][];
@@ -6927,6 +7039,7 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            version?: number;
         };
         LocationListResponse: {
             items: components["schemas"]["Location"][];
@@ -7008,6 +7121,7 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            version?: number;
         };
         ActivityListResponse: {
             items: components["schemas"]["Activity"][];
@@ -7073,6 +7187,7 @@ export interface components {
             currency: string;
             sessions_count?: number | null;
             free_trial_class_offered: boolean;
+            version?: number;
         };
         PricingListResponse: {
             items: components["schemas"]["Pricing"][];
@@ -7144,6 +7259,7 @@ export interface components {
             schedule_type: string;
             weekly_entries: components["schemas"]["WeeklyScheduleEntry"][];
             languages: string[];
+            version?: number;
         };
         ScheduleListResponse: {
             items: components["schemas"]["Schedule"][];
@@ -7353,6 +7469,36 @@ export interface components {
             next_cursor?: string | null;
             /** @description Number of pending tickets matching the current filters */
             pending_count: number;
+        };
+        CatalogVersion: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            entity_type: "organization" | "media" | "location" | "activity" | "pricing" | "schedule";
+            /** Format: uuid */
+            entity_id: string;
+            /** Format: uuid */
+            org_id?: string | null;
+            version: number;
+            /** @enum {string} */
+            action: "created" | "updated" | "deleted";
+            snapshot: {
+                [key: string]: unknown;
+            };
+            changed_fields?: string[];
+            user_id?: string | null;
+            request_id?: string | null;
+            /** Format: uuid */
+            import_job_id?: string | null;
+            reason?: string | null;
+            /** Format: uuid */
+            related_id?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        CatalogVersionListResponse: {
+            items: components["schemas"]["CatalogVersion"][];
+            next_cursor?: string | null;
         };
         AuditLogEntry: {
             /** Format: uuid */

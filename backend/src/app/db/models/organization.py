@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import CheckConstraint, ForeignKey, Text, text
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, Text, text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TIMESTAMP
@@ -134,6 +134,18 @@ class Organization(Base):
         TIMESTAMP(timezone=True),
         nullable=False,
         server_default=text("now()"),
+    )
+    version: Mapped[int] = mapped_column(
+        Integer(),
+        nullable=False,
+        default=1,
+        server_default=text("1"),
+    )
+    media_version: Mapped[int] = mapped_column(
+        Integer(),
+        nullable=False,
+        default=1,
+        server_default=text("1"),
     )
 
     locations: Mapped[List["Location"]] = relationship(

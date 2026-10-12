@@ -37,7 +37,10 @@ def _discard_dry_run_audit_rows(session: Session) -> None:
     if dialect != "postgresql":
         return
     session.execute(
-        text("DELETE FROM audit_log " "WHERE xmin = pg_current_xact_id()::xid")
+        text("DELETE FROM audit_log WHERE xmin = pg_current_xact_id()::xid")
+    )
+    session.execute(
+        text("DELETE FROM catalog_versions WHERE xmin = pg_current_xact_id()::xid")
     )
 
 

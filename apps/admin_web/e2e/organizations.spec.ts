@@ -64,6 +64,8 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByRole('columnheader', { name: 'Review' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Contact' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Import job' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'v2' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toHaveCount(0);
     await expect(adminPage.locator('#review-status-filter')).toHaveValue('');
     await expect(adminPage.getByText('First test organization')).toHaveCount(0);
@@ -292,6 +294,16 @@ test.describe('Organizations Panel', () => {
     // Should show all again
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
+  });
+
+  test('shows the organization version and its history', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    await expect(
+      adminPage.getByRole('heading', { name: 'Test Organization 1' })
+    ).toBeVisible();
+    await expect(adminPage.getByText('v1', { exact: true }).first()).toBeVisible();
+    await adminPage.getByRole('button', { name: 'History' }).click();
+    await expect(adminPage.getByText('v1 · created · Import')).toBeVisible();
   });
 });
 

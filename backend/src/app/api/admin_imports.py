@@ -253,6 +253,9 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
         # writes; persist_import_change also deletes in-txn audit rows.
         if not dry_run:
             _set_session_audit_context(session, event)
+            from app.services.catalog_version_match import set_import_job_context
+
+            set_import_job_context(session, import_job_id)
         try:
             summary, results = process_import_payload(
                 session,

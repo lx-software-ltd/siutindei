@@ -114,6 +114,8 @@ export const mockOrganizations = [
     description_source: 'official',
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
+    version: 1,
+    media_version: 1,
   },
   {
     id: 'org-2',
@@ -144,6 +146,8 @@ export const mockOrganizations = [
     logo_media_url: null,
     created_at: '2024-01-02T00:00:00Z',
     updated_at: '2024-01-02T00:00:00Z',
+    version: 1,
+    media_version: 1,
   },
 ];
 
@@ -173,6 +177,7 @@ export const mockActivities = [
     source_note: 'Class listing',
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
+    version: 1,
   },
   {
     id: 'activity-2',
@@ -194,6 +199,7 @@ export const mockActivities = [
     age_max: 10,
     created_at: '2024-01-02T00:00:00Z',
     updated_at: '2024-01-02T00:00:00Z',
+    version: 1,
   },
 ];
 
@@ -378,6 +384,7 @@ export const mockLocations = [
     lng: 114.175,
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
+    version: 1,
   },
 ];
 
@@ -393,6 +400,7 @@ export const mockPricing = [
     free_trial_class_offered: false,
     created_at: '2024-01-05T00:00:00Z',
     updated_at: '2024-01-05T00:00:00Z',
+    version: 1,
   },
 ];
 
@@ -412,6 +420,7 @@ export const mockSchedules = [
     languages: ['en'],
     created_at: '2024-01-06T00:00:00Z',
     updated_at: '2024-01-06T00:00:00Z',
+    version: 1,
   },
 ];
 
@@ -1729,6 +1738,33 @@ export async function setupApiMocks(page: Page): Promise<void> {
     });
   });
 
+  await page.route('**/api/mock/**/admin/versions*', async (route) => {
+    const url = new URL(route.request().url());
+    const entityType = url.searchParams.get('entity_type') ?? 'organization';
+    const entityId = url.searchParams.get('entity_id') ?? 'org-1';
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: [
+          {
+            id: 'ver-1',
+            entity_type: entityType,
+            entity_id: entityId,
+            org_id: 'org-1',
+            version: 1,
+            action: 'created',
+            snapshot: { name: 'Test Organization 1' },
+            changed_fields: ['name'],
+            import_job_id: 'job-1',
+            created_at: '2024-01-01T00:00:00Z',
+          },
+        ],
+        next_cursor: null,
+      }),
+    });
+  });
+
   await page.route('**/api/mock/**/admin/org-review**', async (route) => {
     const url = route.request().url();
     const method = route.request().method();
@@ -1840,6 +1876,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
             completeness: 0.5,
             blocker_count: 1,
             warning_count: 0,
+            version: 2,
             area_id: null,
             map_locations: [],
           },
@@ -1857,6 +1894,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
             completeness: 1,
             blocker_count: 0,
             warning_count: 0,
+            version: 1,
             area_id: 'area-hk-causeway',
             map_locations: [
               {

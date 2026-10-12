@@ -6,6 +6,9 @@ test.describe('Media Panel', () => {
     await expect(
       adminPage.getByRole('heading', { name: 'Test Organization 1' })
     ).toBeVisible();
+    await expect(adminPage.getByText('Media v1')).toBeVisible();
+    await adminPage.getByRole('button', { name: 'History' }).click();
+    await expect(adminPage.getByText('v1 · created · Import')).toBeVisible();
 
     const mediaInput = adminPage.locator('#media-url');
     await mediaInput.fill('https://example.com/media-one.jpg');

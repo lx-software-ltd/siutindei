@@ -71,6 +71,9 @@ Columns:
   including updates
 - `created_at` (timestamptz, default `now()`)
 - `updated_at` (timestamptz, default `now()`)
+- `version` (integer, default 1) — catalog version; triggers bump it
+- `media_version` (integer, default 1) — version of `media_urls` and
+  `logo_media_url`
 
 Relationships:
 - One organization has many locations.
@@ -402,6 +405,7 @@ Columns:
   importer creates a venue from the org address
 - `created_at` (timestamptz, default `now()`)
 - `updated_at` (timestamptz, default `now()`)
+- `version` (integer, default 1)
 
 Indexes:
 - `locations_district_idx` on `district`
@@ -435,6 +439,7 @@ Columns:
 - `age_range` (int4range, required)
 - `created_at` (timestamptz, default `now()`)
 - `updated_at` (timestamptz, default `now()`)
+- `version` (integer, default 1)
 
 Indexes:
 - `activities_age_gist` on `age_range` (GiST)
@@ -479,6 +484,7 @@ Columns:
 - `currency` (text, default `HKD`)
 - `sessions_count` (integer, optional)
 - `free_trial_class_offered` (boolean, default `false`)
+- `version` (integer, default 1)
 
 Constraints:
 - `pricing_sessions_count_check`:
@@ -499,6 +505,7 @@ Columns:
 - `location_id` (UUID, FK -> locations.id, cascade delete)
 - `schedule_type` (enum `schedule_type`, required)
 - `languages` (text[], default empty array)
+- `version` (integer, default 1)
 
 Constraints:
 - `schedule_type_weekly_only`: schedule_type must be `weekly`
@@ -731,6 +738,47 @@ Counts only `operational` and `closed_temporarily` organizations.
 
 Columns: `district`, `category`, `activities`, `providers`, `stores`,
 `completeness`, `has_photo`, `has_price`, `has_schedule`, `has_geo`.
+
+## Table: catalog_versions
+
+Purpose: One row per catalog entity per version. No foreign key, so a
+tombstone survives delete and merge. Import compares version 1.
+`audit_log` stays the forensic log and does not list these rows.
+
+Columns:
+- `id` (UUID, PK, default `gen_random_uuid()`)
+- `entity_type` (text) — `organization`, `media`, `location`,
+  `activity`, `pricing`, or `schedule`
+- `entity_id` (UUID) — the catalog row id; media uses the organization id
+- `org_id` (UUID, optional)
+- `version` (integer, > 0)
+- `action` (text) — `created`, `updated`, or `deleted`
+- `snapshot` (jsonb)
+- `changed_fields` (text[], optional)
+- `txid` (bigint, required)
+- `user_id` (text, optional)
+- `request_id` (text, optional)
+- `import_job_id` (UUID, optional, no FK)
+- `reason` (text, optional) — `children`, `merged`, or `forgotten`
+- `related_id` (UUID, optional) — survivor when `reason` is `merged`
+- `created_at` (timestamptz, default `now()`)
+
+Indexes:
+- UNIQUE (`entity_type`, `entity_id`, `version`)
+- `catalog_versions_org_created_idx` on (`org_id`, `created_at`)
+- `catalog_versions_txid_idx` on (`txid`, `entity_type`, `org_id`)
+- Partial version-1 indexes on name, place id, source id, and address
+
+Grants: `siutindei_app` and `siutindei_admin` get `SELECT`, `INSERT`,
+and `UPDATE`. Triggers run as the caller.
+
+Seed: `seed_data.sql` does not change. `version` defaults to 1.
+Triggers write the version-1 rows when the seed inserts catalog rows.
+Each seed statement is its own transaction, so later child inserts
+bump the organization past version 1.
+`catalog_versions` is left empty by the seed file itself. Backfill may
+insert `organization_merges` rows with `kind = delete` only when
+historical deletes exist; a fresh database has none.
 
 ## Table: audit_log
 

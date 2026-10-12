@@ -21,6 +21,7 @@ import type { Organization } from '../../types/admin';
 import { OrganizationMergeDialog } from '../admin/data-quality/organization-merge-dialog';
 import { OrganizationReadiness } from '../admin/organization-readiness';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
+import { VersionHistory } from '../admin/version-history';
 import { WorkspaceEmpty } from '../admin/workspace-empty';
 import { useAuth } from '../auth-provider';
 import { Button } from '../ui/button';
@@ -727,6 +728,16 @@ export function OrganizationsPanel({
               );
             })}
       </AdminFieldGrid>
+      {panel.editingId ? (
+        <VersionHistory
+          mode={mode}
+          entityType='organization'
+          entityId={panel.editingId}
+          version={
+            panel.items.find((item) => item.id === panel.editingId)?.version
+          }
+        />
+      ) : null}
     </AdminEditorPanel>
   );
 

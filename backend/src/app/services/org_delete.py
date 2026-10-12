@@ -147,6 +147,9 @@ def forget_deleted_organization(session: Session, deletion_id: UUID) -> None:
     row = session.get(OrganizationMerge, deletion_id)
     if row is None or row.kind != "delete":
         raise NotFoundError("deleted organization", str(deletion_id))
+    from app.services.catalog_version_match import forget_catalog_tombstones
+
+    forget_catalog_tombstones(session, row.merged_org_id)
     session.delete(row)
     session.flush()
 

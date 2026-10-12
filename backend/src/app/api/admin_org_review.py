@@ -59,6 +59,7 @@ class ReviewListFilters:
     sort: str
     area_id: UUID | None = None
     include_locations: bool = False
+    changed: str | None = None
 
 
 def _handle_admin_org_review(
@@ -185,6 +186,10 @@ def _load_filtered_organizations(
         stmt = stmt.where(Organization.import_job_id == filters.import_job_id)
     if filters.status:
         stmt = stmt.where(Organization.status == filters.status)
+    if filters.changed == "unchanged":
+        stmt = stmt.where(Organization.version == 1)
+    elif filters.changed == "changed":
+        stmt = stmt.where(Organization.version > 1)
     if filters.query:
         pattern = f"%{_escape_like(filters.query)}%"
         stmt = stmt.where(Organization.name.ilike(pattern, escape="\\"))
@@ -245,6 +250,11 @@ def _parse_filters(event: Mapping[str, Any]) -> ReviewListFilters:
         sort=sort or "name",
         area_id=_parse_area_id(area_raw),
         include_locations=_parse_include_locations(_query_param(event, "include")),
+        changed=_optional_choice(
+            _query_param(event, "changed"),
+            ("unchanged", "changed"),
+            "changed",
+        ),
     )
 
 
@@ -337,6 +347,7 @@ def _serialize_queue_item(
         "completeness": snapshot.completeness,
         "blocker_count": snapshot.blocker_count,
         "warning_count": snapshot.warning_count,
+        "version": org.version,
     }
     if map_locations is not None:
         body["map_locations"] = map_locations

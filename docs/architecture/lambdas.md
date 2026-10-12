@@ -83,7 +83,8 @@ their primary responsibilities.
   `GET /v1/partner/category-reviews`; a full-access `crud` key can
   also `POST` review decisions and bulk apply/dismiss, and `GET` /
   `DELETE` `/v1/partner/activity-categories`), user self-service
-  (tickets), Cognito user management, audit logs, media upload, admin
+  (tickets), Cognito user management, audit logs, catalog versions
+  (`GET /v1/admin/versions`), media upload, admin
   import/export (`POST /v1/admin/imports` accepts `dry_run` to validate
   without commit or audit rows; `object_key` is idempotent via
   `import_jobs`; the process handler copies the job payload before
