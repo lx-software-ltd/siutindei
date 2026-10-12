@@ -242,6 +242,31 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Test Organization 1')).toHaveCount(0);
   });
 
+  test('shows the map when Google refuses the admin host', async ({
+    adminPage,
+  }) => {
+    await adminPage.getByRole('button', { name: 'Map' }).click();
+    await expect(
+      adminPage.getByRole('application', { name: 'Filtered organizations' })
+    ).toBeVisible();
+    await adminPage.waitForFunction(
+      () => typeof window.gm_authFailure === 'function'
+    );
+    await adminPage.evaluate(() => window.gm_authFailure?.());
+    await expect(
+      adminPage.getByText(/Google Maps blocked this admin host/)
+    ).toBeVisible();
+    await expect(adminPage.getByText('OpenStreetMap')).toBeVisible();
+    await expect(
+      adminPage.getByRole('application', { name: 'Filtered organizations' })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('link', {
+        name: 'Open Test Organization 2 in Google Maps',
+      })
+    ).toBeVisible();
+  });
+
   test('should have a name filter for the catalog', async ({ adminPage }) => {
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
     await expect(adminPage.locator('#review-name-filter')).toBeVisible();
