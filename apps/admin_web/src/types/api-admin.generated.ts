@@ -188,9 +188,11 @@ export interface paths {
          *     source, current name, and earlier names. Contact details are
          *     not stored. A later import that matches the place id, the
          *     same catalog source id, or a remembered name does not create
-         *     the organization again. A name matches only when the file has
-         *     no place id and no source id, or the deleted organization had
-         *     neither. Forget one identity with
+         *     the organization again. A name matches when it does not
+         *     contradict the place id or the same catalog's source id.
+         *     Names are compared after case-folding and collapsed
+         *     whitespace. Forget that organization, including identities
+         *     merged into it, with
          *     `DELETE /v1/admin/deleted-organizations/{id}`. A manager
          *     delete does not remember the organization.
          */
@@ -1177,9 +1179,11 @@ export interface paths {
         post?: never;
         /**
          * Allow one deleted identity to be imported again
-         * @description Removes that remembered identity. A later import can create
-         *     an organization that matches it. Other remembered identities
-         *     stay blocked.
+         * @description Removes that remembered identity. Forgetting the deleted
+         *     organization also removes identities that were merged into
+         *     it. Forgetting one of those merged identities leaves the
+         *     others blocked. A later import of the same file runs again
+         *     when a skipped identity is no longer remembered.
          */
         delete: {
             parameters: {
@@ -7870,6 +7874,16 @@ export interface components {
             deleted_by?: string | null;
             /** Format: date-time */
             deleted_at?: string | null;
+            /**
+             * @description True when this identity was merged into an organization
+             *     that an admin later deleted.
+             */
+            was_merge?: boolean;
+            /**
+             * @description Other identities released when this row is forgotten.
+             *     Empty for a previously merged identity.
+             */
+            also_forgets?: string[];
         };
         OrgDuplicateGroup: {
             id: string;

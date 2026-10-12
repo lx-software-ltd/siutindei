@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 from app.api.admin_crud import _crud_delete
 from app.api.admin_imports_importer import process_import_payload
+from app.api.admin_imports_jobs import reuse_stored_import_job
 from app.api.admin_resources import _RESOURCE_CONFIG
 from app.db.models import AuditLog, Organization, OrganizationMerge
 from app.exceptions import NotFoundError
@@ -68,6 +70,8 @@ def test_reimport_skips_a_deleted_organization(
     by_type = {item["type"]: item for item in results}
     assert by_type["organizations"]["status"] == "skipped"
     assert by_type["organizations"]["errors"][0]["message"] == ORGANIZATION_DELETED
+    assert by_type["organizations"]["place_id"] == "ChIJdeleted-club"
+    assert by_type["organizations"]["source_id"] == "catalog-harbour"
     assert by_type["activities"]["status"] == "skipped"
     assert summary["organizations"]["created"] == 0
     assert summary["activities"]["created"] == 0
@@ -214,8 +218,16 @@ def test_deleting_a_survivor_keeps_merged_place_ids_from_returning(
     assert folded is not None
     assert folded.kind == "delete"
     assert folded.survivor_org_id is None
-    assert set(folded.snapshot) == {"name", "names"}
+    assert folded.merged_by == "admin-sub"
+    assert folded.snapshot["was_merge"] is True
     assert "email" not in folded.snapshot
+    audit_rows = db_session.scalars(
+        select(AuditLog).where(AuditLog.table_name == "organization_merges")
+    ).all()
+    assert {row.action for row in audit_rows} >= {"INSERT", "UPDATE"}
+    assert "hidden@example.com" not in str(
+        [(row.old_values, row.new_values) for row in audit_rows]
+    )
 
 
 def test_same_name_with_a_different_place_id_is_created(
@@ -333,7 +345,7 @@ def test_reimport_skips_a_name_the_organization_used_before(
         select(OrganizationMerge).where(OrganizationMerge.kind == "delete")
     )
     assert stored is not None
-    assert set(stored.snapshot) == {"name", "names"}
+    assert set(stored.snapshot) >= {"name", "names", "normalized_names"}
     assert "Former Harbour" in stored.snapshot["names"]
     assert "Old Spelling Club" in stored.snapshot["names"]
     assert "hidden@example.com" not in str(stored.snapshot)
@@ -486,6 +498,221 @@ def test_manager_delete_allows_reimport(
         allow_org_updates=True,
     )
     assert results[0]["status"] == "created"
+
+
+def test_casefolded_name_with_odd_whitespace_is_skipped(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.name = "Straße\tClub"
+    db_session.flush()
+    remember_deleted_organization(db_session, sample_organization, None)
+    db_session.delete(sample_organization)
+    db_session.flush()
+
+    _summary, results = process_import_payload(
+        db_session,
+        _payload(
+            "  STRASSE   CLUB\n",
+            "00000000-0000-0000-0000-000000000001",
+        ),
+        [],
+        allow_org_updates=True,
+    )
+    assert results[0]["status"] == "skipped"
+
+
+def test_source_id_only_file_matches_a_place_id_deletion(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.name = "Harbour Club"
+    sample_organization.place_id = "ChIJdeleted-club"
+    sample_organization.source_id = None
+    db_session.flush()
+    remember_deleted_organization(db_session, sample_organization, None)
+    db_session.delete(sample_organization)
+    db_session.flush()
+
+    _summary, results = process_import_payload(
+        db_session,
+        _payload(
+            "Harbour Club",
+            "00000000-0000-0000-0000-000000000001",
+            source="lcsd",
+            source_id="catalog-9",
+        ),
+        [],
+        allow_org_updates=True,
+    )
+    assert results[0]["status"] == "skipped"
+
+
+def test_same_catalog_different_source_id_is_created(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.name = "Harbour Club"
+    sample_organization.source = "lcsd"
+    sample_organization.source_id = "catalog-42"
+    sample_organization.place_id = None
+    db_session.flush()
+    remember_deleted_organization(db_session, sample_organization, None)
+    db_session.delete(sample_organization)
+    db_session.flush()
+
+    _summary, results = process_import_payload(
+        db_session,
+        _payload(
+            "Harbour Club",
+            "00000000-0000-0000-0000-000000000001",
+            source="lcsd",
+            source_id="other-id",
+        ),
+        [],
+        allow_org_updates=True,
+    )
+    assert results[0]["status"] == "created"
+
+
+def test_forgetting_the_deleted_organization_releases_merged_identities(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.name = "Kept Club"
+    sample_organization.place_id = "ChIJsurvivor"
+    db_session.add(
+        OrganizationMerge(
+            merged_org_id=uuid4(),
+            survivor_org_id=sample_organization.id,
+            place_id="ChIJfolded",
+            snapshot={"name": "Folded Club", "email": "hidden@example.com"},
+            moved_counts={},
+            merged_by="merger-sub",
+        )
+    )
+    db_session.flush()
+    remember_deleted_organization(db_session, sample_organization, "admin-sub")
+    db_session.delete(sample_organization)
+    db_session.flush()
+    listed = list_deleted_organizations(db_session, query=None, cursor=None, limit=10)
+    by_name = {item["name"]: item for item in listed["items"]}
+    assert by_name["Folded Club"]["was_merge"] is True
+    assert by_name["Folded Club"]["deleted_by"] == "admin-sub"
+    assert by_name["Kept Club"]["also_forgets"] == ["Folded Club"]
+
+    forget_deleted_organization(
+        db_session,
+        UUID(by_name["Kept Club"]["id"]),
+        forgotten_by="admin-sub",
+    )
+    db_session.flush()
+    remaining = list_deleted_organizations(
+        db_session, query=None, cursor=None, limit=10
+    )
+    assert remaining["items"] == []
+    deleted = db_session.scalars(
+        select(AuditLog).where(
+            AuditLog.table_name == "organization_merges",
+            AuditLog.action == "DELETE",
+        )
+    ).all()
+    assert len(deleted) == 2
+    assert {row.user_id for row in deleted} == {"admin-sub"}
+    assert "hidden@example.com" not in str([row.old_values for row in deleted])
+
+
+def test_forgetting_a_merged_identity_leaves_the_deleted_organization(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.name = "Kept Club"
+    sample_organization.place_id = "ChIJsurvivor"
+    db_session.add(
+        OrganizationMerge(
+            merged_org_id=uuid4(),
+            survivor_org_id=sample_organization.id,
+            place_id="ChIJfolded",
+            snapshot={"name": "Folded Club"},
+            moved_counts={},
+        )
+    )
+    db_session.flush()
+    remember_deleted_organization(db_session, sample_organization, "admin-sub")
+    db_session.delete(sample_organization)
+    db_session.flush()
+    listed = list_deleted_organizations(db_session, query=None, cursor=None, limit=10)
+    folded = next(item for item in listed["items"] if item["name"] == "Folded Club")
+    forget_deleted_organization(
+        db_session, UUID(folded["id"]), forgotten_by="admin-sub"
+    )
+    db_session.flush()
+
+    _summary, folded_import = process_import_payload(
+        db_session,
+        _payload(
+            "Folded Club",
+            "00000000-0000-0000-0000-000000000001",
+            place_id="ChIJfolded",
+        ),
+        [],
+        allow_org_updates=True,
+    )
+    assert folded_import[0]["status"] == "created"
+    _summary, survivor_import = process_import_payload(
+        db_session,
+        _payload(
+            "Kept Club",
+            "00000000-0000-0000-0000-000000000001",
+            place_id="ChIJsurvivor",
+        ),
+        [],
+        allow_org_updates=True,
+    )
+    assert survivor_import[0]["status"] == "skipped"
+
+
+def test_stored_import_runs_again_after_forget(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.name = "Harbour Club"
+    sample_organization.place_id = "ChIJdeleted-club"
+    db_session.flush()
+    remember_deleted_organization(db_session, sample_organization, "admin-sub")
+    db_session.delete(sample_organization)
+    db_session.flush()
+    skipped = {
+        "type": "organizations",
+        "key": "Different Name",
+        "status": "skipped",
+        "place_id": "ChIJdeleted-club",
+        "errors": [{"message": ORGANIZATION_DELETED, "field": "name"}],
+    }
+    job = SimpleNamespace(
+        dry_run=False,
+        status="completed",
+        summary={"allow_updates": True},
+        results=[skipped],
+    )
+    assert reuse_stored_import_job(db_session, job, False, True) is True
+    remembered = list_deleted_organizations(
+        db_session, query=None, cursor=None, limit=10
+    )
+    forget_deleted_organization(
+        db_session,
+        UUID(remembered["items"][0]["id"]),
+        forgotten_by="admin-sub",
+    )
+    db_session.flush()
+    assert reuse_stored_import_job(db_session, job, False, True) is False
+    created = SimpleNamespace(
+        dry_run=False,
+        status="completed",
+        summary={"allow_updates": True},
+        results=[{"type": "organizations", "key": "New Studio", "status": "created"}],
+    )
+    assert reuse_stored_import_job(db_session, created, False, True) is True
 
 
 def _event(groups: str, user_sub: str = "admin-sub") -> dict:

@@ -217,6 +217,11 @@ def process_organization(
             errors=[format_error(exc)],
             path=path,
         )
+        if exc.message == ORGANIZATION_DELETED:
+            for field in ("place_id", "source", "source_id"):
+                value = raw_org.get(field)
+                if value:
+                    results[-1][field] = value
         record_skipped_children(raw_org, org_name or path, results, summary)
         return
 
