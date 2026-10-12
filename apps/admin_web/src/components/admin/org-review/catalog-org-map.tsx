@@ -1,14 +1,19 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { StatusBanner } from '../../status-banner';
 import { getGoogleMapsApiKey, getGoogleMapsMapId } from '../../../lib/config';
+import {
+  CATALOG_MAPS_KEY_REFERRERS,
+  catalogMapSurface,
+} from '../../../lib/catalog-map-surface';
 import { loadGoogleMapsScript } from '../../../lib/google-maps-script';
 import {
   CATALOG_MAP_ORG_CAP,
   type CatalogMapPin,
 } from '../../../lib/catalog-map-pins';
+import { CatalogOsmMap } from './catalog-osm-map';
 
 interface CatalogOrgMapProps {
   pins: readonly CatalogMapPin[];
@@ -97,9 +102,13 @@ function syncMarkers(
 function CatalogGoogleMap({
   pins,
   active,
+  onAuthRefused,
+  onFailed,
 }: {
   pins: readonly CatalogMapPin[];
   active: boolean;
+  onAuthRefused: () => void;
+  onFailed: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -109,8 +118,8 @@ function CatalogGoogleMap({
     null
   );
   const pinsRef = useRef(pins);
-  const [failed, setFailed] = useState(false);
-  const [authRefused, setAuthRefused] = useState(false);
+  const onAuthRefusedRef = useRef(onAuthRefused);
+  const onFailedRef = useRef(onFailed);
   const apiKey = getGoogleMapsApiKey();
   const pinKey = pins.map((pin) => `${pin.id}:${pin.lat}:${pin.lng}`).join('|');
 
@@ -119,9 +128,14 @@ function CatalogGoogleMap({
   }, [pins]);
 
   useEffect(() => {
+    onAuthRefusedRef.current = onAuthRefused;
+    onFailedRef.current = onFailed;
+  }, [onAuthRefused, onFailed]);
+
+  useEffect(() => {
     const previous = window.gm_authFailure;
     window.gm_authFailure = () => {
-      setAuthRefused(true);
+      onAuthRefusedRef.current();
       previous?.();
     };
     return () => {
@@ -142,7 +156,7 @@ function CatalogGoogleMap({
         };
         if (cancelled || !containerRef.current || !library.AdvancedMarkerElement) {
           if (!cancelled && !library.AdvancedMarkerElement) {
-            setFailed(true);
+            onFailedRef.current();
           }
           return;
         }
@@ -172,7 +186,7 @@ function CatalogGoogleMap({
       })
       .catch(() => {
         if (!cancelled) {
-          setFailed(true);
+          onFailedRef.current();
         }
       });
     return () => {
@@ -180,27 +194,6 @@ function CatalogGoogleMap({
     };
   }, [active, apiKey, pinKey]);
 
-  if (!apiKey) {
-    return (
-      <StatusBanner kind='info'>
-        The map uses the public website Google Maps key. It is not set for
-        this admin app.
-      </StatusBanner>
-    );
-  }
-  if (authRefused) {
-    return (
-      <StatusBanner kind='error'>
-        Google Maps refused the key for this site. Add this admin address to
-        the key&apos;s allowed websites.
-      </StatusBanner>
-    );
-  }
-  if (failed) {
-    return (
-      <StatusBanner kind='error'>Google Maps failed to load.</StatusBanner>
-    );
-  }
   return (
     <div
       ref={containerRef}
@@ -222,11 +215,22 @@ export function CatalogOrgMap({
   orgCap = CATALOG_MAP_ORG_CAP,
 }: CatalogOrgMapProps) {
   const capLabel = orgCap.toLocaleString('en-US');
+  const apiKey = getGoogleMapsApiKey();
+  const [authRefused, setAuthRefused] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const onAuthRefused = useCallback(() => setAuthRefused(true), []);
+  const onFailed = useCallback(() => setLoadFailed(true), []);
+  const surface = catalogMapSurface({ apiKey, authRefused, loadFailed });
   const showFirstLoad = isLoading && pins.length === 0;
   const showEmpty = !isLoading && !loadingMore && pins.length === 0;
   return (
     <div className='space-y-3'>
       {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
+      {authRefused || loadFailed ? (
+        <StatusBanner kind='info'>
+          {`Google Maps blocked this admin host. The map uses OpenStreetMap until the public website key allows ${CATALOG_MAPS_KEY_REFERRERS.join(' and ')}.`}
+        </StatusBanner>
+      ) : null}
       {showFirstLoad ? (
         <p className='text-sm text-slate-500'>Loading the map…</p>
       ) : null}
@@ -250,7 +254,16 @@ export function CatalogOrgMap({
           No mapped locations match these filters.
         </p>
       ) : null}
-      <CatalogGoogleMap pins={pins} active={active} />
+      {surface === 'google' ? (
+        <CatalogGoogleMap
+          pins={pins}
+          active={active}
+          onAuthRefused={onAuthRefused}
+          onFailed={onFailed}
+        />
+      ) : (
+        <CatalogOsmMap pins={pins} active={active} />
+      )}
       {pins.length > 0 ? (
         <ul className='space-y-2'>
           {pins.map((pin) => (
