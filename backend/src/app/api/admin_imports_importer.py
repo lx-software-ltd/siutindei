@@ -44,6 +44,7 @@ from app.api.admin_validators import (
 )
 from app.db.models import Location
 from app.exceptions import ValidationError
+from app.services.org_delete import ORGANIZATION_DELETED
 
 ALLOWED_ROOT_FIELDS = {"organizations", "default_manager_id"}
 
@@ -198,7 +199,12 @@ def process_organization(
     except ValidationError as exc:
         result_status = (
             "skipped"
-            if exc.message in {MANAGED_BY_PROVIDER, NO_MATCH_TO_CLOSE}
+            if exc.message
+            in {
+                MANAGED_BY_PROVIDER,
+                NO_MATCH_TO_CLOSE,
+                ORGANIZATION_DELETED,
+            }
             else "failed"
         )
         record_result(

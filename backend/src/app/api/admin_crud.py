@@ -9,7 +9,11 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.admin_auth import _get_user_sub, _set_session_audit_context
+from app.api.admin_auth import (
+    _get_user_sub,
+    _is_admin,
+    _set_session_audit_context,
+)
 from app.api.admin_list_filters import (
     list_organizations,
     parse_organization_list_filters,
@@ -27,6 +31,7 @@ from app.db.engine import get_engine
 from app.db.models import Activity, Organization
 from app.db.repositories import ActivityRepository
 from app.exceptions import NotFoundError, ValidationError
+from app.services.org_delete import remember_deleted_organization
 from app.utils import json_response
 from app.utils.logging import get_logger
 
@@ -298,6 +303,12 @@ def _crud_delete(
                 event=event,
             )
 
+    if config.name == "organizations" and _is_admin(event):
+        remember_deleted_organization(
+            session,
+            entity,
+            _get_user_sub(event),
+        )
     repo.delete(entity)
     session.commit()
     logger.info(f"Deleted {config.name}: {resource_id}")

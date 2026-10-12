@@ -167,7 +167,10 @@ their primary responsibilities.
   `pending_review`.   Name-fix and category-check scans sweep with
   `review_scope` `pending_review` or `all`. A merged organization's
   `source_id` and `place_id` stay resolvable through
-  `organization_merges`.
+  `organization_merges`. An admin delete is stored there with no
+  survivor. List and forget those identities at
+  `/v1/admin/deleted-organizations`. A manager delete does not block
+  a later import.
 - For the full endpoint list, see the OpenAPI spec:
   `docs/api/admin.yaml`
 

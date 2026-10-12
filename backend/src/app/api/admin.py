@@ -31,6 +31,7 @@ from app.api.admin_cognito import (
     _handle_user_group,
 )
 from app.api.admin_crud import _handle_crud
+from app.api.admin_deleted_organizations import handle_deleted_organizations
 from app.api.admin_feedback import (
     _handle_admin_feedback,
     _handle_user_feedback,
@@ -221,6 +222,13 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
                 resource_id,
                 sub_resource,
             ),
+            event,
+        )
+    if resource == "deleted-organizations":
+        if not _is_admin(event):
+            return json_response(403, {"error": "Forbidden"}, event=event)
+        return _safe_handler(
+            lambda: handle_deleted_organizations(event, method, resource_id),
             event,
         )
     if resource == "org-duplicates":

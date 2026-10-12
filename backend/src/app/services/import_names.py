@@ -17,6 +17,10 @@ from app.db.repositories import ActivityRepository, OrganizationRepository
 from app.exceptions import ValidationError
 from app.services.name_fixes import load_name_fix_config
 from app.services.name_sanitizer import sanitize_name
+from app.services.org_delete import (
+    ORGANIZATION_DELETED,
+    import_matches_deleted_organization,
+)
 
 _IMPORTED_NAME = "Imported name: "
 
@@ -39,7 +43,7 @@ def prepare_imported_organization(
             "Multiple organizations found",
             field="name",
         ) from exc
-    return _store_cleaned_name(
+    matched = _store_cleaned_name(
         session,
         existing,
         name,
@@ -47,6 +51,13 @@ def prepare_imported_organization(
         warnings,
         lambda candidate: repo.find_by_name_case_insensitive(candidate),
     )
+    if matched is None and import_matches_deleted_organization(
+        session,
+        raw_org,
+        body.get("name"),
+    ):
+        raise ValidationError(ORGANIZATION_DELETED, field="name")
+    return matched
 
 
 def activity_name_translations(body: dict[str, Any]) -> dict[str, Any]:

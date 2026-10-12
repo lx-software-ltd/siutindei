@@ -36,7 +36,19 @@ copy runs only when `ORGANIZATION_MEDIA_BUCKET` and
 the merge transaction commits.
 
 `organization_merges` stores the removed `source_id` and `place_id`.
-Later imports that look up those values load the survivor. The audit
+Later imports that look up those values load the survivor. An admin
+delete writes a row with `kind` `delete` and no survivor. The row
+keeps the place id, catalog source, source id, and names, including
+names the organization used before it was renamed. It does not keep
+email, phone, or manager id. A later import skips that organization
+and its children when the place id matches, when the source id matches
+the same catalog, or when a remembered name matches and either the
+file or the deleted organization has no place id and no source id.
+A manager delete does not write this row, so a catalog import can
+create the organization again. An admin forgets one identity from
+Data quality, and the next import can create it. Creating the
+organization by hand still leaves a live row, and the next import
+follows that row. The audit
 row uses action `MERGE` and records source ids, moved counts, and
 filled field names. Dismissing a pair writes action `DISMISS_DUPLICATE`.
 
