@@ -25,10 +25,12 @@ class OrganizationMerge(Base):
     """Forwarding row for an organization removed by a merge or delete.
 
     ``kind`` is ``merge`` or ``delete``. A delete has no survivor.
-    Its snapshot keeps names only, plus the place id, source, and
-    source id on the columns. Import must not create that identity
-    again until an admin forgets the row. ``merged_by`` and
-    ``merged_at`` are the actor and time for both kinds.
+    Its snapshot keeps names, their normalized form, and a deletion
+    group. Place id, source, and source id stay on the columns.
+    Import must not create that identity again until an admin forgets
+    the row. Forgetting the deleted organization also forgets
+    identities merged into it. ``merged_by`` and ``merged_at`` are
+    the actor and time for both kinds.
     """
 
     __tablename__ = "organization_merges"

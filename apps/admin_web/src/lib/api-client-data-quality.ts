@@ -390,6 +390,8 @@ export interface DeletedOrganization {
   source_id?: string | null;
   deleted_by?: string | null;
   deleted_at?: string | null;
+  was_merge?: boolean;
+  also_forgets?: string[];
 }
 
 export function listDeletedOrganizations(filters: {

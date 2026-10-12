@@ -90,6 +90,9 @@ export function OrganizationsPanel({
     autoExpandFirst: isManager,
     enabled: isManager,
     noun: 'organization',
+    deleteMessage: isAdmin
+      ? 'Import will skip this organization. Allow it again from Data quality, on the Deleted tab.'
+      : undefined,
   });
 
   const [mergeAnchor, setMergeAnchor] = useState<{
