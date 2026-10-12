@@ -217,9 +217,15 @@ paths:
       summary: Delete organization
       description: |
         Removes the organization and its venues and activities.
-        The place id, source id, and name are remembered. A later
-        import that matches any of those does not create the
-        organization again.
+        An admin delete remembers the place id, source id, catalog
+        source, current name, and earlier names. Contact details are
+        not stored. A later import that matches the place id, the
+        same catalog source id, or a remembered name does not create
+        the organization again. A name matches only when the file has
+        no place id and no source id, or the deleted organization had
+        neither. Forget one identity with
+        `DELETE /v1/admin/deleted-organizations/{id}`. A manager
+        delete does not remember the organization.
       responses:
         "204":
           description: Organization deleted
@@ -759,6 +765,63 @@ paths:
                 $ref: '#/components/schemas/OrgDuplicateGroup'
         "404":
           description: Fewer than two of the organizations exist
+
+  /v1/admin/deleted-organizations:
+    get:
+      summary: List organizations an admin delete kept out of import
+      description: |
+        Each item is one remembered identity. Contact details are
+        not included. `q` matches a remembered name. A manager
+        delete is not listed.
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Remembered identities
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeletedOrganization'
+                  next_cursor:
+                    type: string
+                    nullable: true
+
+  /v1/admin/deleted-organizations/{id}:
+    delete:
+      summary: Allow one deleted identity to be imported again
+      description: |
+        Removes that remembered identity. A later import can create
+        an organization that matches it. Other remembered identities
+        stay blocked.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Identity forgotten
+        "404":
+          description: No deleted organization with that id
 
   /v1/admin/name-fixes:
     get:
@@ -2690,9 +2753,8 @@ paths:
       summary: Delete managed organization
       description: |
         Removes the organization and its venues and activities.
-        The place id, source id, and name are remembered. A later
-        import that matches any of those does not create the
-        organization again.
+        A manager delete does not block a later catalog import.
+        An admin delete does.
       responses:
         "204":
           description: Organization deleted
@@ -6734,6 +6796,36 @@ components:
           type: integer
         activity_count:
           type: integer
+
+    DeletedOrganization:
+      type: object
+      required: [id, name, names]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        names:
+          type: array
+          items:
+            type: string
+        place_id:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        source_id:
+          type: string
+          nullable: true
+        deleted_by:
+          type: string
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
 
     OrgDuplicateGroup:
       type: object

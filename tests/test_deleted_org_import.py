@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from app.api.admin_crud import _crud_delete
 from app.api.admin_imports_importer import process_import_payload
 from app.api.admin_resources import _RESOURCE_CONFIG
-from app.db.models import Organization, OrganizationMerge
+from app.db.models import AuditLog, Organization, OrganizationMerge
+from app.exceptions import NotFoundError
 from app.services.org_delete import (
     ORGANIZATION_DELETED,
+    forget_deleted_organization,
+    list_deleted_organizations,
     remember_deleted_organization,
 )
 from sqlalchemy import select
@@ -179,7 +182,7 @@ def test_deleting_a_survivor_keeps_merged_place_ids_from_returning(
             merged_org_id=uuid4(),
             survivor_org_id=sample_organization.id,
             place_id="ChIJfolded",
-            snapshot={"name": "Folded Club"},
+            snapshot={"name": "Folded Club", "email": "hidden@example.com"},
             moved_counts={},
         )
     )
@@ -205,33 +208,289 @@ def test_deleting_a_survivor_keeps_merged_place_ids_from_returning(
         )
         is None
     )
+    folded = db_session.scalar(
+        select(OrganizationMerge).where(OrganizationMerge.place_id == "ChIJfolded")
+    )
+    assert folded is not None
+    assert folded.kind == "delete"
+    assert folded.survivor_org_id is None
+    assert set(folded.snapshot) == {"name", "names"}
+    assert "email" not in folded.snapshot
 
 
-def test_crud_delete_records_the_organization(
+def test_same_name_with_a_different_place_id_is_created(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.name = "Harbour Club"
+    sample_organization.place_id = "ChIJdeleted-club"
+    db_session.flush()
+    remember_deleted_organization(db_session, sample_organization, None)
+    db_session.delete(sample_organization)
+    db_session.flush()
+
+    _summary, results = process_import_payload(
+        db_session,
+        _payload(
+            "Harbour Club",
+            "00000000-0000-0000-0000-000000000001",
+            place_id="ChIJother-club",
+        ),
+        [],
+        allow_org_updates=True,
+    )
+    assert results[0]["status"] == "created"
+
+
+def test_source_id_matches_only_the_same_catalog(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.name = "Harbour Club"
+    sample_organization.source = "lcsd"
+    sample_organization.source_id = "catalog-42"
+    db_session.flush()
+    remember_deleted_organization(db_session, sample_organization, None)
+    db_session.delete(sample_organization)
+    db_session.flush()
+
+    _summary, other_catalog = process_import_payload(
+        db_session,
+        _payload(
+            "Other Catalog Club",
+            "00000000-0000-0000-0000-000000000001",
+            source="edb",
+            source_id="catalog-42",
+        ),
+        [],
+        allow_org_updates=True,
+    )
+    assert other_catalog[0]["status"] == "created"
+
+    _summary, same_catalog = process_import_payload(
+        db_session,
+        _payload(
+            "Harbour Club Again",
+            "00000000-0000-0000-0000-000000000001",
+            source="lcsd",
+            source_id="catalog-42",
+        ),
+        [],
+        allow_org_updates=True,
+    )
+    assert same_catalog[0]["status"] == "skipped"
+
+
+def test_name_only_deletion_blocks_a_file_that_has_a_place_id(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.name = "Harbour Club"
+    sample_organization.place_id = None
+    sample_organization.source_id = None
+    db_session.flush()
+    remember_deleted_organization(db_session, sample_organization, None)
+    db_session.delete(sample_organization)
+    db_session.flush()
+
+    _summary, results = process_import_payload(
+        db_session,
+        _payload(
+            "Harbour Club",
+            "00000000-0000-0000-0000-000000000001",
+            place_id="ChIJnew-club",
+        ),
+        [],
+        allow_org_updates=True,
+    )
+    assert results[0]["status"] == "skipped"
+    assert results[0]["errors"][0]["message"] == ORGANIZATION_DELETED
+
+
+def test_reimport_skips_a_name_the_organization_used_before(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.name = "Harbour Club"
+    sample_organization.email = "hidden@example.com"
+    sample_organization.phone_number = "21234567"
+    sample_organization.source_note = "Imported name: Old Spelling Club"
+    db_session.add(
+        AuditLog(
+            table_name="organizations",
+            record_id=str(sample_organization.id),
+            action="UPDATE",
+            old_values={"name": "Former Harbour", "email": "hidden@example.com"},
+            new_values={"name": "Harbour Club"},
+        )
+    )
+    db_session.flush()
+    remember_deleted_organization(db_session, sample_organization, "admin-sub")
+    db_session.delete(sample_organization)
+    db_session.flush()
+
+    stored = db_session.scalar(
+        select(OrganizationMerge).where(OrganizationMerge.kind == "delete")
+    )
+    assert stored is not None
+    assert set(stored.snapshot) == {"name", "names"}
+    assert "Former Harbour" in stored.snapshot["names"]
+    assert "Old Spelling Club" in stored.snapshot["names"]
+    assert "hidden@example.com" not in str(stored.snapshot)
+
+    _summary, results = process_import_payload(
+        db_session,
+        _payload(
+            "Former Harbour",
+            "00000000-0000-0000-0000-000000000001",
+        ),
+        [],
+        allow_org_updates=True,
+    )
+    assert results[0]["status"] == "skipped"
+
+    listed = list_deleted_organizations(
+        db_session,
+        query="Former",
+        cursor=None,
+        limit=10,
+    )
+    assert listed["items"]
+    assert "email" not in listed["items"][0]
+    assert listed["items"][0]["deleted_by"] == "admin-sub"
+
+
+def test_forgetting_a_deletion_allows_reimport(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.name = "Harbour Club"
+    db_session.flush()
+    remember_deleted_organization(db_session, sample_organization, "admin-sub")
+    db_session.delete(sample_organization)
+    db_session.flush()
+    remembered = list_deleted_organizations(
+        db_session,
+        query=None,
+        cursor=None,
+        limit=10,
+    )
+    forget_deleted_organization(db_session, UUID(remembered["items"][0]["id"]))
+    db_session.flush()
+
+    _summary, results = process_import_payload(
+        db_session,
+        _payload(
+            "Harbour Club",
+            "00000000-0000-0000-0000-000000000001",
+        ),
+        [],
+        allow_org_updates=True,
+    )
+    assert results[0]["status"] == "created"
+
+
+def test_deleted_list_does_not_include_merge_rows(
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.name = "Kept Club"
+    db_session.add(
+        OrganizationMerge(
+            merged_org_id=uuid4(),
+            survivor_org_id=sample_organization.id,
+            snapshot={"name": "Harbour Club", "email": "hidden@example.com"},
+            moved_counts={},
+        )
+    )
+    db_session.flush()
+    listed = list_deleted_organizations(
+        db_session,
+        query="Harbour",
+        cursor=None,
+        limit=10,
+    )
+    assert listed["items"] == []
+
+
+def test_forget_rejects_a_merge_row(db_session, sample_organization) -> None:
+    row = OrganizationMerge(
+        merged_org_id=sample_organization.id,
+        survivor_org_id=sample_organization.id,
+        snapshot={"name": "Harbour Club"},
+        moved_counts={},
+    )
+    db_session.add(row)
+    db_session.flush()
+    try:
+        forget_deleted_organization(db_session, row.id)
+    except NotFoundError:
+        return
+    raise AssertionError("merge row was forgotten")
+
+
+def test_admin_delete_blocks_reimport(
     monkeypatch,
     db_session,
     sample_organization,
 ) -> None:
-    calls: list[str | None] = []
-
-    def remember(session, org, deleted_by):
-        calls.append(deleted_by)
-        assert org.id == sample_organization.id
-
-    monkeypatch.setattr(
-        "app.api.admin_crud.remember_deleted_organization",
-        remember,
-    )
-    monkeypatch.setattr(db_session, "commit", lambda: None)
+    sample_organization.name = "Harbour Club"
+    sample_organization.place_id = "ChIJadmin-delete"
+    db_session.flush()
+    monkeypatch.setattr(db_session, "commit", db_session.flush)
     response = _crud_delete(
-        {
-            "requestContext": {
-                "authorizer": {"userSub": "admin-sub", "groups": "admin"},
-            },
-        },
+        _event("admin"),
         db_session,
         _RESOURCE_CONFIG["organizations"],
         str(sample_organization.id),
     )
     assert response["statusCode"] == 204
-    assert calls == ["admin-sub"]
+    _summary, results = process_import_payload(
+        db_session,
+        _payload(
+            "Harbour Club",
+            "00000000-0000-0000-0000-000000000001",
+            place_id="ChIJadmin-delete",
+        ),
+        [],
+        allow_org_updates=True,
+    )
+    assert results[0]["status"] == "skipped"
+    assert results[0]["errors"][0]["message"] == ORGANIZATION_DELETED
+
+
+def test_manager_delete_allows_reimport(
+    monkeypatch,
+    db_session,
+    sample_organization,
+) -> None:
+    sample_organization.name = "Harbour Club"
+    sample_organization.place_id = "ChIJmanager-delete"
+    db_session.flush()
+    monkeypatch.setattr(db_session, "commit", db_session.flush)
+    response = _crud_delete(
+        _event("manager", "manager-sub"),
+        db_session,
+        _RESOURCE_CONFIG["organizations"],
+        str(sample_organization.id),
+    )
+    assert response["statusCode"] == 204
+    _summary, results = process_import_payload(
+        db_session,
+        _payload(
+            "Harbour Club",
+            "00000000-0000-0000-0000-000000000001",
+            place_id="ChIJmanager-delete",
+        ),
+        [],
+        allow_org_updates=True,
+    )
+    assert results[0]["status"] == "created"
+
+
+def _event(groups: str, user_sub: str = "admin-sub") -> dict:
+    return {
+        "requestContext": {
+            "authorizer": {"userSub": user_sub, "groups": groups},
+        },
+    }

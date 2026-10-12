@@ -380,3 +380,31 @@ export function decideNameFixesBulk(body: {
     body: JSON.stringify(body),
   });
 }
+
+export interface DeletedOrganization {
+  id: string;
+  name: string;
+  names: string[];
+  place_id?: string | null;
+  source?: string | null;
+  source_id?: string | null;
+  deleted_by?: string | null;
+  deleted_at?: string | null;
+}
+
+export function listDeletedOrganizations(filters: {
+  q?: string;
+  cursor?: string;
+  limit?: number;
+} = {}) {
+  return request<ListResponse<DeletedOrganization>>(
+    buildApiUrl(`v1/admin/deleted-organizations${query(filters)}`)
+  );
+}
+
+export function forgetDeletedOrganization(id: string) {
+  return request<void>(
+    buildApiUrl(`v1/admin/deleted-organizations/${encodeURIComponent(id)}`),
+    { method: 'DELETE' }
+  );
+}

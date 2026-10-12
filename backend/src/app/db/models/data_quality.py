@@ -24,11 +24,21 @@ from app.db.base import Base
 class OrganizationMerge(Base):
     """Forwarding row for an organization removed by a merge or delete.
 
-    A null ``survivor_org_id`` means the organization was deleted.
-    Import must not create that place id, source id, or name again.
+    ``kind`` is ``merge`` or ``delete``. A delete has no survivor.
+    Its snapshot keeps names only, plus the place id, source, and
+    source id on the columns. Import must not create that identity
+    again until an admin forgets the row. ``merged_by`` and
+    ``merged_at`` are the actor and time for both kinds.
     """
 
     __tablename__ = "organization_merges"
+    __table_args__ = (
+        CheckConstraint(
+            "(kind = 'merge' AND survivor_org_id IS NOT NULL) "
+            "OR (kind = 'delete' AND survivor_org_id IS NULL)",
+            name="organization_merges_kind_survivor_check",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=True),
@@ -40,6 +50,12 @@ class OrganizationMerge(Base):
         UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=True,
+    )
+    kind: Mapped[str] = mapped_column(
+        Text(),
+        nullable=False,
+        default="merge",
+        server_default=text("'merge'"),
     )
     source: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     source_id: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)

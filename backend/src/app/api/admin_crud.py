@@ -9,7 +9,11 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.admin_auth import _get_user_sub, _set_session_audit_context
+from app.api.admin_auth import (
+    _get_user_sub,
+    _is_admin,
+    _set_session_audit_context,
+)
 from app.api.admin_list_filters import (
     list_organizations,
     parse_organization_list_filters,
@@ -299,7 +303,7 @@ def _crud_delete(
                 event=event,
             )
 
-    if config.name == "organizations":
+    if config.name == "organizations" and _is_admin(event):
         remember_deleted_organization(
             session,
             entity,

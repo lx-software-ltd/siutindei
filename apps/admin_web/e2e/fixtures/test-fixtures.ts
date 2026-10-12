@@ -2078,6 +2078,38 @@ export async function setupApiMocks(page: Page): Promise<void> {
     });
   });
 
+  let deletedOrganizations = [
+    {
+      id: 'del-1',
+      name: 'Harbour Club',
+      names: ['Harbour Club', 'Old Harbour'],
+      place_id: 'ChIJdeleted-club',
+      source: 'lcsd',
+      source_id: 'catalog-harbour',
+      deleted_by: 'admin-sub',
+      deleted_at: '2026-01-01T00:00:00Z',
+    },
+  ];
+  await page.route('**/api/mock/**/admin/deleted-organizations**', async (route) => {
+    const url = route.request().url();
+    const method = route.request().method();
+    if (method === 'DELETE') {
+      const id = url.split('/').pop()?.split('?')[0];
+      deletedOrganizations = deletedOrganizations.filter((item) => item.id !== id);
+      await route.fulfill({ status: 204, body: '' });
+      return;
+    }
+    const needle = new URL(url).searchParams.get('q')?.toLowerCase() ?? '';
+    const items = deletedOrganizations.filter(
+      (item) => !needle || item.names.some((name) => name.toLowerCase().includes(needle))
+    );
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items, next_cursor: null }),
+    });
+  });
+
   let nameFixes: {
     id: string;
     entity_type: 'organization';

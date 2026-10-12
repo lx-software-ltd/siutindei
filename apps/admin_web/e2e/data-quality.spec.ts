@@ -131,6 +131,18 @@ test.describe('Data quality', () => {
     await expect(suffixes).toHaveValue('lcsd edb');
   });
 
+  test('admin can forget a deleted organization', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=data-quality&tab=deleted');
+    await expect(adminPage.getByRole('table', { name: 'Deleted organizations' })).toBeVisible();
+    await adminPage.getByRole('cell', { name: 'Harbour Club', exact: true }).click();
+    await expect(adminPage.getByText('Old Harbour')).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Forget' }).click();
+    await adminPage.getByRole('button', { name: 'Allow import' }).click();
+    await expect(
+      adminPage.getByText('No deleted organizations are blocking import.')
+    ).toBeVisible();
+  });
+
   test('admin can merge from the organization workspace', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
     await adminPage.getByRole('button', { name: 'Merge into…' }).click();

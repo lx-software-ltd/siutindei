@@ -68,7 +68,7 @@ class OrganizationRepository(BaseRepository[Organization]):
             .where(column == value)
             .order_by(OrganizationMerge.merged_at.desc())
         ).first()
-        if merge is None or merge.survivor_org_id is None:
+        if merge is None or merge.kind == "delete" or merge.survivor_org_id is None:
             return None
         return self._session.get(Organization, merge.survivor_org_id)
 

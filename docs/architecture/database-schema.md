@@ -107,23 +107,26 @@ valid. It also inserts the `name_fix_settings` singleton. No
 ## Table: organization_merges
 
 Purpose: Remember a removed organization's `source_id`, `place_id`,
-and name. A merge resolves a later import to the survivor. A delete
-leaves `survivor_org_id` null so a later import does not create the
-organization again.
+and name. A merge resolves a later import to the survivor. An admin
+delete sets `kind` to `delete` and leaves `survivor_org_id` null so
+a later import does not create that identity again. A manager delete
+does not write a row.
 
 Columns:
 - `id` (UUID, PK)
 - `merged_org_id` (UUID, required) — id of the removed organization
 - `survivor_org_id` (UUID, nullable, FK → `organizations.id`,
-  ON DELETE CASCADE) — organization that kept the record. Null means
-  the organization was deleted.
+  ON DELETE CASCADE) — organization that kept the record. Null only
+  when `kind` is `delete`.
+- `kind` (text, required, default `merge`) — `merge` or `delete`
 - `source` (text, optional)
 - `source_id` (text, optional)
 - `place_id` (text, optional)
-- `snapshot` (jsonb, required) — contact and name captured before delete
+- `snapshot` (jsonb, required) — a merge stores the removed contact
+  fields. A delete stores `name` and `names` only.
 - `moved_counts` (jsonb, default `{}`)
-- `merged_by` (text, optional)
-- `merged_at` (timestamptz, default `now()`)
+- `merged_by` (text, optional) — actor for a merge or a delete
+- `merged_at` (timestamptz, default `now()`) — time of a merge or a delete
 
 Indexes: `source_id`, `place_id`, `survivor_org_id`.
 

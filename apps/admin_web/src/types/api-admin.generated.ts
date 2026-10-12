@@ -181,7 +181,19 @@ export interface paths {
             };
         };
         post?: never;
-        /** Delete organization */
+        /**
+         * Delete organization
+         * @description Removes the organization and its venues and activities.
+         *     An admin delete remembers the place id, source id, catalog
+         *     source, current name, and earlier names. Contact details are
+         *     not stored. A later import that matches the place id, the
+         *     same catalog source id, or a remembered name does not create
+         *     the organization again. A name matches only when the file has
+         *     no place id and no source id, or the deleted organization had
+         *     neither. Forget one identity with
+         *     `DELETE /v1/admin/deleted-organizations/{id}`. A manager
+         *     delete does not remember the organization.
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -1094,6 +1106,102 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/deleted-organizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List organizations an admin delete kept out of import
+         * @description Each item is one remembered identity. Contact details are
+         *     not included. `q` matches a remembered name. A manager
+         *     delete is not listed.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Remembered identities */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["DeletedOrganization"][];
+                            next_cursor?: string | null;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/deleted-organizations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Allow one deleted identity to be imported again
+         * @description Removes that remembered identity. A later import can create
+         *     an organization that matches it. Other remembered identities
+         *     stay blocked.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Identity forgotten */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description No deleted organization with that id */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -4576,7 +4684,12 @@ export interface paths {
             };
         };
         post?: never;
-        /** Delete managed organization */
+        /**
+         * Delete managed organization
+         * @description Removes the organization and its venues and activities.
+         *     A manager delete does not block a later catalog import.
+         *     An admin delete does.
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -7733,6 +7846,18 @@ export interface components {
             email?: string | null;
             location_count?: number;
             activity_count?: number;
+        };
+        DeletedOrganization: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            names: string[];
+            place_id?: string | null;
+            source?: string | null;
+            source_id?: string | null;
+            deleted_by?: string | null;
+            /** Format: date-time */
+            deleted_at?: string | null;
         };
         OrgDuplicateGroup: {
             id: string;

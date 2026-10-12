@@ -521,8 +521,9 @@ a Data quality nav item, with Duplicates and Names tabs. Merge fills
 blank fields on the survivor and lets the admin override a field that
 conflicts. The removed organization's `source_id` and `place_id` are
 stored on `organization_merges` so a later import updates the survivor.
-Deleting an organization stores the same identity with no survivor, so
-a later import does not create it again.
+An admin delete stores the same identity with no survivor and
+`kind` `delete`, so a later import does not create it again. A
+manager delete does not. An admin can forget one remembered identity.
 Name rules are deterministic (no model call). Imports apply them to
 every organization name and keep the original spelling in
 `source_note`. Activity names are cleaned only while the organization
