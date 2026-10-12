@@ -13,7 +13,6 @@ import {
 } from '../../../lib/api-client-org-review';
 import {
   AdminDataTableCell,
-  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
 import { RetryIcon, ViewIcon } from '../../icons/action-icons';
@@ -44,14 +43,19 @@ function organizationSummary(item: ImportJobListItem) {
   return `${base}; ${captured} categories captured`;
 }
 
+function liveModeLabel(status: string) {
+  return status === 'completed' ? 'Live execution' : status;
+}
+
 function modeLabel(item: ImportJobListItem) {
   if (item.dry_run) {
     return 'Dry run';
   }
+  const live = liveModeLabel(item.status);
   if (item.allow_updates === false) {
-    return `${item.status} · skip existing`;
+    return `${live} · skip existing`;
   }
-  return item.status;
+  return live;
 }
 
 function ImportFileLink({ job }: { job: ImportJobListItem }) {
@@ -175,7 +179,7 @@ export function ImportHistoryPanel() {
         ariaLabel='Import history'
         rows={list.items}
         getLabel={(item) => `import ${item.id}`}
-        middleColumnCount={4}
+        middleColumnCount={3}
         isLoading={list.isLoading}
         isLoadingMore={list.isLoadingMore}
         hasMore={list.hasMore}
@@ -191,9 +195,6 @@ export function ImportHistoryPanel() {
           <>
             <AdminDataTableHeadCell>When</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>
-              File
-            </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>
               Mode
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
@@ -205,14 +206,11 @@ export function ImportHistoryPanel() {
           <>
             <AdminDataTableCell>
               {formatWhen(item.created_at)}
-              <AdminDataTableCellMeta until='secondary'>
+              <span className='mt-0.5 block wrap-anywhere text-xs font-normal text-slate-500'>
                 <ImportFileLink job={item} />
-              </AdminDataTableCellMeta>
+              </span>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              <ImportFileLink job={item} />
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='tertiary'>
               {modeLabel(item)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
