@@ -519,7 +519,9 @@ paths:
           in: query
           description: |
             `unchanged` keeps organizations still on version 1.
-            `changed` keeps organizations above version 1.
+            `changed` keeps organizations above version 1. A later
+            version includes review, child roll-up, and import, not
+            only a direct admin edit.
           schema:
             type: string
             enum: [unchanged, changed]
@@ -2501,7 +2503,10 @@ paths:
       summary: List catalog versions
       description: |
         History of organizations, media, locations, activities, pricing,
-        and schedules. Newest first. Admin only.
+        and schedules. One entity is ordered by version, newest first,
+        so following `next_cursor` reaches version 1. Other lists are
+        ordered by `created_at`. `blocking=true` with `org_id` returns
+        removed children whose version 1 still blocks import. Admin only.
       parameters:
         - name: entity_type
           in: query
@@ -2518,6 +2523,13 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: blocking
+          in: query
+          schema:
+            type: boolean
+          description: |
+            With `org_id`, return version 1 of removed locations,
+            activities, pricing, and schedules that still block import.
         - name: limit
           in: query
           schema:
@@ -2554,6 +2566,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CatalogVersion'
+        "404":
+          description: Version not found
+
+  /v1/admin/versions/{id}/forget:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Forget a removed child version
+      description: |
+        Marks version 1 of a removed location, activity, pricing row,
+        or schedule as forgotten and strips contact fields from its
+        snapshots. The next import can create that record again. A
+        live or merged record is rejected.
+      responses:
+        "204":
+          description: Forgotten
         "404":
           description: Version not found
 

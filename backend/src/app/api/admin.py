@@ -229,7 +229,7 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
         if not _is_admin(event):
             return json_response(403, {"error": "Forbidden"}, event=event)
         return _safe_handler(
-            lambda: handle_versions(event, method, resource_id),
+            lambda: handle_versions(event, method, resource_id, sub_resource),
             event,
         )
     if resource == "deleted-organizations":

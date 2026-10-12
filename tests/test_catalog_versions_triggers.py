@@ -9,6 +9,7 @@ import pytest
 from app.db.models import (
     Activity,
     ActivityCategory,
+    ActivityLocation,
     ActivityPricing,
     ActivitySchedule,
     ActivityScheduleEntry,
@@ -22,7 +23,15 @@ from app.db.models.enums import PricingType, ScheduleType
 from app.services.org_merge import merge_organizations
 from sqlalchemy import delete, select, text
 from sqlalchemy.dialects.postgresql import Range
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
+
+_BACKFILL_FUNCTIONS = (
+    "catalog_backfill_deleted_batch(text)",
+    "catalog_backfill_deleted(text, text[])",
+    "catalog_backfill_live_batch(text)",
+    "catalog_backfill_live(text, uuid[])",
+)
 
 _BACKFILL = (
     Path(__file__).resolve().parents[1]
@@ -37,7 +46,12 @@ def _triggers_installed(session: Session) -> bool:
     if bind.dialect.name != "postgresql":
         return False
     return bool(
-        session.scalar(text("SELECT to_regprocedure('catalog_version_record()')"))
+        session.scalar(
+            text(
+                "SELECT 1 FROM pg_trigger "
+                "WHERE tgname = 'catalog_versions_delete_guard'"
+            )
+        )
     )
 
 
@@ -100,19 +114,33 @@ def _clear_committed_catalog(versions):
                 | GeographicArea.name.like("Delete Area %")
                 | GeographicArea.name.like("Price Area %")
                 | GeographicArea.name.like("Slot Area %")
+                | GeographicArea.name.like("Join Area %")
             )
         )
         session.execute(
             delete(ActivityCategory).where(
                 ActivityCategory.name.like("Price Class %")
                 | ActivityCategory.name.like("Slot Class %")
+                | ActivityCategory.name.like("Join Class %")
             )
         )
         session.flush()
         session.execute(
+            text(
+                "ALTER TABLE catalog_versions "
+                "DISABLE TRIGGER catalog_versions_delete_guard"
+            )
+        )
+        session.execute(
             delete(CatalogVersion).where(
                 CatalogVersion.org_id.is_not(None),
                 CatalogVersion.org_id.not_in(select(Organization.id)),
+            )
+        )
+        session.execute(
+            text(
+                "ALTER TABLE catalog_versions "
+                "ENABLE TRIGGER catalog_versions_delete_guard"
             )
         )
         session.commit()
@@ -244,6 +272,10 @@ def test_later_location_change_bumps_org_once(versions) -> None:
         org_id = org.id
         location_id = location.id
     with Session(versions) as session:
+        org = session.get(Organization, org_id)
+        assert org is not None
+        started = org.updated_at
+    with Session(versions) as session:
         location = session.get(Location, location_id)
         assert location is not None
         location.address = "2 Trigger Road"
@@ -254,6 +286,7 @@ def test_later_location_change_bumps_org_once(versions) -> None:
         assert org is not None and location is not None
         assert location.version == 2
         assert org.version == 2
+        assert org.updated_at == started
 
 
 def test_media_change_bumps_media_version(versions) -> None:
@@ -398,49 +431,64 @@ def test_merge_annotates_the_source_tombstone(versions) -> None:
         assert deleted.related_id == survivor_id
 
 
+def _install_backfill(session: Session) -> None:
+    """Create the batch functions. Each statement is one function body."""
+    chunks: list[str] = []
+    current: list[str] = []
+    for line in _BACKFILL.read_text(encoding="utf-8").splitlines(keepends=True):
+        if line.startswith("CREATE OR REPLACE FUNCTION") and current:
+            chunks.append("".join(current))
+            current = []
+        current.append(line)
+    if current:
+        chunks.append("".join(current))
+    for chunk in chunks:
+        statement = chunk.strip()
+        if statement.startswith("CREATE"):
+            session.execute(text(statement))
+
+
+def _drop_backfill(session: Session) -> None:
+    for name in _BACKFILL_FUNCTIONS:
+        session.execute(text(f"DROP FUNCTION IF EXISTS {name}"))
+
+
 def test_backfill_prefers_the_audit_insert(versions) -> None:
     with Session(versions) as session:
         session.execute(text("SET session_replication_role = replica"))
-        org = _org(f"Trigger Backfill {uuid4()}")
-        org.description = "Current"
-        session.add(org)
-        session.flush()
-        session.add(
-            AuditLog(
-                table_name="organizations",
-                record_id=str(org.id),
-                action="INSERT",
-                new_values={
-                    "id": str(org.id),
-                    "name": org.name,
-                    "description": "Original",
-                    "manager_id": org.manager_id,
-                },
+        try:
+            org = _org(f"Trigger Backfill {uuid4()}")
+            org.description = "Current"
+            session.add(org)
+            session.flush()
+            session.add(
+                AuditLog(
+                    table_name="organizations",
+                    record_id=str(org.id),
+                    action="INSERT",
+                    new_values={
+                        "id": str(org.id),
+                        "name": org.name,
+                        "description": "Original",
+                        "manager_id": org.manager_id,
+                    },
+                )
             )
-        )
-        session.commit()
-        session.execute(text("SET session_replication_role = origin"))
-        session.commit()
-        org_id = org.id
+            session.commit()
+            org_id = org.id
+        finally:
+            session.execute(text("SET session_replication_role = origin"))
+            session.commit()
     with Session(versions) as session:
-        # Run the live backfill only. The deleted sweep would remember
-        # every organization this session already removed.
-        sql = _BACKFILL.read_text(encoding="utf-8")
-        live_sql, _deleted = sql.split("SELECT catalog_backfill_deleted", 1)
+        _install_backfill(session)
         session.execute(
             text(
-                live_sql
-                + """
-                ALTER TABLE organizations ENABLE TRIGGER USER;
-                ALTER TABLE locations ENABLE TRIGGER USER;
-                ALTER TABLE activities ENABLE TRIGGER USER;
-                ALTER TABLE activity_pricing ENABLE TRIGGER USER;
-                ALTER TABLE activity_schedule ENABLE TRIGGER USER;
-                DROP FUNCTION catalog_backfill_live(text);
-                DROP FUNCTION catalog_backfill_deleted(text);
-                """
-            )
+                "SELECT catalog_backfill_live("
+                "'organizations', ARRAY[CAST(:org_id AS uuid)])"
+            ),
+            {"org_id": org_id},
         )
+        _drop_backfill(session)
         session.commit()
     with Session(versions) as session:
         org = session.get(Organization, org_id)
@@ -450,3 +498,148 @@ def test_backfill_prefers_the_audit_insert(versions) -> None:
         assert rows[0].snapshot["description"] == "Original"
         assert rows[1].action == "updated"
         assert rows[1].snapshot["description"] == "Current"
+
+
+def test_committed_snapshot_is_immutable(versions) -> None:
+    with Session(versions) as session:
+        org = _org(f"Trigger Frozen {uuid4()}")
+        session.add(org)
+        session.commit()
+        org_id = org.id
+    with Session(versions) as session:
+        with pytest.raises(DBAPIError, match="immutable"):
+            session.execute(
+                text(
+                    "UPDATE catalog_versions SET snapshot = '{}'::jsonb "
+                    "WHERE entity_type = 'organization' AND entity_id = :org_id "
+                    "AND version = 1"
+                ),
+                {"org_id": org_id},
+            )
+        session.rollback()
+        with pytest.raises(DBAPIError, match="immutable"):
+            session.execute(
+                text(
+                    "SELECT catalog_upsert_version("
+                    "'organization', :org_id, :org_id, 1, 'created', "
+                    "'{}'::jsonb, NULL, NULL)"
+                ),
+                {"org_id": org_id},
+            )
+        session.rollback()
+        with pytest.raises(DBAPIError, match="immutable"):
+            session.execute(
+                text(
+                    "DELETE FROM catalog_versions "
+                    "WHERE entity_type = 'organization' AND entity_id = :org_id"
+                ),
+                {"org_id": org_id},
+            )
+        session.rollback()
+
+
+def test_open_transaction_can_drop_its_own_version(versions) -> None:
+    with Session(versions) as session:
+        org = _org(f"Trigger Dry {uuid4()}")
+        session.add(org)
+        session.flush()
+        session.execute(
+            text("DELETE FROM catalog_versions WHERE entity_id = :org_id"),
+            {"org_id": org.id},
+        )
+        remaining = session.scalar(
+            text("SELECT count(*) FROM catalog_versions WHERE entity_id = :org_id"),
+            {"org_id": org.id},
+        )
+        assert remaining == 0
+        session.rollback()
+
+
+def test_activity_snapshot_keeps_a_location_added_after_an_edit(versions) -> None:
+    with Session(versions) as session:
+        org = _org(f"Trigger Join {uuid4()}")
+        area = GeographicArea(name=f"Join Area {uuid4()}", level="district")
+        category = ActivityCategory(name=f"Join Class {uuid4()}", display_order=0)
+        session.add_all([org, area, category])
+        session.flush()
+        location = Location(org_id=org.id, area_id=area.id, address="1 Trigger Road")
+        activity = Activity(
+            org_id=org.id,
+            category_id=category.id,
+            name=f"Class {uuid4()}",
+            age_range=Range(5, 9, bounds="[]"),
+        )
+        session.add_all([location, activity])
+        session.commit()
+        activity_id = activity.id
+        location_id = location.id
+    with Session(versions) as session:
+        activity = session.get(Activity, activity_id)
+        assert activity is not None
+        activity.description = "Edited"
+        session.flush()
+        session.add(ActivityLocation(activity_id=activity_id, location_id=location_id))
+        session.commit()
+    with Session(versions) as session:
+        updated = _rows(session, "activity", activity_id)[-1]
+        stored = {str(item) for item in updated.snapshot.get("location_ids") or []}
+        assert str(location_id) in stored
+
+
+def test_forget_keeps_merged_and_strips_contacts(versions) -> None:
+    with Session(versions) as session:
+        survivor = _org(f"Trigger Survivor {uuid4()}")
+        source = _org(f"Trigger Source {uuid4()}")
+        source.email = "source@example.com"
+        session.add_all([survivor, source])
+        session.commit()
+        survivor_id, source_id = survivor.id, source.id
+        merge_organizations(session, survivor_id, [source_id], merged_by="admin-sub")
+        session.commit()
+    with Session(versions) as session:
+        session.execute(
+            text("SELECT catalog_forget_entity('organization', :org_id)"),
+            {"org_id": source_id},
+        )
+        session.commit()
+    with Session(versions) as session:
+        rows = _rows(session, "organization", source_id)
+        created = rows[0]
+        deleted = rows[-1]
+        assert created.reason is None
+        assert deleted.reason == "merged"
+        assert deleted.related_id == survivor_id
+        assert "email" not in (created.snapshot or {})
+        assert "email" not in (deleted.snapshot or {})
+
+
+def test_forgetting_an_organization_forgets_child_baselines(versions) -> None:
+    with Session(versions) as session:
+        org = _org(f"Trigger Forget {uuid4()}")
+        org.email = "org@example.com"
+        area = GeographicArea(name=f"Trigger Area {uuid4()}", level="district")
+        session.add(org)
+        session.add(area)
+        session.flush()
+        location = Location(org_id=org.id, area_id=area.id, address="1 Trigger Road")
+        session.add(location)
+        session.commit()
+        org_id = org.id
+        location_id = location.id
+    with Session(versions) as session:
+        org = session.get(Organization, org_id)
+        assert org is not None
+        session.delete(org)
+        session.commit()
+    with Session(versions) as session:
+        session.execute(
+            text("SELECT catalog_forget_entity('organization', :org_id)"),
+            {"org_id": org_id},
+        )
+        session.commit()
+    with Session(versions) as session:
+        org_rows = _rows(session, "organization", org_id)
+        location_rows = _rows(session, "location", location_id)
+        assert org_rows[0].reason == "forgotten"
+        assert "email" not in (org_rows[0].snapshot or {})
+        assert location_rows[0].reason == "forgotten"

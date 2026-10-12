@@ -2,6 +2,7 @@
 
 from uuid import uuid4
 
+import pytest
 from app.api.admin_imports_importer import process_import_payload
 from app.db.models import (
     ActivityCategory,
@@ -9,8 +10,14 @@ from app.db.models import (
     Organization,
     OrganizationMerge,
 )
+from app.services.catalog_version_match import (
+    IMPORT_EDITS_OVERWRITTEN,
+    KEPT_LATER,
+    MIXED_EDITS_OVERWRITTEN,
+    SYSTEM_EDITS_OVERWRITTEN,
+)
 from app.services.catalog_version_payload import organization_payload
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 
@@ -44,14 +51,38 @@ def _remember(session: Session, org: Organization, **overrides: object) -> None:
     session.flush()
 
 
-def _edit_later(engine: object, org_id: object, **fields: object) -> None:
-    """Apply an admin edit in a later transaction so version 1 stays put."""
+def _edit_later(
+    engine: object, org_id: object, *, actor: str = "admin", **fields: object
+) -> None:
+    """Apply an edit in a later transaction so version 1 stays put."""
     with Session(engine) as session:
+        _set_actor(session, actor)
         org = session.get(Organization, org_id)
         assert org is not None
         for key, value in fields.items():
             setattr(org, key, value)
         session.commit()
+
+
+def _set_actor(session: Session, actor: str) -> None:
+    """Record who is writing so a later version can be classified."""
+    if session.get_bind().dialect.name != "postgresql":
+        return
+    if actor == "admin":
+        session.execute(
+            text("SELECT set_config('app.current_user_id', :user_id, true)"),
+            {"user_id": "admin-sub"},
+        )
+    elif actor == "import":
+        session.execute(
+            text("SELECT set_config('app.current_import_job_id', :job_id, true)"),
+            {"job_id": str(uuid4())},
+        )
+
+
+def _require_postgres(engine: object) -> None:
+    if getattr(getattr(engine, "dialect", None), "name", "") != "postgresql":
+        pytest.skip("later version actors are recorded on PostgreSQL")
 
 
 def _file(name: str, manager_id: str, **extra: object) -> dict:
@@ -121,10 +152,99 @@ def test_file_matching_version_1_keeps_admin_edit(test_engine) -> None:
         )
 
     assert results[0]["status"] == "unchanged"
+    assert KEPT_LATER in results[0]["warnings"]
     with Session(test_engine) as session:
         found = session.get(Organization, org_id)
         assert found is not None
         assert found.description == "Admin edit"
+
+
+def test_changed_source_names_an_earlier_import(test_engine) -> None:
+    _require_postgres(test_engine)
+    name = f"Imported Org {uuid4()}"
+    manager_id = "00000000-0000-0000-0000-000000000047"
+    with Session(test_engine) as session:
+        org = Organization(
+            name=name,
+            description="Original",
+            manager_id=manager_id,
+        )
+        session.add(org)
+        session.flush()
+        _remember(session, org)
+        session.commit()
+        org_id = org.id
+    _edit_later(test_engine, org_id, actor="import", description="Earlier import")
+
+    with Session(test_engine) as session:
+        _summary, results = process_import_payload(
+            session,
+            _file(name, manager_id, description="From file"),
+            [],
+            allow_org_updates=True,
+        )
+
+    assert results[0]["status"] == "updated"
+    assert IMPORT_EDITS_OVERWRITTEN in results[0]["warnings"]
+
+
+def test_changed_source_names_a_system_change(test_engine) -> None:
+    _require_postgres(test_engine)
+    name = f"System Org {uuid4()}"
+    manager_id = "00000000-0000-0000-0000-000000000048"
+    with Session(test_engine) as session:
+        org = Organization(
+            name=name,
+            description="Original",
+            manager_id=manager_id,
+        )
+        session.add(org)
+        session.flush()
+        _remember(session, org)
+        session.commit()
+        org_id = org.id
+    _edit_later(test_engine, org_id, actor="system", description="System edit")
+
+    with Session(test_engine) as session:
+        _summary, results = process_import_payload(
+            session,
+            _file(name, manager_id, description="From file"),
+            [],
+            allow_org_updates=True,
+        )
+
+    assert results[0]["status"] == "updated"
+    assert SYSTEM_EDITS_OVERWRITTEN in results[0]["warnings"]
+
+
+def test_changed_source_names_admin_and_import(test_engine) -> None:
+    _require_postgres(test_engine)
+    name = f"Mixed Org {uuid4()}"
+    manager_id = "00000000-0000-0000-0000-000000000049"
+    with Session(test_engine) as session:
+        org = Organization(
+            name=name,
+            description="Original",
+            manager_id=manager_id,
+        )
+        session.add(org)
+        session.flush()
+        _remember(session, org)
+        session.commit()
+        org_id = org.id
+    _edit_later(test_engine, org_id, actor="admin", description="Admin edit")
+    _edit_later(test_engine, org_id, actor="import", description="Earlier import")
+
+    with Session(test_engine) as session:
+        _summary, results = process_import_payload(
+            session,
+            _file(name, manager_id, description="From file"),
+            [],
+            allow_org_updates=True,
+        )
+
+    assert results[0]["status"] == "updated"
+    assert MIXED_EDITS_OVERWRITTEN in results[0]["warnings"]
 
 
 def test_changed_source_updates_and_warns_when_admin_edited(test_engine) -> None:

@@ -74,3 +74,7 @@ __all__ = [
     "TicketStatus",
     "TicketType",
 ]
+
+from app.db.catalog_locks import register as _register_catalog_locks
+
+_register_catalog_locks()

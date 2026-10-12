@@ -8,10 +8,16 @@ from uuid import UUID
 from sqlalchemy import or_, select, text, update
 from sqlalchemy.orm import Session
 
-from app.api.admin_imports_catalog import normalize_org_name, parse_place_id
 from app.db.models import CatalogVersion, Organization, OrganizationMerge
 from app.exceptions import ValidationError
 from app.services.catalog_version_payload import organization_payload
+from app.services.catalog_version_lookup import (
+    _find_org_version1,
+    _find_removed,
+    _is_postgres,
+    _merge_by_name,
+    _visible,
+)
 from app.services.catalog_version_shape import (
     ACTIVITY_SHAPE_KEYS,
     LOCATION_SHAPE_KEYS,
@@ -29,6 +35,27 @@ from app.services.org_delete import (
 REMOVED_MATCH = "Removed record matches version 1; not imported again"
 REMOVED_DIFFERS = "Removed record differs from version 1; not imported again"
 ADMIN_EDITS_OVERWRITTEN = "This import overwrites admin edits made since version 1"
+IMPORT_EDITS_OVERWRITTEN = "This import overwrites changes from an earlier import"
+SYSTEM_EDITS_OVERWRITTEN = "This import overwrites catalog changes made since version 1"
+MIXED_EDITS_OVERWRITTEN = (
+    "This import overwrites admin edits and an earlier import made since version 1"
+)
+KEPT_LATER = "File matches version 1; later catalog edits were kept"
+
+_CONTACT_KEYS = frozenset(
+    {
+        "phone_country_code",
+        "phone_number",
+        "email",
+        "whatsapp",
+        "facebook",
+        "instagram",
+        "tiktok",
+        "twitter",
+        "xiaohongshu",
+        "wechat",
+    }
+)
 
 _PRESENT_KEYS = {
     "organization": set(ORG_SHAPE_KEYS),
@@ -68,15 +95,29 @@ def set_import_job_context(session: Session, import_job_id: Any) -> None:
 
 
 def forget_catalog_tombstones(session: Session, org_id: UUID) -> None:
-    """Stop version-1 lookup from blocking an organization an admin forgot."""
-    session.execute(
-        update(CatalogVersion)
-        .where(
-            CatalogVersion.entity_type == "organization",
-            CatalogVersion.entity_id == org_id,
+    """Stop version-1 lookup from blocking an organization an admin forgot.
+
+    A merged organization keeps its reason. Contact fields are removed
+    from the stored snapshots.
+    """
+    if _is_postgres(session):
+        session.execute(
+            text("SELECT catalog_forget_entity('organization', :org_id)"),
+            {"org_id": org_id},
         )
-        .values(reason="forgotten")
-    )
+        return
+    _forget_rows(session, "organization", org_id, include_children=True)
+
+
+def forget_removed_baseline(session: Session, entity_type: str, entity_id: Any) -> None:
+    """Let a later import create a removed child again."""
+    if _is_postgres(session):
+        session.execute(
+            text("SELECT catalog_forget_entity(:entity_type, :entity_id)"),
+            {"entity_type": entity_type, "entity_id": entity_id},
+        )
+        return
+    _forget_rows(session, entity_type, entity_id, include_children=False)
 
 
 def annotate_merged_tombstones(
@@ -173,7 +214,9 @@ def _absent_organization(
         live = session.get(Organization, baseline.entity_id)
         if live is not None:
             status = _status_for_snapshot(
+                session,
                 "organization",
+                live.id,
                 incoming,
                 baseline.snapshot or {},
                 present,
@@ -193,7 +236,9 @@ def _absent_organization(
             survivor = session.get(Organization, merge.survivor_org_id)
             if survivor is not None:
                 status = _status_for_snapshot(
+                    session,
                     "organization",
+                    survivor.id,
                     incoming,
                     baseline.snapshot or {},
                     present,
@@ -214,7 +259,9 @@ def _absent_organization(
         return None, None
     snapshot = named.snapshot if isinstance(named.snapshot, dict) else {}
     status = _status_for_snapshot(
+        session,
         "organization",
+        survivor.id,
         incoming,
         snapshot,
         present,
@@ -240,7 +287,9 @@ def _live_status(
     if baseline is None:
         return None
     return _status_for_snapshot(
+        session,
         entity_type,
+        entity_id,
         incoming,
         baseline.snapshot or {},
         present,
@@ -252,7 +301,9 @@ def _live_status(
 
 
 def _status_for_snapshot(
+    session: Session,
     entity_type: str,
+    entity_id: Any,
     incoming: dict[str, Any],
     snapshot: dict[str, Any],
     present: set[str],
@@ -269,11 +320,13 @@ def _status_for_snapshot(
         present,
         partial=partial,
     ):
+        if payload_differs(entity_type, current, snapshot, partial=partial):
+            _warn(warnings, KEPT_LATER)
         return "unchanged"
     if not allow_updates:
         return "skipped"
     if payload_differs(entity_type, current, snapshot, partial=partial):
-        _warn(warnings, ADMIN_EDITS_OVERWRITTEN)
+        _warn(warnings, _overwrite_warning(session, entity_type, entity_id))
     return None
 
 
@@ -291,136 +344,65 @@ def _raise_removed(
     )
 
 
-def _find_removed(
+def _forget_rows(
     session: Session,
     entity_type: str,
-    org_id: Any,
-    incoming: dict[str, Any],
-    names: set[str] | None,
-) -> CatalogVersion | None:
+    entity_id: Any,
+    *,
+    include_children: bool,
+) -> None:
+    """SQLite stand-in for ``catalog_forget_entity``."""
+    clauses = [
+        (CatalogVersion.entity_type == entity_type)
+        & (CatalogVersion.entity_id == entity_id)
+    ]
+    if include_children and entity_type == "organization":
+        clauses.append(CatalogVersion.org_id == entity_id)
+    rows = list(session.scalars(select(CatalogVersion).where(or_(*clauses))).all())
+    merged = {
+        (row.entity_type, row.entity_id) for row in rows if row.reason == "merged"
+    }
+    for row in rows:
+        snapshot = dict(row.snapshot or {})
+        row.snapshot = {
+            key: value for key, value in snapshot.items() if key not in _CONTACT_KEYS
+        }
+        if (row.entity_type, row.entity_id) in merged:
+            continue
+        if row.version == 1 and row.reason != "merged":
+            row.reason = "forgotten"
+
+
+def _overwrite_warning(session: Session, entity_type: str, entity_id: Any) -> str:
+    """Name who changed the row after version 1."""
+    if entity_id is None or not _is_postgres(session):
+        return ADMIN_EDITS_OVERWRITTEN
     rows = session.scalars(
         select(CatalogVersion).where(
             CatalogVersion.entity_type == entity_type,
-            CatalogVersion.version == 1,
-            CatalogVersion.org_id == org_id,
-            _visible(),
+            CatalogVersion.entity_id == entity_id,
+            CatalogVersion.version > 1,
         )
     ).all()
-    matched = [
-        row
-        for row in rows
-        if _identity_matches(entity_type, row.snapshot or {}, incoming, names)
-        and session.get(_model_for(entity_type), row.entity_id) is None
-    ]
-    if len(matched) != 1:
-        return None
-    return matched[0]
-
-
-def _find_org_version1(
-    session: Session,
-    raw_org: dict[str, Any],
-    incoming: dict[str, Any],
-) -> CatalogVersion | None:
-    rows = session.scalars(
-        select(CatalogVersion).where(
-            CatalogVersion.entity_type == "organization",
-            CatalogVersion.version == 1,
-            _visible(),
-        )
-    ).all()
-    place_id = parse_place_id(raw_org.get("place_id"))
-    source = _text(raw_org.get("source"))
-    source_id = _text(raw_org.get("source_id"))
-    name = normalize_org_name(str(incoming.get("name") or ""))
-    file_has_strong_id = bool(place_id or source_id)
-
-    def _name_matches(snap: dict[str, Any]) -> bool:
-        # Same rule as a remembered deletion: a name matches only when
-        # the file has no place id and no source id, or version 1 had
-        # neither. A different place id is a different organization.
-        if not name or normalize_org_name(_text(snap.get("name"))) != name:
-            return False
-        snapshot_has_strong_id = bool(
-            _text(snap.get("place_id")) or _text(snap.get("source_id"))
-        )
-        return not (file_has_strong_id and snapshot_has_strong_id)
-
-    for predicate in (
-        lambda snap: bool(place_id) and _text(snap.get("place_id")) == place_id,
-        lambda snap: (
-            bool(source_id)
-            and _text(snap.get("source_id")) == source_id
-            and _text(snap.get("source")) == source
-        ),
-        _name_matches,
-    ):
-        found = [row for row in rows if predicate(row.snapshot or {})]
-        if len(found) == 1:
-            return found[0]
-    return None
-
-
-def _merge_by_name(session: Session, name: str) -> OrganizationMerge | None:
-    wanted = normalize_org_name(name)
-    if not wanted:
-        return None
-    rows = session.scalars(
-        select(OrganizationMerge).where(OrganizationMerge.kind == "merge")
-    ).all()
-    found = [row for row in rows if _merge_name_matches(row.snapshot, wanted)]
-    if len(found) != 1:
-        return None
-    return found[0]
-
-
-def _identity_matches(
-    entity_type: str,
-    snapshot: dict[str, Any],
-    incoming: dict[str, Any],
-    names: set[str] | None,
-) -> bool:
-    if entity_type == "activity":
-        wanted = {normalize_org_name(name) for name in names or set() if name}
-        wanted.add(normalize_org_name(_text(incoming.get("name"))))
-        wanted.discard("")
-        return normalize_org_name(_text(snapshot.get("name"))) in wanted
-    if entity_type == "location":
-        place_id = parse_place_id(incoming.get("place_id"))
-        if place_id and _text(snapshot.get("place_id")) == place_id:
-            return True
-        address = normalize_org_name(_text(incoming.get("address")))
-        return (
-            bool(address)
-            and normalize_org_name(_text(snapshot.get("address"))) == address
-        )
-    if entity_type == "pricing":
-        return (
-            _text(snapshot.get("activity_id")) == _text(incoming.get("activity_id"))
-            and _text(snapshot.get("location_id")) == _text(incoming.get("location_id"))
-            and _text(snapshot.get("pricing_type"))
-            == _text(incoming.get("pricing_type"))
-        )
-    if entity_type == "schedule":
-        left = sorted(_text(item) for item in snapshot.get("languages") or [])
-        right = sorted(_text(item) for item in incoming.get("languages") or [])
-        return (
-            _text(snapshot.get("activity_id")) == _text(incoming.get("activity_id"))
-            and _text(snapshot.get("location_id")) == _text(incoming.get("location_id"))
-            and left == right
-        )
-    return False
-
-
-def _model_for(entity_type: str) -> type[Any]:
-    from app.db.models import Activity, ActivityPricing, ActivitySchedule, Location
-
-    return {
-        "activity": Activity,
-        "location": Location,
-        "pricing": ActivityPricing,
-        "schedule": ActivitySchedule,
-    }[entity_type]
+    if not rows:
+        return ADMIN_EDITS_OVERWRITTEN
+    saw_admin = False
+    saw_import = False
+    saw_system = False
+    for row in rows:
+        if row.import_job_id is not None:
+            saw_import = True
+        elif row.user_id:
+            saw_admin = True
+        else:
+            saw_system = True
+    if saw_admin and saw_import:
+        return MIXED_EDITS_OVERWRITTEN
+    if saw_admin:
+        return ADMIN_EDITS_OVERWRITTEN
+    if saw_import and not saw_system:
+        return IMPORT_EDITS_OVERWRITTEN
+    return SYSTEM_EDITS_OVERWRITTEN
 
 
 def _version1(
@@ -436,13 +418,6 @@ def _version1(
     ).first()
 
 
-def _visible() -> Any:
-    return or_(
-        CatalogVersion.reason.is_(None),
-        CatalogVersion.reason != "forgotten",
-    )
-
-
 def _present(
     raw: dict[str, Any],
     body: dict[str, Any],
@@ -452,36 +427,6 @@ def _present(
     return {key for key in allowed if key in raw or key in body}
 
 
-def _merge_name_matches(snapshot: Any, wanted: str) -> bool:
-    if not isinstance(snapshot, dict):
-        return False
-    values = [snapshot.get("name")]
-    names = snapshot.get("names")
-    if isinstance(names, list):
-        values.extend(names)
-    return any(
-        isinstance(value, str) and normalize_org_name(value) == wanted
-        for value in values
-    )
-
-
 def _warn(warnings: list[str] | None, message: str) -> None:
     if warnings is not None and message not in warnings:
         warnings.append(message)
-
-
-def _text(value: Any) -> str:
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
-def _is_postgres(session: Session) -> bool:
-    bind = getattr(session, "bind", None)
-    if bind is None:
-        getter = getattr(session, "get_bind", None)
-        if not callable(getter):
-            return False
-        bind = getter()
-    dialect = getattr(getattr(bind, "dialect", None), "name", "")
-    return dialect == "postgresql"
