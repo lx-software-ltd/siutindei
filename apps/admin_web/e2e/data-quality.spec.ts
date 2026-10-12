@@ -90,6 +90,28 @@ test.describe('Data quality', () => {
     await expect(adminPage.getByRole('cell', { name: 'Art Class', exact: true })).toHaveCount(0);
   });
 
+  test('admin can tick one location without selecting the rest', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=data-quality&tab=locations');
+    await adminPage.getByRole('button', { name: 'Sweep pending' }).click();
+    const rows = adminPage.getByRole('checkbox', { name: 'Select row' });
+    await expect(rows).toHaveCount(2);
+    await rows.first().check();
+    await expect(rows.first()).toBeChecked();
+    await expect(rows.nth(1)).not.toBeChecked();
+    await expect(
+      adminPage.getByText(/All matching records are selected/)
+    ).toHaveCount(0);
+    await adminPage.getByRole('button', { name: 'Apply selected' }).click();
+    await expect(
+      adminPage.getByRole('cell', { name: 'Swim Class', exact: true })
+    ).toHaveCount(0);
+    await expect(
+      adminPage.getByRole('cell', { name: 'Art Class', exact: true })
+    ).toBeVisible();
+  });
+
   test('admin can select every matching location from the header checkbox', async ({
     adminPage,
   }) => {

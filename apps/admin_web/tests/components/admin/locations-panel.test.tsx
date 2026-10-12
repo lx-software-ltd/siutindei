@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocationsPanel } from '@/components/admin/data-quality/locations-panel';
 import { resetAdminQueryClientForTests } from '@/lib/admin-query-client';
 import {
+  decideLocationFixesBulk,
   getLocationFixSettings,
   getLocationFixSummary,
   listLocationFixes,
@@ -61,6 +62,13 @@ describe('LocationsPanel', () => {
       active_run: null,
     });
     vi.mocked(listLocationFixes).mockResolvedValue({ items: [], next_cursor: null });
+    vi.mocked(decideLocationFixesBulk).mockResolvedValue({
+      dry_run: false,
+      matched: 0,
+      decided: 0,
+      failed: 0,
+      failures: [],
+    });
   });
 
   it('offers the location sweep and decide actions', async () => {
@@ -141,6 +149,61 @@ describe('LocationsPanel', () => {
     expect(
       await screen.findByRole('button', { name: 'Edit location' })
     ).toBeInTheDocument();
+  });
+
+  it('ticks only the chosen location row', async () => {
+    vi.mocked(decideLocationFixesBulk).mockResolvedValue({
+      dry_run: false,
+      matched: 1,
+      decided: 1,
+      failed: 0,
+      failures: [],
+    });
+    vi.mocked(listLocationFixes).mockResolvedValue({
+      items: [
+        {
+          id: 'loc-fix-a',
+          entity_type: 'activity',
+          entity_id: 'act-a',
+          entity_name: 'Swim Class',
+          org_id: 'org-1',
+          kind: 'link_existing',
+          source: 'rule:name_area',
+          status: 'pending',
+          current_label: '0 of 2 venues',
+          proposed_label: '10 Sham Street',
+        },
+        {
+          id: 'loc-fix-b',
+          entity_type: 'activity',
+          entity_id: 'act-b',
+          entity_name: 'Art Class',
+          org_id: 'org-1',
+          kind: 'unresolved',
+          source: 'model',
+          status: 'pending',
+          current_label: '0 of 2 venues',
+          proposed_label: 'Needs a location',
+        },
+      ],
+      next_cursor: 'page-2',
+    });
+    render(<LocationsPanel />, { wrapper });
+    const rows = await screen.findAllByRole('checkbox', { name: 'Select row' });
+    expect(rows).toHaveLength(2);
+    fireEvent.click(rows[0]);
+    expect(rows[0]).toBeChecked();
+    expect(rows[1]).not.toBeChecked();
+    expect(
+      screen.queryByText(/All matching records are selected/)
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply selected' }));
+    await waitFor(() => {
+      expect(decideLocationFixesBulk).toHaveBeenCalledWith({
+        action: 'apply',
+        ids: ['loc-fix-a'],
+      });
+    });
   });
 
   it('shows a register load error from the sweep', async () => {

@@ -118,6 +118,52 @@ describe('NamesPanel settings lists', () => {
     );
   });
 
+  it('ticks only the chosen name row', async () => {
+    const user = userEvent.setup();
+    vi.mocked(decideNameFixesBulk).mockResolvedValue({
+      dry_run: false,
+      matched: 1,
+      decided: 1,
+      failed: 0,
+      failures: [],
+    });
+    vi.mocked(listNameFixes).mockResolvedValue({
+      items: [
+        {
+          id: 'fix-1',
+          entity_type: 'organization',
+          entity_id: 'org-1',
+          current_value: 'HARBOUR CLUB',
+          proposed_value: 'Harbour Club',
+          rules: ['title_case'],
+          status: 'pending',
+        },
+        {
+          id: 'fix-2',
+          entity_type: 'organization',
+          entity_id: 'org-2',
+          current_value: 'PIER STUDIO',
+          proposed_value: 'Pier Studio',
+          rules: ['title_case'],
+          status: 'pending',
+        },
+      ],
+      next_cursor: 'page-2',
+    });
+    render(<NamesPanel />, { wrapper });
+    const rows = await screen.findAllByRole('checkbox', { name: 'Select row' });
+    await user.click(rows[0]);
+    expect(rows[0]).toBeChecked();
+    expect(rows[1]).not.toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Apply selected' }));
+    await waitFor(() =>
+      expect(decideNameFixesBulk).toHaveBeenCalledWith({
+        action: 'apply',
+        ids: ['fix-1'],
+      })
+    );
+  });
+
   it('cycles the header checkbox from visible rows to all matching rows', async () => {
     const user = userEvent.setup();
     vi.mocked(listNameFixes).mockResolvedValue({
