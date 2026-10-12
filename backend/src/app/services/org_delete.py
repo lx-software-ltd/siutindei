@@ -7,7 +7,8 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, bindparam, or_, select, text
+from sqlalchemy import and_, cast, func, literal, or_, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session
 
 from app.api.admin_imports_catalog import normalize_org_name, parse_place_id
@@ -229,48 +230,49 @@ def _normalized_names(row: OrganizationMerge) -> set[str]:
 def _names_match_sql(names: set[str]) -> Any | None:
     if not names:
         return None
-    clauses = []
-    for index, name in enumerate(sorted(names)):
-        clauses.append(
-            text(
-                "EXISTS ("
-                "SELECT 1 FROM ("
-                "SELECT jsonb_array_elements_text("
-                "COALESCE(organization_merges.snapshot->'names', '[]'::jsonb)"
-                ") AS value "
-                "UNION ALL SELECT organization_merges.snapshot->>'name'"
-                ") AS remembered "
-                "WHERE remembered.value IS NOT NULL "
-                "AND lower(regexp_replace(btrim(remembered.value), "
-                r"'\s+', ' ', 'g')) = :remembered_name_"
-                f"{index})"
-            ).bindparams(bindparam(f"remembered_name_{index}", value=name))
-        )
-    return or_(*clauses)
+    wanted = sorted(names)
+    elements = _snapshot_name_elements()
+    in_list = (
+        select(literal(1))
+        .select_from(elements)
+        .where(_sql_normalized(elements.c.value).in_(wanted))
+        .exists()
+    )
+    in_name = _sql_normalized(OrganizationMerge.snapshot["name"].astext).in_(wanted)
+    return or_(in_list, in_name)
 
 
 def _name_search_sql(needle: str) -> Any:
     pattern = f"%{_like_escape(needle)}%"
-    return text(
-        "("
-        "lower(COALESCE(organization_merges.snapshot->>'name', '')) "
-        "LIKE :deleted_name_pattern ESCAPE '\\' "
-        "OR EXISTS ("
-        "SELECT 1 FROM jsonb_array_elements_text("
-        "COALESCE(organization_merges.snapshot->'names', '[]'::jsonb)"
-        ") AS remembered(value) "
-        "WHERE lower(remembered.value) LIKE :deleted_name_pattern ESCAPE '\\'"
-        ")"
-        ")"
-    ).bindparams(bindparam("deleted_name_pattern", value=pattern))
+    elements = _snapshot_name_elements()
+    in_list = (
+        select(literal(1))
+        .select_from(elements)
+        .where(func.lower(elements.c.value).like(pattern, escape="\\"))
+        .exists()
+    )
+    in_name = func.lower(
+        func.coalesce(OrganizationMerge.snapshot["name"].astext, "")
+    ).like(pattern, escape="\\")
+    return or_(in_name, in_list)
+
+
+def _snapshot_name_elements():
+    payload = func.coalesce(
+        OrganizationMerge.snapshot["names"],
+        cast(literal("[]"), JSONB),
+    )
+    return func.jsonb_array_elements_text(payload).table_valued("value")
+
+
+def _sql_normalized(value: Any) -> Any:
+    return func.lower(func.regexp_replace(func.btrim(value), r"\s+", " ", "g"))
 
 
 def _source_equals(source: str) -> Any:
     if source:
-        return text(
-            "lower(COALESCE(organization_merges.source, '')) = :deleted_source"
-        ).bindparams(bindparam("deleted_source", value=source))
-    return text("organization_merges.source IS NULL")
+        return func.lower(func.coalesce(OrganizationMerge.source, "")) == source
+    return OrganizationMerge.source.is_(None)
 
 
 def _cursor_value(row: OrganizationMerge) -> str:
