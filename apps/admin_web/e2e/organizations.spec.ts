@@ -303,7 +303,14 @@ test.describe('Organizations Panel', () => {
     ).toBeVisible();
     await expect(adminPage.getByText('v1', { exact: true }).first()).toBeVisible();
     await adminPage.getByRole('button', { name: 'History' }).click();
-    await expect(adminPage.getByText('v1 · created · Import')).toBeVisible();
+    const history = adminPage.getByTestId(
+      'version-history-organization-org-1-disclosure'
+    );
+    await expect(history.getByText('v1 · created · Import')).toBeVisible();
+    await history.getByRole('button', { name: 'View version 1' }).click();
+    await expect(history.getByText('Read-only')).toBeVisible();
+    await expect(history.getByText('Test Organization 1')).toBeVisible();
+    await expect(history.locator('input, textarea, select')).toHaveCount(0);
   });
 });
 

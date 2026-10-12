@@ -235,8 +235,9 @@ status; `allow_updates` keeps its meaning.
   `Version` and a `History` disclosure (`AdminDisclosure`) that lists
   versions newest first: when, actor email (same Cognito lookup as
   Audit Logs), source (import job link, admin, partner key, merge),
-  and changed fields. Selecting two versions shows old and new values
-  with the same layout as `AuditLogDetail`.
+  and changed fields. Selecting a version shows that snapshot
+  read-only. The form above still edits the live row and writes a new
+  version.
 - Media screen header shows `Media v{N}` and the same history list
   limited to `entity_type = media`.
 - Locations, Activities, Pricing, and Schedules tables add a

@@ -8,7 +8,11 @@ test.describe('Media Panel', () => {
     ).toBeVisible();
     await expect(adminPage.getByText('Media v1')).toBeVisible();
     await adminPage.getByRole('button', { name: 'History' }).click();
-    await expect(adminPage.getByText('v1 · created · Import')).toBeVisible();
+    const history = adminPage.getByTestId('version-history-media-org-1-disclosure');
+    await expect(history.getByText('v1 · created · Import')).toBeVisible();
+    await history.getByRole('button', { name: 'View version 1' }).click();
+    await expect(history.getByText('Read-only')).toBeVisible();
+    await expect(history.locator('input, textarea, select')).toHaveCount(0);
 
     const mediaInput = adminPage.locator('#media-url');
     await mediaInput.fill('https://example.com/media-one.jpg');
