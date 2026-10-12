@@ -25,6 +25,8 @@ import { AdminRowActions } from '../../ui/admin-row-actions';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { StatusBanner } from '../../status-banner';
 
+const HISTORY_LINK_REFRESH_MS = 30 * 60 * 1000;
+
 function formatWhen(value?: string) {
   return value ? new Date(value).toLocaleString() : '—';
 }
@@ -127,6 +129,8 @@ export function ImportHistoryPanel() {
     queryKey: adminQueryKeys.importJobs(),
     defaultFilters: {},
     errorPrefix: 'Failed to load imports',
+    refetchInterval: HISTORY_LINK_REFRESH_MS,
+    refetchOnWindowFocus: true,
     fetcher: async ({ cursor }) => {
       const response = await listImportJobs(cursor ?? undefined);
       return {

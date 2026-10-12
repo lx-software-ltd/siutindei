@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 from app.api.admin_imports import (
@@ -152,7 +153,13 @@ def test_failed_job_can_be_retried(monkeypatch) -> None:
     assert calls == ["begin", "process", "finish"]
 
 
-def _history_job(object_key: str, job_id: str) -> SimpleNamespace:
+def _history_job(
+    object_key: str,
+    job_id: str,
+    *,
+    created_at: datetime | str | None = None,
+) -> SimpleNamespace:
+    when = created_at if created_at is not None else datetime.now(UTC)
     return SimpleNamespace(
         id=job_id,
         object_key=object_key,
@@ -161,8 +168,8 @@ def _history_job(object_key: str, job_id: str) -> SimpleNamespace:
         summary={"allow_updates": True},
         results=[],
         file_warnings=[],
-        created_at="2024-02-01T00:00:00Z",
-        updated_at="2024-02-01T00:00:00Z",
+        created_at=when,
+        updated_at=when,
     )
 
 
@@ -205,7 +212,7 @@ def test_history_list_links_each_file_to_s3(monkeypatch) -> None:
         monkeypatch,
         [
             _history_job(
-                "admin/imports/abc-catalog.json",
+                ("admin/imports/0123456789abcdef0123456789abcdef-catalog.json"),
                 "00000000-0000-0000-0000-000000000021",
             )
         ],
@@ -219,22 +226,66 @@ def test_history_list_links_each_file_to_s3(monkeypatch) -> None:
     body = json.loads(response["body"])
     assert response["statusCode"] == 200
     assert body["items"][0]["download_url"] == (
-        "https://s3.example/admin/imports/abc-catalog.json"
+        "https://s3.example/admin/imports/0123456789abcdef0123456789abcdef-catalog.json"
     )
     assert signed == [
         {
             "operation": "get_object",
             "params": {
                 "Bucket": "import-bucket",
-                "Key": "admin/imports/abc-catalog.json",
-                "ResponseContentDisposition": (
-                    'attachment; filename="abc-catalog.json"'
-                ),
+                "Key": ("admin/imports/0123456789abcdef0123456789abcdef-catalog.json"),
+                "ResponseContentDisposition": 'inline; filename="catalog.json"',
                 "ResponseContentType": "application/json",
             },
-            "expires": 900,
+            "expires": 3600,
         }
     ]
+
+
+def test_history_list_skips_download_url_after_object_expiry(monkeypatch) -> None:
+    def _boom():
+        raise AssertionError("expired objects are not signed")
+
+    _stub_history_list(
+        monkeypatch,
+        [
+            _history_job(
+                "admin/imports/old.json",
+                "00000000-0000-0000-0000-000000000023",
+                created_at=datetime.now(UTC) - timedelta(days=8),
+            )
+        ],
+    )
+    monkeypatch.setattr("app.api.admin_imports_objects.get_s3_client", _boom)
+
+    response = _handle_list_import_jobs(_list_event())
+    body = json.loads(response["body"])
+    assert response["statusCode"] == 200
+    assert "download_url" not in body["items"][0]
+    assert body["items"][0]["object_key"] == "admin/imports/old.json"
+
+
+def test_history_list_survives_signing_failure(monkeypatch) -> None:
+    def _boom():
+        raise RuntimeError("s3 unavailable")
+
+    monkeypatch.setenv("ADMIN_IMPORT_EXPORT_BUCKET", "import-bucket")
+    _stub_history_list(
+        monkeypatch,
+        [
+            _history_job(
+                "admin/imports/catalog.json",
+                "00000000-0000-0000-0000-000000000024",
+            )
+        ],
+    )
+    monkeypatch.setattr("app.api.admin_imports_objects.get_s3_client", _boom)
+
+    response = _handle_list_import_jobs(_list_event())
+    body = json.loads(response["body"])
+    assert response["statusCode"] == 200
+    assert "download_url" not in body["items"][0]
+    assert body["items"][0]["object_key"] == "admin/imports/catalog.json"
 
 
 def test_history_list_skips_download_url_for_foreign_key(monkeypatch) -> None:

@@ -34,6 +34,12 @@ test.describe('Organization review queue', () => {
     await expect(
       adminPage.getByRole('cell', { name: 'admin/imports/dry-run.json' })
     ).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'admin/imports/expired.json' })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('link', { name: 'admin/imports/expired.json' })
+    ).toHaveCount(0);
     await expect(adminPage.getByText('completed · skip existing')).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'View orgs' })).toHaveCount(
       2
