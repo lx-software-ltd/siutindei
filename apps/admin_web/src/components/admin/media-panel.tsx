@@ -4,6 +4,7 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent, SetStateAction } from 'react';
 
 import { ApiError } from '../../lib/api-client';
+import { refreshCatalogHistory } from '../../lib/admin-query-client';
 import {
   deleteOrganizationMedia,
 } from '../../lib/api-client-media';
@@ -433,6 +434,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
       setUploadedMediaUrls([]);
       setHasUnsavedChanges(false);
       setSuccessMessage('Media saved successfully.');
+      refreshCatalogHistory();
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : 'Unable to save media.';

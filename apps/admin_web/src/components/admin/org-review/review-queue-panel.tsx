@@ -370,15 +370,15 @@ export function CatalogPanel() {
                 ))}
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Changed since import' htmlFor='review-changed-filter'>
+            <AdminFilterField label='Catalog version' htmlFor='review-changed-filter'>
               <Select
                 id='review-changed-filter'
                 value={filters.changed}
                 onChange={(event) => setFilter('changed', event.target.value)}
               >
                 <option value=''>Any</option>
-                <option value='unchanged'>Unchanged</option>
-                <option value='changed'>Changed</option>
+                <option value='unchanged'>Version 1</option>
+                <option value='changed'>Later version</option>
               </Select>
             </AdminFilterField>
             <AdminFilterField label='Blockers' htmlFor='review-blocker-filter'>

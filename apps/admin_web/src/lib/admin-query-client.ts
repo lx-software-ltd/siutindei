@@ -1,5 +1,7 @@
 import { QueryClient, type DefaultOptions } from '@tanstack/react-query';
 
+import { adminQueryKeys } from './admin-query-keys';
+
 /**
  * Cache tuning for the admin SPA. Lists render from cache instantly on
  * remount and revalidate in the background once older than `staleTime`.
@@ -26,6 +28,12 @@ let client: QueryClient | null = null;
  * cache works the same inside and outside `QueryClientProvider` (tests render
  * hooks and components without a wrapper).
  */
+export function refreshCatalogHistory() {
+  void getAdminQueryClient().invalidateQueries({
+    queryKey: adminQueryKeys.catalogVersions(),
+  });
+}
+
 export function getAdminQueryClient(): QueryClient {
   if (!client) {
     client = new QueryClient({ defaultOptions: ADMIN_QUERY_DEFAULTS });

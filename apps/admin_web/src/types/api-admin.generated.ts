@@ -663,7 +663,9 @@ export interface paths {
                     include?: string;
                     /**
                      * @description `unchanged` keeps organizations still on version 1.
-                     *     `changed` keeps organizations above version 1.
+                     *     `changed` keeps organizations above version 1. A later
+                     *     version includes review, child roll-up, and import, not
+                     *     only a direct admin edit.
                      */
                     changed?: "unchanged" | "changed";
                 };
@@ -4257,7 +4259,10 @@ export interface paths {
         /**
          * List catalog versions
          * @description History of organizations, media, locations, activities, pricing,
-         *     and schedules. Newest first. Admin only.
+         *     and schedules. One entity is ordered by version, newest first,
+         *     so following `next_cursor` reaches version 1. Other lists are
+         *     ordered by `created_at`. `blocking=true` with `org_id` returns
+         *     removed children whose version 1 still blocks import. Admin only.
          */
         get: {
             parameters: {
@@ -4265,6 +4270,11 @@ export interface paths {
                     entity_type?: "organization" | "media" | "location" | "activity" | "pricing" | "schedule";
                     entity_id?: string;
                     org_id?: string;
+                    /**
+                     * @description With `org_id`, return version 1 of removed locations,
+                     *     activities, pricing, and schedules that still block import.
+                     */
+                    blocking?: boolean;
                     limit?: number;
                     cursor?: string;
                 };
@@ -4334,6 +4344,57 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/versions/{id}/forget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Forget a removed child version
+         * @description Marks version 1 of a removed location, activity, pricing row,
+         *     or schedule as forgotten and strips contact fields from its
+         *     snapshots. The next import can create that record again. A
+         *     live or merged record is rejected.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Forgotten */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Version not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;

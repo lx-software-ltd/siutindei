@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useQueryState } from 'nuqs';
 
 import { ApiError } from '../../lib/api-client';
+import { refreshCatalogHistory } from '../../lib/admin-query-client';
 import {
   decideOrgReview,
   getOrgReviewDetail,
@@ -114,6 +115,7 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
         action,
         force: action === 'approve' ? force : undefined,
       });
+      refreshCatalogHistory();
       setNotice(
         action === 'approve'
           ? 'Organization approved. Public search can stay cached for up to 5 minutes.'

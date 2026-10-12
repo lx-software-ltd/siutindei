@@ -311,6 +311,16 @@ test.describe('Organizations Panel', () => {
     await expect(history.getByText('Read-only')).toBeVisible();
     await expect(history.getByText('Test Organization 1')).toBeVisible();
     await expect(history.locator('input, textarea, select')).toHaveCount(0);
+    await expect(history.getByText('Removed records')).toBeVisible();
+    await expect(history.getByText('Removed Class')).toBeVisible();
+    const forgetRequest = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'POST' &&
+        request.url().includes('/admin/versions/ver-removed/forget')
+    );
+    await history.getByRole('button', { name: 'Forget' }).click();
+    await forgetRequest;
+    await expect(history.getByText('Removed Class')).toHaveCount(0);
   });
 });
 

@@ -1738,8 +1738,38 @@ export async function setupApiMocks(page: Page): Promise<void> {
     });
   });
 
-  await page.route('**/api/mock/**/admin/versions*', async (route) => {
+  let forgottenRemoved = false;
+  await page.route('**/api/mock/**/admin/versions**', async (route) => {
     const url = new URL(route.request().url());
+    if (route.request().method() === 'POST') {
+      forgottenRemoved = true;
+      await route.fulfill({ status: 204, body: '' });
+      return;
+    }
+    if (url.searchParams.get('blocking') === 'true') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: forgottenRemoved
+            ? []
+            : [
+                {
+                  id: 'ver-removed',
+                  entity_type: 'activity',
+                  entity_id: 'activity-removed',
+                  org_id: 'org-1',
+                  version: 1,
+                  action: 'created',
+                  snapshot: { name: 'Removed Class' },
+                  created_at: '2024-01-02T00:00:00Z',
+                },
+              ],
+          next_cursor: null,
+        }),
+      });
+      return;
+    }
     const entityType = url.searchParams.get('entity_type') ?? 'organization';
     const entityId = url.searchParams.get('entity_id') ?? 'org-1';
     await route.fulfill({
