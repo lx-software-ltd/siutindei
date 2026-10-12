@@ -19,7 +19,8 @@ row use that URL. Clicking the file does not expand the row.
 
 ## Files
 
-- `backend/src/app/api/admin_imports.py` signs each listed object key.
+- `backend/src/app/api/admin_imports_objects.py` signs each listed object key.
+- `backend/src/app/api/admin_imports.py` returns that URL on the history list.
 - `docs/api/admin.yaml` and the generated admin types.
 - `docs/architecture/lambdas.md` notes the presigned history URL.
 - `apps/admin_web` history panel, client type, fixture, and Playwright spec.

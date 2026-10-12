@@ -210,7 +210,10 @@ def test_history_list_links_each_file_to_s3(monkeypatch) -> None:
             )
         ],
     )
-    monkeypatch.setattr("app.api.admin_imports.get_s3_client", lambda: _S3())
+    monkeypatch.setattr(
+        "app.api.admin_imports_objects.get_s3_client",
+        lambda: _S3(),
+    )
 
     response = _handle_list_import_jobs(_list_event())
     body = json.loads(response["body"])
@@ -247,7 +250,7 @@ def test_history_list_skips_download_url_for_foreign_key(monkeypatch) -> None:
             )
         ],
     )
-    monkeypatch.setattr("app.api.admin_imports.get_s3_client", _boom)
+    monkeypatch.setattr("app.api.admin_imports_objects.get_s3_client", _boom)
 
     response = _handle_list_import_jobs(_list_event())
     body = json.loads(response["body"])
