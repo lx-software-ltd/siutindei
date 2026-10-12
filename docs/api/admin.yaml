@@ -221,9 +221,11 @@ paths:
         source, current name, and earlier names. Contact details are
         not stored. A later import that matches the place id, the
         same catalog source id, or a remembered name does not create
-        the organization again. A name matches only when the file has
-        no place id and no source id, or the deleted organization had
-        neither. Forget one identity with
+        the organization again. A name matches when it does not
+        contradict the place id or the same catalog's source id.
+        Names are compared after case-folding and collapsed
+        whitespace. Forget that organization, including identities
+        merged into it, with
         `DELETE /v1/admin/deleted-organizations/{id}`. A manager
         delete does not remember the organization.
       responses:
@@ -807,9 +809,11 @@ paths:
     delete:
       summary: Allow one deleted identity to be imported again
       description: |
-        Removes that remembered identity. A later import can create
-        an organization that matches it. Other remembered identities
-        stay blocked.
+        Removes that remembered identity. Forgetting the deleted
+        organization also removes identities that were merged into
+        it. Forgetting one of those merged identities leaves the
+        others blocked. A later import of the same file runs again
+        when a skipped identity is no longer remembered.
       parameters:
         - name: id
           in: path
@@ -6826,6 +6830,18 @@ components:
           type: string
           format: date-time
           nullable: true
+        was_merge:
+          type: boolean
+          description: |
+            True when this identity was merged into an organization
+            that an admin later deleted.
+        also_forgets:
+          type: array
+          description: |
+            Other identities released when this row is forgotten.
+            Empty for a previously merged identity.
+          items:
+            type: string
 
     OrgDuplicateGroup:
       type: object

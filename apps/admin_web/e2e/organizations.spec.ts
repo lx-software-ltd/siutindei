@@ -215,6 +215,12 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
     await adminPage.getByRole('row', { name: /Test Organization 1/ }).first().click();
     await expect(adminPage.getByRole('button', { name: 'Delete' })).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Delete' }).click();
+    await expect(adminPage.getByRole('alertdialog')).toContainText(
+      'Import will skip this organization'
+    );
+    await adminPage.getByRole('button', { name: 'Cancel' }).click();
+    await expect(adminPage.getByRole('alertdialog')).toHaveCount(0);
   });
 
   test('filters organizations by neighbourhood and maps them', async ({

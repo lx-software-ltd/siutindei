@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.api.admin_auth import _set_session_audit_context
+from app.api.admin_auth import _get_user_sub, _set_session_audit_context
 from app.api.admin_request import _query_param, parse_limit
 from app.db.engine import get_engine
 from app.exceptions import ValidationError
@@ -45,7 +45,11 @@ def _list(event: Mapping[str, Any]) -> dict[str, Any]:
 def _forget(event: Mapping[str, Any], resource_id: str) -> dict[str, Any]:
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event)
-        forget_deleted_organization(session, _uuid(resource_id))
+        forget_deleted_organization(
+            session,
+            _uuid(resource_id),
+            forgotten_by=_get_user_sub(event),
+        )
         session.commit()
     return json_response(204, {}, event=event)
 
