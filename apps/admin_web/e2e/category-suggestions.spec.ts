@@ -10,6 +10,10 @@ test.describe('Category suggestions', () => {
     await expect(adminPage.locator('#suggestion-status-filter')).toHaveCount(0);
 
     await expect(adminPage.getByText('Capture unknown categories on import')).toBeVisible();
+    await expect(adminPage.getByText(/Unknown category names/)).toHaveCount(0);
+    await expect(
+      adminPage.getByRole('heading', { name: 'Suggestion settings' })
+    ).toBeVisible();
     await expect(adminPage.getByText('Pottery').first()).toBeVisible();
 
     await adminPage.getByRole('cell', { name: 'Pottery' }).click();

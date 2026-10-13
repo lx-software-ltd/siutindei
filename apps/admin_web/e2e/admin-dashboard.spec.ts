@@ -48,7 +48,12 @@ test.describe('Admin Dashboard', () => {
 
     const catalogButton = adminPage.getByRole('button', { name: 'Catalog' });
     await expect(catalogButton).toBeVisible();
+    const catalogTable = adminPage.getByTestId('admin-record-table');
     await expect(adminPage.getByRole('table', { name: 'Catalog' })).toBeVisible();
+    await expect(catalogTable.getByTestId('admin-filter-bar')).toBeVisible();
+    await expect(
+      catalogTable.getByRole('button', { name: 'New organization' })
+    ).toBeVisible();
   });
 
   test('should navigate to Media section', async ({ adminPage }) => {

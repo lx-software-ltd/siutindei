@@ -9,7 +9,7 @@ import {
 describe('formatAdminTabLabel', () => {
   it('uses sentence case and keeps all-caps tokens', () => {
     expect(formatAdminTabLabel('Category checks')).toBe('Category checks');
-    expect(formatAdminTabLabel('feedback labels')).toBe('Feedback labels');
+    expect(formatAdminTabLabel('labels')).toBe('Labels');
     expect(formatAdminTabLabel('API keys')).toBe('API keys');
     expect(formatAdminTabLabel('Suggestions')).toBe('Suggestions');
   });
