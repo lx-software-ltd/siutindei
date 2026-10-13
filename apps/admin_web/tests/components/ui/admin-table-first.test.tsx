@@ -8,7 +8,7 @@ import {
   AdminDataTableHeadCell,
 } from '@/components/ui/admin-data-table';
 import { AdminEditorActions } from '@/components/ui/admin-editor-panel';
-import { AdminFilterBar } from '@/components/ui/admin-filter-bar';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
 import { AdminRecordTable } from '@/components/ui/admin-record-table';
 import { ResourceTableShell } from '@/components/ui/resource-table-shell';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,33 @@ import { Button } from '@/components/ui/button';
 function following(a: HTMLElement, b: HTMLElement) {
   return Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 }
+
+describe('AdminCreateButton', () => {
+  it('matches Button md height and stays auto-width', () => {
+    render(<AdminCreateButton label='New organization' onClick={() => undefined} />);
+
+    const create = screen.getByRole('button', { name: 'New organization' });
+    expect(create).toHaveClass('h-9', 'px-4');
+    expect(create.className).not.toMatch(/\bw-full\b/);
+    expect(create.className).not.toMatch(/\bh-10\b/);
+  });
+});
+
+describe('AdminFilterField', () => {
+  it('uses the default compact width', () => {
+    render(
+      <AdminFilterBar>
+        <AdminFilterField>
+          <input aria-label='Action' />
+        </AdminFilterField>
+      </AdminFilterBar>
+    );
+
+    const field = screen.getByLabelText('Action').parentElement;
+    expect(field).toHaveClass('min-w-[10rem]', 'sm:basis-48');
+    expect(field?.className ?? '').not.toMatch(/8\.5rem/);
+  });
+});
 
 describe('AdminRecordTable', () => {
   it('renders filters left, actions left, table, then Load more', () => {

@@ -29,16 +29,23 @@ vi.mock('@/lib/api-client-category-suggestions', () => ({
   startCategoryScan: vi.fn(),
 }));
 
-function wrapper({ children }: { children: ReactNode }) {
-  const client = resetAdminQueryClientForTests();
-  return (
-    <QueryClientProvider client={client}>
-      <NuqsTestingAdapter hasMemory searchParams='?section=data-quality&tab=checks'>
-        {children}
-      </NuqsTestingAdapter>
-    </QueryClientProvider>
-  );
+function wrapperFor(searchParams: string) {
+  return function wrapper({ children }: { children: ReactNode }) {
+    const client = resetAdminQueryClientForTests();
+    return (
+      <QueryClientProvider client={client}>
+        <NuqsTestingAdapter hasMemory searchParams={searchParams}>
+          {children}
+        </NuqsTestingAdapter>
+      </QueryClientProvider>
+    );
+  };
 }
+
+const wrapper = wrapperFor('?section=data-quality&tab=checks');
+const scopedWrapper = wrapperFor(
+  '?section=data-quality&tab=checks&organization=org-1'
+);
 
 describe('CategoryChecksPanel sweep buttons', () => {
   beforeEach(() => {
@@ -122,6 +129,19 @@ describe('CategoryChecksPanel sweep buttons', () => {
     expect(
       apply.compareDocumentPosition(dismiss) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
+    expect(apply).toHaveClass('bg-slate-100');
+    expect(dismiss).toHaveClass('bg-slate-100');
+  });
+
+  it('puts a scoped organization above the card, not in the filter bar', async () => {
+    render(<CategoryChecksPanel />, { wrapper: scopedWrapper });
+    const note = await screen.findByText(
+      /Filtered to the organization from the review queue/
+    );
+    const card = screen.getByTestId('admin-record-table');
+    expect(card).not.toContainElement(note);
+    expect(screen.getByRole('button', { name: 'Show all' })).toBeVisible();
+    expect(screen.queryByLabelText('Organization')).not.toBeInTheDocument();
   });
 
   it('sweeps pending review or all organizations from the matching button', async () => {
