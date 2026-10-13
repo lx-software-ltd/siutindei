@@ -522,7 +522,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
           <>
             <AdminDataTableCell>
               <AdminTableName>{getAreaName(item.area_id)}</AdminTableName>
-              <AdminDataTableCellMeta until={addressColumnPriority}>
+              <AdminDataTableCellMeta until={addressColumnPriority} label='Address'>
                 {adminTableText(item.address)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>

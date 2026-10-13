@@ -21,6 +21,8 @@ import {
   adminTableText,
   AdminTableName,
   AdminTableNumber,
+  formatAdminTableLabel,
+  formatAdminTablePercent,
 } from '../../ui/admin-table-value';
 import { AdminRowActions } from '../../ui/admin-row-actions';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
@@ -75,7 +77,7 @@ export function CategoryChecksTable({
         ariaLabel={PAGE_NAME}
         rows={items}
         getLabel={(item) => item.activity_name || item.activity_id}
-        middleColumnCount={6}
+        middleColumnCount={7}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         hasMore={hasMore}
@@ -99,7 +101,10 @@ export function CategoryChecksTable({
               Organization
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>
-              Category
+              Current
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Proposed
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
               Verdict
@@ -116,22 +121,27 @@ export function CategoryChecksTable({
           <>
             <AdminDataTableCell>
               <AdminTableName>{item.activity_name || item.activity_id}</AdminTableName>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Organization'>
                 {adminTableText(item.org_name)}
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Current'>
                 {adminTableText(item.current_category_name)}
-                {' → '}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary' label='Proposed'>
                 {adminTableText(item.proposed_category_name)}
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminDataTableCellMeta until='tertiary' label='Verdict' empty={!item.verdict}>
                 {item.verdict ? <StatusBadge status={item.verdict} /> : adminTableText(null)}
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
-                <AdminTableNumber>{item.confidence}</AdminTableNumber>
+              <AdminDataTableCellMeta
+                until='tertiary'
+                label='Confidence'
+                empty={item.confidence == null}
+              >
+                <AdminTableNumber>{formatAdminTablePercent(item.confidence)}</AdminTableNumber>
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='tertiary'>
-                <StatusBadge status={item.status.replace(/_/g, ' ')} />
+                <StatusBadge status={formatAdminTableLabel(item.status)} />
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
@@ -139,17 +149,18 @@ export function CategoryChecksTable({
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               {adminTableText(item.current_category_name)}
-              {' → '}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
               {adminTableText(item.proposed_category_name)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {item.verdict ? <StatusBadge status={item.verdict} /> : adminTableText(null)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              <AdminTableNumber>{item.confidence}</AdminTableNumber>
+              <AdminTableNumber>{formatAdminTablePercent(item.confidence)}</AdminTableNumber>
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              <StatusBadge status={item.status.replace(/_/g, ' ')} />
+              <StatusBadge status={formatAdminTableLabel(item.status)} />
             </AdminDataTableCell>
           </>
         )}

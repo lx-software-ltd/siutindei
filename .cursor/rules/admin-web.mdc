@@ -10,7 +10,7 @@ alwaysApply: false
 - Page names use `formatAdminPageName(nav, tab)`. Use the nav label when there is no tab, or the tab repeats the nav. Otherwise `Nav · Tab`. Do not invent fused phrases. The table `aria-label` and the page's sr-only heading use that name. [why: convention]
 - Page-level input cards use `AdminInputCard` (title, content, action bar only when there are actions). A card under the page heading uses `titleLevel="h3"`. [why: convention]
 - Page-level table cards use four slots: filters left (optional), actions left on a new row (optional), table, Load more (optional). Scope notes sit above the card. On Map, the Catalog filter bar sits above the map card. `AdminCreateButton` matches `Button` `md`. Apply and Dismiss are `secondary`. A failed list hides the empty-table sentence. [why: convention]
-- Listing cells use one role from `admin-table-value.tsx`: name, text, time, `StatusBadge`, id, number, or an em dash. One fact per cell. Hidden columns repeat under the name. `AdminDataTableCell` `className` is layout only. [why: convention]
+- Listing cells use one role from `admin-table-value.tsx`: name, text, time, `StatusBadge`, id, number, or an em dash. One fact per cell. Confidence is a percent. Hidden columns repeat under the name; an empty caption includes the column name. Draft cells inherit header priority. `AdminDataTableCell` `className` is layout only. [why: convention]
 - Server state is TanStack Query. Do not add `useEffect` plus `useState` list loops. [why: 6cf29cf table-first admin console]
 - When UI behavior changes, update Playwright specs and fixtures under `apps/admin_web/e2e`. [why: convention]
 - Keep `npm run generate:api` output committed when OpenAPI changes. [why: 1f0b8c7 generated OpenAPI types]

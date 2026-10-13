@@ -215,7 +215,7 @@ export function DuplicatesPanel() {
               <AdminDataTableCellMeta until='secondary'>
                 <AdminTableNumber>{item.score}</AdminTableNumber>
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Signals'>
                 {formatAdminTableLabels(item.signals)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>

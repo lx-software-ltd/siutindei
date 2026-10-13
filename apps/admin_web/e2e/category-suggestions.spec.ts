@@ -35,6 +35,11 @@ test.describe('Category suggestions', () => {
     ).toBeVisible();
     await expect(adminPage.locator('#check-status-filter')).toHaveValue('pending');
     await expect(adminPage.getByText('Clay club')).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Current' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Proposed' })).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'Sport', exact: true })).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'Ceramics', exact: true })).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: '62%' })).toBeVisible();
     const apply = adminPage.getByRole('button', { name: 'Apply' });
     const applyIcon = await apply.locator('svg').boundingBox();
     expect(applyIcon?.width).toBeGreaterThan(8);

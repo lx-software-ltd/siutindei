@@ -308,16 +308,16 @@ export function TicketsPanel() {
               <AdminDataTableCellMeta until='secondary'>
                 <TicketTypeBadge type={item.ticket_type} />
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Submitted By'>
                 {adminTableText(item.submitter_email)}
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='secondary'>
                 <StatusBadge status={item.status} />
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminDataTableCellMeta until='tertiary' label='Submitted' empty={!item.created_at}>
                 <AdminTableTime value={item.created_at} />
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminDataTableCellMeta until='tertiary' label='Reviewed' empty={!item.reviewed_at}>
                 <AdminTableTime value={item.reviewed_at} />
               </AdminDataTableCellMeta>
             </AdminDataTableCell>

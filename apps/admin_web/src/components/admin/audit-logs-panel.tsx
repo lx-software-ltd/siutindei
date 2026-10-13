@@ -322,10 +322,10 @@ export function AuditLogsPanel() {
             <AdminDataTableCellMeta until='secondary'>
               <ActionBadge action={item.action} />
             </AdminDataTableCellMeta>
-            <AdminDataTableCellMeta until='secondary'>
+            <AdminDataTableCellMeta until='secondary' label='Actor' empty={!item.user_id}>
               <AdminTableId>{getActor(item.user_id)}</AdminTableId>
             </AdminDataTableCellMeta>
-            <AdminDataTableCellMeta until='tertiary'>
+            <AdminDataTableCellMeta until='tertiary' label='Timestamp' empty={!item.timestamp}>
               <AdminTableTime value={item.timestamp} />
             </AdminDataTableCellMeta>
           </AdminDataTableCell>

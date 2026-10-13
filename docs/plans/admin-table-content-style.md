@@ -30,7 +30,8 @@ The seven roles:
 6. **Number.** A count, score, order, star count, percent, or range.
    `AdminTableNumber` with `tabular-nums`. Percents render `82%`.
    Ranges render `3–12` (en dash, no spaces). Confidence is this
-   role, in its own column, not glued to a label.
+   role, in its own column, formatted with `formatAdminTablePercent`
+   (`0.82` → `82%`).
 7. **Empty.** A null or blank value of any role. The em dash `—`.
    Not “Unknown”, “No phone”, “No manager”, “Never”, or a blank cell.
    `formatDateTime` already returns the em dash; the other components
@@ -41,8 +42,10 @@ role badges, several rule labels). A second fact is another column.
 
 The only caption is `AdminDataTableCellMeta`. One caption per hidden
 column, in column order, `until` matching that column’s priority,
-rendering the same role component as the column. A caption does not
-introduce a fact that has no column.
+rendering the same role component as the column. An empty caption
+includes the column name (`Expires —`). A caption does not
+introduce a fact that has no column. Draft cells inherit each
+header’s `priority` so a phone does not show extra em-dash cells.
 
 `IdentityProviderBadge` is the value of the Users Provider column.
 It is the one icon-valued status. It does not sit in the name cell.

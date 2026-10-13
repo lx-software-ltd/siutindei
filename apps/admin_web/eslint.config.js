@@ -1,4 +1,12 @@
 const nextConfig = require('eslint-config-next');
+const cellLayout = require('./src/components/ui/admin-table-cell-layout.json');
+
+function isAdminTableCellLayoutClass(token) {
+  return (
+    cellLayout.exact.includes(token) ||
+    cellLayout.prefix.some((prefix) => token.startsWith(prefix) && token.length > prefix.length)
+  );
+}
 
 const adminUiPlugin = {
   rules: {
@@ -106,9 +114,6 @@ const adminUiPlugin = {
         },
       },
       create(context) {
-        const allowed =
-          /^(w-\S+|pr-0|whitespace-nowrap|text-right|text-center|py-8)$/;
-
         return {
           JSXOpeningElement(node) {
             if (
@@ -134,7 +139,7 @@ const adminUiPlugin = {
               return;
             }
             for (const token of classAttr.value.value.split(/\s+/)) {
-              if (token && !allowed.test(token)) {
+              if (token && !isAdminTableCellLayoutClass(token)) {
                 context.report({
                   node: classAttr,
                   messageId: 'disallowed',

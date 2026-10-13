@@ -141,10 +141,10 @@ export function SuggestionsTable({
               <AdminDataTableCellMeta until='tertiary'>
                 <AdminTableNumber>{item.activity_count}</AdminTableNumber>
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminDataTableCellMeta until='tertiary' label='Suggested'>
                 {adminTableText(item.suggested_name)}
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminDataTableCellMeta until='tertiary' label='Source'>
                 {adminTableText(item.source)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>

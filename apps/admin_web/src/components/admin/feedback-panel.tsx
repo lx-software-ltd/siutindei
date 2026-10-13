@@ -30,6 +30,7 @@ import {
   AdminTableName,
   AdminTableNumber,
   AdminTableTime,
+  ADMIN_TABLE_EMPTY,
 } from '../ui/admin-table-value';
 import { StarRating } from '../ui/star-rating';
 import { Textarea } from '../ui/textarea';
@@ -347,13 +348,13 @@ export function FeedbackPanel() {
                 <AdminDataTableCellMeta until='secondary'>
                   <AdminTableNumber>{item.stars}</AdminTableNumber>
                 </AdminDataTableCellMeta>
-                <AdminDataTableCellMeta until='tertiary'>
-                  {names.length ? names.join(', ') : '—'}
+                <AdminDataTableCellMeta until='tertiary' label='Labels'>
+                  {names.length ? names.join(', ') : ADMIN_TABLE_EMPTY}
                 </AdminDataTableCellMeta>
-                <AdminDataTableCellMeta until='tertiary'>
+                <AdminDataTableCellMeta until='tertiary' label='Submitter'>
                   {adminTableText(item.submitter_email || item.submitter_id)}
                 </AdminDataTableCellMeta>
-                <AdminDataTableCellMeta until='tertiary'>
+                <AdminDataTableCellMeta until='tertiary' label='Submitted' empty={!item.created_at}>
                   <AdminTableTime value={item.created_at} />
                 </AdminDataTableCellMeta>
               </AdminDataTableCell>
@@ -361,7 +362,7 @@ export function FeedbackPanel() {
                 <AdminTableNumber>{item.stars}</AdminTableNumber>
               </AdminDataTableCell>
               <AdminDataTableCell priority='tertiary'>
-                {names.length ? names.join(', ') : '—'}
+                {names.length ? names.join(', ') : ADMIN_TABLE_EMPTY}
               </AdminDataTableCell>
               <AdminDataTableCell priority='tertiary'>
                 {adminTableText(item.submitter_email || item.submitter_id)}

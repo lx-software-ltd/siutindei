@@ -38,7 +38,7 @@ rules use.
 | Row operations | `AdminRowActions` (icon-only, tooltip, overflow menu) |
 | Dialogs | `AdminDialog` with a header Close control. `ConfirmDialog` is the confirm/cancel footer. `footer={null}` keeps the header Close and omits the footer |
 | Status chips | `StatusBadge` with an optional `tone` |
-| Table cell content | One role per cell: `AdminTableName`, plain text, `AdminTableTime`, `StatusBadge`, `AdminTableId`, `AdminTableNumber`, or an em dash. Hidden columns repeat under the name with `AdminDataTableCellMeta`. Cell `className` is layout only |
+| Table cell content | One role per cell: `AdminTableName`, plain text, `AdminTableTime`, `StatusBadge`, `AdminTableId`, `AdminTableNumber`, or an em dash. Confidence is a percent. Hidden columns repeat under the name with `AdminDataTableCellMeta`; an empty caption includes the column name. Draft cells inherit header priority. Cell `className` is layout only |
 | Banners | `StatusBanner` `kind` (`error`, `saved`, `pending-review`, `info`) sets the colour and default heading. `title` overrides the heading |
 | In-area switchers | `AdminTabStrip` (sentence case) |
 | Multi-select chips | `AdminToggleChip` |

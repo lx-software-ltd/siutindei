@@ -23,7 +23,7 @@ import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
 import { Input } from '../ui/input';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
-import { AdminTableName, AdminTableNumber } from '../ui/admin-table-value';
+import { ADMIN_TABLE_EMPTY, AdminTableName, AdminTableNumber } from '../ui/admin-table-value';
 import {
   deleteRowActions,
   ResourceTableShell,
@@ -67,7 +67,7 @@ function translationSummary(item: FeedbackLabel): string {
   const translations = Object.entries(item.name_translations ?? {})
     .map(([lang, value]) => `${lang}: ${value}`)
     .join(', ');
-  return translations || '—';
+  return translations || ADMIN_TABLE_EMPTY;
 }
 
 export function FeedbackLabelsPanel() {
@@ -253,10 +253,10 @@ export function FeedbackLabelsPanel() {
           <>
             <AdminDataTableCell>
               <AdminTableName>{item.name}</AdminTableName>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Order' empty={item.display_order == null}>
                 <AdminTableNumber>{item.display_order}</AdminTableNumber>
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminDataTableCellMeta until='tertiary' label='Translations'>
                 {translationSummary(item)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>

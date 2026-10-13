@@ -413,7 +413,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     (item: ActivitySchedule) => {
       const localEntries = getLocalEntries(item);
       if (localEntries.length === 0) {
-        return <span>—</span>;
+        return ADMIN_TABLE_EMPTY;
       }
       return (
         <div className='space-y-1'>
@@ -433,6 +433,37 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     },
     [getDayLabel, getLocalEntries]
   );
+
+  const renderLanguages = useCallback((item: ActivitySchedule) => {
+    if (!item.languages?.length) {
+      return ADMIN_TABLE_EMPTY;
+    }
+    return (
+      <div className='flex flex-wrap items-center gap-2'>
+        {item.languages.map((language) => {
+          const option = getLanguageOption(language);
+          if (!option) {
+            return <span key={language}>{language}</span>;
+          }
+          return (
+            <span
+              key={option.code}
+              className='inline-flex items-center justify-center rounded border border-slate-200 bg-white px-1.5 py-1'
+              title={option.label}
+            >
+              <img
+                src={option.flagSrc}
+                alt={`${option.label} flag`}
+                width={20}
+                height={14}
+                loading='lazy'
+              />
+            </span>
+          );
+        })}
+      </div>
+    );
+  }, []);
 
   const weeklyEntriesLabel = useCallback(
     (item: ActivitySchedule) => {
@@ -871,14 +902,14 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
           <>
             <AdminDataTableCell>
               <AdminTableName>{getLocationName(item.location_id)}</AdminTableName>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Activity'>
                 {getActivityName(item.activity_id)}
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Day/Time'>
                 {weeklyEntriesLabel(item) || ADMIN_TABLE_EMPTY}
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
-                {item.languages?.length ? item.languages.join(', ') : ADMIN_TABLE_EMPTY}
+              <AdminDataTableCellMeta until='tertiary' label='Languages' empty={!item.languages?.length}>
+                {renderLanguages(item)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
@@ -888,33 +919,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
               {renderWeeklyEntries(item)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              <div className='flex flex-wrap items-center gap-2'>
-                {item.languages?.length ? (
-                  item.languages.map((language) => {
-                    const option = getLanguageOption(language);
-                    if (!option) {
-                      return <span key={language}>{language}</span>;
-                    }
-                    return (
-                      <span
-                        key={option.code}
-                        className='inline-flex items-center justify-center rounded border border-slate-200 bg-white px-1.5 py-1'
-                        title={option.label}
-                      >
-                        <img
-                          src={option.flagSrc}
-                          alt={`${option.label} flag`}
-                          width={20}
-                          height={14}
-                          loading='lazy'
-                        />
-                      </span>
-                    );
-                  })
-                ) : (
-                  ADMIN_TABLE_EMPTY
-                )}
-              </div>
+              {renderLanguages(item)}
             </AdminDataTableCell>
           </>
         )}

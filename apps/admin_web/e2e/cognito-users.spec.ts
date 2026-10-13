@@ -22,6 +22,7 @@ test.describe('Cognito Users Panel', () => {
     await expect(
       managerRow.getByRole('cell', { name: 'manager@example.com', exact: true })
     ).toBeVisible();
+    await expect(managerRow.getByRole('img', { name: 'Email' })).toBeVisible();
     await expect(
       managerRow.getByText('Manager', { exact: true }).filter({ visible: true })
     ).toHaveCount(1);

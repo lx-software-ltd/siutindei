@@ -181,7 +181,7 @@ export function CognitoUsersPanel() {
       <ResourceTableShell
         ariaLabel={PAGE_NAME}
         rows={list.items}
-        getLabel={(item) => item.email || item.username || ADMIN_TABLE_EMPTY}
+        getLabel={(item) => item.email || item.username || 'User'}
         middleColumnCount={6}
         isLoading={list.isLoading}
         isLoadingMore={list.isLoadingMore}
@@ -211,19 +211,19 @@ export function CognitoUsersPanel() {
                 <AdminTableName>
                   {cognitoUser.email || cognitoUser.username || ''}
                 </AdminTableName>
-                <AdminDataTableCellMeta until='secondary'>
+                <AdminDataTableCellMeta until='secondary' label='Name'>
                   {adminTableText(cognitoUser.name)}
                 </AdminDataTableCellMeta>
                 <AdminDataTableCellMeta until='secondary'>
                   <IdentityProviderBadge username={cognitoUser.username} />
                 </AdminDataTableCellMeta>
-                <AdminDataTableCellMeta until='secondary'>
+                <AdminDataTableCellMeta until='secondary' label='Roles' empty={roles.length === 0 && !isCurrent}>
                   <UserRoleMarks roles={roles} isCurrent={isCurrent} />
                 </AdminDataTableCellMeta>
-                <AdminDataTableCellMeta until='secondary'>
+                <AdminDataTableCellMeta until='secondary' label='Created' empty={!cognitoUser.created_at}>
                   <AdminTableTime value={cognitoUser.created_at} />
                 </AdminDataTableCellMeta>
-                <AdminDataTableCellMeta until='tertiary'>
+                <AdminDataTableCellMeta until='tertiary' label='Last Login' empty={!cognitoUser.last_auth_time}>
                   <AdminTableTime value={cognitoUser.last_auth_time} />
                 </AdminDataTableCellMeta>
               </AdminDataTableCell>

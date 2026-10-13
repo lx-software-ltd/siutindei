@@ -443,10 +443,10 @@ export function NamesPanel() {
           <>
             <AdminDataTableCell>
               <AdminTableName>{item.current_value}</AdminTableName>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Record'>
                 {formatAdminTableLabel(item.entity_type)}
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminDataTableCellMeta until='tertiary' label='Rules'>
                 {formatAdminTableLabels(item.rules)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>

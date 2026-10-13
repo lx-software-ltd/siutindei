@@ -5,7 +5,7 @@ test.describe('Tickets Panel', () => {
     await adminPage.goto('/admin/dashboard?section=tickets');
     await expect(adminPage.getByRole('table', { name: 'Tickets' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Reviewed' })).toBeVisible();
-    await expect(adminPage.getByText(/^Reviewed /)).toHaveCount(0);
+    await expect(adminPage.getByText(/^Reviewed [A-Z][a-z]{2} /)).toHaveCount(0);
   });
 
   test('lists tickets without type, status, or search filters', async ({ adminPage }) => {

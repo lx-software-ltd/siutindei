@@ -1,16 +1,22 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
 import { clsx } from 'clsx';
 
 import { formatDateTime } from '@/lib/date-utils';
 
+import layout from './admin-table-cell-layout.json';
+
 /** Missing table value. Every role uses this, not a blank or a prose empty. */
 export const ADMIN_TABLE_EMPTY = '—';
 
-const LAYOUT_CLASS =
-  /^(w-\S+|pr-0|whitespace-nowrap|text-right|text-center|py-8)$/;
-
 /** Layout-only classes allowed on `AdminDataTableCell`. Content uses a role. */
+export function isAdminTableCellLayoutClass(token: string): boolean {
+  return (
+    layout.exact.includes(token) ||
+    layout.prefix.some((prefix) => token.startsWith(prefix) && token.length > prefix.length)
+  );
+}
+
 export function adminTableCellClassNameError(className: string | undefined): string | null {
   if (!className) {
     return null;
@@ -19,7 +25,7 @@ export function adminTableCellClassNameError(className: string | undefined): str
     if (!token) {
       continue;
     }
-    if (!LAYOUT_CLASS.test(token)) {
+    if (!isAdminTableCellLayoutClass(token)) {
       return `AdminDataTableCell class "${token}" is not a layout class. Use a table role component.`;
     }
   }
@@ -64,9 +70,28 @@ function isBlank(children: ReactNode): boolean {
   return children == null || (typeof children === 'string' && children.trim() === '');
 }
 
+function nameChildren(children: ReactNode): ReactNode {
+  if (isBlank(children)) {
+    return ADMIN_TABLE_EMPTY;
+  }
+  if (typeof children === 'string' && children.includes('@')) {
+    return children.split(/([@.])/).map((part, index) =>
+      part === '@' || part === '.' ? (
+        <Fragment key={index}>
+          <wbr />
+          {part}
+        </Fragment>
+      ) : (
+        part
+      )
+    );
+  }
+  return children;
+}
+
 /** Identifying label. One per row. */
 export function AdminTableName({ children }: { children: ReactNode }) {
-  return <span className='font-medium'>{isBlank(children) ? ADMIN_TABLE_EMPTY : children}</span>;
+  return <span className='break-words font-medium'>{nameChildren(children)}</span>;
 }
 
 /** An instant. `emphasis` is for the row whose identity is the time. */
@@ -78,14 +103,16 @@ export function AdminTableTime({
   emphasis?: boolean;
 }) {
   return (
-    <span className={clsx('text-slate-600', emphasis && 'font-medium')}>{formatDateTime(value)}</span>
+    <span className={clsx('admin-table-time text-slate-600', emphasis && 'font-medium')}>
+      {formatDateTime(value)}
+    </span>
   );
 }
 
 /** Opaque token: ticket id, actor, job id, place id, source id, key prefix. */
 export function AdminTableId({ children }: { children: ReactNode }) {
   return (
-    <span className='font-mono text-xs text-slate-600'>
+    <span className='admin-table-id font-mono text-xs text-slate-600'>
       {isBlank(children) ? ADMIN_TABLE_EMPTY : children}
     </span>
   );

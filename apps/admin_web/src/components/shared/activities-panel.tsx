@@ -595,7 +595,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
           <>
             <AdminDataTableCell>
               <AdminTableName>{item.name}</AdminTableName>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Category'>
                 {getCategoryPath(item.category_id)}
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='tertiary'>

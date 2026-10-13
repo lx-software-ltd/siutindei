@@ -36,6 +36,7 @@ import {
   AdminTableName,
   AdminTableNumber,
   formatAdminTableLabel,
+  formatAdminTablePercent,
 } from '../../ui/admin-table-value';
 import { CascadingAreaSelect } from '../../ui/cascading-area-select';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
@@ -718,13 +719,17 @@ export function LocationsPanel() {
               <AdminTableName>
                 {item.entity_name || formatAdminTableLabel(item.entity_type)}
               </AdminTableName>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Source'>
                 {adminTableText(item.source)}
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary'>
-                <AdminTableNumber>{item.confidence}</AdminTableNumber>
+              <AdminDataTableCellMeta
+                until='secondary'
+                label='Confidence'
+                empty={item.confidence == null}
+              >
+                <AdminTableNumber>{formatAdminTablePercent(item.confidence)}</AdminTableNumber>
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminDataTableCellMeta until='tertiary' label='Lookup'>
                 {adminTableText(item.proposed_location?.lookup?.grade)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
@@ -734,7 +739,7 @@ export function LocationsPanel() {
               {adminTableText(item.source)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              <AdminTableNumber>{item.confidence}</AdminTableNumber>
+              <AdminTableNumber>{formatAdminTablePercent(item.confidence)}</AdminTableNumber>
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {adminTableText(item.proposed_location?.lookup?.grade)}

@@ -393,7 +393,7 @@ export function ActivityCategoriesPanel() {
             <>
               <AdminDataTableCell>
                 <AdminTableName>{pathLabel}</AdminTableName>
-                <AdminDataTableCellMeta until='secondary'>
+                <AdminDataTableCellMeta until='secondary' label='Display Order' empty={item.display_order == null}>
                   <AdminTableNumber>{item.display_order}</AdminTableNumber>
                 </AdminDataTableCellMeta>
               </AdminDataTableCell>

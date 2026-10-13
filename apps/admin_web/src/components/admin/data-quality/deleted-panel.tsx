@@ -93,16 +93,16 @@ export function DeletedPanel() {
           <>
             <AdminDataTableCell>
               <AdminTableName>{item.name}</AdminTableName>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Place id' empty={!item.place_id}>
                 <AdminTableId>{item.place_id}</AdminTableId>
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Source'>
                 {adminTableText(item.source)}
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Deleted' empty={!item.deleted_at}>
                 <AdminTableTime value={item.deleted_at} />
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminDataTableCellMeta until='tertiary' label='Source id' empty={!item.source_id}>
                 <AdminTableId>{item.source_id}</AdminTableId>
               </AdminDataTableCellMeta>
             </AdminDataTableCell>

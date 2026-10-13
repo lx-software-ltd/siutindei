@@ -595,7 +595,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
           <>
             <AdminDataTableCell>
               <AdminTableName>{getLocationName(item.location_id)}</AdminTableName>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Activity'>
                 {getActivityName(item.activity_id)}
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='secondary'>

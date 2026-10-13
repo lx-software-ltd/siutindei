@@ -35,6 +35,7 @@ import {
   AdminTableId,
   AdminTableName,
   AdminTableNumber,
+  formatAdminTableLabel,
   formatAdminTablePercent,
 } from '../../ui/admin-table-value';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
@@ -650,25 +651,25 @@ export function CatalogPanel() {
           <>
             <AdminDataTableCell>
               <AdminTableName>{item.name}</AdminTableName>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Source'>
                 {adminTableText(item.source)}
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='secondary'>
-                <StatusBadge status={item.review_status.replaceAll('_', ' ')} />
+                <StatusBadge status={formatAdminTableLabel(item.review_status)} />
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Email'>
                 {adminTableText(item.email)}
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Phone'>
                 {adminTableText(item.phone_number)}
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminDataTableCellMeta until='secondary' label='Manager' empty={!item.manager_id}>
                 <AdminTableId>{item.manager_id}</AdminTableId>
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminDataTableCellMeta until='tertiary' label='Import job' empty={!item.import_job_id}>
                 <AdminTableId>{item.import_job_id}</AdminTableId>
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminDataTableCellMeta until='tertiary' label='Missing'>
                 {issueSummary(item)}
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='tertiary'>
@@ -679,7 +680,7 @@ export function CatalogPanel() {
               {adminTableText(item.source)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              <StatusBadge status={item.review_status.replaceAll('_', ' ')} />
+              <StatusBadge status={formatAdminTableLabel(item.review_status)} />
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               {adminTableText(item.email)}

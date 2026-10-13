@@ -391,10 +391,10 @@ export function ApiKeysPanel() {
               <AdminDataTableCellMeta until='secondary'>
                 <StatusBadge status={apiKey.status} />
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminDataTableCellMeta until='tertiary' label='Prefix' empty={!apiKey.key_prefix}>
                 <AdminTableId>{apiKey.key_prefix}</AdminTableId>
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminDataTableCellMeta until='tertiary' label='Expires' empty={!apiKey.expires_at}>
                 <AdminTableTime value={apiKey.expires_at} />
               </AdminDataTableCellMeta>
             </AdminDataTableCell>

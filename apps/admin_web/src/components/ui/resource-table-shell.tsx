@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { Children, Fragment, isValidElement, type ReactNode } from 'react';
 
 import { DeleteIcon } from '@/components/icons/action-icons';
 import { StatusBanner } from '@/components/status-banner';
@@ -10,6 +10,7 @@ import {
   AdminDataTableCell,
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
+  type AdminDataTableColumnPriority,
 } from './admin-data-table';
 import { ADMIN_TABLE_EMPTY, AdminTableName } from './admin-table-value';
 import { AdminExpandableRow } from './admin-expandable-row';
@@ -37,6 +38,22 @@ export function deleteRowActions(onDelete: () => void): ReactNode {
 
 export function rowActions(actions: AdminRowAction[]): ReactNode {
   return <AdminRowActions actions={actions} />;
+}
+
+function columnPrioritiesFromHead(head: ReactNode): AdminDataTableColumnPriority[] {
+  const nodes =
+    isValidElement<{ children?: ReactNode }>(head) && head.type === Fragment
+      ? Children.toArray(head.props.children)
+      : Children.toArray(head);
+  return nodes.flatMap((child) => {
+    if (!isValidElement<{ children?: ReactNode; priority?: AdminDataTableColumnPriority }>(child)) {
+      return [];
+    }
+    if (child.type === Fragment) {
+      return columnPrioritiesFromHead(child);
+    }
+    return [child.props.priority ?? 'primary'];
+  });
 }
 
 export interface ResourceTableShellProps<T extends { id: string }> {
@@ -105,9 +122,10 @@ export function ResourceTableShell<T extends { id: string }>({
   const hasLeading = Boolean(renderLeading || leadingHead);
   const columnCount =
     (hasLeading ? 1 : 0) + 1 + middleColumnCount + (hasActions ? 1 : 0);
+  const draftPriorities = columnPrioritiesFromHead(head);
 
   const draftCells = Array.from({ length: middleColumnCount }, (_, index) => (
-    <AdminDataTableCell key={index}>
+    <AdminDataTableCell key={index} priority={draftPriorities[index] ?? 'primary'}>
       {index === 0 ? <AdminTableName>{draftLabel}</AdminTableName> : ADMIN_TABLE_EMPTY}
     </AdminDataTableCell>
   ));

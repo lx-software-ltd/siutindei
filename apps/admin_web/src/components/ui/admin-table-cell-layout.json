@@ -1,0 +1,4 @@
+{
+  "exact": ["pr-0", "whitespace-nowrap", "text-right", "text-center", "py-8"],
+  "prefix": ["w-"]
+}

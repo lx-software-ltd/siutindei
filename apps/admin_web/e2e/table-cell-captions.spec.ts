@@ -51,7 +51,7 @@ test.describe('Listing captions on a phone', () => {
     await expect(partner.locator('span.md\\:hidden').filter({ hasText: 'Full access' })).toBeVisible();
     await expect(partner.locator('span.md\\:hidden').getByText('active', { exact: true })).toBeVisible();
     await expect(partner.locator('span.lg\\:hidden').filter({ hasText: 'stk_readkey1' })).toBeVisible();
-    await expect(partner.locator('span.lg\\:hidden').filter({ hasText: '—' })).toBeVisible();
+    await expect(partner.locator('span.lg\\:hidden').filter({ hasText: 'Expires —' })).toBeVisible();
     await partner.screenshot({ path: '/opt/cursor/artifacts/api-keys-phone-captions.png' });
 
     const revoked = table.getByRole('row', { name: /Old revoked key/ });
@@ -105,7 +105,7 @@ test.describe('Listing captions on a phone', () => {
     const row = table.getByRole('row', { name: /T00001/ });
     await expect(row.locator('span.md\\:hidden').filter({ hasText: 'T00001' })).toBeVisible();
     await expect(row.locator('span.md\\:hidden').filter({ hasText: 'pending@example.com' })).toBeVisible();
-    await expect(row.locator('span.lg\\:hidden').filter({ hasText: '—' })).toBeVisible();
+    await expect(row.locator('span.lg\\:hidden').filter({ hasText: 'Reviewed —' })).toBeVisible();
     await expect(row.getByText('District')).toHaveCount(0);
     await row.screenshot({ path: '/opt/cursor/artifacts/tickets-phone-captions.png' });
 
@@ -113,5 +113,14 @@ test.describe('Listing captions on a phone', () => {
     const detail = adminPage.getByRole('region', { name: /T00001/ });
     await expect(detail.getByText('Ticket ID', { exact: true })).toBeVisible();
     await expect(detail.getByText('T00001', { exact: true })).toBeVisible();
+  });
+
+  test('Activities draft row hides later columns on a phone', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=activities&org=org-1');
+    await adminPage.getByRole('button', { name: /New activity/ }).click();
+    const draft = adminPage.getByTestId('admin-row-new');
+    await expect(draft.getByText('New activity')).toBeVisible();
+    await expect(draft.getByText('—').filter({ visible: true })).toHaveCount(0);
+    await draft.screenshot({ path: '/opt/cursor/artifacts/activities-draft-phone.png' });
   });
 });
