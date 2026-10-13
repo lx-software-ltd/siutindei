@@ -470,10 +470,10 @@ export function CatalogPanel() {
       />
       {notice ? <StatusBanner kind='info'>{notice}</StatusBanner> : null}
       {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
-      {filterBar}
       <div className={view === 'map' ? undefined : 'hidden'}>
         {mapMounted ? (
         <Card>
+          {view === 'map' ? filterBar : null}
           <CatalogOrgMap
             pins={mapPins}
             missingPinCount={missingPinCount}
@@ -495,6 +495,7 @@ export function CatalogPanel() {
       {view === 'table' ? (
       <ResourceTableShell
         ariaLabel='Catalog'
+        filters={filterBar}
         rows={items}
         getLabel={(item) => item.name || `organization ${item.id}`}
         middleColumnCount={7}
