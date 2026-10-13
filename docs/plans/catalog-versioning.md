@@ -1,6 +1,6 @@
 # Plan: Catalog versioning
 
-**Status**: Implemented, with review fixes in revision `0048_catalog_version_fixes`
+**Status**: Implemented, with review fixes in revision `0049_catalog_version_fixes`
 **Zone**: red (Alembic revisions), then yellow for backend and admin
 
 ## Review fixes
@@ -24,7 +24,7 @@ be forgotten from the organization history so a later import can create
 them. Forgetting a record also strips contact fields from its snapshots.
 
 Backfill no longer uses `session_replication_role` or disables triggers.
-Revision `0048` fills missing history in batches of 200 and commits each
+Revision `0049` fills missing history in batches of 200 and commits each
 batch, so a retry continues where it stopped. Catalog triggers no-op
 while that flag is set; audit triggers keep running.
 
@@ -120,7 +120,7 @@ rows that are new to the file.
 
 ## How a version bump works
 
-Trigger set, all in revision `0047_catalog_versions`:
+Trigger set, all in revision `0048_catalog_versions`:
 
 - `BEFORE UPDATE` on each catalog table: when a tracked column
   differs and `NEW.version = OLD.version`, set
@@ -206,7 +206,9 @@ version-1 snapshot:
 - Organization: normalised name, description, name and description
   translations, the nine contact and social columns, `media_urls`
   (ordered), `logo_media_url`, `place_id`, `status`, `source`,
-  `source_id`, `source_url`, `source_note`, `description_source`.
+  `source_id`, `source_url`, `source_note`, `description_source`,
+  and `website`. A file that omits `website` keeps the version-1
+  value. A file that includes a different `website` does not match.
   Not `manager_id`: imports never write it on update and the catalog
   manager can change between files.
 - Activity: normalised name, description, translations, `age_min`
@@ -296,8 +298,10 @@ status; `allow_updates` keeps its meaning.
 
 Red, waits for explicit approval before any write:
 
-- `backend/db/alembic/versions/0047_catalog_versions.py`: columns,
-  table, triggers, grants, backfill.
+- `backend/db/alembic/versions/0048_catalog_versions.py`: columns,
+  table, triggers, and grants. It follows `0047_org_website`.
+- `backend/db/alembic/versions/0049_catalog_version_fixes.py`:
+  immutability grants and the batched backfill.
 
 Yellow, backend:
 
@@ -411,8 +415,9 @@ Green, docs:
 
 ## Order of work
 
-The approved implementation lands together. The migration is
-`0047_catalog_versions` (`0046_deleted_org_import` already exists).
+The approved implementation lands together. Catalog history is
+`0048_catalog_versions`, after `0047_org_website`. Review fixes are
+`0049_catalog_version_fixes`.
 
 ## Rollback
 
@@ -429,5 +434,5 @@ row, `allow_updates` lets the file win and records
 `admin_edits_overwritten`. Backfill prefers the `audit_log` insert.
 A merge snapshot name resolves to the survivor. Forgetting a deleted
 organization marks its tombstones `forgotten` so that import can
-create the identity again. Revision `0046_deleted_org_import` already
-exists, so this migration is `0047_catalog_versions`.
+create the identity again. `0047_org_website` already exists on main,
+so catalog history is `0048_catalog_versions`.

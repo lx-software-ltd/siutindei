@@ -110,7 +110,6 @@ def upsert_organization(
         "address",
         "lat",
         "lng",
-        "website",
         "phone",
         "name_zh",
         "description_zh",

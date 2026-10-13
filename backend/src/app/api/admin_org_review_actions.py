@@ -43,6 +43,7 @@ _BULK_FIELDS = {
     "phone_country_code",
     "phone_number",
     "email",
+    "website",
     "whatsapp",
     "facebook",
     "instagram",

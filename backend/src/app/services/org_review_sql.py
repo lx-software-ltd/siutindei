@@ -181,6 +181,7 @@ def _no_contact() -> ColumnElement[bool]:
         Organization.twitter,
         Organization.xiaohongshu,
         Organization.wechat,
+        Organization.website,
     )
     return (
         _blank(fields[0])
@@ -192,6 +193,7 @@ def _no_contact() -> ColumnElement[bool]:
         & _blank(fields[6])
         & _blank(fields[7])
         & _blank(fields[8])
+        & _blank(fields[9])
     )
 
 

@@ -127,6 +127,70 @@ def test_identical_reimport_is_unchanged(test_engine) -> None:
         assert found.version == 1
 
 
+def test_website_only_difference_is_an_update(test_engine) -> None:
+    name = f"Website Org {uuid4()}"
+    manager_id = "00000000-0000-0000-0000-000000000050"
+    with Session(test_engine) as session:
+        org = Organization(
+            name=name,
+            description="Original",
+            manager_id=manager_id,
+            website="https://old.example",
+        )
+        session.add(org)
+        session.flush()
+        _remember(session, org)
+        session.commit()
+        org_id = org.id
+
+    with Session(test_engine) as session:
+        summary, results = process_import_payload(
+            session,
+            _file(name, manager_id, website="https://new.example"),
+            [],
+            allow_org_updates=True,
+        )
+
+    assert results[0]["status"] == "updated"
+    assert summary["organizations"]["updated"] == 1
+    with Session(test_engine) as session:
+        found = session.get(Organization, org_id)
+        assert found is not None
+        assert found.website == "https://new.example"
+
+
+def test_omitted_website_stays_unchanged(test_engine) -> None:
+    name = f"Website Kept {uuid4()}"
+    manager_id = "00000000-0000-0000-0000-000000000051"
+    with Session(test_engine) as session:
+        org = Organization(
+            name=name,
+            description="Original",
+            manager_id=manager_id,
+            website="https://kept.example",
+        )
+        session.add(org)
+        session.flush()
+        _remember(session, org)
+        session.commit()
+        org_id = org.id
+
+    with Session(test_engine) as session:
+        _summary, results = process_import_payload(
+            session,
+            _file(name, manager_id),
+            [],
+            allow_org_updates=True,
+        )
+
+    assert results[0]["status"] == "unchanged"
+    with Session(test_engine) as session:
+        found = session.get(Organization, org_id)
+        assert found is not None
+        assert found.website == "https://kept.example"
+        assert found.version == 1
+
+
 def test_file_matching_version_1_keeps_admin_edit(test_engine) -> None:
     name = f"Edited Org {uuid4()}"
     manager_id = "00000000-0000-0000-0000-000000000042"

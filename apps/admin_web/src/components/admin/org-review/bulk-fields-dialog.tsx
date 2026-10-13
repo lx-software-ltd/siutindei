@@ -11,6 +11,7 @@ const FIELD_OPTIONS = [
   { key: 'description_source', label: 'Description source' },
   { key: 'manager_id', label: 'Manager id' },
   { key: 'email', label: 'Email' },
+  { key: 'website', label: 'Website' },
   { key: 'phone_country_code', label: 'Phone country' },
   { key: 'phone_number', label: 'Phone number' },
   { key: 'whatsapp', label: 'WhatsApp' },

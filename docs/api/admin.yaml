@@ -16,6 +16,7 @@ info:
     | name | 200 characters |
     | description | 5,000 characters |
     | email | 320 characters |
+    | website | 400 characters |
     | phone_country_code | 2 characters |
     | phone_number | 20 characters |
     | social handles / URLs | 64 (handles) / 2,048 (URLs) |
@@ -3740,9 +3741,11 @@ components:
           type: number
         website:
           type: string
+          maxLength: 400
           description: |
-            Accepted on board-flat orgs and recorded as a warning;
-            not stored on the organization.
+            Organization website. Stored on the organization. A blank
+            value clears it when updates are allowed. Skip mode leaves
+            an existing organization unchanged.
         phone:
           type: string
           description: |
@@ -4478,8 +4481,8 @@ components:
           description: |
             Whitelist for `set_fields`: status, manager_id, source,
             source_url, source_note, description_source, review_notes,
-            phone fields, email, and social fields. Only supplied keys
-            are written.
+            phone fields, email, website, and social fields. Only
+            supplied keys are written.
           additionalProperties: true
 
     OrgReviewBulkResult:
@@ -4565,6 +4568,11 @@ components:
           type: string
           maxLength: 320
           description: Contact email address
+        website:
+          type: string
+          maxLength: 400
+          nullable: true
+          description: The organization's own website.
         whatsapp:
           type: string
           maxLength: 2048
@@ -4715,6 +4723,11 @@ components:
           type: string
           maxLength: 320
           description: Contact email address
+        website:
+          type: string
+          maxLength: 400
+          nullable: true
+          description: The organization's own website.
         whatsapp:
           type: string
           maxLength: 2048
@@ -4857,6 +4870,11 @@ components:
           type: string
           nullable: true
           description: Contact email address
+        website:
+          type: string
+          nullable: true
+          maxLength: 400
+          description: The organization's own website.
         whatsapp:
           type: string
           nullable: true

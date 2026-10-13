@@ -56,6 +56,7 @@ def _parse_organization_contact_fields(body: dict[str, Any]) -> dict[str, Any]:
             "xiaohongshu",
         ),
         "wechat": _validate_social_value(body.get("wechat"), "wechat"),
+        "website": _parse_website(body.get("website")),
     }
 
 
@@ -79,6 +80,13 @@ def _apply_organization_contact_fields(
                 field,
                 _validate_social_value(body[field], field),
             )
+    if "website" in body:
+        entity.website = _parse_website(body.get("website"))
+
+
+def _parse_website(value: Any) -> Optional[str]:
+    """Parse an optional organization website."""
+    return _validate_string_length(value, "website", MAX_WEBSITE_LENGTH)
 
 
 def _ensure_unique_organization_name(
@@ -360,6 +368,7 @@ def _serialize_organization(entity: Organization) -> dict[str, Any]:
         "twitter": entity.twitter,
         "xiaohongshu": entity.xiaohongshu,
         "wechat": entity.wechat,
+        "website": entity.website,
         "media_urls": entity.media_urls or [],
         "logo_media_url": entity.logo_media_url,
         "place_id": entity.place_id,

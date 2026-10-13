@@ -38,6 +38,9 @@ Columns:
 - `twitter` (text, optional)
 - `xiaohongshu` (text, optional)
 - `wechat` (text, optional)
+- `website` (text, optional) — the organization's own site, at most
+  400 characters in the API. `source_url` stays the catalog page the
+  listing was taken from.
 - `media_urls` (text[], default empty array)
 - `logo_media_url` (text, optional)
 - `place_id` (text, optional) — Google Places id
@@ -106,6 +109,8 @@ Migration `0041_data_quality` adds `name_key` as nullable and fills it
 with a trigger, so existing seed inserts that omit the column stay
 valid. It also inserts the `name_fix_settings` singleton. No
 `seed_data.sql` change.
+Migration `0047_org_website` adds nullable `website`. Seed inserts
+omit the column and still run. No seed rows change.
 
 ## Table: organization_merges
 
@@ -780,7 +785,7 @@ and `DELETE`, plus `UPDATE` on `reason` and `related_id` only.
 Snapshot writes run as security-definer functions. `DELETE` of a
 committed row is rejected by `catalog_versions_delete_guard`.
 
-Backfill runs in revision `0048_catalog_version_fixes`, 200 rows at a
+Backfill runs in revision `0049_catalog_version_fixes`, 200 rows at a
 time, and commits each batch. It does not disable triggers and does
 not set `session_replication_role`. Catalog triggers no-op while
 `app.catalog_backfill` is on. Audit triggers keep running. A child

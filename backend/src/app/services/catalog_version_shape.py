@@ -37,6 +37,7 @@ ORG_SHAPE_KEYS = (
     "source_url",
     "source_note",
     "description_source",
+    "website",
 )
 ACTIVITY_SHAPE_KEYS = (
     "name",

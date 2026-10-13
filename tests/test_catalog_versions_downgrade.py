@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 _ROOT = Path(__file__).resolve().parents[1]
 _INI = _ROOT / "backend" / "db" / "alembic.ini"
 _SCRIPT = _ROOT / "backend" / "db" / "alembic"
-_READY = {"0047_catalog_versions", "0048_catalog_version_fixes"}
+_READY = {"0048_catalog_versions", "0049_catalog_version_fixes"}
 
 
 def test_downgrade_to_0046_removes_catalog_versions(test_engine) -> None:
@@ -55,5 +55,5 @@ def test_downgrade_to_0046_removes_catalog_versions(test_engine) -> None:
             )
             assert (
                 session.scalar(text("SELECT version_num FROM alembic_version"))
-                == "0048_catalog_version_fixes"
+                == "0049_catalog_version_fixes"
             )

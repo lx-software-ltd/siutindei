@@ -38,6 +38,7 @@ BULK_ORG_LIMIT = 200
 _CONTACT_FIELDS = (
     "phone_number",
     "email",
+    "website",
     "whatsapp",
     "facebook",
     "instagram",
@@ -223,7 +224,7 @@ def collect_issues(
             "warning",
             "organization",
             org_id,
-            "No phone, email, or social contact",
+            "No phone, email, website, or social contact",
         )
     note()
     if not organization.media_urls:

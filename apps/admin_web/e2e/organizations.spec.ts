@@ -29,6 +29,7 @@ test.describe('Organizations Panel', () => {
         .first()
     ).toBeVisible();
     await expect(adminPage.locator('#org-email')).toBeVisible();
+    await expect(adminPage.getByLabel('Website')).toBeVisible();
     await expect(adminPage.getByLabel('Phone country')).toBeVisible();
     await expect(adminPage.getByLabel('Phone number')).toBeVisible();
     await expect(adminPage.locator('#org-whatsapp')).toBeVisible();
@@ -132,6 +133,7 @@ test.describe('Organizations Panel', () => {
       .getByLabel('Description', { exact: true })
       .fill('This is a test organization description');
     await adminPage.getByLabel('Source URL').fill('https://neworg.example');
+    await adminPage.getByLabel('Website').fill('https://neworg.example/home');
     await adminPage.getByLabel('Source note').fill('Imported from the catalog');
 
     // Verify form is filled
@@ -141,6 +143,9 @@ test.describe('Organizations Panel', () => {
     );
     await expect(adminPage.getByLabel('Source URL')).toHaveValue(
       'https://neworg.example'
+    );
+    await expect(adminPage.getByLabel('Website')).toHaveValue(
+      'https://neworg.example/home'
     );
     await expect(adminPage.getByLabel('Source note')).toHaveValue(
       'Imported from the catalog'
@@ -192,6 +197,9 @@ test.describe('Organizations Panel', () => {
     );
     await expect(adminPage.getByLabel('Source URL')).toHaveValue(
       'https://lcsd.example/org-one'
+    );
+    await expect(adminPage.getByLabel('Website')).toHaveValue(
+      'https://org-one.example'
     );
     await expect(adminPage.getByLabel('Source note')).toHaveValue('Checked listing');
     await expect(adminPage.getByLabel('Source', { exact: true })).toHaveValue('lcsd');

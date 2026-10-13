@@ -91,6 +91,7 @@ their primary responsibilities.
   the session closes so `expire_on_commit` cannot 500 the response;
   matching is `place_id` then manager+name; catalog
   `name_zh` / `description_zh` map to translations.zh;
+  a catalog `website` is stored on the organization;
   re-imports update description/hours/price; `closed_permanently`
   updates an existing match only; `GET /v1/admin/imports/{job_id}`
   returns the stored result; `GET /v1/admin/imports` includes a

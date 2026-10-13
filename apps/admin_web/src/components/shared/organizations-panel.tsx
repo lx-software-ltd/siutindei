@@ -117,6 +117,7 @@ export function OrganizationsPanel({
       'name',
       'manager_id',
       'email',
+      'website',
       'phone_country_code',
       'phone_number',
       ...SOCIAL_FIELDS.map((field) => field.key),
@@ -201,6 +202,9 @@ export function OrganizationsPanel({
     if (email && !isValidEmail(email)) {
       return 'Email is invalid.';
     }
+    if (panel.formState.website.trim().length > 400) {
+      return 'Website must be at most 400 characters.';
+    }
     const phoneNumber = panel.formState.phone_number.trim();
     const phoneCountryCode = panel.formState.phone_country_code.trim();
     if (phoneNumber) {
@@ -262,6 +266,13 @@ export function OrganizationsPanel({
     }
     return isValidEmail(trimmed) ? '' : 'Enter a valid email address.';
   }, [panel.formState.email]);
+  const websiteError = useMemo(() => {
+    const trimmed = panel.formState.website.trim();
+    if (trimmed.length > 400) {
+      return 'Website must be at most 400 characters.';
+    }
+    return '';
+  }, [panel.formState.website]);
 
   const { phoneCountryError, phoneNumberError } = useMemo(() => {
     const phoneNumber = panel.formState.phone_number.trim();
@@ -359,6 +370,7 @@ export function OrganizationsPanel({
         : null,
       phone_number: phoneNumber || null,
       email: email || null,
+      website: form.website.trim() || null,
       whatsapp: normalizeSocialValue(form.whatsapp),
       facebook: normalizeSocialValue(form.facebook),
       instagram: normalizeSocialValue(form.instagram),
@@ -391,6 +403,7 @@ export function OrganizationsPanel({
   const showNameError = shouldShowError('name', nameError);
   const showManagerError = shouldShowError('manager_id', managerError);
   const showEmailError = shouldShowError('email', emailError);
+  const showWebsiteError = shouldShowError('website', websiteError);
   const showPhoneCountryError = shouldShowError(
     'phone_country_code',
     phoneCountryError
@@ -546,6 +559,28 @@ export function OrganizationsPanel({
                 placeholder='contact@example.com'
                 className={showEmailError ? errorInputClassName : ''}
                 aria-invalid={showEmailError || undefined}
+              />
+            </AdminField>
+            <AdminField
+              label='Website'
+              htmlFor='org-website'
+              span={2}
+              error={showWebsiteError ? websiteError : undefined}
+            >
+              <Input
+                id='org-website'
+                type='text'
+                value={panel.formState.website}
+                onChange={(e) => {
+                  markTouched('website');
+                  panel.setFormState((prev) => ({
+                    ...prev,
+                    website: e.target.value,
+                  }));
+                }}
+                placeholder='https://example.com'
+                className={showWebsiteError ? errorInputClassName : ''}
+                aria-invalid={showWebsiteError || undefined}
               />
             </AdminField>
             <AdminField
