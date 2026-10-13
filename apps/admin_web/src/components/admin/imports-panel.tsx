@@ -10,11 +10,10 @@ import {
   runAdminImport,
   type AdminImportResponse,
 } from '../../lib/api-client';
-import { AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminInputCard } from '../ui/admin-input-card';
 import { AdminTabStrip } from '../ui/admin-tab-strip';
 import { Button } from '../ui/button';
-import { Card } from '../ui/card';
 import { FileUploadButton } from '../ui/file-upload-button';
 import { Input } from '../ui/input';
 import { StatusBanner } from '../status-banner';
@@ -206,33 +205,32 @@ export function ImportsPanel() {
       {activeTab === 'history' && <ImportHistoryPanel />}
       {activeTab === 'import' && (
         <>
-          <Card>
-            <h2 className='sr-only'>Imports</h2>
-            <AdminEditorPanel
-              status={
-                importError ? (
-                  <StatusBanner kind='error'>
-                    {importError}
-                  </StatusBanner>
-                ) : null
-              }
-              actions={
-                <Button
-                  type='button'
-                  onClick={() => {
-                    void handleImport();
-                  }}
-                  disabled={!selectedFile}
-                  loading={isImportBusy}
-                  loadingLabel={importLoadingLabel}
-                >
-                  Upload & Import
-                </Button>
-              }
-            >
-              <p className='text-sm text-slate-600'>
-                Upload a JSON file to upsert organizations and related data.
-              </p>
+          <AdminInputCard
+            title='Imports'
+            status={
+              importError ? (
+                <StatusBanner kind='error'>
+                  {importError}
+                </StatusBanner>
+              ) : null
+            }
+            actions={
+              <Button
+                type='button'
+                onClick={() => {
+                  void handleImport();
+                }}
+                disabled={!selectedFile}
+                loading={isImportBusy}
+                loadingLabel={importLoadingLabel}
+              >
+                Upload & Import
+              </Button>
+            }
+          >
+            <p className='text-sm text-slate-600'>
+              Upload a JSON file to upsert organizations and related data.
+            </p>
               <AdminFieldGrid columns={1}>
                 <AdminField
                   label='JSON file'
@@ -267,7 +265,6 @@ export function ImportsPanel() {
                   </label>
                 </AdminField>
               </AdminFieldGrid>
-            </AdminEditorPanel>
             {importResult && (
               <div className='mt-4 space-y-4 rounded-lg border border-slate-200 p-4'>
                 {importResult.id &&
@@ -353,59 +350,58 @@ export function ImportsPanel() {
                 )}
               </div>
             )}
-          </Card>
+          </AdminInputCard>
 
-          <Card>
-            <h2 className='sr-only'>Exports</h2>
-            <AdminEditorPanel
-              status={
-                <>
-                  {exportError ? (
-                    <StatusBanner kind='error'>
-                      {exportError}
-                    </StatusBanner>
-                  ) : null}
-                  {exportWarnings.length > 0 ? (
-                    <StatusBanner kind='info'>
-                      {exportWarnings.length} warning(s) encountered. See file
-                      for details.
-                    </StatusBanner>
-                  ) : null}
-                </>
-              }
-              actions={
-                <>
-                  <Button
-                    type='button'
-                    onClick={() => {
-                      void handleExport();
-                    }}
-                    disabled={isExportBusy}
-                    loading={isExportBusy && exportTarget === 'all'}
-                    loadingLabel='Exporting…'
-                  >
-                    Export all
-                  </Button>
-                  <Button
-                    type='button'
-                    variant='secondary'
-                    onClick={() => {
-                      if (selectedOrgName) {
-                        void handleExport(selectedOrgName);
-                      }
-                    }}
-                    disabled={isExportBusy || !selectedOrgName}
-                    loading={isExportBusy && exportTarget === 'selected'}
-                    loadingLabel='Exporting…'
-                  >
-                    Export selected
-                  </Button>
-                </>
-              }
-            >
-              <p className='text-sm text-slate-600'>
-                Download the current dataset as a JSON file.
-              </p>
+          <AdminInputCard
+            title='Exports'
+            status={
+              <>
+                {exportError ? (
+                  <StatusBanner kind='error'>
+                    {exportError}
+                  </StatusBanner>
+                ) : null}
+                {exportWarnings.length > 0 ? (
+                  <StatusBanner kind='info'>
+                    {exportWarnings.length} warning(s) encountered. See file
+                    for details.
+                  </StatusBanner>
+                ) : null}
+              </>
+            }
+            actions={
+              <>
+                <Button
+                  type='button'
+                  onClick={() => {
+                    void handleExport();
+                  }}
+                  disabled={isExportBusy}
+                  loading={isExportBusy && exportTarget === 'all'}
+                  loadingLabel='Exporting…'
+                >
+                  Export all
+                </Button>
+                <Button
+                  type='button'
+                  variant='secondary'
+                  onClick={() => {
+                    if (selectedOrgName) {
+                      void handleExport(selectedOrgName);
+                    }
+                  }}
+                  disabled={isExportBusy || !selectedOrgName}
+                  loading={isExportBusy && exportTarget === 'selected'}
+                  loadingLabel='Exporting…'
+                >
+                  Export selected
+                </Button>
+              </>
+            }
+          >
+            <p className='text-sm text-slate-600'>
+              Download the current dataset as a JSON file.
+            </p>
               <AdminFieldGrid columns={1}>
                 <AdminField htmlFor='admin-export-org'>
                   <Input
@@ -417,8 +413,7 @@ export function ImportsPanel() {
                   />
                 </AdminField>
               </AdminFieldGrid>
-            </AdminEditorPanel>
-          </Card>
+          </AdminInputCard>
         </>
       )}
     </div>

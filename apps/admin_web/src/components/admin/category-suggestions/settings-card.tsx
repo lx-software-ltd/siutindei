@@ -8,10 +8,9 @@ import {
   updateCategorySuggestionSettings,
   type CategorySuggestionSettings,
 } from '../../../lib/api-client-category-suggestions';
-import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../../ui/admin-field-grid';
+import { AdminInputCard } from '../../ui/admin-input-card';
 import { Button } from '../../ui/button';
-import { Card } from '../../ui/card';
 import { Input } from '../../ui/input';
 import { StatusBanner } from '../../status-banner';
 
@@ -88,69 +87,66 @@ export function CategorySuggestionSettingsCard() {
 
   if (!settings) {
     return (
-      <Card>
-        {error ? (
-          <StatusBanner kind='error'>
-            {error}
-          </StatusBanner>
-        ) : (
-          <p className='text-sm text-slate-600'>Loading settings...</p>
-        )}
-      </Card>
+      <AdminInputCard
+        title='Suggestion settings'
+        status={
+          error ? (
+            <StatusBanner kind='error'>
+              {error}
+            </StatusBanner>
+          ) : null
+        }
+      >
+        <p className='text-sm text-slate-600'>Loading settings...</p>
+      </AdminInputCard>
     );
   }
 
   const isSaving = pending !== null;
 
   return (
-    <Card>
-      <AdminEditorPanel
-        status={
-          <>
-            {error ? (
-              <StatusBanner kind='error'>
-                {error}
-              </StatusBanner>
-            ) : null}
-            {notice ? (
-              <StatusBanner kind='saved'>
-                {notice}
-              </StatusBanner>
-            ) : null}
-          </>
-        }
-        actions={
-          <>
-            <Button
-              type='button'
-              onClick={() => void save()}
-              disabled={isSaving}
-              loading={pending === 'save'}
-              loadingLabel='Saving…'
-            >
-              Save settings
-            </Button>
-            <Button
-              type='button'
-              variant='secondary'
-              onClick={() => void testModel()}
-              disabled={isSaving}
-              loading={pending === 'test'}
-              loadingLabel='Testing…'
-            >
-              Test model
-            </Button>
-          </>
-        }
-      >
-        <AdminFieldGrid columns={2}>
-          <AdminField label='Suggestion settings' span='full'>
-            <p className='text-sm text-slate-600'>
-              Unknown category names are captured unless you turn this off.
-              Saved model and fallbacks
-              apply to the next enrichment. The test call is one short ping.
-            </p>
-          </AdminField>
+    <AdminInputCard
+      title='Suggestion settings'
+      description='Unknown category names are captured unless you turn this off. Saved model and fallbacks apply to the next enrichment. The test call is one short ping.'
+      status={
+        <>
+          {error ? (
+            <StatusBanner kind='error'>
+              {error}
+            </StatusBanner>
+          ) : null}
+          {notice ? (
+            <StatusBanner kind='saved'>
+              {notice}
+            </StatusBanner>
+          ) : null}
+        </>
+      }
+      actions={
+        <>
+          <Button
+            type='button'
+            onClick={() => void save()}
+            disabled={isSaving}
+            loading={pending === 'save'}
+            loadingLabel='Saving…'
+          >
+            Save settings
+          </Button>
+          <Button
+            type='button'
+            variant='secondary'
+            onClick={() => void testModel()}
+            disabled={isSaving}
+            loading={pending === 'test'}
+            loadingLabel='Testing…'
+          >
+            Test model
+          </Button>
+        </>
+      }
+    >
+      <AdminFieldGrid columns={2}>
           <AdminField span='full'>
             <label className='flex items-center gap-2 text-sm'>
               <input
@@ -269,8 +265,7 @@ export function CategorySuggestionSettingsCard() {
               }
             />
           </AdminField>
-        </AdminFieldGrid>
-      </AdminEditorPanel>
-    </Card>
+      </AdminFieldGrid>
+    </AdminInputCard>
   );
 }

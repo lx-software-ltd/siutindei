@@ -6,6 +6,7 @@ test.describe('Media Panel', () => {
     await expect(
       adminPage.getByRole('heading', { name: 'Test Organization 1' })
     ).toBeVisible();
+    await expect(adminPage.getByRole('heading', { name: 'Media' })).toBeVisible();
     await expect(adminPage.getByText('Media v1')).toBeVisible();
     await adminPage.getByRole('button', { name: 'History' }).click();
     const history = adminPage.getByTestId('version-history-media-org-1-disclosure');

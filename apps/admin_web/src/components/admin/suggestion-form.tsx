@@ -15,8 +15,8 @@ import {
 } from '../../lib/api-client-user';
 import { AddressAutocomplete } from '../ui/address-autocomplete';
 import { AdminField } from '../ui/admin-field-grid';
+import { AdminInputCard } from '../ui/admin-input-card';
 import { Button } from '../ui/button';
-import { Card } from '../ui/card';
 import { CascadingAreaSelect } from '../ui/cascading-area-select';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
@@ -145,19 +145,29 @@ export function SuggestionForm({ onSuggestionSubmitted }: SuggestionFormProps) {
   };
 
   return (
-    <Card
-      title='Suggest a Place'
-      description='Know a great place for kids activities? Let us know about it!'
-    >
-      {error && (
-        <div className='mb-4'>
-          <StatusBanner kind='error'>
-            {error}
-          </StatusBanner>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className='space-y-4'>
+    <form onSubmit={handleSubmit}>
+      <AdminInputCard
+        title='Suggest a place'
+        description='Know a great place for kids activities? Let us know about it!'
+        status={
+          error ? (
+            <StatusBanner kind='error'>
+              {error}
+            </StatusBanner>
+          ) : null
+        }
+        actions={
+          <Button
+            type='submit'
+            variant='primary'
+            disabled={!organizationName.trim()}
+            loading={isSubmitting}
+            loadingLabel='Submitting…'
+          >
+            Submit Suggestion
+          </Button>
+        }
+      >
         <AdminField
           label='Organization/Place Name'
           htmlFor='organization-name'
@@ -226,19 +236,7 @@ export function SuggestionForm({ onSuggestionSubmitted }: SuggestionFormProps) {
           />
         </AdminField>
 
-        <div className='pt-2'>
-          <Button
-            type='submit'
-            variant='primary'
-            disabled={!organizationName.trim()}
-            loading={isSubmitting}
-            loadingLabel='Submitting…'
-            className='w-full sm:w-auto'
-          >
-            Submit Suggestion
-          </Button>
-        </div>
-      </form>
-    </Card>
+      </AdminInputCard>
+    </form>
   );
 }

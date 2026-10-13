@@ -20,16 +20,16 @@ import {
 import type { Organization } from '../../types/admin';
 import { OrganizationMergeDialog } from '../admin/data-quality/organization-merge-dialog';
 import { OrganizationReadiness } from '../admin/organization-readiness';
-import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
+import { OrganizationStatusBadges } from '../admin/organization-workspace-title';
 import { VersionHistory } from '../admin/version-history';
 import { WorkspaceEmpty } from '../admin/workspace-empty';
 import { useAuth } from '../auth-provider';
 import { Button } from '../ui/button';
-import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminEditorActions } from '../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
+import { AdminInputCard } from '../ui/admin-input-card';
 import { Input } from '../ui/input';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
-import { Card } from '../ui/card';
 import { Select } from '../ui/select';
 import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
@@ -416,61 +416,8 @@ export function OrganizationsPanel({
   const showSocialError = (key: SocialFieldKey) =>
     shouldShowError(key, socialErrors[key]);
 
-  const detail = (
-    <AdminEditorPanel
-      status={
-        panel.error ? (
-          <StatusBanner kind='error'>
-            {panel.error}
-          </StatusBanner>
-        ) : null
-      }
-      actions={
-        <AdminEditorActions
-          mode={panel.editorMode}
-          onSubmit={handleSubmit}
-          isSaving={panel.isSaving}
-        >
-          {isAdmin && panel.editingId ? (
-            <Button
-              type='button'
-              variant='secondary'
-              onClick={() => {
-                const current = panel.items.find(
-                  (item) => item.id === panel.editingId
-                );
-                if (current) {
-                  setMergeAnchor({ id: current.id, name: current.name });
-                }
-              }}
-            >
-              Merge into…
-            </Button>
-          ) : null}
-          {panel.editingId ? (
-            <Button
-              type='button'
-              variant='danger'
-              onClick={() => {
-                const current = panel.items.find(
-                  (item) => item.id === panel.editingId
-                );
-                if (!current) {
-                  return;
-                }
-                void panel.handleDelete(current).then((removed) => {
-                  if (removed && isManager) {
-                    onOrganizationRemoved?.();
-                  }
-                });
-              }}
-            >
-              Delete
-            </Button>
-          ) : null}
-        </AdminEditorActions>
-      }
-    >
+  const fields = (
+    <>
       <AdminFieldGrid columns={2}>
             <AdminField error={showNameError ? nameError : undefined}>
               <LanguageToggleInput
@@ -774,7 +721,7 @@ export function OrganizationsPanel({
           }
         />
       ) : null}
-    </AdminEditorPanel>
+    </>
   );
 
   if (!editorOpen) {
@@ -787,12 +734,10 @@ export function OrganizationsPanel({
     }
     if (isManager) {
       return (
-        <Card
+        <AdminInputCard
           title='No organization is assigned'
           description='This account does not have an organization to manage.'
-        >
-          {null}
-        </Card>
+        />
       );
     }
     return (
@@ -812,16 +757,60 @@ export function OrganizationsPanel({
 
   return (
     <div className='space-y-4'>
-      {current ? (
-        <OrganizationWorkspaceTitle
-          mode={mode}
-          orgId={current.id}
-          organization={current}
-        />
-      ) : (
-        <h2 className='text-lg font-semibold text-slate-900'>New organization</h2>
-      )}
-      <Card>{detail}</Card>
+      <AdminInputCard
+        title={current?.name?.trim() || 'New organization'}
+        titleAccessory={
+          current ? <OrganizationStatusBadges organization={current} /> : undefined
+        }
+        status={
+          panel.error ? (
+            <StatusBanner kind='error'>
+              {panel.error}
+            </StatusBanner>
+          ) : null
+        }
+        actions={
+          <AdminEditorActions
+            mode={panel.editorMode}
+            onSubmit={handleSubmit}
+            isSaving={panel.isSaving}
+          >
+            {isAdmin && panel.editingId ? (
+              <Button
+                type='button'
+                variant='secondary'
+                onClick={() => {
+                  if (current) {
+                    setMergeAnchor({ id: current.id, name: current.name });
+                  }
+                }}
+              >
+                Merge into…
+              </Button>
+            ) : null}
+            {panel.editingId ? (
+              <Button
+                type='button'
+                variant='danger'
+                onClick={() => {
+                  if (!current) {
+                    return;
+                  }
+                  void panel.handleDelete(current).then((removed) => {
+                    if (removed && isManager) {
+                      onOrganizationRemoved?.();
+                    }
+                  });
+                }}
+              >
+                Delete
+              </Button>
+            ) : null}
+          </AdminEditorActions>
+        }
+      >
+        {fields}
+      </AdminInputCard>
       {isAdmin && panel.editingId ? (
         <OrganizationReadiness orgId={panel.editingId} />
       ) : null}

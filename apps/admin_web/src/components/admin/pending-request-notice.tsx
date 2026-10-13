@@ -3,10 +3,9 @@
 import type { Ticket } from '../../lib/api-client-user';
 import { formatDateTime } from '../../lib/date-utils';
 import { StatusBanner } from '../status-banner';
-import { AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminInputCard } from '../ui/admin-input-card';
 import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
-import { Card } from '../ui/card';
 import { StatusBadge } from '../ui/status-badge';
 
 interface PendingRequestNoticeProps {
@@ -19,12 +18,11 @@ export function PendingRequestNotice({ request }: PendingRequestNoticeProps) {
       <StatusBanner kind='pending-review'>
         Your organization access request has been submitted and is pending review.
       </StatusBanner>
-      <Card
-        title='Your Request Details'
+      <AdminInputCard
+        title='Your request details'
         description='An administrator will review your request and get back to you.'
       >
-        <AdminEditorPanel>
-          <AdminFieldGrid columns={2}>
+        <AdminFieldGrid columns={2}>
             <AdminReadOnlyValue label='Ticket ID' mono>
               {request.ticket_id}
             </AdminReadOnlyValue>
@@ -43,13 +41,12 @@ export function PendingRequestNotice({ request }: PendingRequestNoticeProps) {
               {formatDateTime(request.created_at)}
             </AdminReadOnlyValue>
           </AdminFieldGrid>
-          <p className='text-sm text-slate-600'>
-            You will be notified once your request has been reviewed. In the
-            meantime, you cannot submit another request. If you have any
-            questions, please contact support.
-          </p>
-        </AdminEditorPanel>
-      </Card>
+        <p className='text-sm text-slate-600'>
+          You will be notified once your request has been reviewed. In the
+          meantime, you cannot submit another request. If you have any
+          questions, please contact support.
+        </p>
+      </AdminInputCard>
     </div>
   );
 }

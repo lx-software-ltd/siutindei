@@ -29,6 +29,7 @@ import { AdminDataTableCell, AdminDataTableHeadCell } from '../../ui/admin-data-
 import { CascadingAreaSelect } from '../../ui/cascading-area-select';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../../ui/admin-field-grid';
+import { AdminInputCard } from '../../ui/admin-input-card';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -713,12 +714,15 @@ export function LocationsPanel() {
         )}
       />
       {settings ? (
-        <div className='space-y-3 rounded-lg border border-slate-200 bg-white p-4'>
-          <h3 className='text-sm font-medium text-slate-900'>Model budget</h3>
-          <p className='text-sm text-slate-600'>
-            This month {summaryQuery.data?.month_cost_usd ?? 0} of{' '}
-            {settings.monthly_cost_limit_usd} USD. Category checks are not counted.
-          </p>
+        <AdminInputCard
+          title='Model budget'
+          description={`This month ${summaryQuery.data?.month_cost_usd ?? 0} of ${settings.monthly_cost_limit_usd} USD. Category checks are not counted.`}
+          actions={
+            <Button type='button' variant='secondary' onClick={() => void saveSettings()}>
+              Save budget
+            </Button>
+          }
+        >
           <AdminField label='Monthly limit (USD)' htmlFor='location-fix-budget'>
             <Input
               id='location-fix-budget'
@@ -727,10 +731,7 @@ export function LocationsPanel() {
               onChange={(event) => setDraftLimit(event.target.value)}
             />
           </AdminField>
-          <Button type='button' variant='secondary' onClick={() => void saveSettings()}>
-            Save budget
-          </Button>
-        </div>
+        </AdminInputCard>
       ) : null}
     </div>
   );
