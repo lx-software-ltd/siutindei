@@ -7,7 +7,7 @@ description: Build or change an admin list screen using the table-first expand-i
 
 Build list screens from `apps/admin_web/src/components/ui/`.
 
-- Page order is tabs (if any), then one untitled white card (`AdminRecordTable`) of filter row, action row (`toolbar`), table, and Load more. Cards after the table use a title. Workspace pages show the open organization's name and status badges above that card. A new organization uses the heading "New organization" with no badges.
+- Page order is tabs (if any), then one untitled white card (`AdminRecordTable`) of filter row, action row (`toolbar`), table, and Load more. Cards after the table use a title. Workspace pages show the open organization's name and status badges above that card. A new organization uses the heading "New organization" with no badges. Page surfaces use `Card` (`cardSurfaceClass`). Do not hand-write `rounded-lg border border-slate-200 bg-white`.
 - Filters (`AdminFilterBar` + `AdminFilterField`) sit inside the table card. `AdminCreateButton` spells out its label at every breakpoint. Filters apply on change. Text filters are debounced. Do not render Apply or Clear.
 - Rows expand in place (`AdminExpandableRow` + `useExpandedRecord`). One row is open. Do not put `border-x-*` on expandable rows. Create inserts a draft row (`DRAFT_RECORD_ID`, URL value `new`).
 - Editors (`AdminEditorPanel` + `AdminEditorActions`) have no title and no Cancel button. Fields use `AdminField` inside `AdminFieldGrid`. Field errors are the `error` prop (`AdminInlineError`). Do not hand-write `text-xs` or `text-sm` with `text-red-600`. Read-only details use `AdminReadOnlyValue`. Unsaved edits use `AdminDiscardChangesDialog`.

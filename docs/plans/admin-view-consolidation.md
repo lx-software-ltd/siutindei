@@ -9,6 +9,8 @@ Tighten admin list and form chrome: unlabeled filters with sentence-case empty o
 
 Follow-up: Feedback tab `Labels`; drop Suggestions helper copy; Catalog filters and New organization live inside the table card. Page shape is tabs (if any), then a table card of filter row / action row / table / Load more, then titled cards.
 
+Follow-up: every page surface (table, form, KPI, empty, after-table) uses the `Card` primitive / `cardSurfaceClass`. Do not hand-write `rounded-lg border border-slate-200 bg-white`.
+
 ## Non-goals
 
 - Backend audit serialization or catalog-version APIs
