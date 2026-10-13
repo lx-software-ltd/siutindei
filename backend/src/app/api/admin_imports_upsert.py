@@ -145,7 +145,10 @@ def upsert_organization(
         if allow_updates:
             guard_import_organization_update(existing, body)
     if terminal:
-        assert existing is not None
+        if existing is None:
+            raise RuntimeError(
+                "catalog version gate returned a status without an organization"
+            )
         return existing, terminal
 
     if existing:
