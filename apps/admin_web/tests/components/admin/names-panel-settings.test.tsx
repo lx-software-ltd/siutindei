@@ -100,7 +100,7 @@ describe('NamesPanel settings lists', () => {
     const user = userEvent.setup();
     render(<NamesPanel />, { wrapper });
     const heading = await screen.findByRole('heading', { name: 'Rules' });
-    expect(heading.parentElement).toHaveClass('bg-white');
+    expect(heading.closest('section')).toHaveClass('bg-white');
     const exceptions = screen.getByLabelText('Words to leave in capitals');
     expect(exceptions.tagName).toBe('TEXTAREA');
     expect(exceptions).toHaveAttribute('rows', '3');

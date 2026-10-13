@@ -31,6 +31,7 @@ import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../../ui/admin-field-grid';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
 import { Button } from '../../ui/button';
+import { Card } from '../../ui/card';
 import { Input } from '../../ui/input';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { Select } from '../../ui/select';
@@ -713,12 +714,11 @@ export function LocationsPanel() {
         )}
       />
       {settings ? (
-        <div className='space-y-3 rounded-lg border border-slate-200 bg-white p-4'>
-          <h3 className='text-sm font-medium text-slate-900'>Model budget</h3>
-          <p className='text-sm text-slate-600'>
-            This month {summaryQuery.data?.month_cost_usd ?? 0} of{' '}
-            {settings.monthly_cost_limit_usd} USD. Category checks are not counted.
-          </p>
+        <Card
+          title='Model budget'
+          description={`This month ${summaryQuery.data?.month_cost_usd ?? 0} of ${settings.monthly_cost_limit_usd} USD. Category checks are not counted.`}
+          className='space-y-3'
+        >
           <AdminField label='Monthly limit (USD)' htmlFor='location-fix-budget'>
             <Input
               id='location-fix-budget'
@@ -730,7 +730,7 @@ export function LocationsPanel() {
           <Button type='button' variant='secondary' onClick={() => void saveSettings()}>
             Save budget
           </Button>
-        </div>
+        </Card>
       ) : null}
     </div>
   );

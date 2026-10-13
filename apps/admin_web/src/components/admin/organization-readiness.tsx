@@ -131,13 +131,10 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
   const blockers = detail?.issues.filter((issue) => issue.severity === 'blocker') ?? [];
 
   return (
-    <Card>
-      <h2 className='text-sm font-semibold text-slate-900'>Readiness</h2>
-      <p className='mt-1 text-sm text-slate-600'>
-        Imported, created, and suggested organizations stay in review until you
-        release them. Public search keeps current listings until
-        ORG_REVIEW_GATE_ENABLED is turned on.
-      </p>
+    <Card
+      title='Readiness'
+      description='Imported, created, and suggested organizations stay in review until you release them. Public search keeps current listings until ORG_REVIEW_GATE_ENABLED is turned on.'
+    >
       {error ? (
         <div className='mt-3'>
           <StatusBanner kind='error'>

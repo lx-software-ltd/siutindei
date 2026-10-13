@@ -787,14 +787,10 @@ export function OrganizationsPanel({
     }
     if (isManager) {
       return (
-        <div className='rounded-lg border border-slate-200 bg-white p-6'>
-          <p className='text-base font-semibold text-slate-900'>
-            No organization is assigned
-          </p>
-          <p className='mt-1 text-sm text-slate-600'>
-            This account does not have an organization to manage.
-          </p>
-        </div>
+        <Card
+          title='No organization is assigned'
+          description='This account does not have an organization to manage.'
+        />
       );
     }
     return (
