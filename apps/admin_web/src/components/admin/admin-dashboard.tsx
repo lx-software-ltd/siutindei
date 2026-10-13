@@ -6,6 +6,7 @@ import { useAdminSectionQuery } from '@/hooks/use-admin-section-query';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { usePrefetchAdminSection } from '@/hooks/use-prefetch-admin-section';
 import { buildAdminNavSections } from '@/lib/admin-nav-sections';
+import { adminTabLabel } from '@/lib/admin-page-name';
 
 import { AppShell } from '../app-shell';
 import { useAuth } from '../auth-provider';
@@ -75,8 +76,8 @@ const sectionLabels = buildAdminNavSections([
 
 const recognizedSections = [
   ...sectionLabels,
-  { key: 'category-suggestions', label: 'Suggestions' },
-  { key: 'feedback-labels', label: 'Feedback labels' },
+  { key: 'category-suggestions', label: adminTabLabel.suggestions },
+  { key: 'feedback-labels', label: adminTabLabel.labels },
 ];
 
 export function AdminDashboard() {

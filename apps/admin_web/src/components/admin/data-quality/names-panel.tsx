@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useBulkRowSelection } from '../../../hooks/use-bulk-row-selection';
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
-import { formatAdminPageName } from '../../../lib/admin-page-name';
+import { adminTabLabel, formatAdminPageName } from '../../../lib/admin-page-name';
 import { getAdminQueryClient } from '../../../lib/admin-query-client';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { ApiError } from '../../../lib/api-client';
@@ -39,7 +39,7 @@ function splitNameSettingList(value: string): string[] {
   return value.split(/\s+/).filter(Boolean);
 }
 
-const PAGE_NAME = formatAdminPageName('Data quality', 'Names');
+const PAGE_NAME = formatAdminPageName('Data quality', adminTabLabel.names);
 
 const NAME_RULES = [
   'html_entities',
@@ -139,7 +139,11 @@ export function NamesPanel() {
   });
   const open = listed ?? detailQuery.data ?? null;
   const pending = summaryQuery.data?.by_status.pending ?? 0;
-  const summary = summaryQuery.data ? `${pending} pending` : 'No pending names.';
+  const summary = summaryQuery.isPending
+    ? 'Loading…'
+    : summaryQuery.data
+      ? `${pending} pending`
+      : 'No pending names.';
 
   async function sweep(reviewScope: 'pending_review' | 'all') {
     setScanningScope(reviewScope);
@@ -437,6 +441,7 @@ export function NamesPanel() {
       {settings ? (
         <AdminInputCard
           title='Rules'
+          titleLevel='h3'
           actions={
             <Button type='button' variant='secondary' onClick={() => void saveSettings()}>
               Save rules

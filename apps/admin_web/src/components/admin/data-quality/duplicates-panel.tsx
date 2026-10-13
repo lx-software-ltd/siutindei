@@ -6,7 +6,7 @@ import { useRef, useState } from 'react';
 
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
-import { formatAdminPageName } from '../../../lib/admin-page-name';
+import { adminTabLabel, formatAdminPageName } from '../../../lib/admin-page-name';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import {
   dismissOrgDuplicates,
@@ -25,7 +25,7 @@ import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { Select } from '../../ui/select';
 import { OrganizationMergeEditor } from './organization-merge-editor';
 
-const PAGE_NAME = formatAdminPageName('Data quality', 'Duplicates');
+const PAGE_NAME = formatAdminPageName('Data quality', adminTabLabel.duplicates);
 
 interface DuplicateFilters {
   q: string;

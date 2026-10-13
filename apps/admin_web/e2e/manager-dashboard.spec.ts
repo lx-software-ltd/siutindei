@@ -67,11 +67,11 @@ test.describe('Manager Dashboard', () => {
 
     // Navigate to Activities
     await managerPage.getByRole('button', { name: 'Activities' }).click();
-    await expect(managerPage.getByRole('table', { name: 'Your activities' })).toBeVisible();
+    await expect(managerPage.getByRole('table', { name: 'Activities' })).toBeVisible();
 
     // Navigate to Locations
     await managerPage.getByRole('button', { name: 'Locations' }).click();
-    await expect(managerPage.getByRole('table', { name: 'Your locations' })).toBeVisible();
+    await expect(managerPage.getByRole('table', { name: 'Locations' })).toBeVisible();
 
     // Navigate back to Organizations
     await managerPage.getByRole('button', { name: 'Organization' }).click();
@@ -179,7 +179,7 @@ test.describe('Manager Activities Panel', () => {
     await managerPage.goto('/admin/dashboard');
     await managerPage.getByRole('button', { name: 'Activities' }).click();
     await expect(
-      managerPage.getByRole('table', { name: 'Your activities' })
+      managerPage.getByRole('table', { name: 'Activities' })
     ).toBeVisible();
     await managerPage.getByRole('row', { name: /Swimming Class/ }).first().click();
     await expect(managerPage.getByRole('button', { name: 'Update' })).toBeVisible();

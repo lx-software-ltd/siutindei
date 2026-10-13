@@ -24,7 +24,7 @@ import { ConfirmDialog } from '../../ui/confirm-dialog';
 import { Input } from '../../ui/input';
 import { Select } from '../../ui/select';
 import { decideMatchingPending } from './category-checks-bulk';
-import { CategoryChecksTable } from './category-checks-table';
+import { CategoryChecksTable, PAGE_NAME } from './category-checks-table';
 
 interface ReviewFilters {
   status: string;
@@ -73,14 +73,23 @@ export function CategoryChecksPanel() {
     },
     []
   );
+  const defaultFilters = useMemo(
+    () => ({ ...DEFAULT_FILTERS, org_id: scopedOrgId }),
+    // The list reads these defaults once. Later organization changes use setFilter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
   const list = usePaginatedList<ActivityCategoryReview, ReviewFilters>({
     queryKey: adminQueryKeys.categoryReviews(),
-    defaultFilters: DEFAULT_FILTERS,
+    defaultFilters,
     debounceKeys: ['q'],
     errorPrefix: 'Could not load category checks',
     fetcher: fetchReviews,
   });
   const [summary, setSummary] = useState<CategorySuggestionSummary | null>(null);
+  const [summaryPhase, setSummaryPhase] = useState<'loading' | 'ready' | 'missing'>(
+    'loading'
+  );
   const [threshold, setThreshold] = useState<number | null>(0.9);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [confirmMode, setConfirmMode] = useState<
@@ -120,19 +129,28 @@ export function CategoryChecksPanel() {
   const reload = useCallback(() => {
     void refetch();
     void getCategorySuggestionSummary(selectedOrgId || undefined)
-      .then((counts) => setSummary(counts))
-      .catch(() => undefined);
+      .then((counts) => {
+        setSummary(counts);
+        setSummaryPhase('ready');
+      })
+      .catch(() => setSummaryPhase('missing'));
   }, [refetch, selectedOrgId]);
 
   useEffect(() => {
     let cancelled = false;
+    setSummaryPhase('loading');
     void getCategorySuggestionSummary(selectedOrgId || undefined)
       .then((counts) => {
         if (!cancelled) {
           setSummary(counts);
+          setSummaryPhase('ready');
         }
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!cancelled) {
+          setSummaryPhase('missing');
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -321,8 +339,17 @@ export function CategoryChecksPanel() {
     }
   }
 
+  const countsLine =
+    summaryPhase === 'loading'
+      ? 'Loading…'
+      : summaryPhase === 'missing'
+        ? 'Counts unavailable.'
+        : `${summary?.review_pending_total ?? 0} waiting. ` +
+          `${summary?.auto_applied_total ?? 0} auto-assigned.`;
+
   return (
     <div className='space-y-4'>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       {error ? (
         <StatusBanner kind='error'>
           {error}
@@ -348,9 +375,7 @@ export function CategoryChecksPanel() {
         </StatusBanner>
       ) : null}
       <p className='text-sm text-slate-700'>
-        {progress ||
-          `${summary?.review_pending_total ?? 0} waiting. ` +
-            `${summary?.auto_applied_total ?? 0} auto-assigned.`}
+        {progress || countsLine}
       </p>
       <CategoryChecksTable
         items={list.items}

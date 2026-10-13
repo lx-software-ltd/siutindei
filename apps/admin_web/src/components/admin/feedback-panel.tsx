@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useResourceEditor } from '../../hooks/use-resource-editor';
-import { formatAdminPageName } from '../../lib/admin-page-name';
+import { adminTabLabel, formatAdminPageName } from '../../lib/admin-page-name';
 import { ApiError, listResource } from '../../lib/api-client';
 import { formatDate } from '../../lib/date-utils';
 import type {
@@ -40,7 +40,7 @@ interface FeedbackFormState {
   source_ticket_id: string;
 }
 
-const PAGE_NAME = formatAdminPageName('Feedback', 'Feedback');
+const PAGE_NAME = formatAdminPageName('Feedback', adminTabLabel.feedback);
 
 const emptyForm: FeedbackFormState = {
   organization_id: '',

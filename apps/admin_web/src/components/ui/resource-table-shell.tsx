@@ -113,11 +113,7 @@ export function ResourceTableShell<T extends { id: string }>({
 
   return (
     <>
-      {error ? (
-        <div className='mb-3'>
-          <StatusBanner kind='error'>{error}</StatusBanner>
-        </div>
-      ) : null}
+      {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
       <AdminRecordTable
       aria-label={ariaLabel}
       filters={filters}
@@ -125,6 +121,7 @@ export function ResourceTableShell<T extends { id: string }>({
       columnCount={columnCount}
       rowCount={rows.length + (isDraftOpen ? 1 : 0)}
       isLoading={isLoading}
+      hasError={Boolean(error)}
       isLoadingMore={isLoadingMore}
       hasMore={hasMore}
       onLoadMore={onLoadMore}

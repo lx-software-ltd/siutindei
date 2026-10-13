@@ -89,6 +89,7 @@ export function CategorySuggestionSettingsCard() {
     return (
       <AdminInputCard
         title='Suggestion settings'
+        titleLevel='h3'
         status={
           error ? (
             <StatusBanner kind='error'>
@@ -97,7 +98,9 @@ export function CategorySuggestionSettingsCard() {
           ) : null
         }
       >
-        <p className='text-sm text-slate-600'>Loading settings...</p>
+        {error ? null : (
+          <p className='text-sm text-slate-600'>Loading settings...</p>
+        )}
       </AdminInputCard>
     );
   }
@@ -107,6 +110,7 @@ export function CategorySuggestionSettingsCard() {
   return (
     <AdminInputCard
       title='Suggestion settings'
+      titleLevel='h3'
       description='Unknown category names are captured unless you turn this off. Saved model and fallbacks apply to the next enrichment. The test call is one short ping.'
       status={
         <>

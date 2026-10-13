@@ -301,6 +301,7 @@ export function CatalogPanel() {
       );
       setShowFields(false);
       setSelected(new Set());
+      setForce(false);
       await Promise.all([refetch(), refreshSummary()]);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Bulk update failed.');
@@ -462,7 +463,8 @@ export function CatalogPanel() {
         </p>
       ) : null}
       {notice ? <StatusBanner kind='info'>{notice}</StatusBanner> : null}
-      {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
+      {error && !showFields ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
+      {view === 'map' ? filterBar : null}
       <div className={view === 'map' ? undefined : 'hidden'}>
         {mapMounted ? (
         <Card>
@@ -552,6 +554,7 @@ export function CatalogPanel() {
               type='button'
               variant={force ? 'primary' : 'secondary'}
               aria-pressed={force}
+              className='h-auto min-h-10 whitespace-normal py-2 text-left sm:min-h-9'
               onClick={() => setForce((current) => !current)}
             >
               Release even when details are missing

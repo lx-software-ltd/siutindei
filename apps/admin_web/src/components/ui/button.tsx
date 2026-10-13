@@ -3,6 +3,7 @@
 import type { ButtonHTMLAttributes } from 'react';
 
 import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 import { SpinnerIcon } from '@/components/icons/action-icons';
 
@@ -25,7 +26,7 @@ export const BUTTON_DEFAULT_LOADING_LABEL = 'Saving…';
 
 const sizeStyles = {
   sm: 'h-8 px-3',
-  md: 'h-9 px-4',
+  md: 'h-10 px-4 sm:h-9',
   lg: 'h-10 px-5',
 };
 
@@ -54,10 +55,8 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={clsx(
-        baseStyles,
-        variantStyles[variant],
-        sizeStyles[size],
+      className={twMerge(
+        clsx(baseStyles, variantStyles[variant], sizeStyles[size]),
         className
       )}
       disabled={disabled || loading}

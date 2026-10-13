@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
 
 import { clsx } from 'clsx';
 
@@ -17,7 +17,7 @@ export interface AdminFilterBarProps {
  * Create, sweep, and bulk buttons belong on the table `actions` row, not here.
  */
 export function AdminFilterBar({ children, className }: AdminFilterBarProps) {
-  if (children == null) {
+  if (Children.toArray(children).length === 0) {
     return null;
   }
   return (

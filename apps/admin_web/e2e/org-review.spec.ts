@@ -16,11 +16,20 @@ test.describe('Organization review queue', () => {
     ).toBeVisible();
 
     await adminPage.getByRole('checkbox', { name: 'Select row' }).first().check();
-    await adminPage
-      .getByRole('button', { name: 'Release even when details are missing' })
-      .click();
+    const release = adminPage.getByRole('button', {
+      name: 'Release even when details are missing',
+    });
+    await expect(release).toHaveAttribute('aria-pressed', 'false');
+    await release.click();
+    await expect(release).toHaveAttribute('aria-pressed', 'true');
+    const requestPromise = adminPage.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().includes('/bulk')
+    );
     await adminPage.getByRole('button', { name: 'Approve' }).click();
+    const request = await requestPromise;
+    expect(request.postDataJSON()).toMatchObject({ force: true });
     await expect(adminPage.getByText(/Updated 1/)).toBeVisible();
+    await expect(release).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('lists import history', async ({ adminPage }) => {
@@ -158,6 +167,14 @@ test.describe('Organization review queue', () => {
     await adminPage.getByLabel('Name').fill('Studio');
     await adminPage.getByLabel('Name').press('Enter');
     await requestPromise;
+  });
+
+  test('shows a property error once, inside the dialog', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=catalog');
+    await adminPage.getByRole('checkbox', { name: 'Select row' }).first().check();
+    await adminPage.getByRole('button', { name: 'Apply properties' }).click();
+    await adminPage.getByRole('button', { name: 'Apply to selected' }).click();
+    await expect(adminPage.getByText('Tick at least one property.')).toHaveCount(1);
   });
 
   test('applies a bulk property and opens the fix link', async ({ adminPage }) => {

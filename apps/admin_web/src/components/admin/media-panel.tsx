@@ -465,10 +465,14 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
       {isLoadingOrg ? (
         <p className='text-sm text-slate-600'>Loading media…</p>
       ) : null}
+      {!selectedOrgId && error ? (
+        <StatusBanner kind='error'>{error}</StatusBanner>
+      ) : null}
 
       {selectedOrgId && (
         <AdminInputCard
           title='Media'
+          titleLevel='h3'
           status={
             <>
               {error ? (
@@ -492,6 +496,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
               disabled={isProcessingMedia || !hasUnsavedChanges}
               loading={isSaving}
               loadingLabel='Saving…'
+              className='w-full sm:w-auto'
             >
               Save media
             </Button>

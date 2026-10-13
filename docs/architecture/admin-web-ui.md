@@ -1,8 +1,9 @@
 # Admin web UI
 
 The admin console is a table-first workspace. Section names live in the
-nav. Listing cards do not repeat them. Workspace sections show the open
-organization above the card.
+nav. Listing cards do not repeat them. Workspace table sections show the
+open organization above the card. The Organization input card puts that
+name in the card title.
 
 The product rules live in `.cursor/skills/admin-crud-screen/SKILL.md`
 and `.cursor/rules/admin-web.mdc`. This page names the primitives those
@@ -27,13 +28,13 @@ rules use.
 | Concern | Use |
 | --- | --- |
 | Page shell | Untitled `Card` (`AdminRecordTable`): optional filters left, optional actions left on a new row, table, optional Load more. Banners sit above the card |
-| Input card | `AdminInputCard`: required title, variable content, and a bar that always renders. Same `Card` chrome and title style. Login and dialog overlays stay on `Card`. Expanded row editors stay on `AdminEditorPanel` inside the table card |
-| Create | `AdminCreateButton`, label `New <noun>`, on the table `actions` row. Same size as `Button` `md` (`h-9`, `w-auto`) |
-| Bulk and scan actions | `actions` slot, left-aligned. Sweep pending and Sweep all orgs stay primary. Apply and Dismiss are `secondary`. The Catalog release toggle is a pressed `Button` on that row. The header checkbox selects the visible page, then all matching rows. Scope filters stay in `AdminFilterBar`. Import and organization scope notes sit above the card with Show all. Catalog filters sit inside the table card. The map card uses the same filter state |
+| Input card | `AdminInputCard`: required title, variable content, and a bar when there are actions. A nested card uses `titleLevel="h3"`. Same `Card` chrome and title style. Login and dialog overlays stay on `Card`. Expanded row editors stay on `AdminEditorPanel` inside the table card. Post-submit results use `footer` |
+| Create | `AdminCreateButton`, label `New <noun>`, on the table `actions` row. Same size as `Button` `md` (`h-10` below `sm`, `h-9` from `sm`, `w-auto`) |
+| Bulk and scan actions | `actions` slot, left-aligned. Sweep pending and Sweep all orgs stay primary. Apply and Dismiss are `secondary`. The Catalog release toggle is a pressed `Button` on that row and clears after a successful bulk action. The header checkbox selects the visible page, then all matching rows. Scope filters stay in `AdminFilterBar`. Import and organization scope notes sit above the card with Show all. Catalog filters sit inside the table card. On Map, that same bar sits above the map card |
 | Fields | `AdminField` inside `AdminFieldGrid` (1, 2, or 4 columns) |
 | Required mark and invalid border | `RequiredMark` and `formErrorClassName` from `admin-field-grid.tsx` |
 | Field errors | `error` on `AdminField`, which renders `AdminInlineError` |
-| Read-only values | `AdminReadOnlyValue` (plain text, `span` 1, 2, or `full`) |
+| Read-only values | `AdminReadOnlyValue` (`dl` / `dt` / `dd`, `span` 1, 2, or `full`) |
 | Row operations | `AdminRowActions` (icon-only, tooltip, overflow menu) |
 | Dialogs | `AdminDialog` with a header Close control. `ConfirmDialog` is the confirm/cancel footer. `footer={null}` keeps the header Close and omits the footer |
 | Status chips | `StatusBadge` with an optional `tone` |

@@ -25,8 +25,12 @@ describe('PendingRequestNotice', () => {
     const heading = screen.getByRole('heading', { name: 'Your request details' });
     expect(heading.closest('section')).toBeTruthy();
     expect(heading).toHaveClass('text-base', 'font-semibold', 'sm:text-lg');
-    expect(screen.getByTestId('admin-input-card-bar')).toBeInTheDocument();
-    expect(screen.getByText('TCK-100')).toBeVisible();
+    expect(screen.queryByTestId('admin-input-card-bar')).not.toBeInTheDocument();
+    const term = screen.getByText('Ticket ID');
+    const value = screen.getByText('TCK-100');
+    expect(term.tagName).toBe('DT');
+    expect(value.tagName).toBe('DD');
+    expect(term.parentElement).toBe(value.parentElement);
     expect(screen.getByText('Harbour Club')).toBeVisible();
     expect(screen.getByText('Please add this listing.')).toBeVisible();
   });

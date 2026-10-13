@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { parseAsString, useQueryStates } from 'nuqs';
 
+import { adminTabLabel } from '../../lib/admin-page-name';
 import { ActivityCategoriesPanel } from '../shared';
 import { AdminTabStrip } from '../ui/admin-tab-strip';
 import { CategorySuggestionsPanel } from './category-suggestions/category-suggestions-panel';
@@ -10,8 +11,8 @@ import { CategorySuggestionsPanel } from './category-suggestions/category-sugges
 type CategoryView = 'categories' | 'suggestions';
 
 const CATEGORY_VIEWS = [
-  { key: 'categories' as const, label: 'Categories' },
-  { key: 'suggestions' as const, label: 'Suggestions' },
+  { key: 'categories' as const, label: adminTabLabel.categories },
+  { key: 'suggestions' as const, label: adminTabLabel.suggestions },
 ];
 
 export function CategoriesPage() {

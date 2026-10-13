@@ -9,7 +9,7 @@ import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { useOrganizationScope } from '../../../hooks/use-organization-scope';
 import { useGeographicAreas } from '../../../hooks/use-geographic-areas';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
-import { formatAdminPageName } from '../../../lib/admin-page-name';
+import { adminTabLabel, formatAdminPageName } from '../../../lib/admin-page-name';
 import { getAdminQueryClient } from '../../../lib/admin-query-client';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { ApiError } from '../../../lib/api-client';
@@ -37,7 +37,7 @@ import { Input } from '../../ui/input';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { Select } from '../../ui/select';
 
-const PAGE_NAME = formatAdminPageName('Data quality', 'Locations');
+const PAGE_NAME = formatAdminPageName('Data quality', adminTabLabel.locations);
 
 const KINDS = [
   ['link_existing', 'Link existing'],
@@ -201,9 +201,11 @@ export function LocationsPanel() {
     activeRun && (activeRun.status === 'queued' || activeRun.status === 'running')
       ? ` Sweep ${activeRun.batches_done} of ${activeRun.batches_total} batches.`
       : '';
-  const summary = summaryQuery.data
-    ? `${pending} pending.${progress}`
-    : 'No pending locations.';
+  const summary = summaryQuery.isPending
+    ? 'Loading…'
+    : summaryQuery.data
+      ? `${pending} pending.${progress}`
+      : 'No pending locations.';
 
   async function refresh() {
     await getAdminQueryClient().invalidateQueries({
@@ -719,6 +721,7 @@ export function LocationsPanel() {
       {settings ? (
         <AdminInputCard
           title='Model budget'
+          titleLevel='h3'
           description={`This month ${summaryQuery.data?.month_cost_usd ?? 0} of ${settings.monthly_cost_limit_usd} USD. Category checks are not counted.`}
           actions={
             <Button type='button' variant='secondary' onClick={() => void saveSettings()}>

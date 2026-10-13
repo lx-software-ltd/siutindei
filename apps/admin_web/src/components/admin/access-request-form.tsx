@@ -98,6 +98,7 @@ export function AccessRequestForm({ onRequestSubmitted }: AccessRequestFormProps
               type='submit'
               loading={isSubmitting}
               loadingLabel='Submitting…'
+              className='w-full sm:w-auto'
             >
               Submit Request
             </Button>

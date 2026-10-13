@@ -1,6 +1,6 @@
 # Plan: One table card style
 
-**Status**: Approved
+**Status**: Superseded by `docs/plans/admin-table-card-leftovers.md` and `.cursor/skills/admin-crud-screen/SKILL.md`. Actions are left-aligned. Catalog filters sit in the table card, and Map shows that same bar above the map card.
 **Zone**: yellow
 
 ## Goal

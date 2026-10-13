@@ -178,6 +178,7 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
             variant='primary'
             loading={isSubmitting}
             loadingLabel='Submitting…'
+            className='w-full sm:w-auto'
           >
             Submit Feedback
           </Button>

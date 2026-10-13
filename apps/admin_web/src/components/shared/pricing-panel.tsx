@@ -47,6 +47,8 @@ import {
   type PricingFormState,
 } from './pricing/pricing-types';
 
+const PAGE_NAME = formatAdminPageName('Pricing');
+
 interface PricingPanelProps {
   mode: ApiMode;
 }
@@ -529,9 +531,10 @@ export function PricingPanel({ mode }: PricingPanelProps) {
   return (
     <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='pricing'>
       <div className='space-y-4'>
+        <h2 className='sr-only'>{PAGE_NAME}</h2>
         <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
         <ResourceTableShell
-        ariaLabel={formatAdminPageName('Pricing')}
+        ariaLabel={PAGE_NAME}
         rows={filteredItems}
         getLabel={(item) => getLocationName(item.location_id)}
         middleColumnCount={4}
@@ -565,7 +568,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
             <AdminFilterField>
               <Input
                 id='pricing-search'
-                placeholder='Pricing'
+                placeholder='Activity, location, or price'
                 aria-label='Pricing'
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}

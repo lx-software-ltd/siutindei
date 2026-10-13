@@ -99,7 +99,7 @@ describe('NamesPanel settings lists', () => {
   it('keeps a space so a new exception word can be typed', async () => {
     const user = userEvent.setup();
     render(<NamesPanel />, { wrapper });
-    const heading = await screen.findByRole('heading', { name: 'Rules' });
+    const heading = await screen.findByRole('heading', { name: 'Rules', level: 3 });
     expect(heading).toHaveClass('text-base', 'font-semibold', 'sm:text-lg');
     expect(heading.closest('section')).toHaveClass('bg-white', 'shadow-sm');
     expect(screen.getByTestId('admin-input-card-bar')).toContainElement(

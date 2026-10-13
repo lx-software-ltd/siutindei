@@ -74,6 +74,17 @@ async function organizationNameTaken(
   );
 }
 
+export function organizationInputTitle(
+  name: string | null | undefined,
+  mode: 'create' | 'edit'
+): string {
+  const trimmed = name?.trim();
+  if (trimmed) {
+    return trimmed;
+  }
+  return mode === 'create' ? 'New organization' : 'Organization';
+}
+
 export function OrganizationsPanel({
   mode,
   onOrganizationRemoved,
@@ -758,7 +769,7 @@ export function OrganizationsPanel({
   return (
     <div className='space-y-4'>
       <AdminInputCard
-        title={current?.name?.trim() || 'New organization'}
+        title={organizationInputTitle(current?.name, panel.editorMode)}
         titleAccessory={
           current ? <OrganizationStatusBadges organization={current} /> : undefined
         }

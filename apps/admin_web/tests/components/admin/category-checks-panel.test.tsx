@@ -14,6 +14,7 @@ import {
   getCategorySuggestionSummary,
   listCategoryReviews,
   startCategoryScan,
+  type CategorySuggestionSummary,
 } from '@/lib/api-client-category-suggestions';
 
 vi.mock('@/lib/api-client-core', () => ({
@@ -142,6 +143,40 @@ describe('CategoryChecksPanel sweep buttons', () => {
     expect(card).not.toContainElement(note);
     expect(screen.getByRole('button', { name: 'Show all' })).toBeVisible();
     expect(screen.queryByLabelText('Organization')).not.toBeInTheDocument();
+    const heading = screen.getByRole('heading', { name: 'Data quality · Categories' });
+    expect(heading.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await waitFor(() => expect(listCategoryReviews).toHaveBeenCalled());
+    const calls = vi.mocked(listCategoryReviews).mock.calls;
+    expect(calls[0]?.[0]).toMatchObject({ org_id: 'org-1' });
+    expect(calls.every((call) => call[0]?.org_id === 'org-1')).toBe(true);
+  });
+
+  it('shows loading counts until the summary arrives', async () => {
+    let resolveSummary: (value: CategorySuggestionSummary) => void = () => undefined;
+    vi.mocked(getCategorySuggestionSummary).mockImplementation(
+      () =>
+        new Promise<CategorySuggestionSummary>((resolve) => {
+          resolveSummary = resolve;
+        })
+    );
+    render(<CategoryChecksPanel />, { wrapper });
+    expect(await screen.findByText('Loading…')).toBeVisible();
+    resolveSummary({
+      by_status: {},
+      by_enrichment_status: {},
+      pending_activity_total: 0,
+      stranded_activity_total: 0,
+      month_cost_usd: 0,
+      review_pending_total: 4,
+      auto_applied_total: 2,
+      scan_candidate_total: 2,
+      scan_candidate_total_all: 5,
+      scan_limit: 500,
+      scan_batch_size: 10,
+      discover_activity_total: 1,
+      discover_label_total: 1,
+    });
+    expect(await screen.findByText('4 waiting. 2 auto-assigned.')).toBeVisible();
   });
 
   it('sweeps pending review or all organizations from the matching button', async () => {

@@ -27,7 +27,14 @@ test.describe('Imports Panel', () => {
     const request = await requestPromise;
     expect(request.postDataJSON()).toMatchObject({ allow_updates: true });
 
-    await expect(adminPage.getByText('Summary')).toBeVisible();
+    const upload = adminPage.getByRole('button', { name: 'Upload & Import' });
+    const summary = adminPage.getByText('Summary', { exact: true });
+    await expect(summary).toBeVisible();
+    const uploadBox = await upload.boundingBox();
+    const summaryBox = await summary.boundingBox();
+    expect(uploadBox).toBeTruthy();
+    expect(summaryBox).toBeTruthy();
+    expect(summaryBox!.y).toBeGreaterThan(uploadBox!.y);
     await expect(adminPage.getByText(/^Organizations:/)).toBeVisible();
     await expect(
       adminPage.getByText(/Existing organizations, venues, and activities stay/)
@@ -57,6 +64,13 @@ test.describe('Imports Panel', () => {
     await adminPage.getByRole('button', { name: 'Upload & Import' }).click();
     const request = await requestPromise;
     expect(request.postDataJSON()).toMatchObject({ allow_updates: false });
-    await expect(adminPage.getByText('Summary')).toBeVisible();
+    const upload = adminPage.getByRole('button', { name: 'Upload & Import' });
+    const summary = adminPage.getByText('Summary', { exact: true });
+    await expect(summary).toBeVisible();
+    const uploadBox = await upload.boundingBox();
+    const summaryBox = await summary.boundingBox();
+    expect(uploadBox).toBeTruthy();
+    expect(summaryBox).toBeTruthy();
+    expect(summaryBox!.y).toBeGreaterThan(uploadBox!.y);
   });
 });

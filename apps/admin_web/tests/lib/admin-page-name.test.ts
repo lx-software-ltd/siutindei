@@ -15,6 +15,8 @@ describe('formatAdminPageName', () => {
     expect(formatAdminPageName('Imports', 'Import')).toBe('Imports');
     expect(formatAdminPageName('Categories', 'Categories')).toBe('Categories');
     expect(formatAdminPageName('Feedback', 'Feedback')).toBe('Feedback');
+    expect(formatAdminPageName('Categories', 'Category')).toBe('Categories');
+    expect(formatAdminPageName('Activities', 'Activity')).toBe('Activities');
   });
 
   it('joins nav and tab with an interpunct when the tab distinguishes the view', () => {

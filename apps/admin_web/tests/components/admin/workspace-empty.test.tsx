@@ -6,9 +6,17 @@ import { describe, expect, it } from 'vitest';
 
 import { WorkspaceEmpty, WorkspaceScopeGate } from '@/components/admin/workspace-empty';
 
+const urlUpdates: string[] = [];
+
 function wrapper({ children }: { children: ReactNode }) {
   return (
-    <NuqsTestingAdapter hasMemory searchParams='?section=locations'>
+    <NuqsTestingAdapter
+      hasMemory
+      searchParams='?section=locations'
+      onUrlUpdate={(event) => {
+        urlUpdates.push(event.queryString);
+      }}
+    >
       {children}
     </NuqsTestingAdapter>
   );
@@ -29,7 +37,9 @@ describe('WorkspaceEmpty', () => {
       screen.getByRole('button', { name: 'Open catalog' })
     );
 
+    urlUpdates.length = 0;
     await user.click(screen.getByRole('button', { name: 'Open catalog' }));
+    expect(urlUpdates.at(-1)).toContain('section=catalog');
   });
 });
 
@@ -45,7 +55,7 @@ describe('WorkspaceScopeGate', () => {
     expect(
       screen.getByRole('heading', { name: 'No organization is selected' })
     ).toBeVisible();
-    expect(screen.getByTestId('admin-input-card-bar')).toBeInTheDocument();
+    expect(screen.queryByTestId('admin-input-card-bar')).not.toBeInTheDocument();
     expect(screen.queryByText('Locations table')).not.toBeInTheDocument();
   });
 });

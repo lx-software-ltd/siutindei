@@ -2,6 +2,8 @@
 
 import { clsx } from 'clsx';
 
+import { Button } from './button';
+
 export interface AdminCreateButtonProps {
   /** Visible label and accessible name, for example `New contact`. */
   label: string;
@@ -15,24 +17,19 @@ export interface AdminCreateButtonProps {
 /**
  * The create control that opens a draft row above a record table. It spells
  * out its label ("New contact", "New note") — no plus icon — and matches
- * `Button` `md` (`h-9`, `w-auto`).
+ * `Button` `md` (`h-10` below `sm`, `h-9` from `sm`, `w-auto`).
  */
 export function AdminCreateButton({ label, onClick, disabled, active, className }: AdminCreateButtonProps) {
   return (
-    <button
+    <Button
       type='button'
       aria-pressed={active ? true : undefined}
       disabled={disabled}
       onClick={onClick}
       data-testid='admin-create-button'
-      className={clsx(
-        'inline-flex h-9 w-auto shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-slate-900 bg-slate-900 px-4 text-sm font-semibold text-white transition',
-        'hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400',
-        'disabled:cursor-not-allowed disabled:opacity-50',
-        className
-      )}
+      className={clsx('w-auto shrink-0 whitespace-nowrap', className)}
     >
       {label}
-    </button>
+    </Button>
   );
 }

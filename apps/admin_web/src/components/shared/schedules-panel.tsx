@@ -49,6 +49,8 @@ import {
   type WeeklyEntryForm,
 } from './schedules/schedule-form-utils';
 
+const PAGE_NAME = formatAdminPageName('Schedules');
+
 const minutesPerDay = 24 * 60;
 const defaultStartMinutes = 10 * 60;
 const defaultDurationMinutes = 60;
@@ -805,9 +807,10 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
   return (
     <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='schedules'>
       <div className='space-y-4'>
+        <h2 className='sr-only'>{PAGE_NAME}</h2>
         <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
         <ResourceTableShell
-        ariaLabel={formatAdminPageName('Schedules')}
+        ariaLabel={PAGE_NAME}
         rows={filteredItems}
         getLabel={(item) => getLocationName(item.location_id)}
         middleColumnCount={4}
@@ -841,7 +844,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
             <AdminFilterField>
               <Input
                 id='schedule-search'
-                placeholder='Schedule'
+                placeholder='Activity, location, or time'
                 aria-label='Schedule'
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}

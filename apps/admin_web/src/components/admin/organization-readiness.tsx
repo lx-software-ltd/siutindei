@@ -207,11 +207,6 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
                 type='checkbox'
                 checked={force}
                 onChange={(event) => setForce(event.target.checked)}
-                aria-label={
-                  blockers.length > 0
-                    ? `Approve anyway (${blockers.length} missing)`
-                    : 'Approve anyway'
-                }
               />
               Approve anyway{blockers.length > 0 ? ` (${blockers.length} missing)` : ''}
             </label>

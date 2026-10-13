@@ -27,6 +27,8 @@ export interface AdminRecordTableProps {
   hasMore?: boolean;
   onLoadMore?: () => void | Promise<void>;
   emptyLabel?: string;
+  /** Hide the empty sentence when the list request failed. */
+  hasError?: boolean;
   /**
    * Extra classes on the `<table>`. Do not pass min-w-*; the scroll
    * container handles overflow.
@@ -56,6 +58,7 @@ export function AdminRecordTable({
   hasMore = false,
   onLoadMore,
   emptyLabel = 'No records match the current filters.',
+  hasError = false,
   tableClassName,
   embedded = false,
   'aria-label': ariaLabel,
@@ -80,7 +83,7 @@ export function AdminRecordTable({
   }, []);
 
   const showSkeleton = isLoading && rowCount === 0;
-  const showEmpty = !isLoading && !isLoadingMore && rowCount === 0;
+  const showEmpty = !isLoading && !isLoadingMore && !hasError && rowCount === 0;
 
   const Shell = embedded ? 'section' : Card;
 
