@@ -1,7 +1,7 @@
 """Make catalog history immutable and backfill it in batches.
 
-Revision ID: 0048_catalog_version_fixes
-Revises: 0047_catalog_versions
+Revision ID: 0049_catalog_version_fixes
+Revises: 0048_catalog_versions
 
 Seed assessment: no seed column changes. ``catalog_versions`` stays
 unseeded. The batch backfill may insert ``organization_merges`` rows
@@ -18,8 +18,8 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0048_catalog_version_fixes"
-down_revision: Union[str, None] = "0047_catalog_versions"
+revision: str = "0049_catalog_version_fixes"
+down_revision: Union[str, None] = "0048_catalog_versions"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -60,7 +60,7 @@ def _grant_catalog_versions() -> None:
 
 
 def downgrade() -> None:
-    """History rows belong to 0047. Dropping that revision removes them."""
+    """History rows belong to 0048. Dropping that revision removes them."""
 
 
 def _backfill_in_batches() -> None:

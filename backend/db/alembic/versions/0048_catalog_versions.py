@@ -1,14 +1,14 @@
 """Version organizations and the records that describe them.
 
-Revision ID: 0047_catalog_versions
-Revises: 0046_deleted_org_import
+Revision ID: 0048_catalog_versions
+Revises: 0047_org_website
 
 Seed assessment: ``version`` and ``media_version`` are NOT NULL with
 server default 1. seed_data.sql omits both columns and stays valid.
 ``catalog_versions`` is not seeded; the triggers fill it when the seed
 inserts organizations. No seed column is renamed or dropped, and no
 enum used by seed rows changes. Historical rows are filled by
-``0048_catalog_version_fixes``, which may insert ``organization_merges``
+``0049_catalog_version_fixes``, which may insert ``organization_merges``
 rows with ``kind = 'delete'`` for organizations already removed. Those
 rows are empty on a fresh database.
 """
@@ -22,8 +22,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0047_catalog_versions"
-down_revision: Union[str, None] = "0046_deleted_org_import"
+revision: str = "0048_catalog_versions"
+down_revision: Union[str, None] = "0047_org_website"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
