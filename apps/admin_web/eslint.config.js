@@ -90,6 +90,62 @@ const adminUiPlugin = {
         };
       },
     },
+    'no-table-cell-content-class': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description:
+            'AdminDataTableCell className is layout only. Content uses a role component.',
+        },
+        schema: [],
+        messages: {
+          disallowed:
+            'AdminDataTableCell class "{{token}}" is not a layout class. Use a table role component.',
+          literal:
+            'Pass AdminDataTableCell className as a string of layout classes.',
+        },
+      },
+      create(context) {
+        const allowed =
+          /^(w-\S+|pr-0|whitespace-nowrap|text-right|text-center|py-8)$/;
+
+        return {
+          JSXOpeningElement(node) {
+            if (
+              node.name.type !== 'JSXIdentifier' ||
+              node.name.name !== 'AdminDataTableCell'
+            ) {
+              return;
+            }
+            const classAttr = node.attributes.find(
+              (attr) =>
+                attr.type === 'JSXAttribute' &&
+                attr.name.type === 'JSXIdentifier' &&
+                attr.name.name === 'className',
+            );
+            if (!classAttr || classAttr.type !== 'JSXAttribute' || !classAttr.value) {
+              return;
+            }
+            if (
+              classAttr.value.type !== 'Literal' ||
+              typeof classAttr.value.value !== 'string'
+            ) {
+              context.report({ node: classAttr, messageId: 'literal' });
+              return;
+            }
+            for (const token of classAttr.value.value.split(/\s+/)) {
+              if (token && !allowed.test(token)) {
+                context.report({
+                  node: classAttr,
+                  messageId: 'disallowed',
+                  data: { token },
+                });
+              }
+            }
+          },
+        };
+      },
+    },
     'no-hand-rolled-field-error': {
       meta: {
         type: 'problem',
@@ -141,6 +197,7 @@ module.exports = [
     rules: {
       'admin-ui/no-hand-rolled-field-error': 'error',
       'admin-ui/no-record-table-min-width': 'error',
+      'admin-ui/no-table-cell-content-class': 'error',
     },
   },
   {

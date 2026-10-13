@@ -14,8 +14,14 @@ import { DeleteIcon, EditIcon, ReviewIcon } from '../../icons/action-icons';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import {
   AdminDataTableCell,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
+import {
+  adminTableText,
+  AdminTableName,
+  AdminTableNumber,
+} from '../../ui/admin-table-value';
 import { AdminRowActions } from '../../ui/admin-row-actions';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { StatusBadge } from '../../ui/status-badge';
@@ -69,7 +75,7 @@ export function CategoryChecksTable({
         ariaLabel={PAGE_NAME}
         rows={items}
         getLabel={(item) => item.activity_name || item.activity_id}
-        middleColumnCount={5}
+        middleColumnCount={6}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         hasMore={hasMore}
@@ -99,6 +105,9 @@ export function CategoryChecksTable({
               Verdict
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
+              Confidence
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
               Status
             </AdminDataTableHeadCell>
           </>
@@ -106,21 +115,38 @@ export function CategoryChecksTable({
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              <span className='font-medium'>
-                {item.activity_name || item.activity_id}
-              </span>
+              <AdminTableName>{item.activity_name || item.activity_id}</AdminTableName>
+              <AdminDataTableCellMeta until='secondary'>
+                {adminTableText(item.org_name)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary'>
+                {adminTableText(item.current_category_name)}
+                {' → '}
+                {adminTableText(item.proposed_category_name)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                {item.verdict ? <StatusBadge status={item.verdict} /> : adminTableText(null)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                <AdminTableNumber>{item.confidence}</AdminTableNumber>
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                <StatusBadge status={item.status.replace(/_/g, ' ')} />
+              </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {item.org_name || '—'}
+              {adminTableText(item.org_name)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {item.current_category_name || '—'}
+              {adminTableText(item.current_category_name)}
               {' → '}
-              {item.proposed_category_name || '—'}
+              {adminTableText(item.proposed_category_name)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              {item.verdict}
-              {item.confidence != null ? ` ${item.confidence}` : ''}
+              {item.verdict ? <StatusBadge status={item.verdict} /> : adminTableText(null)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              <AdminTableNumber>{item.confidence}</AdminTableNumber>
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               <StatusBadge status={item.status.replace(/_/g, ' ')} />

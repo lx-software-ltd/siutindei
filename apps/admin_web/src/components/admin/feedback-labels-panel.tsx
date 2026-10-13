@@ -23,6 +23,7 @@ import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
 import { Input } from '../ui/input';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
+import { AdminTableName, AdminTableNumber } from '../ui/admin-table-value';
 import {
   deleteRowActions,
   ResourceTableShell,
@@ -251,13 +252,16 @@ export function FeedbackLabelsPanel() {
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              {item.name}
+              <AdminTableName>{item.name}</AdminTableName>
+              <AdminDataTableCellMeta until='secondary'>
+                <AdminTableNumber>{item.display_order}</AdminTableNumber>
+              </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='tertiary'>
                 {translationSummary(item)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {item.display_order ?? 0}
+              <AdminTableNumber>{item.display_order}</AdminTableNumber>
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {translationSummary(item)}

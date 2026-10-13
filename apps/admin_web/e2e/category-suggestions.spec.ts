@@ -49,7 +49,7 @@ test.describe('Category suggestions', () => {
     await expect(adminPage.getByText('Indoor craft, not sport')).toBeVisible();
     await adminPage.getByRole('button', { name: 'Apply', exact: true }).click();
     await expect(
-      adminPage.getByTestId('admin-row-rev-1').getByText('applied', { exact: true })
+      adminPage.getByTestId('admin-row-rev-1').getByRole('cell', { name: 'applied', exact: true })
     ).toBeVisible();
   });
 
@@ -71,7 +71,7 @@ test.describe('Category suggestions', () => {
     ).toBeVisible();
     await adminPage.getByRole('button', { name: 'Apply pending' }).click();
     await expect(
-      adminPage.getByTestId('admin-row-rev-1').getByText('applied', { exact: true })
+      adminPage.getByTestId('admin-row-rev-1').getByRole('cell', { name: 'applied', exact: true })
     ).toBeVisible();
   });
 });

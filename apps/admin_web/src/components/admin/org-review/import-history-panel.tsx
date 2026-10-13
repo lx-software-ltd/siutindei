@@ -15,8 +15,10 @@ import {
 } from '../../../lib/api-client-org-review';
 import {
   AdminDataTableCell,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
+import { AdminTableTime } from '../../ui/admin-table-value';
 import { RetryIcon, ViewIcon } from '../../icons/action-icons';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminFieldGrid } from '../../ui/admin-field-grid';
@@ -209,7 +211,15 @@ export function ImportHistoryPanel() {
         }
         renderCells={(item) => (
           <>
-            <AdminDataTableCell>{formatWhen(item.created_at)}</AdminDataTableCell>
+            <AdminDataTableCell>
+              <AdminTableTime value={item.created_at} emphasis />
+              <AdminDataTableCellMeta until='secondary'>
+                {modeLabel(item)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                {organizationSummary(item)}
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               {modeLabel(item)}
             </AdminDataTableCell>

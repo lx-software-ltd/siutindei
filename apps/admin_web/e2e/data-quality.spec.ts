@@ -158,6 +158,9 @@ test.describe('Data quality', () => {
   test('admin can forget a deleted organization', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=deleted');
     await expect(adminPage.getByRole('table', { name: 'Data quality · Deleted' })).toBeVisible();
+    await expect(
+      adminPage.getByRole('table', { name: 'Data quality · Deleted' }).getByRole('columnheader')
+    ).toHaveText(['Expand', 'Name', 'Place id', 'Source', 'Deleted', 'Source id']);
     await adminPage.getByRole('cell', { name: 'Harbour Club', exact: true }).click();
     await expect(adminPage.getByText('Old Harbour')).toBeVisible();
     await expect(adminPage.getByText('admin-sub')).toBeVisible();

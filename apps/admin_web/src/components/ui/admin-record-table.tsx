@@ -115,7 +115,7 @@ export function AdminRecordTable({
             {showSkeleton ? <AdminSkeletonRows columnCount={columnCount} /> : null}
             {showEmpty ? (
               <tr>
-                <AdminDataTableCell colSpan={columnCount} className='py-8 text-center text-slate-500'>
+                <AdminDataTableCell colSpan={columnCount} empty>
                   {emptyLabel}
                 </AdminDataTableCell>
               </tr>

@@ -10,24 +10,34 @@ test.describe('Cognito Users Panel', () => {
     await expect(table.getByRole('columnheader')).toHaveText([
       'Expand',
       'Email',
+      'Name',
+      'Provider',
+      'Roles',
       'Created',
       'Last Login',
       'Operations',
     ]);
-    await expect(table.getByRole('columnheader', { name: 'Roles' })).toHaveCount(0);
 
     const managerRow = table.getByRole('row', { name: /manager@example.com/ }).first();
     await expect(
-      managerRow.getByText('manager@example.com', { exact: true })
+      managerRow.getByRole('cell', { name: 'manager@example.com', exact: true })
     ).toBeVisible();
-    await expect(managerRow.getByText('Manager', { exact: true })).toBeVisible();
-    await expect(managerRow.getByText('Admin', { exact: true })).toHaveCount(0);
+    await expect(
+      managerRow.getByText('Manager', { exact: true }).filter({ visible: true })
+    ).toHaveCount(1);
+    await expect(
+      managerRow.getByText('Admin', { exact: true }).filter({ visible: true })
+    ).toHaveCount(0);
 
     const adminManagerRow = table
       .getByRole('row', { name: /admin-manager@example.com/ })
       .first();
-    await expect(adminManagerRow.getByText('Admin', { exact: true })).toBeVisible();
-    await expect(adminManagerRow.getByText('Manager', { exact: true })).toBeVisible();
+    await expect(
+      adminManagerRow.getByText('Admin', { exact: true }).filter({ visible: true })
+    ).toHaveCount(1);
+    await expect(
+      adminManagerRow.getByText('Manager', { exact: true }).filter({ visible: true })
+    ).toHaveCount(1);
 
     await managerRow.click();
     const detail = adminPage.getByTestId('admin-row-manager-user-id-456-detail');
@@ -79,7 +89,9 @@ test.describe('Cognito Users Panel', () => {
 
     await adminPage.getByTitle('Make Admin').first().click();
     await expect(adminPage.getByTitle('Remove Admin').first()).toBeVisible();
-    await expect(managerRow.getByText('Admin', { exact: true })).toBeVisible();
+    await expect(
+      managerRow.getByText('Admin', { exact: true }).filter({ visible: true })
+    ).toHaveCount(1);
 
     await adminPage.getByRole('button', { name: 'More actions' }).first().click();
     await adminPage.getByRole('menuitem', { name: 'Delete User' }).click();

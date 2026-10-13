@@ -7,8 +7,14 @@ import { adminTabLabel, formatAdminPageName } from '../../../lib/admin-page-name
 import type { CategorySuggestion } from '../../../lib/api-client-category-suggestions';
 import {
   AdminDataTableCell,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
+import {
+  adminTableText,
+  AdminTableName,
+  AdminTableNumber,
+} from '../../ui/admin-table-value';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
 import { Select } from '../../ui/select';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
@@ -125,22 +131,37 @@ export function SuggestionsTable({
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              <span className='font-medium'>{item.requested_name}</span>
+              <AdminTableName>{item.requested_name}</AdminTableName>
+              <AdminDataTableCellMeta until='secondary'>
+                <StatusBadge status={item.status} />
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary'>
+                <StatusBadge status={item.enrichment_status} />
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                <AdminTableNumber>{item.activity_count}</AdminTableNumber>
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                {adminTableText(item.suggested_name)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                {adminTableText(item.source)}
+              </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               <StatusBadge status={item.status} />
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {item.enrichment_status}
+              <StatusBadge status={item.enrichment_status} />
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              {item.activity_count}
+              <AdminTableNumber>{item.activity_count}</AdminTableNumber>
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              {item.suggested_name || '—'}
+              {adminTableText(item.suggested_name)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              {item.source || '—'}
+              {adminTableText(item.source)}
             </AdminDataTableCell>
           </>
         )}

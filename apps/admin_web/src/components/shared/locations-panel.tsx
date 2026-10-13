@@ -14,6 +14,7 @@ import type { ApiMode } from '../../lib/resource-api';
 import { normalizeKey } from '../../lib/string-utils';
 import type { Location } from '../../types/admin';
 import { AdminCreateButton } from '../ui/admin-create-button';
+import { adminTableText, AdminTableName } from '../ui/admin-table-value';
 import {
   AdminDataTableCell,
   AdminDataTableCellMeta,
@@ -312,8 +313,8 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     const appleMapsUrl = buildAppleMapsUrl(item);
     const hasMapLinks = googleMapsUrl || appleMapsUrl;
     return (
-      <div className='flex items-center gap-2 text-slate-600'>
-        <span>{item.address || '—'}</span>
+      <div className='flex items-center gap-2'>
+        <span>{adminTableText(item.address)}</span>
         {hasMapLinks && (
           <span className='inline-flex items-center gap-2'>
             {googleMapsUrl && (
@@ -520,9 +521,9 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              <span className='font-medium'>{getAreaName(item.area_id)}</span>
+              <AdminTableName>{getAreaName(item.area_id)}</AdminTableName>
               <AdminDataTableCellMeta until={addressColumnPriority}>
-                {item.address || '—'}
+                {adminTableText(item.address)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority={addressColumnPriority}>

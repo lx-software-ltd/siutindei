@@ -16,7 +16,17 @@ import {
   type DeletedOrganization,
 } from '../../../lib/api-client-data-quality';
 import { StatusBanner } from '../../status-banner';
-import { AdminDataTableCell, AdminDataTableHeadCell } from '../../ui/admin-data-table';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '../../ui/admin-data-table';
+import {
+  adminTableText,
+  AdminTableId,
+  AdminTableName,
+  AdminTableTime,
+} from '../../ui/admin-table-value';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminFieldGrid } from '../../ui/admin-field-grid';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
@@ -75,18 +85,38 @@ export function DeletedPanel() {
             <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Place id</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Source</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>Source id</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Deleted</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Source id</AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
           <>
-            <AdminDataTableCell>{item.name}</AdminDataTableCell>
-            <AdminDataTableCell priority='secondary'>{item.place_id || '—'}</AdminDataTableCell>
-            <AdminDataTableCell priority='secondary'>{item.source || '—'}</AdminDataTableCell>
-            <AdminDataTableCell priority='tertiary'>{item.source_id || '—'}</AdminDataTableCell>
+            <AdminDataTableCell>
+              <AdminTableName>{item.name}</AdminTableName>
+              <AdminDataTableCellMeta until='secondary'>
+                <AdminTableId>{item.place_id}</AdminTableId>
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary'>
+                {adminTableText(item.source)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary'>
+                <AdminTableTime value={item.deleted_at} />
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                <AdminTableId>{item.source_id}</AdminTableId>
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {formatDateTime(item.deleted_at)}
+              <AdminTableId>{item.place_id}</AdminTableId>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              {adminTableText(item.source)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              <AdminTableTime value={item.deleted_at} />
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              <AdminTableId>{item.source_id}</AdminTableId>
             </AdminDataTableCell>
           </>
         )}

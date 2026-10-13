@@ -11,6 +11,7 @@ import {
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from './admin-data-table';
+import { ADMIN_TABLE_EMPTY, AdminTableName } from './admin-table-value';
 import { AdminExpandableRow } from './admin-expandable-row';
 import { AdminRecordTable } from './admin-record-table';
 import { AdminRowActions, type AdminRowAction } from './admin-row-actions';
@@ -107,7 +108,7 @@ export function ResourceTableShell<T extends { id: string }>({
 
   const draftCells = Array.from({ length: middleColumnCount }, (_, index) => (
     <AdminDataTableCell key={index}>
-      {index === 0 ? draftLabel : ''}
+      {index === 0 ? <AdminTableName>{draftLabel}</AdminTableName> : ADMIN_TABLE_EMPTY}
     </AdminDataTableCell>
   ));
 

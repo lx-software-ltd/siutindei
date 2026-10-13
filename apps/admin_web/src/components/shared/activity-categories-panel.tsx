@@ -16,6 +16,7 @@ import {
 } from '../../lib/translations';
 import type { ActivityCategory } from '../../types/admin';
 import { AdminCreateButton } from '../ui/admin-create-button';
+import { AdminTableName, AdminTableNumber } from '../ui/admin-table-value';
 import {
   AdminDataTableCell,
   AdminDataTableCellMeta,
@@ -391,13 +392,13 @@ export function ActivityCategoriesPanel() {
           return (
             <>
               <AdminDataTableCell>
-                {pathLabel}
+                <AdminTableName>{pathLabel}</AdminTableName>
                 <AdminDataTableCellMeta until='secondary'>
-                  {item.display_order ?? 0}
+                  <AdminTableNumber>{item.display_order}</AdminTableNumber>
                 </AdminDataTableCellMeta>
               </AdminDataTableCell>
               <AdminDataTableCell priority='secondary'>
-                {item.display_order ?? 0}
+                <AdminTableNumber>{item.display_order}</AdminTableNumber>
               </AdminDataTableCell>
             </>
           );

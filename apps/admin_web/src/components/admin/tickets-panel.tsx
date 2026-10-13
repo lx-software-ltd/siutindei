@@ -33,6 +33,12 @@ import { Label } from '@/components/ui/label';
 import { ResourceTableShell, rowActions } from '@/components/ui/resource-table-shell';
 import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
+import {
+  adminTableText,
+  AdminTableId,
+  AdminTableName,
+  AdminTableTime,
+} from '@/components/ui/admin-table-value';
 import { Textarea } from '@/components/ui/textarea';
 
 type OrganizationMode = 'existing' | 'new';
@@ -271,7 +277,7 @@ export function TicketsPanel() {
         ariaLabel={PAGE_NAME}
         rows={list.items}
         getLabel={(item) => item.ticket_id}
-        middleColumnCount={6}
+        middleColumnCount={7}
         isLoading={list.isLoading}
         isLoadingMore={list.isLoadingMore}
         hasMore={list.hasMore}
@@ -289,36 +295,49 @@ export function TicketsPanel() {
             <AdminDataTableHeadCell priority='secondary'>Submitted By</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Status</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>Submitted</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Reviewed</AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              <span className='font-medium'>{item.organization_name}</span>
-              <AdminDataTableCellMeta>
-                {item.ticket_id}
-                {item.suggested_district ? ` · ${item.suggested_district}` : ''}
+              <AdminTableName>{item.organization_name}</AdminTableName>
+              <AdminDataTableCellMeta until='secondary'>
+                <AdminTableId>{item.ticket_id}</AdminTableId>
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary'>
+                <TicketTypeBadge type={item.ticket_type} />
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary'>
+                {adminTableText(item.submitter_email)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary'>
+                <StatusBadge status={item.status} />
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                <AdminTableTime value={item.created_at} />
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                <AdminTableTime value={item.reviewed_at} />
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              <span className='font-mono text-xs text-slate-600'>{item.ticket_id}</span>
+              <AdminTableId>{item.ticket_id}</AdminTableId>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               <TicketTypeBadge type={item.ticket_type} />
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              <span className='text-slate-600'>{item.submitter_email}</span>
+              {adminTableText(item.submitter_email)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               <StatusBadge status={item.status} />
-              {item.reviewed_at ? (
-                <span className='mt-1 block text-xs text-slate-400'>
-                  Reviewed {formatDateTime(item.reviewed_at)}
-                </span>
-              ) : null}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              <span className='text-slate-600'>{formatDateTime(item.created_at)}</span>
+              <AdminTableTime value={item.created_at} />
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              <AdminTableTime value={item.reviewed_at} />
             </AdminDataTableCell>
           </>
         )}

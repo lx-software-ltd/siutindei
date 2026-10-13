@@ -40,6 +40,12 @@ import {
 } from '@/components/ui/resource-table-shell';
 import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
+import {
+  adminTableText,
+  AdminTableId,
+  AdminTableName,
+  AdminTableTime,
+} from '@/components/ui/admin-table-value';
 
 interface ApiKeyFormState {
   name: string;
@@ -326,7 +332,7 @@ export function ApiKeysPanel() {
         ariaLabel={PAGE_NAME}
         rows={list.items}
         getLabel={(item) => item.name}
-        middleColumnCount={4}
+        middleColumnCount={6}
         isLoading={list.isLoading}
         isLoadingMore={list.isLoadingMore}
         hasMore={list.hasMore}
@@ -359,6 +365,12 @@ export function ApiKeysPanel() {
             <AdminDataTableHeadCell priority='secondary'>
               Organization
             </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Status
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Prefix
+            </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
               Expires
             </AdminDataTableHeadCell>
@@ -367,28 +379,41 @@ export function ApiKeysPanel() {
         renderCells={(apiKey) => (
           <>
             <AdminDataTableCell>
-              <span className='font-medium'>{apiKey.name}</span>
-              <AdminDataTableCellMeta>
-                {apiKey.key_prefix}… · {apiKey.status}
+              <AdminTableName>{apiKey.name}</AdminTableName>
+              <AdminDataTableCellMeta until='secondary'>
+                <StatusBadge status={apiKey.scope} />
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary'>
+                {apiKey.org_id
+                  ? adminTableText(orgNameById.get(apiKey.org_id) ?? apiKey.org_id)
+                  : 'Full access'}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary'>
+                <StatusBadge status={apiKey.status} />
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                <AdminTableId>{apiKey.key_prefix}</AdminTableId>
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                <AdminTableTime value={apiKey.expires_at} />
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              <span className='text-xs font-medium uppercase text-slate-600'>
-                {apiKey.scope}
-              </span>
+              <StatusBadge status={apiKey.scope} />
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               {apiKey.org_id
-                ? (orgNameById.get(apiKey.org_id) ?? apiKey.org_id)
+                ? adminTableText(orgNameById.get(apiKey.org_id) ?? apiKey.org_id)
                 : 'Full access'}
             </AdminDataTableCell>
-            <AdminDataTableCell priority='tertiary'>
+            <AdminDataTableCell priority='secondary'>
               <StatusBadge status={apiKey.status} />
-              <span className='mt-1 block text-xs text-slate-500'>
-                {apiKey.expires_at
-                  ? formatDateTime(apiKey.expires_at)
-                  : 'Never'}
-              </span>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              <AdminTableId>{apiKey.key_prefix}</AdminTableId>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              <AdminTableTime value={apiKey.expires_at} />
             </AdminDataTableCell>
           </>
         )}

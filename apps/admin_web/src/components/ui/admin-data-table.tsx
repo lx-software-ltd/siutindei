@@ -5,6 +5,8 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+import { adminTableCellClassNameError } from './admin-table-value';
+
 /**
  * Admin listing tables use a single cell padding and header weight everywhere.
  * Prefer `AdminDataTableHeadCell` / `AdminDataTableCell` over ad-hoc `px-*` / `py-*` on `th`/`td`.
@@ -101,15 +103,36 @@ export function AdminDataTableHeadCell({
 }
 
 export type AdminDataTableCellProps = Omit<ComponentPropsWithoutRef<'td'>, 'className'> & {
+  /**
+   * Layout only (`w-*`, `pr-0`, `whitespace-nowrap`, `text-right`,
+   * `text-center`, `py-8`). Content weight and color belong on a role.
+   */
   className?: string;
   priority?: AdminDataTableColumnPriority;
+  /** Centered empty-table sentence. Color stays on the cell, not the caller. */
+  empty?: boolean;
 };
 
-export function AdminDataTableCell({ children, className, priority = 'primary', ...rest }: AdminDataTableCellProps) {
+export function AdminDataTableCell({
+  children,
+  className,
+  priority = 'primary',
+  empty = false,
+  ...rest
+}: AdminDataTableCellProps) {
+  const classNameError = adminTableCellClassNameError(className);
+  if (classNameError) {
+    throw new Error(classNameError);
+  }
   return (
     <td
       {...rest}
-      className={twMerge(adminDataTableBodyCellBase, ADMIN_TABLE_COLUMN_PRIORITY_CLASS[priority], className)}
+      className={twMerge(
+        adminDataTableBodyCellBase,
+        ADMIN_TABLE_COLUMN_PRIORITY_CLASS[priority],
+        empty && 'py-8 text-center text-slate-500',
+        className
+      )}
     >
       {children}
     </td>

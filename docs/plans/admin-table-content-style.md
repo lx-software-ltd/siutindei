@@ -1,9 +1,7 @@
 # Plan: One table cell content style
 
-**Status**: Draft
+**Status**: Approved
 **Zone**: yellow
-
-This draft is a proposal. It is not approval to implement.
 
 ## Goal
 
@@ -196,4 +194,4 @@ Revert the branch.
 
 ## Open questions
 
-None. Implementation waits until this draft is approved.
+None. Approved for implementation.

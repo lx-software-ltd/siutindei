@@ -19,6 +19,7 @@ import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-titl
 import { VersionHistory } from '../admin/version-history';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 import { AdminCreateButton } from '../ui/admin-create-button';
+import { ADMIN_TABLE_EMPTY, AdminTableName } from '../ui/admin-table-value';
 import {
   AdminDataTableCell,
   AdminDataTableCellMeta,
@@ -415,12 +416,12 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
         return <span>—</span>;
       }
       return (
-        <div className='space-y-1 text-slate-600'>
+        <div className='space-y-1'>
           {localEntries.map((entry) => (
             <div
               key={`${entry.dayOfWeek}-${entry.startMinutes}-${entry.endMinutes}`}
             >
-              <span className='font-medium text-slate-700'>
+              <span>
                 {getDayLabel(entry.dayOfWeek)}
               </span>{' '}
               {formatTimeLabelForMinutes(entry.startMinutes)}-
@@ -869,9 +870,15 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              {getLocationName(item.location_id)}
+              <AdminTableName>{getLocationName(item.location_id)}</AdminTableName>
               <AdminDataTableCellMeta until='secondary'>
-                {weeklyEntriesLabel(item) || '—'}
+                {getActivityName(item.activity_id)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary'>
+                {weeklyEntriesLabel(item) || ADMIN_TABLE_EMPTY}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                {item.languages?.length ? item.languages.join(', ') : ADMIN_TABLE_EMPTY}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
@@ -881,16 +888,12 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
               {renderWeeklyEntries(item)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              <div className='flex flex-wrap items-center gap-2 text-slate-600'>
+              <div className='flex flex-wrap items-center gap-2'>
                 {item.languages?.length ? (
                   item.languages.map((language) => {
                     const option = getLanguageOption(language);
                     if (!option) {
-                      return (
-                        <span key={language} className='text-xs uppercase'>
-                          {language}
-                        </span>
-                      );
+                      return <span key={language}>{language}</span>;
                     }
                     return (
                       <span
@@ -909,7 +912,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                     );
                   })
                 ) : (
-                  <span>—</span>
+                  ADMIN_TABLE_EMPTY
                 )}
               </div>
             </AdminDataTableCell>
