@@ -209,7 +209,7 @@ export function FeedbackLabelsPanel() {
   return (
     <>
       <ResourceTableShell
-        ariaLabel='Feedback labels'
+        ariaLabel='Labels'
         rows={panel.items}
         getLabel={(item) => item.name || 'Label'}
         middleColumnCount={3}

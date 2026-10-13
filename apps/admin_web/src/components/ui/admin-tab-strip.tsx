@@ -11,7 +11,7 @@ export interface AdminTabItem<T extends string = string> {
 
 /**
  * Sentence case for in-area tab labels: first word capital, later words
- * lower (`Feedback labels`, `API keys`). All-caps tokens such as API stay.
+ * lower (`Labels`, `API keys`). All-caps tokens such as API stay.
  */
 export function formatAdminTabLabel(label: string): string {
   return label

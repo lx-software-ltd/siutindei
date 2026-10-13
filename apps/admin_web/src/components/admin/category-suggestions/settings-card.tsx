@@ -103,7 +103,7 @@ export function CategorySuggestionSettingsCard() {
   const isSaving = pending !== null;
 
   return (
-    <Card>
+    <Card title='Suggestion settings'>
       <AdminEditorPanel
         status={
           <>
@@ -144,13 +144,6 @@ export function CategorySuggestionSettingsCard() {
         }
       >
         <AdminFieldGrid columns={2}>
-          <AdminField label='Suggestion settings' span='full'>
-            <p className='text-sm text-slate-600'>
-              Unknown category names are captured unless you turn this off.
-              Saved model and fallbacks
-              apply to the next enrichment. The test call is one short ping.
-            </p>
-          </AdminField>
           <AdminField span='full'>
             <label className='flex items-center gap-2 text-sm'>
               <input

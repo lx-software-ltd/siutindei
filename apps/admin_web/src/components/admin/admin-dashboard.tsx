@@ -76,7 +76,7 @@ const sectionLabels = buildAdminNavSections([
 const recognizedSections = [
   ...sectionLabels,
   { key: 'category-suggestions', label: 'Suggestions' },
-  { key: 'feedback-labels', label: 'Feedback labels' },
+  { key: 'feedback-labels', label: 'Labels' },
 ];
 
 export function AdminDashboard() {
