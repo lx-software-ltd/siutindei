@@ -7,8 +7,8 @@ import { useGeographicAreas } from '../../hooks/use-geographic-areas';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
-import type { GeographicAreaNode } from '../../lib/api-client';
 import { formatAdminPageName } from '../../lib/admin-page-name';
+import type { GeographicAreaNode } from '../../lib/api-client';
 import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/resource-api';
 import { normalizeKey } from '../../lib/string-utils';
@@ -36,6 +36,8 @@ import { StatusBanner } from '../status-banner';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
 import { VersionHistory } from '../admin/version-history';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
+
+const PAGE_NAME = formatAdminPageName('Locations');
 
 const MAP_ICON_BASE_URL =
   'https://api.iconify.design/simple-icons';
@@ -462,9 +464,10 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   return (
     <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='locations'>
       <div className='space-y-4'>
+        <h2 className='sr-only'>{PAGE_NAME}</h2>
         <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
         <ResourceTableShell
-        ariaLabel={isAdmin ? formatAdminPageName('Locations') : 'Your locations'}
+        ariaLabel={PAGE_NAME}
         rows={filteredItems}
         getLabel={(item) => getAreaName(item.area_id)}
         middleColumnCount={2}
@@ -498,7 +501,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             <AdminFilterField>
               <Input
                 id='location-search'
-                placeholder='Location'
+                placeholder='Name or address'
                 aria-label='Location'
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}

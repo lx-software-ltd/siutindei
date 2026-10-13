@@ -1,4 +1,19 @@
+import path from 'node:path';
+
+import type { Page } from '@playwright/test';
+
 import { test, expect } from './fixtures/test-fixtures';
+
+async function saveTableCardShot(page: Page, name: string) {
+  const dir = process.env.ADMIN_E2E_SCREENSHOT_DIR;
+  if (!dir) {
+    return;
+  }
+  await page.screenshot({
+    path: path.join(dir, `${name}.png`),
+    fullPage: true,
+  });
+}
 
 test.describe('Table card slots', () => {
   test('catalog keeps filters and left-aligned actions inside the table card', async ({
@@ -44,10 +59,7 @@ test.describe('Table card slots', () => {
     expect(actionBox!.y).toBeGreaterThan(filterBox!.y);
     expect(Math.abs(actionBox!.x - filterBox!.x)).toBeLessThan(32);
 
-    await adminPage.screenshot({
-      path: '/opt/cursor/artifacts/table-card-catalog.png',
-      fullPage: true,
-    });
+    await saveTableCardShot(adminPage, 'table-card-catalog');
   });
 
   test('catalog import scope sits above the table card', async ({ adminPage }) => {
@@ -81,7 +93,9 @@ test.describe('Table card slots', () => {
     await expect(card).toBeVisible();
     await expect(filters).toBeVisible();
     await expect(create).toBeVisible();
-    await expect(filters.getByPlaceholder('Activity')).toBeVisible();
+    await expect(
+      filters.getByPlaceholder('Name, description, or category', { exact: true })
+    ).toBeVisible();
     await expect(filters.getByPlaceholder('Search activities...')).toHaveCount(0);
 
     const filterBox = await filters.boundingBox();
@@ -90,10 +104,7 @@ test.describe('Table card slots', () => {
     expect(actionBox!.y).toBeGreaterThan(filterBox!.y);
     expect(Math.abs(createBox!.x - filterBox!.x)).toBeLessThan(32);
 
-    await adminPage.screenshot({
-      path: '/opt/cursor/artifacts/table-card-activities.png',
-      fullPage: true,
-    });
+    await saveTableCardShot(adminPage, 'table-card-activities');
   });
 
   test('categories omit the empty filter bar and keep Create on the actions row', async ({
@@ -107,10 +118,7 @@ test.describe('Table card slots', () => {
     await expect(adminPage.getByTestId('admin-filter-bar')).toHaveCount(0);
     await expect(actions.getByRole('button', { name: 'New category' })).toBeVisible();
 
-    await adminPage.screenshot({
-      path: '/opt/cursor/artifacts/table-card-categories.png',
-      fullPage: true,
-    });
+    await saveTableCardShot(adminPage, 'table-card-categories');
   });
 
   test('names keep sweep buttons on the actions row and the count above the card', async ({
@@ -134,10 +142,7 @@ test.describe('Table card slots', () => {
     const actionBox = await actions.boundingBox();
     expect(actionBox!.y).toBeGreaterThan(filterBox!.y);
 
-    await adminPage.screenshot({
-      path: '/opt/cursor/artifacts/table-card-names.png',
-      fullPage: true,
-    });
+    await saveTableCardShot(adminPage, 'table-card-names');
   });
 
   test('category checks keep sweep on the actions row and org scope above the card', async ({
@@ -160,9 +165,16 @@ test.describe('Table card slots', () => {
     );
     await expect(card.getByLabel('Organization')).toHaveCount(0);
 
-    await adminPage.screenshot({
-      path: '/opt/cursor/artifacts/table-card-category-checks.png',
-      fullPage: true,
-    });
+    await saveTableCardShot(adminPage, 'table-card-category-checks');
+  });
+
+  test('catalog map shows the same filters above the map card', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=catalog&view=map');
+    const filters = adminPage.getByTestId('admin-filter-bar');
+
+    await expect(adminPage.getByTestId('admin-record-table')).toHaveCount(0);
+    await expect(filters).toBeVisible();
+    await expect(filters.getByLabel('Review')).toBeVisible();
+    await expect(filters.getByRole('textbox', { name: 'Name', exact: true })).toBeVisible();
   });
 });

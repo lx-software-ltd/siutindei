@@ -11,7 +11,7 @@ test.describe('Locations Panel', () => {
     await expect(adminPage.getByRole('cell', { name: 'v1' })).toHaveCount(0);
 
     await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
-    await adminPage.getByPlaceholder('Location').fill('Test Street');
+    await adminPage.getByPlaceholder('Name or address', { exact: true }).fill('Test Street');
     await expect(adminPage.getByRole('table')).toContainText('123 Test Street');
 
     await adminPage.getByRole('button', { name: 'Delete' }).first().click();

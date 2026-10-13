@@ -5,13 +5,14 @@ import type { ReactNode } from 'react';
 import { clsx } from 'clsx';
 
 import { BUTTON_DEFAULT_LOADING_LABEL, Button } from './button';
+import { hasContent } from './node-content';
 
 export interface AdminEditorPanelProps {
   /** Field area, usually `AdminFieldGrid` rows and `AdminDisclosure` sections. */
   children: ReactNode;
   /** Single action row rendered under the fields (see `AdminEditorActions`). */
   actions?: ReactNode;
-  /** Always render the action bar, even when `actions` is empty. */
+  /** Mark the action bar as the input-card bar. An empty bar is not rendered. */
   actionRow?: boolean;
   /** Error or status banner shown above the actions. */
   status?: ReactNode;
@@ -29,7 +30,7 @@ export function AdminEditorPanel({
   status,
   className,
 }: AdminEditorPanelProps) {
-  const showBar = actionRow || actions != null;
+  const showBar = hasContent(actions);
   return (
     <div className={clsx('space-y-4', className)} data-testid='admin-editor-panel'>
       {children}

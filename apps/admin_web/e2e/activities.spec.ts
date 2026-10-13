@@ -203,7 +203,9 @@ test.describe('Activities Panel', () => {
     await expect(adminPage.getByText('Swimming Class')).toBeVisible();
 
     // Check for search input
-    const searchInput = adminPage.getByPlaceholder('Activity');
+    const searchInput = adminPage.getByPlaceholder('Name, description, or category', {
+      exact: true,
+    });
     await expect(searchInput).toBeVisible();
     await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
   });
@@ -214,7 +216,9 @@ test.describe('Activities Panel', () => {
     await expect(adminPage.getByText('Art Workshop')).toBeVisible();
 
     // Type in search
-    const searchInput = adminPage.getByPlaceholder('Activity');
+    const searchInput = adminPage.getByPlaceholder('Name, description, or category', {
+      exact: true,
+    });
     await searchInput.fill('Swimming');
 
     // Should only show matching activity
@@ -227,7 +231,9 @@ test.describe('Activities Panel', () => {
     await expect(adminPage.getByText('Swimming Class')).toBeVisible();
 
     // Type in search with no matches
-    const searchInput = adminPage.getByPlaceholder('Activity');
+    const searchInput = adminPage.getByPlaceholder('Name, description, or category', {
+      exact: true,
+    });
     await searchInput.fill('NonexistentActivity');
 
     // Should show no results message

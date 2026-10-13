@@ -163,6 +163,7 @@ export function SuggestionForm({ onSuggestionSubmitted }: SuggestionFormProps) {
             disabled={!organizationName.trim()}
             loading={isSubmitting}
             loadingLabel='Submitting…'
+            className='w-full sm:w-auto'
           >
             Submit Suggestion
           </Button>

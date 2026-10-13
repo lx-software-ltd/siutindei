@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
-import { formatAdminPageName } from '../../../lib/admin-page-name';
+import { adminTabLabel, formatAdminPageName } from '../../../lib/admin-page-name';
 import type { CategorySuggestion } from '../../../lib/api-client-category-suggestions';
 import {
   AdminDataTableCell,
@@ -15,7 +15,7 @@ import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { StatusBadge } from '../../ui/status-badge';
 import { SuggestionDetail } from './suggestion-detail';
 
-const PAGE_NAME = formatAdminPageName('Categories', 'Suggestions');
+const PAGE_NAME = formatAdminPageName('Categories', adminTabLabel.suggestions);
 
 interface SuggestionsTableProps {
   items: CategorySuggestion[];

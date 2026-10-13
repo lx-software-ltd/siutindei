@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
-import { formatAdminPageName } from '../../lib/admin-page-name';
+import { adminTabLabel, formatAdminPageName } from '../../lib/admin-page-name';
 import {
   buildTranslationsPayload,
   emptyTranslations,
@@ -35,7 +35,7 @@ interface FeedbackLabelFormState {
   display_order: string;
 }
 
-const PAGE_NAME = formatAdminPageName('Feedback', 'Labels');
+const PAGE_NAME = formatAdminPageName('Feedback', adminTabLabel.labels);
 
 const emptyForm: FeedbackLabelFormState = {
   name: '',

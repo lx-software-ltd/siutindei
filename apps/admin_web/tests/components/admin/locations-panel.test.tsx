@@ -73,7 +73,7 @@ describe('LocationsPanel', () => {
 
   it('offers the location sweep and decide actions', async () => {
     render(<LocationsPanel />, { wrapper });
-    expect(await screen.findByRole('heading', { name: 'Model budget' })).toHaveClass(
+    expect(await screen.findByRole('heading', { name: 'Model budget', level: 3 })).toHaveClass(
       'text-base',
       'font-semibold',
       'sm:text-lg'

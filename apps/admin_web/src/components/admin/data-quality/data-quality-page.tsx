@@ -2,6 +2,7 @@
 
 import { useQueryState } from 'nuqs';
 
+import { adminTabLabel } from '../../../lib/admin-page-name';
 import { AdminTabStrip } from '../../ui/admin-tab-strip';
 import { CategoryChecksPanel } from '../category-suggestions/category-checks-panel';
 import { DeletedPanel } from './deleted-panel';
@@ -10,11 +11,11 @@ import { LocationsPanel } from './locations-panel';
 import { NamesPanel } from './names-panel';
 
 const TABS = [
-  { key: 'duplicates', label: 'Duplicates' },
-  { key: 'names', label: 'Names' },
-  { key: 'locations', label: 'Locations' },
-  { key: 'checks', label: 'Categories' },
-  { key: 'deleted', label: 'Deleted' },
+  { key: 'duplicates', label: adminTabLabel.duplicates },
+  { key: 'names', label: adminTabLabel.names },
+  { key: 'locations', label: adminTabLabel.locations },
+  { key: 'checks', label: adminTabLabel.categories },
+  { key: 'deleted', label: adminTabLabel.deleted },
 ] as const;
 
 export function DataQualityPage() {

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryState } from 'nuqs';
 
+import { adminTabLabel, formatAdminPageName } from '../../lib/admin-page-name';
 import {
   ApiError,
   createAdminExport,
@@ -25,8 +26,8 @@ type ExportStatus = 'idle' | 'loading' | 'done' | 'error';
 type ExportTarget = 'all' | 'selected';
 
 const IMPORT_TABS: { key: ImportTab; label: string }[] = [
-  { key: 'import', label: 'Import' },
-  { key: 'history', label: 'History' },
+  { key: 'import', label: adminTabLabel.import },
+  { key: 'history', label: adminTabLabel.history },
 ];
 const emptyImportSummary = {
   created: 0,
@@ -205,7 +206,7 @@ export function ImportsPanel() {
       {activeTab === 'import' && (
         <>
           <AdminInputCard
-            title='Imports'
+            title={formatAdminPageName('Imports', adminTabLabel.import)}
             status={
               importError ? (
                 <StatusBanner kind='error'>
@@ -226,46 +227,9 @@ export function ImportsPanel() {
                 Upload & Import
               </Button>
             }
-          >
-            <p className='text-sm text-slate-600'>
-              Upload a JSON file to upsert organizations and related data.
-            </p>
-              <AdminFieldGrid columns={1}>
-                <AdminField
-                  label='JSON file'
-                  htmlFor='admin-import-file'
-                  required
-                  error={importFileError || undefined}
-                >
-                  <FileUploadButton
-                    id='admin-import-file'
-                    accept='application/json,.json'
-                    onChange={(event) => {
-                      setImportTouched(true);
-                      setSelectedFile(event.target.files?.[0] ?? null);
-                    }}
-                    buttonLabel='Choose file'
-                    selectedFileName={selectedFile?.name ?? null}
-                    emptyLabel='No file selected'
-                    fileNameClassName={
-                      showImportFileError ? 'text-red-600' : 'text-slate-600'
-                    }
-                  />
-                </AdminField>
-                <AdminField span='full'>
-                  <label className='flex items-center gap-2 text-sm text-slate-700'>
-                    <input
-                      id='admin-import-skip-existing'
-                      type='checkbox'
-                      checked={skipExisting}
-                      onChange={(event) => setSkipExisting(event.target.checked)}
-                    />
-                    Skip records that already exist
-                  </label>
-                </AdminField>
-              </AdminFieldGrid>
-            {importResult && (
-              <div className='mt-4 space-y-4 rounded-lg border border-slate-200 p-4'>
+            footer={
+              importResult ? (
+              <div className='space-y-4 rounded-lg border border-slate-200 p-4'>
                 {importResult.id &&
                   importResult.summary.organizations.created > 0 && (
                     <Button
@@ -348,7 +312,46 @@ export function ImportsPanel() {
                   </div>
                 )}
               </div>
-            )}
+              ) : null
+            }
+          >
+            <p className='text-sm text-slate-600'>
+              Upload a JSON file to upsert organizations and related data.
+            </p>
+              <AdminFieldGrid columns={1}>
+                <AdminField
+                  label='JSON file'
+                  htmlFor='admin-import-file'
+                  required
+                  error={importFileError || undefined}
+                >
+                  <FileUploadButton
+                    id='admin-import-file'
+                    accept='application/json,.json'
+                    onChange={(event) => {
+                      setImportTouched(true);
+                      setSelectedFile(event.target.files?.[0] ?? null);
+                    }}
+                    buttonLabel='Choose file'
+                    selectedFileName={selectedFile?.name ?? null}
+                    emptyLabel='No file selected'
+                    fileNameClassName={
+                      showImportFileError ? 'text-red-600' : 'text-slate-600'
+                    }
+                  />
+                </AdminField>
+                <AdminField span='full'>
+                  <label className='flex items-center gap-2 text-sm text-slate-700'>
+                    <input
+                      id='admin-import-skip-existing'
+                      type='checkbox'
+                      checked={skipExisting}
+                      onChange={(event) => setSkipExisting(event.target.checked)}
+                    />
+                    Skip records that already exist
+                  </label>
+                </AdminField>
+              </AdminFieldGrid>
           </AdminInputCard>
 
           <AdminInputCard

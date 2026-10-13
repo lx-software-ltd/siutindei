@@ -2,6 +2,7 @@
 
 import { parseAsString, useQueryStates } from 'nuqs';
 
+import { adminTabLabel } from '../../lib/admin-page-name';
 import { AdminTabStrip } from '../ui/admin-tab-strip';
 import { FeedbackLabelsPanel } from './feedback-labels-panel';
 import { FeedbackPanel } from './feedback-panel';
@@ -9,8 +10,8 @@ import { FeedbackPanel } from './feedback-panel';
 type FeedbackView = 'entries' | 'labels';
 
 const FEEDBACK_VIEWS = [
-  { key: 'entries' as const, label: 'Feedback' },
-  { key: 'labels' as const, label: 'Labels' },
+  { key: 'entries' as const, label: adminTabLabel.feedback },
+  { key: 'labels' as const, label: adminTabLabel.labels },
 ];
 
 export function FeedbackPage() {

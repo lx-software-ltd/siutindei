@@ -4,6 +4,8 @@ import { clsx } from 'clsx';
 
 export interface CardProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   title?: string;
+  /** `h3` when this card sits under the page heading. */
+  titleLevel?: 'h2' | 'h3';
   titleAccessory?: ReactNode;
   description?: string;
   children: ReactNode;
@@ -12,12 +14,14 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
 
 export function Card({
   title,
+  titleLevel = 'h2',
   titleAccessory,
   description,
   children,
   className = '',
   ...rest
 }: CardProps) {
+  const TitleTag = titleLevel === 'h3' ? 'h3' : 'h2';
   return (
     <section
       {...rest}
@@ -31,7 +35,7 @@ export function Card({
           {(title || titleAccessory) && (
             <div className='flex flex-wrap items-center gap-2'>
               {title && (
-                <h2 className='text-base font-semibold sm:text-lg'>{title}</h2>
+                <TitleTag className='text-base font-semibold sm:text-lg'>{title}</TitleTag>
               )}
               {titleAccessory}
             </div>

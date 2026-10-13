@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { clsx } from 'clsx';
 
@@ -29,18 +29,10 @@ export function AdminReadOnlyValue({
   span = 1,
   className,
 }: AdminReadOnlyValueProps) {
-  const labelId = useId();
-
   return (
-    <div className={clsx('min-w-0 text-sm', spanStyles[span], className)}>
-      <span
-        id={labelId}
-        className='mb-1 block text-sm font-medium text-slate-700'
-      >
-        {label}
-      </span>
-      <div
-        aria-labelledby={labelId}
+    <dl className={clsx('min-w-0 text-sm', spanStyles[span], className)}>
+      <dt className='mb-1 block text-sm font-medium text-slate-700'>{label}</dt>
+      <dd
         className={
           mono
             ? 'wrap-anywhere font-mono text-xs text-slate-800'
@@ -48,7 +40,7 @@ export function AdminReadOnlyValue({
         }
       >
         {children}
-      </div>
-    </div>
+      </dd>
+    </dl>
   );
 }

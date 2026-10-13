@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { ADMIN_API_MAX_LIST_LIMIT } from '../../lib/admin-list-query';
-import { formatAdminPageName } from '../../lib/admin-page-name';
+import { adminTabLabel, formatAdminPageName } from '../../lib/admin-page-name';
 import {
   buildTranslationsPayload,
   emptyTranslations,
@@ -41,7 +41,7 @@ interface ActivityCategoryFormState {
   show_in_wizard: boolean;
 }
 
-const PAGE_NAME = formatAdminPageName('Categories', 'Categories');
+const PAGE_NAME = formatAdminPageName('Categories', adminTabLabel.categories);
 
 const emptyForm: ActivityCategoryFormState = {
   name: '',

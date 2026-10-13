@@ -42,6 +42,8 @@ import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-titl
 import { VersionHistory } from '../admin/version-history';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 
+const PAGE_NAME = formatAdminPageName('Activities');
+
 interface ActivityFormState {
   org_id: string;
   category_id: string;
@@ -528,9 +530,10 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
   return (
     <WorkspaceScopeGate orgId={scopedOrgId} isAdmin={isAdmin} noun='activities'>
       <div className='space-y-4'>
+        <h2 className='sr-only'>{PAGE_NAME}</h2>
         <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
         <ResourceTableShell
-        ariaLabel={isAdmin ? formatAdminPageName('Activities') : 'Your activities'}
+        ariaLabel={PAGE_NAME}
         rows={filteredItems}
         getLabel={(item) => item.name || 'Activity'}
         middleColumnCount={3}
@@ -564,7 +567,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             <AdminFilterField>
               <Input
                 id='activity-search'
-                placeholder='Activity'
+                placeholder='Name, description, or category'
                 aria-label='Activity'
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}

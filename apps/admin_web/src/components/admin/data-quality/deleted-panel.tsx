@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
 import { useConfirmDialog } from '../../../hooks/use-confirm-dialog';
-import { formatAdminPageName } from '../../../lib/admin-page-name';
+import { adminTabLabel, formatAdminPageName } from '../../../lib/admin-page-name';
 import { getAdminQueryClient } from '../../../lib/admin-query-client';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { ApiError } from '../../../lib/api-client';
@@ -30,7 +30,7 @@ interface DeletedFilters {
 }
 
 const DEFAULT_FILTERS: DeletedFilters = { q: '' };
-const PAGE_NAME = formatAdminPageName('Data quality', 'Deleted');
+const PAGE_NAME = formatAdminPageName('Data quality', adminTabLabel.deleted);
 
 export function DeletedPanel() {
   const expanded = useExpandedRecord({ paramName: 'deleted-org' });

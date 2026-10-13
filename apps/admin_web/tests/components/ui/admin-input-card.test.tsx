@@ -33,7 +33,7 @@ describe('AdminInputCard', () => {
     expect(bar).toContainElement(screen.getByRole('button', { name: 'Open catalog' }));
   });
 
-  it('always renders the bar when there are no actions', () => {
+  it('omits the bar when there are no actions', () => {
     render(
       <AdminInputCard title='Your request details'>
         <p>Ticket body</p>
@@ -41,9 +41,37 @@ describe('AdminInputCard', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Your request details' })).toBeVisible();
+    expect(screen.getByText('Ticket body')).toBeVisible();
+    expect(screen.queryByTestId('admin-input-card-bar')).not.toBeInTheDocument();
+  });
+
+  it('shows a status banner without an empty bar', () => {
+    render(
+      <AdminInputCard title='Suggestion settings' status={<p>Settings failed.</p>} />
+    );
+
+    expect(screen.getByText('Settings failed.')).toBeVisible();
+    expect(screen.queryByTestId('admin-input-card-bar')).not.toBeInTheDocument();
+  });
+
+  it('uses an h3 when the card sits under the page heading', () => {
+    render(<AdminInputCard title='Rules' titleLevel='h3' />);
+
+    expect(screen.getByRole('heading', { name: 'Rules', level: 3 })).toBeVisible();
+  });
+
+  it('renders a footer after the action bar', () => {
+    render(
+      <AdminInputCard
+        title='Imports'
+        actions={<Button type='button'>Upload & Import</Button>}
+        footer={<p>Summary</p>}
+      />
+    );
+
     const bar = screen.getByTestId('admin-input-card-bar');
-    expect(bar).toBeInTheDocument();
-    expect(bar.querySelector('button')).toBeNull();
+    const summary = screen.getByText('Summary');
+    expect(bar.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('keeps badges in the title slot without changing the heading class', () => {

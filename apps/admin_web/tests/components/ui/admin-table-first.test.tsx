@@ -7,7 +7,7 @@ import {
   AdminDataTableCell,
   AdminDataTableHeadCell,
 } from '@/components/ui/admin-data-table';
-import { AdminEditorActions } from '@/components/ui/admin-editor-panel';
+import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
 import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
 import { AdminRecordTable } from '@/components/ui/admin-record-table';
 import { ResourceTableShell } from '@/components/ui/resource-table-shell';
@@ -22,9 +22,9 @@ describe('AdminCreateButton', () => {
     render(<AdminCreateButton label='New organization' onClick={() => undefined} />);
 
     const create = screen.getByRole('button', { name: 'New organization' });
-    expect(create).toHaveClass('h-9', 'px-4');
+    expect(create).toHaveClass('h-10', 'px-4', 'sm:h-9', 'disabled:opacity-60');
     expect(create.className).not.toMatch(/\bw-full\b/);
-    expect(create.className).not.toMatch(/\bh-10\b/);
+    expect(create.className).not.toMatch(/opacity-50/);
   });
 });
 
@@ -41,6 +41,17 @@ describe('AdminFilterField', () => {
     const field = screen.getByLabelText('Action').parentElement;
     expect(field).toHaveClass('min-w-[10rem]', 'sm:basis-48');
     expect(field?.className ?? '').not.toMatch(/8\.5rem/);
+  });
+
+  it('omits the bar when every child is empty', () => {
+    render(
+      <AdminFilterBar>
+        {false}
+        {null}
+      </AdminFilterBar>
+    );
+
+    expect(screen.queryByTestId('admin-filter-bar')).not.toBeInTheDocument();
   });
 });
 
@@ -123,6 +134,23 @@ describe('AdminRecordTable', () => {
     expect(screen.getByText('No records match the current filters.')).toBeVisible();
   });
 
+  it('hides the empty sentence when the list failed', () => {
+    render(
+      <AdminRecordTable
+        aria-label='Organizations'
+        columnCount={1}
+        rowCount={0}
+        isLoading={false}
+        hasError
+        head={<AdminDataTableHeadCell>Name</AdminDataTableHeadCell>}
+      >
+        {null}
+      </AdminRecordTable>
+    );
+
+    expect(screen.queryByText('No records match the current filters.')).not.toBeInTheDocument();
+  });
+
   it('keeps banners and Refreshing out of the card', () => {
     render(
       <AdminRecordTable
@@ -183,6 +211,21 @@ describe('ResourceTableShell banners', () => {
 
     const banner = screen.getByText('Could not load users.');
     expect(screen.getByTestId('admin-record-table')).not.toContainElement(banner);
+    expect(banner.parentElement?.className ?? '').not.toContain('mb-3');
+    expect(screen.queryByText('No records match the current filters.')).not.toBeInTheDocument();
+  });
+});
+
+describe('AdminEditorPanel', () => {
+  it('omits the bar when actions is false', () => {
+    render(
+      <AdminEditorPanel actions={false}>
+        <p>Fields</p>
+      </AdminEditorPanel>
+    );
+
+    expect(screen.getByText('Fields')).toBeVisible();
+    expect(screen.getByTestId('admin-editor-panel').querySelector('.border-t')).toBeNull();
   });
 });
 

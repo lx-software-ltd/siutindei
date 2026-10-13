@@ -5,7 +5,7 @@ import { useQueryState } from 'nuqs';
 
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
-import { formatAdminPageName } from '../../../lib/admin-page-name';
+import { adminTabLabel, formatAdminPageName } from '../../../lib/admin-page-name';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { formatDateTime } from '../../../lib/date-utils';
 import { runAdminImport } from '../../../lib/api-client-imports';
@@ -27,7 +27,7 @@ import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { StatusBanner } from '../../status-banner';
 
 const HISTORY_LINK_REFRESH_MS = 30 * 60 * 1000;
-const PAGE_NAME = formatAdminPageName('Imports', 'History');
+const PAGE_NAME = formatAdminPageName('Imports', adminTabLabel.history);
 
 function formatWhen(value?: string) {
   return formatDateTime(value);
