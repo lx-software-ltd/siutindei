@@ -126,16 +126,19 @@ def _apply_payload(
         org, followed_merge = _load_org(session, row.get("id"))
         if org is None:
             continue
+        org_id = _parse_uuid(org.id)
+        if org_id is None:
+            continue
         current = _text(org.website)
         if status == "skipped" or followed_merge:
             if current:
                 continue
-        elif org.id not in written_ids and current:
+        elif org_id not in written_ids and current:
             continue
         elif current == website:
             continue
         org.website = website
-        written_ids.add(org.id)
+        written_ids.add(org_id)
         written += 1
     return written
 
@@ -184,8 +187,8 @@ def _load_org(
         ).first()
         if merge is None or merge.kind == "delete" or merge.survivor_org_id is None:
             return None, False
-        survivor_id = merge.survivor_org_id
-        if survivor_id in seen:
+        survivor_id = _parse_uuid(merge.survivor_org_id)
+        if survivor_id is None or survivor_id in seen:
             return None, False
         seen.add(survivor_id)
         survivor = session.get(Organization, survivor_id)
