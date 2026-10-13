@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryState } from 'nuqs';
 
+import { formatAdminPageName } from '../../lib/admin-page-name';
 import {
   ApiError,
   createAdminExport,
@@ -29,6 +30,7 @@ const IMPORT_TABS: { key: ImportTab; label: string }[] = [
   { key: 'import', label: 'Import' },
   { key: 'history', label: 'History' },
 ];
+const IMPORT_PAGE_NAME = formatAdminPageName('Imports', 'Import');
 
 const emptyImportSummary = {
   created: 0,
@@ -207,7 +209,7 @@ export function ImportsPanel() {
       {activeTab === 'import' && (
         <>
           <Card>
-            <h2 className='sr-only'>Imports</h2>
+            <h2 className='sr-only'>{IMPORT_PAGE_NAME}</h2>
             <AdminEditorPanel
               status={
                 importError ? (

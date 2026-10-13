@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useResourceEditor } from '../../hooks/use-resource-editor';
+import { formatAdminPageName } from '../../lib/admin-page-name';
 import { ApiError, listResource } from '../../lib/api-client';
 import { formatDate } from '../../lib/date-utils';
 import type {
@@ -39,6 +40,8 @@ interface FeedbackFormState {
   description: string;
   source_ticket_id: string;
 }
+
+const PAGE_NAME = formatAdminPageName('Feedback', 'Feedback');
 
 const emptyForm: FeedbackFormState = {
   organization_id: '',
@@ -278,8 +281,9 @@ export function FeedbackPanel() {
 
   return (
     <>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       <ResourceTableShell
-        ariaLabel='Organization feedback'
+        ariaLabel={PAGE_NAME}
         rows={panel.items}
         getLabel={(item) =>
           item.organization_name || item.organization_id || 'Feedback'

@@ -9,6 +9,7 @@ import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { useOrganizationScope } from '../../../hooks/use-organization-scope';
 import { useGeographicAreas } from '../../../hooks/use-geographic-areas';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
+import { formatAdminPageName } from '../../../lib/admin-page-name';
 import { getAdminQueryClient } from '../../../lib/admin-query-client';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { ApiError } from '../../../lib/api-client';
@@ -34,6 +35,8 @@ import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { Select } from '../../ui/select';
+
+const PAGE_NAME = formatAdminPageName('Data quality', 'Locations');
 
 const KINDS = [
   ['link_existing', 'Link existing'],
@@ -361,7 +364,7 @@ export function LocationsPanel() {
 
   return (
     <div className='space-y-4'>
-      <h2 className='sr-only'>Locations</h2>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       {organization ? (
         <p className='text-sm text-slate-600'>
           Filtered to the organization from the review queue. Sweep pending
@@ -390,7 +393,7 @@ export function LocationsPanel() {
         </StatusBanner>
       ) : null}
       <ResourceTableShell
-        ariaLabel='Location fixes'
+        ariaLabel={PAGE_NAME}
         toolbar={
           <div className='mb-3 flex flex-wrap items-end gap-2'>
             <p className='w-full text-sm text-slate-700'>{summary}</p>

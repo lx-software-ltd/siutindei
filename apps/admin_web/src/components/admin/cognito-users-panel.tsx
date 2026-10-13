@@ -12,6 +12,7 @@ import {
   listCognitoUsers,
   removeUserFromGroup,
 } from '@/lib/api-client-cognito';
+import { formatAdminPageName } from '@/lib/admin-page-name';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { formatDate, formatDateTime } from '@/lib/date-utils';
 import type { CognitoUser } from '@/types/admin';
@@ -33,6 +34,8 @@ import {
   IdentityProviderBadge,
   RoleBadge,
 } from './cognito-users/badges';
+
+const PAGE_NAME = formatAdminPageName('Users');
 
 interface CognitoUserRow extends CognitoUser {
   id: string;
@@ -147,8 +150,9 @@ export function CognitoUsersPanel() {
 
   return (
     <>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       <ResourceTableShell
-        ariaLabel='Users'
+        ariaLabel={PAGE_NAME}
         rows={list.items}
         getLabel={(item) => item.email || item.username || 'Unknown'}
         middleColumnCount={3}

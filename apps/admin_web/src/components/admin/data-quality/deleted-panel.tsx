@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
 import { useConfirmDialog } from '../../../hooks/use-confirm-dialog';
+import { formatAdminPageName } from '../../../lib/admin-page-name';
 import { getAdminQueryClient } from '../../../lib/admin-query-client';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { ApiError } from '../../../lib/api-client';
@@ -29,6 +30,7 @@ interface DeletedFilters {
 }
 
 const DEFAULT_FILTERS: DeletedFilters = { q: '' };
+const PAGE_NAME = formatAdminPageName('Data quality', 'Deleted');
 
 export function DeletedPanel() {
   const expanded = useExpandedRecord({ paramName: 'deleted-org' });
@@ -51,8 +53,9 @@ export function DeletedPanel() {
 
   return (
     <>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       <ResourceTableShell
-        ariaLabel='Deleted organizations'
+        ariaLabel={PAGE_NAME}
         hasActions={false}
         filters={
           <AdminFilterBar>

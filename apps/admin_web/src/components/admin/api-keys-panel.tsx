@@ -13,6 +13,7 @@ import {
   revokeApiKey,
 } from '@/lib/api-client-api-keys';
 import { getAdminQueryClient } from '@/lib/admin-query-client';
+import { formatAdminPageName } from '@/lib/admin-page-name';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { formatDateTime } from '@/lib/date-utils';
 import type { ApiKey, Organization } from '@/types/admin';
@@ -47,6 +48,8 @@ interface ApiKeyFormState {
   org_id: string;
   expires_at: string;
 }
+
+const PAGE_NAME = formatAdminPageName('API keys');
 
 const emptyForm: ApiKeyFormState = {
   name: '',
@@ -282,8 +285,9 @@ export function ApiKeysPanel() {
 
   return (
     <>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       <ResourceTableShell
-        ariaLabel='API keys'
+        ariaLabel={PAGE_NAME}
         rows={list.items}
         getLabel={(item) => item.name}
         middleColumnCount={4}

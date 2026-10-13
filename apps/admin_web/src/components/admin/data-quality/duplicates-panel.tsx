@@ -6,6 +6,7 @@ import { useRef, useState } from 'react';
 
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
+import { formatAdminPageName } from '../../../lib/admin-page-name';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import {
   dismissOrgDuplicates,
@@ -23,6 +24,8 @@ import { Input } from '../../ui/input';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { Select } from '../../ui/select';
 import { OrganizationMergeEditor } from './organization-merge-editor';
+
+const PAGE_NAME = formatAdminPageName('Data quality', 'Duplicates');
 
 interface DuplicateFilters {
   q: string;
@@ -84,7 +87,7 @@ export function DuplicatesPanel() {
 
   return (
     <div className='space-y-4'>
-      <h2 className='sr-only'>Duplicates</h2>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       {organization ? (
         <p className='text-sm text-slate-600'>
           Filtered to the organization from the review queue.{' '}
@@ -105,7 +108,7 @@ export function DuplicatesPanel() {
         </StatusBanner>
       ) : null}
       <ResourceTableShell
-        ariaLabel='Duplicate organizations'
+        ariaLabel={PAGE_NAME}
         rows={list.items}
         getLabel={(item) => item.organizations.map((org) => org.name).join(', ')}
         middleColumnCount={3}
