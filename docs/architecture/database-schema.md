@@ -38,6 +38,9 @@ Columns:
 - `twitter` (text, optional)
 - `xiaohongshu` (text, optional)
 - `wechat` (text, optional)
+- `website` (text, optional) — the organization's own site, at most
+  400 characters in the API. `source_url` stays the catalog page the
+  listing was taken from.
 - `media_urls` (text[], default empty array)
 - `logo_media_url` (text, optional)
 - `place_id` (text, optional) — Google Places id
@@ -103,6 +106,8 @@ Migration `0041_data_quality` adds `name_key` as nullable and fills it
 with a trigger, so existing seed inserts that omit the column stay
 valid. It also inserts the `name_fix_settings` singleton. No
 `seed_data.sql` change.
+Migration `0047_org_website` adds nullable `website`. Seed inserts
+omit the column and still run. No seed rows change.
 
 ## Table: organization_merges
 

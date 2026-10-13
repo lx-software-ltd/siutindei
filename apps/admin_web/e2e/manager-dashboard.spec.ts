@@ -98,6 +98,9 @@ test.describe('Manager Organizations Panel', () => {
     await expect(managerPage.getByLabel('Name')).toHaveValue(
       'Test Organization 1'
     );
+    await expect(managerPage.getByLabel('Website')).toHaveValue(
+      'https://org-one.example'
+    );
     await expect(managerPage.getByLabel('Source URL')).toHaveCount(0);
     await expect(managerPage.getByLabel('Source note')).toHaveCount(0);
   });

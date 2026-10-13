@@ -21,6 +21,7 @@ export interface OrganizationFormState {
   phone_country_code: string;
   phone_number: string;
   email: string;
+  website: string;
   whatsapp: string;
   facebook: string;
   instagram: string;
@@ -45,6 +46,7 @@ export const emptyForm: OrganizationFormState = {
   phone_country_code: 'HK',
   phone_number: '',
   email: '',
+  website: '',
   whatsapp: '',
   facebook: '',
   instagram: '',
@@ -70,6 +72,7 @@ export function itemToForm(item: Organization): OrganizationFormState {
     phone_country_code: item.phone_country_code ?? 'HK',
     phone_number: item.phone_number ?? '',
     email: item.email ?? '',
+    website: item.website ?? '',
     whatsapp: item.whatsapp ?? '',
     facebook: item.facebook ?? '',
     instagram: item.instagram ?? '',
