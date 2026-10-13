@@ -15,8 +15,10 @@ import {
 } from '../../../lib/api-client-org-review';
 import {
   AdminDataTableCell,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
+import { ADMIN_TABLE_EMPTY, AdminTableTime } from '../../ui/admin-table-value';
 import { RetryIcon, ViewIcon } from '../../icons/action-icons';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminFieldGrid } from '../../ui/admin-field-grid';
@@ -36,7 +38,7 @@ function formatWhen(value?: string) {
 function organizationSummary(item: ImportJobListItem) {
   const counts = item.summary?.organizations;
   if (!counts) {
-    return '—';
+    return ADMIN_TABLE_EMPTY;
   }
   const captured = item.summary?.captured_categories;
   const unchanged =
@@ -209,7 +211,15 @@ export function ImportHistoryPanel() {
         }
         renderCells={(item) => (
           <>
-            <AdminDataTableCell>{formatWhen(item.created_at)}</AdminDataTableCell>
+            <AdminDataTableCell>
+              <AdminTableTime value={item.created_at} emphasis />
+              <AdminDataTableCellMeta until='secondary'>
+                {modeLabel(item)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary' label='Organizations'>
+                {organizationSummary(item)}
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               {modeLabel(item)}
             </AdminDataTableCell>

@@ -26,7 +26,18 @@ import {
   type LocationFixSettings,
 } from '../../../lib/api-client-data-quality';
 import { StatusBanner } from '../../status-banner';
-import { AdminDataTableCell, AdminDataTableHeadCell } from '../../ui/admin-data-table';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '../../ui/admin-data-table';
+import {
+  adminTableText,
+  AdminTableName,
+  AdminTableNumber,
+  formatAdminTableLabel,
+  formatAdminTablePercent,
+} from '../../ui/admin-table-value';
 import { CascadingAreaSelect } from '../../ui/cascading-area-select';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../../ui/admin-field-grid';
@@ -458,7 +469,7 @@ export function LocationsPanel() {
         }
         rows={list.items}
         getLabel={(item) => item.entity_name || item.current_label}
-        middleColumnCount={5}
+        middleColumnCount={6}
         hasActions={false}
         isExpanded={expanded.isExpanded}
         onToggle={expanded.toggle}
@@ -698,22 +709,40 @@ export function LocationsPanel() {
             <AdminDataTableHeadCell>Current</AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Proposed</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Source</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Confidence</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>Lookup</AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              {item.entity_name || item.entity_type}
+              <AdminTableName>
+                {item.entity_name || formatAdminTableLabel(item.entity_type)}
+              </AdminTableName>
+              <AdminDataTableCellMeta until='secondary' label='Source'>
+                {adminTableText(item.source)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta
+                until='secondary'
+                label='Confidence'
+                empty={item.confidence == null}
+              >
+                <AdminTableNumber>{formatAdminTablePercent(item.confidence)}</AdminTableNumber>
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary' label='Lookup'>
+                {adminTableText(item.proposed_location?.lookup?.grade)}
+              </AdminDataTableCellMeta>
             </AdminDataTableCell>
-            <AdminDataTableCell>{item.current_label}</AdminDataTableCell>
-            <AdminDataTableCell>{item.proposed_label}</AdminDataTableCell>
+            <AdminDataTableCell>{adminTableText(item.current_label)}</AdminDataTableCell>
+            <AdminDataTableCell>{adminTableText(item.proposed_label)}</AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {item.source}
-              {item.confidence == null ? '' : ` ${item.confidence}`}
+              {adminTableText(item.source)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              <AdminTableNumber>{formatAdminTablePercent(item.confidence)}</AdminTableNumber>
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              {item.proposed_location?.lookup?.grade || ''}
+              {adminTableText(item.proposed_location?.lookup?.grade)}
             </AdminDataTableCell>
           </>
         )}

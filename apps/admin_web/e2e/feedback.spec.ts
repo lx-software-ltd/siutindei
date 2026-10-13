@@ -15,6 +15,24 @@ test.describe('Feedback Panel', () => {
     await expect(
       adminPage.getByRole('cell', { name: 'Test Organization' }).first()
     ).toBeVisible();
+    await expect(
+      adminPage.getByRole('columnheader', { name: 'Submitted' })
+    ).toBeVisible();
+    const submitted = await adminPage.evaluate(() => {
+      const date = new Date('2024-01-03T00:00:00Z');
+      const monthDay = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+      const hours24 = date.getHours();
+      const period = hours24 >= 12 ? 'PM' : 'AM';
+      const hours12 = hours24 % 12 || 12;
+      const pad = (value: number) => String(value).padStart(2, '0');
+      return `${monthDay}, ${pad(hours12)}:${pad(date.getMinutes())} ${period}`;
+    });
+    await expect(adminPage.getByRole('table', { name: 'Feedback', exact: true })).toContainText(
+      submitted
+    );
 
     await adminPage.getByRole('row', { name: /Test Organization/ }).first().click();
     await expect(

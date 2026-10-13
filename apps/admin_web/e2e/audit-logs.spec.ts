@@ -14,8 +14,10 @@ test.describe('Audit Logs Panel', () => {
     await expect(adminPage.locator('label', { hasText: /^Time range$/ })).toHaveCount(0);
     await expect(adminPage.locator('label', { hasText: /^Actor$/ })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Actor' })).toBeVisible();
-    await expect(adminPage.getByRole('cell', { name: 'admin@example.com' })).toBeVisible();
-    await expect(adminPage.getByRole('cell', { name: 'migration' })).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'admin@example.com', exact: true })
+    ).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'migration', exact: true })).toBeVisible();
     await expect(adminPage.getByText('admin-user-id-123')).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Timestamp' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: /Timestamp GMT/ })).toHaveCount(0);
@@ -30,9 +32,8 @@ test.describe('Audit Logs Panel', () => {
     await expect(adminPage.getByPlaceholder('Actor email')).toHaveCount(0);
 
     await expect(adminPage.getByLabel('Action')).toHaveValue('all');
-    await expect(adminPage.getByText('migration')).toBeVisible();
-    await expect(adminPage.getByText('update', { exact: true })).toBeVisible();
-    await expect(adminPage.getByText('insert', { exact: true })).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'update', exact: true })).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'insert', exact: true })).toBeVisible();
     await expect(adminPage.getByText('UPDATE', { exact: true })).toHaveCount(0);
     await expect(adminPage.getByText('INSERT', { exact: true })).toHaveCount(0);
 

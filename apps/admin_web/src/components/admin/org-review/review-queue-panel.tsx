@@ -27,8 +27,17 @@ import {
 import { StatusBanner } from '../../status-banner';
 import {
   AdminDataTableCell,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
+import {
+  adminTableText,
+  AdminTableId,
+  AdminTableName,
+  AdminTableNumber,
+  formatAdminTableLabel,
+  formatAdminTablePercent,
+} from '../../ui/admin-table-value';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
 import { Button } from '../../ui/button';
 import { ConfirmDialog } from '../../ui/confirm-dialog';
@@ -491,7 +500,7 @@ export function CatalogPanel() {
         ariaLabel={PAGE_NAME}
         rows={items}
         getLabel={(item) => item.name || `organization ${item.id}`}
-        middleColumnCount={7}
+        middleColumnCount={9}
         hasActions={false}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
@@ -619,7 +628,13 @@ export function CatalogPanel() {
               Review
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>
-              Contact
+              Email
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Phone
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Manager
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
               Import job
@@ -635,31 +650,55 @@ export function CatalogPanel() {
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              <span className='font-medium'>{item.name}</span>
+              <AdminTableName>{item.name}</AdminTableName>
+              <AdminDataTableCellMeta until='secondary' label='Source'>
+                {adminTableText(item.source)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary'>
+                <StatusBadge status={formatAdminTableLabel(item.review_status)} />
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary' label='Email'>
+                {adminTableText(item.email)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary' label='Phone'>
+                {adminTableText(item.phone_number)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary' label='Manager' empty={!item.manager_id}>
+                <AdminTableId>{item.manager_id}</AdminTableId>
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary' label='Import job' empty={!item.import_job_id}>
+                <AdminTableId>{item.import_job_id}</AdminTableId>
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary' label='Missing'>
+                {issueSummary(item)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                <AdminTableNumber>{formatAdminTablePercent(item.completeness)}</AdminTableNumber>
+              </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {item.source || '—'}
+              {adminTableText(item.source)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              <StatusBadge status={item.review_status.replaceAll('_', ' ')} />
+              <StatusBadge status={formatAdminTableLabel(item.review_status)} />
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              <span>{item.email || '—'}</span>
-              <span className='block text-xs text-slate-500'>
-                {item.phone_number || 'No phone'}
-              </span>
-              <span className='block text-xs text-slate-500'>
-                {item.manager_id ? `Manager ${item.manager_id}` : 'No manager'}
-              </span>
+              {adminTableText(item.email)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              {adminTableText(item.phone_number)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              <AdminTableId>{item.manager_id}</AdminTableId>
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              {item.import_job_id || '—'}
+              <AdminTableId>{item.import_job_id}</AdminTableId>
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {issueSummary(item)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              {`${Math.round(item.completeness * 100)}%`}
+              <AdminTableNumber>{formatAdminTablePercent(item.completeness)}</AdminTableNumber>
             </AdminDataTableCell>
           </>
         )}

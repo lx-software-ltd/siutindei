@@ -31,6 +31,17 @@ const statusToneByValue: Record<string, StatusBadgeTone> = {
   active: 'green',
   revoked: 'red',
   expired: 'slate',
+  none: 'slate',
+  queued: 'yellow',
+  running: 'blue',
+  done: 'green',
+  failed: 'red',
+  read: 'blue',
+  crud: 'purple',
+  confirm: 'green',
+  reassign: 'blue',
+  propose: 'yellow',
+  you: 'slate',
 };
 
 export interface StatusBadgeProps {

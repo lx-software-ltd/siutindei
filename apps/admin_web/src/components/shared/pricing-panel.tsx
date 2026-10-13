@@ -22,6 +22,7 @@ import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-titl
 import { VersionHistory } from '../admin/version-history';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 import { AdminCreateButton } from '../ui/admin-create-button';
+import { AdminTableName } from '../ui/admin-table-value';
 import {
   AdminDataTableCell,
   AdminDataTableCellMeta,
@@ -593,9 +594,15 @@ export function PricingPanel({ mode }: PricingPanelProps) {
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              {getLocationName(item.location_id)}
+              <AdminTableName>{getLocationName(item.location_id)}</AdminTableName>
+              <AdminDataTableCellMeta until='secondary' label='Activity'>
+                {getActivityName(item.activity_id)}
+              </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='secondary'>
                 {pricingAmountLabel(item)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                {getPricingTypeLabel(item.pricing_type)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>

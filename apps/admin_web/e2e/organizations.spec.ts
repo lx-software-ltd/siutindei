@@ -70,11 +70,13 @@ test.describe('Organizations Panel', () => {
 
     await expect(adminPage.getByRole('columnheader', { name: 'Name' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Review' })).toBeVisible();
-    await expect(adminPage.getByRole('columnheader', { name: 'Contact' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Contact' })).toHaveCount(0);
+    await expect(adminPage.getByRole('columnheader', { name: 'Email' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Phone' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Import job' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toHaveCount(0);
     await expect(adminPage.getByRole('cell', { name: 'v2' })).toHaveCount(0);
-    await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toHaveCount(0);
     await expect(adminPage.locator('#review-status-filter')).toHaveValue('');
     await expect(adminPage.getByText('First test organization')).toHaveCount(0);
     await expect(
@@ -82,9 +84,13 @@ test.describe('Organizations Panel', () => {
     ).toBeVisible();
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
-    await expect(adminPage.getByText('contact@org-one.test')).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'contact@org-one.test' })).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: '12345678' })).toBeVisible();
+    await expect(adminPage.getByText('No phone')).toHaveCount(0);
+    await expect(adminPage.getByText('No manager')).toHaveCount(0);
     await expect(adminPage.getByRole('cell', { name: 'job-1' })).toBeVisible();
-    await expect(adminPage.getByText('Manager manager-user-id-456')).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'manager-user-id-456' }).first()).toBeVisible();
+    await expect(adminPage.getByText('Manager manager-user-id-456')).toHaveCount(0);
   });
 
   test('should display manager selector with Cognito users', async ({ adminPage }) => {

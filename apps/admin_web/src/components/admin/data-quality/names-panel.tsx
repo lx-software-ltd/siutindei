@@ -24,7 +24,17 @@ import {
   type NameFixSettings,
 } from '../../../lib/api-client-data-quality';
 import { StatusBanner } from '../../status-banner';
-import { AdminDataTableCell, AdminDataTableHeadCell } from '../../ui/admin-data-table';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '../../ui/admin-data-table';
+import {
+  adminTableText,
+  AdminTableName,
+  formatAdminTableLabel,
+  formatAdminTableLabels,
+} from '../../ui/admin-table-value';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../../ui/admin-field-grid';
 import { AdminInputCard } from '../../ui/admin-input-card';
@@ -431,10 +441,22 @@ export function NamesPanel() {
         }
         renderCells={(item) => (
           <>
-            <AdminDataTableCell>{item.current_value}</AdminDataTableCell>
-            <AdminDataTableCell>{item.proposed_value}</AdminDataTableCell>
-            <AdminDataTableCell priority='secondary'>{item.entity_type}</AdminDataTableCell>
-            <AdminDataTableCell priority='tertiary'>{item.rules.join(', ')}</AdminDataTableCell>
+            <AdminDataTableCell>
+              <AdminTableName>{item.current_value}</AdminTableName>
+              <AdminDataTableCellMeta until='secondary' label='Record'>
+                {formatAdminTableLabel(item.entity_type)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary' label='Rules'>
+                {formatAdminTableLabels(item.rules)}
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
+            <AdminDataTableCell>{adminTableText(item.proposed_value)}</AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              {formatAdminTableLabel(item.entity_type)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {formatAdminTableLabels(item.rules)}
+            </AdminDataTableCell>
           </>
         )}
       />

@@ -31,13 +31,14 @@ rules use.
 | Input card | `AdminInputCard`: required title, variable content, and a bar when there are actions. A nested card uses `titleLevel="h3"`. Same `Card` chrome and title style. Login and dialog overlays stay on `Card`. Expanded row editors stay on `AdminEditorPanel` inside the table card. Post-submit results use `footer` |
 | Create | `AdminCreateButton`, label `New <noun>`, on the table `actions` row. Same size as `Button` `md` (`h-10` below `sm`, `h-9` from `sm`, `w-auto`) |
 | Bulk and scan actions | `actions` slot, left-aligned. Sweep pending and Sweep all orgs stay primary. Apply and Dismiss are `secondary`. The Catalog release toggle is a pressed `Button` on that row and clears after a successful bulk action. The header checkbox selects the visible page, then all matching rows. Scope filters stay in `AdminFilterBar`. Import and organization scope notes sit above the card with Show all. Catalog filters sit inside the table card. On Map, that same bar sits above the map card |
-| Fields | `AdminField` inside `AdminFieldGrid` (1, 2, or 4 columns) |
+| Fields | `AdminField` inside `AdminFieldGrid` (1, 2, or 4 columns). Titles are `font-semibold` |
 | Required mark and invalid border | `RequiredMark` and `formErrorClassName` from `admin-field-grid.tsx` |
 | Field errors | `error` on `AdminField`, which renders `AdminInlineError` |
 | Read-only values | `AdminReadOnlyValue` (`dl` / `dt` / `dd`, `span` 1, 2, or `full`) |
 | Row operations | `AdminRowActions` (icon-only, tooltip, overflow menu) |
 | Dialogs | `AdminDialog` with a header Close control. `ConfirmDialog` is the confirm/cancel footer. `footer={null}` keeps the header Close and omits the footer |
 | Status chips | `StatusBadge` with an optional `tone` |
+| Table cell content | One role per cell: `AdminTableName`, plain text, `AdminTableTime`, `StatusBadge`, `AdminTableId`, `AdminTableNumber`, or an em dash. Confidence is a percent. Hidden columns repeat under the name with `AdminDataTableCellMeta`; an empty caption includes the column name. Draft cells inherit header priority. Cell `className` is layout only |
 | Banners | `StatusBanner` `kind` (`error`, `saved`, `pending-review`, `info`) sets the colour and default heading. `title` overrides the heading |
 | In-area switchers | `AdminTabStrip` (sentence case) |
 | Multi-select chips | `AdminToggleChip` |
