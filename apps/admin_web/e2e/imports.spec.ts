@@ -5,6 +5,7 @@ test.describe('Imports Panel', () => {
     await adminPage.goto('/admin/imports');
     await expect(adminPage).toHaveURL(/section=imports/);
     await expect(adminPage.getByRole('heading', { name: 'Imports' })).toBeVisible();
+    await expect(adminPage.getByRole('heading', { name: 'Exports' })).toBeVisible();
 
     const jsonFile = {
       name: 'import.json',

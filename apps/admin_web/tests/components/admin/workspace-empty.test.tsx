@@ -25,6 +25,9 @@ describe('WorkspaceEmpty', () => {
       screen.getByText('Open an organization from the catalog to work on locations.')
     ).toBeVisible();
     expect(screen.getByTestId('admin-editor-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('admin-input-card-bar')).toContainElement(
+      screen.getByRole('button', { name: 'Open catalog' })
+    );
 
     await user.click(screen.getByRole('button', { name: 'Open catalog' }));
   });
@@ -42,6 +45,7 @@ describe('WorkspaceScopeGate', () => {
     expect(
       screen.getByRole('heading', { name: 'No organization is selected' })
     ).toBeVisible();
+    expect(screen.getByTestId('admin-input-card-bar')).toBeInTheDocument();
     expect(screen.queryByText('Locations table')).not.toBeInTheDocument();
   });
 });

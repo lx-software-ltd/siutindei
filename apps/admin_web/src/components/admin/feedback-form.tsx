@@ -14,8 +14,8 @@ import type { FeedbackLabel } from '../../types/admin';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { AdminField } from '../ui/admin-field-grid';
 import { AdminToggleChip } from '../ui/admin-tab-strip';
+import { AdminInputCard } from '../ui/admin-input-card';
 import { Button } from '../ui/button';
-import { Card } from '../ui/card';
 import { Input } from '../ui/input';
 import { StarRating } from '../ui/star-rating';
 import { Textarea } from '../ui/textarea';
@@ -161,19 +161,28 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
   );
 
   return (
-    <Card
-      title='Leave Feedback'
-      description='Share your experience with an organization.'
-    >
-      {error && (
-        <div className='mb-4'>
-          <StatusBanner kind='error'>
-            {error}
-          </StatusBanner>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className='space-y-4'>
+    <form onSubmit={handleSubmit}>
+      <AdminInputCard
+        title='Leave feedback'
+        description='Share your experience with an organization.'
+        status={
+          error ? (
+            <StatusBanner kind='error'>
+              {error}
+            </StatusBanner>
+          ) : null
+        }
+        actions={
+          <Button
+            type='submit'
+            variant='primary'
+            loading={isSubmitting}
+            loadingLabel='Submitting…'
+          >
+            Submit Feedback
+          </Button>
+        }
+      >
         <AdminField
           label='Organization'
           htmlFor='feedback-org'
@@ -279,18 +288,7 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
           />
         </AdminField>
 
-        <div className='pt-2'>
-          <Button
-            type='submit'
-            variant='primary'
-            loading={isSubmitting}
-            loadingLabel='Submitting…'
-            className='w-full sm:w-auto'
-          >
-            Submit Feedback
-          </Button>
-        </div>
-      </form>
-    </Card>
+      </AdminInputCard>
+    </form>
   );
 }

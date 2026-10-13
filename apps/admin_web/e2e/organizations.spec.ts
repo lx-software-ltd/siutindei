@@ -7,6 +7,9 @@ test.describe('Organizations Panel', () => {
 
   test('should display the organizations form', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
+    await expect(
+      adminPage.getByRole('heading', { name: 'New organization' })
+    ).toBeVisible();
 
     // Check form fields
     await expect(adminPage.getByLabel('Name')).toBeVisible();

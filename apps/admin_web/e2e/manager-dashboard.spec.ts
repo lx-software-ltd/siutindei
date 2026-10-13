@@ -246,7 +246,7 @@ test.describe('Manager Access Request Flow', () => {
     await page.getByRole('button', { name: 'Become a Manager' }).click();
 
     await expect(
-      page.getByRole('heading', { name: 'Request Organization Access' })
+      page.getByRole('heading', { name: 'Request organization access' })
     ).toBeVisible();
   });
 

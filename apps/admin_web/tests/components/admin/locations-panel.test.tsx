@@ -73,6 +73,12 @@ describe('LocationsPanel', () => {
 
   it('offers the location sweep and decide actions', async () => {
     render(<LocationsPanel />, { wrapper });
+    expect(await screen.findByRole('heading', { name: 'Model budget' })).toHaveClass(
+      'text-base',
+      'font-semibold',
+      'sm:text-lg'
+    );
+    expect(screen.getByRole('button', { name: 'Save budget' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Sweep pending' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sweep all orgs' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Apply selected' })).toBeInTheDocument();

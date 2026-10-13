@@ -69,6 +69,9 @@ describe('OrganizationReadiness', () => {
       await screen.findByRole('heading', { name: 'Readiness' })
     ).toBeVisible();
     expect(screen.getByTestId('admin-editor-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('admin-input-card-bar')).toContainElement(
+      screen.getByRole('button', { name: 'Approve' })
+    );
     expect(screen.getByText('No locations')).toBeVisible();
     expect(
       within(screen.getByRole('listitem')).getByRole('button', { name: 'Fix' })

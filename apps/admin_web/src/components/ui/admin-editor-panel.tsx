@@ -11,6 +11,8 @@ export interface AdminEditorPanelProps {
   children: ReactNode;
   /** Single action row rendered under the fields (see `AdminEditorActions`). */
   actions?: ReactNode;
+  /** Always render the action bar, even when `actions` is empty. */
+  actionRow?: boolean;
   /** Error or status banner shown above the actions. */
   status?: ReactNode;
   className?: string;
@@ -20,13 +22,23 @@ export interface AdminEditorPanelProps {
  * Body of an expanded record row. No title or description: the row itself
  * identifies the record, so the panel starts directly with fields.
  */
-export function AdminEditorPanel({ children, actions, status, className }: AdminEditorPanelProps) {
+export function AdminEditorPanel({
+  children,
+  actions,
+  actionRow = false,
+  status,
+  className,
+}: AdminEditorPanelProps) {
+  const showBar = actionRow || actions != null;
   return (
     <div className={clsx('space-y-4', className)} data-testid='admin-editor-panel'>
       {children}
       {status}
-      {actions ? (
-        <div className='flex flex-wrap items-center justify-start gap-2 border-t border-slate-200 pt-4'>
+      {showBar ? (
+        <div
+          className='flex flex-wrap items-center justify-start gap-2 border-t border-slate-200 pt-4'
+          data-testid={actionRow ? 'admin-input-card-bar' : undefined}
+        >
           {actions}
         </div>
       ) : null}
