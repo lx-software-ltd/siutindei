@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AdminField } from '@/components/ui/admin-field-grid';
+import { AdminReadOnlyValue } from '@/components/ui/admin-read-only-value';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Label } from '@/components/ui/label';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 describe('AdminField', () => {
@@ -16,6 +18,33 @@ describe('AdminField', () => {
 
     expect(screen.getByText('*')).toHaveClass('text-red-600');
     expect(screen.getByRole('alert')).toHaveTextContent('Name is required');
+  });
+
+  it('uses the same bold title weight as Import / History / File warnings', () => {
+    render(
+      <AdminField label='Name' htmlFor='name'>
+        <input id='name' />
+      </AdminField>
+    );
+
+    expect(screen.getByText('Name')).toHaveClass('font-semibold');
+  });
+});
+
+describe('Label', () => {
+  it('renders field titles in semibold', () => {
+    render(<Label htmlFor='when'>When</Label>);
+
+    expect(screen.getByText('When')).toHaveClass('font-semibold');
+  });
+});
+
+describe('AdminReadOnlyValue', () => {
+  it('matches Label title weight on expanded read-only fields', () => {
+    render(<AdminReadOnlyValue label='File'>import.json</AdminReadOnlyValue>);
+
+    expect(screen.getByText('File')).toHaveClass('font-semibold');
+    expect(screen.getByText('File')).toHaveClass('text-sm', 'text-slate-700');
   });
 });
 
