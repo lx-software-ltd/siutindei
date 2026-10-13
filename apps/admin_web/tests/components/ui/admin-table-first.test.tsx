@@ -10,17 +10,32 @@ import {
 import { AdminEditorActions } from '@/components/ui/admin-editor-panel';
 import { AdminFilterBar } from '@/components/ui/admin-filter-bar';
 import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { ResourceTableShell } from '@/components/ui/resource-table-shell';
 import { Button } from '@/components/ui/button';
 
+function following(a: HTMLElement, b: HTMLElement) {
+  return Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+}
+
 describe('AdminRecordTable', () => {
-  it('renders filters and an empty state inside one untitled card', () => {
+  it('renders filters left, actions right, table, then Load more', () => {
     render(
       <AdminRecordTable
         aria-label='Organizations'
         columnCount={2}
-        rowCount={0}
+        rowCount={1}
         isLoading={false}
-        filters={<AdminFilterBar trailing={<AdminCreateButton label='New organization' onClick={() => undefined} />} />}
+        hasMore
+        onLoadMore={() => undefined}
+        filters={
+          <AdminFilterBar>
+            <label>
+              Name
+              <input aria-label='Name' />
+            </label>
+          </AdminFilterBar>
+        }
+        actions={<AdminCreateButton label='New organization' onClick={() => undefined} />}
         head={
           <>
             <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
@@ -28,16 +43,79 @@ describe('AdminRecordTable', () => {
           </>
         }
       >
+        <tr>
+          <AdminDataTableCell>Harbour Club</AdminDataTableCell>
+          <AdminDataTableCell>Approved</AdminDataTableCell>
+        </tr>
+      </AdminRecordTable>
+    );
+
+    const card = screen.getByTestId('admin-record-table');
+    const filters = screen.getByTestId('admin-filter-bar');
+    const actions = screen.getByTestId('admin-record-table-actions');
+    const table = screen.getByRole('table', { name: 'Organizations' });
+    const loadMore = screen.getByRole('button', { name: 'Load more' });
+    const create = screen.getByRole('button', { name: 'New organization' });
+
+    expect(card).toContainElement(filters);
+    expect(card).toContainElement(actions);
+    expect(card).toContainElement(table);
+    expect(card).toContainElement(loadMore);
+    expect(following(filters, actions)).toBe(true);
+    expect(following(actions, table)).toBe(true);
+    expect(following(table, loadMore)).toBe(true);
+    expect(actions).toHaveClass('justify-end');
+    expect(actions).toContainElement(create);
+    expect(screen.queryByTestId('admin-filter-bar-trailing')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+  });
+
+  it('omits the actions row when there are no buttons', () => {
+    render(
+      <AdminRecordTable
+        aria-label='Deleted'
+        columnCount={1}
+        rowCount={0}
+        isLoading={false}
+        filters={
+          <AdminFilterBar>
+            <label>
+              Name
+              <input aria-label='Name' />
+            </label>
+          </AdminFilterBar>
+        }
+        head={<AdminDataTableHeadCell>Name</AdminDataTableHeadCell>}
+      >
         {null}
       </AdminRecordTable>
     );
 
-    expect(screen.getByTestId('admin-record-table')).toBeInTheDocument();
-    expect(screen.getByRole('table', { name: 'Organizations' })).toBeVisible();
-    expect(screen.queryAllByRole('region', { name: 'Organizations' })).toHaveLength(0);
-    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'New organization' })).toBeVisible();
+    expect(screen.getByTestId('admin-filter-bar')).toBeVisible();
+    expect(screen.queryByTestId('admin-record-table-actions')).not.toBeInTheDocument();
     expect(screen.getByText('No records match the current filters.')).toBeVisible();
+  });
+
+  it('keeps banners and Refreshing out of the card', () => {
+    render(
+      <AdminRecordTable
+        aria-label='Users'
+        columnCount={1}
+        rowCount={1}
+        isLoading
+        head={<AdminDataTableHeadCell>Email</AdminDataTableHeadCell>}
+      >
+        <tr>
+          <AdminDataTableCell>Ada</AdminDataTableCell>
+        </tr>
+      </AdminRecordTable>
+    );
+
+    const card = screen.getByTestId('admin-record-table');
+    expect(card.querySelector('[role="alert"]')).toBeNull();
+    const busy = screen.getByRole('status');
+    expect(busy).toHaveTextContent('Refreshing...');
+    expect(busy).toHaveClass('sr-only');
   });
 
   it('shows skeleton rows while the first page loads', () => {
@@ -54,6 +132,30 @@ describe('AdminRecordTable', () => {
     );
 
     expect(screen.getAllByTestId('admin-skeleton-row').length).toBeGreaterThan(0);
+  });
+});
+
+describe('ResourceTableShell banners', () => {
+  it('renders the list error above the table card', () => {
+    render(
+      <ResourceTableShell
+        ariaLabel='Users'
+        rows={[]}
+        getLabel={() => 'Ada'}
+        middleColumnCount={1}
+        hasActions={false}
+        isLoading={false}
+        error='Could not load users.'
+        isExpanded={() => false}
+        onToggle={() => undefined}
+        detail={null}
+        head={<AdminDataTableHeadCell>Name</AdminDataTableHeadCell>}
+        renderCells={() => <AdminDataTableCell>Ada</AdminDataTableCell>}
+      />
+    );
+
+    const banner = screen.getByText('Could not load users.');
+    expect(screen.getByTestId('admin-record-table')).not.toContainElement(banner);
   });
 });
 
