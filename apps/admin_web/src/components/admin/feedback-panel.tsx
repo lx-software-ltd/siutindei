@@ -20,7 +20,6 @@ import {
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
 import { AdminToggleChip } from '../ui/admin-tab-strip';
-import { AdminFilterBar } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
 import {
   deleteRowActions,
@@ -280,8 +279,13 @@ export function FeedbackPanel() {
   );
 
   return (
-    <>
+    <div className='space-y-4'>
       <h2 className='sr-only'>{PAGE_NAME}</h2>
+      {lookupError ? (
+        <StatusBanner kind='error'>
+          {lookupError}
+        </StatusBanner>
+      ) : null}
       <ResourceTableShell
         ariaLabel={PAGE_NAME}
         rows={panel.items}
@@ -301,25 +305,14 @@ export function FeedbackPanel() {
         draftLabel='New feedback'
         onToggleDraft={panel.collapse}
         detail={detail}
-        toolbar={
-          lookupError ? (
-            <StatusBanner kind='error'>
-              {lookupError}
-            </StatusBanner>
+        actions={
+          panel.canCreate ? (
+            <AdminCreateButton
+              label='New feedback'
+              active={panel.isDraftOpen}
+              onClick={panel.openDraft}
+            />
           ) : null
-        }
-        filters={
-          <AdminFilterBar
-            trailing={
-              panel.canCreate ? (
-                <AdminCreateButton
-                  label='New feedback'
-                  active={panel.isDraftOpen}
-                  onClick={panel.openDraft}
-                />
-              ) : null
-            }
-          />
         }
         head={
           <>
@@ -368,6 +361,6 @@ export function FeedbackPanel() {
         }
       />
       {panel.confirmDialog}
-    </>
+    </div>
   );
 }

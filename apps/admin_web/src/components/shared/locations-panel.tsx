@@ -484,18 +484,17 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
         draftLabel='New location'
         onToggleDraft={panel.collapse}
         detail={detail}
+        actions={
+          panel.canCreate ? (
+            <AdminCreateButton
+              label='New location'
+              active={panel.isDraftOpen}
+              onClick={panel.openDraft}
+            />
+          ) : null
+        }
         filters={
-          <AdminFilterBar
-            trailing={
-              panel.canCreate ? (
-                <AdminCreateButton
-                  label='New location'
-                  active={panel.isDraftOpen}
-                  onClick={panel.openDraft}
-                />
-              ) : null
-            }
-          >
+          <AdminFilterBar>
             <AdminFilterField>
               <Input
                 id='location-search'

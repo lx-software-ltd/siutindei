@@ -333,6 +333,11 @@ export function CategoryChecksPanel() {
           All matching records are selected, including rows not on this page.
         </StatusBanner>
       ) : null}
+      <p className='text-sm text-slate-700'>
+        {progress ||
+          `${summary?.review_pending_total ?? 0} waiting. ` +
+            `${summary?.auto_applied_total ?? 0} auto-assigned.`}
+      </p>
       <CategoryChecksTable
         items={list.items}
         isLoading={list.isLoading}
@@ -364,13 +369,7 @@ export function CategoryChecksPanel() {
           />
         )}
         filters={
-          <AdminFilterBar
-            summary={
-              progress ||
-              `${summary?.review_pending_total ?? 0} waiting. ` +
-                `${summary?.auto_applied_total ?? 0} auto-assigned.`
-            }
-          >
+          <AdminFilterBar>
             {scopedOrgId ? (
               <AdminFilterField>
                 <Input
@@ -439,11 +438,10 @@ export function CategoryChecksPanel() {
             </AdminFilterField>
           </AdminFilterBar>
         }
-        toolbar={
-          <div className='mb-3 flex flex-wrap gap-2'>
+        actions={
+          <>
             <Button
               type='button'
-              size='sm'
               disabled={pendingCandidates === 0 || isRunning || isStarting}
               loading={isStarting && confirmMode === 'pending_review'}
               loadingLabel='Scanning…'
@@ -453,7 +451,6 @@ export function CategoryChecksPanel() {
             </Button>
             <Button
               type='button'
-              size='sm'
               disabled={allCandidates === 0 || isRunning || isStarting}
               loading={isStarting && confirmMode === 'all'}
               loadingLabel='Scanning…'
@@ -464,7 +461,6 @@ export function CategoryChecksPanel() {
             <Button
               type='button'
               variant='outline'
-              size='sm'
               disabled={!hasSelection || isRunning || isStarting || isBulkRunning}
               loading={isBulkRunning && bulkAction === 'apply'}
               loadingLabel='Applying…'
@@ -475,7 +471,6 @@ export function CategoryChecksPanel() {
             <Button
               type='button'
               variant='outline'
-              size='sm'
               disabled={!hasSelection || isRunning || isStarting || isBulkRunning}
               loading={isBulkRunning && bulkAction === 'dismiss'}
               loadingLabel='Dismissing…'
@@ -483,7 +478,7 @@ export function CategoryChecksPanel() {
             >
               Dismiss matching
             </Button>
-          </div>
+          </>
         }
       />
       <ConfirmDialog

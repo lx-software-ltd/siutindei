@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 
 import { DeleteIcon } from '@/components/icons/action-icons';
+import { StatusBanner } from '@/components/status-banner';
 import { DRAFT_RECORD_ID } from '@/hooks/use-expanded-record';
 
 import {
@@ -40,7 +41,7 @@ export function rowActions(actions: AdminRowAction[]): ReactNode {
 export interface ResourceTableShellProps<T extends { id: string }> {
   ariaLabel: string;
   filters?: ReactNode;
-  toolbar?: ReactNode;
+  actions?: ReactNode;
   /** Header cells between the expand column and Operations. */
   head: ReactNode;
   /** Body cells matching `head`, for one existing row. */
@@ -76,7 +77,7 @@ export interface ResourceTableShellProps<T extends { id: string }> {
 export function ResourceTableShell<T extends { id: string }>({
   ariaLabel,
   filters,
-  toolbar,
+  actions,
   head,
   renderCells,
   renderActions,
@@ -111,17 +112,22 @@ export function ResourceTableShell<T extends { id: string }>({
   ));
 
   return (
-    <AdminRecordTable
+    <>
+      {error ? (
+        <div className='mb-3'>
+          <StatusBanner kind='error'>{error}</StatusBanner>
+        </div>
+      ) : null}
+      <AdminRecordTable
       aria-label={ariaLabel}
       filters={filters}
-      toolbar={toolbar}
+      actions={actions}
       columnCount={columnCount}
       rowCount={rows.length + (isDraftOpen ? 1 : 0)}
       isLoading={isLoading}
       isLoadingMore={isLoadingMore}
       hasMore={hasMore}
       onLoadMore={onLoadMore}
-      error={error}
       emptyLabel={emptyLabel}
       head={
         <>
@@ -170,5 +176,6 @@ export function ResourceTableShell<T extends { id: string }>({
         );
       })}
     </AdminRecordTable>
+    </>
   );
 }

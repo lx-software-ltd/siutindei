@@ -551,18 +551,17 @@ export function PricingPanel({ mode }: PricingPanelProps) {
         draftLabel='New pricing'
         onToggleDraft={panel.collapse}
         detail={detail}
+        actions={
+          panel.canCreate ? (
+            <AdminCreateButton
+              label='New pricing'
+              active={panel.isDraftOpen}
+              onClick={panel.openDraft}
+            />
+          ) : null
+        }
         filters={
-          <AdminFilterBar
-            trailing={
-              panel.canCreate ? (
-                <AdminCreateButton
-                  label='New pricing'
-                  active={panel.isDraftOpen}
-                  onClick={panel.openDraft}
-                />
-              ) : null
-            }
-          >
+          <AdminFilterBar>
             <AdminFilterField>
               <Input
                 id='pricing-search'

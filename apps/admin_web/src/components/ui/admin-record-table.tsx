@@ -4,16 +4,16 @@ import { useEffect, useRef, type ReactNode } from 'react';
 
 import { clsx } from 'clsx';
 
-import { StatusBanner } from '@/components/status-banner';
-
 import { AdminDataTableBody, AdminDataTableCell, AdminDataTableHead } from './admin-data-table';
 import { AdminSkeletonRows } from './admin-skeleton';
 import { Button } from './button';
 import { Card } from './card';
 
 export interface AdminRecordTableProps {
-  /** `AdminFilterBar` (with the create button in its trailing slot). */
+  /** Left-aligned `AdminFilterBar` fields. Omit when there are no filters. */
   filters?: ReactNode;
+  /** Right-aligned create / sweep / bulk buttons. Omit when there are none. */
+  actions?: ReactNode;
   /** Header `<tr>`; start with `<AdminDataTableHeadCell />` for the expand column. */
   head: ReactNode;
   /** Body rows, normally `AdminExpandableRow` elements (draft row first). */
@@ -26,12 +26,7 @@ export interface AdminRecordTableProps {
   isLoadingMore?: boolean;
   hasMore?: boolean;
   onLoadMore?: () => void | Promise<void>;
-  error?: string;
   emptyLabel?: string;
-  /** Footer line under the table, for example a totals summary. */
-  footer?: ReactNode;
-  /** Bulk actions or job status between the filters and the table. */
-  toolbar?: ReactNode;
   /**
    * Extra classes on the `<table>`. Do not pass min-w-*; the scroll
    * container handles overflow.
@@ -46,12 +41,12 @@ export interface AdminRecordTableProps {
 }
 
 /**
- * Table-first listing: a white card (no title) holding the filters and then
- * the table. Shows skeleton rows while the first page loads and keeps
- * existing rows visible while a refetch is in flight.
+ * Table-first listing: an untitled white card with optional filters,
+ * optional right-aligned actions, the table, and optional Load more.
  */
 export function AdminRecordTable({
   filters,
+  actions,
   head,
   children,
   columnCount,
@@ -60,10 +55,7 @@ export function AdminRecordTable({
   isLoadingMore = false,
   hasMore = false,
   onLoadMore,
-  error,
   emptyLabel = 'No records match the current filters.',
-  footer,
-  toolbar,
   tableClassName,
   embedded = false,
   'aria-label': ariaLabel,
@@ -88,19 +80,19 @@ export function AdminRecordTable({
   }, []);
 
   const showSkeleton = isLoading && rowCount === 0;
-  const showEmpty = !isLoading && !isLoadingMore && !error && rowCount === 0;
+  const showEmpty = !isLoading && !isLoadingMore && rowCount === 0;
 
   const Shell = embedded ? 'section' : Card;
 
   return (
     <Shell data-testid='admin-record-table' data-embedded={embedded ? 'true' : undefined}>
       {filters}
-      {toolbar}
-      {error ? (
-        <div className='mb-3'>
-          <StatusBanner kind='error'>
-            {error}
-          </StatusBanner>
+      {actions ? (
+        <div
+          className='mb-3 flex flex-wrap items-center justify-end gap-2'
+          data-testid='admin-record-table-actions'
+        >
+          {actions}
         </div>
       ) : null}
       <div
@@ -129,7 +121,7 @@ export function AdminRecordTable({
         </table>
       </div>
       {isLoading && rowCount > 0 ? (
-        <p className='mt-2 text-xs text-slate-500' role='status'>
+        <p className='sr-only' role='status'>
           Refreshing...
         </p>
       ) : null}
@@ -146,7 +138,6 @@ export function AdminRecordTable({
           </Button>
         </div>
       ) : null}
-      {footer ? <div className='mt-2 text-xs text-slate-500'>{footer}</div> : null}
     </Shell>
   );
 }

@@ -255,8 +255,18 @@ export function TicketsPanel() {
   const showToolbarError = Boolean(reviewError && reviewTargetId !== selectedId);
 
   return (
-    <>
+    <div className='space-y-4'>
       <h2 className='sr-only'>{PAGE_NAME}</h2>
+      {pendingCount > 0 ? (
+        <StatusBanner kind='pending-review'>
+          {pendingCount} ticket{pendingCount !== 1 ? 's' : ''} awaiting review.
+        </StatusBanner>
+      ) : null}
+      {showToolbarError ? (
+        <StatusBanner kind='error'>
+          {reviewError}
+        </StatusBanner>
+      ) : null}
       <ResourceTableShell
         ariaLabel={PAGE_NAME}
         rows={list.items}
@@ -271,22 +281,6 @@ export function TicketsPanel() {
         isExpanded={shell.expanded.isExpanded}
         onToggle={shell.expanded.toggle}
         detail={detail}
-        toolbar={
-          pendingCount > 0 || showToolbarError ? (
-            <div className='mb-3 space-y-3'>
-              {pendingCount > 0 ? (
-                <StatusBanner kind='pending-review'>
-                  {pendingCount} ticket{pendingCount !== 1 ? 's' : ''} awaiting review.
-                </StatusBanner>
-              ) : null}
-              {showToolbarError ? (
-                <StatusBanner kind='error'>
-                  {reviewError}
-                </StatusBanner>
-              ) : null}
-            </div>
-          ) : null
-        }
         head={
           <>
             <AdminDataTableHeadCell>Organization</AdminDataTableHeadCell>
@@ -356,7 +350,7 @@ export function TicketsPanel() {
         }
       />
       <AdminDiscardChangesDialog prompt={shell.expanded.discardPrompt} />
-    </>
+    </div>
   );
 }
 
