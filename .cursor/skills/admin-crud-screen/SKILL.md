@@ -11,6 +11,7 @@ Build list screens from `apps/admin_web/src/components/ui/`.
 - Filters (`AdminFilterBar` + `AdminFilterField`) sit above the table. `AdminCreateButton` spells out its label at every breakpoint. Filters apply on change. Text filters are debounced. Do not render Apply or Clear.
 - Rows expand in place (`AdminExpandableRow` + `useExpandedRecord`). One row is open. Do not put `border-x-*` on expandable rows. Create inserts a draft row (`DRAFT_RECORD_ID`, URL value `new`).
 - Editors (`AdminEditorPanel` + `AdminEditorActions`) have no title and no Cancel button. Fields use `AdminField` inside `AdminFieldGrid`. Field errors are the `error` prop (`AdminInlineError`). Do not hand-write `text-xs` or `text-sm` with `text-red-600`. Read-only details use `AdminReadOnlyValue`. Unsaved edits use `AdminDiscardChangesDialog`.
+- Input cards are `Card` with an optional title and description, wrapping `AdminEditorPanel` (fields, banners, action row). Organization, Readiness, workspace choose, and manager pending tickets use this. Login and dialog overlays stay separate.
 - Banners use `StatusBanner` `kind`: `error`, `saved`, `pending-review`, `info`. Pass `title` only to override the heading. Do not also pass `variant`.
 - Chips use `AdminToggleChip`. Bulk and scan actions go in the table `toolbar`.
 - Dialogs use `AdminDialog`. `ConfirmDialog` is the confirm/cancel footer. `footer={null}` omits the footer.

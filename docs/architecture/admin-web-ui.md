@@ -27,6 +27,7 @@ rules use.
 | Concern | Use |
 | --- | --- |
 | Page shell | Filters, then the table, inside one untitled `Card` (`AdminRecordTable`) |
+| Input card | `Card` (optional title and description) wrapping `AdminEditorPanel`. Organization, Readiness, workspace choose, and manager pending tickets |
 | Create | `AdminCreateButton`, label `New <noun>`, trailing slot of `AdminFilterBar` |
 | Bulk and scan actions | `toolbar` slot. Sweep pending and Sweep all orgs stay primary. Apply and Dismiss follow. The header checkbox selects the visible page, then all matching rows. Scope filters stay in `AdminFilterBar` |
 | Fields | `AdminField` inside `AdminFieldGrid` (1, 2, or 4 columns) |
