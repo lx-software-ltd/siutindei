@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { AuditHighlightedJson } from '@/components/admin/audit-highlighted-json';
 import { useExpandedRecord } from '@/hooks/use-expanded-record';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
-import { ApiError, type AuditLogsFilters } from '@/lib/api-client';
+import { type AuditLogsFilters } from '@/lib/api-client';
 import { listAuditLogs } from '@/lib/api-client-audit';
 import { listCognitoUsers } from '@/lib/api-client-cognito';
 import { formatAdminPageName } from '@/lib/admin-page-name';
@@ -12,24 +13,21 @@ import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { formatAuditActor } from '@/lib/audit-actor';
 import { formatDateTime } from '@/lib/date-utils';
 import type { AuditLog } from '@/types/admin';
-import { StatusBanner } from '@/components/status-banner';
 import {
   AdminDataTableCell,
   AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '@/components/ui/admin-data-table';
 import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
-import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
+import { AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import {
   AdminFilterBar,
   AdminFilterField,
 } from '@/components/ui/admin-filter-bar';
-import { Input } from '@/components/ui/input';
 import { ResourceTableShell } from '@/components/ui/resource-table-shell';
 import { AdminReadOnlyValue } from '@/components/ui/admin-read-only-value';
 import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { Textarea } from '@/components/ui/textarea';
 
 const PAGE_NAME = formatAdminPageName('Audit logs');
 
@@ -39,17 +37,13 @@ interface AuditLogListFilters {
   action: ActionFilter;
   table: string;
   timeRange: string;
-  actor: string;
 }
 
 const defaultAuditLogFilters: AuditLogListFilters = {
   action: 'all',
   table: 'all',
   timeRange: '24h',
-  actor: '',
 };
-
-const auditDebounceKeys: (keyof AuditLogListFilters)[] = ['actor'];
 
 const AUDITABLE_TABLES = [
   'organizations',
@@ -89,35 +83,38 @@ function getTimestamp(range: string): string | undefined {
   }
 }
 
-function formatJson(obj: Record<string, unknown> | null | undefined): string {
-  if (!obj) {
-    return '—';
+function formatAuditAction(action: string): string {
+  return action.toLowerCase();
+}
+
+function auditJsonRecord(
+  value: AuditLog['old_values'] | AuditLog['new_values']
+): Record<string, unknown> | null {
+  if (!value || Object.keys(value).length === 0) {
+    return null;
   }
-  return JSON.stringify(obj, null, 2);
+  return value;
 }
 
 function ActionBadge({ action }: { action: AuditLog['action'] }) {
-  const tone = action === 'INSERT' ? 'green' : action === 'DELETE' ? 'red' : 'blue';
+  const normalized = action.toUpperCase();
+  const tone = normalized === 'INSERT' ? 'green' : normalized === 'DELETE' ? 'red' : 'blue';
 
-  return <StatusBadge status={action} tone={tone} label={action} />;
+  return <StatusBadge status={action} tone={tone} label={formatAuditAction(action)} />;
 }
 
 export function AuditLogsPanel() {
   const expanded = useExpandedRecord({ paramName: 'audit-log' });
-  const [userLookupError, setUserLookupError] = useState('');
   const [userEmailById, setUserEmailById] = useState<Record<string, string>>({});
-  const userLookupPromise = useRef<Promise<{
-    emailById: Record<string, string>;
-    idByEmail: Record<string, string>;
-  }> | null>(null);
-  const userLookupRef = useRef<{
-    emailById: Record<string, string>;
-    idByEmail: Record<string, string>;
-  }>({ emailById: {}, idByEmail: {} });
+  const userLookupPromise = useRef<Promise<Record<string, string>> | null>(null);
+  const userLookupRef = useRef<Record<string, string>>({});
   const isMountedRef = useRef(true);
 
-  const loadCognitoUsers = useCallback(async (showError = false) => {
-    if (Object.keys(userLookupRef.current.emailById).length > 0) {
+  const loadCognitoUsers = useCallback(async () => {
+    if (Object.keys(userLookupRef.current).length > 0) {
+      if (isMountedRef.current) {
+        setUserEmailById(userLookupRef.current);
+      }
       return userLookupRef.current;
     }
     if (userLookupPromise.current) {
@@ -127,7 +124,6 @@ export function AuditLogsPanel() {
     userLookupPromise.current = (async () => {
       try {
         const emailById: Record<string, string> = {};
-        const idByEmail: Record<string, string> = {};
         let paginationToken: string | undefined;
 
         do {
@@ -136,27 +132,18 @@ export function AuditLogsPanel() {
             if (!user.email) {
               continue;
             }
-            const normalizedEmail = user.email.trim().toLowerCase();
             emailById[user.sub] = user.email;
-            if (!idByEmail[normalizedEmail]) {
-              idByEmail[normalizedEmail] = user.sub;
-            }
           }
           paginationToken = response.pagination_token ?? undefined;
         } while (paginationToken);
 
-        userLookupRef.current = { emailById, idByEmail };
+        userLookupRef.current = emailById;
         if (isMountedRef.current) {
           setUserEmailById(emailById);
         }
-        return userLookupRef.current;
-      } catch (err) {
-        if (showError && isMountedRef.current) {
-          setUserLookupError(
-            err instanceof ApiError ? err.message : 'Failed to load user directory.'
-          );
-        }
-        return { emailById: {}, idByEmail: {} };
+        return emailById;
+      } catch {
+        return {};
       } finally {
         userLookupPromise.current = null;
       }
@@ -168,10 +155,9 @@ export function AuditLogsPanel() {
   const list = usePaginatedList<AuditLog, AuditLogListFilters>({
     queryKey: adminQueryKeys.auditLogs(),
     defaultFilters: defaultAuditLogFilters,
-    debounceKeys: auditDebounceKeys,
     limit: 50,
     errorPrefix: 'Failed to load audit logs',
-    fetcher: async ({ action, table, timeRange, actor, cursor, limit }) => {
+    fetcher: async ({ action, table, timeRange, cursor, limit }) => {
       const filters: AuditLogsFilters = {};
       if (action !== 'all') {
         filters.action = action;
@@ -183,13 +169,6 @@ export function AuditLogsPanel() {
       if (since) {
         filters.since = since;
       }
-      const actorEmail = actor.trim().toLowerCase();
-      if (actorEmail) {
-        const userMaps = await loadCognitoUsers(true);
-        filters.user_id = userMaps.idByEmail[actorEmail] ?? '__no_match__';
-      } else if (isMountedRef.current) {
-        setUserLookupError('');
-      }
       const response = await listAuditLogs(filters, cursor ?? undefined, limit);
       return {
         items: response.items,
@@ -199,13 +178,14 @@ export function AuditLogsPanel() {
   });
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
   }, []);
 
   useEffect(() => {
-    void loadCognitoUsers(false);
+    void loadCognitoUsers();
   }, [loadCognitoUsers]);
 
   const getActor = useCallback(
@@ -222,15 +202,10 @@ export function AuditLogsPanel() {
   return (
     <div className='space-y-4'>
     <h2 className='sr-only'>{PAGE_NAME}</h2>
-    {userLookupError ? (
-      <StatusBanner kind='error'>
-        {userLookupError}
-      </StatusBanner>
-    ) : null}
     <ResourceTableShell
       ariaLabel={PAGE_NAME}
       rows={list.items}
-      getLabel={(item) => `${item.table_name} ${item.action}`}
+      getLabel={(item) => `${item.table_name} ${formatAuditAction(item.action)}`}
       middleColumnCount={4}
       hasActions={false}
       isLoading={list.isLoading}
@@ -244,21 +219,6 @@ export function AuditLogsPanel() {
       detail={detail}
       filters={
         <AdminFilterBar>
-          <AdminFilterField>
-            <Select
-              id='action-filter'
-              aria-label='Action'
-              value={list.filters.action}
-              onChange={(event) => {
-                list.setFilter('action', event.target.value as ActionFilter);
-              }}
-            >
-              <option value='all'>All actions</option>
-              <option value='INSERT'>Insert</option>
-              <option value='UPDATE'>Update</option>
-              <option value='DELETE'>Delete</option>
-            </Select>
-          </AdminFilterField>
           <AdminFilterField>
             <Select
               id='table-filter'
@@ -278,6 +238,21 @@ export function AuditLogsPanel() {
           </AdminFilterField>
           <AdminFilterField>
             <Select
+              id='action-filter'
+              aria-label='Action'
+              value={list.filters.action}
+              onChange={(event) => {
+                list.setFilter('action', event.target.value as ActionFilter);
+              }}
+            >
+              <option value='all'>All actions</option>
+              <option value='INSERT'>Insert</option>
+              <option value='UPDATE'>Update</option>
+              <option value='DELETE'>Delete</option>
+            </Select>
+          </AdminFilterField>
+          <AdminFilterField>
+            <Select
               id='time-range'
               aria-label='Time range'
               value={list.filters.timeRange}
@@ -291,18 +266,6 @@ export function AuditLogsPanel() {
                 </option>
               ))}
             </Select>
-          </AdminFilterField>
-          <AdminFilterField>
-            <Input
-              id='actor-filter'
-              aria-label='Actor'
-              type='text'
-              placeholder='Actor email'
-              value={list.filters.actor}
-              onChange={(event) => {
-                list.setFilter('actor', event.target.value);
-              }}
-            />
           </AdminFilterField>
         </AdminFilterBar>
       }
@@ -326,7 +289,7 @@ export function AuditLogsPanel() {
             <ActionBadge action={item.action} />
           </AdminDataTableCell>
           <AdminDataTableCell priority='secondary'>
-            <span className='font-mono text-xs text-slate-600'>{getActor(item.user_id)}</span>
+            {getActor(item.user_id)}
           </AdminDataTableCell>
           <AdminDataTableCell priority='tertiary'>
             <span className='text-slate-600'>{formatDateTime(item.timestamp)}</span>
@@ -339,8 +302,8 @@ export function AuditLogsPanel() {
 }
 
 function AuditLogDetail({ log, actor }: { log: AuditLog; actor: string }) {
-  const hasOldValues = Boolean(log.old_values && Object.keys(log.old_values).length > 0);
-  const hasNewValues = Boolean(log.new_values && Object.keys(log.new_values).length > 0);
+  const oldValues = auditJsonRecord(log.old_values);
+  const newValues = auditJsonRecord(log.new_values);
 
   return (
     <AdminEditorPanel>
@@ -349,25 +312,35 @@ function AuditLogDetail({ log, actor }: { log: AuditLog; actor: string }) {
         <AdminReadOnlyValue label='Timestamp'>{formatDateTime(log.timestamp)}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Table'>{log.table_name}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Record ID' mono>{log.record_id}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Action'>{log.action}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Source'>{log.source}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Action'>{formatAuditAction(log.action)}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Source'>{log.source?.trim() || '—'}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Actor'>{actor}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Request ID' mono>{log.request_id || '—'}</AdminReadOnlyValue>
         {log.changed_fields && log.changed_fields.length > 0 ? (
           <AdminReadOnlyValue label='Changed Fields' span='full'>{log.changed_fields.join(', ')}</AdminReadOnlyValue>
         ) : null}
-        {hasOldValues ? (
+        {oldValues ? (
           <AdminReadOnlyValue label='Old Values' span='full' mono>
-            <span className='block max-h-40 overflow-auto rounded bg-red-50 p-2 text-red-900'>
-              {formatJson(log.old_values)}
-            </span>
+            <AuditHighlightedJson
+              aria-label='Old values JSON'
+              className='max-h-40 overflow-auto rounded bg-red-50 p-2 text-red-900'
+              emphasisClassName='bg-red-300'
+              value={oldValues}
+              counterpart={newValues}
+              changedFields={log.changed_fields}
+            />
           </AdminReadOnlyValue>
         ) : null}
-        {hasNewValues ? (
+        {newValues ? (
           <AdminReadOnlyValue label='New Values' span='full' mono>
-            <span className='block max-h-40 overflow-auto rounded bg-green-50 p-2 text-green-900'>
-              {formatJson(log.new_values)}
-            </span>
+            <AuditHighlightedJson
+              aria-label='New values JSON'
+              className='max-h-40 overflow-auto rounded bg-green-50 p-2 text-green-900'
+              emphasisClassName='bg-green-300'
+              value={newValues}
+              counterpart={oldValues}
+              changedFields={log.changed_fields}
+            />
           </AdminReadOnlyValue>
         ) : null}
         {log.ip_address ? (
