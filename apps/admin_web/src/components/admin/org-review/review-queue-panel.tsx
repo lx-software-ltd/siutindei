@@ -462,7 +462,6 @@ export function CatalogPanel() {
       />
       {notice ? <StatusBanner kind='info'>{notice}</StatusBanner> : null}
       {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
-      {filterBar}
       <div className={view === 'map' ? undefined : 'hidden'}>
         {mapMounted ? (
         <Card>
@@ -502,16 +501,9 @@ export function CatalogPanel() {
         isExpanded={() => false}
         onToggle={openOrganization}
         detail={null}
+        filters={filterBar}
         actions={
           <>
-            <label className='flex items-center gap-2 text-sm text-slate-700'>
-              <input
-                type='checkbox'
-                checked={force}
-                onChange={(event) => setForce(event.target.checked)}
-              />
-              Release even when details are missing
-            </label>
             <AdminCreateButton
               label='New organization'
               onClick={() => {
@@ -555,6 +547,14 @@ export function CatalogPanel() {
             >
               Apply properties
             </Button>
+            <label className='flex items-center gap-2 text-sm text-slate-700'>
+              <input
+                type='checkbox'
+                checked={force}
+                onChange={(event) => setForce(event.target.checked)}
+              />
+              Release even when details are missing
+            </label>
           </>
         }
         leadingHead={

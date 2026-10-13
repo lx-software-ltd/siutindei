@@ -1,31 +1,37 @@
 import { test, expect } from './fixtures/test-fixtures';
 
 test.describe('Table card slots', () => {
-  test('catalog keeps shared filters outside and actions inside, right-aligned', async ({
+  test('catalog keeps filters and left-aligned actions inside the table card', async ({
     adminPage,
   }) => {
     await adminPage.goto('/admin/dashboard?section=catalog');
     const card = adminPage.getByTestId('admin-record-table');
-    const filters = adminPage.getByTestId('admin-filter-bar');
-    const actions = adminPage.getByTestId('admin-record-table-actions');
-    const create = adminPage.getByRole('button', { name: 'New organization', exact: true });
+    const filters = card.getByTestId('admin-filter-bar');
+    const actions = card.getByTestId('admin-record-table-actions');
+    const create = actions.getByRole('button', { name: 'New organization', exact: true });
 
     await expect(adminPage.getByRole('table', { name: 'Catalog' })).toBeVisible();
     await expect(filters).toBeVisible();
-    await expect(actions).toBeVisible();
-    await expect(card.getByTestId('admin-record-table-actions')).toBeVisible();
-    await expect(card.getByTestId('admin-filter-bar')).toHaveCount(0);
-    await expect(actions.getByRole('button', { name: 'New organization', exact: true })).toBeVisible();
+    await expect(create).toBeVisible();
     await expect(actions.getByRole('button', { name: 'Approve' })).toBeVisible();
+    await expect(adminPage.getByTestId('admin-filter-bar')).toHaveCount(1);
+
+    const apply = actions.getByRole('button', { name: 'Apply properties' });
+    const release = actions.getByLabel('Release even when details are missing');
+    await expect(apply).toBeVisible();
+    await expect(release).toBeVisible();
+    const applyBox = await apply.boundingBox();
+    const releaseBox = await release.boundingBox();
+    expect(applyBox).toBeTruthy();
+    expect(releaseBox).toBeTruthy();
+    expect(releaseBox!.x).toBeGreaterThan(applyBox!.x);
 
     const filterBox = await filters.boundingBox();
     const actionBox = await actions.boundingBox();
-    const createBox = await create.boundingBox();
     expect(filterBox).toBeTruthy();
     expect(actionBox).toBeTruthy();
-    expect(createBox).toBeTruthy();
     expect(actionBox!.y).toBeGreaterThan(filterBox!.y);
-    expect(createBox!.x).toBeGreaterThan(filterBox!.x);
+    expect(Math.abs(actionBox!.x - filterBox!.x)).toBeLessThan(32);
 
     await adminPage.screenshot({
       path: '/opt/cursor/artifacts/table-card-catalog.png',
@@ -33,7 +39,7 @@ test.describe('Table card slots', () => {
     });
   });
 
-  test('activities put search left and New activity on a new right-aligned row', async ({
+  test('activities put search and New activity on the left, on two rows', async ({
     adminPage,
   }) => {
     await adminPage.goto('/admin/dashboard?section=activities&org=org-1');
@@ -50,7 +56,7 @@ test.describe('Table card slots', () => {
     const actionBox = await actions.boundingBox();
     const createBox = await create.boundingBox();
     expect(actionBox!.y).toBeGreaterThan(filterBox!.y);
-    expect(createBox!.x).toBeGreaterThan(filterBox!.x);
+    expect(Math.abs(createBox!.x - filterBox!.x)).toBeLessThan(32);
 
     await adminPage.screenshot({
       path: '/opt/cursor/artifacts/table-card-activities.png',

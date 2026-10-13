@@ -12,7 +12,7 @@ import { Card } from './card';
 export interface AdminRecordTableProps {
   /** Left-aligned `AdminFilterBar` fields. Omit when there are no filters. */
   filters?: ReactNode;
-  /** Right-aligned create / sweep / bulk buttons. Omit when there are none. */
+  /** Left-aligned create / sweep / bulk buttons. Omit when there are none. */
   actions?: ReactNode;
   /** Header `<tr>`; start with `<AdminDataTableHeadCell />` for the expand column. */
   head: ReactNode;
@@ -42,7 +42,7 @@ export interface AdminRecordTableProps {
 
 /**
  * Table-first listing: an untitled white card with optional filters,
- * optional right-aligned actions, the table, and optional Load more.
+ * optional left-aligned actions, the table, and optional Load more.
  */
 export function AdminRecordTable({
   filters,
@@ -89,7 +89,7 @@ export function AdminRecordTable({
       {filters}
       {actions ? (
         <div
-          className='mb-3 flex flex-wrap items-center justify-end gap-2'
+          className='mb-3 flex flex-wrap items-center justify-start gap-2'
           data-testid='admin-record-table-actions'
         >
           {actions}

@@ -18,7 +18,7 @@ function following(a: HTMLElement, b: HTMLElement) {
 }
 
 describe('AdminRecordTable', () => {
-  it('renders filters left, actions right, table, then Load more', () => {
+  it('renders filters left, actions left, table, then Load more', () => {
     render(
       <AdminRecordTable
         aria-label='Organizations'
@@ -64,7 +64,7 @@ describe('AdminRecordTable', () => {
     expect(following(filters, actions)).toBe(true);
     expect(following(actions, table)).toBe(true);
     expect(following(table, loadMore)).toBe(true);
-    expect(actions).toHaveClass('justify-end');
+    expect(actions).toHaveClass('justify-start');
     expect(actions).toContainElement(create);
     expect(screen.queryByTestId('admin-filter-bar-trailing')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading')).not.toBeInTheDocument();
