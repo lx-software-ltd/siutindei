@@ -32,7 +32,6 @@ import {
 } from '@/components/ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { AdminReadOnlyValue } from '@/components/ui/admin-read-only-value';
-import { AdminFilterBar } from '@/components/ui/admin-filter-bar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -284,8 +283,45 @@ export function ApiKeysPanel() {
   ) : null;
 
   return (
-    <>
+    <div className='space-y-4'>
       <h2 className='sr-only'>{PAGE_NAME}</h2>
+      {createdKey ? (
+        <StatusBanner kind='saved'>
+          <span className='mb-2 block'>
+            API key created. Copy the key now. It is shown only once
+            and cannot be retrieved later.
+          </span>
+          <span className='flex flex-wrap items-center gap-2'>
+            <code
+              className='rounded bg-white px-2 py-1 font-mono text-xs'
+              data-testid='created-api-key'
+            >
+              {createdKey}
+            </code>
+            <Button
+              type='button'
+              size='sm'
+              variant='secondary'
+              onClick={() => {
+                void navigator.clipboard
+                  .writeText(createdKey)
+                  .then(() => setCopied(true))
+                  .catch(() => setCopied(false));
+              }}
+            >
+              {copied ? 'Copied!' : 'Copy'}
+            </Button>
+            <Button
+              type='button'
+              size='sm'
+              variant='ghost'
+              onClick={() => setCreatedKey(null)}
+            >
+              Dismiss
+            </Button>
+          </span>
+        </StatusBanner>
+      ) : null}
       <ResourceTableShell
         ariaLabel={PAGE_NAME}
         rows={list.items}
@@ -303,60 +339,15 @@ export function ApiKeysPanel() {
         draftLabel='New API key'
         onToggleDraft={shell.expanded.collapse}
         detail={detail}
-        toolbar={
-          createdKey ? (
-            <div className='mb-3'>
-              <StatusBanner kind='saved'>
-                <span className='mb-2 block'>
-                  API key created. Copy the key now. It is shown only once
-                  and cannot be retrieved later.
-                </span>
-                <span className='flex flex-wrap items-center gap-2'>
-                  <code
-                    className='rounded bg-white px-2 py-1 font-mono text-xs'
-                    data-testid='created-api-key'
-                  >
-                    {createdKey}
-                  </code>
-                  <Button
-                    type='button'
-                    size='sm'
-                    variant='secondary'
-                    onClick={() => {
-                      void navigator.clipboard
-                        .writeText(createdKey)
-                        .then(() => setCopied(true))
-                        .catch(() => setCopied(false));
-                    }}
-                  >
-                    {copied ? 'Copied!' : 'Copy'}
-                  </Button>
-                  <Button
-                    type='button'
-                    size='sm'
-                    variant='ghost'
-                    onClick={() => setCreatedKey(null)}
-                  >
-                    Dismiss
-                  </Button>
-                </span>
-              </StatusBanner>
-            </div>
-          ) : null
-        }
-        filters={
-          <AdminFilterBar
-            trailing={
-              <AdminCreateButton
-                label='New API key'
-                active={shell.expanded.isDraftOpen}
-                onClick={() => {
-                  setFormState(emptyForm);
-                  setFormError('');
-                  shell.expanded.openDraft();
-                }}
-              />
-            }
+        actions={
+          <AdminCreateButton
+            label='New API key'
+            active={shell.expanded.isDraftOpen}
+            onClick={() => {
+              setFormState(emptyForm);
+              setFormError('');
+              shell.expanded.openDraft();
+            }}
           />
         }
         head={
@@ -420,12 +411,10 @@ export function ApiKeysPanel() {
       {confirmDialog}
       <AdminDiscardChangesDialog prompt={shell.expanded.discardPrompt} />
       {formError && !showCreateForm ? (
-        <div className='mt-3'>
-          <StatusBanner kind='error'>
-            {formError}
-          </StatusBanner>
-        </div>
+        <StatusBanner kind='error'>
+          {formError}
+        </StatusBanner>
       ) : null}
-    </>
+    </div>
   );
 }

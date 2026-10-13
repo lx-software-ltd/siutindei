@@ -9,6 +9,7 @@ alwaysApply: false
 - Build list screens from `apps/admin_web/src/components/ui/` using the `admin-crud-screen` skill. [why: 6cf29cf table-first admin console]
 - Page names use `formatAdminPageName(nav, tab)`. Use the nav label when there is no tab, or the tab repeats the nav. Otherwise `Nav · Tab`. Do not invent fused phrases. The table `aria-label` and the page's sr-only heading use that name. [why: convention]
 - Page-level input cards use `AdminInputCard` (title, content, bar, inputs). [why: convention]
+- Page-level table cards use four slots: filters left (optional), actions right on a new row (optional), table, Load more (optional). [why: convention]
 - Server state is TanStack Query. Do not add `useEffect` plus `useState` list loops. [why: 6cf29cf table-first admin console]
 - When UI behavior changes, update Playwright specs and fixtures under `apps/admin_web/e2e`. [why: convention]
 - Keep `npm run generate:api` output committed when OpenAPI changes. [why: 1f0b8c7 generated OpenAPI types]

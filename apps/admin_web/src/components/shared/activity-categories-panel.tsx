@@ -23,7 +23,6 @@ import {
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
-import { AdminFilterBar } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
 import {
@@ -369,18 +368,14 @@ export function ActivityCategoriesPanel() {
         draftLabel='New category'
         onToggleDraft={panel.collapse}
         detail={detail}
-        filters={
-          <AdminFilterBar
-            trailing={
-              panel.canCreate ? (
-                <AdminCreateButton
-                  label='New category'
-                  active={panel.isDraftOpen}
-                  onClick={panel.openDraft}
-                />
-              ) : null
-            }
-          />
+        actions={
+          panel.canCreate ? (
+            <AdminCreateButton
+              label='New category'
+              active={panel.isDraftOpen}
+              onClick={panel.openDraft}
+            />
+          ) : null
         }
         head={
           <>

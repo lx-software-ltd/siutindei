@@ -26,10 +26,10 @@ rules use.
 
 | Concern | Use |
 | --- | --- |
-| Page shell | Filters, then the table, inside one untitled `Card` (`AdminRecordTable`) |
+| Page shell | Untitled `Card` (`AdminRecordTable`): optional filters left, optional actions right on a new row, table, optional Load more. Banners sit above the card |
 | Input card | `AdminInputCard`: required title, variable content, and a bar that always renders. Same `Card` chrome and title style. Login and dialog overlays stay on `Card`. Expanded row editors stay on `AdminEditorPanel` inside the table card |
-| Create | `AdminCreateButton`, label `New <noun>`, trailing slot of `AdminFilterBar` |
-| Bulk and scan actions | `toolbar` slot. Sweep pending and Sweep all orgs stay primary. Apply and Dismiss follow. The header checkbox selects the visible page, then all matching rows. Scope filters stay in `AdminFilterBar` |
+| Create | `AdminCreateButton`, label `New <noun>`, on the table `actions` row |
+| Bulk and scan actions | `actions` slot, right-aligned. Sweep pending and Sweep all orgs stay primary. Apply and Dismiss follow. The header checkbox selects the visible page, then all matching rows. Scope filters stay in `AdminFilterBar`. Catalog filters stay outside the table card (shared with Map) |
 | Fields | `AdminField` inside `AdminFieldGrid` (1, 2, or 4 columns) |
 | Required mark and invalid border | `RequiredMark` and `formErrorClassName` from `admin-field-grid.tsx` |
 | Field errors | `error` on `AdminField`, which renders `AdminInlineError` |

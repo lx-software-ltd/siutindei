@@ -70,6 +70,7 @@ export function SuggestionsTable({
   return (
     <div className='space-y-4'>
       <h2 className='sr-only'>{PAGE_NAME}</h2>
+      {summary ? <p className='text-sm text-slate-700'>{summary}</p> : null}
       <ResourceTableShell
         ariaLabel={PAGE_NAME}
         rows={items}
@@ -86,7 +87,7 @@ export function SuggestionsTable({
         onToggle={expanded.toggle}
         detail={openInList ? detail : null}
         filters={
-          <AdminFilterBar summary={summary}>
+          <AdminFilterBar>
             <AdminFilterField>
               <Select
                 id='suggestion-source-filter'

@@ -223,8 +223,13 @@ export function AuditLogsPanel() {
   ) : null;
 
   return (
-    <>
+    <div className='space-y-4'>
     <h2 className='sr-only'>{PAGE_NAME}</h2>
+    {userLookupError ? (
+      <StatusBanner kind='error'>
+        {userLookupError}
+      </StatusBanner>
+    ) : null}
     <ResourceTableShell
       ariaLabel={PAGE_NAME}
       rows={list.items}
@@ -240,15 +245,6 @@ export function AuditLogsPanel() {
       isExpanded={expanded.isExpanded}
       onToggle={expanded.toggle}
       detail={detail}
-      toolbar={
-        userLookupError ? (
-          <div className='mb-3'>
-            <StatusBanner kind='error'>
-              {userLookupError}
-            </StatusBanner>
-          </div>
-        ) : null
-      }
       filters={
         <AdminFilterBar>
           <AdminFilterField className={filterFieldClass}>
@@ -341,7 +337,7 @@ export function AuditLogsPanel() {
         </>
       )}
     />
-    </>
+    </div>
   );
 }
 

@@ -321,31 +321,8 @@ export function CatalogPanel() {
   const missingPinCount = organizationsWithoutMapPins(mapList.items);
 
   const filterBar = (
-          <AdminFilterBar
-            trailing={
-              <>
-                <AdminCreateButton
-                  label='New organization'
-                  onClick={() => {
-                    void scope.openWorkspace('new');
-                  }}
-                />
-                {jobParam ? (
-                  // Leaves the import-job URL scope. This is not a filter
-                  // field, so it is the one Clear control on this bar.
-                  <Button
-                    type='button'
-                    variant='secondary'
-                    onClick={() => {
-                      void setJobParam(null);
-                    }}
-                  >
-                    Clear import filter
-                  </Button>
-                ) : null}
-              </>
-            }
-          >
+          <div className='space-y-2'>
+          <AdminFilterBar>
             <AdminFilterField>
               <Select
                 id='review-status-filter'
@@ -446,6 +423,18 @@ export function CatalogPanel() {
               </Select>
             </AdminFilterField>
           </AdminFilterBar>
+          {jobParam ? (
+            <Button
+              type='button'
+              variant='secondary'
+              onClick={() => {
+                void setJobParam(null);
+              }}
+            >
+              Clear import filter
+            </Button>
+          ) : null}
+          </div>
   );
 
   return (
@@ -513,56 +502,60 @@ export function CatalogPanel() {
         isExpanded={() => false}
         onToggle={openOrganization}
         detail={null}
-        toolbar={
-          <div className='mb-3 space-y-3'>
-            <div className='flex flex-wrap items-center gap-2'>
-              <Button
-                type='button'
-                onClick={() => void runBulk('approve')}
-                disabled={isSaving || selected.size === 0}
-                loading={activeBulk === 'approve'}
-                loadingLabel='Saving…'
-              >
-                Approve
-              </Button>
-              <Button
-                type='button'
-                variant='secondary'
-                onClick={() => void runBulk('reject')}
-                disabled={isSaving || selected.size === 0}
-                loading={activeBulk === 'reject'}
-                loadingLabel='Saving…'
-              >
-                Reject
-              </Button>
-              <Button
-                type='button'
-                variant='secondary'
-                onClick={() => void runBulk('reopen')}
-                disabled={isSaving || selected.size === 0}
-                loading={activeBulk === 'reopen'}
-                loadingLabel='Saving…'
-              >
-                Reopen
-              </Button>
-              <Button
-                type='button'
-                variant='secondary'
-                onClick={() => setShowFields(true)}
-                disabled={selected.size === 0}
-              >
-                Apply properties
-              </Button>
-              <label className='flex items-center gap-2 text-sm text-slate-700'>
-                <input
-                  type='checkbox'
-                  checked={force}
-                  onChange={(event) => setForce(event.target.checked)}
-                />
-                Release even when details are missing
-              </label>
-            </div>
-          </div>
+        actions={
+          <>
+            <label className='flex items-center gap-2 text-sm text-slate-700'>
+              <input
+                type='checkbox'
+                checked={force}
+                onChange={(event) => setForce(event.target.checked)}
+              />
+              Release even when details are missing
+            </label>
+            <AdminCreateButton
+              label='New organization'
+              onClick={() => {
+                void scope.openWorkspace('new');
+              }}
+            />
+            <Button
+              type='button'
+              onClick={() => void runBulk('approve')}
+              disabled={isSaving || selected.size === 0}
+              loading={activeBulk === 'approve'}
+              loadingLabel='Saving…'
+            >
+              Approve
+            </Button>
+            <Button
+              type='button'
+              variant='secondary'
+              onClick={() => void runBulk('reject')}
+              disabled={isSaving || selected.size === 0}
+              loading={activeBulk === 'reject'}
+              loadingLabel='Saving…'
+            >
+              Reject
+            </Button>
+            <Button
+              type='button'
+              variant='secondary'
+              onClick={() => void runBulk('reopen')}
+              disabled={isSaving || selected.size === 0}
+              loading={activeBulk === 'reopen'}
+              loadingLabel='Saving…'
+            >
+              Reopen
+            </Button>
+            <Button
+              type='button'
+              variant='secondary'
+              onClick={() => setShowFields(true)}
+              disabled={selected.size === 0}
+            >
+              Apply properties
+            </Button>
+          </>
         }
         leadingHead={
           <input

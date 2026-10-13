@@ -266,11 +266,11 @@ export function NamesPanel() {
           All matching records are selected, including rows not on this page.
         </StatusBanner>
       ) : null}
+      <p className='text-sm text-slate-700'>{summary}</p>
       <ResourceTableShell
         ariaLabel={PAGE_NAME}
-        toolbar={
-          <div className='mb-3 flex flex-wrap items-end gap-2'>
-            <p className='w-full text-sm text-slate-700'>{summary}</p>
+        actions={
+          <>
             <Button
               type='button'
               onClick={() => void sweep('pending_review')}
@@ -305,7 +305,7 @@ export function NamesPanel() {
             >
               Dismiss selected
             </Button>
-          </div>
+          </>
         }
         rows={list.items}
         getLabel={(item) => item.current_value}

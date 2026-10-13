@@ -32,7 +32,7 @@ interface CategoryChecksTableProps {
   onLoadMore?: () => void;
   onReload: () => void;
   filters?: ReactNode;
-  toolbar?: ReactNode;
+  actions?: ReactNode;
   leadingHead?: ReactNode;
   renderLeading?: (item: ActivityCategoryReview) => ReactNode;
 }
@@ -46,7 +46,7 @@ export function CategoryChecksTable({
   onLoadMore,
   onReload,
   filters,
-  toolbar,
+  actions,
   leadingHead,
   renderLeading,
 }: CategoryChecksTableProps) {
@@ -78,7 +78,7 @@ export function CategoryChecksTable({
         onToggle={expanded.toggle}
         detail={openInList ? detail : null}
         filters={filters}
-        toolbar={toolbar}
+        actions={actions}
         leadingHead={leadingHead}
         renderLeading={renderLeading}
         renderActions={(item) => (

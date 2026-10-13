@@ -550,18 +550,17 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
         draftLabel='New activity'
         onToggleDraft={panel.collapse}
         detail={detail}
+        actions={
+          panel.canCreate ? (
+            <AdminCreateButton
+              label='New activity'
+              active={panel.isDraftOpen}
+              onClick={panel.openDraft}
+            />
+          ) : null
+        }
         filters={
-          <AdminFilterBar
-            trailing={
-              panel.canCreate ? (
-                <AdminCreateButton
-                  label='New activity'
-                  active={panel.isDraftOpen}
-                  onClick={panel.openDraft}
-                />
-              ) : null
-            }
-          >
+          <AdminFilterBar>
             <AdminFilterField>
               <Input
                 id='activity-search'

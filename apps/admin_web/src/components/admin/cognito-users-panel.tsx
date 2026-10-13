@@ -149,8 +149,13 @@ export function CognitoUsersPanel() {
   const selected = list.items.find((item) => item.id === expanded.expandedId) ?? null;
 
   return (
-    <>
+    <div className='space-y-4'>
       <h2 className='sr-only'>{PAGE_NAME}</h2>
+      {actionError ? (
+        <StatusBanner kind='error'>
+          {actionError}
+        </StatusBanner>
+      ) : null}
       <ResourceTableShell
         ariaLabel={PAGE_NAME}
         rows={list.items}
@@ -165,15 +170,6 @@ export function CognitoUsersPanel() {
         isExpanded={expanded.isExpanded}
         onToggle={expanded.toggle}
         detail={selected ? <UserAttributesDetail user={selected} /> : null}
-        toolbar={
-          actionError ? (
-            <div className='mb-3'>
-              <StatusBanner kind='error'>
-                {actionError}
-              </StatusBanner>
-            </div>
-          ) : null
-        }
         head={
           <>
             <AdminDataTableHeadCell>Email</AdminDataTableHeadCell>
@@ -269,7 +265,7 @@ export function CognitoUsersPanel() {
         }}
       />
       {confirmDialog}
-    </>
+    </div>
   );
 }
 
