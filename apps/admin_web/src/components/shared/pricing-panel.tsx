@@ -565,8 +565,8 @@ export function PricingPanel({ mode }: PricingPanelProps) {
             <AdminFilterField>
               <Input
                 id='pricing-search'
-                placeholder='Search pricing...'
-                aria-label='Search pricing'
+                placeholder='Pricing'
+                aria-label='Pricing'
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
               />

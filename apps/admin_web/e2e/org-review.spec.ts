@@ -16,9 +16,9 @@ test.describe('Organization review queue', () => {
     ).toBeVisible();
 
     await adminPage.getByRole('checkbox', { name: 'Select row' }).first().check();
-    await adminPage.getByRole('checkbox', {
-      name: 'Release even when details are missing',
-    }).check();
+    await adminPage
+      .getByRole('button', { name: 'Release even when details are missing' })
+      .click();
     await adminPage.getByRole('button', { name: 'Approve' }).click();
     await expect(adminPage.getByText(/Updated 1/)).toBeVisible();
   });
@@ -207,6 +207,9 @@ test.describe('Organization review queue', () => {
     await expect(adminPage).toHaveURL(/section=data-quality/);
     await expect(adminPage).toHaveURL(/tab=checks/);
     await expect(adminPage).toHaveURL(/organization=org-1/);
-    await expect(adminPage.locator('#check-org-filter')).toHaveValue('org-1');
+    await expect(
+      adminPage.getByText('Filtered to the organization from the review queue.')
+    ).toBeVisible();
+    await expect(adminPage.locator('#check-org-filter')).toHaveCount(0);
   });
 });

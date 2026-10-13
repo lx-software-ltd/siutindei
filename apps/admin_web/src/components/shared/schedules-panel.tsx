@@ -841,8 +841,8 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
             <AdminFilterField>
               <Input
                 id='schedule-search'
-                placeholder='Search schedules...'
-                aria-label='Search schedules'
+                placeholder='Schedule'
+                aria-label='Schedule'
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
               />

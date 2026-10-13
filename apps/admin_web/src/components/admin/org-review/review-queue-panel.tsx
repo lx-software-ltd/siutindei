@@ -321,7 +321,6 @@ export function CatalogPanel() {
   const missingPinCount = organizationsWithoutMapPins(mapList.items);
 
   const filterBar = (
-          <div className='space-y-2'>
           <AdminFilterBar>
             <AdminFilterField>
               <Select
@@ -423,18 +422,6 @@ export function CatalogPanel() {
               </Select>
             </AdminFilterField>
           </AdminFilterBar>
-          {jobParam ? (
-            <Button
-              type='button'
-              variant='secondary'
-              onClick={() => {
-                void setJobParam(null);
-              }}
-            >
-              Clear import filter
-            </Button>
-          ) : null}
-          </div>
   );
 
   return (
@@ -460,6 +447,20 @@ export function CatalogPanel() {
           { key: 'map', label: 'Map' },
         ]}
       />
+      {jobParam ? (
+        <p className='text-sm text-slate-600'>
+          Filtered to this import.{' '}
+          <button
+            type='button'
+            className='underline'
+            onClick={() => {
+              void setJobParam(null);
+            }}
+          >
+            Show all
+          </button>
+        </p>
+      ) : null}
       {notice ? <StatusBanner kind='info'>{notice}</StatusBanner> : null}
       {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
       <div className={view === 'map' ? undefined : 'hidden'}>
@@ -547,14 +548,14 @@ export function CatalogPanel() {
             >
               Apply properties
             </Button>
-            <label className='flex items-center gap-2 text-sm text-slate-700'>
-              <input
-                type='checkbox'
-                checked={force}
-                onChange={(event) => setForce(event.target.checked)}
-              />
+            <Button
+              type='button'
+              variant={force ? 'primary' : 'secondary'}
+              aria-pressed={force}
+              onClick={() => setForce((current) => !current)}
+            >
               Release even when details are missing
-            </label>
+            </Button>
           </>
         }
         leadingHead={

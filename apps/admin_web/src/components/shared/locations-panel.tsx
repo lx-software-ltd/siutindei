@@ -498,8 +498,8 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             <AdminFilterField>
               <Input
                 id='location-search'
-                placeholder='Search locations...'
-                aria-label='Search locations'
+                placeholder='Location'
+                aria-label='Location'
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
               />

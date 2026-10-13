@@ -28,8 +28,8 @@ rules use.
 | --- | --- |
 | Page shell | Untitled `Card` (`AdminRecordTable`): optional filters left, optional actions left on a new row, table, optional Load more. Banners sit above the card |
 | Input card | `AdminInputCard`: required title, variable content, and a bar that always renders. Same `Card` chrome and title style. Login and dialog overlays stay on `Card`. Expanded row editors stay on `AdminEditorPanel` inside the table card |
-| Create | `AdminCreateButton`, label `New <noun>`, on the table `actions` row |
-| Bulk and scan actions | `actions` slot, left-aligned. Sweep pending and Sweep all orgs stay primary. Apply and Dismiss follow. The header checkbox selects the visible page, then all matching rows. Scope filters stay in `AdminFilterBar`. Catalog filters sit inside the table card. The map card uses the same filter state |
+| Create | `AdminCreateButton`, label `New <noun>`, on the table `actions` row. Same size as `Button` `md` (`h-9`, `w-auto`) |
+| Bulk and scan actions | `actions` slot, left-aligned. Sweep pending and Sweep all orgs stay primary. Apply and Dismiss are `secondary`. The Catalog release toggle is a pressed `Button` on that row. The header checkbox selects the visible page, then all matching rows. Scope filters stay in `AdminFilterBar`. Import and organization scope notes sit above the card with Show all. Catalog filters sit inside the table card. The map card uses the same filter state |
 | Fields | `AdminField` inside `AdminFieldGrid` (1, 2, or 4 columns) |
 | Required mark and invalid border | `RequiredMark` and `formErrorClassName` from `admin-field-grid.tsx` |
 | Field errors | `error` on `AdminField`, which renders `AdminInlineError` |
