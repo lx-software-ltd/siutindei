@@ -371,6 +371,22 @@ export const mockCognitoUsers = [
       'custom:feedback_stars': '5',
     },
   },
+  {
+    sub: 'admin-user-id-123',
+    username: 'admin@example.com',
+    email: 'admin@example.com',
+    name: 'Admin User',
+    enabled: true,
+    status: 'CONFIRMED',
+    groups: ['admin'],
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    last_auth_time: '2024-01-10T00:00:00Z',
+    attributes: {
+      email: 'admin@example.com',
+      name: 'Admin User',
+    },
+  },
 ];
 
 /**
@@ -447,7 +463,7 @@ export const mockAuditLogs = [
     table_name: 'activities',
     record_id: 'activity-1',
     action: 'INSERT',
-    source: 'trigger',
+    source: '',
     user_id: null,
     request_id: null,
     changed_fields: ['activity_id', 'location_id'],
