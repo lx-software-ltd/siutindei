@@ -7,6 +7,8 @@
 
 Tighten admin list and form chrome: unlabeled filters with sentence-case empty options, consistent `Oct 13` / `Oct 13, 02:36 PM` timestamps, no Version table columns, expand-on-row-click including Operations padding, and clearer Imports / Organization / Audit copy.
 
+Follow-up: Feedback tab `Labels`; drop Suggestions helper copy; Catalog filters and New organization live inside the table card. Page shape is tabs (if any), then a table card of filter row / action row / table / Load more, then titled cards.
+
 ## Non-goals
 
 - Backend audit serialization or catalog-version APIs
