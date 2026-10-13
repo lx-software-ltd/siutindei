@@ -265,11 +265,6 @@ export function ImportsPanel() {
                     />
                     Skip records that already exist
                   </label>
-                  <p className='mt-1 text-sm text-slate-600'>
-                    Existing organizations, venues, and activities stay
-                    unchanged. New rows are still added, including a new
-                    venue on an organization that already exists.
-                  </p>
                 </AdminField>
               </AdminFieldGrid>
             </AdminEditorPanel>
@@ -412,15 +407,12 @@ export function ImportsPanel() {
                 Download the current dataset as a JSON file.
               </p>
               <AdminFieldGrid columns={1}>
-                <AdminField
-                  label='Organization (optional)'
-                  htmlFor='admin-export-org'
-                >
+                <AdminField htmlFor='admin-export-org'>
                   <Input
                     id='admin-export-org'
                     value={selectedOrgName}
-                    aria-label='Organization name'
-                    placeholder='Leave blank to export every organization'
+                    aria-label='Organization name (optional)'
+                    placeholder='Organization name (optional)'
                     onChange={(event) => setSelectedOrgName(event.target.value)}
                   />
                 </AdminField>

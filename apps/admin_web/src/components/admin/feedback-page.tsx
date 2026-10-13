@@ -10,7 +10,7 @@ type FeedbackView = 'entries' | 'labels';
 
 const FEEDBACK_VIEWS = [
   { key: 'entries' as const, label: 'Feedback' },
-  { key: 'labels' as const, label: 'Feedback Labels' },
+  { key: 'labels' as const, label: 'Feedback labels' },
 ];
 
 export function FeedbackPage() {

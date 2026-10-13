@@ -83,13 +83,14 @@ export function SuggestionsTable({
         detail={openInList ? detail : null}
         filters={
           <AdminFilterBar summary={summary}>
-            <AdminFilterField label='Source' htmlFor='suggestion-source-filter'>
+            <AdminFilterField>
               <Select
                 id='suggestion-source-filter'
+                aria-label='Source'
                 value={source}
                 onChange={(event) => onSourceChange?.(event.target.value)}
               >
-                <option value=''>Any</option>
+                <option value=''>Any source</option>
                 <option value='import'>Import</option>
                 <option value='scan'>Scan</option>
               </Select>

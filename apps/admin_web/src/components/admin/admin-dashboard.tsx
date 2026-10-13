@@ -64,19 +64,19 @@ const sectionLabels = buildAdminNavSections([
   {
     sort: true,
     sections: [
-      { key: 'api-keys', label: 'API Keys' },
+      { key: 'api-keys', label: 'API keys' },
       { key: 'cognito-users', label: 'Users' },
     ],
   },
   {
-    sections: [{ key: 'audit-logs', label: 'Audit Logs' }],
+    sections: [{ key: 'audit-logs', label: 'Audit logs' }],
   },
 ]);
 
 const recognizedSections = [
   ...sectionLabels,
-  { key: 'category-suggestions', label: 'Category Suggestions' },
-  { key: 'feedback-labels', label: 'Feedback Labels' },
+  { key: 'category-suggestions', label: 'Suggestions' },
+  { key: 'feedback-labels', label: 'Feedback labels' },
 ];
 
 export function AdminDashboard() {

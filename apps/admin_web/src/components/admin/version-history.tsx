@@ -12,6 +12,7 @@ import {
   listEntireCatalogHistory,
   type CatalogVersionRow,
 } from '../../lib/api-client-versions';
+import { formatDateTime } from '../../lib/date-utils';
 import type { ApiMode } from '../../lib/resource-api';
 import { AdminDisclosure } from '../ui/admin-disclosure';
 import { AdminFieldGrid } from '../ui/admin-field-grid';
@@ -249,7 +250,7 @@ export function VersionHistory({
                       {' · '}
                       {sourceLabel(row, emailById)}
                       {' · '}
-                      {new Date(row.created_at).toLocaleString()}
+                      {formatDateTime(row.created_at)}
                       <span className='block text-slate-500'>
                         {changedSummary(row)}
                       </span>

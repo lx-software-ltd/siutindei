@@ -11,7 +11,7 @@ type CategoryView = 'categories' | 'suggestions';
 
 const CATEGORY_VIEWS = [
   { key: 'categories' as const, label: 'Categories' },
-  { key: 'suggestions' as const, label: 'Category Suggestions' },
+  { key: 'suggestions' as const, label: 'Suggestions' },
 ];
 
 export function CategoriesPage() {

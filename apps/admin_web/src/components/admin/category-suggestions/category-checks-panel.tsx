@@ -372,21 +372,24 @@ export function CategoryChecksPanel() {
             }
           >
             {scopedOrgId ? (
-              <AdminFilterField label='Organization' htmlFor='check-org-filter'>
+              <AdminFilterField>
                 <Input
                   id='check-org-filter'
+                  aria-label='Organization'
                   value={scopedOrgId}
                   readOnly
+                  placeholder='Organization'
                 />
               </AdminFilterField>
             ) : null}
-            <AdminFilterField label='Status' htmlFor='check-status-filter'>
+            <AdminFilterField>
               <Select
                 id='check-status-filter'
+                aria-label='Status'
                 value={list.filters.status}
                 onChange={(event) => list.setFilter('status', event.target.value)}
               >
-                <option value=''>Any</option>
+                <option value=''>Any status</option>
                 <option value='pending'>Pending</option>
                 <option value='confirmed'>Confirmed</option>
                 <option value='auto_applied'>Auto-assigned</option>
@@ -395,30 +398,29 @@ export function CategoryChecksPanel() {
                 <option value='reverted'>Reverted</option>
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Verdict' htmlFor='check-verdict-filter'>
+            <AdminFilterField>
               <Select
                 id='check-verdict-filter'
+                aria-label='Verdict'
                 value={list.filters.verdict}
                 onChange={(event) => list.setFilter('verdict', event.target.value)}
               >
-                <option value=''>Any</option>
+                <option value=''>Any verdict</option>
                 <option value='confirm'>Confirm</option>
                 <option value='reassign'>Reassign</option>
                 <option value='propose'>Propose</option>
               </Select>
             </AdminFilterField>
-            <AdminFilterField
-              label='Proposed category'
-              htmlFor='check-proposed-filter'
-            >
+            <AdminFilterField>
               <Select
                 id='check-proposed-filter'
+                aria-label='Proposed category'
                 value={list.filters.proposed_category_id}
                 onChange={(event) =>
                   list.setFilter('proposed_category_id', event.target.value)
                 }
               >
-                <option value=''>Any</option>
+                <option value=''>Any category</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
@@ -426,9 +428,10 @@ export function CategoryChecksPanel() {
                 ))}
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Search' htmlFor='check-search'>
+            <AdminFilterField>
               <Input
                 id='check-search'
+                aria-label='Search'
                 value={list.filters.q}
                 placeholder='Activity or organization'
                 onChange={(event) => list.setFilter('q', event.target.value)}

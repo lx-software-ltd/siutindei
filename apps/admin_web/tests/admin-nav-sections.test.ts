@@ -26,13 +26,13 @@ describe('buildAdminNavSections', () => {
         sort: true,
         sections: [
           { key: 'users', label: 'Users' },
-          { key: 'api-keys', label: 'API Keys' },
+          { key: 'api-keys', label: 'API keys' },
         ],
       },
     ]);
 
     expect(sections.map((section) => section.label)).toEqual([
-      'API Keys',
+      'API keys',
       'Users',
     ]);
   });

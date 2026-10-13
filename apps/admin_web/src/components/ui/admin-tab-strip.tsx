@@ -10,16 +10,23 @@ export interface AdminTabItem<T extends string = string> {
 }
 
 /**
- * Title Case for in-area tab labels: first letter of every word is
- * capital (`Category Checks`, not `Category checks`).
+ * Sentence case for in-area tab labels: first word capital, later words
+ * lower (`Feedback labels`, `API keys`). All-caps tokens such as API stay.
  */
 export function formatAdminTabLabel(label: string): string {
   return label
     .trim()
     .split(/\s+/)
-    .map((word) =>
-      word ? word.charAt(0).toUpperCase() + word.slice(1) : word
-    )
+    .map((word, index) => {
+      if (/^[A-Z0-9]{2,}$/.test(word)) {
+        return word;
+      }
+      const lower = word.toLowerCase();
+      if (index === 0) {
+        return lower.charAt(0).toUpperCase() + lower.slice(1);
+      }
+      return lower;
+    })
     .join(' ');
 }
 
@@ -35,7 +42,7 @@ export interface AdminTabStripProps<T extends string> {
  * a white card with a uniform 1px `slate-300` border on all four sides; hover
  * previews the same white surface. On phones the controls fill the row two
  * per line so every view stays readable without horizontal scrolling.
- * Labels render in Title Case (first letter of each word capital).
+ * Labels render in sentence case (first word capital, later words lower).
  */
 export function AdminTabStrip<T extends string>({
   items,

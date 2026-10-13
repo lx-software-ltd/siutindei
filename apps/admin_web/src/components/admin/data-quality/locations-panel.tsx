@@ -585,32 +585,36 @@ export function LocationsPanel() {
         emptyLabel='No locations match these filters. Sweep pending or Sweep all orgs to find some.'
         filters={
           <AdminFilterBar>
-            <AdminFilterField label='Name' htmlFor='location-fix-q'>
+            <AdminFilterField>
               <Input
                 id='location-fix-q'
+                aria-label='Name'
                 value={list.filters.q}
+                placeholder='Name'
                 onChange={(event) => list.setFilter('q', event.target.value)}
               />
             </AdminFilterField>
-            <AdminFilterField label='Record' htmlFor='location-fix-entity'>
+            <AdminFilterField>
               <Select
                 id='location-fix-entity'
+                aria-label='Record'
                 value={list.filters.entity_type}
                 onChange={(event) => list.setFilter('entity_type', event.target.value)}
               >
-                <option value=''>All records</option>
+                <option value=''>Any record</option>
                 <option value='organization'>Organizations</option>
                 <option value='activity'>Activities</option>
                 <option value='location'>Locations</option>
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Kind' htmlFor='location-fix-kind'>
+            <AdminFilterField>
               <Select
                 id='location-fix-kind'
+                aria-label='Kind'
                 value={list.filters.kind}
                 onChange={(event) => list.setFilter('kind', event.target.value)}
               >
-                <option value=''>All kinds</option>
+                <option value=''>Any kind</option>
                 {KINDS.map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -618,13 +622,14 @@ export function LocationsPanel() {
                 ))}
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Source' htmlFor='location-fix-source'>
+            <AdminFilterField>
               <Select
                 id='location-fix-source'
+                aria-label='Source'
                 value={list.filters.source}
                 onChange={(event) => list.setFilter('source', event.target.value)}
               >
-                <option value=''>All sources</option>
+                <option value=''>Any source</option>
                 {SOURCES.map((source) => (
                   <option key={source} value={source}>
                     {source}
@@ -632,13 +637,14 @@ export function LocationsPanel() {
                 ))}
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Grade' htmlFor='location-fix-grade'>
+            <AdminFilterField>
               <Select
                 id='location-fix-grade'
+                aria-label='Grade'
                 value={list.filters.grade}
                 onChange={(event) => list.setFilter('grade', event.target.value)}
               >
-                <option value=''>All grades</option>
+                <option value=''>Any grade</option>
                 {GRADES.map((grade) => (
                   <option key={grade} value={grade}>
                     {grade}
@@ -646,9 +652,10 @@ export function LocationsPanel() {
                 ))}
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Status' htmlFor='location-fix-status'>
+            <AdminFilterField>
               <Select
                 id='location-fix-status'
+                aria-label='Status'
                 value={list.filters.status}
                 onChange={(event) => list.setFilter('status', event.target.value)}
               >

@@ -7,17 +7,16 @@ import {
 } from '@/components/ui/admin-tab-strip';
 
 describe('formatAdminTabLabel', () => {
-  it('capitalizes the first letter of every word', () => {
-    expect(formatAdminTabLabel('Category checks')).toBe('Category Checks');
-    expect(formatAdminTabLabel('feedback labels')).toBe('Feedback Labels');
-    expect(formatAdminTabLabel('Category Suggestions')).toBe(
-      'Category Suggestions'
-    );
+  it('uses sentence case and keeps all-caps tokens', () => {
+    expect(formatAdminTabLabel('Category checks')).toBe('Category checks');
+    expect(formatAdminTabLabel('feedback labels')).toBe('Feedback labels');
+    expect(formatAdminTabLabel('API keys')).toBe('API keys');
+    expect(formatAdminTabLabel('Suggestions')).toBe('Suggestions');
   });
 });
 
 describe('AdminTabStrip', () => {
-  it('renders tab labels in Title Case', () => {
+  it('renders tab labels in sentence case', () => {
     render(
       <AdminTabStrip
         aria-label='Categories'
@@ -31,7 +30,7 @@ describe('AdminTabStrip', () => {
     );
 
     expect(
-      screen.getByRole('button', { name: 'Category Checks' })
+      screen.getByRole('button', { name: 'Category checks' })
     ).toBeVisible();
   });
 });

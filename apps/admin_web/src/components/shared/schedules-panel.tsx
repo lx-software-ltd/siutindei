@@ -861,9 +861,6 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
             <AdminDataTableHeadCell priority='tertiary'>
               Languages
             </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>
-              Version
-            </AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
@@ -912,9 +909,6 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                   <span>—</span>
                 )}
               </div>
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='tertiary'>
-              {item.version ? `v${item.version}` : '—'}
             </AdminDataTableCell>
           </>
         )}

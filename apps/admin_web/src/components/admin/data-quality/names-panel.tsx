@@ -343,27 +343,31 @@ export function NamesPanel() {
         emptyLabel='No names match these filters. Sweep pending or Sweep all orgs to find some.'
         filters={
           <AdminFilterBar>
-            <AdminFilterField label='Name' htmlFor='name-fix-q'>
+            <AdminFilterField>
               <Input
                 id='name-fix-q'
+                aria-label='Name'
                 value={list.filters.q}
+                placeholder='Name'
                 onChange={(event) => list.setFilter('q', event.target.value)}
               />
             </AdminFilterField>
-            <AdminFilterField label='Record' htmlFor='name-fix-entity'>
+            <AdminFilterField>
               <Select
                 id='name-fix-entity'
+                aria-label='Record'
                 value={list.filters.entity_type}
                 onChange={(event) => list.setFilter('entity_type', event.target.value)}
               >
-                <option value=''>Organizations and activities</option>
+                <option value=''>Any record</option>
                 <option value='organization'>Organizations</option>
                 <option value='activity'>Activities</option>
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Status' htmlFor='name-fix-status'>
+            <AdminFilterField>
               <Select
                 id='name-fix-status'
+                aria-label='Status'
                 value={list.filters.status}
                 onChange={(event) => list.setFilter('status', event.target.value)}
               >
@@ -372,13 +376,14 @@ export function NamesPanel() {
                 <option value='dismissed'>Dismissed</option>
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Rule' htmlFor='name-fix-rule'>
+            <AdminFilterField>
               <Select
                 id='name-fix-rule'
+                aria-label='Rule'
                 value={list.filters.rule}
                 onChange={(event) => list.setFilter('rule', event.target.value)}
               >
-                <option value=''>All rules</option>
+                <option value=''>Any rule</option>
                 {(settings?.available_rules ?? NAME_RULES).map((rule) => (
                   <option key={rule} value={rule}>
                     {rule}

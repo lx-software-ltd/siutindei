@@ -8,6 +8,7 @@ import { ApiError, type AuditLogsFilters } from '@/lib/api-client';
 import { listAuditLogs } from '@/lib/api-client-audit';
 import { listCognitoUsers } from '@/lib/api-client-cognito';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
+import { formatAuditActor } from '@/lib/audit-actor';
 import { formatDateTime } from '@/lib/date-utils';
 import type { AuditLog } from '@/types/admin';
 import { StatusBanner } from '@/components/status-banner';
@@ -86,16 +87,6 @@ function getTimestamp(range: string): string | undefined {
     default:
       return undefined;
   }
-}
-
-function formatGmtOffset(date: Date = new Date()) {
-  const offsetMinutes = -date.getTimezoneOffset();
-  const sign = offsetMinutes >= 0 ? '+' : '-';
-  const absMinutes = Math.abs(offsetMinutes);
-  const hours = Math.floor(absMinutes / 60);
-  const minutes = absMinutes % 60;
-  const minuteSuffix = minutes ? `:${minutes.toString().padStart(2, '0')}` : '';
-  return `GMT${sign}${hours}${minuteSuffix}`;
 }
 
 function formatJson(obj: Record<string, unknown> | null | undefined): string {
@@ -217,21 +208,15 @@ export function AuditLogsPanel() {
     void loadCognitoUsers(false);
   }, [loadCognitoUsers]);
 
-  const getUserEmail = useCallback(
-    (userId: string | null | undefined) => {
-      if (!userId) {
-        return '—';
-      }
-      return userEmailById[userId] || '—';
-    },
+  const getActor = useCallback(
+    (userId: string | null | undefined) => formatAuditActor(userId, userEmailById),
     [userEmailById]
   );
 
   const selected = list.items.find((item) => item.id === expanded.expandedId) ?? null;
-  const timestampHeader = `Timestamp ${formatGmtOffset()}`;
 
   const detail = selected ? (
-    <AuditLogDetail log={selected} userEmail={getUserEmail(selected.user_id)} />
+    <AuditLogDetail log={selected} actor={getActor(selected.user_id)} />
   ) : null;
 
   return (
@@ -270,7 +255,7 @@ export function AuditLogsPanel() {
                 list.setFilter('action', event.target.value as ActionFilter);
               }}
             >
-              <option value='all'>All Actions</option>
+              <option value='all'>All actions</option>
               <option value='INSERT'>Insert</option>
               <option value='UPDATE'>Update</option>
               <option value='DELETE'>Delete</option>
@@ -285,7 +270,7 @@ export function AuditLogsPanel() {
                 list.setFilter('table', event.target.value);
               }}
             >
-              <option value='all'>All Tables</option>
+              <option value='all'>All tables</option>
               {AUDITABLE_TABLES.map((table) => (
                 <option key={table} value={table}>
                   {table}
@@ -314,7 +299,7 @@ export function AuditLogsPanel() {
               id='actor-filter'
               aria-label='Actor'
               type='text'
-              placeholder='Filter by email...'
+              placeholder='Actor email'
               value={list.filters.actor}
               onChange={(event) => {
                 list.setFilter('actor', event.target.value);
@@ -327,8 +312,8 @@ export function AuditLogsPanel() {
         <>
           <AdminDataTableHeadCell>Table</AdminDataTableHeadCell>
           <AdminDataTableHeadCell priority='secondary'>Action</AdminDataTableHeadCell>
-          <AdminDataTableHeadCell priority='secondary'>User Email</AdminDataTableHeadCell>
-          <AdminDataTableHeadCell priority='tertiary'>{timestampHeader}</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='secondary'>Actor</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='tertiary'>Timestamp</AdminDataTableHeadCell>
         </>
       }
       renderCells={(item) => (
@@ -343,7 +328,7 @@ export function AuditLogsPanel() {
             <ActionBadge action={item.action} />
           </AdminDataTableCell>
           <AdminDataTableCell priority='secondary'>
-            <span className='font-mono text-xs text-slate-600'>{getUserEmail(item.user_id)}</span>
+            <span className='font-mono text-xs text-slate-600'>{getActor(item.user_id)}</span>
           </AdminDataTableCell>
           <AdminDataTableCell priority='tertiary'>
             <span className='text-slate-600'>{formatDateTime(item.timestamp)}</span>
@@ -354,7 +339,7 @@ export function AuditLogsPanel() {
   );
 }
 
-function AuditLogDetail({ log, userEmail }: { log: AuditLog; userEmail: string }) {
+function AuditLogDetail({ log, actor }: { log: AuditLog; actor: string }) {
   const hasOldValues = Boolean(log.old_values && Object.keys(log.old_values).length > 0);
   const hasNewValues = Boolean(log.new_values && Object.keys(log.new_values).length > 0);
 
@@ -367,7 +352,7 @@ function AuditLogDetail({ log, userEmail }: { log: AuditLog; userEmail: string }
         <AdminReadOnlyValue label='Record ID' mono>{log.record_id}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Action'>{log.action}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Source'>{log.source}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='User Email'>{userEmail}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Actor'>{actor}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Request ID' mono>{log.request_id || '—'}</AdminReadOnlyValue>
         {log.changed_fields && log.changed_fields.length > 0 ? (
           <AdminReadOnlyValue label='Changed Fields' span='full'>{log.changed_fields.join(', ')}</AdminReadOnlyValue>

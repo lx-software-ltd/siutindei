@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import Image from 'next/image';
 
+import { formatDateTime } from '@/lib/date-utils';
+
 import { CloseIcon, MenuIcon } from './icons/action-icons';
 import { LegalLinks } from './legal-links';
 import { Button } from './ui/button';
@@ -26,29 +28,12 @@ export interface AppShellProps {
   children: ReactNode;
 }
 
-/**
- * Format a datetime string for display.
- * Uses the browser's timezone, falling back to UTC if unavailable.
- */
 function formatLastLogin(dateStr: string | undefined): string | null {
-  if (!dateStr) return null;
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return null;
-
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone,
-      timeZoneName: 'short',
-    });
-  } catch {
+  if (!dateStr) {
     return null;
   }
+  const formatted = formatDateTime(dateStr);
+  return formatted === '—' ? null : formatted;
 }
 
 export function AppShell({

@@ -56,10 +56,12 @@ export function DeletedPanel() {
         hasActions={false}
         filters={
           <AdminFilterBar>
-            <AdminFilterField label='Name' htmlFor='deleted-org-name'>
+            <AdminFilterField>
               <Input
                 id='deleted-org-name'
+                aria-label='Name'
                 value={list.filters.q}
+                placeholder='Name'
                 onChange={(event) => list.setFilter('q', event.target.value)}
               />
             </AdminFilterField>
