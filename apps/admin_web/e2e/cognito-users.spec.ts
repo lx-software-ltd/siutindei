@@ -65,7 +65,11 @@ test.describe('Cognito Users Panel', () => {
     await expect(detail).toContainText(lastLogin);
 
     await managerRow.click();
-    await expect(detail).toHaveCount(0);
+    await expect(detail.getByText('Email:', { exact: true })).toHaveCount(0);
+    await expect(adminPage.getByTestId('admin-row-manager-user-id-456')).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
 
     await adminPage.getByTitle('Make Admin').first().click();
     await expect(adminPage.getByTitle('Remove Admin').first()).toBeVisible();
