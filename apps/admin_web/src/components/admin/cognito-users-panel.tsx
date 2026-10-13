@@ -273,18 +273,18 @@ function UserAttributesDetail({ user }: { user: CognitoUserRow }) {
   return (
     <AdminEditorPanel>
       <AdminFieldGrid columns={2}>
-        <AdminReadOnlyValue label='Email:'>{user.email || '—'}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Username:'>{user.username || '—'}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Status:'>{user.status}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Roles:'>
+        <AdminReadOnlyValue label='Email'>{user.email || '—'}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Username'>{user.username || '—'}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Status'>{user.status}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Roles'>
           {user.groups?.length
             ? user.groups.map((group) => formatRoleLabel(group)).join(', ')
             : '—'}
         </AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Created:'>
+        <AdminReadOnlyValue label='Created'>
           {formatDateTime(user.created_at)}
         </AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Last Login:'>
+        <AdminReadOnlyValue label='Last Login'>
           {formatDateTime(user.last_auth_time)}
         </AdminReadOnlyValue>
       </AdminFieldGrid>

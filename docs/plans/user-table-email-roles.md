@@ -7,8 +7,8 @@
 
 On the admin Users table, show assigned roles under the email instead of
 a separate Roles column, swap Created and Last Login, and tidy the
-expanded detail: drop raw attributes, colon-suffix labels, rename Groups
-to Roles, and format the timestamps.
+expanded detail: drop raw attributes, rename Groups to Roles, and format
+the timestamps.
 
 ## Non-goals
 
