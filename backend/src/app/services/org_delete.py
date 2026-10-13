@@ -153,7 +153,7 @@ def forget_deleted_organization(
 
     audit = AuditService(session, user_id=forgotten_by)
     for item in _forget_targets(session, row):
-        forget_catalog_tombstones(session, item.merged_org_id)
+        forget_catalog_tombstones(session, UUID(str(item.merged_org_id)))
         audit.log_delete(
             "organization_merges",
             item.id,

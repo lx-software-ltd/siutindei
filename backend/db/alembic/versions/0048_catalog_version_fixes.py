@@ -71,13 +71,10 @@ def _backfill_in_batches() -> None:
             _drain("catalog_backfill_deleted_batch", table)
 
 
-def _drain(function: str, table: str) -> None:
+def _drain(function_name: str, table: str) -> None:
+    statement = sa.select(getattr(sa.func, function_name)(table))
     for _ in range(_BATCH_CAP):
-        count = (
-            op.get_bind()
-            .execute(sa.text(f"SELECT {function}(:table)"), {"table": table})
-            .scalar()
-        )
+        count = op.get_bind().execute(statement).scalar()
         if not count:
             return
-    raise RuntimeError(f"{function} did not finish for {table}")
+    raise RuntimeError(f"{function_name} did not finish for {table}")

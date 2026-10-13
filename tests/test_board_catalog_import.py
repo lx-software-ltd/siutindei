@@ -10,8 +10,14 @@ from app.api.admin_imports_jobs import (
     serialize_import_job,
     store_import_job,
 )
-from app.db.models import Activity, CatalogVersion, Organization
-from sqlalchemy import delete, select
+from app.db.models import (
+    Activity,
+    CatalogVersion,
+    Location,
+    Organization,
+    OrganizationMerge,
+)
+from sqlalchemy import bindparam, delete, select, text
 from sqlalchemy.orm import Session
 
 CATALOG_MANAGER = "00000000-0000-0000-0000-000000000088"
@@ -313,9 +319,45 @@ def test_dry_run_place_id_match_reports_update_without_write(
         ).scalar_one()
         assert org.name == name
         org_id = org.id
+        removed_ids = [str(org_id)]
+        removed_ids.extend(
+            str(item)
+            for item in session.scalars(
+                select(Location.id).where(Location.org_id == org_id)
+            )
+        )
+        removed_ids.extend(
+            str(item)
+            for item in session.scalars(
+                select(Activity.id).where(Activity.org_id == org_id)
+            )
+        )
+        if session.get_bind().dialect.name == "postgresql":
+            session.execute(
+                text(
+                    "ALTER TABLE catalog_versions "
+                    "DISABLE TRIGGER catalog_versions_delete_guard"
+                )
+            )
         session.delete(org)
         session.flush()
         session.execute(delete(CatalogVersion).where(CatalogVersion.org_id == org_id))
+        session.execute(
+            delete(OrganizationMerge).where(OrganizationMerge.merged_org_id == org_id)
+        )
+        session.execute(
+            text("DELETE FROM audit_log WHERE record_id IN :ids").bindparams(
+                bindparam("ids", expanding=True)
+            ),
+            {"ids": removed_ids},
+        )
+        if session.get_bind().dialect.name == "postgresql":
+            session.execute(
+                text(
+                    "ALTER TABLE catalog_versions "
+                    "ENABLE TRIGGER catalog_versions_delete_guard"
+                )
+            )
         session.commit()
 
 
@@ -520,8 +562,6 @@ def test_location_place_id_collision_warns(
     sample_activity_category,
     sample_geographic_area,
 ) -> None:
-    from app.db.models import Location
-
     sample_organization.place_id = "ChIJ-loc-unique"
     other_location = Location(
         org_id=sample_organization.id,

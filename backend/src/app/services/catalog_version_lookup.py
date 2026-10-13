@@ -148,19 +148,25 @@ def _merge_by_name(session: Session, name: str) -> OrganizationMerge | None:
         if len(found) != 1:
             return None
         return found[0]
-    folded_name = (
-        "lower(regexp_replace(btrim(snapshot->>'name'), '\\s+', ' ', 'g')) = :wanted"
-    )
-    folded_list = (
-        "EXISTS (SELECT 1 FROM jsonb_array_elements_text("
-        "COALESCE(snapshot->'names', '[]'::jsonb)) AS merge_name(value) "
-        "WHERE lower(regexp_replace(btrim(merge_name.value), '\\s+', ' ', 'g')) "
-        "= :wanted)"
-    )
     rows = session.scalars(
         select(OrganizationMerge)
         .where(OrganizationMerge.kind == "merge")
-        .where(text(f"{folded_name} OR {folded_list}").bindparams(wanted=wanted))
+        .where(
+            or_(
+                text(
+                    "lower(regexp_replace(btrim(snapshot->>'name'), "
+                    "'\\s+', ' ', 'g')) = :wanted"
+                ),
+                text(
+                    "EXISTS (SELECT 1 FROM jsonb_array_elements_text("
+                    "COALESCE(snapshot->'names', '[]'::jsonb)) "
+                    "AS merge_name(value) "
+                    "WHERE lower(regexp_replace(btrim(merge_name.value), "
+                    "'\\s+', ' ', 'g')) = :wanted)"
+                ),
+            )
+        )
+        .params(wanted=wanted)
     ).all()
     found = [row for row in rows if _merge_name_matches(row.snapshot, wanted)]
     if len(found) != 1:

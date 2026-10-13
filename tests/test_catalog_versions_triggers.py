@@ -455,30 +455,28 @@ def _drop_backfill(session: Session) -> None:
 
 def test_backfill_prefers_the_audit_insert(versions) -> None:
     with Session(versions) as session:
-        session.execute(text("SET session_replication_role = replica"))
-        try:
-            org = _org(f"Trigger Backfill {uuid4()}")
-            org.description = "Current"
-            session.add(org)
-            session.flush()
-            session.add(
-                AuditLog(
-                    table_name="organizations",
-                    record_id=str(org.id),
-                    action="INSERT",
-                    new_values={
-                        "id": str(org.id),
-                        "name": org.name,
-                        "description": "Original",
-                        "manager_id": org.manager_id,
-                    },
-                )
+        # LOCAL reverts when this transaction commits, so the pooled
+        # connection is not left with triggers disabled.
+        session.execute(text("SET LOCAL session_replication_role = replica"))
+        org = _org(f"Trigger Backfill {uuid4()}")
+        org.description = "Current"
+        session.add(org)
+        session.flush()
+        session.add(
+            AuditLog(
+                table_name="organizations",
+                record_id=str(org.id),
+                action="INSERT",
+                new_values={
+                    "id": str(org.id),
+                    "name": org.name,
+                    "description": "Original",
+                    "manager_id": org.manager_id,
+                },
             )
-            session.commit()
-            org_id = org.id
-        finally:
-            session.execute(text("SET session_replication_role = origin"))
-            session.commit()
+        )
+        session.commit()
+        org_id = org.id
     with Session(versions) as session:
         _install_backfill(session)
         session.execute(

@@ -159,9 +159,7 @@ def location_shape(data: Mapping[str, Any]) -> dict[str, Any]:
 
 def pricing_shape(data: Mapping[str, Any]) -> dict[str, Any]:
     """Pricing identity includes the venue address and the price itself."""
-    pricing_type = data.get("pricing_type")
-    if hasattr(pricing_type, "value"):
-        pricing_type = pricing_type.value
+    pricing_type = getattr(data.get("pricing_type"), "value", data.get("pricing_type"))
     return {
         "location_address": _norm_name(data.get("location_address")),
         "pricing_type": _text(pricing_type),

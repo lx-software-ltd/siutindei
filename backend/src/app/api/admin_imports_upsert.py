@@ -146,6 +146,7 @@ def upsert_organization(
         if allow_updates:
             guard_import_organization_update(existing, body)
     if terminal:
+        assert existing is not None
         return existing, terminal
 
     if existing:
