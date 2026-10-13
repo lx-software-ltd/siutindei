@@ -25,11 +25,14 @@ import {
 } from '@/components/ui/admin-data-table';
 import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
 import { AdminReadOnlyValue } from '@/components/ui/admin-read-only-value';
-import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
-import { Input } from '@/components/ui/input';
+import { AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { ResourceTableShell, rowActions } from '@/components/ui/resource-table-shell';
-import { Textarea } from '@/components/ui/textarea';
-import { IdentityProviderBadge, RoleBadge } from './cognito-users/badges';
+import {
+  assignedUserRoles,
+  formatRoleLabel,
+  IdentityProviderBadge,
+  RoleBadge,
+} from './cognito-users/badges';
 
 interface CognitoUserRow extends CognitoUser {
   id: string;
@@ -148,7 +151,7 @@ export function CognitoUsersPanel() {
         ariaLabel='Users'
         rows={list.items}
         getLabel={(item) => item.email || item.username || 'Unknown'}
-        middleColumnCount={4}
+        middleColumnCount={3}
         isLoading={list.isLoading}
         isLoadingMore={list.isLoadingMore}
         hasMore={list.hasMore}
@@ -170,15 +173,13 @@ export function CognitoUsersPanel() {
         head={
           <>
             <AdminDataTableHeadCell>Email</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='secondary'>Roles</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='secondary'>Last Login</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>Created</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Created</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Last Login</AdminDataTableHeadCell>
           </>
         }
         renderCells={(cognitoUser) => {
           const isCurrent = isCurrentUser(cognitoUser);
-          const hasAdminRole = cognitoUser.groups?.includes('admin') || false;
-          const hasManagerRole = cognitoUser.groups?.includes('manager') || false;
+          const roles = assignedUserRoles(cognitoUser.groups);
           return (
             <>
               <AdminDataTableCell>
@@ -197,33 +198,26 @@ export function CognitoUsersPanel() {
                   {cognitoUser.name ? (
                     <div className='text-xs text-slate-500'>{cognitoUser.name}</div>
                   ) : null}
+                  {roles.length > 0 ? (
+                    <div className='mt-1 flex flex-wrap gap-1'>
+                      {roles.map((role) => (
+                        <RoleBadge key={role} role={role} />
+                      ))}
+                    </div>
+                  ) : null}
                   <AdminDataTableCellMeta>
-                    {hasAdminRole && hasManagerRole
-                      ? 'Admin, Manager'
-                      : hasAdminRole
-                        ? 'Admin'
-                        : hasManagerRole
-                          ? 'Manager'
-                          : 'No roles'}
-                    {' · '}
-                    {formatDateTime(cognitoUser.last_auth_time)}
-                  </AdminDataTableCellMeta>
-                  <AdminDataTableCellMeta until='tertiary'>
                     {formatDate(cognitoUser.created_at)}
                   </AdminDataTableCellMeta>
+                  <AdminDataTableCellMeta until='tertiary'>
+                    {formatDateTime(cognitoUser.last_auth_time)}
+                  </AdminDataTableCellMeta>
                 </div>
               </AdminDataTableCell>
               <AdminDataTableCell priority='secondary'>
-                <div className='flex gap-1'>
-                  <RoleBadge role='admin' isActive={hasAdminRole} />
-                  <RoleBadge role='manager' isActive={hasManagerRole} />
-                </div>
-              </AdminDataTableCell>
-              <AdminDataTableCell priority='secondary'>
-                <span className='text-slate-600'>{formatDateTime(cognitoUser.last_auth_time)}</span>
+                <span className='text-slate-600'>{formatDate(cognitoUser.created_at)}</span>
               </AdminDataTableCell>
               <AdminDataTableCell priority='tertiary'>
-                <span className='text-slate-600'>{formatDate(cognitoUser.created_at)}</span>
+                <span className='text-slate-600'>{formatDateTime(cognitoUser.last_auth_time)}</span>
               </AdminDataTableCell>
             </>
           );
@@ -276,21 +270,22 @@ export function CognitoUsersPanel() {
 }
 
 function UserAttributesDetail({ user }: { user: CognitoUserRow }) {
-  const attributes = user.attributes ?? {};
-  const attributeEntries = Object.entries(attributes).sort((a, b) => a[0].localeCompare(b[0]));
   return (
     <AdminEditorPanel>
       <AdminFieldGrid columns={2}>
         <AdminReadOnlyValue label='Email'>{user.email || '—'}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Username'>{user.username || '—'}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Status'>{user.status}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Groups'>{user.groups?.join(', ') || '—'}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Created'>{user.created_at || '—'}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Last Login'>{user.last_auth_time || '—'}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Raw Attributes' span='full' mono>
-          {attributeEntries.length === 0
-            ? 'No attributes found.'
-            : JSON.stringify(attributes, null, 2)}
+        <AdminReadOnlyValue label='Roles'>
+          {user.groups?.length
+            ? user.groups.map((group) => formatRoleLabel(group)).join(', ')
+            : '—'}
+        </AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Created'>
+          {formatDateTime(user.created_at)}
+        </AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Last Login'>
+          {formatDateTime(user.last_auth_time)}
         </AdminReadOnlyValue>
       </AdminFieldGrid>
     </AdminEditorPanel>
