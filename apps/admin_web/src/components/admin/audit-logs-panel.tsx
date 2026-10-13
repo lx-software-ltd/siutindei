@@ -29,6 +29,7 @@ import { ResourceTableShell } from '@/components/ui/resource-table-shell';
 import { AdminReadOnlyValue } from '@/components/ui/admin-read-only-value';
 import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { AdminTableId, AdminTableName, AdminTableTime } from '@/components/ui/admin-table-value';
 import { Textarea } from '@/components/ui/textarea';
 
 const PAGE_NAME = formatAdminPageName('Audit logs');
@@ -317,19 +318,25 @@ export function AuditLogsPanel() {
       renderCells={(item) => (
         <>
           <AdminDataTableCell>
-            <span className='font-medium'>{item.table_name}</span>
-            <AdminDataTableCellMeta>
-              {item.changed_fields?.length ? item.changed_fields.join(', ') : '—'}
+            <AdminTableName>{item.table_name}</AdminTableName>
+            <AdminDataTableCellMeta until='secondary'>
+              <ActionBadge action={item.action} />
+            </AdminDataTableCellMeta>
+            <AdminDataTableCellMeta until='secondary' label='Actor' empty={!item.user_id}>
+              <AdminTableId>{getActor(item.user_id)}</AdminTableId>
+            </AdminDataTableCellMeta>
+            <AdminDataTableCellMeta until='tertiary' label='Timestamp' empty={!item.timestamp}>
+              <AdminTableTime value={item.timestamp} />
             </AdminDataTableCellMeta>
           </AdminDataTableCell>
           <AdminDataTableCell priority='secondary'>
             <ActionBadge action={item.action} />
           </AdminDataTableCell>
           <AdminDataTableCell priority='secondary'>
-            <span className='font-mono text-xs text-slate-600'>{getActor(item.user_id)}</span>
+            <AdminTableId>{getActor(item.user_id)}</AdminTableId>
           </AdminDataTableCell>
           <AdminDataTableCell priority='tertiary'>
-            <span className='text-slate-600'>{formatDateTime(item.timestamp)}</span>
+            <AdminTableTime value={item.timestamp} />
           </AdminDataTableCell>
         </>
       )}

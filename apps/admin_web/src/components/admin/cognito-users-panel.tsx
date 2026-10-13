@@ -14,7 +14,7 @@ import {
 } from '@/lib/api-client-cognito';
 import { formatAdminPageName } from '@/lib/admin-page-name';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
-import { formatDate, formatDateTime } from '@/lib/date-utils';
+import { formatDateTime } from '@/lib/date-utils';
 import type { CognitoUser } from '@/types/admin';
 import { useAuth } from '@/components/auth-provider';
 import { BriefcaseIcon, DeleteIcon, ShieldIcon } from '@/components/icons/action-icons';
@@ -29,13 +29,35 @@ import { AdminReadOnlyValue } from '@/components/ui/admin-read-only-value';
 import { AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { ResourceTableShell, rowActions } from '@/components/ui/resource-table-shell';
 import {
+  ADMIN_TABLE_EMPTY,
+  adminTableText,
+  AdminTableName,
+  AdminTableTime,
+} from '@/components/ui/admin-table-value';
+import { StatusBadge } from '@/components/ui/status-badge';
+import {
   assignedUserRoles,
   formatRoleLabel,
   IdentityProviderBadge,
   RoleBadge,
+  type UserRole,
 } from './cognito-users/badges';
 
 const PAGE_NAME = formatAdminPageName('Users');
+
+function UserRoleMarks({ roles, isCurrent }: { roles: UserRole[]; isCurrent: boolean }) {
+  if (roles.length === 0 && !isCurrent) {
+    return ADMIN_TABLE_EMPTY;
+  }
+  return (
+    <span className='inline-flex flex-wrap gap-1'>
+      {isCurrent ? <StatusBadge status='you' tone='slate' label='You' /> : null}
+      {roles.map((role) => (
+        <RoleBadge key={role} role={role} />
+      ))}
+    </span>
+  );
+}
 
 interface CognitoUserRow extends CognitoUser {
   id: string;
@@ -159,8 +181,8 @@ export function CognitoUsersPanel() {
       <ResourceTableShell
         ariaLabel={PAGE_NAME}
         rows={list.items}
-        getLabel={(item) => item.email || item.username || 'Unknown'}
-        middleColumnCount={3}
+        getLabel={(item) => item.email || item.username || 'User'}
+        middleColumnCount={6}
         isLoading={list.isLoading}
         isLoadingMore={list.isLoadingMore}
         hasMore={list.hasMore}
@@ -173,6 +195,9 @@ export function CognitoUsersPanel() {
         head={
           <>
             <AdminDataTableHeadCell>Email</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Name</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Provider</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Roles</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Created</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>Last Login</AdminDataTableHeadCell>
           </>
@@ -183,50 +208,46 @@ export function CognitoUsersPanel() {
           return (
             <>
               <AdminDataTableCell>
-                <div className='min-w-0'>
-                  <div className='flex items-center gap-2'>
-                    <span className='truncate font-medium'>
-                      {cognitoUser.email || cognitoUser.username || 'Unknown'}
-                    </span>
-                    <IdentityProviderBadge username={cognitoUser.username} />
-                    {isCurrent ? (
-                      <span className='rounded bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600'>
-                        You
-                      </span>
-                    ) : null}
-                  </div>
-                  {cognitoUser.name ? (
-                    <div className='text-xs text-slate-500'>{cognitoUser.name}</div>
-                  ) : null}
-                  {roles.length > 0 ? (
-                    <div className='mt-1 flex flex-wrap gap-1'>
-                      {roles.map((role) => (
-                        <RoleBadge key={role} role={role} />
-                      ))}
-                    </div>
-                  ) : null}
-                  <AdminDataTableCellMeta>
-                    {formatDate(cognitoUser.created_at)}
-                  </AdminDataTableCellMeta>
-                  <AdminDataTableCellMeta until='tertiary'>
-                    {formatDateTime(cognitoUser.last_auth_time)}
-                  </AdminDataTableCellMeta>
-                </div>
+                <AdminTableName>
+                  {cognitoUser.email || cognitoUser.username || ''}
+                </AdminTableName>
+                <AdminDataTableCellMeta until='secondary' label='Name'>
+                  {adminTableText(cognitoUser.name)}
+                </AdminDataTableCellMeta>
+                <AdminDataTableCellMeta until='secondary'>
+                  <IdentityProviderBadge username={cognitoUser.username} />
+                </AdminDataTableCellMeta>
+                <AdminDataTableCellMeta until='secondary' label='Roles' empty={roles.length === 0 && !isCurrent}>
+                  <UserRoleMarks roles={roles} isCurrent={isCurrent} />
+                </AdminDataTableCellMeta>
+                <AdminDataTableCellMeta until='secondary' label='Created' empty={!cognitoUser.created_at}>
+                  <AdminTableTime value={cognitoUser.created_at} />
+                </AdminDataTableCellMeta>
+                <AdminDataTableCellMeta until='tertiary' label='Last Login' empty={!cognitoUser.last_auth_time}>
+                  <AdminTableTime value={cognitoUser.last_auth_time} />
+                </AdminDataTableCellMeta>
               </AdminDataTableCell>
               <AdminDataTableCell priority='secondary'>
-                <span className='text-slate-600'>{formatDate(cognitoUser.created_at)}</span>
+                {adminTableText(cognitoUser.name)}
+              </AdminDataTableCell>
+              <AdminDataTableCell priority='secondary'>
+                <IdentityProviderBadge username={cognitoUser.username} />
+              </AdminDataTableCell>
+              <AdminDataTableCell priority='secondary'>
+                <UserRoleMarks roles={roles} isCurrent={isCurrent} />
+              </AdminDataTableCell>
+              <AdminDataTableCell priority='secondary'>
+                <AdminTableTime value={cognitoUser.created_at} />
               </AdminDataTableCell>
               <AdminDataTableCell priority='tertiary'>
-                <span className='text-slate-600'>{formatDateTime(cognitoUser.last_auth_time)}</span>
+                <AdminTableTime value={cognitoUser.last_auth_time} />
               </AdminDataTableCell>
             </>
           );
         }}
         renderActions={(cognitoUser) => {
           if (isCurrentUser(cognitoUser)) {
-            return (
-              <span className='text-xs text-slate-400'>Cannot modify your own account</span>
-            );
+            return <span className='sr-only'>Cannot modify your own account</span>;
           }
           const hasAdminRole = cognitoUser.groups?.includes('admin') || false;
           const hasManagerRole = cognitoUser.groups?.includes('manager') || false;

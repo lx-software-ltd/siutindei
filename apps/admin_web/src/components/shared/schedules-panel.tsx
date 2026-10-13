@@ -19,6 +19,7 @@ import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-titl
 import { VersionHistory } from '../admin/version-history';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 import { AdminCreateButton } from '../ui/admin-create-button';
+import { ADMIN_TABLE_EMPTY, AdminTableName } from '../ui/admin-table-value';
 import {
   AdminDataTableCell,
   AdminDataTableCellMeta,
@@ -412,15 +413,15 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     (item: ActivitySchedule) => {
       const localEntries = getLocalEntries(item);
       if (localEntries.length === 0) {
-        return <span>—</span>;
+        return ADMIN_TABLE_EMPTY;
       }
       return (
-        <div className='space-y-1 text-slate-600'>
+        <div className='space-y-1'>
           {localEntries.map((entry) => (
             <div
               key={`${entry.dayOfWeek}-${entry.startMinutes}-${entry.endMinutes}`}
             >
-              <span className='font-medium text-slate-700'>
+              <span>
                 {getDayLabel(entry.dayOfWeek)}
               </span>{' '}
               {formatTimeLabelForMinutes(entry.startMinutes)}-
@@ -432,6 +433,37 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     },
     [getDayLabel, getLocalEntries]
   );
+
+  const renderLanguages = useCallback((item: ActivitySchedule) => {
+    if (!item.languages?.length) {
+      return ADMIN_TABLE_EMPTY;
+    }
+    return (
+      <div className='flex flex-wrap items-center gap-2'>
+        {item.languages.map((language) => {
+          const option = getLanguageOption(language);
+          if (!option) {
+            return <span key={language}>{language}</span>;
+          }
+          return (
+            <span
+              key={option.code}
+              className='inline-flex items-center justify-center rounded border border-slate-200 bg-white px-1.5 py-1'
+              title={option.label}
+            >
+              <img
+                src={option.flagSrc}
+                alt={`${option.label} flag`}
+                width={20}
+                height={14}
+                loading='lazy'
+              />
+            </span>
+          );
+        })}
+      </div>
+    );
+  }, []);
 
   const weeklyEntriesLabel = useCallback(
     (item: ActivitySchedule) => {
@@ -869,9 +901,15 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              {getLocationName(item.location_id)}
-              <AdminDataTableCellMeta until='secondary'>
-                {weeklyEntriesLabel(item) || '—'}
+              <AdminTableName>{getLocationName(item.location_id)}</AdminTableName>
+              <AdminDataTableCellMeta until='secondary' label='Activity'>
+                {getActivityName(item.activity_id)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary' label='Day/Time'>
+                {weeklyEntriesLabel(item) || ADMIN_TABLE_EMPTY}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary' label='Languages' empty={!item.languages?.length}>
+                {renderLanguages(item)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
@@ -881,37 +919,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
               {renderWeeklyEntries(item)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              <div className='flex flex-wrap items-center gap-2 text-slate-600'>
-                {item.languages?.length ? (
-                  item.languages.map((language) => {
-                    const option = getLanguageOption(language);
-                    if (!option) {
-                      return (
-                        <span key={language} className='text-xs uppercase'>
-                          {language}
-                        </span>
-                      );
-                    }
-                    return (
-                      <span
-                        key={option.code}
-                        className='inline-flex items-center justify-center rounded border border-slate-200 bg-white px-1.5 py-1'
-                        title={option.label}
-                      >
-                        <img
-                          src={option.flagSrc}
-                          alt={`${option.label} flag`}
-                          width={20}
-                          height={14}
-                          loading='lazy'
-                        />
-                      </span>
-                    );
-                  })
-                ) : (
-                  <span>—</span>
-                )}
-              </div>
+              {renderLanguages(item)}
             </AdminDataTableCell>
           </>
         )}

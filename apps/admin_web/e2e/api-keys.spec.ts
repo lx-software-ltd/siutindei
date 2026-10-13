@@ -9,13 +9,17 @@ test.describe('API Keys Panel', () => {
     await expect(adminPage.getByRole('table', { name: 'API keys' })).toBeVisible();
 
     const table = adminPage.getByRole('table');
+    await expect(table.getByRole('columnheader', { name: 'Status' })).toBeVisible();
+    await expect(table.getByRole('columnheader', { name: 'Prefix' })).toBeVisible();
+    await expect(table.getByRole('columnheader', { name: 'Expires' })).toBeVisible();
     await expect(table).toContainText('Partner read key');
     await expect(table).toContainText('stk_readkey1');
     await expect(table).toContainText('Full access');
+    await expect(table.getByText('Never')).toHaveCount(0);
     await expect(table).toContainText('Org One CRUD key');
     await expect(table).toContainText('Test Organization 1');
     await expect(table).toContainText('Old revoked key');
-    await expect(table.getByText('revoked', { exact: true })).toBeVisible();
+    await expect(table.getByRole('cell', { name: 'revoked', exact: true })).toBeVisible();
   });
 
   test('creates a key and shows the plaintext once', async ({ adminPage }) => {

@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { adminTabLabel, formatAdminPageName } from '../../lib/admin-page-name';
 import { ApiError, listResource } from '../../lib/api-client';
-import { formatDate } from '../../lib/date-utils';
 import type {
   FeedbackLabel,
   Organization,
@@ -26,6 +25,13 @@ import {
   ResourceTableShell,
 } from '../ui/resource-table-shell';
 import { Select } from '../ui/select';
+import {
+  adminTableText,
+  AdminTableName,
+  AdminTableNumber,
+  AdminTableTime,
+  ADMIN_TABLE_EMPTY,
+} from '../ui/admin-table-value';
 import { StarRating } from '../ui/star-rating';
 import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
@@ -336,22 +342,33 @@ export function FeedbackPanel() {
           return (
             <>
               <AdminDataTableCell>
-                {item.organization_name || item.organization_id}
+                <AdminTableName>
+                  {item.organization_name || item.organization_id}
+                </AdminTableName>
                 <AdminDataTableCellMeta until='secondary'>
-                  {item.stars}
+                  <AdminTableNumber>{item.stars}</AdminTableNumber>
+                </AdminDataTableCellMeta>
+                <AdminDataTableCellMeta until='tertiary' label='Labels'>
+                  {names.length ? names.join(', ') : ADMIN_TABLE_EMPTY}
+                </AdminDataTableCellMeta>
+                <AdminDataTableCellMeta until='tertiary' label='Submitter'>
+                  {adminTableText(item.submitter_email || item.submitter_id)}
+                </AdminDataTableCellMeta>
+                <AdminDataTableCellMeta until='tertiary' label='Submitted' empty={!item.created_at}>
+                  <AdminTableTime value={item.created_at} />
                 </AdminDataTableCellMeta>
               </AdminDataTableCell>
               <AdminDataTableCell priority='secondary'>
-                {item.stars}
+                <AdminTableNumber>{item.stars}</AdminTableNumber>
               </AdminDataTableCell>
               <AdminDataTableCell priority='tertiary'>
-                {names.length ? names.join(', ') : '—'}
+                {names.length ? names.join(', ') : ADMIN_TABLE_EMPTY}
               </AdminDataTableCell>
               <AdminDataTableCell priority='tertiary'>
-                {item.submitter_email || item.submitter_id || '—'}
+                {adminTableText(item.submitter_email || item.submitter_id)}
               </AdminDataTableCell>
               <AdminDataTableCell priority='tertiary'>
-                {formatDate(item.created_at)}
+                <AdminTableTime value={item.created_at} />
               </AdminDataTableCell>
             </>
           );

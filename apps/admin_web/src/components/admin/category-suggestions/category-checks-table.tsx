@@ -14,8 +14,16 @@ import { DeleteIcon, EditIcon, ReviewIcon } from '../../icons/action-icons';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import {
   AdminDataTableCell,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
+import {
+  adminTableText,
+  AdminTableName,
+  AdminTableNumber,
+  formatAdminTableLabel,
+  formatAdminTablePercent,
+} from '../../ui/admin-table-value';
 import { AdminRowActions } from '../../ui/admin-row-actions';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { StatusBadge } from '../../ui/status-badge';
@@ -69,7 +77,7 @@ export function CategoryChecksTable({
         ariaLabel={PAGE_NAME}
         rows={items}
         getLabel={(item) => item.activity_name || item.activity_id}
-        middleColumnCount={5}
+        middleColumnCount={7}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         hasMore={hasMore}
@@ -93,10 +101,16 @@ export function CategoryChecksTable({
               Organization
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>
-              Category
+              Current
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Proposed
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
               Verdict
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Confidence
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
               Status
@@ -106,24 +120,47 @@ export function CategoryChecksTable({
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              <span className='font-medium'>
-                {item.activity_name || item.activity_id}
-              </span>
+              <AdminTableName>{item.activity_name || item.activity_id}</AdminTableName>
+              <AdminDataTableCellMeta until='secondary' label='Organization'>
+                {adminTableText(item.org_name)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary' label='Current'>
+                {adminTableText(item.current_category_name)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary' label='Proposed'>
+                {adminTableText(item.proposed_category_name)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary' label='Verdict' empty={!item.verdict}>
+                {item.verdict ? <StatusBadge status={item.verdict} /> : adminTableText(null)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta
+                until='tertiary'
+                label='Confidence'
+                empty={item.confidence == null}
+              >
+                <AdminTableNumber>{formatAdminTablePercent(item.confidence)}</AdminTableNumber>
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                <StatusBadge status={formatAdminTableLabel(item.status)} />
+              </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {item.org_name || '—'}
+              {adminTableText(item.org_name)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {item.current_category_name || '—'}
-              {' → '}
-              {item.proposed_category_name || '—'}
+              {adminTableText(item.current_category_name)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              {adminTableText(item.proposed_category_name)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              {item.verdict}
-              {item.confidence != null ? ` ${item.confidence}` : ''}
+              {item.verdict ? <StatusBadge status={item.verdict} /> : adminTableText(null)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              <StatusBadge status={item.status.replace(/_/g, ' ')} />
+              <AdminTableNumber>{formatAdminTablePercent(item.confidence)}</AdminTableNumber>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              <StatusBadge status={formatAdminTableLabel(item.status)} />
             </AdminDataTableCell>
           </>
         )}

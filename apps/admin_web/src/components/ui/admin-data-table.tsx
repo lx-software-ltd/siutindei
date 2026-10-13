@@ -5,6 +5,8 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+import { ADMIN_TABLE_EMPTY, adminTableCellClassNameError } from './admin-table-value';
+
 /**
  * Admin listing tables use a single cell padding and header weight everywhere.
  * Prefer `AdminDataTableHeadCell` / `AdminDataTableCell` over ad-hoc `px-*` / `py-*` on `th`/`td`.
@@ -101,15 +103,36 @@ export function AdminDataTableHeadCell({
 }
 
 export type AdminDataTableCellProps = Omit<ComponentPropsWithoutRef<'td'>, 'className'> & {
+  /**
+   * Layout only (`w-*`, `pr-0`, `whitespace-nowrap`, `text-right`,
+   * `text-center`, `py-8`). Content weight and color belong on a role.
+   */
   className?: string;
   priority?: AdminDataTableColumnPriority;
+  /** Centered empty-table sentence. Color stays on the cell, not the caller. */
+  empty?: boolean;
 };
 
-export function AdminDataTableCell({ children, className, priority = 'primary', ...rest }: AdminDataTableCellProps) {
+export function AdminDataTableCell({
+  children,
+  className,
+  priority = 'primary',
+  empty = false,
+  ...rest
+}: AdminDataTableCellProps) {
+  const classNameError = adminTableCellClassNameError(className);
+  if (classNameError && process.env.NODE_ENV !== 'production') {
+    console.warn(classNameError);
+  }
   return (
     <td
       {...rest}
-      className={twMerge(adminDataTableBodyCellBase, ADMIN_TABLE_COLUMN_PRIORITY_CLASS[priority], className)}
+      className={twMerge(
+        adminDataTableBodyCellBase,
+        ADMIN_TABLE_COLUMN_PRIORITY_CLASS[priority],
+        empty && 'py-8 text-center text-slate-500',
+        className
+      )}
     >
       {children}
     </td>
@@ -121,21 +144,53 @@ export interface AdminDataTableCellMetaProps {
   /** Breakpoint at which the dedicated column takes over (matches the column's `priority`). */
   until?: Exclude<AdminDataTableColumnPriority, 'primary'>;
   className?: string;
+  /** Column name. Shown with the em dash so an empty caption is not a lone dash. */
+  label?: string;
+  /** Force the empty caption even when `children` is a role component. */
+  empty?: boolean;
+}
+
+function captionIsEmpty(empty: boolean | undefined, children: ReactNode): boolean {
+  if (empty === true) {
+    return true;
+  }
+  if (empty === false) {
+    return false;
+  }
+  return (
+    children == null ||
+    (typeof children === 'string' &&
+      (children.trim() === '' || children.trim() === ADMIN_TABLE_EMPTY))
+  );
 }
 
 /** Secondary line under a primary cell, shown only while its own column is hidden. */
-export function AdminDataTableCellMeta({ children, until = 'secondary', className }: AdminDataTableCellMetaProps) {
+export function AdminDataTableCellMeta({
+  children,
+  until = 'secondary',
+  className,
+  label,
+  empty,
+}: AdminDataTableCellMetaProps) {
+  const isEmpty = captionIsEmpty(empty, children);
+  const body =
+    isEmpty && label
+      ? `${label} ${ADMIN_TABLE_EMPTY}`
+      : isEmpty
+        ? ADMIN_TABLE_EMPTY
+        : children;
   return (
     <span
       className={clsx(
         // `wrap-anywhere` (not `truncate`) so a long email or timestamp never
         // sets the column's minimum width and forces a horizontal scroll.
-        'mt-0.5 block wrap-anywhere text-xs font-normal text-slate-500',
+        // Time and id keep their desktop color; inside a caption they inherit.
+        'mt-0.5 block wrap-anywhere text-xs font-normal text-slate-500 [&_.admin-table-id]:text-inherit [&_.admin-table-time]:text-inherit',
         until === 'secondary' ? 'md:hidden' : 'lg:hidden',
         className
       )}
     >
-      {children}
+      {body}
     </span>
   );
 }

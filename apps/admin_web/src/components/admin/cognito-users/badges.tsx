@@ -53,7 +53,7 @@ export function IdentityProviderBadge({
   };
 
   return (
-    <span title={provider} className='inline-flex items-center'>
+    <span role='img' title={provider} aria-label={provider} className='inline-flex items-center'>
       {icons[provider]}
     </span>
   );

@@ -21,6 +21,11 @@ import {
 import type { Activity } from '../../types/admin';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import {
+  AdminTableName,
+  AdminTableNumber,
+  formatAdminTableRange,
+} from '../ui/admin-table-value';
+import {
   AdminDataTableCell,
   AdminDataTableCellMeta,
   AdminDataTableHeadCell,
@@ -589,16 +594,23 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              {item.name}
-              <AdminDataTableCellMeta until='secondary'>
+              <AdminTableName>{item.name}</AdminTableName>
+              <AdminDataTableCellMeta until='secondary' label='Category'>
                 {getCategoryPath(item.category_id)}
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary'>
+                <AdminTableNumber>
+                  {formatAdminTableRange(item.age_min, item.age_max)}
+                </AdminTableNumber>
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               {getCategoryPath(item.category_id)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              {`${item.age_min} - ${item.age_max}`}
+              <AdminTableNumber>
+                {formatAdminTableRange(item.age_min, item.age_max)}
+              </AdminTableNumber>
             </AdminDataTableCell>
           </>
         )}

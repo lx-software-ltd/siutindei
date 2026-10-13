@@ -16,7 +16,16 @@ import {
 } from '../../../lib/api-client-data-quality';
 import { ApiError } from '../../../lib/api-client';
 import { StatusBanner } from '../../status-banner';
-import { AdminDataTableCell, AdminDataTableHeadCell } from '../../ui/admin-data-table';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '../../ui/admin-data-table';
+import {
+  AdminTableName,
+  AdminTableNumber,
+  formatAdminTableLabels,
+} from '../../ui/admin-table-value';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
 import { Button } from '../../ui/button';
@@ -200,11 +209,21 @@ export function DuplicatesPanel() {
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              {item.organizations.map((org) => org.name).join(' · ')}
+              <AdminTableName>
+                {item.organizations.map((org) => org.name).join(' · ')}
+              </AdminTableName>
+              <AdminDataTableCellMeta until='secondary'>
+                <AdminTableNumber>{item.score}</AdminTableNumber>
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='secondary' label='Signals'>
+                {formatAdminTableLabels(item.signals)}
+              </AdminDataTableCellMeta>
             </AdminDataTableCell>
-            <AdminDataTableCell priority='secondary'>{item.score}</AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {item.signals.join(', ')}
+              <AdminTableNumber>{item.score}</AdminTableNumber>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              {formatAdminTableLabels(item.signals)}
             </AdminDataTableCell>
           </>
         )}

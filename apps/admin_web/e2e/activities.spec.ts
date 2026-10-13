@@ -194,8 +194,8 @@ test.describe('Activities Panel', () => {
     await expect(adminPage.getByText('Swimming Class')).toBeVisible();
 
     // Check age ranges are displayed
-    await expect(adminPage.getByText('5 - 12')).toBeVisible(); // Swimming Class
-    await expect(adminPage.getByText('3 - 10')).toBeVisible(); // Art Workshop
+    await expect(adminPage.getByRole('cell', { name: '5–12' })).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: '3–10' })).toBeVisible();
   });
 
   test('should have search input for activities', async ({ adminPage }) => {

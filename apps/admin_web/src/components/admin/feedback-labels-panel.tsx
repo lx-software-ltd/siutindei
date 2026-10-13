@@ -23,6 +23,7 @@ import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
 import { Input } from '../ui/input';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
+import { ADMIN_TABLE_EMPTY, AdminTableName, AdminTableNumber } from '../ui/admin-table-value';
 import {
   deleteRowActions,
   ResourceTableShell,
@@ -66,7 +67,7 @@ function translationSummary(item: FeedbackLabel): string {
   const translations = Object.entries(item.name_translations ?? {})
     .map(([lang, value]) => `${lang}: ${value}`)
     .join(', ');
-  return translations || '—';
+  return translations || ADMIN_TABLE_EMPTY;
 }
 
 export function FeedbackLabelsPanel() {
@@ -251,13 +252,16 @@ export function FeedbackLabelsPanel() {
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              {item.name}
-              <AdminDataTableCellMeta until='tertiary'>
+              <AdminTableName>{item.name}</AdminTableName>
+              <AdminDataTableCellMeta until='secondary' label='Order' empty={item.display_order == null}>
+                <AdminTableNumber>{item.display_order}</AdminTableNumber>
+              </AdminDataTableCellMeta>
+              <AdminDataTableCellMeta until='tertiary' label='Translations'>
                 {translationSummary(item)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {item.display_order ?? 0}
+              <AdminTableNumber>{item.display_order}</AdminTableNumber>
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {translationSummary(item)}

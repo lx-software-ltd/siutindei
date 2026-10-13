@@ -18,7 +18,7 @@ test.describe('Audit Logs Panel', () => {
     await expect(adminPage.getByRole('columnheader', { name: /Timestamp GMT/ })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'User Email' })).toHaveCount(0);
     await expect(adminPage.getByLabel('Action')).toHaveValue('all');
-    await expect(adminPage.getByText('migration')).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'migration', exact: true })).toBeVisible();
 
     await adminPage.getByLabel('Action').selectOption('UPDATE');
     await expect(adminPage.getByRole('table')).toContainText('UPDATE');
