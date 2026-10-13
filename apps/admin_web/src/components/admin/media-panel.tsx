@@ -16,9 +16,8 @@ import { PlusIcon } from '../icons/action-icons';
 import { OrganizationWorkspaceTitle } from './organization-workspace-title';
 import { VersionHistory } from './version-history';
 import { WorkspaceScopeGate } from './workspace-empty';
-import { AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminInputCard } from '../ui/admin-input-card';
 import { Button } from '../ui/button';
-import { Card } from '../ui/card';
 import { Input } from '../ui/input';
 import { StatusBanner } from '../status-banner';
 import { MediaGrid } from './media/media-grid';
@@ -463,40 +462,41 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
           version={organization?.media_version}
         />
       ) : null}
-      {error && (
-        <StatusBanner kind='error'>
-          {error}
-        </StatusBanner>
-      )}
-      {successMessage && (
-        <StatusBanner kind='saved'>
-          {successMessage}
-        </StatusBanner>
-      )}
       {isLoadingOrg ? (
         <p className='text-sm text-slate-600'>Loading media…</p>
       ) : null}
 
       {selectedOrgId && (
-        <Card>
-          <AdminEditorPanel
-            actions={
-              <>
-                <Button
-                  type='button'
-                  onClick={() => {
-                    void handleSave();
-                  }}
-                  disabled={isProcessingMedia || !hasUnsavedChanges}
-                  loading={isSaving}
-                  loadingLabel='Saving…'
-                  className='w-full sm:w-auto'
-                >
-                  Save media
-                </Button>
-              </>
-            }
-          >
+        <AdminInputCard
+          title='Media'
+          status={
+            <>
+              {error ? (
+                <StatusBanner kind='error'>
+                  {error}
+                </StatusBanner>
+              ) : null}
+              {successMessage ? (
+                <StatusBanner kind='saved'>
+                  {successMessage}
+                </StatusBanner>
+              ) : null}
+            </>
+          }
+          actions={
+            <Button
+              type='button'
+              onClick={() => {
+                void handleSave();
+              }}
+              disabled={isProcessingMedia || !hasUnsavedChanges}
+              loading={isSaving}
+              loadingLabel='Saving…'
+            >
+              Save media
+            </Button>
+          }
+        >
             <p className='text-sm text-slate-600'>
               Add or remove media for{' '}
               {selectedOrganization?.name ?? 'this organization'}.
@@ -569,8 +569,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
                 No media added yet. Upload files or add URLs above.
               </p>
             )}
-          </AdminEditorPanel>
-        </Card>
+        </AdminInputCard>
       )}
 
       {confirmDialog}

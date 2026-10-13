@@ -4,9 +4,8 @@ import type { ReactNode } from 'react';
 
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 
-import { AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminInputCard } from '../ui/admin-input-card';
 import { Button } from '../ui/button';
-import { Card } from '../ui/card';
 
 export function WorkspaceEmpty({
   noun = 'this section',
@@ -16,20 +15,15 @@ export function WorkspaceEmpty({
   const { openCatalog } = useOrganizationScope();
 
   return (
-    <Card
+    <AdminInputCard
       title='Choose an organization'
       description={`Open an organization from the catalog to work on ${noun}.`}
-    >
-      <AdminEditorPanel
-        actions={
-          <Button type='button' onClick={openCatalog}>
-            Open catalog
-          </Button>
-        }
-      >
-        {null}
-      </AdminEditorPanel>
-    </Card>
+      actions={
+        <Button type='button' onClick={openCatalog}>
+          Open catalog
+        </Button>
+      }
+    />
   );
 }
 
@@ -52,11 +46,9 @@ export function WorkspaceScopeGate({
     return <WorkspaceEmpty noun={noun} />;
   }
   return (
-    <Card
+    <AdminInputCard
       title='No organization is selected'
       description='This account has no organization open. Refresh the page, or ask an owner to assign one.'
-    >
-      {null}
-    </Card>
+    />
   );
 }

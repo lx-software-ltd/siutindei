@@ -6,10 +6,9 @@ import { listFeedbackLabels, type Ticket } from '../../lib/api-client-user';
 import { formatDateTime } from '../../lib/date-utils';
 import type { FeedbackLabel } from '../../types/admin';
 import { StatusBanner } from '../status-banner';
-import { AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminInputCard } from '../ui/admin-input-card';
 import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
-import { Card } from '../ui/card';
 import { StatusBadge } from '../ui/status-badge';
 
 interface PendingFeedbackNoticeProps {
@@ -46,12 +45,11 @@ export function PendingFeedbackNotice({
         Your feedback is being reviewed by our team. We&apos;ll notify you
         once it&apos;s been processed.
       </StatusBanner>
-      <Card
-        title='Your Feedback'
+      <AdminInputCard
+        title='Your feedback'
         description='Thank you for sharing your experience!'
       >
-        <AdminEditorPanel>
-          <AdminFieldGrid columns={2}>
+        <AdminFieldGrid columns={2}>
             <AdminReadOnlyValue label='Ticket ID' mono>
               {feedback.ticket_id}
             </AdminReadOnlyValue>
@@ -78,11 +76,10 @@ export function PendingFeedbackNotice({
               {formatDateTime(feedback.created_at)}
             </AdminReadOnlyValue>
           </AdminFieldGrid>
-          <p className='text-sm text-slate-600'>
-            You can submit another feedback entry once this one has been reviewed.
-          </p>
-        </AdminEditorPanel>
-      </Card>
+        <p className='text-sm text-slate-600'>
+          You can submit another feedback entry once this one has been reviewed.
+        </p>
+      </AdminInputCard>
     </div>
   );
 }

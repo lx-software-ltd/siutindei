@@ -27,6 +27,7 @@ import { StatusBanner } from '../../status-banner';
 import { AdminDataTableCell, AdminDataTableHeadCell } from '../../ui/admin-data-table';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../../ui/admin-field-grid';
+import { AdminInputCard } from '../../ui/admin-input-card';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -434,8 +435,14 @@ export function NamesPanel() {
         )}
       />
       {settings ? (
-        <div className='space-y-3 rounded-lg border border-slate-200 bg-white p-4'>
-          <h3 className='text-sm font-medium text-slate-900'>Rules</h3>
+        <AdminInputCard
+          title='Rules'
+          actions={
+            <Button type='button' variant='secondary' onClick={() => void saveSettings()}>
+              Save rules
+            </Button>
+          }
+        >
           <div className='flex flex-wrap gap-3'>
             {(settings.available_rules ?? settings.enabled_rules).map((rule) => (
               <label key={rule} className='flex items-center gap-2 text-sm text-slate-700'>
@@ -478,10 +485,7 @@ export function NamesPanel() {
               />
             </AdminField>
           </AdminFieldGrid>
-          <Button type='button' variant='secondary' onClick={() => void saveSettings()}>
-            Save rules
-          </Button>
-        </div>
+        </AdminInputCard>
       ) : null}
     </div>
   );
