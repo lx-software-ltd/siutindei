@@ -48,7 +48,7 @@ const DEFAULT_FILTERS: ReviewFilters = {
 };
 
 export function CategoryChecksPanel() {
-  const [organizationParam] = useQueryState('organization');
+  const [organizationParam, setOrganization] = useQueryState('organization');
   const scopedOrgId = organizationParam ?? '';
   const fetchReviews = useCallback(
     async ({
@@ -328,6 +328,20 @@ export function CategoryChecksPanel() {
           {error}
         </StatusBanner>
       ) : null}
+      {scopedOrgId ? (
+        <p className='text-sm text-slate-600'>
+          Filtered to the organization from the review queue.{' '}
+          <button
+            type='button'
+            className='underline'
+            onClick={() => {
+              void setOrganization(null);
+            }}
+          >
+            Show all
+          </button>
+        </p>
+      ) : null}
       {selectScope === 'all' ? (
         <StatusBanner kind='info' title='Selection'>
           All matching records are selected, including rows not on this page.
@@ -370,17 +384,6 @@ export function CategoryChecksPanel() {
         )}
         filters={
           <AdminFilterBar>
-            {scopedOrgId ? (
-              <AdminFilterField>
-                <Input
-                  id='check-org-filter'
-                  aria-label='Organization'
-                  value={scopedOrgId}
-                  readOnly
-                  placeholder='Organization'
-                />
-              </AdminFilterField>
-            ) : null}
             <AdminFilterField>
               <Select
                 id='check-status-filter'
@@ -460,7 +463,7 @@ export function CategoryChecksPanel() {
             </Button>
             <Button
               type='button'
-              variant='outline'
+              variant='secondary'
               disabled={!hasSelection || isRunning || isStarting || isBulkRunning}
               loading={isBulkRunning && bulkAction === 'apply'}
               loadingLabel='Applying…'
@@ -470,7 +473,7 @@ export function CategoryChecksPanel() {
             </Button>
             <Button
               type='button'
-              variant='outline'
+              variant='secondary'
               disabled={!hasSelection || isRunning || isStarting || isBulkRunning}
               loading={isBulkRunning && bulkAction === 'dismiss'}
               loadingLabel='Dismissing…'

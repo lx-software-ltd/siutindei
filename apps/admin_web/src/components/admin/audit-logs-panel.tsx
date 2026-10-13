@@ -70,9 +70,6 @@ const TIME_RANGES = [
   { value: '30d', label: 'Last 30 days' },
 ];
 
-/** Narrow enough that Action, Table, Time range, and Actor share one desktop row. */
-const filterFieldClass = '!min-w-[8.5rem] sm:!flex-1 sm:!basis-0';
-
 function getTimestamp(range: string): string | undefined {
   if (!range) {
     return undefined;
@@ -247,7 +244,7 @@ export function AuditLogsPanel() {
       detail={detail}
       filters={
         <AdminFilterBar>
-          <AdminFilterField className={filterFieldClass}>
+          <AdminFilterField>
             <Select
               id='action-filter'
               aria-label='Action'
@@ -262,7 +259,7 @@ export function AuditLogsPanel() {
               <option value='DELETE'>Delete</option>
             </Select>
           </AdminFilterField>
-          <AdminFilterField className={filterFieldClass}>
+          <AdminFilterField>
             <Select
               id='table-filter'
               aria-label='Table'
@@ -279,7 +276,7 @@ export function AuditLogsPanel() {
               ))}
             </Select>
           </AdminFilterField>
-          <AdminFilterField className={filterFieldClass}>
+          <AdminFilterField>
             <Select
               id='time-range'
               aria-label='Time range'
@@ -295,7 +292,7 @@ export function AuditLogsPanel() {
               ))}
             </Select>
           </AdminFilterField>
-          <AdminFilterField className={filterFieldClass}>
+          <AdminFilterField>
             <Input
               id='actor-filter'
               aria-label='Actor'
