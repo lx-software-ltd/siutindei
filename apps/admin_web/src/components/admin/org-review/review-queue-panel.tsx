@@ -462,7 +462,6 @@ export function CatalogPanel() {
       />
       {notice ? <StatusBanner kind='info'>{notice}</StatusBanner> : null}
       {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
-      {filterBar}
       <div className={view === 'map' ? undefined : 'hidden'}>
         {mapMounted ? (
         <Card>
@@ -502,6 +501,7 @@ export function CatalogPanel() {
         isExpanded={() => false}
         onToggle={openOrganization}
         detail={null}
+        filters={filterBar}
         actions={
           <>
             <label className='flex items-center gap-2 text-sm text-slate-700'>
