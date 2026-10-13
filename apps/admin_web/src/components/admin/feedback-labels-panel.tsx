@@ -225,13 +225,13 @@ export function FeedbackLabelsPanel() {
         isExpanded={panel.isExpanded}
         onToggle={panel.toggle}
         isDraftOpen={panel.isDraftOpen}
-        draftLabel='New feedback label'
+        draftLabel='New label'
         onToggleDraft={panel.collapse}
         detail={detail}
         actions={
           panel.canCreate ? (
             <AdminCreateButton
-              label='New feedback label'
+              label='New label'
               active={panel.isDraftOpen}
               onClick={panel.openDraft}
             />
