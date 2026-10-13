@@ -2,10 +2,13 @@ import type { HTMLAttributes, ReactNode } from 'react';
 
 import { clsx } from 'clsx';
 
+export const cardSurfaceClass =
+  'rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:rounded-xl sm:p-6';
+
 export interface CardProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   title?: string;
   description?: string;
-  children: ReactNode;
+  children?: ReactNode;
   className?: string;
 }
 
@@ -19,10 +22,7 @@ export function Card({
   return (
     <section
       {...rest}
-      className={clsx(
-        'rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:rounded-xl sm:p-6',
-        className
-      )}
+      className={clsx(cardSurfaceClass, className)}
     >
       {(title || description) && (
         <header className='mb-3 sm:mb-4'>
