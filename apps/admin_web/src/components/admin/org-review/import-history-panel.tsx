@@ -5,6 +5,7 @@ import { useQueryState } from 'nuqs';
 
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
+import { formatAdminPageName } from '../../../lib/admin-page-name';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { formatDateTime } from '../../../lib/date-utils';
 import { runAdminImport } from '../../../lib/api-client-imports';
@@ -26,6 +27,7 @@ import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { StatusBanner } from '../../status-banner';
 
 const HISTORY_LINK_REFRESH_MS = 30 * 60 * 1000;
+const PAGE_NAME = formatAdminPageName('Imports', 'History');
 
 function formatWhen(value?: string) {
   return formatDateTime(value);
@@ -172,14 +174,14 @@ export function ImportHistoryPanel() {
 
   return (
     <div className='space-y-4'>
-      <h2 className='sr-only'>Import history</h2>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       {retryError ? (
         <StatusBanner kind='error'>
           {retryError}
         </StatusBanner>
       ) : null}
       <ResourceTableShell
-        ariaLabel='Import history'
+        ariaLabel={PAGE_NAME}
         rows={list.items}
         getLabel={(item) => `import ${item.id}`}
         middleColumnCount={3}

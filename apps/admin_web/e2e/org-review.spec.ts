@@ -26,7 +26,10 @@ test.describe('Organization review queue', () => {
   test('lists import history', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=imports&tab=history');
     await expect(
-      adminPage.getByRole('heading', { name: 'Import history' })
+      adminPage.getByRole('heading', { name: 'Imports · History' })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('table', { name: 'Imports · History' })
     ).toBeVisible();
     await expect(
       adminPage.getByRole('columnheader', { name: 'File' })

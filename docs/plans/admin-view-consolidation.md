@@ -11,6 +11,8 @@ Follow-up: Feedback tab `Labels`; drop Suggestions helper copy; Catalog filters 
 
 Follow-up: every page surface (table, form, KPI, empty, after-table) uses the `Card` primitive / `cardSurfaceClass`. Do not hand-write `rounded-lg border border-slate-200 bg-white`.
 
+Follow-up: page names use `formatAdminPageName`. Nav only when there is no tab, or the tab repeats the nav. Otherwise `Nav · Tab`. No fused phrases. Sub-tabs are not part of the name.
+
 ## Non-goals
 
 - Backend audit serialization or catalog-version APIs
@@ -20,9 +22,11 @@ Follow-up: every page surface (table, form, KPI, empty, after-table) uses the `C
 ## Files
 
 - `apps/admin_web/src/lib/date-utils.ts` and list/detail call sites
+- `apps/admin_web/src/lib/admin-page-name.ts` and list/detail call sites
 - `apps/admin_web/src/components/ui/admin-expandable-row.tsx`
 - Imports, catalog, workspace tables, data quality, categories, audit, users, tickets, API keys
-- Playwright specs that assert the old labels, Version columns, or timestamps
+- Playwright specs that assert the old labels, Version columns, timestamps, or fused page names
+- `.cursor/skills/admin-crud-screen/SKILL.md`, `.cursor/rules/admin-web.mdc`, `docs/architecture/admin-web-ui.md`
 
 ## Invariants this change preserves
 
@@ -34,8 +38,8 @@ Follow-up: every page surface (table, form, KPI, empty, after-table) uses the `C
 ## Done when
 
 - `npm run lint` and `npm run typecheck` in `apps/admin_web`
-- Targeted unit tests for dates, expandable-row click, and audit actor
-- Playwright specs match the new labels
+- Targeted unit tests for dates, expandable-row click, audit actor, and page names
+- Playwright specs match the new labels and `Nav · Tab` page names
 
 ## Rollback
 

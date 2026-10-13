@@ -8,6 +8,7 @@ import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import type { GeographicAreaNode } from '../../lib/api-client';
+import { formatAdminPageName } from '../../lib/admin-page-name';
 import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/resource-api';
 import { normalizeKey } from '../../lib/string-utils';
@@ -463,7 +464,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
       <div className='space-y-4'>
         <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
         <ResourceTableShell
-        ariaLabel={isAdmin ? 'Locations' : 'Your locations'}
+        ariaLabel={isAdmin ? formatAdminPageName('Locations') : 'Your locations'}
         rows={filteredItems}
         getLabel={(item) => getAreaName(item.area_id)}
         middleColumnCount={2}

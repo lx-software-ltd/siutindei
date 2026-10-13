@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useBulkRowSelection } from '../../../hooks/use-bulk-row-selection';
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
+import { formatAdminPageName } from '../../../lib/admin-page-name';
 import { getAdminQueryClient } from '../../../lib/admin-query-client';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { ApiError } from '../../../lib/api-client';
@@ -37,6 +38,8 @@ import { Textarea } from '../../ui/textarea';
 function splitNameSettingList(value: string): string[] {
   return value.split(/\s+/).filter(Boolean);
 }
+
+const PAGE_NAME = formatAdminPageName('Data quality', 'Names');
 
 const NAME_RULES = [
   'html_entities',
@@ -233,7 +236,7 @@ export function NamesPanel() {
 
   return (
     <div className='space-y-4'>
-      <h2 className='sr-only'>Names</h2>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       {organization ? (
         <p className='text-sm text-slate-600'>
           Filtered to the organization from the review queue.{' '}
@@ -264,7 +267,7 @@ export function NamesPanel() {
         </StatusBanner>
       ) : null}
       <ResourceTableShell
-        ariaLabel='Name fixes'
+        ariaLabel={PAGE_NAME}
         toolbar={
           <div className='mb-3 flex flex-wrap items-end gap-2'>
             <p className='w-full text-sm text-slate-700'>{summary}</p>

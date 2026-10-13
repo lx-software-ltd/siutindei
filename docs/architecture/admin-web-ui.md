@@ -1,12 +1,26 @@
 # Admin web UI
 
 The admin console is a table-first workspace. Section names live in the
-nav. Listing cards do not repeat them. Screen readers still get an
-`sr-only` heading with the nav label. Workspace sections show the open
+nav. Listing cards do not repeat them. Workspace sections show the open
 organization above the card.
 
-The product rules live in `.cursorrules` under **Admin Web CRUD UX
-pattern**. This page names the primitives those rules use.
+The product rules live in `.cursor/skills/admin-crud-screen/SKILL.md`
+and `.cursor/rules/admin-web.mdc`. This page names the primitives those
+rules use.
+
+## Page names
+
+`formatAdminPageName(nav, tab)` in
+`apps/admin_web/src/lib/admin-page-name.ts` is the page name.
+
+- Nav only when there is no tab, or the tab is the default and repeats
+  the nav (`Imports`, `Categories`, `Feedback`).
+- Otherwise `Nav · Tab` (`Imports · History`, `Categories · Suggestions`,
+  `Data quality · Names`).
+- Do not invent fused phrases (`Import history`).
+- Sub-tabs (Catalog Table / Map) are not part of the name.
+- The table `aria-label` and the page's `sr-only` heading use that name.
+  Sidebar shows nav; the strip shows the tab.
 
 ## Primitives
 
@@ -23,7 +37,7 @@ pattern**. This page names the primitives those rules use.
 | Dialogs | `AdminDialog` with a header Close control. `ConfirmDialog` is the confirm/cancel footer. `footer={null}` keeps the header Close and omits the footer |
 | Status chips | `StatusBadge` with an optional `tone` |
 | Banners | `StatusBanner` `kind` (`error`, `saved`, `pending-review`, `info`) sets the colour and default heading. `title` overrides the heading |
-| In-area switchers | `AdminTabStrip` (Title Case) |
+| In-area switchers | `AdminTabStrip` (sentence case) |
 | Multi-select chips | `AdminToggleChip` |
 | Icons | `src/components/icons/action-icons.tsx` |
 | In-flight buttons | `Button` `loading` |

@@ -13,6 +13,7 @@ import {
   type Ticket,
   type TicketType,
 } from '@/lib/api-client-tickets';
+import { formatAdminPageName } from '@/lib/admin-page-name';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { formatDateTime } from '@/lib/date-utils';
 import type { FeedbackLabel, Organization } from '@/types/admin';
@@ -44,6 +45,8 @@ interface ReviewFormState {
   orgTouched: boolean;
   hasSubmitted: boolean;
 }
+
+const PAGE_NAME = formatAdminPageName('Tickets');
 
 const emptyReviewForm: ReviewFormState = {
   adminNotes: '',
@@ -253,8 +256,9 @@ export function TicketsPanel() {
 
   return (
     <>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       <ResourceTableShell
-        ariaLabel='Tickets'
+        ariaLabel={PAGE_NAME}
         rows={list.items}
         getLabel={(item) => item.ticket_id}
         middleColumnCount={6}

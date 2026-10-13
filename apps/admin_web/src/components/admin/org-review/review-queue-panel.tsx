@@ -6,6 +6,7 @@ import { useQueryState } from 'nuqs';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
 import { useGeographicAreas } from '../../../hooks/use-geographic-areas';
 import { useOrganizationScope } from '../../../hooks/use-organization-scope';
+import { formatAdminPageName } from '../../../lib/admin-page-name';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import {
   CATALOG_MAP_ORG_CAP,
@@ -42,6 +43,8 @@ import { Card } from '../../ui/card';
 import { BULK_FIELDS_FORM_ID, BulkFieldsDialog } from './bulk-fields-dialog';
 import { CatalogOrgMap } from './catalog-org-map';
 import { NeighbourhoodFilter } from './neighbourhood-filter';
+
+const PAGE_NAME = formatAdminPageName('Catalog');
 
 const ISSUE_OPTIONS = [
   ['', 'Any issue'],
@@ -447,7 +450,7 @@ export function CatalogPanel() {
 
   return (
     <div className='space-y-4'>
-      <h2 className='sr-only'>Catalog</h2>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       <div className='grid gap-3 sm:grid-cols-3'>
         <AdminKpiCard label='Pending review' value={pendingCount} />
         <AdminKpiCard
@@ -494,7 +497,7 @@ export function CatalogPanel() {
       </div>
       {view === 'table' ? (
       <ResourceTableShell
-        ariaLabel='Catalog'
+        ariaLabel={PAGE_NAME}
         filters={filterBar}
         rows={items}
         getLabel={(item) => item.name || `organization ${item.id}`}

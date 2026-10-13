@@ -8,7 +8,7 @@ test.describe('Feedback Panel', () => {
       feedbackTabs.getByRole('button', { name: 'Feedback', exact: true })
     ).toHaveAttribute('aria-pressed', 'true');
     await expect(
-      adminPage.getByRole('table', { name: 'Organization feedback' })
+      adminPage.getByRole('table', { name: 'Feedback', exact: true })
     ).toBeVisible();
     await expect(adminPage.getByPlaceholder('Search feedback...')).toHaveCount(0);
 
@@ -30,23 +30,23 @@ test.describe('Feedback Panel', () => {
     await feedbackTabs.getByRole('button', { name: 'Labels' }).click();
     await expect(adminPage).toHaveURL(/feedbackView=labels/);
     await expect(
-      adminPage.getByRole('table', { name: 'Labels' })
+      adminPage.getByRole('table', { name: 'Feedback · Labels' })
     ).toBeVisible();
     await expect(adminPage.getByPlaceholder('Search labels...')).toHaveCount(0);
     await expect(
       adminPage.getByRole('button', { name: 'New feedback label' })
     ).toBeVisible();
     await expect(
-      adminPage.getByRole('table', { name: 'Organization feedback' })
+      adminPage.getByRole('table', { name: 'Feedback', exact: true })
     ).toHaveCount(0);
 
     await feedbackTabs.getByRole('button', { name: 'Feedback', exact: true }).click();
     await expect(adminPage).not.toHaveURL(/feedbackView=/);
     await expect(
-      adminPage.getByRole('table', { name: 'Organization feedback' })
+      adminPage.getByRole('table', { name: 'Feedback', exact: true })
     ).toBeVisible();
     await expect(
-      adminPage.getByRole('table', { name: 'Labels' })
+      adminPage.getByRole('table', { name: 'Feedback · Labels' })
     ).toHaveCount(0);
   });
 
@@ -57,7 +57,7 @@ test.describe('Feedback Panel', () => {
       feedbackTabs.getByRole('button', { name: 'Labels' })
     ).toHaveAttribute('aria-pressed', 'true');
     await expect(
-      adminPage.getByRole('table', { name: 'Labels' })
+      adminPage.getByRole('table', { name: 'Feedback · Labels' })
     ).toBeVisible();
     const feedbackNav = adminPage
       .locator('nav.sticky')
