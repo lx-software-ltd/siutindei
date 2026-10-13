@@ -12,6 +12,9 @@ import {
   type OrgReviewIssue,
 } from '../../lib/api-client-org-review';
 import { StatusBanner } from '../status-banner';
+import { AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 
@@ -131,86 +134,93 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
   const blockers = detail?.issues.filter((issue) => issue.severity === 'blocker') ?? [];
 
   return (
-    <Card>
-      <h2 className='text-sm font-semibold text-slate-900'>Readiness</h2>
-      <p className='mt-1 text-sm text-slate-600'>
-        Imported, created, and suggested organizations stay in review until you
-        release them. Public search keeps current listings until
-        ORG_REVIEW_GATE_ENABLED is turned on.
-      </p>
-      {error ? (
-        <div className='mt-3'>
-          <StatusBanner kind='error'>
-            {error}
-          </StatusBanner>
-        </div>
-      ) : null}
-      {notice ? (
-        <div className='mt-3'>
-          <StatusBanner kind='info'>
-            {notice}
-          </StatusBanner>
-        </div>
-      ) : null}
-      {!detail ? (
-        <p className='mt-3 text-sm text-slate-600'>Loading readiness…</p>
-      ) : (
-        <ul className='mt-3 space-y-2 text-sm text-slate-700'>
-          {detail.issues.length === 0 && <li>Nothing is missing.</li>}
-          {detail.issues.map((entry) => (
-            <li key={`${entry.entity_id}-${entry.code}`}>
-              <span className='font-medium'>{entry.message}</span>
-              <span className='ml-2 text-slate-500'>{entry.severity}</span>
-              <button
-                type='button'
-                className='ml-2 text-slate-900 underline'
-                onClick={() => openIssue(entry)}
-              >
-                Fix
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className='mt-4 flex flex-wrap items-center gap-2'>
-        <Button
-          type='button'
-          onClick={() => void decide('approve')}
-          disabled={activeAction !== null}
-          loading={activeAction === 'approve'}
-          loadingLabel='Saving…'
-        >
-          Approve
-        </Button>
-        <Button
-          type='button'
-          variant='secondary'
-          onClick={() => void decide('reject')}
-          disabled={activeAction !== null}
-          loading={activeAction === 'reject'}
-          loadingLabel='Saving…'
-        >
-          Reject
-        </Button>
-        <Button
-          type='button'
-          variant='secondary'
-          onClick={() => void decide('reopen')}
-          disabled={activeAction !== null}
-          loading={activeAction === 'reopen'}
-          loadingLabel='Saving…'
-        >
-          Reopen
-        </Button>
-        <label className='flex items-center gap-2 text-sm text-slate-700'>
-          <input
-            type='checkbox'
-            checked={force}
-            onChange={(event) => setForce(event.target.checked)}
-          />
-          Approve anyway{blockers.length > 0 ? ` (${blockers.length} missing)` : ''}
-        </label>
-      </div>
+    <Card
+      title='Readiness'
+      description='Imported, created, and suggested organizations stay in review until you release them. Public search keeps current listings until ORG_REVIEW_GATE_ENABLED is turned on.'
+    >
+      <AdminEditorPanel
+        status={
+          <>
+            {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
+            {notice ? <StatusBanner kind='info'>{notice}</StatusBanner> : null}
+          </>
+        }
+        actions={
+          <>
+            <Button
+              type='button'
+              onClick={() => void decide('approve')}
+              disabled={activeAction !== null}
+              loading={activeAction === 'approve'}
+              loadingLabel='Saving…'
+            >
+              Approve
+            </Button>
+            <Button
+              type='button'
+              variant='secondary'
+              onClick={() => void decide('reject')}
+              disabled={activeAction !== null}
+              loading={activeAction === 'reject'}
+              loadingLabel='Saving…'
+            >
+              Reject
+            </Button>
+            <Button
+              type='button'
+              variant='secondary'
+              onClick={() => void decide('reopen')}
+              disabled={activeAction !== null}
+              loading={activeAction === 'reopen'}
+              loadingLabel='Saving…'
+            >
+              Reopen
+            </Button>
+          </>
+        }
+      >
+        <AdminFieldGrid columns={1}>
+          {!detail ? (
+            <p className='text-sm text-slate-600'>Loading readiness…</p>
+          ) : detail.issues.length === 0 ? (
+            <AdminReadOnlyValue label='Issues'>Nothing is missing.</AdminReadOnlyValue>
+          ) : (
+            <ul className='col-span-full space-y-4'>
+              {detail.issues.map((entry) => (
+                <li key={`${entry.entity_id}-${entry.code}`}>
+                  <AdminReadOnlyValue
+                    label={entry.severity === 'blocker' ? 'Blocker' : 'Warning'}
+                  >
+                    <span>{entry.message}</span>{' '}
+                    <button
+                      type='button'
+                      className='text-slate-900 underline'
+                      onClick={() => openIssue(entry)}
+                    >
+                      Fix
+                    </button>
+                  </AdminReadOnlyValue>
+                </li>
+              ))}
+            </ul>
+          )}
+          <AdminField>
+            <label className='flex items-center gap-2 text-sm text-slate-700'>
+              <input
+                type='checkbox'
+                checked={force}
+                onChange={(event) => setForce(event.target.checked)}
+                aria-label={
+                  blockers.length > 0
+                    ? `Approve anyway (${blockers.length} missing)`
+                    : 'Approve anyway'
+                }
+              />
+              Approve anyway{blockers.length > 0 ? ` (${blockers.length} missing)` : ''}
+            </label>
+          </AdminField>
+        </AdminFieldGrid>
+      </AdminEditorPanel>
     </Card>
   );
 }

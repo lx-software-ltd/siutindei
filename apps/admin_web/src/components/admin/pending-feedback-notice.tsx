@@ -5,9 +5,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { listFeedbackLabels, type Ticket } from '../../lib/api-client-user';
 import { formatDateTime } from '../../lib/date-utils';
 import type { FeedbackLabel } from '../../types/admin';
+import { StatusBanner } from '../status-banner';
+import { AdminEditorPanel } from '../ui/admin-editor-panel';
+import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
 import { Card } from '../ui/card';
 import { StatusBadge } from '../ui/status-badge';
-import { StatusBanner } from '../status-banner';
 
 interface PendingFeedbackNoticeProps {
   feedback: Ticket;
@@ -47,46 +50,38 @@ export function PendingFeedbackNotice({
         title='Your Feedback'
         description='Thank you for sharing your experience!'
       >
-        <dl className='space-y-4'>
-          <div className='flex items-start justify-between gap-3'>
-            <div>
-              <dt className='text-sm font-medium text-slate-500'>Ticket ID</dt>
-              <dd className='mt-1 font-mono text-sm text-slate-900'>
-                {feedback.ticket_id}
-              </dd>
-            </div>
-            <StatusBadge status={feedback.status} />
-          </div>
-          <div>
-            <dt className='text-sm font-medium text-slate-500'>Organization</dt>
-            <dd className='mt-1 text-sm text-slate-900'>{feedback.organization_name}</dd>
-          </div>
-          <div>
-            <dt className='text-sm font-medium text-slate-500'>Stars</dt>
-            <dd className='mt-1 text-sm text-slate-900'>{feedback.feedback_stars ?? '—'}</dd>
-          </div>
-          {labelNames && labelNames.length > 0 ? (
-            <div>
-              <dt className='text-sm font-medium text-slate-500'>Labels</dt>
-              <dd className='mt-1 text-sm text-slate-900'>{labelNames.join(', ')}</dd>
-            </div>
-          ) : null}
-          {feedback.feedback_text ? (
-            <div>
-              <dt className='text-sm font-medium text-slate-500'>Description</dt>
-              <dd className='mt-1 text-sm text-slate-900'>{feedback.feedback_text}</dd>
-            </div>
-          ) : null}
-          <div>
-            <dt className='text-sm font-medium text-slate-500'>Submitted</dt>
-            <dd className='mt-1 text-sm text-slate-900'>
+        <AdminEditorPanel>
+          <AdminFieldGrid columns={2}>
+            <AdminReadOnlyValue label='Ticket ID' mono>
+              {feedback.ticket_id}
+            </AdminReadOnlyValue>
+            <AdminReadOnlyValue label='Status'>
+              <StatusBadge status={feedback.status} />
+            </AdminReadOnlyValue>
+            <AdminReadOnlyValue label='Organization' span={2}>
+              {feedback.organization_name}
+            </AdminReadOnlyValue>
+            <AdminReadOnlyValue label='Stars'>
+              {feedback.feedback_stars ?? '—'}
+            </AdminReadOnlyValue>
+            {labelNames && labelNames.length > 0 ? (
+              <AdminReadOnlyValue label='Labels'>
+                {labelNames.join(', ')}
+              </AdminReadOnlyValue>
+            ) : null}
+            {feedback.feedback_text ? (
+              <AdminReadOnlyValue label='Description' span={2}>
+                {feedback.feedback_text}
+              </AdminReadOnlyValue>
+            ) : null}
+            <AdminReadOnlyValue label='Submitted'>
               {formatDateTime(feedback.created_at)}
-            </dd>
-          </div>
-        </dl>
-        <p className='mt-4 text-sm text-slate-600'>
-          You can submit another feedback entry once this one has been reviewed.
-        </p>
+            </AdminReadOnlyValue>
+          </AdminFieldGrid>
+          <p className='text-sm text-slate-600'>
+            You can submit another feedback entry once this one has been reviewed.
+          </p>
+        </AdminEditorPanel>
       </Card>
     </div>
   );
