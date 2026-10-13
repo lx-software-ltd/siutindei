@@ -34,7 +34,7 @@ test.describe('Feedback Panel', () => {
     ).toBeVisible();
     await expect(adminPage.getByPlaceholder('Search labels...')).toHaveCount(0);
     await expect(
-      adminPage.getByRole('button', { name: 'New feedback label' })
+      adminPage.getByRole('button', { name: 'New label' })
     ).toBeVisible();
     await expect(
       adminPage.getByRole('table', { name: 'Feedback', exact: true })
