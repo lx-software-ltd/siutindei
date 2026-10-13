@@ -4,6 +4,7 @@ import { clsx } from 'clsx';
 
 export interface CardProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   title?: string;
+  titleAccessory?: ReactNode;
   description?: string;
   children: ReactNode;
   className?: string;
@@ -11,6 +12,7 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
 
 export function Card({
   title,
+  titleAccessory,
   description,
   children,
   className = '',
@@ -24,10 +26,15 @@ export function Card({
         className
       )}
     >
-      {(title || description) && (
+      {(title || titleAccessory || description) && (
         <header className='mb-3 sm:mb-4'>
-          {title && (
-            <h2 className='text-base font-semibold sm:text-lg'>{title}</h2>
+          {(title || titleAccessory) && (
+            <div className='flex flex-wrap items-center gap-2'>
+              {title && (
+                <h2 className='text-base font-semibold sm:text-lg'>{title}</h2>
+              )}
+              {titleAccessory}
+            </div>
           )}
           {description && (
             <p className='mt-1 text-xs text-slate-600 sm:text-sm'>
