@@ -504,14 +504,6 @@ export function CatalogPanel() {
         filters={filterBar}
         actions={
           <>
-            <label className='flex items-center gap-2 text-sm text-slate-700'>
-              <input
-                type='checkbox'
-                checked={force}
-                onChange={(event) => setForce(event.target.checked)}
-              />
-              Release even when details are missing
-            </label>
             <AdminCreateButton
               label='New organization'
               onClick={() => {
@@ -555,6 +547,14 @@ export function CatalogPanel() {
             >
               Apply properties
             </Button>
+            <label className='flex items-center gap-2 text-sm text-slate-700'>
+              <input
+                type='checkbox'
+                checked={force}
+                onChange={(event) => setForce(event.target.checked)}
+              />
+              Release even when details are missing
+            </label>
           </>
         }
         leadingHead={

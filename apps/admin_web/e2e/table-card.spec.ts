@@ -16,6 +16,16 @@ test.describe('Table card slots', () => {
     await expect(actions.getByRole('button', { name: 'Approve' })).toBeVisible();
     await expect(adminPage.getByTestId('admin-filter-bar')).toHaveCount(1);
 
+    const apply = actions.getByRole('button', { name: 'Apply properties' });
+    const release = actions.getByLabel('Release even when details are missing');
+    await expect(apply).toBeVisible();
+    await expect(release).toBeVisible();
+    const applyBox = await apply.boundingBox();
+    const releaseBox = await release.boundingBox();
+    expect(applyBox).toBeTruthy();
+    expect(releaseBox).toBeTruthy();
+    expect(releaseBox!.x).toBeGreaterThan(applyBox!.x);
+
     const filterBox = await filters.boundingBox();
     const actionBox = await actions.boundingBox();
     expect(filterBox).toBeTruthy();
