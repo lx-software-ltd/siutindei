@@ -32,15 +32,33 @@ test.describe('Organization review queue', () => {
       adminPage.getByRole('columnheader', { name: 'File' })
     ).toHaveCount(0);
     await expect(
-      adminPage.getByRole('link', { name: 'admin/imports/catalog.json' })
+      adminPage.getByRole('columnheader', { name: 'When' })
     ).toBeVisible();
+    const when = await adminPage.evaluate(() => {
+      const date = new Date('2024-02-01T00:00:00Z');
+      const monthDay = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+      const hours24 = date.getHours();
+      const period = hours24 >= 12 ? 'PM' : 'AM';
+      const hours12 = hours24 % 12 || 12;
+      const pad = (value: number) => String(value).padStart(2, '0');
+      return `${monthDay}, ${pad(hours12)}:${pad(date.getMinutes())} ${period}`;
+    });
+    await expect(adminPage.getByTestId('admin-row-job-1')).toContainText(when);
     await expect(
-      adminPage.getByRole('link', { name: 'admin/imports/dry-run.json' })
-    ).toBeVisible();
-    await expect(adminPage.getByText('admin/imports/expired.json')).toBeVisible();
-    await expect(
-      adminPage.getByRole('link', { name: 'admin/imports/expired.json' })
+      adminPage.getByTestId('admin-row-job-1').getByRole('link')
     ).toHaveCount(0);
+    await expect(
+      adminPage.getByText('admin/imports/catalog.json')
+    ).toHaveCount(0);
+    await expect(
+      adminPage.getByText('admin/imports/dry-run.json')
+    ).toHaveCount(0);
+    await expect(adminPage.getByText('admin/imports/expired.json')).toHaveCount(
+      0
+    );
     await expect(
       adminPage.getByRole('cell', { name: 'Live execution', exact: true })
     ).toBeVisible();
@@ -63,16 +81,21 @@ test.describe('Organization review queue', () => {
       });
     });
     await adminPage.goto('/admin/dashboard?section=imports&tab=history');
-    const fileLink = adminPage.getByRole('link', {
-      name: 'admin/imports/catalog.json',
-    });
-    await expect(fileLink).toHaveAttribute(
-      'href',
-      'https://imports.example/admin/imports/catalog.json'
-    );
     await expect(adminPage.getByTestId('admin-row-job-1')).toHaveAttribute(
       'data-expanded',
       'false'
+    );
+    await expect(
+      adminPage.getByTestId('admin-row-job-1').getByRole('link')
+    ).toHaveCount(0);
+
+    await adminPage.getByRole('cell', { name: 'created 1, updated 0' }).click();
+    const fileLink = adminPage
+      .getByTestId('admin-row-job-1-detail')
+      .getByRole('link', { name: 'admin/imports/catalog.json' });
+    await expect(fileLink).toHaveAttribute(
+      'href',
+      'https://imports.example/admin/imports/catalog.json'
     );
     const popupPromise = adminPage.waitForEvent('popup');
     await fileLink.click();
@@ -82,25 +105,8 @@ test.describe('Organization review queue', () => {
     );
     await expect(adminPage.getByTestId('admin-row-job-1')).toHaveAttribute(
       'data-expanded',
-      'false'
+      'true'
     );
-
-    await adminPage.getByRole('cell', { name: 'created 1, updated 0' }).click();
-    await expect(
-      adminPage
-        .getByTestId('admin-row-job-1-detail')
-        .getByRole('link', { name: 'admin/imports/catalog.json' })
-    ).toHaveAttribute(
-      'href',
-      'https://imports.example/admin/imports/catalog.json'
-    );
-
-    await adminPage.setViewportSize({ width: 390, height: 800 });
-    await expect(
-      adminPage
-        .getByTestId('admin-row-job-1')
-        .getByRole('link', { name: 'admin/imports/catalog.json' })
-    ).toBeVisible();
   });
 
   test('retries a skip-existing import with the stored flag', async ({

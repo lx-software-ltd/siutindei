@@ -442,6 +442,21 @@ export const mockAuditLogs = [
     ip_address: '127.0.0.1',
     user_agent: 'playwright',
   },
+  {
+    id: 'audit-2',
+    table_name: 'activities',
+    record_id: 'activity-1',
+    action: 'INSERT',
+    source: 'trigger',
+    user_id: null,
+    request_id: null,
+    changed_fields: ['activity_id', 'location_id'],
+    old_values: {},
+    new_values: { activity_id: 'activity-1' },
+    timestamp: '2024-01-07T11:00:00Z',
+    ip_address: null,
+    user_agent: null,
+  },
 ];
 
 export const mockAreaTree = [

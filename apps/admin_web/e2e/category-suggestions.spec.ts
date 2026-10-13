@@ -5,7 +5,7 @@ test.describe('Category suggestions', () => {
     await adminPage.goto('/admin/dashboard');
     await adminPage.getByRole('button', { name: 'Categories', exact: true }).click();
     await adminPage
-      .getByRole('button', { name: 'Category Suggestions', exact: true })
+      .getByRole('button', { name: 'Suggestions', exact: true })
       .click();
     await expect(adminPage.locator('#suggestion-status-filter')).toHaveCount(0);
 

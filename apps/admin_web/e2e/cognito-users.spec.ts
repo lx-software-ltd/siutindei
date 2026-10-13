@@ -43,24 +43,30 @@ test.describe('Cognito Users Panel', () => {
     await expect(detail).not.toContainText('2024-01-01T00:00:00Z');
     await expect(detail).not.toContainText('2024-01-10T00:00:00Z');
 
-    const created = await adminPage.evaluate(() =>
-      new Date('2024-01-01T00:00:00Z').toLocaleString('en-US', {
-        year: 'numeric',
+    const created = await adminPage.evaluate(() => {
+      const date = new Date('2024-01-01T00:00:00Z');
+      const monthDay = date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    );
-    const lastLogin = await adminPage.evaluate(() =>
-      new Date('2024-01-10T00:00:00Z').toLocaleString('en-US', {
-        year: 'numeric',
+      });
+      const hours24 = date.getHours();
+      const period = hours24 >= 12 ? 'PM' : 'AM';
+      const hours12 = hours24 % 12 || 12;
+      const pad = (value: number) => String(value).padStart(2, '0');
+      return `${monthDay}, ${pad(hours12)}:${pad(date.getMinutes())} ${period}`;
+    });
+    const lastLogin = await adminPage.evaluate(() => {
+      const date = new Date('2024-01-10T00:00:00Z');
+      const monthDay = date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    );
+      });
+      const hours24 = date.getHours();
+      const period = hours24 >= 12 ? 'PM' : 'AM';
+      const hours12 = hours24 % 12 || 12;
+      const pad = (value: number) => String(value).padStart(2, '0');
+      return `${monthDay}, ${pad(hours12)}:${pad(date.getMinutes())} ${period}`;
+    });
     await expect(detail).toContainText(created);
     await expect(detail).toContainText(lastLogin);
 

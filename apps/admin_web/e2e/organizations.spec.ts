@@ -30,6 +30,10 @@ test.describe('Organizations Panel', () => {
     ).toBeVisible();
     await expect(adminPage.locator('#org-email')).toBeVisible();
     await expect(adminPage.getByLabel('Website')).toBeVisible();
+    const emailBox = await adminPage.locator('#org-email').boundingBox();
+    const websiteBox = await adminPage.locator('#org-website').boundingBox();
+    expect(emailBox && websiteBox).toBeTruthy();
+    expect(Math.abs((emailBox?.y ?? 0) - (websiteBox?.y ?? 0))).toBeLessThan(8);
     await expect(adminPage.getByLabel('Phone country')).toBeVisible();
     await expect(adminPage.getByLabel('Phone number')).toBeVisible();
     await expect(adminPage.locator('#org-whatsapp')).toBeVisible();
@@ -65,8 +69,8 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByRole('columnheader', { name: 'Review' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Contact' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Import job' })).toBeVisible();
-    await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toBeVisible();
-    await expect(adminPage.getByRole('cell', { name: 'v2' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toHaveCount(0);
+    await expect(adminPage.getByRole('cell', { name: 'v2' })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toHaveCount(0);
     await expect(adminPage.locator('#review-status-filter')).toHaveValue('');
     await expect(adminPage.getByText('First test organization')).toHaveCount(0);

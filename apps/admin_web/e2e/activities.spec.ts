@@ -43,8 +43,8 @@ test.describe('Activities Panel', () => {
     await expect(adminPage.getByRole('columnheader', { name: 'Name' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Category' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Age Range' })).toBeVisible();
-    await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toBeVisible();
-    await expect(adminPage.getByRole('cell', { name: 'v1' }).first()).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toHaveCount(0);
+    await expect(adminPage.getByRole('cell', { name: 'v1' })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Operations' })).toBeVisible();
 
     // Check for activity data
