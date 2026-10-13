@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
+import { formatAdminPageName } from '../../../lib/admin-page-name';
 import type { CategorySuggestion } from '../../../lib/api-client-category-suggestions';
 import {
   AdminDataTableCell,
@@ -13,6 +14,8 @@ import { Select } from '../../ui/select';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { StatusBadge } from '../../ui/status-badge';
 import { SuggestionDetail } from './suggestion-detail';
+
+const PAGE_NAME = formatAdminPageName('Categories', 'Suggestions');
 
 interface SuggestionsTableProps {
   items: CategorySuggestion[];
@@ -66,8 +69,9 @@ export function SuggestionsTable({
 
   return (
     <div className='space-y-4'>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       <ResourceTableShell
-        ariaLabel='Category suggestions'
+        ariaLabel={PAGE_NAME}
         rows={items}
         getLabel={(item) => `suggestion ${item.id}`}
         middleColumnCount={6}

@@ -7,6 +7,7 @@ import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { ApiError, type AuditLogsFilters } from '@/lib/api-client';
 import { listAuditLogs } from '@/lib/api-client-audit';
 import { listCognitoUsers } from '@/lib/api-client-cognito';
+import { formatAdminPageName } from '@/lib/admin-page-name';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { formatAuditActor } from '@/lib/audit-actor';
 import { formatDateTime } from '@/lib/date-utils';
@@ -29,6 +30,8 @@ import { AdminReadOnlyValue } from '@/components/ui/admin-read-only-value';
 import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Textarea } from '@/components/ui/textarea';
+
+const PAGE_NAME = formatAdminPageName('Audit logs');
 
 type ActionFilter = 'all' | 'INSERT' | 'UPDATE' | 'DELETE';
 
@@ -220,8 +223,10 @@ export function AuditLogsPanel() {
   ) : null;
 
   return (
+    <>
+    <h2 className='sr-only'>{PAGE_NAME}</h2>
     <ResourceTableShell
-      ariaLabel='Audit logs'
+      ariaLabel={PAGE_NAME}
       rows={list.items}
       getLabel={(item) => `${item.table_name} ${item.action}`}
       middleColumnCount={4}
@@ -336,6 +341,7 @@ export function AuditLogsPanel() {
         </>
       )}
     />
+    </>
   );
 }
 

@@ -10,6 +10,7 @@ import { useFormValidation } from '../../hooks/use-form-validation';
 import { useLocationsByMode } from '../../hooks/use-locations-by-mode';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
+import { formatAdminPageName } from '../../lib/admin-page-name';
 import {
   formatPriceAmount,
   parseOptionalNumber,
@@ -530,7 +531,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
       <div className='space-y-4'>
         <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
         <ResourceTableShell
-        ariaLabel='Pricing'
+        ariaLabel={formatAdminPageName('Pricing')}
         rows={filteredItems}
         getLabel={(item) => getLocationName(item.location_id)}
         middleColumnCount={4}

@@ -7,6 +7,8 @@
 
 Tighten admin list and form chrome: unlabeled filters with sentence-case empty options, consistent `Oct 13` / `Oct 13, 02:36 PM` timestamps, no Version table columns, expand-on-row-click including Operations padding, and clearer Imports / Organization / Audit copy.
 
+Follow-up: page names use `formatAdminPageName`. Nav only when there is no tab, or the tab repeats the nav. Otherwise `Nav · Tab`. No fused phrases. Sub-tabs are not part of the name.
+
 ## Non-goals
 
 - Backend audit serialization or catalog-version APIs
@@ -16,9 +18,11 @@ Tighten admin list and form chrome: unlabeled filters with sentence-case empty o
 ## Files
 
 - `apps/admin_web/src/lib/date-utils.ts` and list/detail call sites
+- `apps/admin_web/src/lib/admin-page-name.ts` and list/detail call sites
 - `apps/admin_web/src/components/ui/admin-expandable-row.tsx`
 - Imports, catalog, workspace tables, data quality, categories, audit, users, tickets, API keys
-- Playwright specs that assert the old labels, Version columns, or timestamps
+- Playwright specs that assert the old labels, Version columns, timestamps, or fused page names
+- `.cursor/skills/admin-crud-screen/SKILL.md`, `.cursor/rules/admin-web.mdc`, `docs/architecture/admin-web-ui.md`
 
 ## Invariants this change preserves
 
@@ -30,8 +34,8 @@ Tighten admin list and form chrome: unlabeled filters with sentence-case empty o
 ## Done when
 
 - `npm run lint` and `npm run typecheck` in `apps/admin_web`
-- Targeted unit tests for dates, expandable-row click, and audit actor
-- Playwright specs match the new labels
+- Targeted unit tests for dates, expandable-row click, audit actor, and page names
+- Playwright specs match the new labels and `Nav · Tab` page names
 
 ## Rollback
 

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
+import { formatAdminPageName } from '../../lib/admin-page-name';
 import {
   buildTranslationsPayload,
   emptyTranslations,
@@ -34,6 +35,8 @@ interface FeedbackLabelFormState {
   name_translations: Record<TranslationLanguageCode, string>;
   display_order: string;
 }
+
+const PAGE_NAME = formatAdminPageName('Feedback', 'Labels');
 
 const emptyForm: FeedbackLabelFormState = {
   name: '',
@@ -208,8 +211,9 @@ export function FeedbackLabelsPanel() {
 
   return (
     <>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       <ResourceTableShell
-        ariaLabel='Feedback labels'
+        ariaLabel={PAGE_NAME}
         rows={panel.items}
         getLabel={(item) => item.name || 'Label'}
         middleColumnCount={3}

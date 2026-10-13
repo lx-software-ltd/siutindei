@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
+import { formatAdminPageName } from '../../../lib/admin-page-name';
 import {
   decideCategoryReview,
   getCategoryReview,
@@ -19,6 +20,8 @@ import { AdminRowActions } from '../../ui/admin-row-actions';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { StatusBadge } from '../../ui/status-badge';
 import { StatusBanner } from '../../status-banner';
+
+const PAGE_NAME = formatAdminPageName('Data quality', 'Categories');
 
 interface CategoryChecksTableProps {
   items: ActivityCategoryReview[];
@@ -59,8 +62,9 @@ export function CategoryChecksTable({
 
   return (
     <div className='space-y-4'>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       <ResourceTableShell
-        ariaLabel='Categories'
+        ariaLabel={PAGE_NAME}
         rows={items}
         getLabel={(item) => item.activity_name || item.activity_id}
         middleColumnCount={5}

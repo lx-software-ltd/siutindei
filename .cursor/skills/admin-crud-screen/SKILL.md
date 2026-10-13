@@ -20,6 +20,7 @@ Build list screens from `apps/admin_web/src/components/ui/`.
 - Server state is TanStack Query via `getAdminQueryClient()`, `adminQueryKeys`, and `usePaginatedList`. `useResourceEditor` is the list and editor hook for resource-api screens.
 - Read-only records still expand in place. Do not add a detail dialog for them.
 - In-area switchers use `AdminTabStrip`. Tab labels are sentence case.
+- Page name is the nav label when there is no tab, or the tab is the default and repeats the nav (`Imports`, `Categories`, `Feedback`). Otherwise the page name is `Nav · Tab` (`Imports · History`, `Categories · Suggestions`, `Data quality · Names`). Use `formatAdminPageName(nav, tab)` from `apps/admin_web/src/lib/admin-page-name.ts`. Do not invent fused phrases (`Import history`). Sub-tabs (Catalog Table / Map) are not part of the page name. Sidebar shows nav; the strip shows the tab. The table `aria-label` and the page's sr-only heading use the page name.
 - Deep links use `?<entity>=<id>`. `org` is the workspace organization and stays across workspace sections. Legacy `?organization=` and `?edit=` still open that organization.
 - Organization media stays a drag-reorder grid. There is no Cancel control. Leaving the section deletes uploads that were not saved.
 

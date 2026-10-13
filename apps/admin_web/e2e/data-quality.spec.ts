@@ -4,7 +4,7 @@ test.describe('Data quality', () => {
   test('admin can preview and merge a duplicate group', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard');
     await adminPage.getByRole('button', { name: 'Data quality', exact: true }).click();
-    await expect(adminPage.getByRole('table', { name: 'Duplicate organizations' })).toBeVisible();
+    await expect(adminPage.getByRole('table', { name: 'Data quality · Duplicates' })).toBeVisible();
     await expect(adminPage.getByText(/Groups share a name/)).toHaveCount(0);
     await expect(adminPage.getByText(/to the survivor/)).toHaveCount(0);
     await adminPage.getByRole('cell', { name: 'Harbour Club · Harbour Club Limited' }).click();
@@ -19,6 +19,7 @@ test.describe('Data quality', () => {
 
   test('admin can scan and apply a name fix', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=names');
+    await expect(adminPage.getByRole('table', { name: 'Data quality · Names' })).toBeVisible();
     await adminPage.getByRole('button', { name: 'Sweep pending' }).click();
     await expect(
       adminPage.getByText('Created 1, updated 0, skipped 0, cleared 0.')
@@ -68,6 +69,7 @@ test.describe('Data quality', () => {
 
   test('admin can sweep and apply a location fix', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=locations');
+    await expect(adminPage.getByRole('table', { name: 'Data quality · Locations' })).toBeVisible();
     await adminPage.getByRole('button', { name: 'Sweep pending' }).click();
     await expect(
       adminPage.getByText(
@@ -155,7 +157,7 @@ test.describe('Data quality', () => {
 
   test('admin can forget a deleted organization', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=deleted');
-    await expect(adminPage.getByRole('table', { name: 'Deleted organizations' })).toBeVisible();
+    await expect(adminPage.getByRole('table', { name: 'Data quality · Deleted' })).toBeVisible();
     await adminPage.getByRole('cell', { name: 'Harbour Club', exact: true }).click();
     await expect(adminPage.getByText('Old Harbour')).toBeVisible();
     await expect(adminPage.getByText('admin-sub')).toBeVisible();

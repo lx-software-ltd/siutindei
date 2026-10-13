@@ -7,6 +7,7 @@ import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
+import { formatAdminPageName } from '../../lib/admin-page-name';
 import { parseRequiredNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/resource-api';
 import { normalizeKey } from '../../lib/string-utils';
@@ -529,7 +530,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
       <div className='space-y-4'>
         <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
         <ResourceTableShell
-        ariaLabel={isAdmin ? 'Activities' : 'Your activities'}
+        ariaLabel={isAdmin ? formatAdminPageName('Activities') : 'Your activities'}
         rows={filteredItems}
         getLabel={(item) => item.name || 'Activity'}
         middleColumnCount={3}

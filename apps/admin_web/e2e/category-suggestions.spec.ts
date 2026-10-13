@@ -7,6 +7,9 @@ test.describe('Category suggestions', () => {
     await adminPage
       .getByRole('button', { name: 'Suggestions', exact: true })
       .click();
+    await expect(
+      adminPage.getByRole('table', { name: 'Categories · Suggestions' })
+    ).toBeVisible();
     await expect(adminPage.locator('#suggestion-status-filter')).toHaveCount(0);
 
     await expect(adminPage.getByText('Capture unknown categories on import')).toBeVisible();
@@ -27,6 +30,9 @@ test.describe('Category suggestions', () => {
       .getByRole('group', { name: 'Data quality' })
       .getByRole('button', { name: 'Categories', exact: true })
       .click();
+    await expect(
+      adminPage.getByRole('table', { name: 'Data quality · Categories' })
+    ).toBeVisible();
     await expect(adminPage.locator('#check-status-filter')).toHaveValue('pending');
     await expect(adminPage.getByText('Clay club')).toBeVisible();
     const apply = adminPage.getByRole('button', { name: 'Apply' });

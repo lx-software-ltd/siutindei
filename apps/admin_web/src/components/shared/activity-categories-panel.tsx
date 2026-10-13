@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { ADMIN_API_MAX_LIST_LIMIT } from '../../lib/admin-list-query';
+import { formatAdminPageName } from '../../lib/admin-page-name';
 import {
   buildTranslationsPayload,
   emptyTranslations,
@@ -40,6 +41,8 @@ interface ActivityCategoryFormState {
   display_order: string;
   show_in_wizard: boolean;
 }
+
+const PAGE_NAME = formatAdminPageName('Categories', 'Categories');
 
 const emptyForm: ActivityCategoryFormState = {
   name: '',
@@ -345,8 +348,9 @@ export function ActivityCategoriesPanel() {
 
   return (
     <>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
       <ResourceTableShell
-        ariaLabel='Categories'
+        ariaLabel={PAGE_NAME}
         rows={panel.items}
         getLabel={(item) => {
           const label = categoryPathById.get(item.id) || item.name;
