@@ -84,6 +84,12 @@ class Activity(Base):
         nullable=False,
         server_default=text("now()"),
     )
+    version: Mapped[int] = mapped_column(
+        Integer(),
+        nullable=False,
+        default=1,
+        server_default=text("1"),
+    )
 
     organization: Mapped["Organization"] = relationship(back_populates="activities")
     category: Mapped["ActivityCategory"] = relationship(back_populates="activities")
@@ -158,6 +164,12 @@ class ActivityPricing(Base):
         default=False,
         server_default=text("false"),
     )
+    version: Mapped[int] = mapped_column(
+        Integer(),
+        nullable=False,
+        default=1,
+        server_default=text("1"),
+    )
 
     __table_args__ = (
         CheckConstraint(
@@ -203,6 +215,12 @@ class ActivitySchedule(Base):
         ARRAY(Text()),
         nullable=False,
         server_default=text("'{}'::text[]"),
+    )
+    version: Mapped[int] = mapped_column(
+        Integer(),
+        nullable=False,
+        default=1,
+        server_default=text("1"),
     )
 
     __table_args__ = (

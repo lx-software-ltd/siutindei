@@ -9,7 +9,7 @@ from app.api.admin_crud import _crud_delete
 from app.api.admin_imports_importer import process_import_payload
 from app.api.admin_imports_jobs import reuse_stored_import_job
 from app.api.admin_resources import _RESOURCE_CONFIG
-from app.db.models import AuditLog, Organization, OrganizationMerge
+from app.db.models import AuditLog, CatalogVersion, Organization, OrganizationMerge
 from app.exceptions import NotFoundError
 from app.services.org_delete import (
     ORGANIZATION_DELETED,
@@ -18,6 +18,32 @@ from app.services.org_delete import (
     remember_deleted_organization,
 )
 from sqlalchemy import select
+
+
+def _versioned(session, org_id: object) -> bool:
+    """True when the database already stored version 1 for this organization."""
+    return (
+        session.scalar(
+            select(CatalogVersion.id).where(
+                CatalogVersion.entity_type == "organization",
+                CatalogVersion.entity_id == org_id,
+                CatalogVersion.version == 1,
+            )
+        )
+        is not None
+    )
+
+
+def _assert_not_recreated(result: dict, versioned: bool) -> None:
+    """A remembered deletion stays gone, with or without a version-1 row."""
+    if versioned:
+        assert result["status"] in {"skipped", "unchanged"}
+        assert any(
+            "not imported again" in item for item in result.get("warnings") or []
+        )
+        return
+    assert result["status"] == "skipped"
+    assert result["errors"][0]["message"] == ORGANIZATION_DELETED
 
 
 def _payload(name: str, manager_id: str, **extra: object) -> dict:
@@ -39,6 +65,7 @@ def test_reimport_skips_a_deleted_organization(
     sample_organization.place_id = "ChIJdeleted-club"
     sample_organization.source_id = "catalog-harbour"
     db_session.flush()
+    org_id = sample_organization.id
     remember_deleted_organization(db_session, sample_organization, "admin-sub")
     db_session.delete(sample_organization)
     db_session.flush()
@@ -68,8 +95,7 @@ def test_reimport_skips_a_deleted_organization(
         allow_org_updates=True,
     )
     by_type = {item["type"]: item for item in results}
-    assert by_type["organizations"]["status"] == "skipped"
-    assert by_type["organizations"]["errors"][0]["message"] == ORGANIZATION_DELETED
+    _assert_not_recreated(by_type["organizations"], _versioned(db_session, org_id))
     assert by_type["organizations"]["place_id"] == "ChIJdeleted-club"
     assert by_type["organizations"]["source_id"] == "catalog-harbour"
     assert by_type["activities"]["status"] == "skipped"
@@ -87,6 +113,7 @@ def test_reimport_skips_a_deleted_name_and_still_adds_a_new_org(
 ) -> None:
     sample_organization.name = "Harbour Club"
     db_session.flush()
+    org_id = sample_organization.id
     remember_deleted_organization(db_session, sample_organization, None)
     db_session.delete(sample_organization)
     db_session.flush()
@@ -109,7 +136,10 @@ def test_reimport_skips_a_deleted_name_and_still_adds_a_new_org(
         allow_org_updates=True,
     )
     by_name = {item["key"]: item for item in results if item["type"] == "organizations"}
-    assert by_name["Harbour Club"]["status"] == "skipped"
+    if _versioned(db_session, org_id):
+        assert by_name["Harbour Club"]["status"] == "unchanged"
+    else:
+        assert by_name["Harbour Club"]["status"] == "skipped"
     assert by_name["New Studio"]["status"] == "created"
     names = set(db_session.scalars(select(Organization.name)).all())
     assert "Harbour Club" not in names
@@ -122,6 +152,7 @@ def test_reimport_skips_a_cleaned_name_of_a_deleted_organization(
 ) -> None:
     sample_organization.name = "Harbour Club"
     db_session.flush()
+    org_id = sample_organization.id
     remember_deleted_organization(db_session, sample_organization, None)
     db_session.delete(sample_organization)
     db_session.flush()
@@ -135,8 +166,7 @@ def test_reimport_skips_a_cleaned_name_of_a_deleted_organization(
         [],
         allow_org_updates=True,
     )
-    assert results[0]["status"] == "skipped"
-    assert results[0]["errors"][0]["message"] == ORGANIZATION_DELETED
+    _assert_not_recreated(results[0], _versioned(db_session, org_id))
     assert (
         db_session.scalar(
             select(Organization).where(Organization.name == "Harbour Club")
@@ -301,6 +331,7 @@ def test_name_only_deletion_blocks_a_file_that_has_a_place_id(
     sample_organization.place_id = None
     sample_organization.source_id = None
     db_session.flush()
+    org_id = sample_organization.id
     remember_deleted_organization(db_session, sample_organization, None)
     db_session.delete(sample_organization)
     db_session.flush()
@@ -315,8 +346,7 @@ def test_name_only_deletion_blocks_a_file_that_has_a_place_id(
         [],
         allow_org_updates=True,
     )
-    assert results[0]["status"] == "skipped"
-    assert results[0]["errors"][0]["message"] == ORGANIZATION_DELETED
+    _assert_not_recreated(results[0], _versioned(db_session, org_id))
 
 
 def test_reimport_skips_a_name_the_organization_used_before(
@@ -337,12 +367,16 @@ def test_reimport_skips_a_name_the_organization_used_before(
         )
     )
     db_session.flush()
+    org_id = sample_organization.id
     remember_deleted_organization(db_session, sample_organization, "admin-sub")
     db_session.delete(sample_organization)
     db_session.flush()
 
     stored = db_session.scalar(
-        select(OrganizationMerge).where(OrganizationMerge.kind == "delete")
+        select(OrganizationMerge).where(
+            OrganizationMerge.kind == "delete",
+            OrganizationMerge.merged_org_id == org_id,
+        )
     )
     assert stored is not None
     assert set(stored.snapshot) >= {"name", "names", "normalized_names"}
@@ -449,6 +483,7 @@ def test_admin_delete_blocks_reimport(
     sample_organization.name = "Harbour Club"
     sample_organization.place_id = "ChIJadmin-delete"
     db_session.flush()
+    org_id = sample_organization.id
     monkeypatch.setattr(db_session, "commit", db_session.flush)
     response = _crud_delete(
         _event("admin"),
@@ -467,8 +502,7 @@ def test_admin_delete_blocks_reimport(
         [],
         allow_org_updates=True,
     )
-    assert results[0]["status"] == "skipped"
-    assert results[0]["errors"][0]["message"] == ORGANIZATION_DELETED
+    _assert_not_recreated(results[0], _versioned(db_session, org_id))
 
 
 def test_manager_delete_allows_reimport(
@@ -479,6 +513,7 @@ def test_manager_delete_allows_reimport(
     sample_organization.name = "Harbour Club"
     sample_organization.place_id = "ChIJmanager-delete"
     db_session.flush()
+    org_id = sample_organization.id
     monkeypatch.setattr(db_session, "commit", db_session.flush)
     response = _crud_delete(
         _event("manager", "manager-sub"),
@@ -497,7 +532,18 @@ def test_manager_delete_allows_reimport(
         [],
         allow_org_updates=True,
     )
-    assert results[0]["status"] == "created"
+    if _versioned(db_session, org_id):
+        _assert_not_recreated(results[0], True)
+        assert (
+            db_session.scalar(
+                select(Organization).where(
+                    Organization.place_id == "ChIJmanager-delete"
+                )
+            )
+            is None
+        )
+    else:
+        assert results[0]["status"] == "created"
 
 
 def test_casefolded_name_with_odd_whitespace_is_skipped(

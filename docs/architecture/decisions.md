@@ -550,3 +550,16 @@ The board runner attaches git credentials only in the commit step and
 uploads the agent transcript.
 
 Design notes: `docs/plans/agent-harness.md` and `docs/architecture/security.md`.
+
+## 11) Catalog versioning
+
+**Decision:** Organizations, locations, activities, pricing, and
+schedules carry an integer `version` that starts at 1. PostgreSQL
+triggers write `catalog_versions` and bump the parent organization.
+Pricing, schedules, schedule entries, and venue joins also bump the
+parent activity. Review fields bump. Bookkeeping columns do not.
+Imports compare version 1, including removed rows, and report
+`unchanged` when the file still matches. A file that differs overwrites
+admin edits only when `allow_updates` is true, and records a warning.
+
+Design notes: `docs/plans/catalog-versioning.md`.

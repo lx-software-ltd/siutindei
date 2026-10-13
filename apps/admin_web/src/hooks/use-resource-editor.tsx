@@ -16,6 +16,7 @@ import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell
 import { useExpandedRecordForm } from '@/hooks/use-expanded-record-form';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { ApiError } from '@/lib/api-client-core';
+import { refreshCatalogHistory } from '@/lib/admin-query-client';
 import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import {
@@ -218,6 +219,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
           );
           setFormStateRaw(itemToFormRef.current(updated));
           clearDirty();
+          refreshCatalogHistory();
         } else if (api.create) {
           const created = await api.create(payload);
           setPinnedCreated(created);
@@ -227,6 +229,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
           ]);
           clearDirty();
           expand(created.id);
+          refreshCatalogHistory();
         } else {
           setSaveError('Creating new items is not allowed.');
         }
@@ -255,6 +258,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
       setSaveError('');
       try {
         await api.delete(item.id);
+        refreshCatalogHistory();
         setPinnedCreated((current) => (current?.id === item.id ? null : current));
         list.setItems((prev) => prev.filter((entry) => entry.id !== item.id));
         if (expandedId === item.id) {

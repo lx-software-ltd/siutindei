@@ -35,6 +35,7 @@ from app.api.admin_validators import (
 )
 from app.db.models import Location, Organization
 from app.exceptions import ValidationError
+from app.services.catalog_version_match import ImportRowOutcome
 
 
 def process_location(
@@ -120,6 +121,19 @@ def process_location(
                 warnings=warnings,
             ),
         )
+    except ImportRowOutcome as outcome:
+        warnings.extend(outcome.warnings)
+        record_result(
+            results,
+            summary,
+            "locations",
+            f"{org.name} / {location_name}",
+            outcome.status,
+            entity_id=outcome.entity_id,
+            warnings=warnings,
+            path=path,
+        )
+        return
     except ValidationError as exc:
         record_result(
             results,
@@ -222,6 +236,21 @@ def process_activity(
                 import_job_id=import_job_id,
             ),
         )
+    except ImportRowOutcome as outcome:
+        warnings.extend(outcome.warnings)
+        record_result(
+            results,
+            summary,
+            "activities",
+            f"{org.name} / {activity_name}",
+            outcome.status,
+            entity_id=outcome.entity_id,
+            warnings=warnings,
+            path=path,
+        )
+        if outcome.skip_children:
+            record_skipped_children(raw_activity, activity_name, results, summary)
+        return
     except ValidationError as exc:
         record_result(
             results,

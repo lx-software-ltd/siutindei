@@ -16,15 +16,13 @@ from app.db.models import AuditLog, Organization, OrganizationMerge
 from app.exceptions import NotFoundError, ValidationError
 from app.services.org_delete_match import (
     ORGANIZATION_DELETED,
-    import_matches_deleted_organization,
-    stored_deletion_skips_still_match,
-)
-from app.services.org_delete_match import (
     _name_search_sql,
     _names_from_snapshot,
     _optional,
     _text,
     _unique_names,
+    import_matches_deleted_organization,
+    stored_deletion_skips_still_match,
 )
 
 _IMPORTED_NAME = re.compile(r"Imported name:\s*(.+)")
@@ -144,14 +142,18 @@ def forget_deleted_organization(
     """Drop a remembered identity so a later import can create it.
 
     Forgetting the organization that was deleted also forgets identities
-    that had been merged into it. Forgetting one of those merged
-    identities leaves the others in place.
+    that had been merged into it, and marks each organization's catalog
+    versions forgotten. Forgetting one of those merged identities leaves
+    the others in place.
     """
     row = session.get(OrganizationMerge, deletion_id)
     if row is None or row.kind != "delete":
         raise NotFoundError("deleted organization", str(deletion_id))
+    from app.services.catalog_version_match import forget_catalog_tombstones
+
     audit = AuditService(session, user_id=forgotten_by)
     for item in _forget_targets(session, row):
+        forget_catalog_tombstones(session, UUID(str(item.merged_org_id)))
         audit.log_delete(
             "organization_merges",
             item.id,

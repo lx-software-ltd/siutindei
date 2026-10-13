@@ -71,6 +71,7 @@ interface ReviewQueueFilters {
   q: string;
   import_job_id: string;
   area_id: string;
+  changed: string;
   sort: 'name' | 'last_imported_at';
 }
 
@@ -82,8 +83,18 @@ const DEFAULT_REVIEW_FILTERS: ReviewQueueFilters = {
   q: '',
   import_job_id: '',
   area_id: '',
+  changed: '',
   sort: 'name',
 };
+
+function reviewChanged(
+  value: string
+): 'unchanged' | 'changed' | undefined {
+  if (value === 'unchanged' || value === 'changed') {
+    return value;
+  }
+  return undefined;
+}
 
 function reviewListParams(filters: ReviewQueueFilters) {
   return {
@@ -95,6 +106,7 @@ function reviewListParams(filters: ReviewQueueFilters) {
     q: filters.q || undefined,
     import_job_id: filters.import_job_id || undefined,
     area_id: filters.area_id || undefined,
+    changed: reviewChanged(filters.changed),
     sort:
       filters.sort === 'last_imported_at'
         ? ('last_imported_at' as const)
@@ -223,6 +235,7 @@ export function CatalogPanel() {
     filters.q,
     filters.import_job_id,
     filters.area_id,
+    filters.changed,
     filters.sort,
   ]);
 
@@ -254,6 +267,7 @@ export function CatalogPanel() {
     filters.q,
     filters.import_job_id,
     filters.area_id,
+    filters.changed,
     filters.sort,
   ]);
 
@@ -354,6 +368,17 @@ export function CatalogPanel() {
                     {label}
                   </option>
                 ))}
+              </Select>
+            </AdminFilterField>
+            <AdminFilterField label='Catalog version' htmlFor='review-changed-filter'>
+              <Select
+                id='review-changed-filter'
+                value={filters.changed}
+                onChange={(event) => setFilter('changed', event.target.value)}
+              >
+                <option value=''>Any</option>
+                <option value='unchanged'>Version 1</option>
+                <option value='changed'>Later version</option>
               </Select>
             </AdminFilterField>
             <AdminFilterField label='Blockers' htmlFor='review-blocker-filter'>
@@ -597,6 +622,9 @@ export function CatalogPanel() {
             <AdminDataTableHeadCell priority='tertiary'>
               Complete
             </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Version
+            </AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
@@ -627,6 +655,9 @@ export function CatalogPanel() {
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {`${Math.round(item.completeness * 100)}%`}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {item.version ? `v${item.version}` : '—'}
             </AdminDataTableCell>
           </>
         )}

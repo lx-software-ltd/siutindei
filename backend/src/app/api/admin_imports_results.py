@@ -87,7 +87,7 @@ def init_summary() -> dict[str, Any]:
 
 
 def init_counts() -> dict[str, int]:
-    return {"created": 0, "updated": 0, "failed": 0, "skipped": 0}
+    return {"created": 0, "updated": 0, "unchanged": 0, "failed": 0, "skipped": 0}
 
 
 def format_error(exc: ValidationError) -> dict[str, Any]:

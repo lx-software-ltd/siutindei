@@ -4,6 +4,7 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent, SetStateAction } from 'react';
 
 import { ApiError } from '../../lib/api-client';
+import { refreshCatalogHistory } from '../../lib/admin-query-client';
 import {
   deleteOrganizationMedia,
 } from '../../lib/api-client-media';
@@ -13,6 +14,7 @@ import { getResourceApi } from '../../lib/resource-api';
 import type { Organization } from '../../types/admin';
 import { PlusIcon } from '../icons/action-icons';
 import { OrganizationWorkspaceTitle } from './organization-workspace-title';
+import { VersionHistory } from './version-history';
 import { WorkspaceScopeGate } from './workspace-empty';
 import { AdminEditorPanel } from '../ui/admin-editor-panel';
 import { Button } from '../ui/button';
@@ -432,6 +434,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
       setUploadedMediaUrls([]);
       setHasUnsavedChanges(false);
       setSuccessMessage('Media saved successfully.');
+      refreshCatalogHistory();
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : 'Unable to save media.';
@@ -449,6 +452,17 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
         orgId={scopedOrgId}
         organization={organization}
       />
+      {organization?.media_version ? (
+        <p className='text-sm text-slate-600'>Media v{organization.media_version}</p>
+      ) : null}
+      {selectedOrgId ? (
+        <VersionHistory
+          mode={mode}
+          entityType='media'
+          entityId={selectedOrgId}
+          version={organization?.media_version}
+        />
+      ) : null}
       {error && (
         <StatusBanner kind='error'>
           {error}

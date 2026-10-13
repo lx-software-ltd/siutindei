@@ -65,6 +65,8 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByRole('columnheader', { name: 'Review' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Contact' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Import job' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'v2' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toHaveCount(0);
     await expect(adminPage.locator('#review-status-filter')).toHaveValue('');
     await expect(adminPage.getByText('First test organization')).toHaveCount(0);
@@ -306,6 +308,33 @@ test.describe('Organizations Panel', () => {
     // Should show all again
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
+  });
+
+  test('shows the organization version and its history', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    await expect(
+      adminPage.getByRole('heading', { name: 'Test Organization 1' })
+    ).toBeVisible();
+    await expect(adminPage.getByText('v1', { exact: true }).first()).toBeVisible();
+    await adminPage.getByRole('button', { name: 'History' }).click();
+    const history = adminPage.getByTestId(
+      'version-history-organization-org-1-disclosure'
+    );
+    await expect(history.getByText('v1 · created · Import')).toBeVisible();
+    await history.getByRole('button', { name: 'View version 1' }).click();
+    await expect(history.getByText('Read-only')).toBeVisible();
+    await expect(history.getByText('Test Organization 1')).toBeVisible();
+    await expect(history.locator('input, textarea, select')).toHaveCount(0);
+    await expect(history.getByText('Removed records')).toBeVisible();
+    await expect(history.getByText('Removed Class')).toBeVisible();
+    const forgetRequest = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'POST' &&
+        request.url().includes('/admin/versions/ver-removed/forget')
+    );
+    await history.getByRole('button', { name: 'Forget' }).click();
+    await forgetRequest;
+    await expect(history.getByText('Removed Class')).toHaveCount(0);
   });
 });
 

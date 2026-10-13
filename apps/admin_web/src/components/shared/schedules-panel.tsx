@@ -15,6 +15,7 @@ import { languageOptions } from '../../lib/translations';
 import type { ActivitySchedule } from '../../types/admin';
 import { StatusBanner } from '../status-banner';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
+import { VersionHistory } from '../admin/version-history';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import {
@@ -787,6 +788,16 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
           </AdminField>
         </div>
       </AdminFieldGrid>
+      {panel.editingId ? (
+        <VersionHistory
+          mode={mode}
+          entityType='schedule'
+          entityId={panel.editingId}
+          version={
+            panel.items.find((item) => item.id === panel.editingId)?.version
+          }
+        />
+      ) : null}
     </AdminEditorPanel>
   );
 
@@ -850,6 +861,9 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
             <AdminDataTableHeadCell priority='tertiary'>
               Languages
             </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Version
+            </AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
@@ -898,6 +912,9 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                   <span>—</span>
                 )}
               </div>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {item.version ? `v${item.version}` : '—'}
             </AdminDataTableCell>
           </>
         )}

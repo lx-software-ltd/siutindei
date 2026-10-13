@@ -6,7 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import ForeignKey, Numeric, Text, text
+from sqlalchemy import ForeignKey, Integer, Numeric, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TIMESTAMP
@@ -53,6 +53,12 @@ class Location(Base):
         TIMESTAMP(timezone=True),
         nullable=False,
         server_default=text("now()"),
+    )
+    version: Mapped[int] = mapped_column(
+        Integer(),
+        nullable=False,
+        default=1,
+        server_default=text("1"),
     )
 
     organization: Mapped["Organization"] = relationship(back_populates="locations")

@@ -46,19 +46,22 @@ when the place id matches, when the source id matches the same
 catalog, or when a remembered name matches and the file does not
 carry a different place id or a different source id for the same
 catalog. Names are compared after case-folding and collapsed
-whitespace. A manager delete does not write this row, so a catalog
-import can create the organization again.
+whitespace. When catalog version 1 exists, an import that matches
+that snapshot is not created again, including after a manager delete.
+A manager delete does not write the deletion row, so an organization
+with no version 1 can be imported again.
 
 Deleting the survivor converts each merge that pointed at it. Those
 rows keep names only, record the person and time of the delete, and
 share one deletion group. Forgetting the deleted organization from
-Data quality forgets that whole group. Forgetting one previously
-merged identity forgets only that identity. Remember, conversion,
-and forget each write an audit row with names and identifiers, not
-contact fields. A stored import that skipped the organization as
-deleted runs again after the identity is forgotten, including the
-same uploaded file. Creating the organization by hand still leaves
-a live row, and the next import follows that row. The merge audit
+Data quality forgets that whole group and marks each organization's
+catalog versions `forgotten`. Forgetting one previously merged
+identity forgets only that identity. Remember, conversion, and forget
+each write an audit row with names and identifiers, not contact
+fields. A stored import that skipped the organization as deleted runs
+again after the identity is forgotten, including the same uploaded
+file. Creating the organization by hand still leaves a live row, and
+the next import follows that row. The merge audit
 row uses action `MERGE` and records source ids, moved counts, and
 filled field names. Dismissing a pair writes action `DISMISS_DUPLICATE`.
 

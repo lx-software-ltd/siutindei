@@ -126,6 +126,19 @@ test.describe('Organization review queue', () => {
     });
   });
 
+  test('filters the queue to rows unchanged since import', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=catalog');
+    const requestPromise = adminPage.waitForRequest(
+      (request) =>
+        request.url().includes('/admin/org-review') &&
+        request.url().includes('changed=unchanged')
+    );
+    await adminPage.locator('#review-changed-filter').selectOption('unchanged');
+    await requestPromise;
+  });
+
   test('filters the queue when the name is submitted', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=catalog');
     const requestPromise = adminPage.waitForRequest(

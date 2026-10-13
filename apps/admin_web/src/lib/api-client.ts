@@ -109,6 +109,13 @@ export {
 } from './api-client-audit';
 
 export {
+  listCatalogVersions,
+  type CatalogVersionFilters,
+  type CatalogVersionListResponse,
+  type CatalogVersionRow,
+} from './api-client-versions';
+
+export {
   createApiKey,
   getApiKey,
   listApiKeys,

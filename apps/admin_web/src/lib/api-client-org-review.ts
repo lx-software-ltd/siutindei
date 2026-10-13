@@ -28,6 +28,7 @@ export interface OrgReviewListItem {
   activity_count: number;
   pricing_count: number;
   schedule_count: number;
+  version?: number;
   issues: OrgReviewIssue[];
   completeness: number;
   blocker_count: number;
@@ -72,6 +73,7 @@ export interface OrgReviewFilters {
   has_blockers?: boolean;
   q?: string;
   area_id?: string;
+  changed?: 'unchanged' | 'changed';
   include?: 'locations';
   sort?: 'name' | 'last_imported_at';
   cursor?: string;
@@ -94,7 +96,13 @@ export interface ImportJobListItem {
   allow_updates?: boolean;
   status: string;
   summary: {
-    organizations?: { created: number; updated: number; failed: number; skipped: number };
+    organizations?: {
+      created: number;
+      updated: number;
+      unchanged?: number;
+      failed: number;
+      skipped: number;
+    };
     captured_categories?: number;
     allow_updates?: boolean;
   };

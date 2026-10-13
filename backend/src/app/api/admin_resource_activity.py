@@ -238,4 +238,5 @@ def _serialize_activity(entity: Activity) -> dict[str, Any]:
         "age_max": age_max,
         "created_at": entity.created_at,
         "updated_at": entity.updated_at,
+        "version": entity.version,
     }

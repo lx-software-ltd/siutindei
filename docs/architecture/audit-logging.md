@@ -231,6 +231,12 @@ OpenAPI spec: [`docs/api/admin.yaml`](../api/admin.yaml) — search for
 **Note:** Sensitive fields (password, secret, token, api_key) are
 automatically redacted from `old_values` and `new_values` in API responses.
 
+Catalog versions are a separate history. Triggers on organizations,
+locations, activities, pricing, and schedules write `catalog_versions`.
+The Audit Logs screen does not list that table. Admins read it at
+`GET /v1/admin/versions`. Import sets `app.current_import_job_id` so
+those rows can name the job. `audit_log` is unchanged.
+
 ---
 
 ## Migration

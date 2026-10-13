@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+import pytest
 from app.db.models import Activity, AuditLog, Location, Organization
 from app.db.repositories.organization import OrganizationRepository
 from app.exceptions import ValidationError
 from app.services.org_merge import merge_organizations
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import Range
-import pytest
 
 
 def _org(db_session, name: str, **kwargs) -> Organization:
@@ -93,7 +93,12 @@ def test_merge_reparents_location_and_forwards_ids(
     repo = OrganizationRepository(db_session)
     assert repo.find_by_place_id("place-old").id == survivor.id
     assert repo.find_by_source_id("src-old").id == survivor.id
-    audit = db_session.scalars(select(AuditLog).where(AuditLog.action == "MERGE")).one()
+    audit = db_session.scalars(
+        select(AuditLog).where(
+            AuditLog.action == "MERGE",
+            AuditLog.record_id == str(survivor.id),
+        )
+    ).one()
     assert audit.new_values["source_ids"] == [str(source.id)]
     assert "email" in audit.new_values["filled_fields"]
 

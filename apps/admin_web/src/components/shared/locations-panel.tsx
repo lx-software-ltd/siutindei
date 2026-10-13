@@ -33,6 +33,7 @@ import {
 } from '../ui/resource-table-shell';
 import { StatusBanner } from '../status-banner';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
+import { VersionHistory } from '../admin/version-history';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 
 const MAP_ICON_BASE_URL =
@@ -444,6 +445,16 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
           />
         </AdminField>
       </AdminFieldGrid>
+      {panel.editingId ? (
+        <VersionHistory
+          mode={mode}
+          entityType='location'
+          entityId={panel.editingId}
+          version={
+            panel.items.find((item) => item.id === panel.editingId)?.version
+          }
+        />
+      ) : null}
     </AdminEditorPanel>
   );
 
@@ -501,6 +512,9 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             <AdminDataTableHeadCell priority={addressColumnPriority}>
               Address
             </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Version
+            </AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
@@ -513,6 +527,9 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             </AdminDataTableCell>
             <AdminDataTableCell priority={addressColumnPriority}>
               {renderAddressCell(item)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {item.version ? `v${item.version}` : '—'}
             </AdminDataTableCell>
           </>
         )}

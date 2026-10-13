@@ -518,6 +518,16 @@ paths:
           description: Set to `locations` to include map pins on each row.
           schema:
             type: string
+        - name: changed
+          in: query
+          description: |
+            `unchanged` keeps organizations still on version 1.
+            `changed` keeps organizations above version 1. A later
+            version includes review, child roll-up, and import, not
+            only a direct admin edit.
+          schema:
+            type: string
+            enum: [unchanged, changed]
       responses:
         "200":
           description: Review queue page
@@ -2491,6 +2501,100 @@ paths:
         "404":
           description: Ticket not found
 
+  # --- Catalog versions (Admin Only, Read-Only) ---
+
+  /v1/admin/versions:
+    get:
+      summary: List catalog versions
+      description: |
+        History of organizations, media, locations, activities, pricing,
+        and schedules. One entity is ordered by version, newest first,
+        so following `next_cursor` reaches version 1. Other lists are
+        ordered by `created_at`. `blocking=true` with `org_id` returns
+        removed children whose version 1 still blocks import. Admin only.
+      parameters:
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+            enum: [organization, media, location, activity, pricing, schedule]
+        - name: entity_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: org_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: blocking
+          in: query
+          schema:
+            type: boolean
+          description: |
+            With `org_id`, return version 1 of removed locations,
+            activities, pricing, and schedules that still block import.
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Catalog version page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogVersionListResponse'
+
+  /v1/admin/versions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get one catalog version
+      responses:
+        "200":
+          description: Catalog version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogVersion'
+        "404":
+          description: Version not found
+
+  /v1/admin/versions/{id}/forget:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Forget a removed child version
+      description: |
+        Marks version 1 of a removed location, activity, pricing row,
+        or schedule as forgotten and strips contact fields from its
+        snapshots. The next import can create that record again. A
+        live or merged record is rejected.
+      responses:
+        "204":
+          description: Forgotten
+        "404":
+          description: Version not found
+
   # --- Audit Logs (Admin Only, Read-Only) ---
 
   /v1/admin/audit-logs:
@@ -3937,6 +4041,11 @@ components:
           type: integer
         updated:
           type: integer
+        unchanged:
+          type: integer
+          description: |
+            Rows whose file matched version 1, so the import wrote
+            nothing. Omitted on jobs stored before catalog versions.
         failed:
           type: integer
         skipped:
@@ -4009,7 +4118,7 @@ components:
           type: string
         status:
           type: string
-          enum: [created, updated, failed, skipped]
+          enum: [created, updated, unchanged, failed, skipped]
         id:
           type: string
           nullable: true
@@ -4237,6 +4346,11 @@ components:
           type: integer
         schedule_count:
           type: integer
+        version:
+          type: integer
+          description: |
+            Catalog version of the organization. Omitted on responses
+            stored before catalog versions.
         issues:
           type: array
           items:
@@ -4804,6 +4918,12 @@ components:
         updated_at:
           type: string
           format: date-time
+        version:
+          type: integer
+          description: Current catalog version. Starts at 1.
+        media_version:
+          type: integer
+          description: Version of the media set (media_urls and logo).
 
     OrganizationListResponse:
       type: object
@@ -4898,6 +5018,8 @@ components:
         updated_at:
           type: string
           format: date-time
+        version:
+          type: integer
 
     LocationListResponse:
       type: object
@@ -5078,6 +5200,8 @@ components:
         updated_at:
           type: string
           format: date-time
+        version:
+          type: integer
 
     ActivityListResponse:
       type: object
@@ -5195,6 +5319,8 @@ components:
           nullable: true
         free_trial_class_offered:
           type: boolean
+        version:
+          type: integer
 
     PricingListResponse:
       type: object
@@ -5325,6 +5451,8 @@ components:
           type: array
           items:
             type: string
+        version:
+          type: integer
 
     ScheduleListResponse:
       type: object
@@ -5806,6 +5934,68 @@ components:
         pending_count:
           type: integer
           description: Number of pending tickets matching the current filters
+
+    CatalogVersion:
+      type: object
+      required: [id, entity_type, entity_id, version, action, snapshot, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity_type:
+          type: string
+          enum: [organization, media, location, activity, pricing, schedule]
+        entity_id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+          nullable: true
+        version:
+          type: integer
+        action:
+          type: string
+          enum: [created, updated, deleted]
+        snapshot:
+          type: object
+          additionalProperties: true
+        changed_fields:
+          type: array
+          items:
+            type: string
+        user_id:
+          type: string
+          nullable: true
+        request_id:
+          type: string
+          nullable: true
+        import_job_id:
+          type: string
+          format: uuid
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        related_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    CatalogVersionListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogVersion'
+        next_cursor:
+          type: string
+          nullable: true
 
     # Audit Log schemas
     AuditLogEntry:

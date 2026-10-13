@@ -145,4 +145,5 @@ def _serialize_pricing(entity: ActivityPricing) -> dict[str, Any]:
         "currency": entity.currency,
         "sessions_count": entity.sessions_count,
         "free_trial_class_offered": entity.free_trial_class_offered,
+        "version": entity.version,
     }

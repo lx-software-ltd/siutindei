@@ -36,7 +36,9 @@ function organizationSummary(item: ImportJobListItem) {
     return '—';
   }
   const captured = item.summary?.captured_categories;
-  const base = `created ${counts.created}, updated ${counts.updated}`;
+  const unchanged =
+    counts.unchanged == null ? '' : `, unchanged ${counts.unchanged}`;
+  const base = `created ${counts.created}, updated ${counts.updated}${unchanged}`;
   if (!captured) {
     return base;
   }

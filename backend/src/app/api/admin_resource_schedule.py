@@ -83,6 +83,7 @@ def _serialize_schedule(entity: ActivitySchedule) -> dict[str, Any]:
             for entry in entries
         ],
         "languages": entity.languages,
+        "version": entity.version,
     }
 
 

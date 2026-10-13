@@ -44,6 +44,7 @@ from app.api.admin_validators import (
 )
 from app.db.models import Location
 from app.exceptions import ValidationError
+from app.services.catalog_version_match import ImportRowOutcome
 from app.services.org_delete import ORGANIZATION_DELETED
 
 ALLOWED_ROOT_FIELDS = {"organizations", "default_manager_id"}
@@ -196,6 +197,25 @@ def process_organization(
                 import_job_id=import_job_id,
             ),
         )
+    except ImportRowOutcome as outcome:
+        warnings.extend(outcome.warnings)
+        record_result(
+            results,
+            summary,
+            "organizations",
+            org_name or path,
+            outcome.status,
+            entity_id=outcome.entity_id,
+            warnings=warnings,
+            path=path,
+        )
+        if outcome.skip_children:
+            for field in ("place_id", "source", "source_id"):
+                value = raw_org.get(field)
+                if value:
+                    results[-1][field] = value
+            record_skipped_children(raw_org, org_name or path, results, summary)
+        return
     except ValidationError as exc:
         result_status = (
             "skipped"

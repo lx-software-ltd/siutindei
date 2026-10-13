@@ -18,6 +18,7 @@ import type { ApiMode } from '../../lib/resource-api';
 import type { ActivityPricing } from '../../types/admin';
 import { StatusBanner } from '../status-banner';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
+import { VersionHistory } from '../admin/version-history';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import {
@@ -511,6 +512,16 @@ export function PricingPanel({ mode }: PricingPanelProps) {
           />
         </AdminField>
       </AdminFieldGrid>
+      {panel.editingId ? (
+        <VersionHistory
+          mode={mode}
+          entityType='pricing'
+          entityId={panel.editingId}
+          version={
+            panel.items.find((item) => item.id === panel.editingId)?.version
+          }
+        />
+      ) : null}
     </AdminEditorPanel>
   );
 
@@ -574,6 +585,9 @@ export function PricingPanel({ mode }: PricingPanelProps) {
             <AdminDataTableHeadCell priority='tertiary'>
               Type
             </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Version
+            </AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
@@ -592,6 +606,9 @@ export function PricingPanel({ mode }: PricingPanelProps) {
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {getPricingTypeLabel(item.pricing_type)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>
+              {item.version ? `v${item.version}` : '—'}
             </AdminDataTableCell>
           </>
         )}
