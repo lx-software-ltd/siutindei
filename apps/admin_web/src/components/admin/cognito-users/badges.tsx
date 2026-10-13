@@ -9,17 +9,22 @@ import {
 } from '../../icons/action-icons';
 import { StatusBadge } from '../../ui/status-badge';
 
-export function RoleBadge({
-  role,
-  isActive,
-}: {
-  role: 'admin' | 'manager';
-  isActive: boolean;
-}) {
-  const tone = !isActive ? 'slate' : role === 'admin' ? 'purple' : 'blue';
-  const label = role.charAt(0).toUpperCase() + role.slice(1);
+export const USER_ROLES = ['admin', 'manager'] as const;
 
-  return <StatusBadge status={role} tone={tone} label={label} />;
+export type UserRole = (typeof USER_ROLES)[number];
+
+export function formatRoleLabel(role: string): string {
+  return role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+export function assignedUserRoles(groups: string[] | null | undefined): UserRole[] {
+  return USER_ROLES.filter((role) => groups?.includes(role));
+}
+
+export function RoleBadge({ role }: { role: UserRole }) {
+  const tone = role === 'admin' ? 'purple' : 'blue';
+
+  return <StatusBadge status={role} tone={tone} label={formatRoleLabel(role)} />;
 }
 
 type IdentityProvider = 'Google' | 'Apple' | 'Email';
