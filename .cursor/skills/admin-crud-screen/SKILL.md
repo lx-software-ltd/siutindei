@@ -7,11 +7,11 @@ description: Build or change an admin list screen using the table-first expand-i
 
 Build list screens from `apps/admin_web/src/components/ui/`.
 
-- Page order is filters, then the table, inside one untitled white card (`AdminRecordTable`). Workspace pages show the open organization's name and status badges above that card. A new organization uses the heading "New organization" with no badges.
+- Page order is filters, then the table, inside one untitled white card (`AdminRecordTable`). Workspace pages show the open organization's name and status badges above that table card. The Organization input card puts the name and badges in the card title. A new organization uses the card title "New organization" with no badges.
 - Filters (`AdminFilterBar` + `AdminFilterField`) sit above the table. `AdminCreateButton` spells out its label at every breakpoint. Filters apply on change. Text filters are debounced. Do not render Apply or Clear.
 - Rows expand in place (`AdminExpandableRow` + `useExpandedRecord`). One row is open. Do not put `border-x-*` on expandable rows. Create inserts a draft row (`DRAFT_RECORD_ID`, URL value `new`).
 - Editors (`AdminEditorPanel` + `AdminEditorActions`) have no title and no Cancel button. Fields use `AdminField` inside `AdminFieldGrid`. Field errors are the `error` prop (`AdminInlineError`). Do not hand-write `text-xs` or `text-sm` with `text-red-600`. Read-only details use `AdminReadOnlyValue`. Unsaved edits use `AdminDiscardChangesDialog`.
-- Input cards are `Card` with an optional title and description, wrapping `AdminEditorPanel` (fields, banners, action row). Organization, Readiness, workspace choose, and manager pending tickets use this. Login and dialog overlays stay separate.
+- Input cards are `AdminInputCard`: required title (`text-base font-semibold sm:text-lg`), variable content, and a bar that always renders (`border-t border-slate-200 pt-4`). Card chrome is `Card`. Do not invent a dummy button when there is no action. Login and dialog overlays stay on `Card`. Expanded row editors stay on `AdminEditorPanel` inside the table card.
 - Banners use `StatusBanner` `kind`: `error`, `saved`, `pending-review`, `info`. Pass `title` only to override the heading. Do not also pass `variant`.
 - Chips use `AdminToggleChip`. Bulk and scan actions go in the table `toolbar`.
 - Dialogs use `AdminDialog`. `ConfirmDialog` is the confirm/cancel footer. `footer={null}` omits the footer.

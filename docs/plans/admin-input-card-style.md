@@ -1,6 +1,6 @@
 # Plan: One input card style
 
-**Status**: Draft
+**Status**: Approved
 **Zone**: yellow
 
 ## Goal

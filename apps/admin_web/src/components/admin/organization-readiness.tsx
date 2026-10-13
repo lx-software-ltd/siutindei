@@ -12,11 +12,10 @@ import {
   type OrgReviewIssue,
 } from '../../lib/api-client-org-review';
 import { StatusBanner } from '../status-banner';
-import { AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminInputCard } from '../ui/admin-input-card';
 import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
 import { Button } from '../ui/button';
-import { Card } from '../ui/card';
 
 function sectionForIssue(entityType: string) {
   if (entityType === 'location') {
@@ -134,52 +133,50 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
   const blockers = detail?.issues.filter((issue) => issue.severity === 'blocker') ?? [];
 
   return (
-    <Card
+    <AdminInputCard
       title='Readiness'
       description='Imported, created, and suggested organizations stay in review until you release them. Public search keeps current listings until ORG_REVIEW_GATE_ENABLED is turned on.'
+      status={
+        <>
+          {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
+          {notice ? <StatusBanner kind='info'>{notice}</StatusBanner> : null}
+        </>
+      }
+      actions={
+        <>
+          <Button
+            type='button'
+            onClick={() => void decide('approve')}
+            disabled={activeAction !== null}
+            loading={activeAction === 'approve'}
+            loadingLabel='Saving…'
+          >
+            Approve
+          </Button>
+          <Button
+            type='button'
+            variant='secondary'
+            onClick={() => void decide('reject')}
+            disabled={activeAction !== null}
+            loading={activeAction === 'reject'}
+            loadingLabel='Saving…'
+          >
+            Reject
+          </Button>
+          <Button
+            type='button'
+            variant='secondary'
+            onClick={() => void decide('reopen')}
+            disabled={activeAction !== null}
+            loading={activeAction === 'reopen'}
+            loadingLabel='Saving…'
+          >
+            Reopen
+          </Button>
+        </>
+      }
     >
-      <AdminEditorPanel
-        status={
-          <>
-            {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
-            {notice ? <StatusBanner kind='info'>{notice}</StatusBanner> : null}
-          </>
-        }
-        actions={
-          <>
-            <Button
-              type='button'
-              onClick={() => void decide('approve')}
-              disabled={activeAction !== null}
-              loading={activeAction === 'approve'}
-              loadingLabel='Saving…'
-            >
-              Approve
-            </Button>
-            <Button
-              type='button'
-              variant='secondary'
-              onClick={() => void decide('reject')}
-              disabled={activeAction !== null}
-              loading={activeAction === 'reject'}
-              loadingLabel='Saving…'
-            >
-              Reject
-            </Button>
-            <Button
-              type='button'
-              variant='secondary'
-              onClick={() => void decide('reopen')}
-              disabled={activeAction !== null}
-              loading={activeAction === 'reopen'}
-              loadingLabel='Saving…'
-            >
-              Reopen
-            </Button>
-          </>
-        }
-      >
-        <AdminFieldGrid columns={1}>
+      <AdminFieldGrid columns={1}>
           {!detail ? (
             <p className='text-sm text-slate-600'>Loading readiness…</p>
           ) : detail.issues.length === 0 ? (
@@ -219,8 +216,7 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
               Approve anyway{blockers.length > 0 ? ` (${blockers.length} missing)` : ''}
             </label>
           </AdminField>
-        </AdminFieldGrid>
-      </AdminEditorPanel>
-    </Card>
+      </AdminFieldGrid>
+    </AdminInputCard>
   );
 }

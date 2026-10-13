@@ -3,10 +3,9 @@
 import type { Ticket } from '../../lib/api-client-user';
 import { formatDateTime } from '../../lib/date-utils';
 import { StatusBanner } from '../status-banner';
-import { AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminInputCard } from '../ui/admin-input-card';
 import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
-import { Card } from '../ui/card';
 import { StatusBadge } from '../ui/status-badge';
 
 interface PendingSuggestionNoticeProps {
@@ -22,12 +21,11 @@ export function PendingSuggestionNotice({
         Your suggestion is being reviewed by our team. We&apos;ll notify you once
         it&apos;s been processed.
       </StatusBanner>
-      <Card
-        title='Your Suggestion'
+      <AdminInputCard
+        title='Your suggestion'
         description='Thank you for helping us discover new places!'
       >
-        <AdminEditorPanel>
-          <AdminFieldGrid columns={2}>
+        <AdminFieldGrid columns={2}>
             <AdminReadOnlyValue label='Ticket ID' mono>
               {suggestion.ticket_id}
             </AdminReadOnlyValue>
@@ -56,11 +54,10 @@ export function PendingSuggestionNotice({
               {formatDateTime(suggestion.created_at)}
             </AdminReadOnlyValue>
           </AdminFieldGrid>
-          <p className='text-sm text-slate-600'>
-            You can submit another suggestion once this one has been reviewed.
-          </p>
-        </AdminEditorPanel>
-      </Card>
+        <p className='text-sm text-slate-600'>
+          You can submit another suggestion once this one has been reviewed.
+        </p>
+      </AdminInputCard>
     </div>
   );
 }

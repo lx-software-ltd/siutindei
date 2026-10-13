@@ -8,8 +8,8 @@ import {
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { submitAccessRequest, type Ticket } from '../../lib/api-client-user';
 import { AdminField } from '../ui/admin-field-grid';
+import { AdminInputCard } from '../ui/admin-input-card';
 import { Button } from '../ui/button';
-import { Card } from '../ui/card';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
@@ -82,19 +82,27 @@ export function AccessRequestForm({ onRequestSubmitted }: AccessRequestFormProps
 
   return (
     <div className='space-y-4'>
-      <Card
-        title='Request Organization Access'
-        description='You are not currently associated with any organization. Please submit a request to be added to an existing organization or to create a new one.'
-      >
-        {error && (
-          <div className='mb-4'>
-            <StatusBanner kind='error'>
-              {error}
-            </StatusBanner>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className='space-y-4'>
+      <form onSubmit={handleSubmit}>
+        <AdminInputCard
+          title='Request organization access'
+          description='You are not currently associated with any organization. Please submit a request to be added to an existing organization or to create a new one.'
+          status={
+            error ? (
+              <StatusBanner kind='error'>
+                {error}
+              </StatusBanner>
+            ) : null
+          }
+          actions={
+            <Button
+              type='submit'
+              loading={isSubmitting}
+              loadingLabel='Submitting…'
+            >
+              Submit Request
+            </Button>
+          }
+        >
           <AdminField
             label='Organization Name'
             htmlFor='organization-name'
@@ -142,18 +150,8 @@ export function AccessRequestForm({ onRequestSubmitted }: AccessRequestFormProps
             </p>
           </AdminField>
 
-          <div className='pt-2'>
-            <Button
-              type='submit'
-              loading={isSubmitting}
-              loadingLabel='Submitting…'
-              className='w-full sm:w-auto'
-            >
-              Submit Request
-            </Button>
-          </div>
-        </form>
-      </Card>
+        </AdminInputCard>
+      </form>
     </div>
   );
 }
