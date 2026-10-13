@@ -224,7 +224,7 @@ function CheckDetail({
       <p className='text-sm text-slate-700'>{item.rationale || 'No rationale.'}</p>
       {item.suggestion_id ? (
         <p className='text-sm text-slate-600'>
-          Suggested category is waiting in Category Suggestions.
+          Suggested category is waiting in Suggestions.
         </p>
       ) : null}
       {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}

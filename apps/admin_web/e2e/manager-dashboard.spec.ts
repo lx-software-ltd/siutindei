@@ -35,14 +35,14 @@ test.describe('Manager Dashboard', () => {
       managerPage.getByRole('button', { name: 'Categories', exact: true })
     ).not.toBeVisible();
     await expect(
-      managerPage.getByRole('button', { name: 'Category Suggestions' })
+      managerPage.getByRole('button', { name: 'Suggestions' })
     ).not.toBeVisible();
     await expect(managerPage.getByRole('button', { name: 'Tickets' })).not.toBeVisible();
     await expect(
       managerPage.getByRole('button', { name: 'Users' })
     ).not.toBeVisible();
     await expect(
-      managerPage.getByRole('button', { name: 'Audit Logs' })
+      managerPage.getByRole('button', { name: 'Audit logs' })
     ).not.toBeVisible();
   });
 

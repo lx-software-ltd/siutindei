@@ -73,6 +73,7 @@ export function NeighbourhoodFilter({
         aria-expanded={open}
         aria-controls={listboxId}
         aria-autocomplete='list'
+        aria-label='Neighbourhood'
         autoComplete='off'
         placeholder='All neighbourhoods'
         value={inputValue}

@@ -7,8 +7,8 @@ test.describe('Locations Panel', () => {
       adminPage.getByRole('heading', { name: 'Test Organization 1' })
     ).toBeVisible();
     await expect(adminPage.getByRole('table', { name: 'Locations' })).toBeVisible();
-    await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toBeVisible();
-    await expect(adminPage.getByRole('cell', { name: 'v1' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toHaveCount(0);
+    await expect(adminPage.getByRole('cell', { name: 'v1' })).toHaveCount(0);
 
     await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
     await adminPage.getByPlaceholder('Search locations...').fill('Test Street');

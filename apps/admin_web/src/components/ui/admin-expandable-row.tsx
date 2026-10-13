@@ -44,9 +44,9 @@ export interface AdminExpandableRowProps {
 
 /**
  * Table row whose editor opens directly beneath it. Clicking the row (or the
- * chevron) toggles; the Operations cell swallows clicks so actions never
- * toggle the row. Only one row per table should be expanded; see
- * `useExpandedRecord`.
+ * chevron) toggles, including Operations cell padding. Action buttons still
+ * swallow clicks so they never toggle the row. Only one row per table should
+ * be expanded; see `useExpandedRecord`.
  */
 export function AdminExpandableRow({
   id,
@@ -152,12 +152,7 @@ export function AdminExpandableRow({
         </AdminDataTableCell>
         {cells}
         {actions !== undefined ? (
-          <AdminDataTableCell
-            className='text-right'
-            onClick={(event) => {
-              event.stopPropagation();
-            }}
-          >
+          <AdminDataTableCell className='w-px whitespace-nowrap text-right'>
             {actions}
           </AdminDataTableCell>
         ) : null}

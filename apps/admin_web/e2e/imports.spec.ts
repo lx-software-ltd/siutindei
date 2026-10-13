@@ -28,6 +28,10 @@ test.describe('Imports Panel', () => {
 
     await expect(adminPage.getByText('Summary')).toBeVisible();
     await expect(adminPage.getByText(/^Organizations:/)).toBeVisible();
+    await expect(
+      adminPage.getByText(/Existing organizations, venues, and activities stay/)
+    ).toHaveCount(0);
+    await expect(adminPage.getByLabel('Organization name (optional)')).toBeVisible();
   });
 
   test('sends allow_updates false when skip existing is checked', async ({

@@ -585,9 +585,6 @@ export function PricingPanel({ mode }: PricingPanelProps) {
             <AdminDataTableHeadCell priority='tertiary'>
               Type
             </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>
-              Version
-            </AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
@@ -606,9 +603,6 @@ export function PricingPanel({ mode }: PricingPanelProps) {
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {getPricingTypeLabel(item.pricing_type)}
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='tertiary'>
-              {item.version ? `v${item.version}` : '—'}
             </AdminDataTableCell>
           </>
         )}

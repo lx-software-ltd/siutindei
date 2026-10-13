@@ -512,9 +512,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             <AdminDataTableHeadCell priority={addressColumnPriority}>
               Address
             </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>
-              Version
-            </AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
@@ -527,9 +524,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             </AdminDataTableCell>
             <AdminDataTableCell priority={addressColumnPriority}>
               {renderAddressCell(item)}
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='tertiary'>
-              {item.version ? `v${item.version}` : '—'}
             </AdminDataTableCell>
           </>
         )}

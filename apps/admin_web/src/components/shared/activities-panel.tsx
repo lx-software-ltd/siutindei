@@ -581,9 +581,6 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             <AdminDataTableHeadCell priority='tertiary'>
               Age Range
             </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>
-              Version
-            </AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
@@ -599,9 +596,6 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {`${item.age_min} - ${item.age_max}`}
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='tertiary'>
-              {item.version ? `v${item.version}` : '—'}
             </AdminDataTableCell>
           </>
         )}

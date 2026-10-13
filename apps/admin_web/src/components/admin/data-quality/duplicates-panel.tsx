@@ -146,20 +146,23 @@ export function DuplicatesPanel() {
         }
         filters={
           <AdminFilterBar>
-            <AdminFilterField label='Name' htmlFor='duplicate-name-filter'>
+            <AdminFilterField>
               <Input
                 id='duplicate-name-filter'
+                aria-label='Name'
                 value={list.filters.q}
+                placeholder='Name'
                 onChange={(event) => list.setFilter('q', event.target.value)}
               />
             </AdminFilterField>
-            <AdminFilterField label='Signal' htmlFor='duplicate-signal-filter'>
+            <AdminFilterField>
               <Select
                 id='duplicate-signal-filter'
+                aria-label='Signal'
                 value={list.filters.matchSignal}
                 onChange={(event) => list.setFilter('matchSignal', event.target.value)}
               >
-                <option value=''>Any</option>
+                <option value=''>Any signal</option>
                 <option value='name'>Name</option>
                 <option value='phone'>Phone</option>
                 <option value='email'>Email</option>
@@ -169,13 +172,14 @@ export function DuplicatesPanel() {
                 <option value='translation'>Translation</option>
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Review' htmlFor='duplicate-review-filter'>
+            <AdminFilterField>
               <Select
                 id='duplicate-review-filter'
+                aria-label='Review'
                 value={list.filters.review_status}
                 onChange={(event) => list.setFilter('review_status', event.target.value)}
               >
-                <option value=''>Any</option>
+                <option value=''>Any review</option>
                 <option value='pending_review'>Pending review</option>
                 <option value='approved'>Approved</option>
                 <option value='rejected'>Rejected</option>

@@ -18,6 +18,8 @@ lib/
 lib64/
 !apps/admin_web/src/lib/
 !apps/admin_web/src/lib/**
+!apps/admin_web/tests/lib/
+!apps/admin_web/tests/lib/**
 !apps/public_www/src/lib/
 !apps/public_www/src/lib/**
 !apps/public_www/tests/lib/

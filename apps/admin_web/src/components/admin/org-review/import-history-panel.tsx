@@ -6,6 +6,7 @@ import { useQueryState } from 'nuqs';
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
+import { formatDateTime } from '../../../lib/date-utils';
 import { runAdminImport } from '../../../lib/api-client-imports';
 import {
   listImportJobs,
@@ -27,7 +28,7 @@ import { StatusBanner } from '../../status-banner';
 const HISTORY_LINK_REFRESH_MS = 30 * 60 * 1000;
 
 function formatWhen(value?: string) {
-  return value ? new Date(value).toLocaleString() : '—';
+  return formatDateTime(value);
 }
 
 function organizationSummary(item: ImportJobListItem) {
@@ -206,12 +207,7 @@ export function ImportHistoryPanel() {
         }
         renderCells={(item) => (
           <>
-            <AdminDataTableCell>
-              {formatWhen(item.created_at)}
-              <span className='mt-0.5 block wrap-anywhere text-xs font-normal text-slate-500'>
-                <ImportFileLink job={item} />
-              </span>
-            </AdminDataTableCell>
+            <AdminDataTableCell>{formatWhen(item.created_at)}</AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               {modeLabel(item)}
             </AdminDataTableCell>

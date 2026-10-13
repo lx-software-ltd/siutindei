@@ -27,7 +27,7 @@ test.describe('Feedback Panel', () => {
     await adminPage.goto('/admin/dashboard?section=feedback');
     const feedbackTabs = adminPage.getByRole('group', { name: 'Feedback' });
 
-    await feedbackTabs.getByRole('button', { name: 'Feedback Labels' }).click();
+    await feedbackTabs.getByRole('button', { name: 'Feedback labels' }).click();
     await expect(adminPage).toHaveURL(/feedbackView=labels/);
     await expect(
       adminPage.getByRole('table', { name: 'Feedback labels' })
@@ -54,7 +54,7 @@ test.describe('Feedback Panel', () => {
     await adminPage.goto('/admin/dashboard?section=feedback-labels');
     const feedbackTabs = adminPage.getByRole('group', { name: 'Feedback' });
     await expect(
-      feedbackTabs.getByRole('button', { name: 'Feedback Labels' })
+      feedbackTabs.getByRole('button', { name: 'Feedback labels' })
     ).toHaveAttribute('aria-pressed', 'true');
     await expect(
       adminPage.getByRole('table', { name: 'Feedback labels' })
@@ -64,7 +64,7 @@ test.describe('Feedback Panel', () => {
       .getByRole('button', { name: 'Feedback', exact: true });
     await expect(feedbackNav).toHaveClass(/bg-slate-900/);
     await expect(
-      adminPage.locator('nav.sticky').getByRole('button', { name: 'Feedback Labels' })
+      adminPage.locator('nav.sticky').getByRole('button', { name: 'Feedback labels' })
     ).toHaveCount(0);
   });
 });

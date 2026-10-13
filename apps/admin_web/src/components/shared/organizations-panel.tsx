@@ -542,7 +542,6 @@ export function OrganizationsPanel({
             <AdminField
               label='Email'
               htmlFor='org-email'
-              span={2}
               error={showEmailError ? emailError : undefined}
             >
               <Input
@@ -564,7 +563,6 @@ export function OrganizationsPanel({
             <AdminField
               label='Website'
               htmlFor='org-website'
-              span={2}
               error={showWebsiteError ? websiteError : undefined}
             >
               <Input

@@ -34,7 +34,7 @@ test.describe('Categories Panel', () => {
     await expect(adminPage.getByRole('table', { name: 'Categories' })).toBeVisible();
     await expect(adminPage.getByPlaceholder('Search categories...')).toHaveCount(0);
     await expect(
-      adminPage.getByRole('button', { name: 'Category Suggestions', exact: true })
+      adminPage.getByRole('button', { name: 'Suggestions', exact: true })
     ).toBeVisible();
 
     await expect(adminPage.getByRole('columnheader', { name: 'Path' })).toBeVisible();

@@ -34,9 +34,9 @@ test.describe('Admin Dashboard', () => {
       'Data quality',
       'Categories',
       'Feedback',
-      'API Keys',
+      'API keys',
       'Users',
-      'Audit Logs',
+      'Audit logs',
     ];
 
     const desktopNavButtons = adminPage.locator('aside.hidden nav button');

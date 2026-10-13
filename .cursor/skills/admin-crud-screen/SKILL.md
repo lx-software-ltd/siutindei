@@ -19,7 +19,7 @@ Build list screens from `apps/admin_web/src/components/ui/`.
 - In-flight buttons use `Button` `loading`. Loading tables use `AdminSkeletonRows`.
 - Server state is TanStack Query via `getAdminQueryClient()`, `adminQueryKeys`, and `usePaginatedList`. `useResourceEditor` is the list and editor hook for resource-api screens.
 - Read-only records still expand in place. Do not add a detail dialog for them.
-- In-area switchers use `AdminTabStrip`. Tab labels are Title Case.
+- In-area switchers use `AdminTabStrip`. Tab labels are sentence case.
 - Deep links use `?<entity>=<id>`. `org` is the workspace organization and stays across workspace sections. Legacy `?organization=` and `?edit=` still open that organization.
 - Organization media stays a drag-reorder grid. There is no Cancel control. Leaving the section deletes uploads that were not saved.
 

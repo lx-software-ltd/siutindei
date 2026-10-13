@@ -343,23 +343,25 @@ export function CatalogPanel() {
               </>
             }
           >
-            <AdminFilterField label='Review' htmlFor='review-status-filter'>
+            <AdminFilterField>
               <Select
                 id='review-status-filter'
+                aria-label='Review'
                 value={filters.review_status}
                 onChange={(event) =>
                   setFilter('review_status', event.target.value)
                 }
               >
-                <option value=''>All</option>
+                <option value=''>Any review</option>
                 <option value='pending_review'>Pending review</option>
                 <option value='approved'>Approved</option>
                 <option value='rejected'>Rejected</option>
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Missing detail' htmlFor='review-issue-filter'>
+            <AdminFilterField>
               <Select
                 id='review-issue-filter'
+                aria-label='Missing detail'
                 value={filters.issue}
                 onChange={(event) => setFilter('issue', event.target.value)}
               >
@@ -370,39 +372,42 @@ export function CatalogPanel() {
                 ))}
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Catalog version' htmlFor='review-changed-filter'>
+            <AdminFilterField>
               <Select
                 id='review-changed-filter'
+                aria-label='Catalog version'
                 value={filters.changed}
                 onChange={(event) => setFilter('changed', event.target.value)}
               >
-                <option value=''>Any</option>
+                <option value=''>Any catalog version</option>
                 <option value='unchanged'>Version 1</option>
                 <option value='changed'>Later version</option>
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Blockers' htmlFor='review-blocker-filter'>
+            <AdminFilterField>
               <Select
                 id='review-blocker-filter'
+                aria-label='Blockers'
                 value={filters.has_blockers}
                 onChange={(event) =>
                   setFilter('has_blockers', event.target.value)
                 }
               >
-                <option value=''>Any</option>
+                <option value=''>Any blockers</option>
                 <option value='true'>Has blockers</option>
                 <option value='false'>No blockers</option>
               </Select>
             </AdminFilterField>
-            <AdminFilterField label='Source' htmlFor='review-source-filter'>
+            <AdminFilterField>
               <Input
                 id='review-source-filter'
+                aria-label='Source'
                 value={filters.source}
-                placeholder='lcsd'
+                placeholder='Source'
                 onChange={(event) => setFilter('source', event.target.value)}
               />
             </AdminFilterField>
-            <AdminFilterField label='Neighbourhood' htmlFor='review-neighbourhood-filter'>
+            <AdminFilterField>
               <NeighbourhoodFilter
                 id='review-neighbourhood-filter'
                 value={filters.area_id}
@@ -410,16 +415,19 @@ export function CatalogPanel() {
                 onChange={(areaId) => setFilter('area_id', areaId)}
               />
             </AdminFilterField>
-            <AdminFilterField label='Name' htmlFor='review-name-filter'>
+            <AdminFilterField>
               <Input
                 id='review-name-filter'
+                aria-label='Name'
                 value={filters.q}
+                placeholder='Name'
                 onChange={(event) => setFilter('q', event.target.value)}
               />
             </AdminFilterField>
-            <AdminFilterField label='Sort' htmlFor='review-sort'>
+            <AdminFilterField>
               <Select
                 id='review-sort'
+                aria-label='Sort'
                 value={filters.sort}
                 onChange={(event) =>
                   setFilter(
@@ -622,9 +630,6 @@ export function CatalogPanel() {
             <AdminDataTableHeadCell priority='tertiary'>
               Complete
             </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>
-              Version
-            </AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => (
@@ -655,9 +660,6 @@ export function CatalogPanel() {
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {`${Math.round(item.completeness * 100)}%`}
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='tertiary'>
-              {item.version ? `v${item.version}` : '—'}
             </AdminDataTableCell>
           </>
         )}
