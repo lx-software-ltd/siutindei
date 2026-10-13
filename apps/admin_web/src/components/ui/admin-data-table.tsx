@@ -157,7 +157,10 @@ export function AdminDataTableOperationsHeadCell({
   scope = 'col',
 }: AdminDataTableOperationsHeadCellProps) {
   return (
-    <th scope={scope} className={twMerge(adminDataTableHeadCellBase, 'text-right', className)}>
+    <th
+      scope={scope}
+      className={twMerge(adminDataTableHeadCellBase, 'w-px whitespace-nowrap text-right', className)}
+    >
       {/* Label stays in the accessibility tree on phones but stops widening the column. */}
       <span className='sr-only md:not-sr-only'>{children}</span>
     </th>
