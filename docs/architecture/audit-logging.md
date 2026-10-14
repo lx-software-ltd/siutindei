@@ -178,16 +178,26 @@ with Session(get_engine()) as session:
 
 The following tables have audit triggers:
 
-- `organizations`
-- `locations`
 - `activities` (a category check records `category-scan:<run id>` as
   the audit user when it auto-assigns a category; an admin apply or
   revert records that admin's Cognito sub)
+- `activity_categories`
 - `activity_locations`
 - `activity_pricing`
 - `activity_schedule`
-- `organization_access_requests`
 - `api_keys` (the `key_hash` field is redacted in admin API responses)
+- `category_suggestion_settings`
+- `category_suggestions`
+- `feedback_labels`
+- `locations`
+- `organization_feedback`
+- `organizations`
+- `tickets`
+
+Application-level rows (no table trigger) also use these names:
+
+- `organization_duplicate_dismissals`
+- `organization_merges`
 
 ## Performance Considerations
 
