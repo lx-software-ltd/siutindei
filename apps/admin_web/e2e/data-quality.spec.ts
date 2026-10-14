@@ -20,6 +20,7 @@ test.describe('Data quality', () => {
   test('admin can scan and apply a name fix', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=names');
     await expect(adminPage.getByRole('table', { name: 'Data quality · Names' })).toBeVisible();
+    await expect(adminPage.getByTestId('admin-filter-bar').getByLabel('Name')).toHaveCount(0);
     const nameKpis = adminPage.getByTestId('admin-kpi-card');
     await expect(nameKpis).toHaveCount(1);
     await expect(nameKpis).toContainText(['Pending']);
@@ -29,7 +30,10 @@ test.describe('Data quality', () => {
       adminPage.getByText('Created 1, updated 0, skipped 0, cleared 0.')
     ).toBeVisible();
     await adminPage.getByRole('cell', { name: 'HARBOUR CLUB', exact: true }).click();
-    await adminPage.getByRole('button', { name: 'Apply', exact: true }).click();
+    const actionBar = adminPage.getByTestId('admin-editor-panel').locator('.border-t');
+    await expect(actionBar.getByRole('button', { name: 'Apply', exact: true })).toBeVisible();
+    await expect(actionBar.getByRole('button', { name: 'Dismiss' })).toBeVisible();
+    await actionBar.getByRole('button', { name: 'Apply', exact: true }).click();
     await expect(adminPage.getByText('Name updated.')).toBeVisible();
   });
 

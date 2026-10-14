@@ -64,14 +64,12 @@ const NAME_RULES = [
 ] as const;
 
 interface NameFilters {
-  q: string;
   entity_type: string;
   rule: string;
   status: string;
 }
 
 const DEFAULT_FILTERS: NameFilters = {
-  q: '',
   entity_type: '',
   rule: '',
   status: 'pending',
@@ -99,13 +97,11 @@ export function NamesPanel() {
   const list = usePaginatedList<NameFixProposal, NameFilters>({
     queryKey: [...adminQueryKeys.nameFixes(), organization ?? ''],
     defaultFilters: DEFAULT_FILTERS,
-    debounceKeys: ['q'],
     errorPrefix: 'Failed to load name fixes',
-    fetcher: async ({ cursor, limit, q, entity_type, rule, status }) => {
+    fetcher: async ({ cursor, limit, entity_type, rule, status }) => {
       const page = await listNameFixes({
         cursor: cursor ?? undefined,
         limit,
-        q: q || undefined,
         entity_type: entity_type || undefined,
         rule: rule || undefined,
         status: status || undefined,
@@ -134,7 +130,6 @@ export function NamesPanel() {
   useEffect(() => {
     resetSelection();
   }, [
-    list.filters.q,
     list.filters.entity_type,
     list.filters.rule,
     list.filters.status,
@@ -207,7 +202,6 @@ export function NamesPanel() {
               action,
               entity_type: list.filters.entity_type || undefined,
               rule: list.filters.rule || undefined,
-              q: list.filters.q || undefined,
               org_id: organization || undefined,
             }
           : { action, ids: Array.from(selected) }
@@ -327,27 +321,30 @@ export function NamesPanel() {
         onToggle={expanded.toggle}
         detail={
           open && open.status === 'pending' ? (
-            <AdminEditorPanel>
+            <AdminEditorPanel
+              actions={
+                <>
+                  <Button
+                    type='button'
+                    onClick={() => void decide(open.id, 'apply')}
+                    loading={activeId === open.id}
+                    loadingLabel='Saving…'
+                  >
+                    Apply
+                  </Button>
+                  <Button
+                    type='button'
+                    variant='secondary'
+                    onClick={() => void decide(open.id, 'dismiss')}
+                  >
+                    Dismiss
+                  </Button>
+                </>
+              }
+            >
               <p className='text-sm text-slate-700'>
                 {open.current_value} becomes {open.proposed_value}
               </p>
-              <div className='flex gap-2'>
-                <Button
-                  type='button'
-                  onClick={() => void decide(open.id, 'apply')}
-                  loading={activeId === open.id}
-                  loadingLabel='Saving…'
-                >
-                  Apply
-                </Button>
-                <Button
-                  type='button'
-                  variant='secondary'
-                  onClick={() => void decide(open.id, 'dismiss')}
-                >
-                  Dismiss
-                </Button>
-              </div>
             </AdminEditorPanel>
           ) : null
         }
@@ -359,15 +356,6 @@ export function NamesPanel() {
         emptyLabel='No names match these filters. Sweep pending or Sweep all orgs to find some.'
         filters={
           <AdminFilterBar>
-            <AdminFilterField>
-              <Input
-                id='name-fix-q'
-                aria-label='Name'
-                value={list.filters.q}
-                placeholder='Name'
-                onChange={(event) => list.setFilter('q', event.target.value)}
-              />
-            </AdminFilterField>
             <AdminFilterField>
               <Select
                 id='name-fix-entity'

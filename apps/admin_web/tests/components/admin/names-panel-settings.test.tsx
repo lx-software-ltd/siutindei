@@ -91,6 +91,15 @@ describe('NamesPanel settings lists', () => {
     expect(screen.queryByRole('button', { name: 'Scan names' })).not.toBeInTheDocument();
   });
 
+  it('keeps record, status, and rule filters and omits the name text filter', async () => {
+    render(<NamesPanel />, { wrapper });
+    expect(await screen.findByLabelText('Record')).toBeInTheDocument();
+    expect(screen.getByLabelText('Status')).toBeInTheDocument();
+    expect(screen.getByLabelText('Rule')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Name')).not.toBeInTheDocument();
+  });
+
   it('sweeps pending review or all organizations from the matching button', async () => {
     const user = userEvent.setup();
     render(<NamesPanel />, { wrapper });
@@ -214,5 +223,33 @@ describe('NamesPanel settings lists', () => {
       )
     );
     expect(vi.mocked(decideNameFixesBulk).mock.calls[0][0]).not.toHaveProperty('ids');
+    expect(vi.mocked(decideNameFixesBulk).mock.calls[0][0]).not.toHaveProperty('q');
+  });
+
+  it('puts apply and dismiss on the expanded-row action bar', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listNameFixes).mockResolvedValue({
+      items: [
+        {
+          id: 'fix-1',
+          entity_type: 'organization',
+          entity_id: 'org-1',
+          current_value: 'HARBOUR CLUB',
+          proposed_value: 'Harbour Club',
+          rules: ['title_case'],
+          status: 'pending',
+        },
+      ],
+      next_cursor: null,
+    });
+    render(<NamesPanel />, { wrapper });
+    await user.click(await screen.findByRole('button', { name: 'Expand HARBOUR CLUB' }));
+    const summary = screen.getByText('HARBOUR CLUB becomes Harbour Club');
+    const panel = summary.closest('[data-testid="admin-editor-panel"]');
+    expect(panel).not.toBeNull();
+    const bar = panel!.querySelector('.border-t');
+    expect(bar).not.toBeNull();
+    expect(bar).toContainElement(screen.getByRole('button', { name: 'Apply' }));
+    expect(bar).toContainElement(screen.getByRole('button', { name: 'Dismiss' }));
   });
 });
