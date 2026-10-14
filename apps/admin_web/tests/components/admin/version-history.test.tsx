@@ -120,6 +120,29 @@ describe('version switcher', () => {
     expect(screen.getByLabelText('Name')).toHaveAttribute('readonly');
   });
 
+  it('does not invent a latest version when history fails to load', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listEntireCatalogHistory).mockRejectedValue(new Error('missing route'));
+    render(<Harness />, { wrapper });
+
+    const unavailable = await screen.findByRole('button', { name: 'Versions unavailable' });
+    expect(unavailable).toBeDisabled();
+    expect(screen.queryByText(/Latest/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    await user.click(unavailable);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('keeps a single current row when history is empty', async () => {
+    vi.mocked(listEntireCatalogHistory).mockResolvedValue({
+      items: [],
+      next_cursor: null,
+    });
+    render(<Harness />, { wrapper });
+
+    expect(await screen.findByRole('button', { name: 'Version 2 · Latest' })).toBeVisible();
+  });
+
   it('shows managers a static version pill', async () => {
     render(<Harness mode='manager' />, { wrapper });
 

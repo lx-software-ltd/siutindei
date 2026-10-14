@@ -372,6 +372,19 @@ test.describe('Organizations Panel', () => {
   });
 });
 
+test.describe('Organizations Panel - versions unavailable', () => {
+  test.use({ versionsUnavailable: true });
+
+  test('shows an unavailable version control when history returns 404', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    await expect(adminPage.getByRole('heading', { name: 'Test Organization 1' })).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Versions unavailable' })).toBeDisabled();
+    await expect(adminPage.getByRole('button', { name: /Latest/ })).toHaveCount(0);
+  });
+});
+
 test.describe('Organizations Panel - Admin vs Manager', () => {
   test('admin should see all organizations', async ({ adminPage }) => {
   await adminPage.goto('/admin/dashboard');

@@ -1,6 +1,6 @@
 # Plan: Catalog versions production recovery
 
-**Status**: Draft, awaiting approval for the red-zone steps
+**Status**: Implemented in this branch. Phase 4 production deploy runs when this merges; the stack deploy itself is not part of the change.
 **Zone**: red (`backend/db/**`, `.github/workflows/deploy-backend.yml`),
 then yellow (`apps/admin_web/src/**`), plus one operator step
 
