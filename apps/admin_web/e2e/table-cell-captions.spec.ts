@@ -20,18 +20,23 @@ test.describe('Listing captions on a phone', () => {
     await expect(adminPage.getByRole('region', { name: /manager@example.com/ })).toBeVisible();
   });
 
-  test('Catalog repeats email, phone, and manager under the name', async ({ adminPage }) => {
+  test('Catalog repeats source and review under the name', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=catalog');
     const table = adminPage.getByRole('table', { name: 'Catalog' });
     await expect(table).toBeVisible();
-    await expect(table.getByRole('columnheader', { name: 'Phone' })).toBeHidden();
+    await expect(table.getByRole('columnheader', { name: 'Source' })).toBeHidden();
+    await expect(table.getByRole('columnheader', { name: 'Email' })).toHaveCount(0);
+    await expect(table.getByRole('columnheader', { name: 'Phone' })).toHaveCount(0);
+    await expect(table.getByRole('columnheader', { name: 'Manager' })).toHaveCount(0);
     await expect(table.getByRole('columnheader', { name: 'Contact' })).toHaveCount(0);
 
     const row = table.getByRole('row', { name: /Test Organization 1/ }).first();
     const secondary = row.locator('span.md\\:hidden');
-    await expect(secondary.filter({ hasText: 'contact@org-one.test' })).toBeVisible();
-    await expect(secondary.filter({ hasText: '12345678' })).toBeVisible();
-    await expect(secondary.filter({ hasText: 'manager-user-id-456' })).toBeVisible();
+    await expect(secondary.filter({ hasText: 'lcsd' })).toBeVisible();
+    await expect(secondary.getByText('pending review', { exact: true })).toBeVisible();
+    await expect(secondary.filter({ hasText: 'contact@org-one.test' })).toHaveCount(0);
+    await expect(secondary.filter({ hasText: '12345678' })).toHaveCount(0);
+    await expect(secondary.filter({ hasText: 'manager-user-id-456' })).toHaveCount(0);
     await expect(row.getByText('No phone')).toHaveCount(0);
     await expect(row.getByText('No manager')).toHaveCount(0);
     await row.screenshot({ path: '/opt/cursor/artifacts/catalog-phone-captions.png' });
