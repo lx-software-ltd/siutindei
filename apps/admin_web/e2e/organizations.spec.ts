@@ -274,6 +274,8 @@ test.describe('Organizations Panel', () => {
   test('should have a name filter for the catalog', async ({ adminPage }) => {
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
     await expect(adminPage.locator('#review-name-filter')).toBeVisible();
+    await expect(adminPage.getByPlaceholder('Organization name')).toBeVisible();
+    await expect(adminPage.getByPlaceholder('Name', { exact: true })).toHaveCount(0);
     await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
   });
 

@@ -409,7 +409,7 @@ export function CatalogPanel() {
                 id='review-name-filter'
                 aria-label='Name'
                 value={filters.q}
-                placeholder='Name'
+                placeholder='Organization name'
                 onChange={(event) => setFilter('q', event.target.value)}
               />
             </AdminFilterField>
@@ -427,8 +427,8 @@ export function CatalogPanel() {
                   )
                 }
               >
-                <option value='name'>Name</option>
-                <option value='last_imported_at'>Recently imported</option>
+                <option value='name'>Sort by name</option>
+                <option value='last_imported_at'>Sort by recently imported</option>
               </Select>
             </AdminFilterField>
           </AdminFilterBar>

@@ -9,9 +9,12 @@ Remove Email, Phone, and Manager from the Catalog table (desktop
 columns and the phone captions under the name). Contact stays on the
 organization editor and in Apply properties.
 
+Rename the Catalog name filter placeholder to “Organization name”
+and the sort option labels to “Sort by name” / “Sort by recently
+imported”. API sort values stay `name` and `last_imported_at`.
+
 ## Non-goals
 
-- Changing the Sort dropdown (Name / Recently imported).
 - Removing email, phone, or manager from the organization form or
   bulk-property dialog.
 - Changing the org-review API payload.
@@ -30,15 +33,17 @@ organization editor and in Apply properties.
   Complete.
 - Phone captions still repeat the remaining hidden columns under the
   name (Source, Review, then tertiary columns).
-- Sort stays a filter: default Name (A–Z, then id). Recently imported
-  sends `sort=last_imported_at` (newest `last_imported_at`, nulls
-  last, then newest id).
+- Sort stays a control: default “Sort by name” (A–Z, then id).
+  “Sort by recently imported” sends `sort=last_imported_at` (newest
+  `last_imported_at`, nulls last, then newest id).
 - Apply properties still edits email, phone, and manager_id.
 
 ## Done when
 
 - Playwright catalog specs assert Email, Phone, and Manager are gone
-  from the table, and Sort sends `sort=last_imported_at`.
+  from the table, the name placeholder is “Organization name”, and
+  Sort sends `sort=last_imported_at` when “Sort by recently imported”
+  is selected.
 - `npm run lint` and `npm run typecheck` pass in `apps/admin_web`.
 - Playwright `organizations.spec.ts`, `org-review.spec.ts`, and
   `table-cell-captions.spec.ts` pass.
@@ -49,5 +54,5 @@ Revert the pull request.
 
 ## Open questions
 
-None. The Sort control is already labeled Sort for assistive tech.
-Name is alphabetical. Recently imported is newest import time first.
+None. The Sort control is labeled Sort for assistive tech. The
+visible options are “Sort by name” and “Sort by recently imported”.
