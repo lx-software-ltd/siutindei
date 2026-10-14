@@ -183,7 +183,7 @@ def _stub_import_jobs(monkeypatch) -> None:
     )
     monkeypatch.setattr(
         "app.api.admin_imports.begin_import_job",
-        lambda session, object_key: _Job(),
+        lambda session, object_key, **kwargs: _Job(),
     )
     monkeypatch.setattr(
         "app.api.admin_imports.finish_import_job",
@@ -419,7 +419,7 @@ def test_different_allow_updates_reruns_stored_job(monkeypatch) -> None:
     )
     monkeypatch.setattr(
         "app.api.admin_imports.begin_import_job",
-        lambda session, object_key: _Job(),
+        lambda session, object_key, **kwargs: _Job(),
     )
 
     def fake_finish(*args, **kwargs):
@@ -597,7 +597,7 @@ def test_dry_run_job_does_not_block_live_import(monkeypatch) -> None:
     )
     monkeypatch.setattr(
         "app.api.admin_imports.begin_import_job",
-        lambda session, object_key: _LiveJob(),
+        lambda session, object_key, **kwargs: _LiveJob(),
     )
     monkeypatch.setattr(
         "app.api.admin_imports.finish_import_job",

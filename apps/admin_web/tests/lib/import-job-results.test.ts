@@ -4,6 +4,7 @@ import { ADMIN_TABLE_EMPTY } from '@/components/ui/admin-table-value';
 import {
   capturedCategoryLabel,
   formatCapturedCategories,
+  formatImportJobSource,
   formatImportResultHeader,
   formatImportResultNotes,
   formatImportStatusCounts,
@@ -23,6 +24,19 @@ function row(
     ...partial,
   };
 }
+
+describe('formatImportJobSource', () => {
+  it('names the admin Imports page and the board catalog API', () => {
+    expect(formatImportJobSource('ui')).toBe('UI import');
+    expect(formatImportJobSource('board')).toBe('Board API');
+  });
+
+  it('uses an em dash when the job predates source', () => {
+    expect(formatImportJobSource(null)).toBe(ADMIN_TABLE_EMPTY);
+    expect(formatImportJobSource(undefined)).toBe(ADMIN_TABLE_EMPTY);
+    expect(formatImportJobSource('')).toBe(ADMIN_TABLE_EMPTY);
+  });
+});
 
 describe('formatImportStatusCounts', () => {
   it('lists only statuses that occurred, in status order', () => {

@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from app.db.models import ImportJob
 from app.services.org_delete import stored_deletion_skips_still_match
 
+IMPORT_JOB_SOURCES = frozenset({"ui", "board"})
+
 
 def find_import_job_by_key(
     session: Session,
@@ -81,14 +83,68 @@ def begin_import_retry(session: Session, job: ImportJob) -> ImportJob:
     return job
 
 
-def begin_import_job(session: Session, object_key: str) -> ImportJob:
+def caller_import_source(*, is_admin: bool, is_importer: bool) -> str:
+    """Map the caller to the history Source column.
+
+    The importer group is the board catalog API. An admin session is
+    the Imports page. An admin who is also an importer stays ``ui``,
+    matching the path that clears the board catalog manager.
+    """
+    if is_importer and not is_admin:
+        return "board"
+    return "ui"
+
+
+def summary_source(summary: Any) -> str | None:
+    """Return a known source stored on a job summary."""
+    if not isinstance(summary, dict):
+        return None
+    source = summary.get("source")
+    if isinstance(source, str) and source in IMPORT_JOB_SOURCES:
+        return source
+    return None
+
+
+def source_for_import_run(
+    caller: str,
+    previous_summary: Any,
+    *,
+    retry: bool,
+) -> str:
+    """Source written on this run.
+
+    A retry keeps the source already stored on the job. A first run
+    uses the caller. An unknown caller value is recorded as ``ui``.
+    """
+    if caller not in IMPORT_JOB_SOURCES:
+        caller = "ui"
+    if retry:
+        stored = summary_source(previous_summary)
+        if stored:
+            return stored
+    return caller
+
+
+def _summary_with_source(source: str | None) -> dict[str, Any]:
+    if source in IMPORT_JOB_SOURCES:
+        return {"source": source}
+    return {}
+
+
+def begin_import_job(
+    session: Session,
+    object_key: str,
+    *,
+    source: str | None = None,
+) -> ImportJob:
     """Create or reuse a live job row before organizations are written."""
     existing = find_import_job_by_key(session, object_key)
     now = datetime.now(timezone.utc)
+    summary = _summary_with_source(source)
     if existing is not None:
         existing.dry_run = False
         existing.status = "running"
-        existing.summary = {}
+        existing.summary = summary
         existing.results = []
         existing.file_warnings = []
         existing.updated_at = now
@@ -98,7 +154,7 @@ def begin_import_job(session: Session, object_key: str) -> ImportJob:
         object_key=object_key,
         dry_run=False,
         status="running",
-        summary={},
+        summary=summary,
         results=[],
         file_warnings=[],
     )
@@ -155,8 +211,11 @@ def fail_import_job(
         job.updated_at = now
         session.flush()
         return
+    source = summary_source(job.summary)
     job.status = "failed"
     job.summary = {"error": error_type[:80]}
+    if source:
+        job.summary["source"] = source
     job.updated_at = now
     session.flush()
 
@@ -185,6 +244,11 @@ def list_import_jobs(
                 )
             )
     return list(session.scalars(query.limit(limit)).all())
+
+
+def job_source(job: Any) -> str | None:
+    """Source shown in import history. Missing on older jobs."""
+    return summary_source(getattr(job, "summary", None))
 
 
 def job_allow_updates(job: ImportJob) -> bool:
@@ -243,6 +307,7 @@ def serialize_import_job(job: ImportJob) -> dict[str, Any]:
         "summary": job.summary,
         "results": job.results,
         "file_warnings": job.file_warnings,
+        "source": job_source(job),
         "created_at": job.created_at,
         "updated_at": job.updated_at,
     }

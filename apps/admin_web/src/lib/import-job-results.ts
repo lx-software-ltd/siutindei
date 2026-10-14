@@ -25,6 +25,20 @@ export type ImportResultGroup = {
   readonly rows: readonly AdminImportResult[];
 };
 
+const IMPORT_JOB_SOURCE_LABELS: Record<string, string> = {
+  ui: 'UI import',
+  board: 'Board API',
+};
+
+/** History Source column. Missing source is an em dash. */
+export function formatImportJobSource(source?: string | null): string {
+  const value = source?.trim() ?? '';
+  if (!value) {
+    return ADMIN_TABLE_EMPTY;
+  }
+  return IMPORT_JOB_SOURCE_LABELS[value] ?? value;
+}
+
 export function countImportStatuses(
   rows: readonly Pick<AdminImportResult, 'status'>[]
 ): Partial<Record<AdminImportStatus, number>> {
