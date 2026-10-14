@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { useActivityCategories } from '../../hooks/use-activity-categories';
-import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
@@ -33,7 +32,6 @@ import {
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
 import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
-import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { CascadingCategorySelect } from '../ui/cascading-category-select';
 import { Input } from '../ui/input';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
@@ -142,15 +140,6 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
 
   const getCategoryPath = (categoryId?: string) =>
     (categoryId ? categoryPathById.get(categoryId) : undefined) ?? '—';
-
-  const [searchQuery, setSearchQuery] = useState('');
-  useExhaustPages(Boolean(searchQuery.trim()), {
-    hasMore: panel.hasMore,
-    isLoading: panel.isLoading,
-    isLoadingMore: panel.isLoadingMore,
-    error: panel.listError,
-    loadMore: panel.loadMore,
-  });
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
@@ -334,27 +323,6 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     return panel.handleSubmit(formToPayload, validate);
   };
 
-  const filteredItems = panel.items.filter((item) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const nameTranslations = Object.values(item.name_translations ?? {})
-      .join(' ')
-      .toLowerCase();
-    const descriptionTranslations = Object.values(
-      item.description_translations ?? {}
-    )
-      .join(' ')
-      .toLowerCase();
-    const categoryPath = getCategoryPath(item.category_id).toLowerCase();
-    return (
-      item.name?.toLowerCase().includes(query) ||
-      item.description?.toLowerCase().includes(query) ||
-      nameTranslations.includes(query) ||
-      descriptionTranslations.includes(query) ||
-      categoryPath.includes(query)
-    );
-  });
-
   const showNameError = shouldShowError('name', nameError);
   const showCategoryError = shouldShowError('category_id', categoryError);
   const showAgeMinError = shouldShowError('age_min', ageMinError);
@@ -378,6 +346,9 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
 
   const detail = (
     <AdminEditorPanel
+      accessory={
+        panel.editingId ? <VersionSwitcher view={versionView} /> : undefined
+      }
       status={
         panel.error ? (
           <StatusBanner kind='error'>
@@ -386,20 +357,17 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
         ) : null
       }
       actions={
-        <>
-          {versionView.isHistorical ? (
-            <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
-              Back to latest
-            </Button>
-          ) : (
-            <AdminEditorActions
-              mode={panel.editorMode}
-              onSubmit={handleSubmit}
-              isSaving={panel.isSaving}
-            />
-          )}
-          <VersionSwitcher view={versionView} />
-        </>
+        versionView.isHistorical ? (
+          <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
+            Back to latest
+          </Button>
+        ) : (
+          <AdminEditorActions
+            mode={panel.editorMode}
+            onSubmit={handleSubmit}
+            isSaving={panel.isSaving}
+          />
+        )
       }
     >
       <VersionFields view={versionView}>
@@ -584,7 +552,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
         <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
         <ResourceTableShell
         ariaLabel={PAGE_NAME}
-        rows={filteredItems}
+        rows={panel.items}
         getLabel={(item) => item.name || 'Activity'}
         middleColumnCount={3}
         isLoading={panel.isLoading}
@@ -592,11 +560,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
         hasMore={panel.hasMore}
         onLoadMore={panel.loadMore}
         error={panel.listError}
-        emptyLabel={
-          searchQuery.trim()
-            ? 'No activities match your search.'
-            : 'No activities yet.'
-        }
+        emptyLabel='No activities yet.'
         isExpanded={panel.isExpanded}
         onToggle={panel.toggle}
         isDraftOpen={panel.isDraftOpen}
@@ -611,19 +575,6 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
               onClick={panel.openDraft}
             />
           ) : null
-        }
-        filters={
-          <AdminFilterBar>
-            <AdminFilterField>
-              <Input
-                id='activity-search'
-                placeholder='Name, description, or category'
-                aria-label='Activity'
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-              />
-            </AdminFilterField>
-          </AdminFilterBar>
         }
         head={
           <>
