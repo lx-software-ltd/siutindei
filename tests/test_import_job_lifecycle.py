@@ -10,9 +10,16 @@ from app.api.admin_imports import (
     _handle_import_process,
     _handle_list_import_jobs,
 )
+from app.api.admin_imports_jobs import (
+    caller_import_source,
+    fail_import_job,
+    job_source,
+    source_for_import_run,
+    summary_source,
+)
 
 
-def _event() -> dict:
+def _event(*, groups: str = "admin", dry_run: bool = False) -> dict:
     return {
         "httpMethod": "POST",
         "path": "/v1/admin/imports",
@@ -20,14 +27,14 @@ def _event() -> dict:
             "authorizer": {
                 "claims": {
                     "sub": "caller-sub",
-                    "cognito:groups": "admin",
+                    "cognito:groups": groups,
                 }
             }
         },
         "body": json.dumps(
             {
                 "object_key": "admin/imports/file.json",
-                "dry_run": False,
+                "dry_run": dry_run,
             }
         ),
     }
@@ -75,7 +82,7 @@ def test_live_import_failure_marks_job(monkeypatch) -> None:
     )
     monkeypatch.setattr(
         "app.api.admin_imports.begin_import_job",
-        lambda session, object_key: order.append("begin") or _Job(),
+        lambda session, object_key, **kwargs: order.append("begin") or _Job(),
     )
     monkeypatch.setattr(
         "app.api.admin_imports._set_session_audit_context",
@@ -133,7 +140,7 @@ def test_failed_job_can_be_retried(monkeypatch) -> None:
     )
     monkeypatch.setattr(
         "app.api.admin_imports.begin_import_job",
-        lambda session, object_key: calls.append("begin") or _Live(),
+        lambda session, object_key, **kwargs: calls.append("begin") or _Live(),
     )
     monkeypatch.setattr(
         "app.api.admin_imports.finish_import_job",
@@ -158,6 +165,7 @@ def _history_job(
     job_id: str,
     *,
     created_at: datetime | str | None = None,
+    summary: dict | None = None,
 ) -> SimpleNamespace:
     when = created_at if created_at is not None else datetime.now(UTC)
     return SimpleNamespace(
@@ -165,7 +173,7 @@ def _history_job(
         object_key=object_key,
         dry_run=False,
         status="completed",
-        summary={"allow_updates": True},
+        summary={"allow_updates": True} if summary is None else summary,
         results=[],
         file_warnings=[],
         created_at=when,
@@ -308,3 +316,145 @@ def test_history_list_skips_download_url_for_foreign_key(monkeypatch) -> None:
     assert response["statusCode"] == 200
     assert "download_url" not in body["items"][0]
     assert body["items"][0]["object_key"] == "other/secret.json"
+
+
+def test_caller_import_source_maps_admin_and_board() -> None:
+    assert caller_import_source(is_admin=True, is_importer=False) == "ui"
+    assert caller_import_source(is_admin=True, is_importer=True) == "ui"
+    assert caller_import_source(is_admin=False, is_importer=True) == "board"
+    assert caller_import_source(is_admin=False, is_importer=False) == "ui"
+
+
+def test_source_for_import_run_keeps_stored_source_on_retry() -> None:
+    assert source_for_import_run("ui", {"source": "board"}, retry=True) == "board"
+    assert source_for_import_run("ui", {}, retry=True) == "ui"
+    assert source_for_import_run("board", {"source": "ui"}, retry=False) == "board"
+    assert summary_source({"source": "elsewhere"}) is None
+    assert summary_source(None) is None
+
+
+def test_failed_import_keeps_source() -> None:
+    class _Session:
+        def __init__(self, job: SimpleNamespace) -> None:
+            self.job = job
+
+        def get(self, model: object, job_id: object) -> SimpleNamespace:
+            return self.job
+
+        def flush(self) -> None:
+            return None
+
+    job = SimpleNamespace(
+        status="running",
+        summary={"source": "board"},
+        file_warnings=[],
+        updated_at=None,
+    )
+    fail_import_job(_Session(job), "job-id", "RuntimeError")
+    assert job.status == "failed"
+    assert job.summary == {"error": "RuntimeError", "source": "board"}
+
+
+def test_job_source_reads_known_summary_values() -> None:
+    stored = SimpleNamespace(summary={"source": "board", "allow_updates": False})
+    assert job_source(stored) == "board"
+    legacy = SimpleNamespace(summary={"allow_updates": True})
+    assert job_source(legacy) is None
+
+
+def test_history_list_returns_source(monkeypatch) -> None:
+    _stub_history_list(
+        monkeypatch,
+        [
+            _history_job(
+                "admin/imports/board.json",
+                "00000000-0000-0000-0000-000000000031",
+                summary={"allow_updates": True, "source": "board"},
+            ),
+            _history_job(
+                "admin/imports/legacy.json",
+                "00000000-0000-0000-0000-000000000032",
+                summary={"allow_updates": True},
+            ),
+        ],
+    )
+
+    response = _handle_list_import_jobs(_list_event())
+    body = json.loads(response["body"])
+    assert body["items"][0]["source"] == "board"
+    assert body["items"][1]["source"] is None
+
+
+def _stub_import_run(monkeypatch, captured: dict) -> None:
+    class _Job:
+        id = "00000000-0000-0000-0000-000000000041"
+
+    monkeypatch.setattr(
+        "app.api.admin_imports.Session",
+        lambda *args, **kwargs: _Session(),
+    )
+    monkeypatch.setattr("app.api.admin_imports.get_engine", lambda: None)
+    monkeypatch.setattr(
+        "app.api.admin_imports.find_import_job_by_key",
+        lambda session, key: None,
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports._load_import_payload",
+        lambda key: {"organizations": []},
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.begin_import_job",
+        lambda session, object_key, **kwargs: captured.update(begin=kwargs) or _Job(),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.finish_import_job",
+        lambda *args, **kwargs: captured.update(finish=kwargs) or _Job(),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.store_import_job",
+        lambda *args, **kwargs: captured.update(store=kwargs) or _Job(),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports.process_import_payload",
+        lambda *args, **kwargs: ({}, []),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_imports._set_session_audit_context",
+        lambda session, event: None,
+    )
+
+
+def test_admin_import_records_ui_source(monkeypatch) -> None:
+    captured: dict = {}
+    _stub_import_run(monkeypatch, captured)
+
+    response = _handle_import_process(_event())
+    body = json.loads(response["body"])
+    assert response["statusCode"] == 200
+    assert captured["begin"]["source"] == "ui"
+    assert captured["finish"]["summary"]["source"] == "ui"
+    assert body["source"] == "ui"
+
+
+def test_board_import_records_board_source(monkeypatch) -> None:
+    captured: dict = {}
+    _stub_import_run(monkeypatch, captured)
+
+    response = _handle_import_process(_event(groups="importer"))
+    body = json.loads(response["body"])
+    assert response["statusCode"] == 200
+    assert captured["begin"]["source"] == "board"
+    assert captured["finish"]["summary"]["source"] == "board"
+    assert body["source"] == "board"
+
+
+def test_dry_run_records_caller_source(monkeypatch) -> None:
+    captured: dict = {}
+    _stub_import_run(monkeypatch, captured)
+
+    response = _handle_import_process(_event(groups="importer", dry_run=True))
+    body = json.loads(response["body"])
+    assert response["statusCode"] == 200
+    assert "begin" not in captured
+    assert captured["store"]["summary"]["source"] == "board"
+    assert body["source"] == "board"
