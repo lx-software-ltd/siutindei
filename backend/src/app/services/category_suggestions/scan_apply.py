@@ -112,6 +112,7 @@ def store_scan_batch(
         parent_ids=parent_ids,
     )
     _bump(run, counts, usage or {}, now)
+    _settle_parent(session, run)
     session.flush()
     return True
 
@@ -133,6 +134,7 @@ def record_batch_failure(
     run.failed = int(run.failed or 0) + len(activity_ids)
     run.error = message[:500]
     _bump(run, {}, {}, datetime.now(timezone.utc))
+    _settle_parent(session, run)
     session.flush()
 
 
@@ -320,6 +322,14 @@ def _category_hash(session: Session, activity: Activity) -> str:
         model=resolved_model_name(settings.openrouter_model),
         threshold=None if threshold is None else float(threshold),
     )
+
+
+def _settle_parent(session: Session, run: CategoryScanRun) -> None:
+    if run.data_quality_run_id is None:
+        return
+    from app.services.data_quality.runs import settle_data_quality_run
+
+    settle_data_quality_run(session, run.data_quality_run_id)
 
 
 def _bump(

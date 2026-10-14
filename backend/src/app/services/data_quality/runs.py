@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import select
@@ -30,7 +30,9 @@ CHECK_VERSIONS = {
 }
 _MANUAL = ("names", "duplicates", "locations", "categories")
 _OPEN = ("queued", "running")
-_BUSY_LIMIT = 5
+# Matches the category-suggestion queue maxReceiveCount.
+_BUSY_LIMIT = 3
+_TERMINAL = frozenset({"done", "partial", "failed", "busy"})
 _TERMINAL_OK = frozenset({"done", "unchanged", "skipped"})
 
 
@@ -53,12 +55,7 @@ def stage_import_run(
     scope = scope_from_results(results)
     if not selected or _scope_empty(scope):
         return None
-    existing = session.scalars(
-        select(DataQualityRun).where(
-            DataQualityRun.import_job_id == import_job_id,
-            DataQualityRun.attempt == 1,
-        )
-    ).first()
+    existing = _import_run(session, import_job_id)
     if existing is not None:
         return str(existing.id)
     run = _new_run(
@@ -73,12 +70,7 @@ def stage_import_run(
             session.add(run)
             session.flush()
     except IntegrityError:
-        found = session.scalars(
-            select(DataQualityRun).where(
-                DataQualityRun.import_job_id == import_job_id,
-                DataQualityRun.attempt == 1,
-            )
-        ).first()
+        found = _import_run(session, import_job_id)
         if found is None:
             raise
         return str(found.id)
@@ -115,6 +107,7 @@ def create_manual_run(
     if _scope_empty(scope):
         raise ValidationError("Nothing to check", field="scope")
     config_hash = _config_hash(checks, scope)
+    refresh = _refresh_flag(body.get("refresh", False))
     key = body.get("idempotency_key")
     if isinstance(key, str) and key.strip():
         existing_key = session.scalars(
@@ -140,6 +133,7 @@ def create_manual_run(
         scope=scope,
         checks=checks,
         idempotency_key=key.strip() if isinstance(key, str) and key.strip() else None,
+        refresh=refresh,
     )
     session.add(run)
     try:
@@ -152,9 +146,17 @@ def create_manual_run(
     return run
 
 
-def process_run(session: Session, run_id: UUID, message_id: str = "") -> bool:
+def process_run(
+    session: Session,
+    run_id: UUID,
+    message_id: str = "",
+    *,
+    receive_count: int = 1,
+) -> bool:
     """Claim a run and advance checks. False asks SQS to deliver the message again."""
-    run = session.get(DataQualityRun, run_id)
+    run = _lock_run(session, run_id)
+    if run is False:
+        return False
     if run is None or run.status == "done":
         return True
     seen = [str(item) for item in (run.processed_message_ids or []) if item]
@@ -166,7 +168,8 @@ def process_run(session: Session, run_id: UUID, message_id: str = "") -> bool:
     run.status = "running"
     checks = [dict(item) for item in (run.checks or [])]
     work: list[dict[str, Any]] = []
-    busy = False
+    hold_for_busy = False
+    final_delivery = receive_count >= _BUSY_LIMIT
     for check in checks:
         if check.get("status") in {"done", "unchanged", "skipped"}:
             continue
@@ -175,13 +178,13 @@ def process_run(session: Session, run_id: UUID, message_id: str = "") -> bool:
         check["detail"] = outcome.get("detail") or {}
         if outcome.get("batches"):
             work.append(outcome)
-        if outcome["status"] == "busy":
-            busy = True
+        if outcome["status"] == "busy" and not final_delivery:
+            hold_for_busy = True
             break
         session.flush()
     run.checks = checks
     run.updated_at = datetime.now(timezone.utc)
-    if busy and int(run.attempts or 0) < _BUSY_LIMIT:
+    if hold_for_busy:
         run.status = "queued"
         session.flush()
         return False
@@ -195,14 +198,15 @@ def process_run(session: Session, run_id: UUID, message_id: str = "") -> bool:
     for check in checks:
         refresh_check(session, run, check)
     run.status = _aggregate(checks)
-    if run.status in {"done", "partial", "failed", "busy"}:
+    if run.status in _TERMINAL:
         run.finished_at = datetime.now(timezone.utc)
+        run.refresh = False
     session.flush()
     return True
 
 
 def refresh_run(session: Session, run: DataQualityRun) -> DataQualityRun:
-    """Update child-scan checkpoints when a run is read."""
+    """Update child-scan checkpoints after a child scan settles."""
     if run.status not in _OPEN and run.status != "running":
         return run
     checks = [dict(item) for item in (run.checks or [])]
@@ -213,40 +217,58 @@ def refresh_run(session: Session, run: DataQualityRun) -> DataQualityRun:
         run.checks = checks
         run.status = status
         run.updated_at = datetime.now(timezone.utc)
-        if status in {"done", "partial", "failed", "busy"}:
+        if status in _TERMINAL:
             run.finished_at = run.finished_at or datetime.now(timezone.utc)
+            run.refresh = False
         session.flush()
     return run
 
 
-def retry_run(session: Session, run: DataQualityRun) -> DataQualityRun:
-    """Queue a finished run again. The same row keeps its child scans."""
+def settle_data_quality_run(session: Session, run_id: UUID | str | None) -> None:
+    """Refresh a parent run after one of its child scans changes."""
+    if not run_id:
+        return
+    parsed = run_id if isinstance(run_id, UUID) else UUID(str(run_id))
+    run = session.get(DataQualityRun, parsed)
+    if run is not None:
+        refresh_run(session, run)
+
+
+def retry_run(session: Session, run: DataQualityRun, *, refresh: bool = False) -> bool:
+    """Queue every check again. False when the run is already in progress."""
     if run.status in _OPEN:
-        return run
-    checks = []
-    for item in run.checks or []:
-        check = dict(item)
-        if check.get("status") not in {"done", "unchanged", "skipped"}:
-            check["status"] = "queued"
-        checks.append(check)
-    run.checks = checks
+        return False
+    _release_children(session, run.id)
+    run.checks = [
+        {"name": item.get("name"), "status": "queued"}
+        for item in (run.checks or [])
+        if isinstance(item, dict) and item.get("name")
+    ]
     run.status = "queued"
     run.finished_at = None
+    run.attempt = int(run.attempt or 1) + 1
+    run.refresh = refresh
     run.updated_at = datetime.now(timezone.utc)
     session.flush()
-    return run
+    return True
 
 
-def serialize_run(run: DataQualityRun) -> dict[str, Any]:
+def serialize_run(run: DataQualityRun, *, summary: bool = False) -> dict[str, Any]:
     """JSON shape for a data-quality run."""
+    checks = [item for item in (run.checks or []) if isinstance(item, dict)]
+    if summary:
+        checks = [
+            {"name": item.get("name"), "status": item.get("status")} for item in checks
+        ]
     return {
         "id": str(run.id),
         "trigger": run.trigger,
         "import_job_id": None if run.import_job_id is None else str(run.import_job_id),
         "requested_by": run.requested_by,
         "scope": run.scope or {},
-        "checks": list(run.checks or []),
+        "checks": checks,
         "status": run.status,
+        "refresh": bool(run.refresh),
         "attempt": int(run.attempt or 1),
         "attempts": int(run.attempts or 0),
         "config_hash": run.config_hash,
@@ -326,6 +348,7 @@ def _new_run(**kwargs: Any) -> DataQualityRun:
         config_hash=_config_hash(checks, scope),
         check_versions={name: CHECK_VERSIONS[name] for name in checks},
         idempotency_key=kwargs.get("idempotency_key"),
+        refresh=bool(kwargs.get("refresh", False)),
         as_of=now,
         created_at=now,
         updated_at=now,
@@ -398,6 +421,44 @@ def _enqueue_children(work: list[dict[str, Any]]) -> bool:
         logger.exception("Data quality child batches were not enqueued")
         return False
     return True
+
+
+def _import_run(session: Session, import_job_id: UUID) -> DataQualityRun | None:
+    return session.scalars(
+        select(DataQualityRun)
+        .where(DataQualityRun.import_job_id == import_job_id)
+        .order_by(DataQualityRun.attempt.desc())
+    ).first()
+
+
+def _lock_run(session: Session, run_id: UUID) -> Any:
+    stmt = select(DataQualityRun).where(DataQualityRun.id == run_id)
+    bind = session.get_bind()
+    if bind is None or bind.dialect.name != "postgresql":
+        return session.get(DataQualityRun, run_id)
+    locked = session.scalar(stmt.with_for_update(skip_locked=True))
+    if locked is not None:
+        return locked
+    exists = session.scalar(
+        select(DataQualityRun.id).where(DataQualityRun.id == run_id)
+    )
+    return None if exists is None else False
+
+
+def _release_children(session: Session, run_id: UUID) -> None:
+    from app.db.models import CategoryScanRun, LocationScanRun
+
+    for model in (LocationScanRun, CategoryScanRun):
+        linked = cast(Any, model).data_quality_run_id
+        rows = session.scalars(select(model).where(linked == run_id)).all()
+        for row in rows:
+            cast(Any, row).data_quality_run_id = None
+
+
+def _refresh_flag(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    raise ValidationError("refresh must be a boolean", field="refresh")
 
 
 def _scope_empty(scope: dict[str, Any]) -> bool:

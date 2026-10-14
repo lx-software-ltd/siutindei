@@ -150,6 +150,12 @@ class DataQualityRun(Base):
         default=0,
         server_default=text("0"),
     )
+    refresh: Mapped[bool] = mapped_column(
+        Boolean(),
+        nullable=False,
+        default=False,
+        server_default=text("false"),
+    )
     config_hash: Mapped[str] = mapped_column(Text(), nullable=False)
     check_versions: Mapped[dict[str, Any]] = mapped_column(
         JSONB(),

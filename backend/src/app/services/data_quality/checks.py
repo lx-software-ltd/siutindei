@@ -74,15 +74,9 @@ def _duplicates(session: Session, run) -> dict[str, Any]:
 def _locations(session: Session, run, check: dict[str, Any]) -> dict[str, Any]:
     detail = dict(check.get("detail") or {})
     existing = _location_child(session, run.id)
-    if existing is not None:
-        return _child_state(existing.status, detail, existing.error)
-    if detail.get("pending_batches"):
-        return {
-            "status": "running",
-            "detail": detail,
-            "batches": list(detail["pending_batches"]),
-            "batch_kind": "location",
-        }
+    resumed = _resume_open_child(existing, detail, "location")
+    if resumed is not None:
+        return resumed
     scope = run.scope or {}
     org_ids = _uuids(scope.get("organization_ids"))
     try:
@@ -92,6 +86,7 @@ def _locations(session: Session, run, check: dict[str, Any]) -> dict[str, Any]:
             only_org_ids=org_ids,
             budget_seconds=None,
             reuse_lookups=True,
+            batch_size=1,
             requested_by=run.requested_by,
         )
     except LocationScanBusy:
@@ -122,15 +117,9 @@ def _locations(session: Session, run, check: dict[str, Any]) -> dict[str, Any]:
 def _categories(session: Session, run, check: dict[str, Any]) -> dict[str, Any]:
     detail = dict(check.get("detail") or {})
     existing = _category_child(session, run.id)
-    if existing is not None:
-        return _child_state(existing.status, detail, existing.error)
-    if detail.get("pending_batches"):
-        return {
-            "status": "running",
-            "detail": detail,
-            "batches": list(detail["pending_batches"]),
-            "batch_kind": "category",
-        }
+    resumed = _resume_open_child(existing, detail, "category")
+    if resumed is not None:
+        return resumed
     scope = run.scope or {}
     from app.services.category_suggestions.scan import MAX_LIMIT
 
@@ -148,6 +137,7 @@ def _categories(session: Session, run, check: dict[str, Any]) -> dict[str, Any]:
             {
                 "activity_ids": chosen,
                 "limit": len(chosen),
+                "batch_size": 1,
                 "review_scope": "all",
                 "rescan": True,
                 "mode": "verify",
@@ -168,7 +158,7 @@ def _categories(session: Session, run, check: dict[str, Any]) -> dict[str, Any]:
     detail["scan_run_id"] = str(child.id)
     detail["pending_batches"] = batches
     if not batches:
-        return {"status": "done", "detail": detail, "batches": []}
+        return {"status": _noted(detail, "done"), "detail": detail, "batches": []}
     return {
         "status": "running",
         "detail": detail,
@@ -252,7 +242,34 @@ def _child_state(
             "detail": {**detail, "error": error or "failed"},
             "batches": [],
         }
-    return {"status": "done", "detail": detail, "batches": []}
+    return {"status": _noted(detail, "done"), "detail": detail, "batches": []}
+
+
+def _resume_open_child(
+    existing, detail: dict[str, Any], kind: str
+) -> dict[str, Any] | None:
+    """Return queued batches that never left, or the child scan's state."""
+    if existing is None:
+        return None
+    if existing.status not in _OPEN:
+        return _child_state(existing.status, detail, existing.error)
+    pending = list(detail.get("pending_batches") or [])
+    sent = int(getattr(existing, "batches_done", 0) or 0)
+    remaining = pending[sent:]
+    if not remaining:
+        return {"status": "running", "detail": detail, "batches": []}
+    return {
+        "status": "running",
+        "detail": detail,
+        "batches": remaining,
+        "batch_kind": kind,
+    }
+
+
+def _noted(detail: dict[str, Any], status: str) -> str:
+    if detail.get("truncated") and status == "done":
+        return "partial"
+    return status
 
 
 def _refresh_location(session: Session, run, check: dict[str, Any]) -> None:

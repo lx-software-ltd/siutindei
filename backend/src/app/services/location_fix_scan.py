@@ -63,6 +63,7 @@ def start_location_scan(
     budget_seconds: float | None = _SWEEP_BUDGET_SECONDS,
     only_org_ids: list[UUID] | None = None,
     reuse_lookups: bool = False,
+    batch_size: int = _BATCH_SIZE,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Run venue rules and return model batches to enqueue after commit."""
     deadline = None if budget_seconds is None else time.monotonic() + budget_seconds
@@ -94,11 +95,11 @@ def start_location_scan(
         entity_type=entity_type,
         updated_at=now,
     )
-    session.add(run)
     try:
-        session.flush()
+        with session.begin_nested():
+            session.add(run)
+            session.flush()
     except IntegrityError as exc:
-        session.rollback()
         raise LocationScanBusy() from exc
 
     counts = {
@@ -210,12 +211,12 @@ def start_location_scan(
         seen += len(lookup_ids)
     if auto_budget.get("register_unavailable"):
         run.error = "EDB school register could not be loaded"
-    batches = _batches(queued)
-    for index in range(0, len(lookup_ids), _BATCH_SIZE):
+    batches = _batches(queued, batch_size)
+    for index in range(0, len(lookup_ids), batch_size):
         batches.append(
             {
                 "entity_type": "location",
-                "entity_ids": lookup_ids[index : index + _BATCH_SIZE],
+                "entity_ids": lookup_ids[index : index + batch_size],
                 "lookup": lookup,
             }
         )
@@ -377,14 +378,14 @@ def _dismissed_unresolved(session: Session, entity_type: str, entity_id) -> bool
     )
 
 
-def _batches(queued: dict[str, list[str]]) -> list[dict[str, Any]]:
+def _batches(queued: dict[str, list[str]], batch_size: int) -> list[dict[str, Any]]:
     batches = []
     for entity_type, ids in queued.items():
-        for index in range(0, len(ids), _BATCH_SIZE):
+        for index in range(0, len(ids), batch_size):
             batches.append(
                 {
                     "entity_type": entity_type,
-                    "entity_ids": ids[index : index + _BATCH_SIZE],
+                    "entity_ids": ids[index : index + batch_size],
                 }
             )
     return batches
@@ -412,3 +413,7 @@ def _fail_stale_runs(session: Session) -> None:
         run.error = "No batch completed before the sweep went stale"
         run.finished_at = now
         run.updated_at = now
+        if run.data_quality_run_id is not None:
+            from app.services.data_quality.runs import settle_data_quality_run
+
+            settle_data_quality_run(session, run.data_quality_run_id)

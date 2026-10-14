@@ -16,7 +16,6 @@ from app.exceptions import NotFoundError, ValidationError
 from app.services.data_quality.runs import (
     create_manual_run,
     enqueue_staged_run,
-    refresh_run,
     retry_run,
     serialize_run,
 )
@@ -52,10 +51,7 @@ def _list(event: Mapping[str, Any]) -> dict[str, Any]:
             .order_by(DataQualityRun.created_at.desc(), DataQualityRun.id.desc())
             .limit(50)
         ).all()
-        for row in rows:
-            refresh_run(session, row)
-        payload = {"items": [serialize_run(row) for row in rows]}
-        session.commit()
+        payload = {"items": [serialize_run(row, summary=True) for row in rows]}
     return json_response(200, payload, event=event)
 
 
@@ -76,9 +72,8 @@ def _get(event: Mapping[str, Any], raw_id: str) -> dict[str, Any]:
         run = session.get(DataQualityRun, run_id)
         if run is None:
             raise NotFoundError("data-quality", raw_id)
-        refresh_run(session, run)
-        payload = serialize_run(run)
-        session.commit()
+        summary = _status_view(event)
+        payload = serialize_run(run, summary=summary)
     return json_response(200, payload, event=event)
 
 
@@ -91,11 +86,20 @@ def _retry(event: Mapping[str, Any], raw_id: str) -> dict[str, Any]:
         run = session.get(DataQualityRun, run_id)
         if run is None:
             raise NotFoundError("data-quality", raw_id)
-        retry_run(session, run)
+        refresh = body.get("refresh", False)
+        if not isinstance(refresh, bool):
+            raise ValidationError("refresh must be a boolean", field="refresh")
+        send = retry_run(session, run, refresh=refresh)
         payload = serialize_run(run)
         session.commit()
-    enqueue_staged_run(str(run_id))
+    if send:
+        enqueue_staged_run(str(run_id))
     return json_response(200, payload, event=event)
+
+
+def _status_view(event: Mapping[str, Any]) -> bool:
+    params = event.get("queryStringParameters") or {}
+    return params.get("view") == "status"
 
 
 def _parse_id(raw_id: str) -> UUID:

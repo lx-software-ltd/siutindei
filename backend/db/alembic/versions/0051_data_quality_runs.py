@@ -172,6 +172,12 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("0"),
         ),
+        sa.Column(
+            "refresh",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.text("false"),
+        ),
         sa.Column("config_hash", sa.Text(), nullable=False),
         sa.Column(
             "check_versions",
@@ -308,7 +314,9 @@ def upgrade() -> None:
             WHERE status = 'pending'
         )
         UPDATE activity_category_reviews
-        SET status = 'dismissed', decided_by = 'migration'
+        SET status = 'dismissed',
+            decided_by = 'migration',
+            decided_at = now()
         WHERE id IN (SELECT id FROM ranked WHERE n > 1)
         """
     )

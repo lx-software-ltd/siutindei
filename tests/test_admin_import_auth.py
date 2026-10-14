@@ -7,7 +7,6 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-
 from app.api.admin import lambda_handler
 
 
@@ -132,6 +131,22 @@ def test_importer_can_patch_organization(mock_crud) -> None:
 def test_importer_cannot_review_organizations() -> None:
     response = lambda_handler(
         _event("/v1/admin/org-review", method="GET"),
+        None,
+    )
+    assert response["statusCode"] == 403
+
+
+def test_importer_cannot_read_import_settings() -> None:
+    response = lambda_handler(
+        _event("/v1/admin/import-settings", method="GET"),
+        None,
+    )
+    assert response["statusCode"] == 403
+
+
+def test_importer_cannot_start_a_data_quality_run() -> None:
+    response = lambda_handler(
+        _event("/v1/admin/data-quality/runs", method="POST"),
         None,
     )
     assert response["statusCode"] == 403

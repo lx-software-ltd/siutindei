@@ -71,22 +71,56 @@ def test_missing_row_follows_legacy_capture_flag(db_session) -> None:
     assert load_import_settings(db_session).unknown_categories == "fail"
 
 
+def _settings_body(**overrides: object) -> dict:
+    body = {
+        "updated_at": None,
+        "skip_deleted_organizations": True,
+        "name_cleanup": "apply",
+        "unknown_categories": "capture",
+        "duplicates": "off",
+        "locations": "off",
+        "categories": "off",
+    }
+    body.update(overrides)
+    return body
+
+
 def test_settings_update_rejects_a_stale_stamp(db_session) -> None:
     _without_import_settings(db_session)
     created = update_import_settings(
         db_session,
-        {"updated_at": None, "name_cleanup": "propose"},
+        _settings_body(name_cleanup="propose"),
         updated_by="admin-user",
     )
     db_session.flush()
     with pytest.raises(AppError) as exc_info:
         update_import_settings(
             db_session,
-            {"updated_at": "2000-01-01T00:00:00+00:00", "name_cleanup": "off"},
+            _settings_body(
+                updated_at="2000-01-01T00:00:00+00:00",
+                name_cleanup="off",
+            ),
             updated_by="admin-user",
         )
     assert exc_info.value.status_code == 409
     assert created.name_cleanup == "propose"
+
+
+def test_settings_update_requires_every_field(db_session) -> None:
+    _without_import_settings(db_session)
+    created = update_import_settings(
+        db_session,
+        _settings_body(),
+        updated_by="admin-user",
+    )
+    partial = _settings_body(
+        updated_at=serialize_import_settings(created)["updated_at"]
+    )
+    partial.pop("categories")
+    with pytest.raises(ValidationError) as exc_info:
+        update_import_settings(db_session, partial, updated_by="admin-user")
+    assert exc_info.value.field == "categories"
+    assert created.categories == "off"
 
 
 def test_second_name_scan_writes_nothing(db_session) -> None:

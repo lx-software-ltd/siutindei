@@ -16,18 +16,34 @@ _UNKNOWN = frozenset({"capture", "fail"})
 _DUPLICATES = frozenset({"off", "report"})
 _LOCATIONS = frozenset({"off", "check"})
 _CATEGORIES = frozenset({"off", "check"})
+_REQUIRED = (
+    "updated_at",
+    "skip_deleted_organizations",
+    "name_cleanup",
+    "unknown_categories",
+    "duplicates",
+    "locations",
+    "categories",
+)
 
 
 def load_import_settings(session: Session) -> ImportSettings:
     """Return the singleton. A missing row uses today's import behaviour."""
-    row = session.get(ImportSettings, 1)
+    getter = getattr(session, "get", None)
+    if getter is None:
+        return _transient("capture")
+    row = getter(ImportSettings, 1)
     if row is not None:
         return row
+    return _transient(_legacy_unknown_categories(session))
+
+
+def _transient(unknown_categories: str) -> ImportSettings:
     return ImportSettings(
         id=1,
         skip_deleted_organizations=True,
         name_cleanup="apply",
-        unknown_categories=_legacy_unknown_categories(session),
+        unknown_categories=unknown_categories,
         duplicates="off",
         locations="off",
         categories="off",
@@ -66,9 +82,10 @@ def update_import_settings(
     updated_by: str | None,
 ) -> ImportSettings:
     """Replace the singleton. A stale ``updated_at`` is HTTP 409."""
-    if "updated_at" not in body:
-        raise ValidationError("updated_at is required", field="updated_at")
-    current = session.get(ImportSettings, 1)
+    for field in _REQUIRED:
+        if field not in body:
+            raise ValidationError(f"{field} is required", field=field)
+    current = _locked_settings(session)
     if current is None:
         if body.get("updated_at") not in (None, ""):
             raise AppError("Import settings were updated", status_code=409)
@@ -85,31 +102,31 @@ def update_import_settings(
     elif not _same_stamp(current.updated_at, body.get("updated_at")):
         raise AppError("Import settings were updated", status_code=409)
     current.skip_deleted_organizations = _parse_bool(
-        body.get("skip_deleted_organizations", current.skip_deleted_organizations),
+        body.get("skip_deleted_organizations"),
         "skip_deleted_organizations",
     )
     current.name_cleanup = _choice(
-        body.get("name_cleanup", current.name_cleanup),
+        body.get("name_cleanup"),
         _NAME_CLEANUP,
         "name_cleanup",
     )
     current.unknown_categories = _choice(
-        body.get("unknown_categories", current.unknown_categories),
+        body.get("unknown_categories"),
         _UNKNOWN,
         "unknown_categories",
     )
     current.duplicates = _choice(
-        body.get("duplicates", current.duplicates),
+        body.get("duplicates"),
         _DUPLICATES,
         "duplicates",
     )
     current.locations = _choice(
-        body.get("locations", current.locations),
+        body.get("locations"),
         _LOCATIONS,
         "locations",
     )
     current.categories = _choice(
-        body.get("categories", current.categories),
+        body.get("categories"),
         _CATEGORIES,
         "categories",
     )
@@ -117,6 +134,14 @@ def update_import_settings(
     current.updated_at = datetime.now(timezone.utc)
     session.flush()
     return current
+
+
+def _locked_settings(session: Session) -> ImportSettings | None:
+    stmt = select(ImportSettings).where(ImportSettings.id == 1)
+    bind = session.get_bind()
+    if bind is not None and bind.dialect.name == "postgresql":
+        stmt = stmt.with_for_update()
+    return session.scalar(stmt)
 
 
 def _legacy_unknown_categories(session: Session) -> str:

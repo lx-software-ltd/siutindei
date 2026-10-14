@@ -36,7 +36,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             continue
         receive_count = _receive_count(record)
         if payload.get("data_quality_run_id"):
-            _handle_data_quality(payload, message_id, failures)
+            _handle_data_quality(payload, message_id, receive_count, failures)
             continue
         if payload.get("location_scan_run_id"):
             _handle_location(payload, message_id, receive_count, failures)
@@ -236,6 +236,7 @@ def _handle_scan(
 def _handle_data_quality(
     payload: dict[str, Any],
     message_id: str,
+    receive_count: int,
     failures: list[str],
 ) -> None:
     from sqlalchemy.orm import Session
@@ -250,7 +251,9 @@ def _handle_data_quality(
         return
     try:
         with Session(get_engine()) as session:
-            acked = process_run(session, run_id, message_id)
+            acked = process_run(
+                session, run_id, message_id, receive_count=receive_count
+            )
             session.commit()
     except Exception:
         logger.exception(
