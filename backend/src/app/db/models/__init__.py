@@ -27,6 +27,12 @@ from app.db.models.enums import PricingType, ScheduleType, TicketStatus, TicketT
 from app.db.models.feedback_label import FeedbackLabel
 from app.db.models.geographic_area import GeographicArea
 from app.db.models.import_job import ImportJob
+from app.db.models.import_settings import (
+    DataQualityRun,
+    ImportSettings,
+    LookupAnswer,
+    ModelAnswer,
+)
 from app.db.models.listing_event import ListingEvent, ListingEventsDaily
 from app.db.models.location import Location
 from app.db.models.location_fix import (
@@ -55,7 +61,11 @@ __all__ = [
     "CategorySuggestionSettings",
     "FeedbackLabel",
     "GeographicArea",
+    "DataQualityRun",
     "ImportJob",
+    "ImportSettings",
+    "LookupAnswer",
+    "ModelAnswer",
     "ListingEvent",
     "ListingEventsDaily",
     "Location",

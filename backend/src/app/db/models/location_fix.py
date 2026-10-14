@@ -103,6 +103,11 @@ class LocationScanRun(Base):
         server_default=text("false"),
     )
     error: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    data_quality_run_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("data_quality_runs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     processed_message_ids: Mapped[list[Any]] = mapped_column(
         JSONB(),
         nullable=False,
@@ -189,6 +194,7 @@ class LocationFixProposal(Base):
         ForeignKey("location_scan_runs.id", ondelete="SET NULL"),
         nullable=True,
     )
+    input_hash: Mapped[str | None] = mapped_column(Text(), nullable=True)
     decided_by: Mapped[str | None] = mapped_column(Text(), nullable=True)
     decided_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True),

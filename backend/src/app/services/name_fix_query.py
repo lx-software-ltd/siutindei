@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import String, and_, cast, or_, select
+from sqlalchemy import String, and_, cast, false, or_, select
 from sqlalchemy.orm import Session
 
 from app.db.models import Activity, NameFixProposal, Organization
@@ -15,7 +15,16 @@ from app.exceptions import ValidationError
 from app.services.name_sanitizer import RULE_CODES
 
 
-def proposal_stmt(status, entity_type, rule, org_id, query):
+def proposal_stmt(
+    status,
+    entity_type,
+    rule,
+    org_id,
+    query,
+    *,
+    organization_ids=None,
+    activity_ids=None,
+):
     """Pending and decided proposals whose organization or activity still exists."""
     stmt = select(NameFixProposal)
     if status:
@@ -28,6 +37,23 @@ def proposal_stmt(status, entity_type, rule, org_id, query):
         stmt = stmt.where(
             cast(NameFixProposal.rules, String).ilike(f'%"{rule}"%', escape="\\")
         )
+    if organization_ids is not None or activity_ids is not None:
+        scoped = []
+        if organization_ids:
+            scoped.append(
+                and_(
+                    NameFixProposal.entity_type == "organization",
+                    NameFixProposal.entity_id.in_(list(organization_ids)),
+                )
+            )
+        if activity_ids:
+            scoped.append(
+                and_(
+                    NameFixProposal.entity_type == "activity",
+                    NameFixProposal.entity_id.in_(list(activity_ids)),
+                )
+            )
+        stmt = stmt.where(or_(*scoped)) if scoped else stmt.where(false())
     if org_id is not None:
         activity_ids = select(Activity.id).where(Activity.org_id == org_id)
         stmt = stmt.where(

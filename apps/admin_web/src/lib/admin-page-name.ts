@@ -5,6 +5,7 @@
 export const adminTabLabel = {
   import: 'Import',
   history: 'History',
+  settings: 'Settings',
   categories: 'Categories',
   suggestions: 'Suggestions',
   feedback: 'Feedback',
@@ -13,6 +14,7 @@ export const adminTabLabel = {
   names: 'Names',
   locations: 'Locations',
   deleted: 'Deleted',
+  runs: 'Runs',
 } as const;
 
 /**

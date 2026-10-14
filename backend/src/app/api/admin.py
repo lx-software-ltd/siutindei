@@ -85,7 +85,9 @@ from app.api.admin_validators import (
     _validate_url,
 )
 from app.api.user_organizations import _handle_user_organizations
-from app.exceptions import NotFoundError, ValidationError
+from app.api.admin_data_quality import handle_data_quality
+from app.api.admin_import_settings import handle_import_settings
+from app.exceptions import AppError, NotFoundError, ValidationError
 from app.utils import json_response
 from app.utils.logging import configure_logging, get_logger, set_request_context
 from app.utils.responses import validate_content_type
@@ -196,6 +198,17 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
     if resource == "api-keys":
         return _safe_handler(
             lambda: _handle_admin_api_keys(event, method, resource_id),
+            event,
+        )
+    if resource == "import-settings":
+        if not _is_admin(event):
+            return json_response(403, {"error": "Forbidden"}, event=event)
+        return _safe_handler(lambda: handle_import_settings(event, method), event)
+    if resource == "data-quality":
+        if not _is_admin(event):
+            return json_response(403, {"error": "Forbidden"}, event=event)
+        return _safe_handler(
+            lambda: handle_data_quality(event, method, resource_id, sub_resource),
             event,
         )
     if resource == "imports":
@@ -332,6 +345,9 @@ def _safe_handler(
         logger.warning(f"Validation error: {exc.message}")
         return json_response(exc.status_code, exc.to_dict(), event=event)
     except NotFoundError as exc:
+        return json_response(exc.status_code, exc.to_dict(), event=event)
+    except AppError as exc:
+        logger.warning(f"Application error: {exc.message}")
         return json_response(exc.status_code, exc.to_dict(), event=event)
     except ValueError as exc:
         logger.warning(f"Value error: {exc}")

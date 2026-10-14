@@ -27,11 +27,15 @@ from app.services.location_fix_prompt import (
 )
 from app.services.location_fix_query import over_budget
 from app.services.location_fixes import upsert_proposal
+from app.services.data_quality.answers import (
+    LOCATION_PROMPT_VERSION,
+    recorded_completion,
+    recording_flags,
+)
 from app.services.openrouter_client import (
     OpenRouterError,
     extract_message_text,
     openrouter_chat_completion,
-    usage_from_body,
 )
 from app.services.openrouter_json_parse import loads_openrouter_json
 from app.utils.logging import get_logger
@@ -53,24 +57,32 @@ def process_location_batch(
     prepared = _prepare(scan_run_id, entity_type, entity_ids, message_id)
     if prepared is None:
         return True
-    system, user, model_name, fallbacks, deny = prepared
+    system, user, model_name, fallbacks, deny, record, refresh = prepared
     try:
-        body = openrouter_chat_completion(
+        reply = recorded_completion(
+            record=record,
+            refresh=refresh,
+            prompt_version=LOCATION_PROMPT_VERSION,
+            model=model_name,
             system_prompt=system,
             user_content=user,
-            timeout=_timeout_seconds(),
-            workload=WORKLOAD_LOCATION_FIX,
-            temperature=0,
-            max_attempts=1,
-            model=model_name,
-            fallback_models=fallbacks,
-            deny_data_collection=deny,
+            invoke=lambda: openrouter_chat_completion(
+                system_prompt=system,
+                user_content=user,
+                timeout=_timeout_seconds(),
+                workload=WORKLOAD_LOCATION_FIX,
+                temperature=0,
+                max_attempts=1,
+                model=model_name,
+                fallback_models=fallbacks,
+                deny_data_collection=deny,
+            ),
         )
         parsed = loads_openrouter_json(
-            extract_message_text(body),
+            extract_message_text(reply.body),
             context="location sweep",
         )
-        usage = usage_from_body(body)
+        usage = reply.usage
     except OpenRouterError as exc:
         if receive_count >= 3:
             record_batch_failure(
@@ -90,6 +102,7 @@ def process_location_batch(
         )
         return True
     with Session(get_engine()) as session:
+        reply.keep(session)
         store_model_items(
             session,
             scan_run_id,
@@ -352,12 +365,15 @@ def _prepare(scan_run_id, entity_type, entity_ids, message_id):
         else:
             return None
         settings = get_settings(session)
+        record, refresh = recording_flags(session, run.data_quality_run_id)
         return (
             system,
             user,
             resolved_model_name(settings.openrouter_model),
             resolved_fallback_models(settings.fallback_models),
             bool(settings.deny_data_collection),
+            record,
+            refresh,
         )
 
 
@@ -393,6 +409,10 @@ def _finish_batch(
     queued_count = int(run.queued_count or 0)
     run.status = "failed" if queued_count and failed_count >= queued_count else "done"
     run.finished_at = now
+    if run.data_quality_run_id is not None:
+        from app.services.data_quality.runs import settle_data_quality_run
+
+        settle_data_quality_run(session, run.data_quality_run_id)
 
 
 def _areas_by_label(session: Session) -> dict[str, GeographicArea]:

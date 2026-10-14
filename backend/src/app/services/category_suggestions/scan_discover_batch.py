@@ -37,10 +37,10 @@ from app.services.category_suggestions.settings import (
     resolved_model_name,
 )
 from app.services.openrouter_client import (
+    openrouter_chat_completion,
     WORKLOAD_CATEGORY_SUGGESTION,
     OpenRouterError,
     extract_message_text,
-    openrouter_chat_completion,
     usage_from_body,
 )
 from app.services.openrouter_json_parse import loads_openrouter_json

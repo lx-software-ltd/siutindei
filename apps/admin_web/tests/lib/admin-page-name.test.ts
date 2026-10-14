@@ -21,6 +21,9 @@ describe('formatAdminPageName', () => {
 
   it('joins nav and tab with an interpunct when the tab distinguishes the view', () => {
     expect(formatAdminPageName('Imports', 'History')).toBe('Imports · History');
+    expect(formatAdminPageName('Imports', 'Settings')).toBe(
+      'Imports · Settings'
+    );
     expect(formatAdminPageName('Categories', 'Suggestions')).toBe(
       'Categories · Suggestions'
     );

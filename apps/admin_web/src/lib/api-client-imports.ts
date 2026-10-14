@@ -25,8 +25,24 @@ export interface AdminImportPresignResponse {
   expires_in: number;
 }
 
+export type NameCleanupMode = 'off' | 'propose' | 'apply';
+export type UnknownCategoryMode = 'capture' | 'fail';
+export type DuplicateCheckMode = 'off' | 'report';
+export type ScanCheckMode = 'off' | 'check';
+
+export interface ImportSettings {
+  skip_deleted_organizations: boolean;
+  name_cleanup: NameCleanupMode;
+  unknown_categories: UnknownCategoryMode;
+  duplicates: DuplicateCheckMode;
+  locations: ScanCheckMode;
+  categories: ScanCheckMode;
+  updated_by?: string | null;
+  updated_at: string | null;
+}
+
 export interface AdminImportRequest {
-  object_key: string;
+  object_key?: string;
   dry_run?: boolean;
   retry_failed?: boolean;
   allow_updates?: boolean;
@@ -65,6 +81,7 @@ export interface AdminImportSummary {
   errors: number;
   captured_categories?: number;
   captured_category_ids?: string[];
+  data_quality_run_id?: string;
 }
 
 export interface AdminImportResponse {
@@ -73,6 +90,7 @@ export interface AdminImportResponse {
   results: AdminImportResult[];
   file_warnings: string[];
   source?: 'ui' | 'board' | null;
+  data_quality_run_id?: string | null;
 }
 
 export interface AdminImportJob {
@@ -126,6 +144,20 @@ export async function runAdminImport(payload: AdminImportRequest) {
 
 export async function getAdminImportJob(jobId: string) {
   return request<AdminImportJob>(buildAdminImportsUrl(jobId));
+}
+
+export async function getImportSettings() {
+  return request<ImportSettings>(buildApiUrl('v1/admin/import-settings'));
+}
+
+export async function updateImportSettings(payload: ImportSettings) {
+  return request<ImportSettings>(buildApiUrl('v1/admin/import-settings'), {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function createAdminExport(orgName?: string) {

@@ -26,6 +26,7 @@ from app.services.category_suggestions.resolve import resolve_category_name
 from app.services.openrouter_client import OpenRouterError
 from tests.test_category_suggestions import _activity_payload
 from tests.test_category_suggestions import _enable_capture
+from tests.test_category_suggestions import _set_unknown_categories
 
 
 def test_ambiguous_exact_name_is_captured_when_enabled(db_session) -> None:
@@ -45,6 +46,7 @@ def test_ambiguous_exact_name_is_captured_when_enabled(db_session) -> None:
     settings = get_settings(db_session)
     settings.on_import_enabled = False
     db_session.flush()
+    _set_unknown_categories(db_session, "fail")
     with pytest.raises(ValidationError):
         resolve_category_name(db_session, "Shared")
     _enable_capture(db_session)

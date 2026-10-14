@@ -86,11 +86,11 @@ def start_discover(
         batches_total=0,
         updated_at=now,
     )
-    session.add(run)
     try:
-        session.flush()
+        with session.begin_nested():
+            session.add(run)
+            session.flush()
     except IntegrityError as exc:
-        session.rollback()
         raise CategoryScanBusy() from exc
     groups = _groups(session, org_id=org_id, review_scope=review_scope)
     catalog = _catalog(session, list(groups))

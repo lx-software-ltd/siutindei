@@ -67,6 +67,19 @@ def import_matches_deleted_organization(
     )
 
 
+def results_skipped_deleted(results: Any) -> bool:
+    """True when a stored import skipped an organization as deleted."""
+    if not isinstance(results, list):
+        return False
+    for item in results:
+        if not isinstance(item, dict):
+            continue
+        if item.get("type") == "organizations" and item.get("status") == "skipped":
+            if _result_says_deleted(item):
+                return True
+    return False
+
+
 def stored_deletion_skips_still_match(session: Session, results: Any) -> bool:
     """False when a stored skip no longer matches a deletion.
 

@@ -41,6 +41,13 @@ _BATCH_SIZE = 10
 # API Gateway stops the admin request at 29 seconds. The sweep stops
 # scanning at this point and leaves room for the commit and the enqueue.
 _SWEEP_BUDGET_SECONDS = 20
+
+
+class _OmittedBudget:
+    """Marker so an omitted budget is read when the sweep starts."""
+
+
+_OMITTED_BUDGET = _OmittedBudget()
 _REVIEW_SCOPES = frozenset({"pending_review", "all"})
 _LOOKUPS = frozenset({"nominatim", "google"})
 _ACTIVE = ("queued", "running")
@@ -60,9 +67,17 @@ def start_location_scan(
     query: str | None = None,
     lookup: str | None = None,
     requested_by: str | None = None,
+    budget_seconds: float | None | _OmittedBudget = _OMITTED_BUDGET,
+    only_org_ids: list[UUID] | None = None,
+    reuse_lookups: bool = False,
+    batch_size: int = _BATCH_SIZE,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Run venue rules and return model batches to enqueue after commit."""
-    deadline = time.monotonic() + _SWEEP_BUDGET_SECONDS
+    if isinstance(budget_seconds, _OmittedBudget):
+        seconds: float | None = float(_SWEEP_BUDGET_SECONDS)
+    else:
+        seconds = budget_seconds
+    deadline = None if seconds is None else time.monotonic() + seconds
     if review_scope not in _REVIEW_SCOPES:
         raise ValidationError("Invalid review_scope", field="review_scope")
     if entity_type is not None and entity_type not in ENTITY_TYPES:
@@ -91,11 +106,11 @@ def start_location_scan(
         entity_type=entity_type,
         updated_at=now,
     )
-    session.add(run)
     try:
-        session.flush()
+        with session.begin_nested():
+            session.add(run)
+            session.flush()
     except IntegrityError as exc:
-        session.rollback()
         raise LocationScanBusy() from exc
 
     counts = {
@@ -109,7 +124,9 @@ def start_location_scan(
     out_of_time = False
     queued: dict[str, list[str]] = {"organization": [], "activity": []}
     if entity_type != "location":
-        orgs = list(session.scalars(org_stmt(org_id, query, review_scope)).all())
+        orgs = list(
+            session.scalars(org_stmt(org_id, query, review_scope, only_org_ids)).all()
+        )
         if len(orgs) > _MAX_SWEEP:
             orgs = orgs[:_MAX_SWEEP]
             truncated = True
@@ -118,7 +135,9 @@ def start_location_scan(
     activities: list[Activity] = []
     if entity_type in (None, "activity") and not truncated:
         activities = list(
-            session.scalars(activity_stmt(org_id, query, review_scope)).all()
+            session.scalars(
+                activity_stmt(org_id, query, review_scope, only_org_ids)
+            ).all()
         )
     org_ids = {org.id for org in orgs}
     org_ids.update(activity.org_id for activity in activities)
@@ -138,7 +157,7 @@ def start_location_scan(
             )
             if len(queued["organization"]) >= _MAX_MODEL:
                 truncated = True
-            if time.monotonic() >= deadline:
+            if _out_of_time(deadline):
                 truncated = out_of_time = True
                 break
     if activities and not truncated:
@@ -146,7 +165,7 @@ def start_location_scan(
             if seen >= _MAX_SWEEP:
                 truncated = True
                 break
-            if time.monotonic() >= deadline:
+            if _out_of_time(deadline):
                 truncated = out_of_time = True
                 break
             seen += 1
@@ -158,12 +177,16 @@ def start_location_scan(
                 truncated = True
                 break
     if entity_type in (None, "location") and not out_of_time:
-        venues = list(session.scalars(location_stmt(org_id, query, review_scope)).all())
+        venues = list(
+            session.scalars(
+                location_stmt(org_id, query, review_scope, only_org_ids)
+            ).all()
+        )
         chains = location_quality.area_chains(
             session, [venue.area_id for venue in venues]
         )
         for venue in venues:
-            if seen >= _MAX_SWEEP or time.monotonic() >= deadline:
+            if seen >= _MAX_SWEEP or _out_of_time(deadline):
                 truncated = True
                 break
             seen += 1
@@ -184,6 +207,8 @@ def start_location_scan(
             org_id=org_id,
             query=query,
             provider=lookup,
+            only_org_ids=only_org_ids,
+            reuse_recorded=reuse_lookups,
         )
         if lookup
         else []
@@ -197,12 +222,12 @@ def start_location_scan(
         seen += len(lookup_ids)
     if auto_budget.get("register_unavailable"):
         run.error = "EDB school register could not be loaded"
-    batches = _batches(queued)
-    for index in range(0, len(lookup_ids), _BATCH_SIZE):
+    batches = _batches(queued, batch_size)
+    for index in range(0, len(lookup_ids), batch_size):
         batches.append(
             {
                 "entity_type": "location",
-                "entity_ids": lookup_ids[index : index + _BATCH_SIZE],
+                "entity_ids": lookup_ids[index : index + batch_size],
                 "lookup": lookup,
             }
         )
@@ -228,6 +253,10 @@ def start_location_scan(
     payload["queued_for_model"] = model_queued
     payload["queued_for_lookup"] = len(lookup_ids)
     return payload, batches
+
+
+def _out_of_time(deadline: float | None) -> bool:
+    return deadline is not None and time.monotonic() >= deadline
 
 
 def _clear(session, context, entity_type: str, entity_id) -> bool:
@@ -360,14 +389,14 @@ def _dismissed_unresolved(session: Session, entity_type: str, entity_id) -> bool
     )
 
 
-def _batches(queued: dict[str, list[str]]) -> list[dict[str, Any]]:
+def _batches(queued: dict[str, list[str]], batch_size: int) -> list[dict[str, Any]]:
     batches = []
     for entity_type, ids in queued.items():
-        for index in range(0, len(ids), _BATCH_SIZE):
+        for index in range(0, len(ids), batch_size):
             batches.append(
                 {
                     "entity_type": entity_type,
-                    "entity_ids": ids[index : index + _BATCH_SIZE],
+                    "entity_ids": ids[index : index + batch_size],
                 }
             )
     return batches
@@ -395,3 +424,7 @@ def _fail_stale_runs(session: Session) -> None:
         run.error = "No batch completed before the sweep went stale"
         run.finished_at = now
         run.updated_at = now
+        if run.data_quality_run_id is not None:
+            from app.services.data_quality.runs import settle_data_quality_run
+
+            settle_data_quality_run(session, run.data_quality_run_id)

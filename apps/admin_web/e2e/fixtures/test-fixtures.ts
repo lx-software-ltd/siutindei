@@ -2045,10 +2045,42 @@ export async function setupApiMocks(
     });
   });
 
+  await page.route('**/api/mock/**/admin/import-settings', async (route) => {
+    if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...body,
+          updated_at: '2026-10-14T00:01:00+00:00',
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        skip_deleted_organizations: true,
+        name_cleanup: 'apply',
+        unknown_categories: 'capture',
+        duplicates: 'off',
+        locations: 'off',
+        categories: 'off',
+        updated_at: '2026-10-14T00:00:00+00:00',
+      }),
+    });
+  });
+
   await page.route('**/api/mock/**/admin/imports/*', async (route) => {
     const url = new URL(route.request().url());
     const jobId = url.pathname.split('/').pop() ?? '';
     if (jobId === 'presign' || jobId === 'export') {
+      await route.fallback();
+      return;
+    }
+    if (jobId === 'settings') {
       await route.fallback();
       return;
     }
@@ -2269,6 +2301,9 @@ export async function setupApiMocks(
       await route.continue();
       return;
     }
+    const posted = route.request().postDataJSON() as {
+      object_key?: string;
+    };
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

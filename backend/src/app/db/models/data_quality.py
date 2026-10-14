@@ -151,6 +151,7 @@ class NameFixProposal(Base):
         UUID(as_uuid=True),
         nullable=True,
     )
+    input_hash: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     decided_by: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
     decided_at: Mapped[Optional[datetime]] = mapped_column(
         TIMESTAMP(timezone=True),

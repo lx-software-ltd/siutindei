@@ -103,8 +103,12 @@ start the name or a bracketed phrase. Cantonese romanizations `On`,
 `To`, and `Or` stay capitalized. A trailing period on a dotted
 initialism is kept (`U.S.A.`). An empty result keeps the original name.
 
-Imports apply this to every organization name and append
-`Imported name: …` to `source_note` (500 characters). Activity names
+Imports apply this when Names is Apply, and record an applied
+proposal instead of appending `Imported name: …`. Older notes are
+still read when matching a deleted organization. Propose stores the
+raw name and a pending proposal on create. On update it keeps the
+stored name and proposes only when that stored name still changes.
+Off stores the raw name. Activity names
 are cleaned only when `review_status` is `pending_review`. If the
 cleaned name belongs to a different record, the original name is kept
 and the import records a warning. An import with `allow_updates` false
@@ -114,7 +118,24 @@ stored name is the cleaned form of the name in the file, using the
 file's name translations. A skipped activity is not joined to the
 imported venue. A new venue on a skipped organization is still created.
 
-Data quality has four tabs: Duplicates, Names, Locations, and Categories.
+Imports · Settings stores skip-deleted, name cleanup, unknown
+categories, and whether duplicates, locations, and categories run
+after a live import. The row is `import_settings`. PUT replaces every
+field and locks the row. A missing row keeps today's import behaviour.
+Post-import checks use the queue and skip an unchanged fingerprint.
+Model replies are recorded only for those runs, one activity or
+organization at a time, and only after the reply parses. A cache hit
+is not charged. Manual Location and Category sweeps call the model
+directly and stay synchronous. Run again requeues every check, replaces
+a failed child scan, and refreshes recorded replies. A busy check stays
+queued until the third delivery, then is marked busy while the remaining
+checks still run. Reading a run does not write. The Duplicates tab still
+scores with `pg_trgm`. A run recomputes with SequenceMatcher only. A
+busy or failed check does not fail the import. A pending name proposal
+blocks approval.
+
+Data quality tabs are Duplicates, Names, Locations, Categories, Runs,
+and Deleted.
 Category checks moved here from the Categories nav item;
 `?categoryView=checks` opens this tab. The Status filter defaults to
 Pending so the table is the work queue; Any still lists the full

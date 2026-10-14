@@ -74,7 +74,7 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
       void setOrganization(orgId);
       return;
     }
-    if (entry.code === 'name_needs_cleanup') {
+    if (entry.code === 'name_needs_cleanup' || entry.code === 'pending_name_fix') {
       void setSection('data-quality');
       void setTab('names');
       void setOrganization(orgId);

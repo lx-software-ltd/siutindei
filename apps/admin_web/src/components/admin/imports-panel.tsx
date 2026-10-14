@@ -18,9 +18,11 @@ import { Button } from '../ui/button';
 import { FileUploadButton } from '../ui/file-upload-button';
 import { Input } from '../ui/input';
 import { StatusBanner } from '../status-banner';
+import { ImportRunStatus } from './import-run-status';
+import { ImportSettingsPanel } from './import-settings-panel';
 import { ImportHistoryPanel } from './org-review/import-history-panel';
 
-type ImportTab = 'import' | 'history';
+type ImportTab = 'import' | 'history' | 'settings';
 type ImportStatus = 'idle' | 'uploading' | 'processing' | 'done' | 'error';
 type ExportStatus = 'idle' | 'loading' | 'done' | 'error';
 type ExportTarget = 'all' | 'selected';
@@ -28,6 +30,7 @@ type ExportTarget = 'all' | 'selected';
 const IMPORT_TABS: { key: ImportTab; label: string }[] = [
   { key: 'import', label: adminTabLabel.import },
   { key: 'history', label: adminTabLabel.history },
+  { key: 'settings', label: adminTabLabel.settings },
 ];
 const emptyImportSummary = {
   created: 0,
@@ -73,7 +76,8 @@ export function ImportsPanel() {
   const [tabParam, setTabParam] = useQueryState('tab');
   const [, setSection] = useQueryState('section');
   const [, setJobParam] = useQueryState('job');
-  const activeTab: ImportTab = tabParam === 'history' ? 'history' : 'import';
+  const activeTab: ImportTab =
+    tabParam === 'history' || tabParam === 'settings' ? tabParam : 'import';
 
   useEffect(() => {
     if (tabParam !== 'review') {
@@ -203,6 +207,7 @@ export function ImportsPanel() {
         }}
       />
       {activeTab === 'history' && <ImportHistoryPanel />}
+      {activeTab === 'settings' && <ImportSettingsPanel />}
       {activeTab === 'import' && (
         <>
           <AdminInputCard
@@ -265,6 +270,9 @@ export function ImportsPanel() {
                     Warnings: {importResult.summary.warnings}, Errors:{' '}
                     {importResult.summary.errors}
                   </p>
+                  {importResult.data_quality_run_id ? (
+                    <ImportRunStatus runId={importResult.data_quality_run_id} />
+                  ) : null}
                 </div>
                 {importResult.file_warnings.length > 0 && (
                   <div className='space-y-1 text-sm text-slate-600'>

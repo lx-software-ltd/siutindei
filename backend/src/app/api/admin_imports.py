@@ -8,7 +8,11 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.api.admin_auth import _is_admin, _is_importer, _set_session_audit_context
+from app.api.admin_auth import (
+    _is_admin,
+    _is_importer,
+    _set_session_audit_context,
+)
 from app.api.admin_imports_export import (
     build_export_payload,
     export_file_name,
@@ -240,6 +244,7 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
     )
     import_job_id = None
     enqueue_ids: list[str] = []
+    run_id = None
     if retry_subset:
         payload, unmatched, retry_paths, retry_names = select_retry_organizations(
             payload,
@@ -321,9 +326,20 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
                     results=results,
                     file_warnings=file_warnings,
                 )
-            # expire_on_commit empties attributes; the session then
-            # closes. Copy the response first or job.id raises
-            # DetachedInstanceError and the client sees HTTP 500.
+            if not dry_run:
+                from app.api.admin_auth import _get_user_sub
+                from app.services.data_quality.runs import stage_import_run
+
+                run_id = stage_import_run(
+                    session,
+                    import_job_id=job.id,
+                    results=results,
+                    requested_by=_get_user_sub(event),
+                )
+            # Copy fields before commit. expire_on_commit detaches job.
+            if run_id:
+                summary["data_quality_run_id"] = run_id
+                job.summary = dict(summary)
             body = {
                 "id": str(job.id),
                 "object_key": object_key,
@@ -334,6 +350,8 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
                 "allow_updates": allow_org_updates,
                 "source": summary["source"],
             }
+            if run_id:
+                body["data_quality_run_id"] = run_id
             session.commit()
         except Exception as exc:
             session.rollback()
@@ -357,6 +375,11 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
             enqueue_enrichment(enqueue_ids)
         except Exception:
             logger.exception("Category suggestion enqueue failed")
+
+    if run_id:
+        from app.services.data_quality.runs import enqueue_staged_run
+
+        enqueue_staged_run(run_id)
 
     logger.info(
         ("Admin import dry-run completed" if dry_run else "Admin import completed"),

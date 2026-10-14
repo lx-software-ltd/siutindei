@@ -486,6 +486,12 @@ export interface paths {
          *     When `dry_run` is true the file is validated the same way as a live
          *     import (presign → PUT → POST) but no rows or audit entries are
          *     committed.
+         *     After a live import commits, Import Settings may queue a
+         *     data-quality run for the rows that were created or updated.
+         *     Names are applied while the import is written. A dry-run does
+         *     not queue a run. A busy or failed check does not fail the
+         *     import. The response includes `data_quality_run_id` when a
+         *     run was queued. `object_key` is required.
          */
         post: {
             parameters: {
@@ -516,6 +522,234 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ValidationError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/import-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read import settings
+         * @description Admin JWT. How an import matches, what it writes, and which
+         *     checks run afterwards. A missing row reports today's defaults
+         *     and `updated_at` null. Importer tokens cannot read this route.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Settings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportSettings"];
+                    };
+                };
+            };
+        };
+        /**
+         * Replace import settings
+         * @description Admin JWT. Send every field, including the `updated_at` from the
+         *     last GET. A missing field is 400. A mismatched `updated_at` is
+         *     409. The row is locked for the update.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ImportSettings"];
+                };
+            };
+            responses: {
+                /** @description Settings saved */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportSettings"];
+                    };
+                };
+                /** @description Settings changed since updated_at */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/data-quality/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List data-quality runs
+         * @description Admin JWT. Newest runs first. Each check is name and status
+         *     only. Reading the list does not write.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Runs */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["DataQualityRun"][];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Run data-quality checks
+         * @description Admin JWT. Scope is pending review, all, one organization, or
+         *     one import. An in-flight run with the same inputs is returned.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DataQualityRunRequest"];
+                };
+            };
+            responses: {
+                /** @description Queued run */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DataQualityRun"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/data-quality/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a data-quality run
+         * @description Admin JWT. Reading a run does not write. `view=status` returns
+         *     each check as name and status only.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    view?: "status";
+                };
+                header?: never;
+                path: {
+                    run_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Run */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DataQualityRun"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Retry a data-quality run
+         * @description Body is `{"action":"retry"}`. `refresh` defaults to false.
+         *     Every check is queued again on the same row, `attempt`
+         *     increments, and a failed child scan is replaced. `refresh` true
+         *     asks the model again. A run that is already queued or running
+         *     is returned without another queue message.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    run_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        action: "retry";
+                        refresh?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Run queued again */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DataQualityRun"];
                     };
                 };
             };
@@ -6593,9 +6827,55 @@ export interface components {
             object_key: string;
             expires_in: number;
         };
+        ImportSettings: {
+            skip_deleted_organizations: boolean;
+            /** @enum {string} */
+            name_cleanup: "off" | "propose" | "apply";
+            /** @enum {string} */
+            unknown_categories: "capture" | "fail";
+            /** @enum {string} */
+            duplicates: "off" | "report";
+            /** @enum {string} */
+            locations: "off" | "check";
+            /** @enum {string} */
+            categories: "off" | "check";
+            updated_by?: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+        };
+        DataQualityRunRequest: {
+            checks: ("names" | "duplicates" | "locations" | "categories")[];
+            scope: {
+                /** @enum {string} */
+                kind: "pending_review" | "all" | "organization" | "import";
+                /** Format: uuid */
+                org_id?: string;
+                /** Format: uuid */
+                import_job_id?: string;
+            };
+            idempotency_key?: string;
+            /** @description Ask the model again instead of reusing a recorded reply. */
+            refresh?: boolean;
+        };
+        DataQualityRun: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            trigger: "import" | "manual";
+            /** Format: uuid */
+            import_job_id?: string | null;
+            scope: Record<string, never>;
+            checks: Record<string, never>[];
+            status: string;
+            refresh?: boolean;
+            attempt?: number;
+            attempts?: number;
+            /** Format: date-time */
+            created_at?: string | null;
+        };
         AdminImportRequest: {
-            /** @description S3 object key returned from the presign endpoint. */
-            object_key: string;
+            /** @description S3 object key returned from the presign endpoint. Required. */
+            object_key?: string;
             /**
              * @description When true, validate and report results without committing
              *     creates or updates, and without persisting audit_log rows.
@@ -6664,6 +6944,12 @@ export interface components {
              *     existing rows.
              */
             allow_updates?: boolean;
+            /**
+             * Format: uuid
+             * @description Post-import data-quality run. Omitted when no check was
+             *     queued, including dry-runs.
+             */
+            data_quality_run_id?: string;
         };
         AdminImportError: {
             message: string;
@@ -6708,6 +6994,11 @@ export interface components {
              * @enum {string|null}
              */
             source: "ui" | "board" | null;
+            /**
+             * Format: uuid
+             * @description Post-import data-quality run, when one was queued.
+             */
+            data_quality_run_id?: string | null;
         };
         AdminImportJob: {
             /** Format: uuid */

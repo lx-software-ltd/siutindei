@@ -77,8 +77,11 @@ const DEFAULT_FILTERS: NameFilters = {
 
 export function NamesPanel() {
   const [organization, setOrganization] = useQueryState('organization');
+  const [runId, setRun] = useQueryState('run');
   const orgIdRef = useRef(organization);
   orgIdRef.current = organization;
+  const runRef = useRef(runId);
+  runRef.current = runId;
   const expanded = useExpandedRecord({ paramName: 'name-fix' });
   const summaryQuery = useQuery({
     queryKey: [...adminQueryKeys.nameFixes(), 'summary'],
@@ -95,7 +98,7 @@ export function NamesPanel() {
   const exceptionValue = exceptionText ?? settings?.exception_words.join(' ') ?? '';
   const suffixValue = suffixText ?? settings?.bracket_suffixes.join(' ') ?? '';
   const list = usePaginatedList<NameFixProposal, NameFilters>({
-    queryKey: [...adminQueryKeys.nameFixes(), organization ?? ''],
+    queryKey: [...adminQueryKeys.nameFixes(), organization ?? '', runId ?? ''],
     defaultFilters: DEFAULT_FILTERS,
     errorPrefix: 'Failed to load name fixes',
     fetcher: async ({ cursor, limit, entity_type, rule, status }) => {
@@ -104,8 +107,9 @@ export function NamesPanel() {
         limit,
         entity_type: entity_type || undefined,
         rule: rule || undefined,
-        status: status || undefined,
+        status: runRef.current ? undefined : status || undefined,
         org_id: orgIdRef.current || undefined,
+        run: runRef.current || undefined,
       });
       return { items: page.items, nextCursor: page.next_cursor ?? null };
     },
@@ -241,6 +245,20 @@ export function NamesPanel() {
   return (
     <div className='space-y-4'>
       <h2 className='sr-only'>{PAGE_NAME}</h2>
+      {runId ? (
+        <p className='text-sm text-slate-600'>
+          Names from this run, including changes the import already applied.{' '}
+          <button
+            type='button'
+            className='underline underline-offset-2'
+            onClick={() => {
+              void setRun(null);
+            }}
+          >
+            Show all
+          </button>
+        </p>
+      ) : null}
       {organization ? (
         <p className='text-sm text-slate-600'>
           Filtered to the organization from the review queue.{' '}

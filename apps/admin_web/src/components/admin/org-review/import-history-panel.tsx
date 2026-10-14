@@ -13,6 +13,7 @@ import { adminTabLabel, formatAdminPageName } from '../../../lib/admin-page-name
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { formatDateTime } from '../../../lib/date-utils';
 import { runAdminImport } from '../../../lib/api-client-imports';
+import { retryDataQualityRun } from '../../../lib/api-client-data-quality';
 import {
   formatCapturedCategories,
   formatImportJobMode,
@@ -246,6 +247,41 @@ function ImportJobCategories({
   );
 }
 
+function ImportRunLink({ runId }: { runId: string }) {
+  const [error, setError] = useState('');
+  const [pending, setPending] = useState(false);
+  return (
+    <div className='space-y-2'>
+      <a
+        className='underline underline-offset-2'
+        href={`/admin/dashboard?section=data-quality&tab=runs&run=${encodeURIComponent(runId)}`}
+      >
+        {runId}
+      </a>
+      <div>
+        <Button
+          type='button'
+          variant='secondary'
+          size='sm'
+          loading={pending}
+          onClick={() => {
+            setPending(true);
+            setError('');
+            void retryDataQualityRun(runId)
+              .catch((err: unknown) => {
+                setError(err instanceof Error ? err.message : 'Retry failed.');
+              })
+              .finally(() => setPending(false));
+          }}
+        >
+          Run again
+        </Button>
+      </div>
+      {error ? <p className='text-sm text-red-700'>{error}</p> : null}
+    </div>
+  );
+}
+
 function ImportJobSummary({ job }: { job: ImportJobListItem }) {
   const detail = useImportJob(job.id, job.status);
   return (
@@ -269,6 +305,11 @@ function ImportJobSummary({ job }: { job: ImportJobListItem }) {
         <AdminReadOnlyValue label='Captured categories'>
           <ImportJobCategories job={job} detail={detail} />
         </AdminReadOnlyValue>
+        {job.summary.data_quality_run_id ? (
+          <AdminReadOnlyValue label='Data quality' span='full'>
+            <ImportRunLink runId={job.summary.data_quality_run_id} />
+          </AdminReadOnlyValue>
+        ) : null}
         <AdminReadOnlyValue label='Results' span='full'>
           <ImportJobResults job={job} detail={detail} />
         </AdminReadOnlyValue>

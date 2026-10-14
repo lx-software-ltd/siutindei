@@ -249,7 +249,11 @@ def _absent_organization(
                 )
                 return survivor, status
         _raise_removed("organization", incoming, baseline.snapshot or {}, present)
-    if import_matches_deleted_organization(session, raw_org, body.get("name")):
+    from app.services.import_settings import skip_deleted_organizations
+
+    if skip_deleted_organizations(session) and import_matches_deleted_organization(
+        session, raw_org, body.get("name")
+    ):
         raise ValidationError(ORGANIZATION_DELETED, field="name")
     named = _merge_by_name(session, str(incoming.get("name") or ""))
     if named is None or named.survivor_org_id is None:

@@ -167,6 +167,17 @@ def _remembered_names(session: Session, org: Organization) -> list[str]:
     values = [org.name or ""]
     note = org.source_note or ""
     values.extend(match.group(1) for match in _IMPORTED_NAME.finditer(note))
+    from app.db.models import NameFixProposal
+
+    proposals = session.scalars(
+        select(NameFixProposal).where(
+            NameFixProposal.entity_type == "organization",
+            NameFixProposal.entity_id == org.id,
+        )
+    ).all()
+    for proposal in proposals:
+        values.append(proposal.current_value or "")
+        values.append(proposal.proposed_value or "")
     audit_rows = session.execute(
         select(AuditLog.old_values, AuditLog.new_values).where(
             AuditLog.table_name == "organizations",

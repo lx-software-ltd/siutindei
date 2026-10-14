@@ -174,6 +174,30 @@ Columns:
 
 Constraints: partial unique index on pending `(entity_type, entity_id, field)`.
 
+## Table: import_settings
+
+Purpose: Singleton (`id = 1`) for what an import does. The migration
+inserts the row. `seed_data.sql` is unchanged.
+
+Columns:
+- `skip_deleted_organizations` (boolean, default true)
+- `name_cleanup` (text) — `off`, `propose`, or `apply`
+- `unknown_categories` (text) — `capture` or `fail`
+- `duplicates` (text) — `off` or `report`
+- `locations` (text) — `off` or `check`
+- `categories` (text) — `off` or `check`
+- `updated_by` (text, optional)
+- `updated_at` (timestamptz)
+
+The row is audited.
+
+## Table: data_quality_runs
+
+Purpose: One queued check pass, from an import or from Run checks.
+`model_answers` and `lookup_answers` store the first reply for an
+input hash. Proposal and review rows store `input_hash`. Scan runs
+store `data_quality_run_id`.
+
 ## Table: name_fix_settings
 
 Purpose: Singleton (`id = 1`) of enabled name rules, capital-letter

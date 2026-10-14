@@ -94,10 +94,6 @@ def apply_settings_update(
 ) -> CategorySuggestionSettings:
     """Validate and store a settings update. Clears the model cache."""
     row = get_settings(session)
-    if "on_import_enabled" in body:
-        row.on_import_enabled = _parse_bool(
-            body["on_import_enabled"], "on_import_enabled"
-        )
     if "auto_enrich_enabled" in body:
         row.auto_enrich_enabled = _parse_bool(
             body["auto_enrich_enabled"],

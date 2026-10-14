@@ -53,8 +53,9 @@ export function CategorySuggestionSettingsCard() {
     setError('');
     setNotice('');
     try {
+      const { on_import_enabled: _capture, ...editable } = settings;
       const updated = await updateCategorySuggestionSettings({
-        ...settings,
+        ...editable,
         fallback_models: fallbacks
           .split(',')
           .map((item) => item.trim())
@@ -152,19 +153,16 @@ export function CategorySuggestionSettingsCard() {
     >
       <AdminFieldGrid columns={2}>
           <AdminField span='full'>
-            <label className='flex items-center gap-2 text-sm'>
-              <input
-                type='checkbox'
-                checked={settings.on_import_enabled}
-                onChange={(event) =>
-                  setSettings({
-                    ...settings,
-                    on_import_enabled: event.target.checked,
-                  })
-                }
-              />
-              Capture unknown categories on import
-            </label>
+            <p className='text-sm text-slate-600'>
+              Capture unknown categories on import is set in{' '}
+              <a
+                className='underline underline-offset-2'
+                href='/admin/dashboard?section=imports&tab=settings'
+              >
+                Imports · Settings
+              </a>
+              .
+            </p>
           </AdminField>
           <AdminField span='full'>
             <label className='flex items-center gap-2 text-sm'>

@@ -108,7 +108,7 @@ def load_context(session: Session, org_ids: list[UUID]) -> dict[str, Any]:
     }
 
 
-def org_stmt(org_id, query, review_scope):
+def org_stmt(org_id, query, review_scope, only_org_ids=None):
     last = _last_scanned("organization")
     stmt = (
         select(Organization)
@@ -119,6 +119,8 @@ def org_stmt(org_id, query, review_scope):
             Organization.id,
         )
     )
+    if only_org_ids is not None:
+        return stmt.where(Organization.id.in_(only_org_ids or []))
     if org_id is not None:
         stmt = stmt.where(Organization.id == org_id)
     if query:
@@ -128,7 +130,7 @@ def org_stmt(org_id, query, review_scope):
     return stmt
 
 
-def location_stmt(org_id, query, review_scope):
+def location_stmt(org_id, query, review_scope, only_org_ids=None):
     last = _last_scanned("location")
     stmt = (
         select(Location)
@@ -140,9 +142,11 @@ def location_stmt(org_id, query, review_scope):
             Location.id,
         )
     )
-    if review_scope != "all":
+    if only_org_ids is not None:
+        stmt = stmt.where(Location.org_id.in_(only_org_ids or []))
+    elif review_scope != "all":
         stmt = stmt.where(Organization.review_status == "pending_review")
-    if org_id is not None:
+    if only_org_ids is None and org_id is not None:
         stmt = stmt.where(Location.org_id == org_id)
     if query:
         pattern = ilike_pattern(query)
@@ -155,7 +159,7 @@ def location_stmt(org_id, query, review_scope):
     return stmt
 
 
-def activity_stmt(org_id, query, review_scope):
+def activity_stmt(org_id, query, review_scope, only_org_ids=None):
     last = _last_scanned("activity")
     stmt = (
         select(Activity)
@@ -167,9 +171,11 @@ def activity_stmt(org_id, query, review_scope):
             Activity.id,
         )
     )
-    if review_scope != "all":
+    if only_org_ids is not None:
+        stmt = stmt.where(Activity.org_id.in_(only_org_ids or []))
+    elif review_scope != "all":
         stmt = stmt.where(Organization.review_status == "pending_review")
-    if org_id is not None:
+    if only_org_ids is None and org_id is not None:
         stmt = stmt.where(Activity.org_id == org_id)
     if query:
         pattern = ilike_pattern(query)

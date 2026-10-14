@@ -109,6 +109,7 @@ export interface ImportJobListItem {
     warnings?: number;
     errors?: number;
     allow_updates?: boolean;
+    data_quality_run_id?: string;
   };
   file_warnings: string[];
   result_count?: number;

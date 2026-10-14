@@ -21,7 +21,9 @@ export {
   createAdminExport,
   createAdminImportPresign,
   getAdminImportJob,
+  getImportSettings,
   runAdminImport,
+  updateImportSettings,
   type AdminExportResponse,
   type AdminImportCounts,
   type AdminImportError,
@@ -34,6 +36,7 @@ export {
   type AdminImportResult,
   type AdminImportStatus,
   type AdminImportSummary,
+  type ImportSettings,
 } from './api-client-imports';
 
 export {

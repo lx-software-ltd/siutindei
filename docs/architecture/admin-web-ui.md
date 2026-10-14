@@ -16,8 +16,8 @@ rules use.
 
 - Nav only when there is no tab, or the tab is the default and repeats
   the nav (`Imports`, `Categories`, `Feedback`).
-- Otherwise `Nav · Tab` (`Imports · History`, `Categories · Suggestions`,
-  `Data quality · Names`).
+- Otherwise `Nav · Tab` (`Imports · History`, `Imports · Settings`,
+  `Categories · Suggestions`, `Data quality · Names`).
 - Do not invent fused phrases (`Import history`).
 - Sub-tabs (Catalog Table / Map) are not part of the name.
 - The table `aria-label` and the page's `sr-only` heading use that name.

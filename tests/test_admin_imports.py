@@ -189,9 +189,12 @@ def test_upsert_activity_unknown_category_name(
 ) -> None:
     from app.services.category_suggestions.settings import get_settings
 
+    from tests.test_category_suggestions import _set_unknown_categories
+
     settings = get_settings(db_session)
     settings.on_import_enabled = False
     db_session.flush()
+    _set_unknown_categories(db_session, "fail")
     with pytest.raises(ValidationError) as exc_info:
         upsert_activity(
             db_session,
@@ -1008,9 +1011,12 @@ def test_create_only_matches_cleaned_activity_on_approved_org(
     }
     from app.services.category_suggestions.settings import get_settings
 
+    from tests.test_category_suggestions import _set_unknown_categories
+
     settings = get_settings(db_session)
     settings.on_import_enabled = False
     db_session.flush()
+    _set_unknown_categories(db_session, "fail")
     _summary, results = process_import_payload(
         db_session,
         payload,
