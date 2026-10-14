@@ -18,6 +18,7 @@ import { Button } from '../ui/button';
 import { FileUploadButton } from '../ui/file-upload-button';
 import { Input } from '../ui/input';
 import { StatusBanner } from '../status-banner';
+import { ImportRunStatus } from './import-run-status';
 import { ImportSettingsPanel } from './import-settings-panel';
 import { ImportHistoryPanel } from './org-review/import-history-panel';
 
@@ -31,12 +32,6 @@ const IMPORT_TABS: { key: ImportTab; label: string }[] = [
   { key: 'history', label: adminTabLabel.history },
   { key: 'settings', label: adminTabLabel.settings },
 ];
-const QUALITY_LABELS: Record<string, string> = {
-  duplicates: adminTabLabel.duplicates,
-  names: adminTabLabel.names,
-  locations: adminTabLabel.locations,
-  categories: adminTabLabel.categories,
-};
 const emptyImportSummary = {
   created: 0,
   updated: 0,
@@ -275,13 +270,8 @@ export function ImportsPanel() {
                     Warnings: {importResult.summary.warnings}, Errors:{' '}
                     {importResult.summary.errors}
                   </p>
-                  {importResult.summary.data_quality?.ran.length ? (
-                    <p>
-                      Data quality:{' '}
-                      {importResult.summary.data_quality.ran
-                        .map((key) => QUALITY_LABELS[key] ?? key)
-                        .join(', ')}
-                    </p>
+                  {importResult.data_quality_run_id ? (
+                    <ImportRunStatus runId={importResult.data_quality_run_id} />
                   ) : null}
                 </div>
                 {importResult.file_warnings.length > 0 && (

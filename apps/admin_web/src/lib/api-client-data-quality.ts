@@ -30,6 +30,7 @@ export interface OrgDuplicateFilters {
   review_status?: string;
   q?: string;
   org_id?: string;
+  run?: string;
   cursor?: string;
   limit?: number;
 }
@@ -134,6 +135,7 @@ export function listNameFixes(filters: {
   rule?: string;
   org_id?: string;
   q?: string;
+  run?: string;
   cursor?: string;
   limit?: number;
 } = {}) {
@@ -401,6 +403,68 @@ export function listDeletedOrganizations(filters: {
 } = {}) {
   return request<ListResponse<DeletedOrganization>>(
     buildApiUrl(`v1/admin/deleted-organizations${query(filters)}`)
+  );
+}
+
+export interface DataQualityCheck {
+  name: string;
+  status: string;
+  detail?: Record<string, unknown>;
+}
+
+export interface DataQualityRun {
+  id: string;
+  trigger: string;
+  import_job_id?: string | null;
+  requested_by?: string | null;
+  scope: { organization_ids?: string[]; activity_ids?: string[] };
+  checks: DataQualityCheck[];
+  status: string;
+  attempt: number;
+  attempts: number;
+  created_at?: string | null;
+  updated_at?: string | null;
+  finished_at?: string | null;
+}
+
+export interface DataQualityRunRequest {
+  checks: string[];
+  scope: {
+    kind: 'pending_review' | 'all' | 'organization' | 'import';
+    org_id?: string;
+    import_job_id?: string;
+  };
+  idempotency_key?: string;
+}
+
+const DATA_QUALITY_RUNS = 'v1/admin/data-quality/runs';
+
+export function listDataQualityRuns() {
+  return request<{ items: DataQualityRun[] }>(buildApiUrl(DATA_QUALITY_RUNS));
+}
+
+export function getDataQualityRun(id: string) {
+  return request<DataQualityRun>(
+    buildApiUrl(`${DATA_QUALITY_RUNS}/${encodeURIComponent(id)}`)
+  );
+}
+
+export function createDataQualityRun(body: DataQualityRunRequest) {
+  return request<DataQualityRun>(buildApiUrl(DATA_QUALITY_RUNS), {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+}
+
+export function retryDataQualityRun(id: string) {
+  return request<DataQualityRun>(
+    buildApiUrl(`${DATA_QUALITY_RUNS}/${encodeURIComponent(id)}`),
+    {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ action: 'retry' }),
+    }
   );
 }
 

@@ -50,11 +50,14 @@ const DEFAULT_FILTERS: DuplicateFilters = {
 
 export function DuplicatesPanel() {
   const [organization, setOrganization] = useQueryState('organization');
+  const [runId, setRun] = useQueryState('run');
   const orgIdRef = useRef(organization);
   orgIdRef.current = organization;
+  const runRef = useRef(runId);
+  runRef.current = runId;
   const expanded = useExpandedRecord({ paramName: 'duplicate' });
   const list = usePaginatedList<OrgDuplicateGroup, DuplicateFilters>({
-    queryKey: [...adminQueryKeys.orgDuplicates(), organization ?? ''],
+    queryKey: [...adminQueryKeys.orgDuplicates(), organization ?? '', runId ?? ''],
     defaultFilters: DEFAULT_FILTERS,
     debounceKeys: ['q'],
     errorPrefix: 'Failed to load duplicates',
@@ -66,6 +69,7 @@ export function DuplicatesPanel() {
         signal: matchSignal || undefined,
         review_status: review_status || undefined,
         org_id: orgIdRef.current || undefined,
+        run: runRef.current || undefined,
       });
       return { items: page.items, nextCursor: page.next_cursor ?? null };
     },
@@ -97,6 +101,20 @@ export function DuplicatesPanel() {
   return (
     <div className='space-y-4'>
       <h2 className='sr-only'>{PAGE_NAME}</h2>
+      {runId ? (
+        <p className='text-sm text-slate-600'>
+          Duplicates recomputed for this run.{' '}
+          <button
+            type='button'
+            className='underline underline-offset-2'
+            onClick={() => {
+              void setRun(null);
+            }}
+          >
+            Show all
+          </button>
+        </p>
+      ) : null}
       {organization ? (
         <p className='text-sm text-slate-600'>
           Filtered to the organization from the review queue.{' '}

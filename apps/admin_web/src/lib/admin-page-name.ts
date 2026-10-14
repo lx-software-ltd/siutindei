@@ -14,6 +14,7 @@ export const adminTabLabel = {
   names: 'Names',
   locations: 'Locations',
   deleted: 'Deleted',
+  runs: 'Runs',
 } as const;
 
 /**

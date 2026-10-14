@@ -76,6 +76,7 @@ const ISSUE_OPTIONS = [
   ['no_media', 'No photos'],
   ['source_attribution', 'Template or source line'],
   ['name_needs_cleanup', 'Name needs cleanup'],
+  ['pending_name_fix', 'Name change waiting'],
   ['possible_duplicate', 'Possible duplicate'],
 ];
 

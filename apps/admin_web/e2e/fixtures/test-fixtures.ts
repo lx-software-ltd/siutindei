@@ -2041,6 +2041,34 @@ export async function setupApiMocks(
     });
   });
 
+  await page.route('**/api/mock/**/admin/import-settings', async (route) => {
+    if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...body,
+          updated_at: '2026-10-14T00:01:00+00:00',
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        skip_deleted_organizations: true,
+        name_cleanup: 'apply',
+        unknown_categories: 'capture',
+        duplicates: 'off',
+        locations: 'off',
+        categories: 'off',
+        updated_at: '2026-10-14T00:00:00+00:00',
+      }),
+    });
+  });
+
   await page.route('**/api/mock/**/admin/imports/*', async (route) => {
     const url = new URL(route.request().url());
     const jobId = url.pathname.split('/').pop() ?? '';
@@ -2049,16 +2077,7 @@ export async function setupApiMocks(
       return;
     }
     if (jobId === 'settings') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          duplicates: false,
-          names: false,
-          locations: false,
-          categories: false,
-        }),
-      });
+      await route.fallback();
       return;
     }
     if (route.request().method() !== 'GET') {
@@ -2280,21 +2299,7 @@ export async function setupApiMocks(
     }
     const posted = route.request().postDataJSON() as {
       object_key?: string;
-      data_quality?: {
-        duplicates: boolean;
-        names: boolean;
-        locations: boolean;
-        categories: boolean;
-      };
     };
-    if (posted?.data_quality && !posted.object_key) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(posted.data_quality),
-      });
-      return;
-    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

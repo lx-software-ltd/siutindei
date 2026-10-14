@@ -25,22 +25,24 @@ export interface AdminImportPresignResponse {
   expires_in: number;
 }
 
-export interface ImportDataQualitySettings {
-  duplicates: boolean;
-  names: boolean;
-  locations: boolean;
-  categories: boolean;
-}
+export type NameCleanupMode = 'off' | 'propose' | 'apply';
+export type UnknownCategoryMode = 'capture' | 'fail';
+export type DuplicateCheckMode = 'off' | 'report';
+export type ScanCheckMode = 'off' | 'check';
 
-export interface ImportDataQualityRun {
-  ran: Array<keyof ImportDataQualitySettings>;
-  skipped: Array<keyof ImportDataQualitySettings>;
-  errors: Array<{ check: string; error: string }>;
+export interface ImportSettings {
+  skip_deleted_organizations: boolean;
+  name_cleanup: NameCleanupMode;
+  unknown_categories: UnknownCategoryMode;
+  duplicates: DuplicateCheckMode;
+  locations: ScanCheckMode;
+  categories: ScanCheckMode;
+  updated_by?: string | null;
+  updated_at: string | null;
 }
 
 export interface AdminImportRequest {
   object_key?: string;
-  data_quality?: ImportDataQualitySettings;
   dry_run?: boolean;
   retry_failed?: boolean;
   allow_updates?: boolean;
@@ -79,7 +81,7 @@ export interface AdminImportSummary {
   errors: number;
   captured_categories?: number;
   captured_category_ids?: string[];
-  data_quality?: ImportDataQualityRun;
+  data_quality_run_id?: string;
 }
 
 export interface AdminImportResponse {
@@ -88,6 +90,7 @@ export interface AdminImportResponse {
   results: AdminImportResult[];
   file_warnings: string[];
   source?: 'ui' | 'board' | null;
+  data_quality_run_id?: string | null;
 }
 
 export interface AdminImportJob {
@@ -143,19 +146,17 @@ export async function getAdminImportJob(jobId: string) {
   return request<AdminImportJob>(buildAdminImportsUrl(jobId));
 }
 
-export async function getImportDataQualitySettings() {
-  return request<ImportDataQualitySettings>(buildAdminImportsUrl('settings'));
+export async function getImportSettings() {
+  return request<ImportSettings>(buildApiUrl('v1/admin/import-settings'));
 }
 
-export async function updateImportDataQualitySettings(
-  payload: ImportDataQualitySettings
-) {
-  return request<ImportDataQualitySettings>(buildAdminImportsUrl(), {
-    method: 'POST',
+export async function updateImportSettings(payload: ImportSettings) {
+  return request<ImportSettings>(buildApiUrl('v1/admin/import-settings'), {
+    method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ data_quality: payload }),
+    body: JSON.stringify(payload),
   });
 }
 
