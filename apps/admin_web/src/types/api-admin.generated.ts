@@ -486,13 +486,12 @@ export interface paths {
          *     When `dry_run` is true the file is validated the same way as a live
          *     import (presign → PUT → POST) but no rows or audit entries are
          *     committed.
-         *     After a live import commits, ticked Import Settings run the
-         *     matching Data quality checks (`review_scope=pending_review`).
-         *     A missing settings object keeps every flag off. A busy or
-         *     failed sweep does not fail the import. The result is stored
-         *     on `summary.data_quality`.
-         *     An admin POST with `data_quality` and no `object_key` saves
-         *     those flags. Importer tokens still need `object_key`.
+         *     After a live import commits, Import Settings may queue a
+         *     data-quality run for the rows that were created or updated.
+         *     Names are applied while the import is written. A dry-run does
+         *     not queue a run. A busy or failed check does not fail the
+         *     import. The response includes `data_quality_run_id` when a
+         *     run was queued. `object_key` is required.
          */
         post: {
             parameters: {
@@ -533,7 +532,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/imports/settings": {
+    "/v1/admin/import-settings": {
         parameters: {
             query?: never;
             header?: never;
@@ -541,11 +540,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read import data-quality settings
-         * @description Admin or importer JWT. Which Data quality checks run after a
-         *     live import: Duplicates, Names, Locations, and Categories.
-         *     A missing object returns all four flags false. Served on the
-         *     existing `GET /v1/admin/imports/{id}` route with `id=settings`.
+         * Read import settings
+         * @description Admin JWT. How an import matches, what it writes, and which
+         *     checks run afterwards. A missing row reports today's defaults
+         *     and `updated_at` null. Importer tokens cannot read this route.
          */
         get: {
             parameters: {
@@ -562,13 +560,187 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ImportDataQualitySettings"];
+                        "application/json": components["schemas"]["ImportSettings"];
+                    };
+                };
+            };
+        };
+        /**
+         * Replace import settings
+         * @description Admin JWT. Send the `updated_at` from the last GET. A mismatch
+         *     is 409. `on_import_enabled` is ignored.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ImportSettings"];
+                };
+            };
+            responses: {
+                /** @description Settings saved */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportSettings"];
+                    };
+                };
+                /** @description Settings changed since updated_at */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/data-quality/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List data-quality runs
+         * @description Admin JWT. Newest runs first.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Runs */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["DataQualityRun"][];
+                        };
                     };
                 };
             };
         };
         put?: never;
-        post?: never;
+        /**
+         * Run data-quality checks
+         * @description Admin JWT. Scope is pending review, all, one organization, or
+         *     one import. An in-flight run with the same inputs is returned.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DataQualityRunRequest"];
+                };
+            };
+            responses: {
+                /** @description Queued run */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DataQualityRun"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/data-quality/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a data-quality run */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    run_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Run */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DataQualityRun"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Retry a data-quality run
+         * @description Body is `{"action":"retry"}`. The same row is queued again.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    run_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        action: "retry";
+                    };
+                };
+            };
+            responses: {
+                /** @description Run queued again */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DataQualityRun"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -6642,36 +6814,50 @@ export interface components {
             object_key: string;
             expires_in: number;
         };
-        /**
-         * @description Ticks on Imports · Settings. Each flag starts a Data quality
-         *     check after a live import. All four default false.
-         */
-        ImportDataQualitySettings: {
-            duplicates: boolean;
-            names: boolean;
-            locations: boolean;
-            categories: boolean;
+        ImportSettings: {
+            skip_deleted_organizations: boolean;
+            /** @enum {string} */
+            name_cleanup: "off" | "propose" | "apply";
+            /** @enum {string} */
+            unknown_categories: "capture" | "fail";
+            /** @enum {string} */
+            duplicates: "off" | "report";
+            /** @enum {string} */
+            locations: "off" | "check";
+            /** @enum {string} */
+            categories: "off" | "check";
+            updated_by?: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
         };
-        ImportDataQualityRun: {
-            ran: ("duplicates" | "names" | "locations" | "categories")[];
-            skipped: ("duplicates" | "names" | "locations" | "categories")[];
-            errors: {
-                check: string;
-                error: string;
-            }[];
+        DataQualityRunRequest: {
+            checks: ("names" | "duplicates" | "locations" | "categories")[];
+            scope: {
+                /** @enum {string} */
+                kind: "pending_review" | "all" | "organization" | "import";
+                /** Format: uuid */
+                org_id?: string;
+                /** Format: uuid */
+                import_job_id?: string;
+            };
+            idempotency_key?: string;
+        };
+        DataQualityRun: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            trigger: "import" | "manual";
+            /** Format: uuid */
+            import_job_id?: string | null;
+            scope: Record<string, never>;
+            checks: Record<string, never>[];
+            status: string;
+            /** Format: date-time */
+            created_at?: string | null;
         };
         AdminImportRequest: {
-            /**
-             * @description S3 object key returned from the presign endpoint. Required
-             *     to process a file. Omit it when saving `data_quality`.
-             */
+            /** @description S3 object key returned from the presign endpoint. Required. */
             object_key?: string;
-            /**
-             * @description Admin-only save of Import Settings when `object_key` is
-             *     omitted. Ignored on a file import; the stored settings
-             *     run after that import commits.
-             */
-            data_quality?: components["schemas"]["ImportDataQualitySettings"];
             /**
              * @description When true, validate and report results without committing
              *     creates or updates, and without persisting audit_log rows.
@@ -6741,10 +6927,11 @@ export interface components {
              */
             allow_updates?: boolean;
             /**
-             * @description Checks this live import ran from Import Settings.
-             *     Omitted on dry-runs and jobs stored before the feature.
+             * Format: uuid
+             * @description Post-import data-quality run. Omitted when no check was
+             *     queued, including dry-runs.
              */
-            data_quality?: components["schemas"]["ImportDataQualityRun"];
+            data_quality_run_id?: string;
         };
         AdminImportError: {
             message: string;
@@ -6789,6 +6976,11 @@ export interface components {
              * @enum {string|null}
              */
             source: "ui" | "board" | null;
+            /**
+             * Format: uuid
+             * @description Post-import data-quality run, when one was queued.
+             */
+            data_quality_run_id?: string | null;
         };
         AdminImportJob: {
             /** Format: uuid */

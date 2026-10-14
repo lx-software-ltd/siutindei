@@ -13,8 +13,9 @@ Endpoint shapes live in `docs/api/admin.yaml` under
 Resolution order for `category_name` is exact name, then an alias from
 an approved or targeted suggestion, then a unique normalised match on
 the English name and `name_translations` (case, whitespace, and
-punctuation insensitive). Anything else is captured when
-`on_import_enabled` is true. That switch defaults to true. The imported
+punctuation insensitive). Anything else is captured when import settings
+`unknown_categories` is `capture`. That defaults to capture. The
+`on_import_enabled` column remains and is no longer written. The imported
 label is stored on `activities.source_category_name` even when the name
 resolves to an existing category. Multi-word labels such as "Art, Music"
 stay one label. Two categories with the same exact name

@@ -94,10 +94,11 @@ their primary responsibilities.
   a catalog `website` is stored on the organization;
   re-imports update description/hours/price; `closed_permanently`
   updates an existing match only;   `GET /v1/admin/imports/{job_id}`
-  returns the stored result; `GET /v1/admin/imports/settings` is that
-  same get-by-id route and returns which Data quality checks run after
-  a live import; an admin `POST /v1/admin/imports` without `object_key`
-  saves those flags; `GET /v1/admin/imports` includes a
+  returns the stored result; `GET` and `PUT /v1/admin/import-settings`
+  store how an import matches, writes names and unknown categories,
+  and which checks run afterwards; `POST /v1/admin/data-quality/runs`
+  starts those checks on demand and the category-suggestion queue
+  runs them; `GET /v1/admin/imports` includes a
   1-hour presigned download URL for each file under
   `admin/imports/` that is at most 7 days old). Live imports commit once per batch
   after per-row SAVEPOINTs, so a Lambda timeout mid-batch rolls

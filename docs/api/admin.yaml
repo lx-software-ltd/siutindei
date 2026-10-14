@@ -375,13 +375,12 @@ paths:
         When `dry_run` is true the file is validated the same way as a live
         import (presign → PUT → POST) but no rows or audit entries are
         committed.
-        After a live import commits, ticked Import Settings run the
-        matching Data quality checks (`review_scope=pending_review`).
-        A missing settings object keeps every flag off. A busy or
-        failed sweep does not fail the import. The result is stored
-        on `summary.data_quality`.
-        An admin POST with `data_quality` and no `object_key` saves
-        those flags. Importer tokens still need `object_key`.
+        After a live import commits, Import Settings may queue a
+        data-quality run for the rows that were created or updated.
+        Names are applied while the import is written. A dry-run does
+        not queue a run. A busy or failed check does not fail the
+        import. The response includes `data_quality_run_id` when a
+        run was queued. `object_key` is required.
       security:
         - AdminGroupAuth: []
         - ImporterGroupAuth: []
@@ -405,24 +404,134 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationError'
 
-  /v1/admin/imports/settings:
+  /v1/admin/import-settings:
     get:
-      summary: Read import data-quality settings
+      summary: Read import settings
       description: |
-        Admin or importer JWT. Which Data quality checks run after a
-        live import: Duplicates, Names, Locations, and Categories.
-        A missing object returns all four flags false. Served on the
-        existing `GET /v1/admin/imports/{id}` route with `id=settings`.
+        Admin JWT. How an import matches, what it writes, and which
+        checks run afterwards. A missing row reports today's defaults
+        and `updated_at` null. Importer tokens cannot read this route.
       security:
         - AdminGroupAuth: []
-        - ImporterGroupAuth: []
       responses:
         "200":
           description: Settings
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ImportDataQualitySettings'
+                $ref: '#/components/schemas/ImportSettings'
+    put:
+      summary: Replace import settings
+      description: |
+        Admin JWT. Send the `updated_at` from the last GET. A mismatch
+        is 409. `on_import_enabled` is ignored.
+      security:
+        - AdminGroupAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportSettings'
+      responses:
+        "200":
+          description: Settings saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportSettings'
+        "409":
+          description: Settings changed since updated_at
+
+  /v1/admin/data-quality/runs:
+    get:
+      summary: List data-quality runs
+      description: Admin JWT. Newest runs first.
+      security:
+        - AdminGroupAuth: []
+      responses:
+        "200":
+          description: Runs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DataQualityRun'
+    post:
+      summary: Run data-quality checks
+      description: |
+        Admin JWT. Scope is pending review, all, one organization, or
+        one import. An in-flight run with the same inputs is returned.
+      security:
+        - AdminGroupAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataQualityRunRequest'
+      responses:
+        "200":
+          description: Queued run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataQualityRun'
+
+  /v1/admin/data-quality/runs/{run_id}:
+    get:
+      summary: Read a data-quality run
+      security:
+        - AdminGroupAuth: []
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataQualityRun'
+    post:
+      summary: Retry a data-quality run
+      description: Body is `{"action":"retry"}`. The same row is queued again.
+      security:
+        - AdminGroupAuth: []
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [retry]
+      responses:
+        "200":
+          description: Run queued again
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataQualityRun'
 
   /v1/admin/imports/{job_id}:
     get:
@@ -4026,46 +4135,93 @@ components:
         expires_in:
           type: integer
 
-    ImportDataQualitySettings:
+    ImportSettings:
       type: object
-      required: [duplicates, names, locations, categories]
+      required:
+        - skip_deleted_organizations
+        - name_cleanup
+        - unknown_categories
+        - duplicates
+        - locations
+        - categories
+        - updated_at
       properties:
+        skip_deleted_organizations:
+          type: boolean
+        name_cleanup:
+          type: string
+          enum: [off, propose, apply]
+        unknown_categories:
+          type: string
+          enum: [capture, fail]
         duplicates:
-          type: boolean
-        names:
-          type: boolean
+          type: string
+          enum: [off, report]
         locations:
-          type: boolean
+          type: string
+          enum: [off, check]
         categories:
-          type: boolean
-      description: |
-        Ticks on Imports · Settings. Each flag starts a Data quality
-        check after a live import. All four default false.
+          type: string
+          enum: [off, check]
+        updated_by:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
 
-    ImportDataQualityRun:
+    DataQualityRunRequest:
       type: object
-      required: [ran, skipped, errors]
+      required: [checks, scope]
       properties:
-        ran:
+        checks:
           type: array
           items:
             type: string
-            enum: [duplicates, names, locations, categories]
-        skipped:
-          type: array
-          items:
-            type: string
-            enum: [duplicates, names, locations, categories]
-        errors:
+            enum: [names, duplicates, locations, categories]
+        scope:
+          type: object
+          required: [kind]
+          properties:
+            kind:
+              type: string
+              enum: [pending_review, all, organization, import]
+            org_id:
+              type: string
+              format: uuid
+            import_job_id:
+              type: string
+              format: uuid
+        idempotency_key:
+          type: string
+
+    DataQualityRun:
+      type: object
+      required: [id, trigger, scope, checks, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        trigger:
+          type: string
+          enum: [import, manual]
+        import_job_id:
+          type: string
+          format: uuid
+          nullable: true
+        scope:
+          type: object
+        checks:
           type: array
           items:
             type: object
-            required: [check, error]
-            properties:
-              check:
-                type: string
-              error:
-                type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
 
     AdminImportRequest:
       type: object
@@ -4073,14 +4229,7 @@ components:
         object_key:
           type: string
           description: |
-            S3 object key returned from the presign endpoint. Required
-            to process a file. Omit it when saving `data_quality`.
-        data_quality:
-          $ref: '#/components/schemas/ImportDataQualitySettings'
-          description: |
-            Admin-only save of Import Settings when `object_key` is
-            omitted. Ignored on a file import; the stored settings
-            run after that import commits.
+            S3 object key returned from the presign endpoint. Required.
         dry_run:
           type: boolean
           default: false
@@ -4175,11 +4324,12 @@ components:
             Whether this run updated existing rows. Omitted on jobs
             stored before the flag existed; those runs updated
             existing rows.
-        data_quality:
-          $ref: '#/components/schemas/ImportDataQualityRun'
+        data_quality_run_id:
+          type: string
+          format: uuid
           description: |
-            Checks this live import ran from Import Settings.
-            Omitted on dry-runs and jobs stored before the feature.
+            Post-import data-quality run. Omitted when no check was
+            queued, including dry-runs.
 
     AdminImportError:
       type: object
@@ -4260,6 +4410,11 @@ components:
             Who started the import. `ui` is an admin session (the
             Imports page). `board` is the importer group (the board
             catalog API). Null on jobs stored before this field existed.
+        data_quality_run_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Post-import data-quality run, when one was queued.
 
     AdminImportJob:
       type: object
