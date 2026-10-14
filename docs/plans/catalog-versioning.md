@@ -30,7 +30,9 @@ while that flag is set; audit triggers keep running. The deleted-row
 batch only picks a real uuid whose earliest INSERT audit row has
 `new_values` and whose row is gone, and the drain stops when the next
 batch starts with the same id. A delete with no usable INSERT still
-gets no tombstone.
+gets no tombstone. `0049` drops the helper functions before it loads
+their SQL, because a failed attempt can leave `integer` returns and
+`CREATE OR REPLACE` cannot change a return type.
 
 Decisions below are approved: review fields bump the version, pricing
 and schedule changes bump the parent activity, a changed file overwrites
