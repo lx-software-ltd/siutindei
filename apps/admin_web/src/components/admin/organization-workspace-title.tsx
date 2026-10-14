@@ -28,7 +28,7 @@ export function OrganizationStatusBadges({
       />
       {version === 'org' && organization.version ? (
         <span className='rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700'>
-          {`Org v${organization.version}`}
+          {`Organization Version ${organization.version}`}
         </span>
       ) : null}
     </span>

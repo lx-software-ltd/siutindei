@@ -6,6 +6,7 @@ test.describe('Media Panel', () => {
     await expect(
       adminPage.getByRole('heading', { name: 'Test Organization 1' })
     ).toBeVisible();
+    await expect(adminPage.getByText('Organization Version 2')).toBeVisible();
     await expect(adminPage.getByRole('heading', { name: 'Media' })).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'History' })).toHaveCount(0);
     await adminPage.getByRole('button', { name: 'Version 2 · Latest' }).click();
