@@ -423,8 +423,9 @@ paths:
     put:
       summary: Replace import settings
       description: |
-        Admin JWT. Send the `updated_at` from the last GET. A mismatch
-        is 409. `on_import_enabled` is ignored.
+        Admin JWT. Send every field, including the `updated_at` from the
+        last GET. A missing field is 400. A mismatched `updated_at` is
+        409. The row is locked for the update.
       security:
         - AdminGroupAuth: []
       requestBody:
@@ -446,7 +447,9 @@ paths:
   /v1/admin/data-quality/runs:
     get:
       summary: List data-quality runs
-      description: Admin JWT. Newest runs first.
+      description: |
+        Admin JWT. Newest runs first. Each check is name and status
+        only. Reading the list does not write.
       security:
         - AdminGroupAuth: []
       responses:
@@ -486,6 +489,9 @@ paths:
   /v1/admin/data-quality/runs/{run_id}:
     get:
       summary: Read a data-quality run
+      description: |
+        Admin JWT. Reading a run does not write. `view=status` returns
+        each check as name and status only.
       security:
         - AdminGroupAuth: []
       parameters:
@@ -495,6 +501,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: view
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [status]
       responses:
         "200":
           description: Run
@@ -504,7 +516,12 @@ paths:
                 $ref: '#/components/schemas/DataQualityRun'
     post:
       summary: Retry a data-quality run
-      description: Body is `{"action":"retry"}`. The same row is queued again.
+      description: |
+        Body is `{"action":"retry"}`. `refresh` defaults to false.
+        Every check is queued again on the same row, `attempt`
+        increments, and a failed child scan is replaced. `refresh` true
+        asks the model again. A run that is already queued or running
+        is returned without another queue message.
       security:
         - AdminGroupAuth: []
       parameters:
@@ -525,6 +542,8 @@ paths:
                 action:
                   type: string
                   enum: [retry]
+                refresh:
+                  type: boolean
       responses:
         "200":
           description: Run queued again
@@ -4195,6 +4214,9 @@ components:
               format: uuid
         idempotency_key:
           type: string
+        refresh:
+          type: boolean
+          description: Ask the model again instead of reusing a recorded reply.
 
     DataQualityRun:
       type: object
@@ -4218,6 +4240,12 @@ components:
             type: object
         status:
           type: string
+        refresh:
+          type: boolean
+        attempt:
+          type: integer
+        attempts:
+          type: integer
         created_at:
           type: string
           format: date-time

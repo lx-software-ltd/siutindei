@@ -52,7 +52,10 @@ from the recorded reply for the same input.
 ## Rollback
 
 Revert the branch. Downgrade `0051_data_quality_runs` drops the new
-tables and columns. No seed change.
+tables and columns. It does not restore category reviews that the
+upgrade dismissed; those rows stay `dismissed`, with `decided_by`
+`migration` and `decided_at` set. No seed change. The upgrade inserts
+the `import_settings` singleton.
 
 ## Open questions
 

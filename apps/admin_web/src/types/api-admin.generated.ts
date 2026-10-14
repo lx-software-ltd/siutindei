@@ -567,8 +567,9 @@ export interface paths {
         };
         /**
          * Replace import settings
-         * @description Admin JWT. Send the `updated_at` from the last GET. A mismatch
-         *     is 409. `on_import_enabled` is ignored.
+         * @description Admin JWT. Send every field, including the `updated_at` from the
+         *     last GET. A missing field is 400. A mismatched `updated_at` is
+         *     409. The row is locked for the update.
          */
         put: {
             parameters: {
@@ -617,7 +618,8 @@ export interface paths {
         };
         /**
          * List data-quality runs
-         * @description Admin JWT. Newest runs first.
+         * @description Admin JWT. Newest runs first. Each check is name and status
+         *     only. Reading the list does not write.
          */
         get: {
             parameters: {
@@ -684,10 +686,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read a data-quality run */
+        /**
+         * Read a data-quality run
+         * @description Admin JWT. Reading a run does not write. `view=status` returns
+         *     each check as name and status only.
+         */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    view?: "status";
+                };
                 header?: never;
                 path: {
                     run_id: string;
@@ -710,7 +718,11 @@ export interface paths {
         put?: never;
         /**
          * Retry a data-quality run
-         * @description Body is `{"action":"retry"}`. The same row is queued again.
+         * @description Body is `{"action":"retry"}`. `refresh` defaults to false.
+         *     Every check is queued again on the same row, `attempt`
+         *     increments, and a failed child scan is replaced. `refresh` true
+         *     asks the model again. A run that is already queued or running
+         *     is returned without another queue message.
          */
         post: {
             parameters: {
@@ -726,6 +738,7 @@ export interface paths {
                     "application/json": {
                         /** @enum {string} */
                         action: "retry";
+                        refresh?: boolean;
                     };
                 };
             };
@@ -6841,6 +6854,8 @@ export interface components {
                 import_job_id?: string;
             };
             idempotency_key?: string;
+            /** @description Ask the model again instead of reusing a recorded reply. */
+            refresh?: boolean;
         };
         DataQualityRun: {
             /** Format: uuid */
@@ -6852,6 +6867,9 @@ export interface components {
             scope: Record<string, never>;
             checks: Record<string, never>[];
             status: string;
+            refresh?: boolean;
+            attempt?: number;
+            attempts?: number;
             /** Format: date-time */
             created_at?: string | null;
         };

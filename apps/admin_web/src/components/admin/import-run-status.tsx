@@ -10,8 +10,8 @@ const SETTLED = new Set(['done', 'partial', 'failed', 'busy']);
 
 export function ImportRunStatus({ runId }: { runId: string }) {
   const query = useQuery({
-    queryKey: adminQueryKeys.dataQualityRun(runId),
-    queryFn: () => getDataQualityRun(runId),
+    queryKey: [...adminQueryKeys.dataQualityRun(runId), 'status'],
+    queryFn: () => getDataQualityRun(runId, 'status'),
     refetchInterval: (current) =>
       SETTLED.has(current.state.data?.status ?? '') ? false : 3000,
   });

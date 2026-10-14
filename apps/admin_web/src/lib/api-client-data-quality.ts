@@ -420,6 +420,7 @@ export interface DataQualityRun {
   scope: { organization_ids?: string[]; activity_ids?: string[] };
   checks: DataQualityCheck[];
   status: string;
+  refresh?: boolean;
   attempt: number;
   attempts: number;
   created_at?: string | null;
@@ -443,9 +444,10 @@ export function listDataQualityRuns() {
   return request<{ items: DataQualityRun[] }>(buildApiUrl(DATA_QUALITY_RUNS));
 }
 
-export function getDataQualityRun(id: string) {
+export function getDataQualityRun(id: string, view?: 'status') {
+  const suffix = view ? `?view=${encodeURIComponent(view)}` : '';
   return request<DataQualityRun>(
-    buildApiUrl(`${DATA_QUALITY_RUNS}/${encodeURIComponent(id)}`)
+    buildApiUrl(`${DATA_QUALITY_RUNS}/${encodeURIComponent(id)}${suffix}`)
   );
 }
 
@@ -463,7 +465,7 @@ export function retryDataQualityRun(id: string) {
     {
       method: 'POST',
       headers: jsonHeaders,
-      body: JSON.stringify({ action: 'retry' }),
+      body: JSON.stringify({ action: 'retry', refresh: true }),
     }
   );
 }
