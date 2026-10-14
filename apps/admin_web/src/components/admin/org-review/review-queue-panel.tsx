@@ -35,7 +35,6 @@ import {
   AdminTableId,
   AdminTableName,
   AdminTableNumber,
-  formatAdminTableLabel,
   formatAdminTablePercent,
 } from '../../ui/admin-table-value';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
@@ -55,6 +54,13 @@ import { NeighbourhoodFilter } from './neighbourhood-filter';
 
 const PAGE_NAME = formatAdminPageName('Catalog');
 
+const REVIEW_STATUS_OPTIONS = [
+  ['', 'Any review'],
+  ['pending_review', 'Pending'],
+  ['approved', 'Approved'],
+  ['rejected', 'Rejected'],
+] as const;
+
 const ISSUE_OPTIONS = [
   ['', 'Any issue'],
   ['missing_description', 'Missing description'],
@@ -72,6 +78,11 @@ const ISSUE_OPTIONS = [
   ['name_needs_cleanup', 'Name needs cleanup'],
   ['possible_duplicate', 'Possible duplicate'],
 ];
+
+function catalogReviewStatusLabel(status: string): string | undefined {
+  const option = REVIEW_STATUS_OPTIONS.find(([value]) => value === status);
+  return option?.[0] ? option[1] : undefined;
+}
 
 type BulkAction = 'approve' | 'reject' | 'reopen' | 'set_fields';
 
@@ -341,10 +352,11 @@ export function CatalogPanel() {
                   setFilter('review_status', event.target.value)
                 }
               >
-                <option value=''>Any review</option>
-                <option value='pending_review'>Pending review</option>
-                <option value='approved'>Approved</option>
-                <option value='rejected'>Rejected</option>
+                {REVIEW_STATUS_OPTIONS.map(([value, label]) => (
+                  <option key={value || 'any'} value={value}>
+                    {label}
+                  </option>
+                ))}
               </Select>
             </AdminFilterField>
             <AdminFilterField>
@@ -646,7 +658,10 @@ export function CatalogPanel() {
                 {adminTableText(item.source)}
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='secondary'>
-                <StatusBadge status={formatAdminTableLabel(item.review_status)} />
+                <StatusBadge
+                  status={item.review_status}
+                  label={catalogReviewStatusLabel(item.review_status)}
+                />
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='tertiary' label='Import job' empty={!item.import_job_id}>
                 <AdminTableId>{item.import_job_id}</AdminTableId>
@@ -662,7 +677,10 @@ export function CatalogPanel() {
               {adminTableText(item.source)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              <StatusBadge status={formatAdminTableLabel(item.review_status)} />
+              <StatusBadge
+                status={item.review_status}
+                label={catalogReviewStatusLabel(item.review_status)}
+              />
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               <AdminTableId>{item.import_job_id}</AdminTableId>

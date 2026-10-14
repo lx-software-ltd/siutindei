@@ -43,7 +43,8 @@ test.describe('Listing captions on a phone', () => {
     const row = table.getByRole('row', { name: /Test Organization 1/ }).first();
     const secondary = row.locator('span.md\\:hidden');
     await expect(secondary.filter({ hasText: 'lcsd' })).toBeVisible();
-    await expect(secondary.getByText('pending review', { exact: true })).toBeVisible();
+    await expect(secondary.getByText('Pending', { exact: true })).toBeVisible();
+    await expect(secondary.getByText('pending review', { exact: true })).toHaveCount(0);
     await expect(secondary.filter({ hasText: 'contact@org-one.test' })).toHaveCount(0);
     await expect(secondary.filter({ hasText: '12345678' })).toHaveCount(0);
     await expect(secondary.filter({ hasText: 'manager-user-id-456' })).toHaveCount(0);

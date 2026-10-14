@@ -144,6 +144,21 @@ test.describe('Organization review queue', () => {
     });
   });
 
+  test('filters the queue to pending organizations', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=catalog');
+    const review = adminPage.getByLabel('Review');
+    await expect(review.getByRole('option', { name: 'Pending', exact: true })).toHaveCount(1);
+    await expect(review.getByRole('option', { name: 'Pending review' })).toHaveCount(0);
+    const requestPromise = adminPage.waitForRequest(
+      (request) =>
+        request.url().includes('/admin/org-review') &&
+        request.url().includes('review_status=pending_review')
+    );
+    await review.selectOption('pending_review');
+    await requestPromise;
+    await expect(review).toHaveValue('pending_review');
+  });
+
   test('filters the queue to rows unchanged since import', async ({
     adminPage,
   }) => {
