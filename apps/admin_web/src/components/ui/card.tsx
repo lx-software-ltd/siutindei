@@ -37,7 +37,11 @@ export function Card({
               {title && (
                 <TitleTag className='text-base font-semibold sm:text-lg'>{title}</TitleTag>
               )}
-              {titleAccessory}
+              {titleAccessory ? (
+                <div className='ml-auto' data-testid='admin-card-title-accessory'>
+                  {titleAccessory}
+                </div>
+              ) : null}
             </div>
           )}
           {description && (

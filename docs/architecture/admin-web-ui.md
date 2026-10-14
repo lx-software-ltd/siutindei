@@ -2,8 +2,8 @@
 
 The admin console is a table-first workspace. Section names live in the
 nav. Listing cards do not repeat them. Workspace table sections show the
-open organization above the card. The Organization input card puts that
-name in the card title.
+open organization above the card. The Organization page shows that
+name and status badges above a Details input card.
 
 The product rules live in `.cursor/skills/admin-crud-screen/SKILL.md`
 and `.cursor/rules/admin-web.mdc`. This page names the primitives those
