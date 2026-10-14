@@ -8,7 +8,7 @@
 On Imports → History, the expanded row explains the job without a
 duplicate organization summary. Results load from
 `GET /v1/admin/imports/{job_id}` and group by organization, location,
-activity, pricing, and schedule. Categories captured always show, with
+activity, pricing, and schedule. Captured categories always show, with
 an em dash when the count is zero. The table and accordion both say
 **First recorded**; the accordion says **Last changed** for
 `updated_at`.

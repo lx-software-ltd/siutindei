@@ -98,7 +98,7 @@ test.describe('Expanded field titles', () => {
     await expect(detail.getByText('Missing column: neighbourhood')).toHaveCount(
       0
     );
-    await expect(detail.getByText('Categories captured')).toBeVisible();
+    await expect(detail.getByText('Captured categories')).toBeVisible();
     await expect(detail.getByText('—', { exact: true })).toBeVisible();
 
     for (const title of [
