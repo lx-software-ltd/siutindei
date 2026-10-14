@@ -15,8 +15,17 @@ import type { LanguageCode } from '../../lib/translations';
 import { languageOptions } from '../../lib/translations';
 import type { ActivitySchedule } from '../../types/admin';
 import { StatusBanner } from '../status-banner';
+import { scheduleFormFromSnapshot } from '../admin/catalog-version-snapshot';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
-import { VersionHistory } from '../admin/version-history';
+import {
+  HistoricalRowMark,
+  useCatalogVersion,
+  VersionField,
+  VersionFields,
+  VersionSwitcher,
+  VersionViewBanner,
+} from '../admin/version-history';
+import { Button } from '../ui/button';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import { ADMIN_TABLE_EMPTY, AdminTableName } from '../ui/admin-table-value';
@@ -30,7 +39,6 @@ import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
 import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { AdminToggleChip } from '../ui/admin-tab-strip';
-import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import {
   deleteRowActions,
@@ -137,6 +145,16 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
       ),
     [panel.editingId, panel.formState, singleActivityId, singleLocationId]
   );
+  const versionView = useCatalogVersion({
+    mode,
+    entityType: 'schedule',
+    entityId: panel.editingId,
+    version: panel.items.find((item) => item.id === panel.editingId)?.version,
+  });
+  const locked = versionView.locked;
+  const editorForm = versionView.snapshot
+    ? scheduleFormFromSnapshot(versionView.snapshot, formState)
+    : formState;
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
@@ -259,13 +277,13 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     return panel.handleSubmit(formToPayload, validate);
   };
 
-  const selectedLanguages = new Set(formState.languages);
+  const selectedLanguages = new Set(editorForm.languages);
   const selectedDays = new Set(
-    formState.weekly_entries.map((entry) => entry.day_of_week_local)
+    editorForm.weekly_entries.map((entry) => entry.day_of_week_local)
   );
 
   const entriesByDay = dayOfWeekOptions.map((option) => {
-    const entries = formState.weekly_entries
+    const entries = editorForm.weekly_entries
       .filter((entry) => entry.day_of_week_local === option.value)
       .sort((left, right) => {
         const leftStart = parseOptionalNumber(left.start_minutes_local) ?? 0;
@@ -508,8 +526,6 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     'languages',
     Boolean(languagesError)
   );
-  const [isHistorical, setIsHistorical] = useState(false);
-
   const detail = (
     <AdminEditorPanel
       status={
@@ -520,34 +536,37 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
         ) : null
       }
       actions={
-        isHistorical ? undefined : (
-        <AdminEditorActions
-          mode={panel.editorMode}
-          onSubmit={handleSubmit}
-          isSaving={panel.isSaving}
-        />
-        )
+        <>
+          {versionView.isHistorical ? (
+            <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
+              Back to latest
+            </Button>
+          ) : (
+            <AdminEditorActions
+              mode={panel.editorMode}
+              onSubmit={handleSubmit}
+              isSaving={panel.isSaving}
+            />
+          )}
+          <VersionSwitcher view={versionView} />
+        </>
       }
     >
-      <VersionHistory
-        mode={mode}
-        entityType='schedule'
-        entityId={panel.editingId}
-        version={
-          panel.items.find((item) => item.id === panel.editingId)?.version
-        }
-        onHistoricalChange={setIsHistorical}
-      >
+      <VersionFields view={versionView}>
+      <div className='space-y-4'>
+      <VersionViewBanner view={versionView} />
       <AdminFieldGrid columns={2}>
-        <AdminField
+        <VersionField
           label='Location'
           htmlFor='schedule-location'
           required
+          versionKey='location_id'
           error={showLocationError ? locationError : undefined}
         >
           <Select
             id='schedule-location'
-            value={formState.location_id}
+            value={editorForm.location_id}
+            disabled={locked}
             onChange={(e) => {
               markTouched('location_id');
               panel.setFormState((prev) => ({
@@ -565,16 +584,18 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
               </option>
             ))}
           </Select>
-        </AdminField>
-        <AdminField
+        </VersionField>
+        <VersionField
           label='Activity'
           htmlFor='schedule-activity'
           required
+          versionKey='activity_id'
           error={showActivityError ? activityError : undefined}
         >
           <Select
             id='schedule-activity'
-            value={formState.activity_id}
+            value={editorForm.activity_id}
+            disabled={locked}
             onChange={(e) => {
               markTouched('activity_id');
               panel.setFormState((prev) => ({
@@ -592,7 +613,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
               </option>
             ))}
           </Select>
-        </AdminField>
+        </VersionField>
         <div className='sm:col-span-2'>
           <AdminDisclosure
             id='schedule-weekly'
@@ -605,10 +626,11 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
             }
           >
             <div className='space-y-4'>
-              <AdminField
+              <VersionField
                 label='Days of Week'
                 labelId='schedule-days-label'
                 required
+                versionKey='entries'
                 error={showDaysError ? daysError : undefined}
               >
                 <p id='schedule-days-help' className='text-xs text-slate-500'>
@@ -628,6 +650,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                       <AdminToggleChip
                         key={option.value}
                         pressed={isSelected}
+                        disabled={locked}
                         onClick={() => toggleDay(option.value)}
                       >
                         {option.label.slice(0, 3)}
@@ -635,7 +658,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                     );
                   })}
                 </div>
-              </AdminField>
+              </VersionField>
               {entriesByDay
                 .filter((day) => day.entries.length > 0)
                 .map((day) => (
@@ -654,6 +677,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                           type='button'
                           size='sm'
                           variant='ghost'
+                          disabled={locked}
                           onClick={() => toggleDay(day.value)}
                         >
                           Remove day
@@ -704,6 +728,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                                 <Select
                                   id={startId}
                                   value={entry.start_minutes_local}
+                                  disabled={locked}
                                   onChange={(e) =>
                                     updateEntryStartTime(entry.id, e.target.value)
                                   }
@@ -739,6 +764,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                                 <Select
                                   id={endId}
                                   value={entry.end_minutes_local}
+                                  disabled={locked}
                                   onChange={(e) => {
                                     markTouched(endTouchedKey);
                                     updateEntry(entry.id, {
@@ -767,6 +793,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                                   type='button'
                                   size='sm'
                                   variant='ghost'
+                                  disabled={locked}
                                   onClick={() => removeEntry(entry.id)}
                                 >
                                   Remove
@@ -781,6 +808,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                           type='button'
                           size='sm'
                           variant='secondary'
+                          disabled={locked}
                           onClick={() => addTimeslot(day.value)}
                         >
                           Add timeslot
@@ -793,10 +821,11 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
           </AdminDisclosure>
         </div>
         <div className='sm:col-span-2'>
-          <AdminField
+          <VersionField
             label='Languages'
             labelId='schedule-languages-label'
             required
+            versionKey='languages'
             error={showLanguagesError ? languagesError : undefined}
           >
             <p id='schedule-languages-help' className='text-xs text-slate-500'>
@@ -816,6 +845,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                   <AdminToggleChip
                     key={option.code}
                     pressed={isSelected}
+                    disabled={locked}
                     onClick={() => toggleLanguage(option.code)}
                     aria-label={`Toggle ${option.label}`}
                     title={option.label}
@@ -832,10 +862,11 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                 );
               })}
             </div>
-          </AdminField>
+          </VersionField>
         </div>
       </AdminFieldGrid>
-      </VersionHistory>
+      </div>
+      </VersionFields>
     </AdminEditorPanel>
   );
 
@@ -904,7 +935,13 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              <AdminTableName>{getLocationName(item.location_id)}</AdminTableName>
+              <span className='inline-flex items-center'>
+                <AdminTableName>{getLocationName(item.location_id)}</AdminTableName>
+                <HistoricalRowMark
+                  active={versionView.isHistorical && item.id === panel.editingId}
+                  version={versionView.selectedVersion}
+                />
+              </span>
               <AdminDataTableCellMeta until='secondary' label='Activity'>
                 {getActivityName(item.activity_id)}
               </AdminDataTableCellMeta>

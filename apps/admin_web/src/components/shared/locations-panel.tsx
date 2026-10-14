@@ -21,7 +21,7 @@ import {
   AdminDataTableHeadCell,
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
-import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
+import { AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
 import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import {
   AddressAutocomplete,
@@ -34,8 +34,17 @@ import {
   ResourceTableShell,
 } from '../ui/resource-table-shell';
 import { StatusBanner } from '../status-banner';
+import { locationFormFromSnapshot } from '../admin/catalog-version-snapshot';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
-import { VersionHistory } from '../admin/version-history';
+import {
+  HistoricalRowMark,
+  useCatalogVersion,
+  VersionField,
+  VersionFields,
+  VersionSwitcher,
+  VersionViewBanner,
+} from '../admin/version-history';
+import { Button } from '../ui/button';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 
 const PAGE_NAME = formatAdminPageName('Locations');
@@ -366,7 +375,16 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   const showAreaError = shouldShowError('area_id', areaError);
   const showAddressError = shouldShowError('address', addressError);
   const addressColumnPriority = 'secondary' as const;
-  const [isHistorical, setIsHistorical] = useState(false);
+  const versionView = useCatalogVersion({
+    mode,
+    entityType: 'location',
+    entityId: panel.editingId,
+    version: panel.items.find((item) => item.id === panel.editingId)?.version,
+  });
+  const locked = versionView.locked;
+  const editorForm = versionView.snapshot
+    ? locationFormFromSnapshot(versionView.snapshot, panel.formState)
+    : panel.formState;
 
   const detail = (
     <AdminEditorPanel
@@ -378,34 +396,37 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
         ) : null
       }
       actions={
-        isHistorical ? undefined : (
-        <AdminEditorActions
-          mode={panel.editorMode}
-          onSubmit={handleSubmit}
-          isSaving={panel.isSaving}
-        />
-        )
+        <>
+          {versionView.isHistorical ? (
+            <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
+              Back to latest
+            </Button>
+          ) : (
+            <AdminEditorActions
+              mode={panel.editorMode}
+              onSubmit={handleSubmit}
+              isSaving={panel.isSaving}
+            />
+          )}
+          <VersionSwitcher view={versionView} />
+        </>
       }
     >
-      <VersionHistory
-        mode={mode}
-        entityType='location'
-        entityId={panel.editingId}
-        version={
-          panel.items.find((item) => item.id === panel.editingId)?.version
-        }
-        onHistoricalChange={setIsHistorical}
-      >
+      <VersionFields view={versionView}>
+      <div className='space-y-4'>
+      <VersionViewBanner view={versionView} />
       <AdminFieldGrid columns={2}>
-        <AdminField
+        <VersionField
           label='Address'
           htmlFor='location-address'
           span={2}
+          versionKey='address'
           error={showAddressError ? addressError : undefined}
         >
           <AddressAutocomplete
             id='location-address'
-            value={panel.formState.address}
+            value={editorForm.address}
+            disabled={locked}
             onChange={(val) => {
               markTouched('address');
               panel.setFormState((prev) => ({
@@ -420,24 +441,26 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             hasError={showAddressError}
             onBlur={() => markTouched('address')}
           />
-        </AdminField>
-        <AdminField span={2}>
+        </VersionField>
+        <VersionField span={2} versionKey='area_id'>
           <CascadingAreaSelect
             tree={tree}
-            value={panel.formState.area_id}
+            value={editorForm.area_id}
             onChange={handleAreaChange}
             disableCountry
+            disabled={locked}
             required
             hasError={showAreaError}
             errorMessage={showAreaError ? areaError : undefined}
           />
-        </AdminField>
-        <AdminField label='Latitude' htmlFor='location-lat'>
+        </VersionField>
+        <VersionField label='Latitude' htmlFor='location-lat' versionKey='lat'>
           <Input
             id='location-lat'
             type='number'
             step='0.000001'
-            value={panel.formState.lat}
+            value={editorForm.lat}
+            disabled={locked}
             onChange={(e) =>
               panel.setFormState((prev) => ({
                 ...prev,
@@ -445,13 +468,14 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
               }))
             }
           />
-        </AdminField>
-        <AdminField label='Longitude' htmlFor='location-lng'>
+        </VersionField>
+        <VersionField label='Longitude' htmlFor='location-lng' versionKey='lng'>
           <Input
             id='location-lng'
             type='number'
             step='0.000001'
-            value={panel.formState.lng}
+            value={editorForm.lng}
+            disabled={locked}
             onChange={(e) =>
               panel.setFormState((prev) => ({
                 ...prev,
@@ -459,9 +483,10 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
               }))
             }
           />
-        </AdminField>
+        </VersionField>
       </AdminFieldGrid>
-      </VersionHistory>
+      </div>
+      </VersionFields>
     </AdminEditorPanel>
   );
 
@@ -524,7 +549,13 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              <AdminTableName>{getAreaName(item.area_id)}</AdminTableName>
+              <span className='inline-flex items-center'>
+                <AdminTableName>{getAreaName(item.area_id)}</AdminTableName>
+                <HistoricalRowMark
+                  active={versionView.isHistorical && item.id === panel.editingId}
+                  version={versionView.selectedVersion}
+                />
+              </span>
               <AdminDataTableCellMeta until={addressColumnPriority} label='Address'>
                 {adminTableText(item.address)}
               </AdminDataTableCellMeta>

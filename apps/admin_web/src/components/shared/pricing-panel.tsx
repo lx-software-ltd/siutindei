@@ -18,8 +18,17 @@ import {
 import type { ApiMode } from '../../lib/resource-api';
 import type { ActivityPricing } from '../../types/admin';
 import { StatusBanner } from '../status-banner';
+import { pricingFormFromSnapshot } from '../admin/catalog-version-snapshot';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
-import { VersionHistory } from '../admin/version-history';
+import {
+  HistoricalRowMark,
+  useCatalogVersion,
+  VersionField,
+  VersionFields,
+  VersionSwitcher,
+  VersionViewBanner,
+} from '../admin/version-history';
+import { Button } from '../ui/button';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import { AdminTableName } from '../ui/admin-table-value';
@@ -29,7 +38,7 @@ import {
   AdminDataTableHeadCell,
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
-import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
+import { AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
 import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
 import {
@@ -325,7 +334,18 @@ export function PricingPanel({ mode }: PricingPanelProps) {
   const showActivityError = shouldShowError('activity_id', activityError);
   const showAmountError = shouldShowError('amount', amountError);
   const showSessionsError = shouldShowError('sessions_count', sessionsError);
-  const [isHistorical, setIsHistorical] = useState(false);
+  const versionView = useCatalogVersion({
+    mode,
+    entityType: 'pricing',
+    entityId: panel.editingId,
+    version: panel.items.find((item) => item.id === panel.editingId)?.version,
+  });
+  const locked = versionView.locked;
+  const editorForm = versionView.snapshot
+    ? pricingFormFromSnapshot(versionView.snapshot, formState)
+    : formState;
+  const editorIsFree = editorForm.pricing_type === 'free';
+  const editorShowSessions = editorForm.pricing_type === 'per_sessions';
 
   const detail = (
     <AdminEditorPanel
@@ -337,34 +357,37 @@ export function PricingPanel({ mode }: PricingPanelProps) {
         ) : null
       }
       actions={
-        isHistorical ? undefined : (
-        <AdminEditorActions
-          mode={panel.editorMode}
-          onSubmit={handleSubmit}
-          isSaving={panel.isSaving}
-        />
-        )
+        <>
+          {versionView.isHistorical ? (
+            <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
+              Back to latest
+            </Button>
+          ) : (
+            <AdminEditorActions
+              mode={panel.editorMode}
+              onSubmit={handleSubmit}
+              isSaving={panel.isSaving}
+            />
+          )}
+          <VersionSwitcher view={versionView} />
+        </>
       }
     >
-      <VersionHistory
-        mode={mode}
-        entityType='pricing'
-        entityId={panel.editingId}
-        version={
-          panel.items.find((item) => item.id === panel.editingId)?.version
-        }
-        onHistoricalChange={setIsHistorical}
-      >
+      <VersionFields view={versionView}>
+      <div className='space-y-4'>
+      <VersionViewBanner view={versionView} />
       <AdminFieldGrid columns={2}>
-        <AdminField
+        <VersionField
           label='Location'
           htmlFor='pricing-location'
           required
+          versionKey='location_id'
           error={showLocationError ? locationError : undefined}
         >
           <Select
             id='pricing-location'
-            value={formState.location_id}
+            value={editorForm.location_id}
+            disabled={locked}
             onChange={(event) => {
               markTouched('location_id');
               panel.setFormState((prev) => ({
@@ -382,16 +405,18 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               </option>
             ))}
           </Select>
-        </AdminField>
-        <AdminField
+        </VersionField>
+        <VersionField
           label='Activity'
           htmlFor='pricing-activity'
           required
+          versionKey='activity_id'
           error={showActivityError ? activityError : undefined}
         >
           <Select
             id='pricing-activity'
-            value={formState.activity_id}
+            value={editorForm.activity_id}
+            disabled={locked}
             onChange={(event) => {
               markTouched('activity_id');
               panel.setFormState((prev) => ({
@@ -409,15 +434,17 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               </option>
             ))}
           </Select>
-        </AdminField>
-        <AdminField
+        </VersionField>
+        <VersionField
           label='Pricing Type'
           htmlFor='pricing-type'
-          span={showSessionsField ? 1 : 2}
+          versionKey='pricing_type'
+          span={editorShowSessions ? 1 : 2}
         >
           <Select
             id='pricing-type'
-            value={formState.pricing_type}
+            value={editorForm.pricing_type}
+            disabled={locked}
             onChange={(event) => {
               const value = event.target.value;
               panel.setFormState((prev) => ({
@@ -441,19 +468,21 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               </option>
             ))}
           </Select>
-        </AdminField>
-        {showSessionsField ? (
-          <AdminField
+        </VersionField>
+        {editorShowSessions ? (
+          <VersionField
             label='Classes per term'
             htmlFor='pricing-sessions'
             required
+            versionKey='sessions_count'
             error={showSessionsError ? sessionsError : undefined}
           >
             <Input
               id='pricing-sessions'
               type='number'
               min='1'
-              value={formState.sessions_count}
+              value={editorForm.sessions_count}
+              disabled={locked}
               onChange={(event) => {
                 markTouched('sessions_count');
                 panel.setFormState((prev) => ({
@@ -464,15 +493,16 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               className={showSessionsError ? errorInputClassName : ''}
               aria-invalid={showSessionsError || undefined}
             />
-          </AdminField>
+          </VersionField>
         ) : null}
-        {showFreeTrialToggle ? (
-          <AdminField span={2}>
+        {editorShowSessions ? (
+          <VersionField span={2} versionKey='free_trial_class_offered'>
             <label className='flex items-center gap-2 text-sm'>
               <input
                 id='pricing-free-trial'
                 type='checkbox'
-                checked={formState.free_trial_class_offered}
+                checked={editorForm.free_trial_class_offered}
+                disabled={locked}
                 onChange={(event) =>
                   panel.setFormState((prev) => ({
                     ...prev,
@@ -483,13 +513,13 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               />
               <span>Free trial class offered</span>
             </label>
-          </AdminField>
+          </VersionField>
         ) : null}
-        <AdminField label='Currency' htmlFor='pricing-currency'>
+        <VersionField label='Currency' htmlFor='pricing-currency' versionKey='currency'>
           <Select
             id='pricing-currency'
-            value={formState.currency}
-            disabled={isFreeType}
+            value={editorForm.currency}
+            disabled={locked || editorIsFree}
             onChange={(event) =>
               panel.setFormState((prev) => ({
                 ...prev,
@@ -503,19 +533,20 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               </option>
             ))}
           </Select>
-        </AdminField>
-        <AdminField
+        </VersionField>
+        <VersionField
           label='Amount'
           htmlFor='pricing-amount'
-          required={!isFreeType}
+          versionKey='amount'
+          required={!editorIsFree}
           error={showAmountError ? amountError : undefined}
         >
           <Input
             id='pricing-amount'
             type='number'
             step='0.01'
-            value={formState.amount}
-            disabled={isFreeType}
+            value={editorForm.amount}
+            disabled={locked || editorIsFree}
             onChange={(event) => {
               markTouched('amount');
               panel.setFormState((prev) => ({
@@ -526,9 +557,10 @@ export function PricingPanel({ mode }: PricingPanelProps) {
             className={showAmountError ? errorInputClassName : ''}
             aria-invalid={showAmountError || undefined}
           />
-        </AdminField>
+        </VersionField>
       </AdminFieldGrid>
-      </VersionHistory>
+      </div>
+      </VersionFields>
     </AdminEditorPanel>
   );
 
@@ -597,7 +629,13 @@ export function PricingPanel({ mode }: PricingPanelProps) {
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              <AdminTableName>{getLocationName(item.location_id)}</AdminTableName>
+              <span className='inline-flex items-center'>
+                <AdminTableName>{getLocationName(item.location_id)}</AdminTableName>
+                <HistoricalRowMark
+                  active={versionView.isHistorical && item.id === panel.editingId}
+                  version={versionView.selectedVersion}
+                />
+              </span>
               <AdminDataTableCellMeta until='secondary' label='Activity'>
                 {getActivityName(item.activity_id)}
               </AdminDataTableCellMeta>

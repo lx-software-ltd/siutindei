@@ -15,9 +15,15 @@ vi.mock('@/lib/api-client-org-review', () => ({
   getOrgReviewDetail: vi.fn(),
 }));
 
-vi.mock('@/lib/admin-query-client', () => ({
-  refreshCatalogHistory: vi.fn(),
-}));
+vi.mock('@/lib/admin-query-client', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/admin-query-client')>(
+    '@/lib/admin-query-client'
+  );
+  return {
+    ...actual,
+    refreshCatalogHistory: vi.fn(),
+  };
+});
 
 const detail = {
   id: 'org-1',

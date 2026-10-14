@@ -8,14 +8,13 @@ test.describe('Media Panel', () => {
     ).toBeVisible();
     await expect(adminPage.getByRole('heading', { name: 'Media' })).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'History' })).toHaveCount(0);
-    const version = adminPage.getByLabel('Version');
-    await expect(version).toHaveValue('2');
-    await version.selectOption('1');
-    await expect(adminPage.getByText('Read-only')).toBeVisible();
-    await expect(adminPage.getByText('https://example.com/original.jpg')).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Version 2 · Latest' }).click();
+    await adminPage.getByRole('menuitem', { name: /Version 1/ }).click();
+    await expect(adminPage.getByText('Viewing version 1 of 2 · read-only')).toBeVisible();
+    await expect(adminPage.locator('img[src="https://example.com/original.jpg"]')).toBeVisible();
     await expect(adminPage.locator('#media-url')).toHaveCount(0);
     await expect(adminPage.getByRole('button', { name: 'Save media' })).toHaveCount(0);
-    await version.selectOption('2');
+    await adminPage.getByRole('button', { name: 'Back to latest' }).first().click();
 
     const mediaInput = adminPage.locator('#media-url');
     await mediaInput.fill('https://example.com/media-one.jpg');

@@ -46,7 +46,8 @@ test.describe('Activities Panel', () => {
     await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toHaveCount(0);
     await expect(adminPage.getByRole('cell', { name: 'v1' })).toHaveCount(0);
     await adminPage.getByRole('row', { name: /Swimming Class/ }).first().click();
-    await expect(adminPage.getByLabel('Version')).toHaveValue('1');
+    await expect(adminPage.getByText('Org v2')).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Version 1 · Latest' })).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'History' })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Operations' })).toBeVisible();
 
