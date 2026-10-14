@@ -278,26 +278,6 @@ export function VersionField({
   );
 }
 
-export function VersionViewBanner({ view }: { view: CatalogVersionView }) {
-  if (!view.isHistorical) {
-    return null;
-  }
-  return (
-    <div className='flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950'>
-      <p>
-        {view.snapshot
-          ? `Viewing version ${view.selectedVersion} of ${view.latestVersion} · read-only`
-          : view.isLoading
-            ? 'Loading version…'
-            : 'This version is unavailable.'}
-      </p>
-      <Button type='button' size='sm' variant='secondary' onClick={view.backToLatest}>
-        Back to latest
-      </Button>
-    </div>
-  );
-}
-
 export function HistoricalRowMark({
   active,
   version,
