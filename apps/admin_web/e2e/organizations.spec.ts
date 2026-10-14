@@ -352,10 +352,19 @@ test.describe('Organizations Panel', () => {
     const menuBox = await menu.boundingBox();
     expect(menuBox?.x ?? 0).toBeGreaterThan(240);
     await adminPage.getByRole('menuitem', { name: /Version 1/ }).click();
-    await expect(adminPage.getByText('Viewing version 1 of 2 · read-only')).toBeVisible();
+    await expect(adminPage.getByText(/Viewing version/)).toHaveCount(0);
     await expect(adminPage.getByLabel('Name')).toHaveValue('Organization One Original');
     await expect(adminPage.getByText('Latest: Test Organization 1')).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'Update' })).toHaveCount(0);
+    const backToLatest = adminPage.getByRole('button', { name: 'Back to latest' });
+    await expect(backToLatest).toHaveCount(1);
+    const editor = adminPage.getByTestId('admin-editor-panel');
+    await expect(editor.getByRole('button', { name: 'Back to latest' })).toBeVisible();
+    const backBox = await backToLatest.boundingBox();
+    const nameBox = await adminPage.getByLabel('Name').boundingBox();
+    expect(backBox).toBeTruthy();
+    expect(nameBox).toBeTruthy();
+    expect(backBox!.y).toBeGreaterThan(nameBox!.y);
     await expect(adminPage.getByText('Removed records')).toBeVisible();
     await expect(adminPage.getByText(/Removed Class/)).toBeVisible();
     const forgetRequest = adminPage.waitForRequest(
@@ -366,7 +375,7 @@ test.describe('Organizations Panel', () => {
     await adminPage.getByRole('button', { name: 'Forget' }).click();
     await forgetRequest;
     await expect(adminPage.getByText(/Removed Class/)).toHaveCount(0);
-    await adminPage.getByRole('button', { name: 'Back to latest' }).first().click();
+    await backToLatest.click();
     await expect(adminPage.getByLabel('Name')).toHaveValue('Test Organization 1');
     await expect(adminPage.getByRole('button', { name: 'Update' })).toBeVisible();
   });

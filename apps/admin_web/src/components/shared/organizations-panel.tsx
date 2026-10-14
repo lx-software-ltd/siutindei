@@ -27,7 +27,6 @@ import {
   VersionField,
   VersionFields,
   VersionSwitcher,
-  VersionViewBanner,
 } from '../admin/version-history';
 import { WorkspaceEmpty } from '../admin/workspace-empty';
 import { useAuth } from '../auth-provider';
@@ -770,7 +769,6 @@ export function OrganizationsPanel({
   const fields = (
     <VersionFields view={versionView}>
       <div className='space-y-4'>
-        <VersionViewBanner view={versionView} />
         {editorFields}
       </div>
     </VersionFields>
