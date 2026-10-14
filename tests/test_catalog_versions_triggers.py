@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -653,8 +655,90 @@ def test_deleted_backfill_leaves_a_live_row_alone(versions) -> None:
             session.commit()
 
 
+def test_deleted_backfill_ignores_an_insert_with_no_values(versions) -> None:
+    record_id = str(uuid4())
+    earlier = datetime.now(UTC) - timedelta(minutes=5)
+    later = datetime.now(UTC)
+    payload = json.dumps({"id": record_id, "name": "Later"})
+    with Session(versions) as session:
+        # SQL NULL, not JSON null. The writer skips only the former.
+        session.execute(
+            text(
+                "INSERT INTO audit_log "
+                "(timestamp, table_name, record_id, action, new_values) "
+                "VALUES (:earlier, 'organizations', :record_id, 'INSERT', NULL)"
+            ),
+            {"earlier": earlier, "record_id": record_id},
+        )
+        session.execute(
+            text(
+                "INSERT INTO audit_log "
+                "(timestamp, table_name, record_id, action, new_values) "
+                "VALUES (:later, 'organizations', :record_id, 'INSERT', "
+                "CAST(:payload AS jsonb))"
+            ),
+            {"later": later, "record_id": record_id, "payload": payload},
+        )
+        session.execute(
+            text(
+                "INSERT INTO audit_log "
+                "(timestamp, table_name, record_id, action, old_values) "
+                "VALUES (:later, 'organizations', :record_id, 'DELETE', "
+                "CAST(:payload AS jsonb))"
+            ),
+            {"later": later, "record_id": record_id, "payload": payload},
+        )
+        session.commit()
+    try:
+        with Session(versions) as session:
+            _install_backfill(session)
+            assert record_id not in _deleted_candidates(session, "organizations")
+            _drop_backfill(session)
+            session.commit()
+    finally:
+        with Session(versions) as session:
+            _forget_backfill_residue(session, record_id)
+            session.commit()
+
+
 def test_deleted_backfill_ignores_a_non_uuid_record_id(versions) -> None:
     record_id = "not-a-uuid"
+    with Session(versions) as session:
+        session.add(
+            _audit_row(
+                "organizations",
+                record_id,
+                "INSERT",
+                new_values={"name": "Broken"},
+            )
+        )
+        session.add(
+            _audit_row(
+                "organizations",
+                record_id,
+                "DELETE",
+                old_values={"name": "Broken"},
+            )
+        )
+        session.commit()
+    try:
+        with Session(versions) as session:
+            _install_backfill(session)
+            found = _deleted_candidates(session, "organizations")
+            _drop_backfill(session)
+            session.commit()
+        assert record_id not in found
+    finally:
+        with Session(versions) as session:
+            session.execute(
+                text("DELETE FROM audit_log WHERE record_id = :record_id"),
+                {"record_id": record_id},
+            )
+            session.commit()
+
+
+def test_deleted_backfill_ignores_a_hex_string_that_is_not_a_uuid(versions) -> None:
+    record_id = "a" * 36
     with Session(versions) as session:
         session.add(
             _audit_row(

@@ -115,7 +115,7 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION catalog_backfill_live_batch(etable text)
-RETURNS integer
+RETURNS uuid[]
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -123,10 +123,10 @@ DECLARE
 BEGIN
     ids := catalog_backfill_live_candidates(etable, 200);
     IF ids IS NULL THEN
-        RETURN 0;
+        RETURN NULL;
     END IF;
     PERFORM catalog_backfill_live(etable, ids);
-    RETURN cardinality(ids);
+    RETURN ids;
 END;
 $$;
 
@@ -273,22 +273,27 @@ AS $$
 DECLARE
     ids text[];
 BEGIN
-    -- Match catalog_backfill_deleted. A tombstone needs an INSERT audit
-    -- row, and a live row belongs to the live backfill. Any other id
-    -- writes nothing and would be picked again on the next call.
+    -- Match catalog_backfill_deleted. The earliest INSERT must have
+    -- new_values, the id must be a real uuid, and a live row belongs to
+    -- the live backfill. Anything else writes nothing and would be
+    -- picked again on the next call.
     EXECUTE format(
         'SELECT array_agg(record_id ORDER BY record_id) FROM ('
         '    SELECT DISTINCT audit_log.record_id'
         '    FROM audit_log'
         '    WHERE audit_log.table_name = $1'
         '      AND audit_log.action = ''DELETE'''
-        '      AND audit_log.record_id ~* ''^[0-9a-f-]{36}$'''
-        '      AND EXISTS ('
-        '          SELECT 1 FROM audit_log inserted'
+        '      AND audit_log.record_id ~* '
+        '          ''^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'''
+        '      AND COALESCE(('
+        '          SELECT inserted.new_values IS NOT NULL'
+        '          FROM audit_log inserted'
         '          WHERE inserted.table_name = $1'
         '            AND inserted.record_id = audit_log.record_id'
         '            AND inserted.action = ''INSERT'''
-        '      )'
+        '          ORDER BY inserted.timestamp ASC'
+        '          LIMIT 1'
+        '      ), false)'
         '      AND NOT EXISTS ('
         '          SELECT 1 FROM %1$I live'
         '          WHERE live.id = audit_log.record_id::uuid'
@@ -311,7 +316,7 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION catalog_backfill_deleted_batch(etable text)
-RETURNS integer
+RETURNS text[]
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -319,9 +324,9 @@ DECLARE
 BEGIN
     ids := catalog_backfill_deleted_candidates(etable, 200);
     IF ids IS NULL THEN
-        RETURN 0;
+        RETURN NULL;
     END IF;
     PERFORM catalog_backfill_deleted(etable, ids);
-    RETURN cardinality(ids);
+    RETURN ids;
 END;
 $$;

@@ -73,39 +73,41 @@ def _backfill_in_batches() -> None:
             _drain("catalog_backfill_deleted_batch", table)
 
 
-def _candidate_function(function_name: str) -> str:
-    if function_name == "catalog_backfill_deleted_batch":
-        return "catalog_backfill_deleted_candidates"
-    if function_name == "catalog_backfill_live_batch":
-        return "catalog_backfill_live_candidates"
-    raise RuntimeError(f"unknown backfill function {function_name}")
+def _drain_ids(
+    function_name: str, table: str, fetch_ids, cap: int = _BATCH_CAP
+) -> None:
+    """Stop when a batch returns the same first id, or the cap is hit.
 
-
-def _sample_ids(function_name: str, table: str) -> list[str]:
-    statement = sa.select(
-        getattr(sa.func, _candidate_function(function_name))(table, 5)
-    )
-    found = op.get_bind().execute(statement).scalar()
-    return [str(item) for item in (found or [])]
-
-
-def _drain(function_name: str, table: str) -> None:
-    """Stop when a batch does not shrink the remaining candidate set."""
-    statement = sa.select(getattr(sa.func, function_name)(table))
+    ``fetch_ids`` is one batch: the ids it selected and then wrote. An
+    empty result means the table is finished. The batch function does
+    both steps in one statement, so the drain does not query twice.
+    """
     previous: str | None = None
-    for _ in range(_BATCH_CAP):
-        samples = _sample_ids(function_name, table)
-        marker = samples[0] if samples else None
+    last_ids: list[str] = []
+    for _ in range(cap):
+        ids = [str(item) for item in fetch_ids()]
+        if not ids:
+            return
+        marker = ids[0]
         if previous is not None and marker == previous:
-            shown = ", ".join(samples)
+            shown = ", ".join(ids[:5])
             raise RuntimeError(
                 f"{function_name} made no progress for {table}; sample ids: {shown}"
             )
-        count = op.get_bind().execute(statement).scalar()
-        if not count:
-            return
         previous = marker
-    shown = ", ".join(_sample_ids(function_name, table))
+        last_ids = ids
+    shown = ", ".join(last_ids[:5])
     raise RuntimeError(
         f"{function_name} did not finish for {table}; sample ids: {shown}"
     )
+
+
+def _drain(function_name: str, table: str) -> None:
+    """Fill one table. The batch returns the ids it just handled."""
+    statement = sa.select(getattr(sa.func, function_name)(table))
+
+    def fetch_ids() -> list[str]:
+        found = op.get_bind().execute(statement).scalar()
+        return [] if not found else list(found)
+
+    _drain_ids(function_name, table, fetch_ids)
