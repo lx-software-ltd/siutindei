@@ -37,20 +37,21 @@ test.describe('Listing captions on a phone', () => {
     await row.screenshot({ path: '/opt/cursor/artifacts/catalog-phone-captions.png' });
   });
 
-  test('API keys repeat status and prefix, and a missing expiry is an em dash', async ({
+  test('API keys repeat status, and a missing expiry is an em dash', async ({
     adminPage,
   }) => {
     await adminPage.goto('/admin/dashboard?section=api-keys');
     const table = adminPage.getByRole('table', { name: 'API keys' });
     await expect(table).toBeVisible();
     await expect(table.getByRole('columnheader', { name: 'Status' })).toBeHidden();
-    await expect(table.getByRole('columnheader', { name: 'Prefix' })).toBeHidden();
+    await expect(table.getByRole('columnheader', { name: 'Prefix' })).toHaveCount(0);
     await expect(table.getByText('Never')).toHaveCount(0);
+    await expect(table).not.toContainText('stk_readkey1');
 
     const partner = table.getByRole('row', { name: /Partner read key/ });
     await expect(partner.locator('span.md\\:hidden').filter({ hasText: 'Full access' })).toBeVisible();
+    await expect(partner.locator('span.md\\:hidden').getByText('read', { exact: true })).toBeVisible();
     await expect(partner.locator('span.md\\:hidden').getByText('active', { exact: true })).toBeVisible();
-    await expect(partner.locator('span.lg\\:hidden').filter({ hasText: 'stk_readkey1' })).toBeVisible();
     await expect(partner.locator('span.lg\\:hidden').filter({ hasText: 'Expires —' })).toBeVisible();
     await partner.screenshot({ path: '/opt/cursor/artifacts/api-keys-phone-captions.png' });
 

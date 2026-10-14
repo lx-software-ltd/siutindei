@@ -42,7 +42,6 @@ import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/status-badge';
 import {
   adminTableText,
-  AdminTableId,
   AdminTableName,
   AdminTableTime,
 } from '@/components/ui/admin-table-value';
@@ -332,7 +331,7 @@ export function ApiKeysPanel() {
         ariaLabel={PAGE_NAME}
         rows={list.items}
         getLabel={(item) => item.name}
-        middleColumnCount={6}
+        middleColumnCount={5}
         isLoading={list.isLoading}
         isLoadingMore={list.isLoadingMore}
         hasMore={list.hasMore}
@@ -369,9 +368,6 @@ export function ApiKeysPanel() {
               Status
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
-              Prefix
-            </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>
               Expires
             </AdminDataTableHeadCell>
           </>
@@ -381,7 +377,7 @@ export function ApiKeysPanel() {
             <AdminDataTableCell>
               <AdminTableName>{apiKey.name}</AdminTableName>
               <AdminDataTableCellMeta until='secondary'>
-                <StatusBadge status={apiKey.scope} />
+                <StatusBadge status={apiKey.scope} label={apiKey.scope} />
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='secondary'>
                 {apiKey.org_id
@@ -391,15 +387,12 @@ export function ApiKeysPanel() {
               <AdminDataTableCellMeta until='secondary'>
                 <StatusBadge status={apiKey.status} />
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary' label='Prefix' empty={!apiKey.key_prefix}>
-                <AdminTableId>{apiKey.key_prefix}</AdminTableId>
-              </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='tertiary' label='Expires' empty={!apiKey.expires_at}>
                 <AdminTableTime value={apiKey.expires_at} />
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              <StatusBadge status={apiKey.scope} />
+              <StatusBadge status={apiKey.scope} label={apiKey.scope} />
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               {apiKey.org_id
@@ -408,9 +401,6 @@ export function ApiKeysPanel() {
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               <StatusBadge status={apiKey.status} />
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='tertiary'>
-              <AdminTableId>{apiKey.key_prefix}</AdminTableId>
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               <AdminTableTime value={apiKey.expires_at} />
