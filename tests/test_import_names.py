@@ -15,7 +15,7 @@ def test_upsert_organization_stores_cleaned_name(db_session) -> None:
     )
     assert status == "created"
     assert org.name == "Harbour Club"
-    assert org.source_note == "Imported name: HARBOUR CLUB"
+    assert org.source_note is None
 
 
 def test_reimport_of_dirty_name_updates_cleaned_row(db_session) -> None:
@@ -81,4 +81,4 @@ def test_activity_name_is_cleaned_while_pending(
     )
     assert status == "created"
     assert activity.name == "Swim Class"
-    assert activity.source_note == "Imported name: SWIM CLASS"
+    assert activity.source_note is None

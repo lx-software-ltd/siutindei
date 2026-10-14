@@ -67,11 +67,33 @@ def _activity_payload(**overrides: object) -> dict:
     return payload
 
 
+def _set_unknown_categories(db_session: Session, mode: str) -> None:
+    """Point import capture at the setting that now owns this behaviour."""
+    from app.db.models import ImportSettings
+
+    row = db_session.get(ImportSettings, 1)
+    if row is None:
+        row = ImportSettings(
+            id=1,
+            skip_deleted_organizations=True,
+            name_cleanup="apply",
+            unknown_categories=mode,
+            duplicates="off",
+            locations="off",
+            categories="off",
+        )
+        db_session.add(row)
+    else:
+        row.unknown_categories = mode
+    db_session.flush()
+
+
 def _enable_capture(db_session: Session) -> None:
     row = get_settings(db_session)
     row.on_import_enabled = True
     row.auto_enrich_enabled = True
     db_session.flush()
+    _set_unknown_categories(db_session, "capture")
     begin_capture_batch(db_session)
 
 
@@ -97,6 +119,7 @@ def test_resolve_exact_alias_fuzzy_and_capture(
     settings = get_settings(db_session)
     settings.on_import_enabled = False
     db_session.flush()
+    _set_unknown_categories(db_session, "fail")
     with pytest.raises(ValidationError):
         resolve_category_name(db_session, "Missing Category")
 

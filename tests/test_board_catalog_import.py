@@ -98,9 +98,12 @@ def test_fifty_org_batch_place_id_and_unknown_category(
 
     from app.services.category_suggestions.settings import get_settings
 
+    from tests.test_category_suggestions import _set_unknown_categories
+
     settings = get_settings(db_session)
     settings.on_import_enabled = False
     db_session.flush()
+    _set_unknown_categories(db_session, "fail")
     warnings: list[str] = []
     summary, results = process_import_payload(
         db_session,
