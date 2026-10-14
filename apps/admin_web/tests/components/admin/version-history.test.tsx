@@ -120,6 +120,46 @@ describe('version switcher', () => {
     expect(screen.getByLabelText('Name')).toHaveAttribute('readonly');
   });
 
+  it('does not call an in-flight history the latest version', async () => {
+    let resolveHistory: (value: { items: []; next_cursor: null }) => void = () => {};
+    vi.mocked(listEntireCatalogHistory).mockReturnValue(
+      new Promise((resolve) => {
+        resolveHistory = resolve;
+      })
+    );
+    render(<Harness />, { wrapper });
+
+    expect(screen.getByRole('button', { name: 'Loading versions…' })).toBeDisabled();
+    expect(screen.queryByText(/Latest/)).not.toBeInTheDocument();
+
+    resolveHistory({ items: [], next_cursor: null });
+    expect(await screen.findByRole('button', { name: 'Version 2 · Latest' })).toBeVisible();
+  });
+
+  it('does not invent a latest version when history fails to load', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listEntireCatalogHistory).mockRejectedValue(new Error('missing route'));
+    render(<Harness />, { wrapper });
+
+    const unavailable = await screen.findByRole('button', { name: 'Versions unavailable' });
+    expect(unavailable).toBeDisabled();
+    expect(screen.getByText('missing route')).toBeInTheDocument();
+    expect(screen.queryByText(/Latest/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    await user.click(unavailable);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('keeps a single current row when history is empty', async () => {
+    vi.mocked(listEntireCatalogHistory).mockResolvedValue({
+      items: [],
+      next_cursor: null,
+    });
+    render(<Harness />, { wrapper });
+
+    expect(await screen.findByRole('button', { name: 'Version 2 · Latest' })).toBeVisible();
+  });
+
   it('shows managers a static version pill', async () => {
     render(<Harness mode='manager' />, { wrapper });
 

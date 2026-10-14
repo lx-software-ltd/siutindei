@@ -452,9 +452,35 @@ because `SiutindeiAdminFunction` also runs 90 s OpenRouter batches.
 after a new migration has run, the CloudFormation rollback re-invokes
 `RunMigrations` with the previous Lambda bundle, which no longer contains
 the revision the database is at, and the rollback wedges in
-`UPDATE_ROLLBACK_FAILED`. The deploy workflow recovers by calling
-`continue-update-rollback --resources-to-skip RunMigrations` when
-`RunMigrations` is the failed resource.
+`UPDATE_ROLLBACK_FAILED`. The deploy workflow recovers on the same
+attempt. It prints describe errors and the failed resource ids, then
+calls `continue-update-rollback --resources-to-skip RunMigrations` when
+`RunMigrations` is `UPDATE_FAILED` or `UPDATE_ROLLBACK_FAILED`, or a
+recent event says it cannot locate the revision or the backfill did not
+finish. If the first call is accepted and the waiter then fails, it
+retries once with that skip. `docs/architecture/setup.md` tells the
+operator to start `GitHubActionsRole` with `AdministratorAccess` and
+tighten it later; this repo does not record the live policy. A missing
+`cloudformation:DescribeStackResources` or
+`cloudformation:DescribeStackEvents` permission shows up in the deploy
+log. If that recovery does not run, an operator unwedges the stack by
+hand:
+
+```
+aws cloudformation continue-update-rollback \
+  --stack-name lxsoftware-siutindei \
+  --resources-to-skip RunMigrations \
+  --region ap-southeast-1
+aws cloudformation wait stack-rollback-complete \
+  --stack-name lxsoftware-siutindei --region ap-southeast-1
+```
+
+`GitHubActionsRole` is created with `AdministratorAccess`
+(`docs/architecture/setup.md`), which includes
+`cloudformation:DescribeStackResources` and
+`cloudformation:DescribeStackEvents`. The workflow prints stderr from
+those calls so a narrower role fails in the log instead of skipping the
+resource silently.
 
 ### Admin Bootstrap
 

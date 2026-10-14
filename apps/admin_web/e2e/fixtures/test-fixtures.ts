@@ -677,7 +677,10 @@ function resourceIdFromUrl(url: string): string {
   return decodeURIComponent(pathname.split('/').pop() ?? '');
 }
 
-export async function setupApiMocks(page: Page): Promise<void> {
+export async function setupApiMocks(
+  page: Page,
+  options: { versionsUnavailable?: boolean } = {}
+): Promise<void> {
   await page.route('https://maps.googleapis.com/**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -1773,6 +1776,14 @@ export async function setupApiMocks(page: Page): Promise<void> {
 
   let forgottenRemoved = false;
   await page.route('**/api/mock/**/admin/versions**', async (route) => {
+    if (options.versionsUnavailable) {
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Not Found' }),
+      });
+      return;
+    }
     const url = new URL(route.request().url());
     if (route.request().method() === 'POST') {
       forgottenRemoved = true;
@@ -2709,7 +2720,9 @@ export const test = base.extend<{
   adminPage: Page;
   managerPage: Page;
   unauthenticatedPage: Page;
+  versionsUnavailable: boolean;
 }>({
+  versionsUnavailable: [false, { option: true }],
   // Authenticated page with admin user
   authenticatedPage: async ({ page }, use) => {
     await setupAuth(page, mockAdminUser);
@@ -2718,9 +2731,9 @@ export const test = base.extend<{
   },
 
   // Admin page specifically
-  adminPage: async ({ page }, use) => {
+  adminPage: async ({ page, versionsUnavailable }, use) => {
     await setupAuth(page, mockAdminUser);
-    await setupApiMocks(page);
+    await setupApiMocks(page, { versionsUnavailable });
     await use(page);
   },
 

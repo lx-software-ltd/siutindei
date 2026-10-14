@@ -134,6 +134,8 @@ export interface CatalogVersionView {
   entityId: string | null;
   isAdmin: boolean;
   isLoading: boolean;
+  isError: boolean;
+  error: Error | null;
   isHistorical: boolean;
   locked: boolean;
   latestVersion: number;
@@ -210,6 +212,8 @@ export function useCatalogVersion({
     entityId,
     isAdmin,
     isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error instanceof Error ? query.error : null,
     isHistorical,
     locked,
     latestVersion,
@@ -313,6 +317,7 @@ export function HistoricalRowMark({
 
 export function VersionSwitcher({ view }: { view: CatalogVersionView }) {
   const menuId = useId();
+  const errorId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -384,21 +389,53 @@ export function VersionSwitcher({ view }: { view: CatalogVersionView }) {
       </span>
     );
   }
+  if (view.isError) {
+    return (
+      <span title={view.error?.message}>
+        <button
+          type='button'
+          disabled
+          aria-describedby={view.error ? errorId : undefined}
+          className='inline-flex h-8 cursor-not-allowed items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium text-slate-500'
+        >
+          Versions unavailable
+        </button>
+        {view.error ? (
+          <span id={errorId} className='sr-only'>
+            {view.error.message}
+          </span>
+        ) : null}
+      </span>
+    );
+  }
+  if (view.isLoading && view.items.length === 0) {
+    return (
+      <button
+        type='button'
+        disabled
+        className='inline-flex h-8 cursor-not-allowed items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium text-slate-500'
+      >
+        Loading versions…
+      </button>
+    );
+  }
 
   const rows =
     view.items.length > 0
       ? view.items
-      : [
-          {
-            id: 'current',
-            entity_type: '',
-            entity_id: view.entityId,
-            version: view.latestVersion,
-            action: 'current',
-            snapshot: {},
-            created_at: '',
-          } satisfies CatalogVersionRow,
-        ];
+      : !view.isLoading
+        ? [
+            {
+              id: 'current',
+              entity_type: '',
+              entity_id: view.entityId,
+              version: view.latestVersion,
+              action: 'current',
+              snapshot: {},
+              created_at: '',
+            } satisfies CatalogVersionRow,
+          ]
+        : [];
 
   return (
     <div className='relative'>

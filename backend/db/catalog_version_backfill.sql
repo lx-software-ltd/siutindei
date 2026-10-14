@@ -83,15 +83,18 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION catalog_backfill_live_batch(etable text)
-RETURNS integer
+CREATE OR REPLACE FUNCTION catalog_backfill_live_candidates(
+    etable text,
+    lim integer
+)
+RETURNS uuid[]
 LANGUAGE plpgsql
 AS $$
 DECLARE
     ids uuid[];
 BEGIN
     EXECUTE format(
-        'SELECT array_agg(id) FROM ('
+        'SELECT array_agg(id ORDER BY id) FROM ('
         '    SELECT id FROM %1$I '
         '    WHERE NOT EXISTS ('
         '        SELECT 1 FROM catalog_versions '
@@ -100,18 +103,30 @@ BEGIN
         '          AND version = 1'
         '    ) '
         '    ORDER BY id '
-        '    LIMIT 200 '
+        '    LIMIT $2 '
         '    FOR UPDATE SKIP LOCKED'
         ') picked',
         etable
     )
     INTO ids
-    USING etable;
+    USING etable, lim;
+    RETURN ids;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION catalog_backfill_live_batch(etable text)
+RETURNS uuid[]
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    ids uuid[];
+BEGIN
+    ids := catalog_backfill_live_candidates(etable, 200);
     IF ids IS NULL THEN
-        RETURN 0;
+        RETURN NULL;
     END IF;
     PERFORM catalog_backfill_live(etable, ids);
-    RETURN cardinality(ids);
+    RETURN ids;
 END;
 $$;
 
@@ -248,34 +263,70 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION catalog_backfill_deleted_batch(etable text)
-RETURNS integer
+CREATE OR REPLACE FUNCTION catalog_backfill_deleted_candidates(
+    etable text,
+    lim integer
+)
+RETURNS text[]
 LANGUAGE plpgsql
 AS $$
 DECLARE
     ids text[];
 BEGIN
-    SELECT array_agg(record_id) INTO ids
-    FROM (
-        SELECT DISTINCT record_id
-        FROM audit_log
-        WHERE table_name = etable
-          AND action = 'DELETE'
-          AND record_id ~* '^[0-9a-f-]{36}$'
-          AND NOT EXISTS (
-              SELECT 1
-              FROM catalog_versions
-              WHERE entity_id = audit_log.record_id::uuid
-                AND entity_type = catalog_entity_type(etable)
-                AND version = 1
-          )
-        ORDER BY record_id
-        LIMIT 200
-    ) picked;
+    -- Match catalog_backfill_deleted. The earliest INSERT must have
+    -- new_values, the id must be a real uuid, and a live row belongs to
+    -- the live backfill. Anything else writes nothing and would be
+    -- picked again on the next call.
+    EXECUTE format(
+        'SELECT array_agg(record_id ORDER BY record_id) FROM ('
+        '    SELECT DISTINCT audit_log.record_id'
+        '    FROM audit_log'
+        '    WHERE audit_log.table_name = $1'
+        '      AND audit_log.action = ''DELETE'''
+        '      AND audit_log.record_id ~* '
+        '          ''^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'''
+        '      AND COALESCE(('
+        '          SELECT inserted.new_values IS NOT NULL'
+        '          FROM audit_log inserted'
+        '          WHERE inserted.table_name = $1'
+        '            AND inserted.record_id = audit_log.record_id'
+        '            AND inserted.action = ''INSERT'''
+        '          ORDER BY inserted.timestamp ASC'
+        '          LIMIT 1'
+        '      ), false)'
+        '      AND NOT EXISTS ('
+        '          SELECT 1 FROM %1$I live'
+        '          WHERE live.id = audit_log.record_id::uuid'
+        '      )'
+        '      AND NOT EXISTS ('
+        '          SELECT 1 FROM catalog_versions'
+        '          WHERE entity_id = audit_log.record_id::uuid'
+        '            AND entity_type = catalog_entity_type($1)'
+        '            AND version = 1'
+        '      )'
+        '    ORDER BY audit_log.record_id'
+        '    LIMIT $2'
+        ') picked',
+        etable
+    )
+    INTO ids
+    USING etable, lim;
+    RETURN ids;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION catalog_backfill_deleted_batch(etable text)
+RETURNS text[]
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    ids text[];
+BEGIN
+    ids := catalog_backfill_deleted_candidates(etable, 200);
     IF ids IS NULL THEN
-        RETURN 0;
+        RETURN NULL;
     END IF;
     PERFORM catalog_backfill_deleted(etable, ids);
-    RETURN cardinality(ids);
+    RETURN ids;
 END;
 $$;

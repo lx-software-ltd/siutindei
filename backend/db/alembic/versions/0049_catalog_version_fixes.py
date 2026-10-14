@@ -43,8 +43,10 @@ def upgrade() -> None:
     for name in (
         "catalog_backfill_deleted_batch(text)",
         "catalog_backfill_deleted(text, text[])",
+        "catalog_backfill_deleted_candidates(text, integer)",
         "catalog_backfill_live_batch(text)",
         "catalog_backfill_live(text, uuid[])",
+        "catalog_backfill_live_candidates(text, integer)",
     ):
         op.execute(f"DROP FUNCTION IF EXISTS {name}")
 
@@ -71,10 +73,41 @@ def _backfill_in_batches() -> None:
             _drain("catalog_backfill_deleted_batch", table)
 
 
-def _drain(function_name: str, table: str) -> None:
-    statement = sa.select(getattr(sa.func, function_name)(table))
-    for _ in range(_BATCH_CAP):
-        count = op.get_bind().execute(statement).scalar()
-        if not count:
+def _drain_ids(
+    function_name: str, table: str, fetch_ids, cap: int = _BATCH_CAP
+) -> None:
+    """Stop when a batch returns the same first id, or the cap is hit.
+
+    ``fetch_ids`` is one batch: the ids it selected and then wrote. An
+    empty result means the table is finished. The batch function does
+    both steps in one statement, so the drain does not query twice.
+    """
+    previous: str | None = None
+    last_ids: list[str] = []
+    for _ in range(cap):
+        ids = [str(item) for item in fetch_ids()]
+        if not ids:
             return
-    raise RuntimeError(f"{function_name} did not finish for {table}")
+        marker = ids[0]
+        if previous is not None and marker == previous:
+            shown = ", ".join(ids[:5])
+            raise RuntimeError(
+                f"{function_name} made no progress for {table}; sample ids: {shown}"
+            )
+        previous = marker
+        last_ids = ids
+    shown = ", ".join(last_ids[:5])
+    raise RuntimeError(
+        f"{function_name} did not finish for {table}; sample ids: {shown}"
+    )
+
+
+def _drain(function_name: str, table: str) -> None:
+    """Fill one table. The batch returns the ids it just handled."""
+    statement = sa.select(getattr(sa.func, function_name)(table))
+
+    def fetch_ids() -> list[str]:
+        found = op.get_bind().execute(statement).scalar()
+        return [] if not found else list(found)
+
+    _drain_ids(function_name, table, fetch_ids)

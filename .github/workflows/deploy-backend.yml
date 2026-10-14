@@ -257,6 +257,73 @@ jobs:
             lxsoftware-siutindei-waf
           )
 
+          # One continue-update-rollback plus its waiter. The AWS call's
+          # own exit code is captured without a pipe: with or without
+          # pipefail, tee must not hide it. A failed waiter is retried
+          # once with RunMigrations skipped, because CloudFormation
+          # accepts the first call and only the waiter sees the resource
+          # fail again.
+          rollback_stack_once() {
+            local managed="$1"
+            shift
+            local -a skip_args=("$@")
+            local rollback_log status
+            rollback_log="$(mktemp)"
+            if [ ${#skip_args[@]} -eq 0 ]; then
+              echo "Stack ${managed} is in UPDATE_ROLLBACK_FAILED; calling continue-update-rollback."
+            else
+              echo "Stack ${managed} is in UPDATE_ROLLBACK_FAILED; calling continue-update-rollback with ${skip_args[*]}."
+            fi
+            if ! aws cloudformation continue-update-rollback \
+              --stack-name "$managed" \
+              --region "$AWS_REGION" \
+              "${skip_args[@]}" >"$rollback_log" 2>&1; then
+              cat "$rollback_log"
+              if [ ${#skip_args[@]} -eq 0 ] && grep -q RunMigrations "$rollback_log"; then
+                rm -f "$rollback_log"
+                echo "Retrying continue-update-rollback for ${managed} with RunMigrations skipped."
+                if ! rollback_stack_once "$managed" --resources-to-skip RunMigrations; then
+                  return 1
+                fi
+                return 0
+              fi
+              rm -f "$rollback_log"
+              echo "continue-update-rollback failed for ${managed}."
+              return 1
+            fi
+            cat "$rollback_log"
+            rm -f "$rollback_log"
+            echo "Waiting for ${managed} to reach UPDATE_ROLLBACK_COMPLETE (timeout ~15m)."
+            if ! aws cloudformation wait stack-rollback-complete \
+              --stack-name "$managed" \
+              --region "$AWS_REGION"; then
+              status="$(aws cloudformation describe-stacks \
+                --stack-name "$managed" \
+                --region "$AWS_REGION" \
+                --query 'Stacks[0].StackStatus' \
+                --output text 2>&1 || true)"
+              echo "Stack ${managed} did not reach UPDATE_ROLLBACK_COMPLETE (status: ${status})."
+              if [ ${#skip_args[@]} -eq 0 ]; then
+                echo "Retrying continue-update-rollback for ${managed} with RunMigrations skipped."
+                if ! rollback_stack_once "$managed" --resources-to-skip RunMigrations; then
+                  return 1
+                fi
+                return 0
+              fi
+              return 1
+            fi
+            status="$(aws cloudformation describe-stacks \
+              --stack-name "$managed" \
+              --region "$AWS_REGION" \
+              --query 'Stacks[0].StackStatus' \
+              --output text)"
+            echo "Stack ${managed} status after rollback: ${status}"
+            if [ "$status" != "UPDATE_ROLLBACK_COMPLETE" ]; then
+              echo "Stack ${managed} is ${status}, expected UPDATE_ROLLBACK_COMPLETE."
+              return 1
+            fi
+          }
+
           continue_rollback_for_wedged_stacks() {
             for managed in "${MANAGED_STACKS[@]}"; do
               if [[ ! " $CDK_STACKS " == *" $managed "* ]]; then
@@ -276,29 +343,42 @@ jobs:
               # revision the database is at. Skipping it is safe (migrations
               # are forward-only) and unwedges the rollback.
               local skip_args=()
-              local failed_resources
-              failed_resources="$(aws cloudformation describe-stack-resources \
+              local describe_err
+              describe_err="$(mktemp)"
+              local failed_resources=""
+              if ! failed_resources="$(aws cloudformation describe-stack-resources \
                 --stack-name "$managed" \
                 --region "$AWS_REGION" \
-                --query "StackResources[?ResourceStatus=='UPDATE_FAILED'].LogicalResourceId" \
-                --output text 2>/dev/null || echo '')"
-              if grep -qw RunMigrations <<< "$failed_resources"; then
+                --query "StackResources[?ResourceStatus=='UPDATE_FAILED' || ResourceStatus=='UPDATE_ROLLBACK_FAILED'].LogicalResourceId" \
+                --output text 2>"$describe_err")"; then
+                echo "describe-stack-resources failed for ${managed}:"
+                cat "$describe_err"
+                failed_resources=""
+              fi
+              rm -f "$describe_err"
+              echo "Resources in UPDATE_FAILED or UPDATE_ROLLBACK_FAILED for ${managed}: ${failed_resources:-<none>}"
+              describe_err="$(mktemp)"
+              local migration_events=""
+              if ! migration_events="$(aws cloudformation describe-stack-events \
+                --stack-name "$managed" \
+                --region "$AWS_REGION" \
+                --max-items 50 \
+                --query "StackEvents[?contains(LogicalResourceId, 'RunMigrations')].[ResourceStatus,ResourceStatusReason]" \
+                --output text 2>"$describe_err")"; then
+                echo "describe-stack-events failed for ${managed}:"
+                cat "$describe_err"
+                migration_events=""
+              fi
+              rm -f "$describe_err"
+              echo "RunMigrations recent events for ${managed}: ${migration_events:-<none>}"
+              if grep -q RunMigrations <<< "$failed_resources" \
+                || grep -q "Can't locate revision" <<< "$migration_events" \
+                || grep -q "did not finish" <<< "$migration_events"; then
                 echo "RunMigrations blocked the rollback; skipping it in continue-update-rollback."
                 skip_args=(--resources-to-skip RunMigrations)
               fi
-              echo "Stack ${managed} is in UPDATE_ROLLBACK_FAILED; calling continue-update-rollback."
-              if ! aws cloudformation continue-update-rollback \
-                --stack-name "$managed" \
-                --region "$AWS_REGION" \
-                "${skip_args[@]}"; then
-                echo "continue-update-rollback failed for ${managed}; the next deploy attempt will report the wedged state."
-                continue
-              fi
-              echo "Waiting for ${managed} to reach UPDATE_ROLLBACK_COMPLETE (timeout ~15m)."
-              if ! aws cloudformation wait stack-rollback-complete \
-                --stack-name "$managed" \
-                --region "$AWS_REGION"; then
-                echo "Wait for stack-rollback-complete on ${managed} timed out or failed."
+              if ! rollback_stack_once "$managed" "${skip_args[@]}"; then
+                return 1
               fi
             done
           }
@@ -325,7 +405,9 @@ jobs:
             fi
 
             saw_rollback_failed=0
-            if grep -Eiq 'is in UPDATE_ROLLBACK_FAILED state and can not be updated' "$ATTEMPT_LOG"; then
+            # The wedged status is already in this attempt's log. Waiting for
+            # the next attempt's "can not be updated" spends a deploy first.
+            if grep -Eiq 'UPDATE_ROLLBACK_FAILED' "$ATTEMPT_LOG"; then
               saw_rollback_failed=1
             fi
 
@@ -336,7 +418,10 @@ jobs:
 
             if [ "$saw_rollback_failed" -eq 1 ]; then
               echo "Detected UPDATE_ROLLBACK_FAILED; attempting continue-update-rollback before retry."
-              continue_rollback_for_wedged_stacks
+              if ! continue_rollback_for_wedged_stacks; then
+                echo "Could not recover the wedged stack."
+                exit 1
+              fi
             fi
 
             delay=$((45 * attempt))
