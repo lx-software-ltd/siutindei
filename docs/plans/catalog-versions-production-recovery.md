@@ -1,6 +1,14 @@
 # Plan: Catalog versions production recovery
 
-**Status**: Implemented in this branch. Phase 4 production deploy runs when this merges; the stack deploy itself is not part of the change.
+**Status**: The first recovery merged in #682. Deploy Backend run
+38551821797 then failed because the earlier attempt had committed
+`catalog_backfill_live_batch(text)` and
+`catalog_backfill_deleted_batch(text)` with `integer` returns, and
+`CREATE OR REPLACE` cannot change a return type. `0049` now drops
+those helpers before loading the SQL. Production is still stamped at
+`0048_catalog_versions`. The stack recovery in that run did reach
+`UPDATE_ROLLBACK_COMPLETE`; the run was cancelled during the retry.
+
 **Zone**: red (`backend/db/**`, `.github/workflows/deploy-backend.yml`),
 then yellow (`apps/admin_web/src/**`), plus one operator step
 

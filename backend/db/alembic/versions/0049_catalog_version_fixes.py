@@ -8,6 +8,11 @@ unseeded. The batch backfill may insert ``organization_merges`` rows
 with ``kind = 'delete'`` when ``audit_log`` still has a removed
 organization and no merge row. A fresh database has none. Existing
 seed SQL is unchanged.
+
+A failed run of this revision can commit the helper functions before
+the version stamp. Those copies return ``integer``. ``CREATE OR
+REPLACE`` cannot change a return type, so ``upgrade`` drops them
+before loading the SQL again.
 """
 
 from __future__ import annotations
@@ -32,22 +37,31 @@ _TABLES = (
     "activity_schedule",
 )
 _BATCH_CAP = 10000
+_BACKFILL_FUNCTIONS = (
+    "catalog_backfill_deleted_batch(text)",
+    "catalog_backfill_deleted(text, text[])",
+    "catalog_backfill_deleted_candidates(text, integer)",
+    "catalog_backfill_live_batch(text)",
+    "catalog_backfill_live(text, uuid[])",
+    "catalog_backfill_live_candidates(text, integer)",
+)
 
 
 def upgrade() -> None:
     """Replace version triggers, then fill any history still missing."""
     op.execute((_DB / "catalog_version_triggers.sql").read_text(encoding="utf-8"))
     _grant_catalog_versions()
+    # Drop first. A failed attempt left integer-returning copies, and
+    # CREATE OR REPLACE cannot change a return type.
+    _drop_backfill_functions()
     op.execute((_DB / "catalog_version_backfill.sql").read_text(encoding="utf-8"))
     _backfill_in_batches()
-    for name in (
-        "catalog_backfill_deleted_batch(text)",
-        "catalog_backfill_deleted(text, text[])",
-        "catalog_backfill_deleted_candidates(text, integer)",
-        "catalog_backfill_live_batch(text)",
-        "catalog_backfill_live(text, uuid[])",
-        "catalog_backfill_live_candidates(text, integer)",
-    ):
+    _drop_backfill_functions()
+
+
+def _drop_backfill_functions() -> None:
+    """Remove the one-shot helpers. Batches go before the functions they call."""
+    for name in _BACKFILL_FUNCTIONS:
         op.execute(f"DROP FUNCTION IF EXISTS {name}")
 
 
