@@ -7,8 +7,6 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   /** `h3` when this card sits under the page heading. */
   titleLevel?: 'h2' | 'h3';
   titleAccessory?: ReactNode;
-  /** `end` puts the accessory on the trailing edge of the title row. */
-  titleAccessoryAlign?: 'start' | 'end';
   description?: string;
   children: ReactNode;
   className?: string;
@@ -18,7 +16,6 @@ export function Card({
   title,
   titleLevel = 'h2',
   titleAccessory,
-  titleAccessoryAlign = 'start',
   description,
   children,
   className = '',
@@ -36,16 +33,15 @@ export function Card({
       {(title || titleAccessory || description) && (
         <header className='mb-3 sm:mb-4'>
           {(title || titleAccessory) && (
-            <div
-              className={clsx(
-                'flex flex-wrap items-center gap-2',
-                titleAccessoryAlign === 'end' && 'justify-between'
-              )}
-            >
+            <div className='flex flex-wrap items-center gap-2'>
               {title && (
                 <TitleTag className='text-base font-semibold sm:text-lg'>{title}</TitleTag>
               )}
-              {titleAccessory}
+              {titleAccessory ? (
+                <div className='ml-auto' data-testid='admin-card-title-accessory'>
+                  {titleAccessory}
+                </div>
+              ) : null}
             </div>
           )}
           {description && (

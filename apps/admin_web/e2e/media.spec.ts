@@ -6,6 +6,7 @@ test.describe('Media Panel', () => {
     await expect(
       adminPage.getByRole('heading', { name: 'Test Organization 1' })
     ).toBeVisible();
+    await expect(adminPage.getByText('Organization Version 2')).toBeVisible();
     await expect(adminPage.getByRole('heading', { name: 'Media' })).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'History' })).toHaveCount(0);
     const mediaHeading = adminPage.getByRole('heading', { name: 'Media' });
@@ -20,11 +21,20 @@ test.describe('Media Panel', () => {
     expect(cardBox!.x + cardBox!.width - (versionBox!.x + versionBox!.width)).toBeLessThan(48);
     await versionControl.click();
     await adminPage.getByRole('menuitem', { name: /Version 1/ }).click();
-    await expect(adminPage.getByText('Viewing version 1 of 2 · read-only')).toBeVisible();
+    await expect(adminPage.getByText(/Viewing version/)).toHaveCount(0);
     await expect(adminPage.locator('img[src="https://example.com/original.jpg"]')).toBeVisible();
     await expect(adminPage.locator('#media-url')).toHaveCount(0);
     await expect(adminPage.getByRole('button', { name: 'Save media' })).toHaveCount(0);
-    await adminPage.getByRole('button', { name: 'Back to latest' }).first().click();
+    const backToLatest = adminPage.getByRole('button', { name: 'Back to latest' });
+    await expect(backToLatest).toHaveCount(1);
+    const imageBox = await adminPage
+      .locator('img[src="https://example.com/original.jpg"]')
+      .boundingBox();
+    const backBox = await backToLatest.boundingBox();
+    expect(imageBox).toBeTruthy();
+    expect(backBox).toBeTruthy();
+    expect(backBox!.y).toBeGreaterThan(imageBox!.y);
+    await backToLatest.click();
 
     const mediaInput = adminPage.locator('#media-url');
     await mediaInput.fill('https://example.com/media-one.jpg');

@@ -14,7 +14,6 @@ import {
   VersionField,
   VersionFields,
   VersionSwitcher,
-  VersionViewBanner,
 } from '@/components/admin/version-history';
 import { resetAdminQueryClientForTests } from '@/lib/admin-query-client';
 import { listEntireCatalogHistory } from '@/lib/api-client-versions';
@@ -42,10 +41,14 @@ function Harness({ mode = 'admin' }: { mode?: ApiMode }) {
   return (
     <VersionFields view={view}>
       <VersionSwitcher view={view} />
-      <VersionViewBanner view={view} />
       <VersionField label='Name' versionKey='name'>
         <input aria-label='Name' readOnly={view.locked} />
       </VersionField>
+      {view.isHistorical ? (
+        <button type='button' onClick={view.backToLatest}>
+          Back to latest
+        </button>
+      ) : null}
     </VersionFields>
   );
 }
@@ -114,9 +117,10 @@ describe('version switcher', () => {
     await user.click(version);
     await user.click(await screen.findByRole('menuitem', { name: /Version 1/ }));
 
-    expect(await screen.findByText('Viewing version 1 of 2 · read-only')).toBeVisible();
+    expect(screen.queryByText(/Viewing version/)).not.toBeInTheDocument();
     expect(screen.getByText('Latest: Current name')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Version 1' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Back to latest' })).toBeVisible();
     expect(screen.getByLabelText('Name')).toHaveAttribute('readonly');
   });
 

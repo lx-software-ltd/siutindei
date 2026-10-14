@@ -17,11 +17,11 @@ switcher on the right of that same title row.
 ## Files
 
 - `docs/plans/media-version-control-align.md`
-- `apps/admin_web/src/components/ui/card.tsx`
-- `apps/admin_web/src/components/ui/admin-input-card.tsx`
-- `apps/admin_web/src/components/admin/media-panel.tsx`
-- `apps/admin_web/tests/components/ui/admin-input-card.test.tsx`
 - `apps/admin_web/e2e/media.spec.ts`
+
+`main` already right-aligns every card title accessory with
+`ml-auto` (`admin-card-title-accessory`). This branch keeps the Media
+Playwright assertion and does not add a second alignment API.
 
 ## Invariants this change preserves
 
@@ -32,8 +32,7 @@ switcher on the right of that same title row.
 
 ## Done when
 
-- The Media title row is `justify-between` so the switcher sits at the
-  trailing edge
+- The Media version switcher sits at the trailing edge of the title row
 - `npx vitest run tests/components/ui/admin-input-card.test.tsx`
 - Playwright media spec still opens the version menu
 - `npm run lint` and `npm run typecheck` pass in `apps/admin_web`

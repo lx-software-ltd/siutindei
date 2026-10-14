@@ -81,28 +81,16 @@ test.describe('Table card slots', () => {
     await expect(adminPage).not.toHaveURL(/[?&]job=/);
   });
 
-  test('activities put search and New activity on the left, on two rows', async ({
+  test('activities omit the filter bar and keep New activity on the actions row', async ({
     adminPage,
   }) => {
     await adminPage.goto('/admin/dashboard?section=activities&org=org-1');
     const card = adminPage.getByTestId('admin-record-table');
-    const filters = card.getByTestId('admin-filter-bar');
     const actions = card.getByTestId('admin-record-table-actions');
-    const create = actions.getByRole('button', { name: 'New activity' });
 
     await expect(card).toBeVisible();
-    await expect(filters).toBeVisible();
-    await expect(create).toBeVisible();
-    await expect(
-      filters.getByPlaceholder('Name, description, or category', { exact: true })
-    ).toBeVisible();
-    await expect(filters.getByPlaceholder('Search activities...')).toHaveCount(0);
-
-    const filterBox = await filters.boundingBox();
-    const actionBox = await actions.boundingBox();
-    const createBox = await create.boundingBox();
-    expect(actionBox!.y).toBeGreaterThan(filterBox!.y);
-    expect(Math.abs(createBox!.x - filterBox!.x)).toBeLessThan(32);
+    await expect(adminPage.getByTestId('admin-filter-bar')).toHaveCount(0);
+    await expect(actions.getByRole('button', { name: 'New activity' })).toBeVisible();
 
     await saveTableCardShot(adminPage, 'table-card-activities');
   });
@@ -132,6 +120,8 @@ test.describe('Table card slots', () => {
     const kpiCards = adminPage.getByTestId('admin-kpi-card');
 
     await expect(filters).toBeVisible();
+    await expect(filters.getByLabel('Name')).toHaveCount(0);
+    await expect(filters.getByLabel('Record')).toBeVisible();
     await expect(sweep).toBeVisible();
     await expect(kpiCards).toHaveCount(1);
     await expect(kpiCards).toContainText(['Pending']);

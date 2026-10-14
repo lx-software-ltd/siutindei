@@ -74,34 +74,22 @@ describe('AdminInputCard', () => {
     expect(bar.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('keeps badges in the title slot without changing the heading class', () => {
+  it('aligns the title accessory to the right of the heading', () => {
     render(
       <AdminInputCard
-        title='Harbour Club'
-        titleAccessory={<span>operational</span>}
+        title='Details'
+        titleAccessory={<span>Version 2 · Latest</span>}
         actions={<Button type='button'>Update</Button>}
       >
         <p>Fields</p>
       </AdminInputCard>
     );
 
-    const heading = screen.getByRole('heading', { name: 'Harbour Club' });
+    const heading = screen.getByRole('heading', { name: 'Details' });
     expect(heading).toHaveClass('text-base', 'font-semibold', 'sm:text-lg');
-    expect(heading.parentElement).toHaveTextContent('operational');
-    expect(heading.parentElement).not.toHaveClass('justify-between');
-  });
-
-  it('aligns a title accessory to the end of the title row', () => {
-    render(
-      <AdminInputCard
-        title='Media'
-        titleAccessory={<span>Version 2 · Latest</span>}
-        titleAccessoryAlign='end'
-      />
-    );
-
-    const heading = screen.getByRole('heading', { name: 'Media' });
-    expect(heading.parentElement).toHaveClass('justify-between');
     expect(heading.parentElement).toHaveTextContent('Version 2 · Latest');
+    const accessory = screen.getByTestId('admin-card-title-accessory');
+    expect(accessory).toHaveClass('ml-auto');
+    expect(accessory).toHaveTextContent('Version 2 · Latest');
   });
 });
