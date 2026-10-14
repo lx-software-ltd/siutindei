@@ -32,12 +32,21 @@ test.describe('Audit Logs Panel', () => {
     await expect(adminPage.getByPlaceholder('Actor email')).toHaveCount(0);
 
     await expect(adminPage.getByLabel('Action')).toHaveValue('all');
+    await expect(adminPage.getByLabel('Action').locator('option')).toHaveText([
+      'All actions',
+      'insert',
+      'update',
+      'delete',
+    ]);
     await expect(adminPage.getByRole('cell', { name: 'update', exact: true })).toBeVisible();
     await expect(adminPage.getByRole('cell', { name: 'insert', exact: true })).toBeVisible();
     await expect(adminPage.getByText('UPDATE', { exact: true })).toHaveCount(0);
     await expect(adminPage.getByText('INSERT', { exact: true })).toHaveCount(0);
+    await expect(adminPage.getByText('Insert', { exact: true })).toHaveCount(0);
+    await expect(adminPage.getByText('Update', { exact: true })).toHaveCount(0);
+    await expect(adminPage.getByText('Delete', { exact: true })).toHaveCount(0);
 
-    await adminPage.getByLabel('Action').selectOption('UPDATE');
+    await adminPage.getByLabel('Action').selectOption('update');
     await expect(adminPage.getByRole('table')).toContainText('update');
 
     await adminPage.getByRole('row').nth(1).click();

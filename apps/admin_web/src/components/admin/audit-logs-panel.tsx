@@ -36,7 +36,7 @@ import {
 
 const PAGE_NAME = formatAdminPageName('Audit logs');
 
-type ActionFilter = 'all' | 'INSERT' | 'UPDATE' | 'DELETE';
+type ActionFilter = 'all' | 'insert' | 'update' | 'delete';
 
 interface AuditLogListFilters {
   action: ActionFilter;
@@ -165,7 +165,7 @@ export function AuditLogsPanel() {
     fetcher: async ({ action, table, timeRange, cursor, limit }) => {
       const filters: AuditLogsFilters = {};
       if (action !== 'all') {
-        filters.action = action;
+        filters.action = action.toUpperCase() as NonNullable<AuditLogsFilters['action']>;
       }
       if (table !== 'all') {
         filters.table = table;
@@ -251,9 +251,9 @@ export function AuditLogsPanel() {
               }}
             >
               <option value='all'>All actions</option>
-              <option value='INSERT'>Insert</option>
-              <option value='UPDATE'>Update</option>
-              <option value='DELETE'>Delete</option>
+              <option value='insert'>insert</option>
+              <option value='update'>update</option>
+              <option value='delete'>delete</option>
             </Select>
           </AdminFilterField>
           <AdminFilterField>
