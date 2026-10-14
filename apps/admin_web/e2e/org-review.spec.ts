@@ -118,13 +118,39 @@ test.describe('Organization review queue', () => {
     await expect(detail.getByText('Organizations', { exact: true })).toHaveCount(0);
     await expect(detail.getByText('Captured categories')).toBeVisible();
     await expect(detail.getByText('1 · Pottery')).toBeVisible();
-    await expect(detail.getByText('3 rows')).toBeVisible();
+    await expect(detail.getByText('5 rows')).toBeVisible();
     await expect(detail.getByText('Organization · created 1')).toBeVisible();
-    await expect(detail.getByText('Harbor Arts', { exact: true })).toBeVisible();
+    await expect(
+      detail.getByRole('link', { name: 'Harbor Arts', exact: true })
+    ).toHaveAttribute('href', '/admin/dashboard?section=organizations&org=org-1');
     await expect(detail.getByText('Location · created 1')).toBeVisible();
-    await expect(detail.getByText('Harbor Arts / Main studio')).toBeVisible();
+    await expect(
+      detail.getByRole('link', { name: 'Harbor Arts / Main studio' })
+    ).toHaveAttribute(
+      'href',
+      '/admin/dashboard?section=locations&org=org-1&location=loc-1'
+    );
     await expect(detail.getByText('Activity · created 1')).toBeVisible();
-    await expect(detail.getByText('Harbor Arts / Clay club')).toBeVisible();
+    await expect(
+      detail.getByRole('link', { name: 'Harbor Arts / Clay club' })
+    ).toHaveAttribute(
+      'href',
+      '/admin/dashboard?section=activities&org=org-1&activity=activity-1'
+    );
+    await expect(detail.getByText('Pricing · created 1')).toBeVisible();
+    await expect(
+      detail.getByRole('link', { name: 'Clay club / Main studio / per_class' })
+    ).toHaveAttribute(
+      'href',
+      '/admin/dashboard?section=pricing&org=org-1&pricing=pricing-1'
+    );
+    await expect(detail.getByText('Schedule · created 1')).toBeVisible();
+    await expect(
+      detail.getByRole('link', { name: 'Clay club / Main studio', exact: true })
+    ).toHaveAttribute(
+      'href',
+      '/admin/dashboard?section=schedules&org=org-1&schedule=schedule-1'
+    );
     await expect(detail.getByText('File warnings')).toHaveCount(0);
     await expect(detail.getByText(/organizations\[\d+\]/)).toHaveCount(0);
     await expect(fileLink).toHaveAttribute(
@@ -138,6 +164,25 @@ test.describe('Organization review queue', () => {
       'https://imports.example/admin/imports/catalog.json'
     );
     await expect(adminPage.getByTestId('admin-row-job-1')).toHaveAttribute(
+      'data-expanded',
+      'true'
+    );
+  });
+
+  test('opens a location from import history', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=imports&tab=history');
+    await adminPage.getByRole('cell', { name: /created 1, updated 0/ }).click();
+    await adminPage
+      .getByTestId('admin-row-job-1-detail')
+      .getByRole('link', { name: 'Harbor Arts / Main studio' })
+      .click();
+    await expect(adminPage).toHaveURL(
+      /section=locations&org=org-1&location=loc-1/
+    );
+    await expect(
+      adminPage.getByRole('heading', { name: 'Locations' })
+    ).toBeVisible();
+    await expect(adminPage.getByTestId('admin-row-loc-1')).toHaveAttribute(
       'data-expanded',
       'true'
     );
