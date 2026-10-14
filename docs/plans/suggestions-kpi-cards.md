@@ -10,7 +10,7 @@ Replace the Categories · Suggestions count line with three
 
 - Pending
 - Activities need category
-- Spending
+- Spending per month
 
 The table card stays filters, table, and Load more only.
 
