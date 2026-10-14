@@ -10,13 +10,19 @@ test.describe('API Keys Panel', () => {
 
     const table = adminPage.getByRole('table');
     await expect(table.getByRole('columnheader', { name: 'Status' })).toBeVisible();
-    await expect(table.getByRole('columnheader', { name: 'Prefix' })).toBeVisible();
+    await expect(table.getByRole('columnheader', { name: 'Prefix' })).toHaveCount(0);
     await expect(table.getByRole('columnheader', { name: 'Expires' })).toBeVisible();
     await expect(table).toContainText('Partner read key');
-    await expect(table).toContainText('stk_readkey1');
+    await expect(
+      table.getByRole('row', { name: /Partner read key/ }).getByRole('cell', { name: 'read', exact: true })
+    ).toBeVisible();
+    await expect(table).not.toContainText('stk_readkey1');
     await expect(table).toContainText('Full access');
     await expect(table.getByText('Never')).toHaveCount(0);
     await expect(table).toContainText('Org One CRUD key');
+    await expect(
+      table.getByRole('row', { name: /Org One CRUD key/ }).getByRole('cell', { name: 'crud', exact: true })
+    ).toBeVisible();
     await expect(table).toContainText('Test Organization 1');
     await expect(table).toContainText('Old revoked key');
     await expect(table.getByRole('cell', { name: 'revoked', exact: true })).toBeVisible();
