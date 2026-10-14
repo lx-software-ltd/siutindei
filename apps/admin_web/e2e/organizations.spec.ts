@@ -340,6 +340,20 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
   });
 
+  test('shows listing status in the title after review is decided', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-2');
+    await expect(
+      adminPage.getByRole('heading', { name: 'Test Organization 2' })
+    ).toBeVisible();
+    const titleRow = adminPage.getByRole('heading', {
+      name: 'Test Organization 2',
+    }).locator('xpath=..');
+    await expect(titleRow.getByText('operational', { exact: true })).toBeVisible();
+    await expect(titleRow.getByText('approved', { exact: true })).toBeVisible();
+  });
+
   test('shows the organization version dropdown and a previous snapshot', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
     await expect(
@@ -348,7 +362,7 @@ test.describe('Organizations Panel', () => {
     const titleRow = adminPage.getByRole('heading', {
       name: 'Test Organization 1',
     }).locator('xpath=..');
-    await expect(titleRow.getByText('operational', { exact: true })).toBeVisible();
+    await expect(titleRow.getByText('operational', { exact: true })).toHaveCount(0);
     await expect(titleRow.getByText('pending review', { exact: true })).toBeVisible();
     const details = adminPage.getByRole('heading', { name: 'Details' });
     await expect(details).toBeVisible();
