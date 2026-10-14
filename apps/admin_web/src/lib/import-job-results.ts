@@ -39,6 +39,36 @@ export function formatImportJobSource(source?: string | null): string {
   return IMPORT_JOB_SOURCE_LABELS[value] ?? value;
 }
 
+function capitalizeImportStatus(status: string): string {
+  const value = status.trim();
+  if (!value) {
+    return ADMIN_TABLE_EMPTY;
+  }
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+function liveImportModeLabel(status: string): string {
+  return status.trim().toLowerCase() === 'completed'
+    ? 'Live execution'
+    : capitalizeImportStatus(status);
+}
+
+/** History Mode column. Live statuses stay capitalized. */
+export function formatImportJobMode(item: {
+  dry_run: boolean;
+  status: string;
+  allow_updates?: boolean;
+}): string {
+  if (item.dry_run) {
+    return 'Dry run';
+  }
+  const live = liveImportModeLabel(item.status);
+  if (item.allow_updates === false) {
+    return `${live} · skip existing`;
+  }
+  return live;
+}
+
 export function countImportStatuses(
   rows: readonly Pick<AdminImportResult, 'status'>[]
 ): Partial<Record<AdminImportStatus, number>> {

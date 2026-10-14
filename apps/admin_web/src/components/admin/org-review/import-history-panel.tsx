@@ -15,6 +15,7 @@ import { formatDateTime } from '../../../lib/date-utils';
 import { runAdminImport } from '../../../lib/api-client-imports';
 import {
   formatCapturedCategories,
+  formatImportJobMode,
   formatImportJobSource,
   formatImportResultHeader,
   formatImportResultNotes,
@@ -58,21 +59,6 @@ const RESULT_STATUS_TONE: Record<string, StatusBadgeTone> = {
 
 function formatWhen(value?: string) {
   return formatDateTime(value);
-}
-
-function liveModeLabel(status: string) {
-  return status === 'completed' ? 'Live execution' : status;
-}
-
-function modeLabel(item: ImportJobListItem) {
-  if (item.dry_run) {
-    return 'Dry run';
-  }
-  const live = liveModeLabel(item.status);
-  if (item.allow_updates === false) {
-    return `${live} · skip existing`;
-  }
-  return live;
 }
 
 function ImportFileLink({ job }: { job: ImportJobListItem }) {
@@ -274,7 +260,9 @@ function ImportJobSummary({ job }: { job: ImportJobListItem }) {
         <AdminReadOnlyValue label='Source'>
           {formatImportJobSource(job.source)}
         </AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Mode'>{modeLabel(job)}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Mode'>
+          {formatImportJobMode(job)}
+        </AdminReadOnlyValue>
         <AdminReadOnlyValue label='File' mono>
           <ImportFileLink job={job} />
         </AdminReadOnlyValue>
@@ -378,14 +366,14 @@ export function ImportHistoryPanel() {
                 {formatImportJobSource(item.source)}
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='secondary'>
-                {modeLabel(item)}
+                {formatImportJobMode(item)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               {formatImportJobSource(item.source)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {modeLabel(item)}
+              {formatImportJobMode(item)}
             </AdminDataTableCell>
           </>
         )}
