@@ -46,6 +46,12 @@ test.describe('Organization review queue', () => {
     await expect(
       adminPage.getByRole('columnheader', { name: 'First recorded' })
     ).toBeVisible();
+    await expect(
+      adminPage.getByRole('columnheader', { name: 'Changes' })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('columnheader', { name: 'Organizations' })
+    ).toHaveCount(0);
     const when = await adminPage.evaluate(() => {
       const date = new Date('2024-02-01T00:00:00Z');
       const monthDay = date.toLocaleDateString('en-US', {

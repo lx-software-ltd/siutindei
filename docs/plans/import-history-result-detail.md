@@ -15,7 +15,7 @@ an em dash when the count is zero. The table and accordion both say
 
 ## Non-goals
 
-- Removing the Organizations table column.
+- Removing the Changes table column.
 - Persisting category names on the job, or changing the import API
   contract.
 - Changing Mode, retry, View orgs, or the file download link.
@@ -39,7 +39,7 @@ an em dash when the count is zero. The table and accordion both say
 
 - Dry runs still say `Dry run`. Live completed jobs still say
   `Live execution` (and `· skip existing` when updates were off).
-- The Organizations table column still shows created/updated counts,
+- The Changes table column still shows created/updated counts,
   and appends captured categories when that count is above zero.
 - Each result type previews 20 rows, failed first, with Show all for the rest.
 - A settled suggestion shows its created name and the captured label.

@@ -352,7 +352,7 @@ export function ImportHistoryPanel() {
               Mode
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
-              Organizations
+              Changes
             </AdminDataTableHeadCell>
           </>
         }
@@ -363,7 +363,7 @@ export function ImportHistoryPanel() {
               <AdminDataTableCellMeta until='secondary'>
                 {modeLabel(item)}
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary' label='Organizations'>
+              <AdminDataTableCellMeta until='tertiary' label='Changes'>
                 {organizationSummary(item)}
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
