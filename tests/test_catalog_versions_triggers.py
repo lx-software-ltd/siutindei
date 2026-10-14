@@ -29,8 +29,10 @@ from sqlalchemy.orm import Session
 _BACKFILL_FUNCTIONS = (
     "catalog_backfill_deleted_batch(text)",
     "catalog_backfill_deleted(text, text[])",
+    "catalog_backfill_deleted_candidates(text, integer)",
     "catalog_backfill_live_batch(text)",
     "catalog_backfill_live(text, uuid[])",
+    "catalog_backfill_live_candidates(text, integer)",
 )
 
 _BACKFILL = (
@@ -496,6 +498,195 @@ def test_backfill_prefers_the_audit_insert(versions) -> None:
         assert rows[0].snapshot["description"] == "Original"
         assert rows[1].action == "updated"
         assert rows[1].snapshot["description"] == "Current"
+
+
+def _audit_row(
+    table_name: str,
+    record_id: str,
+    action: str,
+    *,
+    new_values: dict | None = None,
+    old_values: dict | None = None,
+) -> AuditLog:
+    return AuditLog(
+        table_name=table_name,
+        record_id=record_id,
+        action=action,
+        new_values=new_values,
+        old_values=old_values,
+    )
+
+
+def _deleted_candidates(session: Session, table_name: str) -> list[str]:
+    found = session.scalar(
+        text("SELECT catalog_backfill_deleted_candidates(:table_name, 10000)"),
+        {"table_name": table_name},
+    )
+    return [str(item) for item in (found or [])]
+
+
+def _forget_backfill_residue(session: Session, record_id: str) -> None:
+    session.execute(
+        text(
+            "ALTER TABLE catalog_versions DISABLE TRIGGER catalog_versions_delete_guard"
+        )
+    )
+    session.execute(
+        text("DELETE FROM catalog_versions WHERE entity_id = CAST(:record_id AS uuid)"),
+        {"record_id": record_id},
+    )
+    session.execute(
+        text(
+            "DELETE FROM organization_merges WHERE merged_org_id = CAST(:record_id AS uuid)"
+        ),
+        {"record_id": record_id},
+    )
+    session.execute(
+        text("DELETE FROM audit_log WHERE record_id = :record_id"),
+        {"record_id": record_id},
+    )
+    session.execute(
+        text(
+            "ALTER TABLE catalog_versions ENABLE TRIGGER catalog_versions_delete_guard"
+        )
+    )
+
+
+def test_deleted_backfill_skips_a_delete_without_an_insert(versions) -> None:
+    record_id = str(uuid4())
+    with Session(versions) as session:
+        session.add(
+            _audit_row(
+                "organizations",
+                record_id,
+                "DELETE",
+                old_values={"id": record_id, "name": "Gone"},
+            )
+        )
+        session.commit()
+    try:
+        with Session(versions) as session:
+            _install_backfill(session)
+            assert record_id not in _deleted_candidates(session, "organizations")
+            session.execute(
+                text(
+                    "SELECT catalog_backfill_deleted("
+                    "'organizations', ARRAY[:record_id])"
+                ),
+                {"record_id": record_id},
+            )
+            _drop_backfill(session)
+            session.commit()
+        with Session(versions) as session:
+            assert _rows(session, "organization", record_id) == []
+    finally:
+        with Session(versions) as session:
+            _forget_backfill_residue(session, record_id)
+            session.commit()
+
+
+def test_deleted_backfill_writes_created_then_deleted(versions) -> None:
+    record_id = str(uuid4())
+    snapshot = {"id": record_id, "name": "Original", "description": "Then"}
+    with Session(versions) as session:
+        session.add(
+            _audit_row("organizations", record_id, "INSERT", new_values=snapshot)
+        )
+        session.add(
+            _audit_row("organizations", record_id, "DELETE", old_values=snapshot)
+        )
+        session.commit()
+    try:
+        with Session(versions) as session:
+            _install_backfill(session)
+            assert record_id in _deleted_candidates(session, "organizations")
+            session.execute(
+                text(
+                    "SELECT catalog_backfill_deleted("
+                    "'organizations', ARRAY[:record_id])"
+                ),
+                {"record_id": record_id},
+            )
+            session.commit()
+            assert record_id not in _deleted_candidates(session, "organizations")
+            _drop_backfill(session)
+            session.commit()
+        with Session(versions) as session:
+            rows = _rows(session, "organization", record_id)
+            assert [row.action for row in rows] == ["created", "deleted"]
+            assert rows[0].version == 1
+            assert rows[0].snapshot["description"] == "Then"
+            assert rows[1].version == 2
+            assert rows[1].snapshot["description"] == "Then"
+    finally:
+        with Session(versions) as session:
+            _forget_backfill_residue(session, record_id)
+            session.commit()
+
+
+def test_deleted_backfill_leaves_a_live_row_alone(versions) -> None:
+    with Session(versions) as session:
+        session.execute(text("SET LOCAL session_replication_role = replica"))
+        org = _org(f"Trigger Live Skip {uuid4()}")
+        session.add(org)
+        session.flush()
+        record_id = str(org.id)
+        snapshot = {"id": record_id, "name": org.name, "description": "Original"}
+        session.add(
+            _audit_row("organizations", record_id, "INSERT", new_values=snapshot)
+        )
+        session.add(
+            _audit_row("organizations", record_id, "DELETE", old_values=snapshot)
+        )
+        session.commit()
+    try:
+        with Session(versions) as session:
+            _install_backfill(session)
+            assert record_id not in _deleted_candidates(session, "organizations")
+            _drop_backfill(session)
+            session.commit()
+        with Session(versions) as session:
+            assert _rows(session, "organization", record_id) == []
+    finally:
+        with Session(versions) as session:
+            _forget_backfill_residue(session, record_id)
+            session.commit()
+
+
+def test_deleted_backfill_ignores_a_non_uuid_record_id(versions) -> None:
+    record_id = "not-a-uuid"
+    with Session(versions) as session:
+        session.add(
+            _audit_row(
+                "organizations",
+                record_id,
+                "INSERT",
+                new_values={"name": "Broken"},
+            )
+        )
+        session.add(
+            _audit_row(
+                "organizations",
+                record_id,
+                "DELETE",
+                old_values={"name": "Broken"},
+            )
+        )
+        session.commit()
+    try:
+        with Session(versions) as session:
+            _install_backfill(session)
+            found = _deleted_candidates(session, "organizations")
+            _drop_backfill(session)
+            session.commit()
+        assert record_id not in found
+    finally:
+        with Session(versions) as session:
+            session.execute(
+                text("DELETE FROM audit_log WHERE record_id = :record_id"),
+                {"record_id": record_id},
+            )
+            session.commit()
 
 
 def test_committed_snapshot_is_immutable(versions) -> None:

@@ -26,7 +26,10 @@ them. Forgetting a record also strips contact fields from its snapshots.
 Backfill no longer uses `session_replication_role` or disables triggers.
 Revision `0049` fills missing history in batches of 200 and commits each
 batch, so a retry continues where it stopped. Catalog triggers no-op
-while that flag is set; audit triggers keep running.
+while that flag is set; audit triggers keep running. The deleted-row
+batch only picks ids that have an INSERT audit row and no live row, and
+the drain stops when a batch does not shrink that set. A delete with no
+INSERT audit row still gets no tombstone.
 
 Decisions below are approved: review fields bump the version, pricing
 and schedule changes bump the parent activity, a changed file overwrites

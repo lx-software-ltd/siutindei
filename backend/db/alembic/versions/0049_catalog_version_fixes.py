@@ -43,8 +43,10 @@ def upgrade() -> None:
     for name in (
         "catalog_backfill_deleted_batch(text)",
         "catalog_backfill_deleted(text, text[])",
+        "catalog_backfill_deleted_candidates(text, integer)",
         "catalog_backfill_live_batch(text)",
         "catalog_backfill_live(text, uuid[])",
+        "catalog_backfill_live_candidates(text, integer)",
     ):
         op.execute(f"DROP FUNCTION IF EXISTS {name}")
 
@@ -71,10 +73,39 @@ def _backfill_in_batches() -> None:
             _drain("catalog_backfill_deleted_batch", table)
 
 
+def _candidate_function(function_name: str) -> str:
+    if function_name == "catalog_backfill_deleted_batch":
+        return "catalog_backfill_deleted_candidates"
+    if function_name == "catalog_backfill_live_batch":
+        return "catalog_backfill_live_candidates"
+    raise RuntimeError(f"unknown backfill function {function_name}")
+
+
+def _sample_ids(function_name: str, table: str) -> list[str]:
+    statement = sa.select(
+        getattr(sa.func, _candidate_function(function_name))(table, 5)
+    )
+    found = op.get_bind().execute(statement).scalar()
+    return [str(item) for item in (found or [])]
+
+
 def _drain(function_name: str, table: str) -> None:
+    """Stop when a batch does not shrink the remaining candidate set."""
     statement = sa.select(getattr(sa.func, function_name)(table))
+    previous: str | None = None
     for _ in range(_BATCH_CAP):
+        samples = _sample_ids(function_name, table)
+        marker = samples[0] if samples else None
+        if previous is not None and marker == previous:
+            shown = ", ".join(samples)
+            raise RuntimeError(
+                f"{function_name} made no progress for {table}; sample ids: {shown}"
+            )
         count = op.get_bind().execute(statement).scalar()
         if not count:
             return
-    raise RuntimeError(f"{function_name} did not finish for {table}")
+        previous = marker
+    shown = ", ".join(_sample_ids(function_name, table))
+    raise RuntimeError(
+        f"{function_name} did not finish for {table}; sample ids: {shown}"
+    )
