@@ -28,7 +28,6 @@ interface SuggestionsTableProps {
   isLoading: boolean;
   isLoadingMore?: boolean;
   error?: string;
-  summary?: string;
   source?: string;
   onSourceChange?: (source: string) => void;
   onReload: () => void;
@@ -41,7 +40,6 @@ export function SuggestionsTable({
   isLoading,
   isLoadingMore = false,
   error = '',
-  summary,
   source = '',
   onSourceChange,
   onReload,
@@ -76,7 +74,6 @@ export function SuggestionsTable({
   return (
     <div className='space-y-4'>
       <h2 className='sr-only'>{PAGE_NAME}</h2>
-      {summary ? <p className='text-sm text-slate-700'>{summary}</p> : null}
       <ResourceTableShell
         ariaLabel={PAGE_NAME}
         rows={items}
