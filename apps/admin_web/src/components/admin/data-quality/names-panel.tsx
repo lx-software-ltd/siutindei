@@ -38,6 +38,7 @@ import {
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../../ui/admin-field-grid';
 import { AdminInputCard } from '../../ui/admin-input-card';
+import { AdminKpiCard } from '../../ui/admin-kpi-card';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -149,11 +150,6 @@ export function NamesPanel() {
   });
   const open = listed ?? detailQuery.data ?? null;
   const pending = summaryQuery.data?.by_status.pending ?? 0;
-  const summary = summaryQuery.isPending
-    ? 'Loading…'
-    : summaryQuery.data
-      ? `${pending} pending`
-      : 'No pending names.';
 
   async function sweep(reviewScope: 'pending_review' | 'all') {
     setScanningScope(reviewScope);
@@ -280,7 +276,9 @@ export function NamesPanel() {
           All matching records are selected, including rows not on this page.
         </StatusBanner>
       ) : null}
-      <p className='text-sm text-slate-700'>{summary}</p>
+      <div className='grid gap-3 sm:grid-cols-3'>
+        <AdminKpiCard label='Pending' value={pending} />
+      </div>
       <ResourceTableShell
         ariaLabel={PAGE_NAME}
         actions={

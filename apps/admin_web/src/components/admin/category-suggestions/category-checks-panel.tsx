@@ -19,6 +19,7 @@ import {
 } from '../../../lib/api-client-category-suggestions';
 import { StatusBanner } from '../../status-banner';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
+import { AdminKpiCard } from '../../ui/admin-kpi-card';
 import { Button } from '../../ui/button';
 import { ConfirmDialog } from '../../ui/confirm-dialog';
 import { Input } from '../../ui/input';
@@ -87,9 +88,6 @@ export function CategoryChecksPanel() {
     fetcher: fetchReviews,
   });
   const [summary, setSummary] = useState<CategorySuggestionSummary | null>(null);
-  const [summaryPhase, setSummaryPhase] = useState<'loading' | 'ready' | 'missing'>(
-    'loading'
-  );
   const [threshold, setThreshold] = useState<number | null>(0.9);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [confirmMode, setConfirmMode] = useState<
@@ -131,26 +129,19 @@ export function CategoryChecksPanel() {
     void getCategorySuggestionSummary(selectedOrgId || undefined)
       .then((counts) => {
         setSummary(counts);
-        setSummaryPhase('ready');
       })
-      .catch(() => setSummaryPhase('missing'));
+      .catch(() => undefined);
   }, [refetch, selectedOrgId]);
 
   useEffect(() => {
     let cancelled = false;
-    setSummaryPhase('loading');
     void getCategorySuggestionSummary(selectedOrgId || undefined)
       .then((counts) => {
         if (!cancelled) {
           setSummary(counts);
-          setSummaryPhase('ready');
         }
       })
-      .catch(() => {
-        if (!cancelled) {
-          setSummaryPhase('missing');
-        }
-      });
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -209,10 +200,6 @@ export function CategoryChecksPanel() {
     threshold === null
       ? 'Auto-assign is off.'
       : `Auto-assign when confidence is at least ${threshold}.`;
-  const progress = active
-    ? `${active.batches_done} of ${active.batches_total} batches. ${active.failed} failed.`
-    : '';
-
   async function startScan(reviewScope: 'pending_review' | 'all') {
     setIsStarting(true);
     setError('');
@@ -339,13 +326,11 @@ export function CategoryChecksPanel() {
     }
   }
 
-  const countsLine =
-    summaryPhase === 'loading'
-      ? 'Loading…'
-      : summaryPhase === 'missing'
-        ? 'Counts unavailable.'
-        : `${summary?.review_pending_total ?? 0} waiting. ` +
-          `${summary?.auto_applied_total ?? 0} auto-assigned.`;
+  const waiting = summary?.review_pending_total ?? 0;
+  const autoAssigned = summary?.auto_applied_total ?? 0;
+  const sweepProgress = active
+    ? `${active.batches_done} of ${active.batches_total}`
+    : null;
 
   return (
     <div className='space-y-4'>
@@ -374,9 +359,13 @@ export function CategoryChecksPanel() {
           All matching records are selected, including rows not on this page.
         </StatusBanner>
       ) : null}
-      <p className='text-sm text-slate-700'>
-        {progress || countsLine}
-      </p>
+      <div className='grid gap-3 sm:grid-cols-3'>
+        <AdminKpiCard label='Waiting' value={waiting} />
+        <AdminKpiCard label='Auto-assigned' value={autoAssigned} />
+        {sweepProgress ? (
+          <AdminKpiCard label='Sweep' value={sweepProgress} />
+        ) : null}
+      </div>
       <CategoryChecksTable
         items={list.items}
         isLoading={list.isLoading}

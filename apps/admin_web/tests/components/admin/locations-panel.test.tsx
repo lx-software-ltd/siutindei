@@ -71,6 +71,46 @@ describe('LocationsPanel', () => {
     });
   });
 
+  it('shows pending count in a KPI card', async () => {
+    vi.mocked(getLocationFixSummary).mockResolvedValue({
+      by_status: { pending: 2 },
+      pending_by_kind: {},
+      month_cost_usd: 0,
+      monthly_cost_limit_usd: 50,
+      active_run: null,
+    });
+    render(<LocationsPanel />, { wrapper });
+    const card = await screen.findByTestId('admin-kpi-card');
+    expect(card).toHaveTextContent('Pending');
+    await waitFor(() => expect(card).toHaveTextContent('2'));
+    expect(screen.queryByText('2 pending.')).not.toBeInTheDocument();
+  });
+
+  it('shows sweep progress in a KPI card while a run is active', async () => {
+    vi.mocked(getLocationFixSummary).mockResolvedValue({
+      by_status: { pending: 1 },
+      pending_by_kind: {},
+      month_cost_usd: 0,
+      monthly_cost_limit_usd: 50,
+      active_run: {
+        id: 'run-1',
+        status: 'running',
+        batches_total: 5,
+        batches_done: 2,
+        queued_for_model: 0,
+      },
+    });
+    render(<LocationsPanel />, { wrapper });
+    await waitFor(() => {
+      expect(screen.getAllByTestId('admin-kpi-card')).toHaveLength(2);
+    });
+    const cards = screen.getAllByTestId('admin-kpi-card');
+    expect(cards[0]).toHaveTextContent('Pending');
+    expect(cards[1]).toHaveTextContent('Sweep');
+    expect(cards[1]).toHaveTextContent('2 of 5');
+    expect(screen.queryByText(/Sweep 2 of 5 batches/)).not.toBeInTheDocument();
+  });
+
   it('offers the location sweep and decide actions', async () => {
     render(<LocationsPanel />, { wrapper });
     expect(await screen.findByRole('heading', { name: 'Model budget', level: 3 })).toHaveClass(

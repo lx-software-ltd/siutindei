@@ -42,6 +42,7 @@ import { CascadingAreaSelect } from '../../ui/cascading-area-select';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../../ui/admin-field-grid';
 import { AdminInputCard } from '../../ui/admin-input-card';
+import { AdminKpiCard } from '../../ui/admin-kpi-card';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -208,15 +209,10 @@ export function LocationsPanel() {
   ]);
 
   const pending = summaryQuery.data?.by_status.pending ?? 0;
-  const progress =
+  const sweepProgress =
     activeRun && (activeRun.status === 'queued' || activeRun.status === 'running')
-      ? ` Sweep ${activeRun.batches_done} of ${activeRun.batches_total} batches.`
-      : '';
-  const summary = summaryQuery.isPending
-    ? 'Loading…'
-    : summaryQuery.data
-      ? `${pending} pending.${progress}`
-      : 'No pending locations.';
+      ? `${activeRun.batches_done} of ${activeRun.batches_total}`
+      : null;
 
   async function refresh() {
     await getAdminQueryClient().invalidateQueries({
@@ -406,7 +402,12 @@ export function LocationsPanel() {
           All matching records are selected, including rows not on this page.
         </StatusBanner>
       ) : null}
-      <p className='text-sm text-slate-700'>{summary}</p>
+      <div className='grid gap-3 sm:grid-cols-3'>
+        <AdminKpiCard label='Pending' value={pending} />
+        {sweepProgress ? (
+          <AdminKpiCard label='Sweep' value={sweepProgress} />
+        ) : null}
+      </div>
       <ResourceTableShell
         ariaLabel={PAGE_NAME}
         actions={
