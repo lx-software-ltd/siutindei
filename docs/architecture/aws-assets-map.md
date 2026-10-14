@@ -454,7 +454,25 @@ after a new migration has run, the CloudFormation rollback re-invokes
 the revision the database is at, and the rollback wedges in
 `UPDATE_ROLLBACK_FAILED`. The deploy workflow recovers by calling
 `continue-update-rollback --resources-to-skip RunMigrations` when
-`RunMigrations` is the failed resource.
+`RunMigrations` is `UPDATE_FAILED` or a recent event says it cannot
+locate the revision. If that recovery does not run, an operator unwedges
+the stack by hand:
+
+```
+aws cloudformation continue-update-rollback \
+  --stack-name lxsoftware-siutindei \
+  --resources-to-skip RunMigrations \
+  --region ap-southeast-1
+aws cloudformation wait stack-rollback-complete \
+  --stack-name lxsoftware-siutindei --region ap-southeast-1
+```
+
+`GitHubActionsRole` is created with `AdministratorAccess`
+(`docs/architecture/setup.md`), which includes
+`cloudformation:DescribeStackResources` and
+`cloudformation:DescribeStackEvents`. The workflow prints stderr from
+those calls so a narrower role fails in the log instead of skipping the
+resource silently.
 
 ### Admin Bootstrap
 
