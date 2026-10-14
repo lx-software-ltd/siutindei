@@ -2030,6 +2030,114 @@ export async function setupApiMocks(page: Page): Promise<void> {
     });
   });
 
+  await page.route('**/api/mock/**/admin/imports/*', async (route) => {
+    const url = new URL(route.request().url());
+    const jobId = url.pathname.split('/').pop() ?? '';
+    if (jobId === 'presign' || jobId === 'export') {
+      await route.fallback();
+      return;
+    }
+    if (route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+    const jobs: Record<string, object> = {
+      'job-1': {
+        id: 'job-1',
+        object_key: 'admin/imports/catalog.json',
+        download_url: 'https://imports.example/admin/imports/catalog.json',
+        dry_run: false,
+        status: 'completed',
+        summary: {
+          organizations: { created: 1, updated: 0, failed: 0, skipped: 0 },
+          locations: { created: 1, updated: 0, failed: 0, skipped: 0 },
+          activities: { created: 1, updated: 0, failed: 0, skipped: 0 },
+          pricing: { created: 0, updated: 0, failed: 0, skipped: 0 },
+          schedules: { created: 0, updated: 0, failed: 0, skipped: 0 },
+          warnings: 0,
+          errors: 0,
+          captured_categories: 1,
+          captured_category_ids: ['sug-1'],
+        },
+        results: [
+          {
+            type: 'organizations',
+            key: 'Harbor Arts',
+            status: 'created',
+            warnings: [],
+            errors: [],
+          },
+          {
+            type: 'locations',
+            key: 'Harbor Arts / Main studio',
+            status: 'created',
+            warnings: [],
+            errors: [],
+          },
+          {
+            type: 'activities',
+            key: 'Harbor Arts / Clay club',
+            status: 'created',
+            warnings: [],
+            errors: [],
+          },
+        ],
+        file_warnings: [],
+        created_at: '2024-02-01T00:00:00Z',
+        updated_at: '2024-02-01T01:00:00Z',
+      },
+      'job-skip': {
+        id: 'job-skip',
+        object_key: 'admin/imports/skip.json',
+        dry_run: false,
+        allow_updates: false,
+        status: 'completed',
+        summary: {
+          organizations: { created: 0, updated: 0, failed: 1, skipped: 2 },
+          locations: { created: 0, updated: 0, failed: 0, skipped: 0 },
+          activities: { created: 0, updated: 0, failed: 0, skipped: 0 },
+          pricing: { created: 0, updated: 0, failed: 0, skipped: 0 },
+          schedules: { created: 0, updated: 0, failed: 0, skipped: 0 },
+          warnings: 0,
+          errors: 1,
+        },
+        results: [
+          {
+            type: 'organizations',
+            key: 'Missing Org',
+            status: 'failed',
+            path: 'organizations[0]',
+            warnings: [],
+            errors: [{ message: 'name is required' }],
+          },
+        ],
+        file_warnings: [],
+      },
+    };
+    const fallback = {
+      id: jobId,
+      object_key: 'admin/imports/dry-run.json',
+      dry_run: true,
+      status: 'completed',
+      summary: {
+        organizations: { created: 0, updated: 0, failed: 0, skipped: 0 },
+        locations: { created: 0, updated: 0, failed: 0, skipped: 0 },
+        activities: { created: 0, updated: 0, failed: 0, skipped: 0 },
+        pricing: { created: 0, updated: 0, failed: 0, skipped: 0 },
+        schedules: { created: 0, updated: 0, failed: 0, skipped: 0 },
+        warnings: 0,
+        errors: 0,
+      },
+      results: [],
+      file_warnings: [],
+    };
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(jobs[jobId] ?? fallback),
+    });
+  });
+
   await page.route('**/api/mock/**/admin/imports', async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({
@@ -2045,10 +2153,13 @@ export async function setupApiMocks(page: Page): Promise<void> {
               status: 'completed',
               summary: {
                 organizations: { created: 1, updated: 0, failed: 0, skipped: 0 },
+                captured_categories: 1,
+                captured_category_ids: ['sug-1'],
               },
               file_warnings: [],
-              result_count: 1,
+              result_count: 3,
               created_at: '2024-02-01T00:00:00Z',
+              updated_at: '2024-02-01T01:00:00Z',
             },
             {
               id: 'job-skip',
