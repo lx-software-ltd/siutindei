@@ -10,19 +10,20 @@ test.describe('Cognito Users Panel', () => {
     await expect(table.getByRole('columnheader')).toHaveText([
       'Expand',
       'Email',
-      'Name',
-      'Provider',
       'Roles',
-      'Created',
       'Last Login',
       'Operations',
     ]);
+    await expect(table.getByRole('columnheader', { name: 'Name' })).toHaveCount(0);
+    await expect(table.getByRole('columnheader', { name: 'Provider' })).toHaveCount(0);
+    await expect(table.getByRole('columnheader', { name: 'Created' })).toHaveCount(0);
 
     const managerRow = table.getByRole('row', { name: /manager@example.com/ }).first();
-    await expect(
-      managerRow.getByRole('cell', { name: 'manager@example.com', exact: true })
-    ).toBeVisible();
-    await expect(managerRow.getByRole('img', { name: 'Email' })).toBeVisible();
+    const emailCell = managerRow.getByRole('cell').nth(1);
+    await expect(emailCell).toContainText('manager@example.com');
+    await expect(emailCell.getByRole('img', { name: 'Email' })).toBeVisible();
+    await expect(managerRow.getByText('Manager User', { exact: true })).toHaveCount(0);
+    await table.screenshot({ path: '/opt/cursor/artifacts/users-table-desktop.png' });
     await expect(
       managerRow.getByText('Manager', { exact: true }).filter({ visible: true })
     ).toHaveCount(1);
@@ -45,12 +46,28 @@ test.describe('Cognito Users Panel', () => {
     await expect(detail.getByText('Raw Attributes', { exact: true })).toHaveCount(0);
     await expect(detail.getByText('Groups', { exact: true })).toHaveCount(0);
     await expect(detail.getByText('Groups:', { exact: true })).toHaveCount(0);
-    await expect(detail.getByText('Email', { exact: true })).toBeVisible();
-    await expect(detail.getByText('Username', { exact: true })).toBeVisible();
-    await expect(detail.getByText('Status', { exact: true })).toBeVisible();
-    await expect(detail.getByText('Roles', { exact: true })).toBeVisible();
-    await expect(detail.getByText('Created', { exact: true })).toBeVisible();
-    await expect(detail.getByText('Last Login', { exact: true })).toBeVisible();
+    const labels = detail.locator('dt');
+    await expect(labels).toHaveText([
+      'Email',
+      'Username',
+      'Name',
+      'Provider',
+      'Status',
+      'Roles',
+      'Created',
+      'Last Login',
+    ]);
+    await expect(detail.locator('dd').nth(0)).toHaveText('manager@example.com');
+    await expect(detail.locator('dd').nth(1)).toHaveText('manager@example.com');
+    await expect(detail.locator('dd').nth(2)).toHaveText('Manager User');
+    await expect(detail.locator('dd').nth(3)).toHaveText('Email');
+    await expect(detail.locator('dd').nth(4)).toHaveText('confirmed');
+    await expect(detail.locator('dd').nth(5)).toHaveText('Manager');
+    await expect(detail.getByText(/^CONFIRMED$/)).toHaveCount(0);
+    await expect(detail.locator('dt', { hasText: /^Username$/ }).locator('xpath=following-sibling::dd[1]')).toHaveClass(
+      /font-mono/
+    );
+    await detail.screenshot({ path: '/opt/cursor/artifacts/users-row-expanded.png' });
     await expect(detail).not.toContainText('2024-01-01T00:00:00Z');
     await expect(detail).not.toContainText('2024-01-10T00:00:00Z');
 
@@ -102,7 +119,7 @@ test.describe('Cognito Users Panel', () => {
       .click();
     await expect(adminPage.getByRole('alertdialog')).not.toBeVisible();
     await expect(
-      adminPage.getByRole('row', { name: /manager@example.com Manager User/ })
+      table.getByRole('cell', { name: 'manager@example.com Email', exact: true })
     ).toHaveCount(0);
   });
 });

@@ -3,17 +3,20 @@ import { expect, test } from './fixtures/test-fixtures';
 test.use({ viewport: { width: 390, height: 844 } });
 
 test.describe('Listing captions on a phone', () => {
-  test('Users repeats name, roles, and times under the email', async ({ adminPage }) => {
+  test('Users repeats roles and last login under the email', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=cognito-users');
     const table = adminPage.getByRole('table', { name: 'Users' });
     await expect(table).toBeVisible();
     await expect(table.getByRole('columnheader', { name: 'Roles' })).toBeHidden();
     await expect(table.getByRole('columnheader', { name: 'Last Login' })).toBeHidden();
+    await expect(table.getByRole('columnheader', { name: 'Name' })).toHaveCount(0);
+    await expect(table.getByRole('columnheader', { name: 'Created' })).toHaveCount(0);
 
     const row = table.getByRole('row', { name: /manager@example.com/ }).first();
     const secondary = row.locator('span.md\\:hidden');
-    await expect(secondary.filter({ hasText: 'Manager User' })).toBeVisible();
+    await expect(secondary.filter({ hasText: 'Manager User' })).toHaveCount(0);
     await expect(secondary.getByText('Manager', { exact: true })).toBeVisible();
+    await expect(row.getByRole('img', { name: 'Email' })).toBeVisible();
     await row.screenshot({ path: '/opt/cursor/artifacts/users-phone-captions.png' });
 
     await row.getByRole('button', { name: /Expand/ }).click();
