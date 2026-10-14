@@ -69,7 +69,7 @@ function organizationSummary(item: ImportJobListItem) {
   if (!captured) {
     return base;
   }
-  return `${base}; ${captured} categories captured`;
+  return `${base}; ${captured} captured categories`;
 }
 
 function liveModeLabel(status: string) {
@@ -248,7 +248,7 @@ function ImportJobSummary({ job }: { job: ImportJobListItem }) {
         <AdminReadOnlyValue label='File' mono>
           <ImportFileLink job={job} />
         </AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Categories captured'>
+        <AdminReadOnlyValue label='Captured categories'>
           <ImportJobCategories job={job} detail={detail} />
         </AdminReadOnlyValue>
         <AdminReadOnlyValue label='Results' span='full'>

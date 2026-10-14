@@ -9,6 +9,7 @@ import {
   formatImportStatusCounts,
   groupImportResults,
   previewImportRows,
+  stripImportResultPathPrefix,
 } from '@/lib/import-job-results';
 import type { AdminImportResult } from '@/lib/api-client-imports';
 
@@ -61,6 +62,32 @@ describe('groupImportResults', () => {
   });
 });
 
+describe('stripImportResultPathPrefix', () => {
+  it('drops a leading organizations[n]: prefix', () => {
+    expect(
+      stripImportResultPathPrefix(
+        'organizations[0]: ignored flat location fields area_name, address because locations[] is present'
+      )
+    ).toBe(
+      'ignored flat location fields area_name, address because locations[] is present'
+    );
+  });
+
+  it('drops a nested type path prefix', () => {
+    expect(
+      stripImportResultPathPrefix(
+        'organizations[1]/activities[0]: ignored flat activity fields category_name'
+      )
+    ).toBe('ignored flat activity fields category_name');
+  });
+
+  it('leaves notes that have no path prefix', () => {
+    expect(stripImportResultPathPrefix('neighbourhood missing')).toBe(
+      'neighbourhood missing'
+    );
+  });
+});
+
 describe('formatImportResultNotes', () => {
   it('joins errors and warnings without the file path', () => {
     expect(
@@ -69,6 +96,20 @@ describe('formatImportResultNotes', () => {
         warnings: ['neighbourhood missing'],
       })
     ).toBe('name is required · neighbourhood missing');
+  });
+
+  it('strips JSON index prefixes from each warning and error', () => {
+    expect(
+      formatImportResultNotes({
+        errors: [{ message: 'organizations[0]: name is required' }],
+        warnings: [
+          'organizations[0]: ignored flat location fields area_name, address because locations[] is present',
+          'organizations[0]: ignored flat activity fields category_name because activities[] is present',
+        ],
+      })
+    ).toBe(
+      'name is required · ignored flat location fields area_name, address because locations[] is present; ignored flat activity fields category_name because activities[] is present'
+    );
   });
 });
 

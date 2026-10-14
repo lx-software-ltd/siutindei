@@ -66,7 +66,7 @@ test.describe('Organization review queue', () => {
     });
     await expect(adminPage.getByTestId('admin-row-job-1')).toContainText(when);
     await expect(adminPage.getByTestId('admin-row-job-1')).toContainText(
-      '1 categories captured'
+      '1 captured categories'
     );
     await expect(
       adminPage.getByTestId('admin-row-job-1').getByRole('link')
@@ -116,7 +116,7 @@ test.describe('Organization review queue', () => {
     await expect(detail.getByText('First recorded', { exact: true })).toBeVisible();
     await expect(detail.getByText('Last changed', { exact: true })).toBeVisible();
     await expect(detail.getByText('Organizations', { exact: true })).toHaveCount(0);
-    await expect(detail.getByText('Categories captured')).toBeVisible();
+    await expect(detail.getByText('Captured categories')).toBeVisible();
     await expect(detail.getByText('1 · Pottery')).toBeVisible();
     await expect(detail.getByText('3 rows')).toBeVisible();
     await expect(detail.getByText('Organization · created 1')).toBeVisible();
@@ -148,7 +148,13 @@ test.describe('Organization review queue', () => {
     await adminPage.getByTestId('admin-row-job-skip').click();
     const detail = adminPage.getByTestId('admin-row-job-skip-detail');
     await expect(detail.getByText('name is required')).toBeVisible();
+    await expect(
+      detail.getByText(
+        'ignored flat location fields area_name, address because locations[] is present'
+      )
+    ).toBeVisible();
     await expect(detail.getByText('organizations[0]')).toHaveCount(0);
+    await expect(detail.getByText(/organizations\[\d+\]:/)).toHaveCount(0);
     await expect(detail.getByText('File warnings')).toHaveCount(0);
   });
 
