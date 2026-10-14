@@ -85,6 +85,26 @@ test.describe('Listing captions on a phone', () => {
     await expect(adminPage.getByLabel('Description')).toBeVisible();
   });
 
+  test('Data quality categories hides organization and current', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=data-quality&tab=checks');
+    const table = adminPage.getByRole('table', { name: 'Data quality · Categories' });
+    await expect(table).toBeVisible();
+    await expect(table.getByRole('columnheader', { name: 'Organization' })).toHaveCount(0);
+    await expect(table.getByRole('columnheader', { name: 'Current' })).toHaveCount(0);
+    await expect(table.getByRole('columnheader', { name: 'Proposed' })).toBeHidden();
+
+    const row = table.getByRole('row', { name: /Clay club/ }).first();
+    const secondary = row.locator('span.md\\:hidden');
+    await expect(secondary.filter({ hasText: 'Harbor Arts' })).toHaveCount(0);
+    await expect(secondary.filter({ hasText: 'Sport' })).toHaveCount(0);
+    await expect(secondary.filter({ hasText: 'Ceramics' })).toBeVisible();
+    await row.screenshot({
+      path: '/opt/cursor/artifacts/dq-categories-phone-captions.png',
+    });
+  });
+
   test('Deleted repeats place id and source id under the name', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=deleted');
     const table = adminPage.getByRole('table', { name: 'Data quality · Deleted' });

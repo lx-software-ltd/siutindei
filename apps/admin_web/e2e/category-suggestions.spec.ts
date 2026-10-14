@@ -52,9 +52,11 @@ test.describe('Category suggestions', () => {
     await expect(adminPage.getByText(/waiting\./)).toHaveCount(0);
     await expect(adminPage.locator('#check-status-filter')).toHaveValue('pending');
     await expect(adminPage.getByText('Clay club')).toBeVisible();
-    await expect(adminPage.getByRole('columnheader', { name: 'Current' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Organization' })).toHaveCount(0);
+    await expect(adminPage.getByRole('columnheader', { name: 'Current' })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Proposed' })).toBeVisible();
-    await expect(adminPage.getByRole('cell', { name: 'Sport', exact: true })).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'Harbor Arts', exact: true })).toHaveCount(0);
+    await expect(adminPage.getByRole('cell', { name: 'Sport', exact: true })).toHaveCount(0);
     await expect(adminPage.getByRole('cell', { name: 'Ceramics', exact: true })).toBeVisible();
     await expect(adminPage.getByRole('cell', { name: '62%' })).toBeVisible();
     const apply = adminPage.getByRole('button', { name: 'Apply' });

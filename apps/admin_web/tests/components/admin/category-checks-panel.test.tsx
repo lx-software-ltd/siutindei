@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NuqsTestingAdapter } from 'nuqs/adapters/testing';
 import type { ReactNode } from 'react';
@@ -213,6 +213,48 @@ describe('CategoryChecksPanel sweep buttons', () => {
       )
     );
   });
+  it('hides organization and current columns', async () => {
+    vi.mocked(listCategoryReviews).mockResolvedValue({
+      items: [
+        {
+          id: 'rev-1',
+          scan_run_id: 'run-1',
+          activity_id: 'act-1',
+          activity_name: 'Clay club',
+          org_id: 'org-1',
+          org_name: 'Harbor Arts',
+          current_category_name: 'Sport',
+          proposed_category_name: 'Ceramics',
+          verdict: 'reassign',
+          status: 'pending',
+        },
+      ],
+      next_cursor: null,
+    });
+    render(<CategoryChecksPanel />, { wrapper });
+    const table = await screen.findByRole('table', {
+      name: 'Data quality · Categories',
+    });
+    expect(
+      within(table).queryByRole('columnheader', { name: 'Organization' })
+    ).not.toBeInTheDocument();
+    expect(
+      within(table).queryByRole('columnheader', { name: 'Current' })
+    ).not.toBeInTheDocument();
+    expect(
+      within(table).getByRole('columnheader', { name: 'Proposed' })
+    ).toBeInTheDocument();
+    expect(
+      within(table).queryByRole('cell', { name: 'Harbor Arts' })
+    ).not.toBeInTheDocument();
+    expect(
+      within(table).queryByRole('cell', { name: 'Sport' })
+    ).not.toBeInTheDocument();
+    expect(
+      within(table).getByRole('cell', { name: 'Ceramics' })
+    ).toBeInTheDocument();
+  });
+
   it('cycles the header checkbox from visible rows to all matching rows', async () => {
     const user = userEvent.setup();
     vi.mocked(listCategoryReviews).mockResolvedValue({
