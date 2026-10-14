@@ -120,6 +120,8 @@ test.describe('Table card slots', () => {
     const kpiCards = adminPage.getByTestId('admin-kpi-card');
 
     await expect(filters).toBeVisible();
+    await expect(filters.getByLabel('Name')).toHaveCount(0);
+    await expect(filters.getByLabel('Record')).toBeVisible();
     await expect(sweep).toBeVisible();
     await expect(kpiCards).toHaveCount(1);
     await expect(kpiCards).toContainText(['Pending']);
