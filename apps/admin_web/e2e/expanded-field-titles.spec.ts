@@ -24,7 +24,7 @@ test.describe('Expanded field titles', () => {
     });
   });
 
-  test('import history field titles match File warnings', async ({
+  test('import history field titles are semibold', async ({
     adminPage,
   }, testInfo) => {
     await adminPage.route('**/api/mock/**/admin/imports/job-1', async (route) => {
@@ -94,7 +94,10 @@ test.describe('Expanded field titles', () => {
     await adminPage.goto('/admin/dashboard?section=imports&tab=history');
     await adminPage.getByRole('cell', { name: /created 1, updated 0/ }).click();
     const detail = adminPage.getByTestId('admin-row-job-1-detail');
-    await expect(detail.getByText('File warnings')).toBeVisible();
+    await expect(detail.getByText('File warnings')).toHaveCount(0);
+    await expect(detail.getByText('Missing column: neighbourhood')).toHaveCount(
+      0
+    );
     await expect(detail.getByText('Categories captured')).toBeVisible();
     await expect(detail.getByText('—', { exact: true })).toBeVisible();
 
@@ -103,7 +106,7 @@ test.describe('Expanded field titles', () => {
       'Last changed',
       'Mode',
       'File',
-      'File warnings',
+      'Results',
     ]) {
       await expect(detail.getByText(title, { exact: true })).toHaveCSS(
         'font-weight',

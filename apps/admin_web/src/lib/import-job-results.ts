@@ -75,15 +75,6 @@ export function formatImportResultNotes(
   return [errors, warnings].filter(Boolean).join(' · ');
 }
 
-export function importResultPath(
-  row: Pick<AdminImportResult, 'path' | 'key'>
-): string {
-  if (!row.path || row.path === row.key) {
-    return '';
-  }
-  return row.path;
-}
-
 const RESULT_STATUS_RANK: Record<string, number> = {
   failed: 0,
   skipped: 1,

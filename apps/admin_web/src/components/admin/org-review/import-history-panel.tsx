@@ -18,7 +18,6 @@ import {
   formatImportResultHeader,
   formatImportResultNotes,
   groupImportResults,
-  importResultPath,
   previewImportRows,
   type ImportResultGroup,
 } from '../../../lib/import-job-results';
@@ -127,7 +126,6 @@ function ImportResultGroupList({ group }: { group: ImportResultGroup }) {
       <ul className='list-disc space-y-1 pl-5'>
         {preview.rows.map((row, index) => {
           const notes = formatImportResultNotes(row);
-          const path = importResultPath(row);
           return (
             <li key={`${row.type}-${row.key}-${index}`}>
               <span className='me-2'>
@@ -138,9 +136,6 @@ function ImportResultGroupList({ group }: { group: ImportResultGroup }) {
               </span>
               <span className='text-slate-800'>{row.key}</span>
               {notes ? <span> — {notes}</span> : null}
-              {path ? (
-                <span className='mt-0.5 block text-slate-500'>{path}</span>
-              ) : null}
             </li>
           );
         })}
@@ -239,7 +234,6 @@ function ImportJobCategories({
 }
 
 function ImportJobSummary({ job }: { job: ImportJobListItem }) {
-  const warnings = job.file_warnings ?? [];
   const detail = useImportJob(job.id, job.status);
   return (
     <AdminEditorPanel>
@@ -261,16 +255,6 @@ function ImportJobSummary({ job }: { job: ImportJobListItem }) {
           <ImportJobResults job={job} detail={detail} />
         </AdminReadOnlyValue>
       </AdminFieldGrid>
-      {warnings.length > 0 ? (
-        <div className='space-y-1 text-sm text-slate-600'>
-          <p className='font-semibold text-slate-900'>File warnings</p>
-          <ul className='list-disc space-y-1 pl-5'>
-            {warnings.map((warning) => (
-              <li key={warning}>{warning}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </AdminEditorPanel>
   );
 }

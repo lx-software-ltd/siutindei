@@ -125,6 +125,8 @@ test.describe('Organization review queue', () => {
     await expect(detail.getByText('Harbor Arts / Main studio')).toBeVisible();
     await expect(detail.getByText('Activity · created 1')).toBeVisible();
     await expect(detail.getByText('Harbor Arts / Clay club')).toBeVisible();
+    await expect(detail.getByText('File warnings')).toHaveCount(0);
+    await expect(detail.getByText(/organizations\[\d+\]/)).toHaveCount(0);
     await expect(fileLink).toHaveAttribute(
       'href',
       'https://imports.example/admin/imports/catalog.json'
@@ -139,6 +141,15 @@ test.describe('Organization review queue', () => {
       'data-expanded',
       'true'
     );
+  });
+
+  test('hides JSON index paths on result rows', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=imports&tab=history');
+    await adminPage.getByTestId('admin-row-job-skip').click();
+    const detail = adminPage.getByTestId('admin-row-job-skip-detail');
+    await expect(detail.getByText('name is required')).toBeVisible();
+    await expect(detail.getByText('organizations[0]')).toHaveCount(0);
+    await expect(detail.getByText('File warnings')).toHaveCount(0);
   });
 
   test('retries a skip-existing import with the stored flag', async ({
