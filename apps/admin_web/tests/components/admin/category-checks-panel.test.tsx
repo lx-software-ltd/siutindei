@@ -151,7 +151,7 @@ describe('CategoryChecksPanel sweep buttons', () => {
     expect(calls.every((call) => call[0]?.org_id === 'org-1')).toBe(true);
   });
 
-  it('shows loading counts until the summary arrives', async () => {
+  it('shows waiting and auto-assigned in KPI cards', async () => {
     let resolveSummary: (value: CategorySuggestionSummary) => void = () => undefined;
     vi.mocked(getCategorySuggestionSummary).mockImplementation(
       () =>
@@ -160,7 +160,11 @@ describe('CategoryChecksPanel sweep buttons', () => {
         })
     );
     render(<CategoryChecksPanel />, { wrapper });
-    expect(await screen.findByText('Loading…')).toBeVisible();
+    const cards = await screen.findAllByTestId('admin-kpi-card');
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).toHaveTextContent('Waiting');
+    expect(cards[0]).toHaveTextContent('0');
+    expect(cards[1]).toHaveTextContent('Auto-assigned');
     resolveSummary({
       by_status: {},
       by_enrichment_status: {},
@@ -176,7 +180,13 @@ describe('CategoryChecksPanel sweep buttons', () => {
       discover_activity_total: 1,
       discover_label_total: 1,
     });
-    expect(await screen.findByText('4 waiting. 2 auto-assigned.')).toBeVisible();
+    await waitFor(() => {
+      const updated = screen.getAllByTestId('admin-kpi-card');
+      expect(updated[0]).toHaveTextContent('4');
+      expect(updated[1]).toHaveTextContent('2');
+    });
+    expect(screen.queryByText('4 waiting. 2 auto-assigned.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
   });
 
   it('sweeps pending review or all organizations from the matching button', async () => {

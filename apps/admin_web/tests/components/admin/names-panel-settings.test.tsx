@@ -71,6 +71,18 @@ describe('NamesPanel settings lists', () => {
     });
   });
 
+  it('shows pending count in a KPI card', async () => {
+    vi.mocked(getNameFixSummary).mockResolvedValue({
+      by_status: { pending: 3 },
+      pending_by_entity: {},
+    });
+    render(<NamesPanel />, { wrapper });
+    const card = await screen.findByTestId('admin-kpi-card');
+    expect(card).toHaveTextContent('Pending');
+    await waitFor(() => expect(card).toHaveTextContent('3'));
+    expect(screen.queryByText('3 pending')).not.toBeInTheDocument();
+  });
+
   it('offers pending and all-orgs sweep buttons and not a regular scan', async () => {
     render(<NamesPanel />, { wrapper });
     expect(await screen.findByRole('button', { name: 'Sweep pending' })).toBeInTheDocument();

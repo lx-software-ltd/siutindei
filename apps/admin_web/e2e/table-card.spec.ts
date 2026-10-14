@@ -129,14 +129,14 @@ test.describe('Table card slots', () => {
     const filters = card.getByTestId('admin-filter-bar');
     const actions = card.getByTestId('admin-record-table-actions');
     const sweep = actions.getByRole('button', { name: 'Sweep pending' });
-    const summary = adminPage.locator('p.text-sm.text-slate-700').filter({
-      hasText: /pending/i,
-    });
+    const kpiCards = adminPage.getByTestId('admin-kpi-card');
 
     await expect(filters).toBeVisible();
     await expect(sweep).toBeVisible();
-    await expect(summary).toBeVisible();
-    await expect(card.locator('p.text-sm.text-slate-700').filter({ hasText: /pending/i })).toHaveCount(0);
+    await expect(kpiCards).toHaveCount(1);
+    await expect(kpiCards).toContainText(['Pending']);
+    await expect(card.getByTestId('admin-kpi-card')).toHaveCount(0);
+    await expect(adminPage.locator('p.text-sm.text-slate-700').filter({ hasText: /pending/i })).toHaveCount(0);
 
     const filterBox = await filters.boundingBox();
     const actionBox = await actions.boundingBox();

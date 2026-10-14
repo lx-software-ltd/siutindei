@@ -44,6 +44,12 @@ test.describe('Category suggestions', () => {
     await expect(
       adminPage.getByRole('table', { name: 'Data quality · Categories' })
     ).toBeVisible();
+    const checkKpis = adminPage.getByTestId('admin-kpi-card');
+    await expect(checkKpis).toHaveCount(2);
+    await expect(checkKpis).toContainText(['Waiting', 'Auto-assigned']);
+    await expect(checkKpis.nth(0)).toContainText('1');
+    await expect(checkKpis.nth(1)).toContainText('0');
+    await expect(adminPage.getByText(/waiting\./)).toHaveCount(0);
     await expect(adminPage.locator('#check-status-filter')).toHaveValue('pending');
     await expect(adminPage.getByText('Clay club')).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Current' })).toBeVisible();
@@ -60,7 +66,9 @@ test.describe('Category suggestions', () => {
     await expect(adminPage.getByText(/Scan 2 activities in 1 model call/)).toBeVisible();
     await expect(adminPage.getByLabel('Ignore the current category')).toBeVisible();
     await adminPage.getByRole('button', { name: 'Start scan' }).click();
-    await expect(adminPage.getByText('1 of 1 batches.')).toBeVisible();
+    const sweepKpi = adminPage.getByTestId('admin-kpi-card').filter({ hasText: 'Sweep' });
+    await expect(sweepKpi).toContainText('1 of 1');
+    await expect(adminPage.getByText('1 of 1 batches.')).toHaveCount(0);
     await adminPage.getByRole('cell', { name: 'Clay club', exact: true }).click();
     await expect(adminPage.getByText('Indoor craft, not sport')).toBeVisible();
     await adminPage.getByRole('button', { name: 'Apply', exact: true }).click();

@@ -20,6 +20,10 @@ test.describe('Data quality', () => {
   test('admin can scan and apply a name fix', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=names');
     await expect(adminPage.getByRole('table', { name: 'Data quality · Names' })).toBeVisible();
+    const nameKpis = adminPage.getByTestId('admin-kpi-card');
+    await expect(nameKpis).toHaveCount(1);
+    await expect(nameKpis).toContainText(['Pending']);
+    await expect(adminPage.getByText(/\d+ pending/)).toHaveCount(0);
     await adminPage.getByRole('button', { name: 'Sweep pending' }).click();
     await expect(
       adminPage.getByText('Created 1, updated 0, skipped 0, cleared 0.')
@@ -70,6 +74,10 @@ test.describe('Data quality', () => {
   test('admin can sweep and apply a location fix', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=locations');
     await expect(adminPage.getByRole('table', { name: 'Data quality · Locations' })).toBeVisible();
+    const locationKpis = adminPage.getByTestId('admin-kpi-card');
+    await expect(locationKpis).toHaveCount(1);
+    await expect(locationKpis).toContainText(['Pending']);
+    await expect(adminPage.getByText(/pending\./)).toHaveCount(0);
     await adminPage.getByRole('button', { name: 'Sweep pending' }).click();
     await expect(
       adminPage.getByText(
