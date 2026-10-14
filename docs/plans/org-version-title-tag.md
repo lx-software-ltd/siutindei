@@ -1,6 +1,6 @@
 # Plan: Organization Version title tag
 
-**Status**: Active
+**Status**: Done
 **Zone**: yellow
 
 ## Goal
