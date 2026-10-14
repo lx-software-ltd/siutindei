@@ -71,9 +71,9 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByRole('columnheader', { name: 'Name' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Review' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Contact' })).toHaveCount(0);
-    await expect(adminPage.getByRole('columnheader', { name: 'Email' })).toBeVisible();
-    await expect(adminPage.getByRole('columnheader', { name: 'Phone' })).toBeVisible();
-    await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Email' })).toHaveCount(0);
+    await expect(adminPage.getByRole('columnheader', { name: 'Phone' })).toHaveCount(0);
+    await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Import job' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toHaveCount(0);
     await expect(adminPage.getByRole('cell', { name: 'v2' })).toHaveCount(0);
@@ -84,12 +84,12 @@ test.describe('Organizations Panel', () => {
     ).toBeVisible();
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
-    await expect(adminPage.getByRole('cell', { name: 'contact@org-one.test' })).toBeVisible();
-    await expect(adminPage.getByRole('cell', { name: '12345678' })).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'contact@org-one.test' })).toHaveCount(0);
+    await expect(adminPage.getByRole('cell', { name: '12345678' })).toHaveCount(0);
     await expect(adminPage.getByText('No phone')).toHaveCount(0);
     await expect(adminPage.getByText('No manager')).toHaveCount(0);
     await expect(adminPage.getByRole('cell', { name: 'job-1' })).toBeVisible();
-    await expect(adminPage.getByRole('cell', { name: 'manager-user-id-456' }).first()).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'manager-user-id-456' })).toHaveCount(0);
     await expect(adminPage.getByText('Manager manager-user-id-456')).toHaveCount(0);
   });
 
@@ -274,6 +274,8 @@ test.describe('Organizations Panel', () => {
   test('should have a name filter for the catalog', async ({ adminPage }) => {
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
     await expect(adminPage.locator('#review-name-filter')).toBeVisible();
+    await expect(adminPage.getByPlaceholder('Organization name')).toBeVisible();
+    await expect(adminPage.getByPlaceholder('Name', { exact: true })).toHaveCount(0);
     await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
   });
 

@@ -157,6 +157,27 @@ test.describe('Organization review queue', () => {
     await requestPromise;
   });
 
+  test('sorts the queue by recently imported', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=catalog');
+    const requestPromise = adminPage.waitForRequest(
+      (request) =>
+        request.url().includes('/admin/org-review') &&
+        request.url().includes('sort=last_imported_at')
+    );
+    const sort = adminPage.getByLabel('Sort');
+    await expect(sort.getByRole('option', { name: 'Sort by name' })).toHaveCount(1);
+    await expect(
+      sort.getByRole('option', { name: 'Sort by recently imported' })
+    ).toHaveCount(1);
+    await expect(sort.getByRole('option', { name: 'Name', exact: true })).toHaveCount(0);
+    await expect(
+      sort.getByRole('option', { name: 'Recently imported', exact: true })
+    ).toHaveCount(0);
+    await sort.selectOption('last_imported_at');
+    await requestPromise;
+    await expect(sort).toHaveValue('last_imported_at');
+  });
+
   test('filters the queue when the name is submitted', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=catalog');
     const requestPromise = adminPage.waitForRequest(

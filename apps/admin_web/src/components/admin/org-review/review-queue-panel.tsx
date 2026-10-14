@@ -409,7 +409,7 @@ export function CatalogPanel() {
                 id='review-name-filter'
                 aria-label='Name'
                 value={filters.q}
-                placeholder='Name'
+                placeholder='Organization name'
                 onChange={(event) => setFilter('q', event.target.value)}
               />
             </AdminFilterField>
@@ -427,8 +427,8 @@ export function CatalogPanel() {
                   )
                 }
               >
-                <option value='name'>Name</option>
-                <option value='last_imported_at'>Recently imported</option>
+                <option value='name'>Sort by name</option>
+                <option value='last_imported_at'>Sort by recently imported</option>
               </Select>
             </AdminFilterField>
           </AdminFilterBar>
@@ -500,7 +500,7 @@ export function CatalogPanel() {
         ariaLabel={PAGE_NAME}
         rows={items}
         getLabel={(item) => item.name || `organization ${item.id}`}
-        middleColumnCount={9}
+        middleColumnCount={6}
         hasActions={false}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
@@ -627,15 +627,6 @@ export function CatalogPanel() {
             <AdminDataTableHeadCell priority='secondary'>
               Review
             </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='secondary'>
-              Email
-            </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='secondary'>
-              Phone
-            </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='secondary'>
-              Manager
-            </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
               Import job
             </AdminDataTableHeadCell>
@@ -657,15 +648,6 @@ export function CatalogPanel() {
               <AdminDataTableCellMeta until='secondary'>
                 <StatusBadge status={formatAdminTableLabel(item.review_status)} />
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary' label='Email'>
-                {adminTableText(item.email)}
-              </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary' label='Phone'>
-                {adminTableText(item.phone_number)}
-              </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary' label='Manager' empty={!item.manager_id}>
-                <AdminTableId>{item.manager_id}</AdminTableId>
-              </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='tertiary' label='Import job' empty={!item.import_job_id}>
                 <AdminTableId>{item.import_job_id}</AdminTableId>
               </AdminDataTableCellMeta>
@@ -681,15 +663,6 @@ export function CatalogPanel() {
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               <StatusBadge status={formatAdminTableLabel(item.review_status)} />
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='secondary'>
-              {adminTableText(item.email)}
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='secondary'>
-              {adminTableText(item.phone_number)}
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='secondary'>
-              <AdminTableId>{item.manager_id}</AdminTableId>
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               <AdminTableId>{item.import_job_id}</AdminTableId>
