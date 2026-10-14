@@ -41,6 +41,13 @@ _BATCH_SIZE = 10
 # API Gateway stops the admin request at 29 seconds. The sweep stops
 # scanning at this point and leaves room for the commit and the enqueue.
 _SWEEP_BUDGET_SECONDS = 20
+
+
+class _OmittedBudget:
+    """Marker so an omitted budget is read when the sweep starts."""
+
+
+_OMITTED_BUDGET = _OmittedBudget()
 _REVIEW_SCOPES = frozenset({"pending_review", "all"})
 _LOOKUPS = frozenset({"nominatim", "google"})
 _ACTIVE = ("queued", "running")
@@ -60,13 +67,17 @@ def start_location_scan(
     query: str | None = None,
     lookup: str | None = None,
     requested_by: str | None = None,
-    budget_seconds: float | None = _SWEEP_BUDGET_SECONDS,
+    budget_seconds: float | None | _OmittedBudget = _OMITTED_BUDGET,
     only_org_ids: list[UUID] | None = None,
     reuse_lookups: bool = False,
     batch_size: int = _BATCH_SIZE,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Run venue rules and return model batches to enqueue after commit."""
-    deadline = None if budget_seconds is None else time.monotonic() + budget_seconds
+    if isinstance(budget_seconds, _OmittedBudget):
+        seconds: float | None = float(_SWEEP_BUDGET_SECONDS)
+    else:
+        seconds = budget_seconds
+    deadline = None if seconds is None else time.monotonic() + seconds
     if review_scope not in _REVIEW_SCOPES:
         raise ValidationError("Invalid review_scope", field="review_scope")
     if entity_type is not None and entity_type not in ENTITY_TYPES:
