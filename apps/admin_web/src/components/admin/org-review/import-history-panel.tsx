@@ -15,6 +15,7 @@ import { formatDateTime } from '../../../lib/date-utils';
 import { runAdminImport } from '../../../lib/api-client-imports';
 import {
   formatCapturedCategories,
+  formatImportJobSource,
   formatImportResultHeader,
   formatImportResultNotes,
   groupImportResults,
@@ -57,21 +58,6 @@ const RESULT_STATUS_TONE: Record<string, StatusBadgeTone> = {
 
 function formatWhen(value?: string) {
   return formatDateTime(value);
-}
-
-function organizationSummary(item: ImportJobListItem) {
-  const counts = item.summary?.organizations;
-  if (!counts) {
-    return ADMIN_TABLE_EMPTY;
-  }
-  const unchanged =
-    counts.unchanged == null ? '' : `, unchanged ${counts.unchanged}`;
-  const base = `created ${counts.created}, updated ${counts.updated}${unchanged}`;
-  const captured = item.summary?.captured_categories;
-  if (!captured) {
-    return base;
-  }
-  return `${base}; ${captured} captured categories`;
 }
 
 function liveModeLabel(status: string) {
@@ -279,11 +265,14 @@ function ImportJobSummary({ job }: { job: ImportJobListItem }) {
   return (
     <AdminEditorPanel>
       <AdminFieldGrid columns={2}>
-        <AdminReadOnlyValue label='First recorded'>
+        <AdminReadOnlyValue label='Timestamp'>
           {formatWhen(job.created_at)}
         </AdminReadOnlyValue>
         <AdminReadOnlyValue label='Last changed'>
           {formatWhen(job.updated_at)}
+        </AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Source'>
+          {formatImportJobSource(job.source)}
         </AdminReadOnlyValue>
         <AdminReadOnlyValue label='Mode'>{modeLabel(job)}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='File' mono>
@@ -372,12 +361,12 @@ export function ImportHistoryPanel() {
         detail={expandedJob ? <ImportJobSummary job={expandedJob} /> : null}
         head={
           <>
-            <AdminDataTableHeadCell>First recorded</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell>Timestamp</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Source
+            </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>
               Mode
-            </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>
-              Changes
             </AdminDataTableHeadCell>
           </>
         }
@@ -385,18 +374,18 @@ export function ImportHistoryPanel() {
           <>
             <AdminDataTableCell>
               <AdminTableTime value={item.created_at} emphasis />
+              <AdminDataTableCellMeta until='secondary' label='Source'>
+                {formatImportJobSource(item.source)}
+              </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='secondary'>
                 {modeLabel(item)}
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary' label='Changes'>
-                {organizationSummary(item)}
-              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              {formatImportJobSource(item.source)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               {modeLabel(item)}
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='tertiary'>
-              {organizationSummary(item)}
             </AdminDataTableCell>
           </>
         )}

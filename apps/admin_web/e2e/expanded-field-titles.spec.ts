@@ -36,6 +36,7 @@ test.describe('Expanded field titles', () => {
           object_key: 'admin/imports/catalog.json',
           download_url: 'https://imports.example/admin/imports/catalog.json',
           dry_run: false,
+          source: 'ui',
           status: 'completed',
           summary: {
             organizations: { created: 1, updated: 0, failed: 0, skipped: 0 },
@@ -75,6 +76,7 @@ test.describe('Expanded field titles', () => {
               object_key: 'admin/imports/catalog.json',
               download_url: 'https://imports.example/admin/imports/catalog.json',
               dry_run: false,
+              source: 'ui',
               status: 'completed',
               summary: {
                 organizations: { created: 1, updated: 0, failed: 0, skipped: 0 },
@@ -92,7 +94,11 @@ test.describe('Expanded field titles', () => {
     });
 
     await adminPage.goto('/admin/dashboard?section=imports&tab=history');
-    await adminPage.getByRole('cell', { name: /created 1, updated 0/ }).click();
+    await adminPage
+      .getByTestId('admin-row-job-1')
+      .getByRole('cell')
+      .nth(1)
+      .click();
     const detail = adminPage.getByTestId('admin-row-job-1-detail');
     await expect(detail.getByText('File warnings')).toHaveCount(0);
     await expect(detail.getByText('Missing column: neighbourhood')).toHaveCount(
@@ -102,8 +108,9 @@ test.describe('Expanded field titles', () => {
     await expect(detail.getByText('—', { exact: true })).toBeVisible();
 
     for (const title of [
-      'First recorded',
+      'Timestamp',
       'Last changed',
+      'Source',
       'Mode',
       'File',
       'Results',

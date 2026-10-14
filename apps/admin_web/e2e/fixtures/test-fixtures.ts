@@ -2176,6 +2176,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
               object_key: 'admin/imports/catalog.json',
               download_url: 'https://imports.example/admin/imports/catalog.json',
               dry_run: false,
+              source: 'ui',
               status: 'completed',
               summary: {
                 organizations: { created: 1, updated: 0, failed: 0, skipped: 0 },
@@ -2193,6 +2194,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
               download_url: 'https://imports.example/admin/imports/skip.json',
               dry_run: false,
               allow_updates: false,
+              source: 'board',
               status: 'completed',
               summary: {
                 organizations: { created: 0, updated: 0, failed: 1, skipped: 2 },
@@ -2219,6 +2221,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
               object_key: 'admin/imports/dry-run.json',
               download_url: 'https://imports.example/admin/imports/dry-run.json',
               dry_run: true,
+              source: 'ui',
               status: 'completed',
               summary: {
                 organizations: { created: 0, updated: 0, failed: 0, skipped: 0 },

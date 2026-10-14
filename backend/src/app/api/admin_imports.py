@@ -8,7 +8,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.api.admin_auth import _is_admin, _set_session_audit_context
+from app.api.admin_auth import _is_admin, _is_importer, _set_session_audit_context
 from app.api.admin_imports_export import (
     build_export_payload,
     export_file_name,
@@ -22,6 +22,7 @@ from app.api.admin_imports_retry import (
 from app.api.admin_imports_jobs import (
     begin_import_job,
     begin_import_retry,
+    caller_import_source,
     fail_import_job,
     find_import_job_by_id,
     find_import_job_by_key,
@@ -31,6 +32,7 @@ from app.api.admin_imports_jobs import (
     reuse_stored_import_job,
     serialize_import_job,
     serialize_import_job_summary,
+    source_for_import_run,
     store_import_job,
 )
 from app.api.admin_imports_objects import (
@@ -229,8 +231,13 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
 
     file_warnings: list[str] = []
     catalog_manager_id = os.getenv("BOARD_CATALOG_MANAGER_ID", "").strip() or None
-    if _is_admin(event):
+    is_admin = _is_admin(event)
+    if is_admin:
         catalog_manager_id = None
+    caller_source = caller_import_source(
+        is_admin=is_admin,
+        is_importer=_is_importer(event),
+    )
     import_job_id = None
     enqueue_ids: list[str] = []
     if retry_subset:
@@ -249,7 +256,11 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
                     )
                 started = begin_import_retry(session, job)
             else:
-                started = begin_import_job(session, object_key)
+                started = begin_import_job(
+                    session,
+                    object_key,
+                    source=caller_source,
+                )
             import_job_id = started.id
             session.commit()
     with Session(get_engine()) as session:
@@ -287,6 +298,11 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
                     unmatched=unmatched,
                 )
             summary["allow_updates"] = allow_org_updates
+            summary["source"] = source_for_import_run(
+                caller_source,
+                previous_summary,
+                retry=retry_subset,
+            )
             if dry_run:
                 session.rollback()
                 job = store_import_job(
@@ -316,6 +332,7 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
                 "file_warnings": file_warnings,
                 "dry_run": dry_run,
                 "allow_updates": allow_org_updates,
+                "source": summary["source"],
             }
             session.commit()
         except Exception as exc:

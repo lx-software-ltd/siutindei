@@ -478,6 +478,11 @@ export interface paths {
          *     again. Jobs stored before the flag updated existing rows.
          *     `retry_failed` without `allow_updates` uses the stored flag.
          *     The flag is echoed on the response and stored on the job summary.
+         *     `source` is set from the caller, not the body. An admin session
+         *     is `ui` (the Imports page). The importer group is `board` (the
+         *     board catalog API). An admin who is also an importer stays `ui`.
+         *     A retry keeps the source already stored on the job. Jobs stored
+         *     before this field existed report null.
          *     When `dry_run` is true the file is validated the same way as a live
          *     import (presign → PUT → POST) but no rows or audit entries are
          *     committed.
@@ -6696,6 +6701,13 @@ export interface components {
              *     the flag existed reports true.
              */
             allow_updates: boolean;
+            /**
+             * @description Who started the import. `ui` is an admin session (the
+             *     Imports page). `board` is the importer group (the board
+             *     catalog API). Null on jobs stored before this field existed.
+             * @enum {string|null}
+             */
+            source: "ui" | "board" | null;
         };
         AdminImportJob: {
             /** Format: uuid */
@@ -6707,6 +6719,13 @@ export interface components {
              *     the flag existed report true.
              */
             allow_updates: boolean;
+            /**
+             * @description Who started the import. `ui` is an admin session (the
+             *     Imports page). `board` is the importer group (the board
+             *     catalog API). Null on jobs stored before this field existed.
+             * @enum {string|null}
+             */
+            source: "ui" | "board" | null;
             summary: components["schemas"]["AdminImportSummary"];
             results: components["schemas"]["AdminImportResult"][];
             file_warnings: string[];
@@ -6733,6 +6752,13 @@ export interface components {
              *     the flag existed report true.
              */
             allow_updates: boolean;
+            /**
+             * @description Who started the import. `ui` is an admin session (the
+             *     Imports page). `board` is the importer group (the board
+             *     catalog API). Null on jobs stored before this field existed.
+             * @enum {string|null}
+             */
+            source: "ui" | "board" | null;
             /** @enum {string} */
             status: "running" | "completed" | "failed";
             summary: components["schemas"]["AdminImportSummary"];

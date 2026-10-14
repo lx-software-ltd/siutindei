@@ -367,6 +367,11 @@ paths:
         again. Jobs stored before the flag updated existing rows.
         `retry_failed` without `allow_updates` uses the stored flag.
         The flag is echoed on the response and stored on the job summary.
+        `source` is set from the caller, not the body. An admin session
+        is `ui` (the Imports page). The importer group is `board` (the
+        board catalog API). An admin who is also an importer stays `ui`.
+        A retry keeps the source already stored on the job. Jobs stored
+        before this field existed report null.
         When `dry_run` is true the file is validated the same way as a live
         import (presign → PUT → POST) but no rows or audit entries are
         committed.
@@ -4142,7 +4147,7 @@ components:
 
     AdminImportResponse:
       type: object
-      required: [summary, results, file_warnings, allow_updates]
+      required: [summary, results, file_warnings, allow_updates, source]
       properties:
         id:
           type: string
@@ -4168,6 +4173,14 @@ components:
           description: |
             Echo of the flag used for this run. A job stored before
             the flag existed reports true.
+        source:
+          type: string
+          nullable: true
+          enum: [ui, board]
+          description: |
+            Who started the import. `ui` is an admin session (the
+            Imports page). `board` is the importer group (the board
+            catalog API). Null on jobs stored before this field existed.
 
     AdminImportJob:
       type: object
@@ -4176,6 +4189,7 @@ components:
         - object_key
         - dry_run
         - allow_updates
+        - source
         - summary
         - results
         - file_warnings
@@ -4192,6 +4206,14 @@ components:
           description: |
             Whether this run updated existing rows. Jobs stored before
             the flag existed report true.
+        source:
+          type: string
+          nullable: true
+          enum: [ui, board]
+          description: |
+            Who started the import. `ui` is an admin session (the
+            Imports page). `board` is the importer group (the board
+            catalog API). Null on jobs stored before this field existed.
         summary:
           $ref: '#/components/schemas/AdminImportSummary'
         results:
@@ -4219,6 +4241,7 @@ components:
         - object_key
         - dry_run
         - allow_updates
+        - source
         - status
         - summary
         - file_warnings
@@ -4241,6 +4264,14 @@ components:
           description: |
             Whether this run updated existing rows. Jobs stored before
             the flag existed report true.
+        source:
+          type: string
+          nullable: true
+          enum: [ui, board]
+          description: |
+            Who started the import. `ui` is an admin session (the
+            Imports page). `board` is the importer group (the board
+            catalog API). Null on jobs stored before this field existed.
         status:
           type: string
           enum: [running, completed, failed]

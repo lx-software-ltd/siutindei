@@ -94,6 +94,7 @@ export interface ImportJobListItem {
   download_url?: string;
   dry_run: boolean;
   allow_updates?: boolean;
+  source?: 'ui' | 'board' | null;
   status: string;
   summary: {
     organizations?: {

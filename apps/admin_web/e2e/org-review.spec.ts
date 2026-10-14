@@ -44,11 +44,23 @@ test.describe('Organization review queue', () => {
       adminPage.getByRole('columnheader', { name: 'File' })
     ).toHaveCount(0);
     await expect(
+      adminPage.getByRole('columnheader', { name: 'Timestamp' })
+    ).toBeVisible();
+    await expect(
       adminPage.getByRole('columnheader', { name: 'First recorded' })
+    ).toHaveCount(0);
+    await expect(
+      adminPage.getByRole('columnheader', { name: 'Source' })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('columnheader', { name: 'Mode' })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('columnheader', { name: 'Operations' })
     ).toBeVisible();
     await expect(
       adminPage.getByRole('columnheader', { name: 'Changes' })
-    ).toBeVisible();
+    ).toHaveCount(0);
     await expect(
       adminPage.getByRole('columnheader', { name: 'Organizations' })
     ).toHaveCount(0);
@@ -66,8 +78,11 @@ test.describe('Organization review queue', () => {
     });
     await expect(adminPage.getByTestId('admin-row-job-1')).toContainText(when);
     await expect(adminPage.getByTestId('admin-row-job-1')).toContainText(
-      '1 captured categories'
+      'UI import'
     );
+    await expect(
+      adminPage.getByRole('cell', { name: 'Board API', exact: true })
+    ).toBeVisible();
     await expect(
       adminPage.getByTestId('admin-row-job-1').getByRole('link')
     ).toHaveCount(0);
@@ -110,10 +125,16 @@ test.describe('Organization review queue', () => {
       adminPage.getByTestId('admin-row-job-1').getByRole('link')
     ).toHaveCount(0);
 
-    await adminPage.getByRole('cell', { name: /created 1, updated 0/ }).click();
+    await adminPage
+      .getByTestId('admin-row-job-1')
+      .getByRole('cell')
+      .nth(1)
+      .click();
     const detail = adminPage.getByTestId('admin-row-job-1-detail');
     const fileLink = detail.getByRole('link', { name: 'admin/imports/catalog.json' });
-    await expect(detail.getByText('First recorded', { exact: true })).toBeVisible();
+    await expect(detail.getByText('Timestamp', { exact: true })).toBeVisible();
+    await expect(detail.getByText('Source', { exact: true })).toBeVisible();
+    await expect(detail.getByText('UI import', { exact: true })).toBeVisible();
     await expect(detail.getByText('Last changed', { exact: true })).toBeVisible();
     await expect(detail.getByText('Organizations', { exact: true })).toHaveCount(0);
     await expect(detail.getByText('Captured categories')).toBeVisible();
