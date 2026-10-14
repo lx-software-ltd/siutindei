@@ -60,9 +60,12 @@ def start_location_scan(
     query: str | None = None,
     lookup: str | None = None,
     requested_by: str | None = None,
+    budget_seconds: float | None = _SWEEP_BUDGET_SECONDS,
+    only_org_ids: list[UUID] | None = None,
+    reuse_lookups: bool = False,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Run venue rules and return model batches to enqueue after commit."""
-    deadline = time.monotonic() + _SWEEP_BUDGET_SECONDS
+    deadline = None if budget_seconds is None else time.monotonic() + budget_seconds
     if review_scope not in _REVIEW_SCOPES:
         raise ValidationError("Invalid review_scope", field="review_scope")
     if entity_type is not None and entity_type not in ENTITY_TYPES:
@@ -109,7 +112,9 @@ def start_location_scan(
     out_of_time = False
     queued: dict[str, list[str]] = {"organization": [], "activity": []}
     if entity_type != "location":
-        orgs = list(session.scalars(org_stmt(org_id, query, review_scope)).all())
+        orgs = list(
+            session.scalars(org_stmt(org_id, query, review_scope, only_org_ids)).all()
+        )
         if len(orgs) > _MAX_SWEEP:
             orgs = orgs[:_MAX_SWEEP]
             truncated = True
@@ -118,7 +123,9 @@ def start_location_scan(
     activities: list[Activity] = []
     if entity_type in (None, "activity") and not truncated:
         activities = list(
-            session.scalars(activity_stmt(org_id, query, review_scope)).all()
+            session.scalars(
+                activity_stmt(org_id, query, review_scope, only_org_ids)
+            ).all()
         )
     org_ids = {org.id for org in orgs}
     org_ids.update(activity.org_id for activity in activities)
@@ -138,7 +145,7 @@ def start_location_scan(
             )
             if len(queued["organization"]) >= _MAX_MODEL:
                 truncated = True
-            if time.monotonic() >= deadline:
+            if _out_of_time(deadline):
                 truncated = out_of_time = True
                 break
     if activities and not truncated:
@@ -146,7 +153,7 @@ def start_location_scan(
             if seen >= _MAX_SWEEP:
                 truncated = True
                 break
-            if time.monotonic() >= deadline:
+            if _out_of_time(deadline):
                 truncated = out_of_time = True
                 break
             seen += 1
@@ -158,12 +165,16 @@ def start_location_scan(
                 truncated = True
                 break
     if entity_type in (None, "location") and not out_of_time:
-        venues = list(session.scalars(location_stmt(org_id, query, review_scope)).all())
+        venues = list(
+            session.scalars(
+                location_stmt(org_id, query, review_scope, only_org_ids)
+            ).all()
+        )
         chains = location_quality.area_chains(
             session, [venue.area_id for venue in venues]
         )
         for venue in venues:
-            if seen >= _MAX_SWEEP or time.monotonic() >= deadline:
+            if seen >= _MAX_SWEEP or _out_of_time(deadline):
                 truncated = True
                 break
             seen += 1
@@ -184,6 +195,8 @@ def start_location_scan(
             org_id=org_id,
             query=query,
             provider=lookup,
+            only_org_ids=only_org_ids,
+            reuse_recorded=reuse_lookups,
         )
         if lookup
         else []
@@ -228,6 +241,10 @@ def start_location_scan(
     payload["queued_for_model"] = model_queued
     payload["queued_for_lookup"] = len(lookup_ids)
     return payload, batches
+
+
+def _out_of_time(deadline: float | None) -> bool:
+    return deadline is not None and time.monotonic() >= deadline
 
 
 def _clear(session, context, entity_type: str, entity_id) -> bool:

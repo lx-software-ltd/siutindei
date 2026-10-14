@@ -293,6 +293,13 @@ def reuse_stored_import_job(
     """
     if not stored_job_answers_request(job, dry_run, allow_updates):
         return False
+    from app.services.import_settings import skip_deleted_organizations
+    from app.services.org_delete_match import results_skipped_deleted
+
+    if not skip_deleted_organizations(session) and results_skipped_deleted(
+        getattr(job, "results", None)
+    ):
+        return False
     return stored_deletion_skips_still_match(session, getattr(job, "results", None))
 
 

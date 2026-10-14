@@ -116,8 +116,18 @@ def list_proposals(
     query: str | None,
     cursor: str | None,
     limit: int,
+    organization_ids: list | None = None,
+    activity_ids: list | None = None,
 ) -> dict[str, Any]:
-    stmt = proposal_stmt(status, entity_type, rule, org_id, query)
+    stmt = proposal_stmt(
+        status,
+        entity_type,
+        rule,
+        org_id,
+        query,
+        organization_ids=organization_ids,
+        activity_ids=activity_ids,
+    )
     if cursor:
         stamp, last_id = decode_cursor(cursor)
         stmt = stmt.where(

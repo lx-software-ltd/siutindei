@@ -24,7 +24,7 @@ from app.db.models import (
 )
 from app.db.models import Organization
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
-from app.services.name_sanitizer import NameSanitizeConfig, sanitize_name
+from app.services.name_sanitizer import NameSanitizeConfig
 from app.services.org_review_children import (
     counts_by_activity,
     linked_activity_ids,
@@ -107,6 +107,7 @@ def collect_issues(
     name_config: NameSanitizeConfig | None = None,
     duplicate_ids: set[str] | None = None,
     linked_activity_ids: set[str] | None = None,
+    pending_name_fix_ids: set[str] | None = None,
 ) -> tuple[list[ReviewIssue], int]:
     """Return issues and how many checks ran, so completeness can reach 1."""
     org_id = str(organization.id)
@@ -134,36 +135,16 @@ def collect_issues(
             )
         )
 
-    note()
-    cleaned = sanitize_name(
-        organization.name or "",
-        organization.name_translations or {},
+    from app.services.org_review_names import note_names
+
+    note_names(
+        organization,
+        activities,
         name_config,
+        pending_name_fix_ids or set(),
+        add,
+        note,
     )
-    if cleaned.changed:
-        add(
-            "name_needs_cleanup",
-            "warning",
-            "organization",
-            org_id,
-            "Name needs cleanup",
-        )
-    if organization.review_status == "pending_review":
-        for activity in activities:
-            note()
-            cleaned_activity = sanitize_name(
-                activity.name or "",
-                activity.name_translations or {},
-                name_config,
-            )
-            if cleaned_activity.changed:
-                add(
-                    "name_needs_cleanup",
-                    "warning",
-                    "activity",
-                    str(activity.id),
-                    "Name needs cleanup",
-                )
     note()
     if duplicate_ids and org_id in duplicate_ids:
         add(
@@ -384,8 +365,15 @@ def load_snapshots(
     from app.services.name_fixes import load_name_fix_config
     from app.services.org_duplicates import orgs_with_duplicate_signals
 
+    from app.services.org_review_names import pending_name_fix_ids as load_name_ids
+
     name_config = load_name_fix_config(session)
     duplicate_ids = orgs_with_duplicate_signals(session, organizations)
+    name_ids = load_name_ids(
+        session,
+        [organization.id for organization in organizations],
+        activity_ids,
+    )
 
     snapshots: list[OrgReviewSnapshot] = []
     for organization in organizations:
@@ -414,6 +402,7 @@ def load_snapshots(
                 for activity in org_activities
                 if str(activity.id) in linked_ids
             },
+            name_ids,
         )
         snapshots.append(
             OrgReviewSnapshot(

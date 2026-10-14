@@ -66,7 +66,7 @@ def _create_activity(repo: ActivityRepository, body: dict[str, Any]) -> Activity
     if category_repo.get_by_id(category_uuid) is None:
         raise ValidationError("category_id not found", field="category_id")
 
-    return Activity(
+    entity = Activity(
         org_id=_parse_uuid(org_id),
         category_id=category_uuid,
         name=name,
@@ -86,6 +86,10 @@ def _create_activity(repo: ActivityRepository, body: dict[str, Any]) -> Activity
         source_category_name=_source_category_name(body.get("source_category_name")),
         age_range=age_range,
     )
+    from app.services.data_quality.names import record_imported_name
+
+    record_imported_name(repo.session, entity, body, "activity")
+    return entity
 
 
 def _update_activity_for_manager(
@@ -162,6 +166,9 @@ def _update_activity(
             raise ValidationError("age_min and age_max are required together")
         _validate_age_range(age_min, age_max)
         entity.age_range = Range(int(age_min), int(age_max), bounds="[]")
+    from app.services.data_quality.names import record_imported_name
+
+    record_imported_name(repo.session, entity, body, "activity")
     return entity
 
 

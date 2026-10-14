@@ -27,10 +27,12 @@ from app.services.location_fix_prompt import (
 )
 from app.services.location_fix_query import over_budget
 from app.services.location_fixes import upsert_proposal
+from app.services.data_quality.answers import (
+    cached_chat_completion as openrouter_chat_completion,
+)
 from app.services.openrouter_client import (
     OpenRouterError,
     extract_message_text,
-    openrouter_chat_completion,
     usage_from_body,
 )
 from app.services.openrouter_json_parse import loads_openrouter_json

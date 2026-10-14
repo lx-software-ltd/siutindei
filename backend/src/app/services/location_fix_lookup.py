@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.db.engine import get_engine
 from app.db.models import Location, Organization
-from app.db.models.location_fix import LocationFixProposal
+from app.db.models.location_fix import LocationFixProposal, LocationScanRun
 from app.services.aws_proxy import AwsProxyError, http_invoke
 from app.services.location_fix_districts import in_hong_kong_bbox, pin_consistency
 from app.services.location_fix_geocode import AddressLookupFailed, lookup_address
@@ -48,6 +48,8 @@ def lookup_location_ids(
     org_id: UUID | None,
     query: str | None,
     provider: str,
+    only_org_ids: list | None = None,
+    reuse_recorded: bool = False,
 ) -> list[str]:
     """Pending missing-pin venues that still need this provider."""
     stmt = (
@@ -66,9 +68,11 @@ def lookup_location_ids(
         )
         .order_by(Location.address, Location.id)
     )
-    if review_scope != "all":
+    if only_org_ids is not None:
+        stmt = stmt.where(Location.org_id.in_(only_org_ids or []))
+    elif review_scope != "all":
         stmt = stmt.where(Organization.review_status == "pending_review")
-    if org_id is not None:
+    if only_org_ids is None and org_id is not None:
         stmt = stmt.where(Location.org_id == org_id)
     if query and query.strip():
         pattern = ilike_pattern(query.strip())
@@ -82,7 +86,9 @@ def lookup_location_ids(
     for entity_id, proposed, place_id in session.execute(stmt):
         if provider == "google" and not str(place_id or "").strip():
             continue
-        if _blocked(proposed, provider) or _fresh(proposed, provider):
+        if _blocked(proposed, provider):
+            continue
+        if not reuse_recorded and _fresh(proposed, provider):
             continue
         found.append(str(entity_id))
     return found
@@ -119,6 +125,7 @@ def process_lookup_batch(
     error: str | None = None
     try:
         with Session(get_engine()) as session:
+            reuse = _reuses_recorded_lookups(session, scan_run_id)
             venues = _venues(session, entity_ids)
             chains = area_chains(session, [venue.area_id for venue in venues.values()])
             for index, entity_id in enumerate(entity_ids):
@@ -129,13 +136,21 @@ def process_lookup_batch(
                 if provider == "google" and not within_google_budget(session, cost):
                     logger.warning("Google pin lookup stopped at the monthly budget")
                     break
-                hit, spent, problem = _resolve(provider, venue)
+                hit, spent, problem = _recorded_or_live(
+                    session, provider, venue, reuse=reuse
+                )
                 cost += spent
                 if problem:
                     failed = True
                     error = problem
                     break
-                _store(proposal, hit, provider, chains.get(venue.area_id, []))
+                _store(
+                    proposal,
+                    hit,
+                    provider,
+                    chains.get(venue.area_id, []),
+                    stable=reuse,
+                )
                 if provider == "nominatim" and index < len(entity_ids) - 1:
                     time.sleep(LOOKUP_PAUSE_SECONDS)
             _finish_batch(
@@ -164,6 +179,14 @@ def process_lookup_batch(
     return True
 
 
+def _reuses_recorded_lookups(session, scan_run_id: UUID) -> bool:
+    getter = getattr(session, "get", None)
+    if getter is None:
+        return False
+    run = getter(LocationScanRun, scan_run_id)
+    return bool(run is not None and run.data_quality_run_id)
+
+
 def grade_hit(rank: int) -> str:
     """Nominatim place rank inside Hong Kong: precise, street, or coarse."""
     if rank >= _PRECISE_RANK:
@@ -171,6 +194,27 @@ def grade_hit(rank: int) -> str:
     if rank >= _STREET_RANK:
         return "street"
     return "coarse"
+
+
+def _recorded_or_live(session, provider: str, venue: Location, *, reuse: bool):
+    from app.services.data_quality.answers import (
+        load_lookup_answer,
+        store_lookup_answer,
+    )
+
+    query = (
+        str(venue.place_id or "").strip()
+        if provider == "google"
+        else str(venue.address or "")
+    )
+    if reuse:
+        recorded = load_lookup_answer(session, provider, query)
+        if recorded is not None:
+            return recorded.get("hit"), Decimal("0"), recorded.get("error")
+    hit, spent, problem = _resolve(provider, venue)
+    if reuse and problem is None:
+        store_lookup_answer(session, provider, query, {"hit": hit, "error": None})
+    return hit, spent, problem
 
 
 def _resolve(
@@ -247,9 +291,13 @@ def _store(
     hit: dict[str, Any] | None,
     provider: str,
     areas: list,
+    *,
+    stable: bool = False,
 ) -> None:
     proposed = dict(proposal.proposed_location or {})
     if _blocked(proposed, provider):
+        return
+    if stable and _same_pin(proposed, hit, provider):
         return
     lookup: dict[str, Any] = {
         "provider": provider,
@@ -306,6 +354,21 @@ def _pending(session: Session, entity_id: str) -> LocationFixProposal | None:
             LocationFixProposal.status == "pending",
         )
     ).first()
+
+
+def _same_pin(proposed: dict | None, hit: dict | None, provider: str) -> bool:
+    lookup = (proposed or {}).get("lookup") or {}
+    if lookup.get("provider") != provider:
+        return False
+    if hit is None:
+        return lookup.get("grade") == "miss"
+    lat = (proposed or {}).get("lat")
+    lng = (proposed or {}).get("lng")
+    if lat is None or lng is None:
+        return False
+    return round(float(lat), 6) == round(float(hit["lat"]), 6) and round(
+        float(lng), 6
+    ) == round(float(hit["lng"]), 6)
 
 
 def _blocked(proposed: dict | None, provider: str) -> bool:

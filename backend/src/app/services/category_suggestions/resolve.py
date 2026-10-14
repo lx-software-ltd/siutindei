@@ -60,9 +60,11 @@ def normalize_category_key(value: str) -> str:
 def begin_capture_batch(session: Session) -> None:
     """Load settings once for the current import batch."""
     global _batch, _last_enqueue
+    from app.services.import_settings import captures_unknown_categories
+
     settings = get_settings(session)
     _batch = CaptureBatch(
-        enabled=bool(settings.on_import_enabled),
+        enabled=captures_unknown_categories(session),
         auto_enrich=bool(settings.auto_enrich_enabled),
     )
     _last_enqueue = []
@@ -107,7 +109,9 @@ def capture_enabled(session: Session) -> bool:
     """True when unknown names should be captured instead of failing."""
     if _batch is not None:
         return _batch.enabled
-    return bool(get_settings(session).on_import_enabled)
+    from app.services.import_settings import captures_unknown_categories
+
+    return captures_unknown_categories(session)
 
 
 def current_batch() -> CaptureBatch | None:

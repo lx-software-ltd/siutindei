@@ -35,6 +35,39 @@ def invalidate_duplicate_cache() -> None:
     _cache.clear()
 
 
+def list_stable_duplicate_groups(session: Session, org_ids: list[str]) -> dict:
+    """Recompute groups for a run with the deterministic scorer."""
+    from app.services.data_quality.duplicates import report_duplicates
+    from app.services.org_merge import suggest_survivor_id
+
+    report = report_duplicates(session, org_ids)
+    items = []
+    for group_id in report["group_ids"]:
+        parsed = [UUID(part) for part in group_id.split(",") if part]
+        orgs = list(
+            session.scalars(
+                select(Organization)
+                .where(Organization.id.in_(parsed))
+                .order_by(Organization.id)
+            ).all()
+        )
+        items.append(
+            {
+                "id": group_id,
+                "score": report["scores"].get(group_id, 0),
+                "signals": list((report.get("signals") or {}).get(group_id) or []),
+                "suggested_survivor_id": suggest_survivor_id(orgs) if orgs else None,
+                "organizations": [_org_summary(org) for org in orgs],
+            }
+        )
+    _attach_counts(session, items)
+    return {
+        "items": items,
+        "next_cursor": None,
+        "truncated": bool(report["truncated"]),
+    }
+
+
 def list_duplicate_groups(
     session: Session,
     *,

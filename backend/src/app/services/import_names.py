@@ -118,11 +118,15 @@ def prepare_imported_activity(
 
 
 def _store_cleaned_name(session, existing, name, body, warnings, find_name):
-    result = sanitize_name(
-        name,
-        body.get("name_translations") or {},
-        load_name_fix_config(session),
-    )
+    from app.services.import_settings import load_import_settings
+
+    body.pop("_name_change", None)
+    mode = load_import_settings(session).name_cleanup
+    if mode == "off":
+        body["name"] = name
+        return existing
+    translations = body.get("name_translations") or {}
+    result = sanitize_name(name, translations, load_name_fix_config(session))
     chosen = result.name
     matched = None
     if chosen.casefold() != name.casefold():
@@ -130,24 +134,52 @@ def _store_cleaned_name(session, existing, name, body, warnings, find_name):
             matched = find_name(chosen)
         except MultipleResultsFound as exc:
             raise ValidationError("Multiple records found", field="name") from exc
-    if matched is not None and (
+    collides = matched is not None and (
         existing is None or str(matched.id) != str(existing.id)
-    ):
-        if existing is None:
-            existing = matched
-        else:
+    )
+    if collides and existing is not None:
+        if warnings is not None:
+            warnings.append("Sanitized name matches another record; original name kept")
+        body["name"] = name
+        return existing
+    if collides and existing is None:
+        existing = matched
+        body["name"] = chosen
+        return existing
+    if mode == "propose":
+        body["name"] = name
+        if result.changed:
+            body["_name_change"] = _name_change(name, result, translations, "pending")
             if warnings is not None:
-                warnings.append(
-                    "Sanitized name matches another record; original name kept"
-                )
-            body["name"] = name
-            return existing
+                warnings.append(f"Name left for review: {name} → {result.name}")
+        return existing
     body["name"] = chosen
     if chosen != name or result.translation_patch:
         _merge_translations(body, result.translation_patch)
-        if chosen != name:
-            body["source_note"] = append_imported_name(body.get("source_note"), name)
+    if _stored_name_changes(existing, name, result):
+        body["_name_change"] = _name_change(name, result, translations, "applied")
+        if warnings is not None and chosen != name:
+            warnings.append(f"Name cleaned: {name} → {chosen}")
     return existing
+
+
+def _stored_name_changes(existing, name, result) -> bool:
+    if not result.changed:
+        return False
+    if existing is None:
+        return True
+    return existing.name != result.name or bool(result.translation_patch)
+
+
+def _name_change(name, result, translations, status) -> dict:
+    return {
+        "original": name,
+        "proposed": result.name,
+        "rules": list(result.rules),
+        "translation_patch": result.translation_patch or None,
+        "translations": translations if isinstance(translations, dict) else {},
+        "status": status,
+    }
 
 
 def append_imported_name(note: str | None, original: str) -> str:

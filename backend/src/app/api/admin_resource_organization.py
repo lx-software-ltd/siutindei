@@ -208,7 +208,7 @@ def _create_organization(
     if status != "operational":
         status_changed_at = datetime.now(timezone.utc)
 
-    return Organization(
+    entity = Organization(
         name=name,
         description=description,
         name_translations=name_translations,
@@ -240,6 +240,10 @@ def _create_organization(
         review_status="pending_review",
         **contact_fields,
     )
+    from app.services.data_quality.names import record_imported_name
+
+    record_imported_name(repo.session, entity, body, "organization")
+    return entity
 
 
 def _update_organization(
@@ -295,6 +299,9 @@ def _update_organization(
             entity.logo_media_url = None
     _apply_organization_contact_fields(entity, body)
     _apply_organization_listing_fields(repo, entity, body)
+    from app.services.data_quality.names import record_imported_name
+
+    record_imported_name(repo.session, entity, body, "organization")
     return entity
 
 

@@ -16,6 +16,7 @@ from app.services.org_duplicates import (
     dismiss_pairs,
     get_duplicate_group,
     list_duplicate_groups,
+    list_stable_duplicate_groups,
     search_organizations,
 )
 from app.services.org_merge import merge_organizations
@@ -46,8 +47,14 @@ def handle_org_duplicates(
 
 
 def _list(event: Mapping[str, Any]) -> dict[str, Any]:
+    run_raw = _blank(_query_param(event, "run"))
     min_score = _parse_score(_query_param(event, "min_score"))
     with Session(get_engine()) as session:
+        if run_raw:
+            payload = list_stable_duplicate_groups(
+                session, _run_org_ids(session, run_raw)
+            )
+            return json_response(200, payload, event=event)
         payload = list_duplicate_groups(
             session,
             min_score=min_score,
@@ -118,6 +125,17 @@ def _merge(event: Mapping[str, Any]) -> dict[str, Any]:
 def _public_plan(payload: dict[str, Any]) -> dict[str, Any]:
     hidden = {"values", "pending_deletes"}
     return {key: value for key, value in payload.items() if key not in hidden}
+
+
+def _run_org_ids(session: Session, raw_id: str) -> list[str]:
+    from app.db.models import DataQualityRun
+    from app.exceptions import NotFoundError
+
+    run = session.get(DataQualityRun, _uuid(raw_id, "run"))
+    if run is None:
+        raise NotFoundError("data-quality", raw_id)
+    scope = run.scope if isinstance(run.scope, dict) else {}
+    return [str(item) for item in scope.get("organization_ids") or []]
 
 
 def _parse_score(value: str | None) -> float:

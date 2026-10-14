@@ -289,6 +289,7 @@ def _add_review(
     decided = status in {"confirmed", "auto_applied"}
     session.add(
         ActivityCategoryReview(
+            input_hash=_category_hash(session, activity),
             scan_run_id=run.id,
             activity_id=activity.id,
             org_id=activity.org_id,
@@ -305,6 +306,19 @@ def _add_review(
             decided_by=decided_by,
             decided_at=now if decided else None,
         )
+    )
+
+
+def _category_hash(session: Session, activity: Activity) -> str:
+    from app.services.category_suggestions.settings import resolved_model_name
+    from app.services.data_quality.categories import category_input_hash
+
+    settings = get_settings(session)
+    threshold = settings.auto_assign_threshold
+    return category_input_hash(
+        activity,
+        model=resolved_model_name(settings.openrouter_model),
+        threshold=None if threshold is None else float(threshold),
     )
 
 

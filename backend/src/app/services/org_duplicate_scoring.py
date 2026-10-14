@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from difflib import SequenceMatcher
 from urllib.parse import urlparse
+from uuid import UUID
 
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -180,8 +181,9 @@ def _trgm_pairs(session: Session) -> list[tuple[str, str, float]]:
 def _location_boost(session, by_id, scores) -> None:
     if not scores:
         return
+    org_ids = [_as_uuid(item) for item in by_id]
     rows = list(
-        session.scalars(select(Location).where(Location.org_id.in_(list(by_id)))).all()
+        session.scalars(select(Location).where(Location.org_id.in_(org_ids))).all()
     )
     points: dict[str, list[tuple[float, float]]] = {}
     for row in rows:
@@ -234,7 +236,67 @@ def _shared_host(host: str) -> bool:
     )
 
 
+def _as_uuid(value) -> UUID:
+    if isinstance(value, UUID):
+        return value
+    return UUID(str(value))
+
+
 def _text(value) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def score_pairs_stable(session, orgs, dismissed, scope_ids: set[str]):
+    """Score pairs with SequenceMatcher only. No trigram and no cache.
+
+    A pair is scored when at least one side is in ``scope_ids``.
+    """
+    ordered = sorted(
+        orgs,
+        key=lambda org: ((org.name or "").casefold(), str(org.id)),
+    )
+    by_id = {str(org.id): org for org in ordered}
+    scores: dict[tuple[str, str], dict[str, float]] = {}
+
+    def add(left: str, right: str, signal: str, amount: float) -> None:
+        if left == right:
+            return
+        if left not in scope_ids and right not in scope_ids:
+            return
+        low, high = sorted((left, right))
+        pair = (low, high)
+        if frozenset(pair) in dismissed:
+            return
+        bucket = scores.setdefault(pair, {})
+        bucket[signal] = max(bucket.get(signal, 0.0), amount)
+
+    _bucket_pairs(ordered, add)
+    _stable_similarity(ordered, scope_ids, add)
+    _location_boost(session, by_id, scores)
+    scored: dict[tuple[str, str], tuple[float, list[str]]] = {}
+    for pair, parts in scores.items():
+        base = max(
+            (amount for signal, amount in parts.items() if signal != "location"),
+            default=0.0,
+        )
+        boost = 0.15 if "location" in parts else 0.0
+        scored[pair] = (min(1.0, base + boost), sorted(parts))
+    return scored
+
+
+def _stable_similarity(orgs, scope_ids: set[str], add) -> None:
+    keys = [(str(org.id), organization_name_key(org.name)) for org in orgs]
+    scoped = [item for item in keys if item[0] in scope_ids]
+    for left_id, left_key in scoped:
+        if not left_key:
+            continue
+        for right_id, right_key in keys:
+            if left_id == right_id or not right_key or left_key == right_key:
+                continue
+            if left_id > right_id and right_id in scope_ids:
+                continue
+            sim = SequenceMatcher(None, left_key, right_key).ratio()
+            if sim >= 0.55:
+                add(left_id, right_id, "name", sim)

@@ -208,7 +208,7 @@ def upsert_proposal(
     scan_run_id: str | UUID | None = None,
     decided_by: str | None = None,
 ) -> str:
-    """Insert or refresh one proposal. Returns created, updated, or skipped."""
+    """Insert or refresh one proposal. Returns created, updated, skipped, or unchanged."""
     if dismissed_same(
         session,
         entity_type=entity_type,
@@ -220,8 +220,22 @@ def upsert_proposal(
     ):
         clear_pending(session, entity_type, entity_id)
         return "skipped"
+    from app.services.data_quality.locations import location_input_hash
+
+    digest = location_input_hash(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        kind=kind,
+        source=source,
+        proposed_location=proposed_location,
+        target_location_id=target_location_id,
+        confidence=confidence,
+        rationale=rationale,
+    )
     now = datetime.now(timezone.utc)
     row = pending_row(session, entity_type, entity_id)
+    if row is not None and row.input_hash == digest and status != "applied":
+        return "unchanged"
     if row is None:
         applied = status == "applied"
         session.add(
@@ -237,6 +251,7 @@ def upsert_proposal(
                 confidence=confidence,
                 rationale=rationale,
                 scan_run_id=scan_run_id,
+                input_hash=digest,
                 decided_by=decided_by if applied else None,
                 decided_at=now if applied else None,
             )
@@ -254,6 +269,7 @@ def upsert_proposal(
         rationale=rationale,
         scan_run_id=scan_run_id,
     )
+    row.input_hash = digest
     if status == "applied":
         _mark(row, "applied", decided_by)
         return "auto_applied"

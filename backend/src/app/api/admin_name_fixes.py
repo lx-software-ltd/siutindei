@@ -59,12 +59,19 @@ def handle_name_fixes(
 
 
 def _list(event: Mapping[str, Any]) -> dict[str, Any]:
-    status = _choice(_query_param(event, "status"), _STATUSES, "status") or "pending"
+    run_raw = _blank(_query_param(event, "run"))
+    status = _choice(_query_param(event, "status"), _STATUSES, "status")
+    if run_raw is None:
+        status = status or "pending"
     entity_type = _choice(
         _query_param(event, "entity_type"), _ENTITY_TYPES, "entity_type"
     )
     org_raw = _blank(_query_param(event, "org_id"))
     with Session(get_engine()) as session:
+        organization_ids = None
+        activity_ids = None
+        if run_raw:
+            organization_ids, activity_ids = _run_scope(session, run_raw)
         payload = list_proposals(
             session,
             status=status,
@@ -74,8 +81,28 @@ def _list(event: Mapping[str, Any]) -> dict[str, Any]:
             query=_blank(_query_param(event, "q")),
             cursor=_blank(_query_param(event, "cursor")),
             limit=parse_limit(event),
+            organization_ids=organization_ids,
+            activity_ids=activity_ids,
         )
     return json_response(200, payload, event=event)
+
+
+def _run_scope(session: Session, raw_id: str) -> tuple[list, list]:
+    from app.db.models import DataQualityRun
+    from app.exceptions import NotFoundError
+
+    try:
+        run_id = UUID(raw_id)
+    except ValueError as exc:
+        raise ValidationError("run must be a UUID", field="run") from exc
+    run = session.get(DataQualityRun, run_id)
+    if run is None:
+        raise NotFoundError("data-quality", raw_id)
+    scope = run.scope if isinstance(run.scope, dict) else {}
+    return (
+        [_uuid(item, "run") for item in scope.get("organization_ids") or []],
+        [_uuid(item, "run") for item in scope.get("activity_ids") or []],
+    )
 
 
 def _get(event: Mapping[str, Any], raw_id: str) -> dict[str, Any]:

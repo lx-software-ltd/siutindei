@@ -20,8 +20,9 @@ from app.db.models import (
     ActivityPricing,
     ActivitySchedule,
     Location,
+    NameFixProposal,
+    Organization,
 )
-from app.db.models import Organization
 from app.db.models.category_scan import ActivityCategoryReview
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.services.org_review import REVIEW_STATUSES
@@ -34,6 +35,7 @@ BLOCKER_ISSUE_CODES = (
     "missing_pricing",
     "missing_schedule",
     "pending_category",
+    "pending_name_fix",
 )
 
 _WS_EDGES = r"^[[:space:]]+|[[:space:]]+$"
@@ -135,6 +137,25 @@ def _issue_predicates() -> dict[str, ColumnElement[bool]]:
         "pending_category": _child_exists(
             Activity,
             Activity.category_id == PENDING_CATEGORY_ID,
+        ),
+        "pending_name_fix": or_(
+            select(NameFixProposal.id)
+            .where(
+                NameFixProposal.entity_type == "organization",
+                NameFixProposal.entity_id == Organization.id,
+                NameFixProposal.status == "pending",
+            )
+            .exists(),
+            _child_exists(
+                Activity,
+                select(NameFixProposal.id)
+                .where(
+                    NameFixProposal.entity_type == "activity",
+                    NameFixProposal.entity_id == Activity.id,
+                    NameFixProposal.status == "pending",
+                )
+                .exists(),
+            ),
         ),
         "category_check_pending": _child_exists(
             Activity,

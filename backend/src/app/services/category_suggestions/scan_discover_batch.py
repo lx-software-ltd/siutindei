@@ -36,11 +36,13 @@ from app.services.category_suggestions.settings import (
     resolved_fallback_models,
     resolved_model_name,
 )
+from app.services.data_quality.answers import (
+    cached_chat_completion as openrouter_chat_completion,
+)
 from app.services.openrouter_client import (
     WORKLOAD_CATEGORY_SUGGESTION,
     OpenRouterError,
     extract_message_text,
-    openrouter_chat_completion,
     usage_from_body,
 )
 from app.services.openrouter_json_parse import loads_openrouter_json
