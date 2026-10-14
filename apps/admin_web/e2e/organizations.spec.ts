@@ -233,6 +233,8 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByLabel('Manager')).toHaveValue(
       'manager@example.com (Manager User)'
     );
+    await expect(adminPage.getByLabel('Listing status')).toBeVisible();
+    await expect(adminPage.getByText(/Review state is changed/)).toHaveCount(0);
   });
 
   test('should leave the organization workspace from the catalog', async ({

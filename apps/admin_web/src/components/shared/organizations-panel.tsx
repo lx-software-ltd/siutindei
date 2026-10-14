@@ -707,14 +707,6 @@ export function OrganizationsPanel({
                 versionKey='status'
                 label='Listing status'
                 htmlFor='org-listing-status'
-                hint={
-                  panel.editingId
-                    ? `Review state is changed from Readiness below. Current review: ${(
-                        panel.items.find((item) => item.id === panel.editingId)
-                          ?.review_status ?? 'pending_review'
-                      ).replaceAll('_', ' ')}.`
-                    : undefined
-                }
               >
                 <Select
                 disabled={locked}
