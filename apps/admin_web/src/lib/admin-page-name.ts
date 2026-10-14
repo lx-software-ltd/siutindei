@@ -5,6 +5,7 @@
 export const adminTabLabel = {
   import: 'Import',
   history: 'History',
+  settings: 'Settings',
   categories: 'Categories',
   suggestions: 'Suggestions',
   feedback: 'Feedback',

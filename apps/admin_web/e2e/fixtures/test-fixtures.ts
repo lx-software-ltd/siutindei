@@ -2048,6 +2048,19 @@ export async function setupApiMocks(
       await route.fallback();
       return;
     }
+    if (jobId === 'settings') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          duplicates: false,
+          names: false,
+          locations: false,
+          categories: false,
+        }),
+      });
+      return;
+    }
     if (route.request().method() !== 'GET') {
       await route.fallback();
       return;
@@ -2263,6 +2276,23 @@ export async function setupApiMocks(
     }
     if (route.request().method() !== 'POST') {
       await route.continue();
+      return;
+    }
+    const posted = route.request().postDataJSON() as {
+      object_key?: string;
+      data_quality?: {
+        duplicates: boolean;
+        names: boolean;
+        locations: boolean;
+        categories: boolean;
+      };
+    };
+    if (posted?.data_quality && !posted.object_key) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(posted.data_quality),
+      });
       return;
     }
     await route.fulfill({

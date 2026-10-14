@@ -42,6 +42,35 @@ test.describe('Imports Panel', () => {
     await expect(adminPage.getByLabel('Organization name (optional)')).toBeVisible();
   });
 
+  test('saves which data quality checks run on import', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=imports&tab=settings');
+    await expect(
+      adminPage.getByRole('heading', { name: 'Imports · Settings' })
+    ).toBeVisible();
+    const names = adminPage.getByRole('checkbox', { name: 'Names' });
+    await expect(names).not.toBeChecked();
+    await names.check();
+    const requestPromise = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'POST' &&
+        request.url().includes('/admin/imports') &&
+        !request.url().includes('/presign')
+    );
+    await adminPage.getByRole('button', { name: 'Save settings' }).click();
+    const request = await requestPromise;
+    expect(request.postDataJSON()).toMatchObject({
+      data_quality: {
+        duplicates: false,
+        names: true,
+        locations: false,
+        categories: false,
+      },
+    });
+    await expect(adminPage.getByText('Settings saved.')).toBeVisible();
+  });
+
   test('sends allow_updates false when skip existing is checked', async ({
     adminPage,
   }) => {

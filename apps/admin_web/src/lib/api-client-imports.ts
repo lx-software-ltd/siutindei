@@ -25,8 +25,22 @@ export interface AdminImportPresignResponse {
   expires_in: number;
 }
 
+export interface ImportDataQualitySettings {
+  duplicates: boolean;
+  names: boolean;
+  locations: boolean;
+  categories: boolean;
+}
+
+export interface ImportDataQualityRun {
+  ran: Array<keyof ImportDataQualitySettings>;
+  skipped: Array<keyof ImportDataQualitySettings>;
+  errors: Array<{ check: string; error: string }>;
+}
+
 export interface AdminImportRequest {
-  object_key: string;
+  object_key?: string;
+  data_quality?: ImportDataQualitySettings;
   dry_run?: boolean;
   retry_failed?: boolean;
   allow_updates?: boolean;
@@ -65,6 +79,7 @@ export interface AdminImportSummary {
   errors: number;
   captured_categories?: number;
   captured_category_ids?: string[];
+  data_quality?: ImportDataQualityRun;
 }
 
 export interface AdminImportResponse {
@@ -126,6 +141,22 @@ export async function runAdminImport(payload: AdminImportRequest) {
 
 export async function getAdminImportJob(jobId: string) {
   return request<AdminImportJob>(buildAdminImportsUrl(jobId));
+}
+
+export async function getImportDataQualitySettings() {
+  return request<ImportDataQualitySettings>(buildAdminImportsUrl('settings'));
+}
+
+export async function updateImportDataQualitySettings(
+  payload: ImportDataQualitySettings
+) {
+  return request<ImportDataQualitySettings>(buildAdminImportsUrl(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ data_quality: payload }),
+  });
 }
 
 export async function createAdminExport(orgName?: string) {

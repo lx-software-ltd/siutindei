@@ -486,6 +486,13 @@ export interface paths {
          *     When `dry_run` is true the file is validated the same way as a live
          *     import (presign → PUT → POST) but no rows or audit entries are
          *     committed.
+         *     After a live import commits, ticked Import Settings run the
+         *     matching Data quality checks (`review_scope=pending_review`).
+         *     A missing settings object keeps every flag off. A busy or
+         *     failed sweep does not fail the import. The result is stored
+         *     on `summary.data_quality`.
+         *     An admin POST with `data_quality` and no `object_key` saves
+         *     those flags. Importer tokens still need `object_key`.
          */
         post: {
             parameters: {
@@ -520,6 +527,48 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/imports/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read import data-quality settings
+         * @description Admin or importer JWT. Which Data quality checks run after a
+         *     live import: Duplicates, Names, Locations, and Categories.
+         *     A missing object returns all four flags false. Served on the
+         *     existing `GET /v1/admin/imports/{id}` route with `id=settings`.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Settings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportDataQualitySettings"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6593,9 +6642,36 @@ export interface components {
             object_key: string;
             expires_in: number;
         };
+        /**
+         * @description Ticks on Imports · Settings. Each flag starts a Data quality
+         *     check after a live import. All four default false.
+         */
+        ImportDataQualitySettings: {
+            duplicates: boolean;
+            names: boolean;
+            locations: boolean;
+            categories: boolean;
+        };
+        ImportDataQualityRun: {
+            ran: ("duplicates" | "names" | "locations" | "categories")[];
+            skipped: ("duplicates" | "names" | "locations" | "categories")[];
+            errors: {
+                check: string;
+                error: string;
+            }[];
+        };
         AdminImportRequest: {
-            /** @description S3 object key returned from the presign endpoint. */
-            object_key: string;
+            /**
+             * @description S3 object key returned from the presign endpoint. Required
+             *     to process a file. Omit it when saving `data_quality`.
+             */
+            object_key?: string;
+            /**
+             * @description Admin-only save of Import Settings when `object_key` is
+             *     omitted. Ignored on a file import; the stored settings
+             *     run after that import commits.
+             */
+            data_quality?: components["schemas"]["ImportDataQualitySettings"];
             /**
              * @description When true, validate and report results without committing
              *     creates or updates, and without persisting audit_log rows.
@@ -6664,6 +6740,11 @@ export interface components {
              *     existing rows.
              */
             allow_updates?: boolean;
+            /**
+             * @description Checks this live import ran from Import Settings.
+             *     Omitted on dry-runs and jobs stored before the feature.
+             */
+            data_quality?: components["schemas"]["ImportDataQualityRun"];
         };
         AdminImportError: {
             message: string;
