@@ -31,6 +31,25 @@ test.describe('Audit Logs Panel', () => {
     await expect(adminPage.getByLabel('Actor')).toHaveCount(0);
     await expect(adminPage.getByPlaceholder('Actor email')).toHaveCount(0);
 
+    await expect(adminPage.getByLabel('Table')).toHaveValue('all');
+    await expect(adminPage.getByLabel('Table').locator('option')).toHaveText([
+      'All tables',
+      'activities',
+      'activity_categories',
+      'activity_locations',
+      'activity_pricing',
+      'activity_schedule',
+      'api_keys',
+      'category_suggestion_settings',
+      'category_suggestions',
+      'feedback_labels',
+      'locations',
+      'organization_duplicate_dismissals',
+      'organization_feedback',
+      'organization_merges',
+      'organizations',
+      'tickets',
+    ]);
     await expect(adminPage.getByLabel('Action')).toHaveValue('all');
     await expect(adminPage.getByLabel('Action').locator('option')).toHaveText([
       'All actions',

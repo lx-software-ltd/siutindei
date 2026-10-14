@@ -1,0 +1,17 @@
+export const AUDITABLE_TABLES = [
+  'activities',
+  'activity_categories',
+  'activity_locations',
+  'activity_pricing',
+  'activity_schedule',
+  'api_keys',
+  'category_suggestion_settings',
+  'category_suggestions',
+  'feedback_labels',
+  'locations',
+  'organization_duplicate_dismissals',
+  'organization_feedback',
+  'organization_merges',
+  'organizations',
+  'tickets',
+] as const;

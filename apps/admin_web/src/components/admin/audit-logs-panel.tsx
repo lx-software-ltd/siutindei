@@ -11,6 +11,7 @@ import { listCognitoUsers } from '@/lib/api-client-cognito';
 import { formatAdminPageName } from '@/lib/admin-page-name';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { formatAuditActor } from '@/lib/audit-actor';
+import { AUDITABLE_TABLES } from '@/lib/audit-tables';
 import { formatDateTime } from '@/lib/date-utils';
 import type { AuditLog } from '@/types/admin';
 import {
@@ -49,17 +50,6 @@ const defaultAuditLogFilters: AuditLogListFilters = {
   table: 'all',
   timeRange: '24h',
 };
-
-const AUDITABLE_TABLES = [
-  'organizations',
-  'locations',
-  'activities',
-  'activity_locations',
-  'activity_pricing',
-  'activity_schedule',
-  'organization_access_requests',
-  'organization_suggestions',
-];
 
 const TIME_RANGES = [
   { value: '', label: 'All time' },

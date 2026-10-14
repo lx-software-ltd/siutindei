@@ -33,17 +33,25 @@ AUDIT_REDACTED_FIELDS: frozenset[str] = frozenset(
     ]
 )
 
-# Valid table names that can be queried via the audit logs endpoint
+# Valid table names that can be queried via the audit logs endpoint.
+# Keep in A–Z lockstep with apps/admin_web/src/lib/audit-tables.ts.
 AUDITABLE_TABLES: frozenset[str] = frozenset(
     [
-        "organizations",
-        "locations",
         "activities",
+        "activity_categories",
         "activity_locations",
         "activity_pricing",
         "activity_schedule",
-        "tickets",
         "api_keys",
+        "category_suggestion_settings",
+        "category_suggestions",
+        "feedback_labels",
+        "locations",
+        "organization_duplicate_dismissals",
+        "organization_feedback",
+        "organization_merges",
+        "organizations",
+        "tickets",
     ]
 )
 
@@ -160,10 +168,7 @@ def _list_audit_logs(event: Mapping[str, Any]) -> dict[str, Any]:
         trimmed = list(rows)[:limit]
 
         logger.info(
-            (
-                "Audit logs query returned "
-                f"{len(trimmed)} entries (has_more={has_more})"
-            ),
+            (f"Audit logs query returned {len(trimmed)} entries (has_more={has_more})"),
             extra={
                 "table": table_name,
                 "action": action,
