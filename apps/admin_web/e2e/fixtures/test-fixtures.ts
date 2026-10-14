@@ -115,8 +115,8 @@ export const mockOrganizations = [
     description_source: 'official',
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
-    version: 1,
-    media_version: 1,
+    version: 2,
+    media_version: 2,
   },
   {
     id: 'org-2',
@@ -1805,24 +1805,61 @@ export async function setupApiMocks(page: Page): Promise<void> {
     }
     const entityType = url.searchParams.get('entity_type') ?? 'organization';
     const entityId = url.searchParams.get('entity_id') ?? 'org-1';
+    const twoVersions =
+      entityId === 'org-1' &&
+      (entityType === 'organization' || entityType === 'media');
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        items: [
-          {
-            id: 'ver-1',
-            entity_type: entityType,
-            entity_id: entityId,
-            org_id: 'org-1',
-            version: 1,
-            action: 'created',
-            snapshot: { name: 'Test Organization 1' },
-            changed_fields: ['name'],
-            import_job_id: 'job-1',
-            created_at: '2024-01-01T00:00:00Z',
-          },
-        ],
+        items: twoVersions
+          ? [
+              {
+                id: entityType === 'media' ? 'ver-media-2' : 'ver-2',
+                entity_type: entityType,
+                entity_id: entityId,
+                org_id: 'org-1',
+                version: 2,
+                action: 'updated',
+                snapshot:
+                  entityType === 'media'
+                    ? { media_urls: ['https://example.com/current.jpg'] }
+                    : { name: 'Test Organization 1' },
+                changed_fields:
+                  entityType === 'media' ? ['media_urls'] : ['website'],
+                created_at: '2024-02-01T00:00:00Z',
+              },
+              {
+                id: entityType === 'media' ? 'ver-media-1' : 'ver-1',
+                entity_type: entityType,
+                entity_id: entityId,
+                org_id: 'org-1',
+                version: 1,
+                action: 'created',
+                snapshot:
+                  entityType === 'media'
+                    ? { media_urls: ['https://example.com/original.jpg'] }
+                    : { name: 'Organization One Original' },
+                changed_fields:
+                  entityType === 'media' ? ['media_urls'] : ['name'],
+                import_job_id: 'job-1',
+                created_at: '2024-01-01T00:00:00Z',
+              },
+            ]
+          : [
+              {
+                id: 'ver-1',
+                entity_type: entityType,
+                entity_id: entityId,
+                org_id: 'org-1',
+                version: 1,
+                action: 'created',
+                snapshot: { name: 'Test Organization 1' },
+                changed_fields: ['name'],
+                import_job_id: 'job-1',
+                created_at: '2024-01-01T00:00:00Z',
+              },
+            ],
         next_cursor: null,
       }),
     });

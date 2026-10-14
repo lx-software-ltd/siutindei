@@ -325,31 +325,40 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
   });
 
-  test('shows the organization version and its history', async ({ adminPage }) => {
+  test('shows the organization version dropdown and a previous snapshot', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
     await expect(
       adminPage.getByRole('heading', { name: 'Test Organization 1' })
     ).toBeVisible();
-    await expect(adminPage.getByText('v1', { exact: true }).first()).toBeVisible();
-    await adminPage.getByRole('button', { name: 'History' }).click();
-    const history = adminPage.getByTestId(
-      'version-history-organization-org-1-disclosure'
-    );
-    await expect(history.getByText('v1 · created · Import')).toBeVisible();
-    await history.getByRole('button', { name: 'View version 1' }).click();
-    await expect(history.getByText('Read-only')).toBeVisible();
-    await expect(history.getByText('Test Organization 1')).toBeVisible();
-    await expect(history.locator('input, textarea, select')).toHaveCount(0);
-    await expect(history.getByText('Removed records')).toBeVisible();
-    await expect(history.getByText('Removed Class')).toBeVisible();
+    await expect(adminPage.getByText('v2', { exact: true })).toHaveCount(0);
+    await expect(adminPage.getByRole('button', { name: 'History' })).toHaveCount(0);
+    await expect(adminPage.getByTestId('admin-field-divider')).toHaveCount(2);
+    const version = adminPage.getByRole('button', { name: 'Version 2 · Latest' });
+    await expect(version).toBeVisible();
+    await expect(adminPage.getByLabel('Name')).toHaveValue('Test Organization 1');
+    await version.click();
+    const menu = adminPage.getByRole('menu');
+    await expect(menu).toBeVisible();
+    const menuBox = await menu.boundingBox();
+    expect(menuBox?.x ?? 0).toBeGreaterThan(240);
+    await adminPage.getByRole('menuitem', { name: /Version 1/ }).click();
+    await expect(adminPage.getByText('Viewing version 1 of 2 · read-only')).toBeVisible();
+    await expect(adminPage.getByLabel('Name')).toHaveValue('Organization One Original');
+    await expect(adminPage.getByText('Latest: Test Organization 1')).toBeVisible();
+    await expect(adminPage.getByRole('button', { name: 'Update' })).toHaveCount(0);
+    await expect(adminPage.getByText('Removed records')).toBeVisible();
+    await expect(adminPage.getByText(/Removed Class/)).toBeVisible();
     const forgetRequest = adminPage.waitForRequest(
       (request) =>
         request.method() === 'POST' &&
         request.url().includes('/admin/versions/ver-removed/forget')
     );
-    await history.getByRole('button', { name: 'Forget' }).click();
+    await adminPage.getByRole('button', { name: 'Forget' }).click();
     await forgetRequest;
-    await expect(history.getByText('Removed Class')).toHaveCount(0);
+    await expect(adminPage.getByText(/Removed Class/)).toHaveCount(0);
+    await adminPage.getByRole('button', { name: 'Back to latest' }).first().click();
+    await expect(adminPage.getByLabel('Name')).toHaveValue('Test Organization 1');
+    await expect(adminPage.getByRole('button', { name: 'Update' })).toBeVisible();
   });
 });
 

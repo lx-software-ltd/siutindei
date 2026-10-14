@@ -31,7 +31,7 @@ import {
   AdminDataTableHeadCell,
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
-import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
+import { AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
 import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
 import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { CascadingCategorySelect } from '../ui/cascading-category-select';
@@ -43,8 +43,17 @@ import {
 } from '../ui/resource-table-shell';
 import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
+import { activityFormFromSnapshot } from '../admin/catalog-version-snapshot';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
-import { VersionHistory } from '../admin/version-history';
+import {
+  HistoricalRowMark,
+  useCatalogVersion,
+  VersionField,
+  VersionFields,
+  VersionSwitcher,
+  VersionViewBanner,
+} from '../admin/version-history';
+import { Button } from '../ui/button';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 
 const PAGE_NAME = formatAdminPageName('Activities');
@@ -356,6 +365,16 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
         validation.touched.age_min ||
         validation.touched.age_max)
   );
+  const versionView = useCatalogVersion({
+    mode,
+    entityType: 'activity',
+    entityId: panel.editingId,
+    version: panel.items.find((item) => item.id === panel.editingId)?.version,
+  });
+  const locked = versionView.locked;
+  const editorForm = versionView.snapshot
+    ? activityFormFromSnapshot(versionView.snapshot, panel.formState)
+    : panel.formState;
 
   const detail = (
     <AdminEditorPanel
@@ -367,33 +386,49 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
         ) : null
       }
       actions={
-        <AdminEditorActions
-          mode={panel.editorMode}
-          onSubmit={handleSubmit}
-          isSaving={panel.isSaving}
-        />
+        <>
+          {versionView.isHistorical ? (
+            <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
+              Back to latest
+            </Button>
+          ) : (
+            <AdminEditorActions
+              mode={panel.editorMode}
+              onSubmit={handleSubmit}
+              isSaving={panel.isSaving}
+            />
+          )}
+          <VersionSwitcher view={versionView} />
+        </>
       }
     >
+      <VersionFields view={versionView}>
+      <div className='space-y-4'>
+      <VersionViewBanner view={versionView} />
       <AdminFieldGrid columns={2}>
-        <AdminField error={showNameError ? nameError : undefined}>
+        <VersionField
+          versionKey={['name', 'name_translations']}
+          error={showNameError ? nameError : undefined}
+        >
           <LanguageToggleInput
             id='activity-name'
             label='Name'
             required
+            readOnly={locked}
             values={{
-              en: panel.formState.name,
-              zh: panel.formState.name_translations.zh,
-              yue: panel.formState.name_translations.yue,
+              en: editorForm.name,
+              zh: editorForm.name_translations.zh,
+              yue: editorForm.name_translations.yue,
             }}
             onChange={handleNameChange}
             hasError={showNameError}
             inputClassName={showNameError ? errorInputClassName : ''}
           />
-        </AdminField>
-        <AdminField span={2}>
+        </VersionField>
+        <VersionField span={2}>
           <CascadingCategorySelect
             tree={categoryTree}
-            value={panel.formState.category_id}
+            value={editorForm.category_id}
             onChange={(categoryId, _chain) => {
               markTouched('category_id');
               panel.setFormState((prev) => ({
@@ -401,25 +436,27 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
                 category_id: categoryId,
               }));
             }}
+            disabled={locked}
             required
             hasError={showCategoryError}
             errorMessage={showCategoryError ? categoryError : undefined}
           />
-        </AdminField>
-        <AdminField span={2}>
+        </VersionField>
+        <VersionField span={2} versionKey={['description', 'description_translations']}>
           <LanguageToggleInput
             id='activity-description'
             label='Description'
             multiline
             rows={3}
+            readOnly={locked}
             values={{
-              en: panel.formState.description,
-              zh: panel.formState.description_translations.zh,
-              yue: panel.formState.description_translations.yue,
+              en: editorForm.description,
+              zh: editorForm.description_translations.zh,
+              yue: editorForm.description_translations.yue,
             }}
             onChange={handleDescriptionChange}
           />
-        </AdminField>
+        </VersionField>
         {isAdmin ? (
           <>
             {importedLabel ? (
@@ -427,11 +464,17 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
                 {importedLabel}
               </AdminReadOnlyValue>
             ) : null}
-            <AdminField label='Source URL' htmlFor='activity-source-url' span={2}>
+            <VersionField
+              label='Source URL'
+              htmlFor='activity-source-url'
+              span={2}
+              versionKey='source_url'
+            >
               <Input
                 id='activity-source-url'
                 type='url'
-                value={panel.formState.source_url}
+                value={editorForm.source_url}
+                disabled={locked}
                 onChange={(event) =>
                   panel.setFormState((prev) => ({
                     ...prev,
@@ -440,12 +483,18 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
                 }
                 placeholder='https://'
               />
-            </AdminField>
-            <AdminField label='Source note' htmlFor='activity-source-note' span={2}>
+            </VersionField>
+            <VersionField
+              label='Source note'
+              htmlFor='activity-source-note'
+              span={2}
+              versionKey='source_note'
+            >
               <Textarea
                 id='activity-source-note'
                 rows={2}
-                value={panel.formState.source_note}
+                value={editorForm.source_note}
+                disabled={locked}
                 onChange={(event) =>
                   panel.setFormState((prev) => ({
                     ...prev,
@@ -453,20 +502,22 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
                   }))
                 }
               />
-            </AdminField>
+            </VersionField>
           </>
         ) : null}
-        <AdminField
+        <VersionField
           label='Age Min'
           htmlFor='activity-age-min'
           required
+          versionKey='age_range'
           error={showAgeMinError ? ageMinError : undefined}
         >
           <Input
             id='activity-age-min'
             type='number'
             min='0'
-            value={panel.formState.age_min}
+            value={editorForm.age_min}
+            disabled={locked}
             onChange={(e) => {
               markTouched('age_min');
               panel.setFormState((prev) => ({
@@ -483,11 +534,12 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
               showAgeMinError || showAgeRangeError || undefined
             }
           />
-        </AdminField>
-        <AdminField
+        </VersionField>
+        <VersionField
           label='Age Max'
           htmlFor='activity-age-max'
           required
+          versionKey='age_range'
           error={
             showAgeMaxError
               ? ageMaxError
@@ -500,7 +552,8 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             id='activity-age-max'
             type='number'
             min='0'
-            value={panel.formState.age_max}
+            value={editorForm.age_max}
+            disabled={locked}
             onChange={(e) => {
               markTouched('age_max');
               panel.setFormState((prev) => ({
@@ -517,18 +570,10 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
               showAgeMaxError || showAgeRangeError || undefined
             }
           />
-        </AdminField>
+        </VersionField>
       </AdminFieldGrid>
-      {panel.editingId ? (
-        <VersionHistory
-          mode={mode}
-          entityType='activity'
-          entityId={panel.editingId}
-          version={
-            panel.items.find((item) => item.id === panel.editingId)?.version
-          }
-        />
-      ) : null}
+      </div>
+      </VersionFields>
     </AdminEditorPanel>
   );
 
@@ -594,7 +639,13 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
         renderCells={(item) => (
           <>
             <AdminDataTableCell>
-              <AdminTableName>{item.name}</AdminTableName>
+              <span className='inline-flex items-center'>
+                <AdminTableName>{item.name}</AdminTableName>
+                <HistoricalRowMark
+                  active={versionView.isHistorical && item.id === panel.editingId}
+                  version={versionView.selectedVersion}
+                />
+              </span>
               <AdminDataTableCellMeta until='secondary' label='Category'>
                 {getCategoryPath(item.category_id)}
               </AdminDataTableCellMeta>

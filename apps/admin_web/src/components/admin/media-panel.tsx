@@ -13,8 +13,14 @@ import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { getResourceApi } from '../../lib/resource-api';
 import type { Organization } from '../../types/admin';
 import { PlusIcon } from '../icons/action-icons';
+import { mediaFromSnapshot } from './catalog-version-snapshot';
 import { OrganizationWorkspaceTitle } from './organization-workspace-title';
-import { VersionHistory } from './version-history';
+import {
+  useCatalogVersion,
+  VersionFields,
+  VersionSwitcher,
+  VersionViewBanner,
+} from './version-history';
 import { WorkspaceScopeGate } from './workspace-empty';
 import { AdminInputCard } from '../ui/admin-input-card';
 import { Button } from '../ui/button';
@@ -150,6 +156,16 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
 
   const isMediaBusy = isSaving || isProcessingMedia;
   const selectedOrganization = organization;
+  const versionView = useCatalogVersion({
+    mode,
+    entityType: 'media',
+    entityId: selectedOrgId || null,
+    version: organization?.media_version,
+  });
+  const locked = versionView.locked;
+  const historicalMedia = locked ? mediaFromSnapshot(versionView.snapshot) : null;
+  const mediaChanged =
+    versionView.changed('media_urls') || versionView.changed('logo_media_url');
 
   useEffect(() => {
     if (!scopedOrgId) {
@@ -451,17 +467,6 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
         orgId={scopedOrgId}
         organization={organization}
       />
-      {organization?.media_version ? (
-        <p className='text-sm text-slate-600'>Media v{organization.media_version}</p>
-      ) : null}
-      {selectedOrgId ? (
-        <VersionHistory
-          mode={mode}
-          entityType='media'
-          entityId={selectedOrgId}
-          version={organization?.media_version}
-        />
-      ) : null}
       {isLoadingOrg ? (
         <p className='text-sm text-slate-600'>Loading media…</p>
       ) : null}
@@ -473,6 +478,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
         <AdminInputCard
           title='Media'
           titleLevel='h3'
+          titleAccessory={<VersionSwitcher view={versionView} />}
           status={
             <>
               {error ? (
@@ -488,92 +494,142 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
             </>
           }
           actions={
-            <Button
-              type='button'
-              onClick={() => {
-                void handleSave();
-              }}
-              disabled={isProcessingMedia || !hasUnsavedChanges}
-              loading={isSaving}
-              loadingLabel='Saving…'
-              className='w-full sm:w-auto'
-            >
-              Save media
-            </Button>
+            versionView.isHistorical ? (
+              <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
+                Back to latest
+              </Button>
+            ) : (
+              <Button
+                type='button'
+                onClick={() => {
+                  void handleSave();
+                }}
+                disabled={isProcessingMedia || !hasUnsavedChanges}
+                loading={isSaving}
+                loadingLabel='Saving…'
+                className='w-full sm:w-auto'
+              >
+                Save media
+              </Button>
+            )
           }
         >
-            <p className='text-sm text-slate-600'>
-              Add or remove media for{' '}
-              {selectedOrganization?.name ?? 'this organization'}.
-            </p>
-            <div className='flex flex-col gap-2 sm:flex-row'>
-              <Input
-                id='media-url'
-                type='url'
-                placeholder='https://example.com/photo.jpg'
-                value={newMediaUrl}
-                onChange={(event) => setNewMediaUrl(event.target.value)}
-                disabled={isMediaBusy}
-              />
-              <Button
-                type='button'
-                variant='secondary'
-                onClick={handleAddMediaUrl}
-                disabled={isMediaBusy || !newMediaUrl.trim()}
-                title='Add URL'
-              >
-                <PlusIcon className='h-4 w-4' />
-              </Button>
+          <VersionFields view={versionView}>
+            <div className='space-y-4'>
+              <VersionViewBanner view={versionView} />
+              {locked ? (
+                <div
+                  className={
+                    mediaChanged
+                      ? 'space-y-3 rounded-md bg-amber-50 p-3 ring-1 ring-amber-200'
+                      : 'space-y-3'
+                  }
+                >
+                  {historicalMedia && historicalMedia.urls.length > 0 ? (
+                    <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3'>
+                      {historicalMedia.urls.map((url, index) => (
+                        <div
+                          key={`${url}-${index}`}
+                          className='overflow-hidden rounded-lg border border-slate-200'
+                        >
+                          <img
+                            src={url}
+                            alt={`Organization media ${index + 1}`}
+                            className='h-32 w-full object-cover sm:h-28'
+                            loading='lazy'
+                          />
+                          {historicalMedia.logo === url ? (
+                            <p className='px-3 py-2 text-xs font-medium text-slate-700'>Logo</p>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className='text-sm text-slate-500'>No media in this version.</p>
+                  )}
+                  {mediaChanged ? (
+                    <p className='text-sm text-amber-800'>
+                      Latest: {versionView.latestLabel('media_urls')}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <>
+                  <p className='text-sm text-slate-600'>
+                    Add or remove media for{' '}
+                    {selectedOrganization?.name ?? 'this organization'}.
+                  </p>
+                  <div className='flex flex-col gap-2 sm:flex-row'>
+                    <Input
+                      id='media-url'
+                      type='url'
+                      placeholder='https://example.com/photo.jpg'
+                      value={newMediaUrl}
+                      onChange={(event) => setNewMediaUrl(event.target.value)}
+                      disabled={isMediaBusy}
+                    />
+                    <Button
+                      type='button'
+                      variant='secondary'
+                      onClick={handleAddMediaUrl}
+                      disabled={isMediaBusy || !newMediaUrl.trim()}
+                      title='Add URL'
+                    >
+                      <PlusIcon className='h-4 w-4' />
+                    </Button>
+                  </div>
+                  <div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
+                    <input
+                      id='media-upload'
+                      ref={fileInputRef}
+                      type='file'
+                      accept='image/*'
+                      multiple
+                      onChange={handleMediaFiles}
+                      disabled={isMediaBusy}
+                      aria-label='Upload media files'
+                      className='sr-only'
+                    />
+                    <Button
+                      type='button'
+                      variant='secondary'
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isSaving}
+                      loading={isProcessingMedia}
+                      loadingLabel='Uploading…'
+                    >
+                      Choose files
+                    </Button>
+                    <p className='text-xs text-slate-500 sm:self-center'>
+                      Upload files or add URLs. Drag or use arrows to reorder.
+                      Select a logo, then save to apply changes.
+                    </p>
+                  </div>
+                  {mediaUrls.length > 0 ? (
+                    // Exception: image ordering stays a grid, not a record table.
+                    <MediaGrid
+                      mediaUrls={mediaUrls}
+                      logoMediaUrl={logoMediaUrl}
+                      isMediaBusy={isMediaBusy}
+                      dragIndex={dragIndex}
+                      dragOverIndex={dragOverIndex}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                      onSelectLogo={handleSelectLogo}
+                      onMoveMedia={moveMediaTo}
+                      onRemoveMedia={removeMediaAt}
+                    />
+                  ) : (
+                    <p className='text-sm text-slate-500'>
+                      No media added yet. Upload files or add URLs above.
+                    </p>
+                  )}
+                </>
+              )}
             </div>
-            <div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
-              <input
-                id='media-upload'
-                ref={fileInputRef}
-                type='file'
-                accept='image/*'
-                multiple
-                onChange={handleMediaFiles}
-                disabled={isMediaBusy}
-                aria-label='Upload media files'
-                className='sr-only'
-              />
-              <Button
-                type='button'
-                variant='secondary'
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isSaving}
-                loading={isProcessingMedia}
-                loadingLabel='Uploading…'
-              >
-                Choose files
-              </Button>
-              <p className='text-xs text-slate-500 sm:self-center'>
-                Upload files or add URLs. Drag or use arrows to reorder.
-                Select a logo, then save to apply changes.
-              </p>
-            </div>
-
-            {mediaUrls.length > 0 ? (
-              // Exception: image ordering stays a grid, not a record table.
-              <MediaGrid
-                mediaUrls={mediaUrls}
-                logoMediaUrl={logoMediaUrl}
-                isMediaBusy={isMediaBusy}
-                dragIndex={dragIndex}
-                dragOverIndex={dragOverIndex}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                onSelectLogo={handleSelectLogo}
-                onMoveMedia={moveMediaTo}
-                onRemoveMedia={removeMediaAt}
-              />
-            ) : (
-              <p className='text-sm text-slate-500'>
-                No media added yet. Upload files or add URLs above.
-              </p>
-            )}
+          </VersionFields>
         </AdminInputCard>
       )}
 

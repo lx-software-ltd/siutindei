@@ -9,8 +9,11 @@ import { StatusBadge } from '../ui/status-badge';
 
 export function OrganizationStatusBadges({
   organization,
+  version = 'org',
 }: {
   organization: Organization;
+  /** `org` labels the workspace roll-up. `hidden` leaves version to a switcher. */
+  version?: 'org' | 'hidden';
 }) {
   return (
     <span className='inline-flex flex-wrap items-center gap-1'>
@@ -23,9 +26,9 @@ export function OrganizationStatusBadges({
           ' '
         )}
       />
-      {organization.version ? (
+      {version === 'org' && organization.version ? (
         <span className='rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700'>
-          v{organization.version}
+          {`Org v${organization.version}`}
         </span>
       ) : null}
     </span>

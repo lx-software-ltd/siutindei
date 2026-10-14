@@ -16,6 +16,7 @@ import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
 import { AdminInputCard } from '../ui/admin-input-card';
 import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
 import { Button } from '../ui/button';
+import { RemovedCatalogRecords } from './version-history';
 
 function sectionForIssue(entityType: string) {
   if (entityType === 'location') {
@@ -201,6 +202,7 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
               ))}
             </ul>
           )}
+          <RemovedCatalogRecords orgId={orgId} />
           <AdminField>
             <label className='flex items-center gap-2 text-sm text-slate-700'>
               <input

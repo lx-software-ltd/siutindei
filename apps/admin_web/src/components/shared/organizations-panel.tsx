@@ -21,12 +21,24 @@ import type { Organization } from '../../types/admin';
 import { OrganizationMergeDialog } from '../admin/data-quality/organization-merge-dialog';
 import { OrganizationReadiness } from '../admin/organization-readiness';
 import { OrganizationStatusBadges } from '../admin/organization-workspace-title';
-import { VersionHistory } from '../admin/version-history';
+import { organizationFormFromSnapshot } from '../admin/catalog-version-snapshot';
+import {
+  useCatalogVersion,
+  VersionField,
+  VersionFields,
+  VersionSwitcher,
+  VersionViewBanner,
+} from '../admin/version-history';
 import { WorkspaceEmpty } from '../admin/workspace-empty';
 import { useAuth } from '../auth-provider';
 import { Button } from '../ui/button';
 import { AdminEditorActions } from '../ui/admin-editor-panel';
-import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
+import {
+  AdminField,
+  AdminFieldDivider,
+  AdminFieldGrid,
+  formErrorClassName,
+} from '../ui/admin-field-grid';
 import { AdminInputCard } from '../ui/admin-input-card';
 import { Input } from '../ui/input';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
@@ -112,6 +124,16 @@ export function OrganizationsPanel({
     name: string;
   } | null>(null);
   const [remoteNameTaken, setRemoteNameTaken] = useState(false);
+  const versionView = useCatalogVersion({
+    mode,
+    entityType: 'organization',
+    entityId: panel.editingId,
+    version: panel.items.find((item) => item.id === panel.editingId)?.version,
+  });
+  const locked = versionView.locked;
+  const editorForm = versionView.snapshot
+    ? organizationFormFromSnapshot(versionView.snapshot, panel.formState)
+    : panel.formState;
   const editorOpen = panel.isDraftOpen || Boolean(panel.editingId);
 
   const { orgParam, legacyOrgId, setOrg } = scope;
@@ -427,25 +449,25 @@ export function OrganizationsPanel({
   const showSocialError = (key: SocialFieldKey) =>
     shouldShowError(key, socialErrors[key]);
 
-  const fields = (
-    <>
+  const editorFields = (
       <AdminFieldGrid columns={2}>
-            <AdminField error={showNameError ? nameError : undefined}>
+            <VersionField versionKey={['name', 'name_translations']} error={showNameError ? nameError : undefined}>
               <LanguageToggleInput
+                readOnly={locked}
                 id='org-name'
                 label='Name'
                 required
                 values={{
-                  en: panel.formState.name,
-                  zh: panel.formState.name_translations.zh,
-                  yue: panel.formState.name_translations.yue,
+                  en: editorForm.name,
+                  zh: editorForm.name_translations.zh,
+                  yue: editorForm.name_translations.yue,
                 }}
                 onChange={handleNameChange}
                 hasError={showNameError}
                 inputClassName={showNameError ? errorInputClassName : ''}
               />
-            </AdminField>
-            <AdminField
+            </VersionField>
+            <VersionField
               label='Manager'
               htmlFor='org-manager'
               required={isAdmin && Boolean(panel.editingId)}
@@ -453,9 +475,10 @@ export function OrganizationsPanel({
             >
               {isAdmin ? (
                 <ManagerCombobox
+                disabled={locked}
                   key={formKey}
                   id='org-manager'
-                  value={panel.formState.manager_id}
+                  value={editorForm.manager_id}
                   onChange={(managerId) => {
                     markTouched('manager_id');
                     panel.setFormState((prev) => ({
@@ -482,30 +505,33 @@ export function OrganizationsPanel({
                   </option>
                 </Select>
               )}
-            </AdminField>
-            <AdminField span={2}>
+            </VersionField>
+            <VersionField versionKey={['description', 'description_translations']} span={2}>
               <LanguageToggleInput
+                readOnly={locked}
                 id='org-description'
                 label='Description'
                 multiline
                 rows={3}
                 values={{
-                  en: panel.formState.description,
-                  zh: panel.formState.description_translations.zh,
-                  yue: panel.formState.description_translations.yue,
+                  en: editorForm.description,
+                  zh: editorForm.description_translations.zh,
+                  yue: editorForm.description_translations.yue,
                 }}
                 onChange={handleDescriptionChange}
               />
-            </AdminField>
-            <AdminField
+            </VersionField>
+            <VersionField
+              versionKey='email'
               label='Email'
               htmlFor='org-email'
               error={showEmailError ? emailError : undefined}
             >
               <Input
+                disabled={locked}
                 id='org-email'
                 type='email'
-                value={panel.formState.email}
+                value={editorForm.email}
                 onChange={(e) => {
                   markTouched('email');
                   panel.setFormState((prev) => ({
@@ -517,16 +543,18 @@ export function OrganizationsPanel({
                 className={showEmailError ? errorInputClassName : ''}
                 aria-invalid={showEmailError || undefined}
               />
-            </AdminField>
-            <AdminField
+            </VersionField>
+            <VersionField
+              versionKey='website'
               label='Website'
               htmlFor='org-website'
               error={showWebsiteError ? websiteError : undefined}
             >
               <Input
+                disabled={locked}
                 id='org-website'
                 type='text'
-                value={panel.formState.website}
+                value={editorForm.website}
                 onChange={(e) => {
                   markTouched('website');
                   panel.setFormState((prev) => ({
@@ -538,15 +566,17 @@ export function OrganizationsPanel({
                 className={showWebsiteError ? errorInputClassName : ''}
                 aria-invalid={showWebsiteError || undefined}
               />
-            </AdminField>
-            <AdminField
+            </VersionField>
+            <VersionField
+              versionKey='phone_country_code'
               label='Phone country'
               htmlFor='org-phone-country'
               error={showPhoneCountryError ? phoneCountryError : undefined}
             >
               <Select
+                disabled={locked}
                 id='org-phone-country'
-                value={panel.formState.phone_country_code}
+                value={editorForm.phone_country_code}
                 onChange={(e) => {
                   markTouched('phone_country_code');
                   panel.setFormState((prev) => ({
@@ -563,17 +593,19 @@ export function OrganizationsPanel({
                   </option>
                 ))}
               </Select>
-            </AdminField>
-            <AdminField
+            </VersionField>
+            <VersionField
+              versionKey='phone_number'
               label='Phone number'
               htmlFor='org-phone-number'
               error={showPhoneNumberError ? phoneNumberError : undefined}
             >
               <Input
+                disabled={locked}
                 id='org-phone-number'
                 type='tel'
                 inputMode='numeric'
-                value={panel.formState.phone_number}
+                value={editorForm.phone_number}
                 onChange={(e) => {
                   markTouched('phone_number');
                   panel.setFormState((prev) => ({
@@ -585,13 +617,15 @@ export function OrganizationsPanel({
                 className={showPhoneNumberError ? errorInputClassName : ''}
                 aria-invalid={showPhoneNumberError || undefined}
               />
-            </AdminField>
+            </VersionField>
             {isAdmin && (
               <>
-              <AdminField label='Source' htmlFor='org-source'>
+              <AdminFieldDivider />
+              <VersionField versionKey='source' label='Source' htmlFor='org-source'>
                 <Select
+                disabled={locked}
                   id='org-source'
-                  value={panel.formState.source}
+                  value={editorForm.source}
                   onChange={(event) =>
                     panel.setFormState((prev) => ({
                       ...prev,
@@ -606,11 +640,12 @@ export function OrganizationsPanel({
                     </option>
                   ))}
                 </Select>
-              </AdminField>
-              <AdminField label='Source ID' htmlFor='org-source-id'>
+              </VersionField>
+              <VersionField versionKey='source_id' label='Source ID' htmlFor='org-source-id'>
                 <Input
+                disabled={locked}
                   id='org-source-id'
-                  value={panel.formState.source_id}
+                  value={editorForm.source_id}
                   onChange={(event) =>
                     panel.setFormState((prev) => ({
                       ...prev,
@@ -618,11 +653,12 @@ export function OrganizationsPanel({
                     }))
                   }
                 />
-              </AdminField>
-              <AdminField label='Description origin' htmlFor='org-description-source'>
+              </VersionField>
+              <VersionField versionKey='description_source' label='Description origin' htmlFor='org-description-source'>
                 <Select
+                disabled={locked}
                   id='org-description-source'
-                  value={panel.formState.description_source}
+                  value={editorForm.description_source}
                   onChange={(event) =>
                     panel.setFormState((prev) => ({
                       ...prev,
@@ -637,12 +673,13 @@ export function OrganizationsPanel({
                     </option>
                   ))}
                 </Select>
-              </AdminField>
-              <AdminField label='Source URL' htmlFor='org-source-url'>
+              </VersionField>
+              <VersionField versionKey='source_url' label='Source URL' htmlFor='org-source-url'>
                 <Input
+                disabled={locked}
                   id='org-source-url'
                   type='url'
-                  value={panel.formState.source_url}
+                  value={editorForm.source_url}
                   onChange={(event) =>
                     panel.setFormState((prev) => ({
                       ...prev,
@@ -651,12 +688,13 @@ export function OrganizationsPanel({
                   }
                   placeholder='https://'
                 />
-              </AdminField>
-              <AdminField label='Source note' htmlFor='org-source-note' span={2}>
+              </VersionField>
+              <VersionField versionKey='source_note' label='Source note' htmlFor='org-source-note' span={2}>
                 <Textarea
+                disabled={locked}
                   id='org-source-note'
                   rows={2}
-                  value={panel.formState.source_note}
+                  value={editorForm.source_note}
                   onChange={(event) =>
                     panel.setFormState((prev) => ({
                       ...prev,
@@ -664,8 +702,10 @@ export function OrganizationsPanel({
                     }))
                   }
                 />
-              </AdminField>
-              <AdminField
+              </VersionField>
+              <AdminFieldDivider />
+              <VersionField
+                versionKey='status'
                 label='Listing status'
                 htmlFor='org-listing-status'
                 hint={
@@ -678,8 +718,9 @@ export function OrganizationsPanel({
                 }
               >
                 <Select
+                disabled={locked}
                   id='org-listing-status'
-                  value={panel.formState.status}
+                  value={editorForm.status}
                   onChange={(event) =>
                     panel.setFormState((prev) => ({
                       ...prev,
@@ -692,21 +733,23 @@ export function OrganizationsPanel({
                   <option value='closed_permanently'>Closed permanently</option>
                   <option value='hidden'>Hidden</option>
                 </Select>
-              </AdminField>
+              </VersionField>
               </>
             )}
             {SOCIAL_FIELDS.map((field) => {
               const showError = showSocialError(field.key);
               return (
-                <AdminField
+                <VersionField
                   key={field.key}
+                  versionKey={field.key}
                   label={field.label}
                   htmlFor={`org-${field.key}`}
                   error={showError ? socialErrors[field.key] : undefined}
                 >
                   <Input
+                disabled={locked}
                     id={`org-${field.key}`}
-                    value={panel.formState[field.key]}
+                    value={editorForm[field.key]}
                     onChange={(e) => {
                       markTouched(field.key);
                       panel.setFormState((prev) => ({
@@ -718,21 +761,19 @@ export function OrganizationsPanel({
                     className={showError ? errorInputClassName : ''}
                     aria-invalid={showError || undefined}
                   />
-                </AdminField>
+                </VersionField>
               );
             })}
       </AdminFieldGrid>
-      {panel.editingId ? (
-        <VersionHistory
-          mode={mode}
-          entityType='organization'
-          entityId={panel.editingId}
-          version={
-            panel.items.find((item) => item.id === panel.editingId)?.version
-          }
-        />
-      ) : null}
-    </>
+  );
+
+  const fields = (
+    <VersionFields view={versionView}>
+      <div className='space-y-4'>
+        <VersionViewBanner view={versionView} />
+        {editorFields}
+      </div>
+    </VersionFields>
   );
 
   if (!editorOpen) {
@@ -771,7 +812,12 @@ export function OrganizationsPanel({
       <AdminInputCard
         title={organizationInputTitle(current?.name, panel.editorMode)}
         titleAccessory={
-          current ? <OrganizationStatusBadges organization={current} /> : undefined
+          current ? (
+            <span className='inline-flex flex-wrap items-center gap-2'>
+              <OrganizationStatusBadges organization={current} version='hidden' />
+              <VersionSwitcher view={versionView} />
+            </span>
+          ) : undefined
         }
         status={
           panel.error ? (
@@ -781,6 +827,11 @@ export function OrganizationsPanel({
           ) : null
         }
         actions={
+          versionView.isHistorical ? (
+            <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
+              Back to latest
+            </Button>
+          ) : (
           <AdminEditorActions
             mode={panel.editorMode}
             onSubmit={handleSubmit}
@@ -818,6 +869,7 @@ export function OrganizationsPanel({
               </Button>
             ) : null}
           </AdminEditorActions>
+          )
         }
       >
         {fields}
