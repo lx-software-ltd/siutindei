@@ -41,9 +41,8 @@ def parse_settings(body: Any) -> dict[str, bool]:
     """Accept a flat object or ``{"data_quality": {...}}``."""
     if not isinstance(body, dict):
         raise ValidationError("Settings must be an object")
-    raw = (
-        body.get("data_quality") if isinstance(body.get("data_quality"), dict) else body
-    )
+    nested = body.get("data_quality")
+    raw = nested if isinstance(nested, dict) else body
     parsed = default_settings()
     for key in QUALITY_KEYS:
         if key not in raw:
