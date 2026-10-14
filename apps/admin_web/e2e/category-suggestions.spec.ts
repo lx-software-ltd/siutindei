@@ -15,7 +15,7 @@ test.describe('Category suggestions', () => {
     await expect(kpiCards).toContainText([
       'Pending',
       'Activities need category',
-      'Spending',
+      'Spending per month',
     ]);
     await expect(kpiCards.nth(0)).toContainText('1');
     await expect(kpiCards.nth(1)).toContainText('2');

@@ -86,7 +86,7 @@ export function CategorySuggestionsPanel() {
           label='Activities need category'
           value={pendingActivities}
         />
-        <AdminKpiCard label='Spending' value={spending} />
+        <AdminKpiCard label='Spending per month' value={spending} />
       </div>
       {stranded > 0 ? (
         <p className='text-sm text-slate-700'>
