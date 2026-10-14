@@ -11,6 +11,7 @@ import {
   type CategorySuggestionSummary,
 } from '../../../lib/api-client-category-suggestions';
 import { StatusBanner } from '../../status-banner';
+import { AdminKpiCard } from '../../ui/admin-kpi-card';
 import { CategorySuggestionSettingsCard } from './settings-card';
 import { SuggestionsTable } from './suggestions-table';
 
@@ -68,15 +69,9 @@ export function CategorySuggestionsPanel() {
   }, []);
 
   const pendingCount = summary?.by_status.pending ?? 0;
+  const pendingActivities = summary?.pending_activity_total ?? 0;
   const stranded = summary?.stranded_activity_total ?? 0;
-  const strandedNote =
-    stranded > 0
-      ? ` ${stranded} remain after a decision that did not map them.`
-      : '';
-  const summaryText =
-    `${pendingCount} pending. ${summary?.pending_activity_total ?? 0} ` +
-    `activities still need a category.${strandedNote} This month ` +
-    `$${(summary?.month_cost_usd ?? 0).toFixed(4)}.`;
+  const spending = `$${(summary?.month_cost_usd ?? 0).toFixed(4)}`;
 
   return (
     <div className='space-y-4'>
@@ -85,12 +80,24 @@ export function CategorySuggestionsPanel() {
           {summaryError}
         </StatusBanner>
       ) : null}
+      <div className='grid gap-3 sm:grid-cols-3'>
+        <AdminKpiCard label='Pending' value={pendingCount} />
+        <AdminKpiCard
+          label='Activities need category'
+          value={pendingActivities}
+        />
+        <AdminKpiCard label='Spending' value={spending} />
+      </div>
+      {stranded > 0 ? (
+        <p className='text-sm text-slate-700'>
+          {stranded} remain after a decision that did not map them.
+        </p>
+      ) : null}
       <SuggestionsTable
         items={list.items}
         isLoading={list.isLoading}
         isLoadingMore={list.isLoadingMore}
         error={list.error}
-        summary={summaryText}
         source={list.filters.source}
         onSourceChange={(source) => list.setFilter('source', source)}
         onReload={reload}

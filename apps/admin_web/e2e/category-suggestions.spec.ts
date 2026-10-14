@@ -10,6 +10,17 @@ test.describe('Category suggestions', () => {
     await expect(
       adminPage.getByRole('table', { name: 'Categories · Suggestions' })
     ).toBeVisible();
+    const kpiCards = adminPage.getByTestId('admin-kpi-card');
+    await expect(kpiCards).toHaveCount(3);
+    await expect(kpiCards).toContainText([
+      'Pending',
+      'Activities need category',
+      'Spending',
+    ]);
+    await expect(kpiCards.nth(0)).toContainText('1');
+    await expect(kpiCards.nth(1)).toContainText('2');
+    await expect(kpiCards.nth(2)).toContainText('$0.0100');
+    await expect(adminPage.getByText(/pending\./)).toHaveCount(0);
     await expect(adminPage.locator('#suggestion-status-filter')).toHaveCount(0);
 
     await expect(adminPage.getByText('Capture unknown categories on import')).toBeVisible();
