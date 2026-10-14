@@ -1,6 +1,6 @@
 # Plan: Capitalize Import History Mode values
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

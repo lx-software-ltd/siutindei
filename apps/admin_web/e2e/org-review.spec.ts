@@ -198,7 +198,11 @@ test.describe('Organization review queue', () => {
 
   test('opens a location from import history', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=imports&tab=history');
-    await adminPage.getByRole('cell', { name: /created 1, updated 0/ }).click();
+    await adminPage
+      .getByTestId('admin-row-job-1')
+      .getByRole('cell')
+      .nth(1)
+      .click();
     await adminPage
       .getByTestId('admin-row-job-1-detail')
       .getByRole('link', { name: 'Harbor Arts / Main studio' })
