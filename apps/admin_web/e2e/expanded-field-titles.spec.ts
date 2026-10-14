@@ -27,6 +27,39 @@ test.describe('Expanded field titles', () => {
   test('import history field titles match File warnings', async ({
     adminPage,
   }, testInfo) => {
+    await adminPage.route('**/api/mock/**/admin/imports/job-1', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'job-1',
+          object_key: 'admin/imports/catalog.json',
+          download_url: 'https://imports.example/admin/imports/catalog.json',
+          dry_run: false,
+          status: 'completed',
+          summary: {
+            organizations: { created: 1, updated: 0, failed: 0, skipped: 0 },
+            locations: { created: 0, updated: 0, failed: 0, skipped: 0 },
+            activities: { created: 0, updated: 0, failed: 0, skipped: 0 },
+            pricing: { created: 0, updated: 0, failed: 0, skipped: 0 },
+            schedules: { created: 0, updated: 0, failed: 0, skipped: 0 },
+            warnings: 0,
+            errors: 0,
+            captured_categories: 0,
+          },
+          results: [
+            {
+              type: 'organizations',
+              key: 'Harbor Arts',
+              status: 'created',
+              warnings: [],
+              errors: [],
+            },
+          ],
+          file_warnings: ['Missing column: neighbourhood'],
+        }),
+      });
+    });
     await adminPage.route('**/api/mock/**/admin/imports', async (route) => {
       if (route.request().method() !== 'GET') {
         await route.fallback();
@@ -45,6 +78,7 @@ test.describe('Expanded field titles', () => {
               status: 'completed',
               summary: {
                 organizations: { created: 1, updated: 0, failed: 0, skipped: 0 },
+                captured_categories: 0,
               },
               file_warnings: ['Missing column: neighbourhood'],
               result_count: 1,
@@ -58,11 +92,19 @@ test.describe('Expanded field titles', () => {
     });
 
     await adminPage.goto('/admin/dashboard?section=imports&tab=history');
-    await adminPage.getByRole('cell', { name: 'created 1, updated 0' }).click();
+    await adminPage.getByRole('cell', { name: /created 1, updated 0/ }).click();
     const detail = adminPage.getByTestId('admin-row-job-1-detail');
     await expect(detail.getByText('File warnings')).toBeVisible();
+    await expect(detail.getByText('Categories captured')).toBeVisible();
+    await expect(detail.getByText('—', { exact: true })).toBeVisible();
 
-    for (const title of ['When', 'File', 'Mode', 'File warnings']) {
+    for (const title of [
+      'First recorded',
+      'Last changed',
+      'Mode',
+      'File',
+      'File warnings',
+    ]) {
       await expect(detail.getByText(title, { exact: true })).toHaveCSS(
         'font-weight',
         SEMIBOLD

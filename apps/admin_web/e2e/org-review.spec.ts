@@ -44,7 +44,7 @@ test.describe('Organization review queue', () => {
       adminPage.getByRole('columnheader', { name: 'File' })
     ).toHaveCount(0);
     await expect(
-      adminPage.getByRole('columnheader', { name: 'When' })
+      adminPage.getByRole('columnheader', { name: 'First recorded' })
     ).toBeVisible();
     const when = await adminPage.evaluate(() => {
       const date = new Date('2024-02-01T00:00:00Z');
@@ -59,6 +59,9 @@ test.describe('Organization review queue', () => {
       return `${monthDay}, ${pad(hours12)}:${pad(date.getMinutes())} ${period}`;
     });
     await expect(adminPage.getByTestId('admin-row-job-1')).toContainText(when);
+    await expect(adminPage.getByTestId('admin-row-job-1')).toContainText(
+      '1 categories captured'
+    );
     await expect(
       adminPage.getByTestId('admin-row-job-1').getByRole('link')
     ).toHaveCount(0);
@@ -101,10 +104,21 @@ test.describe('Organization review queue', () => {
       adminPage.getByTestId('admin-row-job-1').getByRole('link')
     ).toHaveCount(0);
 
-    await adminPage.getByRole('cell', { name: 'created 1, updated 0' }).click();
-    const fileLink = adminPage
-      .getByTestId('admin-row-job-1-detail')
-      .getByRole('link', { name: 'admin/imports/catalog.json' });
+    await adminPage.getByRole('cell', { name: /created 1, updated 0/ }).click();
+    const detail = adminPage.getByTestId('admin-row-job-1-detail');
+    const fileLink = detail.getByRole('link', { name: 'admin/imports/catalog.json' });
+    await expect(detail.getByText('First recorded', { exact: true })).toBeVisible();
+    await expect(detail.getByText('Last changed', { exact: true })).toBeVisible();
+    await expect(detail.getByText('Organizations', { exact: true })).toHaveCount(0);
+    await expect(detail.getByText('Categories captured')).toBeVisible();
+    await expect(detail.getByText('1 · Pottery')).toBeVisible();
+    await expect(detail.getByText('3 rows')).toBeVisible();
+    await expect(detail.getByText('Organization · created 1')).toBeVisible();
+    await expect(detail.getByText('Harbor Arts', { exact: true })).toBeVisible();
+    await expect(detail.getByText('Location · created 1')).toBeVisible();
+    await expect(detail.getByText('Harbor Arts / Main studio')).toBeVisible();
+    await expect(detail.getByText('Activity · created 1')).toBeVisible();
+    await expect(detail.getByText('Harbor Arts / Clay club')).toBeVisible();
     await expect(fileLink).toHaveAttribute(
       'href',
       'https://imports.example/admin/imports/catalog.json'

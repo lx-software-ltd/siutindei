@@ -17,5 +17,6 @@ export const adminQueryKeys = {
   nameFixes: () => ['admin', 'name-fixes'] as const,
   locationFixes: () => ['admin', 'location-fixes'] as const,
   importJobs: () => ['admin', 'import-jobs'] as const,
+  importJob: (id: string) => ['admin', 'import-jobs', id] as const,
   catalogVersions: () => ['admin', 'catalog-versions'] as const,
 };

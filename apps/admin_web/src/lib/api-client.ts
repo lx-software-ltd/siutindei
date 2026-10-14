@@ -20,10 +20,12 @@ export {
 export {
   createAdminExport,
   createAdminImportPresign,
+  getAdminImportJob,
   runAdminImport,
   type AdminExportResponse,
   type AdminImportCounts,
   type AdminImportError,
+  type AdminImportJob,
   type AdminImportPresignRequest,
   type AdminImportPresignResponse,
   type AdminImportRecordType,

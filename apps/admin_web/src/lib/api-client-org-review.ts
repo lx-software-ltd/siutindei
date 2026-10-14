@@ -104,6 +104,9 @@ export interface ImportJobListItem {
       skipped: number;
     };
     captured_categories?: number;
+    captured_category_ids?: string[];
+    warnings?: number;
+    errors?: number;
     allow_updates?: boolean;
   };
   file_warnings: string[];

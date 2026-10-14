@@ -7,7 +7,12 @@ export type AdminImportRecordType =
   | 'pricing'
   | 'schedules';
 
-export type AdminImportStatus = 'created' | 'updated' | 'failed' | 'skipped';
+export type AdminImportStatus =
+  | 'created'
+  | 'updated'
+  | 'unchanged'
+  | 'failed'
+  | 'skipped';
 
 export interface AdminImportPresignRequest {
   file_name: string;
@@ -45,6 +50,7 @@ export interface AdminImportResult {
 export interface AdminImportCounts {
   created: number;
   updated: number;
+  unchanged?: number;
   failed: number;
   skipped: number;
 }
@@ -57,6 +63,8 @@ export interface AdminImportSummary {
   schedules: AdminImportCounts;
   warnings: number;
   errors: number;
+  captured_categories?: number;
+  captured_category_ids?: string[];
 }
 
 export interface AdminImportResponse {
@@ -64,6 +72,20 @@ export interface AdminImportResponse {
   summary: AdminImportSummary;
   results: AdminImportResult[];
   file_warnings: string[];
+}
+
+export interface AdminImportJob {
+  id: string;
+  object_key: string;
+  download_url?: string;
+  dry_run: boolean;
+  allow_updates?: boolean;
+  status?: string;
+  summary: AdminImportSummary;
+  results: AdminImportResult[];
+  file_warnings: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface AdminExportResponse {
@@ -98,6 +120,10 @@ export async function runAdminImport(payload: AdminImportRequest) {
     },
     body: JSON.stringify(payload),
   });
+}
+
+export async function getAdminImportJob(jobId: string) {
+  return request<AdminImportJob>(buildAdminImportsUrl(jobId));
 }
 
 export async function createAdminExport(orgName?: string) {
