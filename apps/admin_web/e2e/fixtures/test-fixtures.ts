@@ -272,25 +272,13 @@ export const mockActivityCategoryTree = [
 
 export const mockActivityCategories = [
   {
-    id: 'cat-sport',
-    parent_id: null,
-    name: 'Sport',
+    id: 'cat-paint',
+    parent_id: 'cat-arts',
+    name: 'Painting',
     name_translations: {
-      en: 'Sport',
-      zh: 'Sport (zh)',
-      yue: 'Sport (yue)',
-    },
-    display_order: 1,
-    children: [],
-  },
-  {
-    id: 'cat-water',
-    parent_id: 'cat-sport',
-    name: 'Water Sports',
-    name_translations: {
-      en: 'Water Sports',
-      zh: 'Water Sports (zh)',
-      yue: 'Water Sports (yue)',
+      en: 'Painting',
+      zh: 'Painting (zh)',
+      yue: 'Painting (yue)',
     },
     display_order: 1,
     children: [],
@@ -308,6 +296,18 @@ export const mockActivityCategories = [
     children: [],
   },
   {
+    id: 'cat-sport',
+    parent_id: null,
+    name: 'Sport',
+    name_translations: {
+      en: 'Sport',
+      zh: 'Sport (zh)',
+      yue: 'Sport (yue)',
+    },
+    display_order: 1,
+    children: [],
+  },
+  {
     id: 'cat-arts',
     parent_id: null,
     name: 'Arts',
@@ -320,13 +320,13 @@ export const mockActivityCategories = [
     children: [],
   },
   {
-    id: 'cat-paint',
-    parent_id: 'cat-arts',
-    name: 'Painting',
+    id: 'cat-water',
+    parent_id: 'cat-sport',
+    name: 'Water Sports',
     name_translations: {
-      en: 'Painting',
-      zh: 'Painting (zh)',
-      yue: 'Painting (yue)',
+      en: 'Water Sports',
+      zh: 'Water Sports (zh)',
+      yue: 'Water Sports (yue)',
     },
     display_order: 1,
     children: [],
