@@ -317,6 +317,7 @@ export function HistoricalRowMark({
 
 export function VersionSwitcher({ view }: { view: CatalogVersionView }) {
   const menuId = useId();
+  const errorId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -390,13 +391,31 @@ export function VersionSwitcher({ view }: { view: CatalogVersionView }) {
   }
   if (view.isError) {
     return (
+      <span title={view.error?.message}>
+        <button
+          type='button'
+          disabled
+          aria-describedby={view.error ? errorId : undefined}
+          className='inline-flex h-8 cursor-not-allowed items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium text-slate-500'
+        >
+          Versions unavailable
+        </button>
+        {view.error ? (
+          <span id={errorId} className='sr-only'>
+            {view.error.message}
+          </span>
+        ) : null}
+      </span>
+    );
+  }
+  if (view.isLoading && view.items.length === 0) {
+    return (
       <button
         type='button'
         disabled
-        title={view.error?.message}
         className='inline-flex h-8 cursor-not-allowed items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium text-slate-500'
       >
-        Versions unavailable
+        Loading versions…
       </button>
     );
   }
