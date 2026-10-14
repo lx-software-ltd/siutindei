@@ -29,13 +29,15 @@ from app.services.category_suggestions.scan_candidates import (
     select_candidate_ids as select_candidate_ids,
 )
 from app.services.data_quality.answers import (
-    cached_chat_completion as openrouter_chat_completion,
+    CATEGORY_PROMPT_VERSION,
+    recorded_completion,
+    recording_flags,
 )
 from app.services.openrouter_client import (
     WORKLOAD_CATEGORY_SUGGESTION,
     OpenRouterError,
     extract_message_text,
-    usage_from_body,
+    openrouter_chat_completion,
 )
 from app.services.openrouter_json_parse import loads_openrouter_json
 from app.utils.logging import get_logger
@@ -130,11 +132,11 @@ def start_scan(
         finished_at=now if not batches else None,
         updated_at=now,
     )
-    session.add(run)
     try:
-        session.flush()
+        with session.begin_nested():
+            session.add(run)
+            session.flush()
     except IntegrityError as exc:
-        session.rollback()
         raise CategoryScanBusy() from exc
     return run, batches
 
@@ -233,24 +235,32 @@ def process_scan_batch(
     prepared = _prepare(scan_run_id, activity_ids, message_id)
     if prepared is None:
         return True
-    system, user, model_name, fallbacks, deny = prepared
+    system, user, model_name, fallbacks, deny, record, refresh = prepared
     try:
-        body = openrouter_chat_completion(
+        reply = recorded_completion(
+            record=record,
+            refresh=refresh,
+            prompt_version=CATEGORY_PROMPT_VERSION,
+            model=model_name,
             system_prompt=system,
             user_content=user,
-            timeout=_timeout_seconds(),
-            workload=WORKLOAD_CATEGORY_SUGGESTION,
-            temperature=0,
-            max_attempts=1,
-            model=model_name,
-            fallback_models=fallbacks,
-            deny_data_collection=deny,
+            invoke=lambda: openrouter_chat_completion(
+                system_prompt=system,
+                user_content=user,
+                timeout=_timeout_seconds(),
+                workload=WORKLOAD_CATEGORY_SUGGESTION,
+                temperature=0,
+                max_attempts=1,
+                model=model_name,
+                fallback_models=fallbacks,
+                deny_data_collection=deny,
+            ),
         )
         parsed = loads_openrouter_json(
-            extract_message_text(body),
+            extract_message_text(reply.body),
             context="category check",
         )
-        usage = usage_from_body(body)
+        usage = reply.usage
     except OpenRouterError as exc:
         if receive_count >= 3:
             _fail(scan_run_id, activity_ids, str(exc), message_id)
@@ -263,6 +273,7 @@ def process_scan_batch(
         _fail(scan_run_id, activity_ids, str(exc) or type(exc).__name__, message_id)
         return True
     with Session(get_engine()) as session:
+        reply.keep(session)
         store_scan_batch(
             session,
             scan_run_id,
@@ -279,7 +290,7 @@ def _prepare(
     scan_run_id: UUID,
     activity_ids: list[str],
     message_id: str,
-) -> tuple[str, str, str, list[str], bool] | None:
+) -> tuple[str, str, str, list[str], bool, bool, bool] | None:
     with Session(get_engine()) as session:
         run = session.get(CategoryScanRun, scan_run_id)
         if run is None or run.status in {"done", "failed"}:
@@ -316,12 +327,15 @@ def _prepare(
             activities,
             ignore_current_category=bool(run.ignore_current_category),
         )
+        record, refresh = recording_flags(session, run.data_quality_run_id)
         return (
             system,
             user,
             resolved_model_name(settings.openrouter_model),
             resolved_fallback_models(settings.fallback_models),
             bool(settings.deny_data_collection),
+            record,
+            refresh,
         )
 
 
@@ -387,6 +401,10 @@ def _fail_stale_runs(session: Session) -> None:
         run.error = "No batch completed before the scan went stale"
         run.finished_at = now
         run.updated_at = now
+        if run.data_quality_run_id is not None:
+            from app.services.data_quality.runs import settle_data_quality_run
+
+            settle_data_quality_run(session, run.data_quality_run_id)
 
 
 def _chunks(ids: list[str], size: int) -> list[list[str]]:
