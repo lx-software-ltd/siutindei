@@ -114,6 +114,11 @@ stored name is the cleaned form of the name in the file, using the
 file's name translations. A skipped activity is not joined to the
 imported venue. A new venue on a skipped organization is still created.
 
+Imports · Settings stores which of those four checks run after a live
+import. The flags live on the import/export bucket. A missing object
+keeps every flag off. Sweeps use `review_scope=pending_review`. A
+busy or failed sweep does not fail the import.
+
 Data quality has four tabs: Duplicates, Names, Locations, and Categories.
 Category checks moved here from the Categories nav item;
 `?categoryView=checks` opens this tab. The Status filter defaults to

@@ -375,6 +375,13 @@ paths:
         When `dry_run` is true the file is validated the same way as a live
         import (presign → PUT → POST) but no rows or audit entries are
         committed.
+        After a live import commits, ticked Import Settings run the
+        matching Data quality checks (`review_scope=pending_review`).
+        A missing settings object keeps every flag off. A busy or
+        failed sweep does not fail the import. The result is stored
+        on `summary.data_quality`.
+        An admin POST with `data_quality` and no `object_key` saves
+        those flags. Importer tokens still need `object_key`.
       security:
         - AdminGroupAuth: []
         - ImporterGroupAuth: []
@@ -397,6 +404,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidationError'
+
+  /v1/admin/imports/settings:
+    get:
+      summary: Read import data-quality settings
+      description: |
+        Admin or importer JWT. Which Data quality checks run after a
+        live import: Duplicates, Names, Locations, and Categories.
+        A missing object returns all four flags false. Served on the
+        existing `GET /v1/admin/imports/{id}` route with `id=settings`.
+      security:
+        - AdminGroupAuth: []
+        - ImporterGroupAuth: []
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportDataQualitySettings'
 
   /v1/admin/imports/{job_id}:
     get:
@@ -4000,13 +4026,61 @@ components:
         expires_in:
           type: integer
 
+    ImportDataQualitySettings:
+      type: object
+      required: [duplicates, names, locations, categories]
+      properties:
+        duplicates:
+          type: boolean
+        names:
+          type: boolean
+        locations:
+          type: boolean
+        categories:
+          type: boolean
+      description: |
+        Ticks on Imports · Settings. Each flag starts a Data quality
+        check after a live import. All four default false.
+
+    ImportDataQualityRun:
+      type: object
+      required: [ran, skipped, errors]
+      properties:
+        ran:
+          type: array
+          items:
+            type: string
+            enum: [duplicates, names, locations, categories]
+        skipped:
+          type: array
+          items:
+            type: string
+            enum: [duplicates, names, locations, categories]
+        errors:
+          type: array
+          items:
+            type: object
+            required: [check, error]
+            properties:
+              check:
+                type: string
+              error:
+                type: string
+
     AdminImportRequest:
       type: object
-      required: [object_key]
       properties:
         object_key:
           type: string
-          description: S3 object key returned from the presign endpoint.
+          description: |
+            S3 object key returned from the presign endpoint. Required
+            to process a file. Omit it when saving `data_quality`.
+        data_quality:
+          $ref: '#/components/schemas/ImportDataQualitySettings'
+          description: |
+            Admin-only save of Import Settings when `object_key` is
+            omitted. Ignored on a file import; the stored settings
+            run after that import commits.
         dry_run:
           type: boolean
           default: false
@@ -4101,6 +4175,11 @@ components:
             Whether this run updated existing rows. Omitted on jobs
             stored before the flag existed; those runs updated
             existing rows.
+        data_quality:
+          $ref: '#/components/schemas/ImportDataQualityRun'
+          description: |
+            Checks this live import ran from Import Settings.
+            Omitted on dry-runs and jobs stored before the feature.
 
     AdminImportError:
       type: object

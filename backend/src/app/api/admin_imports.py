@@ -8,7 +8,12 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.api.admin_auth import _is_admin, _is_importer, _set_session_audit_context
+from app.api.admin_auth import (
+    _get_user_sub,
+    _is_admin,
+    _is_importer,
+    _set_session_audit_context,
+)
 from app.api.admin_imports_export import (
     build_export_payload,
     export_file_name,
@@ -59,6 +64,11 @@ from app.api.admin_request import (
 from app.db.engine import get_engine
 from app.exceptions import NotFoundError, ValidationError
 from app.services.aws_clients import get_s3_client
+from app.services.import_data_quality import (
+    load_settings as load_import_data_quality_settings,
+    run_import_data_quality,
+    save_settings as save_import_data_quality_settings,
+)
 from app.utils import json_response
 from app.utils.logging import get_logger
 
@@ -74,14 +84,32 @@ def _handle_admin_imports(
     if method == "POST" and resource_id == "presign":
         return _handle_import_presign(event)
     if method == "POST" and resource_id is None:
-        return _handle_import_process(event)
+        return _handle_import_post(event)
     if method == "GET" and resource_id is None:
         return _handle_list_import_jobs(event)
     if method == "GET" and resource_id == "export":
         return _handle_export(event)
+    if method == "GET" and resource_id == "settings":
+        return _handle_get_import_settings(event)
     if method == "GET" and resource_id:
         return _handle_get_import_job(event, resource_id)
     return json_response(404, {"error": "Not found"}, event=event)
+
+
+def _handle_import_post(event: Mapping[str, Any]) -> dict[str, Any]:
+    """Save Import Settings or process an uploaded file."""
+    body = _parse_body(event)
+    if isinstance(body, dict) and "data_quality" in body and not body.get("object_key"):
+        if not _is_admin(event):
+            raise ValidationError("object_key is required", field="object_key")
+        payload = save_import_data_quality_settings(body)
+        return json_response(200, payload, event=event)
+    return _handle_import_process(event)
+
+
+def _handle_get_import_settings(event: Mapping[str, Any]) -> dict[str, Any]:
+    """Return which Data quality checks run after a live import."""
+    return json_response(200, load_import_data_quality_settings(), event=event)
 
 
 def _handle_import_presign(event: Mapping[str, Any]) -> dict[str, Any]:
@@ -358,12 +386,53 @@ def _handle_import_process(event: Mapping[str, Any]) -> dict[str, Any]:
         except Exception:
             logger.exception("Category suggestion enqueue failed")
 
+    if not dry_run:
+        _attach_import_data_quality(event, body, import_job_id)
+
     logger.info(
         ("Admin import dry-run completed" if dry_run else "Admin import completed"),
         extra={"summary": summary, "dry_run": dry_run},
     )
 
     return json_response(200, body, event=event)
+
+
+def _attach_import_data_quality(
+    event: Mapping[str, Any],
+    body: dict[str, Any],
+    import_job_id: Any,
+) -> None:
+    """Run ticked Data quality checks after a live import commits."""
+    try:
+        quality = run_import_data_quality(
+            results=body.get("results"),
+            requested_by=_get_user_sub(event),
+        )
+    except Exception:
+        logger.exception("Import data-quality run failed")
+        quality = {
+            "ran": [],
+            "skipped": ["duplicates", "names", "locations", "categories"],
+            "errors": [{"check": "all", "error": "failed"}],
+        }
+    if not quality.get("ran") and not quality.get("errors"):
+        return
+    summary = body.setdefault("summary", {})
+    if isinstance(summary, dict):
+        summary["data_quality"] = quality
+    if import_job_id is None:
+        return
+    try:
+        with Session(get_engine()) as session:
+            job = find_import_job_by_id(session, import_job_id)
+            if job is None:
+                return
+            stored = dict(job.summary or {})
+            stored["data_quality"] = quality
+            job.summary = stored
+            session.commit()
+    except Exception:
+        logger.exception("Import data-quality summary was not saved")
 
 
 def _handle_list_import_jobs(event: Mapping[str, Any]) -> dict[str, Any]:

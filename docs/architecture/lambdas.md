@@ -93,8 +93,11 @@ their primary responsibilities.
   `name_zh` / `description_zh` map to translations.zh;
   a catalog `website` is stored on the organization;
   re-imports update description/hours/price; `closed_permanently`
-  updates an existing match only; `GET /v1/admin/imports/{job_id}`
-  returns the stored result; `GET /v1/admin/imports` includes a
+  updates an existing match only;   `GET /v1/admin/imports/{job_id}`
+  returns the stored result; `GET /v1/admin/imports/settings` is that
+  same get-by-id route and returns which Data quality checks run after
+  a live import; an admin `POST /v1/admin/imports` without `object_key`
+  saves those flags; `GET /v1/admin/imports` includes a
   1-hour presigned download URL for each file under
   `admin/imports/` that is at most 7 days old). Live imports commit once per batch
   after per-row SAVEPOINTs, so a Lambda timeout mid-batch rolls
