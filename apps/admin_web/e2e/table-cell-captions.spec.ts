@@ -17,7 +17,14 @@ test.describe('Listing captions on a phone', () => {
     await expect(secondary.filter({ hasText: 'Manager User' })).toHaveCount(0);
     await expect(secondary.getByText('Manager', { exact: true })).toBeVisible();
     await expect(row.getByRole('img', { name: 'Email' })).toBeVisible();
+    await expect(row.getByText('You', { exact: true })).toHaveCount(0);
     await row.screenshot({ path: '/opt/cursor/artifacts/users-phone-captions.png' });
+
+    const currentUserRow = table.getByRole('row', { name: /admin@example.com/ }).first();
+    await expect(currentUserRow.getByText('You', { exact: true })).toBeVisible();
+    await expect(
+      currentUserRow.locator('span.md\\:hidden').getByText('You', { exact: true })
+    ).toHaveCount(0);
 
     await row.getByRole('button', { name: /Expand/ }).click();
     await expect(adminPage.getByRole('region', { name: /manager@example.com/ })).toBeVisible();

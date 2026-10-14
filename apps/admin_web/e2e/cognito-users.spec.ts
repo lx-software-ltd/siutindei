@@ -22,6 +22,7 @@ test.describe('Cognito Users Panel', () => {
     const emailCell = managerRow.getByRole('cell').nth(1);
     await expect(emailCell).toContainText('manager@example.com');
     await expect(emailCell.getByRole('img', { name: 'Email' })).toBeVisible();
+    await expect(emailCell.getByText('You', { exact: true })).toHaveCount(0);
     await expect(managerRow.getByText('Manager User', { exact: true })).toHaveCount(0);
     await table.screenshot({ path: '/opt/cursor/artifacts/users-table-desktop.png' });
     await expect(
@@ -30,6 +31,16 @@ test.describe('Cognito Users Panel', () => {
     await expect(
       managerRow.getByText('Admin', { exact: true }).filter({ visible: true })
     ).toHaveCount(0);
+
+    const currentUserRow = table.getByRole('row', { name: /admin@example.com/ }).first();
+    const currentEmailCell = currentUserRow.getByRole('cell').nth(1);
+    const currentRolesCell = currentUserRow.getByRole('cell').nth(2);
+    await expect(currentEmailCell.getByRole('img', { name: 'Email' })).toBeVisible();
+    await expect(currentEmailCell.getByText('You', { exact: true })).toBeVisible();
+    await expect(currentRolesCell.getByText('You', { exact: true })).toHaveCount(0);
+    await expect(
+      currentRolesCell.getByText('Admin', { exact: true }).filter({ visible: true })
+    ).toHaveCount(1);
 
     const adminManagerRow = table
       .getByRole('row', { name: /admin-manager@example.com/ })

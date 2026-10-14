@@ -45,13 +45,12 @@ import {
 
 const PAGE_NAME = formatAdminPageName('Users');
 
-function UserRoleMarks({ roles, isCurrent }: { roles: UserRole[]; isCurrent: boolean }) {
-  if (roles.length === 0 && !isCurrent) {
+function UserRoleMarks({ roles }: { roles: UserRole[] }) {
+  if (roles.length === 0) {
     return ADMIN_TABLE_EMPTY;
   }
   return (
     <span className='inline-flex flex-wrap gap-1'>
-      {isCurrent ? <StatusBadge status='you' tone='slate' label='You' /> : null}
       {roles.map((role) => (
         <RoleBadge key={role} role={role} />
       ))}
@@ -210,16 +209,17 @@ export function CognitoUsersPanel() {
                     {cognitoUser.email || cognitoUser.username || ''}
                   </AdminTableName>
                   <IdentityProviderBadge username={cognitoUser.username} />
+                  {isCurrent ? <StatusBadge status='you' tone='slate' label='You' /> : null}
                 </span>
-                <AdminDataTableCellMeta until='secondary' label='Roles' empty={roles.length === 0 && !isCurrent}>
-                  <UserRoleMarks roles={roles} isCurrent={isCurrent} />
+                <AdminDataTableCellMeta until='secondary' label='Roles' empty={roles.length === 0}>
+                  <UserRoleMarks roles={roles} />
                 </AdminDataTableCellMeta>
                 <AdminDataTableCellMeta until='tertiary' label='Last Login' empty={!cognitoUser.last_auth_time}>
                   <AdminTableTime value={cognitoUser.last_auth_time} />
                 </AdminDataTableCellMeta>
               </AdminDataTableCell>
               <AdminDataTableCell priority='secondary'>
-                <UserRoleMarks roles={roles} isCurrent={isCurrent} />
+                <UserRoleMarks roles={roles} />
               </AdminDataTableCell>
               <AdminDataTableCell priority='tertiary'>
                 <AdminTableTime value={cognitoUser.last_auth_time} />
