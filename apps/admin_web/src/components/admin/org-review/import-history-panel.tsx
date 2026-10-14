@@ -19,9 +19,11 @@ import {
   formatImportResultHeader,
   formatImportResultNotes,
   groupImportResults,
+  importResultWorkspaceHref,
   previewImportRows,
   type ImportResultGroup,
 } from '../../../lib/import-job-results';
+import type { AdminImportResult } from '../../../lib/api-client-imports';
 import {
   listImportJobs,
   type ImportJobListItem,
@@ -100,7 +102,41 @@ function canRetry(item: ImportJobListItem) {
   );
 }
 
-function ImportResultGroupList({ group }: { group: ImportResultGroup }) {
+function ImportResultKey({
+  row,
+  results,
+  dryRun,
+}: {
+  row: AdminImportResult;
+  results: readonly AdminImportResult[];
+  dryRun: boolean;
+}) {
+  const href = importResultWorkspaceHref(row, results, { dryRun });
+  if (!href) {
+    return <span className='text-slate-800'>{row.key}</span>;
+  }
+  return (
+    <a
+      href={href}
+      className='underline underline-offset-2 hover:text-slate-900'
+      onClick={(event) => {
+        event.stopPropagation();
+      }}
+    >
+      {row.key}
+    </a>
+  );
+}
+
+function ImportResultGroupList({
+  group,
+  results,
+  dryRun,
+}: {
+  group: ImportResultGroup;
+  results: readonly AdminImportResult[];
+  dryRun: boolean;
+}) {
   const [showAll, setShowAll] = useState(false);
   const preview = previewImportRows(group.rows, showAll);
   return (
@@ -120,7 +156,7 @@ function ImportResultGroupList({ group }: { group: ImportResultGroup }) {
                   tone={RESULT_STATUS_TONE[row.status]}
                 />
               </span>
-              <span className='text-slate-800'>{row.key}</span>
+              <ImportResultKey row={row} results={results} dryRun={dryRun} />
               {notes ? <span> — {notes}</span> : null}
             </li>
           );
@@ -189,7 +225,12 @@ function ImportJobResults({
       {job.dry_run ? <p>Predicted outcomes; nothing was written.</p> : null}
       <p>{header}</p>
       {groups.map((group) => (
-        <ImportResultGroupList key={group.type} group={group} />
+        <ImportResultGroupList
+          key={group.type}
+          group={group}
+          results={results}
+          dryRun={job.dry_run}
+        />
       ))}
     </div>
   );

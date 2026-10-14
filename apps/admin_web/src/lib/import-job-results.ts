@@ -175,6 +175,82 @@ export function formatCapturedCategories(
   return missing ? `${listed} · ${missing}` : listed;
 }
 
+const WORKSPACE_TARGETS = {
+  organizations: { section: 'organizations', param: 'org' },
+  locations: { section: 'locations', param: 'location' },
+  activities: { section: 'activities', param: 'activity' },
+  pricing: { section: 'pricing', param: 'pricing' },
+  schedules: { section: 'schedules', param: 'schedule' },
+} as const;
+
+const ORGANIZATION_PATH = /^(organizations\[\d+\])/;
+
+type ImportResultLinkRow = Pick<AdminImportResult, 'type' | 'id' | 'path' | 'key'>;
+
+function organizationPathPrefix(path?: string | null): string | null {
+  const match = path?.match(ORGANIZATION_PATH);
+  return match?.[1] ?? null;
+}
+
+function resolveImportResultOrgId(
+  row: ImportResultLinkRow,
+  results: readonly ImportResultLinkRow[]
+): string | null {
+  const orgs = results.filter(
+    (item) => item.type === 'organizations' && item.id?.trim()
+  );
+  const prefix = organizationPathPrefix(row.path);
+  if (prefix) {
+    const byPath = orgs.find(
+      (item) => organizationPathPrefix(item.path) === prefix
+    );
+    if (byPath?.id) {
+      return byPath.id;
+    }
+  }
+  const separator = ' / ';
+  const slash = row.key.indexOf(separator);
+  if (slash > 0) {
+    const parentKey = row.key.slice(0, slash);
+    const byKey = orgs.find((item) => item.key === parentKey);
+    if (byKey?.id) {
+      return byKey.id;
+    }
+  }
+  return null;
+}
+
+export function importResultWorkspaceHref(
+  row: ImportResultLinkRow,
+  results: readonly ImportResultLinkRow[],
+  options: { dryRun?: boolean } = {}
+): string | null {
+  if (options.dryRun) {
+    return null;
+  }
+  const id = row.id?.trim();
+  if (!id) {
+    return null;
+  }
+  const target = WORKSPACE_TARGETS[row.type];
+  if (!target) {
+    return null;
+  }
+  const params = new URLSearchParams();
+  params.set('section', target.section);
+  if (row.type === 'organizations') {
+    params.set('org', id);
+    return `/admin/dashboard?${params.toString()}`;
+  }
+  const orgId = resolveImportResultOrgId(row, results);
+  if (!orgId) {
+    return null;
+  }
+  params.set('org', orgId);
+  params.set(target.param, id);
+  return `/admin/dashboard?${params.toString()}`;
+}
+
 export function formatImportResultHeader(
   resultCount: number,
   warnings = 0,

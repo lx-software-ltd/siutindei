@@ -9,6 +9,7 @@ import {
   formatImportResultNotes,
   formatImportStatusCounts,
   groupImportResults,
+  importResultWorkspaceHref,
   previewImportRows,
   stripImportResultPathPrefix,
 } from '@/lib/import-job-results';
@@ -189,6 +190,100 @@ describe('formatCapturedCategories', () => {
       '2 · Pottery · 1 name unavailable'
     );
     expect(formatCapturedCategories(2, [], 2)).toBe('2 · 2 names unavailable');
+  });
+});
+
+describe('importResultWorkspaceHref', () => {
+  const results = [
+    row({
+      type: 'organizations',
+      key: 'Harbor Arts',
+      status: 'created',
+      id: 'org-1',
+      path: 'organizations[0]',
+    }),
+    row({
+      type: 'locations',
+      key: 'Harbor Arts / Main studio',
+      status: 'created',
+      id: 'loc-1',
+      path: 'organizations[0].locations[0]',
+    }),
+    row({
+      type: 'activities',
+      key: 'Harbor Arts / Clay club',
+      status: 'created',
+      id: 'activity-1',
+      path: 'organizations[0].activities[0]',
+    }),
+    row({
+      type: 'pricing',
+      key: 'Clay club / Main studio / per_class',
+      status: 'created',
+      id: 'pricing-1',
+      path: 'organizations[0].activities[0].pricing[0]',
+    }),
+    row({
+      type: 'schedules',
+      key: 'Clay club / Main studio',
+      status: 'updated',
+      id: 'schedule-1',
+      path: 'organizations[0].activities[0].schedules[0]',
+    }),
+  ];
+
+  it('links each stored id to its workspace section', () => {
+    expect(importResultWorkspaceHref(results[0]!, results)).toBe(
+      '/admin/dashboard?section=organizations&org=org-1'
+    );
+    expect(importResultWorkspaceHref(results[1]!, results)).toBe(
+      '/admin/dashboard?section=locations&org=org-1&location=loc-1'
+    );
+    expect(importResultWorkspaceHref(results[2]!, results)).toBe(
+      '/admin/dashboard?section=activities&org=org-1&activity=activity-1'
+    );
+    expect(importResultWorkspaceHref(results[3]!, results)).toBe(
+      '/admin/dashboard?section=pricing&org=org-1&pricing=pricing-1'
+    );
+    expect(importResultWorkspaceHref(results[4]!, results)).toBe(
+      '/admin/dashboard?section=schedules&org=org-1&schedule=schedule-1'
+    );
+  });
+
+  it('resolves the parent organization from a key prefix when path is missing', () => {
+    const location = row({
+      type: 'locations',
+      key: 'Harbor Arts / Main studio',
+      status: 'created',
+      id: 'loc-1',
+    });
+    expect(importResultWorkspaceHref(location, results)).toBe(
+      '/admin/dashboard?section=locations&org=org-1&location=loc-1'
+    );
+  });
+
+  it('skips dry-run ids and rows without an id', () => {
+    expect(
+      importResultWorkspaceHref(results[0]!, results, { dryRun: true })
+    ).toBeNull();
+    expect(
+      importResultWorkspaceHref(
+        row({ type: 'organizations', key: 'Missing Org', status: 'failed' }),
+        results
+      )
+    ).toBeNull();
+    expect(
+      importResultWorkspaceHref(
+        row({
+          type: 'locations',
+          key: 'Other Studio / Hall',
+          status: 'created',
+          id: 'loc-2',
+          path: 'organizations[1].locations[0]',
+        }),
+        results
+      )
+    ).toBeNull();
   });
 });
 
