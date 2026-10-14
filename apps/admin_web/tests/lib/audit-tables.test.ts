@@ -12,6 +12,7 @@ const EXPECTED = [
   'category_suggestion_settings',
   'category_suggestions',
   'feedback_labels',
+  'import_settings',
   'locations',
   'organization_duplicate_dismissals',
   'organization_feedback',

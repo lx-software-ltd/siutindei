@@ -189,6 +189,7 @@ The following tables have audit triggers:
 - `category_suggestion_settings`
 - `category_suggestions`
 - `feedback_labels`
+- `import_settings`
 - `locations`
 - `organization_feedback`
 - `organizations`
