@@ -102,9 +102,15 @@ test.describe('Organization review queue', () => {
       adminPage.getByRole('cell', { name: 'Live execution · skip existing' })
     ).toBeVisible();
     await expect(adminPage.getByRole('cell', { name: 'Dry run' })).toHaveCount(2);
+    await expect(
+      adminPage.getByRole('cell', { name: 'Failed', exact: true })
+    ).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'failed', exact: true })).toHaveCount(
+      0
+    );
     await expect(adminPage.getByText('completed', { exact: true })).toHaveCount(0);
     await expect(adminPage.getByRole('button', { name: 'View orgs' })).toHaveCount(
-      2
+      3
     );
   });
 

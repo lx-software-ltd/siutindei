@@ -4,6 +4,7 @@ import { ADMIN_TABLE_EMPTY } from '@/components/ui/admin-table-value';
 import {
   capturedCategoryLabel,
   formatCapturedCategories,
+  formatImportJobMode,
   formatImportJobSource,
   formatImportResultHeader,
   formatImportResultNotes,
@@ -36,6 +37,40 @@ describe('formatImportJobSource', () => {
     expect(formatImportJobSource(null)).toBe(ADMIN_TABLE_EMPTY);
     expect(formatImportJobSource(undefined)).toBe(ADMIN_TABLE_EMPTY);
     expect(formatImportJobSource('')).toBe(ADMIN_TABLE_EMPTY);
+  });
+});
+
+describe('formatImportJobMode', () => {
+  it('keeps dry run and completed live labels', () => {
+    expect(formatImportJobMode({ dry_run: true, status: 'completed' })).toBe(
+      'Dry run'
+    );
+    expect(formatImportJobMode({ dry_run: false, status: 'completed' })).toBe(
+      'Live execution'
+    );
+    expect(
+      formatImportJobMode({
+        dry_run: false,
+        status: 'completed',
+        allow_updates: false,
+      })
+    ).toBe('Live execution · skip existing');
+  });
+
+  it('capitalizes live statuses that are not completed', () => {
+    expect(formatImportJobMode({ dry_run: false, status: 'failed' })).toBe(
+      'Failed'
+    );
+    expect(formatImportJobMode({ dry_run: false, status: 'running' })).toBe(
+      'Running'
+    );
+    expect(
+      formatImportJobMode({
+        dry_run: false,
+        status: 'FAILED',
+        allow_updates: false,
+      })
+    ).toBe('Failed · skip existing');
   });
 });
 
