@@ -1,7 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { IdentityProviderBadge } from '@/components/admin/cognito-users/badges';
+import {
+  getIdentityProvider,
+  IdentityProviderBadge,
+} from '@/components/admin/cognito-users/badges';
 import {
   AdminDataTableCell,
   AdminDataTableCellMeta,
@@ -127,6 +130,13 @@ describe('table cell roles', () => {
     render(<IdentityProviderBadge username='manager@example.com' />);
 
     expect(screen.getByRole('img', { name: 'Email' })).toBeInTheDocument();
+  });
+
+  it('classifies username prefixes as identity providers', () => {
+    expect(getIdentityProvider('manager@example.com')).toBe('Email');
+    expect(getIdentityProvider('google_abc')).toBe('Google');
+    expect(getIdentityProvider('signinwithapple_xyz')).toBe('Apple');
+    expect(getIdentityProvider(null)).toBe('Email');
   });
 });
 

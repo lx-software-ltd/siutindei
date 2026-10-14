@@ -27,9 +27,9 @@ export function RoleBadge({ role }: { role: UserRole }) {
   return <StatusBadge status={role} tone={tone} label={formatRoleLabel(role)} />;
 }
 
-type IdentityProvider = 'Google' | 'Apple' | 'Email';
+export type IdentityProvider = 'Google' | 'Apple' | 'Email';
 
-function getIdentityProvider(
+export function getIdentityProvider(
   username: string | null | undefined
 ): IdentityProvider {
   if (!username) return 'Email';

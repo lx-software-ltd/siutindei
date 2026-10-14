@@ -52,6 +52,9 @@ button and banners as other editors. There is no Cancel control.
 Leaving the section, or switching the open organization, deletes
 uploads that were never saved.
 
+The Users Email cell holds the email and the provider icon. Name and
+Created stay in the expanded row, not in the listing.
+
 ## Guardrail
 
 `apps/admin_web/eslint.config.js` rejects hand-rolled field errors whose

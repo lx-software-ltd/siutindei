@@ -30,7 +30,6 @@ import { AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { ResourceTableShell, rowActions } from '@/components/ui/resource-table-shell';
 import {
   ADMIN_TABLE_EMPTY,
-  adminTableText,
   AdminTableName,
   AdminTableTime,
 } from '@/components/ui/admin-table-value';
@@ -38,6 +37,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import {
   assignedUserRoles,
   formatRoleLabel,
+  getIdentityProvider,
   IdentityProviderBadge,
   RoleBadge,
   type UserRole,
@@ -182,7 +182,7 @@ export function CognitoUsersPanel() {
         ariaLabel={PAGE_NAME}
         rows={list.items}
         getLabel={(item) => item.email || item.username || 'User'}
-        middleColumnCount={6}
+        middleColumnCount={3}
         isLoading={list.isLoading}
         isLoadingMore={list.isLoadingMore}
         hasMore={list.hasMore}
@@ -195,10 +195,7 @@ export function CognitoUsersPanel() {
         head={
           <>
             <AdminDataTableHeadCell>Email</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='secondary'>Name</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='secondary'>Provider</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Roles</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='secondary'>Created</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>Last Login</AdminDataTableHeadCell>
           </>
         }
@@ -208,36 +205,21 @@ export function CognitoUsersPanel() {
           return (
             <>
               <AdminDataTableCell>
-                <AdminTableName>
-                  {cognitoUser.email || cognitoUser.username || ''}
-                </AdminTableName>
-                <AdminDataTableCellMeta until='secondary' label='Name'>
-                  {adminTableText(cognitoUser.name)}
-                </AdminDataTableCellMeta>
-                <AdminDataTableCellMeta until='secondary'>
+                <span className='inline-flex min-w-0 items-center gap-1.5'>
+                  <AdminTableName>
+                    {cognitoUser.email || cognitoUser.username || ''}
+                  </AdminTableName>
                   <IdentityProviderBadge username={cognitoUser.username} />
-                </AdminDataTableCellMeta>
+                </span>
                 <AdminDataTableCellMeta until='secondary' label='Roles' empty={roles.length === 0 && !isCurrent}>
                   <UserRoleMarks roles={roles} isCurrent={isCurrent} />
-                </AdminDataTableCellMeta>
-                <AdminDataTableCellMeta until='secondary' label='Created' empty={!cognitoUser.created_at}>
-                  <AdminTableTime value={cognitoUser.created_at} />
                 </AdminDataTableCellMeta>
                 <AdminDataTableCellMeta until='tertiary' label='Last Login' empty={!cognitoUser.last_auth_time}>
                   <AdminTableTime value={cognitoUser.last_auth_time} />
                 </AdminDataTableCellMeta>
               </AdminDataTableCell>
               <AdminDataTableCell priority='secondary'>
-                {adminTableText(cognitoUser.name)}
-              </AdminDataTableCell>
-              <AdminDataTableCell priority='secondary'>
-                <IdentityProviderBadge username={cognitoUser.username} />
-              </AdminDataTableCell>
-              <AdminDataTableCell priority='secondary'>
                 <UserRoleMarks roles={roles} isCurrent={isCurrent} />
-              </AdminDataTableCell>
-              <AdminDataTableCell priority='secondary'>
-                <AdminTableTime value={cognitoUser.created_at} />
               </AdminDataTableCell>
               <AdminDataTableCell priority='tertiary'>
                 <AdminTableTime value={cognitoUser.last_auth_time} />
@@ -291,12 +273,19 @@ export function CognitoUsersPanel() {
 }
 
 function UserAttributesDetail({ user }: { user: CognitoUserRow }) {
+  const status = user.status.trim().toLowerCase();
   return (
     <AdminEditorPanel>
       <AdminFieldGrid columns={2}>
         <AdminReadOnlyValue label='Email'>{user.email || '—'}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Username'>{user.username || '—'}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Status'>{user.status}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Username' mono>
+          {user.username || '—'}
+        </AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Name'>{user.name?.trim() || '—'}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Provider'>
+          {getIdentityProvider(user.username)}
+        </AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Status'>{status || '—'}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Roles'>
           {user.groups?.length
             ? user.groups.map((group) => formatRoleLabel(group)).join(', ')
