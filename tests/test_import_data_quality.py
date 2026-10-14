@@ -241,7 +241,7 @@ def test_run_records_busy_location_without_raising(monkeypatch) -> None:
 
 def test_get_settings_returns_defaults(monkeypatch) -> None:
     monkeypatch.setattr(
-        "app.api.admin_imports.load_import_data_quality_settings",
+        "app.api.admin_imports_settings.load_import_data_quality_settings",
         lambda: default_settings(),
     )
     response = _handle_admin_imports(
@@ -259,7 +259,8 @@ def test_post_settings_saves_without_object_key(monkeypatch) -> None:
         return parse_settings(body)
 
     monkeypatch.setattr(
-        "app.api.admin_imports.save_import_data_quality_settings", _save
+        "app.api.admin_imports_settings.save_import_data_quality_settings",
+        _save,
     )
     response = _handle_admin_imports(
         _event(
@@ -283,7 +284,8 @@ def test_importer_cannot_save_settings(monkeypatch) -> None:
         return parse_settings(body)
 
     monkeypatch.setattr(
-        "app.api.admin_imports.save_import_data_quality_settings", _save
+        "app.api.admin_imports_settings.save_import_data_quality_settings",
+        _save,
     )
     event = _event(
         "/v1/admin/imports",

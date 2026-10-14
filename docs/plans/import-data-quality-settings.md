@@ -25,8 +25,9 @@ UI import and a board catalog import.
 
 - `backend/src/app/services/import_data_quality.py` loads, saves, and
   runs the four checks.
-- `backend/src/app/api/admin_imports.py` dispatches GET/POST settings
-  and runs checks after a live import commits.
+- `backend/src/app/api/admin_imports_settings.py` handles GET/POST
+  settings and runs checks after a live import commits.
+- `backend/src/app/api/admin_imports.py` dispatches those routes.
 - `docs/api/admin.yaml` and generated admin types.
 - `docs/architecture/data-quality.md`, `docs/architecture/lambdas.md`,
   and `docs/architecture/admin-web-ui.md`.
