@@ -135,7 +135,8 @@ def record_imported_name(
     from app.services.name_fixes import load_name_fix_config
 
     config = load_name_fix_config(session)
-    rules = change.get("rules") if isinstance(change.get("rules"), list) else []
+    raw_rules = change.get("rules")
+    rules = raw_rules if isinstance(raw_rules, list) else []
     patch = change.get("translation_patch")
     upsert_name_proposal(
         session,

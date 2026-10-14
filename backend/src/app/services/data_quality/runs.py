@@ -110,9 +110,8 @@ def create_manual_run(
 ) -> DataQualityRun:
     """Start an on-demand run, or return the in-flight run with the same inputs."""
     checks = _manual_checks(body.get("checks"))
-    scope = resolve_scope(
-        session, body.get("scope") if isinstance(body.get("scope"), dict) else {}
-    )
+    raw_scope = body.get("scope")
+    scope = resolve_scope(session, raw_scope if isinstance(raw_scope, dict) else {})
     if _scope_empty(scope):
         raise ValidationError("Nothing to check", field="scope")
     config_hash = _config_hash(checks, scope)
