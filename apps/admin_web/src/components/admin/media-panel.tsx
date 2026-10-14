@@ -479,6 +479,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
           title='Media'
           titleLevel='h3'
           titleAccessory={<VersionSwitcher view={versionView} />}
+          titleAccessoryAlign='end'
           status={
             <>
               {error ? (

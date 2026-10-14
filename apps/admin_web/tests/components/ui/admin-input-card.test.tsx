@@ -88,5 +88,20 @@ describe('AdminInputCard', () => {
     const heading = screen.getByRole('heading', { name: 'Harbour Club' });
     expect(heading).toHaveClass('text-base', 'font-semibold', 'sm:text-lg');
     expect(heading.parentElement).toHaveTextContent('operational');
+    expect(heading.parentElement).not.toHaveClass('justify-between');
+  });
+
+  it('aligns a title accessory to the end of the title row', () => {
+    render(
+      <AdminInputCard
+        title='Media'
+        titleAccessory={<span>Version 2 · Latest</span>}
+        titleAccessoryAlign='end'
+      />
+    );
+
+    const heading = screen.getByRole('heading', { name: 'Media' });
+    expect(heading.parentElement).toHaveClass('justify-between');
+    expect(heading.parentElement).toHaveTextContent('Version 2 · Latest');
   });
 });

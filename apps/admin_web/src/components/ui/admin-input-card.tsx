@@ -11,6 +11,7 @@ export interface AdminInputCardProps extends Omit<HTMLAttributes<HTMLElement>, '
   /** `h3` when this card sits under the page heading. */
   titleLevel?: 'h2' | 'h3';
   titleAccessory?: ReactNode;
+  titleAccessoryAlign?: 'start' | 'end';
   description?: string;
   children?: ReactNode;
   actions?: ReactNode;
@@ -29,6 +30,7 @@ export function AdminInputCard({
   title,
   titleLevel = 'h2',
   titleAccessory,
+  titleAccessoryAlign,
   description,
   children,
   actions,
@@ -44,6 +46,7 @@ export function AdminInputCard({
       title={title}
       titleLevel={titleLevel}
       titleAccessory={titleAccessory}
+      titleAccessoryAlign={titleAccessoryAlign}
       description={description}
       className={className}
       {...rest}
