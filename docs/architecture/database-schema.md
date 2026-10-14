@@ -736,6 +736,11 @@ Grants:
 
 Not audited.
 
+`summary.source` is `ui` or `board`. `0050_import_job_source` sets
+`board` when that key is missing or any other value, and does not
+change `updated_at`. A job that already stores `ui` or `board` is
+left as recorded.
+
 ## View: v_catalog_health
 
 District × category catalog KPI read by the Executive Board Data API.
