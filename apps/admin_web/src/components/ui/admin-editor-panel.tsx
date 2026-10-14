@@ -10,6 +10,8 @@ import { hasContent } from './node-content';
 export interface AdminEditorPanelProps {
   /** Field area, usually `AdminFieldGrid` rows and `AdminDisclosure` sections. */
   children: ReactNode;
+  /** Top-right control, such as the catalog version switcher. */
+  accessory?: ReactNode;
   /** Single action row rendered under the fields (see `AdminEditorActions`). */
   actions?: ReactNode;
   /** Mark the action bar as the input-card bar. An empty bar is not rendered. */
@@ -21,10 +23,12 @@ export interface AdminEditorPanelProps {
 
 /**
  * Body of an expanded record row. No title or description: the row itself
- * identifies the record, so the panel starts directly with fields.
+ * identifies the record, so the panel starts with an optional top-right
+ * accessory and then the fields.
  */
 export function AdminEditorPanel({
   children,
+  accessory,
   actions,
   actionRow = false,
   status,
@@ -33,6 +37,14 @@ export function AdminEditorPanel({
   const showBar = hasContent(actions);
   return (
     <div className={clsx('space-y-4', className)} data-testid='admin-editor-panel'>
+      {hasContent(accessory) ? (
+        <div
+          className='flex items-center justify-end'
+          data-testid='admin-editor-accessory'
+        >
+          {accessory}
+        </div>
+      ) : null}
       {children}
       {status}
       {showBar ? (

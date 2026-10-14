@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { useActivitiesByMode } from '../../hooks/use-activities-by-mode';
-import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useLocationsByMode } from '../../hooks/use-locations-by-mode';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
@@ -37,9 +36,7 @@ import {
 import { AdminDisclosure } from '../ui/admin-disclosure';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
-import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { AdminToggleChip } from '../ui/admin-tab-strip';
-import { Input } from '../ui/input';
 import {
   deleteRowActions,
   ResourceTableShell,
@@ -121,15 +118,6 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     orgId: scopedOrgId,
   });
   const entryIdRef = useRef(0);
-
-  const [searchQuery, setSearchQuery] = useState('');
-  useExhaustPages(Boolean(searchQuery.trim()), {
-    hasMore: panel.hasMore,
-    isLoading: panel.isLoading,
-    isLoadingMore: panel.isLoadingMore,
-    error: panel.listError,
-    loadMore: panel.loadMore,
-  });
 
   const singleActivityId =
     activities.length === 1 ? (activities[0]?.id ?? '') : '';
@@ -498,21 +486,6 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     [getDayLabel, getLocalEntries]
   );
 
-  const filteredItems = panel.items.filter((item) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const activityName = getActivityName(item.activity_id).toLowerCase();
-    const locationName = getLocationName(item.location_id).toLowerCase();
-    const languagesStr = item.languages?.join(', ')?.toLowerCase() || '';
-    const entriesLabel = weeklyEntriesLabel(item).toLowerCase();
-    return (
-      activityName.includes(query) ||
-      locationName.includes(query) ||
-      entriesLabel.includes(query) ||
-      languagesStr.includes(query)
-    );
-  });
-
   const showLocationError = validation.shouldShowError(
     'location_id',
     Boolean(locationError)
@@ -528,6 +501,9 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
   );
   const detail = (
     <AdminEditorPanel
+      accessory={
+        panel.editingId ? <VersionSwitcher view={versionView} /> : undefined
+      }
       status={
         panel.error ? (
           <StatusBanner kind='error'>
@@ -536,20 +512,17 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
         ) : null
       }
       actions={
-        <>
-          {versionView.isHistorical ? (
-            <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
-              Back to latest
-            </Button>
-          ) : (
-            <AdminEditorActions
-              mode={panel.editorMode}
-              onSubmit={handleSubmit}
-              isSaving={panel.isSaving}
-            />
-          )}
-          <VersionSwitcher view={versionView} />
-        </>
+        versionView.isHistorical ? (
+          <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
+            Back to latest
+          </Button>
+        ) : (
+          <AdminEditorActions
+            mode={panel.editorMode}
+            onSubmit={handleSubmit}
+            isSaving={panel.isSaving}
+          />
+        )
       }
     >
       <VersionFields view={versionView}>
@@ -877,7 +850,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
         <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
         <ResourceTableShell
         ariaLabel={PAGE_NAME}
-        rows={filteredItems}
+        rows={panel.items}
         getLabel={(item) => getLocationName(item.location_id)}
         middleColumnCount={4}
         isLoading={panel.isLoading}
@@ -885,11 +858,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
         hasMore={panel.hasMore}
         onLoadMore={panel.loadMore}
         error={panel.listError}
-        emptyLabel={
-          searchQuery.trim()
-            ? 'No schedules match your search.'
-            : 'No schedules yet.'
-        }
+        emptyLabel='No schedules yet.'
         isExpanded={panel.isExpanded}
         onToggle={panel.toggle}
         isDraftOpen={panel.isDraftOpen}
@@ -904,19 +873,6 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
               onClick={panel.openDraft}
             />
           ) : null
-        }
-        filters={
-          <AdminFilterBar>
-            <AdminFilterField>
-              <Input
-                id='schedule-search'
-                placeholder='Activity, location, or time'
-                aria-label='Schedule'
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-              />
-            </AdminFilterField>
-          </AdminFilterBar>
         }
         head={
           <>

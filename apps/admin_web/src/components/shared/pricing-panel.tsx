@@ -1,11 +1,10 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import currencyCodes from 'currency-codes';
 
 import { useActivitiesByMode } from '../../hooks/use-activities-by-mode';
-import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useLocationsByMode } from '../../hooks/use-locations-by-mode';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
@@ -39,7 +38,6 @@ import {
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
-import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import { Input } from '../ui/input';
 import {
   deleteRowActions,
@@ -116,15 +114,6 @@ export function PricingPanel({ mode }: PricingPanelProps) {
     orgId: scopedOrgId,
   });
 
-  const [searchQuery, setSearchQuery] = useState('');
-  useExhaustPages(Boolean(searchQuery.trim()), {
-    hasMore: panel.hasMore,
-    isLoading: panel.isLoading,
-    isLoadingMore: panel.isLoadingMore,
-    error: panel.listError,
-    loadMore: panel.loadMore,
-  });
-
   const singleActivityId =
     activities.length === 1 ? (activities[0]?.id ?? '') : '';
   const singleLocationId =
@@ -181,20 +170,6 @@ export function PricingPanel({ mode }: PricingPanelProps) {
       a.label.localeCompare(b.label)
     );
   }, []);
-
-  const currencyNameByCode = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const option of currencyOptions) {
-      map.set(option.code, option.name);
-    }
-    return map;
-  }, [currencyOptions]);
-
-  function getCurrencySearchText(value?: string | null): string {
-    const normalized = normalizeCurrencyCode(value);
-    const name = currencyNameByCode.get(normalized);
-    return name ? `${name} ${normalized}` : normalized;
-  }
 
   const isFreeType = formState.pricing_type === 'free';
   const showSessionsField = formState.pricing_type === 'per_sessions';
@@ -307,29 +282,6 @@ export function PricingPanel({ mode }: PricingPanelProps) {
     [locations]
   );
 
-  const filteredItems = panel.items.filter((item) => {
-    if (!searchQuery.trim()) {
-      return true;
-    }
-    const query = searchQuery.toLowerCase();
-    const activityName = getActivityName(item.activity_id);
-    const locationName = getLocationName(item.location_id);
-    const pricingTypeLabel = getPricingTypeLabel(item.pricing_type);
-    const pricingTypeSearch =
-      `${pricingTypeLabel} ${item.pricing_type}`.toLowerCase();
-    const currencySearch = getCurrencySearchText(item.currency).toLowerCase();
-    const amountSearch = String(item.amount).toLowerCase();
-    const formattedAmountSearch = formatPriceAmount(item.amount).toLowerCase();
-    return (
-      activityName.toLowerCase().includes(query) ||
-      locationName.toLowerCase().includes(query) ||
-      pricingTypeSearch.includes(query) ||
-      amountSearch.includes(query) ||
-      formattedAmountSearch.includes(query) ||
-      currencySearch.includes(query)
-    );
-  });
-
   const showLocationError = shouldShowError('location_id', locationError);
   const showActivityError = shouldShowError('activity_id', activityError);
   const showAmountError = shouldShowError('amount', amountError);
@@ -349,6 +301,9 @@ export function PricingPanel({ mode }: PricingPanelProps) {
 
   const detail = (
     <AdminEditorPanel
+      accessory={
+        panel.editingId ? <VersionSwitcher view={versionView} /> : undefined
+      }
       status={
         panel.error ? (
           <StatusBanner kind='error'>
@@ -357,20 +312,17 @@ export function PricingPanel({ mode }: PricingPanelProps) {
         ) : null
       }
       actions={
-        <>
-          {versionView.isHistorical ? (
-            <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
-              Back to latest
-            </Button>
-          ) : (
-            <AdminEditorActions
-              mode={panel.editorMode}
-              onSubmit={handleSubmit}
-              isSaving={panel.isSaving}
-            />
-          )}
-          <VersionSwitcher view={versionView} />
-        </>
+        versionView.isHistorical ? (
+          <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
+            Back to latest
+          </Button>
+        ) : (
+          <AdminEditorActions
+            mode={panel.editorMode}
+            onSubmit={handleSubmit}
+            isSaving={panel.isSaving}
+          />
+        )
       }
     >
       <VersionFields view={versionView}>
@@ -571,7 +523,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
         <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
         <ResourceTableShell
         ariaLabel={PAGE_NAME}
-        rows={filteredItems}
+        rows={panel.items}
         getLabel={(item) => getLocationName(item.location_id)}
         middleColumnCount={4}
         isLoading={panel.isLoading}
@@ -579,11 +531,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
         hasMore={panel.hasMore}
         onLoadMore={panel.loadMore}
         error={panel.listError}
-        emptyLabel={
-          searchQuery.trim()
-            ? 'No pricing entries match your search.'
-            : 'No pricing entries yet.'
-        }
+        emptyLabel='No pricing entries yet.'
         isExpanded={panel.isExpanded}
         onToggle={panel.toggle}
         isDraftOpen={panel.isDraftOpen}
@@ -598,19 +546,6 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               onClick={panel.openDraft}
             />
           ) : null
-        }
-        filters={
-          <AdminFilterBar>
-            <AdminFilterField>
-              <Input
-                id='pricing-search'
-                placeholder='Activity, location, or price'
-                aria-label='Pricing'
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-              />
-            </AdminFilterField>
-          </AdminFilterBar>
         }
         head={
           <>

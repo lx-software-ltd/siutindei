@@ -6,11 +6,25 @@ test.describe('Pricing Panel', () => {
     await expect(adminPage.getByRole('table', { name: 'Pricing' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toHaveCount(0);
     await expect(adminPage.getByRole('cell', { name: 'v1' })).toHaveCount(0);
+    await expect(adminPage.getByTestId('admin-filter-bar')).toHaveCount(0);
+    await expect(adminPage.getByPlaceholder('Activity, location, or price')).toHaveCount(0);
     await adminPage.getByRole('row', { name: /123 Test Street/ }).first().click();
     await expect(adminPage.getByText('Org v2')).toBeVisible();
-    await expect(adminPage.getByRole('button', { name: 'Version 1 · Latest' })).toBeVisible();
+    const editor = adminPage.getByTestId('admin-editor-panel');
+    const accessory = editor.getByTestId('admin-editor-accessory');
+    const version = accessory.getByRole('button', { name: 'Version 1 · Latest' });
+    await expect(version).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'History' })).toHaveCount(0);
-    await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
+    const editorBox = await editor.boundingBox();
+    const versionBox = await version.boundingBox();
+    const locationBox = await editor.locator('#pricing-location').boundingBox();
+    expect(editorBox).toBeTruthy();
+    expect(versionBox).toBeTruthy();
+    expect(locationBox).toBeTruthy();
+    expect(versionBox!.y).toBeLessThan(locationBox!.y);
+    expect(
+      Math.abs(versionBox!.x + versionBox!.width - (editorBox!.x + editorBox!.width))
+    ).toBeLessThan(32);
     await adminPage.getByRole('button', { name: 'New pricing' }).click();
 
     await adminPage.locator('#pricing-location').selectOption('loc-1');
