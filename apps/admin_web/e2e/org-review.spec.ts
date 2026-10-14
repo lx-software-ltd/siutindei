@@ -148,7 +148,13 @@ test.describe('Organization review queue', () => {
     await adminPage.getByTestId('admin-row-job-skip').click();
     const detail = adminPage.getByTestId('admin-row-job-skip-detail');
     await expect(detail.getByText('name is required')).toBeVisible();
+    await expect(
+      detail.getByText(
+        'ignored flat location fields area_name, address because locations[] is present'
+      )
+    ).toBeVisible();
     await expect(detail.getByText('organizations[0]')).toHaveCount(0);
+    await expect(detail.getByText(/organizations\[\d+\]:/)).toHaveCount(0);
     await expect(detail.getByText('File warnings')).toHaveCount(0);
   });
 

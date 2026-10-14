@@ -2098,7 +2098,7 @@ export async function setupApiMocks(page: Page): Promise<void> {
           activities: { created: 0, updated: 0, failed: 0, skipped: 0 },
           pricing: { created: 0, updated: 0, failed: 0, skipped: 0 },
           schedules: { created: 0, updated: 0, failed: 0, skipped: 0 },
-          warnings: 0,
+          warnings: 1,
           errors: 1,
         },
         results: [
@@ -2107,7 +2107,9 @@ export async function setupApiMocks(page: Page): Promise<void> {
             key: 'Missing Org',
             status: 'failed',
             path: 'organizations[0]',
-            warnings: [],
+            warnings: [
+              'organizations[0]: ignored flat location fields area_name, address because locations[] is present',
+            ],
             errors: [{ message: 'name is required' }],
           },
         ],

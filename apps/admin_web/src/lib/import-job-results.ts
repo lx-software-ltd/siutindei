@@ -64,14 +64,24 @@ export function groupImportResults(
   });
 }
 
+const IMPORT_RESULT_PATH_PREFIX =
+  /^(?:organizations|locations|activities|pricing|schedules)\[\d+\](?:\/(?:organizations|locations|activities|pricing|schedules)\[\d+\])*:\s*/i;
+
+export function stripImportResultPathPrefix(text: string): string {
+  return text.replace(IMPORT_RESULT_PATH_PREFIX, '');
+}
+
 export function formatImportResultNotes(
   row: Pick<AdminImportResult, 'errors' | 'warnings'>
 ): string {
   const errors = (row.errors ?? [])
-    .map((error) => error.message)
+    .map((error) => stripImportResultPathPrefix(error.message ?? ''))
     .filter(Boolean)
     .join('; ');
-  const warnings = (row.warnings ?? []).filter(Boolean).join('; ');
+  const warnings = (row.warnings ?? [])
+    .map((warning) => stripImportResultPathPrefix(warning))
+    .filter(Boolean)
+    .join('; ');
   return [errors, warnings].filter(Boolean).join(' · ');
 }
 
