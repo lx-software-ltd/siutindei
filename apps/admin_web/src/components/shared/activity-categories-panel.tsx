@@ -4,6 +4,10 @@ import { useMemo } from 'react';
 
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
+import {
+  flattenCategoriesByPathOrder,
+  groupCategoriesByParent,
+} from '../../lib/activity-category-path';
 import { ADMIN_API_MAX_LIST_LIMIT } from '../../lib/admin-list-query';
 import { adminTabLabel, formatAdminPageName } from '../../lib/admin-page-name';
 import {
@@ -93,23 +97,15 @@ export function ActivityCategoriesPanel() {
     formKey
   );
 
-  const childrenByParent = useMemo(() => {
-    const map = new Map<string, ActivityCategory[]>();
-    for (const category of panel.items) {
-      const parentId = category.parent_id ?? '';
-      const list = map.get(parentId) ?? [];
-      list.push(category);
-      map.set(parentId, list);
-    }
-    for (const list of map.values()) {
-      list.sort((a, b) => {
-        const order = (a.display_order ?? 0) - (b.display_order ?? 0);
-        if (order !== 0) return order;
-        return a.name.localeCompare(b.name);
-      });
-    }
-    return map;
-  }, [panel.items]);
+  const childrenByParent = useMemo(
+    () => groupCategoriesByParent(panel.items),
+    [panel.items]
+  );
+
+  const tableRows = useMemo(
+    () => flattenCategoriesByPathOrder(panel.items),
+    [panel.items]
+  );
 
   const categoryPathById = useMemo(() => {
     const map = new Map<string, string>();
@@ -351,7 +347,7 @@ export function ActivityCategoriesPanel() {
       <h2 className='sr-only'>{PAGE_NAME}</h2>
       <ResourceTableShell
         ariaLabel={PAGE_NAME}
-        rows={panel.items}
+        rows={tableRows}
         getLabel={(item) => {
           const label = categoryPathById.get(item.id) || item.name;
           return item.is_system ? `${label} (pending)` : label;

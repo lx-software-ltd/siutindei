@@ -46,6 +46,16 @@ test.describe('Categories Panel', () => {
     ).toBeVisible();
 
     await expect(adminPage.getByText('Sport / Water Sports')).toBeVisible();
+
+    const rows = adminPage
+      .getByRole('table', { name: 'Categories' })
+      .locator('tr[data-testid^="admin-row-"]:not([data-testid$="-detail"])');
+    await expect(rows).toHaveCount(5);
+    await expect(rows.nth(0)).toHaveAttribute('data-testid', 'admin-row-cat-sport');
+    await expect(rows.nth(1)).toHaveAttribute('data-testid', 'admin-row-cat-water');
+    await expect(rows.nth(2)).toHaveAttribute('data-testid', 'admin-row-cat-team');
+    await expect(rows.nth(3)).toHaveAttribute('data-testid', 'admin-row-cat-arts');
+    await expect(rows.nth(4)).toHaveAttribute('data-testid', 'admin-row-cat-paint');
   });
 
   test('should create a new category', async ({ adminPage }) => {
