@@ -1,6 +1,7 @@
 # Plan: Import data-quality settings
 
 **Status**: Done
+**Superseded by**: `docs/plans/data-quality-engine.md`
 **Zone**: yellow
 
 ## Goal
