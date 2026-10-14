@@ -85,58 +85,62 @@ export function ImportSettingsPanel() {
       : '';
 
   return (
-    <AdminInputCard
-      title={PAGE_NAME}
-      status={
-        <>
-          {error || loadError ? (
-            <StatusBanner kind='error'>{error || loadError}</StatusBanner>
-          ) : null}
-          {notice ? <StatusBanner kind='saved'>{notice}</StatusBanner> : null}
-        </>
-      }
-      actions={
-        <Button
-          type='button'
-          onClick={() => {
-            void save();
-          }}
-          loading={saving}
-          disabled={settingsQuery.isLoading && !draft}
-        >
-          Save settings
-        </Button>
-      }
-    >
-      <p className='text-sm text-slate-600'>
-        Tick the Data quality checks that run after a live import. Sweeps
-        use pending review. A dry-run does not start them.
-      </p>
-      <AdminFieldGrid columns={1}>
-        <AdminField span='full'>
-          <div className='space-y-2'>
-            {QUALITY_OPTIONS.map((option) => (
-              <label
-                key={option.key}
-                className='flex items-center gap-2 text-sm text-slate-700'
-              >
-                <input
-                  type='checkbox'
-                  checked={settings[option.key]}
-                  onChange={(event) => {
-                    setNotice('');
-                    setDraft({
-                      ...settings,
-                      [option.key]: event.target.checked,
-                    });
-                  }}
-                />
-                {option.label}
-              </label>
-            ))}
-          </div>
-        </AdminField>
-      </AdminFieldGrid>
-    </AdminInputCard>
+    <>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
+      <AdminInputCard
+        title={adminTabLabel.settings}
+        titleLevel='h3'
+        status={
+          <>
+            {error || loadError ? (
+              <StatusBanner kind='error'>{error || loadError}</StatusBanner>
+            ) : null}
+            {notice ? <StatusBanner kind='saved'>{notice}</StatusBanner> : null}
+          </>
+        }
+        actions={
+          <Button
+            type='button'
+            onClick={() => {
+              void save();
+            }}
+            loading={saving}
+            disabled={settingsQuery.isLoading && !draft}
+          >
+            Save settings
+          </Button>
+        }
+      >
+        <p className='text-sm text-slate-600'>
+          Tick the Data quality checks that run after a live import. Sweeps
+          use pending review. A dry-run does not start them.
+        </p>
+        <AdminFieldGrid columns={1}>
+          <AdminField span='full'>
+            <div className='space-y-2'>
+              {QUALITY_OPTIONS.map((option) => (
+                <label
+                  key={option.key}
+                  className='flex items-center gap-2 text-sm text-slate-700'
+                >
+                  <input
+                    type='checkbox'
+                    checked={settings[option.key]}
+                    onChange={(event) => {
+                      setNotice('');
+                      setDraft({
+                        ...settings,
+                        [option.key]: event.target.checked,
+                      });
+                    }}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          </AdminField>
+        </AdminFieldGrid>
+      </AdminInputCard>
+    </>
   );
 }

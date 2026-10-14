@@ -48,7 +48,7 @@ describe('ImportSettingsPanel', () => {
     render(<ImportSettingsPanel />, { wrapper });
 
     expect(
-      await screen.findByRole('heading', { name: 'Imports · Settings' })
+      await screen.findByRole('heading', { name: 'Settings', exact: true })
     ).toBeVisible();
     const names = await screen.findByRole('checkbox', { name: 'Names' });
     expect(names).not.toBeChecked();
@@ -79,7 +79,7 @@ describe('ImportSettingsPanel', () => {
     expect(await screen.findByText('Settings failed.')).toBeVisible();
     expect(screen.queryByText('Loading settings...')).not.toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: 'Imports · Settings' })
+      screen.getByRole('heading', { name: 'Settings', exact: true })
     ).toBeVisible();
   });
 });

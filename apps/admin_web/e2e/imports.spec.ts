@@ -47,7 +47,7 @@ test.describe('Imports Panel', () => {
   }) => {
     await adminPage.goto('/admin/dashboard?section=imports&tab=settings');
     await expect(
-      adminPage.getByRole('heading', { name: 'Imports · Settings' })
+      adminPage.getByRole('heading', { name: 'Settings', exact: true })
     ).toBeVisible();
     const names = adminPage.getByRole('checkbox', { name: 'Names' });
     await expect(names).not.toBeChecked();
