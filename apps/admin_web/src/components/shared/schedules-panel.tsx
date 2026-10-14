@@ -508,6 +508,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     'languages',
     Boolean(languagesError)
   );
+  const [isHistorical, setIsHistorical] = useState(false);
 
   const detail = (
     <AdminEditorPanel
@@ -519,13 +520,24 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
         ) : null
       }
       actions={
+        isHistorical ? undefined : (
         <AdminEditorActions
           mode={panel.editorMode}
           onSubmit={handleSubmit}
           isSaving={panel.isSaving}
         />
+        )
       }
     >
+      <VersionHistory
+        mode={mode}
+        entityType='schedule'
+        entityId={panel.editingId}
+        version={
+          panel.items.find((item) => item.id === panel.editingId)?.version
+        }
+        onHistoricalChange={setIsHistorical}
+      >
       <AdminFieldGrid columns={2}>
         <AdminField
           label='Location'
@@ -823,16 +835,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
           </AdminField>
         </div>
       </AdminFieldGrid>
-      {panel.editingId ? (
-        <VersionHistory
-          mode={mode}
-          entityType='schedule'
-          entityId={panel.editingId}
-          version={
-            panel.items.find((item) => item.id === panel.editingId)?.version
-          }
-        />
-      ) : null}
+      </VersionHistory>
     </AdminEditorPanel>
   );
 

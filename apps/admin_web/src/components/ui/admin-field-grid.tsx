@@ -44,6 +44,17 @@ export function AdminFieldGrid({ columns, children, className }: AdminFieldGridP
   );
 }
 
+/** Full-width rule between field groups inside `AdminFieldGrid`. */
+export function AdminFieldDivider() {
+  return (
+    <div
+      className='col-span-full border-t border-slate-200'
+      role='separator'
+      data-testid='admin-field-divider'
+    />
+  );
+}
+
 const spanStyles = {
   1: null,
   2: 'sm:col-span-2',

@@ -7,13 +7,15 @@ test.describe('Media Panel', () => {
       adminPage.getByRole('heading', { name: 'Test Organization 1' })
     ).toBeVisible();
     await expect(adminPage.getByRole('heading', { name: 'Media' })).toBeVisible();
-    await expect(adminPage.getByText('Media v1')).toBeVisible();
-    await adminPage.getByRole('button', { name: 'History' }).click();
-    const history = adminPage.getByTestId('version-history-media-org-1-disclosure');
-    await expect(history.getByText('v1 · created · Import')).toBeVisible();
-    await history.getByRole('button', { name: 'View version 1' }).click();
-    await expect(history.getByText('Read-only')).toBeVisible();
-    await expect(history.locator('input, textarea, select')).toHaveCount(0);
+    await expect(adminPage.getByRole('button', { name: 'History' })).toHaveCount(0);
+    const version = adminPage.getByLabel('Version');
+    await expect(version).toHaveValue('2');
+    await version.selectOption('1');
+    await expect(adminPage.getByText('Read-only')).toBeVisible();
+    await expect(adminPage.getByText('https://example.com/original.jpg')).toBeVisible();
+    await expect(adminPage.locator('#media-url')).toHaveCount(0);
+    await expect(adminPage.getByRole('button', { name: 'Save media' })).toHaveCount(0);
+    await version.selectOption('2');
 
     const mediaInput = adminPage.locator('#media-url');
     await mediaInput.fill('https://example.com/media-one.jpg');

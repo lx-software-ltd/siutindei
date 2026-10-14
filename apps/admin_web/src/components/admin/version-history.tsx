@@ -1,23 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { refreshCatalogHistory, getAdminQueryClient } from '../../lib/admin-query-client';
 import { adminQueryKeys } from '../../lib/admin-query-keys';
-import { listCognitoUsers } from '../../lib/api-client-cognito';
 import {
   forgetCatalogVersion,
   listCatalogVersions,
   listEntireCatalogHistory,
   type CatalogVersionRow,
 } from '../../lib/api-client-versions';
-import { formatDateTime } from '../../lib/date-utils';
 import type { ApiMode } from '../../lib/resource-api';
-import { AdminDisclosure } from '../ui/admin-disclosure';
-import { AdminFieldGrid } from '../ui/admin-field-grid';
+import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
 import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
 import { Button } from '../ui/button';
+import { Select } from '../ui/select';
 
 export type CatalogEntityType =
   | 'organization'
@@ -29,31 +27,27 @@ export type CatalogEntityType =
 
 const REMOVABLE = new Set(['location', 'activity', 'pricing', 'schedule']);
 
-function sourceLabel(row: CatalogVersionRow, emailById: Record<string, string>) {
-  if (row.reason === 'merged') {
-    return 'Merge';
-  }
-  if (row.reason === 'forgotten') {
-    return 'Forgotten';
-  }
-  if (row.reason === 'children') {
-    return 'Child change';
-  }
-  if (row.import_job_id) {
-    return 'Import';
-  }
-  if (row.user_id) {
-    return emailById[row.user_id] ?? 'Admin';
-  }
-  return 'System';
+export function catalogLatestVersion(
+  currentVersion?: number | null,
+  historyItems: Array<{ version: number }> = []
+): number {
+  const current = currentVersion && currentVersion > 0 ? currentVersion : 1;
+  const fromHistory = historyItems.reduce(
+    (latest, item) => (item.version > latest ? item.version : latest),
+    1
+  );
+  return Math.max(current, fromHistory);
 }
 
-function changedSummary(row: CatalogVersionRow) {
-  const fields = row.changed_fields ?? [];
-  if (fields.length === 0) {
-    return row.action;
+export function catalogVersionOptions(
+  latestVersion: number,
+  { allVersions }: { allVersions: boolean }
+): number[] {
+  const latest = latestVersion > 0 ? latestVersion : 1;
+  if (!allVersions) {
+    return [latest];
   }
-  return fields.slice(0, 6).join(', ');
+  return Array.from({ length: latest }, (_, index) => index + 1);
 }
 
 function fieldLabel(key: string) {
@@ -100,8 +94,7 @@ function VersionSnapshot({ row }: { row: CatalogVersionRow }) {
   return (
     <div className='rounded border border-slate-200 bg-white p-3'>
       <p className='text-sm text-slate-600'>
-        Read-only. Version {row.version} is kept as it was. Editing the form
-        writes a new version.
+        {`Read-only. Version ${row.version} is kept as it was. Editing the form writes a new version.`}
       </p>
       {entries.length === 0 ? (
         <p className='mt-3 text-sm text-slate-600'>No stored fields.</p>
@@ -122,35 +115,24 @@ function VersionSnapshot({ row }: { row: CatalogVersionRow }) {
   );
 }
 
-async function loadEmailById() {
-  const emailById: Record<string, string> = {};
-  let paginationToken: string | undefined;
-  do {
-    const response = await listCognitoUsers(paginationToken, 60);
-    for (const user of response.items) {
-      if (user.email) {
-        emailById[user.sub] = user.email;
-      }
-    }
-    paginationToken = response.pagination_token ?? undefined;
-  } while (paginationToken);
-  return emailById;
-}
-
 /**
- * Read-only version and, for admins, the history of one catalog row.
- * Managers see the version only.
+ * Version select for one catalog row. Admins can open an earlier version as
+ * read-only details. Managers see the current version only.
  */
 export function VersionHistory({
   mode,
   entityType,
   entityId,
   version,
+  children,
+  onHistoricalChange,
 }: {
   mode: ApiMode;
   entityType: CatalogEntityType;
   entityId: string | null;
   version?: number | null;
+  children?: ReactNode;
+  onHistoricalChange?: (isHistorical: boolean) => void;
 }) {
   const isAdmin = mode === 'admin';
   const query = useQuery(
@@ -180,24 +162,26 @@ export function VersionHistory({
     getAdminQueryClient()
   );
   const items = query.data?.items ?? [];
-  const needsEmails = items.some((row) => row.user_id && !row.import_job_id);
-  const emails = useQuery(
-    {
-      queryKey: [...adminQueryKeys.catalogVersions(), 'actors'],
-      enabled: isAdmin && needsEmails,
-      staleTime: 60_000,
-      queryFn: loadEmailById,
-    },
-    getAdminQueryClient()
-  );
-  const emailById = emails.data ?? {};
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const latestVersion = catalogLatestVersion(version, isAdmin ? items : []);
+  const options = catalogVersionOptions(latestVersion, { allVersions: isAdmin });
+  const [selectedVersion, setSelectedVersion] = useState(latestVersion);
   const [forgettingId, setForgettingId] = useState<string | null>(null);
   const [forgetError, setForgetError] = useState('');
-  const selected = items.find((row) => row.id === selectedId) ?? null;
+
+  useEffect(() => {
+    setSelectedVersion(latestVersion);
+  }, [entityId, latestVersion]);
+
+  const selected = items.find((row) => row.version === selectedVersion) ?? null;
+  const isHistorical = Boolean(entityId) && selectedVersion < latestVersion;
   const removedItems = (removed.data?.items ?? []).filter((row) =>
     REMOVABLE.has(row.entity_type)
   );
+
+  useEffect(() => {
+    onHistoricalChange?.(isHistorical);
+    return () => onHistoricalChange?.(false);
+  }, [isHistorical, onHistoricalChange]);
 
   async function forget(row: CatalogVersionRow) {
     setForgettingId(row.id);
@@ -212,96 +196,75 @@ export function VersionHistory({
     }
   }
 
+  if (!entityId) {
+    return children ?? null;
+  }
+
+  const selectId = `catalog-version-${entityType}-${entityId}`;
+  const details = isHistorical ? (
+    query.isError ? (
+      <p className='text-sm text-slate-600'>This version is unavailable.</p>
+    ) : query.isLoading ? (
+      <p className='text-sm text-slate-600'>Loading version…</p>
+    ) : selected ? (
+      <VersionSnapshot row={selected} />
+    ) : (
+      <p className='text-sm text-slate-600'>This version is unavailable.</p>
+    )
+  ) : (
+    children
+  );
+
   return (
-    <div className='mt-4 space-y-3'>
-      <AdminReadOnlyValue label='Version'>
-        {version ? `v${version}` : '—'}
-      </AdminReadOnlyValue>
-      {isAdmin && entityId ? (
-        <AdminDisclosure
-          id={`version-history-${entityType}-${entityId}`}
-          title='History'
-          summary={query.isLoading ? 'Loading' : `${items.length}`}
+    <div className='space-y-4'>
+      {details}
+      <AdminField label='Version' htmlFor={selectId}>
+        <Select
+          id={selectId}
+          value={String(selectedVersion)}
+          onChange={(event) => setSelectedVersion(Number(event.target.value))}
         >
-          {query.isError ? (
-            <p className='text-sm text-slate-600'>History is unavailable.</p>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </Select>
+      </AdminField>
+      {query.isError && !isHistorical ? (
+        <p className='text-sm text-slate-600'>Versions are unavailable.</p>
+      ) : null}
+      {entityType === 'organization' && removedItems.length > 0 ? (
+        <div className='space-y-2'>
+          <p className='text-sm font-medium text-slate-900'>Removed records</p>
+          <p className='text-sm text-slate-600'>
+            Forgetting one lets the next import create it again.
+          </p>
+          {forgetError ? (
+            <p className='text-sm text-red-700'>{forgetError}</p>
           ) : null}
-          {items.length === 0 && !query.isLoading ? (
-            <p className='text-sm text-slate-600'>No versions yet.</p>
-          ) : (
-            <>
-              <ul className='space-y-2 text-sm text-slate-700'>
-                {items.map((row) => (
-                  <li key={row.id}>
-                    <button
-                      type='button'
-                      aria-pressed={row.id === selectedId}
-                      aria-label={`View version ${row.version}`}
-                      onClick={() =>
-                        setSelectedId((current) =>
-                          current === row.id ? null : row.id
-                        )
-                      }
-                      className='w-full rounded border border-slate-200 bg-white p-2 text-left hover:bg-slate-50'
-                    >
-                      <span className='font-medium'>v{row.version}</span>
-                      {' · '}
-                      {row.action}
-                      {' · '}
-                      {sourceLabel(row, emailById)}
-                      {' · '}
-                      {formatDateTime(row.created_at)}
-                      <span className='block text-slate-500'>
-                        {changedSummary(row)}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              {query.data?.next_cursor ? (
-                <p className='text-sm text-slate-600'>
-                  Older versions are still stored. Open the record again to
-                  load the next page.
-                </p>
-              ) : null}
-              {selected ? <VersionSnapshot row={selected} /> : null}
-            </>
-          )}
-          {entityType === 'organization' && removedItems.length > 0 ? (
-            <div className='mt-4 space-y-2'>
-              <p className='text-sm font-medium text-slate-900'>
-                Removed records
-              </p>
-              <p className='text-sm text-slate-600'>
-                Forgetting one lets the next import create it again.
-              </p>
-              {forgetError ? (
-                <p className='text-sm text-red-700'>{forgetError}</p>
-              ) : null}
-              <ul className='space-y-2 text-sm text-slate-700'>
-                {removedItems.map((row) => (
-                  <li
-                    key={row.id}
-                    className='flex items-center justify-between gap-3 rounded border border-slate-200 bg-white p-2'
-                  >
-                    <span>
-                      {fieldLabel(row.entity_type)} · {recordName(row)}
-                    </span>
-                    <Button
-                      type='button'
-                      variant='danger'
-                      size='sm'
-                      loading={forgettingId === row.id}
-                      onClick={() => void forget(row)}
-                    >
-                      Forget
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </AdminDisclosure>
+          <ul className='space-y-2 text-sm text-slate-700'>
+            {removedItems.map((row) => (
+              <li
+                key={row.id}
+                className='flex items-center justify-between gap-3 rounded border border-slate-200 bg-white p-2'
+              >
+                <span>
+                  {fieldLabel(row.entity_type)} · {recordName(row)}
+                </span>
+                <Button
+                  type='button'
+                  variant='danger'
+                  size='sm'
+                  loading={forgettingId === row.id}
+                  onClick={() => void forget(row)}
+                >
+                  Forget
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
     </div>
   );

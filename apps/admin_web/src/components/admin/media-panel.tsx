@@ -102,6 +102,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
   const setDragOverIndex = (value: SetStateAction<number | null>) =>
     setMediaField('dragOverIndex', value);
   const { confirmDialog } = useConfirmDialog();
+  const [isHistorical, setIsHistorical] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingUploadsRef = useRef({ orgId: '', urls: [] as string[] });
   const previousOrgIdRef = useRef(scopedOrgId ?? '');
@@ -451,17 +452,6 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
         orgId={scopedOrgId}
         organization={organization}
       />
-      {organization?.media_version ? (
-        <p className='text-sm text-slate-600'>Media v{organization.media_version}</p>
-      ) : null}
-      {selectedOrgId ? (
-        <VersionHistory
-          mode={mode}
-          entityType='media'
-          entityId={selectedOrgId}
-          version={organization?.media_version}
-        />
-      ) : null}
       {isLoadingOrg ? (
         <p className='text-sm text-slate-600'>Loading media…</p>
       ) : null}
@@ -488,6 +478,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
             </>
           }
           actions={
+            isHistorical ? undefined : (
             <Button
               type='button'
               onClick={() => {
@@ -500,8 +491,16 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
             >
               Save media
             </Button>
+            )
           }
         >
+          <VersionHistory
+            mode={mode}
+            entityType='media'
+            entityId={selectedOrgId}
+            version={organization?.media_version}
+            onHistoricalChange={setIsHistorical}
+          >
             <p className='text-sm text-slate-600'>
               Add or remove media for{' '}
               {selectedOrganization?.name ?? 'this organization'}.
@@ -574,6 +573,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
                 No media added yet. Upload files or add URLs above.
               </p>
             )}
+          </VersionHistory>
         </AdminInputCard>
       )}
 

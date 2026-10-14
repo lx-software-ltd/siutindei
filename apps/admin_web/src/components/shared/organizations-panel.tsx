@@ -26,7 +26,12 @@ import { WorkspaceEmpty } from '../admin/workspace-empty';
 import { useAuth } from '../auth-provider';
 import { Button } from '../ui/button';
 import { AdminEditorActions } from '../ui/admin-editor-panel';
-import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
+import {
+  AdminField,
+  AdminFieldDivider,
+  AdminFieldGrid,
+  formErrorClassName,
+} from '../ui/admin-field-grid';
 import { AdminInputCard } from '../ui/admin-input-card';
 import { Input } from '../ui/input';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
@@ -112,6 +117,7 @@ export function OrganizationsPanel({
     name: string;
   } | null>(null);
   const [remoteNameTaken, setRemoteNameTaken] = useState(false);
+  const [isHistorical, setIsHistorical] = useState(false);
   const editorOpen = panel.isDraftOpen || Boolean(panel.editingId);
 
   const { orgParam, legacyOrgId, setOrg } = scope;
@@ -427,8 +433,7 @@ export function OrganizationsPanel({
   const showSocialError = (key: SocialFieldKey) =>
     shouldShowError(key, socialErrors[key]);
 
-  const fields = (
-    <>
+  const editorFields = (
       <AdminFieldGrid columns={2}>
             <AdminField error={showNameError ? nameError : undefined}>
               <LanguageToggleInput
@@ -588,6 +593,7 @@ export function OrganizationsPanel({
             </AdminField>
             {isAdmin && (
               <>
+              <AdminFieldDivider />
               <AdminField label='Source' htmlFor='org-source'>
                 <Select
                   id='org-source'
@@ -665,6 +671,7 @@ export function OrganizationsPanel({
                   }
                 />
               </AdminField>
+              <AdminFieldDivider />
               <AdminField
                 label='Listing status'
                 htmlFor='org-listing-status'
@@ -722,17 +729,20 @@ export function OrganizationsPanel({
               );
             })}
       </AdminFieldGrid>
-      {panel.editingId ? (
-        <VersionHistory
-          mode={mode}
-          entityType='organization'
-          entityId={panel.editingId}
-          version={
-            panel.items.find((item) => item.id === panel.editingId)?.version
-          }
-        />
-      ) : null}
-    </>
+  );
+
+  const fields = (
+    <VersionHistory
+      mode={mode}
+      entityType='organization'
+      entityId={panel.editingId}
+      version={
+        panel.items.find((item) => item.id === panel.editingId)?.version
+      }
+      onHistoricalChange={setIsHistorical}
+    >
+      {editorFields}
+    </VersionHistory>
   );
 
   if (!editorOpen) {
@@ -781,6 +791,7 @@ export function OrganizationsPanel({
           ) : null
         }
         actions={
+          isHistorical ? undefined : (
           <AdminEditorActions
             mode={panel.editorMode}
             onSubmit={handleSubmit}
@@ -818,6 +829,7 @@ export function OrganizationsPanel({
               </Button>
             ) : null}
           </AdminEditorActions>
+          )
         }
       >
         {fields}

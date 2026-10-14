@@ -6,6 +6,9 @@ test.describe('Schedules Panel', () => {
     await expect(adminPage.getByRole('table', { name: 'Schedules' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toHaveCount(0);
     await expect(adminPage.getByRole('cell', { name: 'v1' })).toHaveCount(0);
+    await adminPage.getByRole('row', { name: /123 Test Street/ }).first().click();
+    await expect(adminPage.getByLabel('Version')).toHaveValue('1');
+    await expect(adminPage.getByRole('button', { name: 'History' })).toHaveCount(0);
     await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
     await adminPage.getByRole('button', { name: 'New schedule' }).click();
 
