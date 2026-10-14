@@ -77,7 +77,7 @@ export function CategoryChecksTable({
         ariaLabel={PAGE_NAME}
         rows={items}
         getLabel={(item) => item.activity_name || item.activity_id}
-        middleColumnCount={7}
+        middleColumnCount={5}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         hasMore={hasMore}
@@ -98,12 +98,6 @@ export function CategoryChecksTable({
           <>
             <AdminDataTableHeadCell>Activity</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>
-              Organization
-            </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='secondary'>
-              Current
-            </AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='secondary'>
               Proposed
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
@@ -121,12 +115,6 @@ export function CategoryChecksTable({
           <>
             <AdminDataTableCell>
               <AdminTableName>{item.activity_name || item.activity_id}</AdminTableName>
-              <AdminDataTableCellMeta until='secondary' label='Organization'>
-                {adminTableText(item.org_name)}
-              </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='secondary' label='Current'>
-                {adminTableText(item.current_category_name)}
-              </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='secondary' label='Proposed'>
                 {adminTableText(item.proposed_category_name)}
               </AdminDataTableCellMeta>
@@ -143,12 +131,6 @@ export function CategoryChecksTable({
               <AdminDataTableCellMeta until='tertiary'>
                 <StatusBadge status={formatAdminTableLabel(item.status)} />
               </AdminDataTableCellMeta>
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='secondary'>
-              {adminTableText(item.org_name)}
-            </AdminDataTableCell>
-            <AdminDataTableCell priority='secondary'>
-              {adminTableText(item.current_category_name)}
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               {adminTableText(item.proposed_category_name)}
