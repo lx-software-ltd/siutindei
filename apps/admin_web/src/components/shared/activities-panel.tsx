@@ -49,7 +49,6 @@ import {
   VersionField,
   VersionFields,
   VersionSwitcher,
-  VersionViewBanner,
 } from '../admin/version-history';
 import { Button } from '../ui/button';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
@@ -372,7 +371,6 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     >
       <VersionFields view={versionView}>
       <div className='space-y-4'>
-      <VersionViewBanner view={versionView} />
       <AdminFieldGrid columns={2}>
         <VersionField
           versionKey={['name', 'name_translations']}
