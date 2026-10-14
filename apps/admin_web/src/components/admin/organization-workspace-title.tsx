@@ -15,20 +15,20 @@ export function OrganizationStatusBadges({
   /** `org` labels the workspace roll-up. `hidden` leaves version to a switcher. */
   version?: 'org' | 'hidden';
 }) {
+  const reviewStatus = organization.review_status ?? 'pending_review';
+  const showListingStatus = reviewStatus !== 'pending_review';
+
   return (
     <span className='inline-flex flex-wrap items-center gap-1'>
-      <StatusBadge
-        status={(organization.status ?? 'operational').replaceAll('_', ' ')}
-      />
-      <StatusBadge
-        status={(organization.review_status ?? 'pending_review').replaceAll(
-          '_',
-          ' '
-        )}
-      />
+      {showListingStatus ? (
+        <StatusBadge
+          status={(organization.status ?? 'operational').replaceAll('_', ' ')}
+        />
+      ) : null}
+      <StatusBadge status={reviewStatus.replaceAll('_', ' ')} />
       {version === 'org' && organization.version ? (
         <span className='rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700'>
-          {`Org v${organization.version}`}
+          {`Organization Version ${organization.version}`}
         </span>
       ) : null}
     </span>

@@ -227,6 +227,32 @@ describe('AdminEditorPanel', () => {
     expect(screen.getByText('Fields')).toBeVisible();
     expect(screen.getByTestId('admin-editor-panel').querySelector('.border-t')).toBeNull();
   });
+
+  it('puts the accessory at the top right, before the fields', () => {
+    render(
+      <AdminEditorPanel accessory={<button type='button'>Version 1 · Latest</button>}>
+        <p>Fields</p>
+      </AdminEditorPanel>
+    );
+
+    const panel = screen.getByTestId('admin-editor-panel');
+    const accessory = screen.getByTestId('admin-editor-accessory');
+    const fields = screen.getByText('Fields');
+    expect(panel).toContainElement(accessory);
+    expect(accessory).toContainElement(screen.getByRole('button', { name: 'Version 1 · Latest' }));
+    expect(accessory.compareDocumentPosition(fields) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(accessory.className).toContain('justify-end');
+  });
+
+  it('omits the accessory row when none is passed', () => {
+    render(
+      <AdminEditorPanel>
+        <p>Fields</p>
+      </AdminEditorPanel>
+    );
+
+    expect(screen.queryByTestId('admin-editor-accessory')).not.toBeInTheDocument();
+  });
 });
 
 describe('AdminDataTable column priority', () => {

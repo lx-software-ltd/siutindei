@@ -10,6 +10,9 @@ test.describe('Organizations Panel', () => {
     await expect(
       adminPage.getByRole('heading', { name: 'New organization' })
     ).toBeVisible();
+    await expect(adminPage.getByRole('heading', { name: 'Details' })).toBeVisible();
+    await expect(adminPage.getByText('operational', { exact: true })).toHaveCount(0);
+    await expect(adminPage.getByText('pending review', { exact: true })).toHaveCount(0);
 
     // Check form fields
     await expect(adminPage.getByLabel('Name')).toBeVisible();
@@ -230,6 +233,8 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByLabel('Manager')).toHaveValue(
       'manager@example.com (Manager User)'
     );
+    await expect(adminPage.getByLabel('Listing status')).toBeVisible();
+    await expect(adminPage.getByText(/Review state is changed/)).toHaveCount(0);
   });
 
   test('should leave the organization workspace from the catalog', async ({
@@ -335,16 +340,49 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
   });
 
+  test('shows listing status in the title after review is decided', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-2');
+    await expect(
+      adminPage.getByRole('heading', { name: 'Test Organization 2' })
+    ).toBeVisible();
+    const titleRow = adminPage.getByRole('heading', {
+      name: 'Test Organization 2',
+    }).locator('xpath=..');
+    await expect(titleRow.getByText('operational', { exact: true })).toBeVisible();
+    await expect(titleRow.getByText('approved', { exact: true })).toBeVisible();
+  });
+
   test('shows the organization version dropdown and a previous snapshot', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
     await expect(
       adminPage.getByRole('heading', { name: 'Test Organization 1' })
     ).toBeVisible();
+    const titleRow = adminPage.getByRole('heading', {
+      name: 'Test Organization 1',
+    }).locator('xpath=..');
+    await expect(titleRow.getByText('operational', { exact: true })).toHaveCount(0);
+    await expect(titleRow.getByText('pending review', { exact: true })).toBeVisible();
+    const details = adminPage.getByRole('heading', { name: 'Details' });
+    await expect(details).toBeVisible();
+    const card = details.locator('xpath=ancestor::section[1]');
+    await expect(card.getByText('operational', { exact: true })).toHaveCount(0);
     await expect(adminPage.getByText('v2', { exact: true })).toHaveCount(0);
     await expect(adminPage.getByRole('button', { name: 'History' })).toHaveCount(0);
     await expect(adminPage.getByTestId('admin-field-divider')).toHaveCount(2);
     const version = adminPage.getByRole('button', { name: 'Version 2 · Latest' });
     await expect(version).toBeVisible();
+    const detailsBox = await details.boundingBox();
+    const versionBox = await version.boundingBox();
+    const cardBox = await card.boundingBox();
+    expect(detailsBox).toBeTruthy();
+    expect(versionBox).toBeTruthy();
+    expect(cardBox).toBeTruthy();
+    expect(versionBox!.x).toBeGreaterThan(detailsBox!.x);
+    expect(
+      Math.abs(versionBox!.x + versionBox!.width - (cardBox!.x + cardBox!.width))
+    ).toBeLessThan(48);
     await expect(adminPage.getByLabel('Name')).toHaveValue('Test Organization 1');
     await version.click();
     const menu = adminPage.getByRole('menu');
@@ -352,10 +390,19 @@ test.describe('Organizations Panel', () => {
     const menuBox = await menu.boundingBox();
     expect(menuBox?.x ?? 0).toBeGreaterThan(240);
     await adminPage.getByRole('menuitem', { name: /Version 1/ }).click();
-    await expect(adminPage.getByText('Viewing version 1 of 2 · read-only')).toBeVisible();
+    await expect(adminPage.getByText(/Viewing version/)).toHaveCount(0);
     await expect(adminPage.getByLabel('Name')).toHaveValue('Organization One Original');
     await expect(adminPage.getByText('Latest: Test Organization 1')).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'Update' })).toHaveCount(0);
+    const backToLatest = adminPage.getByRole('button', { name: 'Back to latest' });
+    await expect(backToLatest).toHaveCount(1);
+    const editor = adminPage.getByTestId('admin-editor-panel');
+    await expect(editor.getByRole('button', { name: 'Back to latest' })).toBeVisible();
+    const backBox = await backToLatest.boundingBox();
+    const nameBox = await adminPage.getByLabel('Name').boundingBox();
+    expect(backBox).toBeTruthy();
+    expect(nameBox).toBeTruthy();
+    expect(backBox!.y).toBeGreaterThan(nameBox!.y);
     await expect(adminPage.getByText('Removed records')).toBeVisible();
     await expect(adminPage.getByText(/Removed Class/)).toBeVisible();
     const forgetRequest = adminPage.waitForRequest(
@@ -366,7 +413,7 @@ test.describe('Organizations Panel', () => {
     await adminPage.getByRole('button', { name: 'Forget' }).click();
     await forgetRequest;
     await expect(adminPage.getByText(/Removed Class/)).toHaveCount(0);
-    await adminPage.getByRole('button', { name: 'Back to latest' }).first().click();
+    await backToLatest.click();
     await expect(adminPage.getByLabel('Name')).toHaveValue('Test Organization 1');
     await expect(adminPage.getByRole('button', { name: 'Update' })).toBeVisible();
   });
@@ -380,6 +427,7 @@ test.describe('Organizations Panel - versions unavailable', () => {
   }) => {
     await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
     await expect(adminPage.getByRole('heading', { name: 'Test Organization 1' })).toBeVisible();
+    await expect(adminPage.getByRole('heading', { name: 'Details' })).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'Versions unavailable' })).toBeDisabled();
     await expect(adminPage.getByRole('button', { name: /Latest/ })).toHaveCount(0);
   });

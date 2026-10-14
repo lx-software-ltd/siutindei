@@ -13,7 +13,7 @@ as 1. History stays removed. Organization source fields stay between
 the two dividers.
 
 Placement: the organization switcher sits in the card title and the
-workspace badge reads `Org vN`. Media puts the switcher in the Media
+workspace badge reads `Organization Version N`. Media puts the switcher in the Media
 card title. Locations, activities, pricing, and schedules put it in the
 editor action bar, and the open row shows an amber version mark.
 Removed records move to the Readiness card.

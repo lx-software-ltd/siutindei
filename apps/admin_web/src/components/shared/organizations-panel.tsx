@@ -20,14 +20,13 @@ import {
 import type { Organization } from '../../types/admin';
 import { OrganizationMergeDialog } from '../admin/data-quality/organization-merge-dialog';
 import { OrganizationReadiness } from '../admin/organization-readiness';
-import { OrganizationStatusBadges } from '../admin/organization-workspace-title';
+import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
 import { organizationFormFromSnapshot } from '../admin/catalog-version-snapshot';
 import {
   useCatalogVersion,
   VersionField,
   VersionFields,
   VersionSwitcher,
-  VersionViewBanner,
 } from '../admin/version-history';
 import { WorkspaceEmpty } from '../admin/workspace-empty';
 import { useAuth } from '../auth-provider';
@@ -708,14 +707,6 @@ export function OrganizationsPanel({
                 versionKey='status'
                 label='Listing status'
                 htmlFor='org-listing-status'
-                hint={
-                  panel.editingId
-                    ? `Review state is changed from Readiness below. Current review: ${(
-                        panel.items.find((item) => item.id === panel.editingId)
-                          ?.review_status ?? 'pending_review'
-                      ).replaceAll('_', ' ')}.`
-                    : undefined
-                }
               >
                 <Select
                 disabled={locked}
@@ -770,7 +761,6 @@ export function OrganizationsPanel({
   const fields = (
     <VersionFields view={versionView}>
       <div className='space-y-4'>
-        <VersionViewBanner view={versionView} />
         {editorFields}
       </div>
     </VersionFields>
@@ -809,15 +799,24 @@ export function OrganizationsPanel({
 
   return (
     <div className='space-y-4'>
+      {current ? (
+        <OrganizationWorkspaceTitle
+          mode={mode}
+          orgId={current.id}
+          organization={current}
+        />
+      ) : (
+        <div className='flex flex-wrap items-center gap-2'>
+          <h2 className='text-lg font-semibold text-slate-900'>
+            {organizationInputTitle(null, panel.editorMode)}
+          </h2>
+        </div>
+      )}
       <AdminInputCard
-        title={organizationInputTitle(current?.name, panel.editorMode)}
+        title='Details'
+        titleLevel='h3'
         titleAccessory={
-          current ? (
-            <span className='inline-flex flex-wrap items-center gap-2'>
-              <OrganizationStatusBadges organization={current} version='hidden' />
-              <VersionSwitcher view={versionView} />
-            </span>
-          ) : undefined
+          current ? <VersionSwitcher view={versionView} /> : undefined
         }
         status={
           panel.error ? (

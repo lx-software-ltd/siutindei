@@ -1,8 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
-import { useExhaustPages } from '../../hooks/use-exhaust-pages';
 import { useGeographicAreas } from '../../hooks/use-geographic-areas';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
@@ -22,7 +21,6 @@ import {
 } from '../ui/admin-data-table';
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
-import { AdminFilterBar, AdminFilterField } from '../ui/admin-filter-bar';
 import {
   AddressAutocomplete,
   type AddressSelection,
@@ -42,7 +40,6 @@ import {
   VersionField,
   VersionFields,
   VersionSwitcher,
-  VersionViewBanner,
 } from '../admin/version-history';
 import { Button } from '../ui/button';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
@@ -189,15 +186,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
       (areaId ? areaNameById.get(areaId) : undefined) ?? '—',
     [areaNameById]
   );
-
-  const [searchQuery, setSearchQuery] = useState('');
-  useExhaustPages(Boolean(searchQuery.trim()), {
-    hasMore: panel.hasMore,
-    isLoading: panel.isLoading,
-    isLoadingMore: panel.isLoadingMore,
-    error: panel.listError,
-    loadMore: panel.loadMore,
-  });
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
@@ -362,16 +350,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     );
   }
 
-  const filteredItems = panel.items.filter((item) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const areaName = getAreaName(item.area_id).toLowerCase();
-    return (
-      areaName.includes(query) ||
-      item.address?.toLowerCase().includes(query)
-    );
-  });
-
   const showAreaError = shouldShowError('area_id', areaError);
   const showAddressError = shouldShowError('address', addressError);
   const addressColumnPriority = 'secondary' as const;
@@ -388,6 +366,9 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
 
   const detail = (
     <AdminEditorPanel
+      accessory={
+        panel.editingId ? <VersionSwitcher view={versionView} /> : undefined
+      }
       status={
         panel.error ? (
           <StatusBanner kind='error'>
@@ -396,25 +377,21 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
         ) : null
       }
       actions={
-        <>
-          {versionView.isHistorical ? (
-            <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
-              Back to latest
-            </Button>
-          ) : (
-            <AdminEditorActions
-              mode={panel.editorMode}
-              onSubmit={handleSubmit}
-              isSaving={panel.isSaving}
-            />
-          )}
-          <VersionSwitcher view={versionView} />
-        </>
+        versionView.isHistorical ? (
+          <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
+            Back to latest
+          </Button>
+        ) : (
+          <AdminEditorActions
+            mode={panel.editorMode}
+            onSubmit={handleSubmit}
+            isSaving={panel.isSaving}
+          />
+        )
       }
     >
       <VersionFields view={versionView}>
       <div className='space-y-4'>
-      <VersionViewBanner view={versionView} />
       <AdminFieldGrid columns={2}>
         <VersionField
           label='Address'
@@ -497,7 +474,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
         <OrganizationWorkspaceTitle mode={mode} orgId={scopedOrgId} />
         <ResourceTableShell
         ariaLabel={PAGE_NAME}
-        rows={filteredItems}
+        rows={panel.items}
         getLabel={(item) => getAreaName(item.area_id)}
         middleColumnCount={2}
         isLoading={panel.isLoading}
@@ -505,11 +482,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
         hasMore={panel.hasMore}
         onLoadMore={panel.loadMore}
         error={panel.listError}
-        emptyLabel={
-          searchQuery.trim()
-            ? 'No locations match your search.'
-            : 'No locations yet.'
-        }
+        emptyLabel='No locations yet.'
         isExpanded={panel.isExpanded}
         onToggle={panel.toggle}
         isDraftOpen={panel.isDraftOpen}
@@ -524,19 +497,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
               onClick={panel.openDraft}
             />
           ) : null
-        }
-        filters={
-          <AdminFilterBar>
-            <AdminFilterField>
-              <Input
-                id='location-search'
-                placeholder='Name or address'
-                aria-label='Location'
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-              />
-            </AdminFilterField>
-          </AdminFilterBar>
         }
         head={
           <>

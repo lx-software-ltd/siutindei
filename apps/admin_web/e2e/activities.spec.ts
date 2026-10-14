@@ -46,9 +46,22 @@ test.describe('Activities Panel', () => {
     await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toHaveCount(0);
     await expect(adminPage.getByRole('cell', { name: 'v1' })).toHaveCount(0);
     await adminPage.getByRole('row', { name: /Swimming Class/ }).first().click();
-    await expect(adminPage.getByText('Org v2')).toBeVisible();
-    await expect(adminPage.getByRole('button', { name: 'Version 1 · Latest' })).toBeVisible();
+    await expect(adminPage.getByText('Organization Version 2')).toBeVisible();
+    const editor = adminPage.getByTestId('admin-editor-panel');
+    const accessory = editor.getByTestId('admin-editor-accessory');
+    const version = accessory.getByRole('button', { name: 'Version 1 · Latest' });
+    await expect(version).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'History' })).toHaveCount(0);
+    const editorBox = await editor.boundingBox();
+    const versionBox = await version.boundingBox();
+    const nameBox = await editor.getByLabel('Name').boundingBox();
+    expect(editorBox).toBeTruthy();
+    expect(versionBox).toBeTruthy();
+    expect(nameBox).toBeTruthy();
+    expect(versionBox!.y).toBeLessThan(nameBox!.y);
+    expect(
+      Math.abs(versionBox!.x + versionBox!.width - (editorBox!.x + editorBox!.width))
+    ).toBeLessThan(32);
     await expect(adminPage.getByRole('columnheader', { name: 'Operations' })).toBeVisible();
 
     // Check for activity data
@@ -202,46 +215,14 @@ test.describe('Activities Panel', () => {
     await expect(adminPage.getByRole('cell', { name: '3–10' })).toBeVisible();
   });
 
-  test('should have search input for activities', async ({ adminPage }) => {
-    // Wait for the table to load
-    await expect(adminPage.getByText('Swimming Class')).toBeVisible();
-
-    // Check for search input
-    const searchInput = adminPage.getByPlaceholder('Name, description, or category', {
-      exact: true,
-    });
-    await expect(searchInput).toBeVisible();
-    await expect(adminPage.locator('label', { hasText: /^Search$/ })).toHaveCount(0);
-  });
-
-  test('should filter activities by search query', async ({ adminPage }) => {
-    // Wait for the table to load
+  test('lists every activity without a search bar', async ({ adminPage }) => {
     await expect(adminPage.getByText('Swimming Class')).toBeVisible();
     await expect(adminPage.getByText('Art Workshop')).toBeVisible();
-
-    // Type in search
-    const searchInput = adminPage.getByPlaceholder('Name, description, or category', {
-      exact: true,
-    });
-    await searchInput.fill('Swimming');
-
-    // Should only show matching activity
-    await expect(adminPage.getByText('Swimming Class')).toBeVisible();
-    await expect(adminPage.getByText('Art Workshop')).not.toBeVisible();
-  });
-
-  test('should show no results message when search has no matches', async ({ adminPage }) => {
-    // Wait for the table to load
-    await expect(adminPage.getByText('Swimming Class')).toBeVisible();
-
-    // Type in search with no matches
-    const searchInput = adminPage.getByPlaceholder('Name, description, or category', {
-      exact: true,
-    });
-    await searchInput.fill('NonexistentActivity');
-
-    // Should show no results message
-    await expect(adminPage.getByText('No activities match your search.')).toBeVisible();
+    await expect(adminPage.getByTestId('admin-filter-bar')).toHaveCount(0);
+    await expect(
+      adminPage.getByPlaceholder('Name, description, or category')
+    ).toHaveCount(0);
+    await expect(adminPage.getByText('No activities match your search.')).toHaveCount(0);
   });
 });
 

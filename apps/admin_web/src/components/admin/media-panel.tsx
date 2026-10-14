@@ -19,7 +19,6 @@ import {
   useCatalogVersion,
   VersionFields,
   VersionSwitcher,
-  VersionViewBanner,
 } from './version-history';
 import { WorkspaceScopeGate } from './workspace-empty';
 import { AdminInputCard } from '../ui/admin-input-card';
@@ -516,7 +515,6 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
         >
           <VersionFields view={versionView}>
             <div className='space-y-4'>
-              <VersionViewBanner view={versionView} />
               {locked ? (
                 <div
                   className={
