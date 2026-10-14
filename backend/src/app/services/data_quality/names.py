@@ -126,8 +126,14 @@ def record_imported_name(
     body: dict[str, Any],
     entity_type: str,
 ) -> None:
-    """Write the proposal stashed on an import body, then drop the stash."""
-    change = body.pop("_name_change", None)
+    """Write the proposal stashed by the import, then drop the stash.
+
+    A client-supplied ``_name_change`` is discarded. Only the token
+    written by name preparation can record a proposal.
+    """
+    body.pop("_name_change", None)
+    token = body.pop("_import_name_token", None)
+    change = session.info.pop(id(token), None) if token is not None else None
     if not isinstance(change, dict):
         return
     if getattr(entity, "id", None) is None:

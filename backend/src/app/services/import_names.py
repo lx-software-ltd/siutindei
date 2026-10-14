@@ -147,20 +147,51 @@ def _store_cleaned_name(session, existing, name, body, warnings, find_name):
         body["name"] = chosen
         return existing
     if mode == "propose":
-        body["name"] = name
-        if result.changed:
-            body["_name_change"] = _name_change(name, result, translations, "pending")
-            if warnings is not None:
-                warnings.append(f"Name left for review: {name} → {result.name}")
-        return existing
+        return _propose_name(
+            session, existing, name, result, translations, body, warnings
+        )
     body["name"] = chosen
     if chosen != name or result.translation_patch:
         _merge_translations(body, result.translation_patch)
     if _stored_name_changes(existing, name, result):
-        body["_name_change"] = _name_change(name, result, translations, "applied")
+        _remember(session, body, _name_change(name, result, translations, "applied"))
         if warnings is not None and chosen != name:
             warnings.append(f"Name cleaned: {name} → {chosen}")
     return existing
+
+
+def _propose_name(session, existing, name, result, translations, body, warnings):
+    """Store the raw name on create. Leave an existing name in place."""
+    if existing is not None:
+        body["name"] = existing.name
+        stored = sanitize_name(
+            existing.name or "",
+            existing.name_translations or {},
+            load_name_fix_config(session),
+        )
+        if stored.changed:
+            _remember(
+                session,
+                body,
+                _name_change(existing.name or "", stored, translations, "pending"),
+            )
+            if warnings is not None:
+                warnings.append(
+                    f"Name left for review: {existing.name} → {stored.name}"
+                )
+        return existing
+    body["name"] = name
+    if result.changed:
+        _remember(session, body, _name_change(name, result, translations, "pending"))
+        if warnings is not None:
+            warnings.append(f"Name left for review: {name} → {result.name}")
+    return existing
+
+
+def _remember(session, body, change: dict) -> None:
+    token = object()
+    body["_import_name_token"] = token
+    session.info[id(token)] = change
 
 
 def _stored_name_changes(existing, name, result) -> bool:

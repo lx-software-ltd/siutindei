@@ -81,16 +81,30 @@ def _note_activity_blockers(activities, pending_name_ids: set[str], add) -> None
 
 def pending_name_fix_ids(session, org_ids: list, activity_ids: list) -> set[str]:
     """Entity ids with a name change still waiting for a decision."""
-    from sqlalchemy import select
+    from sqlalchemy import and_, or_, select
 
     from app.db.models import NameFixProposal
 
-    ids = [*org_ids, *activity_ids]
-    if not ids:
+    clauses = []
+    if org_ids:
+        clauses.append(
+            and_(
+                NameFixProposal.entity_type == "organization",
+                NameFixProposal.entity_id.in_(org_ids),
+            )
+        )
+    if activity_ids:
+        clauses.append(
+            and_(
+                NameFixProposal.entity_type == "activity",
+                NameFixProposal.entity_id.in_(activity_ids),
+            )
+        )
+    if not clauses:
         return set()
     rows = session.scalars(
         select(NameFixProposal.entity_id).where(
-            NameFixProposal.entity_id.in_(ids),
+            or_(*clauses),
             NameFixProposal.status == "pending",
         )
     ).all()
