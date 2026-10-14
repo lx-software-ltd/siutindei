@@ -19,6 +19,7 @@ an em dash when the count is zero. The table and accordion both say
 - Persisting category names on the job, or changing the import API
   contract.
 - Changing Mode, retry, View orgs, or the file download link.
+- Showing a File warnings section. Warnings stay on result rows.
 
 ## Files
 
@@ -46,6 +47,7 @@ an em dash when the count is zero. The table and accordion both say
 - A finished job is not refetched on window focus. A running job refreshes
   every 5 seconds.
 - File still opens from the expanded row without collapsing it.
+- Result rows do not print JSON index paths such as `organizations[0]`.
 - Retry failed still posts the stored `allow_updates` flag.
 - A zero or missing `captured_categories` count shows `—`, not a hidden
   field.

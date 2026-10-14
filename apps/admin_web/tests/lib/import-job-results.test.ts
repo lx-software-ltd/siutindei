@@ -8,7 +8,6 @@ import {
   formatImportResultNotes,
   formatImportStatusCounts,
   groupImportResults,
-  importResultPath,
   previewImportRows,
 } from '@/lib/import-job-results';
 import type { AdminImportResult } from '@/lib/api-client-imports';
@@ -70,20 +69,6 @@ describe('formatImportResultNotes', () => {
         warnings: ['neighbourhood missing'],
       })
     ).toBe('name is required · neighbourhood missing');
-  });
-});
-
-describe('importResultPath', () => {
-  it('keeps a path that differs from the name', () => {
-    expect(
-      importResultPath({ key: 'Harbor Arts', path: 'organizations[0]' })
-    ).toBe('organizations[0]');
-  });
-
-  it('omits a path that repeats the name', () => {
-    expect(importResultPath({ key: 'Harbor Arts', path: 'Harbor Arts' })).toBe(
-      ''
-    );
   });
 });
 
