@@ -337,6 +337,10 @@ test.describe('Organizations Panel', () => {
     await expect(version).toBeVisible();
     await expect(adminPage.getByLabel('Name')).toHaveValue('Test Organization 1');
     await version.click();
+    const menu = adminPage.getByRole('menu');
+    await expect(menu).toBeVisible();
+    const menuBox = await menu.boundingBox();
+    expect(menuBox?.x ?? 0).toBeGreaterThan(240);
     await adminPage.getByRole('menuitem', { name: /Version 1/ }).click();
     await expect(adminPage.getByText('Viewing version 1 of 2 · read-only')).toBeVisible();
     await expect(adminPage.getByLabel('Name')).toHaveValue('Organization One Original');

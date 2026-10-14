@@ -408,7 +408,20 @@ export function VersionSwitcher({ view }: { view: CatalogVersionView }) {
         aria-haspopup='menu'
         aria-expanded={open}
         aria-controls={menuId}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          if (!open) {
+            const rect = buttonRef.current?.getBoundingClientRect();
+            if (rect) {
+              const flip = rect.bottom + 280 > window.innerHeight;
+              setMenuStyle({
+                top: flip ? rect.top - 4 : rect.bottom + 4,
+                left: rect.left,
+                flip,
+              });
+            }
+          }
+          setOpen((current) => !current);
+        }}
         className={clsx(
           'inline-flex h-8 items-center gap-1 rounded-full border px-2.5 text-xs font-medium',
           view.isHistorical
