@@ -9,7 +9,7 @@ test.describe('Pricing Panel', () => {
     await expect(adminPage.getByTestId('admin-filter-bar')).toHaveCount(0);
     await expect(adminPage.getByPlaceholder('Activity, location, or price')).toHaveCount(0);
     await adminPage.getByRole('row', { name: /123 Test Street/ }).first().click();
-    await expect(adminPage.getByText('Org v2')).toBeVisible();
+    await expect(adminPage.getByText('Organization Version 2')).toBeVisible();
     const editor = adminPage.getByTestId('admin-editor-panel');
     const accessory = editor.getByTestId('admin-editor-accessory');
     const version = accessory.getByRole('button', { name: 'Version 1 · Latest' });
