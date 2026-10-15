@@ -143,16 +143,16 @@ def store_model_items(
     if model is None:
         return
     rows = {
-        row.id: row
+        str(row.id): row
         for row in session.scalars(select(model).where(model.id.in_(wanted))).all()
     }
-    for entity_id in wanted:
-        entity = rows.get(entity_id)
+    for wanted_id in wanted:
+        entity = rows.get(str(wanted_id))
         if entity is None:
             continue
         org_id = entity.id if entity_type == "organization" else entity.org_id
         for field, gap in entity_gaps(entity).items():
-            item = by_key.get((str(entity_id), field), {})
+            item = by_key.get((str(wanted_id), field), {})
             proposed = _accepted_translations(
                 item.get("translations"),
                 gap["missing"],

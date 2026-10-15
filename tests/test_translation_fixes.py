@@ -26,6 +26,9 @@ from sqlalchemy import select
 
 _MANAGER = "00000000-0000-0000-0000-000000000001"
 _WORKER = None
+# Keeps sweep assertions on the rows this file inserts when the database
+# already contains the seeded catalog.
+_FIXTURE_MARK = "dq-translation-fixture"
 
 
 def _worker():
@@ -86,11 +89,12 @@ def _activity(db_session, org, category, name: str) -> Activity:
 def test_pending_sweep_queues_a_missing_language_and_skips_approved(
     db_session,
 ) -> None:
-    pending = _org(db_session, "Harbour Club")
-    _org(db_session, "Approved Club", review_status="approved")
+    pending = _org(db_session, f"{_FIXTURE_MARK} harbour")
+    _org(db_session, f"{_FIXTURE_MARK} approved", review_status="approved")
     result, batches = start_translation_scan(
         db_session,
         review_scope="pending_review",
+        query=_FIXTURE_MARK,
         budget_seconds=None,
     )
     assert result["queued_for_model"] == 1
@@ -102,7 +106,7 @@ def test_pending_sweep_queues_a_missing_language_and_skips_approved(
 def test_complete_text_is_not_queued(db_session) -> None:
     _org(
         db_session,
-        "Harbour Club",
+        f"{_FIXTURE_MARK} complete",
         description="Lessons",
         name_translations={"zh": "海港会", "zh-HK": "海港會"},
         description_translations={"zh": "課程", "zh-HK": "課程"},
@@ -110,6 +114,7 @@ def test_complete_text_is_not_queued(db_session) -> None:
     result, batches = start_translation_scan(
         db_session,
         review_scope="all",
+        query=_FIXTURE_MARK,
         budget_seconds=None,
     )
     assert result["queued_for_model"] == 0
@@ -118,10 +123,11 @@ def test_complete_text_is_not_queued(db_session) -> None:
 
 
 def test_sweep_all_includes_an_approved_organization(db_session) -> None:
-    approved = _org(db_session, "Approved Club", review_status="approved")
+    approved = _org(db_session, f"{_FIXTURE_MARK} approved", review_status="approved")
     result, batches = start_translation_scan(
         db_session,
         review_scope="all",
+        query=_FIXTURE_MARK,
         budget_seconds=None,
     )
     queued = [item for batch in batches for item in batch["entity_ids"]]
@@ -134,7 +140,7 @@ def test_dismissed_source_is_not_queued_again(db_session) -> None:
 
     org = _org(
         db_session,
-        "Harbour Club",
+        f"{_FIXTURE_MARK} harbour",
         description="Lessons",
         description_translations={"zh": "課程", "zh-HK": "課程"},
     )
@@ -144,7 +150,7 @@ def test_dismissed_source_is_not_queued_again(db_session) -> None:
             entity_id=org.id,
             org_id=org.id,
             field="name",
-            source_text={"en": "Harbour Club"},
+            source_text={"en": f"{_FIXTURE_MARK} harbour"},
             proposed_text={"zh": "海港会", "zh-HK": "海港會"},
             missing_languages=["zh", "zh-HK"],
             status="dismissed",
@@ -152,7 +158,7 @@ def test_dismissed_source_is_not_queued_again(db_session) -> None:
                 entity_type="organization",
                 entity_id=org.id,
                 field="name",
-                source={"en": "Harbour Club"},
+                source={"en": f"{_FIXTURE_MARK} harbour"},
             ),
         )
     )
@@ -161,6 +167,7 @@ def test_dismissed_source_is_not_queued_again(db_session) -> None:
         db_session,
         review_scope="pending_review",
         entity_type="organization",
+        query=_FIXTURE_MARK,
         budget_seconds=None,
     )
     assert batches == []

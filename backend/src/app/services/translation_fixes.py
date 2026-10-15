@@ -212,7 +212,7 @@ def upsert_proposal(
     row.missing_languages = missing_languages
     row.confidence = confidence
     row.rationale = rationale
-    row.scan_run_id = scan_run_id
+    row.scan_run_id = None if scan_run_id is None else str(scan_run_id)
     row.input_hash = digest
     row.updated_at = now
     session.flush()
@@ -246,7 +246,10 @@ def _dismissed_hash(session, entity_type, entity_id, field, digest: str) -> bool
     return found is not None
 
 
-def _load_entity(session: Session, row: TranslationFixProposal):
+def _load_entity(
+    session: Session, row: TranslationFixProposal
+) -> Organization | Activity:
+    entity: Organization | Activity | None
     if row.entity_type == "organization":
         entity = session.get(Organization, row.entity_id)
         table = "organizations"
