@@ -181,10 +181,13 @@ export async function bulkOrgReview(body: {
   return { results };
 }
 
-export function listImportJobs(cursor?: string) {
+export function listImportJobs(cursor?: string, limit?: number) {
   const url = new URL(buildApiUrl('v1/admin/imports'));
   if (cursor) {
     url.searchParams.set('cursor', cursor);
+  }
+  if (limit !== undefined) {
+    url.searchParams.set('limit', String(limit));
   }
   return request<{ items: ImportJobListItem[]; next_cursor?: string | null }>(
     url.toString()

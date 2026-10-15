@@ -1244,10 +1244,17 @@ export async function setupApiMocks(
 
   // Mock organization search (user endpoint)
   await page.route('**/api/mock/**/user/organizations*', async (route) => {
+    const query = new URL(route.request().url()).searchParams.get('q') ?? '';
+    const needle = query.trim().toLowerCase();
+    const items = needle
+      ? mockOrganizations.filter((org) =>
+          org.name.toLowerCase().includes(needle)
+        )
+      : mockOrganizations;
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ items: mockOrganizations }),
+      body: JSON.stringify({ items }),
     });
   });
 
@@ -2244,7 +2251,7 @@ export async function setupApiMocks(
     });
   });
 
-  await page.route('**/api/mock/**/admin/imports', async (route) => {
+  await page.route(/\/api\/mock\/.*\/admin\/imports(?:\?.*)?$/, async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({
         status: 200,
@@ -2794,6 +2801,58 @@ export async function setupApiMocks(
         items: locationFixes,
         next_cursor: locationFixes.length ? 'page-2' : null,
       }),
+    });
+  });
+
+  await page.route('**/api/mock/**/admin/data-quality/**', async (route) => {
+    const url = new URL(route.request().url());
+    const method = route.request().method();
+    const path = url.pathname;
+    if (method === 'POST' && path.endsWith('/data-quality/runs')) {
+      const body = (route.request().postDataJSON() || {}) as {
+        checks?: string[];
+        scope?: Record<string, unknown>;
+      };
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'run-created',
+          trigger: 'manual',
+          scope: body.scope ?? {},
+          checks: (body.checks ?? []).map((name) => ({
+            name,
+            status: 'queued',
+          })),
+          status: 'queued',
+          attempt: 1,
+          attempts: 1,
+          created_at: '2024-02-02T00:00:00Z',
+        }),
+      });
+      return;
+    }
+    if (method === 'GET' && /\/data-quality\/runs\/[^/]+$/.test(path)) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: path.split('/').pop(),
+          trigger: 'manual',
+          scope: {},
+          checks: [],
+          status: 'done',
+          attempt: 1,
+          attempts: 1,
+          created_at: '2024-02-02T00:00:00Z',
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [] }),
     });
   });
 }

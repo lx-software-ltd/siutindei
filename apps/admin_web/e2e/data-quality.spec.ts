@@ -1,3 +1,5 @@
+import { formatDateTime } from '../src/lib/date-utils';
+
 import { test, expect } from './fixtures/test-fixtures';
 
 test.describe('Data quality', () => {
@@ -182,6 +184,71 @@ test.describe('Data quality', () => {
     await expect(
       adminPage.getByText('No deleted organizations are blocking import.')
     ).toBeVisible();
+  });
+
+  test('admin starts a run for one organization by name', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=data-quality&tab=runs');
+    await expect(adminPage.getByRole('table', { name: 'Data quality · Runs' })).toBeVisible();
+    await adminPage.getByLabel('Scope').selectOption('organization');
+    await expect(adminPage.getByLabel('Organization id')).toHaveCount(0);
+    const organization = adminPage.getByLabel('Organization');
+    await expect(adminPage.getByRole('button', { name: 'Run checks' })).toBeDisabled();
+    const search = adminPage.waitForRequest(
+      (request) =>
+        request.url().includes('/user/organizations') &&
+        request.url().includes('q=Test')
+    );
+    await organization.fill('Test');
+    await search;
+    await adminPage.getByRole('option', { name: 'Test Organization 1' }).click();
+    await expect(organization).toHaveValue('Test Organization 1');
+    const posted = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'POST' &&
+        new URL(request.url()).pathname.endsWith('/admin/data-quality/runs')
+    );
+    await adminPage.getByRole('button', { name: 'Run checks' }).click();
+    const body = (await posted).postDataJSON() as {
+      scope: { kind: string; org_id?: string };
+    };
+    expect(body.scope).toMatchObject({
+      kind: 'organization',
+      org_id: 'org-1',
+    });
+  });
+
+  test('admin starts a run for one import by its create time', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=data-quality&tab=runs');
+    const listed = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'GET' &&
+        request.url().includes('/admin/imports') &&
+        request.url().includes('limit=20')
+    );
+    await adminPage.getByLabel('Scope').selectOption('import');
+    await listed;
+    await expect(adminPage.getByLabel('Import id')).toHaveCount(0);
+    const importSelect = adminPage.getByLabel('Import');
+    await expect(importSelect.locator('option[value="job-1"]')).toHaveText(
+      formatDateTime('2024-02-01T00:00:00Z')
+    );
+    await expect(importSelect.locator('option')).toHaveCount(6);
+    await importSelect.selectOption('job-1');
+    const posted = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'POST' &&
+        new URL(request.url()).pathname.endsWith('/admin/data-quality/runs')
+    );
+    await adminPage.getByRole('button', { name: 'Run checks' }).click();
+    const body = (await posted).postDataJSON() as {
+      scope: { kind: string; import_job_id?: string };
+    };
+    expect(body.scope).toMatchObject({
+      kind: 'import',
+      import_job_id: 'job-1',
+    });
   });
 
   test('admin can merge from the organization workspace', async ({ adminPage }) => {
