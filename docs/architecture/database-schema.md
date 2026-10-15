@@ -69,9 +69,13 @@ Columns:
 - `review_notes` (text, optional)
 - `import_job_id` (uuid, optional, FK → `import_jobs.id`, ON DELETE
   SET NULL) — the job that created the organization. Later imports
-  do not replace it.
+  do not replace it. A null value is filled when history records a
+  create.
 - `last_imported_at` (timestamptz, optional) — set on every live import,
-  including updates
+  including updates. A null value is filled from the latest import
+  history time: a catalog version written by an import, or a completed
+  live job result of created, updated, skipped, or unchanged. A stored
+  time is left in place.
 - `created_at` (timestamptz, default `now()`)
 - `updated_at` (timestamptz, default `now()`)
 - `version` (integer, default 1) — catalog version; triggers bump it
