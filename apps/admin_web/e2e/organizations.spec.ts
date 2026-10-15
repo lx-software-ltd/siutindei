@@ -452,7 +452,22 @@ test.describe('Organizations Panel', () => {
       'href',
       'https://www.google.com/maps/search/?api=1&query=22.2803,114.1846'
     );
+    const orgLink = adminPage.getByRole('link', {
+      name: 'Test Organization 2',
+      exact: true,
+    });
+    await expect(orgLink).toBeVisible();
+    await expect(orgLink).toHaveAttribute(
+      'href',
+      '/admin/dashboard?section=organizations&org=org-2'
+    );
     await expect(adminPage.getByText('Test Organization 1')).toHaveCount(0);
+    await orgLink.click();
+    await expect(adminPage).toHaveURL(/section=organizations/);
+    await expect(adminPage).toHaveURL(/org=org-2/);
+    await expect(
+      adminPage.getByRole('heading', { name: 'Test Organization 2' })
+    ).toBeVisible();
   });
 
   test('should have a name filter for the catalog', async ({ adminPage }) => {

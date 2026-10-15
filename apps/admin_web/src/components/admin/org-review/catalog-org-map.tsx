@@ -7,6 +7,7 @@ import { getGoogleMapsApiKey, getGoogleMapsMapId } from '../../../lib/config';
 import { loadGoogleMapsScript } from '../../../lib/google-maps-script';
 import {
   CATALOG_MAP_ORG_CAP,
+  catalogOrganizationHref,
   type CatalogMapPin,
 } from '../../../lib/catalog-map-pins';
 
@@ -30,7 +31,8 @@ interface PinMarker {
 
 function pinContent(pin: CatalogMapPin): HTMLElement {
   const content = document.createElement('div');
-  const title = document.createElement('p');
+  const title = document.createElement('a');
+  title.href = catalogOrganizationHref(pin.orgId);
   title.textContent = pin.orgName;
   content.append(title);
   if (pin.areaName) {
@@ -255,7 +257,12 @@ export function CatalogOrgMap({
         <ul className='space-y-2'>
           {pins.map((pin) => (
             <li key={pin.id} className='text-sm text-slate-700'>
-              <span className='font-medium text-slate-900'>{pin.orgName}</span>
+              <a
+                className='font-medium text-slate-900 underline underline-offset-2 hover:text-slate-900'
+                href={catalogOrganizationHref(pin.orgId)}
+              >
+                {pin.orgName}
+              </a>
               {pin.areaName ? <span>{` · ${pin.areaName}`}</span> : null}
               {pin.address ? <span>{` · ${pin.address}`}</span> : null}
               <a
