@@ -77,7 +77,8 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByRole('columnheader', { name: 'Email' })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Phone' })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Manager' })).toHaveCount(0);
-    await expect(adminPage.getByRole('columnheader', { name: 'Import job' })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Import', exact: true })).toBeVisible();
+    await expect(adminPage.getByRole('columnheader', { name: 'Import job' })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toHaveCount(0);
     await expect(adminPage.getByRole('cell', { name: 'v2' })).toHaveCount(0);
     const reviewFilter = adminPage.locator('#review-status-filter');
@@ -101,7 +102,27 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByRole('cell', { name: '12345678' })).toHaveCount(0);
     await expect(adminPage.getByText('No phone')).toHaveCount(0);
     await expect(adminPage.getByText('No manager')).toHaveCount(0);
-    await expect(adminPage.getByRole('cell', { name: 'job-1' })).toBeVisible();
+    const importedAt = await adminPage.evaluate(() => {
+      const date = new Date('2024-02-01T00:00:00Z');
+      const monthDay = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+      const hours24 = date.getHours();
+      const period = hours24 >= 12 ? 'PM' : 'AM';
+      const hours12 = hours24 % 12 || 12;
+      const pad = (value: number) => String(value).padStart(2, '0');
+      return `${monthDay}, ${pad(hours12)}:${pad(date.getMinutes())} ${period}`;
+    });
+    const importedRow = adminPage.getByRole('row', { name: /Test Organization 1/ });
+    await expect(importedRow).toContainText(importedAt);
+    await expect(importedRow).not.toContainText('job-1');
+    const neverImported = adminPage.getByRole('row', { name: /Quiet Hall/ });
+    await expect(neverImported).toContainText('—');
+    await expect(neverImported).not.toContainText('job-');
+    await adminPage
+      .getByRole('table', { name: 'Catalog' })
+      .screenshot({ path: '/opt/cursor/artifacts/catalog-import-column.png' });
     await expect(adminPage.getByRole('cell', { name: 'manager-user-id-456' })).toHaveCount(0);
     await expect(adminPage.getByText('Manager manager-user-id-456')).toHaveCount(0);
   });
