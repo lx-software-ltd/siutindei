@@ -50,6 +50,26 @@ test.describe('Listing captions on a phone', () => {
     await expect(secondary.filter({ hasText: 'manager-user-id-456' })).toHaveCount(0);
     await expect(row.getByText('No phone')).toHaveCount(0);
     await expect(row.getByText('No manager')).toHaveCount(0);
+    await expect(table.getByRole('columnheader', { name: 'Import', exact: true })).toBeHidden();
+    await expect(table.getByRole('columnheader', { name: 'Import job' })).toHaveCount(0);
+    const importedAt = await adminPage.evaluate(() => {
+      const date = new Date('2024-02-01T00:00:00Z');
+      const monthDay = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+      const hours24 = date.getHours();
+      const period = hours24 >= 12 ? 'PM' : 'AM';
+      const hours12 = hours24 % 12 || 12;
+      const pad = (value: number) => String(value).padStart(2, '0');
+      return `${monthDay}, ${pad(hours12)}:${pad(date.getMinutes())} ${period}`;
+    });
+    await expect(row.locator('span.lg\\:hidden').filter({ hasText: importedAt })).toBeVisible();
+    await expect(row).not.toContainText('job-1');
+    const neverImported = table.getByRole('row', { name: /Quiet Hall/ });
+    await expect(
+      neverImported.locator('span.lg\\:hidden').filter({ hasText: 'Import —' })
+    ).toBeVisible();
     await row.screenshot({ path: '/opt/cursor/artifacts/catalog-phone-captions.png' });
   });
 

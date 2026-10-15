@@ -32,9 +32,9 @@ import {
 } from '../../ui/admin-data-table';
 import {
   adminTableText,
-  AdminTableId,
   AdminTableName,
   AdminTableNumber,
+  AdminTableTime,
   formatAdminTablePercent,
 } from '../../ui/admin-table-value';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
@@ -641,7 +641,7 @@ export function CatalogPanel() {
               Review
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
-              Import job
+              Import
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>
               Missing
@@ -664,8 +664,12 @@ export function CatalogPanel() {
                   label={catalogReviewStatusLabel(item.review_status)}
                 />
               </AdminDataTableCellMeta>
-              <AdminDataTableCellMeta until='tertiary' label='Import job' empty={!item.import_job_id}>
-                <AdminTableId>{item.import_job_id}</AdminTableId>
+              <AdminDataTableCellMeta
+                until='tertiary'
+                label='Import'
+                empty={!item.last_imported_at}
+              >
+                <AdminTableTime value={item.last_imported_at} />
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='tertiary' label='Missing'>
                 {issueSummary(item)}
@@ -684,7 +688,7 @@ export function CatalogPanel() {
               />
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
-              <AdminTableId>{item.import_job_id}</AdminTableId>
+              <AdminTableTime value={item.last_imported_at} />
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
               {issueSummary(item)}
