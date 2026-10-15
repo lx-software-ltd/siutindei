@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQueryState } from 'nuqs';
+import { parseAsString, useQueryStates } from 'nuqs';
 
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import {
@@ -319,12 +319,14 @@ function ImportJobSummary({ job }: { job: ImportJobListItem }) {
 }
 
 export function ImportHistoryPanel() {
-  const [, setTab] = useQueryState('tab');
-  const [, setSection] = useQueryState('section');
+  const [, setCatalogJob] = useQueryStates({
+    section: parseAsString,
+    tab: parseAsString,
+    job: parseAsString,
+  });
   const [retryJob, setRetryJob] = useState<ImportJobListItem | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryError, setRetryError] = useState('');
-  const [, setJob] = useQueryState('job');
   const expanded = useExpandedRecord({ paramName: 'import-job' });
   const list = usePaginatedList<ImportJobListItem, Record<string, never>>({
     queryKey: adminQueryKeys.importJobs(),
@@ -434,9 +436,11 @@ export function ImportHistoryPanel() {
                   label: 'View orgs',
                   icon: <ViewIcon className='h-4 w-4' />,
                   onClick: () => {
-                    void setJob(item.id);
-                    void setTab(null);
-                    void setSection('catalog');
+                    void setCatalogJob({
+                      section: 'catalog',
+                      tab: null,
+                      job: item.id,
+                    });
                   },
                 },
               ]}

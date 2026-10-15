@@ -396,7 +396,9 @@ Listing `status` stays the business state (`operational`,
 whether an admin has released the organization. Re-importing an
 approved organization does not send it back to the queue; it stamps
 `last_imported_at` and leaves `import_job_id` pointing at the job
-that created the row. Owner creates, access-request creates, and
+that created the row. Catalog `?job=` still lists that later import:
+an organization catalog version the job wrote, or an organization
+result with status `created` or `updated`. Owner creates, access-request creates, and
 suggestion creates also start as `pending_review`. A blank `manager_id`
 on an owner create defaults to the caller's Cognito sub. A live import
 commits its job as `running`
@@ -415,7 +417,8 @@ source, missing detail, and import job, and bulk actions approve,
 reject, reopen, or set a whitelist of organization fields. Opening a
 row sets `?org=` and shows the same readiness checklist on the
 Organization screen. Imports keeps upload, export, and history; history
-"View orgs" opens Catalog with `?job=`. Approve refuses while
+"View orgs" opens Catalog with `?job=` for the organizations that
+import created or updated. Approve refuses while
 blockers remain unless `force` is set. Blockers are a missing
 description, no location, no activity, a location without coordinates,
 an activity without pricing or a schedule, and an activity still on

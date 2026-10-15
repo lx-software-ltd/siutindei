@@ -17,6 +17,7 @@ from app.api.admin_org_review_actions import (
     handle_bulk,
     handle_decision,
 )
+from app.api.admin_org_review_import import import_job_clause
 from app.api.admin_request import (
     _decode_cursor,
     _query_param,
@@ -183,7 +184,7 @@ def _load_filtered_organizations(
     if filters.source:
         stmt = stmt.where(Organization.source == filters.source)
     if filters.import_job_id is not None:
-        stmt = stmt.where(Organization.import_job_id == filters.import_job_id)
+        stmt = stmt.where(import_job_clause(session, filters.import_job_id))
     if filters.status:
         stmt = stmt.where(Organization.status == filters.status)
     if filters.changed == "unchanged":

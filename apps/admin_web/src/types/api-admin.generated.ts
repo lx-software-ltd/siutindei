@@ -894,6 +894,12 @@ export interface paths {
                     review_status?: "pending_review" | "approved" | "rejected";
                     status?: "operational" | "closed_temporarily" | "closed_permanently" | "hidden";
                     source?: string;
+                    /**
+                     * @description Organizations this import created or updated. Matches the
+                     *     creating `import_job_id`, an organization catalog version
+                     *     with action `created` or `updated` for the job, or a stored
+                     *     organization result with status `created` or `updated`.
+                     */
                     import_job_id?: string;
                     issue?: string;
                     has_blockers?: boolean;

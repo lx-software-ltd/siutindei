@@ -651,6 +651,11 @@ paths:
             type: string
         - name: import_job_id
           in: query
+          description: |
+            Organizations this import created or updated. Matches the
+            creating `import_job_id`, an organization catalog version
+            with action `created` or `updated` for the job, or a stored
+            organization result with status `created` or `updated`.
           schema:
             type: string
             format: uuid

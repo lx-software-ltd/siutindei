@@ -1972,6 +1972,7 @@ export async function setupApiMocks(
             review_status: 'pending_review',
             source: 'lcsd',
             import_job_id: 'job-1',
+            touched_by: ['job-1'],
             manager_id: 'manager-user-id-456',
             email: 'contact@org-one.test',
             phone_number: '12345678',
@@ -2001,6 +2002,8 @@ export async function setupApiMocks(
             status: 'operational',
             review_status: 'pending_review',
             source: 'manual',
+            import_job_id: 'job-older',
+            touched_by: ['job-1'],
             location_count: 1,
             activity_count: 1,
             pricing_count: 1,
@@ -2021,24 +2024,54 @@ export async function setupApiMocks(
               },
             ],
           },
+          {
+            id: 'org-quiet',
+            name: 'Quiet Hall',
+            status: 'operational',
+            review_status: 'pending_review',
+            source: 'manual',
+            import_job_id: null,
+            touched_by: [] as string[],
+            location_count: 0,
+            activity_count: 0,
+            pricing_count: 0,
+            schedule_count: 0,
+            issues: [],
+            completeness: 1,
+            blocker_count: 0,
+            warning_count: 0,
+            version: 1,
+            area_id: null,
+            map_locations: [],
+          },
         ]
           .filter((item) => {
             const params = new URL(url).searchParams;
             const query = params.get('q')?.toLowerCase() ?? '';
             const areaId = params.get('area_id') ?? '';
+            const jobId = params.get('import_job_id') ?? '';
+            const touched = 'touched_by' in item ? item.touched_by : undefined;
             const nameMatches =
               query.length === 0 || item.name.toLowerCase().includes(query);
             const areaMatches = areaId.length === 0 || item.area_id === areaId;
-            return nameMatches && areaMatches;
+            const jobMatches =
+              jobId.length === 0 ||
+              item.import_job_id === jobId ||
+              (Array.isArray(touched) && touched.includes(jobId));
+            return nameMatches && areaMatches && jobMatches;
           })
           .map((item) => {
             const include = new URL(url).searchParams.get('include') ?? '';
+            const {
+              map_locations: pins,
+              area_id: _area,
+              touched_by: _touched,
+              ...rest
+            } = item;
             if (!include.includes('locations')) {
-              const { map_locations: _pins, area_id: _area, ...rest } = item;
               return rest;
             }
-            const { area_id: _area, ...rest } = item;
-            return rest;
+            return { ...rest, map_locations: pins };
           }),
         next_cursor: null,
       }),
