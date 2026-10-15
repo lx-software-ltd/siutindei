@@ -61,12 +61,41 @@ import { NeighbourhoodFilter } from './neighbourhood-filter';
 const PAGE_NAME = formatAdminPageName('Catalog');
 const CATALOG_IMPORT_FILTER_LIMIT = 20;
 
-function catalogImportChoices(jobs: readonly ImportJobListItem[]) {
-  return jobs
-    .filter((job): job is ImportJobListItem & { created_at: string } =>
-      Boolean(job.created_at)
-    )
-    .slice(0, CATALOG_IMPORT_FILTER_LIMIT);
+function isLiveCatalogImport(
+  job: ImportJobListItem
+): job is ImportJobListItem & { created_at: string } {
+  return Boolean(job.created_at) && job.dry_run !== true;
+}
+
+async function loadCatalogImportChoices(): Promise<
+  Array<ImportJobListItem & { created_at: string }>
+> {
+  const choices: Array<ImportJobListItem & { created_at: string }> = [];
+  const seen = new Set<string>();
+  let cursor: string | undefined;
+  for (
+    let page = 0;
+    page < 10 && choices.length < CATALOG_IMPORT_FILTER_LIMIT;
+    page += 1
+  ) {
+    const response = await listImportJobs(cursor, CATALOG_IMPORT_FILTER_LIMIT);
+    for (const job of response.items) {
+      if (!isLiveCatalogImport(job) || seen.has(job.id)) {
+        continue;
+      }
+      seen.add(job.id);
+      choices.push(job);
+      if (choices.length === CATALOG_IMPORT_FILTER_LIMIT) {
+        break;
+      }
+    }
+    const next = response.next_cursor ?? undefined;
+    if (!next || next === cursor) {
+      break;
+    }
+    cursor = next;
+  }
+  return choices;
 }
 
 const REVIEW_STATUS_OPTIONS = [
@@ -244,15 +273,15 @@ export function CatalogPanel() {
     {
       queryKey: [
         ...adminQueryKeys.importJobs(),
-        'recent',
+        'recent-live',
         CATALOG_IMPORT_FILTER_LIMIT,
       ],
-      queryFn: () => listImportJobs(undefined, CATALOG_IMPORT_FILTER_LIMIT),
+      queryFn: loadCatalogImportChoices,
     },
     getAdminQueryClient()
   );
   const recentImports = useMemo(
-    () => catalogImportChoices(importsQuery.data?.items ?? []),
+    () => importsQuery.data ?? [],
     [importsQuery.data]
   );
   const [importAt, setImportAt] = useState('');
