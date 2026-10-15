@@ -174,6 +174,106 @@ test.describe('Organizations Panel', () => {
     });
   });
 
+  test('filters the catalog by an import time', async ({ adminPage }) => {
+    const listed = adminPage.waitForRequest((request) => {
+      const url = new URL(request.url());
+      return (
+        request.method() === 'GET' &&
+        url.pathname.endsWith('/admin/imports') &&
+        url.searchParams.get('limit') === '20'
+      );
+    });
+    await adminPage.reload();
+    await listed;
+
+    const imports = adminPage.locator('#review-import-filter');
+    const name = adminPage.locator('#review-name-filter');
+    const sort = adminPage.locator('#review-sort');
+    await expect(imports).toHaveValue('');
+    await expect(imports.locator('option').first()).toHaveText('All imports');
+    const followsName = await name.evaluate((nameField, importId) => {
+      const importField = document.getElementById(importId);
+      const sortField = document.getElementById('review-sort');
+      if (!importField || !sortField) {
+        return false;
+      }
+      const afterName =
+        nameField.compareDocumentPosition(importField) &
+        Node.DOCUMENT_POSITION_FOLLOWING;
+      const beforeSort =
+        importField.compareDocumentPosition(sortField) &
+        Node.DOCUMENT_POSITION_FOLLOWING;
+      return Boolean(afterName && beforeSort);
+    }, 'review-import-filter');
+    expect(followsName).toBe(true);
+    await expect(sort).toBeVisible();
+
+    const values = await imports.locator('option').evaluateAll((options) =>
+      options.map((option) => (option as HTMLOptionElement).value)
+    );
+    expect(values[0]).toBe('');
+    expect(values).toContain('2024-02-01T00:00:00Z');
+    expect(values).toContain('2024-01-15T00:00:00Z');
+    expect(values).toContain('2024-01-20T00:00:00Z');
+    expect(values).toContain('2024-01-01T00:00:00Z');
+    expect(values.length).toBeLessThanOrEqual(21);
+    const importedAt = await adminPage.evaluate(() => {
+      const date = new Date('2024-02-01T00:00:00Z');
+      const monthDay = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+      const hours24 = date.getHours();
+      const period = hours24 >= 12 ? 'PM' : 'AM';
+      const hours12 = hours24 % 12 || 12;
+      const pad = (value: number) => String(value).padStart(2, '0');
+      return `${monthDay}, ${pad(hours12)}:${pad(date.getMinutes())} ${period}`;
+    });
+    await expect(
+      imports.locator('option[value="2024-02-01T00:00:00Z"]')
+    ).toHaveText(importedAt);
+
+    const requestPromise = adminPage.waitForRequest((request) => {
+      if (request.method() !== 'GET' || request.url().includes('/summary')) {
+        return false;
+      }
+      const url = new URL(request.url());
+      return (
+        url.pathname.includes('/admin/org-review') &&
+        url.searchParams.get('import_job_id') === 'job-1'
+      );
+    });
+    await imports.selectOption('2024-02-01T00:00:00Z');
+    await requestPromise;
+    await expect(imports).toHaveValue('2024-02-01T00:00:00Z');
+    await expect(adminPage.getByText('Filtered to this import.')).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'Test Organization 1', exact: true })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'Test Organization 2', exact: true })
+    ).toBeVisible();
+    await expect(adminPage.getByText('Quiet Hall')).toHaveCount(0);
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/catalog-import-filter.png',
+    });
+
+    await adminPage.getByRole('button', { name: 'Map' }).click();
+    await expect(adminPage.locator('#review-import-filter')).toHaveValue(
+      '2024-02-01T00:00:00Z'
+    );
+    await expect(adminPage.getByText('Quiet Hall')).toHaveCount(0);
+    await expect(
+      adminPage.getByRole('link', { name: 'Open Test Organization 2 in Google Maps' })
+    ).toBeVisible();
+
+    await adminPage.getByRole('button', { name: 'Table' }).click();
+    await imports.selectOption('');
+    await expect(imports).toHaveValue('');
+    await expect(adminPage.getByText('Quiet Hall')).toBeVisible();
+    await expect(adminPage.getByText('Filtered to this import.')).toHaveCount(0);
+  });
+
   test('should display manager selector with Cognito users', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
     const managerField = adminPage.getByLabel('Manager');

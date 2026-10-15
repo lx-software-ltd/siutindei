@@ -1,5 +1,6 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryState } from 'nuqs';
 
@@ -8,6 +9,8 @@ import { useGeographicAreas } from '../../../hooks/use-geographic-areas';
 import { useOrganizationScope } from '../../../hooks/use-organization-scope';
 import { formatAdminPageName } from '../../../lib/admin-page-name';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
+import { getAdminQueryClient } from '../../../lib/admin-query-client';
+import { formatDateTime } from '../../../lib/date-utils';
 import {
   CATALOG_MAP_ORG_CAP,
   CATALOG_MAP_PAGE_CAP,
@@ -21,7 +24,9 @@ import { ApiError } from '../../../lib/api-client';
 import {
   bulkOrgReview,
   getOrgReviewSummary,
+  listImportJobs,
   listOrgReviews,
+  type ImportJobListItem,
   type OrgReviewListItem,
   type OrgReviewSummary,
 } from '../../../lib/api-client-org-review';
@@ -54,6 +59,15 @@ import { CatalogOrgMap } from './catalog-org-map';
 import { NeighbourhoodFilter } from './neighbourhood-filter';
 
 const PAGE_NAME = formatAdminPageName('Catalog');
+const CATALOG_IMPORT_FILTER_LIMIT = 20;
+
+function catalogImportChoices(jobs: readonly ImportJobListItem[]) {
+  return jobs
+    .filter((job): job is ImportJobListItem & { created_at: string } =>
+      Boolean(job.created_at)
+    )
+    .slice(0, CATALOG_IMPORT_FILTER_LIMIT);
+}
 
 const REVIEW_STATUS_OPTIONS = [
   ['', 'Any review'],
@@ -226,6 +240,22 @@ export function CatalogPanel() {
     }
   }, [view]);
   const areas = useGeographicAreas();
+  const importsQuery = useQuery(
+    {
+      queryKey: [
+        ...adminQueryKeys.importJobs(),
+        'recent',
+        CATALOG_IMPORT_FILTER_LIMIT,
+      ],
+      queryFn: () => listImportJobs(undefined, CATALOG_IMPORT_FILTER_LIMIT),
+    },
+    getAdminQueryClient()
+  );
+  const recentImports = useMemo(
+    () => catalogImportChoices(importsQuery.data?.items ?? []),
+    [importsQuery.data]
+  );
+  const [importAt, setImportAt] = useState('');
   const { items, filters, setFilter, refetch, loadMore, hasMore, isLoading, isLoadingMore } =
     list;
 
@@ -249,6 +279,23 @@ export function CatalogPanel() {
       setFilter('import_job_id', nextJob);
     }
   }, [filters.import_job_id, jobParam, setFilter]);
+
+  useEffect(() => {
+    const match = recentImports.find((job) => job.id === (jobParam ?? ''));
+    setImportAt(match?.created_at ?? '');
+  }, [jobParam, recentImports]);
+
+  function selectImport(timestamp: string) {
+    setImportAt(timestamp);
+    if (!timestamp) {
+      void setJobParam(null);
+      return;
+    }
+    const job = recentImports.find((item) => item.created_at === timestamp);
+    if (job) {
+      void setJobParam(job.id);
+    }
+  }
 
   useEffect(() => {
     setSelected(new Set());
@@ -430,6 +477,21 @@ export function CatalogPanel() {
                 placeholder='Organization name'
                 onChange={(event) => setFilter('q', event.target.value)}
               />
+            </AdminFilterField>
+            <AdminFilterField>
+              <Select
+                id='review-import-filter'
+                aria-label='Imports'
+                value={importAt}
+                onChange={(event) => selectImport(event.target.value)}
+              >
+                <option value=''>All imports</option>
+                {recentImports.map((job) => (
+                  <option key={job.id} value={job.created_at}>
+                    {formatDateTime(job.created_at)}
+                  </option>
+                ))}
+              </Select>
             </AdminFilterField>
             <AdminFilterField>
               <Select
