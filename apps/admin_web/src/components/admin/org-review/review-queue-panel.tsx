@@ -16,6 +16,7 @@ import {
   pinsForOrganizations,
 } from '../../../lib/catalog-map-pins';
 import { neighbourhoodFilterOptions } from '../../../lib/neighbourhood-options';
+import { ORG_SOURCE_OPTIONS } from '../../shared/organizations/organization-form-utils';
 import { ApiError } from '../../../lib/api-client';
 import {
   bulkOrgReview,
@@ -164,7 +165,7 @@ export function CatalogPanel() {
     queryKey: adminQueryKeys.orgReview(),
     defaultFilters,
     limit: 50,
-    debounceKeys: ['q', 'source'],
+    debounceKeys: ['q'],
     errorPrefix: 'Failed to load the review queue',
     fetcher: async ({ cursor, limit, ...filters }) => {
       const page = await listOrgReviews({
@@ -265,14 +266,12 @@ export function CatalogPanel() {
 
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
-  const textFiltersRef = useRef({ q: filters.q, source: filters.source });
+  const textFiltersRef = useRef(filters.q);
   const mapRefetchRef = useRef(mapList.refetch);
   mapRefetchRef.current = mapList.refetch;
   useEffect(() => {
-    const textChanged =
-      textFiltersRef.current.q !== filters.q ||
-      textFiltersRef.current.source !== filters.source;
-    textFiltersRef.current = { q: filters.q, source: filters.source };
+    const textChanged = textFiltersRef.current !== filters.q;
+    textFiltersRef.current = filters.q;
     if (view !== 'map') {
       return;
     }
@@ -401,13 +400,19 @@ export function CatalogPanel() {
               </Select>
             </AdminFilterField>
             <AdminFilterField>
-              <Input
+              <Select
                 id='review-source-filter'
                 aria-label='Source'
                 value={filters.source}
-                placeholder='Source'
                 onChange={(event) => setFilter('source', event.target.value)}
-              />
+              >
+                <option value=''>Any source</option>
+                {ORG_SOURCE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
             </AdminFilterField>
             <AdminFilterField>
               <NeighbourhoodFilter

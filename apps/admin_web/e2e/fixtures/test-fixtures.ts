@@ -2059,6 +2059,7 @@ export async function setupApiMocks(
             const query = params.get('q')?.toLowerCase() ?? '';
             const areaId = params.get('area_id') ?? '';
             const jobId = params.get('import_job_id') ?? '';
+            const source = params.get('source') ?? '';
             const touched = 'touched_by' in item ? item.touched_by : undefined;
             const nameMatches =
               query.length === 0 || item.name.toLowerCase().includes(query);
@@ -2067,7 +2068,8 @@ export async function setupApiMocks(
               jobId.length === 0 ||
               item.import_job_id === jobId ||
               (Array.isArray(touched) && touched.includes(jobId));
-            return nameMatches && areaMatches && jobMatches;
+            const sourceMatches = source.length === 0 || item.source === source;
+            return nameMatches && areaMatches && jobMatches && sourceMatches;
           })
           .map((item) => {
             const include = new URL(url).searchParams.get('include') ?? '';

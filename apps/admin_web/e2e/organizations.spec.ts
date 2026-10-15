@@ -86,6 +86,20 @@ test.describe('Organizations Panel', () => {
     await expect(
       reviewFilter.getByRole('option', { name: 'Pending', exact: true })
     ).toHaveCount(1);
+    const sourceFilter = adminPage.locator('#review-source-filter');
+    await expect(sourceFilter).toHaveValue('');
+    for (const label of [
+      'Any source',
+      'LCSD',
+      'EDB',
+      'SWD',
+      'Places',
+      'Competitor',
+    ]) {
+      await expect(
+        sourceFilter.getByRole('option', { name: label, exact: true })
+      ).toHaveCount(1);
+    }
     await expect(
       reviewFilter.getByRole('option', { name: 'Pending review' })
     ).toHaveCount(0);
@@ -125,6 +139,39 @@ test.describe('Organizations Panel', () => {
       .screenshot({ path: '/opt/cursor/artifacts/catalog-import-column.png' });
     await expect(adminPage.getByRole('cell', { name: 'manager-user-id-456' })).toHaveCount(0);
     await expect(adminPage.getByText('Manager manager-user-id-456')).toHaveCount(0);
+  });
+
+  test('filters the catalog by source', async ({ adminPage }) => {
+    await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/catalog-source-filter-any.png',
+    });
+    const requestPromise = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'GET' &&
+        request.url().includes('/admin/org-review') &&
+        !request.url().includes('/summary') &&
+        new URL(request.url()).searchParams.get('source') === 'lcsd'
+    );
+    await adminPage.locator('#review-source-filter').selectOption('lcsd');
+    await requestPromise;
+    await expect(
+      adminPage.getByRole('cell', { name: 'Test Organization 1', exact: true })
+    ).toBeVisible();
+    await expect(adminPage.getByText('Test Organization 2')).toHaveCount(0);
+    await expect(adminPage.getByText('Quiet Hall')).toHaveCount(0);
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/catalog-source-filter-lcsd.png',
+    });
+
+    await adminPage.getByRole('button', { name: 'Map' }).click();
+    await expect(adminPage.locator('#review-source-filter')).toHaveValue('lcsd');
+    await expect(adminPage.getByText('1 organization has no map pin.')).toBeVisible();
+    await expect(adminPage.getByText('Test Organization 2')).toHaveCount(0);
+    await expect(adminPage.getByText('Quiet Hall')).toHaveCount(0);
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/catalog-source-filter-map.png',
+    });
   });
 
   test('should display manager selector with Cognito users', async ({ adminPage }) => {
