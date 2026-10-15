@@ -38,6 +38,7 @@ from app.db.models import (
     Activity,
     ActivityPricing,
     ActivitySchedule,
+    CatalogVersion,
     GeographicArea,
     ImportJob,
     Location,
@@ -453,6 +454,129 @@ def test_import_update_keeps_creating_job(db_session, sample_organization) -> No
     assert sample_organization.import_job_id == created.id
     assert sample_organization.review_status == "approved"
     assert sample_organization.last_imported_at is not None
+
+
+def test_review_list_includes_orgs_created_or_updated_by_import(db_session) -> None:
+    job = ImportJob(
+        object_key=f"admin/imports/{uuid4().hex}.json",
+        dry_run=False,
+        summary={},
+        results=[],
+        file_warnings=[],
+    )
+    other = ImportJob(
+        object_key=f"admin/imports/{uuid4().hex}.json",
+        dry_run=False,
+        summary={},
+        results=[],
+        file_warnings=[],
+    )
+    db_session.add_all([job, other])
+    db_session.flush()
+    created = Organization(
+        name="Created By Job",
+        manager_id="00000000-0000-0000-0000-000000000091",
+        description="Created",
+        import_job_id=job.id,
+    )
+    updated_version = Organization(
+        name="Updated By Version",
+        manager_id="00000000-0000-0000-0000-000000000092",
+        description="Updated",
+        import_job_id=other.id,
+    )
+    updated_result = Organization(
+        name="Updated By Result",
+        manager_id="00000000-0000-0000-0000-000000000093",
+        description="Updated from the file",
+    )
+    skipped = Organization(
+        name="Skipped Org",
+        manager_id="00000000-0000-0000-0000-000000000094",
+        description="Left alone",
+    )
+    child_only = Organization(
+        name="Child Only",
+        manager_id="00000000-0000-0000-0000-000000000095",
+        description="Location changed",
+    )
+    db_session.add_all([created, updated_version, updated_result, skipped, child_only])
+    db_session.flush()
+    db_session.add(
+        CatalogVersion(
+            entity_type="organization",
+            entity_id=updated_version.id,
+            org_id=updated_version.id,
+            version=2,
+            action="updated",
+            snapshot={"name": updated_version.name},
+            txid=2,
+            import_job_id=job.id,
+        )
+    )
+    db_session.add(
+        CatalogVersion(
+            entity_type="location",
+            entity_id=uuid4(),
+            org_id=child_only.id,
+            version=2,
+            action="updated",
+            snapshot={"address": "1 Side Street"},
+            txid=3,
+            import_job_id=job.id,
+        )
+    )
+    db_session.add(
+        CatalogVersion(
+            entity_type="organization",
+            entity_id=skipped.id,
+            org_id=skipped.id,
+            version=2,
+            action="deleted",
+            snapshot={"name": skipped.name},
+            txid=4,
+            import_job_id=job.id,
+        )
+    )
+    job.results = [
+        {
+            "type": "organizations",
+            "status": "updated",
+            "id": str(updated_result.id),
+            "key": updated_result.name,
+        },
+        {
+            "type": "organizations",
+            "status": "skipped",
+            "id": str(skipped.id),
+            "key": skipped.name,
+        },
+        {
+            "type": "organizations",
+            "status": "unchanged",
+            "id": str(child_only.id),
+            "key": child_only.name,
+        },
+        {
+            "type": "locations",
+            "status": "updated",
+            "id": str(uuid4()),
+            "key": "Somewhere",
+        },
+        {"type": "organizations", "status": "created", "id": "not-a-uuid"},
+    ]
+    db_session.flush()
+    found = _load_filtered_organizations(
+        db_session,
+        _review_filters(import_job_id=job.id),
+        None,
+        20,
+    )
+    assert {org.id for org in found} == {
+        created.id,
+        updated_version.id,
+        updated_result.id,
+    }
 
 
 def test_bulk_status_sets_owner_source(db_session, sample_organization) -> None:

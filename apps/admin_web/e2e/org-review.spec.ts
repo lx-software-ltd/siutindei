@@ -114,6 +114,35 @@ test.describe('Organization review queue', () => {
     );
   });
 
+  test('view orgs opens the catalog for created and updated organizations', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=imports&tab=history');
+    const requestPromise = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'GET' &&
+        request.url().includes('/admin/org-review') &&
+        !request.url().includes('/summary') &&
+        request.url().includes('import_job_id=job-1')
+    );
+    await adminPage
+      .getByTestId('admin-row-job-1')
+      .getByRole('button', { name: 'View orgs' })
+      .click();
+    await requestPromise;
+    await expect(adminPage).toHaveURL(/section=catalog/);
+    await expect(adminPage).toHaveURL(/[?&]job=job-1/);
+    await expect(adminPage.getByRole('heading', { name: 'Catalog' })).toBeVisible();
+    await expect(adminPage.getByText('Filtered to this import.')).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'Test Organization 1', exact: true })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'Test Organization 2', exact: true })
+    ).toBeVisible();
+    await expect(adminPage.getByText('Quiet Hall')).toHaveCount(0);
+  });
+
   test('opens the stored import file from history', async ({ adminPage }) => {
     await adminPage.context().route('https://imports.example/**', async (route) => {
       await route.fulfill({
