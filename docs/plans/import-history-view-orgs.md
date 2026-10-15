@@ -17,6 +17,7 @@ Imports · History **View orgs** opens Catalog filtered to every organization th
 
 - `docs/plans/import-history-view-orgs.md`
 - `backend/src/app/api/admin_org_review.py`
+- `backend/src/app/api/admin_org_review_import.py`
 - `tests/test_org_review.py`
 - `docs/api/admin.yaml`
 - `docs/architecture/decisions.md`
@@ -35,6 +36,7 @@ Imports · History **View orgs** opens Catalog filtered to every organization th
 ## Done when
 
 - `pytest tests/test_org_review.py::test_review_list_includes_orgs_created_or_updated_by_import`
+- `python3 scripts/check_python_file_length.py`
 - `npm run lint` and `npm run typecheck` in `apps/admin_web`
 - `npx playwright test e2e/org-review.spec.ts` in `apps/admin_web`
 
