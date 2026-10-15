@@ -9,12 +9,14 @@ import { DeletedPanel } from './deleted-panel';
 import { DuplicatesPanel } from './duplicates-panel';
 import { LocationsPanel } from './locations-panel';
 import { NamesPanel } from './names-panel';
+import { TranslationsPanel } from './translations-panel';
 import { RunsPanel } from './runs-panel';
 
 const TABS = [
   { key: 'duplicates', label: adminTabLabel.duplicates },
   { key: 'names', label: adminTabLabel.names },
   { key: 'locations', label: adminTabLabel.locations },
+  { key: 'translations', label: adminTabLabel.translations },
   { key: 'checks', label: adminTabLabel.categories },
   { key: 'runs', label: adminTabLabel.runs },
   { key: 'deleted', label: adminTabLabel.deleted },
@@ -25,6 +27,7 @@ export function DataQualityPage() {
   const activeTab =
     tabParam === 'names' ||
     tabParam === 'locations' ||
+    tabParam === 'translations' ||
     tabParam === 'checks' ||
     tabParam === 'runs' ||
     tabParam === 'deleted'
@@ -45,6 +48,8 @@ export function DataQualityPage() {
         <NamesPanel />
       ) : activeTab === 'locations' ? (
         <LocationsPanel />
+      ) : activeTab === 'translations' ? (
+        <TranslationsPanel />
       ) : activeTab === 'checks' ? (
         <CategoryChecksPanel />
       ) : activeTab === 'runs' ? (

@@ -470,6 +470,148 @@ export function retryDataQualityRun(id: string) {
   );
 }
 
+export interface TranslationFixProposal {
+  id: string;
+  entity_type: 'organization' | 'activity';
+  entity_id: string;
+  entity_name?: string | null;
+  org_id: string;
+  org_name?: string | null;
+  field: 'name' | 'description';
+  source_text?: Record<string, string> | null;
+  proposed_text?: Record<string, string> | null;
+  missing_languages: string[];
+  source: string;
+  confidence?: number | null;
+  rationale?: string | null;
+  status: string;
+  current_label: string;
+  proposed_label: string;
+  missing_label: string;
+}
+
+export interface TranslationFixSettings {
+  monthly_cost_limit_usd: number;
+}
+
+export interface TranslationScanRun {
+  id: string;
+  status: string;
+  batches_total: number;
+  batches_done: number;
+  queued_for_model: number;
+}
+
+export function listTranslationFixes(filters: {
+  status?: string;
+  entity_type?: string;
+  field?: string;
+  org_id?: string;
+  q?: string;
+  cursor?: string;
+  limit?: number;
+} = {}) {
+  return request<ListResponse<TranslationFixProposal>>(
+    buildApiUrl(`v1/admin/translation-fixes${query(filters)}`)
+  );
+}
+
+export function getTranslationFix(id: string) {
+  return request<TranslationFixProposal>(
+    buildApiUrl(`v1/admin/translation-fixes/${id}`)
+  );
+}
+
+export function getTranslationFixSummary() {
+  return request<{
+    by_status: Record<string, number>;
+    month_cost_usd: number;
+    monthly_cost_limit_usd: number;
+    active_run?: TranslationScanRun | null;
+  }>(buildApiUrl('v1/admin/translation-fixes/summary'));
+}
+
+export function getTranslationFixSettings() {
+  return request<TranslationFixSettings>(
+    buildApiUrl('v1/admin/translation-fixes/settings')
+  );
+}
+
+export function updateTranslationFixSettings(body: TranslationFixSettings) {
+  return request<TranslationFixSettings>(
+    buildApiUrl('v1/admin/translation-fixes/settings'),
+    {
+      method: 'PUT',
+      headers: jsonHeaders,
+      body: JSON.stringify(body),
+    }
+  );
+}
+
+export function scanTranslationFixes(body: {
+  entity_type?: string;
+  q?: string;
+  org_id?: string;
+  review_scope: 'pending_review' | 'all';
+}) {
+  return request<{
+    scan_run_id: string;
+    created: number;
+    updated: number;
+    skipped: number;
+    cleared: number;
+    queued_for_model: number;
+    total_entities?: number;
+    truncated: boolean;
+    status: string;
+    error?: string | null;
+  }>(buildApiUrl('v1/admin/translation-fixes/scan'), {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+}
+
+export function decideTranslationFix(
+  id: string,
+  body: {
+    action: 'apply' | 'dismiss';
+    translations?: Record<string, string>;
+  }
+) {
+  return request<TranslationFixProposal>(
+    buildApiUrl(`v1/admin/translation-fixes/${id}`),
+    {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify(body),
+    }
+  );
+}
+
+export function decideTranslationFixesBulk(body: {
+  action: 'apply' | 'dismiss';
+  ids?: string[];
+  entity_type?: string;
+  field?: string;
+  q?: string;
+  org_id?: string;
+  dry_run?: boolean;
+}) {
+  return request<{
+    dry_run: boolean;
+    matched: number;
+    truncated?: boolean;
+    decided: number;
+    failed: number;
+    failures: { id: string; message: string }[];
+  }>(buildApiUrl('v1/admin/translation-fixes/bulk'), {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+}
+
 export function forgetDeletedOrganization(id: string) {
   return request<void>(
     buildApiUrl(`v1/admin/deleted-organizations/${encodeURIComponent(id)}`),

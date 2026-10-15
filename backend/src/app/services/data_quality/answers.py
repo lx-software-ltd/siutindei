@@ -15,6 +15,7 @@ from app.services.openrouter_client import usage_from_body
 
 CATEGORY_PROMPT_VERSION = "verify-1"
 LOCATION_PROMPT_VERSION = "locations-1"
+TRANSLATION_PROMPT_VERSION = "translations-1"
 
 
 class ModelReply:

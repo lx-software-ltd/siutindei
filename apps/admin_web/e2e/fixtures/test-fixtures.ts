@@ -2808,6 +2808,104 @@ export async function setupApiMocks(
     });
   });
 
+  let translationFixes: {
+    id: string;
+    entity_type: 'organization';
+    entity_id: string;
+    entity_name: string;
+    org_id: string;
+    field: 'name';
+    source_text: Record<string, string>;
+    proposed_text: Record<string, string>;
+    missing_languages: string[];
+    source: string;
+    rationale: string;
+    status: string;
+    current_label: string;
+    proposed_label: string;
+    missing_label: string;
+  }[] = [];
+  await page.route('**/api/mock/**/admin/translation-fixes**', async (route) => {
+    const url = route.request().url();
+    const method = route.request().method();
+    if (url.includes('/translation-fixes/summary')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          by_status: { pending: translationFixes.length },
+          month_cost_usd: 0,
+          monthly_cost_limit_usd: 50,
+          active_run: null,
+        }),
+      });
+      return;
+    }
+    if (url.includes('/translation-fixes/settings')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ monthly_cost_limit_usd: 50 }),
+      });
+      return;
+    }
+    if (method === 'POST' && url.includes('/translation-fixes/scan')) {
+      translationFixes = [
+        {
+          id: 'tr-1',
+          entity_type: 'organization',
+          entity_id: 'org-1',
+          entity_name: 'Harbour Club',
+          org_id: 'org-1',
+          field: 'name',
+          source_text: { en: 'Harbour Club' },
+          proposed_text: { zh: '海港会', 'zh-HK': '海港會' },
+          missing_languages: ['zh', 'zh-HK'],
+          source: 'model',
+          rationale: 'From the English name',
+          status: 'pending',
+          current_label: 'English: Harbour Club',
+          proposed_label: 'Chinese: 海港会 · Hong Kong: 海港會',
+          missing_label: 'Chinese, Hong Kong',
+        },
+      ];
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          scan_run_id: 'tr-run-1',
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          cleared: 0,
+          queued_for_model: 1,
+          total_entities: 1,
+          truncated: false,
+          status: 'queued',
+        }),
+      });
+      return;
+    }
+    if (method === 'POST' && /\/translation-fixes\/[^/]+$/.test(url.split('?')[0])) {
+      const id = url.split('?')[0].split('/').pop();
+      translationFixes = translationFixes.filter((item) => item.id !== id);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ id, status: 'applied' }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: translationFixes,
+        next_cursor: null,
+      }),
+    });
+  });
+
   await page.route('**/api/mock/**/admin/data-quality/**', async (route) => {
     const url = new URL(route.request().url());
     const method = route.request().method();

@@ -1,13 +1,14 @@
 # Data quality
 
 Admins merge organizations that are the same provider, review display
-names that still need the import cleanup rules, and give every
-activity a venue. The tools live on the Data quality nav item:
-Duplicates, Names, Locations, then Categories.
+names that still need the import cleanup rules, give every
+activity a venue, and fill missing English, Chinese, and Hong Kong
+text. The tools live on the Data quality nav item:
+Duplicates, Names, Locations, Translations, then Categories.
 
 Endpoint shapes live in `docs/api/admin.yaml` under
-`/v1/admin/org-duplicates`, `/v1/admin/name-fixes`, and
-`/v1/admin/location-fixes`. A full-access partner API key can read
+`/v1/admin/org-duplicates`, `/v1/admin/name-fixes`,
+`/v1/admin/location-fixes`, and `/v1/admin/translation-fixes`. A full-access partner API key can read
 pending proposals at `GET /v1/partner/name-fixes` and sees
 `pending_name_fixes` on `GET /v1/partner/organizations`. The same key
 can read venue proposals at `GET /v1/partner/location-fixes`, sees
@@ -134,8 +135,8 @@ scores with `pg_trgm`. A run recomputes with SequenceMatcher only. A
 busy or failed check does not fail the import. A pending name proposal
 blocks approval.
 
-Data quality tabs are Duplicates, Names, Locations, Categories, Runs,
-and Deleted.
+Data quality tabs are Duplicates, Names, Locations, Translations,
+Categories, Runs, and Deleted.
 Category checks moved here from the Categories nav item;
 `?categoryView=checks` opens this tab. The Status filter defaults to
 Pending so the table is the work queue; Any still lists the full
@@ -256,3 +257,20 @@ as `link_existing`. The proposal kind stays `unresolved`.
 `no_locations` stays a blocker. `activity_no_location` is a warning.
 `missing_coordinates` stays a blocker until the pin is stored.
 All three open this tab.
+
+## Translations
+
+Organization and activity names and descriptions need English, Chinese
+(`zh`), and Hong Kong Chinese (`zh-HK`). English is the base column.
+Chinese and Hong Kong live in `name_translations` and
+`description_translations`. The Translations tab lists
+`translation_fix_proposals`. Sweep pending covers organizations still
+in review. Sweep all orgs includes approved organizations. A field is
+queued when at least one of those three languages has text and another
+is missing. A description that is empty in every language is left
+alone. The model and fallbacks come from category-check settings.
+Spend counts toward `translation_fix_settings.monthly_cost_limit_usd`
+and does not include category-check or location-sweep spend. The
+worker reads `translation_scan_run_id` before `location_scan_run_id`.
+Applying a proposal writes only languages that are still missing. A
+dismissed proposal with the same source text is not queued again.

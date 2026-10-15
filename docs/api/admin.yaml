@@ -1468,6 +1468,208 @@ paths:
         "404":
           description: Proposal not found
 
+  /v1/admin/translation-fixes:
+    get:
+      summary: List translation proposals
+      description: |
+        Pending rows come from `POST /v1/admin/translation-fixes/scan`.
+        A name or description is queued when English, Chinese (`zh`),
+        or Hong Kong Chinese (`zh-HK`) is present and another of those
+        languages is missing. The model runs on the category suggestion
+        queue.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, applied, dismissed]
+            default: pending
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+            enum: [organization, activity]
+        - name: field
+          in: query
+          schema:
+            type: string
+            enum: [name, description]
+        - name: org_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Proposals
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationFixListResponse'
+
+  /v1/admin/translation-fixes/summary:
+    get:
+      summary: Count translation proposals and the active sweep
+      responses:
+        "200":
+          description: Counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationFixSummary'
+
+  /v1/admin/translation-fixes/settings:
+    get:
+      summary: Read the translation-sweep monthly budget
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationFixSettings'
+    put:
+      summary: Replace the translation-sweep monthly budget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TranslationFixSettings'
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationFixSettings'
+
+  /v1/admin/translation-fixes/scan:
+    post:
+      summary: Sweep missing translations and queue the model
+      description: |
+        Looks at organizations and activities in `review_scope`
+        (`pending_review` or `all`). Rows with a missing English,
+        Chinese, or Hong Kong value are queued for the model. One
+        translation sweep runs at a time. The model and fallbacks come
+        from category-check settings. Spend counts toward the
+        translation budget only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [review_scope]
+              properties:
+                entity_type:
+                  type: string
+                  enum: [organization, activity]
+                org_id:
+                  type: string
+                  format: uuid
+                q:
+                  type: string
+                review_scope:
+                  type: string
+                  enum: [pending_review, all]
+      responses:
+        "200":
+          description: Sweep counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationFixScanResult'
+        "409":
+          description: A translation sweep is already running
+        "502":
+          description: The model batches could not be queued
+
+  /v1/admin/translation-fixes/bulk:
+    post:
+      summary: Apply or dismiss translation proposals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TranslationFixBulkRequest'
+      responses:
+        "200":
+          description: Bulk result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationFixBulkResult'
+
+  /v1/admin/translation-fixes/{id}:
+    get:
+      summary: Load one translation proposal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Proposal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationFixProposal'
+        "404":
+          description: Proposal not found
+    post:
+      summary: Apply or dismiss one translation proposal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [apply, dismiss]
+                translations:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    Optional replacement text for languages that are
+                    still missing. Keys are en, zh, and zh-HK.
+      responses:
+        "200":
+          description: Updated proposal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranslationFixProposal'
+        "404":
+          description: Proposal not found
+
   /v1/admin/category-suggestions:
     get:
       summary: List category suggestions
@@ -7871,6 +8073,232 @@ components:
         truncated:
           type: boolean
           description: True when more pending rows match than this call decides.
+        decided:
+          type: integer
+        failed:
+          type: integer
+        failures:
+          type: array
+          items:
+            type: object
+            required: [id, message]
+            properties:
+              id:
+                type: string
+              message:
+                type: string
+
+    TranslationFixProposal:
+      type: object
+      required:
+        - id
+        - entity_type
+        - entity_id
+        - org_id
+        - field
+        - source
+        - status
+        - missing_languages
+        - current_label
+        - proposed_label
+        - missing_label
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity_type:
+          type: string
+          enum: [organization, activity]
+        entity_id:
+          type: string
+          format: uuid
+        entity_name:
+          type: string
+          nullable: true
+        org_id:
+          type: string
+          format: uuid
+        org_name:
+          type: string
+          nullable: true
+        field:
+          type: string
+          enum: [name, description]
+        source_text:
+          type: object
+          additionalProperties:
+            type: string
+        proposed_text:
+          type: object
+          additionalProperties:
+            type: string
+        missing_languages:
+          type: array
+          items:
+            type: string
+            enum: [en, zh, zh-HK]
+        source:
+          type: string
+        confidence:
+          type: number
+          nullable: true
+        rationale:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, applied, dismissed]
+        current_label:
+          type: string
+        proposed_label:
+          type: string
+        missing_label:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        decided_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    TranslationFixListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranslationFixProposal'
+        next_cursor:
+          type: string
+          nullable: true
+
+    TranslationFixSummary:
+      type: object
+      required:
+        - by_status
+        - month_cost_usd
+        - monthly_cost_limit_usd
+      properties:
+        by_status:
+          type: object
+          additionalProperties:
+            type: integer
+        month_cost_usd:
+          type: number
+        monthly_cost_limit_usd:
+          type: number
+        active_run:
+          allOf:
+            - $ref: '#/components/schemas/TranslationFixScanResult'
+          nullable: true
+
+    TranslationFixSettings:
+      type: object
+      required: [monthly_cost_limit_usd]
+      properties:
+        monthly_cost_limit_usd:
+          type: number
+        updated_at:
+          type: string
+          format: date-time
+
+    TranslationFixScanResult:
+      type: object
+      required:
+        - scan_run_id
+        - created
+        - updated
+        - skipped
+        - cleared
+        - queued_for_model
+        - truncated
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        scan_run_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        review_scope:
+          type: string
+        entity_type:
+          type: string
+          nullable: true
+        total_entities:
+          type: integer
+        batches_total:
+          type: integer
+        batches_done:
+          type: integer
+        created:
+          type: integer
+        updated:
+          type: integer
+        skipped:
+          type: integer
+        cleared:
+          type: integer
+        queued_for_model:
+          type: integer
+        failed:
+          type: integer
+        cost_usd:
+          type: number
+        truncated:
+          type: boolean
+        error:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    TranslationFixBulkRequest:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [apply, dismiss]
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        entity_type:
+          type: string
+        field:
+          type: string
+        q:
+          type: string
+        org_id:
+          type: string
+          format: uuid
+        dry_run:
+          type: boolean
+
+    TranslationFixBulkResult:
+      type: object
+      required: [dry_run, matched, decided, failed, failures]
+      properties:
+        dry_run:
+          type: boolean
+        matched:
+          type: integer
+        truncated:
+          type: boolean
         decided:
           type: integer
         failed:

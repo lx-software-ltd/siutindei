@@ -280,6 +280,67 @@ Seed assessment: migration `0042_location_fixes` inserts the default
 row. `location_scan_runs` and `location_fix_proposals` stay empty. No
 `seed_data.sql` change.
 
+## Table: translation_scan_runs
+
+Purpose: One sweep that queues names and descriptions missing English,
+Chinese, or Hong Kong Chinese.
+
+Columns:
+- `id` (UUID, PK)
+- `status` (text) — `queued`, `running`, `done`, or `failed`
+- `requested_by` (text, optional)
+- `org_id` (UUID, optional, FK → `organizations.id`, ON DELETE SET NULL)
+- `review_scope` (text) — `pending_review` or `all`
+- `entity_type` (text, optional) — `organization` or `activity`
+- `total_entities`, `batches_total`, `batches_done` (integer)
+- `created_count`, `updated_count`, `skipped_count`, `cleared_count`, `queued_count`, `failed_count` (integer)
+- `cost_usd` (numeric)
+- `truncated` (boolean)
+- `error` (text, optional)
+- `processed_message_ids` (jsonb, default `[]`)
+- `created_at` / `updated_at` / `finished_at` (timestamptz)
+
+Constraints: partial unique index so only one `queued` or `running` row exists.
+
+## Table: translation_fix_proposals
+
+Purpose: A suggested translation for a missing name or description language.
+
+Columns:
+- `id` (UUID, PK)
+- `entity_type` (text) — `organization` or `activity`
+- `entity_id` (UUID, required)
+- `org_id` (UUID, required, FK → `organizations.id`, ON DELETE CASCADE)
+- `field` (text) — `name` or `description`
+- `source_text` (jsonb) — languages that were already present
+- `proposed_text` (jsonb) — languages the model filled
+- `missing_languages` (jsonb) — `en`, `zh`, and/or `zh-HK`
+- `source` (text) — `model`
+- `confidence` (numeric, optional)
+- `rationale` (text, optional)
+- `status` (text) — `pending`, `applied`, or `dismissed`
+- `scan_run_id` (UUID, optional, FK → `translation_scan_runs.id`, ON DELETE SET NULL)
+- `input_hash` (text, optional)
+- `decided_by` (text, optional)
+- `decided_at` (timestamptz, optional)
+- `created_at` / `updated_at` (timestamptz)
+
+Constraints: partial unique index on pending `(entity_type, entity_id, field)`.
+
+## Table: translation_fix_settings
+
+Purpose: Singleton (`id = 1`) monthly budget for translation sweeps.
+Category-check and location-sweep spend are not included.
+
+Columns:
+- `id` (integer, PK)
+- `monthly_cost_limit_usd` (numeric, required, greater than 0 and at most 1000)
+- `updated_at` (timestamptz)
+
+Seed assessment: migration `0053_translation_fixes` inserts the default
+row. `translation_scan_runs` and `translation_fix_proposals` stay empty.
+No `seed_data.sql` change.
+
 ## Table: geographic_areas
 
 Purpose: Hierarchical lookup of valid geographic areas

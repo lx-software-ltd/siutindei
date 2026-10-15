@@ -120,8 +120,11 @@ their primary responsibilities.
   `google`. A successful Google call counts 0.017 USD, and the sweep
   queues only as many calls as the remaining monthly budget can pay.
   The worker handles
-  `location_scan_run_id` before `scan_run_id`. The sweep also loads the
-  EDB school register through the HTTP proxy.
+  `location_scan_run_id` before `scan_run_id`. Translation sweeps send
+  `translation_scan_run_id` and the worker reads that key first. They
+  spend `translation_fix_settings.monthly_cost_limit_usd`, which is
+  separate from category-check and location-sweep spend. The location
+  sweep also loads the EDB school register through the HTTP proxy.
   After a live import commits, the function sends SQS messages when
   `CATEGORY_SUGGESTION_QUEUE_URL` is set. OpenRouter calls go through
   `app.services.openrouter_client` and the HTTP proxy. The settings
@@ -365,7 +368,8 @@ their primary responsibilities.
   should sit, run category-check batches for activities in
   organizations that are still pending review, and run location-sweep
   batches whose messages carry `location_scan_run_id`, including pin
-  lookups whose `lookup` is `nominatim` or `google`
+  lookups whose `lookup` is `nominatim` or `google`, and translation
+  batches whose messages carry `translation_scan_run_id`
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - VPC: Yes
 - Timeout: 120 seconds on the admin function. One OpenRouter attempt

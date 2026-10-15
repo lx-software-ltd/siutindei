@@ -72,6 +72,7 @@ describe('admin section params', () => {
         duplicate: 'org-a,org-b',
         'name-fix': 'fix-1',
         'location-fix': 'loc-1',
+        'translation-fix': 'tr-1',
         organization: 'org-1',
       })
     ).toEqual({});
@@ -80,6 +81,7 @@ describe('admin section params', () => {
     expect(patch).not.toHaveProperty('duplicate');
     expect(patch).not.toHaveProperty('name-fix');
     expect(patch).not.toHaveProperty('location-fix');
+    expect(patch).not.toHaveProperty('translation-fix');
     expect(patch).not.toHaveProperty('organization');
     expect(patch).not.toHaveProperty('category-check');
   });
