@@ -5,8 +5,8 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { ApiError } from '../../lib/api-client';
 import {
   listFeedbackLabels,
-  searchUserOrganizations,
   submitUserFeedback,
+  type OrganizationLookup,
   type Ticket,
   type UserFeedbackCreatePayload,
 } from '../../lib/api-client-user';
@@ -16,7 +16,7 @@ import { AdminField } from '../ui/admin-field-grid';
 import { AdminToggleChip } from '../ui/admin-tab-strip';
 import { AdminInputCard } from '../ui/admin-input-card';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
+import { OrganizationAutocomplete } from '../ui/organization-autocomplete';
 import { StarRating } from '../ui/star-rating';
 import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
@@ -25,24 +25,14 @@ interface FeedbackFormProps {
   onFeedbackSubmitted: (feedback: Ticket) => void;
 }
 
-interface OrganizationOption {
-  id: string;
-  name: string;
-}
-
 export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
-  const [organizationQuery, setOrganizationQuery] = useState('');
-  const [organizationMatches, setOrganizationMatches] = useState<
-    OrganizationOption[]
-  >([]);
   const [selectedOrganization, setSelectedOrganization] =
-    useState<OrganizationOption | null>(null);
+    useState<OrganizationLookup | null>(null);
   const [labels, setLabels] = useState<FeedbackLabel[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [stars, setStars] = useState(1);
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState('');
   const validation = useFormValidation(
     ['organization', 'stars'] as const,
@@ -60,26 +50,6 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
     };
     loadLabels();
   }, []);
-
-  useEffect(() => {
-    const trimmed = organizationQuery.trim();
-    if (trimmed.length < 2) {
-      setOrganizationMatches([]);
-      return;
-    }
-    setIsSearching(true);
-    const timer = window.setTimeout(async () => {
-      try {
-        const response = await searchUserOrganizations(trimmed, 10);
-        setOrganizationMatches(response.items);
-      } catch {
-        setOrganizationMatches([]);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [organizationQuery]);
 
   const toggleLabel = (labelId: string) => {
     setSelectedLabels((prev) =>
@@ -190,38 +160,16 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
           required
           error={hasOrganizationError ? 'Please select an organization.' : undefined}
         >
-          <Input
+          <OrganizationAutocomplete
             id='feedback-org'
-            className={validation.errorClassName('organization', !selectedOrganization)}
-            value={organizationQuery}
-            onChange={(e) => {
-              setOrganizationQuery(e.target.value);
-              setSelectedOrganization(null);
-            }}
+            selected={selectedOrganization}
+            onSelect={setSelectedOrganization}
             onBlur={() => validation.markTouched('organization')}
-            placeholder='Search organizations...'
+            className={validation.errorClassName(
+              'organization',
+              !selectedOrganization
+            )}
           />
-          {isSearching && (
-            <p className='mt-1 text-xs text-slate-500'>Searching...</p>
-          )}
-          {organizationMatches.length > 0 && !selectedOrganization && (
-            <div className='mt-2 rounded border border-slate-200 bg-white'>
-              {organizationMatches.map((org) => (
-                <button
-                  key={org.id}
-                  type='button'
-                  onClick={() => {
-                    setSelectedOrganization(org);
-                    setOrganizationQuery(org.name);
-                    setOrganizationMatches([]);
-                  }}
-                  className='flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50'
-                >
-                  <span>{org.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
           {selectedOrganization && (
             <p className='mt-2 text-xs text-slate-500'>
               Selected: {selectedOrganization.name}

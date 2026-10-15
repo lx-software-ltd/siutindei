@@ -15,6 +15,9 @@ import {
   type DataQualityRun,
   type DataQualityRunRequest,
 } from '../../../lib/api-client-data-quality';
+import { listImportJobs } from '../../../lib/api-client-org-review';
+import type { OrganizationLookup } from '../../../lib/api-client-user';
+import { formatDateTime } from '../../../lib/date-utils';
 import { StatusBanner } from '../../status-banner';
 import {
   AdminDataTableCell,
@@ -24,7 +27,7 @@ import { AdminField, AdminFieldGrid } from '../../ui/admin-field-grid';
 import { AdminInputCard } from '../../ui/admin-input-card';
 import { AdminTableTime } from '../../ui/admin-table-value';
 import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
+import { OrganizationAutocomplete } from '../../ui/organization-autocomplete';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { Select } from '../../ui/select';
 
@@ -38,6 +41,8 @@ const CHECKS = [
 
 type ScopeKind = DataQualityRunRequest['scope']['kind'];
 
+const RECENT_IMPORT_COUNT = 20;
+
 export function RunsPanel() {
   const [runParam, setRunParam] = useQueryState('run');
   const [, setSection] = useQueryState('section');
@@ -48,8 +53,13 @@ export function RunsPanel() {
   });
   const [checks, setChecks] = useState<string[]>(['names', 'duplicates']);
   const [scopeKind, setScopeKind] = useState<ScopeKind>('pending_review');
-  const [orgId, setOrgId] = useState('');
+  const [organization, setOrganization] = useState<OrganizationLookup | null>(null);
   const [importJobId, setImportJobId] = useState('');
+  const importsQuery = useQuery({
+    queryKey: [...adminQueryKeys.importJobs(), 'recent', RECENT_IMPORT_COUNT],
+    queryFn: () => listImportJobs(undefined, RECENT_IMPORT_COUNT),
+    enabled: scopeKind === 'import',
+  });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [retrying, setRetrying] = useState('');
@@ -62,7 +72,8 @@ export function RunsPanel() {
         checks,
         scope: {
           kind: scopeKind,
-          org_id: scopeKind === 'organization' ? orgId : undefined,
+          org_id:
+            scopeKind === 'organization' ? organization?.id : undefined,
           import_job_id: scopeKind === 'import' ? importJobId : undefined,
         },
       });
@@ -99,6 +110,13 @@ export function RunsPanel() {
   }
 
   const items = runsQuery.data?.items ?? [];
+  const recentImports = (importsQuery.data?.items ?? []).slice(0, RECENT_IMPORT_COUNT);
+  const scopeReady =
+    scopeKind === 'organization'
+      ? Boolean(organization?.id)
+      : scopeKind === 'import'
+        ? Boolean(importJobId)
+        : true;
 
   return (
     <div className='space-y-4'>
@@ -114,7 +132,7 @@ export function RunsPanel() {
               void start();
             }}
             loading={saving}
-            disabled={checks.length === 0}
+            disabled={checks.length === 0 || !scopeReady}
           >
             Run checks
           </Button>
@@ -154,21 +172,38 @@ export function RunsPanel() {
             </Select>
           </AdminField>
           {scopeKind === 'organization' ? (
-            <AdminField label='Organization id' htmlFor='data-quality-org'>
-              <Input
+            <AdminField label='Organization' htmlFor='data-quality-org'>
+              <OrganizationAutocomplete
                 id='data-quality-org'
-                value={orgId}
-                onChange={(event) => setOrgId(event.target.value)}
+                selected={organization}
+                onSelect={setOrganization}
+                placeholder='Organization name'
               />
             </AdminField>
           ) : null}
           {scopeKind === 'import' ? (
-            <AdminField label='Import id' htmlFor='data-quality-import'>
-              <Input
+            <AdminField
+              label='Import'
+              htmlFor='data-quality-import'
+              error={
+                importsQuery.isError ? 'Could not load imports.' : undefined
+              }
+            >
+              <Select
                 id='data-quality-import'
                 value={importJobId}
+                disabled={importsQuery.isLoading}
                 onChange={(event) => setImportJobId(event.target.value)}
-              />
+              >
+                <option value=''>
+                  {importsQuery.isLoading ? 'Loading…' : 'Select an import'}
+                </option>
+                {recentImports.map((job) => (
+                  <option key={job.id} value={job.id}>
+                    {formatDateTime(job.created_at)}
+                  </option>
+                ))}
+              </Select>
             </AdminField>
           ) : null}
         </AdminFieldGrid>
