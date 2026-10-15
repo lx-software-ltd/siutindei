@@ -16,7 +16,8 @@ from app.db.models import (
     TranslationScanRun,
 )
 from app.exceptions import ValidationError
-from app.services.translation_fix_model import store_model_items
+from app.services.translation_fix_model import _finish_batch, store_model_items
+from app.services.translation_fix_prompt import build_prompt
 from app.services.translation_fix_query import load_settings
 from app.services.translation_fix_scan import start_translation_scan
 from app.services.translation_fixes import decide_proposal
@@ -244,6 +245,84 @@ def test_model_stores_only_missing_languages(db_session) -> None:
     assert "en" not in by_field["name"].proposed_text
     assert by_field["name"].proposed_text["zh-HK"] == "海港會"
     assert by_field["description"].missing_languages == ["zh", "zh-HK"]
+    db_session.refresh(run)
+    assert run.created_count == 2
+
+
+def test_failed_batches_fail_the_sweep(db_session) -> None:
+    run = TranslationScanRun(
+        status="running",
+        review_scope="all",
+        queued_count=2,
+        batches_total=1,
+        batches_done=0,
+    )
+    db_session.add(run)
+    db_session.flush()
+    _finish_batch(
+        db_session,
+        run.id,
+        {},
+        "message-1",
+        failed=True,
+        failed_entities=2,
+    )
+    db_session.flush()
+    db_session.refresh(run)
+    assert run.status == "failed"
+    assert run.failed_count == 2
+
+
+def test_apply_keeps_a_language_filled_after_the_proposal(db_session) -> None:
+    org = _org(db_session, "Harbour Club")
+    run = TranslationScanRun(status="done", review_scope="all")
+    db_session.add(run)
+    db_session.flush()
+    store_model_items(
+        db_session,
+        run.id,
+        "organization",
+        [str(org.id)],
+        {
+            "items": [
+                {
+                    "entity_id": str(org.id),
+                    "field": "name",
+                    "translations": {"zh": "海港会", "zh-HK": "海港會"},
+                }
+            ]
+        },
+    )
+    proposal = db_session.scalars(select(TranslationFixProposal)).one()
+    org.name_translations = {"zh": "已填"}
+    db_session.flush()
+    decide_proposal(db_session, proposal.id, "apply", "admin")
+    db_session.refresh(org)
+    assert org.name_translations["zh"] == "已填"
+    assert org.name_translations["zh-HK"] == "海港會"
+
+
+def test_complete_entity_prompt_has_no_items() -> None:
+    org = Organization(
+        name="Harbour Club",
+        manager_id=_MANAGER,
+        description="Lessons",
+        name_translations={"zh": "海港会", "zh-HK": "海港會"},
+        description_translations={"zh": "課程", "zh-HK": "課程"},
+    )
+    _system, _user, count = build_prompt("organization", [org])
+    assert count == 0
+
+
+def test_sweep_stops_at_the_entity_cap(db_session, monkeypatch) -> None:
+    monkeypatch.setattr("app.services.translation_fix_scan._MAX_SWEEP", 1)
+    _org(db_session, "Alpha Club")
+    _org(db_session, "Beta Club")
+    result, _batches = start_translation_scan(
+        db_session, review_scope="all", budget_seconds=None
+    )
+    assert result["truncated"] is True
+    assert result["total_entities"] == 1
 
 
 def test_apply_fills_missing_languages_and_keeps_english(

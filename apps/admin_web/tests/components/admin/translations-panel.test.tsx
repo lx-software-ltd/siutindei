@@ -113,6 +113,38 @@ describe('TranslationsPanel', () => {
     expect(await screen.findByText(/queued 1/)).toBeInTheDocument();
   });
 
+  it('replaces the sweep notice when the run finishes', async () => {
+    const idle = {
+      by_status: { pending: 0 },
+      month_cost_usd: 0,
+      monthly_cost_limit_usd: 50,
+      active_run: null,
+    };
+    const finished = {
+      ...idle,
+      by_status: { pending: 1 },
+      latest_run: {
+        scan_run_id: 'run-1',
+        status: 'done' as const,
+        created: 2,
+        updated: 1,
+        skipped: 0,
+        cleared: 3,
+        queued_for_model: 1,
+        truncated: false,
+      },
+    };
+    let calls = 0;
+    vi.mocked(getTranslationFixSummary).mockImplementation(async () => {
+      calls += 1;
+      return calls === 1 ? idle : finished;
+    });
+    render(<TranslationsPanel />, { wrapper });
+    expect(await screen.findByText(/This month 0 of 50/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Sweep pending' }));
+    expect(await screen.findByText(/Created 2, updated 1/)).toBeInTheDocument();
+  });
+
   it('explains that sweep pending skips an approved organization', async () => {
     render(<TranslationsPanel />, {
       wrapper: ({ children }) =>

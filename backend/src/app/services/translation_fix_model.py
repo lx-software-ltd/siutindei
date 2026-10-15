@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import os
-from datetime import datetime, timezone
-from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -13,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from app.api.admin_validators import MAX_DESCRIPTION_LENGTH, MAX_NAME_LENGTH
 from app.db.engine import get_engine
-from app.db.models import Activity, Organization
 from app.db.models.translation_fix import TranslationScanRun
 from app.services.category_suggestions.settings import (
     get_settings,
@@ -24,6 +20,13 @@ from app.services.data_quality.answers import (
     TRANSLATION_PROMPT_VERSION,
     recorded_completion,
 )
+from app.services.data_quality.sweep_support import (
+    advance_scan_batch,
+    confidence_score,
+    fail_open_run,
+    openrouter_timeout_seconds,
+    rationale_text,
+)
 from app.services.openrouter_client import (
     OpenRouterError,
     extract_message_text,
@@ -31,7 +34,7 @@ from app.services.openrouter_client import (
 )
 from app.services.openrouter_json_parse import loads_openrouter_json
 from app.services.translation_fix_prompt import build_prompt
-from app.services.translation_fix_query import over_budget
+from app.services.translation_fix_query import catalog_model, over_budget
 from app.services.translation_fixes import upsert_proposal
 from app.services.translation_gaps import LANGUAGES, entity_gaps, text_value
 from app.utils.logging import get_logger
@@ -54,11 +57,6 @@ def process_translation_batch(
     if prepared is None:
         return True
     system, user, model_name, fallbacks, deny = prepared
-    if '"items": []' in user or '"items":[]' in user.replace(" ", ""):
-        with Session(get_engine()) as session:
-            _finish_batch(session, scan_run_id, {}, message_id, failed=False)
-            session.commit()
-        return True
     try:
         reply = recorded_completion(
             record=False,
@@ -70,7 +68,7 @@ def process_translation_batch(
             invoke=lambda: openrouter_chat_completion(
                 system_prompt=system,
                 user_content=user,
-                timeout=_timeout_seconds(),
+                timeout=openrouter_timeout_seconds(),
                 workload=WORKLOAD_TRANSLATION_FIX,
                 temperature=0,
                 max_attempts=1,
@@ -123,6 +121,8 @@ def store_model_items(
     payload: dict[str, Any],
 ) -> None:
     """Persist translations for languages that are still missing."""
+    created = 0
+    updated = 0
     wanted = []
     for raw in entity_ids:
         try:
@@ -139,8 +139,8 @@ def store_model_items(
             field = str(item.get("field") or "")
             if entity_id and field in {"name", "description"}:
                 by_key[(entity_id, field)] = item
-    model = Organization if entity_type == "organization" else Activity
-    if entity_type not in {"organization", "activity"}:
+    model = catalog_model(entity_type)
+    if model is None:
         return
     rows = {
         row.id: row
@@ -160,7 +160,7 @@ def store_model_items(
             )
             if not proposed:
                 continue
-            upsert_proposal(
+            outcome = upsert_proposal(
                 session,
                 entity_type=entity_type,
                 entity_id=entity.id,
@@ -169,10 +169,18 @@ def store_model_items(
                 source_text=gap["source"],
                 proposed_text=proposed,
                 missing_languages=list(gap["missing"]),
-                confidence=_confidence(item.get("confidence")),
-                rationale=_rationale(item.get("rationale")),
+                confidence=confidence_score(item.get("confidence")),
+                rationale=rationale_text(item.get("rationale")),
                 scan_run_id=scan_run_id,
             )
+            if outcome == "created":
+                created += 1
+            elif outcome == "updated":
+                updated += 1
+    run = session.get(TranslationScanRun, scan_run_id)
+    if run is not None and run.status not in {"done", "failed"}:
+        run.created_count = int(run.created_count or 0) + created
+        run.updated_count = int(run.updated_count or 0) + updated
 
 
 def record_batch_failure(
@@ -182,7 +190,6 @@ def record_batch_failure(
     *,
     message_id: str,
 ) -> None:
-    del entity_ids
     with Session(get_engine()) as session:
         _finish_batch(
             session,
@@ -190,7 +197,7 @@ def record_batch_failure(
             {},
             message_id,
             failed=True,
-            failed_entities=1,
+            failed_entities=len(entity_ids),
             error=message,
         )
         session.commit()
@@ -219,11 +226,7 @@ def _prepare(scan_run_id, entity_type, entity_ids, message_id):
         if message_id and message_id in seen:
             return None
         if over_budget(session):
-            now = datetime.now(timezone.utc)
-            run.status = "failed"
-            run.error = "Monthly translation-sweep budget is used"
-            run.finished_at = now
-            run.updated_at = now
+            fail_open_run(run, "Monthly translation-sweep budget is used")
             session.commit()
             return None
         ids = []
@@ -232,15 +235,19 @@ def _prepare(scan_run_id, entity_type, entity_ids, message_id):
                 ids.append(UUID(str(raw)))
             except ValueError:
                 continue
-        model = Organization if entity_type == "organization" else Activity
-        if entity_type not in {"organization", "activity"}:
+        model = catalog_model(entity_type)
+        if model is None:
             return None
         rows = list(session.scalars(select(model).where(model.id.in_(ids))).all())
         if not rows:
             _finish_batch(session, scan_run_id, {}, message_id, failed=False)
             session.commit()
             return None
-        system, user = build_prompt(entity_type, rows)
+        system, user, item_count = build_prompt(entity_type, rows)
+        if item_count == 0:
+            _finish_batch(session, scan_run_id, {}, message_id, failed=False)
+            session.commit()
+            return None
         settings = get_settings(session)
         return (
             system,
@@ -262,53 +269,12 @@ def _finish_batch(
     error: str | None = None,
 ) -> None:
     run = session.get(TranslationScanRun, scan_run_id)
-    if run is None or run.status in {"done", "failed"}:
-        return
-    seen = [str(item) for item in (run.processed_message_ids or [])]
-    if message_id and message_id not in seen:
-        seen.append(message_id)
-        run.processed_message_ids = seen
-    cost = usage.get("cost_usd") or 0
-    run.cost_usd = Decimal(str(run.cost_usd or 0)) + Decimal(str(round(float(cost), 6)))
-    run.batches_done = int(run.batches_done or 0) + 1
-    if failed:
-        run.failed_count = int(run.failed_count or 0) + failed_entities
-        run.error = (error or "Translation sweep batch failed")[:500]
-    now = datetime.now(timezone.utc)
-    run.updated_at = now
-    if run.batches_done < int(run.batches_total or 0):
-        run.status = "running"
-        return
-    failed_count = int(run.failed_count or 0)
-    queued_count = int(run.queued_count or 0)
-    run.status = "failed" if queued_count and failed_count >= queued_count else "done"
-    run.finished_at = now
-
-
-def _confidence(value: Any) -> Decimal | None:
-    if value is None or value == "":
-        return None
-    try:
-        number = Decimal(str(value))
-    except Exception:
-        return None
-    if number < 0:
-        number = Decimal("0")
-    if number > 1:
-        number = Decimal("1")
-    return number.quantize(Decimal("0.001"))
-
-
-def _rationale(value: Any) -> str | None:
-    if not isinstance(value, str):
-        return None
-    text = value.strip()
-    return text[:500] or None
-
-
-def _timeout_seconds() -> int:
-    raw = os.getenv("CATEGORY_SUGGESTION_OPENROUTER_TIMEOUT_SECONDS", "90")
-    try:
-        return max(10, int(raw))
-    except ValueError:
-        return 90
+    advance_scan_batch(
+        run,
+        usage,
+        message_id,
+        failed=failed,
+        failed_entities=failed_entities,
+        error=error,
+        default_error="Translation sweep batch failed",
+    )

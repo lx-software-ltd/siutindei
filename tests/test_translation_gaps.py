@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from app.services.translation_gaps import entity_gaps, field_gap, source_hash
+from app.services.translation_gaps import (
+    entity_gaps,
+    field_gap,
+    language_map,
+    source_hash,
+)
 
 
 def test_blank_description_is_not_a_gap() -> None:
@@ -46,6 +51,17 @@ def test_entity_gaps_cover_name_and_description() -> None:
     gaps = entity_gaps(entity)
     assert "name" not in gaps
     assert gaps["description"]["missing"] == ["zh", "zh-HK"]
+
+
+def test_language_map_keeps_required_languages_and_strips_space() -> None:
+    assert language_map(
+        "  Harbour Club  ",
+        {"zh": " 海港会 ", "zh-HK": "海港會", "fr": "ignored"},
+    ) == {
+        "en": "Harbour Club",
+        "zh": "海港会",
+        "zh-HK": "海港會",
+    }
 
 
 def test_source_hash_changes_when_the_source_text_changes() -> None:

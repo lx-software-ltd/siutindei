@@ -6,6 +6,8 @@ import hashlib
 import json
 from typing import Any
 
+from app.utils.translations import build_translation_map
+
 LANGUAGES = ("en", "zh", "zh-HK")
 FIELDS = ("name", "description")
 LANGUAGE_LABELS = {
@@ -24,13 +26,12 @@ def text_value(value: Any) -> str:
 
 def language_map(base: Any, translations: Any) -> dict[str, str]:
     """English from the base column, Chinese and Hong Kong from the map."""
-    found: dict[str, str] = {}
+    raw = translations if isinstance(translations, dict) else None
     english = text_value(base)
-    if english:
-        found["en"] = english
-    raw = translations if isinstance(translations, dict) else {}
-    for key in ("zh", "zh-HK"):
-        value = text_value(raw.get(key))
+    built = build_translation_map(english or None, raw)
+    found: dict[str, str] = {}
+    for key in LANGUAGES:
+        value = text_value(built.get(key))
         if value:
             found[key] = value
     return found

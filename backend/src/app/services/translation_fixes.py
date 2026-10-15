@@ -113,7 +113,7 @@ def apply_proposal(
     gap = gaps.get(row.field)
     if gap is None:
         raise ValidationError("Those languages are already filled", field="field")
-    if gap["source"] != dict(row.source_text or {}):
+    if not _source_still_matches(dict(row.source_text or {}), gap["source"]):
         raise ValidationError("The source text changed. Sweep again.", field="field")
     proposed = _proposed_text(row, translations, gap["missing"], row.field)
     limit = MAX_NAME_LENGTH if row.field == "name" else MAX_DESCRIPTION_LENGTH
@@ -284,6 +284,14 @@ def _write_english(session: Session, entity, field: str, english: str) -> None:
             field="name",
         )
     entity.name = english
+
+
+def _source_still_matches(stored: dict[str, Any], current: dict[str, Any]) -> bool:
+    """True when every language the proposal was made from is unchanged."""
+    for key, value in stored.items():
+        if text_value(current.get(key)) != text_value(value):
+            return False
+    return True
 
 
 def _proposed_text(

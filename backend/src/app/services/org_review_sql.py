@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import case, func, literal, or_, select
+from sqlalchemy import and_, case, func, literal, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -118,9 +118,23 @@ def _issue_predicates() -> dict[str, ColumnElement[bool]]:
             Organization.description_source == "template",
             Organization.description.contains("Source:"),
         ),
-        "missing_zh_name": _blank(Organization.name_translations.op("->>")("zh")),
-        "missing_zh_description": _blank(
-            Organization.description_translations.op("->>")("zh")
+        "missing_zh_name": _translation_gap(
+            Organization.name, Organization.name_translations, "zh"
+        ),
+        "missing_zh_hk_name": _translation_gap(
+            Organization.name, Organization.name_translations, "zh-HK"
+        ),
+        "missing_en_name": _translation_gap(
+            Organization.name, Organization.name_translations, "en"
+        ),
+        "missing_zh_description": _translation_gap(
+            Organization.description, Organization.description_translations, "zh"
+        ),
+        "missing_zh_hk_description": _translation_gap(
+            Organization.description, Organization.description_translations, "zh-HK"
+        ),
+        "missing_en_description": _translation_gap(
+            Organization.description, Organization.description_translations, "en"
         ),
         "no_contact": _no_contact(),
         "no_media": func.coalesce(func.cardinality(Organization.media_urls), 0) == 0,
@@ -189,6 +203,17 @@ def _blank(column: Any) -> ColumnElement[bool]:
         "g",
     )
     return func.length(trimmed) == 0
+
+
+def _translation_gap(base, translations, language: str) -> ColumnElement[bool]:
+    """True when one required language has text and this language is blank."""
+    present = or_(
+        ~_blank(base),
+        ~_blank(translations.op("->>")("zh")),
+        ~_blank(translations.op("->>")("zh-HK")),
+    )
+    target = base if language == "en" else translations.op("->>")(language)
+    return and_(present, _blank(target))
 
 
 def _no_contact() -> ColumnElement[bool]:

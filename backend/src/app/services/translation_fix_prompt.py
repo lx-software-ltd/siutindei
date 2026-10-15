@@ -18,8 +18,8 @@ Return JSON only, with this shape:
 field is name or description. confidence is from 0 to 1. Omit rationale when you have nothing to add."""
 
 
-def build_prompt(entity_type: str, rows: list[Any]) -> tuple[str, str]:
-    """System and user text for one batch. Entities with no gap are omitted."""
+def build_prompt(entity_type: str, rows: list[Any]) -> tuple[str, str, int]:
+    """System text, user text, and how many gaps the batch still has."""
     items = []
     for entity in rows:
         gaps = entity_gaps(entity)
@@ -34,4 +34,4 @@ def build_prompt(entity_type: str, rows: list[Any]) -> tuple[str, str]:
                 }
             )
     user = json.dumps({"items": items}, ensure_ascii=False)
-    return _SYSTEM, user
+    return _SYSTEM, user, len(items)

@@ -272,5 +272,13 @@ alone. The model and fallbacks come from category-check settings.
 Spend counts toward `translation_fix_settings.monthly_cost_limit_usd`
 and does not include category-check or location-sweep spend. The
 worker reads `translation_scan_run_id` before `location_scan_run_id`.
-Applying a proposal writes only languages that are still missing. A
-dismissed proposal with the same source text is not queued again.
+Applying a proposal writes only languages that are still missing. The
+source check covers the languages the proposal was made from, so a
+language filled by hand later is left as stored. A dismissed proposal
+with the same source text is not queued again. The sweep walks
+organizations and activities in name order and stops at the entity cap
+without loading the rest of the catalog. Created and updated counts are
+recorded when the model stores proposals. The scan response reports
+cleared, skipped, and queued. The review queue uses the same gap: a
+warning for each missing required language when some text exists. A
+blank description is not a translation warning.

@@ -41,13 +41,18 @@ import {
 import { CascadingAreaSelect } from '../../ui/cascading-area-select';
 import { AdminEditorPanel } from '../../ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '../../ui/admin-field-grid';
-import { AdminInputCard } from '../../ui/admin-input-card';
 import { AdminKpiCard } from '../../ui/admin-kpi-card';
 import { AdminFilterBar, AdminFilterField } from '../../ui/admin-filter-bar';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { Select } from '../../ui/select';
+import {
+  ModelBudgetCard,
+  ReviewQueueScopeNote,
+  SWEEP_TIMEOUT_MESSAGE,
+  sweepLimitNote,
+} from './sweep-shared';
 
 const PAGE_NAME = formatAdminPageName('Data quality', adminTabLabel.locations);
 
@@ -236,9 +241,7 @@ export function LocationsPanel() {
         result.total_entities == null
           ? ''
           : ` Scanned ${result.total_entities} entities.`;
-      const stopped = result.truncated
-        ? ' Stopped at the limit; sweep again to continue with the rest. The pending count falls when you apply or dismiss findings, not when you sweep.'
-        : '';
+      const stopped = sweepLimitNote(result.truncated);
       const lookedUp = result.queued_for_lookup
         ? ` Queued ${result.queued_for_lookup} pin lookups.`
         : '';
@@ -249,9 +252,7 @@ export function LocationsPanel() {
       await refresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 504) {
-        setError(
-          'The sweep did not answer in time. It may still have run; refresh in a moment and sweep again to continue.'
-        );
+        setError(SWEEP_TIMEOUT_MESSAGE);
         await refresh();
       } else {
         setError(err instanceof ApiError ? err.message : 'Scan failed.');
@@ -376,20 +377,11 @@ export function LocationsPanel() {
     <div className='space-y-4'>
       <h2 className='sr-only'>{PAGE_NAME}</h2>
       {organization ? (
-        <p className='text-sm text-slate-600'>
-          Filtered to the organization from the review queue. Sweep pending
-          only includes organizations still in review. Sweep all orgs includes
-          this organization when it is already approved.{' '}
-          <button
-            type='button'
-            className='underline'
-            onClick={() => {
-              void setOrganization(null);
-            }}
-          >
-            Show all
-          </button>
-        </p>
+        <ReviewQueueScopeNote
+          onClear={() => {
+            void setOrganization(null);
+          }}
+        />
       ) : null}
       {notice ? (
         <StatusBanner kind='info' title='Locations'>
@@ -749,25 +741,15 @@ export function LocationsPanel() {
         )}
       />
       {settings ? (
-        <AdminInputCard
-          title='Model budget'
-          titleLevel='h3'
-          description={`This month ${summaryQuery.data?.month_cost_usd ?? 0} of ${settings.monthly_cost_limit_usd} USD. Category checks are not counted.`}
-          actions={
-            <Button type='button' variant='secondary' onClick={() => void saveSettings()}>
-              Save budget
-            </Button>
-          }
-        >
-          <AdminField label='Monthly limit (USD)' htmlFor='location-fix-budget'>
-            <Input
-              id='location-fix-budget'
-              inputMode='decimal'
-              value={limitValue}
-              onChange={(event) => setDraftLimit(event.target.value)}
-            />
-          </AdminField>
-        </AdminInputCard>
+        <ModelBudgetCard
+          monthCost={summaryQuery.data?.month_cost_usd ?? 0}
+          limit={settings.monthly_cost_limit_usd}
+          value={limitValue}
+          onChange={setDraftLimit}
+          onSave={() => void saveSettings()}
+          inputId='location-fix-budget'
+          description='Category checks are not counted.'
+        />
       ) : null}
     </div>
   );

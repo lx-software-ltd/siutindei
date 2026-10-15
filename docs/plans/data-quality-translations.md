@@ -53,6 +53,12 @@ Add a Data quality tab, Translations, that finds missing English, Chinese, or Ho
 
 Revert the commit. Downgrade drops `translation_fix_settings`, `translation_fix_proposals`, and `translation_scan_runs`.
 
+## Follow-up
+
+Sweep accounting, the model-batch helpers, and the admin list filters are shared with the location sweep. The review queue uses the same required-language gap as this tab.
+
+The translation budget stays on its own tables. Location sweeps already persist to `location_fix_settings`, so folding both into one budget table would migrate data that is already shipped.
+
 ## Open questions
 
 None.

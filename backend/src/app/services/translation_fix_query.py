@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -16,9 +16,15 @@ from app.db.models.translation_fix import (
     TranslationFixSettings,
     TranslationScanRun,
 )
-from app.exceptions import NotFoundError, ValidationError
-from app.services.location_fix_query import choice, parse_uuid
-from app.services.name_fix_query import decode_cursor, encode_cursor, ilike_pattern
+from app.exceptions import NotFoundError
+from app.services.data_quality.list_params import (
+    choice,
+    decode_cursor,
+    encode_cursor,
+    ilike_pattern,
+    parse_uuid,
+)
+from app.services.data_quality.sweep_support import month_total, parse_cost_limit
 from app.services.translation_gaps import language_list, text_label
 
 STATUSES = frozenset({"pending", "applied", "dismissed"})
@@ -47,7 +53,7 @@ def settings_payload(session: Session) -> dict[str, Any]:
 def update_settings(session: Session, body: dict[str, Any]) -> dict[str, Any]:
     row = load_settings(session)
     if "monthly_cost_limit_usd" in body:
-        row.monthly_cost_limit_usd = _parse_cost_limit(body["monthly_cost_limit_usd"])
+        row.monthly_cost_limit_usd = parse_cost_limit(body["monthly_cost_limit_usd"])
     row.updated_at = datetime.now(timezone.utc)
     session.flush()
     return settings_payload(session)
@@ -55,15 +61,18 @@ def update_settings(session: Session, body: dict[str, Any]) -> dict[str, Any]:
 
 def month_cost(session: Session) -> float:
     """Spend recorded on translation sweeps this calendar month."""
-    start = datetime.now(timezone.utc).replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0
+    return month_total(
+        session, TranslationScanRun.cost_usd, TranslationScanRun.created_at
     )
-    value = session.scalar(
-        select(func.coalesce(func.sum(TranslationScanRun.cost_usd), 0)).where(
-            TranslationScanRun.created_at >= start
-        )
-    )
-    return float(value or 0)
+
+
+def catalog_model(entity_type: str):
+    """Organization or activity table. None when the type is unknown."""
+    if entity_type == "organization":
+        return Organization
+    if entity_type == "activity":
+        return Activity
+    return None
 
 
 def over_budget(session: Session) -> bool:
@@ -136,12 +145,18 @@ def summarize_proposals(session: Session) -> dict[str, Any]:
         .order_by(TranslationScanRun.created_at.desc())
         .limit(1)
     ).first()
+    latest = session.scalars(
+        select(TranslationScanRun)
+        .order_by(TranslationScanRun.created_at.desc())
+        .limit(1)
+    ).first()
     settings = load_settings(session)
     return {
         "by_status": by_status,
         "month_cost_usd": month_cost(session),
         "monthly_cost_limit_usd": float(settings.monthly_cost_limit_usd),
         "active_run": None if active is None else serialize_run(active),
+        "latest_run": None if latest is None else serialize_run(latest),
     }
 
 
@@ -281,22 +296,6 @@ def serialize_many(
             }
         )
     return payload
-
-
-def _parse_cost_limit(value: Any) -> Decimal:
-    try:
-        parsed = Decimal(str(value))
-    except (InvalidOperation, ValueError) as exc:
-        raise ValidationError(
-            "monthly_cost_limit_usd must be a number",
-            field="monthly_cost_limit_usd",
-        ) from exc
-    if parsed <= 0 or parsed > 1000:
-        raise ValidationError(
-            "monthly_cost_limit_usd must be greater than 0 and at most 1000",
-            field="monthly_cost_limit_usd",
-        )
-    return parsed
 
 
 __all__ = [

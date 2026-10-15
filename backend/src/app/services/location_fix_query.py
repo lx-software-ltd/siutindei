@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timezone
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -23,8 +23,16 @@ from app.db.models.location_fix import (
     LocationFixSettings,
     LocationScanRun,
 )
-from app.exceptions import NotFoundError, ValidationError
+from app.exceptions import NotFoundError
+from app.services.data_quality.list_params import choice, optional_uuid, parse_uuid
+from app.services.data_quality.sweep_support import month_total, parse_cost_limit
 from app.services.name_fix_query import decode_cursor, encode_cursor, ilike_pattern
+
+__all__ = [
+    "choice",
+    "optional_uuid",
+    "parse_uuid",
+]
 
 KINDS = frozenset({"link_existing", "create_location", "unresolved", "update_location"})
 SOURCES = frozenset(
@@ -76,15 +84,7 @@ def update_settings(session: Session, body: dict[str, Any]) -> dict[str, Any]:
 
 def month_cost(session: Session) -> float:
     """Spend recorded on location sweeps this calendar month."""
-    start = datetime.now(timezone.utc).replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0
-    )
-    value = session.scalar(
-        select(func.coalesce(func.sum(LocationScanRun.cost_usd), 0)).where(
-            LocationScanRun.created_at >= start
-        )
-    )
-    return float(value or 0)
+    return month_total(session, LocationScanRun.cost_usd, LocationScanRun.created_at)
 
 
 def over_budget(session: Session) -> bool:
@@ -454,43 +454,4 @@ def _serialize(
 
 
 def _parse_cost_limit(value: Any) -> Decimal:
-    try:
-        number = Decimal(str(value))
-    except (InvalidOperation, ValueError) as exc:
-        raise ValidationError(
-            "monthly_cost_limit_usd must be a number",
-            field="monthly_cost_limit_usd",
-        ) from exc
-    if number <= 0 or number > 1000:
-        raise ValidationError(
-            "monthly_cost_limit_usd must be greater than 0 and at most 1000",
-            field="monthly_cost_limit_usd",
-        )
-    return number
-
-
-def choice(value: Any, allowed: frozenset[str], field: str) -> str | None:
-    if value is None:
-        return None
-    text = str(value).strip()
-    if not text:
-        return None
-    if text not in allowed:
-        raise ValidationError(f"Invalid {field}", field=field)
-    return text
-
-
-def optional_uuid(value: Any, field: str) -> UUID | None:
-    if value in (None, ""):
-        return None
-    try:
-        return UUID(str(value))
-    except (TypeError, ValueError) as exc:
-        raise ValidationError("id must be a UUID", field=field) from exc
-
-
-def parse_uuid(value: str, field: str) -> UUID:
-    try:
-        return UUID(value)
-    except (TypeError, ValueError) as exc:
-        raise ValidationError("id must be a UUID", field=field) from exc
+    return parse_cost_limit(value)

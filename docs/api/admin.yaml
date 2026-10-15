@@ -8196,6 +8196,11 @@ components:
           allOf:
             - $ref: '#/components/schemas/TranslationFixScanResult'
           nullable: true
+        latest_run:
+          description: Most recent translation sweep, including one that already finished.
+          allOf:
+            - $ref: '#/components/schemas/TranslationFixScanResult'
+          nullable: true
 
     TranslationFixSettings:
       type: object

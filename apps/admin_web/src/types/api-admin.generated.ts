@@ -9050,6 +9050,8 @@ export interface components {
             month_cost_usd: number;
             monthly_cost_limit_usd: number;
             active_run?: components["schemas"]["TranslationFixScanResult"] | null;
+            /** @description Most recent translation sweep, including one that already finished. */
+            latest_run?: components["schemas"]["TranslationFixScanResult"] | null;
         };
         TranslationFixSettings: {
             monthly_cost_limit_usd: number;

@@ -7,14 +7,20 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import Activity, Organization
 from app.db.models.translation_fix import TranslationFixProposal, TranslationScanRun
 from app.exceptions import ValidationError
-from app.services.name_fix_query import ilike_pattern
+from app.services.data_quality.list_params import ilike_pattern
+from app.services.data_quality.sweep_support import (
+    chunk_entity_batches,
+    fail_stale_runs,
+    out_of_time,
+    take_limited,
+)
 from app.services.translation_fix_query import ENTITY_TYPES, over_budget, serialize_run
 from app.services.translation_fixes import clear_pending
 from app.services.translation_gaps import FIELDS, entity_gaps, source_hash
@@ -84,10 +90,15 @@ def start_translation_scan(
     pending = _pending_fields(session)
     dismissed = _dismissed_hashes(session)
     seen = 0
+    remaining = _MAX_SWEEP
     if entity_type in (None, "organization"):
-        orgs = list(session.scalars(org_stmt(org_id, query, review_scope)).all())
+        orgs, more = take_limited(
+            session, org_stmt(org_id, query, review_scope), remaining
+        )
+        if more:
+            truncated = True
         for org in orgs:
-            if seen >= _MAX_SWEEP or _out_of_time(deadline):
+            if out_of_time(deadline):
                 truncated = True
                 break
             seen += 1
@@ -105,12 +116,15 @@ def start_translation_scan(
             if len(queued["organization"]) >= _MAX_MODEL:
                 truncated = True
                 break
-    if entity_type in (None, "activity") and not truncated:
-        activities = list(
-            session.scalars(activity_stmt(org_id, query, review_scope)).all()
+        remaining = _MAX_SWEEP - seen
+    if entity_type in (None, "activity") and not truncated and remaining > 0:
+        activities, more = take_limited(
+            session, activity_stmt(org_id, query, review_scope), remaining
         )
+        if more:
+            truncated = True
         for activity in activities:
-            if seen >= _MAX_SWEEP or _out_of_time(deadline):
+            if out_of_time(deadline):
                 truncated = True
                 break
             seen += 1
@@ -128,7 +142,7 @@ def start_translation_scan(
             if len(queued["activity"]) >= _MAX_MODEL:
                 truncated = True
                 break
-    batches = _batches(queued, batch_size)
+    batches = chunk_entity_batches(queued, batch_size)
     run.total_entities = seen
     run.batches_total = len(batches)
     run.created_count = counts["created"]
@@ -151,16 +165,7 @@ def start_translation_scan(
 
 
 def org_stmt(org_id, query, review_scope):
-    last = _last_scanned("organization")
-    stmt = (
-        select(Organization)
-        .outerjoin(last, last.c.entity_id == Organization.id)
-        .order_by(
-            last.c.scanned_at.asc().nulls_first(),
-            Organization.name,
-            Organization.id,
-        )
-    )
+    stmt = select(Organization).order_by(Organization.name, Organization.id)
     if org_id is not None:
         stmt = stmt.where(Organization.id == org_id)
     if query:
@@ -171,18 +176,12 @@ def org_stmt(org_id, query, review_scope):
 
 
 def activity_stmt(org_id, query, review_scope):
-    last = _last_scanned("activity")
     stmt = (
         select(Activity)
         .join(Organization, Organization.id == Activity.org_id)
-        .outerjoin(last, last.c.entity_id == Activity.id)
-        .order_by(
-            last.c.scanned_at.asc().nulls_first(),
-            Activity.name,
-            Activity.id,
-        )
+        .order_by(Activity.name, Activity.id)
     )
-    if review_scope != "all":
+    if review_scope == "pending_review":
         stmt = stmt.where(Organization.review_status == "pending_review")
     if org_id is not None:
         stmt = stmt.where(Activity.org_id == org_id)
@@ -264,55 +263,16 @@ def _dismissed_hashes(session: Session) -> set[tuple]:
     }
 
 
-def _last_scanned(entity_type: str):
-    return (
-        select(
-            TranslationFixProposal.entity_id.label("entity_id"),
-            func.max(TranslationFixProposal.updated_at).label("scanned_at"),
-        )
-        .where(TranslationFixProposal.entity_type == entity_type)
-        .group_by(TranslationFixProposal.entity_id)
-        .subquery()
-    )
-
-
-def _batches(queued: dict[str, list[str]], batch_size: int) -> list[dict[str, Any]]:
-    batches = []
-    for entity_type, ids in queued.items():
-        for index in range(0, len(ids), batch_size):
-            batches.append(
-                {
-                    "entity_type": entity_type,
-                    "entity_ids": ids[index : index + batch_size],
-                }
-            )
-    return batches
-
-
 def _count_many(counts: dict[str, int], outcomes: list[str]) -> None:
     for outcome in outcomes:
         if outcome in counts:
             counts[outcome] += 1
 
 
-def _out_of_time(deadline: float | None) -> bool:
-    return deadline is not None and time.monotonic() >= deadline
-
-
 def _fail_stale_runs(session: Session) -> None:
-    cutoff = datetime.now(timezone.utc) - STALE_AFTER
-    now = datetime.now(timezone.utc)
-    stale = session.scalars(
-        select(TranslationScanRun).where(
-            TranslationScanRun.status.in_(_ACTIVE),
-            or_(
-                TranslationScanRun.updated_at < cutoff,
-                TranslationScanRun.updated_at.is_(None),
-            ),
-        )
-    ).all()
-    for run in stale:
-        run.status = "failed"
-        run.error = "No batch completed before the sweep went stale"
-        run.finished_at = now
-        run.updated_at = now
+    fail_stale_runs(
+        session,
+        TranslationScanRun,
+        stale_after=STALE_AFTER,
+        active=_ACTIVE,
+    )

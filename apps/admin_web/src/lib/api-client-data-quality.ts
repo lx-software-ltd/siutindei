@@ -1,4 +1,5 @@
 import { buildApiUrl, request, type ListResponse } from './api-client-core';
+import type { AdminSchemas } from './api-admin-client';
 
 export interface OrgDuplicateMember {
   id: string;
@@ -470,37 +471,11 @@ export function retryDataQualityRun(id: string) {
   );
 }
 
-export interface TranslationFixProposal {
-  id: string;
-  entity_type: 'organization' | 'activity';
-  entity_id: string;
-  entity_name?: string | null;
-  org_id: string;
-  org_name?: string | null;
-  field: 'name' | 'description';
-  source_text?: Record<string, string> | null;
-  proposed_text?: Record<string, string> | null;
-  missing_languages: string[];
-  source: string;
-  confidence?: number | null;
-  rationale?: string | null;
-  status: string;
-  current_label: string;
-  proposed_label: string;
-  missing_label: string;
-}
-
-export interface TranslationFixSettings {
-  monthly_cost_limit_usd: number;
-}
-
-export interface TranslationScanRun {
-  id: string;
-  status: string;
-  batches_total: number;
-  batches_done: number;
-  queued_for_model: number;
-}
+export type TranslationFixProposal = AdminSchemas['TranslationFixProposal'];
+export type TranslationFixSettings = AdminSchemas['TranslationFixSettings'];
+export type TranslationFixSummary = AdminSchemas['TranslationFixSummary'];
+export type TranslationFixScanResult = AdminSchemas['TranslationFixScanResult'];
+export type TranslationFixBulkResult = AdminSchemas['TranslationFixBulkResult'];
 
 export function listTranslationFixes(filters: {
   status?: string;
@@ -523,12 +498,9 @@ export function getTranslationFix(id: string) {
 }
 
 export function getTranslationFixSummary() {
-  return request<{
-    by_status: Record<string, number>;
-    month_cost_usd: number;
-    monthly_cost_limit_usd: number;
-    active_run?: TranslationScanRun | null;
-  }>(buildApiUrl('v1/admin/translation-fixes/summary'));
+  return request<TranslationFixSummary>(
+    buildApiUrl('v1/admin/translation-fixes/summary')
+  );
 }
 
 export function getTranslationFixSettings() {
@@ -554,18 +526,7 @@ export function scanTranslationFixes(body: {
   org_id?: string;
   review_scope: 'pending_review' | 'all';
 }) {
-  return request<{
-    scan_run_id: string;
-    created: number;
-    updated: number;
-    skipped: number;
-    cleared: number;
-    queued_for_model: number;
-    total_entities?: number;
-    truncated: boolean;
-    status: string;
-    error?: string | null;
-  }>(buildApiUrl('v1/admin/translation-fixes/scan'), {
+  return request<TranslationFixScanResult>(buildApiUrl('v1/admin/translation-fixes/scan'), {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify(body),
@@ -598,14 +559,7 @@ export function decideTranslationFixesBulk(body: {
   org_id?: string;
   dry_run?: boolean;
 }) {
-  return request<{
-    dry_run: boolean;
-    matched: number;
-    truncated?: boolean;
-    decided: number;
-    failed: number;
-    failures: { id: string; message: string }[];
-  }>(buildApiUrl('v1/admin/translation-fixes/bulk'), {
+  return request<TranslationFixBulkResult>(buildApiUrl('v1/admin/translation-fixes/bulk'), {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify(body),

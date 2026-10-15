@@ -29,27 +29,17 @@ def enqueue_scan_batches(scan_run_id: str, batches: list[list[str]]) -> None:
 
 def enqueue_translation_batches(scan_run_id: str, batches: list[dict]) -> None:
     """Publish one SQS message per translation-sweep batch."""
-    if not batches:
-        return
-    queue_url = os.getenv("CATEGORY_SUGGESTION_QUEUE_URL", "").strip()
-    if not queue_url:
-        raise RuntimeError("CATEGORY_SUGGESTION_QUEUE_URL is not configured")
-    client = get_client("sqs")
-    for batch in batches:
-        client.send_message(
-            QueueUrl=queue_url,
-            MessageBody=json.dumps(
-                {
-                    "translation_scan_run_id": scan_run_id,
-                    "entity_type": batch["entity_type"],
-                    "entity_ids": batch["entity_ids"],
-                }
-            ),
-        )
+    _enqueue_entity_batches(scan_run_id, batches, run_key="translation_scan_run_id")
 
 
 def enqueue_location_batches(scan_run_id: str, batches: list[dict]) -> None:
     """Publish one SQS message per location-sweep batch."""
+    _enqueue_entity_batches(scan_run_id, batches, run_key="location_scan_run_id")
+
+
+def _enqueue_entity_batches(
+    scan_run_id: str, batches: list[dict], *, run_key: str
+) -> None:
     if not batches:
         return
     queue_url = os.getenv("CATEGORY_SUGGESTION_QUEUE_URL", "").strip()
@@ -58,7 +48,7 @@ def enqueue_location_batches(scan_run_id: str, batches: list[dict]) -> None:
     client = get_client("sqs")
     for batch in batches:
         body = {
-            "location_scan_run_id": scan_run_id,
+            run_key: scan_run_id,
             "entity_type": batch["entity_type"],
             "entity_ids": batch["entity_ids"],
         }
