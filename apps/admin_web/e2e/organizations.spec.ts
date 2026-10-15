@@ -212,11 +212,12 @@ test.describe('Organizations Panel', () => {
       options.map((option) => (option as HTMLOptionElement).value)
     );
     expect(values[0]).toBe('');
-    expect(values).toContain('2024-02-01T00:00:00Z');
-    expect(values).toContain('2024-01-15T00:00:00Z');
-    expect(values).toContain('2024-01-20T00:00:00Z');
-    expect(values).toContain('2024-01-01T00:00:00Z');
-    expect(values.length).toBeLessThanOrEqual(21);
+    expect(values).toEqual([
+      '',
+      '2024-02-01T00:00:00Z',
+      '2024-01-15T00:00:00Z',
+      '2024-01-20T00:00:00Z',
+    ]);
     const importedAt = await adminPage.evaluate(() => {
       const date = new Date('2024-02-01T00:00:00Z');
       const monthDay = date.toLocaleDateString('en-US', {
