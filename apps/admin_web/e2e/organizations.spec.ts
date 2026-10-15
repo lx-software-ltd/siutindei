@@ -86,6 +86,20 @@ test.describe('Organizations Panel', () => {
     await expect(
       reviewFilter.getByRole('option', { name: 'Pending', exact: true })
     ).toHaveCount(1);
+    const sourceFilter = adminPage.locator('#review-source-filter');
+    await expect(sourceFilter).toHaveValue('');
+    for (const label of [
+      'Any source',
+      'LCSD',
+      'EDB',
+      'SWD',
+      'Places',
+      'Competitor',
+    ]) {
+      await expect(
+        sourceFilter.getByRole('option', { name: label, exact: true })
+      ).toHaveCount(1);
+    }
     await expect(
       reviewFilter.getByRole('option', { name: 'Pending review' })
     ).toHaveCount(0);
@@ -125,6 +139,139 @@ test.describe('Organizations Panel', () => {
       .screenshot({ path: '/opt/cursor/artifacts/catalog-import-column.png' });
     await expect(adminPage.getByRole('cell', { name: 'manager-user-id-456' })).toHaveCount(0);
     await expect(adminPage.getByText('Manager manager-user-id-456')).toHaveCount(0);
+  });
+
+  test('filters the catalog by source', async ({ adminPage }) => {
+    await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/catalog-source-filter-any.png',
+    });
+    const requestPromise = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'GET' &&
+        request.url().includes('/admin/org-review') &&
+        !request.url().includes('/summary') &&
+        new URL(request.url()).searchParams.get('source') === 'lcsd'
+    );
+    await adminPage.locator('#review-source-filter').selectOption('lcsd');
+    await requestPromise;
+    await expect(
+      adminPage.getByRole('cell', { name: 'Test Organization 1', exact: true })
+    ).toBeVisible();
+    await expect(adminPage.getByText('Test Organization 2')).toHaveCount(0);
+    await expect(adminPage.getByText('Quiet Hall')).toHaveCount(0);
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/catalog-source-filter-lcsd.png',
+    });
+
+    await adminPage.getByRole('button', { name: 'Map' }).click();
+    await expect(adminPage.locator('#review-source-filter')).toHaveValue('lcsd');
+    await expect(adminPage.getByText('1 organization has no map pin.')).toBeVisible();
+    await expect(adminPage.getByText('Test Organization 2')).toHaveCount(0);
+    await expect(adminPage.getByText('Quiet Hall')).toHaveCount(0);
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/catalog-source-filter-map.png',
+    });
+  });
+
+  test('filters the catalog by an import time', async ({ adminPage }) => {
+    const listed = adminPage.waitForRequest((request) => {
+      const url = new URL(request.url());
+      return (
+        request.method() === 'GET' &&
+        url.pathname.endsWith('/admin/imports') &&
+        url.searchParams.get('limit') === '20'
+      );
+    });
+    await adminPage.reload();
+    await listed;
+
+    const imports = adminPage.locator('#review-import-filter');
+    const name = adminPage.locator('#review-name-filter');
+    const sort = adminPage.locator('#review-sort');
+    await expect(imports).toHaveValue('');
+    await expect(imports.locator('option').first()).toHaveText('All imports');
+    const followsName = await name.evaluate((nameField, importId) => {
+      const importField = document.getElementById(importId);
+      const sortField = document.getElementById('review-sort');
+      if (!importField || !sortField) {
+        return false;
+      }
+      const afterName =
+        nameField.compareDocumentPosition(importField) &
+        Node.DOCUMENT_POSITION_FOLLOWING;
+      const beforeSort =
+        importField.compareDocumentPosition(sortField) &
+        Node.DOCUMENT_POSITION_FOLLOWING;
+      return Boolean(afterName && beforeSort);
+    }, 'review-import-filter');
+    expect(followsName).toBe(true);
+    await expect(sort).toBeVisible();
+
+    const values = await imports.locator('option').evaluateAll((options) =>
+      options.map((option) => (option as HTMLOptionElement).value)
+    );
+    expect(values[0]).toBe('');
+    expect(values).toContain('2024-02-01T00:00:00Z');
+    expect(values).toContain('2024-01-15T00:00:00Z');
+    expect(values).toContain('2024-01-20T00:00:00Z');
+    expect(values).toContain('2024-01-01T00:00:00Z');
+    expect(values.length).toBeLessThanOrEqual(21);
+    const importedAt = await adminPage.evaluate(() => {
+      const date = new Date('2024-02-01T00:00:00Z');
+      const monthDay = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+      const hours24 = date.getHours();
+      const period = hours24 >= 12 ? 'PM' : 'AM';
+      const hours12 = hours24 % 12 || 12;
+      const pad = (value: number) => String(value).padStart(2, '0');
+      return `${monthDay}, ${pad(hours12)}:${pad(date.getMinutes())} ${period}`;
+    });
+    await expect(
+      imports.locator('option[value="2024-02-01T00:00:00Z"]')
+    ).toHaveText(importedAt);
+
+    const requestPromise = adminPage.waitForRequest((request) => {
+      if (request.method() !== 'GET' || request.url().includes('/summary')) {
+        return false;
+      }
+      const url = new URL(request.url());
+      return (
+        url.pathname.includes('/admin/org-review') &&
+        url.searchParams.get('import_job_id') === 'job-1'
+      );
+    });
+    await imports.selectOption('2024-02-01T00:00:00Z');
+    await requestPromise;
+    await expect(imports).toHaveValue('2024-02-01T00:00:00Z');
+    await expect(adminPage.getByText('Filtered to this import.')).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'Test Organization 1', exact: true })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'Test Organization 2', exact: true })
+    ).toBeVisible();
+    await expect(adminPage.getByText('Quiet Hall')).toHaveCount(0);
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/catalog-import-filter.png',
+    });
+
+    await adminPage.getByRole('button', { name: 'Map' }).click();
+    await expect(adminPage.locator('#review-import-filter')).toHaveValue(
+      '2024-02-01T00:00:00Z'
+    );
+    await expect(adminPage.getByText('Quiet Hall')).toHaveCount(0);
+    await expect(
+      adminPage.getByRole('link', { name: 'Open Test Organization 2 in Google Maps' })
+    ).toBeVisible();
+
+    await adminPage.getByRole('button', { name: 'Table' }).click();
+    await imports.selectOption('');
+    await expect(imports).toHaveValue('');
+    await expect(adminPage.getByText('Quiet Hall')).toBeVisible();
+    await expect(adminPage.getByText('Filtered to this import.')).toHaveCount(0);
   });
 
   test('should display manager selector with Cognito users', async ({ adminPage }) => {
