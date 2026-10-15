@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  catalogOrganizationHref,
   organizationsWithoutMapPins,
   pinsForOrganizations,
 } from '@/lib/catalog-map-pins';
@@ -96,6 +97,7 @@ describe('pinsForOrganizations', () => {
     expect(pins).toEqual([
       {
         id: 'loc-1',
+        orgId: 'org-1',
         orgName: 'Studio',
         address: '1 Lane',
         areaName: 'Central',
@@ -104,6 +106,9 @@ describe('pinsForOrganizations', () => {
         mapsUrl: 'https://www.google.com/maps/search/?api=1&query=22.28,114.15',
       },
     ]);
+    expect(catalogOrganizationHref('org-1')).toBe(
+      '/admin/dashboard?section=organizations&org=org-1'
+    );
     expect(
       organizationsWithoutMapPins([
         {

@@ -22,6 +22,7 @@ export interface CatalogMapOrg {
 
 export interface CatalogMapPin {
   id: string;
+  orgId: string;
   orgName: string;
   address: string;
   areaName: string;
@@ -32,6 +33,14 @@ export interface CatalogMapPin {
 
 export function googleMapsPinUrl(lat: number, lng: number): string {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
+
+/** Workspace page for one organization. Same query import history uses. */
+export function catalogOrganizationHref(orgId: string): string {
+  const params = new URLSearchParams();
+  params.set('section', 'organizations');
+  params.set('org', orgId);
+  return `/admin/dashboard?${params.toString()}`;
 }
 
 function hasPin(location: CatalogMapLocation): boolean {
@@ -54,6 +63,7 @@ export function pinsForOrganizations(
       }
       pins.push({
         id: location.id,
+        orgId: item.id,
         orgName: item.name,
         address: location.address?.trim() ?? '',
         areaName: location.area_name?.trim() ?? '',
