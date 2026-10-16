@@ -439,8 +439,11 @@ test.describe('Organization review queue', () => {
     );
     await expect(adminPage.getByText('Zebra Yoga Studio')).toBeVisible();
     await expect(
-      adminPage.getByRole('cell', { name: 'Rejected · Not relevant', exact: true })
+      adminPage.getByRole('cell', { name: 'Rejected', exact: true })
     ).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: /Rejected ·/ })
+    ).toHaveCount(0);
 
     await adminPage.getByRole('checkbox', { name: 'Select row' }).check();
     await adminPage.getByRole('button', { name: 'Reject' }).click();
