@@ -2194,6 +2194,351 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/translation-fixes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List translation proposals
+         * @description Pending rows come from `POST /v1/admin/translation-fixes/scan`.
+         *     A name or description is queued when English, Chinese (`zh`),
+         *     or Hong Kong Chinese (`zh-HK`) is present and another of those
+         *     languages is missing. The model runs on the category suggestion
+         *     queue.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "pending" | "applied" | "dismissed";
+                    entity_type?: "organization" | "activity";
+                    field?: "name" | "description";
+                    org_id?: string;
+                    q?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Proposals */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TranslationFixListResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/translation-fixes/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Count translation proposals and the active sweep */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Counts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TranslationFixSummary"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/translation-fixes/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the translation-sweep monthly budget */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Settings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TranslationFixSettings"];
+                    };
+                };
+            };
+        };
+        /** Replace the translation-sweep monthly budget */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TranslationFixSettings"];
+                };
+            };
+            responses: {
+                /** @description Updated settings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TranslationFixSettings"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/translation-fixes/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sweep missing translations and queue the model
+         * @description Looks at organizations and activities in `review_scope`
+         *     (`pending_review` or `all`). Rows with a missing English,
+         *     Chinese, or Hong Kong value are queued for the model. One
+         *     translation sweep runs at a time. The model and fallbacks come
+         *     from category-check settings. Spend counts toward the
+         *     translation budget only.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        entity_type?: "organization" | "activity";
+                        /** Format: uuid */
+                        org_id?: string;
+                        q?: string;
+                        /** @enum {string} */
+                        review_scope: "pending_review" | "all";
+                    };
+                };
+            };
+            responses: {
+                /** @description Sweep counts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TranslationFixScanResult"];
+                    };
+                };
+                /** @description A translation sweep is already running */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description The model batches could not be queued */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/translation-fixes/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply or dismiss translation proposals */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TranslationFixBulkRequest"];
+                };
+            };
+            responses: {
+                /** @description Bulk result */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TranslationFixBulkResult"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/translation-fixes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Load one translation proposal */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Proposal */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TranslationFixProposal"];
+                    };
+                };
+                /** @description Proposal not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Apply or dismiss one translation proposal */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        action: "apply" | "dismiss";
+                        /**
+                         * @description Optional replacement text for languages that are
+                         *     still missing. Keys are en, zh, and zh-HK.
+                         */
+                        translations?: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Updated proposal */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TranslationFixProposal"];
+                    };
+                };
+                /** @description Proposal not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/category-suggestions": {
         parameters: {
             query?: never;
@@ -8651,6 +8996,107 @@ export interface components {
             /** @description Rows this call will decide, at most 200. */
             matched: number;
             /** @description True when more pending rows match than this call decides. */
+            truncated?: boolean;
+            decided: number;
+            failed: number;
+            failures: {
+                id: string;
+                message: string;
+            }[];
+        };
+        TranslationFixProposal: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            entity_type: "organization" | "activity";
+            /** Format: uuid */
+            entity_id: string;
+            entity_name?: string | null;
+            /** Format: uuid */
+            org_id: string;
+            org_name?: string | null;
+            /** @enum {string} */
+            field: "name" | "description";
+            source_text?: {
+                [key: string]: string;
+            };
+            proposed_text?: {
+                [key: string]: string;
+            };
+            missing_languages: ("en" | "zh" | "zh-HK")[];
+            source: string;
+            confidence?: number | null;
+            rationale?: string | null;
+            /** @enum {string} */
+            status: "pending" | "applied" | "dismissed";
+            current_label: string;
+            proposed_label: string;
+            missing_label: string;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            /** Format: date-time */
+            decided_at?: string | null;
+        };
+        TranslationFixListResponse: {
+            items: components["schemas"]["TranslationFixProposal"][];
+            next_cursor?: string | null;
+        };
+        TranslationFixSummary: {
+            by_status: {
+                [key: string]: number;
+            };
+            month_cost_usd: number;
+            monthly_cost_limit_usd: number;
+            active_run?: components["schemas"]["TranslationFixScanResult"] | null;
+            /** @description Most recent translation sweep, including one that already finished. */
+            latest_run?: components["schemas"]["TranslationFixScanResult"] | null;
+        };
+        TranslationFixSettings: {
+            monthly_cost_limit_usd: number;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        TranslationFixScanResult: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            scan_run_id: string;
+            status: string;
+            review_scope?: string;
+            entity_type?: string | null;
+            total_entities?: number;
+            batches_total?: number;
+            batches_done?: number;
+            created: number;
+            updated: number;
+            skipped: number;
+            cleared: number;
+            queued_for_model: number;
+            failed?: number;
+            cost_usd?: number;
+            truncated: boolean;
+            error?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            finished_at?: string | null;
+        };
+        TranslationFixBulkRequest: {
+            /** @enum {string} */
+            action: "apply" | "dismiss";
+            ids?: string[];
+            entity_type?: string;
+            field?: string;
+            q?: string;
+            /** Format: uuid */
+            org_id?: string;
+            dry_run?: boolean;
+        };
+        TranslationFixBulkResult: {
+            dry_run: boolean;
+            matched: number;
             truncated?: boolean;
             decided: number;
             failed: number;

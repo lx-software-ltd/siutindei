@@ -169,6 +169,20 @@ test.describe('Data quality', () => {
     await expect(suffixes).toHaveValue('lcsd edb');
   });
 
+  test('admin can sweep and apply a translation', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=data-quality&tab=translations');
+    await expect(
+      adminPage.getByRole('table', { name: 'Data quality · Translations' })
+    ).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Sweep pending' }).click();
+    await expect(adminPage.getByText(/queued 1/)).toBeVisible();
+    await adminPage.getByRole('cell', { name: 'Harbour Club', exact: true }).click();
+    await expect(adminPage.getByText('From the English name')).toBeVisible();
+    await expect(adminPage.getByLabel('Chinese')).toHaveValue('海港会');
+    await adminPage.getByRole('button', { name: 'Apply', exact: true }).click();
+    await expect(adminPage.getByText('Translation updated.')).toBeVisible();
+  });
+
   test('admin can forget a deleted organization', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=deleted');
     await expect(adminPage.getByRole('table', { name: 'Data quality · Deleted' })).toBeVisible();

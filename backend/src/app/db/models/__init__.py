@@ -40,6 +40,11 @@ from app.db.models.location_fix import (
     LocationFixSettings,
     LocationScanRun,
 )
+from app.db.models.translation_fix import (
+    TranslationFixProposal,
+    TranslationFixSettings,
+    TranslationScanRun,
+)
 from app.db.models.organization_feedback import OrganizationFeedback
 from app.db.models.organization import Organization
 from app.db.models.ticket import Ticket
@@ -83,6 +88,9 @@ __all__ = [
     "Ticket",
     "TicketStatus",
     "TicketType",
+    "TranslationFixProposal",
+    "TranslationFixSettings",
+    "TranslationScanRun",
 ]
 
 from app.db.catalog_locks import register as _register_catalog_locks

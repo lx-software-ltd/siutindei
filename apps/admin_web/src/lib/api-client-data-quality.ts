@@ -1,4 +1,5 @@
 import { buildApiUrl, request, type ListResponse } from './api-client-core';
+import type { AdminSchemas } from './api-admin-client';
 
 export interface OrgDuplicateMember {
   id: string;
@@ -468,6 +469,101 @@ export function retryDataQualityRun(id: string) {
       body: JSON.stringify({ action: 'retry', refresh: true }),
     }
   );
+}
+
+export type TranslationFixProposal = AdminSchemas['TranslationFixProposal'];
+export type TranslationFixSettings = AdminSchemas['TranslationFixSettings'];
+export type TranslationFixSummary = AdminSchemas['TranslationFixSummary'];
+export type TranslationFixScanResult = AdminSchemas['TranslationFixScanResult'];
+export type TranslationFixBulkResult = AdminSchemas['TranslationFixBulkResult'];
+
+export function listTranslationFixes(filters: {
+  status?: string;
+  entity_type?: string;
+  field?: string;
+  org_id?: string;
+  q?: string;
+  cursor?: string;
+  limit?: number;
+} = {}) {
+  return request<ListResponse<TranslationFixProposal>>(
+    buildApiUrl(`v1/admin/translation-fixes${query(filters)}`)
+  );
+}
+
+export function getTranslationFix(id: string) {
+  return request<TranslationFixProposal>(
+    buildApiUrl(`v1/admin/translation-fixes/${id}`)
+  );
+}
+
+export function getTranslationFixSummary() {
+  return request<TranslationFixSummary>(
+    buildApiUrl('v1/admin/translation-fixes/summary')
+  );
+}
+
+export function getTranslationFixSettings() {
+  return request<TranslationFixSettings>(
+    buildApiUrl('v1/admin/translation-fixes/settings')
+  );
+}
+
+export function updateTranslationFixSettings(body: TranslationFixSettings) {
+  return request<TranslationFixSettings>(
+    buildApiUrl('v1/admin/translation-fixes/settings'),
+    {
+      method: 'PUT',
+      headers: jsonHeaders,
+      body: JSON.stringify(body),
+    }
+  );
+}
+
+export function scanTranslationFixes(body: {
+  entity_type?: string;
+  q?: string;
+  org_id?: string;
+  review_scope: 'pending_review' | 'all';
+}) {
+  return request<TranslationFixScanResult>(buildApiUrl('v1/admin/translation-fixes/scan'), {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
+}
+
+export function decideTranslationFix(
+  id: string,
+  body: {
+    action: 'apply' | 'dismiss';
+    translations?: Record<string, string>;
+  }
+) {
+  return request<TranslationFixProposal>(
+    buildApiUrl(`v1/admin/translation-fixes/${id}`),
+    {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify(body),
+    }
+  );
+}
+
+export function decideTranslationFixesBulk(body: {
+  action: 'apply' | 'dismiss';
+  ids?: string[];
+  entity_type?: string;
+  field?: string;
+  q?: string;
+  org_id?: string;
+  dry_run?: boolean;
+}) {
+  return request<TranslationFixBulkResult>(buildApiUrl('v1/admin/translation-fixes/bulk'), {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify(body),
+  });
 }
 
 export function forgetDeletedOrganization(id: string) {

@@ -2,17 +2,26 @@
 
 from __future__ import annotations
 
-import base64
-import json
-from datetime import datetime
-from uuid import UUID
-
 from sqlalchemy import String, and_, cast, false, or_, select
 from sqlalchemy.orm import Session
 
 from app.db.models import Activity, NameFixProposal, Organization
 from app.exceptions import ValidationError
+from app.services.data_quality.list_params import (
+    decode_cursor,
+    encode_cursor,
+    ilike_pattern,
+)
 from app.services.name_sanitizer import RULE_CODES
+
+__all__ = [
+    "decode_cursor",
+    "encode_cursor",
+    "entity_exists",
+    "ilike_pattern",
+    "proposal_stmt",
+    "reject_stale_name",
+]
 
 
 def proposal_stmt(
@@ -102,24 +111,3 @@ def entity_exists(session: Session, row: NameFixProposal) -> bool:
 def reject_stale_name(stored: str | None, recorded: str | None) -> None:
     if (stored or "").strip() != (recorded or "").strip():
         raise ValidationError("The stored name changed. Scan again.", field="name")
-
-
-def ilike_pattern(value: str) -> str:
-    escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    return f"%{escaped}%"
-
-
-def encode_cursor(created_at: datetime, proposal_id) -> str:
-    raw = json.dumps({"t": created_at.isoformat(), "id": str(proposal_id)}).encode()
-    return base64.urlsafe_b64encode(raw).decode("utf-8").rstrip("=")
-
-
-def decode_cursor(value: str) -> tuple[datetime, UUID]:
-    padded = value + "=" * (-len(value) % 4)
-    try:
-        payload = json.loads(base64.urlsafe_b64decode(padded.encode("utf-8")))
-        stamp = datetime.fromisoformat(str(payload["t"]))
-        proposal_id = UUID(str(payload["id"]))
-    except (KeyError, TypeError, ValueError) as exc:
-        raise ValidationError("cursor is invalid", field="cursor") from exc
-    return stamp, proposal_id

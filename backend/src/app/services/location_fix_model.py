@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import os
-from datetime import datetime, timezone
-from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -24,6 +21,13 @@ from app.services.location_fix_geocode import geocode_address
 from app.services.location_fix_prompt import (
     build_activity_prompt,
     build_organization_prompt,
+)
+from app.services.data_quality.sweep_support import (
+    advance_scan_batch,
+    confidence_score,
+    fail_open_run,
+    openrouter_timeout_seconds,
+    rationale_text,
 )
 from app.services.location_fix_query import over_budget
 from app.services.location_fixes import upsert_proposal
@@ -69,7 +73,7 @@ def process_location_batch(
             invoke=lambda: openrouter_chat_completion(
                 system_prompt=system,
                 user_content=user,
-                timeout=_timeout_seconds(),
+                timeout=openrouter_timeout_seconds(),
                 workload=WORKLOAD_LOCATION_FIX,
                 temperature=0,
                 max_attempts=1,
@@ -198,8 +202,8 @@ def _store_organizations(session, scan_run_id, org_ids, by_id) -> None:
                 kind="create_location",
                 source="model",
                 proposed_location=proposed,
-                confidence=_confidence(item.get("confidence")),
-                rationale=_rationale(item.get("rationale")),
+                confidence=confidence_score(item.get("confidence")),
+                rationale=rationale_text(item.get("rationale")),
                 scan_run_id=scan_run_id,
             )
             continue
@@ -210,8 +214,8 @@ def _store_organizations(session, scan_run_id, org_ids, by_id) -> None:
             org_id=org.id,
             kind="unresolved",
             source="model",
-            confidence=_confidence(item.get("confidence")),
-            rationale=_rationale(item.get("rationale"))
+            confidence=confidence_score(item.get("confidence")),
+            rationale=rationale_text(item.get("rationale"))
             or "Model could not propose an address",
             scan_run_id=scan_run_id,
         )
@@ -249,12 +253,12 @@ def _store_activities(session, scan_run_id, activity_ids, by_id) -> None:
                 kind="link_existing",
                 source="model",
                 target_location_id=chosen[0].id,
-                confidence=_confidence(item.get("confidence")),
-                rationale=_rationale(item.get("rationale")),
+                confidence=confidence_score(item.get("confidence")),
+                rationale=rationale_text(item.get("rationale")),
                 scan_run_id=scan_run_id,
             )
             continue
-        rationale = _rationale(item.get("rationale"))
+        rationale = rationale_text(item.get("rationale"))
         proposed = None
         if len(chosen) > 1:
             names = "; ".join(venue.address or "Venue" for venue in chosen)
@@ -274,7 +278,7 @@ def _store_activities(session, scan_run_id, activity_ids, by_id) -> None:
             kind="unresolved",
             source="model",
             proposed_location=proposed,
-            confidence=_confidence(item.get("confidence")),
+            confidence=confidence_score(item.get("confidence")),
             rationale=rationale or "Model could not choose a venue",
             scan_run_id=scan_run_id,
         )
@@ -311,11 +315,7 @@ def _prepare(scan_run_id, entity_type, entity_ids, message_id):
         if message_id and message_id in seen:
             return None
         if over_budget(session):
-            now = datetime.now(timezone.utc)
-            run.status = "failed"
-            run.error = "Monthly location-sweep budget is used"
-            run.finished_at = now
-            run.updated_at = now
+            fail_open_run(run, "Monthly location-sweep budget is used")
             session.commit()
             return None
         ids = []
@@ -388,28 +388,16 @@ def _finish_batch(
     error: str | None = None,
 ) -> None:
     run = session.get(LocationScanRun, scan_run_id)
-    if run is None or run.status in {"done", "failed"}:
-        return
-    seen = [str(item) for item in (run.processed_message_ids or [])]
-    if message_id and message_id not in seen:
-        seen.append(message_id)
-        run.processed_message_ids = seen
-    cost = usage.get("cost_usd") or 0
-    run.cost_usd = Decimal(str(run.cost_usd or 0)) + Decimal(str(round(float(cost), 6)))
-    run.batches_done = int(run.batches_done or 0) + 1
-    if failed:
-        run.failed_count = int(run.failed_count or 0) + failed_entities
-        run.error = (error or "Location sweep batch failed")[:500]
-    now = datetime.now(timezone.utc)
-    run.updated_at = now
-    if run.batches_done < int(run.batches_total or 0):
-        run.status = "running"
-        return
-    failed_count = int(run.failed_count or 0)
-    queued_count = int(run.queued_count or 0)
-    run.status = "failed" if queued_count and failed_count >= queued_count else "done"
-    run.finished_at = now
-    if run.data_quality_run_id is not None:
+    finished = advance_scan_batch(
+        run,
+        usage,
+        message_id,
+        failed=failed,
+        failed_entities=failed_entities,
+        error=error,
+        default_error="Location sweep batch failed",
+    )
+    if finished and run is not None and run.data_quality_run_id is not None:
         from app.services.data_quality.runs import settle_data_quality_run
 
         settle_data_quality_run(session, run.data_quality_run_id)
@@ -464,32 +452,3 @@ def _index_area(found: dict[str, GeographicArea], area: GeographicArea) -> None:
 
 def _label_key(value: Any) -> str:
     return str(value or "").strip().casefold()
-
-
-def _confidence(value: Any) -> Decimal | None:
-    if value is None or value == "":
-        return None
-    try:
-        number = Decimal(str(value))
-    except Exception:
-        return None
-    if number < 0:
-        number = Decimal("0")
-    if number > 1:
-        number = Decimal("1")
-    return number.quantize(Decimal("0.001"))
-
-
-def _rationale(value: Any) -> str | None:
-    if not isinstance(value, str):
-        return None
-    text = value.strip()
-    return text[:500] or None
-
-
-def _timeout_seconds() -> int:
-    raw = os.getenv("CATEGORY_SUGGESTION_OPENROUTER_TIMEOUT_SECONDS", "90")
-    try:
-        return max(10, int(raw))
-    except ValueError:
-        return 90

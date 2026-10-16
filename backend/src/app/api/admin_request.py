@@ -114,6 +114,17 @@ def parse_limit(
     return limit
 
 
+def uuid_resource_id(resource_id: str | None) -> str | None:
+    """Return a UUID path segment, or None when the segment is not a UUID."""
+    if resource_id is None:
+        return None
+    try:
+        UUID(resource_id)
+    except ValueError:
+        return None
+    return resource_id
+
+
 def _parse_uuid(value: str) -> UUID:
     """Parse a UUID string."""
     try:

@@ -107,6 +107,55 @@ def test_activity_without_a_location_is_a_warning() -> None:
     assert "activity_no_location" not in BLOCKER_ISSUE_CODES
 
 
+def test_hong_kong_name_gap_is_a_warning() -> None:
+    organization = Organization(
+        id=uuid4(),
+        name="Harbour Club",
+        manager_id="manager-1",
+        description="Classes",
+        name_translations={"zh": "海港会"},
+        description_translations={"zh": "課程", "zh-HK": "課程"},
+    )
+    issues, _checks = collect_issues(organization, [], [], {}, {})
+    messages = {issue.code: issue.message for issue in issues}
+    assert messages["missing_zh_hk_name"] == "Hong Kong name is missing"
+    assert "missing_zh_name" not in messages
+    assert "missing_en_name" not in messages
+    assert "missing_zh_description" not in messages
+
+
+def test_blank_description_is_not_a_translation_warning() -> None:
+    organization = Organization(
+        id=uuid4(),
+        name="Harbour Club",
+        manager_id="manager-1",
+        description="   ",
+        name_translations={"zh": "海港会", "zh-HK": "海港會"},
+    )
+    issues, _checks = collect_issues(organization, [], [], {}, {})
+    codes = {issue.code for issue in issues}
+    assert "missing_description" in codes
+    assert "missing_zh_description" not in codes
+    assert "missing_zh_hk_description" not in codes
+    assert "missing_en_description" not in codes
+
+
+def test_english_name_gap_is_a_warning() -> None:
+    organization = Organization(
+        id=uuid4(),
+        name=" ",
+        manager_id="manager-1",
+        description="Classes",
+        name_translations={"zh": "海港会", "zh-HK": "海港會"},
+        description_translations={"zh": "課程", "zh-HK": "課程"},
+    )
+    issues, _checks = collect_issues(organization, [], [], {}, {})
+    codes = {issue.code for issue in issues}
+    assert "missing_en_name" in codes
+    assert "missing_zh_name" not in codes
+    assert "missing_en_description" not in codes
+
+
 def test_import_create_is_pending_and_ignores_review_status(db_session) -> None:
     payload = {
         "organizations": [

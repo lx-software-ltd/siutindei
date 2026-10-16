@@ -13,6 +13,7 @@ export const adminTabLabel = {
   duplicates: 'Duplicates',
   names: 'Names',
   locations: 'Locations',
+  translations: 'Translations',
   deleted: 'Deleted',
   runs: 'Runs',
 } as const;

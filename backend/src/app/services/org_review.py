@@ -30,6 +30,7 @@ from app.services.org_review_children import (
     linked_activity_ids,
     pending_category_check_ids,
 )
+from app.services.translation_gaps import LANGUAGES, field_gap
 
 REVIEW_STATUSES = ("pending_review", "approved", "rejected")
 MAX_REVIEW_NOTES_LENGTH = 2000
@@ -47,6 +48,24 @@ _CONTACT_FIELDS = (
     "xiaohongshu",
     "wechat",
 )
+
+_TRANSLATION_WARNINGS = {
+    ("name", "en"): ("missing_en_name", "English name is missing"),
+    ("name", "zh"): ("missing_zh_name", "Chinese name is missing"),
+    ("name", "zh-HK"): ("missing_zh_hk_name", "Hong Kong name is missing"),
+    ("description", "en"): (
+        "missing_en_description",
+        "English description is missing",
+    ),
+    ("description", "zh"): (
+        "missing_zh_description",
+        "Chinese description is missing",
+    ),
+    ("description", "zh-HK"): (
+        "missing_zh_hk_description",
+        "Hong Kong description is missing",
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -181,24 +200,7 @@ def collect_issues(
             "Description still contains a source line",
         )
     note()
-    if not _translation(organization.name_translations, "zh"):
-        add(
-            "missing_zh_name",
-            "warning",
-            "organization",
-            org_id,
-            "Chinese name is missing",
-        )
-    note()
-    if not _translation(organization.description_translations, "zh"):
-        add(
-            "missing_zh_description",
-            "warning",
-            "organization",
-            org_id,
-            "Chinese description is missing",
-        )
-    note()
+    _note_translation_gaps(organization, org_id, add, note)
     if not any(_text(getattr(organization, field)) for field in _CONTACT_FIELDS):
         add(
             "no_contact",
@@ -466,10 +468,19 @@ def _passed_checks(snapshot: OrgReviewSnapshot) -> int:
     return max(snapshot.check_count - len(snapshot.issues), 0)
 
 
-def _translation(value: Any, language: str) -> str:
-    if not isinstance(value, dict):
-        return ""
-    return _text(value.get(language))
+def _note_translation_gaps(organization, org_id, add, note) -> None:
+    for field in ("name", "description"):
+        gap = field_gap(
+            getattr(organization, field),
+            getattr(organization, f"{field}_translations"),
+        )
+        missing = set(gap["missing"]) if gap else set()
+        for language in LANGUAGES:
+            note()
+            if language not in missing:
+                continue
+            code, message = _TRANSLATION_WARNINGS[(field, language)]
+            add(code, "warning", "organization", org_id, message)
 
 
 def _text(value: Any) -> str:

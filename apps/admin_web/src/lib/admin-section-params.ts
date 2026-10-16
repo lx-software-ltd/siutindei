@@ -22,6 +22,7 @@ export const ADMIN_RECORD_PARAMS = [
   'duplicate',
   'name-fix',
   'location-fix',
+  'translation-fix',
 ] as const;
 
 export type AdminRecordParam = (typeof ADMIN_RECORD_PARAMS)[number];
@@ -47,6 +48,7 @@ const KEEP_BY_SECTION: Record<string, readonly AdminRecordParam[]> = {
     'duplicate',
     'name-fix',
     'location-fix',
+    'translation-fix',
     'organization',
     'category-check',
   ],

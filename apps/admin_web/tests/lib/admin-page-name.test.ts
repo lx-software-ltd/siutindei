@@ -37,6 +37,9 @@ describe('formatAdminPageName', () => {
     expect(formatAdminPageName('Data quality', 'Locations')).toBe(
       'Data quality · Locations'
     );
+    expect(formatAdminPageName('Data quality', 'Translations')).toBe(
+      'Data quality · Translations'
+    );
     expect(formatAdminPageName('Data quality', 'Categories')).toBe(
       'Data quality · Categories'
     );

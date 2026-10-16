@@ -8,12 +8,18 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.api.admin_auth import _get_user_sub, _set_session_audit_context
-from app.api.admin_request import _query_param, parse_limit, parse_object_body
+from app.api.admin_list_filters import _blank
+from app.api.admin_request import (
+    _query_param,
+    parse_limit,
+    parse_object_body,
+    uuid_resource_id,
+)
 from app.db.engine import get_engine
 from app.db.models.location_fix import LocationScanRun
 from app.exceptions import ValidationError
 from app.services.category_suggestions.events import enqueue_location_batches
-from app.services.location_fix_scan import LocationScanBusy, start_location_scan
+from app.services.data_quality.sweep_support import mark_scan_enqueue_failed
 from app.services.location_fix_query import (
     ENTITY_TYPES,
     GRADES,
@@ -28,6 +34,7 @@ from app.services.location_fix_query import (
     summarize_proposals,
     update_settings,
 )
+from app.services.location_fix_scan import LocationScanBusy, start_location_scan
 from app.services.location_fixes import decide_bulk, decide_proposal
 from app.utils import json_response
 from app.utils.logging import get_logger
@@ -56,7 +63,7 @@ def handle_location_fixes(
         return _scan(event)
     if method == "POST" and resource_id == "bulk" and sub_resource is None:
         return _bulk(event)
-    item_id = _parse_item_id(resource_id)
+    item_id = uuid_resource_id(resource_id)
     if method == "GET" and item_id and sub_resource is None:
         return _get(event, item_id)
     if method == "POST" and item_id and sub_resource is None:
@@ -148,7 +155,9 @@ def _scan(event: Mapping[str, Any]) -> dict[str, Any]:
             enqueue_location_batches(run_id, batches)
         except Exception:
             logger.exception("Location sweep enqueue failed")
-            _mark_enqueue_failed(run_id)
+            mark_scan_enqueue_failed(
+                LocationScanRun, run_id, "Location sweep could not be queued"
+            )
             return json_response(
                 502,
                 {"error": "Location sweep could not be queued"},
@@ -214,26 +223,6 @@ def _decide_body(
     return json_response(200, payload, event=event)
 
 
-def _mark_enqueue_failed(run_id: str) -> None:
-    with Session(get_engine()) as session:
-        run = session.get(LocationScanRun, UUID(run_id))
-        if run is None or run.status in {"done", "failed"}:
-            return
-        run.status = "failed"
-        run.error = "Location sweep could not be queued"
-        session.commit()
-
-
-def _parse_item_id(resource_id: str | None) -> str | None:
-    if resource_id is None:
-        return None
-    try:
-        UUID(resource_id)
-    except ValueError:
-        return None
-    return resource_id
-
-
 def _lookup(value: Any) -> str | None:
     if value is None or value == "":
         return None
@@ -248,10 +237,3 @@ def _coord(value: Any, field: str) -> float | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValidationError(f"{field} must be a number", field=field)
     return float(value)
-
-
-def _blank(value: str | None) -> str | None:
-    if value is None:
-        return None
-    text = value.strip()
-    return text or None

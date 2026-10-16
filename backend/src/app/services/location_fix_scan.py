@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,12 @@ from app.db.models import Activity, ActivityLocation
 from app.db.models.location_fix import LocationScanRun
 from app.exceptions import ValidationError
 from app.services import location_fix_quality as location_quality
+from app.services.data_quality.sweep_support import (
+    chunk_entity_batches,
+    fail_stale_runs,
+    out_of_time as past_deadline,
+    take_limited,
+)
 from app.services.location_fix_lookup import (
     affordable_google_lookups,
     lookup_location_ids,
@@ -123,21 +129,23 @@ def start_location_scan(
     truncated = False
     out_of_time = False
     queued: dict[str, list[str]] = {"organization": [], "activity": []}
+    activities_more = False
     if entity_type != "location":
-        orgs = list(
-            session.scalars(org_stmt(org_id, query, review_scope, only_org_ids)).all()
+        orgs, orgs_more = take_limited(
+            session,
+            org_stmt(org_id, query, review_scope, only_org_ids),
+            _MAX_SWEEP,
         )
-        if len(orgs) > _MAX_SWEEP:
-            orgs = orgs[:_MAX_SWEEP]
+        if orgs_more:
             truncated = True
     else:
         orgs = []
     activities: list[Activity] = []
     if entity_type in (None, "activity") and not truncated:
-        activities = list(
-            session.scalars(
-                activity_stmt(org_id, query, review_scope, only_org_ids)
-            ).all()
+        activities, activities_more = take_limited(
+            session,
+            activity_stmt(org_id, query, review_scope, only_org_ids),
+            _MAX_SWEEP,
         )
     org_ids = {org.id for org in orgs}
     org_ids.update(activity.org_id for activity in activities)
@@ -157,7 +165,7 @@ def start_location_scan(
             )
             if len(queued["organization"]) >= _MAX_MODEL:
                 truncated = True
-            if _out_of_time(deadline):
+            if past_deadline(deadline):
                 truncated = out_of_time = True
                 break
     if activities and not truncated:
@@ -165,7 +173,7 @@ def start_location_scan(
             if seen >= _MAX_SWEEP:
                 truncated = True
                 break
-            if _out_of_time(deadline):
+            if past_deadline(deadline):
                 truncated = out_of_time = True
                 break
             seen += 1
@@ -176,17 +184,20 @@ def start_location_scan(
             if len(queued["activity"]) >= _MAX_MODEL:
                 truncated = True
                 break
+    if activities_more:
+        truncated = True
+    venues_more = False
     if entity_type in (None, "location") and not out_of_time:
-        venues = list(
-            session.scalars(
-                location_stmt(org_id, query, review_scope, only_org_ids)
-            ).all()
+        venues, venues_more = take_limited(
+            session,
+            location_stmt(org_id, query, review_scope, only_org_ids),
+            _MAX_SWEEP,
         )
         chains = location_quality.area_chains(
             session, [venue.area_id for venue in venues]
         )
         for venue in venues:
-            if seen >= _MAX_SWEEP or _out_of_time(deadline):
+            if seen >= _MAX_SWEEP or past_deadline(deadline):
                 truncated = True
                 break
             seen += 1
@@ -200,6 +211,8 @@ def start_location_scan(
                     pending=context["pending"],
                 ),
             )
+    if venues_more:
+        truncated = True
     lookup_ids = (
         lookup_location_ids(
             session,
@@ -222,7 +235,7 @@ def start_location_scan(
         seen += len(lookup_ids)
     if auto_budget.get("register_unavailable"):
         run.error = "EDB school register could not be loaded"
-    batches = _batches(queued, batch_size)
+    batches = chunk_entity_batches(queued, batch_size)
     for index in range(0, len(lookup_ids), batch_size):
         batches.append(
             {
@@ -253,10 +266,6 @@ def start_location_scan(
     payload["queued_for_model"] = model_queued
     payload["queued_for_lookup"] = len(lookup_ids)
     return payload, batches
-
-
-def _out_of_time(deadline: float | None) -> bool:
-    return deadline is not None and time.monotonic() >= deadline
 
 
 def _clear(session, context, entity_type: str, entity_id) -> bool:
@@ -389,42 +398,23 @@ def _dismissed_unresolved(session: Session, entity_type: str, entity_id) -> bool
     )
 
 
-def _batches(queued: dict[str, list[str]], batch_size: int) -> list[dict[str, Any]]:
-    batches = []
-    for entity_type, ids in queued.items():
-        for index in range(0, len(ids), batch_size):
-            batches.append(
-                {
-                    "entity_type": entity_type,
-                    "entity_ids": ids[index : index + batch_size],
-                }
-            )
-    return batches
-
-
 def _count(counts: dict[str, int], outcome: str) -> None:
     if outcome in counts:
         counts[outcome] += 1
 
 
 def _fail_stale_runs(session: Session) -> None:
-    cutoff = datetime.now(timezone.utc) - STALE_AFTER
-    now = datetime.now(timezone.utc)
-    stale = session.scalars(
-        select(LocationScanRun).where(
-            LocationScanRun.status.in_(_ACTIVE),
-            or_(
-                LocationScanRun.updated_at < cutoff,
-                LocationScanRun.updated_at.is_(None),
-            ),
-        )
-    ).all()
-    for run in stale:
-        run.status = "failed"
-        run.error = "No batch completed before the sweep went stale"
-        run.finished_at = now
-        run.updated_at = now
-        if run.data_quality_run_id is not None:
-            from app.services.data_quality.runs import settle_data_quality_run
+    def settle(run: LocationScanRun) -> None:
+        if run.data_quality_run_id is None:
+            return
+        from app.services.data_quality.runs import settle_data_quality_run
 
-            settle_data_quality_run(session, run.data_quality_run_id)
+        settle_data_quality_run(session, run.data_quality_run_id)
+
+    fail_stale_runs(
+        session,
+        LocationScanRun,
+        stale_after=STALE_AFTER,
+        active=_ACTIVE,
+        on_each=settle,
+    )

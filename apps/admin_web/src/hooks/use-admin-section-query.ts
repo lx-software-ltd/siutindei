@@ -34,6 +34,7 @@ const parsers = {
   duplicate: parseAsString,
   'name-fix': parseAsString,
   'location-fix': parseAsString,
+  'translation-fix': parseAsString,
 };
 
 interface SectionLabel {
