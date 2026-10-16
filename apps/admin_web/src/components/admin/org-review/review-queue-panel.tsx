@@ -55,11 +55,7 @@ import { AdminKpiCard } from '../../ui/admin-kpi-card';
 import { AdminTabStrip } from '../../ui/admin-tab-strip';
 import { Card } from '../../ui/card';
 import { BULK_FIELDS_FORM_ID, BulkFieldsDialog } from './bulk-fields-dialog';
-import {
-  REVIEW_REASON_OPTIONS,
-  RejectForm,
-  reviewReasonLabel,
-} from './reject-form';
+import { REVIEW_REASON_OPTIONS, RejectForm } from './reject-form';
 import { CatalogOrgMap } from './catalog-org-map';
 import { NeighbourhoodFilter } from './neighbourhood-filter';
 
@@ -133,15 +129,6 @@ const ISSUE_OPTIONS = [
 function catalogReviewStatusLabel(status: string): string | undefined {
   const option = REVIEW_STATUS_OPTIONS.find(([value]) => value === status);
   return option?.[0] ? option[1] : undefined;
-}
-
-function catalogReviewBadgeLabel(item: OrgReviewListItem): string | undefined {
-  const status = catalogReviewStatusLabel(item.review_status);
-  const reason = reviewReasonLabel(item.review_reason);
-  if (item.review_status === 'rejected' && status && reason) {
-    return `${status} · ${reason}`;
-  }
-  return status;
 }
 
 type BulkAction = 'approve' | 'reject' | 'reopen' | 'set_fields';
@@ -822,7 +809,7 @@ export function CatalogPanel() {
               <AdminDataTableCellMeta until='secondary'>
                 <StatusBadge
                   status={item.review_status}
-                  label={catalogReviewBadgeLabel(item)}
+                  label={catalogReviewStatusLabel(item.review_status)}
                 />
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta
@@ -845,7 +832,7 @@ export function CatalogPanel() {
             <AdminDataTableCell priority='secondary'>
               <StatusBadge
                 status={item.review_status}
-                label={catalogReviewBadgeLabel(item)}
+                label={catalogReviewStatusLabel(item.review_status)}
               />
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
