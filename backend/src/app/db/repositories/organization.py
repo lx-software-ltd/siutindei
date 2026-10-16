@@ -88,6 +88,28 @@ class OrganizationRepository(BaseRepository[Organization]):
         )
         return self._session.execute(query).scalar_one_or_none()
 
+    def list_managed_for_subs(
+        self,
+        manager_ids: Sequence[str],
+    ) -> dict[str, list[dict[str, str]]]:
+        """Return organizations managed by the given Cognito subs.
+
+        Each value is ``{"id", "name"}`` ordered by name. Subs with no
+        organizations are omitted. An empty input does not query.
+        """
+        unique_ids = list(dict.fromkeys(manager_ids))
+        if not unique_ids:
+            return {}
+        rows = self._session.execute(
+            select(Organization.manager_id, Organization.id, Organization.name)
+            .where(Organization.manager_id.in_(unique_ids))
+            .order_by(func.lower(Organization.name), Organization.id)
+        ).all()
+        grouped: dict[str, list[dict[str, str]]] = {}
+        for manager_id, org_id, name in rows:
+            grouped.setdefault(manager_id, []).append({"id": str(org_id), "name": name})
+        return grouped
+
     def find_by_manager(
         self,
         manager_id: str,

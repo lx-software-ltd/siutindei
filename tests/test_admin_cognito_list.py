@@ -85,6 +85,7 @@ def test_list_users_uses_constant_number_of_proxy_calls(
     assert groups['user0'] == ['admin', 'manager']
     assert groups['user3'] == ['manager']
     assert groups['user1'] == []
+    assert 'managed_organizations' not in body['items'][0]
     assert response['statusCode'] == 200
 
 
@@ -139,3 +140,89 @@ def test_managed_group_names_respect_env(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setenv('ADMIN_GROUP', 'ops')
     monkeypatch.setenv('MANAGER_GROUP', 'ops')
     assert admin_cognito._managed_group_names() == ['ops']
+
+def test_include_managed_organizations_attaches_names(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager_sub = 'aaaaaaaa-0000-0000-0000-000000000001'
+    other_sub = 'bbbbbbbb-0000-0000-0000-000000000002'
+    looked_up: list[list[str]] = []
+
+    def responder(action: str, params: dict) -> dict:
+        if action == 'list_users':
+            return {
+                'Users': [_user('manager', manager_sub), _user('plain', other_sub)]
+            }
+        return {'Users': []}
+
+    def lookup(subs: list[str]) -> dict[str, list[dict[str, str]]]:
+        looked_up.append(subs)
+        return {
+            manager_sub: [
+                {
+                    'id': '00000000-0000-0000-0000-000000000010',
+                    'name': 'Alpha Club',
+                }
+            ]
+        }
+
+    _patch_proxy(monkeypatch, responder)
+    monkeypatch.setattr(admin_cognito, '_managed_organizations_by_sub', lookup)
+
+    response = admin_cognito._handle_list_cognito_users(
+        _event(include='managed_organizations')
+    )
+
+    assert looked_up == [[manager_sub, other_sub]]
+    body = json.loads(response['body'])
+    by_username = {item['username']: item for item in body['items']}
+    assert by_username['manager']['managed_organizations'] == [
+        {'id': '00000000-0000-0000-0000-000000000010', 'name': 'Alpha Club'}
+    ]
+    assert by_username['plain']['managed_organizations'] == []
+    assert response['statusCode'] == 200
+
+
+def test_invalid_include_is_rejected() -> None:
+    with pytest.raises(admin_cognito.ValidationError):
+        admin_cognito._handle_list_cognito_users(_event(include='groups'))
+
+
+def test_managed_organizations_by_sub_reads_repository(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: dict[str, Any] = {}
+
+    class FakeSession:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args: object) -> bool:
+            return False
+
+    class FakeRepo:
+        def __init__(self, session: FakeSession) -> None:
+            seen['session'] = session
+
+        def list_managed_for_subs(self, subs: list[str]) -> dict[str, list]:
+            seen['subs'] = subs
+            return {'sub-1': [{'id': 'id-1', 'name': 'Club'}]}
+
+    monkeypatch.setattr(admin_cognito, 'Session', lambda _engine: FakeSession())
+    monkeypatch.setattr(admin_cognito, 'get_engine', lambda: object())
+    monkeypatch.setattr(admin_cognito, 'OrganizationRepository', FakeRepo)
+
+    result = admin_cognito._managed_organizations_by_sub(['sub-1'])
+
+    assert result == {'sub-1': [{'id': 'id-1', 'name': 'Club'}]}
+    assert seen['subs'] == ['sub-1']
+
+
+def test_managed_organizations_by_sub_skips_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def boom() -> object:
+        raise AssertionError('engine should not open')
+
+    monkeypatch.setattr(admin_cognito, 'get_engine', boom)
+    assert admin_cognito._managed_organizations_by_sub([]) == {}

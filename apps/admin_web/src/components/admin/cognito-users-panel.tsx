@@ -75,7 +75,12 @@ export function CognitoUsersPanel() {
     limit: 50,
     errorPrefix: 'Failed to load users',
     fetcher: async ({ cursor, limit }) => {
-      const response = await listCognitoUsers(cursor ?? undefined, limit);
+      const response = await listCognitoUsers(
+        cursor ?? undefined,
+        limit,
+        undefined,
+        'managed_organizations'
+      );
       return {
         items: response.items.map((user) => ({ ...user, id: user.sub })),
         nextCursor: response.pagination_token ?? null,
@@ -272,6 +277,23 @@ export function CognitoUsersPanel() {
   );
 }
 
+function ManagedOrganizations({
+  organizations,
+}: {
+  organizations: CognitoUser['managed_organizations'];
+}) {
+  if (!organizations?.length) {
+    return '—';
+  }
+  return (
+    <ul className='list-disc space-y-1 pl-5'>
+      {organizations.map((organization) => (
+        <li key={organization.id}>{organization.name}</li>
+      ))}
+    </ul>
+  );
+}
+
 function UserAttributesDetail({ user }: { user: CognitoUserRow }) {
   const status = user.status.trim().toLowerCase();
   return (
@@ -296,6 +318,9 @@ function UserAttributesDetail({ user }: { user: CognitoUserRow }) {
         </AdminReadOnlyValue>
         <AdminReadOnlyValue label='Last Login'>
           {formatDateTime(user.last_auth_time)}
+        </AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Managed organizations' span='full'>
+          <ManagedOrganizations organizations={user.managed_organizations} />
         </AdminReadOnlyValue>
       </AdminFieldGrid>
     </AdminEditorPanel>

@@ -67,6 +67,7 @@ test.describe('Cognito Users Panel', () => {
       'Roles',
       'Created',
       'Last Login',
+      'Managed organizations',
     ]);
     await expect(detail.locator('dd').nth(0)).toHaveText('manager@example.com');
     await expect(detail.locator('dd').nth(1)).toHaveText('manager@example.com');
@@ -109,12 +110,40 @@ test.describe('Cognito Users Panel', () => {
     await expect(detail).toContainText(created);
     await expect(detail).toContainText(lastLogin);
 
+    const managed = detail.getByRole('list');
+    await expect(managed).toHaveClass(/list-disc/);
+    await expect(managed.getByRole('listitem')).toHaveText([
+      'Harbor Studio',
+      'Test Organization 1',
+    ]);
+
     await managerRow.click();
     await expect(detail.getByText('Username', { exact: true })).toHaveCount(0);
     await expect(adminPage.getByTestId('admin-row-manager-user-id-456')).toHaveAttribute(
       'aria-expanded',
       'false'
     );
+
+    await currentUserRow.click();
+    const emptyDetail = adminPage.getByTestId('admin-row-admin-user-id-123-detail');
+    const emptyManaged = emptyDetail
+      .locator('dt', { hasText: /^Managed organizations$/ })
+      .locator('xpath=following-sibling::dd[1]');
+    await expect(emptyManaged).toHaveText('—');
+    await expect(emptyDetail.getByRole('list')).toHaveCount(0);
+    await emptyDetail.screenshot({
+      path: '/opt/cursor/artifacts/users-row-no-organizations.png',
+    });
+
+    await adminManagerRow.click();
+    const adminManagerDetail = adminPage.getByTestId(
+      'admin-row-admin-manager-id-789-detail'
+    );
+    await expect(adminManagerDetail.getByRole('listitem')).toHaveText([
+      'Test Organization 2',
+    ]);
+    await adminManagerRow.click();
+    await expect(adminManagerDetail.getByText('Username', { exact: true })).toHaveCount(0);
 
     await adminPage.getByTitle('Make Admin').first().click();
     await expect(adminPage.getByTitle('Remove Admin').first()).toBeVisible();

@@ -31,6 +31,7 @@ USER_SUB_PATTERN = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 )
 MAX_COGNITO_LIST_LIMIT = 60
+MANAGED_ORGANIZATIONS_INCLUDE = "managed_organizations"
 MAX_ORG_TRANSFER_LIMIT = 1000
 # Cognito caps ListUsersInGroup at 60 members per page.
 GROUP_MEMBERS_PAGE_SIZE = 60
@@ -201,9 +202,30 @@ def _add_user_to_manager_group(user_sub: str) -> None:
         )
 
 
+def _include_managed_organizations(event: Mapping[str, Any]) -> bool:
+    """True when the caller asked for each user's managed organizations."""
+    include = (_query_param(event, "include") or "").strip()
+    if not include:
+        return False
+    if include != MANAGED_ORGANIZATIONS_INCLUDE:
+        raise ValidationError("Invalid include", field="include")
+    return True
+
+
+def _managed_organizations_by_sub(
+    subs: list[str],
+) -> dict[str, list[dict[str, str]]]:
+    """Organizations each Cognito sub manages, ordered by name."""
+    if not subs:
+        return {}
+    with Session(get_engine()) as session:
+        return OrganizationRepository(session).list_managed_for_subs(subs)
+
+
 def _handle_list_cognito_users(event: Mapping[str, Any]) -> dict[str, Any]:
     """List Cognito users for manager selection."""
     limit = parse_limit(event, max_limit=MAX_COGNITO_LIST_LIMIT)
+    include_managed = _include_managed_organizations(event)
 
     pagination_token = _query_param(event, "pagination_token")
     user_pool_id = _require_env("COGNITO_USER_POOL_ID")
@@ -237,6 +259,11 @@ def _handle_list_cognito_users(event: Mapping[str, Any]) -> dict[str, Any]:
             username = user.get("Username")
             user_data["groups"] = list(memberships.get(username or "", []))
             users.append(user_data)
+
+    if include_managed:
+        managed = _managed_organizations_by_sub([user["sub"] for user in users])
+        for user in users:
+            user["managed_organizations"] = managed.get(user["sub"], [])
 
     result: dict[str, Any] = {"items": users}
     next_token = response.get("PaginationToken")

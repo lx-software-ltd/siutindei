@@ -4638,6 +4638,12 @@ export interface paths {
                      *     the value matches a short allow-list of characters.
                      */
                     q?: string;
+                    /**
+                     * @description `managed_organizations` attaches each user's managed
+                     *     organizations (id and name, ordered by name). Other
+                     *     callers omit this parameter.
+                     */
+                    include?: "managed_organizations";
                 };
                 header?: never;
                 path?: never;
@@ -8137,6 +8143,11 @@ export interface components {
             attributes: {
                 [key: string]: string;
             };
+            /**
+             * @description Present when `include=managed_organizations`. Organizations
+             *     whose manager is this user, ordered by name.
+             */
+            managed_organizations?: components["schemas"]["OrganizationLookup"][];
         };
         CognitoUserListResponse: {
             items: components["schemas"]["CognitoUser"][];

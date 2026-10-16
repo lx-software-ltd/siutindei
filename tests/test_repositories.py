@@ -142,6 +142,30 @@ class TestOrganizationRepository:
 
         assert repo.get_by_id(org_id) is None
 
+    def test_list_managed_for_subs_orders_names_per_manager(self, db_session) -> None:
+        """Managed organizations group by sub and sort by name."""
+        from app.db.repositories.organization import OrganizationRepository
+
+        repo = OrganizationRepository(db_session)
+        other_manager = '00000000-0000-0000-0000-000000000002'
+        repo.create_organization(name='Zebra Club', manager_id=TEST_MANAGER_ID)
+        repo.create_organization(name='Alpha Club', manager_id=TEST_MANAGER_ID)
+        repo.create_organization(name='Other Club', manager_id=other_manager)
+
+        found = repo.list_managed_for_subs([TEST_MANAGER_ID, TEST_MANAGER_ID])
+
+        names = [item['name'] for item in found[TEST_MANAGER_ID]]
+        assert names == ['Alpha Club', 'Zebra Club']
+        assert all(item['id'] for item in found[TEST_MANAGER_ID])
+        assert other_manager not in found
+
+    def test_list_managed_for_subs_empty(self, db_session) -> None:
+        """An empty sub list does not query."""
+        from app.db.repositories.organization import OrganizationRepository
+
+        repo = OrganizationRepository(db_session)
+        assert repo.list_managed_for_subs([]) == {}
+
 
 class TestLocationRepository:
     """Tests for LocationRepository class."""

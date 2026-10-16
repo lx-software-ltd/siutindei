@@ -30,7 +30,8 @@ function buildUserGroupsUrl(username: string) {
 export async function listCognitoUsers(
   paginationToken?: string,
   limit = 50,
-  query?: string
+  query?: string,
+  include?: 'managed_organizations'
 ): Promise<CognitoUsersResponse> {
   const url = new URL(buildCognitoUsersUrl());
   url.searchParams.set('limit', `${limit}`);
@@ -39,6 +40,9 @@ export async function listCognitoUsers(
   }
   if (query?.trim()) {
     url.searchParams.set('q', query.trim());
+  }
+  if (include) {
+    url.searchParams.set('include', include);
   }
   return request<CognitoUsersResponse>(url.toString());
 }
