@@ -601,6 +601,56 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByLabel('Name')).toHaveValue('Test Organization 1');
     await expect(adminPage.getByRole('button', { name: 'Update' })).toBeVisible();
   });
+
+  test('enriches one organization from its website', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    const enrich = adminPage.getByTestId('enrich-from-website');
+    const version = adminPage.getByRole('button', { name: 'Version 2 · Latest' });
+    await expect(enrich).toBeVisible();
+    await expect(version).toBeVisible();
+    const enrichBox = await enrich.boundingBox();
+    const versionBox = await version.boundingBox();
+    expect(enrichBox).toBeTruthy();
+    expect(versionBox).toBeTruthy();
+    expect(enrichBox!.x + enrichBox!.width).toBeLessThanOrEqual(versionBox!.x);
+    await expect(
+      adminPage.getByRole('heading', { name: 'Website enrichment' })
+    ).toHaveCount(0);
+    const started = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'POST' &&
+        request.url().includes('/organizations/org-1/enrichment') &&
+        !request.url().includes('/apply')
+    );
+    await enrich.click();
+    await started;
+    await expect(
+      adminPage.getByRole('heading', { name: 'Website enrichment' })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'description: Saturday classes for children.' })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByText(
+        'Copied from the provider website for this catalog. Copyright remains with the provider.'
+      )
+    ).toBeVisible();
+    await version.click();
+    await adminPage.getByRole('menuitem', { name: /Version 1/ }).click();
+    await expect(enrich).toHaveCount(0);
+    await expect(
+      adminPage.getByRole('heading', { name: 'Website enrichment' })
+    ).toHaveCount(0);
+  });
+
+  test('disables website enrichment until a website is saved', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-2');
+    const enrich = adminPage.getByTestId('enrich-from-website');
+    await expect(enrich).toBeDisabled();
+    await expect(enrich).toHaveAttribute('title', 'Add a website first');
+  });
 });
 
 test.describe('Organizations Panel - versions unavailable', () => {

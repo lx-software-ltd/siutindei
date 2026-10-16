@@ -23,4 +23,5 @@ export const adminQueryKeys = {
   dataQualityRuns: () => ['admin', 'data-quality-runs'] as const,
   dataQualityRun: (id: string) => ['admin', 'data-quality-runs', id] as const,
   catalogVersions: () => ['admin', 'catalog-versions'] as const,
+  orgEnrichment: (orgId: string) => ['admin', 'org-enrichment', orgId] as const,
 };
