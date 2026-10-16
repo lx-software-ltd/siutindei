@@ -496,6 +496,9 @@ decides whether phase 3 is worth doing.
 
 ## Open questions
 
+Accepted answers live in `docs/plans/org-website-enrichment.md`.
+The list below is the set that was open when this memo was written.
+
 1. Proxy `type: "crawl"` (Option A) or a dedicated crawler function
    (Option B), given the 500-resource cap.
 2. Same-site rule: host with or without `www.` only, or a registrable
