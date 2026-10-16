@@ -86,6 +86,41 @@ def language_list(codes: list[str] | tuple[str, ...]) -> str:
     return ", ".join(LANGUAGE_LABELS[code] for code in LANGUAGES if code in set(codes))
 
 
+_REVIEW_WARNINGS = {
+    ("name", "en"): ("missing_en_name", "English name is missing"),
+    ("name", "zh"): ("missing_zh_name", "Chinese name is missing"),
+    ("name", "zh-HK"): ("missing_zh_hk_name", "Hong Kong name is missing"),
+    ("description", "en"): (
+        "missing_en_description",
+        "English description is missing",
+    ),
+    ("description", "zh"): (
+        "missing_zh_description",
+        "Chinese description is missing",
+    ),
+    ("description", "zh-HK"): (
+        "missing_zh_hk_description",
+        "Hong Kong description is missing",
+    ),
+}
+
+
+def note_review_gaps(organization, org_id: str, add, note) -> None:
+    """Warn when a review snapshot is missing a required language."""
+    for field in ("name", "description"):
+        gap = field_gap(
+            getattr(organization, field),
+            getattr(organization, f"{field}_translations"),
+        )
+        missing = set(gap["missing"]) if gap else set()
+        for language in LANGUAGES:
+            note()
+            if language not in missing:
+                continue
+            code, message = _REVIEW_WARNINGS[(field, language)]
+            add(code, "warning", "organization", org_id, message)
+
+
 def text_label(values: dict[str, Any] | None, *, limit: int = 160) -> str:
     """One line of language-tagged text for a table cell."""
     raw = values if isinstance(values, dict) else {}

@@ -247,6 +247,26 @@ def test_review_status_bumps(versions) -> None:
         assert "review_status" in changed
 
 
+def test_review_reason_bumps(versions) -> None:
+    with Session(versions) as session:
+        org = _org(f"Trigger Reason {uuid4()}")
+        session.add(org)
+        session.commit()
+        org_id = org.id
+    with Session(versions) as session:
+        org = session.get(Organization, org_id)
+        assert org is not None
+        org.review_status = "rejected"
+        org.review_reason = "not_relevant"
+        session.commit()
+    with Session(versions) as session:
+        org = session.get(Organization, org_id)
+        assert org is not None
+        assert org.version == 2
+        changed = _rows(session, "organization", org_id)[-1].changed_fields or []
+        assert "review_reason" in changed
+
+
 def test_child_created_with_org_leaves_org_at_version_1(versions) -> None:
     with Session(versions) as session:
         org = _org(f"Trigger Child {uuid4()}")

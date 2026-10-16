@@ -7,8 +7,27 @@ from typing import Any, cast
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import ActivityLocation
+from app.db.models import Activity, ActivityLocation, Organization
 from app.db.models.category_scan import ActivityCategoryReview
+
+
+def added_since_rejected(
+    organization: Organization,
+    activities: list[Activity],
+) -> bool:
+    """True when a rejected organization gained an activity afterwards."""
+    reviewed_at = organization.reviewed_at
+    if (
+        organization.review_status != "rejected"
+        or not organization.review_reason
+        or reviewed_at is None
+    ):
+        return False
+    for activity in activities:
+        created_at = getattr(activity, "created_at", None)
+        if created_at is not None and created_at > reviewed_at:
+            return True
+    return False
 
 
 def linked_activity_ids(session: Session, activity_ids: list) -> set[str]:

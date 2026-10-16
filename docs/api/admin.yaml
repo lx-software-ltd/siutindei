@@ -640,6 +640,14 @@ paths:
           schema:
             type: string
             enum: [pending_review, approved, rejected]
+        - name: review_reason
+          in: query
+          description: |
+            Reject reason. `none` keeps rejected organizations that have
+            no reason. Other values match that reason.
+          schema:
+            type: string
+            enum: [not_relevant, duplicate, poor_data, other, none]
         - name: status
           in: query
           schema:
@@ -764,7 +772,8 @@ paths:
       summary: Approve, reject, or reopen one organization
       description: |
         Approve returns 400 with `issues` when blockers remain unless
-        `force` is true.
+        `force` is true. Reject requires `reason`. Approve and reopen
+        clear a stored reason and return 400 when `reason` is sent.
       requestBody:
         required: true
         content:
@@ -4094,6 +4103,13 @@ components:
           type: string
           description: |
             Included on export for visibility and ignored on import.
+        review_reason:
+          type: string
+          enum: [not_relevant, duplicate, poor_data, other]
+          description: |
+            Included on export for visibility and ignored on import.
+            A file value does not change the stored reason and does not
+            warn.
         area_name:
           type: string
           description: |
@@ -4836,6 +4852,13 @@ components:
         reviewed_by:
           type: string
           nullable: true
+        review_reason:
+          type: string
+          nullable: true
+          enum: [not_relevant, duplicate, poor_data, other]
+        review_notes:
+          type: string
+          nullable: true
         place_id:
           type: string
           nullable: true
@@ -4927,12 +4950,27 @@ components:
 
     OrgReviewSummary:
       type: object
-      required: [total, by_review_status, by_source, by_status_source, by_issue, with_blockers]
+      required:
+        - total
+        - by_review_status
+        - by_review_reason
+        - by_source
+        - by_status_source
+        - by_issue
+        - with_blockers
       properties:
         total:
           type: integer
         by_review_status:
           type: object
+          additionalProperties:
+            type: integer
+        by_review_reason:
+          type: object
+          description: |
+            Counts of rejected organizations by reason. `none` is a
+            rejected organization with no reason. Keys are always
+            present, including zeros.
           additionalProperties:
             type: integer
         by_source:
@@ -4962,6 +5000,13 @@ components:
         notes:
           type: string
           nullable: true
+        reason:
+          type: string
+          enum: [not_relevant, duplicate, poor_data, other]
+          description: |
+            Required when `action` is `reject`. Approve and reopen
+            return 400 when this is sent. Reject stores it and later
+            approve or reopen clears it.
         status:
           type: string
           enum: [operational, closed_temporarily, closed_permanently, hidden]
@@ -4984,6 +5029,13 @@ components:
         notes:
           type: string
           nullable: true
+        reason:
+          type: string
+          enum: [not_relevant, duplicate, poor_data, other]
+          description: |
+            Required when `action` is `reject`. Applied to every
+            selected organization. Other actions return 400 when this
+            is sent.
         status:
           type: string
         fields:
@@ -5360,6 +5412,12 @@ components:
         review_notes:
           type: string
           nullable: true
+        review_reason:
+          type: string
+          nullable: true
+          enum: [not_relevant, duplicate, poor_data, other]
+          description: |
+            Set only while `review_status` is `rejected`.
         import_job_id:
           type: string
           format: uuid

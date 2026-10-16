@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import base64
-import json
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any, Mapping
 from uuid import UUID
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.admin_imports_catalog import ORG_STATUSES
@@ -17,9 +14,15 @@ from app.api.admin_org_review_actions import (
     handle_bulk,
     handle_decision,
 )
+from app.api.admin_org_review_cursor import (
+    ReviewCursor,
+    apply_review_cursor,
+    apply_review_order,
+    encode_review_cursor,
+    parse_review_cursor,
+)
 from app.api.admin_org_review_import import import_job_clause
 from app.api.admin_request import (
-    _decode_cursor,
     _query_param,
     parse_limit,
 )
@@ -31,12 +34,13 @@ from app.db.models import GeographicArea, Location, Organization
 from app.db.queries import area_descendant_ids_subquery
 from app.exceptions import NotFoundError, ValidationError
 from app.services.org_review import (
+    REVIEW_REASONS,
     REVIEW_STATUSES,
     OrgReviewSnapshot,
     load_snapshots,
 )
 from app.services.org_review_sql import (
-    BLOCKER_ISSUE_CODES,
+    SQL_FILTERABLE_ISSUE_CODES,
     has_blocker_clause,
     issue_clause,
     summarize_catalog,
@@ -61,6 +65,7 @@ class ReviewListFilters:
     area_id: UUID | None = None
     include_locations: bool = False
     changed: str | None = None
+    review_reason: str | None = None
 
 
 def _handle_admin_org_review(
@@ -86,7 +91,7 @@ def _handle_admin_org_review(
 def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
     limit = parse_limit(event)
     filters = _parse_filters(event)
-    cursor = _parse_review_cursor(_query_param(event, "cursor"), filters.sort)
+    cursor = parse_review_cursor(_query_param(event, "cursor"), filters.sort)
     warning_scan = _needs_warning_scan(filters)
     with Session(get_engine()) as session:
         organizations = _load_filtered_organizations(
@@ -104,7 +109,7 @@ def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
         page = matched[:limit]
         has_more = len(matched) > limit
         next_cursor = (
-            _encode_review_cursor(page[-1].organization, filters.sort)
+            encode_review_cursor(page[-1].organization, filters.sort)
             if has_more and page
             else None
         )
@@ -143,7 +148,7 @@ def _handle_summary(event: Mapping[str, Any]) -> dict[str, Any]:
 
 def _needs_warning_scan(filters: ReviewListFilters) -> bool:
     """Warning codes are matched in Python after the SQL page filters."""
-    return bool(filters.issue) and filters.issue not in BLOCKER_ISSUE_CODES
+    return bool(filters.issue) and filters.issue not in SQL_FILTERABLE_ISSUE_CODES
 
 
 def _handle_detail(event: Mapping[str, Any], resource_id: str) -> dict[str, Any]:
@@ -166,7 +171,7 @@ def _require_active_area(session: Session, area_id: UUID) -> None:
 def _load_filtered_organizations(
     session: Session,
     filters: ReviewListFilters,
-    cursor: _ReviewCursor | None,
+    cursor: ReviewCursor | None,
     limit: int | None,
 ) -> list[Organization]:
     stmt = select(Organization)
@@ -181,6 +186,13 @@ def _load_filtered_organizations(
         )
     if filters.review_status:
         stmt = stmt.where(Organization.review_status == filters.review_status)
+    if filters.review_reason == "none":
+        stmt = stmt.where(
+            Organization.review_status == "rejected",
+            Organization.review_reason.is_(None),
+        )
+    elif filters.review_reason:
+        stmt = stmt.where(Organization.review_reason == filters.review_reason)
     if filters.source:
         stmt = stmt.where(Organization.source == filters.source)
     if filters.import_job_id is not None:
@@ -198,12 +210,12 @@ def _load_filtered_organizations(
         stmt = stmt.where(has_blocker_clause())
     elif filters.has_blockers is False:
         stmt = stmt.where(~has_blocker_clause())
-    if filters.issue in BLOCKER_ISSUE_CODES:
+    if filters.issue in SQL_FILTERABLE_ISSUE_CODES:
         clause = issue_clause(filters.issue)
         if clause is not None:
             stmt = stmt.where(clause)
-    stmt = _apply_review_cursor(stmt, filters.sort, cursor)
-    stmt = _apply_review_order(stmt, filters.sort)
+    stmt = apply_review_cursor(stmt, filters.sort, cursor)
+    stmt = apply_review_order(stmt, filters.sort)
     if limit is not None:
         stmt = stmt.limit(limit)
     return list(session.scalars(stmt).all())
@@ -226,6 +238,11 @@ def _parse_filters(event: Mapping[str, Any]) -> ReviewListFilters:
         _query_param(event, "review_status"),
         REVIEW_STATUSES,
         "review_status",
+    )
+    review_reason = _optional_choice(
+        _query_param(event, "review_reason"),
+        (*REVIEW_REASONS, "none"),
+        "review_reason",
     )
     status = _optional_choice(
         _query_param(event, "status"),
@@ -256,6 +273,7 @@ def _parse_filters(event: Mapping[str, Any]) -> ReviewListFilters:
             ("unchanged", "changed"),
             "changed",
         ),
+        review_reason=review_reason,
     )
 
 
@@ -329,6 +347,8 @@ def _serialize_queue_item(
         "name": org.name,
         "status": org.status,
         "review_status": org.review_status,
+        "review_reason": org.review_reason,
+        "review_notes": org.review_notes,
         "source": org.source,
         "status_source": org.status_source,
         "description_source": org.description_source,
@@ -408,85 +428,3 @@ def _blank_to_none(value: str | None) -> str | None:
 
 def _escape_like(pattern: str) -> str:
     return pattern.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-
-
-@dataclass(frozen=True)
-class _ReviewCursor:
-    org_id: UUID
-    name: str | None
-    last_imported_at: datetime | None
-
-
-def _encode_review_cursor(organization: Organization, sort: str) -> str:
-    imported_at = organization.last_imported_at
-    payload = json.dumps(
-        {
-            "sort": sort,
-            "id": str(organization.id),
-            "name": organization.name,
-            "last_imported_at": (
-                imported_at.isoformat() if imported_at is not None else None
-            ),
-        }
-    ).encode("utf-8")
-    return base64.urlsafe_b64encode(payload).decode("utf-8").rstrip("=")
-
-
-def _parse_review_cursor(value: str | None, sort: str) -> _ReviewCursor | None:
-    if value is None or value == "":
-        return None
-    try:
-        payload = _decode_cursor(value)
-        if payload.get("sort") != sort or "id" not in payload:
-            raise ValueError("sort")
-        imported_raw = payload.get("last_imported_at")
-        imported_at = datetime.fromisoformat(imported_raw) if imported_raw else None
-        return _ReviewCursor(
-            org_id=UUID(payload["id"]),
-            name=payload.get("name"),
-            last_imported_at=imported_at,
-        )
-    except (ValueError, KeyError, TypeError) as exc:
-        raise ValidationError("Invalid cursor", field="cursor") from exc
-
-
-def _apply_review_order(stmt: Any, sort: str) -> Any:
-    if sort == "last_imported_at":
-        return stmt.order_by(
-            Organization.last_imported_at.desc().nulls_last(),
-            Organization.id.desc(),
-        )
-    return stmt.order_by(Organization.name, Organization.id)
-
-
-def _apply_review_cursor(stmt: Any, sort: str, cursor: _ReviewCursor | None) -> Any:
-    if cursor is None:
-        return stmt
-    if sort == "name":
-        name = cursor.name or ""
-        return stmt.where(
-            or_(
-                Organization.name > name,
-                and_(
-                    Organization.name == name,
-                    Organization.id > cursor.org_id,
-                ),
-            )
-        )
-    if cursor.last_imported_at is None:
-        return stmt.where(
-            and_(
-                Organization.last_imported_at.is_(None),
-                Organization.id < cursor.org_id,
-            )
-        )
-    return stmt.where(
-        or_(
-            Organization.last_imported_at < cursor.last_imported_at,
-            and_(
-                Organization.last_imported_at == cursor.last_imported_at,
-                Organization.id < cursor.org_id,
-            ),
-            Organization.last_imported_at.is_(None),
-        )
-    )

@@ -26,13 +26,22 @@ from app.db.models import Organization
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.services.name_sanitizer import NameSanitizeConfig
 from app.services.org_review_children import (
+    added_since_rejected,
     counts_by_activity,
     linked_activity_ids,
     pending_category_check_ids,
 )
-from app.services.translation_gaps import LANGUAGES, field_gap
+from app.services.translation_gaps import note_review_gaps
 
 REVIEW_STATUSES = ("pending_review", "approved", "rejected")
+REVIEW_REASONS = ("not_relevant", "duplicate", "poor_data", "other")
+ACTIVITY_ADDED_SINCE_REJECTED = "activity_added_since_rejected"
+ACTIVITY_ADDED_SINCE_REJECTED_MESSAGE = (
+    "New activity added after this organization was rejected"
+)
+REJECTED_ACTIVITY_IMPORT_WARNING = (
+    "organization was rejected; new activity flagged for review"
+)
 MAX_REVIEW_NOTES_LENGTH = 2000
 BULK_ORG_LIMIT = 200
 
@@ -48,24 +57,6 @@ _CONTACT_FIELDS = (
     "xiaohongshu",
     "wechat",
 )
-
-_TRANSLATION_WARNINGS = {
-    ("name", "en"): ("missing_en_name", "English name is missing"),
-    ("name", "zh"): ("missing_zh_name", "Chinese name is missing"),
-    ("name", "zh-HK"): ("missing_zh_hk_name", "Hong Kong name is missing"),
-    ("description", "en"): (
-        "missing_en_description",
-        "English description is missing",
-    ),
-    ("description", "zh"): (
-        "missing_zh_description",
-        "Chinese description is missing",
-    ),
-    ("description", "zh-HK"): (
-        "missing_zh_hk_description",
-        "Hong Kong description is missing",
-    ),
-}
 
 
 @dataclass(frozen=True)
@@ -200,7 +191,7 @@ def collect_issues(
             "Description still contains a source line",
         )
     note()
-    _note_translation_gaps(organization, org_id, add, note)
+    note_review_gaps(organization, org_id, add, note)
     if not any(_text(getattr(organization, field)) for field in _CONTACT_FIELDS):
         add(
             "no_contact",
@@ -332,6 +323,15 @@ def collect_issues(
                 activity_id,
                 "Activity age range is still the import default (0-18)",
             )
+    note()
+    if added_since_rejected(organization, activities):
+        add(
+            ACTIVITY_ADDED_SINCE_REJECTED,
+            "warning",
+            "organization",
+            org_id,
+            ACTIVITY_ADDED_SINCE_REJECTED_MESSAGE,
+        )
     return issues, checks
 
 
@@ -423,6 +423,7 @@ def load_snapshots(
 def summarize_snapshots(snapshots: list[OrgReviewSnapshot]) -> dict[str, Any]:
     """Python summary used to check the SQL aggregate stays equivalent."""
     by_review = {status: 0 for status in REVIEW_STATUSES}
+    by_review_reason = {reason: 0 for reason in (*REVIEW_REASONS, "none")}
     by_source: dict[str, int] = {}
     by_status_source: dict[str, int] = {}
     by_issue: dict[str, int] = {}
@@ -430,6 +431,9 @@ def summarize_snapshots(snapshots: list[OrgReviewSnapshot]) -> dict[str, Any]:
     for snapshot in snapshots:
         org = snapshot.organization
         by_review[org.review_status] = by_review.get(org.review_status, 0) + 1
+        if org.review_status == "rejected":
+            reason_key = org.review_reason or "none"
+            by_review_reason[reason_key] = by_review_reason.get(reason_key, 0) + 1
         source_key = org.source or "unknown"
         by_source[source_key] = by_source.get(source_key, 0) + 1
         status_source_key = org.status_source or "unknown"
@@ -447,6 +451,7 @@ def summarize_snapshots(snapshots: list[OrgReviewSnapshot]) -> dict[str, Any]:
     return {
         "total": len(snapshots),
         "by_review_status": by_review,
+        "by_review_reason": by_review_reason,
         "by_source": by_source,
         "by_status_source": by_status_source,
         "by_issue": by_issue,
@@ -466,21 +471,6 @@ def snapshot_for_org(
 def _passed_checks(snapshot: OrgReviewSnapshot) -> int:
     """Checks that did not produce an issue, so completeness can reach 1."""
     return max(snapshot.check_count - len(snapshot.issues), 0)
-
-
-def _note_translation_gaps(organization, org_id, add, note) -> None:
-    for field in ("name", "description"):
-        gap = field_gap(
-            getattr(organization, field),
-            getattr(organization, f"{field}_translations"),
-        )
-        missing = set(gap["missing"]) if gap else set()
-        for language in LANGUAGES:
-            note()
-            if language not in missing:
-                continue
-            code, message = _TRANSLATION_WARNINGS[(field, language)]
-            add(code, "warning", "organization", org_id, message)
 
 
 def _text(value: Any) -> str:

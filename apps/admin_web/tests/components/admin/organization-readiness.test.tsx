@@ -108,4 +108,38 @@ describe('OrganizationReadiness', () => {
       )
     ).toBeVisible();
   });
+
+  it('requires a reason and hides the listing when rejecting', async () => {
+    const user = userEvent.setup();
+    render(<OrganizationReadiness orgId='org-1' />, { wrapper });
+    await user.click(await screen.findByRole('button', { name: 'Reject' }));
+
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    await user.selectOptions(screen.getByLabelText(/Reject reason/), 'not_relevant');
+    expect(screen.getByLabelText('Hide from public listing')).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() => {
+      expect(decideOrgReview).toHaveBeenCalledWith('org-1', {
+        action: 'reject',
+        reason: 'not_relevant',
+        notes: undefined,
+        status: 'hidden',
+      });
+    });
+    expect(await screen.findByText('Organization rejected.')).toBeVisible();
+  });
+
+  it('shows the stored reason on a rejected organization', async () => {
+    vi.mocked(getOrgReviewDetail).mockResolvedValue({
+      ...detail,
+      review_status: 'rejected',
+      review_reason: 'duplicate',
+      review_notes: 'Same studio as Harbour',
+    });
+    render(<OrganizationReadiness orgId='org-1' />, { wrapper });
+
+    expect(await screen.findByText('Duplicate')).toBeVisible();
+    expect(screen.getByText('Same studio as Harbour')).toBeVisible();
+  });
 });

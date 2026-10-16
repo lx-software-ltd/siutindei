@@ -391,6 +391,7 @@ def _serialize_organization(entity: Organization) -> dict[str, Any]:
         "reviewed_at": entity.reviewed_at,
         "reviewed_by": entity.reviewed_by,
         "review_notes": entity.review_notes,
+        "review_reason": entity.review_reason,
         "import_job_id": (str(entity.import_job_id) if entity.import_job_id else None),
         "last_imported_at": entity.last_imported_at,
         "created_at": entity.created_at,

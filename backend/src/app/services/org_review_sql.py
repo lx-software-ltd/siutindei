@@ -25,7 +25,11 @@ from app.db.models import (
 )
 from app.db.models.category_scan import ActivityCategoryReview
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
-from app.services.org_review import REVIEW_STATUSES
+from app.services.org_review import (
+    ACTIVITY_ADDED_SINCE_REJECTED,
+    REVIEW_REASONS,
+    REVIEW_STATUSES,
+)
 
 BLOCKER_ISSUE_CODES = (
     "missing_description",
@@ -36,6 +40,11 @@ BLOCKER_ISSUE_CODES = (
     "missing_schedule",
     "pending_category",
     "pending_name_fix",
+)
+
+SQL_FILTERABLE_ISSUE_CODES = (
+    *BLOCKER_ISSUE_CODES,
+    ACTIVITY_ADDED_SINCE_REJECTED,
 )
 
 _WS_EDGES = r"^[[:space:]]+|[[:space:]]+$"
@@ -64,6 +73,7 @@ def summarize_catalog(session: Session) -> dict[str, Any]:
         )
     ).all()
     by_review = {status: 0 for status in REVIEW_STATUSES}
+    by_review_reason = _reason_counts(session)
     by_source: dict[str, int] = {}
     by_status_source: dict[str, int] = {}
     total = 0
@@ -93,11 +103,29 @@ def summarize_catalog(session: Session) -> dict[str, Any]:
     return {
         "total": total,
         "by_review_status": by_review,
+        "by_review_reason": by_review_reason,
         "by_source": by_source,
         "by_status_source": by_status_source,
         "by_issue": by_issue,
         "with_blockers": int(issue_row.with_blockers or 0),
     }
+
+
+def _reason_counts(session: Session) -> dict[str, int]:
+    """Count rejected organizations by reason. Null is `none`."""
+    reason_key = case(
+        (Organization.review_reason.is_(None), literal("none")),
+        else_=Organization.review_reason,
+    )
+    grouped = session.execute(
+        select(reason_key, func.count())
+        .where(Organization.review_status == "rejected")
+        .group_by(reason_key)
+    ).all()
+    counts = {reason: 0 for reason in (*REVIEW_REASONS, "none")}
+    for reason, count in grouped:
+        counts[str(reason)] = counts.get(str(reason), 0) + int(count)
+    return counts
 
 
 def has_blocker_clause() -> ColumnElement[bool]:
@@ -187,6 +215,15 @@ def _issue_predicates() -> dict[str, ColumnElement[bool]]:
             Activity,
             (func.lower(Activity.age_range) == 0)
             & (func.upper(Activity.age_range) == 19),
+        ),
+        ACTIVITY_ADDED_SINCE_REJECTED: and_(
+            Organization.review_status == "rejected",
+            Organization.review_reason.is_not(None),
+            Organization.reviewed_at.is_not(None),
+            _child_exists(
+                Activity,
+                Activity.created_at > Organization.reviewed_at,
+            ),
         ),
     }
 

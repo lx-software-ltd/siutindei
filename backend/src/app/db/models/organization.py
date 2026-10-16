@@ -121,6 +121,11 @@ class Organization(Base):
         comment="Cognito sub of the admin who last set review_status",
     )
     review_notes: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    review_reason: Mapped[Optional[str]] = mapped_column(
+        Text(),
+        nullable=True,
+        comment="Why review_status is rejected",
+    )
     import_job_id: Mapped[Optional[str]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("import_jobs.id", ondelete="SET NULL"),
@@ -181,5 +186,14 @@ class Organization(Base):
         CheckConstraint(
             "review_status IN ('pending_review', 'approved', 'rejected')",
             name="organizations_review_status_check",
+        ),
+        CheckConstraint(
+            "review_reason IS NULL OR review_reason IN "
+            "('not_relevant', 'duplicate', 'poor_data', 'other')",
+            name="organizations_review_reason_check",
+        ),
+        CheckConstraint(
+            "review_reason IS NULL OR review_status = 'rejected'",
+            name="organizations_review_reason_rejected_check",
         ),
     )

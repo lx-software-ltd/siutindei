@@ -13,6 +13,8 @@ export interface OrgReviewListItem {
   name: string;
   status: string;
   review_status: 'pending_review' | 'approved' | 'rejected';
+  review_reason?: 'not_relevant' | 'duplicate' | 'poor_data' | 'other' | null;
+  review_notes?: string | null;
   source?: string | null;
   status_source?: string | null;
   description_source?: string | null;
@@ -52,6 +54,7 @@ export interface OrgReviewListResponse {
 export interface OrgReviewSummary {
   total: number;
   by_review_status: Record<string, number>;
+  by_review_reason: Record<string, number>;
   by_source: Record<string, number>;
   by_status_source: Record<string, number>;
   by_issue: Record<string, number>;
@@ -66,6 +69,7 @@ export interface OrgReviewDetail extends OrgReviewListItem {
 
 export interface OrgReviewFilters {
   review_status?: string;
+  review_reason?: string;
   status?: string;
   source?: string;
   import_job_id?: string;
@@ -144,6 +148,7 @@ export function decideOrgReview(
     action: 'approve' | 'reject' | 'reopen';
     force?: boolean;
     notes?: string;
+    reason?: string;
     status?: string;
   }
 ) {
@@ -162,6 +167,7 @@ export async function bulkOrgReview(body: {
   action: 'approve' | 'reject' | 'reopen' | 'set_fields';
   force?: boolean;
   notes?: string;
+  reason?: string;
   status?: string;
   fields?: Record<string, unknown>;
 }) {
