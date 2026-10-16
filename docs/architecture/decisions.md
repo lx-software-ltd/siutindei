@@ -202,9 +202,11 @@ Lambdas or NAT Gateway.
   auth, and business logic.
 
 **How:**
-- `AwsApiProxyFunction` runs outside the VPC and accepts two request types:
+- `AwsApiProxyFunction` runs outside the VPC and accepts three request types:
   - `type: "aws"` – executes a boto3 call (e.g. `cognito-idp:list_users`)
   - `type: "http"` – makes an outbound HTTP request to an external API
+  - `type: "crawl"` – fetches one provider website, or copies one image,
+    after SSRF, robots, and same-site checks
 - Requests are validated against environment-variable allow-lists:
   - `ALLOWED_ACTIONS` for AWS API calls (`service:action` pairs)
   - `ALLOWED_HTTP_URLS` for HTTP requests (URL prefixes)
@@ -213,6 +215,7 @@ Lambdas or NAT Gateway.
 - Client helpers in `backend/src/app/services/aws_proxy.py`:
   - `invoke(service, action, params)` for AWS calls
   - `http_invoke(method, url, headers, body, timeout)` for HTTP calls
+  - `crawl_invoke(payload)` for a website crawl or an image copy
 
 **Security:**
 - IAM role scoped to specific AWS actions on specific resources.

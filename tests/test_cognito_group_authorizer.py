@@ -76,6 +76,51 @@ def _arn(method: str, *path: str) -> str:
             ),
             True,
         ),
+        (
+            _arn(
+                "GET",
+                "v1",
+                "admin",
+                "organizations",
+                "00000000-0000-0000-0000-000000000001",
+                "enrichment",
+            ),
+            True,
+        ),
+        (
+            _arn(
+                "POST",
+                "v1",
+                "admin",
+                "organizations",
+                "00000000-0000-0000-0000-000000000001",
+                "enrichment",
+            ),
+            True,
+        ),
+        (
+            _arn(
+                "ANY",
+                "v1",
+                "admin",
+                "organizations",
+                "00000000-0000-0000-0000-000000000001",
+                "enrichment",
+            ),
+            True,
+        ),
+        (
+            _arn(
+                "POST",
+                "v1",
+                "admin",
+                "organizations",
+                "00000000-0000-0000-0000-000000000001",
+                "enrichment",
+                "apply",
+            ),
+            False,
+        ),
         (_arn("GET", "v1", "admin", "users"), False),
         ("arn:aws:execute-api:ap-southeast-1:123:api", False),
     ],
@@ -104,14 +149,18 @@ def test_importer_allowed_on_import_post(monkeypatch) -> None:
     statement = response["policyDocument"]["Statement"][0]
     assert statement["Effect"] == "Allow"
     assert _arn("POST", "v1", "admin", "imports") in statement["Resource"]
-    assert _arn("POST", "v1", "admin", "imports", "presign") in statement[
-        "Resource"
-    ]
+    assert _arn("POST", "v1", "admin", "imports", "presign") in statement["Resource"]
     assert _arn("GET", "v1", "admin", "imports", "*") in statement["Resource"]
     assert _arn("GET", "v1", "admin", "organizations") in statement["Resource"]
-    assert _arn("PATCH", "v1", "admin", "organizations", "*") in statement[
-        "Resource"
-    ]
+    assert _arn("PATCH", "v1", "admin", "organizations", "*") in statement["Resource"]
+    assert (
+        _arn("POST", "v1", "admin", "organizations", "*", "enrichment")
+        in statement["Resource"]
+    )
+    assert (
+        _arn("GET", "v1", "admin", "organizations", "*", "enrichment")
+        in statement["Resource"]
+    )
     assert not any(str(item).endswith("/prod/*") for item in statement["Resource"])
 
 

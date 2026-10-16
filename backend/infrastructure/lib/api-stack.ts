@@ -1475,6 +1475,9 @@ export class ApiStack extends cdk.Stack {
           "https://places.googleapis.com/v1/places/",
           openRouterChatCompletionsUrl.valueAsString,
         ].join(","),
+        ORGANIZATION_MEDIA_BUCKET: organizationImagesBucket.bucketName,
+        ORGANIZATION_MEDIA_BASE_URL:
+          `https://${organizationImagesBucket.bucketRegionalDomainName}`,
       },
     });
 
@@ -1495,6 +1498,15 @@ export class ApiStack extends cdk.Stack {
           "cognito-idp:AdminUpdateUserAttributes",
         ],
         resources: [userPool.userPoolArn],
+      })
+    );
+
+    awsProxyFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["s3:PutObject"],
+        resources: [
+          organizationImagesBucket.arnForObjects("organizations/*/enrichment/*"),
+        ],
       })
     );
 
@@ -2472,6 +2484,14 @@ export class ApiStack extends cdk.Stack {
           authorizer: adminAuthorizer,
         });
         media.addMethod("DELETE", adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.CUSTOM,
+          authorizer: adminAuthorizer,
+        });
+        // enrichment, enrichment/apply, and enrichment/dismiss.
+        // The literal media resource still wins. A greedy child stays
+        // under the CloudFormation 500-resource cap.
+        const orgProxy = resourceById.addResource("{proxy+}");
+        orgProxy.addMethod("ANY", adminIntegration, {
           authorizationType: apigateway.AuthorizationType.CUSTOM,
           authorizer: adminAuthorizer,
         });

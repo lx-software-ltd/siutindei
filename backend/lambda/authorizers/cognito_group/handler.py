@@ -60,6 +60,8 @@ def _importer_path_allowed(method_arn: str) -> bool:
             return True
     if method in {"PATCH", "ANY"} and len(path) == 4:
         return path[:3] == ("v1", "admin", "organizations")
+    if method in {"GET", "POST", "ANY"} and len(path) == 5:
+        return path[:3] == ("v1", "admin", "organizations") and path[4] == "enrichment"
     return False
 
 
@@ -75,6 +77,9 @@ def _importer_method_arns(method_arn: str) -> list[str]:
         f"{prefix}/GET/v1/admin/organizations/*",
         f"{prefix}/PATCH/v1/admin/organizations/*",
         f"{prefix}/ANY/v1/admin/organizations/*",
+        f"{prefix}/GET/v1/admin/organizations/*/enrichment",
+        f"{prefix}/POST/v1/admin/organizations/*/enrichment",
+        f"{prefix}/ANY/v1/admin/organizations/*/enrichment",
     ]
 
 
