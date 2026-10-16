@@ -390,6 +390,19 @@ test.describe('Organization review queue', () => {
       )
     ).toBeVisible();
     await adminPage.getByRole('button', { name: 'Reject' }).click();
+    await expect(adminPage.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    await adminPage.getByLabel('Reject reason').selectOption('not_relevant');
+    await expect(adminPage.getByLabel('Hide from public listing')).toBeChecked();
+    const decision = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'POST' && request.url().includes('/decision')
+    );
+    await adminPage.getByRole('button', { name: 'Confirm' }).click();
+    expect((await decision).postDataJSON()).toMatchObject({
+      action: 'reject',
+      reason: 'not_relevant',
+      status: 'hidden',
+    });
     await expect(adminPage.getByText('Organization rejected.')).toBeVisible();
     await adminPage.getByRole('button', { name: 'Reopen' }).click();
     await expect(adminPage.getByText('Organization reopened.')).toBeVisible();
@@ -406,5 +419,45 @@ test.describe('Organization review queue', () => {
       adminPage.getByText('Filtered to the organization from the review queue.')
     ).toBeVisible();
     await expect(adminPage.locator('#check-org-filter')).toHaveCount(0);
+  });
+
+  test('filters rejected organizations and records a bulk reason', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=imports&tab=review');
+    await expect(
+      adminPage.getByTestId('admin-kpi-card').filter({ hasText: 'Added since rejected' })
+    ).toBeVisible();
+    await adminPage.getByLabel('Review').selectOption('rejected');
+    await expect(adminPage.getByLabel('Reject reason')).toBeVisible();
+    await adminPage.getByLabel('Reject reason').selectOption('not_relevant');
+    await expect(adminPage.getByText('Zebra Yoga Studio')).toBeVisible();
+    await expect(adminPage.getByText('Test Organization 1')).toHaveCount(0);
+    await adminPage.getByLabel('Reject reason').selectOption('');
+    await adminPage.getByLabel('Missing detail').selectOption(
+      'activity_added_since_rejected'
+    );
+    await expect(adminPage.getByText('Zebra Yoga Studio')).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'Rejected · Not relevant', exact: true })
+    ).toBeVisible();
+
+    await adminPage.getByRole('checkbox', { name: 'Select row' }).check();
+    await adminPage.getByRole('button', { name: 'Reject' }).click();
+    const dialog = adminPage.getByRole('alertdialog');
+    await expect(dialog.getByRole('button', { name: 'Reject' })).toBeDisabled();
+    await dialog.getByLabel('Reject reason').selectOption('duplicate');
+    await expect(dialog.getByLabel('Hide from public listing')).toBeChecked();
+    const requestPromise = adminPage.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().includes('/bulk')
+    );
+    await dialog.getByRole('button', { name: 'Reject' }).click();
+    expect((await requestPromise).postDataJSON()).toMatchObject({
+      action: 'reject',
+      reason: 'duplicate',
+      status: 'hidden',
+      org_ids: ['org-yoga'],
+    });
+    await expect(adminPage.getByText(/Updated 1/)).toBeVisible();
   });
 });

@@ -55,6 +55,11 @@ import { AdminKpiCard } from '../../ui/admin-kpi-card';
 import { AdminTabStrip } from '../../ui/admin-tab-strip';
 import { Card } from '../../ui/card';
 import { BULK_FIELDS_FORM_ID, BulkFieldsDialog } from './bulk-fields-dialog';
+import {
+  REVIEW_REASON_OPTIONS,
+  RejectForm,
+  reviewReasonLabel,
+} from './reject-form';
 import { CatalogOrgMap } from './catalog-org-map';
 import { NeighbourhoodFilter } from './neighbourhood-filter';
 
@@ -122,6 +127,7 @@ const ISSUE_OPTIONS = [
   ['name_needs_cleanup', 'Name needs cleanup'],
   ['pending_name_fix', 'Name change waiting'],
   ['possible_duplicate', 'Possible duplicate'],
+  ['activity_added_since_rejected', 'Added since rejected'],
 ];
 
 function catalogReviewStatusLabel(status: string): string | undefined {
@@ -129,10 +135,20 @@ function catalogReviewStatusLabel(status: string): string | undefined {
   return option?.[0] ? option[1] : undefined;
 }
 
+function catalogReviewBadgeLabel(item: OrgReviewListItem): string | undefined {
+  const status = catalogReviewStatusLabel(item.review_status);
+  const reason = reviewReasonLabel(item.review_reason);
+  if (item.review_status === 'rejected' && status && reason) {
+    return `${status} · ${reason}`;
+  }
+  return status;
+}
+
 type BulkAction = 'approve' | 'reject' | 'reopen' | 'set_fields';
 
 interface ReviewQueueFilters {
   review_status: string;
+  review_reason: string;
   source: string;
   issue: string;
   has_blockers: string;
@@ -145,6 +161,7 @@ interface ReviewQueueFilters {
 
 const DEFAULT_REVIEW_FILTERS: ReviewQueueFilters = {
   review_status: '',
+  review_reason: '',
   source: '',
   issue: '',
   has_blockers: '',
@@ -167,6 +184,7 @@ function reviewChanged(
 function reviewListParams(filters: ReviewQueueFilters) {
   return {
     review_status: filters.review_status || undefined,
+    review_reason: filters.review_reason || undefined,
     source: filters.source || undefined,
     issue: filters.issue || undefined,
     has_blockers:
@@ -248,6 +266,10 @@ export function CatalogPanel() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [force, setForce] = useState(false);
   const [showFields, setShowFields] = useState(false);
+  const [showReject, setShowReject] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectNotes, setRejectNotes] = useState('');
+  const [hideListing, setHideListing] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [activeBulk, setActiveBulk] = useState<BulkAction | null>(null);
@@ -330,6 +352,7 @@ export function CatalogPanel() {
     setSelected(new Set());
   }, [
     filters.review_status,
+    filters.review_reason,
     filters.source,
     filters.issue,
     filters.has_blockers,
@@ -360,6 +383,7 @@ export function CatalogPanel() {
   }, [
     view,
     filters.review_status,
+    filters.review_reason,
     filters.source,
     filters.issue,
     filters.has_blockers,
@@ -370,9 +394,18 @@ export function CatalogPanel() {
     filters.sort,
   ]);
 
+  function openReject() {
+    setRejectReason('');
+    setRejectNotes('');
+    setHideListing(true);
+    setError('');
+    setShowReject(true);
+  }
+
   async function runBulk(
     action: BulkAction,
-    fields?: Record<string, string>
+    fields?: Record<string, string>,
+    decision?: { reason?: string; notes?: string; status?: string }
   ) {
     const orgIds = Array.from(selected);
     if (orgIds.length === 0) {
@@ -388,6 +421,9 @@ export function CatalogPanel() {
         action,
         force: action === 'approve' ? force : undefined,
         fields,
+        reason: decision?.reason,
+        notes: decision?.notes,
+        status: decision?.status,
       });
       const blocked = response.results.filter((item) => item.status === 'blocked');
       const failed = response.results.filter((item) => item.status === 'error');
@@ -396,6 +432,7 @@ export function CatalogPanel() {
         `Updated ${ok.length}. ${blocked.length} still missing details. ${failed.length} failed.`
       );
       setShowFields(false);
+      setShowReject(false);
       setSelected(new Set());
       setForce(false);
       await Promise.all([refetch(), refreshSummary()]);
@@ -424,9 +461,13 @@ export function CatalogPanel() {
                 id='review-status-filter'
                 aria-label='Review'
                 value={filters.review_status}
-                onChange={(event) =>
-                  setFilter('review_status', event.target.value)
-                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setFilter('review_status', value);
+                  if (value !== 'rejected') {
+                    setFilter('review_reason', '');
+                  }
+                }}
               >
                 {REVIEW_STATUS_OPTIONS.map(([value, label]) => (
                   <option key={value || 'any'} value={value}>
@@ -435,6 +476,26 @@ export function CatalogPanel() {
                 ))}
               </Select>
             </AdminFilterField>
+            {filters.review_status === 'rejected' ? (
+              <AdminFilterField>
+                <Select
+                  id='review-reason-filter'
+                  aria-label='Reject reason'
+                  value={filters.review_reason}
+                  onChange={(event) =>
+                    setFilter('review_reason', event.target.value)
+                  }
+                >
+                  <option value=''>Any reason</option>
+                  {REVIEW_REASON_OPTIONS.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                  <option value='none'>No reason</option>
+                </Select>
+              </AdminFilterField>
+            ) : null}
             <AdminFilterField>
               <Select
                 id='review-issue-filter'
@@ -546,7 +607,7 @@ export function CatalogPanel() {
   return (
     <div className='space-y-4'>
       <h2 className='sr-only'>{PAGE_NAME}</h2>
-      <div className='grid gap-3 sm:grid-cols-3'>
+      <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
         <AdminKpiCard label='Pending review' value={pendingCount} />
         <AdminKpiCard
           label='With missing details'
@@ -555,6 +616,10 @@ export function CatalogPanel() {
         <AdminKpiCard
           label='Approved'
           value={summary?.by_review_status.approved ?? 0}
+        />
+        <AdminKpiCard
+          label='Added since rejected'
+          value={summary?.by_issue.activity_added_since_rejected ?? 0}
         />
       </div>
       <AdminTabStrip
@@ -643,7 +708,7 @@ export function CatalogPanel() {
             <Button
               type='button'
               variant='secondary'
-              onClick={() => void runBulk('reject')}
+              onClick={openReject}
               disabled={isSaving || selected.size === 0}
               loading={activeBulk === 'reject'}
               loadingLabel='Saving…'
@@ -757,7 +822,7 @@ export function CatalogPanel() {
               <AdminDataTableCellMeta until='secondary'>
                 <StatusBadge
                   status={item.review_status}
-                  label={catalogReviewStatusLabel(item.review_status)}
+                  label={catalogReviewBadgeLabel(item)}
                 />
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta
@@ -780,7 +845,7 @@ export function CatalogPanel() {
             <AdminDataTableCell priority='secondary'>
               <StatusBadge
                 status={item.review_status}
-                label={catalogReviewStatusLabel(item.review_status)}
+                label={catalogReviewBadgeLabel(item)}
               />
             </AdminDataTableCell>
             <AdminDataTableCell priority='tertiary'>
@@ -796,6 +861,34 @@ export function CatalogPanel() {
         )}
       />
       ) : null}
+      <ConfirmDialog
+        open={showReject}
+        title='Reject organizations'
+        message='A reason is required. Hide keeps the listing off public search while the review gate is off.'
+        confirmLabel='Reject'
+        cancelLabel='Cancel'
+        confirmDisabled={!rejectReason || isSaving}
+        confirmLoading={activeBulk === 'reject'}
+        confirmLoadingLabel='Saving…'
+        onConfirm={() =>
+          void runBulk('reject', undefined, {
+            reason: rejectReason,
+            notes: rejectNotes.trim() || undefined,
+            status: hideListing ? 'hidden' : undefined,
+          })
+        }
+        onCancel={() => setShowReject(false)}
+      >
+        <RejectForm
+          reason={rejectReason}
+          notes={rejectNotes}
+          hideListing={hideListing}
+          disabled={isSaving}
+          onReason={setRejectReason}
+          onNotes={setRejectNotes}
+          onHideListing={setHideListing}
+        />
+      </ConfirmDialog>
       <ConfirmDialog
         open={showFields}
         title='Apply properties'

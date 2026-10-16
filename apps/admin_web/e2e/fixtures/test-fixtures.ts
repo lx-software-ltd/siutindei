@@ -1902,10 +1902,17 @@ export async function setupApiMocks(
         contentType: 'application/json',
         body: JSON.stringify({
           total: 1,
-          by_review_status: { pending_review: 1, approved: 0, rejected: 0 },
+          by_review_status: { pending_review: 1, approved: 0, rejected: 1 },
+          by_review_reason: {
+            not_relevant: 1,
+            duplicate: 0,
+            poor_data: 0,
+            other: 0,
+            none: 0,
+          },
           by_source: { lcsd: 1 },
           by_status_source: { importer: 1 },
-          by_issue: { no_locations: 1 },
+          by_issue: { no_locations: 1, activity_added_since_rejected: 1 },
           with_blockers: 1,
         }),
       });
@@ -2059,6 +2066,36 @@ export async function setupApiMocks(
             area_id: null,
             map_locations: [],
           },
+          {
+            id: 'org-yoga',
+            name: 'Zebra Yoga Studio',
+            status: 'operational',
+            review_status: 'rejected',
+            review_reason: 'not_relevant',
+            review_notes: 'Adults only',
+            source: 'places',
+            import_job_id: null,
+            touched_by: [] as string[],
+            location_count: 1,
+            activity_count: 1,
+            pricing_count: 0,
+            schedule_count: 0,
+            issues: [
+              {
+                code: 'activity_added_since_rejected',
+                severity: 'warning',
+                entity_type: 'organization',
+                entity_id: 'org-yoga',
+                message: 'New activity added after this organization was rejected',
+              },
+            ],
+            completeness: 0.5,
+            blocker_count: 0,
+            warning_count: 1,
+            version: 3,
+            area_id: null,
+            map_locations: [],
+          },
         ]
           .filter((item) => {
             const params = new URL(url).searchParams;
@@ -2066,6 +2103,9 @@ export async function setupApiMocks(
             const areaId = params.get('area_id') ?? '';
             const jobId = params.get('import_job_id') ?? '';
             const source = params.get('source') ?? '';
+            const reviewStatus = params.get('review_status') ?? '';
+            const reviewReason = params.get('review_reason') ?? '';
+            const issue = params.get('issue') ?? '';
             const touched = 'touched_by' in item ? item.touched_by : undefined;
             const nameMatches =
               query.length === 0 || item.name.toLowerCase().includes(query);
@@ -2075,7 +2115,27 @@ export async function setupApiMocks(
               item.import_job_id === jobId ||
               (Array.isArray(touched) && touched.includes(jobId));
             const sourceMatches = source.length === 0 || item.source === source;
-            return nameMatches && areaMatches && jobMatches && sourceMatches;
+            const reviewMatches =
+              reviewStatus.length === 0 || item.review_status === reviewStatus;
+            const itemReason =
+              'review_reason' in item ? item.review_reason : undefined;
+            const reasonMatches =
+              reviewReason.length === 0 ||
+              (reviewReason === 'none'
+                ? itemReason == null
+                : itemReason === reviewReason);
+            const issueMatches =
+              issue.length === 0 ||
+              item.issues.some((entry) => entry.code === issue);
+            return (
+              nameMatches &&
+              areaMatches &&
+              jobMatches &&
+              sourceMatches &&
+              reviewMatches &&
+              reasonMatches &&
+              issueMatches
+            );
           })
           .map((item) => {
             const include = new URL(url).searchParams.get('include') ?? '';

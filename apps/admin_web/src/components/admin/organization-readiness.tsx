@@ -16,6 +16,7 @@ import { AdminField, AdminFieldGrid } from '../ui/admin-field-grid';
 import { AdminInputCard } from '../ui/admin-input-card';
 import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
 import { Button } from '../ui/button';
+import { RejectForm, reviewReasonLabel } from './org-review/reject-form';
 import { RemovedCatalogRecords } from './version-history';
 
 function sectionForIssue(entityType: string) {
@@ -39,6 +40,10 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [force, setForce] = useState(false);
+  const [showReject, setShowReject] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectNotes, setRejectNotes] = useState('');
+  const [hideListing, setHideListing] = useState(true);
   const [activeAction, setActiveAction] = useState<string | null>(null);
 
   useEffect(() => {
@@ -86,6 +91,13 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
       void setOrganization(orgId);
       return;
     }
+    if (entry.code === 'activity_added_since_rejected') {
+      void setOrg(orgId);
+      void setSection('activities');
+      void setLocation(null);
+      void setActivity(null);
+      return;
+    }
     if (entry.code === 'pending_category' || entry.code === 'category_check_pending') {
       void setSection('data-quality');
       void setTab('checks');
@@ -109,7 +121,15 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
     void setActivity(null);
   }
 
-  async function decide(action: 'approve' | 'reject' | 'reopen') {
+  function openReject() {
+    setShowReject(true);
+    setRejectReason('');
+    setRejectNotes('');
+    setHideListing(true);
+    setError('');
+  }
+
+  async function decide(action: 'approve' | 'reopen') {
     setActiveAction(action);
     setError('');
     setNotice('');
@@ -119,11 +139,33 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
         force: action === 'approve' ? force : undefined,
       });
       refreshCatalogHistory();
+      setShowReject(false);
       setNotice(
         action === 'approve'
           ? 'Organization approved. Public search can stay cached for up to 5 minutes.'
-          : `Organization ${action === 'reopen' ? 'reopened' : 'rejected'}.`
+          : 'Organization reopened.'
       );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not update review.');
+    } finally {
+      setActiveAction(null);
+    }
+  }
+
+  async function confirmReject() {
+    setActiveAction('reject');
+    setError('');
+    setNotice('');
+    try {
+      await decideOrgReview(orgId, {
+        action: 'reject',
+        reason: rejectReason,
+        notes: rejectNotes.trim() || undefined,
+        status: hideListing ? 'hidden' : undefined,
+      });
+      refreshCatalogHistory();
+      setShowReject(false);
+      setNotice('Organization rejected.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not update review.');
     } finally {
@@ -158,10 +200,8 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
           <Button
             type='button'
             variant='secondary'
-            onClick={() => void decide('reject')}
+            onClick={openReject}
             disabled={activeAction !== null}
-            loading={activeAction === 'reject'}
-            loadingLabel='Saving…'
           >
             Reject
           </Button>
@@ -179,6 +219,51 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
       }
     >
       <AdminFieldGrid columns={1}>
+          {showReject ? (
+            <div className='col-span-full space-y-4'>
+              <RejectForm
+                reason={rejectReason}
+                notes={rejectNotes}
+                hideListing={hideListing}
+                disabled={activeAction !== null}
+                onReason={setRejectReason}
+                onNotes={setRejectNotes}
+                onHideListing={setHideListing}
+              />
+              <div className='flex flex-wrap gap-3'>
+                <Button
+                  type='button'
+                  variant='secondary'
+                  onClick={() => void confirmReject()}
+                  disabled={activeAction !== null || rejectReason === ''}
+                  loading={activeAction === 'reject'}
+                  loadingLabel='Saving…'
+                >
+                  Confirm
+                </Button>
+                <Button
+                  type='button'
+                  variant='secondary'
+                  onClick={() => setShowReject(false)}
+                  disabled={activeAction !== null}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          {detail?.review_status === 'rejected' && !showReject ? (
+            <>
+              <AdminReadOnlyValue label='Reject reason'>
+                {reviewReasonLabel(detail.review_reason) ?? 'No reason'}
+              </AdminReadOnlyValue>
+              {detail.review_notes ? (
+                <AdminReadOnlyValue label='Review notes'>
+                  {detail.review_notes}
+                </AdminReadOnlyValue>
+              ) : null}
+            </>
+          ) : null}
           {!detail ? (
             <p className='text-sm text-slate-600'>Loading readiness…</p>
           ) : detail.issues.length === 0 ? (
