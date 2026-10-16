@@ -7,7 +7,11 @@ import re
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse
 
-from app.services.enrichment.constants import MAX_PAGE_TEXT, PAGE_KEYWORDS
+from app.services.enrichment.constants import (
+    MAX_JSONLD_BLOCKS,
+    MAX_PAGE_TEXT,
+    PAGE_KEYWORDS,
+)
 from app.services.enrichment.guard import is_social_host, social_field
 
 _WS_RE = re.compile(r"\s+")
@@ -65,7 +69,7 @@ class _PageParser(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         if tag == "script" and self._in_jsonld:
             raw = "".join(self._jsonld_parts).strip()
-            if raw:
+            if raw and len(self.jsonld_raw) < MAX_JSONLD_BLOCKS:
                 self.jsonld_raw.append(raw[:20_000])
             self._in_jsonld = False
             return

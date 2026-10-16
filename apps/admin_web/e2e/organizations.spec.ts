@@ -627,9 +627,13 @@ test.describe('Organizations Panel', () => {
     await expect(
       adminPage.getByRole('heading', { name: 'Website enrichment' })
     ).toBeVisible();
+    const proposal = adminPage.locator('td').filter({
+      hasText: 'description: Saturday classes for children.',
+    }).filter({ hasText: 'Now: Empty' });
     await expect(
-      adminPage.getByRole('cell', { name: 'description: Saturday classes for children.' })
+      proposal.getByText('description: Saturday classes for children.')
     ).toBeVisible();
+    await expect(proposal.getByText('Now: Empty')).toBeVisible();
     await expect(
       adminPage.getByText(
         'Copied from the provider website for this catalog. Copyright remains with the provider.'
@@ -650,6 +654,107 @@ test.describe('Organizations Panel', () => {
     const enrich = adminPage.getByTestId('enrich-from-website');
     await expect(enrich).toBeDisabled();
     await expect(enrich).toHaveAttribute('title', 'Add a website first');
+    await adminPage.getByLabel('Website').fill('https://typed.example');
+    await expect(enrich).toBeDisabled();
+    await expect(enrich).toHaveAttribute('title', 'Save the website first');
+  });
+
+  test('applies enrichment with the fields the website left out', async ({
+    adminPage,
+  }) => {
+    const org = mockOrganizations.find((item) => item.id === 'org-1');
+    await adminPage.route(
+      '**/api/mock/**/admin/organizations/org-1',
+      async (route) => {
+        if (route.request().method() !== 'GET') {
+          await route.fallback();
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ...org,
+            description: 'Saturday classes for children.',
+          }),
+        });
+      }
+    );
+    await adminPage.route(
+      '**/api/mock/**/admin/enrichment-settings',
+      async (route) => {
+        const saved = {
+          monthly_cost_limit_usd: 25,
+          max_pages: route.request().method() === 'PUT' ? 4 : 6,
+          max_page_bytes: 1000000,
+          copy_media: true,
+          min_confidence_shown: 0.5,
+        };
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(saved),
+        });
+      }
+    );
+    let applyBody: { ids?: string[]; overrides?: Record<string, unknown> } = {};
+    await adminPage.route(
+      '**/api/mock/**/admin/organizations/*/enrichment/apply',
+      async (route) => {
+        applyBody = route.request().postDataJSON();
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            results: (applyBody.ids ?? []).map((id) => ({
+              id,
+              status: 'applied',
+            })),
+          }),
+        });
+      }
+    );
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    await adminPage.getByTestId('enrich-from-website').click();
+    await adminPage.getByTestId('enrichment-settings').click();
+    await expect(adminPage.getByLabel('Pages per site')).toHaveValue('6');
+    await adminPage.getByLabel('Pages per site').fill('4');
+    await adminPage.getByRole('button', { name: 'Save limits' }).click();
+    await expect(adminPage.getByText('Crawl limits saved.')).toBeVisible();
+    await adminPage.getByLabel('Description', { exact: true }).fill('Unsaved edit');
+    await expect(adminPage.getByRole('button', { name: 'Apply selected' })).toBeDisabled();
+    await expect(
+      adminPage.getByText('Save or discard the Details edits before applying')
+    ).toBeVisible();
+    await adminPage.reload();
+    await expect(
+      adminPage.getByRole('heading', { name: 'Website enrichment' })
+    ).toBeVisible();
+    await adminPage.getByRole('checkbox', { name: 'Select Description' }).check();
+    await adminPage.getByRole('checkbox', { name: 'Select Activity · Painting' }).check();
+    await adminPage.getByRole('checkbox', { name: 'Select Location · 1 Test Street' }).check();
+    await adminPage.getByLabel('Minimum age').fill('5');
+    await adminPage.getByLabel('Maximum age').fill('8');
+    await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
+    await adminPage.getByLabel('Region').selectOption({ label: 'Hong Kong Island' });
+    await adminPage.getByLabel('District').selectOption({ label: 'Wan Chai' });
+    await adminPage.getByLabel('Neighbourhood').selectOption({ label: 'Causeway Bay' });
+    await adminPage.getByRole('button', { name: 'Apply selected' }).click();
+    await expect(adminPage.getByText('Selected changes were applied.')).toBeVisible();
+    await expect(adminPage.getByLabel('Description', { exact: true })).toHaveValue(
+      'Saturday classes for children.'
+    );
+    expect(applyBody.ids).toEqual(
+      expect.arrayContaining(['prop-1', 'prop-activity', 'prop-location'])
+    );
+    expect(applyBody.overrides?.['prop-activity']).toMatchObject({
+      category_id: 'cat-sport',
+      age_min: 5,
+      age_max: 8,
+    });
+    expect(applyBody.overrides?.['prop-location']).toMatchObject({
+      area_id: 'area-hk-causeway',
+    });
   });
 });
 

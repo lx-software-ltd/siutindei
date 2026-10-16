@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -20,6 +20,7 @@ from app.db.models.org_enrichment import (
     OrgEnrichmentSettings,
 )
 from app.exceptions import AppError, NotFoundError, ValidationError
+from app.services.enrichment.constants import STALE_RUN_MINUTES
 
 _DEFAULT_LIMIT = Decimal("25")
 
@@ -91,6 +92,7 @@ def start_run(
         seed = validate_seed_url(website)
     except CrawlError as exc:
         raise ValidationError(str(exc), field="website") from exc
+    expire_stale_runs(session, org_id)
     active = session.scalar(
         select(OrgEnrichmentRun.id).where(
             OrgEnrichmentRun.org_id == org_id,
@@ -111,6 +113,34 @@ def start_run(
     session.add(run)
     session.flush()
     return run
+
+
+def expire_stale_runs(session: Session, org_id: UUID) -> bool:
+    """Fail active runs that outlived the queue retries. Returns True if any changed."""
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=STALE_RUN_MINUTES)
+    rows = session.scalars(
+        select(OrgEnrichmentRun).where(
+            OrgEnrichmentRun.org_id == org_id,
+            OrgEnrichmentRun.status.in_(ACTIVE_RUN_STATUSES),
+        )
+    ).all()
+    changed = False
+    now = datetime.now(timezone.utc)
+    for row in rows:
+        created = row.created_at
+        if created is None:
+            continue
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        if created >= cutoff:
+            continue
+        row.status = "failed"
+        row.error = "Enrichment timed out"
+        row.finished_at = now
+        changed = True
+    if changed:
+        session.flush()
+    return changed
 
 
 def latest_run(
@@ -147,7 +177,7 @@ def save_proposals(
     kept = 0
     for item in items:
         confidence = Decimal(str(item.get("confidence") or 0))
-        if confidence < min_confidence and not item.get("unverified"):
+        if confidence < min_confidence:
             continue
         proposed = item.get("proposed") or {}
         current = item.get("current")

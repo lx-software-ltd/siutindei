@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import time
 from datetime import datetime, timezone
 from typing import Any, Mapping
 from urllib.parse import urljoin
@@ -63,6 +64,8 @@ def copy_image(event: Mapping[str, Any]) -> dict[str, Any]:
     if not _uuidish(org_id):
         raise CrawlError("org_id is not valid")
     result = _follow_image(url)
+    if result.truncated:
+        raise CrawlError("image is too large")
     ctype = result.content_type.split(";", 1)[0].strip().lower()
     ext = _IMAGE_TYPES.get(ctype)
     if ext is None:
@@ -98,9 +101,15 @@ def copy_image(event: Mapping[str, Any]) -> dict[str, Any]:
 
 def _follow_image(url: str) -> FetchResult:
     current = url
+    deadline = time.monotonic() + 15
     for _ in range(4):
         check_fetch_url(current)
-        result = fetch_public(current, MAX_IMAGE_BYTES, timeout=10)
+        try:
+            result = fetch_public(
+                current, MAX_IMAGE_BYTES, timeout=10, deadline=deadline
+            )
+        except TimeoutError as exc:
+            raise CrawlError("image download timed out") from exc
         if result.status in {301, 302, 303, 307, 308} and result.location:
             current = urljoin(result.url or current, result.location)
             continue

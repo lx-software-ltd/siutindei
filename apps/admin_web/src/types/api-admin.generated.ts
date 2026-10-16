@@ -470,10 +470,13 @@ export interface paths {
         put?: never;
         /**
          * Apply selected enrichment proposals
-         * @description Admin only. Body is `{ids, overrides}`. `overrides` is keyed
-         *     by proposal id and may set `area_id`, `category_id`,
-         *     `age_min`, `age_max`, or `location_id`. Each id returns its
-         *     own result. Nothing is applied automatically.
+         * @description Admin only. Body is `{ids, overrides}`. Proposals are applied
+         *     in dependency order: organization, media, locations, activities,
+         *     pricing, then schedules. Each proposal is saved on its own, so
+         *     one failure does not undo the others. `overrides` is keyed by
+         *     proposal id and may set `area_id`, `category_id`, `age_min`,
+         *     `age_max`, or `location_id`. Each id returns its own result.
+         *     Nothing is applied automatically.
          */
         post: {
             parameters: {

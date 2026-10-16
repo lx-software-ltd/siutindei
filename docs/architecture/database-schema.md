@@ -408,8 +408,9 @@ Columns:
 - `updated_at` (timestamptz)
 
 Seed assessment: migration `0055_org_enrichment` inserts the settings
-row. `org_enrichment_runs` and `org_enrichment_proposals` stay empty.
-No `seed_data.sql` change.
+row and grants `siutindei_admin` select, insert, update, and delete on
+these three tables. `org_enrichment_runs` and `org_enrichment_proposals`
+stay empty. No `seed_data.sql` change.
 
 ## Table: geographic_areas
 

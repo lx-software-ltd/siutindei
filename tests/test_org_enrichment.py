@@ -3,28 +3,37 @@
 from __future__ import annotations
 
 import socket
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from urllib.parse import urlparse
+from uuid import uuid4
 
 import pytest
-from app.db.models import Organization
+from app.db.models import Activity, ActivityPricing, ActivitySchedule, Organization
+from app.db.models.audit_log import AuditLog
 from app.db.models.org_enrichment import OrgEnrichmentProposal, OrgEnrichmentRun
 from app.exceptions import AppError
 from app.services.aws_proxy import proxy_handler
-from app.services.enrichment.apply import apply_proposals
+from app.services.enrichment.apply import _link_run, apply_proposals
 from app.services.enrichment.extract import (
     proposals_from_pages,
     validate_model_sheet,
 )
-from app.services.enrichment.fetch import FetchResult, _follow, crawl_site
+from app.services.enrichment.fetch import FetchResult, _follow, crawl_site, fetch_public
 from app.services.enrichment.guard import (
     CrawlError,
     host_is_blocked,
     same_site,
 )
+from app.services.enrichment.match import prepare_proposals
 from app.services.enrichment.parse import parse_html
-from app.services.enrichment.run import process_enrichment
-from app.services.enrichment.store import start_run
+from app.services.enrichment.proxy_crawl import copy_image
+from app.services.enrichment.run import (
+    EnrichmentStep,
+    commit_and_queue,
+    process_enrichment,
+)
+from app.services.enrichment.store import save_proposals, start_run
 
 
 def _infos(ip: str):
@@ -355,7 +364,7 @@ def test_processed_message_is_not_crawled_twice(db_session, monkeypatch) -> None
             "error": "",
         }
 
-    assert process_enrichment(
+    step = process_enrichment(
         db_session,
         run.id,
         "m1",
@@ -363,8 +372,10 @@ def test_processed_message_is_not_crawled_twice(db_session, monkeypatch) -> None
         stage="crawl",
         crawl=crawl,
     )
-    assert sent == [(str(run.id), "extract")]
-    assert process_enrichment(
+    assert step.acked is True
+    assert step.enqueue_stage == "extract"
+    assert sent == []
+    again = process_enrichment(
         db_session,
         run.id,
         "m1",
@@ -372,4 +383,463 @@ def test_processed_message_is_not_crawled_twice(db_session, monkeypatch) -> None
         stage="crawl",
         crawl=crawl,
     )
-    assert sent == [(str(run.id), "extract")]
+    assert again.enqueue_stage is None
+    assert sent == []
+
+
+def test_extract_is_queued_only_after_commit(monkeypatch) -> None:
+    order: list[str] = []
+
+    class _Session:
+        def commit(self) -> None:
+            order.append("commit")
+
+        def rollback(self) -> None:
+            order.append("rollback")
+
+    monkeypatch.setattr(
+        "app.services.enrichment.run.enqueue_enrichment",
+        lambda run_id, *, stage: order.append(f"enqueue:{stage}"),
+    )
+    commit_and_queue(
+        _Session(),  # type: ignore[arg-type]
+        EnrichmentStep(acked=True, run_id=uuid4(), enqueue_stage="extract"),
+    )
+    assert order == ["commit", "enqueue:extract"]
+
+
+def test_other_subdomain_robots_are_checked(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.enrichment.fetch.check_fetch_url",
+        lambda url, resolve=None: None,
+    )
+    fetched: list[str] = []
+
+    def fetch_one(url: str, max_bytes: int) -> FetchResult:
+        del max_bytes
+        fetched.append(url)
+        if url.endswith("/robots.txt"):
+            if "shop.ok.test" in url:
+                return FetchResult(
+                    200,
+                    url,
+                    "text/plain",
+                    b"User-agent: *\nDisallow: /\n",
+                    "",
+                )
+            return FetchResult(404, url, "text/plain", b"", "")
+        if "shop.ok.test" in url:
+            raise AssertionError(url)
+        body = (
+            "<html><body>"
+            + ("Class " * 80)
+            + "<a href='https://shop.ok.test/class'>class</a>"
+            + "</body></html>"
+        ).encode()
+        return FetchResult(200, url, "text/html", body, "")
+
+    crawled = crawl_site(
+        "https://ok.test/",
+        fetch_one=fetch_one,
+        sleep=lambda _seconds: None,
+        now=lambda: 0,
+    )
+    assert crawled["pages_fetched"] == 1
+    assert any("shop.ok.test/robots.txt" in url for url in fetched)
+
+
+def test_jsonld_blocks_are_capped() -> None:
+    blocks = "".join(
+        f'<script type="application/ld+json">{{"name":"Item {index}"}}</script>'
+        for index in range(25)
+    )
+    page = parse_html("https://ok.test/", f"<html><head>{blocks}</head></html>")
+    assert len(page["jsonld_raw"]) == 20
+
+
+def test_fetch_connects_to_the_checked_address(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.enrichment.fetch.public_address",
+        lambda host, resolve=None: "1.1.1.1",
+    )
+    captured: dict[str, str] = {}
+
+    class _Response:
+        def __init__(self) -> None:
+            self.status = 200
+            self.headers = {"Content-Type": "text/html"}
+            self.url = "https://1.1.1.1/"
+            self._sent = False
+
+        def read(self, amount: int) -> bytes:
+            del amount
+            if self._sent:
+                return b""
+            self._sent = True
+            return b"hello"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args) -> bool:
+            del args
+            return False
+
+    class _Opener:
+        def open(self, request, timeout=None):
+            del timeout
+            captured["url"] = request.full_url
+            captured["host"] = dict(request.header_items()).get("Host")
+            return _Response()
+
+    monkeypatch.setattr(
+        "urllib.request.build_opener",
+        lambda *handlers: _Opener(),
+    )
+    result = fetch_public("https://ok.test/page", 100)
+    assert result.body == b"hello"
+    assert result.truncated is False
+    assert "1.1.1.1" in captured["url"]
+    assert captured["host"] == "ok.test"
+
+
+def test_truncated_image_is_refused(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.enrichment.proxy_crawl.check_fetch_url",
+        lambda url, resolve=None: None,
+    )
+    monkeypatch.setattr(
+        "app.services.enrichment.proxy_crawl.fetch_public",
+        lambda url, max_bytes, timeout=10, deadline=None: FetchResult(
+            200,
+            url,
+            "image/jpeg",
+            b"x" * 8,
+            "",
+            truncated=True,
+        ),
+    )
+    with pytest.raises(CrawlError, match="too large"):
+        copy_image(
+            {
+                "url": "https://ok.test/a.jpg",
+                "org_id": "11111111-1111-1111-1111-111111111111",
+            }
+        )
+
+
+def _proposal(run, **fields) -> OrgEnrichmentProposal:
+    row = OrgEnrichmentProposal(
+        run_id=run.id,
+        org_id=run.org_id,
+        section=fields.pop("section", "Organization"),
+        kind=fields.pop("kind", "update_organization"),
+        label=fields.pop("label", "Change"),
+        proposed_value=fields.pop("proposed_value"),
+        confidence=Decimal("0.900"),
+        evidence=[],
+        proposed_hash=fields.pop("proposed_hash", uuid4().hex),
+        **fields,
+    )
+    return row
+
+
+def test_unverified_rows_respect_the_confidence_floor(db_session) -> None:
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    kept = save_proposals(
+        db_session,
+        run,
+        [
+            {
+                "section": "Organization",
+                "kind": "update_organization",
+                "field": "email",
+                "label": "Email",
+                "current": None,
+                "proposed": {"email": "hello@example.com"},
+                "confidence": 0.2,
+                "unverified": True,
+                "evidence": [],
+            }
+        ],
+        min_confidence=Decimal("0.500"),
+    )
+    assert kept == 0
+
+
+def test_stale_run_no_longer_blocks_the_organization(db_session, monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.enrichment.guard.host_is_blocked",
+        lambda host, resolve=None: False,
+    )
+    org = _org(db_session, website="https://ok.test")
+    old = OrgEnrichmentRun(
+        org_id=org.id,
+        status="running",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(hours=1),
+    )
+    db_session.add(old)
+    db_session.flush()
+    fresh = start_run(db_session, org.id, requested_by="admin")
+    assert old.status == "failed"
+    assert old.error == "Enrichment timed out"
+    assert fresh.status == "queued"
+
+
+def test_existing_rows_are_not_proposed_again(
+    db_session, sample_location, sample_activity
+) -> None:
+    org = sample_location.organization
+    items = prepare_proposals(
+        db_session,
+        org,
+        [
+            {
+                "kind": "create_location",
+                "proposed": {"address": "123 Test Street"},
+            },
+            {
+                "kind": "create_activity",
+                "proposed": {"name": "Swimming Class"},
+            },
+        ],
+    )
+    assert items == []
+
+
+def test_one_bad_proposal_does_not_undo_the_others(db_session) -> None:
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    good = _proposal(
+        run,
+        field="description",
+        label="Description",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-good",
+    )
+    bad = _proposal(
+        run,
+        section="Locations",
+        kind="create_location",
+        label="Location",
+        proposed_value={"address": "9 Example Road"},
+        proposed_hash="hash-bad",
+    )
+    db_session.add_all([good, bad])
+    db_session.flush()
+    calls: list[int] = []
+    results = apply_proposals(
+        db_session,
+        org.id,
+        [str(bad.id), str(good.id)],
+        {str(bad.id): ["not-an-object"]},  # type: ignore[dict-item]
+        user_id="admin",
+        request_id="req-mix",
+    )
+    del calls
+    by_id = {row["id"]: row["status"] for row in results}
+    assert by_id[str(good.id)] == "applied"
+    assert by_id[str(bad.id)] == "error"
+    assert org.description == "Saturday art class for children."
+    audit = db_session.query(AuditLog).filter_by(action="ENRICH_APPLY").one()
+    assert audit.new_values["proposal_ids"] == [str(good.id)]
+
+
+def test_reason_is_marked_for_each_applied_proposal(db_session, monkeypatch) -> None:
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    first = _proposal(
+        run,
+        field="description",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-a",
+    )
+    second = _proposal(
+        run,
+        field="email",
+        label="Email",
+        proposed_value={"email": "hello@example.com"},
+        proposed_hash="hash-b",
+    )
+    db_session.add_all([first, second])
+    db_session.flush()
+    calls: list[int] = []
+    monkeypatch.setattr(
+        "app.services.enrichment.apply._mark_reason",
+        lambda session: calls.append(1),
+    )
+    apply_proposals(
+        db_session,
+        org.id,
+        [str(first.id), str(second.id)],
+        {},
+        user_id="admin",
+        request_id="req-reason",
+    )
+    assert calls == [1, 1]
+
+
+def test_link_run_covers_child_and_media_rows() -> None:
+    captured: list[str] = []
+
+    class _Dialect:
+        name = "postgresql"
+
+    class _Bind:
+        dialect = _Dialect()
+
+    class _Session:
+        def get_bind(self):
+            return _Bind()
+
+        def execute(self, statement, params=None):
+            del params
+            captured.append(str(statement))
+
+    _link_run(_Session(), "run-1")  # type: ignore[arg-type]
+    assert "children" in captured[0]
+    assert "media" in captured[0]
+    assert "enrichment" in captured[0]
+
+
+def test_media_keeps_the_existing_order(db_session) -> None:
+    from app.services.enrichment.store import load_settings
+
+    org = _org(
+        db_session,
+        media_urls=["https://cdn.example/b.png", "https://cdn.example/a.png"],
+    )
+    settings = load_settings(db_session)
+    settings.copy_media = False
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    proposal = _proposal(
+        run,
+        section="Media",
+        kind="add_media",
+        label="Photo",
+        proposed_value={"source_url": "https://cdn.example/c.png"},
+        proposed_hash="hash-media",
+    )
+    db_session.add(proposal)
+    db_session.flush()
+    results = apply_proposals(
+        db_session,
+        org.id,
+        [str(proposal.id)],
+        {},
+        user_id="admin",
+        request_id="req-media",
+    )
+    assert results[0]["status"] == "applied"
+    assert org.media_urls == [
+        "https://cdn.example/b.png",
+        "https://cdn.example/a.png",
+        "https://cdn.example/c.png",
+    ]
+
+
+def test_pricing_applies_after_its_activity(
+    db_session, sample_location, sample_activity_category
+) -> None:
+    org = sample_location.organization
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    activity = _proposal(
+        run,
+        section="Activities",
+        kind="create_activity",
+        label="Activity · Painting",
+        proposed_value={
+            "name": "Painting",
+            "category_name": sample_activity_category.name,
+            "age_min": 5,
+            "age_max": 8,
+        },
+        proposed_hash="hash-activity",
+    )
+    pricing = _proposal(
+        run,
+        section="Pricing",
+        kind="create_pricing",
+        label="Price",
+        proposed_value={
+            "activity_name": "Painting",
+            "pricing_type": "per_class",
+            "amount": "120",
+            "currency": "HKD",
+        },
+        proposed_hash="hash-price",
+    )
+    db_session.add_all([activity, pricing])
+    db_session.flush()
+    results = apply_proposals(
+        db_session,
+        org.id,
+        [str(pricing.id), str(activity.id)],
+        {},
+        user_id="admin",
+        request_id="req-order",
+    )
+    assert {row["status"] for row in results} == {"applied"}
+    assert (
+        db_session.query(ActivityPricing)
+        .join(Activity, ActivityPricing.activity_id == Activity.id)
+        .filter(Activity.name == "Painting")
+        .count()
+        == 1
+    )
+
+
+def test_invalid_schedule_does_not_leave_an_empty_row(
+    db_session, sample_activity, sample_location
+) -> None:
+    org = sample_activity.organization
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    good = _proposal(
+        run,
+        field="description",
+        current_value={"description": org.description},
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-desc",
+    )
+    schedule = _proposal(
+        run,
+        section="Schedules",
+        kind="create_schedule",
+        label="Schedule",
+        proposed_value={
+            "activity_name": sample_activity.name,
+            "entries": [
+                {"day_of_week": "nope", "start_time": "10:00", "end_time": "11:00"}
+            ],
+        },
+        proposed_hash="hash-slot",
+    )
+    db_session.add_all([good, schedule])
+    db_session.flush()
+    results = apply_proposals(
+        db_session,
+        org.id,
+        [str(schedule.id), str(good.id)],
+        {},
+        user_id="admin",
+        request_id="req-slot",
+    )
+    by_id = {row["id"]: row["status"] for row in results}
+    assert by_id[str(good.id)] == "applied"
+    assert by_id[str(schedule.id)] == "error"
+    assert db_session.query(ActivitySchedule).count() == 0
+    assert org.description == "Saturday art class for children."

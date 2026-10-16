@@ -3,6 +3,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -15,27 +16,17 @@ import {
   decideOrgEnrichment,
   getOrgEnrichment,
   startOrgEnrichment,
+  type EnrichmentOverride,
   type EnrichmentProposal,
 } from '../../lib/api-client-enrichment';
 import { ApiError } from '../../lib/api-client';
 import { refreshCatalogHistory, getAdminQueryClient } from '../../lib/admin-query-client';
 import { StatusBanner } from '../status-banner';
 import { AdminInputCard } from '../ui/admin-input-card';
-import {
-  AdminDataTable,
-  AdminDataTableBody,
-  AdminDataTableCell,
-  AdminDataTableCellMeta,
-  AdminDataTableHead,
-  AdminDataTableHeadCell,
-} from '../ui/admin-data-table';
-import {
-  AdminTableName,
-  AdminTableNumber,
-  formatAdminTablePercent,
-} from '../ui/admin-table-value';
 import { Button } from '../ui/button';
 import { StatusBadge } from '../ui/status-badge';
+import { ProposalTable } from './organization-enrichment-proposals';
+import { OrganizationEnrichmentSettings } from './organization-enrichment-settings';
 
 const COPYRIGHT_NOTICE =
   'Copied from the provider website for this catalog. Copyright remains with the provider.';
@@ -53,21 +44,30 @@ const ACTIVE = new Set(['queued', 'running', 'extracting']);
 
 type Scope = {
   orgId: string | null;
-  website: string;
+  savedWebsite: string;
+  draftWebsite: string;
+  detailsDirty: boolean;
   pending: boolean;
   error: string;
   start: () => void;
+  onApplied?: () => Promise<void>;
 };
 
 const EnrichmentScopeContext = createContext<Scope | null>(null);
 
 export function OrgEnrichmentScope({
   orgId,
-  website,
+  savedWebsite,
+  draftWebsite,
+  detailsDirty,
+  onApplied,
   children,
 }: {
   orgId: string | null;
-  website: string;
+  savedWebsite: string;
+  draftWebsite: string;
+  detailsDirty: boolean;
+  onApplied?: () => Promise<void>;
   children: ReactNode;
 }) {
   const [pending, setPending] = useState(false);
@@ -93,7 +93,16 @@ export function OrgEnrichmentScope({
 
   return (
     <EnrichmentScopeContext.Provider
-      value={{ orgId, website, pending, error, start }}
+      value={{
+        orgId,
+        savedWebsite,
+        draftWebsite,
+        detailsDirty,
+        pending,
+        error,
+        start,
+        onApplied,
+      }}
     >
       {children}
     </EnrichmentScopeContext.Provider>
@@ -105,7 +114,15 @@ export function OrganizationEnrichButton() {
   if (!scope?.orgId) {
     return null;
   }
-  const missingWebsite = scope.website.trim().length === 0;
+  const saved = scope.savedWebsite.trim();
+  const draft = scope.draftWebsite.trim();
+  const missingWebsite = saved.length === 0 && draft.length === 0;
+  const unsavedWebsite = saved !== draft;
+  const title = missingWebsite
+    ? 'Add a website first'
+    : unsavedWebsite
+      ? 'Save the website first'
+      : 'Enrich from the website';
   return (
     <Button
       type='button'
@@ -113,26 +130,14 @@ export function OrganizationEnrichButton() {
       size='md'
       loading={scope.pending}
       loadingLabel='Enriching…'
-      disabled={missingWebsite}
-      title={missingWebsite ? 'Add a website first' : 'Enrich from the website'}
+      disabled={missingWebsite || unsavedWebsite}
+      title={title}
       data-testid='enrich-from-website'
       onClick={() => scope.start()}
     >
       Enrich from website
     </Button>
   );
-}
-
-function proposedText(value: Record<string, unknown>): string {
-  return Object.entries(value)
-    .filter(([key]) => key !== 'copyright_notice')
-    .map(([key, item]) => {
-      if (item && typeof item === 'object') {
-        return `${key}: ${JSON.stringify(item)}`;
-      }
-      return `${key}: ${String(item ?? '')}`;
-    })
-    .join(' · ');
 }
 
 function statusTone(status: string) {
@@ -162,9 +167,18 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
     getAdminQueryClient()
   );
   const [selected, setSelected] = useState<string[]>([]);
+  const [overrides, setOverrides] = useState<Record<string, EnrichmentOverride>>({});
   const [busy, setBusy] = useState<'apply' | 'dismiss' | null>(null);
   const [notice, setNotice] = useState('');
   const [actionError, setActionError] = useState('');
+  const runId = query.data?.run?.id ?? '';
+
+  useEffect(() => {
+    setSelected([]);
+    setOverrides({});
+    setNotice('');
+    setActionError('');
+  }, [orgId, runId]);
 
   const proposals = useMemo(
     () => query.data?.proposals ?? [],
@@ -189,15 +203,53 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
     );
   }
 
+  function chosenOverrides() {
+    const body: Record<string, EnrichmentOverride> = {};
+    for (const id of selected) {
+      const draft = overrides[id];
+      if (!draft) {
+        continue;
+      }
+      const cleaned: EnrichmentOverride = {};
+      if (draft.area_id) {
+        cleaned.area_id = draft.area_id;
+      }
+      if (draft.category_id) {
+        cleaned.category_id = draft.category_id;
+      }
+      if (draft.location_id) {
+        cleaned.location_id = draft.location_id;
+      }
+      if (draft.age_min !== undefined && !Number.isNaN(draft.age_min)) {
+        cleaned.age_min = draft.age_min;
+      }
+      if (draft.age_max !== undefined && !Number.isNaN(draft.age_max)) {
+        cleaned.age_max = draft.age_max;
+      }
+      if (Object.keys(cleaned).length > 0) {
+        body[id] = cleaned;
+      }
+    }
+    return body;
+  }
+
   async function decide(action: 'apply' | 'dismiss') {
     if (!scope?.orgId || selected.length === 0) {
+      return;
+    }
+    if (action === 'apply' && scope.detailsDirty) {
       return;
     }
     setBusy(action);
     setActionError('');
     setNotice('');
     try {
-      const result = await decideOrgEnrichment(scope.orgId, action, selected);
+      const result = await decideOrgEnrichment(
+        scope.orgId,
+        action,
+        selected,
+        action === 'apply' ? chosenOverrides() : undefined
+      );
       const failed = result.results.filter((row) => row.status === 'error');
       setNotice(
         failed.length
@@ -214,6 +266,9 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
         queryKey: adminQueryKeys.resourceList('organizations', 'admin'),
       });
       refreshCatalogHistory();
+      if (action === 'apply' && result.results.some((row) => row.status === 'applied')) {
+        await scope.onApplied?.();
+      }
     } catch (err: unknown) {
       setActionError(
         err instanceof ApiError ? err.message : 'The selection could not be saved.'
@@ -250,7 +305,12 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
               variant='secondary'
               loading={busy === 'apply'}
               loadingLabel='Applying…'
-              disabled={selected.length === 0 || busy !== null}
+              disabled={selected.length === 0 || busy !== null || scope.detailsDirty}
+              title={
+                scope.detailsDirty
+                  ? 'Save the Details form before applying'
+                  : 'Apply selected'
+              }
               onClick={() => void decide('apply')}
             >
               Apply selected
@@ -269,6 +329,11 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
         ) : null
       }
     >
+      {scope.detailsDirty && pendingIds.length ? (
+        <p className='mb-3 text-sm text-slate-600'>
+          Save or discard the Details edits before applying these changes.
+        </p>
+      ) : null}
       {run ? (
         <div className='mb-4 flex flex-wrap items-center gap-2'>
           <StatusBadge status={run.status} tone={statusTone(run.status)} />
@@ -294,75 +359,20 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
             <h4 className='text-sm font-semibold text-slate-900'>{section}</h4>
             <ProposalTable
               rows={rows}
+              venues={query.data?.venues ?? []}
               selected={selected}
+              overrides={overrides}
               onToggle={toggle}
+              onOverride={(id, patch) =>
+                setOverrides((current) => ({ ...current, [id]: patch }))
+              }
             />
           </section>
         );
       })}
+      <OrganizationEnrichmentSettings />
     </AdminInputCard>
   );
 }
 
-function ProposalTable({
-  rows,
-  selected,
-  onToggle,
-}: {
-  rows: EnrichmentProposal[];
-  selected: string[];
-  onToggle: (id: string) => void;
-}) {
-  return (
-    <AdminDataTable>
-      <AdminDataTableHead>
-        <tr>
-          <AdminDataTableHeadCell className='w-10'>Select</AdminDataTableHeadCell>
-          <AdminDataTableHeadCell>Proposal</AdminDataTableHeadCell>
-          <AdminDataTableHeadCell priority='secondary'>Value</AdminDataTableHeadCell>
-          <AdminDataTableHeadCell priority='tertiary'>Confidence</AdminDataTableHeadCell>
-          <AdminDataTableHeadCell priority='secondary'>Status</AdminDataTableHeadCell>
-        </tr>
-      </AdminDataTableHead>
-      <AdminDataTableBody>
-        {rows.map((row) => {
-          const value = proposedText(row.proposed_value);
-          const pending = row.status === 'pending';
-          return (
-            <tr key={row.id}>
-              <AdminDataTableCell>
-                <input
-                  type='checkbox'
-                  aria-label={`Select ${row.label}`}
-                  checked={selected.includes(row.id)}
-                  disabled={!pending}
-                  onChange={() => onToggle(row.id)}
-                />
-              </AdminDataTableCell>
-              <AdminDataTableCell>
-                <AdminTableName>{row.label}</AdminTableName>
-                <AdminDataTableCellMeta label='Value' until='secondary'>
-                  {value}
-                </AdminDataTableCellMeta>
-                <AdminDataTableCellMeta label='Confidence' until='tertiary'>
-                  {formatAdminTablePercent(row.confidence)}
-                  {row.unverified ? ' · unverified' : ''}
-                </AdminDataTableCellMeta>
-              </AdminDataTableCell>
-              <AdminDataTableCell priority='secondary'>{value}</AdminDataTableCell>
-              <AdminDataTableCell priority='tertiary'>
-                <AdminTableNumber>
-                  {formatAdminTablePercent(row.confidence)}
-                  {row.unverified ? ' unverified' : ''}
-                </AdminTableNumber>
-              </AdminDataTableCell>
-              <AdminDataTableCell priority='secondary'>
-                <StatusBadge status={row.status} tone={statusTone(row.status)} />
-              </AdminDataTableCell>
-            </tr>
-          );
-        })}
-      </AdminDataTableBody>
-    </AdminDataTable>
-  );
-}
+export type { EnrichmentProposal };

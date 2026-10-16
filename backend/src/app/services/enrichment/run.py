@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Callable
@@ -21,6 +22,7 @@ from app.services.enrichment.extract import (
     proposals_from_pages,
     validate_model_sheet,
 )
+from app.services.enrichment.match import prepare_proposals
 from app.services.enrichment.queue import enqueue_enrichment
 from app.services.enrichment.store import load_settings, month_spend, save_proposals
 from app.utils.logging import get_logger
@@ -29,6 +31,43 @@ logger = get_logger(__name__)
 
 CrawlFn = Callable[[OrgEnrichmentRun, Any], dict[str, Any]]
 ModelFn = Callable[[str], tuple[dict[str, Any], Decimal, str]]
+
+
+@dataclass
+class EnrichmentStep:
+    acked: bool
+    run_id: UUID | None = None
+    enqueue_stage: str | None = None
+
+
+def commit_and_queue(session: Session, step: EnrichmentStep) -> None:
+    """Commit the stage, then publish the next one."""
+    if step.acked:
+        session.commit()
+    else:
+        session.rollback()
+    if step.acked and step.enqueue_stage and step.run_id is not None:
+        try:
+            enqueue_enrichment(step.run_id, stage=step.enqueue_stage)
+        except Exception:
+            logger.exception(
+                "Enrichment follow-up was not queued",
+                extra={"run_id": str(step.run_id)},
+            )
+            fail_enrichment_run(step.run_id, "Enrichment queue is not configured")
+
+
+def fail_enrichment_run(run_id: UUID, error: str = "enrichment failed") -> None:
+    from app.db.engine import get_engine
+
+    with Session(get_engine()) as session:
+        row = session.get(OrgEnrichmentRun, run_id)
+        if row is None or row.status in {"ready", "failed", "render_required"}:
+            return
+        row.status = "failed"
+        row.error = error
+        row.finished_at = datetime.now(timezone.utc)
+        session.commit()
 
 
 def process_enrichment(
@@ -40,34 +79,34 @@ def process_enrichment(
     stage: str,
     crawl: CrawlFn | None = None,
     complete: ModelFn | None = None,
-) -> bool:
-    """Return True when the message should be acknowledged."""
+) -> EnrichmentStep:
+    """Return whether the message should be acknowledged, and any follow-up."""
     run = session.get(OrgEnrichmentRun, run_id)
     if run is None:
         logger.warning("Enrichment run is missing")
-        return True
+        return EnrichmentStep(acked=True)
     seen = list(run.processed_message_ids or [])
     if message_id and message_id in seen:
-        return True
+        return EnrichmentStep(acked=True)
     if run.status in {"ready", "failed", "render_required"}:
-        return True
+        return EnrichmentStep(acked=True)
+    step = EnrichmentStep(acked=True, run_id=run.id)
     try:
         if stage == "extract" or run.status == "extracting":
             _extract(session, run, complete=complete)
         else:
-            _crawl(session, run, crawl=crawl)
+            step.enqueue_stage = _crawl(session, run, crawl=crawl)
     except Exception:
         logger.exception("Enrichment run will retry", extra={"run_id": str(run_id)})
+        session.rollback()
         if receive_count >= 3:
-            run.status = "failed"
-            run.error = "enrichment failed"
-            run.finished_at = datetime.now(timezone.utc)
-            session.flush()
-        return False
+            fail_enrichment_run(run_id)
+            return EnrichmentStep(acked=True)
+        return EnrichmentStep(acked=False)
     if message_id:
         run.processed_message_ids = seen + [message_id]
     session.flush()
-    return True
+    return step
 
 
 def _crawl(
@@ -75,7 +114,7 @@ def _crawl(
     run: OrgEnrichmentRun,
     *,
     crawl: CrawlFn | None,
-) -> None:
+) -> str | None:
     run.status = "running"
     session.flush()
     settings = load_settings(session)
@@ -88,16 +127,16 @@ def _crawl(
         run.status = "render_required"
         run.error = str(crawled.get("error") or "")
         run.finished_at = datetime.now(timezone.utc)
-        return
+        return None
     if status != "ok" or not run.pages:
         run.status = "failed"
         run.error = str(crawled.get("error") or "website returned no readable page")
         run.finished_at = datetime.now(timezone.utc)
-        return
+        return None
     run.input_hash = _hash_pages(run.pages)
     run.status = "extracting"
     session.flush()
-    enqueue_enrichment(run.id, stage="extract")
+    return "extract"
 
 
 def _extract(
@@ -126,10 +165,13 @@ def _extract(
         checked = copied
         run.cost_usd = Decimal("0")
         run.model = "cache"
+    merged = merge_proposals(deterministic, checked)
+    if org is not None:
+        merged = prepare_proposals(session, org, merged)
     save_proposals(
         session,
         run,
-        merge_proposals(deterministic, checked),
+        merged,
         min_confidence=Decimal(str(settings.min_confidence_shown)),
     )
     run.status = "ready"

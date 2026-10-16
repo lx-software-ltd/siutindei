@@ -17,6 +17,7 @@ from app.exceptions import AppError, ValidationError
 from app.services.enrichment.apply import apply_proposals, dismiss_proposals
 from app.services.enrichment.queue import enqueue_enrichment
 from app.services.enrichment.store import (
+    expire_stale_runs,
     latest_run,
     load_settings,
     serialize_proposal,
@@ -85,24 +86,28 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
     raw_run = _query_param(event, "run_id")
     run_id = _parse_uuid(raw_run) if raw_run else None
     with Session(get_engine()) as session:
+        expired = expire_stale_runs(session, org_id)
         run = latest_run(session, org_id, run_id)
         if run is None:
-            return json_response(
-                200, {"run": None, "proposals": [], "venues": []}, event=event
-            )
-        proposals = session.scalars(
-            select(OrgEnrichmentProposal)
-            .where(OrgEnrichmentProposal.run_id == run.id)
-            .order_by(OrgEnrichmentProposal.section, OrgEnrichmentProposal.label)
-        ).all()
-        venues = session.scalars(
-            select(Location).where(Location.org_id == org_id)
-        ).all()
-        payload = {
-            "run": serialize_run(run),
-            "proposals": [serialize_proposal(row) for row in proposals],
-            "venues": [{"id": str(row.id), "address": row.address} for row in venues],
-        }
+            payload = {"run": None, "proposals": [], "venues": []}
+        else:
+            proposals = session.scalars(
+                select(OrgEnrichmentProposal)
+                .where(OrgEnrichmentProposal.run_id == run.id)
+                .order_by(OrgEnrichmentProposal.section, OrgEnrichmentProposal.label)
+            ).all()
+            venues = session.scalars(
+                select(Location).where(Location.org_id == org_id)
+            ).all()
+            payload = {
+                "run": serialize_run(run),
+                "proposals": [serialize_proposal(row) for row in proposals],
+                "venues": [
+                    {"id": str(row.id), "address": row.address} for row in venues
+                ],
+            }
+        if expired:
+            session.commit()
     return json_response(200, payload, event=event)
 
 

@@ -11,7 +11,7 @@ import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { listResource } from '../../lib/api-client-admin';
-import type { ApiMode } from '../../lib/resource-api';
+import { getResourceApi, type ApiMode } from '../../lib/resource-api';
 import { normalizeKey } from '../../lib/string-utils';
 import {
   buildTranslationsPayload,
@@ -809,7 +809,19 @@ export function OrganizationsPanel({
   return (
     <OrgEnrichmentScope
       orgId={current && showEnrichment ? current.id : null}
-      website={panel.formState.website}
+      savedWebsite={current?.website ?? ''}
+      draftWebsite={panel.formState.website}
+      detailsDirty={panel.isDirty()}
+      onApplied={async () => {
+        if (!current) {
+          return;
+        }
+        const fresh = await getResourceApi<Organization>(
+          'organizations',
+          mode
+        ).get(current.id);
+        panel.replaceItem(fresh);
+      }}
     >
     <div className='space-y-4'>
       {current ? (

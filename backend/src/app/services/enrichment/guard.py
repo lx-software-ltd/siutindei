@@ -120,6 +120,39 @@ def validate_seed_url(url: str) -> str:
     return f"{parsed.scheme}://{host}{path}{query}"
 
 
+def public_address(host: str, *, resolve: Resolve = socket.getaddrinfo) -> str:
+    """Return one public IP for this host. The caller connects to that IP."""
+    hostname = _hostname(host)
+    if not hostname or hostname in {"localhost", "localhost.localdomain"}:
+        raise CrawlError("refusing private or disallowed host")
+    if hostname.endswith(".local") or hostname.endswith(".internal"):
+        raise CrawlError("refusing private or disallowed host")
+    try:
+        literal = ipaddress.ip_address(hostname)
+    except ValueError:
+        literal = None
+    if literal is not None:
+        if _ip_blocked(str(literal)):
+            raise CrawlError("refusing private or disallowed host")
+        return str(literal)
+    try:
+        infos = resolve(hostname, None)
+    except socket.gaierror as exc:
+        raise CrawlError("refusing private or disallowed host") from exc
+    if not infos:
+        raise CrawlError("refusing private or disallowed host")
+    chosen: str | None = None
+    for info in infos:
+        address = str(info[4][0])
+        if _ip_blocked(address):
+            raise CrawlError("refusing private or disallowed host")
+        if chosen is None:
+            chosen = address
+    if chosen is None:
+        raise CrawlError("refusing private or disallowed host")
+    return chosen
+
+
 def check_fetch_url(url: str, *, resolve: Resolve = socket.getaddrinfo) -> None:
     """Refuse a crawl target that is not public http(s)."""
     parsed = urlparse(url)

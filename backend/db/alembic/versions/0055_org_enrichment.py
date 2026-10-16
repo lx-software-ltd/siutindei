@@ -236,6 +236,14 @@ def upgrade() -> None:
         ),
     )
     op.execute("INSERT INTO org_enrichment_settings (id) VALUES (1)")
+    op.execute(
+        """
+        GRANT SELECT, INSERT, UPDATE, DELETE
+        ON org_enrichment_runs, org_enrichment_proposals,
+           org_enrichment_settings
+        TO siutindei_admin
+        """
+    )
 
 
 def downgrade() -> None:

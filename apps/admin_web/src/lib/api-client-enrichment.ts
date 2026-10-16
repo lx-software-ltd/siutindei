@@ -48,17 +48,50 @@ export function startOrgEnrichment(orgId: string): Promise<{ run: EnrichmentRun 
   );
 }
 
+export interface EnrichmentOverride {
+  area_id?: string;
+  category_id?: string;
+  age_min?: number;
+  age_max?: number;
+  location_id?: string;
+}
+
+export interface EnrichmentSettings {
+  monthly_cost_limit_usd: number;
+  max_pages: number;
+  max_page_bytes: number;
+  copy_media: boolean;
+  min_confidence_shown: number;
+}
+
 export function decideOrgEnrichment(
   orgId: string,
   action: 'apply' | 'dismiss',
-  ids: string[]
+  ids: string[],
+  overrides?: Record<string, EnrichmentOverride>
 ): Promise<{ results: Array<{ id: string; status: string; error?: string }> }> {
   return request(
     buildApiUrl(`v1/admin/organizations/${orgId}/enrichment/${action}`),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids }),
+      body: JSON.stringify(
+        action === 'apply' ? { ids, overrides: overrides ?? {} } : { ids }
+      ),
     }
   );
+}
+
+export function getEnrichmentSettings(): Promise<EnrichmentSettings> {
+  return request<EnrichmentSettings>(buildApiUrl('v1/admin/enrichment-settings'));
+}
+
+export function updateEnrichmentSettings(
+  body: EnrichmentSettings
+): Promise<EnrichmentSettings> {
+  return request<EnrichmentSettings>(buildApiUrl('v1/admin/enrichment-settings'), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }

@@ -15,6 +15,9 @@ MAX_PAGE_TEXT = 8000
 MAX_PROMPT_CHARS = 40_000
 MAX_IMAGE_BYTES = 5_000_000
 MAX_APPLY_IDS = 200
+MAX_JSONLD_BLOCKS = 20
+# Three 180s queue receives, plus time waiting to start.
+STALE_RUN_MINUTES = 20
 
 ORG_FIELDS = (
     "description",

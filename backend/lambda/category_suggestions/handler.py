@@ -322,7 +322,11 @@ def _handle_enrichment(
     from sqlalchemy.orm import Session
 
     from app.db.engine import get_engine
-    from app.services.enrichment.run import process_enrichment
+    from app.services.enrichment.run import (
+        commit_and_queue,
+        fail_enrichment_run,
+        process_enrichment,
+    )
 
     try:
         run_id = UUID(str(payload.get("enrichment_run_id")))
@@ -332,23 +336,26 @@ def _handle_enrichment(
     stage = str(payload.get("stage") or "crawl")
     try:
         with Session(get_engine()) as session:
-            acked = process_enrichment(
+            step = process_enrichment(
                 session,
                 run_id,
                 message_id,
                 receive_count=receive_count,
                 stage=stage,
             )
-            session.commit()
+            commit_and_queue(session, step)
     except Exception:
         logger.exception(
             "Enrichment run will retry",
             extra={"enrichment_run_id": str(payload.get("enrichment_run_id"))},
         )
+        if receive_count >= 3:
+            fail_enrichment_run(run_id)
+            return
         if message_id:
             failures.append(message_id)
         return
-    if not acked and message_id:
+    if not step.acked and message_id:
         failures.append(message_id)
 
 
