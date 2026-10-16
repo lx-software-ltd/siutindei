@@ -12,7 +12,6 @@ from app.api.admin_imports_allowed import (
     ALLOWED_LOCATION_FIELDS,
     ALLOWED_ORG_FIELDS,
     ALLOWED_PRICING_FIELDS,
-    ALLOWED_SCHEDULE_FIELDS,  # noqa: F401  re-exported
 )
 from app.api.admin_imports_catalog import (
     CATALOG_MANAGER_REQUIRED,
@@ -29,42 +28,29 @@ from app.api.admin_imports_fields import (
 from app.api.admin_imports_lookups import (
     filter_fields,
     guard_existing_org,
-    parse_weekly_entries_local,
     prepare_listing_body,
     resolve_activity_category_fields,
     resolve_location_area_fields,
 )
 from app.api.admin_imports_venues import link_activity_to_venue
-from app.api.admin_imports_utils import (
-    parse_timezone,
-    persist_import_change,
-)
+from app.api.admin_imports_utils import persist_import_change
 from app.api.admin_resource_activity import _create_activity, _update_activity
-from app.services.import_names import (
-    activity_name_translations,
-    find_cleaned_activity,
-    prepare_imported_activity,
-    prepare_imported_organization,
-)
 from app.api.admin_resource_location import _create_location, _update_location
 from app.api.admin_resource_organization import (
     _create_organization,
     _update_organization,
 )
 from app.api.admin_resource_pricing import _create_pricing, _update_pricing
-from app.api.admin_resource_schedule import _create_schedule, _update_schedule
 from app.api.admin_validators import (
     MAX_NAME_LENGTH,
-    _parse_languages,
     _validate_string_length,
 )
 from app.db.models import Activity
-from app.db.models import ActivityPricing, ActivitySchedule
+from app.db.models import ActivityPricing
 from app.db.models import Location, Organization, PricingType
 from app.db.repositories import (
     ActivityPricingRepository,
     ActivityRepository,
-    ActivityScheduleRepository,
     LocationRepository,
     OrganizationRepository,
 )
@@ -73,11 +59,16 @@ from app.api.admin_imports_version import (
     hold_existing,
     location_terminal,
     pricing_terminal,
-    schedule_terminal,
 )
 from app.exceptions import ValidationError
 from app.services.catalog_version_match import apply_org_gate
 from app.services.category_suggestions.capture import record_import_capture
+from app.services.import_names import (
+    activity_name_translations,
+    find_cleaned_activity,
+    prepare_imported_activity,
+    prepare_imported_organization,
+)
 from app.services.org_review import REJECTED_ACTIVITY_IMPORT_WARNING
 
 
@@ -430,72 +421,6 @@ def upsert_pricing(
     body["activity_id"] = str(activity.id)
     body["location_id"] = str(location.id)
     created = _create_pricing(repo, body)
-    repo.create(created)
-    persist_import_change(session, dry_run=dry_run)
-    session.refresh(created)
-    return created, "created"
-
-
-def upsert_schedule(
-    session: Session,
-    activity: Activity,
-    location: Location,
-    raw_schedule: dict[str, Any],
-    warnings: list[str],
-    *,
-    dry_run: bool = False,
-    allow_updates: bool = True,
-) -> tuple[ActivitySchedule, str]:
-    tzinfo = parse_timezone(raw_schedule.get("timezone"), "timezone")
-    languages = _parse_languages(raw_schedule.get("languages"))
-    repo = ActivityScheduleRepository(session)
-    existing = repo.find_by_activity_location_languages(
-        coerce_uuid(activity.id),
-        coerce_uuid(location.id),
-        languages,
-    )
-    entries = parse_weekly_entries_local(
-        raw_schedule.get("weekly_entries"),
-        tzinfo,
-        warnings,
-    )
-    if not entries:
-        raise ValidationError(
-            "weekly_entries must include at least one entry",
-            field="weekly_entries",
-        )
-    held = hold_existing(
-        existing,
-        schedule_terminal(
-            session,
-            activity,
-            location,
-            existing,
-            languages,
-            entries,
-            allow_updates,
-            warnings,
-        ),
-        allow_updates,
-    )
-    if held:
-        return held
-
-    body = {
-        "activity_id": str(activity.id),
-        "location_id": str(location.id),
-        "schedule_type": "weekly",
-        "languages": languages,
-        "weekly_entries": entries,
-    }
-    if existing:
-        updated = _update_schedule(repo, existing, body)
-        repo.update(updated)
-        persist_import_change(session, dry_run=dry_run)
-        session.refresh(updated)
-        return updated, "updated"
-
-    created = _create_schedule(repo, body)
     repo.create(created)
     persist_import_change(session, dry_run=dry_run)
     session.refresh(created)

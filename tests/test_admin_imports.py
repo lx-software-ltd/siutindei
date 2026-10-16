@@ -20,11 +20,11 @@ from app.api.admin_imports_fields import (
 )
 from app.api.admin_imports_importer import process_import_payload
 from app.api.admin_imports_jobs import stored_job_answers_request
+from app.api.admin_imports_schedule import upsert_schedule
 from app.api.admin_imports_upsert import (
     upsert_activity,
     upsert_location,
     upsert_organization,
-    upsert_schedule,
 )
 from app.api.admin_imports_utils import (
     from_utc_weekly,

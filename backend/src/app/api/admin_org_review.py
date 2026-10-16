@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import base64
-import json
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any, Mapping
 from uuid import UUID
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.admin_imports_catalog import ORG_STATUSES
@@ -17,9 +14,15 @@ from app.api.admin_org_review_actions import (
     handle_bulk,
     handle_decision,
 )
+from app.api.admin_org_review_cursor import (
+    ReviewCursor,
+    apply_review_cursor,
+    apply_review_order,
+    encode_review_cursor,
+    parse_review_cursor,
+)
 from app.api.admin_org_review_import import import_job_clause
 from app.api.admin_request import (
-    _decode_cursor,
     _query_param,
     parse_limit,
 )
@@ -88,7 +91,7 @@ def _handle_admin_org_review(
 def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
     limit = parse_limit(event)
     filters = _parse_filters(event)
-    cursor = _parse_review_cursor(_query_param(event, "cursor"), filters.sort)
+    cursor = parse_review_cursor(_query_param(event, "cursor"), filters.sort)
     warning_scan = _needs_warning_scan(filters)
     with Session(get_engine()) as session:
         organizations = _load_filtered_organizations(
@@ -106,7 +109,7 @@ def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
         page = matched[:limit]
         has_more = len(matched) > limit
         next_cursor = (
-            _encode_review_cursor(page[-1].organization, filters.sort)
+            encode_review_cursor(page[-1].organization, filters.sort)
             if has_more and page
             else None
         )
@@ -168,7 +171,7 @@ def _require_active_area(session: Session, area_id: UUID) -> None:
 def _load_filtered_organizations(
     session: Session,
     filters: ReviewListFilters,
-    cursor: _ReviewCursor | None,
+    cursor: ReviewCursor | None,
     limit: int | None,
 ) -> list[Organization]:
     stmt = select(Organization)
@@ -211,8 +214,8 @@ def _load_filtered_organizations(
         clause = issue_clause(filters.issue)
         if clause is not None:
             stmt = stmt.where(clause)
-    stmt = _apply_review_cursor(stmt, filters.sort, cursor)
-    stmt = _apply_review_order(stmt, filters.sort)
+    stmt = apply_review_cursor(stmt, filters.sort, cursor)
+    stmt = apply_review_order(stmt, filters.sort)
     if limit is not None:
         stmt = stmt.limit(limit)
     return list(session.scalars(stmt).all())
@@ -425,85 +428,3 @@ def _blank_to_none(value: str | None) -> str | None:
 
 def _escape_like(pattern: str) -> str:
     return pattern.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-
-
-@dataclass(frozen=True)
-class _ReviewCursor:
-    org_id: UUID
-    name: str | None
-    last_imported_at: datetime | None
-
-
-def _encode_review_cursor(organization: Organization, sort: str) -> str:
-    imported_at = organization.last_imported_at
-    payload = json.dumps(
-        {
-            "sort": sort,
-            "id": str(organization.id),
-            "name": organization.name,
-            "last_imported_at": (
-                imported_at.isoformat() if imported_at is not None else None
-            ),
-        }
-    ).encode("utf-8")
-    return base64.urlsafe_b64encode(payload).decode("utf-8").rstrip("=")
-
-
-def _parse_review_cursor(value: str | None, sort: str) -> _ReviewCursor | None:
-    if value is None or value == "":
-        return None
-    try:
-        payload = _decode_cursor(value)
-        if payload.get("sort") != sort or "id" not in payload:
-            raise ValueError("sort")
-        imported_raw = payload.get("last_imported_at")
-        imported_at = datetime.fromisoformat(imported_raw) if imported_raw else None
-        return _ReviewCursor(
-            org_id=UUID(payload["id"]),
-            name=payload.get("name"),
-            last_imported_at=imported_at,
-        )
-    except (ValueError, KeyError, TypeError) as exc:
-        raise ValidationError("Invalid cursor", field="cursor") from exc
-
-
-def _apply_review_order(stmt: Any, sort: str) -> Any:
-    if sort == "last_imported_at":
-        return stmt.order_by(
-            Organization.last_imported_at.desc().nulls_last(),
-            Organization.id.desc(),
-        )
-    return stmt.order_by(Organization.name, Organization.id)
-
-
-def _apply_review_cursor(stmt: Any, sort: str, cursor: _ReviewCursor | None) -> Any:
-    if cursor is None:
-        return stmt
-    if sort == "name":
-        name = cursor.name or ""
-        return stmt.where(
-            or_(
-                Organization.name > name,
-                and_(
-                    Organization.name == name,
-                    Organization.id > cursor.org_id,
-                ),
-            )
-        )
-    if cursor.last_imported_at is None:
-        return stmt.where(
-            and_(
-                Organization.last_imported_at.is_(None),
-                Organization.id < cursor.org_id,
-            )
-        )
-    return stmt.where(
-        or_(
-            Organization.last_imported_at < cursor.last_imported_at,
-            and_(
-                Organization.last_imported_at == cursor.last_imported_at,
-                Organization.id < cursor.org_id,
-            ),
-            Organization.last_imported_at.is_(None),
-        )
-    )

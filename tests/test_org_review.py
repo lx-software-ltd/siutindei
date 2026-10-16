@@ -18,11 +18,9 @@ from app.api.admin_imports_jobs import (
 )
 from app.api.admin_org_review import (
     ReviewListFilters,
-    _encode_review_cursor,
     _load_filtered_organizations,
     _map_locations,
     _parse_filters,
-    _parse_review_cursor,
     _serialize_queue_item,
 )
 from app.api.admin_org_review_actions import (
@@ -30,6 +28,10 @@ from app.api.admin_org_review_actions import (
     _apply_decision,
     _apply_fields,
     _parse_fields,
+)
+from app.api.admin_org_review_cursor import (
+    encode_review_cursor,
+    parse_review_cursor,
 )
 from app.api.admin_resource_activity import _serialize_activity
 from app.api.admin_resource_organization import _create_organization
@@ -409,7 +411,7 @@ def test_review_list_orders_by_name_and_blocker_filter(
     )
     page = _load_filtered_organizations(db_session, filters, None, 1)
     assert [org.name for org in page] == [ready.name]
-    cursor = _parse_review_cursor(_encode_review_cursor(page[0], "name"), "name")
+    cursor = parse_review_cursor(encode_review_cursor(page[0], "name"), "name")
     rest = _load_filtered_organizations(db_session, filters, cursor, 10)
     assert [org.name for org in rest] == [blocked.name]
     blocked_only = _load_filtered_organizations(

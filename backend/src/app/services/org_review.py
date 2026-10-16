@@ -26,11 +26,12 @@ from app.db.models import Organization
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.services.name_sanitizer import NameSanitizeConfig
 from app.services.org_review_children import (
+    added_since_rejected,
     counts_by_activity,
     linked_activity_ids,
     pending_category_check_ids,
 )
-from app.services.translation_gaps import LANGUAGES, field_gap
+from app.services.translation_gaps import note_review_gaps
 
 REVIEW_STATUSES = ("pending_review", "approved", "rejected")
 REVIEW_REASONS = ("not_relevant", "duplicate", "poor_data", "other")
@@ -56,24 +57,6 @@ _CONTACT_FIELDS = (
     "xiaohongshu",
     "wechat",
 )
-
-_TRANSLATION_WARNINGS = {
-    ("name", "en"): ("missing_en_name", "English name is missing"),
-    ("name", "zh"): ("missing_zh_name", "Chinese name is missing"),
-    ("name", "zh-HK"): ("missing_zh_hk_name", "Hong Kong name is missing"),
-    ("description", "en"): (
-        "missing_en_description",
-        "English description is missing",
-    ),
-    ("description", "zh"): (
-        "missing_zh_description",
-        "Chinese description is missing",
-    ),
-    ("description", "zh-HK"): (
-        "missing_zh_hk_description",
-        "Hong Kong description is missing",
-    ),
-}
 
 
 @dataclass(frozen=True)
@@ -208,7 +191,7 @@ def collect_issues(
             "Description still contains a source line",
         )
     note()
-    _note_translation_gaps(organization, org_id, add, note)
+    note_review_gaps(organization, org_id, add, note)
     if not any(_text(getattr(organization, field)) for field in _CONTACT_FIELDS):
         add(
             "no_contact",
@@ -341,7 +324,7 @@ def collect_issues(
                 "Activity age range is still the import default (0-18)",
             )
     note()
-    if _added_since_rejected(organization, activities):
+    if added_since_rejected(organization, activities):
         add(
             ACTIVITY_ADDED_SINCE_REJECTED,
             "warning",
@@ -490,21 +473,6 @@ def _passed_checks(snapshot: OrgReviewSnapshot) -> int:
     return max(snapshot.check_count - len(snapshot.issues), 0)
 
 
-def _note_translation_gaps(organization, org_id, add, note) -> None:
-    for field in ("name", "description"):
-        gap = field_gap(
-            getattr(organization, field),
-            getattr(organization, f"{field}_translations"),
-        )
-        missing = set(gap["missing"]) if gap else set()
-        for language in LANGUAGES:
-            note()
-            if language not in missing:
-                continue
-            code, message = _TRANSLATION_WARNINGS[(field, language)]
-            add(code, "warning", "organization", org_id, message)
-
-
 def _text(value: Any) -> str:
     if value is None:
         return ""
@@ -513,25 +481,6 @@ def _text(value: Any) -> str:
 
 def _age_bounds(activity: Activity) -> tuple[int | None, int | None]:
     return inclusive_age_bounds(activity.age_range)
-
-
-def _added_since_rejected(
-    organization: Organization,
-    activities: list[Activity],
-) -> bool:
-    """True when a rejected organization gained an activity afterwards."""
-    reviewed_at = organization.reviewed_at
-    if (
-        organization.review_status != "rejected"
-        or not organization.review_reason
-        or reviewed_at is None
-    ):
-        return False
-    for activity in activities:
-        created_at = getattr(activity, "created_at", None)
-        if created_at is not None and created_at > reviewed_at:
-            return True
-    return False
 
 
 def parse_org_uuid(value: str) -> UUID:
