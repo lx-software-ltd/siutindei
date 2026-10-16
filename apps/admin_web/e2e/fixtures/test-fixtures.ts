@@ -357,6 +357,10 @@ export const mockCognitoUsers = [
       name: 'Manager User',
       'custom:feedback_stars': '2',
     },
+    managed_organizations: [
+      { id: 'org-harbor', name: 'Harbor Studio' },
+      { id: 'org-1', name: 'Test Organization 1' },
+    ],
   },
   {
     sub: 'admin-manager-id-789',
@@ -374,6 +378,7 @@ export const mockCognitoUsers = [
       name: 'Admin Manager User',
       'custom:feedback_stars': '5',
     },
+    managed_organizations: [{ id: 'org-2', name: 'Test Organization 2' }],
   },
   {
     sub: 'admin-user-id-123',
@@ -390,6 +395,7 @@ export const mockCognitoUsers = [
       email: 'admin@example.com',
       name: 'Admin User',
     },
+    managed_organizations: [],
   },
 ];
 

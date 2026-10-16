@@ -10,6 +10,7 @@ from typing import Any, Mapping, Optional
 from sqlalchemy.orm import Session
 
 from app.api.admin_auth import _get_user_sub, _set_session_audit_context
+from app.api.admin_cognito_groups import _list_group_memberships
 from app.api.admin_list_filters import cognito_email_prefix_filter
 from app.api.admin_request import (
     _parse_group_name,
@@ -31,12 +32,8 @@ USER_SUB_PATTERN = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 )
 MAX_COGNITO_LIST_LIMIT = 60
+MANAGED_ORGANIZATIONS_INCLUDE = "managed_organizations"
 MAX_ORG_TRANSFER_LIMIT = 1000
-# Cognito caps ListUsersInGroup at 60 members per page.
-GROUP_MEMBERS_PAGE_SIZE = 60
-# Hard stop on group pagination so a runaway NextToken can never exhaust the
-# Lambda timeout; 50 pages x 60 members is far beyond any realistic pool.
-MAX_GROUP_PAGES = 50
 
 
 def _mask_cognito_username(username: str) -> str:
@@ -201,9 +198,30 @@ def _add_user_to_manager_group(user_sub: str) -> None:
         )
 
 
+def _include_managed_organizations(event: Mapping[str, Any]) -> bool:
+    """True when the caller asked for each user's managed organizations."""
+    include = (_query_param(event, "include") or "").strip()
+    if not include:
+        return False
+    if include != MANAGED_ORGANIZATIONS_INCLUDE:
+        raise ValidationError("Invalid include", field="include")
+    return True
+
+
+def _managed_organizations_by_sub(
+    subs: list[str],
+) -> dict[str, list[dict[str, str]]]:
+    """Organizations each Cognito sub manages, ordered by name."""
+    if not subs:
+        return {}
+    with Session(get_engine()) as session:
+        return OrganizationRepository(session).list_managed_for_subs(subs)
+
+
 def _handle_list_cognito_users(event: Mapping[str, Any]) -> dict[str, Any]:
     """List Cognito users for manager selection."""
     limit = parse_limit(event, max_limit=MAX_COGNITO_LIST_LIMIT)
+    include_managed = _include_managed_organizations(event)
 
     pagination_token = _query_param(event, "pagination_token")
     user_pool_id = _require_env("COGNITO_USER_POOL_ID")
@@ -237,6 +255,11 @@ def _handle_list_cognito_users(event: Mapping[str, Any]) -> dict[str, Any]:
             username = user.get("Username")
             user_data["groups"] = list(memberships.get(username or "", []))
             users.append(user_data)
+
+    if include_managed:
+        managed = _managed_organizations_by_sub([user["sub"] for user in users])
+        for user in users:
+            user["managed_organizations"] = managed.get(user["sub"], [])
 
     result: dict[str, Any] = {"items": users}
     next_token = response.get("PaginationToken")
@@ -361,66 +384,6 @@ def _parse_last_auth_time(value: Optional[str]) -> Optional[str]:
         parsed = parsed.replace(tzinfo=timezone.utc)
 
     return parsed.astimezone(timezone.utc).isoformat()
-
-
-def _managed_group_names() -> list[str]:
-    """Return the Cognito groups the admin console exposes as roles."""
-    names = [
-        os.getenv("ADMIN_GROUP") or "admin",
-        os.getenv("MANAGER_GROUP") or "manager",
-    ]
-    return list(dict.fromkeys(names))
-
-
-def _list_group_memberships(user_pool_id: str) -> dict[str, list[str]]:
-    """Map username -> group names for the managed groups.
-
-    A failure for one group degrades to "no members" for that group only,
-    so the user list still renders; the failure is logged for follow-up.
-    """
-    memberships: dict[str, list[str]] = {}
-    for group_name in _managed_group_names():
-        for username in _iter_group_members(user_pool_id, group_name):
-            memberships.setdefault(username, []).append(group_name)
-    return memberships
-
-
-def _iter_group_members(user_pool_id: str, group_name: str) -> list[str]:
-    members: list[str] = []
-    next_token: Optional[str] = None
-    for _ in range(MAX_GROUP_PAGES):
-        params: dict[str, Any] = {
-            "UserPoolId": user_pool_id,
-            "GroupName": group_name,
-            "Limit": GROUP_MEMBERS_PAGE_SIZE,
-        }
-        if next_token:
-            params["NextToken"] = next_token
-        try:
-            response = _cognito("list_users_in_group", **params)
-        except AwsProxyError as exc:
-            logger.warning(
-                "Failed to list Cognito group members",
-                extra={
-                    "group": group_name,
-                    "error_code": exc.code,
-                    "error_message": exc.message,
-                },
-            )
-            break
-        for user in response.get("Users", []):
-            username = user.get("Username")
-            if username:
-                members.append(username)
-        next_token = response.get("NextToken")
-        if not next_token:
-            break
-    else:
-        logger.warning(
-            "Cognito group pagination exceeded MAX_GROUP_PAGES; results truncated",
-            extra={"group": group_name},
-        )
-    return members
 
 
 def _handle_delete_cognito_user(

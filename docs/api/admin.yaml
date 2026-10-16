@@ -2743,6 +2743,16 @@ paths:
           schema:
             type: string
             maxLength: 80
+        - name: include
+          in: query
+          required: false
+          description: |
+            `managed_organizations` attaches each user's managed
+            organizations (id and name, ordered by name). Other
+            callers omit this parameter.
+          schema:
+            type: string
+            enum: [managed_organizations]
       responses:
         "200":
           description: List of Cognito users
@@ -6276,6 +6286,13 @@ components:
           type: object
           additionalProperties:
             type: string
+        managed_organizations:
+          type: array
+          description: |
+            Present when `include=managed_organizations`. Organizations
+            whose manager is this user, ordered by name.
+          items:
+            $ref: '#/components/schemas/OrganizationLookup'
 
     CognitoUserListResponse:
       type: object
