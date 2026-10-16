@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
@@ -41,6 +42,7 @@ from app.db.models import (
     Organization,
 )
 from app.exceptions import ValidationError
+from app.services.org_review import REJECTED_ACTIVITY_IMPORT_WARNING
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
@@ -1076,6 +1078,48 @@ def test_update_import_does_not_match_cleaned_activity_on_approved_org(
         ).all()
     )
     assert names == {"Harbour Club", "Harbour Club (海港會)"}
+
+
+def test_new_activity_on_a_rejected_org_warns_without_reopening(
+    db_session,
+    sample_organization,
+    sample_activity_category,
+) -> None:
+    sample_organization.review_status = "rejected"
+    sample_organization.review_reason = "duplicate"
+    sample_organization.reviewed_at = datetime(2020, 1, 1, tzinfo=UTC)
+    db_session.flush()
+    payload = {
+        "organizations": [
+            {
+                "name": sample_organization.name,
+                "manager_id": str(sample_organization.manager_id),
+                "review_reason": "not_relevant",
+                "activities": [
+                    {
+                        "name": "Kids Yoga",
+                        "category_id": str(sample_activity_category.id),
+                        "age_min": 4,
+                        "age_max": 8,
+                    }
+                ],
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=False,
+    )
+    activity_rows = [item for item in results if item["type"] == "activities"]
+    assert activity_rows[0]["status"] == "created"
+    assert REJECTED_ACTIVITY_IMPORT_WARNING in activity_rows[0]["warnings"]
+    org_warnings = " ".join(results[0]["warnings"])
+    assert "review_reason" not in org_warnings
+    db_session.refresh(sample_organization)
+    assert sample_organization.review_status == "rejected"
+    assert sample_organization.review_reason == "duplicate"
 
 
 def test_first_import_links_activity_to_single_venue(

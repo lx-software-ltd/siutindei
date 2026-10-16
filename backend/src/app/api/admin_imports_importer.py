@@ -148,6 +148,7 @@ def process_organization(
     warnings: list[str] = []
     ignored_review = raw_org.pop("review_status", None)
     raw_org.pop("review_notes", None)
+    raw_org.pop("review_reason", None)
     if _review_status_needs_warning(session, raw_org, ignored_review):
         warnings.append(
             f"{path}: review_status is ignored; "

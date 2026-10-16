@@ -33,6 +33,14 @@ from app.services.org_review_children import (
 from app.services.translation_gaps import LANGUAGES, field_gap
 
 REVIEW_STATUSES = ("pending_review", "approved", "rejected")
+REVIEW_REASONS = ("not_relevant", "duplicate", "poor_data", "other")
+ACTIVITY_ADDED_SINCE_REJECTED = "activity_added_since_rejected"
+ACTIVITY_ADDED_SINCE_REJECTED_MESSAGE = (
+    "New activity added after this organization was rejected"
+)
+REJECTED_ACTIVITY_IMPORT_WARNING = (
+    "organization was rejected; new activity flagged for review"
+)
 MAX_REVIEW_NOTES_LENGTH = 2000
 BULK_ORG_LIMIT = 200
 
@@ -332,6 +340,15 @@ def collect_issues(
                 activity_id,
                 "Activity age range is still the import default (0-18)",
             )
+    note()
+    if _added_since_rejected(organization, activities):
+        add(
+            ACTIVITY_ADDED_SINCE_REJECTED,
+            "warning",
+            "organization",
+            org_id,
+            ACTIVITY_ADDED_SINCE_REJECTED_MESSAGE,
+        )
     return issues, checks
 
 
@@ -423,6 +440,7 @@ def load_snapshots(
 def summarize_snapshots(snapshots: list[OrgReviewSnapshot]) -> dict[str, Any]:
     """Python summary used to check the SQL aggregate stays equivalent."""
     by_review = {status: 0 for status in REVIEW_STATUSES}
+    by_review_reason = {reason: 0 for reason in (*REVIEW_REASONS, "none")}
     by_source: dict[str, int] = {}
     by_status_source: dict[str, int] = {}
     by_issue: dict[str, int] = {}
@@ -430,6 +448,9 @@ def summarize_snapshots(snapshots: list[OrgReviewSnapshot]) -> dict[str, Any]:
     for snapshot in snapshots:
         org = snapshot.organization
         by_review[org.review_status] = by_review.get(org.review_status, 0) + 1
+        if org.review_status == "rejected":
+            reason_key = org.review_reason or "none"
+            by_review_reason[reason_key] = by_review_reason.get(reason_key, 0) + 1
         source_key = org.source or "unknown"
         by_source[source_key] = by_source.get(source_key, 0) + 1
         status_source_key = org.status_source or "unknown"
@@ -447,6 +468,7 @@ def summarize_snapshots(snapshots: list[OrgReviewSnapshot]) -> dict[str, Any]:
     return {
         "total": len(snapshots),
         "by_review_status": by_review,
+        "by_review_reason": by_review_reason,
         "by_source": by_source,
         "by_status_source": by_status_source,
         "by_issue": by_issue,
@@ -491,6 +513,25 @@ def _text(value: Any) -> str:
 
 def _age_bounds(activity: Activity) -> tuple[int | None, int | None]:
     return inclusive_age_bounds(activity.age_range)
+
+
+def _added_since_rejected(
+    organization: Organization,
+    activities: list[Activity],
+) -> bool:
+    """True when a rejected organization gained an activity afterwards."""
+    reviewed_at = organization.reviewed_at
+    if (
+        organization.review_status != "rejected"
+        or not organization.review_reason
+        or reviewed_at is None
+    ):
+        return False
+    for activity in activities:
+        created_at = getattr(activity, "created_at", None)
+        if created_at is not None and created_at > reviewed_at:
+            return True
+    return False
 
 
 def parse_org_uuid(value: str) -> UUID:

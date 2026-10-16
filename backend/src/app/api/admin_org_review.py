@@ -31,12 +31,13 @@ from app.db.models import GeographicArea, Location, Organization
 from app.db.queries import area_descendant_ids_subquery
 from app.exceptions import NotFoundError, ValidationError
 from app.services.org_review import (
+    REVIEW_REASONS,
     REVIEW_STATUSES,
     OrgReviewSnapshot,
     load_snapshots,
 )
 from app.services.org_review_sql import (
-    BLOCKER_ISSUE_CODES,
+    SQL_FILTERABLE_ISSUE_CODES,
     has_blocker_clause,
     issue_clause,
     summarize_catalog,
@@ -61,6 +62,7 @@ class ReviewListFilters:
     area_id: UUID | None = None
     include_locations: bool = False
     changed: str | None = None
+    review_reason: str | None = None
 
 
 def _handle_admin_org_review(
@@ -143,7 +145,7 @@ def _handle_summary(event: Mapping[str, Any]) -> dict[str, Any]:
 
 def _needs_warning_scan(filters: ReviewListFilters) -> bool:
     """Warning codes are matched in Python after the SQL page filters."""
-    return bool(filters.issue) and filters.issue not in BLOCKER_ISSUE_CODES
+    return bool(filters.issue) and filters.issue not in SQL_FILTERABLE_ISSUE_CODES
 
 
 def _handle_detail(event: Mapping[str, Any], resource_id: str) -> dict[str, Any]:
@@ -181,6 +183,13 @@ def _load_filtered_organizations(
         )
     if filters.review_status:
         stmt = stmt.where(Organization.review_status == filters.review_status)
+    if filters.review_reason == "none":
+        stmt = stmt.where(
+            Organization.review_status == "rejected",
+            Organization.review_reason.is_(None),
+        )
+    elif filters.review_reason:
+        stmt = stmt.where(Organization.review_reason == filters.review_reason)
     if filters.source:
         stmt = stmt.where(Organization.source == filters.source)
     if filters.import_job_id is not None:
@@ -198,7 +207,7 @@ def _load_filtered_organizations(
         stmt = stmt.where(has_blocker_clause())
     elif filters.has_blockers is False:
         stmt = stmt.where(~has_blocker_clause())
-    if filters.issue in BLOCKER_ISSUE_CODES:
+    if filters.issue in SQL_FILTERABLE_ISSUE_CODES:
         clause = issue_clause(filters.issue)
         if clause is not None:
             stmt = stmt.where(clause)
@@ -226,6 +235,11 @@ def _parse_filters(event: Mapping[str, Any]) -> ReviewListFilters:
         _query_param(event, "review_status"),
         REVIEW_STATUSES,
         "review_status",
+    )
+    review_reason = _optional_choice(
+        _query_param(event, "review_reason"),
+        (*REVIEW_REASONS, "none"),
+        "review_reason",
     )
     status = _optional_choice(
         _query_param(event, "status"),
@@ -256,6 +270,7 @@ def _parse_filters(event: Mapping[str, Any]) -> ReviewListFilters:
             ("unchanged", "changed"),
             "changed",
         ),
+        review_reason=review_reason,
     )
 
 
@@ -329,6 +344,8 @@ def _serialize_queue_item(
         "name": org.name,
         "status": org.status,
         "review_status": org.review_status,
+        "review_reason": org.review_reason,
+        "review_notes": org.review_notes,
         "source": org.source,
         "status_source": org.status_source,
         "description_source": org.description_source,

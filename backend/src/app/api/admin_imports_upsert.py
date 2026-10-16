@@ -78,6 +78,7 @@ from app.api.admin_imports_version import (
 from app.exceptions import ValidationError
 from app.services.catalog_version_match import apply_org_gate
 from app.services.category_suggestions.capture import record_import_capture
+from app.services.org_review import REJECTED_ACTIVITY_IMPORT_WARNING
 
 
 def upsert_organization(
@@ -358,6 +359,9 @@ def upsert_activity(
         return updated, "updated"
 
     body["org_id"] = str(org.id)
+    if org.review_status == "rejected" and org.review_reason:
+        if warnings is not None:
+            warnings.append(REJECTED_ACTIVITY_IMPORT_WARNING)
     created = _create_activity(repo, body)
     repo.create(created)
     link_activity_to_venue(session, created, venue)

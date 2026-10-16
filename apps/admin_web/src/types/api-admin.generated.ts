@@ -892,6 +892,11 @@ export interface paths {
                     cursor?: string;
                     sort?: "name" | "last_imported_at";
                     review_status?: "pending_review" | "approved" | "rejected";
+                    /**
+                     * @description Reject reason. `none` keeps rejected organizations that have
+                     *     no reason. Other values match that reason.
+                     */
+                    review_reason?: "not_relevant" | "duplicate" | "poor_data" | "other" | "none";
                     status?: "operational" | "closed_temporarily" | "closed_permanently" | "hidden";
                     source?: string;
                     /**
@@ -1070,7 +1075,8 @@ export interface paths {
         /**
          * Approve, reject, or reopen one organization
          * @description Approve returns 400 with `issues` when blockers remain unless
-         *     `force` is true.
+         *     `force` is true. Reject requires `reason`. Approve and reopen
+         *     clear a stored reason and return 400 when `reason` is sent.
          */
         post: {
             parameters: {
@@ -7028,6 +7034,13 @@ export interface components {
             /** @description Included on export for visibility and ignored on import. */
             review_notes?: string;
             /**
+             * @description Included on export for visibility and ignored on import.
+             *     A file value does not change the stored reason and does not
+             *     warn.
+             * @enum {string}
+             */
+            review_reason?: "not_relevant" | "duplicate" | "poor_data" | "other";
+            /**
              * @description Board-flat org field. When locations[] is empty, the importer
              *     synthesizes one location resolved like location area_name.
              *     Ignored with a warning when locations[] is already present.
@@ -7447,6 +7460,9 @@ export interface components {
             /** Format: date-time */
             reviewed_at?: string | null;
             reviewed_by?: string | null;
+            /** @enum {string|null} */
+            review_reason?: "not_relevant" | "duplicate" | "poor_data" | "other" | null;
+            review_notes?: string | null;
             place_id?: string | null;
             manager_id?: string | null;
             email?: string | null;
@@ -7489,6 +7505,14 @@ export interface components {
             by_review_status: {
                 [key: string]: number;
             };
+            /**
+             * @description Counts of rejected organizations by reason. `none` is a
+             *     rejected organization with no reason. Keys are always
+             *     present, including zeros.
+             */
+            by_review_reason: {
+                [key: string]: number;
+            };
             by_source: {
                 [key: string]: number;
             };
@@ -7505,6 +7529,13 @@ export interface components {
             action: "approve" | "reject" | "reopen";
             force?: boolean;
             notes?: string | null;
+            /**
+             * @description Required when `action` is `reject`. Approve and reopen
+             *     return 400 when this is sent. Reject stores it and later
+             *     approve or reopen clears it.
+             * @enum {string}
+             */
+            reason?: "not_relevant" | "duplicate" | "poor_data" | "other";
             /** @enum {string} */
             status?: "operational" | "closed_temporarily" | "closed_permanently" | "hidden";
         };
@@ -7514,6 +7545,13 @@ export interface components {
             action: "approve" | "reject" | "reopen" | "set_fields";
             force?: boolean;
             notes?: string | null;
+            /**
+             * @description Required when `action` is `reject`. Applied to every
+             *     selected organization. Other actions return 400 when this
+             *     is sent.
+             * @enum {string}
+             */
+            reason?: "not_relevant" | "duplicate" | "poor_data" | "other";
             status?: string;
             /**
              * @description Whitelist for `set_fields`: status, manager_id, source,
@@ -7692,6 +7730,11 @@ export interface components {
             /** @description Cognito sub of the admin who last changed review state */
             reviewed_by?: string | null;
             review_notes?: string | null;
+            /**
+             * @description Set only while `review_status` is `rejected`.
+             * @enum {string|null}
+             */
+            review_reason?: "not_relevant" | "duplicate" | "poor_data" | "other" | null;
             /** Format: uuid */
             import_job_id?: string | null;
             /** Format: date-time */

@@ -67,6 +67,8 @@ Columns:
 - `reviewed_at` (timestamptz, optional)
 - `reviewed_by` (text, optional) — Cognito sub of the reviewing admin
 - `review_notes` (text, optional)
+- `review_reason` (text, optional) — `not_relevant`, `duplicate`,
+  `poor_data`, or `other`. Null unless `review_status` is `rejected`.
 - `import_job_id` (uuid, optional, FK → `import_jobs.id`, ON DELETE
   SET NULL) — the job that created the organization. Later imports
   do not replace it. A null value is filled when history records a
@@ -115,6 +117,10 @@ valid. It also inserts the `name_fix_settings` singleton. No
 `seed_data.sql` change.
 Migration `0047_org_website` adds nullable `website`. Seed inserts
 omit the column and still run. No seed rows change.
+Migration `0054_org_review_reason` adds nullable `review_reason`.
+Seed inserts omit it. The two local organizations are `approved`, so
+the check that a reason exists only on a rejected row holds. No seed
+rows change.
 
 ## Table: organization_merges
 

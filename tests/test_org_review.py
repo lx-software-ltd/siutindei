@@ -48,10 +48,17 @@ from app.db.models.enums import PricingType, ScheduleType
 from app.db.queries import ActivitySearchFilters, build_search_query
 from app.db.repositories import OrganizationRepository
 from app.exceptions import ValidationError
-from app.services.org_review import collect_issues, load_snapshots, summarize_snapshots
+from app.services.org_review import (
+    ACTIVITY_ADDED_SINCE_REJECTED,
+    ACTIVITY_ADDED_SINCE_REJECTED_MESSAGE,
+    collect_issues,
+    load_snapshots,
+    summarize_snapshots,
+)
 from app.services.org_review_sql import BLOCKER_ISSUE_CODES, summarize_catalog
 from psycopg.types.range import Range
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 
 def test_collect_issues_flags_blockers() -> None:
@@ -442,6 +449,7 @@ def test_export_omits_review_status_and_same_value_is_quiet(
     )
     assert "review_status" not in exported
     assert exported["review_notes"] == "called"
+    assert exported["review_reason"] is None
     _summary, results = process_import_payload(
         db_session,
         {
@@ -862,3 +870,190 @@ def test_review_list_filters_by_neighbourhood(db_session) -> None:
     body = _serialize_queue_item(snapshot, map_locations=pins)
     assert body["map_locations"] == pins
     assert "map_locations" not in _serialize_queue_item(snapshot)
+
+
+def _decide(session, organization, action: str, **overrides: object) -> None:
+    values: dict[str, object] = {
+        "force": True,
+        "notes": None,
+        "status": None,
+        "reviewer_sub": "admin-sub",
+        "notes_provided": False,
+        "reason": None,
+    }
+    values.update(overrides)
+    _apply_decision(session, organization, action, **values)  # type: ignore[arg-type]
+
+
+def test_reject_requires_a_known_reason(db_session, sample_organization) -> None:
+    from app.api.admin_org_review_actions import _decision_reason
+
+    with pytest.raises(ValidationError, match="reason is required"):
+        _decision_reason(None, "reject")
+    with pytest.raises(ValidationError, match="Invalid reason"):
+        _decision_reason("closed", "reject")
+    with pytest.raises(ValidationError, match="only set when rejecting"):
+        _decision_reason("other", "approve")
+    assert _decision_reason(None, "reopen") is None
+
+    with pytest.raises(ValidationError, match="reason is required"):
+        _decide(db_session, sample_organization, "reject")
+    _decide(db_session, sample_organization, "reject", reason="not_relevant")
+    assert sample_organization.review_status == "rejected"
+    assert sample_organization.review_reason == "not_relevant"
+    assert sample_organization.reviewed_by == "admin-sub"
+    first_review = sample_organization.reviewed_at
+    assert first_review is not None
+
+    sample_organization.reviewed_at = datetime(2020, 1, 1, tzinfo=UTC)
+    _decide(db_session, sample_organization, "reject", reason="poor_data")
+    assert sample_organization.review_reason == "poor_data"
+    assert sample_organization.reviewed_at is not None
+    assert sample_organization.reviewed_at > datetime(2020, 1, 1, tzinfo=UTC)
+
+    _decide(db_session, sample_organization, "approve")
+    assert sample_organization.review_status == "approved"
+    assert sample_organization.review_reason is None
+    _decide(db_session, sample_organization, "reject", reason="other")
+    _decide(db_session, sample_organization, "reopen")
+    assert sample_organization.review_status == "pending_review"
+    assert sample_organization.review_reason is None
+
+    with pytest.raises(ValidationError, match="Unsupported bulk fields"):
+        _parse_fields({"review_reason": "other"})
+
+
+def test_reason_is_rejected_only(db_session, sample_organization) -> None:
+    with pytest.raises(IntegrityError), db_session.begin_nested():
+        sample_organization.review_reason = "other"
+        db_session.flush()
+
+
+def test_activity_added_after_rejection_is_a_warning(
+    db_session,
+    sample_organization,
+    sample_activity_category,
+) -> None:
+    reviewed_at = datetime(2024, 1, 1, tzinfo=UTC)
+    sample_organization.review_status = "rejected"
+    sample_organization.review_reason = "not_relevant"
+    sample_organization.reviewed_at = reviewed_at
+    newer = Activity(
+        org_id=sample_organization.id,
+        category_id=sample_activity_category.id,
+        name=f"Kids Class {uuid4().hex[:8]}",
+        description="After the rejection",
+        age_range=Range(6, 10, bounds="[]"),
+        created_at=datetime(2024, 6, 1, tzinfo=UTC),
+    )
+    older = Activity(
+        org_id=sample_organization.id,
+        category_id=sample_activity_category.id,
+        name=f"Adult Class {uuid4().hex[:8]}",
+        description="Before the rejection",
+        age_range=Range(18, 40, bounds="[]"),
+        created_at=datetime(2023, 1, 1, tzinfo=UTC),
+    )
+    db_session.add_all([newer, older])
+    db_session.flush()
+
+    def codes_for(organization: Organization) -> set[str]:
+        snapshot = load_snapshots(db_session, [organization])[0]
+        return {issue.code for issue in snapshot.issues}
+
+    assert ACTIVITY_ADDED_SINCE_REJECTED in codes_for(sample_organization)
+    message = next(
+        issue.message
+        for issue in load_snapshots(db_session, [sample_organization])[0].issues
+        if issue.code == ACTIVITY_ADDED_SINCE_REJECTED
+    )
+    assert message == ACTIVITY_ADDED_SINCE_REJECTED_MESSAGE
+
+    sample_organization.review_reason = "duplicate"
+    db_session.flush()
+    assert ACTIVITY_ADDED_SINCE_REJECTED in codes_for(sample_organization)
+
+    sample_organization.reviewed_at = datetime(2025, 1, 1, tzinfo=UTC)
+    db_session.flush()
+    assert ACTIVITY_ADDED_SINCE_REJECTED not in codes_for(sample_organization)
+
+    sample_organization.reviewed_at = reviewed_at
+    sample_organization.review_status = "approved"
+    sample_organization.review_reason = None
+    db_session.flush()
+    assert ACTIVITY_ADDED_SINCE_REJECTED not in codes_for(sample_organization)
+
+    sample_organization.review_status = "rejected"
+    sample_organization.review_reason = None
+    db_session.flush()
+    assert ACTIVITY_ADDED_SINCE_REJECTED not in codes_for(sample_organization)
+
+
+def test_added_since_rejected_filters_in_sql_and_matches_summary(
+    db_session,
+    sample_organization,
+    sample_activity_category,
+) -> None:
+    sample_organization.review_status = "rejected"
+    sample_organization.review_reason = "other"
+    sample_organization.reviewed_at = datetime(2024, 1, 1, tzinfo=UTC)
+    plain = Organization(
+        name=f"No Reason {uuid4().hex[:8]}",
+        manager_id="00000000-0000-0000-0000-000000000091",
+        description="Rejected earlier",
+        review_status="rejected",
+    )
+    db_session.add(plain)
+    db_session.add(
+        Activity(
+            org_id=sample_organization.id,
+            category_id=sample_activity_category.id,
+            name=f"Later Class {uuid4().hex[:8]}",
+            description="New",
+            age_range=Range(5, 9, bounds="[]"),
+            created_at=datetime(2024, 8, 1, tzinfo=UTC),
+        )
+    )
+    db_session.flush()
+
+    flagged = _load_filtered_organizations(
+        db_session,
+        _review_filters(issue=ACTIVITY_ADDED_SINCE_REJECTED),
+        None,
+        10,
+    )
+    assert sample_organization.id in {org.id for org in flagged}
+    assert plain.id not in {org.id for org in flagged}
+    python_ids = {
+        snapshot.organization.id
+        for snapshot in load_snapshots(
+            db_session,
+            list(db_session.scalars(select(Organization)).all()),
+        )
+        if any(issue.code == ACTIVITY_ADDED_SINCE_REJECTED for issue in snapshot.issues)
+    }
+    assert {org.id for org in flagged} == python_ids
+
+    by_reason = _load_filtered_organizations(
+        db_session,
+        _review_filters(review_reason="other"),
+        None,
+        10,
+    )
+    assert {org.id for org in by_reason} == {sample_organization.id}
+    none = _load_filtered_organizations(
+        db_session,
+        _review_filters(review_reason="none"),
+        None,
+        20,
+    )
+    assert plain.id in {org.id for org in none}
+    assert sample_organization.id not in {org.id for org in none}
+
+    organizations = list(db_session.scalars(select(Organization)).all())
+    snapshots = load_snapshots(db_session, organizations)
+    assert summarize_catalog(db_session) == summarize_snapshots(snapshots)
+    summary = summarize_catalog(db_session)
+    assert summary["by_review_reason"]["other"] >= 1
+    assert summary["by_review_reason"]["none"] >= 1
+    assert summary["by_issue"][ACTIVITY_ADDED_SINCE_REJECTED] >= 1

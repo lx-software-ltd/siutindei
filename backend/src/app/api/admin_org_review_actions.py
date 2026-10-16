@@ -22,6 +22,7 @@ from app.exceptions import NotFoundError, ValidationError
 from app.services.org_review import (
     BULK_ORG_LIMIT,
     MAX_REVIEW_NOTES_LENGTH,
+    REVIEW_REASONS,
     ReviewIssue,
     snapshot_for_org,
 )
@@ -88,6 +89,7 @@ def handle_decision(
                 status=body.get("status"),
                 reviewer_sub=_reviewer_sub(event),
                 notes_provided="notes" in body,
+                reason=_decision_reason(body.get("reason"), action),
             )
         except ReviewBlockedError as exc:
             return json_response(
@@ -123,6 +125,7 @@ def handle_bulk(event: Mapping[str, Any]) -> dict[str, Any]:
     notes = body.get("notes") if "notes" in body else None
     notes_provided = "notes" in body
     status = body.get("status")
+    reason = _decision_reason(body.get("reason"), action)
     reviewer = _reviewer_sub(event)
     results: list[dict[str, Any]] = []
     with Session(get_engine()) as session:
@@ -141,6 +144,7 @@ def handle_bulk(event: Mapping[str, Any]) -> dict[str, Any]:
                     status=status,
                     fields=fields,
                     reviewer_sub=reviewer,
+                    reason=reason,
                 )
             )
         session.commit()
@@ -168,6 +172,7 @@ def _apply_one(
     status: Any,
     fields: dict[str, Any] | None,
     reviewer_sub: str | None,
+    reason: str | None,
 ) -> dict[str, Any]:
     organization = session.get(Organization, org_id)
     if organization is None:
@@ -190,6 +195,7 @@ def _apply_one(
                     status=status,
                     reviewer_sub=reviewer_sub,
                     notes_provided=notes_provided,
+                    reason=reason,
                 )
             session.flush()
     except ReviewBlockedError as exc:
@@ -222,6 +228,7 @@ def _apply_decision(
     status: Any,
     reviewer_sub: str | None,
     notes_provided: bool,
+    reason: str | None = None,
 ) -> None:
     if action == "approve":
         snapshot = snapshot_for_org(session, organization)
@@ -229,10 +236,15 @@ def _apply_decision(
         if blockers and not force:
             raise ReviewBlockedError(blockers)
         organization.review_status = "approved"
+        organization.review_reason = None
     elif action == "reject":
+        if reason is None:
+            raise ValidationError("reason is required", field="reason")
         organization.review_status = "rejected"
+        organization.review_reason = reason
     else:
         organization.review_status = "pending_review"
+        organization.review_reason = None
     organization.reviewed_at = datetime.now(timezone.utc)
     organization.reviewed_by = reviewer_sub
     if notes_provided:
@@ -287,6 +299,25 @@ def _require_action(value: Any, allowed: tuple[str, ...]) -> str:
     if action not in allowed:
         raise ValidationError("Invalid action", field="action")
     return action
+
+
+def _decision_reason(value: Any, action: str) -> str | None:
+    """Return a reject reason. Other actions refuse one."""
+    if value in (None, ""):
+        if action == "reject":
+            raise ValidationError("reason is required", field="reason")
+        return None
+    if action != "reject":
+        raise ValidationError(
+            "reason is only set when rejecting",
+            field="reason",
+        )
+    if not isinstance(value, str):
+        raise ValidationError("Invalid reason", field="reason")
+    reason = value.strip()
+    if reason not in REVIEW_REASONS:
+        raise ValidationError("Invalid reason", field="reason")
+    return reason
 
 
 def _parse_force(value: Any) -> bool:

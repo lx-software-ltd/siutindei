@@ -424,6 +424,17 @@ description, no location, no activity, a location without coordinates,
 an activity without pricing or a schedule, and an activity still on
 Pending categorisation.
 
+Reject stores `review_reason` (`not_relevant`, `duplicate`,
+`poor_data`, or `other`). The API requires a reason. Approve and
+reopen clear it. A reason cannot be stored on any other review state.
+Imports never write `review_reason`. A new activity on an organization
+that already has a reason adds the warning
+`activity_added_since_rejected` and a line on the import result. The
+import does not reopen the organization. Rejecting again moves
+`reviewed_at` forward and clears that warning when every activity is
+older than the new decision. Catalog filters by reason and shows the
+warning as "Added since rejected".
+
 Endpoint shapes live in `docs/api/admin.yaml` under `/v1/admin/org-review`.
 
 ## Keeping Documentation Up to Date
