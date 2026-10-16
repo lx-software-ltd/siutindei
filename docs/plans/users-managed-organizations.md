@@ -28,6 +28,7 @@ callers of the same endpoint stay unchanged.
 - `docs/api/admin.yaml`
 - `docs/architecture/lambdas.md`
 - `backend/src/app/api/admin_cognito.py`
+- `backend/src/app/api/admin_cognito_groups.py`
 - `backend/src/app/db/repositories/organization.py`
 - `tests/test_admin_cognito_list.py`
 - `tests/test_repositories.py`

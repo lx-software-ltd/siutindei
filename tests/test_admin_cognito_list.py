@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 
 from app.api import admin_cognito
+from app.api import admin_cognito_groups
 from app.services.aws_proxy import AwsProxyError
 
 
@@ -112,7 +113,9 @@ def test_group_listing_follows_pagination(
         if action == 'list_users_in_group' and params['GroupName'] == 'admin'
     ]
     assert len(admin_calls) == 2
-    assert all(p['Limit'] == admin_cognito.GROUP_MEMBERS_PAGE_SIZE for p in admin_calls)
+    assert all(
+        p['Limit'] == admin_cognito_groups.GROUP_MEMBERS_PAGE_SIZE for p in admin_calls
+    )
     body = json.loads(response['body'])
     assert body['items'][0]['groups'] == ['admin']
 
@@ -139,7 +142,7 @@ def test_group_lookup_failure_degrades_to_empty_groups(
 def test_managed_group_names_respect_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv('ADMIN_GROUP', 'ops')
     monkeypatch.setenv('MANAGER_GROUP', 'ops')
-    assert admin_cognito._managed_group_names() == ['ops']
+    assert admin_cognito_groups._managed_group_names() == ['ops']
 
 def test_include_managed_organizations_attaches_names(
     monkeypatch: pytest.MonkeyPatch,
