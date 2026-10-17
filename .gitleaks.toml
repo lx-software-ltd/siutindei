@@ -1,0 +1,8 @@
+title = "siutindei gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "generic-api-key reads the word token inside max_tokens and then the next assignment. This is a boolean keyword argument."
+regexes = ['''reasoning_off=True''']
