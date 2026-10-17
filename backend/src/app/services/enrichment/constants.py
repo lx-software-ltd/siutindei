@@ -14,6 +14,9 @@ CRAWL_TIME_BUDGET_SECONDS = 60
 EXTRACT_TIMEOUT_SECONDS = 90
 MAX_PAGE_TEXT = 20_000
 MAX_PROMPT_CHARS = 90_000
+# The default model has a 40,960-token window shared by the prompt, its
+# reasoning, and the reply.
+MAX_PROMPT_TOKENS = 22_000
 # A PDF is read whole or not at all, so it gets its own byte limit.
 MAX_PDF_BYTES = 8_000_000
 MAX_PDF_PAGES = 30
