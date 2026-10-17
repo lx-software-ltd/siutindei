@@ -17,7 +17,11 @@ from sqlalchemy.orm import Session
 from app.db.models.organization import Organization
 from app.services.aws_proxy import AwsProxyError
 from app.db.models.org_enrichment import OrgEnrichmentProposal, OrgEnrichmentRun
-from app.services.enrichment.constants import EXTRACT_TIMEOUT_SECONDS, MAX_REPLY_TOKENS
+from app.services.enrichment.constants import (
+    EXTRACT_TIMEOUT_SECONDS,
+    EXTRACTION_VERSION,
+    MAX_REPLY_TOKENS,
+)
 from app.services.enrichment.extract import (
     merge_proposals,
     proposals_from_pages,
@@ -347,10 +351,19 @@ def _section_counts(items: list[dict[str, Any]]) -> dict[str, int]:
 
 
 def _hash_pages(pages: list[Any]) -> str:
+    """Key for reusing an earlier run's proposals.
+
+    Covers the page text and the extraction code, so a run made with an
+    older prompt or parser is not copied after the code changes.
+    """
     blob = "\n".join(
         str(page.get("text") or "") for page in pages if isinstance(page, dict)
     )
-    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(blob.encode("utf-8"))
+    digest.update(b"\x00extraction:")
+    digest.update(EXTRACTION_VERSION.encode("utf-8"))
+    digest.update(MODEL_INSTRUCTIONS.encode("utf-8"))
+    return digest.hexdigest()
 
 
 def _org_snapshot(org: Organization | None) -> dict[str, Any]:
