@@ -146,7 +146,9 @@ def parse_html(url: str, markup: str) -> dict[str, object]:
 def page_corpus(page: dict[str, object]) -> str:
     """Text the evidence quote is allowed to come from."""
     parts = [str(page.get("text") or "")]
-    parts.extend(str(item) for item in (page.get("jsonld_raw") or []))
+    jsonld_raw = page.get("jsonld_raw")
+    if isinstance(jsonld_raw, list):
+        parts.extend(str(item) for item in jsonld_raw)
     og = page.get("og") or {}
     if isinstance(og, dict):
         parts.extend(str(value) for value in og.values())

@@ -24,7 +24,7 @@ def proposals_from_pages(
     for page in pages:
         url = str(page.get("final_url") or page.get("url") or "")
         lang = str(page.get("lang") or "").lower()
-        og = page.get("og") if isinstance(page.get("og"), dict) else {}
+        og: dict[str, Any] = raw if isinstance(raw := page.get("og"), dict) else {}
         description = str(og.get("og:description") or og.get("description") or "")
         if description:
             field = "description_zh" if lang.startswith("zh") else "description"
@@ -451,7 +451,7 @@ def _schedule_entries(raw: object, pages: list[dict[str, Any]]) -> list[dict[str
         if not isinstance(item, dict):
             continue
         try:
-            day = int(item.get("day_of_week"))
+            day = int(str(item.get("day_of_week")))
         except (TypeError, ValueError):
             continue
         start = str(item.get("start_time") or "")

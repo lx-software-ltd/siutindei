@@ -60,14 +60,15 @@ class _PinnedHTTPS(urllib.request.HTTPSHandler):
     """Connect to a checked IP and verify the certificate for the hostname."""
 
     def __init__(self, server_hostname: str):
-        super().__init__(context=ssl.create_default_context())
+        self._ssl_context = ssl.create_default_context()
+        super().__init__(context=self._ssl_context)
         self._server_hostname = server_hostname
 
     def https_open(self, req: urllib.request.Request):  # noqa: ANN201
         return self.do_open(
             http.client.HTTPSConnection,
             req,
-            context=self._context,
+            context=self._ssl_context,
             server_hostname=self._server_hostname,
         )
 
@@ -287,7 +288,8 @@ def crawl_site(
         page["final_url"] = final_url
         page["status"] = result.status
         pages.append(page)
-        for link in page.get("links") or []:
+        raw_links = page.get("links")
+        for link in raw_links if isinstance(raw_links, list) else []:
             if not isinstance(link, dict):
                 continue
             href = str(link.get("href") or "")

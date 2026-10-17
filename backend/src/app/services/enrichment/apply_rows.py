@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
 from typing import Any
-from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from psycopg.types.range import Range
@@ -322,18 +321,20 @@ def _schedule_times(raw: object) -> list[tuple[int, int, int]]:
 
 
 def _whole_number(value: object, field: str) -> int:
-    if value is None or value == "":
+    if value is None or value == "" or isinstance(value, bool):
         raise ValidationError(
             f"{field} was not on the website",
             field=field,
         )
+    if not isinstance(value, (int, float, str)):
+        raise ValidationError(f"{field} must be a whole number", field=field)
     try:
         return int(value)
-    except (TypeError, ValueError) as exc:
+    except ValueError as exc:
         raise ValidationError(f"{field} must be a whole number", field=field) from exc
 
 
-def _resolve_category(session: Session, name: str) -> UUID | None:
+def _resolve_category(session: Session, name: str) -> str | None:
     cleaned = name.strip()
     if not cleaned:
         return None

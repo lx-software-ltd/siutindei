@@ -44,7 +44,8 @@ def crawl_requested(event: Mapping[str, Any]) -> dict[str, Any]:
         time_budget_seconds=budget,
     )
     pages = []
-    for page in crawled.get("pages") or []:
+    raw_pages = crawled.get("pages")
+    for page in raw_pages if isinstance(raw_pages, list) else []:
         if isinstance(page, dict):
             pages.append(_public_page(page))
     return {
@@ -140,9 +141,11 @@ def _public_page(page: dict[str, Any]) -> dict[str, Any]:
 
 
 def _clamp(value: object, default: int, low: int, high: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        return default
     try:
-        number = int(value)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
+        number = int(value)
+    except ValueError:
         return default
     return min(high, max(low, number))
 

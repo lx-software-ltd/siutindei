@@ -22,8 +22,9 @@ def prepare_proposals(
     media_sources = _applied_media_sources(session, org.id)
     kept: list[dict[str, Any]] = []
     for item in items:
-        proposed = (
-            item.get("proposed") if isinstance(item.get("proposed"), dict) else {}
+        raw_proposed = item.get("proposed")
+        proposed: dict[str, Any] = (
+            raw_proposed if isinstance(raw_proposed, dict) else {}
         )
         kind = str(item.get("kind") or "")
         current = item

@@ -9,7 +9,7 @@ from uuid import UUID
 from app.services.aws_clients import get_client
 
 
-def enqueue_enrichment(run_id: UUID, *, stage: str) -> None:
+def enqueue_enrichment(run_id: UUID | str, *, stage: str) -> None:
     queue_url = os.getenv("CATEGORY_SUGGESTION_QUEUE_URL", "").strip()
     if not queue_url:
         raise RuntimeError("CATEGORY_SUGGESTION_QUEUE_URL is not configured")

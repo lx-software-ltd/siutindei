@@ -275,9 +275,11 @@ def _decimal(value: object, field: str, low: Decimal, high: Decimal) -> Decimal:
 
 
 def _int_between(value: object, field: str, low: int, high: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        raise ValidationError(f"{field} must be an integer", field=field)
     try:
-        number = int(value)  # type: ignore[arg-type]
-    except (TypeError, ValueError) as exc:
+        number = int(value)
+    except ValueError as exc:
         raise ValidationError(f"{field} must be an integer", field=field) from exc
     if number < low or number > high:
         raise ValidationError(f"{field} is out of range", field=field)

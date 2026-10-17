@@ -36,7 +36,7 @@ ModelFn = Callable[[str], tuple[dict[str, Any], Decimal, str]]
 @dataclass
 class EnrichmentStep:
     acked: bool
-    run_id: UUID | None = None
+    run_id: UUID | str | None = None
     enqueue_stage: str | None = None
 
 
@@ -57,7 +57,7 @@ def commit_and_queue(session: Session, step: EnrichmentStep) -> None:
             fail_enrichment_run(step.run_id, "Enrichment queue is not configured")
 
 
-def fail_enrichment_run(run_id: UUID, error: str = "enrichment failed") -> None:
+def fail_enrichment_run(run_id: UUID | str, error: str = "enrichment failed") -> None:
     from app.db.engine import get_engine
 
     with Session(get_engine()) as session:

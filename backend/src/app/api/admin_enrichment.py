@@ -88,6 +88,7 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
     with Session(get_engine()) as session:
         expired = expire_stale_runs(session, org_id)
         run = latest_run(session, org_id, run_id)
+        payload: dict[str, Any]
         if run is None:
             payload = {"run": None, "proposals": [], "venues": []}
         else:
@@ -138,7 +139,14 @@ def _decide(event: Mapping[str, Any], org_id: UUID, *, apply: bool) -> dict[str,
     ids = body.get("ids")
     if not isinstance(ids, list):
         raise ValidationError("ids is required", field="ids")
-    overrides = body.get("overrides") if isinstance(body.get("overrides"), dict) else {}
+    raw_overrides = body.get("overrides")
+    overrides: dict[str, dict[str, Any]] = {}
+    if isinstance(raw_overrides, dict):
+        overrides = {
+            str(key): value
+            for key, value in raw_overrides.items()
+            if isinstance(value, dict)
+        }
     request_id = event.get("requestContext", {}).get("requestId", "")
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event)
