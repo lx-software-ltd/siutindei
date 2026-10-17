@@ -401,7 +401,7 @@ not included.
 Columns:
 - `id` (integer, PK)
 - `monthly_cost_limit_usd` (numeric, required, greater than 0 and at most 1000, default 25)
-- `max_pages` (integer, 1 to 8, default 6)
+- `max_pages` (integer, 1 to 20, default 12)
 - `max_page_bytes` (integer, default 1000000)
 - `copy_media` (boolean, default true)
 - `min_confidence_shown` (numeric, 0 to 1, default 0.5)
@@ -410,7 +410,9 @@ Columns:
 Seed assessment: migration `0055_org_enrichment` inserts the settings
 row and grants `siutindei_admin` select, insert, update, and delete on
 these three tables. `org_enrichment_runs` and `org_enrichment_proposals`
-stay empty. No `seed_data.sql` change.
+stay empty. No `seed_data.sql` change. `0056_org_enrichment_pages`
+widens `max_pages` from 1 to 8 to 1 to 20, and moves the default and a
+row still on 6 to 12.
 
 ## Table: geographic_areas
 

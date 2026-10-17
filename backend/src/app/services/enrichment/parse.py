@@ -11,10 +11,16 @@ from app.services.enrichment.constants import (
     MAX_JSONLD_BLOCKS,
     MAX_PAGE_TEXT,
     PAGE_KEYWORDS,
+    SKIP_KEYWORDS,
 )
 from app.services.enrichment.guard import is_social_host, social_field
 
 _WS_RE = re.compile(r"\s+")
+_CAMEL_RE = re.compile(r"(?<=[a-z])(?=[A-Z])")
+_LOCALE_RE = re.compile(r"^(?:[a-z]{2}(?:[-_][a-z]{2,4})?|tc|sc|chs|cht)$", re.I)
+_QUOTE_FOLD = str.maketrans(
+    {"‘": "'", "’": "'", "“": '"', "”": '"', "–": "-", "—": "-", "\xa0": " "}
+)
 _META_REFRESH_RE = re.compile(
     r"""url\s*=\s*['"]?([^'">\s]+)""",
     re.IGNORECASE,
@@ -32,6 +38,7 @@ class _PageParser(HTMLParser):
         self.jsonld_raw: list[str] = []
         self.lang = ""
         self._skip = 0
+        self._nav = 0
         self._in_title = False
         self._in_jsonld = False
         self._jsonld_parts: list[str] = []
@@ -49,6 +56,8 @@ class _PageParser(HTMLParser):
             return
         if self._skip:
             return
+        if tag == "nav":
+            self._nav += 1
         if tag == "title":
             self._in_title = True
         if tag == "a" and data.get("href"):
@@ -76,6 +85,8 @@ class _PageParser(HTMLParser):
         if tag in {"script", "style", "noscript"} and self._skip:
             self._skip -= 1
             return
+        if tag == "nav" and self._nav:
+            self._nav -= 1
         if tag == "title":
             self._in_title = False
 
@@ -91,7 +102,8 @@ class _PageParser(HTMLParser):
             self.links[-1]["text"] = (
                 self.links[-1]["text"] + " " + data.strip()
             ).strip()[:200]
-        self.text_parts.append(data)
+        if not self._nav:
+            self.text_parts.append(data)
 
 
 def _image(data: dict[str, str], key: str) -> dict[str, object]:
@@ -155,21 +167,69 @@ def page_corpus(page: dict[str, object]) -> str:
     return "\n".join(parts)
 
 
-def quote_supported(pages: list[dict[str, object]], url: str, quote: str) -> bool:
-    needle = (quote or "").strip()
+def page_url(page: dict[str, object]) -> str:
+    return str(page.get("final_url") or page.get("url") or "")
+
+
+def find_quote(pages: list[dict[str, object]], url: str, quote: str) -> str | None:
+    """URL of the fetched page holding the quote, trying the cited page first.
+
+    Spacing, case, curly quotes, and the URL's www, scheme, or trailing slash
+    do not matter.
+    """
+    needle = _fold(quote)
     if len(needle) < 8:
-        return False
-    for page in pages:
-        if str(page.get("final_url") or page.get("url") or "") != url:
-            continue
-        if needle in page_corpus(page):
-            return True
-    return False
+        return None
+    cited = url_key(url) if url else ""
+    ordered = sorted(pages, key=lambda page: url_key(page_url(page)) != cited)
+    for page in ordered:
+        if needle in _fold(page_corpus(page)):
+            return page_url(page)
+    return None
 
 
-def link_score(href: str, anchor: str) -> int:
-    blob = f"{href} {anchor}".casefold()
-    return sum(1 for word in PAGE_KEYWORDS if word.casefold() in blob)
+def quote_supported(pages: list[dict[str, object]], url: str, quote: str) -> bool:
+    return find_quote(pages, url, quote) is not None
+
+
+def url_key(url: str) -> str:
+    """One key per page, whatever the scheme, www, trailing slash, or fragment."""
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower().removeprefix("www.")
+    key = host + parsed.path.rstrip("/")
+    return f"{key}?{parsed.query}" if parsed.query else key
+
+
+def link_score(href: str, anchor: str, base: str = "") -> int:
+    """Keywords add one each. A skip word or another language's copy costs more.
+
+    A linked PDF on these sites is usually a timetable, fee sheet, or term
+    flyer, so it starts ahead of a plain menu page.
+    """
+    path = urlparse(href).path
+    blob = _CAMEL_RE.sub(" ", f"{path} {anchor}").casefold()
+    score = 2 if path.lower().endswith(".pdf") else 0
+    score += sum(1 for word in PAGE_KEYWORDS if _has_word(blob, word))
+    score -= 3 * sum(1 for word in SKIP_KEYWORDS if _has_word(blob, word))
+    if base and _locale(href) != _locale(base):
+        score -= 2
+    return score
+
+
+def _has_word(blob: str, word: str) -> bool:
+    # Short words need a word start, so "workshop" is not "shop".
+    if not word.isascii() or len(word) >= 6:
+        return word in blob
+    return re.search(rf"(?<![a-z]){re.escape(word)}", blob) is not None
+
+
+def _locale(url: str) -> str:
+    first = urlparse(url).path.strip("/").split("/", 1)[0]
+    return first.lower().replace("-", "_") if _LOCALE_RE.match(first) else ""
+
+
+def _fold(text: str) -> str:
+    return _WS_RE.sub(" ", (text or "").translate(_QUOTE_FOLD)).strip().casefold()
 
 
 def _collect_links(

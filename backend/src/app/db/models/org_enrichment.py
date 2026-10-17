@@ -228,8 +228,8 @@ class OrgEnrichmentSettings(Base):
     max_pages: Mapped[int] = mapped_column(
         Integer(),
         nullable=False,
-        default=6,
-        server_default=text("6"),
+        default=12,
+        server_default=text("12"),
     )
     max_page_bytes: Mapped[int] = mapped_column(
         Integer(),
@@ -263,7 +263,7 @@ class OrgEnrichmentSettings(Base):
             name="org_enrichment_settings_cost_check",
         ),
         CheckConstraint(
-            "max_pages >= 1 AND max_pages <= 8",
+            "max_pages >= 1 AND max_pages <= 20",
             name="org_enrichment_settings_pages_check",
         ),
         CheckConstraint(

@@ -15,7 +15,7 @@ import { StatusBanner } from '../status-banner';
 
 const EMPTY: EnrichmentSettings = {
   monthly_cost_limit_usd: 25,
-  max_pages: 6,
+  max_pages: 12,
   max_page_bytes: 1000000,
   copy_media: true,
   min_confidence_shown: 0.5,
@@ -111,7 +111,7 @@ export function OrganizationEnrichmentSettings() {
               id='enrich-pages'
               type='number'
               min={1}
-              max={8}
+              max={20}
               disabled={loading}
               value={form.max_pages}
               onChange={(event) =>

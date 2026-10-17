@@ -191,6 +191,8 @@ def configure_logging(level: Optional[str] = None) -> None:
     logging.getLogger("botocore").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    # pypdf warns on every recoverable defect in a crawled PDF.
+    logging.getLogger("pypdf").setLevel(logging.ERROR)
 
 
 def get_logger(name: str, **extra: Any) -> ContextLogger:

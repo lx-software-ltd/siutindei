@@ -8,11 +8,15 @@ COPYRIGHT_NOTICE = (
     "Copyright remains with the provider."
 )
 
-# Two queue messages share the 120s admin function: crawl, then extract.
-CRAWL_TIME_BUDGET_SECONDS = 20
-EXTRACT_TIMEOUT_SECONDS = 70
-MAX_PAGE_TEXT = 8000
-MAX_PROMPT_CHARS = 40_000
+# Crawl and extract are separate queue messages, each inside the 120s admin
+# function. The crawl also waits one second between fetches.
+CRAWL_TIME_BUDGET_SECONDS = 60
+EXTRACT_TIMEOUT_SECONDS = 90
+MAX_PAGE_TEXT = 20_000
+MAX_PROMPT_CHARS = 90_000
+# A PDF is read whole or not at all, so it gets its own byte limit.
+MAX_PDF_BYTES = 8_000_000
+MAX_PDF_PAGES = 30
 MAX_IMAGE_BYTES = 5_000_000
 MAX_APPLY_IDS = 200
 MAX_JSONLD_BLOCKS = 20
@@ -88,27 +92,72 @@ MULTI_PART_SUFFIXES = frozenset(
     }
 )
 
+# Link words that point at programs, venues, prices, or class times.
 PAGE_KEYWORDS = (
     "about",
     "contact",
     "location",
+    "venue",
+    "branch",
+    "campus",
+    "centre",
+    "center",
     "class",
     "course",
+    "program",
+    "lesson",
+    "term",
+    "camp",
+    "league",
+    "team",
+    "clinic",
+    "coaching",
+    "training",
+    "workshop",
+    "playgroup",
+    "kids",
+    "junior",
+    "youth",
     "price",
     "fee",
+    "tuition",
     "schedule",
     "timetable",
-    "gallery",
-    "photo",
+    "calendar",
     "關於",
     "聯絡",
     "地址",
     "分店",
     "校舍",
+    "場地",
     "課程",
+    "活動",
     "收費",
     "學費",
     "時間表",
     "上課",
+)
+
+# Link words for pages that rarely hold catalog facts. One outweighs any
+# single keyword, so a photo gallery never beats a program page.
+SKIP_KEYWORDS = (
+    "gallery",
+    "photo",
+    "video",
+    "blog",
+    "news",
+    "cart",
+    "shop",
+    "wishlist",
+    "checkout",
+    "login",
+    "account",
+    "privacy",
+    "terms",
+    "cookie",
+    "testimonial",
+    "booking",
+    "career",
     "相片",
+    "相簿",
 )
