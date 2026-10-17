@@ -1,7 +1,9 @@
 # Plan: Keep model rows when the reply is long or cut off
 
 **Status**: Done
-**Zone**: yellow
+**Zone**: red (`openrouter_client.py`), yellow (enrichment services)
+
+The requester approved the red-zone change in chat after the reply limit and reasoning settings were named as the follow-up.
 
 ## Goal
 
@@ -16,15 +18,17 @@ After the deeper crawl shipped, a run on a 12-page site still returned no model 
 
 ## Non-goals
 
-No change to `openrouter_client.py` (red), so no `max_tokens`, reasoning, or `response_format` setting in this change. No change to the crawl, the proposal tables, or the admin screens. No change to the shared log formatter, because turning on every `extra=` in the backend could start printing values that were never reviewed for PII.
+No `response_format` or structured-output setting. Other OpenRouter workloads send the same request as before. No change to the crawl, the proposal tables, or the admin screens. No change to the shared log formatter, because turning on every `extra=` in the backend could start printing values that were never reviewed for PII.
 
 ## Files
 
 - `backend/src/app/services/enrichment/prompt.py`: list rows carry plain values with one `confidence`, `url`, and `quote` per row. Organization fields keep their own evidence. The prompt is also capped by an estimated token count, counting CJK characters as one token each, so a Chinese site cannot overflow a 40,960-token window.
 - `backend/src/app/services/enrichment/sheet.py`: when the reply does not parse, keep every complete row before the cut and close the open brackets.
 - `backend/src/app/services/enrichment/run.py`: one log line per model reply with `finish_reason`, reply length, and whether the sheet parsed whole, was repaired, or was empty. The existing "model sheet checked" line passes its counts so the formatter prints them.
-- `backend/src/app/services/enrichment/constants.py`: the prompt token budget.
-- `tests/test_org_enrichment_reply.py` (new).
+- `backend/src/app/services/openrouter_client.py` (red): optional `max_tokens` and `reasoning_off` arguments. When set, the request carries `max_tokens` and `reasoning: {"enabled": false}`. Nothing changes for callers that leave them out.
+- `backend/src/app/services/enrichment/run.py`: enrichment asks for a 12,000-token reply cap with reasoning off. A quick 400 or 404 refusal, from a model with mandatory reasoning or a shorter output limit, is retried once without them.
+- `backend/src/app/services/enrichment/constants.py`: prompt budget of 20,000 estimated tokens and reply cap of 12,000. The estimate can run about 15% low, so prompt, instructions, and reply stay under a 40,960-token window.
+- `tests/test_org_enrichment_reply.py`, `tests/test_openrouter_reply_room.py` (new).
 
 ## Invariants this change preserves
 
@@ -32,7 +36,7 @@ Every proposed value still needs a quote found on a fetched page, or it is marke
 
 ## Done when
 
-- `pytest tests/test_org_enrichment_reply.py tests/test_org_enrichment_depth.py tests/test_org_enrichment.py` passes.
+- `pytest tests/test_org_enrichment_reply.py tests/test_openrouter_reply_room.py tests/test_org_enrichment_depth.py tests/test_org_enrichment.py tests/test_category_suggestions.py` passes.
 - `pytest tests backend` passes on a freshly migrated Postgres.
 - `pre-commit run` passes on the changed files.
 - On the real crawled pages of the site that returned nothing, a reply cut off at a 4,096-token budget still yields locations and activities, and the compact shape is several times smaller than the old one.
@@ -43,4 +47,4 @@ Revert the commits. Stored runs and proposals are unchanged.
 
 ## Open questions
 
-Setting `max_tokens` and turning reasoning off for this workload would leave more room for the reply. Both need a change in `openrouter_client.py`, which is red, so they are left for an approved follow-up.
+A model with a larger window for this workload would leave more room still. That is an admin setting, not a code change.
