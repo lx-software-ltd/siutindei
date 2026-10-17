@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -16,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.db.models.organization import Organization
 from app.services.aws_proxy import AwsProxyError
 from app.db.models.org_enrichment import OrgEnrichmentProposal, OrgEnrichmentRun
-from app.services.enrichment.constants import EXTRACT_TIMEOUT_SECONDS
+from app.services.enrichment.constants import EXTRACT_TIMEOUT_SECONDS, MAX_REPLY_TOKENS
 from app.services.enrichment.extract import (
     merge_proposals,
     proposals_from_pages,
@@ -241,18 +242,34 @@ def _proxy_crawl(run: OrgEnrichmentRun, settings: Any) -> dict[str, Any]:
 
 def _model(user_content: str) -> tuple[dict[str, Any], Decimal, str]:
     from app.services.openrouter_client import (
+        OpenRouterError,
         extract_message_text,
         openrouter_chat_completion,
         usage_from_body,
     )
 
-    body = openrouter_chat_completion(
-        system_prompt=MODEL_INSTRUCTIONS,
-        user_content=user_content or "No page text.",
-        timeout=EXTRACT_TIMEOUT_SECONDS,
-        workload="org-enrichment",
-        max_attempts=1,
-    )
+    request: dict[str, Any] = {
+        "system_prompt": MODEL_INSTRUCTIONS,
+        "user_content": user_content or "No page text.",
+        "timeout": EXTRACT_TIMEOUT_SECONDS,
+        "workload": "org-enrichment",
+        "max_attempts": 1,
+    }
+    started = time.monotonic()
+    try:
+        body = openrouter_chat_completion(
+            **request, max_tokens=MAX_REPLY_TOKENS, reasoning_off=True
+        )
+    except OpenRouterError as exc:
+        # An admin-chosen model may require reasoning or allow a shorter reply.
+        # Its refusal is quick, so one plain retry still fits the function.
+        if exc.status not in {400, 404} or time.monotonic() - started > 15:
+            raise
+        logger.warning(
+            "Enrichment model refused reply settings; retrying without them",
+            extra={"extra": {"status": exc.status}},
+        )
+        body = openrouter_chat_completion(**request)
     text = extract_message_text(body)
     sheet, parsed = read_sheet(text)
     usage = usage_from_body(body)
