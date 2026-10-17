@@ -160,8 +160,15 @@ def openrouter_chat_completion(
     model: str | None = None,
     fallback_models: Sequence[str] | None = None,
     deny_data_collection: bool | None = None,
+    max_tokens: int | None = None,
+    reasoning_off: bool = False,
 ) -> str:
-    """POST a chat completion and return the raw response body."""
+    """POST a chat completion and return the raw response body.
+
+    ``max_tokens`` caps the reply. ``reasoning_off`` asks a thinking model
+    not to reason, because reasoning tokens share the reply budget and the
+    context window. A model whose reasoning is mandatory rejects it.
+    """
     endpoint_url = require_env("OPENROUTER_CHAT_COMPLETIONS_URL")
     chosen = (model or "").strip() or configured_model_name()
     api_key = get_openrouter_api_key()
@@ -187,6 +194,10 @@ def openrouter_chat_completion(
     }
     if fallbacks:
         payload["models"] = fallbacks[:_MAX_FALLBACK_MODELS]
+    if max_tokens is not None:
+        payload["max_tokens"] = max_tokens
+    if reasoning_off:
+        payload["reasoning"] = {"enabled": False}
     if deny:
         payload["provider"] = {"data_collection": "deny"}
     headers = {
