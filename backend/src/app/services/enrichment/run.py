@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -23,7 +24,7 @@ from app.services.enrichment.extract import (
 )
 from app.services.enrichment.match import prepare_proposals
 from app.services.enrichment.prompt import MODEL_INSTRUCTIONS, prompt_pages
-from app.services.enrichment.sheet import SECTIONS, section_rows, sheet_from_text
+from app.services.enrichment.sheet import SECTIONS, read_sheet, section_rows
 from app.services.enrichment.queue import enqueue_enrichment
 from app.services.enrichment.store import load_settings, month_spend, save_proposals
 from app.utils.logging import get_logger
@@ -190,16 +191,20 @@ def _extract(
         checked = validate_model_sheet(sheet, pages, snapshot)
         run.cost_usd = cost
         run.model = model
+        # StructuredLogFormatter prints only a field named "extra".
         logger.info(
             "Enrichment model sheet checked",
             extra={
-                "run_id": str(run.id),
-                "pages": len(pages),
-                "prompt_chars": len(prompt),
-                "model_rows": {
-                    section: len(section_rows(sheet, section)) for section in SECTIONS
-                },
-                "kept": _section_counts(checked),
+                "extra": {
+                    "run_id": str(run.id),
+                    "pages": len(pages),
+                    "prompt_chars": len(prompt),
+                    "model_rows": {
+                        section: len(section_rows(sheet, section))
+                        for section in SECTIONS
+                    },
+                    "kept": _section_counts(checked),
+                }
             },
         )
     else:
@@ -248,13 +253,36 @@ def _model(user_content: str) -> tuple[dict[str, Any], Decimal, str]:
         workload="org-enrichment",
         max_attempts=1,
     )
-    sheet = sheet_from_text(extract_message_text(body))
+    text = extract_message_text(body)
+    sheet, parsed = read_sheet(text)
     usage = usage_from_body(body)
+    logger.info(
+        "Enrichment model reply",
+        extra={
+            "extra": {
+                "model": str(usage.get("model") or ""),
+                "finish_reason": _finish_reason(body),
+                "prompt_tokens": usage.get("prompt_tokens"),
+                "completion_tokens": usage.get("completion_tokens"),
+                "reply_chars": len(text),
+                "sheet": parsed,
+            }
+        },
+    )
     return (
         sheet,
         Decimal(str(usage.get("cost_usd") or 0)),
         str(usage.get("model") or ""),
     )
+
+
+def _finish_reason(body: str) -> str:
+    """``length`` means the reply hit the model's output limit."""
+    try:
+        payload = json.loads(body)
+        return str(payload["choices"][0].get("finish_reason") or "")
+    except (ValueError, KeyError, IndexError, TypeError, AttributeError):
+        return ""
 
 
 def _copy_cached(
