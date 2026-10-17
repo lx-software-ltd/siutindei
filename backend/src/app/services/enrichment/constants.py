@@ -10,10 +10,13 @@ COPYRIGHT_NOTICE = (
 
 # Crawl and extract are separate queue messages, each inside the 120s admin
 # function. The crawl also waits one second between fetches.
-CRAWL_TIME_BUDGET_SECONDS = 30
-EXTRACT_TIMEOUT_SECONDS = 70
+CRAWL_TIME_BUDGET_SECONDS = 60
+EXTRACT_TIMEOUT_SECONDS = 90
 MAX_PAGE_TEXT = 20_000
-MAX_PROMPT_CHARS = 60_000
+MAX_PROMPT_CHARS = 90_000
+# A PDF is read whole or not at all, so it gets its own byte limit.
+MAX_PDF_BYTES = 8_000_000
+MAX_PDF_PAGES = 30
 MAX_IMAGE_BYTES = 5_000_000
 MAX_APPLY_IDS = 200
 MAX_JSONLD_BLOCKS = 20

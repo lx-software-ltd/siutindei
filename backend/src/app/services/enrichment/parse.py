@@ -201,9 +201,15 @@ def url_key(url: str) -> str:
 
 
 def link_score(href: str, anchor: str, base: str = "") -> int:
-    """Keywords add one each. A skip word or another language's copy costs more."""
-    blob = _CAMEL_RE.sub(" ", f"{urlparse(href).path} {anchor}").casefold()
-    score = sum(1 for word in PAGE_KEYWORDS if _has_word(blob, word))
+    """Keywords add one each. A skip word or another language's copy costs more.
+
+    A linked PDF on these sites is usually a timetable, fee sheet, or term
+    flyer, so it starts ahead of a plain menu page.
+    """
+    path = urlparse(href).path
+    blob = _CAMEL_RE.sub(" ", f"{path} {anchor}").casefold()
+    score = 2 if path.lower().endswith(".pdf") else 0
+    score += sum(1 for word in PAGE_KEYWORDS if _has_word(blob, word))
     score -= 3 * sum(1 for word in SKIP_KEYWORDS if _has_word(blob, word))
     if base and _locale(href) != _locale(base):
         score -= 2

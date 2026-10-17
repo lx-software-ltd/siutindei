@@ -205,6 +205,14 @@ def test_other_language_copy_ranks_below_the_page() -> None:
     )
 
 
+def test_linked_pdf_outranks_plain_menu_pages() -> None:
+    seed = "https://club.test/stanley"
+    pdf = link_score("https://club.test/s/stanley2027.pdf", "Download", seed)
+    assert pdf > link_score("https://club.test/contact-us", "Contact Us", seed)
+    assert pdf > link_score("https://club.test/redhill", "Stanley Sports Centre", seed)
+    assert link_score("https://club.test/s/privacy.pdf", "Download", seed) < 0
+
+
 def test_url_key_ignores_www_slash_fragment_and_scheme() -> None:
     assert url_key("https://www.club.test/") == url_key("http://club.test")
     assert url_key("https://club.test/a/#top") == url_key("https://club.test/a")
@@ -237,8 +245,7 @@ def test_crawl_spends_its_pages_on_term_venue_and_program_pages(monkeypatch) -> 
         "<a href='/zh_HK/'>中文</a>"
         "<a href='/2026-fall-term'>2026 Fall Term</a>"
         "<a href='/venue-locations'>Venue Locations</a>"
-        "<a href='/girls-program'>Girls Program</a>"
-        "<a href='/term-timetable-fees.pdf'>Term Timetable and Fees</a></nav>"
+        "<a href='/girls-program'>Girls Program</a></nav>"
     )
     body = "<p>" + "Youth basketball training in the city. " * 10 + "</p>"
     paths = [
@@ -251,7 +258,7 @@ def test_crawl_spends_its_pages_on_term_venue_and_program_pages(monkeypatch) -> 
         "/girls-program",
     ]
     pages = {path: f"<html><body>{nav}{body}</body></html>" for path in paths}
-    fetch_one, calls = _site(pages)
+    fetch_one, _calls = _site(pages)
     result = crawl_site(
         "https://www.club.test/",
         max_pages=4,
@@ -266,7 +273,6 @@ def test_crawl_spends_its_pages_on_term_venue_and_program_pages(monkeypatch) -> 
         "club.test/venue-locations",
         "club.test/girls-program",
     }
-    assert not any(url.endswith(".pdf") for url in calls)
 
 
 def test_prompt_drops_text_repeated_on_every_page() -> None:
@@ -293,3 +299,136 @@ def test_prompt_shares_room_so_a_long_page_does_not_crowd_out_the_rest() -> None
     ]
     prompt = prompt_pages(pages)
     assert "HK$2,400" in prompt
+
+
+def _pdf(*lines: str) -> bytes:
+    """A one-page PDF with one line of Helvetica text per argument."""
+    text = " ".join(
+        f"BT /F1 12 Tf 50 {700 - 20 * index} Td ({line}) Tj ET"
+        for index, line in enumerate(lines)
+    ).encode()
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        (
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+            b"/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>"
+        ),
+        b"<< /Length %d >>\nstream\n" % len(text) + text + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    out = b"%PDF-1.4\n"
+    offsets = []
+    for number, body in enumerate(objects, start=1):
+        offsets.append(len(out))
+        out += b"%d 0 obj\n" % number + body + b"\nendobj\n"
+    xref = len(out)
+    out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objects) + 1)
+    out += b"".join(b"%010d 00000 n \n" % offset for offset in offsets)
+    out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (
+        len(objects) + 1,
+        xref,
+    )
+    return out
+
+
+def test_pdf_text_becomes_a_page() -> None:
+    from app.services.enrichment.pdf import parse_pdf
+
+    page = parse_pdf(
+        "https://club.test/timetable.pdf",
+        _pdf("Junior Skills Class Wednesdays 4:30pm - 6:00pm", "Fee: HK$2,400"),
+    )
+    assert page is not None
+    assert "Junior Skills Class Wednesdays" in str(page["text"])
+    assert "HK$2,400" in str(page["text"])
+    assert page["links"] == [] and page["images"] == []
+
+
+def test_broken_pdf_is_skipped() -> None:
+    from app.services.enrichment.pdf import parse_pdf
+
+    assert parse_pdf("https://club.test/x.pdf", b"%PDF-1.4 not really") is None
+
+
+def test_crawl_reads_a_linked_pdf_timetable(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.enrichment.fetch.check_fetch_url", lambda url: None
+    )
+    home = (
+        "<html><body><p>"
+        + "Youth basketball training in the city. " * 10
+        + "</p><a href='/term-timetable.pdf'>Term Timetable</a></body></html>"
+    ).encode()
+    pdf = _pdf("Junior Skills Class Wednesdays 4:30pm - 6:00pm")
+    sizes: dict[str, int] = {}
+
+    def fetch_one(url: str, max_bytes: int) -> FetchResult:
+        sizes[url] = max_bytes
+        if url.endswith("/robots.txt"):
+            return FetchResult(404, url, "text/plain", b"", "")
+        if url.endswith(".pdf"):
+            return FetchResult(200, url, "application/pdf", pdf, "")
+        return FetchResult(200, url, "text/html", home, "")
+
+    result = crawl_site(
+        "https://club.test/",
+        max_pages=4,
+        max_page_bytes=50_000,
+        fetch_one=fetch_one,
+        sleep=lambda _seconds: None,
+        now=lambda: 0,
+    )
+    pages = result["pages"]  # type: ignore[index]
+    pdf_page = next(p for p in pages if str(p["final_url"]).endswith(".pdf"))
+    assert "Wednesdays 4:30pm" in str(pdf_page["text"])
+    assert sizes["https://club.test/term-timetable.pdf"] > 50_000
+
+
+def test_site_pdf_served_from_a_file_host_is_read(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.enrichment.fetch.check_fetch_url", lambda url: None
+    )
+    home = (
+        "<html><body><p>"
+        + "Youth basketball training in the city. " * 10
+        + "</p><a href='/s/timetable.pdf'>Download</a>"
+        + "<a href='/s/brochure.pdf'>Download</a>"
+        + "<a href='https://files.test/other.html'>Partner</a></body></html>"
+    ).encode()
+    pdf = _pdf("Junior Skills Class Wednesdays 4:30pm - 6:00pm")
+
+    def fetch_one(url: str, max_bytes: int) -> FetchResult:
+        if url.endswith("/robots.txt"):
+            return FetchResult(404, url, "text/plain", b"", "")
+        if url.startswith("https://club.test/s/"):
+            name = url.rsplit("/", 1)[1]
+            return FetchResult(302, url, "text/html", b"", f"https://files.test/{name}")
+        if url == "https://files.test/timetable.pdf":
+            return FetchResult(200, url, "application/pdf", pdf, "")
+        if url.startswith("https://files.test/"):
+            return FetchResult(200, url, "text/html", home, "")
+        return FetchResult(200, url, "text/html", home, "")
+
+    result = crawl_site(
+        "https://club.test/",
+        max_pages=4,
+        fetch_one=fetch_one,
+        sleep=lambda _seconds: None,
+        now=lambda: 0,
+    )
+    urls = [str(p["final_url"]) for p in result["pages"]]  # type: ignore[index]
+    assert "https://files.test/timetable.pdf" in urls
+    assert "https://files.test/brochure.pdf" not in urls
+    assert "https://files.test/other.html" not in urls
+
+
+def test_settings_allow_twenty_pages(db_session) -> None:
+    import pytest
+    from app.exceptions import ValidationError
+    from app.services.enrichment.store import load_settings, update_settings
+
+    assert load_settings(db_session).max_pages == 12
+    assert update_settings(db_session, {"max_pages": 20}).max_pages == 20
+    with pytest.raises(ValidationError):
+        update_settings(db_session, {"max_pages": 21})

@@ -16,6 +16,7 @@ from urllib.robotparser import RobotFileParser
 
 from app.services.enrichment.constants import (
     CRAWL_TIME_BUDGET_SECONDS,
+    MAX_PDF_BYTES,
     USER_AGENT,
 )
 from app.services.enrichment.guard import (
@@ -26,9 +27,10 @@ from app.services.enrichment.guard import (
     same_site,
 )
 from app.services.enrichment.parse import link_score, parse_html, url_key
+from app.services.enrichment.pdf import parse_pdf
 
 _FILE_RE = re.compile(
-    r"\.(?:pdf|jpe?g|png|gif|webp|svg|zip|docx?|xlsx?|pptx?|mp4|mp3)$", re.I
+    r"\.(?:jpe?g|png|gif|webp|svg|zip|docx?|xlsx?|pptx?|mp4|mp3)$", re.I
 )
 _ALLOWED_TYPES = (
     "text/html",
@@ -241,7 +243,7 @@ def _follow(
 def crawl_site(
     seed_url: str,
     *,
-    max_pages: int = 6,
+    max_pages: int = 12,
     max_page_bytes: int = 1_000_000,
     time_budget_seconds: int = CRAWL_TIME_BUDGET_SECONDS,
     fetch_one: FetchOne | None = None,
@@ -293,26 +295,42 @@ def crawl_site(
             wait = 1.0 - (now() - last_fetch)
             if wait > 0 and now() + wait < deadline:
                 sleep(wait)
+        limit = MAX_PDF_BYTES if _is_pdf_path(url) else max_page_bytes
         try:
-            result = _follow(url, fetch_one=bounded, max_bytes=max_page_bytes)
+            result = _follow(url, fetch_one=bounded, max_bytes=limit)
         except (CrawlError, urllib.error.URLError, TimeoutError, OSError):
             continue
         last_fetch = now()
         final_url = result.url or url
         final_host = urlparse(final_url).hostname or ""
-        if not same_site(host, final_host):
+        ctype = result.content_type.split(";", 1)[0].strip().lower()
+        is_pdf = ctype == "application/pdf" or result.body.startswith(b"%PDF-")
+        # Site builders serve the site's own PDF links from a file host.
+        if not same_site(host, final_host) and not (is_pdf and _is_pdf_path(url)):
             continue
         final_robots = robots_for(final_url)
         if final_robots is not None and not _allowed(final_robots, final_url):
             continue
-        ctype = result.content_type.split(";", 1)[0].strip().lower()
-        if ctype and not any(ctype.startswith(allowed) for allowed in _ALLOWED_TYPES):
+        if (
+            not is_pdf
+            and ctype
+            and not any(ctype.startswith(allowed) for allowed in _ALLOWED_TYPES)
+        ):
             continue
-        markup = result.body.decode("utf-8", errors="replace")
         total_bytes += len(result.body)
         if result.status >= 400:
             continue
-        page = parse_html(final_url, markup)
+        if is_pdf:
+            parsed = (
+                None
+                if result.truncated
+                else parse_pdf(final_url, result.body, deadline=deadline, now=now)
+            )
+            if parsed is None:
+                continue
+            page = parsed
+        else:
+            page = parse_html(final_url, result.body.decode("utf-8", errors="replace"))
         refresh = str(page.get("meta_refresh") or "")
         if (
             refresh
@@ -387,6 +405,10 @@ def _allowed(parser: RobotFileParser, url: str) -> bool:
         return bool(parser.can_fetch(USER_AGENT, url))
     except Exception:
         return True
+
+
+def _is_pdf_path(url: str) -> bool:
+    return urlparse(url).path.lower().endswith(".pdf")
 
 
 def _done(
