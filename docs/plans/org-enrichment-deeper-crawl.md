@@ -1,6 +1,6 @@
 # Plan: Read the pages that hold locations, programs, prices, and times
 
-**Status**: Draft
+**Status**: Done
 **Zone**: yellow
 
 ## Goal
