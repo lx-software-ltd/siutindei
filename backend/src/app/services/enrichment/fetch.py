@@ -9,7 +9,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from typing import Callable
+from typing import Any, Callable
 from urllib.parse import urljoin, urlparse, urlunparse
 from urllib.robotparser import RobotFileParser
 
@@ -56,6 +56,34 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
     http_error_301 = http_error_303 = http_error_307 = http_error_308 = http_error_302
 
 
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    """TCP to the checked IP, with TLS for the website name.
+
+    urllib would pass server_hostname into HTTPSConnection, and Python 3.12
+    rejects that keyword. The name is applied when the socket is wrapped.
+    """
+
+    def __init__(self, host: str, port: int | None = None, **kwargs: Any) -> None:
+        server_hostname = kwargs.pop("server_hostname", None)
+        context = kwargs.get("context")
+        if not isinstance(context, ssl.SSLContext):
+            context = ssl.create_default_context()
+            kwargs["context"] = context
+        super().__init__(host, port, **kwargs)
+        self._ssl_context = context
+        self._pinned_hostname = (
+            server_hostname if isinstance(server_hostname, str) else None
+        )
+
+    def connect(self) -> None:
+        http.client.HTTPConnection.connect(self)
+        sock = self.sock
+        if sock is None:
+            raise OSError("connection failed")
+        name = self._pinned_hostname or self.host
+        self.sock = self._ssl_context.wrap_socket(sock, server_hostname=name)
+
+
 class _PinnedHTTPS(urllib.request.HTTPSHandler):
     """Connect to a checked IP and verify the certificate for the hostname."""
 
@@ -66,7 +94,7 @@ class _PinnedHTTPS(urllib.request.HTTPSHandler):
 
     def https_open(self, req: urllib.request.Request):  # noqa: ANN201
         return self.do_open(
-            http.client.HTTPSConnection,
+            _PinnedHTTPSConnection,
             req,
             context=self._ssl_context,
             server_hostname=self._server_hostname,
