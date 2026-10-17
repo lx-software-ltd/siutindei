@@ -23,7 +23,7 @@ The connection target stays the IP from `public_address`. Certificate checks sti
 
 ## Done when
 
-`pytest tests/test_org_enrichment.py` passes, including a fetch that uses the real HTTPS handler and a crawl that fails immediately on `LambdaInvocationError`. `pre-commit run mypy --all-files` passes.
+`pytest tests/test_org_enrichment.py` passes, including a fetch that uses the real HTTPS handler and a crawl that fails immediately on `LambdaInvocationError`. `pre-commit run mypy --all-files` passes. A live `crawl_site` on Python 3.12 returns `ok` against a real HTTPS site. The change is on `main`, because only `main` deploys the proxy Lambda.
 
 ## Rollback
 
