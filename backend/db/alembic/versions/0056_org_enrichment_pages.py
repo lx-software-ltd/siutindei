@@ -30,13 +30,13 @@ def upgrade() -> None:
     op.drop_constraint(_CHECK, _TABLE, type_="check")
     op.create_check_constraint(_CHECK, _TABLE, "max_pages >= 1 AND max_pages <= 20")
     op.alter_column(_TABLE, "max_pages", server_default=sa.text("12"))
-    op.execute(sa.text(f"UPDATE {_TABLE} SET max_pages = 12 WHERE max_pages = 6"))
+    op.execute("UPDATE org_enrichment_settings SET max_pages = 12 WHERE max_pages = 6")
 
 
 def downgrade() -> None:
     """Restore max_pages 1-8 with default 6."""
-    op.execute(sa.text(f"UPDATE {_TABLE} SET max_pages = 6 WHERE max_pages = 12"))
-    op.execute(sa.text(f"UPDATE {_TABLE} SET max_pages = 8 WHERE max_pages > 8"))
+    op.execute("UPDATE org_enrichment_settings SET max_pages = 6 WHERE max_pages = 12")
+    op.execute("UPDATE org_enrichment_settings SET max_pages = 8 WHERE max_pages > 8")
     op.drop_constraint(_CHECK, _TABLE, type_="check")
     op.create_check_constraint(_CHECK, _TABLE, "max_pages >= 1 AND max_pages <= 8")
     op.alter_column(_TABLE, "max_pages", server_default=sa.text("6"))
