@@ -17,13 +17,13 @@ from app.services.aws_proxy import AwsProxyError
 from app.db.models.org_enrichment import OrgEnrichmentProposal, OrgEnrichmentRun
 from app.services.enrichment.constants import EXTRACT_TIMEOUT_SECONDS
 from app.services.enrichment.extract import (
-    MODEL_INSTRUCTIONS,
     merge_proposals,
-    prompt_pages,
     proposals_from_pages,
     validate_model_sheet,
 )
 from app.services.enrichment.match import prepare_proposals
+from app.services.enrichment.prompt import MODEL_INSTRUCTIONS, prompt_pages
+from app.services.enrichment.sheet import SECTIONS, section_rows, sheet_from_text
 from app.services.enrichment.queue import enqueue_enrichment
 from app.services.enrichment.store import load_settings, month_spend, save_proposals
 from app.utils.logging import get_logger
@@ -185,10 +185,23 @@ def _extract(
     deterministic = proposals_from_pages(pages, snapshot)
     copied = _copy_cached(session, run)
     if copied is None:
-        sheet, cost, model = (complete or _model)(prompt_pages(pages))
+        prompt = prompt_pages(pages)
+        sheet, cost, model = (complete or _model)(prompt)
         checked = validate_model_sheet(sheet, pages, snapshot)
         run.cost_usd = cost
         run.model = model
+        logger.info(
+            "Enrichment model sheet checked",
+            extra={
+                "run_id": str(run.id),
+                "pages": len(pages),
+                "prompt_chars": len(prompt),
+                "model_rows": {
+                    section: len(section_rows(sheet, section)) for section in SECTIONS
+                },
+                "kept": _section_counts(checked),
+            },
+        )
     else:
         checked = copied
         run.cost_usd = Decimal("0")
@@ -227,9 +240,6 @@ def _model(user_content: str) -> tuple[dict[str, Any], Decimal, str]:
         openrouter_chat_completion,
         usage_from_body,
     )
-    import json
-
-    from app.services.openrouter_json_parse import openrouter_json_text_candidates
 
     body = openrouter_chat_completion(
         system_prompt=MODEL_INSTRUCTIONS,
@@ -238,10 +248,7 @@ def _model(user_content: str) -> tuple[dict[str, Any], Decimal, str]:
         workload="org-enrichment",
         max_attempts=1,
     )
-    candidates = openrouter_json_text_candidates(extract_message_text(body))
-    sheet = json.loads(candidates[0]) if candidates else {}
-    if not isinstance(sheet, dict):
-        sheet = {}
+    sheet = sheet_from_text(extract_message_text(body))
     usage = usage_from_body(body)
     return (
         sheet,
@@ -284,6 +291,14 @@ def _copy_cached(
         }
         for row in rows
     ]
+
+
+def _section_counts(items: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in items:
+        section = str(item.get("section") or "")
+        counts[section] = counts.get(section, 0) + 1
+    return counts
 
 
 def _hash_pages(pages: list[Any]) -> str:
