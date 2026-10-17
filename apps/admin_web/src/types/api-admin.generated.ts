@@ -592,7 +592,7 @@ export interface paths {
         /**
          * Update website enrichment settings
          * @description Admin only. `monthly_cost_limit_usd` is greater than 0 and at
-         *     most 1000. `max_pages` is 1 to 8. `max_page_bytes` is 10000 to
+         *     most 1000. `max_pages` is 1 to 20. `max_page_bytes` is 10000 to
          *     2000000. `min_confidence_shown` is 0 to 1.
          */
         put: {

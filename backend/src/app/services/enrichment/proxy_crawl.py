@@ -17,6 +17,9 @@ from app.services.enrichment.constants import (
 from app.services.enrichment.fetch import FetchResult, crawl_site, fetch_public
 from app.services.enrichment.guard import CrawlError, check_fetch_url, validate_seed_url
 
+# Twenty pages must fit the 6 MB Lambda response with room to spare.
+_PAGE_JSONLD_BLOCKS = 5
+
 _IMAGE_TYPES = {
     "image/jpeg": "jpg",
     "image/png": "png",
@@ -38,7 +41,7 @@ def handle_crawl_event(event: Mapping[str, Any]) -> dict[str, Any]:
 
 def crawl_requested(event: Mapping[str, Any]) -> dict[str, Any]:
     seed = validate_seed_url(str(event.get("seed_url") or ""))
-    max_pages = _clamp(event.get("max_pages"), 6, 1, 8)
+    max_pages = _clamp(event.get("max_pages"), 12, 1, 20)
     max_bytes = _clamp(event.get("max_page_bytes"), 1_000_000, 10_000, 2_000_000)
     budget = _clamp(
         event.get("time_budget_seconds"),
@@ -138,8 +141,8 @@ def _public_page(page: dict[str, Any]) -> dict[str, Any]:
         "title": page.get("title"),
         "lang": page.get("lang"),
         "text": page.get("text"),
-        "jsonld": page.get("jsonld"),
-        "jsonld_raw": page.get("jsonld_raw"),
+        "jsonld": _first(page.get("jsonld"), _PAGE_JSONLD_BLOCKS),
+        "jsonld_raw": _first(page.get("jsonld_raw"), _PAGE_JSONLD_BLOCKS),
         "og": page.get("og"),
         "images": page.get("images"),
         "links": page.get("links"),
@@ -147,6 +150,10 @@ def _public_page(page: dict[str, Any]) -> dict[str, Any]:
         "mailtos": page.get("mailtos"),
         "tels": page.get("tels"),
     }
+
+
+def _first(value: object, count: int) -> list[Any]:
+    return list(value[:count]) if isinstance(value, list) else []
 
 
 def _clamp(value: object, default: int, low: int, high: int) -> int:

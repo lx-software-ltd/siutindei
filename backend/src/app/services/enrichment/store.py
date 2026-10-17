@@ -44,7 +44,7 @@ def update_settings(session: Session, body: dict[str, Any]) -> OrgEnrichmentSett
             Decimal("1000"),
         )
     if "max_pages" in body:
-        row.max_pages = _int_between(body.get("max_pages"), "max_pages", 1, 8)
+        row.max_pages = _int_between(body.get("max_pages"), "max_pages", 1, 20)
     if "max_page_bytes" in body:
         row.max_page_bytes = _int_between(
             body.get("max_page_bytes"), "max_page_bytes", 10_000, 2_000_000
