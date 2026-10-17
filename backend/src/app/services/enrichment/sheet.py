@@ -67,13 +67,66 @@ _CLOCK_RE = re.compile(r"^(\d{1,2})(?:[:.](\d{2}))?\s*(?:([ap])\.?\s*m\.?)?$", r
 
 def sheet_from_text(text: str) -> dict[str, Any]:
     """The first JSON object in the model reply, or an empty sheet."""
-    for candidate in openrouter_json_text_candidates(text or ""):
+    return read_sheet(text)[0]
+
+
+def read_sheet(text: str) -> tuple[dict[str, Any], str]:
+    """The sheet, and whether it parsed ``whole``, was ``repaired``, or is ``empty``.
+
+    A reply that hits the model's output limit stops mid-row. Every complete
+    row before the cut is kept, and the cut row is dropped.
+    """
+    candidates = openrouter_json_text_candidates(text or "")
+    for candidate in candidates:
         try:
             loaded = json.loads(candidate)
         except json.JSONDecodeError:
             continue
-        return loaded if isinstance(loaded, dict) else {}
-    return {}
+        return (loaded, "whole") if isinstance(loaded, dict) else ({}, "empty")
+    start = candidates[0].find("{")
+    if start >= 0:
+        try:
+            loaded = json.loads(_close_cut_json(candidates[0][start:]))
+        except json.JSONDecodeError:
+            loaded = None
+        if isinstance(loaded, dict) and any(loaded.values()):
+            return loaded, "repaired"
+    return {}, "empty"
+
+
+def _close_cut_json(text: str) -> str:
+    """Cut after the last whole row and close the brackets still open.
+
+    Cuts only fall between sections, organization fields, or rows of a
+    section list (depth two or less), so a row is never half kept.
+    """
+    stack: list[str] = []
+    cut, closers = 0, ""
+    in_string = escaped = False
+    for index, char in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char in "{[":
+            stack.append("}" if char == "{" else "]")
+        elif char in "}]":
+            if not stack:
+                break
+            stack.pop()
+            if len(stack) <= 2:
+                cut, closers = index + 1, "".join(reversed(stack))
+            if not stack:
+                break
+        elif char == "," and len(stack) <= 2:
+            cut, closers = index, "".join(reversed(stack))
+    return text[:cut] + closers
 
 
 def section_rows(sheet: dict[str, Any], section: str) -> list[dict[str, Any]]:
