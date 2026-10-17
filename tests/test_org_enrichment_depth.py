@@ -237,7 +237,8 @@ def test_crawl_spends_its_pages_on_term_venue_and_program_pages(monkeypatch) -> 
         "<a href='/zh_HK/'>中文</a>"
         "<a href='/2026-fall-term'>2026 Fall Term</a>"
         "<a href='/venue-locations'>Venue Locations</a>"
-        "<a href='/girls-program'>Girls Program</a></nav>"
+        "<a href='/girls-program'>Girls Program</a>"
+        "<a href='/term-timetable-fees.pdf'>Term Timetable and Fees</a></nav>"
     )
     body = "<p>" + "Youth basketball training in the city. " * 10 + "</p>"
     paths = [
@@ -250,7 +251,7 @@ def test_crawl_spends_its_pages_on_term_venue_and_program_pages(monkeypatch) -> 
         "/girls-program",
     ]
     pages = {path: f"<html><body>{nav}{body}</body></html>" for path in paths}
-    fetch_one, _calls = _site(pages)
+    fetch_one, calls = _site(pages)
     result = crawl_site(
         "https://www.club.test/",
         max_pages=4,
@@ -258,13 +259,14 @@ def test_crawl_spends_its_pages_on_term_venue_and_program_pages(monkeypatch) -> 
         sleep=lambda _seconds: None,
         now=lambda: 0,
     )
-    fetched = [page["final_url"] for page in result["pages"]]  # type: ignore[index]
-    assert fetched[0] == "https://www.club.test/"
+    fetched = [url_key(page["final_url"]) for page in result["pages"]]  # type: ignore[index]
+    assert fetched[0] == "club.test"
     assert set(fetched[1:]) == {
-        "https://club.test/2026-fall-term",
-        "https://club.test/venue-locations",
-        "https://club.test/girls-program",
+        "club.test/2026-fall-term",
+        "club.test/venue-locations",
+        "club.test/girls-program",
     }
+    assert not any(url.endswith(".pdf") for url in calls)
 
 
 def test_prompt_drops_text_repeated_on_every_page() -> None:

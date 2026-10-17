@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import http.client
+import re
 import socket
 import ssl
 import time
@@ -24,8 +25,11 @@ from app.services.enrichment.guard import (
     public_address,
     same_site,
 )
-from app.services.enrichment.parse import link_score, parse_html
+from app.services.enrichment.parse import link_score, parse_html, url_key
 
+_FILE_RE = re.compile(
+    r"\.(?:pdf|jpe?g|png|gif|webp|svg|zip|docx?|xlsx?|pptx?|mp4|mp3)$", re.I
+)
 _ALLOWED_TYPES = (
     "text/html",
     "application/xhtml+xml",
@@ -274,7 +278,8 @@ def crawl_site(
     if robots is not None and not _allowed(robots, seed_url):
         return _done("failed", "robots.txt disallows this bot", [])
     queue: list[tuple[int, str]] = [(1000, seed_url)]
-    seen = {seed_url}
+    seen = {url_key(seed_url)}
+    fetched: set[str] = set()
     pages: list[dict[str, object]] = []
     total_bytes = 0
     last_fetch = 0.0
@@ -309,13 +314,22 @@ def crawl_site(
             continue
         page = parse_html(final_url, markup)
         refresh = str(page.get("meta_refresh") or "")
-        if refresh and not str(page.get("text") or "").strip() and refresh not in seen:
-            seen.add(refresh)
+        if (
+            refresh
+            and not str(page.get("text") or "").strip()
+            and url_key(refresh) not in seen
+        ):
+            seen.add(url_key(refresh))
             queue.append((900, refresh))
             continue
+        if url_key(final_url) in fetched:
+            continue
+        fetched.add(url_key(final_url))
+        seen.add(url_key(final_url))
         page["final_url"] = final_url
         page["status"] = result.status
         pages.append(page)
+        base = str(pages[0]["final_url"])
         raw_links = page.get("links")
         for link in raw_links if isinstance(raw_links, list) else []:
             if not isinstance(link, dict):
@@ -323,13 +337,15 @@ def crawl_site(
             href = str(link.get("href") or "")
             link_host = urlparse(href).hostname or ""
             if (
-                href in seen
+                url_key(href) in seen
                 or not same_site(host, link_host)
                 or is_social_host(link_host)
+                or _FILE_RE.search(urlparse(href).path)
             ):
                 continue
-            seen.add(href)
-            queue.append((link_score(href, str(link.get("text") or "")), href))
+            seen.add(url_key(href))
+            score = link_score(href, str(link.get("text") or ""), base)
+            queue.append((score, href))
     if not pages:
         return _done("failed", "website returned no readable page", [])
     seed_text = str(pages[0].get("text") or "")

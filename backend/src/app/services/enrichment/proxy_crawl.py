@@ -9,7 +9,11 @@ from datetime import datetime, timezone
 from typing import Any, Mapping
 from urllib.parse import urljoin
 
-from app.services.enrichment.constants import COPYRIGHT_NOTICE, MAX_IMAGE_BYTES
+from app.services.enrichment.constants import (
+    COPYRIGHT_NOTICE,
+    CRAWL_TIME_BUDGET_SECONDS,
+    MAX_IMAGE_BYTES,
+)
 from app.services.enrichment.fetch import FetchResult, crawl_site, fetch_public
 from app.services.enrichment.guard import CrawlError, check_fetch_url, validate_seed_url
 
@@ -36,7 +40,12 @@ def crawl_requested(event: Mapping[str, Any]) -> dict[str, Any]:
     seed = validate_seed_url(str(event.get("seed_url") or ""))
     max_pages = _clamp(event.get("max_pages"), 6, 1, 8)
     max_bytes = _clamp(event.get("max_page_bytes"), 1_000_000, 10_000, 2_000_000)
-    budget = _clamp(event.get("time_budget_seconds"), 20, 5, 20)
+    budget = _clamp(
+        event.get("time_budget_seconds"),
+        CRAWL_TIME_BUDGET_SECONDS,
+        5,
+        CRAWL_TIME_BUDGET_SECONDS,
+    )
     crawled = crawl_site(
         seed,
         max_pages=max_pages,
