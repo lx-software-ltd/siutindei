@@ -503,6 +503,115 @@ def test_fetch_connects_to_the_checked_address(monkeypatch) -> None:
     assert captured["host"] == "ok.test"
 
 
+def test_https_uses_the_real_handler_for_the_pinned_address(monkeypatch) -> None:
+    import io
+
+    monkeypatch.setattr(
+        "app.services.enrichment.fetch.public_address",
+        lambda host, resolve=None: "1.1.1.1",
+    )
+    seen: dict[str, object] = {}
+    payload = (
+        b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n"
+        b"Content-Length: 5\r\nConnection: close\r\n\r\nhello"
+    )
+
+    class _Sock:
+        def __init__(self) -> None:
+            self._buf = payload
+
+        def sendall(self, data: bytes) -> None:
+            del data
+
+        def setsockopt(self, *args: object) -> None:
+            del args
+
+        def settimeout(self, seconds: float) -> None:
+            del seconds
+
+        def makefile(self, mode: str = "rb", *args: object, **kwargs: object):
+            del mode, args, kwargs
+            return io.BytesIO(self._buf)
+
+        def close(self) -> None:
+            return None
+
+    def _connect(address, timeout=None, source_address=None):
+        del timeout, source_address
+        seen["address"] = address
+        return _Sock()
+
+    def _wrap(self, sock, server_hostname=None, **kwargs):
+        del self, kwargs
+        seen["sni"] = server_hostname
+        return sock
+
+    monkeypatch.setattr(socket, "create_connection", _connect)
+    monkeypatch.setattr("ssl.SSLContext.wrap_socket", _wrap)
+    result = fetch_public("https://ok.test/robots.txt", 100)
+    assert seen["address"] == ("1.1.1.1", 443)
+    assert seen["sni"] == "ok.test"
+    assert result.body == b"hello"
+    assert result.status == 200
+
+
+def test_proxy_crash_fails_the_run_without_a_retry(db_session, monkeypatch) -> None:
+    from app.services.aws_proxy import AwsProxyError
+
+    monkeypatch.setattr(
+        "app.services.enrichment.run.enqueue_enrichment",
+        lambda run_id, *, stage: None,
+    )
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="queued", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+
+    def crawl(row, settings):
+        del row, settings
+        raise AwsProxyError("LambdaInvocationError", "TypeError: server_hostname")
+
+    step = process_enrichment(
+        db_session,
+        run.id,
+        "m-crash",
+        receive_count=1,
+        stage="crawl",
+        crawl=crawl,
+    )
+    assert step.acked is True
+    assert step.enqueue_stage is None
+    assert run.status == "failed"
+    assert run.error == "The website could not be read"
+
+
+def test_proxy_timeout_stays_retryable(db_session, monkeypatch) -> None:
+    from app.services.aws_proxy import AwsProxyError
+
+    monkeypatch.setattr(
+        "app.services.enrichment.run.enqueue_enrichment",
+        lambda run_id, *, stage: None,
+    )
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="queued", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+
+    def crawl(row, settings):
+        del row, settings
+        raise AwsProxyError("TimeoutError", "timed out")
+
+    step = process_enrichment(
+        db_session,
+        run.id,
+        "m-timeout",
+        receive_count=1,
+        stage="crawl",
+        crawl=crawl,
+    )
+    assert step.acked is False
+
+
 def test_truncated_image_is_refused(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.services.enrichment.proxy_crawl.check_fetch_url",
