@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models.organization import Organization
+from app.services.aws_proxy import AwsProxyError
 from app.db.models.org_enrichment import OrgEnrichmentProposal, OrgEnrichmentRun
 from app.services.enrichment.constants import EXTRACT_TIMEOUT_SECONDS
 from app.services.enrichment.extract import (
@@ -57,6 +58,22 @@ def commit_and_queue(session: Session, step: EnrichmentStep) -> None:
             fail_enrichment_run(step.run_id, "Enrichment queue is not configured")
 
 
+def _proxy_failure_message(exc: AwsProxyError) -> str:
+    if exc.code == "CrawlRefused" and exc.message:
+        return exc.message
+    return "The website could not be read"
+
+
+def _fail_open_run(session: Session, run_id: UUID | str, error: str) -> None:
+    row = session.get(OrgEnrichmentRun, run_id)
+    if row is None or row.status in {"ready", "failed", "render_required"}:
+        return
+    row.status = "failed"
+    row.error = error
+    row.finished_at = datetime.now(timezone.utc)
+    session.flush()
+
+
 def fail_enrichment_run(run_id: UUID | str, error: str = "enrichment failed") -> None:
     from app.db.engine import get_engine
 
@@ -96,6 +113,17 @@ def process_enrichment(
             _extract(session, run, complete=complete)
         else:
             step.enqueue_stage = _crawl(session, run, crawl=crawl)
+    except AwsProxyError as exc:
+        if exc.code == "TimeoutError":
+            logger.exception("Enrichment run will retry", extra={"run_id": str(run_id)})
+            session.rollback()
+            if receive_count >= 3:
+                fail_enrichment_run(run_id)
+                return EnrichmentStep(acked=True)
+            return EnrichmentStep(acked=False)
+        logger.exception("Enrichment crawl failed", extra={"run_id": str(run_id)})
+        _fail_open_run(session, run_id, _proxy_failure_message(exc))
+        return EnrichmentStep(acked=True)
     except Exception:
         logger.exception("Enrichment run will retry", extra={"run_id": str(run_id)})
         session.rollback()
