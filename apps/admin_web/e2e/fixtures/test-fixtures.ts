@@ -829,6 +829,114 @@ export async function setupApiMocks(
     }
   });
 
+  const enrichmentReady = new Set<string>();
+  await page.route(
+    '**/api/mock/**/admin/organizations/*/enrichment',
+    async (route) => {
+      const url = route.request().url();
+      const orgId = url.match(/\/organizations\/([^/]+)\/enrichment/)?.[1] ?? '';
+      if (route.request().method() === 'POST') {
+        enrichmentReady.add(orgId);
+        await route.fulfill({
+          status: 202,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            run: {
+              id: 'run-1',
+              org_id: orgId,
+              status: 'queued',
+              seed_url: 'https://org-one.example',
+              pages_fetched: 0,
+              bytes_fetched: 0,
+              model: null,
+              cost_usd: 0,
+              error: null,
+              created_at: new Date().toISOString(),
+              finished_at: null,
+            },
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(
+          enrichmentReady.has(orgId)
+            ? {
+                run: {
+                  id: 'run-1',
+                  org_id: orgId,
+                  status: 'ready',
+                  seed_url: 'https://org-one.example',
+                  pages_fetched: 1,
+                  bytes_fetched: 120,
+                  model: null,
+                  cost_usd: 0.01,
+                  error: null,
+                  created_at: new Date().toISOString(),
+                  finished_at: new Date().toISOString(),
+                },
+                proposals: [
+                  {
+                    id: 'prop-1',
+                    section: 'Organization',
+                    kind: 'update_organization',
+                    field: 'description',
+                    label: 'Description',
+                    current_value: null,
+                    proposed_value: {
+                      description: 'Saturday classes for children.',
+                    },
+                    confidence: 0.9,
+                    unverified: false,
+                    evidence: [],
+                    status: 'pending',
+                  },
+                  {
+                    id: 'prop-activity',
+                    section: 'Activities',
+                    kind: 'create_activity',
+                    field: null,
+                    label: 'Activity · Painting',
+                    current_value: null,
+                    proposed_value: {
+                      name: 'Painting',
+                      category_name: 'Art',
+                    },
+                    confidence: 0.8,
+                    unverified: false,
+                    evidence: [],
+                    status: 'pending',
+                  },
+                  {
+                    id: 'prop-location',
+                    section: 'Locations',
+                    kind: 'create_location',
+                    field: null,
+                    label: 'Location · 1 Test Street',
+                    current_value: null,
+                    proposed_value: {
+                      address: '1 Test Street',
+                      area_name: 'Wan Chai',
+                    },
+                    confidence: 0.8,
+                    unverified: false,
+                    evidence: [],
+                    status: 'pending',
+                  },
+                ],
+                venues: [
+                  { id: 'venue-1', address: '1 Test Street' },
+                  { id: 'venue-2', address: '2 Test Street' },
+                ],
+              }
+            : { run: null, proposals: [], venues: [] }
+        ),
+      });
+    }
+  );
+
   // Mock activities list
   await page.route('**/api/mock/**/admin/activities*', async (route) => {
     const method = route.request().method();

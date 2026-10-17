@@ -283,7 +283,7 @@ For each function above, the following resources are created:
 | `SiutindeiSearchFunction` | Read DB secret, connect to RDS Proxy as `siutindei_app` |
 | `PartnerApiKeyAuthorizerFunction` | Read app DB secret, connect to RDS Proxy as `siutindei_app` |
 | `SiutindeiAdminFunction` | Read DB secret, connect to RDS Proxy as `siutindei_admin`, invoke `AwsApiProxyFunction`, read the OpenRouter secret, send to and consume the category suggestion queue, SNS publish to manager request topic, SES send email, S3 read/write for org media and admin import/export |
-| `AwsApiProxyFunction` | Cognito admin operations (`ListUsers`, `AdminGetUser`, `AdminDeleteUser`, `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `AdminUserGlobalSignOut`) |
+| `AwsApiProxyFunction` | Cognito admin operations (`ListUsers`, `AdminGetUser`, `AdminDeleteUser`, `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `AdminUserGlobalSignOut`); `s3:PutObject` on `organizations/*/enrichment/*` |
 | `SiutindeiMigrationFunction` | Read DB secret, direct connect to Aurora as `postgres`, Cognito user management, CloudFormation invoke permission |
 | `HealthCheckFunction` | Read DB secret, connect to RDS Proxy as `siutindei_app` |
 | `AuthCreateChallengeFunction` | SES `SendEmail`, `SendRawEmail` for the configured email address |

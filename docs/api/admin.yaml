@@ -273,6 +273,128 @@ paths:
         "204":
           description: Media deleted
 
+  /v1/admin/organizations/{id}/enrichment:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Read website enrichment for one organization
+      description: |
+        Latest run, its proposals, and the organization's venues.
+        An admin or importer JWT may call this. Apply and dismiss
+        stay admin-only. Nothing is written to the catalog.
+      security:
+        - AdminGroupAuth: []
+        - ImporterGroupAuth: []
+      parameters:
+        - name: run_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Run, proposals, and venues
+        "403":
+          description: Forbidden
+    post:
+      summary: Start website enrichment for one organization
+      description: |
+        Queues a crawl of the stored website. Returns 202. An empty
+        website is 422, a bad URL is 400, an active run is 409, and
+        a spent monthly budget is 422. An admin or importer JWT may
+        start a run. The board keeps its own enrich duty; this route
+        is callable when that duty wants the same proposals.
+      security:
+        - AdminGroupAuth: []
+        - ImporterGroupAuth: []
+      responses:
+        "202":
+          description: Run queued
+        "400":
+          description: Website URL is not crawlable
+        "409":
+          description: A run is already active
+        "422":
+          description: Website is missing or the monthly budget is spent
+        "503":
+          description: Enrichment queue is not configured
+
+  /v1/admin/organizations/{id}/enrichment/apply:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Apply selected enrichment proposals
+      description: |
+        Admin only. Body is `{ids, overrides}`. Proposals are applied
+        in dependency order: organization, media, locations, activities,
+        pricing, then schedules. Each proposal is saved on its own, so
+        one failure does not undo the others. `overrides` is keyed by
+        proposal id and may set `area_id`, `category_id`, `age_min`,
+        `age_max`, or `location_id`. Each id returns its own result.
+        Nothing is applied automatically.
+      security:
+        - AdminGroupAuth: []
+      responses:
+        "200":
+          description: Per-proposal results
+        "403":
+          description: Forbidden
+
+  /v1/admin/organizations/{id}/enrichment/dismiss:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Dismiss selected enrichment proposals
+      description: |
+        Admin only. A dismissed proposal stores its hash so a later
+        run does not suggest the same value again.
+      security:
+        - AdminGroupAuth: []
+      responses:
+        "200":
+          description: Per-proposal results
+        "403":
+          description: Forbidden
+
+  /v1/admin/enrichment-settings:
+    get:
+      summary: Read website enrichment settings
+      description: Admin only. Singleton monthly budget and crawl limits.
+      security:
+        - AdminGroupAuth: []
+      responses:
+        "200":
+          description: Settings
+    put:
+      summary: Update website enrichment settings
+      description: |
+        Admin only. `monthly_cost_limit_usd` is greater than 0 and at
+        most 1000. `max_pages` is 1 to 8. `max_page_bytes` is 10000 to
+        2000000. `min_confidence_shown` is 0 to 1.
+      security:
+        - AdminGroupAuth: []
+      responses:
+        "200":
+          description: Settings saved
+        "400":
+          description: Validation error
+
   /v1/admin/imports/presign:
     post:
       summary: Create admin import upload URL
@@ -3980,7 +4102,10 @@ components:
       bearerFormat: JWT
       description: |
         Cognito JWT token, user must be in the 'importer' or 'admin' group.
-        Allowed only on POST /v1/admin/imports and POST /v1/admin/imports/presign.
+        Allowed on POST /v1/admin/imports, POST /v1/admin/imports/presign,
+        GET /v1/admin/imports/{job_id}, organization lookup and PATCH,
+        and GET or POST /v1/admin/organizations/{id}/enrichment.
+        Apply and dismiss stay admin-only.
         The importer app client enables ALLOW_ADMIN_USER_PASSWORD_AUTH for
         AdminInitiateAuth (board catalog import).
     ManagerGroupAuth:

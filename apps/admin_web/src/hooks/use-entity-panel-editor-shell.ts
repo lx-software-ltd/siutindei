@@ -57,5 +57,6 @@ export function useEntityPanelEditorShell({
     expanded,
     markDirty,
     clearDirty,
+    isDirty: () => dirtyRef.current,
   };
 }

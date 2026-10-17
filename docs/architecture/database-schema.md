@@ -347,6 +347,71 @@ Seed assessment: migration `0053_translation_fixes` inserts the default
 row. `translation_scan_runs` and `translation_fix_proposals` stay empty.
 No `seed_data.sql` change.
 
+## Table: org_enrichment_runs
+
+Purpose: One crawl-and-extract pass for a single organization. The admin
+function crawls on the proxy, then extracts on a second queue delivery.
+
+Columns:
+- `id` (UUID, PK)
+- `org_id` (UUID, FK → `organizations.id`, ON DELETE CASCADE)
+- `status` (text) — `queued`, `running`, `extracting`, `ready`, `failed`, or `render_required`
+- `requested_by` (text, optional)
+- `seed_url` (text, required)
+- `pages` (jsonb, default `[]`) — fetched page text kept for the extract stage
+- `pages_fetched` / `bytes_fetched` (integer)
+- `model` (text, optional)
+- `cost_usd` (numeric)
+- `input_hash` (text, optional)
+- `error` (text, optional)
+- `processed_message_ids` (jsonb, default `[]`)
+- `created_at` / `finished_at` (timestamptz)
+
+Constraints: partial unique index `org_enrichment_runs_active_org_idx` on
+`org_id` where status is `queued`, `running`, or `extracting`.
+
+## Table: org_enrichment_proposals
+
+Purpose: One suggested catalog change. An admin applies or dismisses it.
+Nothing is written to the organization until apply.
+
+Columns:
+- `id` (UUID, PK)
+- `run_id` (UUID, FK → `org_enrichment_runs.id`, ON DELETE CASCADE)
+- `org_id` (UUID, FK → `organizations.id`, ON DELETE CASCADE)
+- `section` / `kind` / `label` (text)
+- `entity_type` (text, optional), `entity_id` (UUID, optional), `field` (text, optional)
+- `current_value` (jsonb, optional), `proposed_value` (jsonb)
+- `confidence` (numeric), `unverified` (boolean)
+- `evidence` (jsonb)
+- `status` (text) — `pending`, `applied`, `dismissed`, or `superseded`
+- `proposed_hash` (text) — identity of the suggestion; a dismissed hash is not proposed again
+- `decided_by` / `decided_at` (optional)
+- `created_at` (timestamptz)
+
+Copied images store `copyright_notice` inside `proposed_value` and on the
+S3 object metadata. The notice is not shown on the public site.
+
+## Table: org_enrichment_settings
+
+Purpose: Singleton (`id = 1`) monthly budget and crawl limits for website
+enrichment. Category-check, location-sweep, and translation spend are
+not included.
+
+Columns:
+- `id` (integer, PK)
+- `monthly_cost_limit_usd` (numeric, required, greater than 0 and at most 1000, default 25)
+- `max_pages` (integer, 1 to 8, default 6)
+- `max_page_bytes` (integer, default 1000000)
+- `copy_media` (boolean, default true)
+- `min_confidence_shown` (numeric, 0 to 1, default 0.5)
+- `updated_at` (timestamptz)
+
+Seed assessment: migration `0055_org_enrichment` inserts the settings
+row and grants `siutindei_admin` select, insert, update, and delete on
+these three tables. `org_enrichment_runs` and `org_enrichment_proposals`
+stay empty. No `seed_data.sql` change.
+
 ## Table: geographic_areas
 
 Purpose: Hierarchical lookup of valid geographic areas

@@ -128,6 +128,28 @@ def test_importer_can_patch_organization(mock_crud) -> None:
     mock_crud.assert_called_once()
 
 
+@patch(
+    "app.api.admin.handle_org_enrichment",
+    return_value={"statusCode": 200, "body": "{}"},
+)
+def test_importer_can_read_and_start_enrichment(mock_enrichment) -> None:
+    org = "/v1/admin/organizations/00000000-0000-0000-0000-000000000001/enrichment"
+    assert lambda_handler(_event(org, method="GET"), None)["statusCode"] == 200
+    assert lambda_handler(_event(org, method="POST"), None)["statusCode"] == 200
+    assert mock_enrichment.call_count == 2
+
+
+def test_importer_cannot_apply_enrichment() -> None:
+    response = lambda_handler(
+        _event(
+            "/v1/admin/organizations/00000000-0000-0000-0000-000000000001/enrichment/apply",
+            method="POST",
+        ),
+        None,
+    )
+    assert response["statusCode"] == 403
+
+
 def test_importer_cannot_review_organizations() -> None:
     response = lambda_handler(
         _event("/v1/admin/org-review", method="GET"),

@@ -15,8 +15,13 @@ Two request types are supported:
     (comma-separated URL prefixes).  Only URLs that start with one of
     the prefixes are allowed.
 
-The *client* functions (``invoke`` / ``http_invoke``) are imported by
-in-VPC Lambdas to call the proxy via Lambda-to-Lambda.
+**Website crawl** (``type: "crawl"``):
+    Fetches one provider site, or copies one image into the media
+    bucket.  The crawl handler enforces SSRF, robots, and same-site
+    checks.  It is not gated by ``ALLOWED_HTTP_URLS``.
+
+The *client* functions (``invoke`` / ``http_invoke`` / ``crawl_invoke``)
+are imported by in-VPC Lambdas to call the proxy via Lambda-to-Lambda.
 
 Environment (proxy Lambda):
     ALLOWED_ACTIONS    e.g. ``cognito-idp:list_users,cognito-idp:admin_get_user``
@@ -81,6 +86,10 @@ def proxy_handler(event: Mapping[str, Any], _context: Any) -> dict[str, Any]:
 
     if req_type == "http":
         return _handle_http(event)
+    if req_type == "crawl":
+        from app.services.enrichment.proxy_crawl import handle_crawl_event
+
+        return handle_crawl_event(event)
     return _handle_aws(event)
 
 
@@ -341,6 +350,15 @@ def invoke(service: str, action: str, params: dict[str, Any]) -> dict[str, Any]:
     return _invoke_proxy(
         {"type": "aws", "service": service, "action": action, "params": params}
     )
+
+
+def crawl_invoke(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Crawl one site or copy one image via the proxy Lambda.
+
+    ``payload`` is ``{"op": "site"|"image", ...}``. The proxy adds
+    ``type: "crawl"``.
+    """
+    return _invoke_proxy({"type": "crawl", **payload})
 
 
 def http_invoke(

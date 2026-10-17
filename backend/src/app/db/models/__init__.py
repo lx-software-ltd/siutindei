@@ -45,6 +45,11 @@ from app.db.models.translation_fix import (
     TranslationFixSettings,
     TranslationScanRun,
 )
+from app.db.models.org_enrichment import (
+    OrgEnrichmentProposal,
+    OrgEnrichmentRun,
+    OrgEnrichmentSettings,
+)
 from app.db.models.organization_feedback import OrganizationFeedback
 from app.db.models.organization import Organization
 from app.db.models.ticket import Ticket
@@ -79,6 +84,9 @@ __all__ = [
     "LocationScanRun",
     "NameFixProposal",
     "NameFixSettings",
+    "OrgEnrichmentProposal",
+    "OrgEnrichmentRun",
+    "OrgEnrichmentSettings",
     "Organization",
     "OrganizationDuplicateDismissal",
     "OrganizationMerge",

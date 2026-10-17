@@ -114,6 +114,15 @@ export {
 } from './api-client-audit';
 
 export {
+  decideOrgEnrichment,
+  getOrgEnrichment,
+  startOrgEnrichment,
+  type EnrichmentProposal,
+  type EnrichmentRead,
+  type EnrichmentRun,
+} from './api-client-enrichment';
+
+export {
   listCatalogVersions,
   type CatalogVersionFilters,
   type CatalogVersionListResponse,

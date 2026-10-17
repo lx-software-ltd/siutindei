@@ -87,6 +87,11 @@ from app.api.admin_validators import (
 )
 from app.api.user_organizations import _handle_user_organizations
 from app.api.admin_data_quality import handle_data_quality
+from app.api.admin_enrichment import (
+    handle_enrichment_settings,
+    handle_org_enrichment,
+    organization_tail,
+)
 from app.api.admin_import_settings import handle_import_settings
 from app.exceptions import AppError, NotFoundError, ValidationError
 from app.utils import json_response
@@ -177,6 +182,11 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
         )
     if resource == "organizations" and sub_resource == "media":
         return _handle_organization_media(event, method, resource_id)
+    if resource == "organizations" and sub_resource == "enrichment":
+        return _safe_handler(
+            lambda: handle_org_enrichment(event, method, resource_id),
+            event,
+        )
     if resource == "cognito-users" and method == "GET":
         return _safe_handler(lambda: _handle_list_cognito_users(event), event)
     if resource == "cognito-users" and method == "DELETE" and resource_id:
@@ -199,6 +209,13 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
     if resource == "api-keys":
         return _safe_handler(
             lambda: _handle_admin_api_keys(event, method, resource_id),
+            event,
+        )
+    if resource == "enrichment-settings":
+        if not _is_admin(event):
+            return json_response(403, {"error": "Forbidden"}, event=event)
+        return _safe_handler(
+            lambda: handle_enrichment_settings(event, method),
             event,
         )
     if resource == "import-settings":
@@ -334,6 +351,9 @@ def _importer_can_access(
             return True
         return False
     if resource == "organizations":
+        tail = organization_tail(str(event.get("path") or ""))
+        if tail == ["enrichment"] and method in {"GET", "POST"}:
+            return True
         if method == "GET":
             return True
         if method == "PATCH" and resource_id:

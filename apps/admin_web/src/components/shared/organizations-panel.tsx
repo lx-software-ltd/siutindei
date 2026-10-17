@@ -11,7 +11,7 @@ import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { listResource } from '../../lib/api-client-admin';
-import type { ApiMode } from '../../lib/resource-api';
+import { getResourceApi, type ApiMode } from '../../lib/resource-api';
 import { normalizeKey } from '../../lib/string-utils';
 import {
   buildTranslationsPayload,
@@ -19,6 +19,11 @@ import {
 } from '../../lib/translations';
 import type { Organization } from '../../types/admin';
 import { OrganizationMergeDialog } from '../admin/data-quality/organization-merge-dialog';
+import {
+  OrgEnrichmentScope,
+  OrganizationEnrichButton,
+  OrganizationEnrichmentCard,
+} from '../admin/organization-enrichment';
 import { OrganizationReadiness } from '../admin/organization-readiness';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
 import { organizationFormFromSnapshot } from '../admin/catalog-version-snapshot';
@@ -797,7 +802,27 @@ export function OrganizationsPanel({
 
   const current = panel.items.find((item) => item.id === panel.editingId);
 
+  const showEnrichment = Boolean(
+    isAdmin && current && !versionView.isHistorical
+  );
+
   return (
+    <OrgEnrichmentScope
+      orgId={current && showEnrichment ? current.id : null}
+      savedWebsite={current?.website ?? ''}
+      draftWebsite={panel.formState.website}
+      detailsDirty={panel.isDirty()}
+      onApplied={async () => {
+        if (!current) {
+          return;
+        }
+        const fresh = await getResourceApi<Organization>(
+          'organizations',
+          mode
+        ).get(current.id);
+        panel.replaceItem(fresh);
+      }}
+    >
     <div className='space-y-4'>
       {current ? (
         <OrganizationWorkspaceTitle
@@ -816,7 +841,12 @@ export function OrganizationsPanel({
         title='Details'
         titleLevel='h3'
         titleAccessory={
-          current ? <VersionSwitcher view={versionView} /> : undefined
+          current ? (
+            <div className='flex items-center gap-2'>
+              {showEnrichment ? <OrganizationEnrichButton /> : null}
+              <VersionSwitcher view={versionView} />
+            </div>
+          ) : undefined
         }
         status={
           panel.error ? (
@@ -873,6 +903,7 @@ export function OrganizationsPanel({
       >
         {fields}
       </AdminInputCard>
+      <OrganizationEnrichmentCard hidden={!showEnrichment} />
       {isAdmin && panel.editingId ? (
         <OrganizationReadiness orgId={panel.editingId} />
       ) : null}
@@ -887,5 +918,6 @@ export function OrganizationsPanel({
       ) : null}
       {panel.confirmDialog}
     </div>
+    </OrgEnrichmentScope>
   );
 }

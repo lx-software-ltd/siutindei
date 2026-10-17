@@ -72,7 +72,8 @@ their primary responsibilities.
   (`POST /v1/admin/imports`, `POST /v1/admin/imports/presign`,
   `GET /v1/admin/imports/{job_id}`,
   `GET /v1/admin/organizations?place_id=` / `?source_id=`,
-  `PATCH /v1/admin/organizations/{id}`),
+  `PATCH /v1/admin/organizations/{id}`,
+  `GET` and `POST /v1/admin/organizations/{id}/enrichment`),
   admin/manager group for `/v1/manager/*`, any authenticated user for
   `/v1/user/*`; partner API keys (`x-partner-key`) for `/v1/partner/*`
 - Purpose: admin CRUD (including activity categories, category
@@ -121,7 +122,12 @@ their primary responsibilities.
   queues only as many calls as the remaining monthly budget can pay.
   The worker handles
   `location_scan_run_id` before `scan_run_id`. Translation sweeps send
-  `translation_scan_run_id` and the worker reads that key first. They
+  `translation_scan_run_id` and the worker reads that key first. Website
+  enrichment sends `enrichment_run_id` and `stage` (`crawl`, then
+  `extract`) on that same queue. The worker reads that key before the
+  others. Crawl uses proxy `type: "crawl"` and stops after 20 seconds;
+  extract is a second delivery because both stages do not fit in the
+  120 second function. They
   spend `translation_fix_settings.monthly_cost_limit_usd`, which is
   separate from category-check and location-sweep spend. The location
   sweep also loads the EDB school register through the HTTP proxy.
@@ -246,8 +252,10 @@ their primary responsibilities.
 - Handler: backend/lambda/authorizers/cognito_group/handler.py
 - Trigger: API Gateway request authorizer
 - Purpose: verify JWT and check user belongs to the `admin` Cognito group.
-  When `IMPORTER_GROUP` is set, also allow that group on
-  `POST /v1/admin/imports` and `POST /v1/admin/imports/presign` only.
+  When `IMPORTER_GROUP` is set, also allow that group on catalog import
+  routes, owner-UI organization lookup and PATCH, and
+  `GET` or `POST /v1/admin/organizations/{id}/enrichment`. Apply and
+  dismiss stay admin-only.
   A dedicated importer authorizer Lambda is not used (500-resource cap).
 - VPC: **No** (runs outside VPC to fetch JWKS from Cognito)
 - Environment: `ALLOWED_GROUPS=admin`, `IMPORTER_GROUP=importer`
@@ -345,6 +353,10 @@ their primary responsibilities.
     API calls (e.g. `cognito-idp:list_users`)
   - `ALLOWED_HTTP_URLS`: comma-separated URL prefixes for outbound HTTP
     requests (e.g. `https://api.example.com/v1/`)
+  - `type: "crawl"` fetches one provider website or copies one image.
+    SSRF, robots, and same-site checks live in the crawl handler.
+    `ORGANIZATION_MEDIA_BUCKET` and `ORGANIZATION_MEDIA_BASE_URL` let
+    it `PutObject` under `organizations/*/enrichment/*`.
 - Security: only invocable by Lambdas granted `lambda:InvokeFunction`;
   IAM role scoped to specific AWS actions; all requests validated
   against the allow-lists before execution
@@ -372,7 +384,8 @@ their primary responsibilities.
   organizations that are still pending review, and run location-sweep
   batches whose messages carry `location_scan_run_id`, including pin
   lookups whose `lookup` is `nominatim` or `google`, and translation
-  batches whose messages carry `translation_scan_run_id`
+  batches whose messages carry `translation_scan_run_id`, and website
+  enrichment whose messages carry `enrichment_run_id`
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - VPC: Yes
 - Timeout: 120 seconds on the admin function. One OpenRouter attempt

@@ -36,6 +36,9 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             logger.warning("Category suggestion message is missing a payload")
             continue
         receive_count = _receive_count(record)
+        if payload.get("enrichment_run_id"):
+            _handle_enrichment(payload, message_id, receive_count, failures)
+            continue
         if payload.get("data_quality_run_id"):
             _handle_data_quality(payload, message_id, receive_count, failures)
             continue
@@ -307,6 +310,52 @@ def _handle_data_quality(
             failures.append(message_id)
         return
     if not acked and message_id:
+        failures.append(message_id)
+
+
+def _handle_enrichment(
+    payload: dict[str, Any],
+    message_id: str,
+    receive_count: int,
+    failures: list[str],
+) -> None:
+    from sqlalchemy.orm import Session
+
+    from app.db.engine import get_engine
+    from app.services.enrichment.run import (
+        commit_and_queue,
+        fail_enrichment_run,
+        process_enrichment,
+    )
+
+    try:
+        run_id = UUID(str(payload.get("enrichment_run_id")))
+    except ValueError:
+        logger.warning("Enrichment run id is not a UUID")
+        return
+    stage = str(payload.get("stage") or "crawl")
+    try:
+        with Session(get_engine()) as session:
+            step = process_enrichment(
+                session,
+                run_id,
+                message_id,
+                receive_count=receive_count,
+                stage=stage,
+            )
+            commit_and_queue(session, step)
+    except Exception:
+        logger.exception(
+            "Enrichment run will retry",
+            extra={"enrichment_run_id": str(payload.get("enrichment_run_id"))},
+        )
+        if receive_count >= 3:
+            fail_enrichment_run(run_id)
+            return
+        if message_id:
+            failures.append(message_id)
+        return
+    if not step.acked and message_id:
         failures.append(message_id)
 
 

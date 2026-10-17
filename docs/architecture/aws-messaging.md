@@ -120,6 +120,13 @@ redelivery does not apply the batch twice. An OpenRouter failure is
 retried; the third receive records the batch as failed and the
 message moves to the DLQ.
 
+Website enrichment uses the same queue. `POST
+/v1/admin/organizations/{id}/enrichment` sends
+`{"enrichment_run_id": "<uuid>", "stage": "crawl"}`. The crawl stage
+then sends `stage: "extract"`. The worker handles `enrichment_run_id`
+before the other keys. A repeated message id is acknowledged. The third
+failed receive marks the run `failed` and leaves the message for the DLQ.
+
 ## Listing-events rollup
 
 A nightly EventBridge rule (`lxsoftware-siutindei-listing-events-rollup`)
