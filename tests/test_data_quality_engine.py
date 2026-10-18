@@ -13,9 +13,9 @@ from app.services.data_quality.names import name_input_hash
 from app.services.data_quality.runs import (
     create_manual_run,
     process_run,
-    scope_from_results,
     stage_import_run,
 )
+from app.services.data_quality.scope import scope_from_results
 from app.services.import_settings import (
     load_import_settings,
     serialize_import_settings,

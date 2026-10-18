@@ -15,13 +15,9 @@ from sqlalchemy.orm import Session
 from app.db.models import DataQualityRun
 from app.exceptions import ValidationError
 from app.services.aws_clients import get_client
+from app.services.data_quality import scope as run_scope
 from app.services.data_quality.checks import refresh_check, run_check
 from app.services.data_quality.fingerprint import fingerprint
-from app.services.data_quality.scope import (
-    resolve_scope,
-    scope_from_results,
-    scope_is_empty,
-)
 from app.services.import_settings import load_import_settings
 from app.utils.logging import get_logger
 
@@ -35,8 +31,11 @@ CHECK_VERSIONS = {
 }
 _MANUAL = ("names", "duplicates", "locations", "categories")
 _OPEN = ("queued", "running")
-# Matches the category-suggestion queue maxReceiveCount.
+# Matches the category-suggestion queue maxReceiveCount. Two later
+# waits, ten minutes apart, cover a scan still inside its stale window.
 _BUSY_LIMIT = 3
+_BUSY_DEFER_LIMIT = 2
+_BUSY_DEFER_SECONDS = 600
 _TERMINAL = frozenset({"done", "partial", "failed", "busy"})
 _TERMINAL_OK = frozenset({"done", "unchanged", "skipped"})
 
@@ -53,6 +52,20 @@ def checks_from_settings(settings: Any) -> list[str]:
     return selected
 
 
+def _enrichment_checks(
+    selected: list[str],
+    *,
+    activity_ids: list[str],
+    include_locations: bool,
+) -> list[str]:
+    kept = list(selected)
+    if not include_locations:
+        kept = [name for name in kept if name != "locations"]
+    if not activity_ids:
+        kept = [name for name in kept if name != "categories"]
+    return kept
+
+
 def stage_import_run(
     session: Session,
     *,
@@ -62,8 +75,8 @@ def stage_import_run(
 ) -> str | None:
     """Insert the post-import run in the import transaction. Names stay inline."""
     selected = checks_from_settings(load_import_settings(session))
-    scope = scope_from_results(results)
-    if not selected or scope_is_empty(scope):
+    scope = run_scope.scope_from_results(results)
+    if not selected or run_scope.scope_is_empty(scope):
         return None
     existing = _import_run(session, import_job_id)
     if existing is not None:
@@ -92,15 +105,21 @@ def stage_enrichment_run(
     *,
     organization_id: UUID,
     activity_ids: list[str],
+    include_locations: bool,
     requested_by: str | None,
 ) -> str | None:
     """Insert the post-apply run. Each apply gets its own row. Names stay out."""
-    selected = checks_from_settings(load_import_settings(session))
+    activity_scope = sorted({str(item) for item in activity_ids if item})
+    selected = _enrichment_checks(
+        checks_from_settings(load_import_settings(session)),
+        activity_ids=activity_scope,
+        include_locations=include_locations,
+    )
     scope = {
         "organization_ids": [str(organization_id)],
-        "activity_ids": sorted({str(item) for item in activity_ids if item}),
+        "activity_ids": activity_scope,
     }
-    if not selected or scope_is_empty(scope):
+    if not selected or run_scope.scope_is_empty(scope):
         return None
     run = _new_run(
         trigger="enrichment",
@@ -140,8 +159,10 @@ def create_manual_run(
     """Start an on-demand run, or return the in-flight run with the same inputs."""
     checks = _manual_checks(body.get("checks"))
     raw_scope = body.get("scope")
-    scope = resolve_scope(session, raw_scope if isinstance(raw_scope, dict) else {})
-    if scope_is_empty(scope):
+    scope = run_scope.resolve_scope(
+        session, raw_scope if isinstance(raw_scope, dict) else {}
+    )
+    if run_scope.scope_is_empty(scope):
         raise ValidationError("Nothing to check", field="scope")
     config_hash = _config_hash(checks, scope)
     refresh = _refresh_flag(body.get("refresh", False))
@@ -206,6 +227,7 @@ def process_run(
     checks = [dict(item) for item in (run.checks or [])]
     work: list[dict[str, Any]] = []
     hold_for_busy = False
+    deferred = False
     final_delivery = receive_count >= _BUSY_LIMIT
     for check in checks:
         if check.get("status") in {"done", "unchanged", "skipped"}:
@@ -215,16 +237,20 @@ def process_run(
         check["detail"] = outcome.get("detail") or {}
         if outcome.get("batches"):
             work.append(outcome)
-        if outcome["status"] == "busy" and not final_delivery:
-            hold_for_busy = True
-            break
+        if outcome["status"] == "busy":
+            if not final_delivery:
+                hold_for_busy = True
+                break
+            if _defer_busy(run, check):
+                deferred = True
+                break
         session.flush()
     run.checks = checks
     run.updated_at = datetime.now(timezone.utc)
-    if hold_for_busy:
+    if hold_for_busy or deferred:
         run.status = "queued"
         session.flush()
-        return False
+        return deferred
     if work and not _enqueue_children(work):
         run.status = "running"
         session.flush()
@@ -378,6 +404,28 @@ def _aggregate(checks: list[dict[str, Any]]) -> str:
     if any(status not in _TERMINAL_OK for status in statuses):
         return "partial"
     return "done"
+
+
+def _defer_busy(run: DataQualityRun, check: dict[str, Any]) -> bool:
+    detail = dict(check.get("detail") or {})
+    used = int(detail.get("busy_defers") or 0)
+    if used >= _BUSY_DEFER_LIMIT:
+        return False
+    queue_url = os.getenv("CATEGORY_SUGGESTION_QUEUE_URL", "").strip()
+    if not queue_url:
+        return False
+    try:
+        get_client("sqs").send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps({"data_quality_run_id": str(run.id)}),
+            DelaySeconds=_BUSY_DEFER_SECONDS,
+        )
+    except Exception:
+        logger.exception("Busy data-quality check was not deferred")
+        return False
+    detail["busy_defers"] = used + 1
+    check["detail"] = detail
+    return True
 
 
 def _enqueue_children(work: list[dict[str, Any]]) -> bool:

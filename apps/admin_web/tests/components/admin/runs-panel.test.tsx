@@ -113,6 +113,26 @@ describe('RunsPanel scope', () => {
     });
   });
 
+  it('labels an enrichment trigger', async () => {
+    vi.mocked(listDataQualityRuns).mockResolvedValue({
+      items: [
+        {
+          id: 'run-enrich-1',
+          trigger: 'enrichment',
+          scope: {},
+          checks: [],
+          status: 'queued',
+          attempt: 1,
+          attempts: 0,
+          created_at: '2026-01-21T15:04:00.000Z',
+        },
+      ],
+    });
+    render(<RunsPanel />, { wrapper });
+    expect(await screen.findByText('Enrichment')).toBeVisible();
+    expect(screen.queryByText('enrichment')).not.toBeInTheDocument();
+  });
+
   it('lists the last 20 imports by create time', async () => {
     const user = userEvent.setup();
     render(<RunsPanel />, { wrapper });

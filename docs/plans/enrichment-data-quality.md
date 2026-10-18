@@ -39,6 +39,12 @@ scoped to that organization and any activities this apply created.
 - A second apply while the first run is open creates a second run.
 - A missing queue or a failed send leaves the run queued and does not
   fail the apply.
+- A contact-only apply does not queue Locations or Categories.
+- Locations runs when the apply saved a venue or an activity.
+- Categories runs only for activities this apply created.
+- A failure while staging the run does not undo proposals that saved.
+- A busy check is queued again up to twice, ten minutes apart, before
+  it is marked busy.
 
 ## Done when
 
@@ -57,5 +63,5 @@ stay applied. No seed change.
 
 ## Open questions
 
-None. Names stay on the import write path. A phone-only apply still
-runs every enabled check, including Locations for that organization.
+None. Names stay on the import write path. A phone-only apply runs
+Duplicates when that check is on, and skips Locations and Categories.

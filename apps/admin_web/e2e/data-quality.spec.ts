@@ -203,6 +203,7 @@ test.describe('Data quality', () => {
   test('admin starts a run for one organization by name', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=data-quality&tab=runs');
     await expect(adminPage.getByRole('table', { name: 'Data quality · Runs' })).toBeVisible();
+    await expect(adminPage.getByRole('cell', { name: 'Enrichment' })).toBeVisible();
     await adminPage.getByLabel('Scope').selectOption('organization');
     await expect(adminPage.getByLabel('Organization id')).toHaveCount(0);
     const organization = adminPage.getByLabel('Organization');

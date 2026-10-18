@@ -59,6 +59,9 @@ describe('ImportSettingsPanel', () => {
     expect(screen.getByRole('heading', { name: 'Imports · Settings' })).toBeInTheDocument();
     expect(screen.getByLabelText('Names')).toHaveValue('apply');
     expect(screen.getByText(/after an enrichment apply/)).toBeVisible();
+    expect(
+      screen.getByText(/categories run when an activity was saved/)
+    ).toBeVisible();
     expect(screen.getByRole('checkbox', { name: 'Skip deleted organizations' })).toBeChecked();
 
     await user.selectOptions(screen.getByLabelText('Duplicates'), 'report');

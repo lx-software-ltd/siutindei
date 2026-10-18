@@ -114,20 +114,7 @@ def apply_proposals(
         if len(run_ids) == 1:
             _link_run(session, run_ids.pop())
     session.flush()
-    quality_run_id = None
-    if applied:
-        from app.services.data_quality.runs import stage_enrichment_run
-
-        quality_run_id = stage_enrichment_run(
-            session,
-            organization_id=org_id,
-            activity_ids=[
-                str(row.entity_id)
-                for row in applied
-                if row.kind == "create_activity" and row.entity_id is not None
-            ],
-            requested_by=user_id,
-        )
+    quality_run_id = _stage_quality(session, org_id, applied, user_id)
     return results, quality_run_id
 
 
@@ -152,6 +139,41 @@ def dismiss_proposals(
         results.append({"id": raw_id, "status": "dismissed"})
     session.flush()
     return results
+
+
+def _stage_quality(
+    session: Session,
+    org_id: UUID,
+    applied: list[OrgEnrichmentProposal],
+    user_id: str | None,
+) -> str | None:
+    """Stage the quality run without letting a failure undo the apply."""
+    if not applied:
+        return None
+    from app.services.data_quality.runs import stage_enrichment_run
+
+    try:
+        with session.begin_nested():
+            return stage_enrichment_run(
+                session,
+                organization_id=org_id,
+                activity_ids=[
+                    str(row.entity_id)
+                    for row in applied
+                    if row.kind == "create_activity" and row.entity_id is not None
+                ],
+                include_locations=any(
+                    row.kind in {"create_location", "create_activity"}
+                    for row in applied
+                ),
+                requested_by=user_id,
+            )
+    except Exception:
+        logger.exception(
+            "Enrichment apply did not stage a data-quality run",
+            extra={"organization_id": str(org_id)},
+        )
+        return None
 
 
 def _load(session: Session, org_id: UUID, raw_id: str) -> OrgEnrichmentProposal | None:

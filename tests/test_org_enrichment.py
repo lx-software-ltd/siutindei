@@ -1048,10 +1048,118 @@ def test_apply_stages_quality_checks_from_import_settings(
     )
     assert second_id is not None
     assert second_id != quality_run_id
-    assert second_id
     second = db_session.get(DataQualityRun, UUID(second_id))
     assert second is not None
+    assert [item["name"] for item in second.checks] == ["duplicates"]
     assert second.scope["activity_ids"] == []
+
+
+def test_location_apply_runs_locations_without_categories(
+    db_session, sample_geographic_area
+) -> None:
+    from uuid import UUID
+
+    from app.db.models import DataQualityRun
+
+    _quality_settings(db_session, locations="check", categories="check")
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    location = _proposal(
+        run,
+        section="Locations",
+        kind="create_location",
+        label="Location",
+        proposed_value={"address": "9 Example Road"},
+        proposed_hash="hash-quality-location",
+    )
+    db_session.add(location)
+    db_session.flush()
+    results, quality_run_id = apply_proposals(
+        db_session,
+        org.id,
+        [str(location.id)],
+        {str(location.id): {"area_id": str(sample_geographic_area.id)}},
+        user_id="admin",
+        request_id="req-location-quality",
+    )
+    assert results[0]["status"] == "applied"
+    assert quality_run_id is not None
+    quality = db_session.get(DataQualityRun, UUID(quality_run_id))
+    assert quality is not None
+    assert [item["name"] for item in quality.checks] == ["locations"]
+    assert quality.scope["activity_ids"] == []
+
+
+def test_contact_apply_skips_location_and_category_checks(db_session) -> None:
+    from app.db.models import DataQualityRun
+    from sqlalchemy import select
+
+    _quality_settings(db_session, locations="check", categories="check")
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    proposal = _proposal(
+        run,
+        field="email",
+        label="Email",
+        proposed_value={"email": "hello@example.com"},
+        proposed_hash="hash-quality-contact",
+    )
+    db_session.add(proposal)
+    db_session.flush()
+    results, quality_run_id = apply_proposals(
+        db_session,
+        org.id,
+        [str(proposal.id)],
+        {},
+        user_id="admin",
+        request_id="req-contact-quality",
+    )
+    assert results[0]["status"] == "applied"
+    assert quality_run_id is None
+    assert db_session.scalars(select(DataQualityRun)).all() == []
+
+
+def test_quality_stage_failure_keeps_the_apply(db_session, monkeypatch) -> None:
+    from app.db.models import DataQualityRun
+    from sqlalchemy import select
+
+    def explode(*_args, **_kwargs):
+        raise RuntimeError("settings unavailable")
+
+    monkeypatch.setattr(
+        "app.services.data_quality.runs.stage_enrichment_run",
+        explode,
+    )
+    _quality_settings(db_session, duplicates="report")
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    proposal = _proposal(
+        run,
+        field="description",
+        label="Description",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-quality-stage-fail",
+    )
+    db_session.add(proposal)
+    db_session.flush()
+    results, quality_run_id = apply_proposals(
+        db_session,
+        org.id,
+        [str(proposal.id)],
+        {},
+        user_id="admin",
+        request_id="req-stage-fail",
+    )
+    assert results[0]["status"] == "applied"
+    assert quality_run_id is None
+    assert org.description == "Saturday art class for children."
+    assert db_session.scalars(select(DataQualityRun)).all() == []
 
 
 def test_apply_skips_quality_run_when_checks_are_off(db_session) -> None:
