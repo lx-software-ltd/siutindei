@@ -53,6 +53,29 @@ function renderTable(rows: EnrichmentProposal[]) {
   );
 }
 
+describe('ProposalTable place match', () => {
+  it('shows the matched neighbourhood path', () => {
+    renderTable([
+      proposal({
+        id: 'prop-location',
+        section: 'Locations',
+        kind: 'create_location',
+        field: null,
+        label: 'Location · Nathan Road',
+        proposed_value: {
+          address: '123 Nathan Road',
+          area_id: 'area-mong-kok',
+          area_path: 'Kowloon · Yau Tsim Mong · Mong Kok',
+        },
+      }),
+    ]);
+
+    expect(
+      screen.getByText('Matched Kowloon · Yau Tsim Mong · Mong Kok.')
+    ).toBeInTheDocument();
+  });
+});
+
 describe('ProposalTable media preview', () => {
   it('shows the image instead of the source URL', () => {
     renderTable([

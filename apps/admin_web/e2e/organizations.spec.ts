@@ -745,6 +745,9 @@ test.describe('Organizations Panel', () => {
     await adminPage.getByRole('checkbox', { name: 'Select Description' }).check();
     await adminPage.getByRole('checkbox', { name: 'Select Activity · Painting' }).check();
     await adminPage.getByRole('checkbox', { name: 'Select Location · 1 Test Street' }).check();
+    await expect(
+      adminPage.getByText('Matched Hong Kong Island · Wan Chai.')
+    ).toBeVisible();
     await adminPage.getByLabel('Minimum age').fill('5');
     await adminPage.getByLabel('Maximum age').fill('8');
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });

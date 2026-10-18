@@ -12,12 +12,13 @@ from app.services.openrouter_json_parse import openrouter_json_text_candidates
 SECTIONS = ("locations", "activities", "pricing", "schedules")
 
 _ROW_FIELDS = {
-    "locations": ("address", "area_name"),
+    "locations": ("address", "area_name", "district", "neighbourhood"),
     "activities": (
         "name",
         "name_zh",
         "description",
         "category_name",
+        "category_words",
         "age_min",
         "age_max",
     ),

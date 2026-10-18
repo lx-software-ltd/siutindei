@@ -216,16 +216,20 @@ function ProposalFields({
 }) {
   const proposed = row.proposed_value;
   if (row.kind === 'create_location') {
+    const path = proposed.area_path ? String(proposed.area_path) : '';
+    const said = proposed.area_name ? String(proposed.area_name) : '';
     return (
       <div className='mt-3 max-w-xl'>
         <p className='mb-2 text-xs text-slate-500'>
-          {proposed.area_name
-            ? `Website said ${String(proposed.area_name)}. Pick the neighbourhood if that does not match.`
-            : 'Pick the neighbourhood for this address.'}
+          {path
+            ? `Matched ${path}.`
+            : said
+              ? `Website said ${said}. Pick the neighbourhood if that does not match.`
+              : 'Pick the neighbourhood for this address.'}
         </p>
         <CascadingAreaSelect
           tree={areaTree}
-          value={override.area_id ?? ''}
+          value={override.area_id ?? String(proposed.area_id ?? '')}
           onChange={(areaId) => onOverride({ ...override, area_id: areaId })}
         />
       </div>
@@ -234,16 +238,18 @@ function ProposalFields({
   if (row.kind === 'create_activity') {
     const ageMin = override.age_min ?? numberOrBlank(proposed.age_min);
     const ageMax = override.age_max ?? numberOrBlank(proposed.age_max);
+    const words = proposed.category_words ? String(proposed.category_words) : '';
+    const named = proposed.category_name ? String(proposed.category_name) : '';
+    const said =
+      words && named && words !== named ? `${words} (${named})` : words || named;
     return (
       <div className='mt-3 max-w-xl space-y-3'>
-        {proposed.category_name ? (
-          <p className='text-xs text-slate-500'>
-            Website said {String(proposed.category_name)}.
-          </p>
+        {said ? (
+          <p className='text-xs text-slate-500'>Website said {said}.</p>
         ) : null}
         <CascadingCategorySelect
           tree={categoryTree}
-          value={override.category_id ?? ''}
+          value={override.category_id ?? String(proposed.category_id ?? '')}
           onChange={(categoryId) =>
             onOverride({ ...override, category_id: categoryId })
           }

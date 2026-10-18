@@ -21,7 +21,7 @@ MAX_PROMPT_TOKENS = 20_000
 MAX_REPLY_TOKENS = 12_000
 # Bump when the sheet parser or validator changes. The model instructions
 # are hashed in as well, so a prompt change needs no bump.
-EXTRACTION_VERSION = "2"
+EXTRACTION_VERSION = "3"
 # A PDF is read whole or not at all, so it gets its own byte limit.
 MAX_PDF_BYTES = 8_000_000
 MAX_PDF_PAGES = 30

@@ -28,7 +28,12 @@ from app.services.enrichment.extract import (
     validate_model_sheet,
 )
 from app.services.enrichment.match import prepare_proposals
-from app.services.enrichment.prompt import MODEL_INSTRUCTIONS, prompt_pages
+from app.services.enrichment.prompt import (
+    MODEL_INSTRUCTIONS,
+    instructions_for,
+    prompt_pages,
+)
+from app.services.enrichment.refine import annotate, catalog_names
 from app.services.enrichment.sheet import SECTIONS, read_sheet, section_rows
 from app.services.enrichment.queue import enqueue_enrichment
 from app.services.enrichment.store import load_settings, month_spend, save_proposals
@@ -191,7 +196,7 @@ def _extract(
     deterministic = proposals_from_pages(pages, snapshot)
     copied = _copy_cached(session, run)
     if copied is None:
-        prompt = prompt_pages(pages)
+        prompt = instructions_for(catalog_names(session)) + prompt_pages(pages)
         sheet, cost, model = (complete or _model)(prompt)
         checked = validate_model_sheet(sheet, pages, snapshot)
         run.cost_usd = cost
@@ -218,6 +223,7 @@ def _extract(
         run.model = "cache"
     merged = merge_proposals(deterministic, checked)
     if org is not None:
+        merged = annotate(session, org, merged)
         merged = prepare_proposals(session, org, merged)
     save_proposals(
         session,
@@ -370,6 +376,8 @@ def _org_snapshot(org: Organization | None) -> dict[str, Any]:
     if org is None:
         return {}
     return {
+        "name": org.name,
+        "name_translations": dict(org.name_translations or {}),
         "description": org.description,
         "description_translations": dict(org.description_translations or {}),
         "email": org.email,

@@ -145,7 +145,9 @@ their primary responsibilities.
   `OPENROUTER_MODEL`, `CATEGORY_SUGGESTION_LAMBDA_TIMEOUT_SECONDS`,
   `CATEGORY_SUGGESTION_OPENROUTER_TIMEOUT_SECONDS`,
   `GOOGLE_PLACES_API_KEY` (CDK parameter `GooglePlacesApiKey`,
-  `noEcho`; empty disables Google pin lookup)
+  `noEcho`; empty disables Google pin lookup),
+  `META_GRAPH_API_KEY` (CDK parameter `MetaGraphApiKey`, `noEcho`;
+  empty skips Facebook and Instagram logo lookup)
 - Memory: 1024 MB (cold start is import-bound; CPU scales with memory)
 - Timeout: 120 seconds so one SQS enrichment can wait on a 90-second
   OpenRouter attempt. API Gateway still limits HTTP to 29 seconds, so
@@ -172,6 +174,7 @@ their primary responsibilities.
   - `FEEDBACK_STARS_PER_APPROVAL`
   - `NOMINATIM_USER_AGENT`
   - `NOMINATIM_REFERER`
+  - `META_GRAPH_API_KEY` (CDK parameter `MetaGraphApiKey`, `noEcho`; empty skips Facebook and Instagram logos)
   - `ADMIN_IMPORT_EXPORT_BUCKET`
   - `BOARD_CATALOG_MANAGER_ID` (optional catalog manager sub)
   - `ORG_REVIEW_GATE_ENABLED` (same flag as search; default `false`)
@@ -371,9 +374,10 @@ their primary responsibilities.
   AWS calls) or `app.services.aws_proxy.http_invoke` (for HTTP calls)
 - Timeout: 120 seconds. Outbound HTTP is capped at 90 seconds in
   `app.services.aws_proxy`. `ALLOWED_HTTP_URLS` includes Nominatim,
-  the EDB school-location CSV, the Places API (New) place prefix, and
-  the OpenRouter chat completions URL. Google calls send the key as
-  `X-Goog-Api-Key`, not in the URL.
+  the EDB school-location CSV, the Places API (New) place prefix,
+  `https://graph.facebook.com/`, and the OpenRouter chat completions
+  URL. Google calls send the key as `X-Goog-Api-Key`, and the Meta
+  logo call sends its token as a bearer header, not in the URL.
 - OpenRouter: the proxy does not inject the API key. Callers pass
   `Authorization` from Secrets Manager via `app.services.openrouter_client`.
 

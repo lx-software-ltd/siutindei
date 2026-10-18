@@ -949,6 +949,7 @@ export async function setupApiMocks(
                     proposed_value: {
                       address: '1 Test Street',
                       area_name: 'Wan Chai',
+                      area_path: 'Hong Kong Island · Wan Chai',
                     },
                     confidence: 0.8,
                     unverified: false,
