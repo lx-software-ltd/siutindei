@@ -3,9 +3,16 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   ProposalTable,
+  areaIdFromPath,
+  matchedAreaId,
   selectionAfterToggle,
 } from '@/components/admin/organization-enrichment-proposals';
 import type { EnrichmentProposal } from '@/lib/api-client-enrichment';
+import type { GeographicAreaNode } from '@/lib/api-client-user';
+
+const areaState = vi.hoisted(() => ({
+  tree: [] as GeographicAreaNode[],
+}));
 
 vi.mock('@/hooks/use-activity-categories', () => ({
   useActivityCategories: () => ({
@@ -17,12 +24,60 @@ vi.mock('@/hooks/use-activity-categories', () => ({
 
 vi.mock('@/hooks/use-geographic-areas', () => ({
   useGeographicAreas: () => ({
-    tree: [],
+    tree: areaState.tree,
     isLoading: false,
     countryCodes: '',
     flatNodes: () => [],
   }),
 }));
+
+const HONG_KONG: GeographicAreaNode = {
+  id: 'area-hk',
+  parent_id: null,
+  name: 'Hong Kong',
+  name_translations: {},
+  level: 'country',
+  code: 'HK',
+  active: true,
+  display_order: 1,
+  children: [
+    {
+      id: 'area-hk-island',
+      parent_id: 'area-hk',
+      name: 'Hong Kong Island',
+      name_translations: { 'zh-HK': '香港島' },
+      level: 'region',
+      code: null,
+      active: true,
+      display_order: 1,
+      children: [
+        {
+          id: 'area-hk-wanchai',
+          parent_id: 'area-hk-island',
+          name: 'Wan Chai',
+          name_translations: {},
+          level: 'district',
+          code: null,
+          active: true,
+          display_order: 1,
+          children: [
+            {
+              id: 'area-hk-causeway',
+              parent_id: 'area-hk-wanchai',
+              name: 'Causeway Bay',
+              name_translations: {},
+              level: 'neighbourhood',
+              code: null,
+              active: true,
+              display_order: 1,
+              children: [],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
 
 const MEDIA_URL = 'https://cdn.example/class.png';
 
@@ -55,6 +110,46 @@ function renderTable(rows: EnrichmentProposal[]) {
     />
   );
 }
+
+describe('matched area selection', () => {
+  it('selects the region from a path that has no neighbourhood id', () => {
+    expect(areaIdFromPath([HONG_KONG], 'Hong Kong Island · Wan Chai')).toBe(
+      'area-hk-wanchai'
+    );
+    expect(
+      matchedAreaId(
+        { area_path: 'Hong Kong Island · Wan Chai' },
+        [HONG_KONG]
+      )
+    ).toBe('area-hk-wanchai');
+    expect(
+      matchedAreaId(
+        { area_path: '香港島' },
+        [HONG_KONG]
+      )
+    ).toBe('area-hk-island');
+  });
+
+  it('shows the region selected on the location proposal', () => {
+    areaState.tree = [HONG_KONG];
+    renderTable([
+      proposal({
+        id: 'prop-location',
+        section: 'Locations',
+        kind: 'create_location',
+        field: null,
+        label: 'Location · 1 Test Street',
+        proposed_value: {
+          address: '1 Test Street',
+          area_path: 'Hong Kong Island · Wan Chai',
+        },
+      }),
+    ]);
+    expect(screen.getByLabelText('Region')).toHaveValue('area-hk-island');
+    expect(screen.getByLabelText('District')).toHaveValue('area-hk-wanchai');
+    areaState.tree = [];
+  });
+});
 
 describe('ProposalTable place match', () => {
   it('shows the matched neighbourhood path', () => {

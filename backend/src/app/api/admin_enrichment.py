@@ -113,9 +113,18 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
 
 
 def _start(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
+    body = parse_object_body(event)
+    website = body.get("website")
+    if website is not None and not isinstance(website, str):
+        raise ValidationError("website must be a string", field="website")
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event)
-        run = start_run(session, org_id, requested_by=_get_user_sub(event))
+        run = start_run(
+            session,
+            org_id,
+            requested_by=_get_user_sub(event),
+            website=website if isinstance(website, str) else None,
+        )
         session.commit()
         run_id = run.id
         payload = serialize_run(run)

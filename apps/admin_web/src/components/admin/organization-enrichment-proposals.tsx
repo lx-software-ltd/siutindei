@@ -8,6 +8,7 @@ import type {
   EnrichmentOverride,
   EnrichmentProposal,
 } from '../../lib/api-client-enrichment';
+import type { GeographicAreaNode } from '../../lib/api-client-user';
 import { CascadingAreaSelect } from '../ui/cascading-area-select';
 import { CascadingCategorySelect } from '../ui/cascading-category-select';
 import {
@@ -27,6 +28,70 @@ import {
   AdminTableNumber,
   formatAdminTablePercent,
 } from '../ui/admin-table-value';
+
+function sameAreaName(node: GeographicAreaNode, name: string): boolean {
+  const wanted = name.trim().toLowerCase();
+  if (!wanted) {
+    return false;
+  }
+  if (node.name.trim().toLowerCase() === wanted) {
+    return true;
+  }
+  return Object.values(node.name_translations ?? {}).some(
+    (value) => typeof value === 'string' && value.trim().toLowerCase() === wanted
+  );
+}
+
+function containsArea(nodes: GeographicAreaNode[], id: string): boolean {
+  return nodes.some(
+    (node) => node.id === id || containsArea(node.children ?? [], id)
+  );
+}
+
+/** Deepest area named by a path such as ``Kowloon · Yau Tsim Mong``. */
+export function areaIdFromPath(tree: GeographicAreaNode[], path: string): string {
+  const names = path
+    .split('·')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (names.length === 0 || tree.length === 0) {
+    return '';
+  }
+  const namedRoot = tree.find((node) => sameAreaName(node, names[0]));
+  const rootChildren = tree.length === 1 ? (tree[0].children ?? []) : tree;
+  let nodes = namedRoot ? (namedRoot.children ?? []) : rootChildren;
+  const start = namedRoot ? 1 : 0;
+  let deepest = namedRoot ? namedRoot.id : '';
+  for (const name of names.slice(start)) {
+    const next = nodes.find((node) => sameAreaName(node, name));
+    if (!next) {
+      break;
+    }
+    deepest = next.id;
+    nodes = next.children ?? [];
+  }
+  return deepest;
+}
+
+/** Leaf when enrichment matched one, otherwise the region or district anchor. */
+export function matchedAreaId(
+  proposed: Record<string, unknown>,
+  tree: GeographicAreaNode[],
+  overrideAreaId?: string
+): string {
+  if (overrideAreaId) {
+    return overrideAreaId;
+  }
+  const explicit = String(proposed.area_id ?? proposed.area_anchor_id ?? '');
+  const fromPath = areaIdFromPath(
+    tree,
+    typeof proposed.area_path === 'string' ? proposed.area_path : ''
+  );
+  if (explicit && (tree.length === 0 || containsArea(tree, explicit))) {
+    return explicit;
+  }
+  return fromPath || explicit;
+}
 
 export function proposedText(value: Record<string, unknown> | null): string {
   if (!value) {
@@ -231,7 +296,7 @@ function ProposalFields({
         </p>
         <CascadingAreaSelect
           tree={areaTree}
-          value={override.area_id ?? String(proposed.area_id ?? '')}
+          value={matchedAreaId(proposed, areaTree, override.area_id)}
           onChange={(areaId) => onOverride({ ...override, area_id: areaId })}
         />
       </div>
