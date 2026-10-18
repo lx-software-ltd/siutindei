@@ -172,7 +172,7 @@ def _decide(event: Mapping[str, Any], org_id: UUID, *, apply: bool) -> dict[str,
         from app.services.data_quality.runs import enqueue_staged_run
 
         enqueue_staged_run(quality_run_id)
-    body: dict[str, Any] = {"results": results}
+    payload: dict[str, Any] = {"results": results}
     if quality_run_id:
-        body["data_quality_run_id"] = quality_run_id
-    return json_response(200, body, event=event)
+        payload["data_quality_run_id"] = quality_run_id
+    return json_response(200, payload, event=event)
