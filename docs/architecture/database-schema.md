@@ -203,7 +203,8 @@ The row is audited.
 
 ## Table: data_quality_runs
 
-Purpose: One queued check pass, from an import or from Run checks.
+Purpose: One queued check pass, from an import, an enrichment apply,
+or Run checks. `trigger` is `import`, `enrichment`, or `manual`.
 `model_answers` and `lookup_answers` store the first reply for an
 input hash. Proposal and review rows store `input_hash`. Scan runs
 store `data_quality_run_id`.

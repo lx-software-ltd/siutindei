@@ -121,16 +121,25 @@ imported venue. A new venue on a skipped organization is still created.
 
 Imports · Settings stores skip-deleted, name cleanup, unknown
 categories, and whether duplicates, locations, and categories run
-after a live import. The row is `import_settings`. PUT replaces every
-field and locks the row. A missing row keeps today's import behaviour.
-Post-import checks use the queue and skip an unchanged fingerprint.
-Model replies are recorded only for those runs, one activity or
-organization at a time, and only after the reply parses. A cache hit
+after a live import and after a website-enrichment apply. The row is
+`import_settings`. PUT replaces every field and locks the row. A
+missing row keeps today's import behaviour. Post-import checks use
+the queue and skip an unchanged fingerprint. An enrichment apply uses
+those same three flags. Duplicates cover that organization. Locations
+runs only when the apply saved a venue or an activity. Categories runs
+only for activities that apply created. The trigger is `enrichment`.
+Names stay on the import write path. A dismiss, a crawl, and an apply
+that saves nothing do not queue a run. A failure while staging the run
+does not undo proposals that saved. Each apply that still has a check
+gets its own run. Model replies are recorded for queued runs, whether
+the trigger is import or enrichment, one activity or organization at a
+time, and only after the reply parses. A cache hit
 is not charged. Manual Location and Category sweeps call the model
 directly and stay synchronous. Run again requeues every check, replaces
 a failed child scan, and refreshes recorded replies. A busy check stays
-queued until the third delivery, then is marked busy while the remaining
-checks still run. Reading a run does not write. The Duplicates tab still
+queued until the third delivery. The run is then queued again up to
+twice, ten minutes apart, so a scan that is still open can finish.
+After that the check is marked busy and the remaining checks still run. Reading a run does not write. The Duplicates tab still
 scores with `pg_trgm`. A run recomputes with SequenceMatcher only. A
 busy or failed check does not fail the import. A pending name proposal
 blocks approval.

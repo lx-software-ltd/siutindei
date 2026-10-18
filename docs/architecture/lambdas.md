@@ -125,7 +125,11 @@ their primary responsibilities.
   `translation_scan_run_id` and the worker reads that key first. Website
   enrichment sends `enrichment_run_id` and `stage` (`crawl`, then
   `extract`) on that same queue. The worker reads that key before the
-  others. Crawl uses proxy `type: "crawl"` and stops after 20 seconds;
+  others. Applying enrichment proposals stages a data-quality run from
+  import settings and publishes `data_quality_run_id` after commit.
+  Locations is included only when a venue or activity was saved, and
+  categories only when an activity was saved. A busy check is published
+  again up to twice, delayed ten minutes, before it is marked busy. Crawl uses proxy `type: "crawl"` and stops after 20 seconds;
   extract is a second delivery because both stages do not fit in the
   120 second function. They
   spend `translation_fix_settings.monthly_cost_limit_usd`, which is

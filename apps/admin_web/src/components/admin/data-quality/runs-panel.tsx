@@ -32,6 +32,15 @@ import { ResourceTableShell } from '../../ui/resource-table-shell';
 import { Select } from '../../ui/select';
 
 const PAGE_NAME = formatAdminPageName('Data quality', adminTabLabel.runs);
+const TRIGGER_LABELS: Record<string, string> = {
+  import: 'Import',
+  manual: 'Manual',
+  enrichment: 'Enrichment',
+};
+
+function triggerLabel(trigger: string): string {
+  return TRIGGER_LABELS[trigger] ?? trigger;
+}
 const CHECKS = [
   ['names', adminTabLabel.names],
   ['duplicates', adminTabLabel.duplicates],
@@ -235,7 +244,7 @@ export function RunsPanel() {
               <AdminTableTime value={item.created_at} emphasis />
             </AdminDataTableCell>
             <AdminDataTableCell>{item.status}</AdminDataTableCell>
-            <AdminDataTableCell priority='secondary'>{item.trigger}</AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>{triggerLabel(item.trigger)}</AdminDataTableCell>
           </>
         )}
         renderActions={(item) => (

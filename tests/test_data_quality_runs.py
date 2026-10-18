@@ -148,6 +148,45 @@ def test_busy_check_retries_then_continues(db_session, monkeypatch) -> None:
     assert run.refresh is False
 
 
+def test_busy_check_defers_twice_then_continues(db_session, monkeypatch) -> None:
+    run = _run(db_session, ["names", "duplicates"])
+    sent: list[dict] = []
+
+    def fake(_session, _run, check):
+        if check.get("name") == "names":
+            return {
+                "status": "busy",
+                "detail": dict(check.get("detail") or {}),
+                "batches": [],
+            }
+        return {"status": "done", "detail": {}, "batches": []}
+
+    def send_message(**kwargs):
+        sent.append(kwargs)
+
+    monkeypatch.setenv("CATEGORY_SUGGESTION_QUEUE_URL", "https://sqs.example/queue")
+    monkeypatch.setattr("app.services.data_quality.runs.run_check", fake)
+    monkeypatch.setattr(
+        "app.services.data_quality.runs.get_client",
+        lambda _name: SimpleNamespace(send_message=send_message),
+    )
+    assert process_run(db_session, run.id, "message-1", receive_count=3) is True
+    assert run.status == "queued"
+    by_name = {item["name"]: item["status"] for item in run.checks}
+    assert by_name == {"names": "busy", "duplicates": "queued"}
+    assert sent[0]["DelaySeconds"] == 600
+    assert json.loads(sent[0]["MessageBody"])["data_quality_run_id"] == str(run.id)
+    assert process_run(db_session, run.id, "message-2", receive_count=3) is True
+    names = next(item for item in run.checks if item["name"] == "names")
+    assert names["detail"]["busy_defers"] == 2
+    assert run.status == "queued"
+    assert process_run(db_session, run.id, "message-3", receive_count=3) is True
+    by_name = {item["name"]: item["status"] for item in run.checks}
+    assert by_name == {"names": "busy", "duplicates": "done"}
+    assert run.status == "busy"
+    assert len(sent) == 2
+
+
 def test_worker_enqueues_location_and_category_batches(db_session, monkeypatch) -> None:
     run = _run(db_session, ["locations", "categories"])
     locations: list[tuple] = []

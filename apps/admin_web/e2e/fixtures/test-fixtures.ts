@@ -3138,6 +3138,27 @@ export async function setupApiMocks(
       });
       return;
     }
+    if (method === 'GET' && path.endsWith('/data-quality/runs')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              id: 'run-enrich-1',
+              trigger: 'enrichment',
+              scope: {},
+              checks: [{ name: 'duplicates', status: 'queued' }],
+              status: 'queued',
+              attempt: 1,
+              attempts: 0,
+              created_at: '2024-02-02T00:00:00Z',
+            },
+          ],
+        }),
+      });
+      return;
+    }
     if (method === 'GET' && /\/data-quality\/runs\/[^/]+$/.test(path)) {
       await route.fulfill({
         status: 200,

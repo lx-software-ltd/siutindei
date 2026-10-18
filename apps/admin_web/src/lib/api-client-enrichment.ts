@@ -69,7 +69,10 @@ export function decideOrgEnrichment(
   action: 'apply' | 'dismiss',
   ids: string[],
   overrides?: Record<string, EnrichmentOverride>
-): Promise<{ results: Array<{ id: string; status: string; error?: string }> }> {
+): Promise<{
+  results: Array<{ id: string; status: string; error?: string }>;
+  data_quality_run_id?: string;
+}> {
   return request(
     buildApiUrl(`v1/admin/organizations/${orgId}/enrichment/${action}`),
     {

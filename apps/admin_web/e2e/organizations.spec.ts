@@ -721,6 +721,7 @@ test.describe('Organizations Panel', () => {
               id,
               status: 'applied',
             })),
+            data_quality_run_id: 'run-enrich-1',
           }),
         });
       }
@@ -752,6 +753,10 @@ test.describe('Organizations Panel', () => {
     await adminPage.getByLabel('Neighbourhood').selectOption({ label: 'Causeway Bay' });
     await adminPage.getByRole('button', { name: 'Apply selected' }).click();
     await expect(adminPage.getByText('Selected changes were applied.')).toBeVisible();
+    await expect(adminPage.getByRole('link', { name: 'done' })).toHaveAttribute(
+      'href',
+      '/admin/dashboard?section=data-quality&tab=runs&run=run-enrich-1'
+    );
     await expect(adminPage.getByLabel('Description', { exact: true })).toHaveValue(
       'Saturday classes for children.'
     );

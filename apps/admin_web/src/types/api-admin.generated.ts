@@ -476,7 +476,13 @@ export interface paths {
          *     one failure does not undo the others. `overrides` is keyed by
          *     proposal id and may set `area_id`, `category_id`, `age_min`,
          *     `age_max`, or `location_id`. Each id returns its own result.
-         *     Nothing is applied automatically.
+         *     Nothing is applied automatically. When at least one proposal
+         *     is applied, the response includes `data_quality_run_id` for
+         *     the checks selected in import settings. Locations is included
+         *     only when a venue or activity was saved, and categories only
+         *     when an activity was saved. The field is omitted when no
+         *     check remains or nothing was saved. A failure while staging
+         *     the run does not undo proposals that saved.
          */
         post: {
             parameters: {
@@ -494,7 +500,21 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": {
+                            results: {
+                                id: string;
+                                status: string;
+                                error?: string;
+                            }[];
+                            /**
+                             * Format: uuid
+                             * @description Data-quality run staged from import settings.
+                             *     Omitted when no check was queued.
+                             */
+                            data_quality_run_id?: string;
+                        };
+                    };
                 };
                 /** @description Forbidden */
                 403: {
@@ -7508,7 +7528,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            trigger: "import" | "manual";
+            trigger: "import" | "manual" | "enrichment";
             /** Format: uuid */
             import_job_id?: string | null;
             scope: Record<string, never>;

@@ -106,7 +106,7 @@ class ImportSettings(Base):
 
 
 class DataQualityRun(Base):
-    """One import or manual pass over the data-quality checks."""
+    """One import, enrichment, or manual pass over the data-quality checks."""
 
     __tablename__ = "data_quality_runs"
 
@@ -197,7 +197,7 @@ class DataQualityRun(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "trigger IN ('import', 'manual')",
+            "trigger IN ('import', 'manual', 'enrichment')",
             name="data_quality_runs_trigger_check",
         ),
         CheckConstraint(

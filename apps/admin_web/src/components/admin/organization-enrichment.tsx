@@ -22,6 +22,7 @@ import {
 import { ApiError } from '../../lib/api-client';
 import { refreshCatalogHistory, getAdminQueryClient } from '../../lib/admin-query-client';
 import { StatusBanner } from '../status-banner';
+import { ImportRunStatus } from './import-run-status';
 import { AdminInputCard } from '../ui/admin-input-card';
 import { Button } from '../ui/button';
 import { StatusBadge } from '../ui/status-badge';
@@ -170,6 +171,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
   const [overrides, setOverrides] = useState<Record<string, EnrichmentOverride>>({});
   const [busy, setBusy] = useState<'apply' | 'dismiss' | null>(null);
   const [notice, setNotice] = useState('');
+  const [qualityRunId, setQualityRunId] = useState('');
   const [actionError, setActionError] = useState('');
   const runId = query.data?.run?.id ?? '';
 
@@ -177,6 +179,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
     setSelected([]);
     setOverrides({});
     setNotice('');
+    setQualityRunId('');
     setActionError('');
   }, [orgId, runId]);
 
@@ -258,6 +261,11 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
             ? 'Selected changes were applied.'
             : 'Selected changes were dismissed.'
       );
+      setQualityRunId(
+        action === 'apply' && result.data_quality_run_id
+          ? result.data_quality_run_id
+          : ''
+      );
       setSelected([]);
       await getAdminQueryClient().invalidateQueries({
         queryKey: adminQueryKeys.orgEnrichment(scope.orgId),
@@ -294,7 +302,10 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
                 : 'Enrichment could not be loaded.')}
           </StatusBanner>
         ) : notice ? (
-          <StatusBanner kind='saved'>{notice}</StatusBanner>
+          <div className='space-y-2'>
+            <StatusBanner kind='saved'>{notice}</StatusBanner>
+            {qualityRunId ? <ImportRunStatus runId={qualityRunId} /> : null}
+          </div>
         ) : null
       }
       actions={

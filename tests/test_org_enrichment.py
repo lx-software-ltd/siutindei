@@ -251,7 +251,7 @@ def test_apply_description(db_session) -> None:
     )
     db_session.add(proposal)
     db_session.flush()
-    results = apply_proposals(
+    results, _quality_run = apply_proposals(
         db_session,
         org.id,
         [str(proposal.id)],
@@ -283,7 +283,7 @@ def test_apply_refuses_a_stale_field(db_session) -> None:
     )
     db_session.add(proposal)
     db_session.flush()
-    results = apply_proposals(
+    results, _quality_run = apply_proposals(
         db_session,
         org.id,
         [str(proposal.id)],
@@ -318,7 +318,7 @@ def test_approved_org_refuses_an_unknown_category(db_session) -> None:
     )
     db_session.add(proposal)
     db_session.flush()
-    results = apply_proposals(
+    results, _quality_run = apply_proposals(
         db_session,
         org.id,
         [str(proposal.id)],
@@ -743,7 +743,7 @@ def test_one_bad_proposal_does_not_undo_the_others(db_session) -> None:
     db_session.add_all([good, bad])
     db_session.flush()
     calls: list[int] = []
-    results = apply_proposals(
+    results, _quality_run = apply_proposals(
         db_session,
         org.id,
         [str(bad.id), str(good.id)],
@@ -841,7 +841,7 @@ def test_media_keeps_the_existing_order(db_session) -> None:
     )
     db_session.add(proposal)
     db_session.flush()
-    results = apply_proposals(
+    results, _quality_run = apply_proposals(
         db_session,
         org.id,
         [str(proposal.id)],
@@ -892,7 +892,7 @@ def test_pricing_applies_after_its_activity(
     )
     db_session.add_all([activity, pricing])
     db_session.flush()
-    results = apply_proposals(
+    results, _quality_run = apply_proposals(
         db_session,
         org.id,
         [str(pricing.id), str(activity.id)],
@@ -939,7 +939,7 @@ def test_invalid_schedule_does_not_leave_an_empty_row(
     )
     db_session.add_all([good, schedule])
     db_session.flush()
-    results = apply_proposals(
+    results, _quality_run = apply_proposals(
         db_session,
         org.id,
         [str(schedule.id), str(good.id)],
@@ -952,3 +952,402 @@ def test_invalid_schedule_does_not_leave_an_empty_row(
     assert by_id[str(schedule.id)] == "error"
     assert db_session.query(ActivitySchedule).count() == 0
     assert org.description == "Saturday art class for children."
+
+
+def _quality_settings(session, **flags: str):
+    from app.db.models import ImportSettings
+
+    row = session.get(ImportSettings, 1)
+    if row is None:
+        row = ImportSettings(
+            id=1,
+            skip_deleted_organizations=True,
+            name_cleanup="apply",
+            unknown_categories="capture",
+        )
+        session.add(row)
+    row.duplicates = flags.get("duplicates", "off")
+    row.locations = flags.get("locations", "off")
+    row.categories = flags.get("categories", "off")
+    session.flush()
+    return row
+
+
+def test_apply_stages_quality_checks_from_import_settings(
+    db_session, sample_activity_category
+) -> None:
+    from uuid import UUID
+
+    from app.db.models import DataQualityRun
+
+    _quality_settings(
+        db_session, duplicates="report", locations="check", categories="check"
+    )
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    description = _proposal(
+        run,
+        field="description",
+        label="Description",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-quality-desc",
+    )
+    activity = _proposal(
+        run,
+        section="Activities",
+        kind="create_activity",
+        label="Activity · Painting",
+        proposed_value={
+            "name": "Painting",
+            "category_name": sample_activity_category.name,
+            "age_min": 5,
+            "age_max": 8,
+        },
+        proposed_hash="hash-quality-activity",
+    )
+    db_session.add_all([description, activity])
+    db_session.flush()
+    results, quality_run_id = apply_proposals(
+        db_session,
+        org.id,
+        [str(description.id), str(activity.id)],
+        {},
+        user_id="admin",
+        request_id="req-quality",
+    )
+    assert {row["status"] for row in results} == {"applied"}
+    assert quality_run_id is not None
+    quality = db_session.get(DataQualityRun, UUID(quality_run_id))
+    assert quality is not None
+    assert quality.trigger == "enrichment"
+    assert [item["name"] for item in quality.checks] == [
+        "duplicates",
+        "locations",
+        "categories",
+    ]
+    assert quality.scope["organization_ids"] == [str(org.id)]
+    assert quality.scope["activity_ids"] == [str(activity.entity_id)]
+    email = _proposal(
+        run,
+        field="email",
+        label="Email",
+        proposed_value={"email": "hello@example.com"},
+        proposed_hash="hash-quality-email",
+    )
+    db_session.add(email)
+    db_session.flush()
+    _again, second_id = apply_proposals(
+        db_session,
+        org.id,
+        [str(email.id)],
+        {},
+        user_id="admin",
+        request_id="req-quality-2",
+    )
+    assert second_id is not None
+    assert second_id != quality_run_id
+    second = db_session.get(DataQualityRun, UUID(second_id))
+    assert second is not None
+    assert [item["name"] for item in second.checks] == ["duplicates"]
+    assert second.scope["activity_ids"] == []
+
+
+def test_location_apply_runs_locations_without_categories(
+    db_session, sample_geographic_area
+) -> None:
+    from uuid import UUID
+
+    from app.db.models import DataQualityRun
+
+    _quality_settings(db_session, locations="check", categories="check")
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    location = _proposal(
+        run,
+        section="Locations",
+        kind="create_location",
+        label="Location",
+        proposed_value={"address": "9 Example Road"},
+        proposed_hash="hash-quality-location",
+    )
+    db_session.add(location)
+    db_session.flush()
+    results, quality_run_id = apply_proposals(
+        db_session,
+        org.id,
+        [str(location.id)],
+        {str(location.id): {"area_id": str(sample_geographic_area.id)}},
+        user_id="admin",
+        request_id="req-location-quality",
+    )
+    assert results[0]["status"] == "applied"
+    assert quality_run_id is not None
+    quality = db_session.get(DataQualityRun, UUID(quality_run_id))
+    assert quality is not None
+    assert [item["name"] for item in quality.checks] == ["locations"]
+    assert quality.scope["activity_ids"] == []
+
+
+def test_contact_apply_skips_location_and_category_checks(db_session) -> None:
+    from app.db.models import DataQualityRun
+    from sqlalchemy import select
+
+    _quality_settings(db_session, locations="check", categories="check")
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    proposal = _proposal(
+        run,
+        field="email",
+        label="Email",
+        proposed_value={"email": "hello@example.com"},
+        proposed_hash="hash-quality-contact",
+    )
+    db_session.add(proposal)
+    db_session.flush()
+    results, quality_run_id = apply_proposals(
+        db_session,
+        org.id,
+        [str(proposal.id)],
+        {},
+        user_id="admin",
+        request_id="req-contact-quality",
+    )
+    assert results[0]["status"] == "applied"
+    assert quality_run_id is None
+    assert db_session.scalars(select(DataQualityRun)).all() == []
+
+
+def test_quality_stage_failure_keeps_the_apply(db_session, monkeypatch) -> None:
+    from app.db.models import DataQualityRun
+    from sqlalchemy import select
+
+    def explode(*_args, **_kwargs):
+        raise RuntimeError("settings unavailable")
+
+    monkeypatch.setattr(
+        "app.services.data_quality.runs.stage_enrichment_run",
+        explode,
+    )
+    _quality_settings(db_session, duplicates="report")
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    proposal = _proposal(
+        run,
+        field="description",
+        label="Description",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-quality-stage-fail",
+    )
+    db_session.add(proposal)
+    db_session.flush()
+    results, quality_run_id = apply_proposals(
+        db_session,
+        org.id,
+        [str(proposal.id)],
+        {},
+        user_id="admin",
+        request_id="req-stage-fail",
+    )
+    assert results[0]["status"] == "applied"
+    assert quality_run_id is None
+    assert org.description == "Saturday art class for children."
+    assert db_session.scalars(select(DataQualityRun)).all() == []
+
+
+def test_apply_skips_quality_run_when_checks_are_off(db_session) -> None:
+    from app.db.models import DataQualityRun
+    from sqlalchemy import select
+
+    _quality_settings(db_session)
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    proposal = _proposal(
+        run,
+        field="description",
+        label="Description",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-quality-off",
+    )
+    db_session.add(proposal)
+    db_session.flush()
+    results, quality_run_id = apply_proposals(
+        db_session,
+        org.id,
+        [str(proposal.id)],
+        {},
+        user_id="admin",
+        request_id="req-off",
+    )
+    assert results[0]["status"] == "applied"
+    assert quality_run_id is None
+    assert db_session.scalars(select(DataQualityRun)).all() == []
+
+
+def test_failed_apply_does_not_stage_a_quality_run(db_session) -> None:
+    from app.db.models import DataQualityRun
+    from sqlalchemy import select
+
+    _quality_settings(db_session, duplicates="report")
+    org = _org(db_session, description="Kept by an editor")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    proposal = _proposal(
+        run,
+        field="description",
+        label="Description",
+        current_value={"description": "old"},
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-quality-stale",
+    )
+    db_session.add(proposal)
+    db_session.flush()
+    results, quality_run_id = apply_proposals(
+        db_session,
+        org.id,
+        [str(proposal.id)],
+        {},
+        user_id="admin",
+        request_id="req-stale-quality",
+    )
+    assert results[0]["status"] == "error"
+    assert quality_run_id is None
+    assert db_session.scalars(select(DataQualityRun)).all() == []
+
+
+def test_apply_route_enqueues_the_quality_run(db_session, monkeypatch) -> None:
+    import json
+
+    from app.api.admin_enrichment import handle_org_enrichment
+
+    _quality_settings(db_session, duplicates="report", locations="check")
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    proposal = _proposal(
+        run,
+        field="description",
+        label="Description",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-quality-route",
+    )
+    db_session.add(proposal)
+    db_session.flush()
+    enqueued: list[str | None] = []
+
+    class _OpenSession:
+        def __enter__(self):
+            return db_session
+
+        def __exit__(self, *_args) -> bool:
+            return False
+
+    monkeypatch.setattr("app.api.admin_enrichment.get_engine", lambda: None)
+    monkeypatch.setattr(
+        "app.api.admin_enrichment.Session",
+        lambda _engine: _OpenSession(),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_enrichment._set_session_audit_context",
+        lambda _session, _event: None,
+    )
+    monkeypatch.setattr(db_session, "commit", db_session.flush)
+    monkeypatch.setattr(
+        "app.services.data_quality.runs.enqueue_staged_run",
+        lambda run_id: enqueued.append(run_id),
+    )
+    response = handle_org_enrichment(
+        {
+            "httpMethod": "POST",
+            "path": f"/v1/admin/organizations/{org.id}/enrichment/apply",
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"ids": [str(proposal.id)]}),
+            "requestContext": {
+                "requestId": "req-route",
+                "authorizer": {"groups": "admin", "userSub": "admin-user"},
+            },
+        },
+        "POST",
+        str(org.id),
+    )
+    body = json.loads(response["body"])
+    assert response["statusCode"] == 200
+    assert body["results"][0]["status"] == "applied"
+    assert body["data_quality_run_id"]
+    assert enqueued == [body["data_quality_run_id"]]
+
+
+def test_dismiss_does_not_enqueue_a_quality_run(db_session, monkeypatch) -> None:
+    import json
+
+    from app.api.admin_enrichment import handle_org_enrichment
+    from app.db.models import DataQualityRun
+    from sqlalchemy import select
+
+    _quality_settings(db_session, duplicates="report")
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    proposal = _proposal(
+        run,
+        field="description",
+        label="Description",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-quality-dismiss",
+    )
+    db_session.add(proposal)
+    db_session.flush()
+    enqueued: list[str | None] = []
+
+    class _OpenSession:
+        def __enter__(self):
+            return db_session
+
+        def __exit__(self, *_args) -> bool:
+            return False
+
+    monkeypatch.setattr("app.api.admin_enrichment.get_engine", lambda: None)
+    monkeypatch.setattr(
+        "app.api.admin_enrichment.Session",
+        lambda _engine: _OpenSession(),
+    )
+    monkeypatch.setattr(
+        "app.api.admin_enrichment._set_session_audit_context",
+        lambda _session, _event: None,
+    )
+    monkeypatch.setattr(db_session, "commit", db_session.flush)
+    monkeypatch.setattr(
+        "app.services.data_quality.runs.enqueue_staged_run",
+        lambda run_id: enqueued.append(run_id),
+    )
+    response = handle_org_enrichment(
+        {
+            "httpMethod": "POST",
+            "path": f"/v1/admin/organizations/{org.id}/enrichment/dismiss",
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"ids": [str(proposal.id)]}),
+            "requestContext": {
+                "requestId": "req-dismiss",
+                "authorizer": {"groups": "admin", "userSub": "admin-user"},
+            },
+        },
+        "POST",
+        str(org.id),
+    )
+    body = json.loads(response["body"])
+    assert body["results"][0]["status"] == "dismissed"
+    assert "data_quality_run_id" not in body
+    assert enqueued == []
+    assert db_session.scalars(select(DataQualityRun)).all() == []
