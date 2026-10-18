@@ -95,6 +95,12 @@ def test_board_agent_declares_revision_inputs() -> None:
     assert "--output-format stream-json" in text
     assert "docs/architecture/zones.md" in text
     assert "CURSOR_HOOK_MARKER" in text
+    assert "AUTHORIZATION: bearer" not in text
+    assert "git_auth fetch origin staging" in text
+    assert (
+        "auth_header=\"AUTHORIZATION: basic $(printf 'x-access-token:%s' "
+        '"${GH_TOKEN}" | base64 -w0)"'
+    ) in text
 
 
 def test_lockfile_lines_are_excluded() -> None:
