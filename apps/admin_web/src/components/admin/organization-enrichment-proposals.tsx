@@ -218,8 +218,10 @@ function ProposalFields({
   if (row.kind === 'create_location') {
     const path = proposed.area_path ? String(proposed.area_path) : '';
     const said = proposed.area_name ? String(proposed.area_name) : '';
+    const note = proposed.area_note ? String(proposed.area_note) : '';
     return (
       <div className='mt-3 max-w-xl'>
+        {note ? <p className='mb-2 text-xs text-slate-500'>{note}</p> : null}
         <p className='mb-2 text-xs text-slate-500'>
           {path
             ? `Matched ${path}.`
@@ -325,6 +327,28 @@ function ProposalFields({
     );
   }
   return null;
+}
+
+function isLogoProposal(row: EnrichmentProposal | undefined): boolean {
+  return Boolean(row && row.kind === 'add_media' && row.proposed_value.logo);
+}
+
+export function selectionAfterToggle(
+  selected: string[],
+  id: string,
+  rows: EnrichmentProposal[]
+): string[] {
+  if (selected.includes(id)) {
+    return selected.filter((item) => item !== id);
+  }
+  const row = rows.find((item) => item.id === id);
+  if (!isLogoProposal(row)) {
+    return [...selected, id];
+  }
+  const otherLogos = new Set(
+    rows.filter((item) => isLogoProposal(item) && item.id !== id).map((item) => item.id)
+  );
+  return [...selected.filter((item) => !otherLogos.has(item)), id];
 }
 
 function numberOrBlank(value: unknown): number | undefined {

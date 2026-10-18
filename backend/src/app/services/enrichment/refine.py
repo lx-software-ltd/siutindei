@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+import time
 from typing import Any, Callable
 
 from sqlalchemy import select
@@ -11,9 +13,13 @@ from app.db.models.activity_category import ActivityCategory
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.db.models.organization import Organization
 from app.services.category_suggestions.resolve import matching_category_id
+from app.services.enrichment.constants import LOOKUP_BUDGET_SECONDS
 from app.services.enrichment.logos import social_logo_proposals
-from app.services.enrichment.places import GeocodeBudget, place_fields
+from app.services.enrichment.places import GeocodeBudget, load_index, place_fields
 from app.services.name_sanitizer import organization_name_key, sanitize_name
+
+_PAREN_RE = re.compile(r"\s*\([^)]*\)\s*$")
+_PLACE_KEYS = ("area_id", "area_path", "area_match", "area_note", "lat", "lng")
 
 Lookup = Callable[[str], dict[str, Any] | None]
 Sleep = Callable[[float], None]
@@ -38,6 +44,11 @@ def catalog_names(session: Session) -> list[str]:
     return lines
 
 
+def bare_category_name(value: str) -> str:
+    """Drop a trailing catalog translation such as `` (舞蹈芭蕾)``."""
+    return _PAREN_RE.sub("", value or "").strip()
+
+
 def annotate(
     session: Session,
     org: Organization,
@@ -46,16 +57,22 @@ def annotate(
     geocode: Lookup | None = None,
     sleep: Sleep | None = None,
     social_fetch: Fetch | None = None,
+    deadline: float | None = None,
 ) -> list[dict[str, Any]]:
     """Resolve places and categories, drop names that must not change, add logos."""
-    budget = GeocodeBudget(geocode, sleep)
+    if deadline is None:
+        deadline = time.monotonic() + LOOKUP_BUDGET_SECONDS
+    budget = GeocodeBudget(geocode, sleep, deadline=deadline)
+    index = load_index(session)
     kept: list[dict[str, Any]] = []
     for item in items:
         proposed = dict(item.get("proposed") or {})
         kind = str(item.get("kind") or "")
         field = str(item.get("field") or "")
         if kind == "create_location":
-            proposed.update(place_fields(session, proposed, budget))
+            for key in _PLACE_KEYS:
+                proposed.pop(key, None)
+            proposed.update(place_fields(session, proposed, budget, index))
             item = {**item, "proposed": proposed}
         elif kind == "create_activity":
             category_id = _category_id(session, proposed)
@@ -67,13 +84,17 @@ def annotate(
                 continue
             item = {**item, "proposed": proposed}
         kept.append(item)
-    kept.extend(social_logo_proposals(org, items, fetch=social_fetch))
+    kept.extend(
+        social_logo_proposals(org, items, fetch=social_fetch, deadline=deadline)
+    )
     return kept
 
 
 def _category_id(session: Session, proposed: dict[str, Any]) -> str | None:
     for key in ("category_name", "category_words"):
-        found = matching_category_id(session, str(proposed.get(key) or ""))
+        found = matching_category_id(
+            session, bare_category_name(str(proposed.get(key) or ""))
+        )
         if found is not None:
             return str(found)
     return None

@@ -147,7 +147,9 @@ their primary responsibilities.
   `GOOGLE_PLACES_API_KEY` (CDK parameter `GooglePlacesApiKey`,
   `noEcho`; empty disables Google pin lookup),
   `META_GRAPH_API_KEY` (CDK parameter `MetaGraphApiKey`, `noEcho`;
-  empty skips Facebook and Instagram logo lookup)
+  empty skips Facebook and Instagram logo lookup),
+  `META_INSTAGRAM_USER_ID` (CDK parameter `MetaInstagramUserId`;
+  empty skips Instagram logos; Facebook still uses the token)
 - Memory: 1024 MB (cold start is import-bound; CPU scales with memory)
 - Timeout: 120 seconds so one SQS enrichment can wait on a 90-second
   OpenRouter attempt. API Gateway still limits HTTP to 29 seconds, so
@@ -175,6 +177,7 @@ their primary responsibilities.
   - `NOMINATIM_USER_AGENT`
   - `NOMINATIM_REFERER`
   - `META_GRAPH_API_KEY` (CDK parameter `MetaGraphApiKey`, `noEcho`; empty skips Facebook and Instagram logos)
+  - `META_INSTAGRAM_USER_ID` (CDK parameter `MetaInstagramUserId`; empty skips Instagram logos)
   - `ADMIN_IMPORT_EXPORT_BUCKET`
   - `BOARD_CATALOG_MANAGER_ID` (optional catalog manager sub)
   - `ORG_REVIEW_GATE_ENABLED` (same flag as search; default `false`)
@@ -376,8 +379,9 @@ their primary responsibilities.
   `app.services.aws_proxy`. `ALLOWED_HTTP_URLS` includes Nominatim,
   the EDB school-location CSV, the Places API (New) place prefix,
   `https://graph.facebook.com/`, and the OpenRouter chat completions
-  URL. Google calls send the key as `X-Goog-Api-Key`, and the Meta
-  logo call sends its token as a bearer header, not in the URL.
+  URL. Google calls send the key as `X-Goog-Api-Key`. Facebook logo
+  lookup uses the Graph picture edge, and Instagram uses Business
+  Discovery. Both send the Meta token as a bearer header, not in the URL.
 - OpenRouter: the proxy does not inject the API key. Callers pass
   `Authorization` from Secrets Manager via `app.services.openrouter_client`.
 

@@ -38,8 +38,13 @@ the Facebook or Instagram picture from the existing Meta app.
   activity is saved.
 - An approved organization's name is not proposed or written.
 - A missing Nominatim answer or a missing Meta key does not fail the run.
-- At most five Nominatim calls per extract, one second apart.
-- The Meta key is sent as a bearer header, never in the URL.
+- At most five Nominatim calls per extract, one second apart, and the
+  place plus logo lookups share 20 seconds after the model call.
+- The Meta key is sent as a bearer header, never in the URL. Instagram
+  pictures need `META_INSTAGRAM_USER_ID`; Facebook does not.
+- A category suggestion is captured only when the saved activity stays
+  on the pending category and Imports is set to capture unknown categories.
+- One apply can set one logo.
 
 ## Done when
 

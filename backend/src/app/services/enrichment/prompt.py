@@ -58,7 +58,8 @@ def instructions_for(category_names: list[str]) -> str:
     listed = "; ".join(category_names)
     return (
         "category_name must be one of: "
-        f"{listed}. category_words is the wording on the site when it differs.\n"
+        f"{listed}. Use the catalog name before the parentheses. "
+        "category_words is the wording on the site when it differs.\n"
     )
 
 

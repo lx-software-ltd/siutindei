@@ -5,14 +5,17 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from typing import Any, Callable
-from urllib.parse import urlencode, urljoin, urlparse
+from urllib.parse import quote, urlencode, urljoin, urlparse
 
 from app.services.aws_proxy import AwsProxyError, http_invoke
 from app.services.enrichment.constants import COPYRIGHT_NOTICE
 
-_HANDLE_RE = re.compile(r"^[\w.\-]{2,80}$")
+_FB_HANDLE = re.compile(r"^[A-Za-z0-9.\-]{2,80}$")
+_IG_HANDLE = re.compile(r"^[A-Za-z0-9._]{1,30}$")
 _GRAPH = "https://graph.facebook.com/v21.0"
+_GRAPH_TIMEOUT_SECONDS = 3
 Fetch = Callable[[str, dict[str, str]], dict[str, Any] | None]
 
 
@@ -73,12 +76,20 @@ def social_logo_proposals(
     items: list[dict[str, Any]],
     *,
     fetch: Fetch | None = None,
+    deadline: float | None = None,
 ) -> list[dict[str, Any]]:
-    """Facebook and Instagram pictures. No key, or a failed call, adds nothing."""
+    """Facebook and Instagram pictures. No key, or a failed call, adds nothing.
+
+    Page oEmbed no longer returns a thumbnail. Facebook uses the picture
+    edge. Instagram uses Business Discovery, which needs the app's own
+    professional account id.
+    """
     token = os.environ.get("META_GRAPH_API_KEY", "").strip()
     if not token:
         return []
-    caller = fetch or _graph_fetch
+    caller = fetch or (
+        lambda url, headers: _graph_fetch(url, headers, timeout=_http_timeout(deadline))
+    )
     existing = {
         str((item.get("proposed") or {}).get("source_url") or "")
         for item in items
@@ -86,29 +97,21 @@ def social_logo_proposals(
     }
     found: list[dict[str, Any]] = []
     specs = (
-        (
-            "facebook",
-            "https://www.facebook.com/{handle}",
-            f"{_GRAPH}/oembed_page",
-            "Logo · Facebook",
-        ),
-        (
-            "instagram",
-            "https://www.instagram.com/{handle}/",
-            f"{_GRAPH}/instagram_oembed",
-            "Logo · Instagram",
-        ),
+        ("facebook", "Logo · Facebook"),
+        ("instagram", "Logo · Instagram"),
     )
-    for field, profile, endpoint, label in specs:
+    for field, label in specs:
+        if not _has_time(deadline):
+            break
         handle = _handle(_social_value(org, items, field))
-        if not handle:
+        built = _social_request(field, handle)
+        if built is None:
             continue
-        page_url = profile.format(handle=handle)
-        url = f"{endpoint}?{urlencode({'url': page_url})}"
-        thumbnail = _thumbnail(caller(url, {"Authorization": f"Bearer {token}"}))
-        if not thumbnail or thumbnail in existing:
+        url, page_url = built
+        picture = _picture(caller(url, {"Authorization": f"Bearer {token}"}), field)
+        if not picture or picture in existing:
             continue
-        existing.add(thumbnail)
+        existing.add(picture)
         found.append(
             {
                 "section": "Media",
@@ -117,30 +120,48 @@ def social_logo_proposals(
                 "label": label,
                 "current": None,
                 "proposed": {
-                    "source_url": thumbnail,
+                    "source_url": picture,
                     "alt": label,
                     "logo": True,
                     "copyright_notice": COPYRIGHT_NOTICE,
                 },
                 "confidence": 0.8,
                 "unverified": False,
-                "evidence": [{"url": page_url, "quote": thumbnail[:180]}],
+                "evidence": [{"url": page_url, "quote": picture[:180]}],
             }
         )
     return found
 
 
+def _social_request(field: str, handle: str) -> tuple[str, str] | None:
+    if field == "facebook":
+        if not _FB_HANDLE.fullmatch(handle):
+            return None
+        query = urlencode({"redirect": "0", "type": "large"})
+        url = f"{_GRAPH}/{quote(handle, safe='.-')}/picture?{query}"
+        return url, f"https://www.facebook.com/{handle}"
+    user_id = os.environ.get("META_INSTAGRAM_USER_ID", "").strip()
+    if not user_id or not _IG_HANDLE.fullmatch(handle):
+        return None
+    if not re.fullmatch(r"[0-9]{2,40}", user_id):
+        return None
+    fields = f"business_discovery.username({handle}){{profile_picture_url}}"
+    url = f"{_GRAPH}/{quote(user_id, safe='')}/?{urlencode({'fields': fields})}"
+    return url, f"https://www.instagram.com/{handle}/"
+
+
 def _page_logo(page: dict[str, Any]) -> tuple[int, str, str] | None:
+    """JSON-LD, then a logo image, then a touch icon, then a favicon, then Open Graph."""
+    best: tuple[int, str, str] | None = None
+
+    def consider(rank: int, src: str, alt: str) -> None:
+        nonlocal best
+        if src and (best is None or rank < best[0]):
+            best = (rank, src, alt)
+
     logo = _jsonld_logo(page)
     if logo:
-        src = _absolute(page, logo)
-        if src:
-            return 0, src, "Logo"
-    for icon in page.get("icons") or []:
-        if isinstance(icon, dict):
-            src = _absolute(page, str(icon.get("href") or ""))
-            if src:
-                return 1, src, "Logo"
+        consider(0, _absolute(page, logo), "Logo")
     for image in page.get("images") or []:
         if not isinstance(image, dict):
             continue
@@ -151,17 +172,19 @@ def _page_logo(page: dict[str, Any]) -> tuple[int, str, str] | None:
             (str(image.get("src") or ""), alt, str(image.get("class") or ""))
         ).casefold()
         if "logo" in blob:
-            src = _absolute(page, str(image.get("src") or ""))
-            if src:
-                return 2, src, alt or "Logo"
+            consider(1, _absolute(page, str(image.get("src") or "")), alt or "Logo")
+    for icon in page.get("icons") or []:
+        if not isinstance(icon, dict):
+            continue
+        rel = str(icon.get("rel") or "").casefold()
+        rank = 2 if "apple-touch" in rel or "logo" in rel else 3
+        consider(rank, _absolute(page, str(icon.get("href") or "")), "Logo")
     for image in page.get("images") or []:
         if not isinstance(image, dict):
             continue
         if str(image.get("alt") or "").casefold() in {"og:image", "twitter:image"}:
-            src = _absolute(page, str(image.get("src") or ""))
-            if src:
-                return 3, src, "Logo"
-    return None
+            consider(4, _absolute(page, str(image.get("src") or "")), "Logo")
+    return best
 
 
 def _jsonld_logo(page: dict[str, Any]) -> str:
@@ -248,15 +271,27 @@ def _handle(value: str) -> str:
             token = parts[-1] if parts else ""
         else:
             token = text
-    token = token.split("?")[0].strip().strip("/")
-    if not _HANDLE_RE.fullmatch(token):
-        return ""
-    return token
+    return token.split("?")[0].strip().strip("/")
 
 
-def _graph_fetch(url: str, headers: dict[str, str]) -> dict[str, Any] | None:
+def _has_time(deadline: float | None, needed: float = 1.0) -> bool:
+    if deadline is None:
+        return True
+    return deadline - time.monotonic() > needed
+
+
+def _http_timeout(deadline: float | None) -> int:
+    if deadline is None:
+        return _GRAPH_TIMEOUT_SECONDS
+    remaining = int(deadline - time.monotonic())
+    return max(1, min(_GRAPH_TIMEOUT_SECONDS, remaining))
+
+
+def _graph_fetch(
+    url: str, headers: dict[str, str], timeout: int = _GRAPH_TIMEOUT_SECONDS
+) -> dict[str, Any] | None:
     try:
-        result = http_invoke("GET", url, headers=headers, timeout=10)
+        result = http_invoke("GET", url, headers=headers, timeout=timeout)
     except (AwsProxyError, RuntimeError):
         return None
     if int(result.get("status") or 0) != 200:
@@ -264,7 +299,7 @@ def _graph_fetch(url: str, headers: dict[str, str]) -> dict[str, Any] | None:
     return result
 
 
-def _thumbnail(result: dict[str, Any] | None) -> str:
+def _picture(result: dict[str, Any] | None, field: str) -> str:
     if not result:
         return ""
     try:
@@ -273,7 +308,14 @@ def _thumbnail(result: dict[str, Any] | None) -> str:
         return ""
     if not isinstance(payload, dict):
         return ""
-    thumbnail = payload.get("thumbnail_url")
-    if isinstance(thumbnail, str) and thumbnail.startswith("https://"):
-        return thumbnail[:500]
+    if field == "facebook":
+        data = payload.get("data")
+        if not isinstance(data, dict) or data.get("is_silhouette") is True:
+            return ""
+        url = data.get("url")
+    else:
+        data = payload.get("business_discovery")
+        url = data.get("profile_picture_url") if isinstance(data, dict) else None
+    if isinstance(url, str) and url.startswith("https://"):
+        return url[:500]
     return ""

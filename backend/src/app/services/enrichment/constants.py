@@ -12,6 +12,9 @@ COPYRIGHT_NOTICE = (
 # function. The crawl also waits one second between fetches.
 CRAWL_TIME_BUDGET_SECONDS = 60
 EXTRACT_TIMEOUT_SECONDS = 90
+# The model may use the 90s above. Place and logo lookups share what is
+# left of the 120s function so a slow lookup cannot force a second paid call.
+LOOKUP_BUDGET_SECONDS = 20
 MAX_PAGE_TEXT = 20_000
 MAX_PROMPT_CHARS = 90_000
 # The default model has a 40,960-token window shared by the prompt and the

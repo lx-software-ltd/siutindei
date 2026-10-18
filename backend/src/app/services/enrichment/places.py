@@ -10,7 +10,7 @@ from typing import Any, Callable
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.data.hk_neighbourhoods import assign_among, neighbourhoods_for
+from app.data.hk_neighbourhoods import NEIGHBOURHOODS, assign_among, neighbourhoods_for
 from app.db.models.geographic_area import GeographicArea
 from app.services.location_fix_geocode import AddressLookupFailed, lookup_address
 
@@ -20,13 +20,17 @@ _LATIN_MIN = 4
 _CJK_MIN = 2
 _GEOCODE_LIMIT = 5
 _GEOCODE_GAP_SECONDS = 1.0
+_GEOCODE_CALL_SECONDS = 4.0
+# Leave enough of the lookup budget for one Facebook and one Instagram call.
+_SOCIAL_RESERVE_SECONDS = 6.0
+_OUTSIDE = "The neighbourhood on the page is outside the named district."
 
 Lookup = Callable[[str], dict[str, Any] | None]
 Sleep = Callable[[float], None]
 
 
 class GeocodeBudget:
-    """At most five Nominatim calls, one second apart. A failure is not a miss."""
+    """At most five Nominatim calls, one second apart, inside the time left."""
 
     def __init__(
         self,
@@ -35,21 +39,27 @@ class GeocodeBudget:
         *,
         limit: int = _GEOCODE_LIMIT,
         gap: float = _GEOCODE_GAP_SECONDS,
+        deadline: float | None = None,
+        call_timeout: float = _GEOCODE_CALL_SECONDS,
+        reserve: float = _SOCIAL_RESERVE_SECONDS,
     ) -> None:
-        self.lookup = lookup or lookup_address
+        self.lookup = lookup
         self.sleep = sleep or time.sleep
         self.limit = limit
         self.gap = gap
+        self.deadline = deadline
+        self.call_timeout = call_timeout
+        self.reserve = reserve
         self.calls = 0
 
     def pin(self, address: str) -> tuple[float, float] | None:
-        if self.calls >= self.limit:
+        if self.calls >= self.limit or not self._fits(self.gap if self.calls else 0):
             return None
         if self.calls:
             self.sleep(self.gap)
         self.calls += 1
         try:
-            found = self.lookup(address)
+            found = self._lookup(address)
         except AddressLookupFailed:
             return None
         if not isinstance(found, dict):
@@ -59,39 +69,57 @@ class GeocodeBudget:
         except (KeyError, TypeError, ValueError):
             return None
 
+    def _lookup(self, address: str) -> dict[str, Any] | None:
+        if self.lookup is not None:
+            return self.lookup(address)
+        return lookup_address(address, timeout=self._timeout())
+
+    def _timeout(self) -> int:
+        remaining = self._remaining() - self.reserve
+        return max(1, min(int(self.call_timeout), int(remaining)))
+
+    def _fits(self, extra: float) -> bool:
+        return self._remaining() > self.reserve + extra
+
+    def _remaining(self) -> float:
+        if self.deadline is None:
+            return 10_000.0
+        return self.deadline - time.monotonic()
+
+
+def load_index(session: Session) -> _Index:
+    """Active areas, loaded once per extract."""
+    return _Index.load(session)
+
 
 def place_fields(
     session: Session,
     proposed: dict[str, Any],
     budget: GeocodeBudget,
+    index: _Index | None = None,
 ) -> dict[str, Any]:
     """Neighbourhood id and path. A district without a confident pin stays a path."""
-    index = _Index.load(session)
+    index = index or _Index.load(session)
     address = str(proposed.get("address") or "")
     district = _named_district(index, proposed)
-    neighbourhood = _named_neighbourhood(index, proposed, district)
+    neighbourhood, note = _named_neighbourhood(index, proposed, district)
+    method = "neighbourhood"
+    if neighbourhood is None:
+        neighbourhood, address_note = _address_neighbourhood(index, address, district)
+        note = note or address_note
+        method = "address"
     if neighbourhood is not None:
-        return _hit(index, neighbourhood, "neighbourhood")
-    from_address = _address_neighbourhood(index, address, district)
-    if from_address is not None:
-        return _hit(index, from_address, "address")
+        return _with_note(_hit(index, neighbourhood, method), note)
     if district is None:
         district = _address_district(index, address)
-    if district is None:
-        return {}
-    pin = budget.pin(address) if address.strip() else None
-    if pin is None:
-        return _district_only(index, district)
-    choices = neighbourhoods_for(district.name)
-    assigned = assign_among(choices, pin[0], pin[1]) if choices else None
-    if assigned is None or not assigned.confident:
-        return _district_only(index, district)
-    child = _child_named(index, district, assigned.neighbourhood.name)
-    if child is None:
-        child = _child_named(index, district, assigned.neighbourhood.name_zh)
-    if child is None:
-        return _district_only(index, district)
-    return _hit(index, child, "geocode", lat=pin[0], lng=pin[1])
+    if district is not None:
+        pinned = _pinned(
+            index, budget, address, neighbourhoods_for(district.name), district
+        )
+        if pinned is not None:
+            return _with_note(pinned, note)
+        return _with_note(_district_only(index, district), note)
+    return _with_note(_pinned(index, budget, address, NEIGHBOURHOODS, None), note)
 
 
 def _fold(text: str) -> str:
@@ -170,11 +198,14 @@ def _pick(
         under = [area for area in hits if str(area.parent_id) == str(district.id)]
         if len(under) == 1:
             return under[0]
-        if len(under) > 1:
-            return None
+        return None
     if len(hits) == 1:
         return hits[0]
     return None
+
+
+def _outside(hits: list[GeographicArea], district: GeographicArea) -> bool:
+    return bool(hits) and all(str(area.parent_id) != str(district.id) for area in hits)
 
 
 def _named_district(_index: _Index, proposed: dict[str, Any]) -> GeographicArea | None:
@@ -189,12 +220,16 @@ def _named_neighbourhood(
     index: _Index,
     proposed: dict[str, Any],
     district: GeographicArea | None,
-) -> GeographicArea | None:
+) -> tuple[GeographicArea | None, str]:
+    note = ""
     for key in ("neighbourhood", "area_name"):
-        found = _pick(_exact(index.neighbourhoods, proposed.get(key)), district)
+        hits = _exact(index.neighbourhoods, proposed.get(key))
+        found = _pick(hits, district)
         if found is not None:
-            return found
-    return None
+            return found, ""
+        if district is not None and _outside(hits, district):
+            note = _OUTSIDE
+    return None, note
 
 
 def _address_district(index: _Index, address: str) -> GeographicArea | None:
@@ -235,10 +270,10 @@ def _address_neighbourhood(
     index: _Index,
     address: str,
     district: GeographicArea | None,
-) -> GeographicArea | None:
+) -> tuple[GeographicArea | None, str]:
     folded = _fold(address)
     if not folded:
-        return None
+        return None, ""
     blocked_by = _district_aliases_in(index, address)
     best = 0
     hits: list[GeographicArea] = []
@@ -253,7 +288,12 @@ def _address_neighbourhood(
                 hits = [area]
             elif len(alias) == best:
                 hits.append(area)
-    return _pick(hits, district)
+    found = _pick(hits, district)
+    if found is not None:
+        return found, ""
+    if district is not None and _outside(hits, district):
+        return None, _OUTSIDE
+    return None, ""
 
 
 def _child_named(
@@ -293,3 +333,58 @@ def _hit(
 
 def _district_only(index: _Index, district: GeographicArea) -> dict[str, Any]:
     return {"area_path": index.path(district), "area_match": "district"}
+
+
+def _with_note(payload: dict[str, Any] | None, note: str) -> dict[str, Any]:
+    body = dict(payload or {})
+    if note:
+        body["area_note"] = note
+    return body
+
+
+def _pinned(
+    index: _Index,
+    budget: GeocodeBudget,
+    address: str,
+    choices: tuple[Any, ...] | list[Any],
+    district: GeographicArea | None,
+) -> dict[str, Any] | None:
+    if not address.strip() or not choices:
+        return None
+    pin = budget.pin(address)
+    if pin is None:
+        return None
+    assigned = assign_among(choices, pin[0], pin[1])
+    if assigned is None or not assigned.confident:
+        return None
+    child = _match_catalog(index, assigned.neighbourhood, district)
+    if child is None:
+        return None
+    return _hit(index, child, "geocode", lat=pin[0], lng=pin[1])
+
+
+def _match_catalog(
+    index: _Index, neighbourhood: Any, district: GeographicArea | None
+) -> GeographicArea | None:
+    names = (neighbourhood.name, neighbourhood.name_zh)
+    if district is not None:
+        for name in names:
+            found = _child_named(index, district, name)
+            if found is not None:
+                return found
+        return None
+    for name in names:
+        found = _one_named(index, name)
+        if found is not None:
+            return found
+    return None
+
+
+def _one_named(index: _Index, name: str) -> GeographicArea | None:
+    token = _fold(name)
+    if not token:
+        return None
+    hits = [area for area in index.neighbourhoods if token in _aliases(area)]
+    if len(hits) == 1:
+        return hits[0]
+    return None

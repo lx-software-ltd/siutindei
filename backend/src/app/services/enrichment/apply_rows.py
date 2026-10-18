@@ -32,7 +32,11 @@ from app.services.category_suggestions.capture import (
     capture_pending,
     ensure_pending_category,
 )
-from app.services.category_suggestions.resolve import matching_category_id
+from app.services.category_suggestions.resolve import (
+    capture_enabled,
+    matching_category_id,
+)
+from app.services.enrichment.refine import bare_category_name
 
 HK = ZoneInfo("Asia/Hong_Kong")
 CopyImage = Any
@@ -218,7 +222,13 @@ def _apply_activity(
         or proposed.get("category_id")
         or _resolve_category(
             session,
-            str(proposed.get("category_name") or proposed.get("category_words") or ""),
+            bare_category_name(
+                str(
+                    proposed.get("category_name")
+                    or proposed.get("category_words")
+                    or ""
+                )
+            ),
         )
     )
     if category_id is None:
@@ -257,7 +267,13 @@ def _apply_activity(
     wording = str(
         proposed.get("category_words") or proposed.get("category_name") or ""
     ).strip()
-    if wording and matching_category_id(session, wording) is None:
+    bare = bare_category_name(wording)
+    if (
+        str(category_id) == str(PENDING_CATEGORY_ID)
+        and bare
+        and matching_category_id(session, bare) is None
+        and capture_enabled(session)
+    ):
         capture_pending(
             session,
             activity=activity,

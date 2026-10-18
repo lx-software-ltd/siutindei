@@ -26,7 +26,10 @@ import { ImportRunStatus } from './import-run-status';
 import { AdminInputCard } from '../ui/admin-input-card';
 import { Button } from '../ui/button';
 import { StatusBadge } from '../ui/status-badge';
-import { ProposalTable } from './organization-enrichment-proposals';
+import {
+  ProposalTable,
+  selectionAfterToggle,
+} from './organization-enrichment-proposals';
 import { OrganizationEnrichmentSettings } from './organization-enrichment-settings';
 
 const COPYRIGHT_NOTICE =
@@ -201,9 +204,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
   }
 
   function toggle(id: string) {
-    setSelected((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
-    );
+    setSelected((current) => selectionAfterToggle(current, id, proposals));
   }
 
   function chosenOverrides() {

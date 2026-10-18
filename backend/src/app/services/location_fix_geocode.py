@@ -35,7 +35,7 @@ def geocode_address(address: str) -> tuple[float, float] | None:
     return found["lat"], found["lng"]
 
 
-def lookup_address(address: str) -> dict[str, Any] | None:
+def lookup_address(address: str, *, timeout: int = 10) -> dict[str, Any] | None:
     """Return the first Hong Kong Nominatim hit, without a country filter.
 
     Nominatim files Hong Kong under China, so ``countrycodes=hk`` matches
@@ -58,7 +58,7 @@ def lookup_address(address: str) -> dict[str, Any] | None:
     )
     url = f"{NOMINATIM_SEARCH_URL}?{params}"
     try:
-        result = http_invoke("GET", url, headers=headers, timeout=10)
+        result = http_invoke("GET", url, headers=headers, timeout=timeout)
     except AwsProxyError as exc:
         logger.warning("Address geocode failed: %s", exc.code)
         raise AddressLookupFailed(exc.code) from exc
