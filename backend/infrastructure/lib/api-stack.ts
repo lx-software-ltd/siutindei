@@ -653,6 +653,30 @@ export class ApiStack extends cdk.Stack {
           "Leave empty to disable Google lookup.",
       }
     );
+    const metaGraphApiKey = new cdk.CfnParameter(
+      this,
+      "MetaGraphApiKey",
+      {
+        type: "String",
+        default: "",
+        noEcho: true,
+        description:
+          "Meta Graph token for Facebook and Instagram logo pictures. " +
+          "Sent as a bearer header. Leave empty to skip social logos.",
+      }
+    );
+    const metaInstagramUserId = new cdk.CfnParameter(
+      this,
+      "MetaInstagramUserId",
+      {
+        type: "String",
+        default: "",
+        description:
+          "Instagram professional account id connected to the Meta app. " +
+          "Used for Business Discovery profile pictures. Leave empty to " +
+          "skip Instagram logos. Facebook pictures still use the token.",
+      }
+    );
     const boardCatalogManagerId = new cdk.CfnParameter(
       this,
       "BoardCatalogManagerId",
@@ -1426,6 +1450,8 @@ export class ApiStack extends cdk.Stack {
         NOMINATIM_USER_AGENT: nominatimUserAgent.valueAsString,
         NOMINATIM_REFERER: nominatimReferer.valueAsString,
         GOOGLE_PLACES_API_KEY: googlePlacesApiKey.valueAsString,
+        META_GRAPH_API_KEY: metaGraphApiKey.valueAsString,
+        META_INSTAGRAM_USER_ID: metaInstagramUserId.valueAsString,
         BOARD_CATALOG_MANAGER_ID: boardCatalogManagerId.valueAsString,
         ORG_REVIEW_GATE_ENABLED: orgReviewGateEnabled.valueAsString,
       },
@@ -1471,6 +1497,7 @@ export class ApiStack extends cdk.Stack {
         // external APIs via the proxy.
         ALLOWED_HTTP_URLS: [
           "https://nominatim.openstreetmap.org/search",
+          "https://graph.facebook.com/",
           "https://www.edb.gov.hk/attachment/en/student-parents/sch-info/sch-search/sch-location-info/SCH_LOC_EDB.csv",
           "https://places.googleapis.com/v1/places/",
           openRouterChatCompletionsUrl.valueAsString,

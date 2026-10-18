@@ -216,16 +216,22 @@ function ProposalFields({
 }) {
   const proposed = row.proposed_value;
   if (row.kind === 'create_location') {
+    const path = proposed.area_path ? String(proposed.area_path) : '';
+    const said = proposed.area_name ? String(proposed.area_name) : '';
+    const note = proposed.area_note ? String(proposed.area_note) : '';
     return (
       <div className='mt-3 max-w-xl'>
+        {note ? <p className='mb-2 text-xs text-slate-500'>{note}</p> : null}
         <p className='mb-2 text-xs text-slate-500'>
-          {proposed.area_name
-            ? `Website said ${String(proposed.area_name)}. Pick the neighbourhood if that does not match.`
-            : 'Pick the neighbourhood for this address.'}
+          {path
+            ? `Matched ${path}.`
+            : said
+              ? `Website said ${said}. Pick the neighbourhood if that does not match.`
+              : 'Pick the neighbourhood for this address.'}
         </p>
         <CascadingAreaSelect
           tree={areaTree}
-          value={override.area_id ?? ''}
+          value={override.area_id ?? String(proposed.area_id ?? '')}
           onChange={(areaId) => onOverride({ ...override, area_id: areaId })}
         />
       </div>
@@ -234,16 +240,18 @@ function ProposalFields({
   if (row.kind === 'create_activity') {
     const ageMin = override.age_min ?? numberOrBlank(proposed.age_min);
     const ageMax = override.age_max ?? numberOrBlank(proposed.age_max);
+    const words = proposed.category_words ? String(proposed.category_words) : '';
+    const named = proposed.category_name ? String(proposed.category_name) : '';
+    const said =
+      words && named && words !== named ? `${words} (${named})` : words || named;
     return (
       <div className='mt-3 max-w-xl space-y-3'>
-        {proposed.category_name ? (
-          <p className='text-xs text-slate-500'>
-            Website said {String(proposed.category_name)}.
-          </p>
+        {said ? (
+          <p className='text-xs text-slate-500'>Website said {said}.</p>
         ) : null}
         <CascadingCategorySelect
           tree={categoryTree}
-          value={override.category_id ?? ''}
+          value={override.category_id ?? String(proposed.category_id ?? '')}
           onChange={(categoryId) =>
             onOverride({ ...override, category_id: categoryId })
           }
@@ -319,6 +327,28 @@ function ProposalFields({
     );
   }
   return null;
+}
+
+function isLogoProposal(row: EnrichmentProposal | undefined): boolean {
+  return Boolean(row && row.kind === 'add_media' && row.proposed_value.logo);
+}
+
+export function selectionAfterToggle(
+  selected: string[],
+  id: string,
+  rows: EnrichmentProposal[]
+): string[] {
+  if (selected.includes(id)) {
+    return selected.filter((item) => item !== id);
+  }
+  const row = rows.find((item) => item.id === id);
+  if (!isLogoProposal(row)) {
+    return [...selected, id];
+  }
+  const otherLogos = new Set(
+    rows.filter((item) => isLogoProposal(item) && item.id !== id).map((item) => item.id)
+  );
+  return [...selected.filter((item) => !otherLogos.has(item)), id];
 }
 
 function numberOrBlank(value: unknown): number | undefined {

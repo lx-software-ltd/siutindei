@@ -29,24 +29,38 @@ MODEL_INSTRUCTIONS = (
     "per_sessions, per_hour, per_day, or free. day_of_week is 0-6 (Sunday is 0); "
     "start_time and end_time are HH:MM in Asia/Hong_Kong. Write locations, "
     "activities, pricing, and schedules before organization. Keep descriptions under "
-    "200 characters. Use exactly this shape:\n"
-    '{"locations": [{"address": "...", "area_name": "...", "confidence": 0.9, '
-    '"url": "...", "quote": "..."}], '
+    "200 characters. district and neighbourhood are the area names on the page. "
+    "category_words is the site's wording when it is not the catalog name. "
+    "Use exactly this shape:\n"
+    '{"locations": [{"address": "...", "district": "...", "neighbourhood": "...", '
+    '"area_name": "...", "confidence": 0.9, "url": "...", "quote": "..."}], '
     '"activities": [{"name": "...", "name_zh": "...", "description": "...", '
-    '"category_name": "...", "age_min": 6, "age_max": 12, "confidence": 0.9, '
-    '"url": "...", "quote": "..."}], '
+    '"category_name": "...", "category_words": "...", "age_min": 6, "age_max": 12, '
+    '"confidence": 0.9, "url": "...", "quote": "..."}], '
     '"pricing": [{"activity_name": "...", "location_address": "...", '
     '"pricing_type": "per_sessions", "amount": "2400", "currency": "HKD", '
     '"confidence": 0.9, "url": "...", "quote": "..."}], '
     '"schedules": [{"activity_name": "...", "location_address": "...", '
     '"url": "...", "quote": "...", "entries": [{"day_of_week": 3, '
     '"start_time": "16:30", "end_time": "18:00"}]}], '
-    '"organization": {"description": F, "description_zh": F, "email": F, '
-    '"phone": F, "whatsapp": F, "facebook": F, "instagram": F, "tiktok": F, '
-    '"twitter": F, "xiaohongshu": F, "wechat": F, "website": F}}\n'
+    '"organization": {"name": F, "name_zh": F, "description": F, "description_zh": F, '
+    '"email": F, "phone": F, "whatsapp": F, "facebook": F, "instagram": F, '
+    '"tiktok": F, "twitter": F, "xiaohongshu": F, "wechat": F, "website": F}}\n'
     'where each F is {"value": "...", "confidence": 0.9, "evidence": '
     '[{"url": "...", "quote": "..."}]}. Leave out any key you cannot fill.'
 )
+
+
+def instructions_for(category_names: list[str]) -> str:
+    """Catalog names for the user prompt. Empty when the catalog has none."""
+    if not category_names:
+        return ""
+    listed = "; ".join(category_names)
+    return (
+        "category_name must be one of: "
+        f"{listed}. Use the catalog name before the parentheses. "
+        "category_words is the wording on the site when it differs.\n"
+    )
 
 
 def prompt_pages(pages: list[dict[str, Any]]) -> str:

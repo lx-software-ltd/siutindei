@@ -56,6 +56,11 @@ def apply_proposals(
             results.append({"id": raw_id, "status": "error", "error": "not pending"})
             continue
         pending.append((index, raw_id, proposal))
+    logo_ids = {raw for _index, raw, proposal in pending if _is_logo(proposal)}
+    if len(logo_ids) > 1:
+        for raw in logo_ids:
+            results.append({"id": raw, "status": "error", "error": "Pick one logo"})
+        pending = [item for item in pending if item[1] not in logo_ids]
     pending.sort(key=lambda item: (_KIND_ORDER.get(item[2].kind, 99), item[0]))
     applied: list[OrgEnrichmentProposal] = []
     fields: list[str] = []
@@ -116,6 +121,13 @@ def apply_proposals(
     session.flush()
     quality_run_id = _stage_quality(session, org_id, applied, user_id)
     return results, quality_run_id
+
+
+def _is_logo(proposal: OrgEnrichmentProposal) -> bool:
+    proposed = (
+        proposal.proposed_value if isinstance(proposal.proposed_value, dict) else {}
+    )
+    return proposal.kind == "add_media" and bool(proposed.get("logo"))
 
 
 def dismiss_proposals(

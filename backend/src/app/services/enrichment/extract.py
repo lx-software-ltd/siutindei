@@ -8,7 +8,7 @@ from typing import Any
 
 import phonenumbers
 
-from app.services.enrichment.constants import COPYRIGHT_NOTICE
+from app.services.enrichment.logos import media_proposals
 from app.services.enrichment.parse import quote_supported
 from app.services.enrichment.sheet import checked_value, schedule_entries, section_rows
 
@@ -41,8 +41,11 @@ def proposals_from_pages(
                         str(item["field"]), str(item["url"]), url, str(item["url"]), org
                     )
                 )
+        site_name = str(og.get("og:site_name") or "").strip()
+        if site_name:
+            found.append(_fact("name", site_name, url, site_name, org))
         found.extend(_jsonld_facts(page, url, org))
-        found.extend(_image_facts(page, url))
+    found.extend(media_proposals(pages))
     return _dedupe(found)
 
 
@@ -79,13 +82,17 @@ def validate_model_sheet(
         address = checked_value(row.get("address"), pages)
         if address is None:
             continue
-        area = checked_value(row.get("area_name"), pages)
+        proposed_location: dict[str, Any] = {"address": address["value"]}
+        for key in ("area_name", "district", "neighbourhood"):
+            checked = checked_value(row.get(key), pages)
+            if checked:
+                proposed_location[key] = checked["value"]
         found.append(
             _record(
                 "Locations",
                 "create_location",
                 f"Location · {address['value'][:80]}",
-                {"address": address["value"], "area_name": (area or {}).get("value")},
+                proposed_location,
                 address,
             )
         )
@@ -94,7 +101,7 @@ def validate_model_sheet(
         if name is None:
             continue
         proposed: dict[str, Any] = {"name": name["value"]}
-        for key in ("description", "category_name", "name_zh"):
+        for key in ("description", "category_name", "category_words", "name_zh"):
             checked = checked_value(row.get(key), pages)
             if checked:
                 proposed[key] = checked["value"]
@@ -176,6 +183,8 @@ def merge_proposals(*groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 _ORG_MODEL_FIELDS = {
+    "name",
+    "name_zh",
     "description",
     "description_zh",
     "email",
@@ -191,6 +200,8 @@ _ORG_MODEL_FIELDS = {
 }
 
 _FIELD_LABELS = {
+    "name": "Name",
+    "name_zh": "Name (Chinese)",
     "description": "Description",
     "description_zh": "Description (Chinese)",
     "email": "Email",
@@ -234,14 +245,18 @@ def _fact(
                 "zh": (org.get("description_translations") or {}).get("zh")
             }
         }
+    if field == "name_zh":
+        current = {
+            "name_translations": {"zh": (org.get("name_translations") or {}).get("zh")}
+        }
+    stored_field = {
+        "description_zh": "description_translations",
+        "name_zh": "name_translations",
+    }.get(field, field)
     return {
         "section": "Organization",
         "kind": "update_organization",
-        "field": "description_translations"
-        if field == "description_zh"
-        else field
-        if field != "phone"
-        else "phone",
+        "field": stored_field,
         "label": _FIELD_LABELS.get(field, field),
         "current": current,
         "proposed": proposed,
@@ -254,8 +269,12 @@ def _fact(
 def _proposed_for(field: str, value: str) -> dict[str, Any]:
     if field == "description_zh":
         return {"description_translations": {"zh": value[:5000]}}
+    if field == "name_zh":
+        return {"name_translations": {"zh": value[:200]}}
     if field == "description":
         return {"description": value[:5000]}
+    if field == "name":
+        return {"name": value[:200]}
     return {field: value[:400]}
 
 
@@ -315,7 +334,27 @@ def _jsonld_facts(
                 found.append(
                     _fact("description", description, url, description[:180], org)
                 )
+            name = _organization_name(node)
+            if name:
+                found.append(_fact("name", name, url, name, org))
     return found
+
+
+def _organization_name(node: dict[str, Any]) -> str:
+    name = node.get("name")
+    if not isinstance(name, str) or not name.strip():
+        return ""
+    raw = node.get("@type")
+    types = raw if isinstance(raw, list) else [raw]
+    blob = " ".join(str(item) for item in types if item).casefold()
+    if any(token in blob for token in ("product", "event", "offer", "review")):
+        return ""
+    if blob and not any(
+        token in blob
+        for token in ("organization", "localbusiness", "school", "sportsclub")
+    ):
+        return ""
+    return name.strip()
 
 
 def _nodes(block: object) -> list[object]:
@@ -326,36 +365,6 @@ def _nodes(block: object) -> list[object]:
     if isinstance(block, dict):
         return [block]
     return []
-
-
-def _image_facts(page: dict[str, Any], url: str) -> list[dict[str, Any]]:
-    found: list[dict[str, Any]] = []
-    images = page.get("images") or []
-    for index, image in enumerate(images):
-        if not isinstance(image, dict):
-            continue
-        src = str(image.get("src") or "")
-        if not src:
-            continue
-        found.append(
-            {
-                "section": "Media",
-                "kind": "add_media",
-                "field": "logo" if index == 0 else "media",
-                "label": "Logo" if index == 0 else f"Photo {index}",
-                "current": None,
-                "proposed": {
-                    "source_url": src,
-                    "alt": str(image.get("alt") or ""),
-                    "logo": index == 0,
-                    "copyright_notice": COPYRIGHT_NOTICE,
-                },
-                "confidence": 0.9,
-                "unverified": False,
-                "evidence": [{"url": url, "quote": src[:180]}],
-            }
-        )
-    return found
 
 
 def _record(

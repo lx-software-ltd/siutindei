@@ -22,13 +22,21 @@ from app.api.admin_validators import (
 )
 from app.db.models import Activity, ActivityLocation, ActivityPricing, ActivitySchedule
 from app.db.models import ActivityScheduleEntry, Location, Organization
-from app.db.models.activity_category import ActivityCategory
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.db.models.enums import PricingType, ScheduleType
 from app.db.models.org_enrichment import OrgEnrichmentProposal
 from app.exceptions import ValidationError
+from app.services.enrichment.apply_names import apply_name, apply_name_translation
 from app.services.area_assignment import get_leaf
-from app.services.category_suggestions.resolve import normalize_category_key
+from app.services.category_suggestions.capture import (
+    capture_pending,
+    ensure_pending_category,
+)
+from app.services.category_suggestions.resolve import (
+    capture_enabled,
+    matching_category_id,
+)
+from app.services.enrichment.refine import bare_category_name
 
 HK = ZoneInfo("Asia/Hong_Kong")
 CopyImage = Any
@@ -46,7 +54,7 @@ def apply_one(
         proposal.proposed_value if isinstance(proposal.proposed_value, dict) else {}
     )
     if proposal.kind == "update_organization":
-        _apply_org(org, proposal, proposed)
+        _apply_org(session, org, proposal, proposed)
         return
     if proposal.kind == "add_media":
         _apply_media(session, org, proposed, copy_image=copy_image)
@@ -67,10 +75,14 @@ def apply_one(
 
 
 def _apply_org(
+    session: Session,
     org: Organization,
     proposal: OrgEnrichmentProposal,
     proposed: dict[str, Any],
 ) -> None:
+    if "name_translations" in proposed:
+        apply_name_translation(org, proposal, proposed)
+        return
     if "description_translations" in proposed:
         if not _empty_translation(org, proposal.current_value):
             raise ValidationError(
@@ -93,6 +105,9 @@ def _apply_org(
         org.phone_number = number
         return
     field = proposal.field or ""
+    if field == "name":
+        apply_name(session, org, proposal, proposed)
+        return
     if field not in proposed:
         raise ValidationError("proposal has no value", field=field or "field")
     if not _still(org, proposal.current_value, (field,)):
@@ -168,12 +183,27 @@ def _apply_location(
     if existing is not None:
         proposal.entity_id = existing.id
         return
-    area_id = str(override.get("area_id") or "")
-    if not area_id:
-        area_id = lookup_district_area_id(session, proposed.get("area_name"))
-    if get_leaf(session, area_id) is None:
+    area_id = str(override.get("area_id") or proposed.get("area_id") or "")
+    lat = _coordinate(proposed.get("lat"))
+    lng = _coordinate(proposed.get("lng"))
+    if not area_id and proposed.get("area_match") != "district":
+        area_id = lookup_district_area_id(
+            session,
+            proposed.get("area_name"),
+            float(lat) if lat is not None else None,
+            float(lng) if lng is not None else None,
+        )
+    if not area_id or get_leaf(session, area_id) is None:
         raise ValidationError("area_id must be a neighbourhood", field="area_id")
-    session.add(Location(org_id=org.id, area_id=area_id, address=address[:500]))
+    session.add(
+        Location(
+            org_id=org.id,
+            area_id=area_id,
+            address=address[:500],
+            lat=lat,
+            lng=lng,
+        )
+    )
     session.flush()
 
 
@@ -187,8 +217,19 @@ def _apply_activity(
     name = str(proposed.get("name") or "").strip()
     if not name:
         raise ValidationError("name is required", field="name")
-    category_id = override.get("category_id") or _resolve_category(
-        session, str(proposed.get("category_name") or "")
+    category_id = (
+        override.get("category_id")
+        or proposed.get("category_id")
+        or _resolve_category(
+            session,
+            bare_category_name(
+                str(
+                    proposed.get("category_name")
+                    or proposed.get("category_words")
+                    or ""
+                )
+            ),
+        )
     )
     if category_id is None:
         if org.review_status == "approved":
@@ -212,12 +253,34 @@ def _apply_activity(
         if proposed.get("name_zh")
         else {},
         description_translations={},
-        source_category_name=str(proposed.get("category_name") or "")[:200] or None,
+        source_category_name=str(
+            proposed.get("category_words") or proposed.get("category_name") or ""
+        )[:200]
+        or None,
         age_range=Range(age_min, age_max, bounds="[]"),
     )
+    if str(category_id) == str(PENDING_CATEGORY_ID):
+        ensure_pending_category(session)
     session.add(activity)
     session.flush()
     proposal.entity_id = activity.id
+    wording = str(
+        proposed.get("category_words") or proposed.get("category_name") or ""
+    ).strip()
+    bare = bare_category_name(wording)
+    if (
+        str(category_id) == str(PENDING_CATEGORY_ID)
+        and bare
+        and matching_category_id(session, bare) is None
+        and capture_enabled(session)
+    ):
+        capture_pending(
+            session,
+            activity=activity,
+            requested_name=wording,
+            org=org,
+            import_job_id=None,
+        )
     venue = location_by_address(
         session, org.id, str(proposed.get("location_address") or "")
     )
@@ -335,25 +398,22 @@ def _whole_number(value: object, field: str) -> int:
 
 
 def _resolve_category(session: Session, name: str) -> str | None:
-    cleaned = name.strip()
-    if not cleaned:
+    found = matching_category_id(session, name)
+    if found is None:
         return None
-    exact = list(
-        session.scalars(
-            select(ActivityCategory).where(ActivityCategory.name == cleaned)
-        ).all()
-    )
-    if len(exact) == 1 and exact[0].id != PENDING_CATEGORY_ID:
-        return exact[0].id
-    key = normalize_category_key(cleaned)
-    matches = [
-        row
-        for row in session.scalars(select(ActivityCategory)).all()
-        if normalize_category_key(row.name) == key and row.id != PENDING_CATEGORY_ID
-    ]
-    if len(matches) == 1:
-        return matches[0].id
-    return None
+    return str(found)
+
+
+def _coordinate(value: object) -> Decimal | None:
+    if value is None or value == "" or isinstance(value, bool):
+        return None
+    try:
+        number = Decimal(str(value))
+    except InvalidOperation:
+        return None
+    if not number.is_finite():
+        return None
+    return number.quantize(Decimal("0.000001"))
 
 
 def _resolve_venue(

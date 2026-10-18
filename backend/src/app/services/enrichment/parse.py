@@ -34,6 +34,7 @@ class _PageParser(HTMLParser):
         self.text_parts: list[str] = []
         self.links: list[dict[str, str]] = []
         self.images: list[dict[str, object]] = []
+        self.icons: list[dict[str, str]] = []
         self.meta: list[tuple[str, str, str]] = []
         self.jsonld_raw: list[str] = []
         self.lang = ""
@@ -64,6 +65,10 @@ class _PageParser(HTMLParser):
             self.links.append({"href": data["href"].strip(), "text": ""})
         if tag == "img" and data.get("src"):
             self.images.append(_image(data, "src"))
+        if tag == "link" and data.get("href") and _icon_rel(data.get("rel", "")):
+            self.icons.append(
+                {"href": data["href"].strip(), "rel": data.get("rel", "")}
+            )
         if tag == "meta":
             self.meta.append(
                 (
@@ -106,10 +111,16 @@ class _PageParser(HTMLParser):
             self.text_parts.append(data)
 
 
+def _icon_rel(rel: str) -> bool:
+    folded = rel.casefold()
+    return "icon" in folded or "logo" in folded
+
+
 def _image(data: dict[str, str], key: str) -> dict[str, object]:
     return {
         "src": data.get(key, ""),
         "alt": data.get("alt", "")[:200],
+        "class": data.get("class", "")[:200],
         "width": _int_or_none(data.get("width")),
         "height": _int_or_none(data.get("height")),
     }
@@ -136,6 +147,7 @@ def parse_html(url: str, markup: str) -> dict[str, object]:
         if key.startswith("og:") or key in {"description", "twitter:image"}:
             og[key] = content.strip()[:2000]
     images = _collect_images(url, parser.images, og)
+    icons = _collect_icons(url, parser.icons)
     links, social, mailtos, tels = _collect_links(url, parser.links)
     jsonld = _load_jsonld(parser.jsonld_raw)
     return {
@@ -147,6 +159,7 @@ def parse_html(url: str, markup: str) -> dict[str, object]:
         "jsonld_raw": parser.jsonld_raw,
         "og": og,
         "images": images,
+        "icons": icons,
         "links": links,
         "social": social,
         "mailtos": mailtos,
@@ -280,7 +293,7 @@ def _collect_images(
         src = og.get(key)
         if src:
             raw_images.insert(
-                0, {"src": src, "alt": key, "width": None, "height": None}
+                0, {"src": src, "alt": key, "class": "", "width": None, "height": None}
             )
     for item in raw_images:
         src = str(item.get("src") or "")
@@ -298,6 +311,7 @@ def _collect_images(
             {
                 "src": absolute[:500],
                 "alt": str(item.get("alt") or "")[:200],
+                "class": str(item.get("class") or "")[:200],
                 "width": width,
                 "height": height,
             }
@@ -305,6 +319,18 @@ def _collect_images(
         if len(found) >= 20:
             break
     return found
+
+
+def _collect_icons(base: str, raw_icons: list[dict[str, str]]) -> list[dict[str, str]]:
+    found: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in raw_icons:
+        absolute = urljoin(base, item.get("href") or "")
+        if not absolute.startswith(("http://", "https://")) or absolute in seen:
+            continue
+        seen.add(absolute)
+        found.append({"href": absolute[:500], "rel": (item.get("rel") or "")[:80]})
+    return found[:10]
 
 
 def _tiny(width: object, height: object) -> bool:

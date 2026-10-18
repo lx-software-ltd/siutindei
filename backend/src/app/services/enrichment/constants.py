@@ -12,6 +12,9 @@ COPYRIGHT_NOTICE = (
 # function. The crawl also waits one second between fetches.
 CRAWL_TIME_BUDGET_SECONDS = 60
 EXTRACT_TIMEOUT_SECONDS = 90
+# The model may use the 90s above. Place and logo lookups share what is
+# left of the 120s function so a slow lookup cannot force a second paid call.
+LOOKUP_BUDGET_SECONDS = 20
 MAX_PAGE_TEXT = 20_000
 MAX_PROMPT_CHARS = 90_000
 # The default model has a 40,960-token window shared by the prompt and the
@@ -21,7 +24,7 @@ MAX_PROMPT_TOKENS = 20_000
 MAX_REPLY_TOKENS = 12_000
 # Bump when the sheet parser or validator changes. The model instructions
 # are hashed in as well, so a prompt change needs no bump.
-EXTRACTION_VERSION = "2"
+EXTRACTION_VERSION = "3"
 # A PDF is read whole or not at all, so it gets its own byte limit.
 MAX_PDF_BYTES = 8_000_000
 MAX_PDF_PAGES = 30

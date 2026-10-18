@@ -1,7 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ProposalTable } from '@/components/admin/organization-enrichment-proposals';
+import {
+  ProposalTable,
+  selectionAfterToggle,
+} from '@/components/admin/organization-enrichment-proposals';
 import type { EnrichmentProposal } from '@/lib/api-client-enrichment';
 
 vi.mock('@/hooks/use-activity-categories', () => ({
@@ -52,6 +55,87 @@ function renderTable(rows: EnrichmentProposal[]) {
     />
   );
 }
+
+describe('ProposalTable place match', () => {
+  it('shows the matched neighbourhood path', () => {
+    renderTable([
+      proposal({
+        id: 'prop-location',
+        section: 'Locations',
+        kind: 'create_location',
+        field: null,
+        label: 'Location · Nathan Road',
+        proposed_value: {
+          address: '123 Nathan Road',
+          area_id: 'area-mong-kok',
+          area_path: 'Kowloon · Yau Tsim Mong · Mong Kok',
+        },
+      }),
+    ]);
+
+    expect(
+      screen.getByText('Matched Kowloon · Yau Tsim Mong · Mong Kok.')
+    ).toBeInTheDocument();
+  });
+
+  it('shows when the neighbourhood is outside the named district', () => {
+    renderTable([
+      proposal({
+        id: 'prop-location',
+        section: 'Locations',
+        kind: 'create_location',
+        field: null,
+        label: 'Location · Nathan Road',
+        proposed_value: {
+          address: '123 Nathan Road',
+          area_path: 'Kowloon · Yau Tsim Mong',
+          area_note: 'The neighbourhood on the page is outside the named district.',
+        },
+      }),
+    ]);
+
+    expect(
+      screen.getByText(
+        'The neighbourhood on the page is outside the named district.'
+      )
+    ).toBeInTheDocument();
+  });
+});
+
+describe('logo selection', () => {
+  const rows = [
+    proposal({
+      id: 'logo-site',
+      kind: 'add_media',
+      field: 'logo',
+      label: 'Logo',
+      proposed_value: { source_url: MEDIA_URL, logo: true },
+    }),
+    proposal({
+      id: 'logo-facebook',
+      kind: 'add_media',
+      field: 'logo',
+      label: 'Logo · Facebook',
+      proposed_value: { source_url: 'https://cdn.example/fb.jpg', logo: true },
+    }),
+    proposal({
+      id: 'photo',
+      kind: 'add_media',
+      field: 'media',
+      label: 'Photo 1',
+      proposed_value: { source_url: 'https://cdn.example/photo.jpg', logo: false },
+    }),
+  ];
+
+  it('keeps one logo selected', () => {
+    const withSite = selectionAfterToggle([], 'logo-site', rows);
+    const switched = selectionAfterToggle(withSite, 'logo-facebook', rows);
+    const withPhoto = selectionAfterToggle(switched, 'photo', rows);
+
+    expect(switched).toEqual(['logo-facebook']);
+    expect(withPhoto).toEqual(['logo-facebook', 'photo']);
+  });
+});
 
 describe('ProposalTable media preview', () => {
   it('shows the image instead of the source URL', () => {
