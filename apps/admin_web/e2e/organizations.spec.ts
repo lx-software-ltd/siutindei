@@ -634,6 +634,17 @@ test.describe('Organizations Panel', () => {
       proposal.getByText('description: Saturday classes for children.')
     ).toBeVisible();
     await expect(proposal.getByText('Now: Empty')).toBeVisible();
+    const media = adminPage
+      .getByRole('heading', { name: 'Media', exact: true })
+      .locator('xpath=ancestor::section[1]');
+    const preview = media.getByRole('img', { name: 'Children painting' });
+    await expect(preview).toBeVisible();
+    await expect(preview).toHaveAttribute('src', 'https://cdn.example/class.png');
+    await expect(media.getByText('https://cdn.example/class.png')).toHaveCount(0);
+    await expect(media.getByText(/source_url/)).toHaveCount(0);
+    await adminPage.setViewportSize({ width: 390, height: 844 });
+    await expect(preview).toBeVisible();
+    await adminPage.setViewportSize({ width: 1280, height: 720 });
     await expect(
       adminPage.getByText(
         'Copied from the provider website for this catalog. Copyright remains with the provider.'
