@@ -19,6 +19,7 @@ from app.db.models.import_settings import ImportSettings
 from app.db.models.org_enrichment import OrgEnrichmentProposal, OrgEnrichmentRun
 from app.exceptions import ValidationError
 from app.services.aws_proxy import AwsProxyError
+from app.services.category_suggestions.capture import ensure_pending_category
 from app.services.enrichment.apply import apply_proposals
 from app.services.enrichment.apply_rows import apply_one
 from app.services.enrichment.extract import proposals_from_pages, validate_model_sheet
@@ -51,13 +52,31 @@ def _area(session, **fields) -> GeographicArea:
     return row
 
 
+def _ensure_area(session, **fields) -> GeographicArea:
+    """Reuse the seeded row for this name, level, and parent."""
+    parent_id = fields.get("parent_id")
+    query = select(GeographicArea).where(
+        GeographicArea.name == fields["name"],
+        GeographicArea.level == fields["level"],
+        GeographicArea.active.is_(True),
+    )
+    if parent_id is None:
+        query = query.where(GeographicArea.parent_id.is_(None))
+    else:
+        query = query.where(GeographicArea.parent_id == parent_id)
+    found = session.scalars(query).first()
+    if found is not None:
+        return found
+    return _area(session, **fields)
+
+
 def _kowloon(session) -> tuple[GeographicArea, GeographicArea]:
-    country = _area(session, name="Hong Kong", level="country")
-    region = _area(session, name="Kowloon", level="region", parent_id=country.id)
-    district = _area(
+    country = _ensure_area(session, name="Hong Kong", level="country")
+    region = _ensure_area(session, name="Kowloon", level="region", parent_id=country.id)
+    district = _ensure_area(
         session, name="Yau Tsim Mong", level="district", parent_id=region.id
     )
-    tai = _area(
+    tai = _ensure_area(
         session,
         name="Tai Kok Tsui",
         level="neighbourhood",
@@ -67,7 +86,7 @@ def _kowloon(session) -> tuple[GeographicArea, GeographicArea]:
         lng=114.161,
         name_translations={"zh-HK": "大角咀"},
     )
-    mong = _area(
+    mong = _ensure_area(
         session,
         name="Mong Kok",
         level="neighbourhood",
@@ -78,6 +97,52 @@ def _kowloon(session) -> tuple[GeographicArea, GeographicArea]:
         name_translations={"zh-HK": "旺角"},
     )
     return mong, tai
+
+
+def _central(session) -> GeographicArea:
+    country = _ensure_area(session, name="Hong Kong", level="country")
+    region = _ensure_area(
+        session, name="Hong Kong Island", level="region", parent_id=country.id
+    )
+    district = _ensure_area(
+        session,
+        name="Central and Western",
+        level="district",
+        parent_id=region.id,
+    )
+    return _ensure_area(
+        session,
+        name="Central",
+        level="neighbourhood",
+        parent_id=district.id,
+    )
+
+
+def _dance(session) -> ActivityCategory:
+    """The catalog dance row, including the Chinese name these tests match."""
+    row = session.scalars(
+        select(ActivityCategory).where(ActivityCategory.name == "Dance and ballet")
+    ).first()
+    if row is None:
+        row = ActivityCategory(
+            name="Dance and ballet",
+            name_translations={"zh": "舞蹈芭蕾"},
+            display_order=1,
+        )
+        session.add(row)
+    else:
+        row.name_translations = {"zh": "舞蹈芭蕾"}
+    session.flush()
+    return row
+
+
+def _reject_unknown_categories(session) -> None:
+    row = session.get(ImportSettings, 1)
+    if row is None:
+        session.add(ImportSettings(id=1, unknown_categories="fail"))
+    else:
+        row.unknown_categories = "fail"
+    session.flush()
 
 
 def _location(address: str, **proposed: object) -> dict:
@@ -167,13 +232,7 @@ def test_far_or_missing_pin_does_not_snap_a_district(db_session) -> None:
 
 
 def test_district_name_does_not_match_its_shorter_neighbourhood(db_session) -> None:
-    district = _area(db_session, name="Central and Western", level="district")
-    central = _area(
-        db_session,
-        name="Central",
-        level="neighbourhood",
-        parent_id=district.id,
-    )
+    central = _central(db_session)
     proposed = _one(
         db_session,
         _org(db_session),
@@ -226,18 +285,8 @@ def test_geocode_failure_does_not_fail_the_extract(db_session) -> None:
 
 
 def test_category_match_uses_the_catalog_and_skips_pending(db_session) -> None:
-    dance = ActivityCategory(
-        name="Dance and ballet",
-        name_translations={"zh": "舞蹈芭蕾"},
-        display_order=1,
-    )
-    pending = ActivityCategory(
-        id=PENDING_CATEGORY_ID,
-        name="Pending categorisation",
-        display_order=9999,
-    )
-    db_session.add_all([dance, pending])
-    db_session.flush()
+    dance = _dance(db_session)
+    ensure_pending_category(db_session)
     org = _org(db_session)
     exact = _one(
         db_session,
@@ -267,8 +316,9 @@ def test_category_match_uses_the_catalog_and_skips_pending(db_session) -> None:
     assert translated["category_id"] == str(dance.id)
     assert suffixed["category_id"] == str(dance.id)
     assert "category_id" not in unknown
-    assert catalog_names(db_session) == ["Dance and ballet (舞蹈芭蕾)"]
-    assert "Pending" not in " ".join(catalog_names(db_session))
+    names = catalog_names(db_session)
+    assert "Dance and ballet (舞蹈芭蕾)" in names
+    assert "Pending" not in " ".join(names)
 
 
 def test_catalog_sentence_names_category_words() -> None:
@@ -733,23 +783,7 @@ def test_a_pin_matches_when_the_page_names_no_district(db_session) -> None:
 
 def test_a_neighbourhood_outside_the_named_district_is_flagged(db_session) -> None:
     _kowloon(db_session)
-    country = _area(db_session, name="Hong Kong Island Country", level="country")
-    region = _area(
-        db_session, name="Hong Kong Island", level="region", parent_id=country.id
-    )
-    district = _area(
-        db_session,
-        name="Central and Western",
-        level="district",
-        parent_id=region.id,
-    )
-    _area(
-        db_session,
-        name="Central",
-        level="neighbourhood",
-        parent_id=district.id,
-        display_order=0,
-    )
+    _central(db_session)
     proposed = _one(
         db_session,
         _org(db_session),
@@ -819,18 +853,8 @@ def test_areas_are_loaded_once_per_extract(db_session, monkeypatch) -> None:
 
 
 def test_a_matched_category_does_not_capture_other_wording(db_session) -> None:
-    dance = ActivityCategory(name="Dance and ballet", display_order=1)
-    db_session.add_all(
-        [
-            dance,
-            ActivityCategory(
-                id=PENDING_CATEGORY_ID,
-                name="Pending categorisation",
-                display_order=9,
-            ),
-        ]
-    )
-    db_session.flush()
+    dance = _dance(db_session)
+    ensure_pending_category(db_session)
     org = _org(db_session, review_status="pending_review")
     apply_one(
         db_session,
@@ -855,8 +879,7 @@ def test_a_matched_category_does_not_capture_other_wording(db_session) -> None:
 
 
 def test_unknown_wording_is_not_captured_when_imports_reject_it(db_session) -> None:
-    db_session.add(ImportSettings(id=1, unknown_categories="fail"))
-    db_session.flush()
+    _reject_unknown_categories(db_session)
     org = _org(db_session, review_status="pending_review")
     apply_one(
         db_session,
@@ -922,13 +945,7 @@ def test_extract_matches_a_catalog_category(db_session, monkeypatch) -> None:
         "app.services.enrichment.run.enqueue_enrichment",
         lambda run_id, *, stage: None,
     )
-    dance = ActivityCategory(
-        name="Dance and ballet",
-        name_translations={"zh": "舞蹈芭蕾"},
-        display_order=1,
-    )
-    db_session.add(dance)
-    db_session.flush()
+    dance = _dance(db_session)
     org = _org(db_session, website="https://club.test")
     quote = "Beginner ballet classes for children every Saturday morning."
     pages = [
