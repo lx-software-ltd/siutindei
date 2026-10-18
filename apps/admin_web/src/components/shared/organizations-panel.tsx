@@ -809,7 +809,6 @@ export function OrganizationsPanel({
   return (
     <OrgEnrichmentScope
       orgId={current && showEnrichment ? current.id : null}
-      savedWebsite={current?.website ?? ''}
       draftWebsite={panel.formState.website}
       detailsDirty={panel.isDirty()}
       onApplied={async () => {

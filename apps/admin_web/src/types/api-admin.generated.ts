@@ -397,11 +397,13 @@ export interface paths {
         put?: never;
         /**
          * Start website enrichment for one organization
-         * @description Queues a crawl of the stored website. Returns 202. An empty
-         *     website is 422, a bad URL is 400, an active run is 409, and
-         *     a spent monthly budget is 422. An admin or importer JWT may
-         *     start a run. The board keeps its own enrich duty; this route
-         *     is callable when that duty wants the same proposals.
+         * @description Queues a crawl of the website in the body, or the stored
+         *     website when the body omits it. The typed website is not
+         *     saved onto the organization. Returns 202. An empty website
+         *     is 422, a bad URL is 400, an active run is 409, and a spent
+         *     monthly budget is 422. An admin or importer JWT may start a
+         *     run. The board keeps its own enrich duty; this route is
+         *     callable when that duty wants the same proposals.
          */
         post: {
             parameters: {
@@ -412,7 +414,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Website to crawl. Omitted or blank uses the stored
+                         *     organization website. This value is not saved.
+                         */
+                        website?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Run queued */
                 202: {

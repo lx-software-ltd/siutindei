@@ -205,6 +205,40 @@ def _org(session, **fields) -> Organization:
     return org
 
 
+def test_start_run_uses_a_typed_website_without_saving_it(
+    db_session, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        "app.services.enrichment.guard.host_is_blocked",
+        lambda host, resolve=None: False,
+    )
+    org = _org(db_session)
+    run = start_run(
+        db_session,
+        org.id,
+        requested_by="admin",
+        website="https://typed.example/classes",
+    )
+    assert run.seed_url == "https://typed.example/classes"
+    assert org.website in (None, "")
+
+
+def test_typed_website_wins_over_the_stored_one(db_session, monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.enrichment.guard.host_is_blocked",
+        lambda host, resolve=None: False,
+    )
+    org = _org(db_session, website="https://saved.example")
+    run = start_run(
+        db_session,
+        org.id,
+        requested_by="admin",
+        website="https://typed.example",
+    )
+    assert run.seed_url == "https://typed.example/"
+    assert org.website == "https://saved.example"
+
+
 def test_start_run_requires_a_website(db_session) -> None:
     org = _org(db_session)
     with pytest.raises(AppError) as exc:

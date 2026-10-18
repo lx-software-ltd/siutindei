@@ -658,7 +658,7 @@ test.describe('Organizations Panel', () => {
     ).toHaveCount(0);
   });
 
-  test('disables website enrichment until a website is saved', async ({
+  test('enables website enrichment as soon as a website is typed', async ({
     adminPage,
   }) => {
     await adminPage.goto('/admin/dashboard?section=organizations&org=org-2');
@@ -666,8 +666,21 @@ test.describe('Organizations Panel', () => {
     await expect(enrich).toBeDisabled();
     await expect(enrich).toHaveAttribute('title', 'Add a website first');
     await adminPage.getByLabel('Website').fill('https://typed.example');
-    await expect(enrich).toBeDisabled();
-    await expect(enrich).toHaveAttribute('title', 'Save the website first');
+    await expect(enrich).toBeEnabled();
+    await expect(enrich).toHaveAttribute('title', 'Enrich from the website');
+    const started = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'POST' &&
+        request.url().includes('/organizations/org-2/enrichment') &&
+        !request.url().includes('/apply')
+    );
+    await enrich.click();
+    expect((await started).postDataJSON()).toEqual({
+      website: 'https://typed.example',
+    });
+    await expect(adminPage.getByLabel('Website')).toHaveValue(
+      'https://typed.example'
+    );
   });
 
   test('applies enrichment with the fields the website left out', async ({
@@ -748,11 +761,11 @@ test.describe('Organizations Panel', () => {
     await expect(
       adminPage.getByText('Matched Hong Kong Island · Wan Chai.')
     ).toBeVisible();
+    await expect(adminPage.getByLabel('Region')).toHaveValue('area-hk-island');
+    await expect(adminPage.getByLabel('District')).toHaveValue('area-hk-wanchai');
     await adminPage.getByLabel('Minimum age').fill('5');
     await adminPage.getByLabel('Maximum age').fill('8');
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
-    await adminPage.getByLabel('Region').selectOption({ label: 'Hong Kong Island' });
-    await adminPage.getByLabel('District').selectOption({ label: 'Wan Chai' });
     await adminPage.getByLabel('Neighbourhood').selectOption({ label: 'Causeway Bay' });
     await adminPage.getByRole('button', { name: 'Apply selected' }).click();
     await expect(adminPage.getByText('Selected changes were applied.')).toBeVisible();

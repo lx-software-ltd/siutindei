@@ -19,7 +19,15 @@ from app.services.enrichment.places import GeocodeBudget, load_index, place_fiel
 from app.services.name_sanitizer import organization_name_key, sanitize_name
 
 _PAREN_RE = re.compile(r"\s*\([^)]*\)\s*$")
-_PLACE_KEYS = ("area_id", "area_path", "area_match", "area_note", "lat", "lng")
+_PLACE_KEYS = (
+    "area_id",
+    "area_anchor_id",
+    "area_path",
+    "area_match",
+    "area_note",
+    "lat",
+    "lng",
+)
 
 Lookup = Callable[[str], dict[str, Any] | None]
 Sleep = Callable[[float], None]

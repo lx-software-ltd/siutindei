@@ -83,7 +83,7 @@ def validate_model_sheet(
         if address is None:
             continue
         proposed_location: dict[str, Any] = {"address": address["value"]}
-        for key in ("area_name", "district", "neighbourhood"):
+        for key in ("area_name", "region", "district", "neighbourhood"):
             checked = checked_value(row.get(key), pages)
             if checked:
                 proposed_location[key] = checked["value"]

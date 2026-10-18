@@ -29,10 +29,12 @@ MODEL_INSTRUCTIONS = (
     "per_sessions, per_hour, per_day, or free. day_of_week is 0-6 (Sunday is 0); "
     "start_time and end_time are HH:MM in Asia/Hong_Kong. Write locations, "
     "activities, pricing, and schedules before organization. Keep descriptions under "
-    "200 characters. district and neighbourhood are the area names on the page. "
+    "200 characters. region, district, and neighbourhood are the area names on the "
+    "page. region is Hong Kong Island, Kowloon, New Territories, or Islands. "
     "category_words is the site's wording when it is not the catalog name. "
     "Use exactly this shape:\n"
-    '{"locations": [{"address": "...", "district": "...", "neighbourhood": "...", '
+    '{"locations": [{"address": "...", "region": "...", "district": "...", '
+    '"neighbourhood": "...", '
     '"area_name": "...", "confidence": 0.9, "url": "...", "quote": "..."}], '
     '"activities": [{"name": "...", "name_zh": "...", "description": "...", '
     '"category_name": "...", "category_words": "...", "age_min": 6, "age_max": 12, '

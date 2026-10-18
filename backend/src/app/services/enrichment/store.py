@@ -79,11 +79,13 @@ def start_run(
     org_id: UUID,
     *,
     requested_by: str | None,
+    website: str | None = None,
 ) -> OrgEnrichmentRun:
     org = session.get(Organization, org_id)
     if org is None:
         raise NotFoundError("organization", str(org_id))
-    website = (org.website or "").strip()
+    # A typed address starts the crawl. It is not written onto the organization.
+    website = (website or "").strip() or (org.website or "").strip()
     if not website:
         raise AppError("Add a website before enriching", status_code=422)
     from app.services.enrichment.guard import CrawlError, validate_seed_url
