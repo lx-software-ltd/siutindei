@@ -10,7 +10,12 @@ from typing import Any, Callable
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.data.hk_neighbourhoods import NEIGHBOURHOODS, assign_among, neighbourhoods_for
+from app.data.hk_neighbourhoods import (
+    DISTRICT_REGION_ID,
+    NEIGHBOURHOODS,
+    assign_among,
+    neighbourhoods_for,
+)
 from app.db.models.geographic_area import GeographicArea
 from app.services.location_fix_geocode import AddressLookupFailed, lookup_address
 
@@ -102,6 +107,7 @@ def place_fields(
     index = index or _Index.load(session)
     address = str(proposed.get("address") or "")
     district = _named_district(index, proposed)
+    region = _named_region(index, proposed)
     neighbourhood, note = _named_neighbourhood(index, proposed, district)
     method = "neighbourhood"
     if neighbourhood is None:
@@ -112,13 +118,27 @@ def place_fields(
         return _with_note(_hit(index, neighbourhood, method), note)
     if district is None:
         district = _address_district(index, address)
+    if region is None:
+        region = _address_region(index, address)
     if district is not None:
         pinned = _pinned(
             index, budget, address, neighbourhoods_for(district.name), district
         )
         if pinned is not None:
             return _with_note(pinned, note)
-        return _with_note(_district_only(index, district), note)
+        return _with_note(_anchor(index, district, "district"), note)
+    if region is not None:
+        pinned = _pinned(
+            index,
+            budget,
+            address,
+            neighbourhoods_in_region(region.name),
+            None,
+            region=region,
+        )
+        if pinned is not None:
+            return _with_note(pinned, note)
+        return _with_note(_anchor(index, region, "region"), note)
     return _with_note(_pinned(index, budget, address, NEIGHBOURHOODS, None), note)
 
 
@@ -161,6 +181,7 @@ class _Index:
         self.by_id = {str(row.id): row for row in rows}
         self.neighbourhoods = [row for row in rows if row.level == "neighbourhood"]
         self.districts = [row for row in rows if row.level == "district"]
+        self.regions = [row for row in rows if row.level == "region"]
 
     @classmethod
     def load(cls, session: Session) -> _Index:
@@ -206,6 +227,50 @@ def _pick(
 
 def _outside(hits: list[GeographicArea], district: GeographicArea) -> bool:
     return bool(hits) and all(str(area.parent_id) != str(district.id) for area in hits)
+
+
+_REGION_KEYS = {
+    "kowloon": "kowloon",
+    "hong kong island": "hong_kong_island",
+    "new territories": "new_territories",
+    "islands": "islands",
+}
+
+
+def neighbourhoods_in_region(name: str) -> tuple[Any, ...]:
+    """Catalog neighbourhoods under one Hong Kong region."""
+    key = _REGION_KEYS.get(_fold(name))
+    if key is None:
+        return ()
+    districts = {
+        district for district, region in DISTRICT_REGION_ID.items() if region == key
+    }
+    return tuple(item for item in NEIGHBOURHOODS if item.district in districts)
+
+
+def _named_region(index: _Index, proposed: dict[str, Any]) -> GeographicArea | None:
+    """A region named on the page, including one written in the district field."""
+    for key in ("region", "district", "area_name"):
+        found = _pick(_exact(index.regions, proposed.get(key)), None)
+        if found is not None:
+            return found
+    return None
+
+
+def _address_region(index: _Index, address: str) -> GeographicArea | None:
+    folded = _fold(address)
+    hits: list[GeographicArea] = []
+    best = 0
+    for area in index.regions:
+        for alias in _aliases(area):
+            if not _long_enough(alias) or not _contains(folded, alias):
+                continue
+            if len(alias) > best:
+                best = len(alias)
+                hits = [area]
+            elif len(alias) == best:
+                hits.append(area)
+    return _pick(hits, None)
 
 
 def _named_district(_index: _Index, proposed: dict[str, Any]) -> GeographicArea | None:
@@ -322,6 +387,7 @@ def _hit(
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "area_id": str(area.id),
+        "area_anchor_id": str(area.id),
         "area_path": index.path(area),
         "area_match": method,
     }
@@ -331,8 +397,13 @@ def _hit(
     return payload
 
 
-def _district_only(index: _Index, district: GeographicArea) -> dict[str, Any]:
-    return {"area_path": index.path(district), "area_match": "district"}
+def _anchor(index: _Index, area: GeographicArea, method: str) -> dict[str, Any]:
+    """Region or district, so the picker can start there. Not a saved leaf."""
+    return {
+        "area_anchor_id": str(area.id),
+        "area_path": index.path(area),
+        "area_match": method,
+    }
 
 
 def _with_note(payload: dict[str, Any] | None, note: str) -> dict[str, Any]:
@@ -348,6 +419,7 @@ def _pinned(
     address: str,
     choices: tuple[Any, ...] | list[Any],
     district: GeographicArea | None,
+    region: GeographicArea | None = None,
 ) -> dict[str, Any] | None:
     if not address.strip() or not choices:
         return None
@@ -357,14 +429,17 @@ def _pinned(
     assigned = assign_among(choices, pin[0], pin[1])
     if assigned is None or not assigned.confident:
         return None
-    child = _match_catalog(index, assigned.neighbourhood, district)
+    child = _match_catalog(index, assigned.neighbourhood, district, region)
     if child is None:
         return None
     return _hit(index, child, "geocode", lat=pin[0], lng=pin[1])
 
 
 def _match_catalog(
-    index: _Index, neighbourhood: Any, district: GeographicArea | None
+    index: _Index,
+    neighbourhood: Any,
+    district: GeographicArea | None,
+    region: GeographicArea | None = None,
 ) -> GeographicArea | None:
     names = (neighbourhood.name, neighbourhood.name_zh)
     if district is not None:
@@ -373,10 +448,37 @@ def _match_catalog(
             if found is not None:
                 return found
         return None
+    if region is not None:
+        for name in names:
+            found = _under_region(index, region, name)
+            if found is not None:
+                return found
+        return None
     for name in names:
         found = _one_named(index, name)
         if found is not None:
             return found
+    return None
+
+
+def _under_region(
+    index: _Index, region: GeographicArea, name: str
+) -> GeographicArea | None:
+    token = _fold(name)
+    if not token:
+        return None
+    district_ids = {
+        str(area.id)
+        for area in index.districts
+        if str(area.parent_id) == str(region.id)
+    }
+    hits = [
+        area
+        for area in index.neighbourhoods
+        if str(area.parent_id) in district_ids and token in _aliases(area)
+    ]
+    if len(hits) == 1:
+        return hits[0]
     return None
 
 

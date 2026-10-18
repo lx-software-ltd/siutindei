@@ -48,7 +48,6 @@ const ACTIVE = new Set(['queued', 'running', 'extracting']);
 
 type Scope = {
   orgId: string | null;
-  savedWebsite: string;
   draftWebsite: string;
   detailsDirty: boolean;
   pending: boolean;
@@ -61,14 +60,12 @@ const EnrichmentScopeContext = createContext<Scope | null>(null);
 
 export function OrgEnrichmentScope({
   orgId,
-  savedWebsite,
   draftWebsite,
   detailsDirty,
   onApplied,
   children,
 }: {
   orgId: string | null;
-  savedWebsite: string;
   draftWebsite: string;
   detailsDirty: boolean;
   onApplied?: () => Promise<void>;
@@ -81,10 +78,11 @@ export function OrgEnrichmentScope({
     if (!orgId || pending) {
       return;
     }
+    const website = draftWebsite.trim();
     setPending(true);
     setError('');
     try {
-      await startOrgEnrichment(orgId);
+      await startOrgEnrichment(orgId, website);
       await getAdminQueryClient().invalidateQueries({
         queryKey: adminQueryKeys.orgEnrichment(orgId),
       });
@@ -99,7 +97,6 @@ export function OrgEnrichmentScope({
     <EnrichmentScopeContext.Provider
       value={{
         orgId,
-        savedWebsite,
         draftWebsite,
         detailsDirty,
         pending,
@@ -118,15 +115,9 @@ export function OrganizationEnrichButton() {
   if (!scope?.orgId) {
     return null;
   }
-  const saved = scope.savedWebsite.trim();
   const draft = scope.draftWebsite.trim();
-  const missingWebsite = saved.length === 0 && draft.length === 0;
-  const unsavedWebsite = saved !== draft;
-  const title = missingWebsite
-    ? 'Add a website first'
-    : unsavedWebsite
-      ? 'Save the website first'
-      : 'Enrich from the website';
+  const missingWebsite = draft.length === 0;
+  const title = missingWebsite ? 'Add a website first' : 'Enrich from the website';
   return (
     <Button
       type='button'
@@ -134,7 +125,7 @@ export function OrganizationEnrichButton() {
       size='md'
       loading={scope.pending}
       loadingLabel='Enriching…'
-      disabled={missingWebsite || unsavedWebsite}
+      disabled={missingWebsite}
       title={title}
       data-testid='enrich-from-website'
       onClick={() => scope.start()}

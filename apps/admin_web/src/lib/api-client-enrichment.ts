@@ -41,10 +41,18 @@ export function getOrgEnrichment(orgId: string): Promise<EnrichmentRead> {
   );
 }
 
-export function startOrgEnrichment(orgId: string): Promise<{ run: EnrichmentRun }> {
+export function startOrgEnrichment(
+  orgId: string,
+  website?: string
+): Promise<{ run: EnrichmentRun }> {
+  const body = website ? { website } : {};
   return request<{ run: EnrichmentRun }>(
     buildApiUrl(`v1/admin/organizations/${orgId}/enrichment`),
-    { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }
   );
 }
 

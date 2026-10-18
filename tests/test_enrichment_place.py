@@ -227,7 +227,8 @@ def test_far_or_missing_pin_does_not_snap_a_district(db_session) -> None:
         )
         assert "area_id" not in proposed
         assert proposed["area_match"] == "district"
-        assert "Yau Tsim Mong" in proposed["area_path"]
+        assert proposed["area_path"] == "Kowloon · Yau Tsim Mong"
+        assert proposed["area_anchor_id"] == str(tai.parent_id)
         assert tai.name not in proposed["area_path"]
 
 
@@ -242,6 +243,55 @@ def test_district_name_does_not_match_its_shorter_neighbourhood(db_session) -> N
     assert proposed.get("area_id") != str(central.id)
     assert "area_id" not in proposed
     assert proposed["area_match"] == "district"
+
+
+def test_a_named_region_selects_the_region(db_session) -> None:
+    _kowloon(db_session)
+    region = db_session.scalars(
+        select(GeographicArea).where(
+            GeographicArea.name == "Kowloon",
+            GeographicArea.level == "region",
+        )
+    ).one()
+    proposed = _one(
+        db_session,
+        _org(db_session),
+        _location("1 Nathan Road", region="Kowloon"),
+        geocode=lambda _address: None,
+    )
+    assert "area_id" not in proposed
+    assert proposed["area_match"] == "region"
+    assert proposed["area_path"] == "Kowloon"
+    assert proposed["area_anchor_id"] == str(region.id)
+
+
+def test_a_region_written_as_the_district_still_selects_the_region(
+    db_session,
+) -> None:
+    _kowloon(db_session)
+    proposed = _one(
+        db_session,
+        _org(db_session),
+        _location("1 Nathan Road", district="Kowloon"),
+        geocode=lambda _address: None,
+    )
+    assert proposed["area_match"] == "region"
+    assert proposed["area_path"] == "Kowloon"
+    assert "area_id" not in proposed
+
+
+def test_a_pin_in_a_named_region_picks_that_regions_neighbourhood(
+    db_session,
+) -> None:
+    mong, _tai = _kowloon(db_session)
+    proposed = _one(
+        db_session,
+        _org(db_session),
+        _location("123 Nathan Road", region="Kowloon"),
+        geocode=lambda _address: {"lat": 22.3192, "lng": 114.1694},
+    )
+    assert proposed["area_id"] == str(mong.id)
+    assert proposed["area_path"] == "Kowloon · Yau Tsim Mong · Mong Kok"
 
 
 def test_geocode_stops_after_five_calls(db_session) -> None:
@@ -368,6 +418,7 @@ def test_sheet_keeps_place_category_and_name_fields() -> None:
         "locations": [
             {
                 "address": "123 Nathan Road",
+                "region": "Kowloon",
                 "district": "Yau Tsim Mong",
                 "neighbourhood": "Mong Kok",
                 "area_name": "Hong Kong",
@@ -397,6 +448,7 @@ def test_sheet_keeps_place_category_and_name_fields() -> None:
     location = next(item for item in found if item["kind"] == "create_location")
     activity = next(item for item in found if item["kind"] == "create_activity")
     name = next(item for item in found if item["field"] == "name")
+    assert location["proposed"]["region"] == "Kowloon"
     assert location["proposed"]["district"] == "Yau Tsim Mong"
     assert location["proposed"]["neighbourhood"] == "Mong Kok"
     assert location["proposed"]["area_name"] == "Hong Kong"
