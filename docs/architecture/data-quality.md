@@ -121,9 +121,14 @@ imported venue. A new venue on a skipped organization is still created.
 
 Imports · Settings stores skip-deleted, name cleanup, unknown
 categories, and whether duplicates, locations, and categories run
-after a live import. The row is `import_settings`. PUT replaces every
-field and locks the row. A missing row keeps today's import behaviour.
-Post-import checks use the queue and skip an unchanged fingerprint.
+after a live import and after a website-enrichment apply. The row is
+`import_settings`. PUT replaces every field and locks the row. A
+missing row keeps today's import behaviour. Post-import checks use
+the queue and skip an unchanged fingerprint. An enrichment apply uses
+those same three flags, scoped to that organization and any activities
+the apply created. The trigger is `enrichment`. Names stay on the
+import write path. A dismiss, a crawl, and an apply that saves nothing
+do not queue a run. Each successful apply gets its own run.
 Model replies are recorded only for those runs, one activity or
 organization at a time, and only after the reply parses. A cache hit
 is not charged. Manual Location and Category sweeps call the model

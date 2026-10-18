@@ -66,6 +66,9 @@ test.describe('Imports Panel', () => {
       categories: 'off',
       skip_deleted_organizations: true,
     });
+    await expect(
+      adminPage.getByText(/after an enrichment apply/)
+    ).toBeVisible();
     await expect(adminPage.getByText('Settings saved.')).toBeVisible();
   });
 

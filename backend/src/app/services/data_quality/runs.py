@@ -36,6 +36,18 @@ _TERMINAL = frozenset({"done", "partial", "failed", "busy"})
 _TERMINAL_OK = frozenset({"done", "unchanged", "skipped"})
 
 
+def checks_from_settings(settings: Any) -> list[str]:
+    """Duplicates, locations, and categories selected for an automatic run."""
+    selected = []
+    if settings.duplicates == "report":
+        selected.append("duplicates")
+    if settings.locations == "check":
+        selected.append("locations")
+    if settings.categories == "check":
+        selected.append("categories")
+    return selected
+
+
 def stage_import_run(
     session: Session,
     *,
@@ -44,14 +56,7 @@ def stage_import_run(
     requested_by: str | None,
 ) -> str | None:
     """Insert the post-import run in the import transaction. Names stay inline."""
-    settings = load_import_settings(session)
-    selected = []
-    if settings.duplicates == "report":
-        selected.append("duplicates")
-    if settings.locations == "check":
-        selected.append("locations")
-    if settings.categories == "check":
-        selected.append("categories")
+    selected = checks_from_settings(load_import_settings(session))
     scope = scope_from_results(results)
     if not selected or _scope_empty(scope):
         return None
@@ -74,6 +79,33 @@ def stage_import_run(
         if found is None:
             raise
         return str(found.id)
+    return str(run.id)
+
+
+def stage_enrichment_run(
+    session: Session,
+    *,
+    organization_id: UUID,
+    activity_ids: list[str],
+    requested_by: str | None,
+) -> str | None:
+    """Insert the post-apply run. Each apply gets its own row. Names stay out."""
+    selected = checks_from_settings(load_import_settings(session))
+    scope = {
+        "organization_ids": [str(organization_id)],
+        "activity_ids": sorted({str(item) for item in activity_ids if item}),
+    }
+    if not selected or _scope_empty(scope):
+        return None
+    run = _new_run(
+        trigger="enrichment",
+        import_job_id=None,
+        requested_by=requested_by,
+        scope=scope,
+        checks=selected,
+    )
+    session.add(run)
+    session.flush()
     return str(run.id)
 
 

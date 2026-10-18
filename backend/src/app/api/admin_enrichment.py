@@ -150,8 +150,9 @@ def _decide(event: Mapping[str, Any], org_id: UUID, *, apply: bool) -> dict[str,
     request_id = event.get("requestContext", {}).get("requestId", "")
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event)
+        quality_run_id = None
         if apply:
-            results = apply_proposals(
+            results, quality_run_id = apply_proposals(
                 session,
                 org_id,
                 [str(item) for item in ids],
@@ -167,4 +168,11 @@ def _decide(event: Mapping[str, Any], org_id: UUID, *, apply: bool) -> dict[str,
                 user_id=_get_user_sub(event),
             )
         session.commit()
-    return json_response(200, {"results": results}, event=event)
+    if quality_run_id:
+        from app.services.data_quality.runs import enqueue_staged_run
+
+        enqueue_staged_run(quality_run_id)
+    body: dict[str, Any] = {"results": results}
+    if quality_run_id:
+        body["data_quality_run_id"] = quality_run_id
+    return json_response(200, body, event=event)

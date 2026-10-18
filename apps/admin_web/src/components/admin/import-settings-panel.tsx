@@ -190,7 +190,8 @@ export function ImportSettingsPanel() {
           <h4 className='text-sm font-semibold text-slate-900'>After import</h4>
           <p className='text-sm text-slate-600'>
             These checks run on the organizations and activities this import
-            created or updated. A dry-run does not start them.
+            created or updated, and on an organization after an enrichment
+            apply. A dry-run does not start them.
           </p>
           <AdminFieldGrid columns={1}>
             <AdminField label='Duplicates' htmlFor='import-duplicates'>
