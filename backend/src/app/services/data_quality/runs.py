@@ -12,11 +12,16 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import Activity, DataQualityRun, ImportJob, Organization
-from app.exceptions import NotFoundError, ValidationError
+from app.db.models import DataQualityRun
+from app.exceptions import ValidationError
 from app.services.aws_clients import get_client
 from app.services.data_quality.checks import refresh_check, run_check
 from app.services.data_quality.fingerprint import fingerprint
+from app.services.data_quality.scope import (
+    resolve_scope,
+    scope_from_results,
+    scope_is_empty,
+)
 from app.services.import_settings import load_import_settings
 from app.utils.logging import get_logger
 
@@ -58,7 +63,7 @@ def stage_import_run(
     """Insert the post-import run in the import transaction. Names stay inline."""
     selected = checks_from_settings(load_import_settings(session))
     scope = scope_from_results(results)
-    if not selected or _scope_empty(scope):
+    if not selected or scope_is_empty(scope):
         return None
     existing = _import_run(session, import_job_id)
     if existing is not None:
@@ -95,7 +100,7 @@ def stage_enrichment_run(
         "organization_ids": [str(organization_id)],
         "activity_ids": sorted({str(item) for item in activity_ids if item}),
     }
-    if not selected or _scope_empty(scope):
+    if not selected or scope_is_empty(scope):
         return None
     run = _new_run(
         trigger="enrichment",
@@ -136,7 +141,7 @@ def create_manual_run(
     checks = _manual_checks(body.get("checks"))
     raw_scope = body.get("scope")
     scope = resolve_scope(session, raw_scope if isinstance(raw_scope, dict) else {})
-    if _scope_empty(scope):
+    if scope_is_empty(scope):
         raise ValidationError("Nothing to check", field="scope")
     config_hash = _config_hash(checks, scope)
     refresh = _refresh_flag(body.get("refresh", False))
@@ -312,60 +317,6 @@ def serialize_run(run: DataQualityRun, *, summary: bool = False) -> dict[str, An
     }
 
 
-def scope_from_results(results: list[dict[str, Any]] | None) -> dict[str, list[str]]:
-    """Organization and activity ids written by an import."""
-    orgs: list[str] = []
-    activities: list[str] = []
-    for item in results or []:
-        if not isinstance(item, dict) or item.get("status") not in {
-            "created",
-            "updated",
-        }:
-            continue
-        entity_id = item.get("id")
-        if not entity_id:
-            continue
-        if item.get("type") == "organizations":
-            orgs.append(str(entity_id))
-        elif item.get("type") == "activities":
-            activities.append(str(entity_id))
-    return {
-        "organization_ids": sorted(set(orgs)),
-        "activity_ids": sorted(set(activities)),
-    }
-
-
-def resolve_scope(session: Session, scope: dict[str, Any]) -> dict[str, list[str]]:
-    """Turn a manual scope into sorted organization and activity ids."""
-    kind = str(scope.get("kind") or "pending_review")
-    if kind == "organization":
-        org_id = _uuid(scope.get("org_id"), "org_id")
-        if session.get(Organization, org_id) is None:
-            raise ValidationError("org_id not found", field="org_id")
-        return _ids([org_id], _activity_ids(session, [org_id]))
-    if kind == "import":
-        job_id = _uuid(scope.get("import_job_id"), "import_job_id")
-        job = session.get(ImportJob, job_id)
-        if job is None:
-            raise NotFoundError("imports", str(job_id))
-        return scope_from_results(job.results)
-    if kind == "all":
-        org_ids = list(
-            session.scalars(select(Organization.id).order_by(Organization.id)).all()
-        )
-        return _ids(org_ids, _activity_ids(session, org_ids))
-    if kind != "pending_review":
-        raise ValidationError("Invalid scope", field="scope")
-    org_ids = list(
-        session.scalars(
-            select(Organization.id)
-            .where(Organization.review_status == "pending_review")
-            .order_by(Organization.id)
-        ).all()
-    )
-    return _ids(org_ids, _activity_ids(session, org_ids))
-
-
 def _new_run(**kwargs: Any) -> DataQualityRun:
     checks = list(kwargs.pop("checks"))
     scope = kwargs.pop("scope")
@@ -491,36 +442,6 @@ def _refresh_flag(value: Any) -> bool:
     if isinstance(value, bool):
         return value
     raise ValidationError("refresh must be a boolean", field="refresh")
-
-
-def _scope_empty(scope: dict[str, Any]) -> bool:
-    return not scope.get("organization_ids") and not scope.get("activity_ids")
-
-
-def _activity_ids(session: Session, org_ids: list) -> list:
-    if not org_ids:
-        return []
-    return list(
-        session.scalars(
-            select(Activity.id)
-            .where(Activity.org_id.in_(org_ids))
-            .order_by(Activity.id)
-        ).all()
-    )
-
-
-def _ids(org_ids, activity_ids) -> dict[str, list[str]]:
-    return {
-        "organization_ids": sorted(str(item) for item in org_ids),
-        "activity_ids": sorted(str(item) for item in activity_ids),
-    }
-
-
-def _uuid(value: Any, field: str) -> UUID:
-    try:
-        return UUID(str(value))
-    except (TypeError, ValueError) as exc:
-        raise ValidationError(f"{field} must be a UUID", field=field) from exc
 
 
 def _iso(value: datetime | None) -> str | None:

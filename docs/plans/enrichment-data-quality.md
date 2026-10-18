@@ -23,6 +23,7 @@ scoped to that organization and any activities this apply created.
 - `backend/db/alembic/versions/0057_dq_enrich_trigger.py`
 - `backend/src/app/db/models/import_settings.py`
 - `backend/src/app/services/data_quality/runs.py`
+- `backend/src/app/services/data_quality/scope.py`
 - `backend/src/app/services/enrichment/apply.py`
 - `backend/src/app/api/admin_enrichment.py`
 - `docs/api/admin.yaml`, generated admin types
