@@ -691,6 +691,17 @@ export async function setupApiMocks(
   page: Page,
   options: { versionsUnavailable?: boolean } = {}
 ): Promise<void> {
+  await page.route('https://cdn.example/class.png', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAHgAAABQCAIAAABd+SbeAAAAg0lEQVR42u3QQQkAAAgEsAtmCPtjGFuIj8ESLNPFgSgQLRrRokVbEC0a0aJFWxAtGtGiRSNaNKJFi0a0aESLFo1o0YgWLRrRohEtWjSiRSNatGhEi0a0aNGIFo1o0aIRLRrRokUjWjSiRYtGtGhEixaNaNGIFi0a0aIRLVo0okUj+o8Flp6/DZENHX4AAAAASUVORK5CYII=',
+        'base64'
+      ),
+    });
+  });
+
   await page.route('https://maps.googleapis.com/**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -887,6 +898,25 @@ export async function setupApiMocks(
                     current_value: null,
                     proposed_value: {
                       description: 'Saturday classes for children.',
+                    },
+                    confidence: 0.9,
+                    unverified: false,
+                    evidence: [],
+                    status: 'pending',
+                  },
+                  {
+                    id: 'prop-media',
+                    section: 'Media',
+                    kind: 'add_media',
+                    field: 'media',
+                    label: 'Photo 1',
+                    current_value: null,
+                    proposed_value: {
+                      source_url: 'https://cdn.example/class.png',
+                      alt: 'Children painting',
+                      logo: false,
+                      copyright_notice:
+                        'Copied from the provider website for this catalog. Copyright remains with the provider.',
                     },
                     confidence: 0.9,
                     unverified: false,

@@ -1,6 +1,6 @@
 # Plan: Website enrichment media preview
 
-**Status**: Draft
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

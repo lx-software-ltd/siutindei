@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import { useActivityCategories } from '../../hooks/use-activity-categories';
 import { useGeographicAreas } from '../../hooks/use-geographic-areas';
 import type {
@@ -39,6 +41,66 @@ export function proposedText(value: Record<string, unknown> | null): string {
       return `${key}: ${String(item ?? '')}`;
     })
     .join(' · ');
+}
+
+function mediaPreviewUrl(value: Record<string, unknown> | null): string | null {
+  if (!value || typeof value.source_url !== 'string') {
+    return null;
+  }
+  const raw = value.source_url.trim();
+  if (!raw) {
+    return null;
+  }
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return null;
+    }
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
+function ProposalValue({ row }: { row: EnrichmentProposal }) {
+  const preview = row.kind === 'add_media' ? mediaPreviewUrl(row.proposed_value) : null;
+  if (!preview) {
+    return <>{proposedText(row.proposed_value)}</>;
+  }
+  const alt =
+    typeof row.proposed_value.alt === 'string' ? row.proposed_value.alt.trim() : '';
+  const caption = alt && alt !== preview ? alt : '';
+  const rest = { ...row.proposed_value };
+  delete rest.source_url;
+  delete rest.alt;
+  delete rest.logo;
+  delete rest.copyright_notice;
+  const extra = proposedText(rest);
+  return (
+    <div className='space-y-2'>
+      <MediaPreview src={preview} alt={caption || 'Proposed media'} />
+      {caption ? <div>{caption}</div> : null}
+      {extra ? <div>{extra}</div> : null}
+    </div>
+  );
+}
+
+function MediaPreview({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <p className='text-xs text-slate-500'>Preview unavailable</p>;
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      data-testid='enrichment-media-preview'
+      className='h-28 w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 object-contain'
+      loading='lazy'
+      referrerPolicy='no-referrer'
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 function statusTone(status: string) {
@@ -84,7 +146,6 @@ export function ProposalTable({
       </AdminDataTableHead>
       <AdminDataTableBody>
         {rows.map((row) => {
-          const value = proposedText(row.proposed_value);
           const current = proposedText(row.current_value);
           const pending = row.status === 'pending';
           return (
@@ -104,11 +165,11 @@ export function ProposalTable({
                   {current}
                 </AdminDataTableCellMeta>
                 <AdminDataTableCellMeta label='Value' until='secondary'>
-                  {value}
+                  <ProposalValue row={row} />
                 </AdminDataTableCellMeta>
               </AdminDataTableCell>
               <AdminDataTableCell priority='secondary'>
-                <div>{value}</div>
+                <ProposalValue row={row} />
                 <div className='mt-1 text-xs text-slate-500'>Now: {current}</div>
                 {pending ? (
                   <ProposalFields
