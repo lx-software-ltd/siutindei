@@ -406,6 +406,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             required
             hasError={showCategoryError}
             errorMessage={showCategoryError ? categoryError : undefined}
+            allowNewSubcategory={isAdmin}
           />
         </VersionField>
         <VersionField span={2} versionKey={['description', 'description_translations']}>
