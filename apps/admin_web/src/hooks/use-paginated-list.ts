@@ -213,32 +213,24 @@ export function usePaginatedList<TItem, TFilters extends object>({
   const queryClient = getAdminQueryClient();
   const pageSize = clampAdminListLimit(limit, maxLimit);
   const instanceId = useId();
-  // Without an explicit key the cache is private to this hook instance and a
-  // new fetcher identity (closure params changed) starts a fresh list, which
-  // is what the pre-cache implementation did by refetching on fetcher change.
-  const fetcherIdentityRef = useRef<{ fetcher: typeof fetcher; version: number }>({
-    fetcher,
-    version: 0,
-  });
-  if (fetcherIdentityRef.current.fetcher !== fetcher) {
-    fetcherIdentityRef.current = { fetcher, version: fetcherIdentityRef.current.version + 1 };
-  }
-  const fetcherVersion = fetcherIdentityRef.current.version;
+  // An explicit queryKey owns cache identity. Callers include the inputs the
+  // fetcher closes over. Without a key the cache is private to this instance.
+  const queryKeyIdentity = queryKey ? hashKey(queryKey) : instanceId;
   const baseKey = useMemo<readonly unknown[]>(
-    () => queryKey ?? ['admin', 'list', instanceId, fetcherVersion],
+    () => queryKey ?? ['admin', 'list', instanceId],
     // Callers may pass a fresh array each render; compare by hash instead.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [queryKey ? hashKey(queryKey) : `${instanceId}:${fetcherVersion}`]
+    [queryKeyIdentity]
   );
 
   const [filters, setFilters] = useState<TFilters>(defaultFilters);
   const [committedFilters, setCommittedFilters] = useState<TFilters>(defaultFilters);
   const [armed, setArmed] = useState(fetchOnMount);
+  const [explicitRefetch, setExplicitRefetch] = useState(false);
   // `fetchOnMount` may flip from false to true later (for example once a parent
   // record is selected); that must start fetching like a mount would.
   const enabled = armed || fetchOnMount;
   const filtersRef = useRef<TFilters>(defaultFilters);
-  const explicitRefetchRef = useRef(false);
 
   const buildKey = useCallback(
     (activeFilters: TFilters) => [...baseKey, activeFilters] as const,
@@ -259,7 +251,9 @@ export function usePaginatedList<TItem, TFilters extends object>({
 
   const activeKey = useMemo(() => buildKey(committedFilters), [buildKey, committedFilters]);
   const activeKeyRef = useRef(activeKey);
-  activeKeyRef.current = activeKey;
+  useEffect(() => {
+    activeKeyRef.current = activeKey;
+  }, [activeKey]);
 
   const query = useInfiniteQuery<
     PaginatedResponse<TItem>,
@@ -293,7 +287,7 @@ export function usePaginatedList<TItem, TFilters extends object>({
       const effectiveFilters = { ...filtersRef.current, ...(nextFilters ?? {}) };
       commitFilters(effectiveFilters);
       const key = buildKey(effectiveFilters);
-      explicitRefetchRef.current = true;
+      setExplicitRefetch(true);
       // Only page one is reloaded; "Load more" pages are dropped like before.
       queryClient.setQueryData<ListData<TItem>>(key, trimToFirstPage);
       try {
@@ -314,7 +308,7 @@ export function usePaginatedList<TItem, TFilters extends object>({
       } catch {
         // The observer exposes the failure through `error`.
       } finally {
-        explicitRefetchRef.current = false;
+        setExplicitRefetch(false);
       }
     },
     [buildKey, commitFilters, makeQueryFn, queryClient]
@@ -398,7 +392,7 @@ export function usePaginatedList<TItem, TFilters extends object>({
     enabled &&
     (query.isPending ||
       query.isPlaceholderData ||
-      (isFetchingFirstPage && explicitRefetchRef.current));
+      (isFetchingFirstPage && explicitRefetch));
 
   let error = '';
   if (query.error && !query.isFetching && !isAbortError(query.error)) {

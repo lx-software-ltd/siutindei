@@ -44,7 +44,18 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
   const scope = useOrganizationScope();
   const scopedOrgId = scope.orgId;
   const [organization, setOrganization] = useState<Organization | null>(null);
-  const [isLoadingOrg, setIsLoadingOrg] = useState(false);
+  const orgRequestKey = `${mode}:${scopedOrgId ?? ''}`;
+  const [seenOrgRequest, setSeenOrgRequest] = useState(orgRequestKey);
+  const [isLoadingOrg, setIsLoadingOrg] = useState(Boolean(scopedOrgId));
+  if (seenOrgRequest !== orgRequestKey) {
+    setSeenOrgRequest(orgRequestKey);
+    if (!scopedOrgId) {
+      setOrganization(null);
+      setIsLoadingOrg(false);
+    } else {
+      setIsLoadingOrg(true);
+    }
+  }
   const [mediaState, dispatchMedia] = useReducer(
     mediaPanelReducer,
     initialMediaPanelState
@@ -168,12 +179,9 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
 
   useEffect(() => {
     if (!scopedOrgId) {
-      setOrganization(null);
-      setIsLoadingOrg(false);
       return;
     }
     let cancelled = false;
-    setIsLoadingOrg(true);
     const api = getResourceApi<Organization>('organizations', mode);
     void api
       .get(scopedOrgId)

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
@@ -96,7 +96,14 @@ export function TicketsPanel() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [managerEmails, setManagerEmails] = useState<Record<string, string>>({});
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
-  const reviewTargetIdRef = useRef<string | null>(null);
+  const [seenSelectedId, setSeenSelectedId] = useState(selectedId);
+  if (selectedId !== seenSelectedId) {
+    setSeenSelectedId(selectedId);
+    setReviewForm(emptyReviewForm);
+    if (reviewTargetId !== selectedId) {
+      setReviewError('');
+    }
+  }
 
   const list = usePaginatedList<Ticket, Record<string, never>>({
     queryKey: adminQueryKeys.tickets(),
@@ -126,11 +133,7 @@ export function TicketsPanel() {
   }, []);
 
   useEffect(() => {
-    setReviewForm(emptyReviewForm);
     clearDirty();
-    if (reviewTargetIdRef.current !== selectedId) {
-      setReviewError('');
-    }
   }, [selectedId, clearDirty]);
 
   const selected = list.items.find((item) => item.id === selectedId) ?? null;
@@ -191,7 +194,6 @@ export function TicketsPanel() {
   const submitReview = async (ticket: Ticket, action: 'approve' | 'reject') => {
     const usingForm = selectedId === ticket.id;
     const form = usingForm ? reviewForm : emptyReviewForm;
-    reviewTargetIdRef.current = ticket.id;
     setReviewTargetId(ticket.id);
 
     if (
@@ -232,7 +234,6 @@ export function TicketsPanel() {
         prev.map((item) => (item.id === updated.id ? updated : item))
       );
       clearDirty();
-      reviewTargetIdRef.current = null;
       shell.expanded.collapse();
       setReviewError('');
       await list.refetch();

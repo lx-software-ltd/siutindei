@@ -263,6 +263,13 @@ export function CatalogPanel() {
   const [viewParam, setViewParam] = useQueryState('view');
   const view = viewParam === 'map' ? 'map' : 'table';
   const [mapMounted, setMapMounted] = useState(view === 'map');
+  const [prevView, setPrevView] = useState(view);
+  if (view !== prevView) {
+    setPrevView(view);
+    if (view === 'map') {
+      setMapMounted(true);
+    }
+  }
   const setView = useCallback(
     (next: 'table' | 'map') => {
       if (next === 'map') {
@@ -272,11 +279,6 @@ export function CatalogPanel() {
     },
     [setViewParam]
   );
-  useEffect(() => {
-    if (view === 'map') {
-      setMapMounted(true);
-    }
-  }, [view]);
   const areas = useGeographicAreas();
   const importsQuery = useQuery(
     {
@@ -308,20 +310,42 @@ export function CatalogPanel() {
   }, []);
 
   useEffect(() => {
-    void refreshSummary();
-  }, [refreshSummary]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const next = await getOrgReviewSummary();
+        if (!cancelled) {
+          setSummary(next);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof ApiError ? err.message : 'Failed to load the review queue.'
+          );
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  useEffect(() => {
-    const nextJob = jobParam ?? '';
+  const nextJob = jobParam ?? '';
+  const [seenJobParam, setSeenJobParam] = useState(nextJob);
+  if (seenJobParam !== nextJob) {
+    setSeenJobParam(nextJob);
     if (filters.import_job_id !== nextJob) {
       setFilter('import_job_id', nextJob);
     }
-  }, [filters.import_job_id, jobParam, setFilter]);
+  }
 
-  useEffect(() => {
-    const match = recentImports.find((job) => job.id === (jobParam ?? ''));
-    setImportAt(match?.created_at ?? '');
-  }, [jobParam, recentImports]);
+  const matchedImportAt =
+    recentImports.find((job) => job.id === (jobParam ?? ''))?.created_at ?? '';
+  const [seenMatchedImportAt, setSeenMatchedImportAt] = useState(matchedImportAt);
+  if (matchedImportAt !== seenMatchedImportAt) {
+    setSeenMatchedImportAt(matchedImportAt);
+    setImportAt(matchedImportAt);
+  }
 
   function selectImport(timestamp: string) {
     setImportAt(timestamp);
@@ -335,9 +359,7 @@ export function CatalogPanel() {
     }
   }
 
-  useEffect(() => {
-    setSelected(new Set());
-  }, [
+  const selectionKey = [
     filters.review_status,
     filters.review_reason,
     filters.source,
@@ -348,13 +370,22 @@ export function CatalogPanel() {
     filters.area_id,
     filters.changed,
     filters.sort,
-  ]);
+  ].join('\0');
+  const [seenSelectionKey, setSeenSelectionKey] = useState(selectionKey);
+  if (selectionKey !== seenSelectionKey) {
+    setSeenSelectionKey(selectionKey);
+    setSelected(new Set());
+  }
 
   const filtersRef = useRef(filters);
-  filtersRef.current = filters;
   const textFiltersRef = useRef(filters.q);
   const mapRefetchRef = useRef(mapList.refetch);
-  mapRefetchRef.current = mapList.refetch;
+  useEffect(() => {
+    filtersRef.current = filters;
+  });
+  useEffect(() => {
+    mapRefetchRef.current = mapList.refetch;
+  });
   useEffect(() => {
     const textChanged = textFiltersRef.current !== filters.q;
     textFiltersRef.current = filters.q;

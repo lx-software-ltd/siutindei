@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useQueryState } from 'nuqs';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useBulkRowSelection } from '../../../hooks/use-bulk-row-selection';
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
@@ -100,8 +100,6 @@ const DEFAULT_FILTERS: LocationFilters = {
 export function LocationsPanel() {
   const [organization, setOrganization] = useQueryState('organization');
   const { openWorkspace } = useOrganizationScope();
-  const orgIdRef = useRef(organization);
-  orgIdRef.current = organization;
   const expanded = useExpandedRecord({ paramName: 'location-fix' });
   const areas = useGeographicAreas();
   const summaryQuery = useQuery({
@@ -136,7 +134,7 @@ export function LocationsPanel() {
         source: source || undefined,
         grade: grade || undefined,
         status: status || undefined,
-        org_id: orgIdRef.current || undefined,
+        org_id: organization || undefined,
       });
       return { items: page.items, nextCursor: page.next_cursor ?? null };
     },
@@ -162,6 +160,7 @@ export function LocationsPanel() {
   const [areaId, setAreaId] = useState('');
   const [pinLat, setPinLat] = useState('');
   const [pinLng, setPinLng] = useState('');
+  const [appliedProposalKey, setAppliedProposalKey] = useState<string | null>(null);
   const activeRun = summaryQuery.data?.active_run ?? null;
   const sweepBusy =
     scanningScope !== null ||
@@ -195,7 +194,16 @@ export function LocationsPanel() {
   const openProposalArea = open?.proposed_location?.area_id ?? '';
   const openProposalLat = open?.proposed_location?.lat;
   const openProposalLng = open?.proposed_location?.lng;
-  useEffect(() => {
+  const openProposalKey = [
+    openProposalId,
+    openProposalKind ?? '',
+    openProposalAddress,
+    openProposalArea,
+    openProposalLat ?? '',
+    openProposalLng ?? '',
+  ].join('\0');
+  if (openProposalKey !== appliedProposalKey) {
+    setAppliedProposalKey(openProposalKey);
     if (openProposalKind === 'create_location') {
       setAddress(openProposalAddress);
       setAreaId(openProposalArea);
@@ -204,14 +212,7 @@ export function LocationsPanel() {
       setPinLat(openProposalLat == null ? '' : String(openProposalLat));
       setPinLng(openProposalLng == null ? '' : String(openProposalLng));
     }
-  }, [
-    openProposalId,
-    openProposalKind,
-    openProposalAddress,
-    openProposalArea,
-    openProposalLat,
-    openProposalLng,
-  ]);
+  }
 
   const pending = summaryQuery.data?.by_status.pending ?? 0;
   const sweepProgress =

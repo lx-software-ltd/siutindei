@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ApiError } from '../../lib/api-client';
 import {
@@ -43,55 +43,60 @@ export function AccountHome() {
     useState<Ticket | null>(null);
   const [pendingFeedback, setPendingFeedback] = useState<Ticket | null>(null);
 
-  const loadUserStatus = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      // Load both access request status and suggestions in parallel
-      const [accessStatus, suggestionsStatus, feedbackStatus] =
-        await Promise.all([
-          getUserAccessStatus(),
-          getUserSuggestions(),
-          getUserFeedback(),
-        ]);
-
-      // Check for pending access request
-      if (accessStatus.has_pending_request && accessStatus.pending_request) {
-        setPendingRequest(accessStatus.pending_request);
-      }
-
-      // Check for pending suggestion
-      if (suggestionsStatus.has_pending_suggestion) {
-        const pending = suggestionsStatus.suggestions.find(
-          (s) => s.status === 'pending'
-        );
-        if (pending) {
-          setPendingSuggestion(pending);
-        }
-      }
-
-      if (feedbackStatus.has_pending_feedback) {
-        const pending = feedbackStatus.feedbacks.find(
-          (item) => item.status === 'pending'
-        );
-        if (pending) {
-          setPendingFeedback(pending);
-        }
-      }
-    } catch (err) {
-      const message =
-        err instanceof ApiError
-          ? err.message
-          : 'Failed to load your account status.';
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    loadUserStatus();
-  }, [loadUserStatus]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const [accessStatus, suggestionsStatus, feedbackStatus] =
+          await Promise.all([
+            getUserAccessStatus(),
+            getUserSuggestions(),
+            getUserFeedback(),
+          ]);
+        if (cancelled) {
+          return;
+        }
+
+        if (accessStatus.has_pending_request && accessStatus.pending_request) {
+          setPendingRequest(accessStatus.pending_request);
+        }
+
+        if (suggestionsStatus.has_pending_suggestion) {
+          const pending = suggestionsStatus.suggestions.find(
+            (s) => s.status === 'pending'
+          );
+          if (pending) {
+            setPendingSuggestion(pending);
+          }
+        }
+
+        if (feedbackStatus.has_pending_feedback) {
+          const pending = feedbackStatus.feedbacks.find(
+            (item) => item.status === 'pending'
+          );
+          if (pending) {
+            setPendingFeedback(pending);
+          }
+        }
+      } catch (err) {
+        if (cancelled) {
+          return;
+        }
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : 'Failed to load your account status.';
+        setError(message);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleRequestSubmitted = (request: Ticket) => {
     setPendingRequest(request);

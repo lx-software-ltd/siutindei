@@ -45,11 +45,16 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
   const [rejectNotes, setRejectNotes] = useState('');
   const [hideListing, setHideListing] = useState(true);
   const [activeAction, setActiveAction] = useState<string | null>(null);
+  const readinessKey = `${orgId}\0${notice}`;
+  const [seenReadinessKey, setSeenReadinessKey] = useState(readinessKey);
+  if (readinessKey !== seenReadinessKey) {
+    setSeenReadinessKey(readinessKey);
+    setDetail(null);
+    setError('');
+  }
 
   useEffect(() => {
     let cancelled = false;
-    setDetail(null);
-    setError('');
     getOrgReviewDetail(orgId)
       .then((row) => {
         if (!cancelled) {

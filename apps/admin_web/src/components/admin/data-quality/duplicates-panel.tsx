@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useQueryState } from 'nuqs';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
 import { usePaginatedList } from '../../../hooks/use-paginated-list';
@@ -51,10 +51,6 @@ const DEFAULT_FILTERS: DuplicateFilters = {
 export function DuplicatesPanel() {
   const [organization, setOrganization] = useQueryState('organization');
   const [runId, setRun] = useQueryState('run');
-  const orgIdRef = useRef(organization);
-  orgIdRef.current = organization;
-  const runRef = useRef(runId);
-  runRef.current = runId;
   const expanded = useExpandedRecord({ paramName: 'duplicate' });
   const list = usePaginatedList<OrgDuplicateGroup, DuplicateFilters>({
     queryKey: [...adminQueryKeys.orgDuplicates(), organization ?? '', runId ?? ''],
@@ -68,8 +64,8 @@ export function DuplicatesPanel() {
         q: q || undefined,
         signal: matchSignal || undefined,
         review_status: review_status || undefined,
-        org_id: orgIdRef.current || undefined,
-        run: runRef.current || undefined,
+        org_id: organization || undefined,
+        run: runId || undefined,
       });
       return { items: page.items, nextCursor: page.next_cursor ?? null };
     },
