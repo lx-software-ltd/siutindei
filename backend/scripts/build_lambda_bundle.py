@@ -6,10 +6,12 @@ import argparse
 import hashlib
 import logging
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
+import time
+from collections.abc import Callable
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,26 @@ TARGET_PYTHON_VERSION = "3.12"
 CACHE_FORMAT_VERSION = "1"
 DEFAULT_CACHE_RETENTION = 3
 CACHE_RETENTION_ENV_VAR = "LAMBDA_DEPS_CACHE_RETENTION"
+PIP_INSTALL_ATTEMPTS = 3
+# A truncated PyPI simple-index body is a 200 with invalid JSON. Pip does
+# not retry that, and one occurrence fails the whole backend deploy.
+RETRYABLE_PIP_MARKERS = (
+    "JSONDecodeError",
+    "Unterminated string",
+    "IncompleteRead",
+    "ReadTimeoutError",
+    "ConnectTimeoutError",
+    "Read timed out",
+    "ConnectionResetError",
+    "RemoteDisconnected",
+    "NewConnectionError",
+    "ProtocolError",
+    "SSLEOFError",
+    "Temporary failure in name resolution",
+    "502 Bad Gateway",
+    "503 Service Unavailable",
+    "504 Gateway Timeout",
+)
 
 
 def _ensure_python_version() -> None:
@@ -27,8 +49,70 @@ def _ensure_python_version() -> None:
         raise SystemExit("Python 3.12 is required to build Lambda bundles.")
 
 
+class PipCommandError(RuntimeError):
+    def __init__(self, command: list[str], returncode: int, output: str) -> None:
+        self.command = command
+        self.returncode = returncode
+        self.output = output
+        super().__init__(
+            f"Command {command!r} returned non-zero exit status {returncode}."
+        )
+
+
+def _pip_output_is_retryable(output: str) -> bool:
+    return any(marker in output for marker in RETRYABLE_PIP_MARKERS)
+
+
+def _retry_sleep_seconds(failed_attempt: int) -> int:
+    return 2 * failed_attempt
+
+
 def _run_pip(command: list[str], cwd: Path, env: dict[str, str]) -> None:
-    subprocess.run(command, check=True, cwd=cwd, env=env)
+    process = subprocess.Popen(
+        command,
+        cwd=cwd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    assert process.stdout is not None
+    output_parts: list[str] = []
+    for line in process.stdout:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        output_parts.append(line)
+    returncode = process.wait()
+    if returncode != 0:
+        raise PipCommandError(command, returncode, "".join(output_parts))
+
+
+def _run_pip_retrying(
+    command: list[str],
+    cwd: Path,
+    env: dict[str, str],
+    *,
+    on_retry: Callable[[], None] | None = None,
+) -> None:
+    for attempt in range(1, PIP_INSTALL_ATTEMPTS + 1):
+        try:
+            _run_pip(command, cwd, env)
+            return
+        except PipCommandError as exc:
+            if attempt >= PIP_INSTALL_ATTEMPTS or not _pip_output_is_retryable(
+                exc.output
+            ):
+                raise
+            logger.warning(
+                "Retryable pip failure on attempt %s of %s; retrying.",
+                attempt,
+                PIP_INSTALL_ATTEMPTS,
+            )
+            time.sleep(_retry_sleep_seconds(attempt))
+            if on_retry is not None:
+                on_retry()
 
 
 def _copy_tree(source: Path, destination: Path) -> None:
@@ -128,7 +212,12 @@ def _build_dependency_cache(
     temp_cache_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info("Installing Lambda Python dependencies into cache...")
-    _run_pip(
+
+    def reset_temp_cache() -> None:
+        _remove_tree(temp_cache_dir)
+        temp_cache_dir.mkdir(parents=True, exist_ok=True)
+
+    _run_pip_retrying(
         [
             sys.executable,
             "-m",
@@ -141,7 +230,7 @@ def _build_dependency_cache(
         cwd=source_root,
         env=env,
     )
-    _run_pip(
+    _run_pip_retrying(
         [
             sys.executable,
             "-m",
@@ -162,6 +251,7 @@ def _build_dependency_cache(
         ],
         cwd=source_root,
         env=env,
+        on_retry=reset_temp_cache,
     )
     _cleanup_bundle(temp_cache_dir)
     _remove_tree(cache_dir)
