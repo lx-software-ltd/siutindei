@@ -105,10 +105,18 @@ export function CategoryChecksPanel() {
   } = useBulkRowSelection(list.items, list.hasMore);
   const [ignoreCurrent, setIgnoreCurrent] = useState(false);
   const [bulkAction, setBulkAction] = useState<'apply' | 'dismiss' | null>(null);
+  const [seenBulkAction, setSeenBulkAction] = useState(bulkAction);
   const [bulkPreview, setBulkPreview] = useState<CategoryReviewBulkResult | null>(
     null
   );
   const [bulkProgress, setBulkProgress] = useState('');
+  if (seenBulkAction !== bulkAction) {
+    setSeenBulkAction(bulkAction);
+    if (bulkAction === null) {
+      setBulkPreview(null);
+      setBulkProgress('');
+    }
+  }
   const [isStarting, setIsStarting] = useState(false);
   const [isBulkRunning, setIsBulkRunning] = useState(false);
   const [error, setError] = useState('');
@@ -258,8 +266,6 @@ export function CategoryChecksPanel() {
 
   useEffect(() => {
     if (bulkAction === null) {
-      setBulkPreview(null);
-      setBulkProgress('');
       return;
     }
     const controller = new AbortController();

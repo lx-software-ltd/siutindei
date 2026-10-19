@@ -3,7 +3,6 @@
 import {
   createContext,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -168,14 +167,16 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
   const [qualityRunId, setQualityRunId] = useState('');
   const [actionError, setActionError] = useState('');
   const runId = query.data?.run?.id ?? '';
-
-  useEffect(() => {
+  const enrichmentKey = `${orgId}\0${runId}`;
+  const [seenEnrichmentKey, setSeenEnrichmentKey] = useState(enrichmentKey);
+  if (enrichmentKey !== seenEnrichmentKey) {
+    setSeenEnrichmentKey(enrichmentKey);
     setSelected([]);
     setOverrides({});
     setNotice('');
     setQualityRunId('');
     setActionError('');
-  }, [orgId, runId]);
+  }
 
   const proposals = useMemo(
     () => query.data?.proposals ?? [],
