@@ -105,6 +105,9 @@ def create_activity_category(
     parent_id_raw = body.get("parent_id")
     parent_id = _parse_uuid(parent_id_raw) if parent_id_raw else None
     validate_category_parent(repo, None, parent_id)
+    if not isinstance(name, str):
+        raise ValidationError("name is required", field="name")
+    reject_same_parent_name(repo, name, parent_id)
     display_order = parse_display_order(body.get("display_order"))
     show_in_wizard = _parse_show_in_wizard(body.get("show_in_wizard", False))
 
@@ -115,6 +118,33 @@ def create_activity_category(
         display_order=display_order,
         show_in_wizard=show_in_wizard,
     )
+
+
+def reject_same_parent_name(
+    repo: ActivityCategoryRepository,
+    name: str,
+    parent_id: Optional[UUID],
+    category_id: Optional[UUID] = None,
+) -> None:
+    """Reject a sibling whose name matches, ignoring case and extra space.
+
+    ``uq_activity_category_parent_name`` already rejects an exact
+    ``(parent_id, name)`` pair. This check also rejects ``Kayaking``
+    when ``kayaking`` is already under that parent.
+    """
+    folded = " ".join(name.split()).casefold()
+    if parent_id is None:
+        rows = repo.get_all_roots()
+    else:
+        rows = repo.get_children(parent_id)
+    for row in rows:
+        if category_id is not None and _as_uuid(row.id) == category_id:
+            continue
+        if " ".join(str(row.name).split()).casefold() == folded:
+            raise ValidationError(
+                "A category with this name already exists under that parent.",
+                field="name",
+            )
 
 
 def _parse_show_in_wizard(value: Any) -> bool:

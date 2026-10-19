@@ -44,12 +44,17 @@ export function insertActivityCategory(
   return placed ? next : tree;
 }
 
-/** Re-apply subcategories created in this session onto a freshly loaded tree. */
-export function applyPublishedCategories(tree: ActivityCategoryNode[]) {
-  return published.reduce(
-    (current, node) => insertActivityCategory(current, node),
-    tree
-  );
+export function publishedCategoryCount() {
+  return published.length;
+}
+
+/**
+ * Subcategories published after `index`. A fetch applies only the ones
+ * created while it was in flight, so a later fetch trusts the server
+ * and does not restore a subcategory that was deleted.
+ */
+export function publishedCategoriesSince(index: number) {
+  return published.slice(index);
 }
 
 /** Tell every mounted category tree about a subcategory that was just created. */

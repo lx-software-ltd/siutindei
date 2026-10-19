@@ -11,7 +11,8 @@ On an activity subcategory dropdown, offer “— Add a new subcategory —”. 
 
 - Adding a root category from the Category dropdown.
 - Letting a manager create catalog categories.
-- A database migration or a change to the category create API.
+- Showing the add option on enrichment rows or the category-suggestion dialog. The prop defaults off and only the activity editor turns it on for admins.
+- A database migration. Exact duplicates are already rejected by `uq_activity_category_parent_name`. Create and update also reject a sibling whose name differs only by case.
 - Saving the activity itself when the subcategory is created.
 
 ## Files
@@ -22,12 +23,17 @@ On an activity subcategory dropdown, offer “— Add a new subcategory —”. 
 - `apps/admin_web/src/components/shared/activities-panel.tsx` — admins only.
 - `apps/admin_web/tests/components/ui/cascading-category-select.test.tsx`
 - `apps/admin_web/e2e/activities.spec.ts`
+- `backend/src/app/services/activity_categories.py` — reject a sibling name that differs only by case.
+- `tests/test_activity_category_names.py`
 
 ## Invariants this change preserves
 
 - Choosing an existing subcategory still sets that category id.
-- The sentinel value is never stored as an activity category.
-- A category with no children still hides the subcategory dropdown for managers.
+- Choosing “— Add a new subcategory —” stores the parent category, never the sentinel, so Update cannot keep a previous subcategory that the dropdown no longer shows.
+- Each dropdown’s field ids come from `useId()`, so two pickers on one page do not share `category-level-*`.
+- A category with no children still hides the subcategory dropdown unless adding is allowed. That empty dropdown is not marked required.
+- The name field accepts Chinese and Cantonese as well as English.
+- A fetch applies only subcategories created while that request was in flight. A later fetch trusts the server.
 - Pending categorisation cannot be a parent.
 - Creating the subcategory uses the existing admin create route and does not change the activity until the activity editor is saved.
 
@@ -36,6 +42,7 @@ On an activity subcategory dropdown, offer “— Add a new subcategory —”. 
 - `npm run test -- tests/components/ui/cascading-category-select.test.tsx` in `apps/admin_web`.
 - `npm run lint` and `npm run typecheck` in `apps/admin_web`.
 - Playwright `e2e/activities.spec.ts` covers adding a subcategory and selecting it on another activity.
+- `pytest tests/test_activity_category_names.py` rejects a case-variant sibling name.
 
 ## Rollback
 

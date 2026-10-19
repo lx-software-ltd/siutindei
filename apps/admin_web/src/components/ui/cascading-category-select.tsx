@@ -7,9 +7,13 @@ import { useId, useMemo, useState } from 'react';
 import type { ActivityCategoryNode } from '../../lib/api-client';
 import { createResource } from '../../lib/api-client';
 import { publishActivityCategory } from '../../lib/activity-category-tree';
+import {
+  buildTranslationsPayload,
+  emptyTranslations,
+} from '../../lib/translations';
 import { Button } from './button';
-import { Input } from './input';
 import { Label } from './label';
+import { LanguageToggleInput } from './language-toggle-input';
 import { Select } from './select';
 
 export const ADD_SUBCATEGORY_VALUE = '__add_subcategory__';
@@ -61,7 +65,7 @@ export function CascadingCategorySelect({
   hasError = false,
   errorMessage,
   selectClassName = '',
-  allowNewSubcategory = true,
+  allowNewSubcategory = false,
 }: CascadingCategorySelectProps) {
   const fieldId = useId();
   const [overrideState, setOverrideState] = useState<{
@@ -70,6 +74,7 @@ export function CascadingCategorySelect({
   } | null>(null);
   const [addingLevel, setAddingLevel] = useState<number | null>(null);
   const [draftName, setDraftName] = useState('');
+  const [draftTranslations, setDraftTranslations] = useState(emptyTranslations);
   const [addError, setAddError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -168,7 +173,20 @@ export function CascadingCategorySelect({
     if (selectedId === ADD_SUBCATEGORY_VALUE) {
       setAddingLevel(levelIndex);
       setDraftName('');
+      setDraftTranslations(emptyTranslations());
       setAddError('');
+      const parentId = selections[levelIndex - 1];
+      if (parentId && parentId !== value) {
+        const parentChain = selections
+          .slice(0, levelIndex)
+          .map((id) => nodesById.get(id))
+          .filter(Boolean) as ActivityCategoryNode[];
+        setOverrideState({
+          forValue: parentId,
+          selections: selections.slice(0, levelIndex),
+        });
+        onChange(parentId, parentChain);
+      }
       return;
     }
     setAddingLevel(null);
@@ -192,7 +210,9 @@ export function CascadingCategorySelect({
     const siblings = parent.children ?? [];
     const folded = name.toLocaleLowerCase();
     if (siblings.some((child) => child.name.trim().toLocaleLowerCase() === folded)) {
-      setAddError('A subcategory with this name already exists.');
+      setAddError(
+        'A category with this name already exists under that parent.'
+      );
       return;
     }
     const displayOrder =
@@ -201,10 +221,16 @@ export function CascadingCategorySelect({
     setAddError('');
     try {
       const created = await createResource<
-        { name: string; parent_id: string; display_order: number },
+        {
+          name: string;
+          name_translations: Record<string, string>;
+          parent_id: string;
+          display_order: number;
+        },
         CreatedCategory
       >('activity-categories', {
         name,
+        name_translations: buildTranslationsPayload(draftTranslations),
         parent_id: parentId,
         display_order: displayOrder,
       });
@@ -220,6 +246,7 @@ export function CascadingCategorySelect({
       publishActivityCategory(node);
       setAddingLevel(null);
       setDraftName('');
+      setDraftTranslations(emptyTranslations());
       choose(levelIndex, node.id, node);
     } catch (err) {
       setAddError(
@@ -261,7 +288,9 @@ export function CascadingCategorySelect({
             <div key={`${level.label}-${level.index}`}>
               <Label htmlFor={selectId}>
                 {level.label}
-                {required ? <RequiredMark /> : null}
+                {required && (level.index === 0 || level.options.length > 0) ? (
+                  <RequiredMark />
+                ) : null}
               </Label>
               <Select
                 id={selectId}
@@ -291,21 +320,39 @@ export function CascadingCategorySelect({
                 ) : null}
               </Select>
               {showAdd && addingHere ? (
-                <div className='mt-2 space-y-2'>
-                  <Label htmlFor={`${selectId}-new`}>New subcategory</Label>
-                  <Input
+                <div
+                  className='mt-2 space-y-2'
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      void addSubcategory(level.index);
+                    }
+                  }}
+                >
+                  <LanguageToggleInput
                     id={`${selectId}-new`}
-                    value={draftName}
-                    disabled={disabled || saving}
-                    onChange={(event) => {
-                      setDraftName(event.target.value);
-                      if (addError) setAddError('');
+                    label='New subcategory'
+                    required
+                    readOnly={disabled || saving}
+                    hasError={Boolean(addError)}
+                    values={{
+                      en: draftName,
+                      zh: draftTranslations.zh,
+                      yue: draftTranslations.yue,
                     }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault();
-                        void addSubcategory(level.index);
+                    onChange={(
+                      language,
+                      next: string
+                    ) => {
+                      if (language === 'en') {
+                        setDraftName(next);
+                      } else {
+                        setDraftTranslations((current) => ({
+                          ...current,
+                          [language]: next,
+                        }));
                       }
+                      if (addError) setAddError('');
                     }}
                   />
                   <Button

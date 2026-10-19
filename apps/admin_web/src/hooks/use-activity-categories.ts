@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-  applyPublishedCategories,
   insertActivityCategory,
+  publishedCategoriesSince,
+  publishedCategoryCount,
   subscribeActivityCategories,
 } from '../lib/activity-category-tree';
 import {
@@ -24,8 +25,16 @@ export function useActivityCategories() {
     if (fetched.current) return;
     fetched.current = true;
 
+    const publishedAtStart = publishedCategoryCount();
     fetchActivityCategories()
-      .then((res) => setTree(applyPublishedCategories(res.items)))
+      .then((res) =>
+        setTree(
+          publishedCategoriesSince(publishedAtStart).reduce(
+            (current, node) => insertActivityCategory(current, node),
+            res.items
+          )
+        )
+      )
       .catch(() => setTree([]))
       .finally(() => setIsLoading(false));
   }, []);
