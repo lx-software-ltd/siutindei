@@ -16,6 +16,7 @@ from app.db.repositories import ActivityCategoryRepository
 from app.exceptions import ValidationError
 from app.services.activity_categories import create_activity_category
 from app.services.activity_categories import parse_display_order
+from app.services.activity_categories import reject_same_parent_name
 from app.services.activity_categories import validate_category_parent
 from app.utils.translations import build_translation_map
 
@@ -84,5 +85,14 @@ def _update_activity_category(
                 field="show_in_wizard",
             )
         entity.show_in_wizard = show_in_wizard
+
+    if "name" in body or "parent_id" in body:
+        parent_id = _to_uuid(entity.parent_id) if entity.parent_id else None
+        reject_same_parent_name(
+            repo,
+            str(entity.name),
+            parent_id,
+            category_id=_to_uuid(entity.id),
+        )
 
     return entity

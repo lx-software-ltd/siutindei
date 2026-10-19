@@ -2,11 +2,22 @@
 import { formErrorClassName, RequiredMark } from './admin-field-grid';
 import { AdminInlineError } from './admin-inline-error';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 
 import type { ActivityCategoryNode } from '../../lib/api-client';
+import { createResource } from '../../lib/api-client';
+import { publishActivityCategory } from '../../lib/activity-category-tree';
+import {
+  buildTranslationsPayload,
+  emptyTranslations,
+} from '../../lib/translations';
+import { Button } from './button';
 import { Label } from './label';
+import { LanguageToggleInput } from './language-toggle-input';
 import { Select } from './select';
+
+export const ADD_SUBCATEGORY_VALUE = '__add_subcategory__';
+export const ADD_SUBCATEGORY_LABEL = '— Add a new subcategory —';
 
 interface CascadingCategorySelectProps {
   /** The full category tree from useActivityCategories(). */
@@ -25,6 +36,20 @@ interface CascadingCategorySelectProps {
   errorMessage?: string;
   /** Extra classes applied to each select. */
   selectClassName?: string;
+  /**
+   * Admins can create a subcategory under the selected category.
+   * Managers leave this off.
+   */
+  allowNewSubcategory?: boolean;
+}
+
+interface CreatedCategory {
+  id: string;
+  parent_id?: string | null;
+  name: string;
+  name_translations?: Record<string, string>;
+  display_order?: number;
+  is_system?: boolean;
 }
 
 /**
@@ -40,11 +65,18 @@ export function CascadingCategorySelect({
   hasError = false,
   errorMessage,
   selectClassName = '',
+  allowNewSubcategory = false,
 }: CascadingCategorySelectProps) {
+  const fieldId = useId();
   const [overrideState, setOverrideState] = useState<{
     forValue: string;
     selections: string[];
   } | null>(null);
+  const [addingLevel, setAddingLevel] = useState<number | null>(null);
+  const [draftName, setDraftName] = useState('');
+  const [draftTranslations, setDraftTranslations] = useState(emptyTranslations);
+  const [addError, setAddError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const nodesById = useMemo(() => {
     const map = new Map<string, ActivityCategoryNode>();
@@ -95,22 +127,32 @@ export function CascadingCategorySelect({
     let depth = 1;
     while (parentId) {
       const parent = nodesById.get(parentId);
-      if (!parent || !parent.children || parent.children.length === 0) {
+      if (!parent) {
+        break;
+      }
+      const children = parent.children ?? [];
+      const canStartHere =
+        allowNewSubcategory && !parent.is_system && depth === 1;
+      if (children.length === 0 && !canStartHere) {
         break;
       }
       const label = depth === 1 ? 'Subcategory' : `Subcategory ${depth}`;
       nextLevels.push({
         label,
-        options: parent.children,
+        options: children,
         index: depth,
       });
       parentId = selections[depth];
       depth++;
     }
     return nextLevels;
-  }, [nodesById, selections, tree]);
+  }, [allowNewSubcategory, nodesById, selections, tree]);
 
-  const handleSelect = (levelIndex: number, selectedId: string) => {
+  const choose = (
+    levelIndex: number,
+    selectedId: string,
+    created?: ActivityCategoryNode
+  ) => {
     let updated = selections.slice(0, levelIndex);
     if (selectedId) {
       updated = [...updated, selectedId];
@@ -120,9 +162,101 @@ export function CascadingCategorySelect({
     const finalId = updated[updated.length - 1];
     if (!finalId) return;
     const chain = updated
-      .map((id) => nodesById.get(id))
+      .map((id) =>
+        created && id === created.id ? created : nodesById.get(id)
+      )
       .filter(Boolean) as ActivityCategoryNode[];
     onChange(finalId, chain);
+  };
+
+  const handleSelect = (levelIndex: number, selectedId: string) => {
+    if (selectedId === ADD_SUBCATEGORY_VALUE) {
+      setAddingLevel(levelIndex);
+      setDraftName('');
+      setDraftTranslations(emptyTranslations());
+      setAddError('');
+      const parentId = selections[levelIndex - 1];
+      if (parentId && parentId !== value) {
+        const parentChain = selections
+          .slice(0, levelIndex)
+          .map((id) => nodesById.get(id))
+          .filter(Boolean) as ActivityCategoryNode[];
+        setOverrideState({
+          forValue: parentId,
+          selections: selections.slice(0, levelIndex),
+        });
+        onChange(parentId, parentChain);
+      }
+      return;
+    }
+    setAddingLevel(null);
+    setDraftName('');
+    setAddError('');
+    choose(levelIndex, selectedId);
+  };
+
+  const addSubcategory = async (levelIndex: number) => {
+    const parentId = selections[levelIndex - 1];
+    const parent = parentId ? nodesById.get(parentId) : undefined;
+    const name = draftName.trim();
+    if (!parent || !parentId) {
+      setAddError('Select a category before adding a subcategory.');
+      return;
+    }
+    if (!name) {
+      setAddError('Enter a subcategory name.');
+      return;
+    }
+    const siblings = parent.children ?? [];
+    const folded = name.toLocaleLowerCase();
+    if (siblings.some((child) => child.name.trim().toLocaleLowerCase() === folded)) {
+      setAddError(
+        'A category with this name already exists under that parent.'
+      );
+      return;
+    }
+    const displayOrder =
+      siblings.reduce((max, child) => Math.max(max, child.display_order ?? 0), 0) + 1;
+    setSaving(true);
+    setAddError('');
+    try {
+      const created = await createResource<
+        {
+          name: string;
+          name_translations: Record<string, string>;
+          parent_id: string;
+          display_order: number;
+        },
+        CreatedCategory
+      >('activity-categories', {
+        name,
+        name_translations: buildTranslationsPayload(draftTranslations),
+        parent_id: parentId,
+        display_order: displayOrder,
+      });
+      const node: ActivityCategoryNode = {
+        id: created.id,
+        parent_id: created.parent_id ?? parentId,
+        name: created.name,
+        name_translations: created.name_translations ?? { en: created.name },
+        display_order: created.display_order ?? displayOrder,
+        is_system: Boolean(created.is_system),
+        children: [],
+      };
+      publishActivityCategory(node);
+      setAddingLevel(null);
+      setDraftName('');
+      setDraftTranslations(emptyTranslations());
+      choose(levelIndex, node.id, node);
+    } catch (err) {
+      setAddError(
+        err instanceof Error && err.message
+          ? err.message
+          : 'Could not add the subcategory.'
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const errorId = errorMessage
@@ -141,17 +275,32 @@ export function CascadingCategorySelect({
         {levels.map((level) => {
           const isLevelDisabled =
             disabled || (level.index > 0 && !selections[level.index - 1]);
+          const parent =
+            level.index > 0
+              ? nodesById.get(selections[level.index - 1] ?? '')
+              : undefined;
+          const showAdd = Boolean(
+            allowNewSubcategory && parent && !parent.is_system
+          );
+          const selectId = `${fieldId}-level-${level.index}`;
+          const addingHere = addingLevel === level.index;
           return (
             <div key={`${level.label}-${level.index}`}>
-              <Label htmlFor={`category-level-${level.index}`}>
+              <Label htmlFor={selectId}>
                 {level.label}
-                {required ? <RequiredMark /> : null}
+                {required && (level.index === 0 || level.options.length > 0) ? (
+                  <RequiredMark />
+                ) : null}
               </Label>
               <Select
-                id={`category-level-${level.index}`}
-                value={selections[level.index] || ''}
+                id={selectId}
+                value={
+                  addingHere
+                    ? ADD_SUBCATEGORY_VALUE
+                    : selections[level.index] || ''
+                }
                 onChange={(e) => handleSelect(level.index, e.target.value)}
-                disabled={isLevelDisabled}
+                disabled={isLevelDisabled || saving}
                 className={selectClasses}
                 aria-invalid={hasError || undefined}
                 aria-describedby={errorId}
@@ -164,7 +313,62 @@ export function CascadingCategorySelect({
                     {opt.is_system ? `${opt.name} (pending)` : opt.name}
                   </option>
                 ))}
+                {showAdd ? (
+                  <option value={ADD_SUBCATEGORY_VALUE}>
+                    {ADD_SUBCATEGORY_LABEL}
+                  </option>
+                ) : null}
               </Select>
+              {showAdd && addingHere ? (
+                <div
+                  className='mt-2 space-y-2'
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      void addSubcategory(level.index);
+                    }
+                  }}
+                >
+                  <LanguageToggleInput
+                    id={`${selectId}-new`}
+                    label='New subcategory'
+                    required
+                    readOnly={disabled || saving}
+                    hasError={Boolean(addError)}
+                    values={{
+                      en: draftName,
+                      zh: draftTranslations.zh,
+                      yue: draftTranslations.yue,
+                    }}
+                    onChange={(
+                      language,
+                      next: string
+                    ) => {
+                      if (language === 'en') {
+                        setDraftName(next);
+                      } else {
+                        setDraftTranslations((current) => ({
+                          ...current,
+                          [language]: next,
+                        }));
+                      }
+                      if (addError) setAddError('');
+                    }}
+                  />
+                  <Button
+                    type='button'
+                    size='sm'
+                    loading={saving}
+                    disabled={disabled}
+                    onClick={() => void addSubcategory(level.index)}
+                  >
+                    Add subcategory
+                  </Button>
+                  {addError ? (
+                    <AdminInlineError size='xs'>{addError}</AdminInlineError>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           );
         })}

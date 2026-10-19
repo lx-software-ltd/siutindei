@@ -224,6 +224,37 @@ test.describe('Activities Panel', () => {
     ).toHaveCount(0);
     await expect(adminPage.getByText('No activities match your search.')).toHaveCount(0);
   });
+
+  test('adds a subcategory and offers it on another activity', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New activity' }).click();
+    await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
+    await adminPage
+      .getByLabel('Subcategory')
+      .selectOption({ label: '— Add a new subcategory —' });
+    await expect(adminPage.getByLabel('New subcategory')).toBeVisible();
+    await adminPage.getByRole('button', { name: 'Add subcategory' }).click();
+    await expect(adminPage.getByText('Enter a subcategory name.')).toBeVisible();
+
+    const created = adminPage.waitForResponse(
+      (response) =>
+        response.url().includes('/admin/activity-categories') &&
+        response.request().method() === 'POST'
+    );
+    await adminPage.getByLabel('New subcategory').fill('Kayaking');
+    await adminPage.getByRole('button', { name: 'Add subcategory' }).click();
+    const response = await created;
+    const body = (await response.json()) as { id: string; parent_id: string };
+    expect(body.parent_id).toBe('cat-sport');
+    await expect(adminPage.getByLabel('Subcategory')).toHaveValue(body.id);
+    await expect(adminPage.getByRole('option', { name: 'Kayaking' })).toHaveCount(1);
+
+    await adminPage.getByRole('row', { name: /Swimming Class/ }).first().click();
+    await adminPage.getByRole('button', { name: 'Discard changes' }).click();
+    await expect(adminPage.getByLabel('Name')).toHaveValue('Swimming Class');
+    await expect(adminPage.getByRole('option', { name: 'Kayaking' })).toHaveCount(1);
+    await adminPage.getByLabel('Subcategory').selectOption({ label: 'Kayaking' });
+    await expect(adminPage.getByLabel('Subcategory')).toHaveValue(body.id);
+  });
 });
 
 test.describe('Activities Panel - Form Validation', () => {
