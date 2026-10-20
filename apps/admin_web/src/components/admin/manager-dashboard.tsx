@@ -63,6 +63,8 @@ export function ManagerDashboard() {
     useState<Ticket | null>(null);
   const [pendingFeedback, setPendingFeedback] = useState<Ticket | null>(null);
   const [managerOrgName, setManagerOrgName] = useState<string | null>(null);
+  const [statusRequest, setStatusRequest] = useState(0);
+  const [seenOrgParam, setSeenOrgParam] = useState(orgParam);
   const { activeSection, selectSection } = useAdminSectionQuery(
     managerSectionLabels,
     'organizations'
@@ -73,72 +75,93 @@ export function ManagerDashboard() {
     return response.items;
   }, []);
 
-  const loadManagerStatus = useCallback(async () => {
+  const reloadManagerStatus = useCallback(() => {
     setIsLoading(true);
     setError('');
-    try {
-      // Load access request, suggestions, and feedback in parallel
-      const [status, suggestionsStatus, feedbackStatus] = await Promise.all([
-        getUserAccessStatus(),
-        getUserSuggestions(),
-        getUserFeedback(),
-      ]);
-      // Check for pending suggestion
-      if (suggestionsStatus.has_pending_suggestion) {
-        const pending = suggestionsStatus.suggestions.find(
-          (s) => s.status === 'pending'
-        );
-        if (pending) {
-          setPendingSuggestion(pending);
-        }
-      }
+    setStatusRequest((current) => current + 1);
+  }, []);
 
-      if (feedbackStatus.has_pending_feedback) {
-        const pending = feedbackStatus.feedbacks.find(
-          (item) => item.status === 'pending'
-        );
-        if (pending) {
-          setPendingFeedback(pending);
-        }
-      }
-
-      if (status.organizations_count > 0) {
-        const items = await loadManagerOrgs();
-        setManagerOrgs(items);
-        if (items.length === 0) {
-          setManagerOrgName(null);
-          setError('No organization is assigned to this account.');
-          setView('error');
-          return;
-        }
-        const orgName = items[0]?.name?.trim();
-        setManagerOrgName(orgName ? orgName : null);
-        const current =
-          orgParam !== null && items.some((org) => org.id === orgParam);
-        if (!current) {
-          setOrg(items[0].id);
-        }
-        setView('dashboard');
-      } else {
-        setManagerOrgs([]);
-        setManagerOrgName(null);
-        setView('request-form');
-      }
-    } catch (err) {
-      const message =
-        err instanceof ApiError
-          ? err.message
-          : 'Failed to load your account status.';
-      setError(message);
-      setView('error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [loadManagerOrgs, orgParam, setOrg]);
+  if (seenOrgParam !== orgParam) {
+    setSeenOrgParam(orgParam);
+    setIsLoading(true);
+    setError('');
+  }
 
   useEffect(() => {
-    loadManagerStatus();
-  }, [loadManagerStatus]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const [status, suggestionsStatus, feedbackStatus] = await Promise.all([
+          getUserAccessStatus(),
+          getUserSuggestions(),
+          getUserFeedback(),
+        ]);
+        if (cancelled) {
+          return;
+        }
+        if (suggestionsStatus.has_pending_suggestion) {
+          const pending = suggestionsStatus.suggestions.find(
+            (item) => item.status === 'pending'
+          );
+          if (pending) {
+            setPendingSuggestion(pending);
+          }
+        }
+
+        if (feedbackStatus.has_pending_feedback) {
+          const pending = feedbackStatus.feedbacks.find(
+            (item) => item.status === 'pending'
+          );
+          if (pending) {
+            setPendingFeedback(pending);
+          }
+        }
+
+        if (status.organizations_count > 0) {
+          const items = await loadManagerOrgs();
+          if (cancelled) {
+            return;
+          }
+          setManagerOrgs(items);
+          if (items.length === 0) {
+            setManagerOrgName(null);
+            setError('No organization is assigned to this account.');
+            setView('error');
+            return;
+          }
+          const orgName = items[0]?.name?.trim();
+          setManagerOrgName(orgName ? orgName : null);
+          const current =
+            orgParam !== null && items.some((org) => org.id === orgParam);
+          if (!current) {
+            setOrg(items[0].id);
+          }
+          setView('dashboard');
+        } else {
+          setManagerOrgs([]);
+          setManagerOrgName(null);
+          setView('request-form');
+        }
+      } catch (err) {
+        if (cancelled) {
+          return;
+        }
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : 'Failed to load your account status.';
+        setError(message);
+        setView('error');
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadManagerOrgs, orgParam, setOrg, statusRequest]);
 
   useEffect(() => {
     if (view !== 'dashboard' || orgParam || managerOrgs.length === 0) {
@@ -192,12 +215,12 @@ export function ManagerDashboard() {
           <OrganizationsPanel
             mode='manager'
             onOrganizationRemoved={() => {
-              void loadManagerStatus();
+              void reloadManagerStatus();
             }}
           />
         );
     }
-  }, [activeSection, loadManagerStatus, pendingFeedback, pendingSuggestion]);
+  }, [activeSection, pendingFeedback, pendingSuggestion, reloadManagerStatus]);
 
   // Loading state
   if (view === 'loading' || isLoading) {
@@ -221,7 +244,7 @@ export function ManagerDashboard() {
             type='button'
             variant='secondary'
             onClick={() => {
-              void loadManagerStatus();
+              void reloadManagerStatus();
             }}
           >
             Retry

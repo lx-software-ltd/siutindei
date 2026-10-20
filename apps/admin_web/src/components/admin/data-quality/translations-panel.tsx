@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useQueryState } from 'nuqs';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useBulkRowSelection } from '../../../hooks/use-bulk-row-selection';
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
@@ -84,10 +84,8 @@ function fieldLabel(field: string): string {
 
 export function TranslationsPanel() {
   const [organization, setOrganization] = useQueryState('organization');
-  const orgIdRef = useRef(organization);
-  orgIdRef.current = organization;
-  const sweepRunId = useRef<string | null>(null);
-  const sweepNoticeDone = useRef(false);
+  const [sweepRunId, setSweepRunId] = useState<string | null>(null);
+  const [sweepHandledId, setSweepHandledId] = useState<string | null>(null);
   const expanded = useExpandedRecord({ paramName: 'translation-fix' });
   const summaryQuery = useQuery({
     queryKey: [...adminQueryKeys.translationFixes(), 'summary'],
@@ -123,7 +121,7 @@ export function TranslationsPanel() {
         entity_type: entity_type || undefined,
         field: field || undefined,
         status: status || undefined,
-        org_id: orgIdRef.current || undefined,
+        org_id: organization || undefined,
       });
       return { items: page.items, nextCursor: page.next_cursor ?? null };
     },
@@ -135,6 +133,7 @@ export function TranslationsPanel() {
   );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draftText, setDraftText] = useState<Record<string, string>>({});
+  const [appliedDraftKey, setAppliedDraftKey] = useState<string | null>(null);
   const selection = useBulkRowSelection(list.items, list.hasMore);
   const {
     selected,
@@ -169,17 +168,18 @@ export function TranslationsPanel() {
   const openId = open?.id ?? '';
   const openMissing = (open?.missing_languages ?? []).join(',');
   const openProposed = JSON.stringify(open?.proposed_text ?? {});
-  useEffect(() => {
-    if (!openId) {
-      return;
+  const draftKey = `${openId}\0${openMissing}\0${openProposed}`;
+  if (draftKey !== appliedDraftKey) {
+    setAppliedDraftKey(draftKey);
+    if (openId) {
+      const proposed = open?.proposed_text ?? {};
+      const next: Record<string, string> = {};
+      for (const code of open?.missing_languages ?? []) {
+        next[code] = proposed[code] ?? '';
+      }
+      setDraftText(next);
     }
-    const proposed = open?.proposed_text ?? {};
-    const next: Record<string, string> = {};
-    for (const code of open?.missing_languages ?? []) {
-      next[code] = proposed[code] ?? '';
-    }
-    setDraftText(next);
-  }, [openId, openMissing, openProposed, open]);
+  }
 
   const pending = summaryQuery.data?.by_status.pending ?? 0;
   const sweepProgress =
@@ -187,28 +187,25 @@ export function TranslationsPanel() {
       ? `${activeRun.batches_done} of ${activeRun.batches_total}`
       : null;
 
-  useEffect(() => {
-    if (sweepNoticeDone.current) {
-      return;
-    }
-    const started = sweepRunId.current;
-    if (!started || !latestRun || latestRun.scan_run_id !== started) {
-      return;
-    }
-    if (latestRun.status !== 'done' && latestRun.status !== 'failed') {
-      return;
-    }
-    sweepNoticeDone.current = true;
+  const sweepFinished =
+    sweepRunId &&
+    latestRun &&
+    latestRun.scan_run_id === sweepRunId &&
+    (latestRun.status === 'done' || latestRun.status === 'failed')
+      ? latestRun
+      : null;
+  if (sweepFinished && sweepHandledId !== sweepFinished.scan_run_id) {
+    setSweepHandledId(sweepFinished.scan_run_id);
     setNotice((current) => {
       const sweepNotice =
         current.startsWith('Cleared ') || current.includes('queued ');
       if (!sweepNotice) {
         return current;
       }
-      const warning = latestRun.error ? ` ${latestRun.error}` : '';
-      return `Created ${latestRun.created}, updated ${latestRun.updated}, skipped ${latestRun.skipped}, cleared ${latestRun.cleared}.${warning}`;
+      const warning = sweepFinished.error ? ` ${sweepFinished.error}` : '';
+      return `Created ${sweepFinished.created}, updated ${sweepFinished.updated}, skipped ${sweepFinished.skipped}, cleared ${sweepFinished.cleared}.${warning}`;
     });
-  }, [latestRun, notice]);
+  }
 
   async function refresh() {
     await getAdminQueryClient().invalidateQueries({
@@ -231,8 +228,8 @@ export function TranslationsPanel() {
       const scanned =
         result.total_entities == null ? '' : ` Scanned ${result.total_entities} entities.`;
       const warning = result.error ? ` ${result.error}` : '';
-      sweepRunId.current = result.scan_run_id;
-      sweepNoticeDone.current = false;
+      setSweepRunId(result.scan_run_id);
+      setSweepHandledId(null);
       setNotice(
         `Cleared ${result.cleared}, skipped ${result.skipped}, queued ${result.queued_for_model}.${scanned}${sweepLimitNote(result.truncated)}${warning}`
       );

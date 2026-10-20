@@ -85,9 +85,11 @@ export function useResourceEditor<T extends { id: string }, TForm>({
   const formStateRef = useRef(formState);
   const emptyFormRef = useRef(emptyForm);
   const itemToFormRef = useRef(itemToForm);
-  formStateRef.current = formState;
-  emptyFormRef.current = emptyForm;
-  itemToFormRef.current = itemToForm;
+  useEffect(() => {
+    formStateRef.current = formState;
+    emptyFormRef.current = emptyForm;
+    itemToFormRef.current = itemToForm;
+  });
 
   const list = usePaginatedList<T, Record<string, never>>({
     queryKey: [...adminQueryKeys.resourceList(resource, mode), listFiltersKey],
@@ -170,12 +172,13 @@ export function useResourceEditor<T extends { id: string }, TForm>({
   const expand = expanded.expand;
   const collapse = expanded.collapse;
   const expandedId = expanded.expandedId;
-
-  useEffect(() => {
+  const [seenExpandedId, setSeenExpandedId] = useState(expandedId);
+  if (expandedId !== seenExpandedId) {
+    setSeenExpandedId(expandedId);
     if (expandedId) {
       setMissingNotice('');
     }
-  }, [expandedId]);
+  }
 
   const didAutoExpand = useRef(false);
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useQueryState } from 'nuqs';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useBulkRowSelection } from '../../../hooks/use-bulk-row-selection';
 import { useExpandedRecord } from '../../../hooks/use-expanded-record';
@@ -78,10 +78,6 @@ const DEFAULT_FILTERS: NameFilters = {
 export function NamesPanel() {
   const [organization, setOrganization] = useQueryState('organization');
   const [runId, setRun] = useQueryState('run');
-  const orgIdRef = useRef(organization);
-  orgIdRef.current = organization;
-  const runRef = useRef(runId);
-  runRef.current = runId;
   const expanded = useExpandedRecord({ paramName: 'name-fix' });
   const summaryQuery = useQuery({
     queryKey: [...adminQueryKeys.nameFixes(), 'summary'],
@@ -107,9 +103,9 @@ export function NamesPanel() {
         limit,
         entity_type: entity_type || undefined,
         rule: rule || undefined,
-        status: runRef.current ? undefined : status || undefined,
-        org_id: orgIdRef.current || undefined,
-        run: runRef.current || undefined,
+        status: runId ? undefined : status || undefined,
+        org_id: organization || undefined,
+        run: runId || undefined,
       });
       return { items: page.items, nextCursor: page.next_cursor ?? null };
     },

@@ -88,6 +88,30 @@ describe('usePaginatedList', () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  it('loads the rows for the current query key', async () => {
+    const first = vi.fn(async () => ({ items: [{ id: 'a' }], nextCursor: null }));
+    const second = vi.fn(async () => ({ items: [{ id: 'b' }], nextCursor: null }));
+    const { result, rerender } = renderHook(
+      ({
+        queryKey,
+        fetcher,
+      }: {
+        queryKey: readonly string[];
+        fetcher: typeof first;
+      }) =>
+        usePaginatedList<{ id: string }, Record<string, never>>({
+          queryKey,
+          defaultFilters: {},
+          fetcher,
+        }),
+      { initialProps: { queryKey: ['list-a'], fetcher: first } }
+    );
+
+    await waitFor(() => expect(result.current.items.map((item) => item.id)).toEqual(['a']));
+    rerender({ queryKey: ['list-b'], fetcher: second });
+    await waitFor(() => expect(result.current.items.map((item) => item.id)).toEqual(['b']));
+  });
+
   it('refetches on the configured interval', async () => {
     vi.useFakeTimers();
     const fetcher = vi.fn(async () => ({ items: [{ id: 'a' }], nextCursor: null }));

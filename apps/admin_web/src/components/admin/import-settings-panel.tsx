@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { adminTabLabel, formatAdminPageName } from '../../lib/admin-page-name';
 import { getAdminQueryClient } from '../../lib/admin-query-client';
@@ -41,12 +41,6 @@ export function ImportSettingsPanel() {
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
   const settings = draft ?? settingsQuery.data ?? EMPTY_SETTINGS;
-
-  useEffect(() => {
-    if (settingsQuery.data && draft === null) {
-      setDraft(settingsQuery.data);
-    }
-  }, [draft, settingsQuery.data]);
 
   function update<K extends keyof ImportSettings>(key: K, value: ImportSettings[K]) {
     setNotice('');

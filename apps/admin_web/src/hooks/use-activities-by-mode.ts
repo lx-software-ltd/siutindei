@@ -27,53 +27,80 @@ export function useActivitiesByMode(
   mode: ApiMode,
   options: UseActivitiesByModeOptions = {}
 ): UseActivitiesByModeResult {
-  const [items, setItems] = useState<Activity[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-
   const orgId = options.orgId;
-  const loadActivities = useCallback(async () => {
-    if (orgId === null) {
-      setItems([]);
-      setError('');
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
+  const limit = options.limit;
+  const skipped = orgId === null;
+  const [reloadToken, setReloadToken] = useState(0);
+  const requestKey = skipped
+    ? 'skip'
+    : `${mode}:${limit ?? ''}:${orgId ?? ''}:${reloadToken}`;
+  const [items, setItems] = useState<Activity[]>([]);
+  const [isLoading, setIsLoading] = useState(!skipped);
+  const [error, setError] = useState('');
+  const [seenKey, setSeenKey] = useState(requestKey);
+
+  if (seenKey !== requestKey) {
+    setSeenKey(requestKey);
     setError('');
-    try {
-      if (mode === 'admin') {
-        const limit = options.limit ?? 200;
-        const response = await listResource<Activity>(
-          'activities',
-          undefined,
-          limit,
-          undefined,
-          orgId ? { org_id: orgId } : undefined
-        );
-        setItems(response.items);
-      } else {
-        const response = await listManagerActivities(orgId ?? undefined);
-        setItems(response.items);
-      }
-    } catch (err) {
-      const message =
-        err instanceof ApiError ? err.message : 'Failed to load activities.';
-      setError(message);
+    if (skipped) {
       setItems([]);
-    } finally {
       setIsLoading(false);
+    } else {
+      setIsLoading(true);
     }
-  }, [mode, options.limit, orgId]);
+  }
 
   useEffect(() => {
-    loadActivities();
-  }, [loadActivities]);
+    if (skipped) {
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        if (mode === 'admin') {
+          const response = await listResource<Activity>(
+            'activities',
+            undefined,
+            limit ?? 200,
+            undefined,
+            orgId ? { org_id: orgId } : undefined
+          );
+          if (!cancelled) {
+            setItems(response.items);
+          }
+        } else {
+          const response = await listManagerActivities(orgId ?? undefined);
+          if (!cancelled) {
+            setItems(response.items);
+          }
+        }
+      } catch (err) {
+        if (cancelled) {
+          return;
+        }
+        const message =
+          err instanceof ApiError ? err.message : 'Failed to load activities.';
+        setError(message);
+        setItems([]);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [skipped, mode, limit, orgId, reloadToken]);
+
+  const reload = useCallback(() => {
+    setReloadToken((current) => current + 1);
+  }, []);
 
   return {
     items,
     isLoading,
     error,
-    reload: loadActivities,
+    reload,
   };
 }

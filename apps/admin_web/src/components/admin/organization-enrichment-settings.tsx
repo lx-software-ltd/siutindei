@@ -28,14 +28,20 @@ export function OrganizationEnrichmentSettings() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [seenOpen, setSeenOpen] = useState(open);
+  if (open !== seenOpen) {
+    setSeenOpen(open);
+    if (open) {
+      setLoading(true);
+      setError('');
+    }
+  }
 
   useEffect(() => {
     if (!open) {
       return;
     }
     let cancelled = false;
-    setLoading(true);
-    setError('');
     getEnrichmentSettings()
       .then((row) => {
         if (!cancelled) {

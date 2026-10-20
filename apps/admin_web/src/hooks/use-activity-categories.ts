@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  insertActivityCategory,
+  publishedCategoriesSince,
+  publishedCategoryCount,
+  subscribeActivityCategories,
+} from '../lib/activity-category-tree';
+import {
   fetchActivityCategories,
   type ActivityCategoryNode,
 } from '../lib/api-client';
@@ -19,11 +25,27 @@ export function useActivityCategories() {
     if (fetched.current) return;
     fetched.current = true;
 
+    const publishedAtStart = publishedCategoryCount();
     fetchActivityCategories()
-      .then((res) => setTree(res.items))
+      .then((res) =>
+        setTree(
+          publishedCategoriesSince(publishedAtStart).reduce(
+            (current, node) => insertActivityCategory(current, node),
+            res.items
+          )
+        )
+      )
       .catch(() => setTree([]))
       .finally(() => setIsLoading(false));
   }, []);
+
+  useEffect(
+    () =>
+      subscribeActivityCategories((node) => {
+        setTree((current) => insertActivityCategory(current, node));
+      }),
+    []
+  );
 
   /**
    * Walk the tree and collect all nodes as a flat list.
