@@ -54,7 +54,7 @@ final areasServiceProvider = Provider<AreasService>((ref) {
 
 final geographicAreaServiceProvider = Provider<GeographicAreaService>((ref) {
   return GeographicAreaService(
-    ref.watch(apiServiceProvider),
+    ref.watch(areasServiceProvider),
     ref.watch(authServiceProvider),
   );
 });

@@ -1,13 +1,16 @@
 import '../features/home_wizard/models/home_wizard_choices.dart';
 import '../models/geographic_area.dart';
-import 'api_service.dart';
+import 'areas_service.dart';
 import 'auth_service.dart';
 
-/// Loads the active geographic area tree, with a bundled fallback.
+/// Loads the active geographic area tree for search filters.
+///
+/// Signed-in users receive GET /v1/user/areas (cached via [AreasService]).
+/// Guests use a shallow bundled region list so every chip id is searchable.
 class GeographicAreaService {
-  GeographicAreaService(this._apiService, this._authService);
+  GeographicAreaService(this._areasService, this._authService);
 
-  final ApiService _apiService;
+  final AreasService _areasService;
   final AuthService _authService;
   List<GeographicArea>? _cachedTree;
   bool? _cachedForSignedIn;
@@ -17,26 +20,21 @@ class GeographicAreaService {
     if (_cachedTree != null && _cachedForSignedIn == signedIn) {
       return _cachedTree!;
     }
-    if (signedIn) {
-      try {
-        final tree = [
-          for (final node in (await _apiService.fetchActiveAreas()).items)
-            GeographicArea.fromNode(node),
-        ];
-        if (tree.isNotEmpty) {
-          _cachedTree = tree;
-          _cachedForSignedIn = signedIn;
-          return tree;
-        }
-      } on Object {
-        // Use bundled regions when the API is unavailable.
-      }
-    }
-    final fallback = await _fallbackTree();
-    _cachedTree = fallback;
+    final tree = signedIn ? await _loadSignedInTree() : await _guestTree();
+    _cachedTree = tree;
     _cachedForSignedIn = signedIn;
-    return fallback;
+    return tree;
   }
+
+  Future<List<GeographicArea>> _loadSignedInTree() async {
+    final nodes = await _areasService.getActiveAreaTree();
+    return [
+      for (final node in nodes)
+        if (node.active) GeographicArea.fromNode(node, activeOnly: true),
+    ];
+  }
+
+  Future<List<GeographicArea>> _guestTree() => _fallbackTree();
 
   static Future<List<GeographicArea>> _fallbackTree() async {
     final regions = (await HomeWizardChoices.loadFromAsset()).regions;

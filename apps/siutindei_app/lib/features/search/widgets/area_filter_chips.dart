@@ -7,6 +7,9 @@ import '../../../viewmodels/geographic_areas_provider.dart';
 import 'filter_chip_bar.dart';
 
 /// Cascading area filter chips driven by GET /v1/user/areas.
+///
+/// Watches [geographicAreaTreeProvider] once per session; chip rows are derived
+/// in memory via [GeographicAreaTreeIndex] so drill-down stays responsive.
 class AreaFilterChips extends ConsumerWidget {
   const AreaFilterChips({
     super.key,
@@ -27,7 +30,13 @@ class AreaFilterChips extends ConsumerWidget {
         padding: EdgeInsets.symmetric(horizontal: spacing.md),
         child: const LinearProgressIndicator(minHeight: 2),
       ),
-      error: (_, _) => const SizedBox.shrink(),
+      error: (error, _) => Padding(
+        padding: EdgeInsets.symmetric(horizontal: spacing.md),
+        child: Text(
+          'Unable to load areas',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ),
       data: (roots) {
         if (roots.isEmpty) {
           return const SizedBox.shrink();
