@@ -85,22 +85,35 @@ class GeographicAreaTreeIndex {
     return [...nodes]..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
   }
 
+  List<GeographicArea> _visibleSorted(List<GeographicArea> nodes) {
+    return _sorted([
+      for (final node in nodes)
+        if (node.active) node,
+    ]);
+  }
+
   List<GeographicArea> chipOptions({String? selectedAreaId}) {
     if (roots.isEmpty) {
       return const [];
     }
-    final selected = selectedAreaId == null ? null : _byId[selectedAreaId];
+    var selected = selectedAreaId == null ? null : _byId[selectedAreaId];
+    if (selected != null && !selected.active) {
+      selected = null;
+      selectedAreaId = null;
+    }
     if (selected == null) {
-      return _hideRoot ? _sorted(roots.first.children) : _sorted(roots);
+      return _hideRoot
+          ? _visibleSorted(roots.first.children)
+          : _visibleSorted(roots);
     }
     if (selected.hasChildren) {
-      return _sorted(selected.children);
+      return _visibleSorted(selected.children);
     }
     final parent = _byId[_parentById[selectedAreaId]];
     if (parent == null) {
-      return _sorted(roots);
+      return _visibleSorted(roots);
     }
-    return _sorted(parent.children);
+    return _visibleSorted(parent.children);
   }
 
   String? backTarget(String? selectedAreaId) {

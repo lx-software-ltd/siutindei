@@ -5,6 +5,8 @@ GeographicArea _node({
   required String id,
   required String name,
   String? parentId,
+  bool active = true,
+  int displayOrder = 1,
   List<GeographicArea> children = const [],
 }) {
   return GeographicArea(
@@ -12,8 +14,8 @@ GeographicArea _node({
     parentId: parentId,
     name: name,
     level: 'region',
-    active: true,
-    displayOrder: 1,
+    active: active,
+    displayOrder: displayOrder,
     children: children,
   );
 }
@@ -59,6 +61,25 @@ void main() {
       'Mong Kok',
       'Tsim Sha Tsui',
     ]);
+  });
+
+  test('chipOptions omits inactive siblings', () {
+    final index = GeographicAreaTreeIndex.fromRoots([
+      _node(
+        id: 'country',
+        name: 'Hong Kong',
+        children: [
+          _node(id: 'a', parentId: 'country', name: 'Visible'),
+          _node(
+            id: 'hidden',
+            parentId: 'country',
+            name: 'Hidden',
+            active: false,
+          ),
+        ],
+      ),
+    ]);
+    expect(index.chipOptions().map((n) => n.name), ['Visible']);
   });
 
   test('backTarget clears single-country first level selection', () {

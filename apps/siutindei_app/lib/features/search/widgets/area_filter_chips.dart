@@ -22,45 +22,49 @@ class AreaFilterChips extends ConsumerWidget {
     final treeAsync = ref.watch(geographicAreaTreeProvider);
     final spacing = ref.watch(semanticTokensProvider.select((s) => s.spacing));
 
-    return treeAsync.when(
-      loading: () => Padding(
-        padding: EdgeInsets.symmetric(horizontal: spacing.md),
-        child: const LinearProgressIndicator(minHeight: 2),
+    return Semantics(
+      container: true,
+      label: 'Area filters',
+      child: treeAsync.when(
+        loading: () => Padding(
+          padding: EdgeInsets.symmetric(horizontal: spacing.md),
+          child: const LinearProgressIndicator(minHeight: 2),
+        ),
+        error: (_, _) => const SizedBox.shrink(),
+        data: (roots) {
+          if (roots.isEmpty) {
+            return const SizedBox.shrink();
+          }
+          final index = GeographicAreaTreeIndex.fromRoots(roots);
+          final options = index.chipOptions(selectedAreaId: selectedAreaId);
+          if (options.isEmpty) {
+            return const SizedBox.shrink();
+          }
+          final backTarget = index.backTarget(selectedAreaId);
+          return FilterChipBar(
+            children: [
+              if (selectedAreaId != null)
+                TokenFilterChip(
+                  label: 'All areas',
+                  selected: false,
+                  onSelected: (_) => onAreaChanged(null),
+                ),
+              if (backTarget != null)
+                TokenFilterChip(
+                  label: 'Back',
+                  selected: false,
+                  onSelected: (_) => onAreaChanged(backTarget),
+                ),
+              for (final area in options)
+                TokenFilterChip(
+                  label: area.name,
+                  selected: selectedAreaId == area.id,
+                  onSelected: (_) => onAreaChanged(area.id),
+                ),
+            ],
+          );
+        },
       ),
-      error: (_, _) => const SizedBox.shrink(),
-      data: (roots) {
-        if (roots.isEmpty) {
-          return const SizedBox.shrink();
-        }
-        final index = GeographicAreaTreeIndex.fromRoots(roots);
-        final options = index.chipOptions(selectedAreaId: selectedAreaId);
-        if (options.isEmpty) {
-          return const SizedBox.shrink();
-        }
-        final backTarget = index.backTarget(selectedAreaId);
-        return FilterChipBar(
-          children: [
-            if (selectedAreaId != null)
-              TokenFilterChip(
-                label: 'All areas',
-                selected: false,
-                onSelected: (_) => onAreaChanged(null),
-              ),
-            if (backTarget != null)
-              TokenFilterChip(
-                label: 'Back',
-                selected: false,
-                onSelected: (_) => onAreaChanged(backTarget),
-              ),
-            for (final area in options)
-              TokenFilterChip(
-                label: area.name,
-                selected: selectedAreaId == area.id,
-                onSelected: (_) => onAreaChanged(area.id),
-              ),
-          ],
-        );
-      },
     );
   }
 }
