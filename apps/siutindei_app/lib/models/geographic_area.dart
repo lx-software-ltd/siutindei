@@ -113,7 +113,11 @@ class GeographicAreaTreeIndex {
     if (roots.isEmpty) {
       return const [];
     }
-    final selected = selectedAreaId == null ? null : _byId[selectedAreaId];
+    var selected = selectedAreaId == null ? null : _byId[selectedAreaId];
+    if (selected != null && !selected.active) {
+      selected = null;
+      selectedAreaId = null;
+    }
     List<GeographicArea> options;
     if (selected == null) {
       options = _hideRoot
