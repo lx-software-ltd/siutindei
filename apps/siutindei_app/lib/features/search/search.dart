@@ -6,6 +6,13 @@
 /// - Activity cards
 /// - Search state management
 ///
+/// ## Area filter
+///
+/// SearchScreen shows AreaFilterChips, a horizontal cascading chip bar backed
+/// by geographicAreaTreeProvider (GET /v1/user/areas). The selected node is
+/// stored on SearchFilters.areaId and sent as area_id on activity search.
+/// The same chips appear in SearchFiltersSheet.
+///
 /// ## Usage
 ///
 /// ```dart

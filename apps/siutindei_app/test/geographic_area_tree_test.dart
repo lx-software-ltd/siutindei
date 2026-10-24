@@ -63,13 +63,13 @@ void main() {
     ]);
   });
 
-  test('chipOptions omits inactive siblings', () {
+  test('chipOptions skips inactive siblings', () {
     final index = GeographicAreaTreeIndex.fromRoots([
       _node(
         id: 'country',
         name: 'Hong Kong',
         children: [
-          _node(id: 'a', parentId: 'country', name: 'Visible'),
+          _node(id: 'a', parentId: 'country', name: 'Island'),
           _node(
             id: 'hidden',
             parentId: 'country',
@@ -79,7 +79,32 @@ void main() {
         ],
       ),
     ]);
-    expect(index.chipOptions().map((n) => n.name), ['Visible']);
+    expect(index.chipOptions().map((n) => n.name), ['Island']);
+  });
+
+  test('chipOptions flattens bundled district row to neighbourhoods', () {
+    final index = GeographicAreaTreeIndex.fromRoots([
+      _node(
+        id: 'region',
+        parentId: 'country',
+        name: 'Kowloon',
+        children: [
+          _node(
+            id: 'bundled-district-region-0',
+            parentId: 'region',
+            name: 'District',
+            children: [
+              _node(id: 'n1', parentId: 'bundled-district-region-0', name: 'A'),
+              _node(id: 'n2', parentId: 'bundled-district-region-0', name: 'B'),
+            ],
+          ),
+        ],
+      ),
+    ]);
+    expect(
+      index.chipOptions(selectedAreaId: 'region').map((n) => n.name),
+      ['A', 'B'],
+    );
   });
 
   test('backTarget clears single-country first level selection', () {
