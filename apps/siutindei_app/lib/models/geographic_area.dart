@@ -13,7 +13,10 @@ class GeographicArea {
     this.children = const [],
   });
 
-  factory GeographicArea.fromNode(GeographicAreaNode node) {
+  factory GeographicArea.fromNode(
+    GeographicAreaNode node, {
+    bool activeOnly = false,
+  }) {
     return GeographicArea(
       id: node.id,
       parentId: node.parentId,
@@ -23,7 +26,9 @@ class GeographicArea {
       active: node.active,
       displayOrder: node.displayOrder,
       children: [
-        for (final child in node.children) GeographicArea.fromNode(child),
+        for (final child in node.children)
+          if (!activeOnly || child.active)
+            GeographicArea.fromNode(child, activeOnly: activeOnly),
       ],
     );
   }
@@ -56,7 +61,10 @@ class GeographicArea {
   bool get hasChildren => children.isNotEmpty;
 }
 
-/// Indexed area tree for chip options and back navigation.
+/// Indexed area tree for cascading search filter chips.
+///
+/// Top-level options mirror GET /v1/user/areas; selecting a node with children
+/// drills in, and Back / All areas walk up or clear the active area filter.
 class GeographicAreaTreeIndex {
   GeographicAreaTreeIndex._(this.roots, this._byId, this._parentById);
 
@@ -81,26 +89,49 @@ class GeographicAreaTreeIndex {
 
   bool get _hideRoot => roots.length == 1 && roots.first.hasChildren;
 
-  List<GeographicArea> _sorted(List<GeographicArea> nodes) {
-    return [...nodes]..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+  List<GeographicArea> _sortedActive(List<GeographicArea> nodes) {
+    final active = nodes.where((node) => node.active).toList();
+    active.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    return active;
+  }
+
+  /// Bundled offline trees use synthetic district ids; skip that row so users
+  /// pick real neighbourhood UUIDs that match the search API.
+  List<GeographicArea> _flattenBundledDistrictRow(List<GeographicArea> nodes) {
+    if (nodes.isEmpty ||
+        !nodes.every((node) => node.id.startsWith('bundled-district-'))) {
+      return nodes;
+    }
+    final flattened = <GeographicArea>[];
+    for (final district in nodes) {
+      flattened.addAll(_sortedActive(district.children));
+    }
+    return flattened;
   }
 
   List<GeographicArea> chipOptions({String? selectedAreaId}) {
     if (roots.isEmpty) {
       return const [];
     }
-    final selected = selectedAreaId == null ? null : _byId[selectedAreaId];
+    var selected = selectedAreaId == null ? null : _byId[selectedAreaId];
+    if (selected != null && !selected.active) {
+      selected = null;
+      selectedAreaId = null;
+    }
+    List<GeographicArea> options;
     if (selected == null) {
-      return _hideRoot ? _sorted(roots.first.children) : _sorted(roots);
+      options = _hideRoot
+          ? _sortedActive(roots.first.children)
+          : _sortedActive(roots);
+    } else if (selected.hasChildren) {
+      options = _sortedActive(selected.children);
+    } else {
+      final parent = _byId[_parentById[selectedAreaId]];
+      options = parent == null
+          ? _sortedActive(roots)
+          : _sortedActive(parent.children);
     }
-    if (selected.hasChildren) {
-      return _sorted(selected.children);
-    }
-    final parent = _byId[_parentById[selectedAreaId]];
-    if (parent == null) {
-      return _sorted(roots);
-    }
-    return _sorted(parent.children);
+    return _flattenBundledDistrictRow(options);
   }
 
   String? backTarget(String? selectedAreaId) {

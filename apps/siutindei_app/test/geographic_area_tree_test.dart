@@ -5,6 +5,8 @@ GeographicArea _node({
   required String id,
   required String name,
   String? parentId,
+  bool active = true,
+  int displayOrder = 1,
   List<GeographicArea> children = const [],
 }) {
   return GeographicArea(
@@ -12,8 +14,8 @@ GeographicArea _node({
     parentId: parentId,
     name: name,
     level: 'region',
-    active: true,
-    displayOrder: 1,
+    active: active,
+    displayOrder: displayOrder,
     children: children,
   );
 }
@@ -59,6 +61,50 @@ void main() {
       'Mong Kok',
       'Tsim Sha Tsui',
     ]);
+  });
+
+  test('chipOptions skips inactive siblings', () {
+    final index = GeographicAreaTreeIndex.fromRoots([
+      _node(
+        id: 'country',
+        name: 'Hong Kong',
+        children: [
+          _node(id: 'a', parentId: 'country', name: 'Island'),
+          _node(
+            id: 'hidden',
+            parentId: 'country',
+            name: 'Hidden',
+            active: false,
+          ),
+        ],
+      ),
+    ]);
+    expect(index.chipOptions().map((n) => n.name), ['Island']);
+  });
+
+  test('chipOptions flattens bundled district row to neighbourhoods', () {
+    final index = GeographicAreaTreeIndex.fromRoots([
+      _node(
+        id: 'region',
+        parentId: 'country',
+        name: 'Kowloon',
+        children: [
+          _node(
+            id: 'bundled-district-region-0',
+            parentId: 'region',
+            name: 'District',
+            children: [
+              _node(id: 'n1', parentId: 'bundled-district-region-0', name: 'A'),
+              _node(id: 'n2', parentId: 'bundled-district-region-0', name: 'B'),
+            ],
+          ),
+        ],
+      ),
+    ]);
+    expect(
+      index.chipOptions(selectedAreaId: 'region').map((n) => n.name),
+      ['A', 'B'],
+    );
   });
 
   test('backTarget clears single-country first level selection', () {

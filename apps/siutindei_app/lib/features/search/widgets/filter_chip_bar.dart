@@ -20,6 +20,9 @@ class FilterChipBar extends ConsumerWidget {
     return RepaintBoundary(
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
+        primary: false,
+        clipBehavior: Clip.hardEdge,
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: padding ?? EdgeInsets.symmetric(horizontal: spacing.md),
         child: Row(
           mainAxisSize: MainAxisSize.min,
