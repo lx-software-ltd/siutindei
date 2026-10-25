@@ -5,6 +5,8 @@ GeographicArea _node({
   required String id,
   required String name,
   String? parentId,
+  bool active = true,
+  int displayOrder = 1,
   List<GeographicArea> children = const [],
 }) {
   return GeographicArea(
@@ -12,8 +14,8 @@ GeographicArea _node({
     parentId: parentId,
     name: name,
     level: 'region',
-    active: true,
-    displayOrder: 1,
+    active: active,
+    displayOrder: displayOrder,
     children: children,
   );
 }
@@ -68,13 +70,11 @@ void main() {
         name: 'Hong Kong',
         children: [
           _node(id: 'a', parentId: 'country', name: 'Island'),
-          GeographicArea(
+          _node(
             id: 'hidden',
             parentId: 'country',
             name: 'Hidden',
-            level: 'region',
             active: false,
-            displayOrder: 2,
           ),
         ],
       ),
