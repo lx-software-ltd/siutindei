@@ -23,9 +23,9 @@
     "lighthouse:ci": "lhci autorun --config=.lighthouserc.json"
   },
   "dependencies": {
-    "next": "^16.4.0",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "next": "^16.4.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@lhci/cli": "^0.15.1",
@@ -37,11 +37,11 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^4.1.12",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.4.0",
+    "eslint-config-next": "^16.4.2",
     "jsdom": "^29.1.1",
-    "postcss": "^8.5.29",
+    "postcss": "^8.5.31",
     "tailwindcss": "^4.2.0",
     "typescript": "^5.9.3",
     "vite": "^8.3.4",

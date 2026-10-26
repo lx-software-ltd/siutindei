@@ -1,9 +1,9 @@
 alembic==1.20.0
-boto3==1.43.111
+boto3==1.43.114
 pyjwt[crypto]==2.15.1
 pydantic==2.14.1
 psycopg[binary]==3.2.13
-sqlalchemy==2.1.4
+sqlalchemy==2.1.5
 phonenumbers==9.0.41
 pycountry==26.2.16
 pypdf==6.21.2
