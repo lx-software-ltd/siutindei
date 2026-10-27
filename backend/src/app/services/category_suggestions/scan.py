@@ -272,17 +272,31 @@ def process_scan_batch(
         )
         _fail(scan_run_id, activity_ids, str(exc) or type(exc).__name__, message_id)
         return True
-    with Session(get_engine()) as session:
-        reply.keep(session)
-        store_scan_batch(
-            session,
-            scan_run_id,
-            activity_ids,
-            parsed,
-            usage,
-            message_id=message_id,
+    try:
+        with Session(get_engine()) as session:
+            reply.keep(session)
+            store_scan_batch(
+                session,
+                scan_run_id,
+                activity_ids,
+                parsed,
+                usage,
+                message_id=message_id,
+            )
+            session.commit()
+    except Exception as exc:
+        logger.exception(
+            "Category check result was not stored",
+            extra={"scan_run_id": str(scan_run_id)},
         )
-        session.commit()
+        if receive_count >= 3:
+            _fail(
+                scan_run_id,
+                activity_ids,
+                str(exc) or type(exc).__name__,
+                message_id,
+            )
+        raise
     return True
 
 

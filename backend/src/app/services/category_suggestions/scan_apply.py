@@ -288,6 +288,7 @@ def _add_review(
     ).scalar_one_or_none()
     if existing is not None:
         return
+    _close_open_reviews(session, activity.id, run_id=run.id, now=now)
     decided = status in {"confirmed", "auto_applied"}
     session.add(
         ActivityCategoryReview(
@@ -309,6 +310,29 @@ def _add_review(
             decided_at=now if decided else None,
         )
     )
+
+
+def _close_open_reviews(
+    session: Session,
+    activity_id: UUID | str,
+    *,
+    run_id: UUID,
+    now: datetime,
+) -> None:
+    """Dismiss pending reviews before inserting a newer verdict."""
+    rows = session.scalars(
+        select(ActivityCategoryReview).where(
+            ActivityCategoryReview.activity_id == activity_id,
+            ActivityCategoryReview.status == "pending",
+        )
+    ).all()
+    if not rows:
+        return
+    for row in rows:
+        row.status = "dismissed"
+        row.decided_by = f"category-scan:{run_id}"
+        row.decided_at = now
+    session.flush()
 
 
 def _category_hash(session: Session, activity: Activity) -> str:

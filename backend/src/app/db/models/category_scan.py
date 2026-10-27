@@ -232,4 +232,11 @@ class ActivityCategoryReview(Base):
             "'dismissed', 'reverted')",
             name="activity_cat_reviews_status_check",
         ),
+        Index(
+            "activity_cat_reviews_one_pending",
+            "activity_id",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+            sqlite_where=text("status = 'pending'"),
+        ),
     )

@@ -94,9 +94,11 @@ run to a single organization; the default is every organization in
 that scope. Auto-assign still applies only while the organization is
 `pending_review`. A run skips an activity that was
 confirmed, applied, or auto-applied in the last 30 days unless the
-request sets `rescan`. An activity with a review still `pending` is
-skipped even on rescan, so a second run does not open a duplicate
-decision. An activity an admin dismissed or reverted is still scanned,
+request sets `rescan`. The candidate query skips an activity with a review still `pending`,
+including on rescan. A data-quality run names activities explicitly and
+rechecks one whose input changed, even when a pending review exists.
+Storing that newer verdict dismisses the older pending review first, so
+an activity still has only one open decision. An activity an admin dismissed or reverted is still scanned,
 and it is never auto-assigned again. A reassign whose target is the
 activity's current category is stored as confirm.
 
@@ -114,7 +116,9 @@ try again. A reassign onto a leaf still auto-applies at the threshold.
 Discover rejects the flag.
 
 Each batch is one SQS message, `{"scan_run_id", "activity_ids"}`, on
-the same queue as enrichment. The model returns confirm, reassign, or
+the same queue as enrichment. A failure while storing the verdict is
+retried with the message. The third receive counts that batch as failed
+so the run can finish. The model returns confirm, reassign, or
 propose. Confirm leaves the category in place. Reassign at or above
 the threshold changes `activities.category_id` immediately and stores
 the previous category. A lower score, or an organization that left
