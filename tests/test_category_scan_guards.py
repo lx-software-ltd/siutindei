@@ -313,6 +313,35 @@ def test_one_active_run_index(db_session) -> None:
     assert db_session.scalar(select(func.count()).select_from(CategoryScanRun)) == 1
 
 
+def test_one_pending_review_per_activity(
+    db_session, sample_activity, sample_organization
+) -> None:
+    first = _run(db_session, status="done", batches_total=0)
+    second = _run(db_session, status="done", batches_total=0)
+    db_session.add(
+        ActivityCategoryReview(
+            scan_run_id=first.id,
+            activity_id=sample_activity.id,
+            org_id=sample_organization.id,
+            verdict="reassign",
+            status="pending",
+        )
+    )
+    db_session.flush()
+    with pytest.raises(IntegrityError):
+        with db_session.begin_nested():
+            db_session.add(
+                ActivityCategoryReview(
+                    scan_run_id=second.id,
+                    activity_id=sample_activity.id,
+                    org_id=sample_organization.id,
+                    verdict="reassign",
+                    status="pending",
+                )
+            )
+            db_session.flush()
+
+
 def test_start_scan_maps_integrity_error_to_busy(test_engine) -> None:
     with _Seed(test_engine) as seeded:
         with Session(test_engine) as session:
@@ -502,6 +531,54 @@ def test_process_scan_batch_retries_then_records_the_third_failure(
             assert run is not None
             assert run.status == "failed"
             assert run.error == "down"
+
+
+def test_process_scan_batch_records_a_storage_failure_on_the_last_try(
+    monkeypatch, test_engine
+) -> None:
+    monkeypatch.setattr(
+        "app.services.category_suggestions.scan.get_engine",
+        lambda: test_engine,
+    )
+
+    def fail_store(*_args, **_kwargs):
+        raise RuntimeError("duplicate key")
+
+    monkeypatch.setattr(
+        "app.services.category_suggestions.scan.store_scan_batch",
+        fail_store,
+    )
+    with _Seed(test_engine) as seeded:
+        monkeypatch.setattr(
+            "app.services.category_suggestions.scan.openrouter_chat_completion",
+            lambda **_kwargs: _completion(seeded.activity_id),
+        )
+        with pytest.raises(RuntimeError, match="duplicate key"):
+            process_scan_batch(
+                seeded.run_id,
+                [str(seeded.activity_id)],
+                message_id="store-1",
+                receive_count=1,
+            )
+        with Session(test_engine) as session:
+            run = session.get(CategoryScanRun, seeded.run_id)
+            assert run is not None
+            assert run.status == "queued"
+            assert run.error is None
+            assert int(run.batches_done or 0) == 0
+        with pytest.raises(RuntimeError, match="duplicate key"):
+            process_scan_batch(
+                seeded.run_id,
+                [str(seeded.activity_id)],
+                message_id="store-3",
+                receive_count=3,
+            )
+        with Session(test_engine) as session:
+            run = session.get(CategoryScanRun, seeded.run_id)
+            assert run is not None
+            assert run.status == "failed"
+            assert run.error == "duplicate key"
+            assert run.failed == 1
 
 
 def test_process_scan_batch_acks_other_errors(monkeypatch, test_engine) -> None:

@@ -554,7 +554,9 @@ time, `verdict` (`confirm`, `reassign`, `propose`), optional
 `proposed_category_id` and `suggestion_id`, `confidence`, `rationale`,
 `status` (`confirmed`, `pending`, `auto_applied`, `applied`,
 `dismissed`, `reverted`), `previous_category_id`, and decision fields.
-Unique on (`scan_run_id`, `activity_id`). Category foreign keys use
+Unique on (`scan_run_id`, `activity_id`). Partial unique index
+`activity_cat_reviews_one_pending` allows one `pending` row per
+activity. Category foreign keys use
 `ON DELETE SET NULL`. Activity, organization, run, and suggestion
 foreign keys cascade or set null with the parent row.
 

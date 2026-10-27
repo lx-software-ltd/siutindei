@@ -132,6 +132,121 @@ def test_low_confidence_stays_pending(db_session, sample_activity) -> None:
     assert str(review.proposed_category_id) == str(other.id)
 
 
+def test_later_scan_replaces_an_open_review(
+    db_session, sample_activity, sample_organization, sample_activity_category
+) -> None:
+    sample_organization.review_status = "approved"
+    first = ActivityCategory(name="Music Room", display_order=3)
+    second = ActivityCategory(name="Indoor Play", display_order=4)
+    db_session.add_all([first, second])
+    db_session.flush()
+    earlier = _run(db_session)
+    store_scan_batch(
+        db_session,
+        earlier.id,
+        [str(sample_activity.id)],
+        {
+            "results": [
+                _result(
+                    sample_activity,
+                    verdict="reassign",
+                    category_id=str(first.id),
+                    confidence=0.95,
+                )
+            ]
+        },
+        {},
+        message_id="earlier-batch",
+    )
+    later = _run(db_session)
+    stored = store_scan_batch(
+        db_session,
+        later.id,
+        [str(sample_activity.id)],
+        {
+            "results": [
+                _result(
+                    sample_activity,
+                    verdict="reassign",
+                    category_id=str(second.id),
+                    confidence=0.95,
+                )
+            ]
+        },
+        {},
+        message_id="later-batch",
+    )
+    assert stored is True
+    db_session.refresh(sample_activity)
+    assert sample_activity.category_id == sample_activity_category.id
+    reviews = {
+        review.scan_run_id: review
+        for review in db_session.scalars(select(ActivityCategoryReview)).all()
+    }
+    assert reviews[earlier.id].status == "dismissed"
+    assert reviews[earlier.id].decided_by == f"category-scan:{later.id}"
+    assert reviews[earlier.id].decided_at is not None
+    assert reviews[later.id].status == "pending"
+    assert str(reviews[later.id].proposed_category_id) == str(second.id)
+    pending = db_session.scalars(
+        select(ActivityCategoryReview).where(
+            ActivityCategoryReview.activity_id == sample_activity.id,
+            ActivityCategoryReview.status == "pending",
+        )
+    ).all()
+    assert len(pending) == 1
+
+
+def test_later_auto_apply_closes_the_open_review(db_session, sample_activity) -> None:
+    target = ActivityCategory(name="Ceramics Studio", display_order=5)
+    db_session.add(target)
+    db_session.flush()
+    earlier = _run(db_session)
+    store_scan_batch(
+        db_session,
+        earlier.id,
+        [str(sample_activity.id)],
+        {
+            "results": [
+                _result(
+                    sample_activity,
+                    verdict="reassign",
+                    category_id=str(target.id),
+                    confidence=0.4,
+                )
+            ]
+        },
+        {},
+        message_id="low-batch",
+    )
+    later = _run(db_session)
+    store_scan_batch(
+        db_session,
+        later.id,
+        [str(sample_activity.id)],
+        {
+            "results": [
+                _result(
+                    sample_activity,
+                    verdict="reassign",
+                    category_id=str(target.id),
+                    confidence=0.95,
+                )
+            ]
+        },
+        {},
+        message_id="auto-batch",
+    )
+    reviews = {
+        review.scan_run_id: review
+        for review in db_session.scalars(select(ActivityCategoryReview)).all()
+    }
+    assert reviews[earlier.id].status == "dismissed"
+    assert reviews[later.id].status == "auto_applied"
+    db_session.refresh(sample_activity)
+    assert sample_activity.category_id == target.id
+
+
 def test_confirm_and_pending_placeholder(
     db_session, sample_activity, sample_organization
 ) -> None:
