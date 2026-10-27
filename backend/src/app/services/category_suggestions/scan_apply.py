@@ -319,11 +319,7 @@ def _close_open_reviews(
     run_id: UUID,
     now: datetime,
 ) -> None:
-    """Dismiss pending reviews so a newer verdict can be stored.
-
-    The partial unique index allows one pending review per activity.
-    Flush the dismissal before the new row is inserted.
-    """
+    """Dismiss pending reviews before inserting a newer verdict."""
     rows = session.scalars(
         select(ActivityCategoryReview).where(
             ActivityCategoryReview.activity_id == activity_id,
