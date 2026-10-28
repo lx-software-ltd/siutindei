@@ -18,6 +18,12 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByLabel('Name')).toBeVisible();
     await expect(adminPage.getByLabel('Manager')).toBeVisible();
     await expect(adminPage.getByLabel('Description', { exact: true })).toBeVisible();
+    await expect(
+      adminPage.getByLabel('Source', { exact: true }).getByRole('option', {
+        name: 'Recommendation',
+        exact: true,
+      })
+    ).toHaveCount(1);
     await expect(adminPage.getByLabel('Source URL')).toBeVisible();
     await expect(
       adminPage
@@ -61,7 +67,7 @@ test.describe('Organizations Panel', () => {
   test('should display the catalog of organizations', async ({ adminPage }) => {
     await expect(adminPage.getByRole('table', { name: 'Catalog' })).toBeVisible();
     const kpiCards = adminPage.getByTestId('admin-kpi-card');
-    await expect(kpiCards).toHaveCount(3);
+    await expect(kpiCards).toHaveCount(4);
     for (const card of await kpiCards.all()) {
       await expect(card).toHaveCSS('background-color', 'rgb(255, 255, 255)');
     }
@@ -69,6 +75,7 @@ test.describe('Organizations Panel', () => {
       'Pending review',
       'With missing details',
       'Approved',
+      'Added since rejected',
     ]);
 
     await expect(adminPage.getByRole('columnheader', { name: 'Name' })).toBeVisible();
@@ -95,6 +102,7 @@ test.describe('Organizations Panel', () => {
       'SWD',
       'Places',
       'Competitor',
+      'Recommendation',
     ]) {
       await expect(
         sourceFilter.getByRole('option', { name: label, exact: true })
@@ -171,6 +179,29 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Quiet Hall')).toHaveCount(0);
     await adminPage.screenshot({
       path: '/opt/cursor/artifacts/catalog-source-filter-map.png',
+    });
+  });
+
+  test('offers Recommendation as a catalog source', async ({ adminPage }) => {
+    const sourceFilter = adminPage.locator('#review-source-filter');
+    await expect(
+      sourceFilter.getByRole('option', { name: 'Recommendation', exact: true })
+    ).toHaveCount(1);
+    await sourceFilter.selectOption('recommendation');
+    await expect(sourceFilter).toHaveValue('recommendation');
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/catalog-source-filter-recommendation.png',
+    });
+
+    await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
+    const sourceField = adminPage.getByLabel('Source', { exact: true });
+    await expect(
+      sourceField.getByRole('option', { name: 'Recommendation', exact: true })
+    ).toHaveCount(1);
+    await sourceField.selectOption('recommendation');
+    await expect(sourceField).toHaveValue('recommendation');
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/org-editor-source-recommendation.png',
     });
   });
 
@@ -404,7 +435,7 @@ test.describe('Organizations Panel', () => {
     await adminPage
       .getByLabel('Description', { exact: true })
       .fill('A brand new organization');
-    await adminPage.getByLabel('Source', { exact: true }).selectOption('places');
+    await adminPage.getByLabel('Source', { exact: true }).selectOption('recommendation');
 
     // Submit the form
     await adminPage.getByRole('button', { name: 'Create' }).click();

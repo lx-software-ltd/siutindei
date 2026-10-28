@@ -12,12 +12,14 @@ from app.api.admin_crud import (
 from app.api.admin_imports_jobs import store_import_job
 from app.api.admin_resource_activity import _update_activity_for_manager
 from app.api.admin_resource_organization import (
+    _create_organization,
     _serialize_organization,
     _update_organization,
     _update_organization_for_manager,
 )
 from app.db.models import Organization
 from app.db.repositories import OrganizationRepository
+from app.exceptions import ValidationError
 from sqlalchemy import select
 
 
@@ -184,9 +186,35 @@ def test_duplicate_source_id_lookup_is_validation_error(
         assert exc.field == "source_id"
 
 
-def test_create_non_operational_stamps_changed_at(db_session) -> None:
-    from app.api.admin_resource_organization import _create_organization
+def test_create_organization_accepts_recommendation_source(db_session) -> None:
+    repo = OrganizationRepository(db_session)
+    created = _create_organization(
+        repo,
+        {
+            "name": f"Recommended Studio {uuid4()}",
+            "manager_id": "00000000-0000-0000-0000-000000000003",
+            "source": "recommendation",
+        },
+    )
+    assert created.source == "recommendation"
 
+
+def test_update_organization_rejects_unknown_source(
+    db_session, sample_organization
+) -> None:
+    repo = OrganizationRepository(db_session)
+    try:
+        _update_organization(
+            repo,
+            sample_organization,
+            {"source": "referral"},
+        )
+        raise AssertionError("expected ValidationError")
+    except ValidationError as exc:
+        assert exc.field == "source"
+
+
+def test_create_non_operational_stamps_changed_at(db_session) -> None:
     repo = OrganizationRepository(db_session)
     created = _create_organization(
         repo,
