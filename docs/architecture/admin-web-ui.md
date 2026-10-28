@@ -49,8 +49,9 @@ rules use.
 
 The signed-out login page, the session-loading state, and the imports
 redirect use the public site's Small World backdrop: stacked logo,
-golden gradient, and a fixed set of kawaii pictures. The heading keeps
-"Siu Tin Dei" on one line. Focus rings use `brand-700` so they stay
+golden gradient, and a fixed set of kawaii pictures. The signed-out
+page identifies itself with the stacked logo and the Admin console
+pill, not a heading. Focus rings use `brand-700` so they stay
 visible on white. The footer is wide enough that Privacy Policy and
 Terms of Use stay on one line. There is no environment label on the
 login pill.

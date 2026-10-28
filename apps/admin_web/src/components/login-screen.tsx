@@ -33,13 +33,13 @@ function loginFieldClass(invalid: boolean) {
 const socialProviders = [
   {
     key: 'google',
-    label: 'Continue with Google',
+    label: 'Sign in with Google',
     provider: 'Google',
     Icon: GoogleIcon,
   },
   {
     key: 'apple',
-    label: 'Continue with Apple',
+    label: 'Sign in with Apple',
     provider: 'SignInWithApple',
     Icon: AppleIcon,
   },
@@ -127,12 +127,6 @@ export function LoginScreen() {
   return (
     <LoginBackdrop footer={<LoginFooter />}>
       <LoginBrandHeader
-        title={
-          <>
-            Sign in to <span className='whitespace-nowrap'>Siu Tin Dei</span>{' '}
-            Admin
-          </>
-        }
         subtitle='For the team that curates trusted classes, workshops, and outdoor adventures across Hong Kong.'
       />
       <Card className='w-full rounded-2xl border-brand-100 shadow-xl shadow-ink-900/10 sm:rounded-2xl sm:p-8'>
@@ -193,7 +187,7 @@ export function LoginScreen() {
           <form onSubmit={handleEmailSubmit} className='space-y-4'>
             <div className='space-y-2'>
               <Label htmlFor='email'>
-                Work email <RequiredMark />
+                Sign in with your email <RequiredMark />
               </Label>
               <Input
                 id='email'
