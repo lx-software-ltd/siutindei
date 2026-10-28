@@ -130,7 +130,7 @@ export function AdminDataTableCell({
       className={twMerge(
         adminDataTableBodyCellBase,
         ADMIN_TABLE_COLUMN_PRIORITY_CLASS[priority],
-        empty && 'py-8 text-center text-slate-500',
+        empty && 'py-8 text-center text-ink-500',
         className
       )}
     >
@@ -185,7 +185,7 @@ export function AdminDataTableCellMeta({
         // `wrap-anywhere` (not `truncate`) so a long email or timestamp never
         // sets the column's minimum width and forces a horizontal scroll.
         // Time and id keep their desktop color; inside a caption they inherit.
-        'mt-0.5 block wrap-anywhere text-xs font-normal text-slate-500 [&_.admin-table-id]:text-inherit [&_.admin-table-time]:text-inherit',
+        'mt-0.5 block wrap-anywhere text-xs font-normal text-ink-500 [&_.admin-table-id]:text-inherit [&_.admin-table-time]:text-inherit',
         until === 'secondary' ? 'md:hidden' : 'lg:hidden',
         className
       )}

@@ -27,7 +27,7 @@ export function OrganizationStatusBadges({
       ) : null}
       <StatusBadge status={reviewStatus.replaceAll('_', ' ')} />
       {version === 'org' && organization.version ? (
-        <span className='rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700'>
+        <span className='rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-ink-700'>
           {`Organization Version ${organization.version}`}
         </span>
       ) : null}
@@ -68,7 +68,7 @@ export function OrganizationWorkspaceTitle({
 
   return (
     <div className='flex flex-wrap items-center gap-2'>
-      <h2 className='text-lg font-semibold text-slate-900'>{name}</h2>
+      <h2 className='text-lg font-semibold text-ink-900'>{name}</h2>
       {shown ? <OrganizationStatusBadges organization={shown} /> : null}
     </div>
   );

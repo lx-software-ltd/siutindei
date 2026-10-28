@@ -242,7 +242,7 @@ export function NamesPanel() {
     <div className='space-y-4'>
       <h2 className='sr-only'>{PAGE_NAME}</h2>
       {runId ? (
-        <p className='text-sm text-slate-600'>
+        <p className='text-sm text-ink-700'>
           Names from this run, including changes the import already applied.{' '}
           <button
             type='button'
@@ -256,7 +256,7 @@ export function NamesPanel() {
         </p>
       ) : null}
       {organization ? (
-        <p className='text-sm text-slate-600'>
+        <p className='text-sm text-ink-700'>
           Filtered to the organization from the review queue.{' '}
           <button
             type='button'
@@ -356,7 +356,7 @@ export function NamesPanel() {
                 </>
               }
             >
-              <p className='text-sm text-slate-700'>
+              <p className='text-sm text-ink-700'>
                 {open.current_value} becomes {open.proposed_value}
               </p>
             </AdminEditorPanel>
@@ -472,7 +472,7 @@ export function NamesPanel() {
         >
           <div className='flex flex-wrap gap-3'>
             {(settings.available_rules ?? settings.enabled_rules).map((rule) => (
-              <label key={rule} className='flex items-center gap-2 text-sm text-slate-700'>
+              <label key={rule} className='flex items-center gap-2 text-sm text-ink-700'>
                 <input
                   type='checkbox'
                   checked={settings.enabled_rules.includes(rule)}

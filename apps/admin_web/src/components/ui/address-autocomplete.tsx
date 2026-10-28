@@ -265,7 +265,7 @@ export function AddressAutocomplete({
         />
         {isLoading && (
           <div className='pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3'>
-            <SpinnerIcon className='h-4 w-4 animate-spin text-slate-400' />
+            <SpinnerIcon className='h-4 w-4 animate-spin text-ink-500' />
           </div>
         )}
       </div>
@@ -301,13 +301,13 @@ export function AddressAutocomplete({
               <span className='line-clamp-2'>{result.display_name}</span>
             </li>
           ))}
-          <li className='px-3 py-1.5 text-xs text-slate-400' aria-hidden>
+          <li className='px-3 py-1.5 text-xs text-ink-500' aria-hidden>
             Powered by{' '}
             <a
               href='https://www.openstreetmap.org/copyright'
               target='_blank'
               rel='noopener noreferrer'
-              className='underline hover:text-slate-500'
+              className='underline hover:text-ink-700'
             >
               OpenStreetMap
             </a>

@@ -11,7 +11,7 @@ export function LegalLinks({ className }: LegalLinksProps) {
         href={getPrivacyPolicyUrl()}
         target='_blank'
         rel='noreferrer noopener'
-        className='underline underline-offset-2 hover:text-brand-600'
+        className='admin-focus underline underline-offset-2 hover:text-brand-700'
       >
         Privacy Policy
       </a>
@@ -22,7 +22,7 @@ export function LegalLinks({ className }: LegalLinksProps) {
         href={getTermsOfUseUrl()}
         target='_blank'
         rel='noreferrer noopener'
-        className='underline underline-offset-2 hover:text-brand-600'
+        className='admin-focus underline underline-offset-2 hover:text-brand-700'
       >
         Terms of Use
       </a>

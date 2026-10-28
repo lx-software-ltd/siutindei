@@ -111,10 +111,10 @@ export function NeighbourhoodFilter({
         <ul
           id={listboxId}
           role='listbox'
-          className='absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg'
+          className='absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-brand-100 bg-white py-1 shadow-lg'
         >
           {choices.length === 0 ? (
-            <li className='px-3 py-2 text-sm text-slate-500'>No neighbourhoods</li>
+            <li className='px-3 py-2 text-sm text-ink-500'>No neighbourhoods</li>
           ) : (
             choices.map((option, index) => (
               <li key={option.id || 'all'} role='presentation'>
@@ -124,8 +124,8 @@ export function NeighbourhoodFilter({
                   aria-selected={option.id === value}
                   className={
                     index === activeIndex
-                      ? 'flex w-full items-baseline gap-2 bg-slate-100 px-3 py-2 text-left text-sm text-slate-900'
-                      : 'flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm text-slate-900 hover:bg-slate-50'
+                      ? 'flex w-full items-baseline gap-2 bg-brand-50 px-3 py-2 text-left text-sm text-ink-900'
+                      : 'flex w-full items-baseline gap-2 px-3 py-2 text-left text-sm text-ink-900 hover:bg-brand-50'
                   }
                   onMouseDown={(event) => {
                     event.preventDefault();
@@ -135,7 +135,7 @@ export function NeighbourhoodFilter({
                 >
                   <span>{option.name}</span>
                   {option.group ? (
-                    <span className='text-xs text-slate-500'>{option.group}</span>
+                    <span className='text-xs text-ink-500'>{option.group}</span>
                   ) : null}
                 </button>
               </li>

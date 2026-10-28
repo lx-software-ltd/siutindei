@@ -234,7 +234,7 @@ export function ImportsPanel() {
             }
             footer={
               importResult ? (
-              <div className='space-y-4 rounded-lg border border-slate-200 p-4'>
+              <div className='space-y-4 rounded-lg border border-brand-100 p-4'>
                 {importResult.id &&
                   importResult.summary.organizations.created > 0 && (
                     <Button
@@ -249,8 +249,8 @@ export function ImportsPanel() {
                       Review organizations from this import
                     </Button>
                   )}
-                <div className='space-y-1 text-sm text-slate-700'>
-                  <p className='font-semibold text-slate-900'>Summary</p>
+                <div className='space-y-1 text-sm text-ink-700'>
+                  <p className='font-semibold text-ink-900'>Summary</p>
                   <p>
                     Organizations:{' '}
                     {formatCountLabel(importResult.summary.organizations)}
@@ -275,8 +275,8 @@ export function ImportsPanel() {
                   ) : null}
                 </div>
                 {importResult.file_warnings.length > 0 && (
-                  <div className='space-y-1 text-sm text-slate-600'>
-                    <p className='font-semibold text-slate-900'>
+                  <div className='space-y-1 text-sm text-ink-700'>
+                    <p className='font-semibold text-ink-900'>
                       File warnings
                     </p>
                     <ul className='list-disc space-y-1 pl-5'>
@@ -287,14 +287,14 @@ export function ImportsPanel() {
                   </div>
                 )}
                 {warningResults.length > 0 && (
-                  <div className='space-y-1 text-sm text-slate-600'>
-                    <p className='font-semibold text-slate-900'>
+                  <div className='space-y-1 text-sm text-ink-700'>
+                    <p className='font-semibold text-ink-900'>
                       Record warnings
                     </p>
                     <ul className='list-disc space-y-1 pl-5'>
                       {warningResults.map((result, index) => (
                         <li key={`${result.key}-${index}`}>
-                          <span className='font-medium text-slate-800'>
+                          <span className='font-medium text-ink-900'>
                             {result.type}
                           </span>{' '}
                           {result.key}: {result.warnings.join('; ')}
@@ -323,7 +323,7 @@ export function ImportsPanel() {
               ) : null
             }
           >
-            <p className='text-sm text-slate-600'>
+            <p className='text-sm text-ink-700'>
               Upload a JSON file to upsert organizations and related data.
             </p>
               <AdminFieldGrid columns={1}>
@@ -344,12 +344,12 @@ export function ImportsPanel() {
                     selectedFileName={selectedFile?.name ?? null}
                     emptyLabel='No file selected'
                     fileNameClassName={
-                      showImportFileError ? 'text-red-600' : 'text-slate-600'
+                      showImportFileError ? 'text-red-600' : 'text-ink-700'
                     }
                   />
                 </AdminField>
                 <AdminField span='full'>
-                  <label className='flex items-center gap-2 text-sm text-slate-700'>
+                  <label className='flex items-center gap-2 text-sm text-ink-700'>
                     <input
                       id='admin-import-skip-existing'
                       type='checkbox'
@@ -409,7 +409,7 @@ export function ImportsPanel() {
               </>
             }
           >
-            <p className='text-sm text-slate-600'>
+            <p className='text-sm text-ink-700'>
               Download the current dataset as a JSON file.
             </p>
               <AdminFieldGrid columns={1}>

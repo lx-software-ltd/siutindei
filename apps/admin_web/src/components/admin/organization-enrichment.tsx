@@ -334,24 +334,24 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
       }
     >
       {scope.detailsDirty && pendingIds.length ? (
-        <p className='mb-3 text-sm text-slate-600'>
+        <p className='mb-3 text-sm text-ink-700'>
           Save or discard the Details edits before applying these changes.
         </p>
       ) : null}
       {run ? (
         <div className='mb-4 flex flex-wrap items-center gap-2'>
           <StatusBadge status={run.status} tone={statusTone(run.status)} />
-          <span className='text-sm text-slate-600'>
+          <span className='text-sm text-ink-700'>
             {run.pages_fetched} pages
             {run.error ? ` · ${run.error}` : ''}
           </span>
         </div>
       ) : null}
       {run && ACTIVE.has(run.status) ? (
-        <p className='text-sm text-slate-600'>Reading the website…</p>
+        <p className='text-sm text-ink-700'>Reading the website…</p>
       ) : null}
       {run && run.status === 'ready' && proposals.length === 0 ? (
-        <p className='text-sm text-slate-600'>No new fields were found.</p>
+        <p className='text-sm text-ink-700'>No new fields were found.</p>
       ) : null}
       {SECTIONS.map((section) => {
         const rows = proposals.filter((row) => row.section === section);
@@ -360,7 +360,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
         }
         return (
           <section key={section} className='mb-4 space-y-2'>
-            <h4 className='text-sm font-semibold text-slate-900'>{section}</h4>
+            <h4 className='text-sm font-semibold text-ink-900'>{section}</h4>
             <ProposalTable
               rows={rows}
               venues={query.data?.venues ?? []}

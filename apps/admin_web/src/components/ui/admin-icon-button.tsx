@@ -10,7 +10,7 @@ import { twMerge } from 'tailwind-merge';
  * colour so destructive actions stay visually aligned with their siblings.
  */
 export const ADMIN_ICON_BUTTON_BASE_CLASS =
-  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-ink-900/15 bg-white transition ' +
+  'admin-focus inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-ink-900/15 bg-white transition ' +
   '[&>svg]:h-4 [&>svg]:w-4 ' +
   'disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50';
 

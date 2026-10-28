@@ -12,7 +12,7 @@ export interface AdminDialogProps {
   description?: string;
   onClose: () => void;
   children?: ReactNode;
-  /** Custom footer; when omitted, a single primary close button labelled `closeLabel` is rendered. */
+  /** Custom footer; when omitted, a single outline close button labelled `closeLabel` is rendered. */
   footer?: ReactNode;
   closeLabel?: string;
   dialogRole?: 'dialog' | 'alertdialog';
@@ -141,7 +141,7 @@ export function AdminDialog({
           {children}
           {footer === undefined ? (
             <div className='flex justify-end'>
-              <Button type='button' variant='primary' onClick={onClose}>
+              <Button type='button' variant='outline' onClick={onClose}>
                 {closeLabel}
               </Button>
             </div>

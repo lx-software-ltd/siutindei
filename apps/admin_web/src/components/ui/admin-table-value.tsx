@@ -103,7 +103,7 @@ export function AdminTableTime({
   emphasis?: boolean;
 }) {
   return (
-    <span className={clsx('admin-table-time text-slate-600', emphasis && 'font-medium')}>
+    <span className={clsx('admin-table-time text-ink-700', emphasis && 'font-medium')}>
       {formatDateTime(value)}
     </span>
   );
@@ -112,7 +112,7 @@ export function AdminTableTime({
 /** Opaque token: ticket id, actor, job id, place id, source id, key prefix. */
 export function AdminTableId({ children }: { children: ReactNode }) {
   return (
-    <span className='admin-table-id font-mono text-xs text-slate-600'>
+    <span className='admin-table-id font-mono text-xs text-ink-700'>
       {isBlank(children) ? ADMIN_TABLE_EMPTY : children}
     </span>
   );

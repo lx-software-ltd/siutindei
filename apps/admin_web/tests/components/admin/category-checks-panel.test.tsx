@@ -130,8 +130,8 @@ describe('CategoryChecksPanel sweep buttons', () => {
     expect(
       apply.compareDocumentPosition(dismiss) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
-    expect(apply).toHaveClass('bg-white');
-    expect(dismiss).toHaveClass('bg-white');
+    expect(apply).toHaveClass('bg-brand-100');
+    expect(dismiss).toHaveClass('bg-brand-100');
     expect(apply).not.toHaveClass('bg-accent-500');
   });
 

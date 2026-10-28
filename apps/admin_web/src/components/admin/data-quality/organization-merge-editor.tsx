@@ -95,9 +95,9 @@ export function OrganizationMergeEditor({
         </StatusBanner>
       ) : null}
       <fieldset className='space-y-2'>
-        <legend className='text-sm font-medium text-slate-800'>Keep</legend>
+        <legend className='text-sm font-medium text-ink-900'>Keep</legend>
         {organizations.map((org) => (
-          <label key={org.id} className='flex items-center gap-2 text-sm text-slate-700'>
+          <label key={org.id} className='flex items-center gap-2 text-sm text-ink-700'>
             <input
               type='radio'
               name='merge-survivor'
@@ -108,18 +108,18 @@ export function OrganizationMergeEditor({
               }}
             />
             <span>{org.name}</span>
-            <span className='text-slate-500'>{org.review_status.replaceAll('_', ' ')}</span>
+            <span className='text-ink-500'>{org.review_status.replaceAll('_', ' ')}</span>
           </label>
         ))}
       </fieldset>
-      {previewQuery.isLoading ? <p className='text-sm text-slate-600'>Preparing preview...</p> : null}
+      {previewQuery.isLoading ? <p className='text-sm text-ink-700'>Preparing preview...</p> : null}
       {preview?.warnings.map((warning) => (
         <p key={warning} className='text-sm text-amber-800'>
           {warning}
         </p>
       ))}
       {preview ? (
-        <ul className='space-y-2 text-sm text-slate-700'>
+        <ul className='space-y-2 text-sm text-ink-700'>
           {preview.fields
             .filter((field) => field.conflict || field.result)
             .map((field) => (
@@ -155,7 +155,7 @@ export function OrganizationMergeEditor({
         </ul>
       ) : null}
       {preview ? (
-        <p className='text-sm text-slate-600'>
+        <p className='text-sm text-ink-700'>
           Moves {preview.moved.locations ?? 0} locations and {preview.moved.activities ?? 0}{' '}
           activities. Matching addresses and activity names are combined.
         </p>

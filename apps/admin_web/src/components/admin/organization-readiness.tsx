@@ -270,7 +270,7 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
             </>
           ) : null}
           {!detail ? (
-            <p className='text-sm text-slate-600'>Loading readiness…</p>
+            <p className='text-sm text-ink-700'>Loading readiness…</p>
           ) : detail.issues.length === 0 ? (
             <AdminReadOnlyValue label='Issues'>Nothing is missing.</AdminReadOnlyValue>
           ) : (
@@ -283,7 +283,7 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
                     <span>{entry.message}</span>{' '}
                     <button
                       type='button'
-                      className='text-slate-900 underline'
+                      className='text-ink-900 underline'
                       onClick={() => openIssue(entry)}
                     >
                       Fix
@@ -295,7 +295,7 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
           )}
           <RemovedCatalogRecords orgId={orgId} />
           <AdminField>
-            <label className='flex items-center gap-2 text-sm text-slate-700'>
+            <label className='flex items-center gap-2 text-sm text-ink-700'>
               <input
                 type='checkbox'
                 checked={force}

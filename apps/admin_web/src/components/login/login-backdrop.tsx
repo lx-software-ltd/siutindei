@@ -47,7 +47,7 @@ interface LoginBackdropProps {
 
 export function LoginBackdrop({ children, footer }: LoginBackdropProps) {
   return (
-    <div className='flex min-h-screen flex-col'>
+    <div className='admin-focus flex min-h-screen flex-col'>
       <main className='admin-login-hero flex flex-1 flex-col items-center justify-center px-4 py-10 sm:px-6'>
         <div className='admin-login-hero__stars' aria-hidden='true' />
         <div className='pointer-events-none absolute inset-0' aria-hidden='true'>

@@ -35,8 +35,8 @@ export function AdminReadOnlyValue({
       <dd
         className={
           mono
-            ? 'wrap-anywhere font-mono text-xs text-slate-800'
-            : 'text-slate-800'
+            ? 'wrap-anywhere font-mono text-xs text-ink-900'
+            : 'text-ink-900'
         }
       >
         {children}

@@ -68,3 +68,22 @@ Revert the branch.
 ## Open questions
 
 Resolved by the defaults above.
+
+## Corrections
+
+These replace the earlier choices where a review showed they collide.
+
+1. The neutral badge stays grey (`bg-slate-200 text-slate-700`). A cream chip reads as pending.
+2. Info banners are white with a `brand-200` border, so they sit on the cream page. `pending-review` stays blue.
+3. `app/admin/loading.tsx` is a spinner on the cream page. The login page, session loading, and the imports redirect keep the golden backdrop.
+4. `Input`, `Select`, and `Textarea` keep `twMerge`, so `formErrorClassName` replaces the field border. `Label` does not merge, so its `mb-1` stays.
+5. Focus rings opt in through `.admin-focus` on the shell, the login backdrop, and portaled menus. The transition list includes transform and leaves outline colour out, so the ring does not fade and a moving control still moves. Rings inside a scrolling table are inset.
+6. Primary stays yellow. A disabled primary is grey. `secondary` is filled `bg-brand-100`. `outline` stays white. `ConfirmDialog` confirms with `ink`.
+7. Tab tracks are white with a gold border. The active language flag uses an ink ring.
+8. `PublicSiteLink` is the one public-site link. It opens in a new tab from the login footer and the console footer.
+9. Leftover cool copy, borders, and menus use ink and brand surfaces. Row hover, expanded rows, and draft rows stay neutral. The expanded-row frame stays `slate-300`.
+10. The header title is "Siu Tin Dei". The pill still says "Admin console".
+11. `--font-sans` in both apps includes the emoji faces from Tailwind's default stack.
+12. Legal-link hover is `brand-700`.
+13. The theme test matches colour and font tokens in both directions, and the admin favicons match the public site byte for byte.
+14. This branch stays stacked on the login branch. Merge that pull request first. A squash there means this pull request needs its base brought up to date before it can merge.

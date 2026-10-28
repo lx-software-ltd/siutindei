@@ -39,8 +39,7 @@ export interface AdminTabStripProps<T extends string> {
 
 /**
  * In-area view switcher (button group, not ARIA tabs). The active control is
- * a white card with a uniform 1px `slate-300` border on all four sides; hover
- * previews the same white surface. On phones the controls fill the row two
+ * a cream card on a white track. On phones the controls fill the row two
  * per line so every view stays readable without horizontal scrolling.
  * Labels render in sentence case (first word capital, later words lower).
  */
@@ -52,7 +51,7 @@ export function AdminTabStrip<T extends string>({
 }: AdminTabStripProps<T>) {
   return (
     <div
-      className='grid grid-cols-2 gap-1 rounded-lg bg-brand-50 p-1 sm:inline-flex sm:flex-wrap'
+      className='grid grid-cols-2 gap-1 rounded-lg border border-brand-200 bg-white p-1 sm:inline-flex sm:flex-wrap'
       role='group'
       aria-label={ariaLabel ?? 'Section views'}
     >
@@ -65,10 +64,10 @@ export function AdminTabStrip<T extends string>({
             aria-pressed={isActive}
             onClick={() => onChange(item.key)}
             className={clsx(
-              'inline-flex h-9 w-full items-center justify-center rounded-md border px-3 text-sm font-semibold transition sm:w-auto',
+              'admin-focus inline-flex h-9 w-full items-center justify-center rounded-md border px-3 text-sm font-semibold transition sm:w-auto',
             isActive
-              ? 'border-brand-200 bg-white text-ink-900 shadow-sm'
-              : 'border-transparent text-ink-700 hover:border-brand-200 hover:bg-white hover:text-ink-900'
+              ? 'border-ink-900/20 bg-brand-100 text-ink-900 shadow-sm'
+              : 'border-transparent text-ink-700 hover:border-brand-200 hover:bg-brand-50 hover:text-ink-900'
             )}
           >
             {formatAdminTabLabel(item.label)}

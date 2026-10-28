@@ -42,7 +42,7 @@ export function MediaGrid({
         return (
           <div
             key={`${url}-${index}`}
-            className={`overflow-hidden rounded-lg border border-slate-200 ${
+            className={`overflow-hidden rounded-lg border border-brand-100 ${
               isDropTarget ? 'ring-2 ring-sky-400' : ''
             }`}
             onDragOver={(event) => onDragOver(event, index)}
@@ -68,7 +68,7 @@ export function MediaGrid({
                 >
                   Drag
                 </Button>
-                <label className='flex items-center gap-2 text-slate-600'>
+                <label className='flex items-center gap-2 text-ink-700'>
                   <input
                     type='radio'
                     name='logo_media'
@@ -107,7 +107,7 @@ export function MediaGrid({
                 href={url}
                 target='_blank'
                 rel='noreferrer'
-                className='truncate text-slate-600 hover:text-slate-900'
+                className='truncate text-ink-700 hover:text-ink-900'
               >
                 Open
               </a>

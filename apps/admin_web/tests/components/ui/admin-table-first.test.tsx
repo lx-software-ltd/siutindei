@@ -285,7 +285,7 @@ describe('AdminEditorActions', () => {
 });
 
 describe('Button loading', () => {
-  it('gives secondary buttons the white brand surface', () => {
+  it('gives secondary buttons the filled cream surface', () => {
     render(
       <Button type='button' variant='secondary'>
         Test model
@@ -294,7 +294,7 @@ describe('Button loading', () => {
 
     expect(screen.getByRole('button', { name: 'Test model' })).toHaveClass(
       'border-ink-900/15',
-      'bg-white',
+      'bg-brand-100',
       'text-ink-900'
     );
     expect(screen.getByRole('button', { name: 'Test model' })).not.toHaveClass(

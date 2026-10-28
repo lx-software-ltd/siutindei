@@ -49,7 +49,7 @@ export function IdentityProviderBadge({
   const icons: Record<IdentityProvider, ReactNode> = {
     Google: <GoogleIcon className='h-4 w-4' />,
     Apple: <AppleIcon className='h-4 w-4' />,
-    Email: <EmailIcon className='h-4 w-4 text-slate-500' />,
+    Email: <EmailIcon className='h-4 w-4 text-ink-500' />,
   };
 
   return (

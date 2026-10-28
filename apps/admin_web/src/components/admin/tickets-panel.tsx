@@ -458,9 +458,9 @@ function TicketDetail({
       </AdminFieldGrid>
 
       {isPending && isAccessRequest ? (
-        <div className='space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3'>
+        <div className='space-y-3 rounded-lg border border-brand-100 bg-brand-50 p-3'>
           <Label>Organization Assignment</Label>
-          <p className='text-xs text-slate-500'>
+          <p className='text-xs text-ink-500'>
             The requester will become the manager of the selected organization. This applies when
             you approve.
           </p>
@@ -498,14 +498,14 @@ function TicketDetail({
             </label>
           </div>
           {form.organizationMode === 'new' ? (
-            <div className='rounded border border-slate-200 bg-white p-2 text-sm'>
-              <span className='text-slate-500'>New organization name:</span>{' '}
+            <div className='rounded border border-brand-100 bg-white p-2 text-sm'>
+              <span className='text-ink-500'>New organization name:</span>{' '}
               <span className='font-medium'>{ticket.organization_name}</span>
             </div>
           ) : isLoadingOrgs ? (
-            <p className='text-sm text-slate-500'>Loading organizations...</p>
+            <p className='text-sm text-ink-500'>Loading organizations...</p>
           ) : organizations.length === 0 ? (
-            <p className='text-sm text-slate-500'>No existing organizations available.</p>
+            <p className='text-sm text-ink-500'>No existing organizations available.</p>
           ) : (
             <AdminField
               label='Organization'
@@ -539,7 +539,7 @@ function TicketDetail({
       ) : null}
 
       {isPending && !isAccessRequest ? (
-        <label className='flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3'>
+        <label className='flex items-center gap-2 rounded-lg border border-brand-100 bg-brand-50 p-3'>
           <input
             type='checkbox'
             checked={form.createOrg}

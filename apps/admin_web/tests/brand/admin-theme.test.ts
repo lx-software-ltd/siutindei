@@ -42,5 +42,30 @@ describe('admin brand tokens', () => {
         expect(admin.get(name), name).toBe(value);
       }
     }
+    for (const [name, value] of admin) {
+      if (name.startsWith('--color-') || name.startsWith('--font-')) {
+        expect(pub.get(name), `${name} is admin-only`).toBe(value);
+      }
+    }
+  });
+
+  it('keeps the expanded-row frame neutral and scopes the focus ring', () => {
+    const css = readFileSync(
+      resolve(__dirname, '../../src/app/globals.css'),
+      'utf8'
+    );
+    expect(css).toContain('var(--color-slate-300)');
+    expect(css).not.toMatch(/button\s*\{[^}]*transition-property/);
+    expect(css).toContain('.admin-focus');
+    expect(css).toContain("'Apple Color Emoji'");
+  });
+
+  it('ships the same favicon files as the public site', () => {
+    const root = resolve(__dirname, '../../../..');
+    for (const name of ['favicon.ico', 'favicon.svg']) {
+      const admin = readFileSync(resolve(root, 'apps/admin_web/public', name));
+      const pub = readFileSync(resolve(root, 'apps/public_www/public', name));
+      expect(Buffer.compare(admin, pub), name).toBe(0);
+    }
   });
 });

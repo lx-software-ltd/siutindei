@@ -57,14 +57,20 @@ login pill.
 
 The signed-in console uses the same tokens for its frame: cream
 canvas, white cards with `border-brand-100`, yellow primary buttons,
-an ink active nav item, and a `brand-700` focus outline. `Input` and
-`Label` carry those field colours, and the login fields use them.
-Table row hover, expanded rows, and draft rows stay on their existing
-neutral colours so a draft row still reads against a hover. Status
-badge tones stay semantic, except the neutral tone and the info
-banner, which use the cream brand surface. Brand colour tokens in
-`apps/admin_web/src/app/globals.css` mirror
-`apps/public_www/src/app/globals.css`. Change both or neither.
+a filled cream secondary, a white outline, and an ink confirm.
+A disabled primary is grey. The active nav item is ink. Focus rings
+use `brand-700` inside `.admin-focus`, with transform still allowed
+and table rings inset. `Input`, `Select`, and `Textarea` merge a
+caller border so an invalid field turns red. `Label` keeps its margin.
+The header title is "Siu Tin Dei" next to an Admin console pill.
+The public-site link is shared and opens in a new tab. Route-level
+admin loading is a spinner on the cream page. Table row hover,
+expanded rows, and draft rows stay neutral, and the expanded-row
+frame stays slate. Status tones stay semantic, including a grey
+neutral badge. Info banners are white. Pending review stays blue.
+Colour and font tokens in `apps/admin_web/src/app/globals.css` mirror
+`apps/public_www/src/app/globals.css` in both directions, including
+the emoji faces on `--font-sans`. Change both or neither.
 
 ## Exceptions
 

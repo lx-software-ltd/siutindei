@@ -4,10 +4,10 @@ import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import Image from 'next/image';
 
 import { formatDateTime } from '@/lib/date-utils';
-import { getPublicWwwUrl } from '@/lib/config';
 
 import { CloseIcon, MenuIcon } from './icons/action-icons';
 import { LegalLinks } from './legal-links';
+import { PublicSiteLink } from './public-site-link';
 import { Button } from './ui/button';
 
 export interface NavSection {
@@ -87,7 +87,7 @@ export function AppShell({
   const activeLabel = sections.find((s) => s.key === activeKey)?.label;
 
   return (
-    <div className='min-h-screen'>
+    <div className='admin-focus min-h-screen'>
       {/* Header */}
       <header className='sticky top-0 z-40 border-b border-brand-100 bg-white/95 backdrop-blur'>
         <div className='mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4'>
@@ -114,7 +114,7 @@ export function AppShell({
             <div>
               <div className='flex items-center gap-2'>
                 <h1 className='brand-title text-[calc(1.125rem*0.8)] font-semibold text-brand-700 sm:text-[calc(1.25rem*0.8)]'>
-                  Siu Tin Dei Admin
+                  Siu Tin Dei
                 </h1>
                 <p className='hidden rounded-full bg-ink-900 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-100 sm:inline-flex'>
                   Admin console
@@ -253,13 +253,7 @@ export function AppShell({
       <footer className='border-t border-brand-100 bg-brand-50'>
         <div className='mx-auto flex w-full max-w-7xl flex-col items-center gap-3 px-4 py-4 text-center text-xs text-ink-700 sm:flex-row sm:justify-between sm:px-6 sm:text-left'>
           <p>
-            Looking for the public site?{' '}
-            <a
-              href={getPublicWwwUrl()}
-              className='font-semibold text-brand-700 underline underline-offset-2'
-            >
-              Go to siutindei.com
-            </a>
+            Looking for the public site? <PublicSiteLink />
           </p>
           <LegalLinks className='whitespace-nowrap text-xs text-ink-700' />
         </div>

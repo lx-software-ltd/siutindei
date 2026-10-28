@@ -54,7 +54,7 @@ export function PendingSuggestionNotice({
               {formatDateTime(suggestion.created_at)}
             </AdminReadOnlyValue>
           </AdminFieldGrid>
-        <p className='text-sm text-slate-600'>
+        <p className='text-sm text-ink-700'>
           You can submit another suggestion once this one has been reviewed.
         </p>
       </AdminInputCard>

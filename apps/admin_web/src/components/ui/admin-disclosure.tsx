@@ -75,8 +75,8 @@ export function AdminDisclosure({
           className='flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold text-ink-900 transition hover:bg-brand-50'
         >
           <span className='min-w-0 flex-1 truncate'>{title}</span>
-          {summary ? <span className='text-xs font-normal text-slate-500'>{summary}</span> : null}
-          <ChevronDownIcon className='admin-chevron h-4 w-4 shrink-0 text-slate-500' />
+          {summary ? <span className='text-xs font-normal text-ink-500'>{summary}</span> : null}
+          <ChevronDownIcon className='admin-chevron h-4 w-4 shrink-0 text-ink-500' />
         </button>
       </h3>
       <AdminExpandRegion open={open} id={panelId} labelledBy={triggerId}>

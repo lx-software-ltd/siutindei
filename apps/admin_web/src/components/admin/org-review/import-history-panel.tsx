@@ -71,7 +71,7 @@ function ImportFileLink({ job }: { job: ImportJobListItem }) {
       href={job.download_url}
       target='_blank'
       rel='noreferrer'
-      className='underline underline-offset-2 hover:text-slate-900'
+      className='underline underline-offset-2 hover:text-ink-900'
       onClick={(event) => {
         event.stopPropagation();
       }}
@@ -100,12 +100,12 @@ function ImportResultKey({
 }) {
   const href = importResultWorkspaceHref(row, results, { dryRun });
   if (!href) {
-    return <span className='text-slate-800'>{row.key}</span>;
+    return <span className='text-ink-900'>{row.key}</span>;
   }
   return (
     <a
       href={href}
-      className='underline underline-offset-2 hover:text-slate-900'
+      className='underline underline-offset-2 hover:text-ink-900'
       onClick={(event) => {
         event.stopPropagation();
       }}
@@ -127,8 +127,8 @@ function ImportResultGroupList({
   const [showAll, setShowAll] = useState(false);
   const preview = previewImportRows(group.rows, showAll);
   return (
-    <div className='space-y-1 text-sm text-slate-600'>
-      <p className='font-semibold text-slate-900'>
+    <div className='space-y-1 text-sm text-ink-700'>
+      <p className='font-semibold text-ink-900'>
         {group.label}
         {group.counts ? ` · ${group.counts}` : ''}
       </p>
@@ -181,7 +181,7 @@ function ImportJobResults({
     detail.data?.summary.errors ?? job.summary.errors ?? 0
   );
   if (detail.isPending) {
-    return <p className='text-sm text-slate-500'>Loading…</p>;
+    return <p className='text-sm text-ink-500'>Loading…</p>;
   }
   if (detail.isError) {
     const fallback =
@@ -193,7 +193,7 @@ function ImportJobResults({
         ? detail.error.message
         : 'Failed to load results';
     return (
-      <div className='space-y-1 text-sm text-slate-600'>
+      <div className='space-y-1 text-sm text-ink-700'>
         <p>{fallback}</p>
         <p>{message}</p>
       </div>
@@ -201,14 +201,14 @@ function ImportJobResults({
   }
   if (results.length === 0) {
     return (
-      <div className='space-y-1 text-sm text-slate-600'>
+      <div className='space-y-1 text-sm text-ink-700'>
         {job.dry_run ? <p>Predicted outcomes; nothing was written.</p> : null}
         <p>No per-row results.</p>
       </div>
     );
   }
   return (
-    <div className='space-y-3 text-sm text-slate-600'>
+    <div className='space-y-3 text-sm text-ink-700'>
       {job.dry_run ? <p>Predicted outcomes; nothing was written.</p> : null}
       <p>{header}</p>
       {groups.map((group) => (

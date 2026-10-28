@@ -23,7 +23,8 @@
   --color-blush-300: #f2a0bf;
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
+    'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
   --font-display:
     'Aero BC', 'Arial Rounded MT Bold', 'Hiragino Maru Gothic ProN',
     'Varela Round', 'Quicksand', ui-rounded, ui-sans-serif, system-ui,
@@ -158,24 +159,24 @@
     max-width: 100%;
   }
   .admin-row-framed > :first-child {
-    box-shadow: inset 2px 2px 0 0 var(--color-brand-200);
+    box-shadow: inset 2px 2px 0 0 var(--color-slate-300);
   }
   .admin-row-framed > :not(:first-child):not(:last-child) {
-    box-shadow: inset 0 2px 0 0 var(--color-brand-200);
+    box-shadow: inset 0 2px 0 0 var(--color-slate-300);
   }
   .admin-row-framed > :last-child {
-    box-shadow: inset -2px 2px 0 0 var(--color-brand-200);
+    box-shadow: inset -2px 2px 0 0 var(--color-slate-300);
   }
   .admin-row-framed > :first-child:last-child {
     box-shadow:
-      inset 2px 2px 0 0 var(--color-brand-200),
-      inset -2px 2px 0 0 var(--color-brand-200);
+      inset 2px 2px 0 0 var(--color-slate-300),
+      inset -2px 2px 0 0 var(--color-slate-300);
   }
   .admin-row-detail-framed {
     box-shadow:
-      inset 2px 0 0 0 var(--color-brand-200),
-      inset -2px 0 0 0 var(--color-brand-200),
-      inset 0 -2px 0 0 var(--color-brand-200);
+      inset 2px 0 0 0 var(--color-slate-300),
+      inset -2px 0 0 0 var(--color-slate-300),
+      inset 0 -2px 0 0 var(--color-slate-300);
   }
   [aria-expanded='true'] > .admin-chevron {
     transform: rotate(180deg);
@@ -208,17 +209,23 @@
   }
 }
 
-/* Unlayered so it wins over focus-visible:outline-none. brand-700 on white
-   is about 7.7:1. The `transition` utility includes outline-color, which
-   would fade the ring in from currentColor. */
-button {
-  transition-property: color, background-color, border-color, opacity, box-shadow;
+/* Opt-in focus ring. brand-700 on white is about 7.7:1. The list includes
+   transform and omits outline-color, so the ring does not fade and a control
+   can still move. Unlayered so it wins over focus-visible:outline-none on
+   these controls. A scrolling table insets the ring so overflow does not clip it. */
+.admin-focus:is(button, a),
+.admin-focus :is(button, a) {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, translate, scale, rotate, filter, backdrop-filter;
 }
 
-button:focus-visible,
-a:focus-visible {
+.admin-focus:is(button, a):focus-visible,
+.admin-focus :is(button, a):focus-visible {
   outline: 2px solid var(--color-brand-700);
   outline-offset: 2px;
+}
+
+.admin-focus .admin-record-table-scroll :is(button, a):focus-visible {
+  outline-offset: -2px;
 }
 
 @keyframes admin-login-drift-a {

@@ -100,7 +100,7 @@ function MergeSearch({
               <li key={item.id}>
                 <button
                   type='button'
-                  className='text-sm text-slate-900 underline'
+                  className='text-sm text-ink-900 underline'
                   onClick={() => setPartner(item)}
                 >
                   {item.name}

@@ -237,7 +237,7 @@ function CheckDetail({
   if (!item) {
     return (
       <AdminEditorPanel>
-        <p className='text-sm text-slate-600'>
+        <p className='text-sm text-ink-700'>
           {error || 'Loading category check.'}
         </p>
       </AdminEditorPanel>
@@ -246,9 +246,9 @@ function CheckDetail({
 
   return (
     <AdminEditorPanel>
-      <p className='text-sm text-slate-700'>{item.rationale || 'No rationale.'}</p>
+      <p className='text-sm text-ink-700'>{item.rationale || 'No rationale.'}</p>
       {item.suggestion_id ? (
-        <p className='text-sm text-slate-600'>
+        <p className='text-sm text-ink-700'>
           Suggested category is waiting in Suggestions.
         </p>
       ) : null}

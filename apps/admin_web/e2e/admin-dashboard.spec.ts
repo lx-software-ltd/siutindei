@@ -6,7 +6,7 @@ test.describe('Admin Dashboard', () => {
 
     // Check header
     await expect(
-      adminPage.getByRole('heading', { name: 'Siu Tin Dei Admin', exact: true })
+      adminPage.getByRole('heading', { name: 'Siu Tin Dei', exact: true })
     ).toBeVisible();
     await expect(
       adminPage.getByText('Manage organizations, activities, and schedules.')
@@ -20,7 +20,7 @@ test.describe('Admin Dashboard', () => {
     await expect(adminPage.getByText('Admin console')).toBeVisible();
     await expect(
       adminPage.getByRole('link', { name: 'Go to siutindei.com' })
-    ).toBeVisible();
+    ).toHaveAttribute('target', '_blank');
   });
 
   test('should display all navigation sections', async ({ adminPage }) => {

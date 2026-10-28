@@ -101,7 +101,7 @@ export function OrganizationAutocomplete({
         onChange={(event) => handleQueryChange(event.target.value)}
       />
       {isSearching ? (
-        <p className='mt-1 text-xs text-slate-500'>Searching...</p>
+        <p className='mt-1 text-xs text-ink-500'>Searching...</p>
       ) : null}
       {showMatches ? (
         <ul

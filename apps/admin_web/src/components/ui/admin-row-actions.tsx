@@ -240,7 +240,7 @@ function AdminActionMenu({ actions, label }: AdminActionMenuProps) {
               id={menuId}
               role='menu'
               aria-label={label}
-              className='admin-action-menu z-50 min-w-52 rounded-md border border-brand-100 bg-white p-1 text-sm shadow-lg'
+              className='admin-action-menu admin-focus z-50 min-w-52 rounded-md border border-brand-100 bg-white p-1 text-sm shadow-lg'
               onKeyDown={handleMenuKeyDown}
               onClick={(event) => {
                 event.stopPropagation();

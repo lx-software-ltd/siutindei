@@ -267,7 +267,7 @@ export function ActivityCategoriesPanel() {
             error={showNameError ? nameError : ''}
             inputClassName={
               isSystemLocked
-                ? 'bg-slate-100'
+                ? 'bg-brand-50'
                 : validation.errorClassName('name', Boolean(nameError))
             }
           />
