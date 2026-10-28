@@ -22,14 +22,14 @@ describe('AdminInputCard', () => {
     expect(card).toHaveClass(
       'rounded-lg',
       'border',
-      'border-slate-200',
+      'border-brand-100',
       'bg-white',
       'shadow-sm'
     );
     expect(screen.getByText('Open an organization from the catalog.')).toBeVisible();
     expect(screen.getByText('Card body')).toBeVisible();
     const bar = screen.getByTestId('admin-input-card-bar');
-    expect(bar).toHaveClass('border-t', 'border-slate-200', 'pt-4');
+    expect(bar).toHaveClass('border-t', 'border-brand-100', 'pt-4');
     expect(bar).toContainElement(screen.getByRole('button', { name: 'Open catalog' }));
   });
 

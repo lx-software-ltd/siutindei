@@ -62,7 +62,7 @@ export function AdminDisclosure({
 
   return (
     <section
-      className={clsx('rounded-md border border-slate-200 bg-slate-50/40', className)}
+      className={clsx('rounded-md border border-brand-100 bg-brand-50/40', className)}
       data-testid={`${id}-disclosure`}
     >
       <h3 className='m-0'>
@@ -72,7 +72,7 @@ export function AdminDisclosure({
           aria-expanded={open}
           aria-controls={panelId}
           onClick={toggle}
-          className='flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold text-slate-900 transition hover:bg-slate-100/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400'
+          className='flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold text-ink-900 transition hover:bg-brand-50'
         >
           <span className='min-w-0 flex-1 truncate'>{title}</span>
           {summary ? <span className='text-xs font-normal text-slate-500'>{summary}</span> : null}

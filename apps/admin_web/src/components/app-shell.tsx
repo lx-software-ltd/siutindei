@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import Image from 'next/image';
 
 import { formatDateTime } from '@/lib/date-utils';
+import { getPublicWwwUrl } from '@/lib/config';
 
 import { CloseIcon, MenuIcon } from './icons/action-icons';
 import { LegalLinks } from './legal-links';
@@ -88,7 +89,7 @@ export function AppShell({
   return (
     <div className='min-h-screen'>
       {/* Header */}
-      <header className='sticky top-0 z-40 border-b border-slate-200 bg-white'>
+      <header className='sticky top-0 z-40 border-b border-brand-100 bg-white/95 backdrop-blur'>
         <div className='mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4'>
           <div className='flex items-center gap-3'>
             {/* Mobile menu button */}
@@ -96,7 +97,7 @@ export function AppShell({
               <button
                 type='button'
                 onClick={() => setMobileMenuOpen(true)}
-                className='rounded-md p-2 text-slate-600 hover:bg-slate-100 lg:hidden'
+                className='rounded-md p-2 text-ink-700 hover:bg-brand-50 lg:hidden'
                 aria-label='Open menu'
               >
                 <MenuIcon className='h-6 w-6' />
@@ -111,24 +112,28 @@ export function AppShell({
               className='h-[1.76rem] w-[1.76rem] shrink-0 lg:mb-[-8px] lg:mt-[-8px] lg:h-[64px] lg:w-[64px]'
             />
             <div>
-              <h1 className='text-[calc(1.125rem*0.8)] font-semibold sm:text-[calc(1.25rem*0.8)]'>
-                Siu Tin Dei Admin
-              </h1>
-              <p className='hidden text-sm text-slate-500 sm:block'>
+              <div className='flex items-center gap-2'>
+                <h1 className='brand-title text-[calc(1.125rem*0.8)] font-semibold text-brand-700 sm:text-[calc(1.25rem*0.8)]'>
+                  Siu Tin Dei Admin
+                </h1>
+                <p className='hidden rounded-full bg-ink-900 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-100 sm:inline-flex'>
+                  Admin console
+                </p>
+              </div>
+              <p className='hidden text-sm text-ink-700 sm:block'>
                 {headerDescriptionText}
               </p>
-              {/* Show current section on mobile */}
               {activeLabel && (
-                <p className='text-sm text-slate-500 lg:hidden'>{activeLabel}</p>
+                <p className='text-sm text-ink-500 lg:hidden'>{activeLabel}</p>
               )}
             </div>
           </div>
           <div className='flex items-center gap-2 sm:gap-3'>
             {userEmail && (
               <div className='hidden text-right sm:block'>
-                <span className='text-sm text-slate-600'>{userEmail}</span>
+                <span className='text-sm text-ink-700'>{userEmail}</span>
                 {formattedLastLogin && (
-                  <p className='text-xs text-slate-400'>
+                  <p className='text-xs text-ink-500'>
                     Last login: {formattedLastLogin}
                   </p>
                 )}
@@ -145,7 +150,7 @@ export function AppShell({
       {/* Mobile navigation overlay */}
       {mobileMenuOpen && (
         <div
-          className='fixed inset-0 z-50 bg-black/50 lg:hidden'
+          className='fixed inset-0 z-50 bg-ink-900/50 lg:hidden'
           onClick={() => setMobileMenuOpen(false)}
           aria-hidden='true'
         />
@@ -158,22 +163,22 @@ export function AppShell({
         }`}
       >
         <div className='flex h-full flex-col'>
-          <div className='flex items-center justify-between border-b border-slate-200 px-4 py-3'>
-            <span className='font-semibold'>Menu</span>
+          <div className='flex items-center justify-between border-b border-brand-100 px-4 py-3'>
+            <span className='font-semibold text-ink-900'>Menu</span>
             <button
               type='button'
               onClick={() => setMobileMenuOpen(false)}
-              className='rounded-md p-2 text-slate-600 hover:bg-slate-100'
+              className='rounded-md p-2 text-ink-700 hover:bg-brand-50'
               aria-label='Close menu'
             >
               <CloseIcon className='h-5 w-5' />
             </button>
           </div>
           {userEmail && (
-            <div className='border-b border-slate-200 px-4 py-3'>
-              <p className='truncate text-sm text-slate-600'>{userEmail}</p>
+            <div className='border-b border-brand-100 px-4 py-3'>
+              <p className='truncate text-sm text-ink-700'>{userEmail}</p>
               {formattedLastLogin && (
-                <p className='mt-0.5 text-xs text-slate-400'>
+                <p className='mt-0.5 text-xs text-ink-500'>
                   Last login: {formattedLastLogin}
                 </p>
               )}
@@ -186,7 +191,7 @@ export function AppShell({
                 return (
                   <div key={section.key}>
                     {section.dividerBefore && (
-                      <hr className='my-3 border-slate-200' />
+                      <hr className='my-3 border-brand-100' />
                     )}
                     <button
                       type='button'
@@ -195,8 +200,8 @@ export function AppShell({
                       onFocus={() => onIntent?.(section.key)}
                       className={`w-full rounded-md px-3 py-2.5 text-left text-sm font-medium ${
                         isActive
-                          ? 'bg-slate-900 text-white'
-                          : 'text-slate-700 hover:bg-slate-100'
+                          ? 'bg-ink-900 font-semibold text-white'
+                          : 'text-ink-700 hover:bg-brand-50'
                       }`}
                     >
                       {section.label}
@@ -220,7 +225,7 @@ export function AppShell({
                 return (
                   <div key={section.key}>
                     {section.dividerBefore && (
-                      <hr className='my-3 border-slate-200' />
+                      <hr className='my-3 border-brand-100' />
                     )}
                     <button
                       type='button'
@@ -229,8 +234,8 @@ export function AppShell({
                       onFocus={() => onIntent?.(section.key)}
                       className={`w-full rounded-md px-3 py-2 text-left text-sm ${
                         isActive
-                          ? 'bg-slate-900 text-white'
-                          : 'text-slate-700 hover:bg-slate-100'
+                          ? 'bg-ink-900 font-semibold text-white'
+                          : 'text-ink-700 hover:bg-brand-50'
                       }`}
                     >
                       {section.label}
@@ -245,9 +250,18 @@ export function AppShell({
       </div>
 
       {/* Footer */}
-      <footer className='border-t border-slate-200 bg-white'>
-        <div className='mx-auto w-full max-w-7xl px-4 py-4 sm:px-6'>
-          <LegalLinks className='text-center text-xs text-slate-500' />
+      <footer className='border-t border-brand-100 bg-brand-50'>
+        <div className='mx-auto flex w-full max-w-7xl flex-col items-center gap-3 px-4 py-4 text-center text-xs text-ink-700 sm:flex-row sm:justify-between sm:px-6 sm:text-left'>
+          <p>
+            Looking for the public site?{' '}
+            <a
+              href={getPublicWwwUrl()}
+              className='font-semibold text-brand-700 underline underline-offset-2'
+            >
+              Go to siutindei.com
+            </a>
+          </p>
+          <LegalLinks className='whitespace-nowrap text-xs text-ink-700' />
         </div>
       </footer>
     </div>

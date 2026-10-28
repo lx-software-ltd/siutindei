@@ -50,14 +50,21 @@ rules use.
 The signed-out login page, the session-loading state, and the imports
 redirect use the public site's Small World backdrop: stacked logo,
 golden gradient, and a fixed set of kawaii pictures. The heading keeps
-"Siu Tin Dei" on one line. Focus rings on the sign-in card use
-`brand-700` so they stay visible on white. The footer is wide enough
-that Privacy Policy and Terms of Use stay on one line. Brand colour
-tokens in `apps/admin_web/src/app/globals.css` mirror
-`apps/public_www/src/app/globals.css`. Change both or neither. Console
-fields stay on `Input` and `Label` (slate). The login fields are
-separate so those primitives are unchanged. There is no environment
-label on the login pill.
+"Siu Tin Dei" on one line. Focus rings use `brand-700` so they stay
+visible on white. The footer is wide enough that Privacy Policy and
+Terms of Use stay on one line. There is no environment label on the
+login pill.
+
+The signed-in console uses the same tokens for its frame: cream
+canvas, white cards with `border-brand-100`, yellow primary buttons,
+an ink active nav item, and a `brand-700` focus outline. `Input` and
+`Label` carry those field colours, and the login fields use them.
+Table row hover, expanded rows, and draft rows stay on their existing
+neutral colours so a draft row still reads against a hover. Status
+badge tones stay semantic, except the neutral tone and the info
+banner, which use the cream brand surface. Brand colour tokens in
+`apps/admin_web/src/app/globals.css` mirror
+`apps/public_www/src/app/globals.css`. Change both or neither.
 
 ## Exceptions
 

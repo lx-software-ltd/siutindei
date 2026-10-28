@@ -52,7 +52,7 @@ export function AdminTabStrip<T extends string>({
 }: AdminTabStripProps<T>) {
   return (
     <div
-      className='grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 sm:inline-flex sm:flex-wrap'
+      className='grid grid-cols-2 gap-1 rounded-lg bg-brand-50 p-1 sm:inline-flex sm:flex-wrap'
       role='group'
       aria-label={ariaLabel ?? 'Section views'}
     >
@@ -66,10 +66,9 @@ export function AdminTabStrip<T extends string>({
             onClick={() => onChange(item.key)}
             className={clsx(
               'inline-flex h-9 w-full items-center justify-center rounded-md border px-3 text-sm font-semibold transition sm:w-auto',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400',
-              isActive
-                ? 'border-slate-300 bg-white text-slate-900 shadow-sm'
-                : 'border-transparent text-slate-600 hover:border-slate-300 hover:bg-white hover:text-slate-900'
+            isActive
+              ? 'border-brand-200 bg-white text-ink-900 shadow-sm'
+              : 'border-transparent text-ink-700 hover:border-brand-200 hover:bg-white hover:text-ink-900'
             )}
           >
             {formatAdminTabLabel(item.label)}
@@ -82,11 +81,10 @@ export function AdminTabStrip<T extends string>({
 
 const toggleChipClassName = (pressed: boolean) =>
   clsx(
-    'inline-flex h-8 items-center justify-center rounded-md border px-3 text-sm font-semibold transition',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400',
+    'inline-flex h-8 items-center justify-center rounded-full border px-3 text-sm font-semibold transition',
     pressed
-      ? 'border-slate-300 bg-white text-slate-900 shadow-sm'
-      : 'border-transparent bg-slate-100 text-slate-600 hover:border-slate-300 hover:bg-white hover:text-slate-900'
+      ? 'border-ink-900 bg-accent-500 text-ink-900'
+      : 'border-ink-900/15 bg-white text-ink-700 hover:border-ink-900/30'
   );
 
 export interface AdminToggleChipProps
@@ -95,7 +93,7 @@ export interface AdminToggleChipProps
   children: ReactNode;
 }
 
-/** Multi-select chip. Same surface as the active control in `AdminTabStrip`. */
+/** Multi-select chip. The selected state matches the public site chip. */
 export function AdminToggleChip({
   pressed,
   className,

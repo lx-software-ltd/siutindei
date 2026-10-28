@@ -31,7 +31,7 @@ export function AdminReadOnlyValue({
 }: AdminReadOnlyValueProps) {
   return (
     <dl className={clsx('min-w-0 text-sm', spanStyles[span], className)}>
-      <dt className='mb-1 block text-sm font-semibold text-slate-700'>{label}</dt>
+      <dt className='mb-1 block text-sm font-semibold text-ink-900'>{label}</dt>
       <dd
         className={
           mono

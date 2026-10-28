@@ -34,8 +34,8 @@ export interface AdminDataTableProps {
 
 export function AdminDataTable({ children, tableClassName }: AdminDataTableProps) {
   return (
-    <div className='rounded-md border border-slate-200'>
-      <table className={clsx('w-full divide-y divide-slate-200 text-left', tableClassName)}>
+    <div className='rounded-md border border-brand-100'>
+      <table className={clsx('w-full divide-y divide-brand-100 text-left', tableClassName)}>
         {children}
       </table>
     </div>
@@ -52,7 +52,7 @@ export function AdminDataTableHead({ children, sticky, className }: AdminDataTab
   return (
     <thead
       className={clsx(
-        'bg-slate-100 text-xs uppercase tracking-[0.08em] text-slate-700',
+        'bg-brand-50 text-xs uppercase tracking-[0.08em] text-ink-700',
         sticky && 'sticky top-0 z-10',
         className
       )}
@@ -63,7 +63,7 @@ export function AdminDataTableHead({ children, sticky, className }: AdminDataTab
 }
 
 export function AdminDataTableBody({ children }: { children: ReactNode }) {
-  return <tbody className='divide-y divide-slate-200 bg-white text-sm'>{children}</tbody>;
+  return <tbody className='divide-y divide-brand-100 bg-white text-sm'>{children}</tbody>;
 }
 
 /**
@@ -203,7 +203,7 @@ export interface AdminDataTableOperationsHeadCellProps {
 
 /** Icon-only Operations control: outline button shared by listing tables. */
 export const ADMIN_OPS_ICON_LINK_CLASS =
-  'inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400';
+  'inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-ink-900/15 bg-white px-3 text-sm font-semibold text-ink-900 transition hover:bg-brand-50';
 
 /** Standard right-aligned operations column header for admin listing tables. */
 export function AdminDataTableOperationsHeadCell({

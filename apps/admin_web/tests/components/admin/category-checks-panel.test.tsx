@@ -130,8 +130,9 @@ describe('CategoryChecksPanel sweep buttons', () => {
     expect(
       apply.compareDocumentPosition(dismiss) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
-    expect(apply).toHaveClass('bg-slate-100');
-    expect(dismiss).toHaveClass('bg-slate-100');
+    expect(apply).toHaveClass('bg-white');
+    expect(dismiss).toHaveClass('bg-white');
+    expect(apply).not.toHaveClass('bg-accent-500');
   });
 
   it('puts a scoped organization above the card, not in the filter bar', async () => {

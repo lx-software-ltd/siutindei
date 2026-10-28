@@ -206,7 +206,7 @@ function CatalogGoogleMap({
   return (
     <div
       ref={containerRef}
-      className='h-[28rem] w-full rounded-md border border-slate-200'
+      className='h-[28rem] w-full rounded-md border border-brand-100'
       role='application'
       aria-label='Filtered organizations'
     />

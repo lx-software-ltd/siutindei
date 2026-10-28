@@ -479,7 +479,7 @@ function TicketDetail({
                     hasSubmitted: false,
                   });
                 }}
-                className='h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-500'
+                className='h-4 w-4 border-ink-900/15 text-ink-900 focus:ring-brand-700'
               />
               <span className='text-sm'>Create new</span>
             </label>
@@ -492,7 +492,7 @@ function TicketDetail({
                 onChange={() => {
                   onChange({ organizationMode: 'existing', orgTouched: false, hasSubmitted: false });
                 }}
-                className='h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-500'
+                className='h-4 w-4 border-ink-900/15 text-ink-900 focus:ring-brand-700'
               />
               <span className='text-sm'>Use existing</span>
             </label>
@@ -546,7 +546,7 @@ function TicketDetail({
             onChange={(event) => {
               onChange({ createOrg: event.target.checked });
             }}
-            className='h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500'
+            className='h-4 w-4 rounded border-ink-900/15 text-ink-900 focus:ring-brand-700'
           />
           <span className='text-sm'>Create organization from this suggestion</span>
         </label>

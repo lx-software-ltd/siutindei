@@ -17,6 +17,10 @@ test.describe('Admin Dashboard', () => {
     await expect(brandLogo).toHaveCSS('width', '64px');
     await expect(brandLogo).toHaveCSS('height', '64px');
     await expect(adminPage.locator('[class*="max-w-7xl"]')).toHaveCount(3);
+    await expect(adminPage.getByText('Admin console')).toBeVisible();
+    await expect(
+      adminPage.getByRole('link', { name: 'Go to siutindei.com' })
+    ).toBeVisible();
   });
 
   test('should display all navigation sections', async ({ adminPage }) => {

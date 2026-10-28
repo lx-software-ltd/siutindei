@@ -1,10 +1,12 @@
-import { SpinnerIcon } from '@/components/icons/action-icons';
+import { LoginBackdrop } from '@/components/login/login-backdrop';
+import { LoginBrandHeader } from '@/components/login/login-brand-header';
+import { StatusBanner } from '@/components/status-banner';
 
 export default function AdminLoading() {
   return (
-    <main className='mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-4 px-6'>
-      <SpinnerIcon className='h-8 w-8 animate-spin text-slate-700' />
-      <p className='text-sm text-slate-600'>Loading admin workspace...</p>
-    </main>
+    <LoginBackdrop>
+      <LoginBrandHeader />
+      <StatusBanner kind='info'>Loading admin workspace...</StatusBanner>
+    </LoginBackdrop>
   );
 }

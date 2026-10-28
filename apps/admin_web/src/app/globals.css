@@ -15,6 +15,15 @@
   --color-ink-900: #2e1d12;
   --color-ink-700: #57402e;
   --color-ink-500: #8a7461;
+  --color-night-900: #241708;
+  --color-night-700: #57402e;
+  --color-glow-300: #5e9636;
+  --color-earth-teal: #a6dcd3;
+  --color-leaf-500: #8bc152;
+  --color-blush-300: #f2a0bf;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
   --font-display:
     'Aero BC', 'Arial Rounded MT Bold', 'Hiragino Maru Gothic ProN',
     'Varela Round', 'Quicksand', ui-rounded, ui-sans-serif, system-ui,
@@ -24,10 +33,11 @@
 @layer base {
   :root {
     color-scheme: light;
+    accent-color: var(--color-ink-900);
   }
 
   body {
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-brand-50 text-ink-900;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -148,24 +158,24 @@
     max-width: 100%;
   }
   .admin-row-framed > :first-child {
-    box-shadow: inset 2px 2px 0 0 var(--color-slate-300);
+    box-shadow: inset 2px 2px 0 0 var(--color-brand-200);
   }
   .admin-row-framed > :not(:first-child):not(:last-child) {
-    box-shadow: inset 0 2px 0 0 var(--color-slate-300);
+    box-shadow: inset 0 2px 0 0 var(--color-brand-200);
   }
   .admin-row-framed > :last-child {
-    box-shadow: inset -2px 2px 0 0 var(--color-slate-300);
+    box-shadow: inset -2px 2px 0 0 var(--color-brand-200);
   }
   .admin-row-framed > :first-child:last-child {
     box-shadow:
-      inset 2px 2px 0 0 var(--color-slate-300),
-      inset -2px 2px 0 0 var(--color-slate-300);
+      inset 2px 2px 0 0 var(--color-brand-200),
+      inset -2px 2px 0 0 var(--color-brand-200);
   }
   .admin-row-detail-framed {
     box-shadow:
-      inset 2px 0 0 0 var(--color-slate-300),
-      inset -2px 0 0 0 var(--color-slate-300),
-      inset 0 -2px 0 0 var(--color-slate-300);
+      inset 2px 0 0 0 var(--color-brand-200),
+      inset -2px 0 0 0 var(--color-brand-200),
+      inset 0 -2px 0 0 var(--color-brand-200);
   }
   [aria-expanded='true'] > .admin-chevron {
     transform: rotate(180deg);
@@ -198,14 +208,15 @@
   }
 }
 
-/* Unlayered so it wins over the button's focus-visible:outline-none utility.
-   brand-700 on white is about 7.7:1. The shared button `transition` includes
-   outline-color, which would fade the ring in from currentColor (ink). */
-.admin-login-focus {
+/* Unlayered so it wins over focus-visible:outline-none. brand-700 on white
+   is about 7.7:1. The `transition` utility includes outline-color, which
+   would fade the ring in from currentColor. */
+button {
   transition-property: color, background-color, border-color, opacity, box-shadow;
 }
 
-.admin-login-focus:focus-visible {
+button:focus-visible,
+a:focus-visible {
   outline: 2px solid var(--color-brand-700);
   outline-offset: 2px;
 }

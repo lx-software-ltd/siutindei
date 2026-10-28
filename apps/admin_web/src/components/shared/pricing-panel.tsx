@@ -459,7 +459,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
                     free_trial_class_offered: event.target.checked,
                   }))
                 }
-                className='h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500'
+                className='h-4 w-4 rounded border-ink-900/15 text-ink-900 focus:ring-brand-700'
               />
               <span>Free trial class offered</span>
             </label>

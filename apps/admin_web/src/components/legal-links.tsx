@@ -6,12 +6,12 @@ interface LegalLinksProps {
 
 export function LegalLinks({ className }: LegalLinksProps) {
   return (
-    <p className={className ?? 'text-center text-xs text-slate-500'}>
+    <p className={className ?? 'text-center text-xs text-ink-700'}>
       <a
         href={getPrivacyPolicyUrl()}
         target='_blank'
         rel='noreferrer noopener'
-        className='underline underline-offset-2 hover:text-slate-900'
+        className='underline underline-offset-2 hover:text-brand-600'
       >
         Privacy Policy
       </a>
@@ -22,7 +22,7 @@ export function LegalLinks({ className }: LegalLinksProps) {
         href={getTermsOfUseUrl()}
         target='_blank'
         rel='noreferrer noopener'
-        className='underline underline-offset-2 hover:text-slate-900'
+        className='underline underline-offset-2 hover:text-brand-600'
       >
         Terms of Use
       </a>

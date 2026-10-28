@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 const variantStyles = {
-  info: 'border-blue-200 bg-blue-50 text-blue-900',
+  info: 'border-brand-100 bg-brand-50 text-ink-900',
   error: 'border-red-200 bg-red-50 text-red-900',
   success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
 };
