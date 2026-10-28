@@ -23,7 +23,8 @@
   --color-blush-300: #f2a0bf;
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
+    'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
   /* Brand display face per the identity spec (Aero BC). The webfont file
      is licensed separately; rounded system faces stand in until it is
      added via @font-face. */

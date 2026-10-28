@@ -49,7 +49,7 @@ export function AdminEditorPanel({
       {status}
       {showBar ? (
         <div
-          className='flex flex-wrap items-center justify-start gap-2 border-t border-slate-200 pt-4'
+          className='flex flex-wrap items-center justify-start gap-2 border-t border-brand-100 pt-4'
           data-testid={actionRow ? 'admin-input-card-bar' : undefined}
         >
           {actions}

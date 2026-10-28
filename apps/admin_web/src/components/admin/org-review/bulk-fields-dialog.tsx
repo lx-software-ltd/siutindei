@@ -72,7 +72,7 @@ export function BulkFieldsDialog({
       <div className='grid gap-3 md:grid-cols-2'>
         {FIELD_OPTIONS.map((option) => (
           <div key={option.key} className='space-y-1'>
-            <label className='flex items-center gap-2 text-sm text-slate-800'>
+            <label className='flex items-center gap-2 text-sm text-ink-900'>
               <input
                 type='checkbox'
                 checked={Boolean(enabled[option.key])}

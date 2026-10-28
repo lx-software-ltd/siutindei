@@ -98,7 +98,7 @@ export function DuplicatesPanel() {
     <div className='space-y-4'>
       <h2 className='sr-only'>{PAGE_NAME}</h2>
       {runId ? (
-        <p className='text-sm text-slate-600'>
+        <p className='text-sm text-ink-700'>
           Duplicates recomputed for this run.{' '}
           <button
             type='button'
@@ -112,7 +112,7 @@ export function DuplicatesPanel() {
         </p>
       ) : null}
       {organization ? (
-        <p className='text-sm text-slate-600'>
+        <p className='text-sm text-ink-700'>
           Filtered to the organization from the review queue.{' '}
           <button
             type='button'

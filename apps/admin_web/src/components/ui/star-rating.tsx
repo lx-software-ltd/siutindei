@@ -34,7 +34,7 @@ export function StarRating({
           >
             <StarIcon
               className={`${sizeClassName} ${
-                isSelected ? 'text-yellow-400' : 'text-slate-300'
+                isSelected ? 'text-accent-500' : 'text-brand-200'
               }`}
             />
           </button>

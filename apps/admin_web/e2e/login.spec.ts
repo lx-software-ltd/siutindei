@@ -23,6 +23,7 @@ test.describe('Login Screen', () => {
       'href',
       'https://siutindei.com'
     );
+    await expect(publicSiteLink).toHaveAttribute('target', '_blank');
     const bubbles = unauthenticatedPage.locator(
       'img[src*="/images/small-world/"]'
     );
@@ -109,7 +110,7 @@ test.describe('Login Screen', () => {
     await adminPage.goto('/');
 
     await expect(
-      adminPage.getByRole('heading', { name: 'Siu Tin Dei Admin', exact: true })
+      adminPage.getByRole('heading', { name: 'Siu Tin Dei', exact: true })
     ).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'Catalog' })).toBeVisible();
     await expect(adminPage.getByText('Redirecting')).toHaveCount(0);
@@ -316,7 +317,7 @@ test.describe('Authentication Flow', () => {
 
     // Should be authenticated
     await expect(
-      page.getByRole('heading', { name: 'Siu Tin Dei Admin', exact: true })
+      page.getByRole('heading', { name: 'Siu Tin Dei', exact: true })
     ).toBeVisible();
 
     // Reload the page
@@ -324,7 +325,7 @@ test.describe('Authentication Flow', () => {
 
     // Should still be authenticated
     await expect(
-      page.getByRole('heading', { name: 'Siu Tin Dei Admin', exact: true })
+      page.getByRole('heading', { name: 'Siu Tin Dei', exact: true })
     ).toBeVisible();
   });
 

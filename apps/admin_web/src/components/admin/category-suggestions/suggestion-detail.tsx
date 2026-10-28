@@ -60,7 +60,7 @@ export function SuggestionDetail({
   if (!item) {
     return (
       <AdminEditorPanel>
-        <p className='text-sm text-slate-600'>Loading suggestion.</p>
+        <p className='text-sm text-ink-700'>Loading suggestion.</p>
         {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
       </AdminEditorPanel>
     );
@@ -85,7 +85,7 @@ export function SuggestionDetail({
         }
       >
         {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
-        <p className='text-sm text-slate-600'>
+        <p className='text-sm text-ink-700'>
           {item.rationale || 'No rationale yet.'}
         </p>
         {item.status === 'rejected' && !item.merged_into_category_id ? (
@@ -102,7 +102,7 @@ export function SuggestionDetail({
           <div>Confidence: {item.confidence ?? '—'}</div>
           <div>Activities: {item.activity_count}</div>
         </dl>
-        <ul className='space-y-1 text-sm text-slate-700'>
+        <ul className='space-y-1 text-sm text-ink-700'>
           {(item.activities || []).map((link) => (
             <li key={link.activity_id}>
               {link.org_name || link.org_id}: {link.activity_name || link.requested_name}

@@ -48,7 +48,7 @@ export function AdminFieldGrid({ columns, children, className }: AdminFieldGridP
 export function AdminFieldDivider() {
   return (
     <div
-      className='col-span-full border-t border-slate-200'
+      className='col-span-full border-t border-brand-100'
       role='separator'
       data-testid='admin-field-divider'
     />
@@ -105,7 +105,7 @@ export function AdminField({
           {error}
         </AdminInlineError>
       ) : hint ? (
-        <p className='mt-1 text-xs text-slate-500'>{hint}</p>
+        <p className='mt-1 text-xs text-ink-500'>{hint}</p>
       ) : null}
     </div>
   );

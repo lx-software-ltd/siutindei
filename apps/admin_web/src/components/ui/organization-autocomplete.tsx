@@ -101,13 +101,13 @@ export function OrganizationAutocomplete({
         onChange={(event) => handleQueryChange(event.target.value)}
       />
       {isSearching ? (
-        <p className='mt-1 text-xs text-slate-500'>Searching...</p>
+        <p className='mt-1 text-xs text-ink-500'>Searching...</p>
       ) : null}
       {showMatches ? (
         <ul
           id={listboxId}
           role='listbox'
-          className='mt-2 rounded border border-slate-200 bg-white'
+          className='mt-2 rounded border border-brand-100 bg-white'
         >
           {matches.map((org) => (
             <li key={org.id} role='presentation'>
@@ -121,7 +121,7 @@ export function OrganizationAutocomplete({
                   setIsSearching(false);
                   onSelect(org);
                 }}
-                className='flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50'
+                className='flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-brand-50'
               >
                 <span>{org.name}</span>
               </button>

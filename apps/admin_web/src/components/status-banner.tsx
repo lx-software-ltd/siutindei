@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 
 const variantStyles = {
-  info: 'border-blue-200 bg-blue-50 text-blue-900',
+  info: 'border-brand-200 bg-white text-ink-900',
+  pending: 'border-blue-200 bg-blue-50 text-blue-900',
   error: 'border-red-200 bg-red-50 text-red-900',
   success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
 };
@@ -11,6 +12,8 @@ export type StatusBannerKind = 'error' | 'saved' | 'pending-review' | 'info';
 
 type StatusBannerVariant = 'info' | 'error' | 'success';
 
+type StatusBannerStyle = keyof typeof variantStyles;
+
 const kindTitle: Record<StatusBannerKind, string> = {
   error: 'Error',
   saved: 'Saved',
@@ -18,10 +21,10 @@ const kindTitle: Record<StatusBannerKind, string> = {
   info: 'Info',
 };
 
-const kindVariant: Record<StatusBannerKind, StatusBannerVariant> = {
+const kindVariant: Record<StatusBannerKind, StatusBannerStyle> = {
   error: 'error',
   saved: 'success',
-  'pending-review': 'info',
+  'pending-review': 'pending',
   info: 'info',
 };
 

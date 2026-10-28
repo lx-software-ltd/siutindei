@@ -15,6 +15,16 @@
   --color-ink-900: #2e1d12;
   --color-ink-700: #57402e;
   --color-ink-500: #8a7461;
+  --color-night-900: #241708;
+  --color-night-700: #57402e;
+  --color-glow-300: #5e9636;
+  --color-earth-teal: #a6dcd3;
+  --color-leaf-500: #8bc152;
+  --color-blush-300: #f2a0bf;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
   --font-display:
     'Aero BC', 'Arial Rounded MT Bold', 'Hiragino Maru Gothic ProN',
     'Varela Round', 'Quicksand', ui-rounded, ui-sans-serif, system-ui,
@@ -24,10 +34,11 @@
 @layer base {
   :root {
     color-scheme: light;
+    accent-color: var(--color-ink-900);
   }
 
   body {
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-brand-50 text-ink-900;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -198,16 +209,23 @@
   }
 }
 
-/* Unlayered so it wins over the button's focus-visible:outline-none utility.
-   brand-700 on white is about 7.7:1. The shared button `transition` includes
-   outline-color, which would fade the ring in from currentColor (ink). */
-.admin-login-focus {
-  transition-property: color, background-color, border-color, opacity, box-shadow;
+/* Opt-in focus ring. brand-700 on white is about 7.7:1. The list includes
+   transform and omits outline-color, so the ring does not fade and a control
+   can still move. Unlayered so it wins over focus-visible:outline-none on
+   these controls. A scrolling table insets the ring so overflow does not clip it. */
+.admin-focus:is(button, a),
+.admin-focus :is(button, a) {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, translate, scale, rotate, filter, backdrop-filter;
 }
 
-.admin-login-focus:focus-visible {
+.admin-focus:is(button, a):focus-visible,
+.admin-focus :is(button, a):focus-visible {
   outline: 2px solid var(--color-brand-700);
   outline-offset: 2px;
+}
+
+.admin-focus .admin-record-table-scroll :is(button, a):focus-visible {
+  outline-offset: -2px;
 }
 
 @keyframes admin-login-drift-a {

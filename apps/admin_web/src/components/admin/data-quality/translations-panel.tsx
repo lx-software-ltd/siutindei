@@ -386,11 +386,11 @@ export function TranslationsPanel() {
           open && open.status === 'pending' ? (
             <AdminEditorPanel>
               {open.rationale ? (
-                <p className='text-sm text-slate-700'>{open.rationale}</p>
+                <p className='text-sm text-ink-700'>{open.rationale}</p>
               ) : null}
               {LANGUAGES.filter((entry) => open.source_text?.[entry[0]]).map(
                 ([code, label]) => (
-                  <p key={code} className='text-sm text-slate-700'>
+                  <p key={code} className='text-sm text-ink-700'>
                     {label}: {open.source_text?.[code]}
                   </p>
                 )

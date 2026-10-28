@@ -130,7 +130,7 @@ export function AccessRequestForm({ onRequestSubmitted }: AccessRequestFormProps
               aria-invalid={showOrgNameError || undefined}
               onBlur={() => validation.markTouched('organizationName')}
             />
-            <p className='mt-1 text-sm text-slate-500'>
+            <p className='mt-1 text-sm text-ink-500'>
               Enter the exact name of an existing organization, or the name for a
               new organization you would like to create.
             </p>
@@ -145,7 +145,7 @@ export function AccessRequestForm({ onRequestSubmitted }: AccessRequestFormProps
               placeholder='Provide any additional information about your request...'
               disabled={isSubmitting}
             />
-            <p className='mt-1 text-sm text-slate-500'>
+            <p className='mt-1 text-sm text-ink-500'>
               Explain why you need access to this organization or provide
               additional context for your request.
             </p>

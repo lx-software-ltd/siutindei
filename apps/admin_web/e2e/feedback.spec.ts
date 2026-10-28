@@ -80,7 +80,7 @@ test.describe('Feedback Panel', () => {
     const feedbackNav = adminPage
       .locator('nav.sticky')
       .getByRole('button', { name: 'Feedback', exact: true });
-    await expect(feedbackNav).toHaveClass(/bg-slate-900/);
+    await expect(feedbackNav).toHaveClass(/bg-ink-900/);
     await expect(
       adminPage.locator('nav.sticky').getByRole('button', { name: 'Feedback labels' })
     ).toHaveCount(0);

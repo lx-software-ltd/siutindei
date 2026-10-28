@@ -458,9 +458,9 @@ function TicketDetail({
       </AdminFieldGrid>
 
       {isPending && isAccessRequest ? (
-        <div className='space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3'>
+        <div className='space-y-3 rounded-lg border border-brand-100 bg-brand-50 p-3'>
           <Label>Organization Assignment</Label>
-          <p className='text-xs text-slate-500'>
+          <p className='text-xs text-ink-500'>
             The requester will become the manager of the selected organization. This applies when
             you approve.
           </p>
@@ -479,7 +479,7 @@ function TicketDetail({
                     hasSubmitted: false,
                   });
                 }}
-                className='h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-500'
+                className='h-4 w-4 border-ink-900/15 text-ink-900 focus:ring-brand-700'
               />
               <span className='text-sm'>Create new</span>
             </label>
@@ -492,20 +492,20 @@ function TicketDetail({
                 onChange={() => {
                   onChange({ organizationMode: 'existing', orgTouched: false, hasSubmitted: false });
                 }}
-                className='h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-500'
+                className='h-4 w-4 border-ink-900/15 text-ink-900 focus:ring-brand-700'
               />
               <span className='text-sm'>Use existing</span>
             </label>
           </div>
           {form.organizationMode === 'new' ? (
-            <div className='rounded border border-slate-200 bg-white p-2 text-sm'>
-              <span className='text-slate-500'>New organization name:</span>{' '}
+            <div className='rounded border border-brand-100 bg-white p-2 text-sm'>
+              <span className='text-ink-500'>New organization name:</span>{' '}
               <span className='font-medium'>{ticket.organization_name}</span>
             </div>
           ) : isLoadingOrgs ? (
-            <p className='text-sm text-slate-500'>Loading organizations...</p>
+            <p className='text-sm text-ink-500'>Loading organizations...</p>
           ) : organizations.length === 0 ? (
-            <p className='text-sm text-slate-500'>No existing organizations available.</p>
+            <p className='text-sm text-ink-500'>No existing organizations available.</p>
           ) : (
             <AdminField
               label='Organization'
@@ -539,14 +539,14 @@ function TicketDetail({
       ) : null}
 
       {isPending && !isAccessRequest ? (
-        <label className='flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3'>
+        <label className='flex items-center gap-2 rounded-lg border border-brand-100 bg-brand-50 p-3'>
           <input
             type='checkbox'
             checked={form.createOrg}
             onChange={(event) => {
               onChange({ createOrg: event.target.checked });
             }}
-            className='h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500'
+            className='h-4 w-4 rounded border-ink-900/15 text-ink-900 focus:ring-brand-700'
           />
           <span className='text-sm'>Create organization from this suggestion</span>
         </label>

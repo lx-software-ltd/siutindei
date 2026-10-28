@@ -89,7 +89,7 @@ export function CategorySuggestionsPanel() {
         <AdminKpiCard label='Spending per month' value={spending} />
       </div>
       {stranded > 0 ? (
-        <p className='text-sm text-slate-700'>
+        <p className='text-sm text-ink-700'>
           {stranded} remain after a decision that did not map them.
         </p>
       ) : null}

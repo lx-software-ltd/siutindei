@@ -151,7 +151,7 @@ export function RunsPanel() {
           <AdminField label='Checks' span='full'>
             <div className='space-y-2'>
               {CHECKS.map(([key, label]) => (
-                <label key={key} className='flex items-center gap-2 text-sm text-slate-700'>
+                <label key={key} className='flex items-center gap-2 text-sm text-ink-700'>
                   <input
                     type='checkbox'
                     checked={checks.includes(key)}
@@ -275,7 +275,7 @@ export function RunsPanel() {
         )}
         detail={
           runParam ? (
-            <p className='text-sm text-slate-600'>Selected run {runParam}</p>
+            <p className='text-sm text-ink-700'>Selected run {runParam}</p>
           ) : null
         }
         isExpanded={(id) => id === runParam}
