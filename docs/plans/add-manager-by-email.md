@@ -26,6 +26,7 @@ selects that user. Saving the organization still sends the Cognito `sub`.
 - `backend/infrastructure/lib/api-stack.ts`
 - `backend/src/app/api/admin.py`
 - `backend/src/app/api/admin_cognito.py`
+- `backend/src/app/api/admin_cognito_manager.py`
 - `tests/test_admin_cognito_manager_create.py`
 - `apps/admin_web/src/lib/api-client-cognito.ts`
 - `apps/admin_web/src/lib/api-client.ts`

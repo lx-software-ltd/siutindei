@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 from app.api import admin_cognito
+from app.api import admin_cognito_manager as manager_accounts
 from app.api.admin import lambda_handler
 from app.exceptions import ValidationError
 from app.services.aws_proxy import AwsProxyError
@@ -84,12 +85,12 @@ def _body(response: dict[str, Any]) -> dict[str, Any]:
 
 
 def test_confirmation_secret_meets_pool_policy() -> None:
-    secret = admin_cognito._passwordless_confirmation_secret()
+    secret = manager_accounts._passwordless_confirmation_secret()
     assert len(secret) >= 12
     assert any(char.islower() for char in secret)
     assert any(char.isupper() for char in secret)
     assert any(char.isdigit() for char in secret)
-    assert any(char in admin_cognito._PASSWORD_SYMBOLS for char in secret)
+    assert any(char in manager_accounts._PASSWORD_SYMBOLS for char in secret)
 
 
 def test_create_confirms_user_and_grants_manager(
@@ -97,7 +98,7 @@ def test_create_confirms_user_and_grants_manager(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     monkeypatch.setattr(
-        admin_cognito,
+        manager_accounts,
         "_passwordless_confirmation_secret",
         lambda: SECRET,
     )
@@ -125,7 +126,7 @@ def test_create_confirms_user_and_grants_manager(
     calls = _patch_proxy(monkeypatch, responder)
 
     with caplog.at_level("INFO"):
-        response = admin_cognito._handle_create_cognito_manager(
+        response = manager_accounts._handle_create_cognito_manager(
             _event({"email": "  New.Manager@Example.com  "})
         )
 
@@ -165,7 +166,7 @@ def test_existing_confirmed_user_keeps_password_and_gains_manager(
 
     calls = _patch_proxy(monkeypatch, responder)
 
-    response = admin_cognito._handle_create_cognito_manager(_event({"email": EMAIL}))
+    response = manager_accounts._handle_create_cognito_manager(_event({"email": EMAIL}))
 
     actions = [action for action, _ in calls]
     assert "admin_create_user" not in actions
@@ -185,7 +186,7 @@ def test_existing_manager_is_not_signed_out(monkeypatch: pytest.MonkeyPatch) -> 
 
     calls = _patch_proxy(monkeypatch, responder)
 
-    response = admin_cognito._handle_create_cognito_manager(_event({"email": EMAIL}))
+    response = manager_accounts._handle_create_cognito_manager(_event({"email": EMAIL}))
 
     actions = [action for action, _ in calls]
     assert actions == ["list_users", "admin_list_groups_for_user"]
@@ -210,7 +211,7 @@ def test_unconfirmed_existing_user_is_confirmed(
 
     calls = _patch_proxy(monkeypatch, responder)
 
-    admin_cognito._handle_create_cognito_manager(_event({"email": EMAIL}))
+    manager_accounts._handle_create_cognito_manager(_event({"email": EMAIL}))
 
     actions = [action for action, _ in calls]
     assert actions.index("admin_set_user_password") < actions.index("admin_get_user")
@@ -235,7 +236,7 @@ def test_username_exists_reuses_the_account(monkeypatch: pytest.MonkeyPatch) -> 
 
     _patch_proxy(monkeypatch, responder)
 
-    response = admin_cognito._handle_create_cognito_manager(_event({"email": EMAIL}))
+    response = manager_accounts._handle_create_cognito_manager(_event({"email": EMAIL}))
 
     assert response["statusCode"] == 200
     assert _body(response)["sub"] == SUB
@@ -244,14 +245,16 @@ def test_username_exists_reuses_the_account(monkeypatch: pytest.MonkeyPatch) -> 
 def test_invalid_email_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = _patch_proxy(monkeypatch, lambda action, params: {})
     with pytest.raises(ValidationError):
-        admin_cognito._handle_create_cognito_manager(_event({"email": "not-an-email"}))
+        manager_accounts._handle_create_cognito_manager(
+            _event({"email": "not-an-email"})
+        )
     assert calls == []
 
 
 def test_quoted_email_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = _patch_proxy(monkeypatch, lambda action, params: {})
     with pytest.raises(ValidationError):
-        admin_cognito._handle_create_cognito_manager(
+        manager_accounts._handle_create_cognito_manager(
             _event({"email": 'bad"quote@example.com'})
         )
     assert calls == []
@@ -259,7 +262,7 @@ def test_quoted_email_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_missing_email_is_rejected() -> None:
     with pytest.raises(ValidationError):
-        admin_cognito._handle_create_cognito_manager(_event({}))
+        manager_accounts._handle_create_cognito_manager(_event({}))
 
 
 def test_manager_group_cannot_create_accounts() -> None:

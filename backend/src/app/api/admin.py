@@ -26,11 +26,11 @@ from app.api.admin_auth import (
     _is_manager,
 )
 from app.api.admin_cognito import (
-    _handle_create_cognito_manager,
     _handle_delete_cognito_user,
     _handle_list_cognito_users,
     _handle_user_group,
 )
+from app.api.admin_cognito_manager import _handle_create_cognito_manager
 from app.api.admin_crud import _handle_crud
 from app.api.admin_deleted_organizations import handle_deleted_organizations
 from app.api.admin_feedback import (
