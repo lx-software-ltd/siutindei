@@ -15,10 +15,22 @@ import {
 } from '../../../lib/api-client-cognito';
 import type { CognitoUser } from '../../../types/admin';
 import { ChevronDownIcon, SpinnerIcon } from '../../icons/action-icons';
+import { ConfirmDialog } from '../../ui/confirm-dialog';
 import { Input } from '../../ui/input';
 
 const MANAGER_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ADD_MANAGER_PREFIX = 'add:';
+
+function addManagerMessage(email: string): string {
+  return (
+    `Grant manager access to ${email}. This creates a passwordless ` +
+    'account when none exists, even if the organization is not saved. ' +
+    'An existing account is signed out of every device. They sign in ' +
+    'with the one-time email code. Google or Apple sign-in uses this ' +
+    'account only when that provider is not already a separate user. ' +
+    'Check the address before continuing.'
+  );
+}
 
 interface ManagerComboboxProps {
   id: string;
@@ -56,12 +68,15 @@ export function ManagerCombobox({
   const [isTyping, setIsTyping] = useState(false);
   const [query, setQuery] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [loadedQuery, setLoadedQuery] = useState<string | null>(null);
   const [addedUser, setAddedUser] = useState<CognitoUser | null>(null);
   const [remembered, setRemembered] = useState<{
     id: string;
     label: string;
   } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const creatingRef = useRef(false);
   const listboxId = `${id}-listbox`;
 
   const selectedUser = useMemo(() => {
@@ -86,11 +101,14 @@ export function ManagerCombobox({
       : value;
 
   const inputValue = isTyping ? query : selectedLabel;
-  const pendingEmail = query.trim().toLowerCase();
+  const typedEmail = query.trim().toLowerCase();
   const showAdd =
     isTyping &&
-    MANAGER_EMAIL.test(pendingEmail) &&
-    !users.some((user) => (user.email || '').toLowerCase() === pendingEmail);
+    !isLoading &&
+    loadedQuery !== null &&
+    loadedQuery.trim().toLowerCase() === typedEmail &&
+    MANAGER_EMAIL.test(typedEmail) &&
+    !users.some((user) => (user.email || '').toLowerCase() === typedEmail);
 
   const options = useMemo(() => {
     const items: Array<{ id: string; label: string }> = [];
@@ -106,14 +124,14 @@ export function ManagerCombobox({
     }
     if (showAdd) {
       items.push({
-        id: `${ADD_MANAGER_PREFIX}${pendingEmail}`,
+        id: `${ADD_MANAGER_PREFIX}${typedEmail}`,
         label: isCreating
-          ? `Adding ${pendingEmail} as manager`
-          : `Add ${pendingEmail} as manager`,
+          ? `Adding ${typedEmail} as manager`
+          : `Add ${typedEmail} as manager`,
       });
     }
     return items;
-  }, [allowEmpty, isCreating, pendingEmail, selectedLabel, showAdd, users, value]);
+  }, [allowEmpty, isCreating, typedEmail, selectedLabel, showAdd, users, value]);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,12 +141,14 @@ export function ManagerCombobox({
         .then((response) => {
           if (!cancelled) {
             setUsers(response.items);
+            setLoadedQuery(query);
           }
         })
         .catch((err: unknown) => {
           if (cancelled) {
             return;
           }
+          setLoadedQuery(null);
           const message =
             err instanceof ApiError
               ? err.message
@@ -170,9 +190,10 @@ export function ManagerCombobox({
   };
 
   const addManager = async (email: string) => {
-    if (isCreating) {
+    if (creatingRef.current) {
       return;
     }
+    creatingRef.current = true;
     setIsCreating(true);
     try {
       const created = await createCognitoManager(email);
@@ -189,17 +210,29 @@ export function ManagerCombobox({
         err instanceof ApiError ? err.message : 'Failed to add this manager.';
       onError?.(message);
     } finally {
+      creatingRef.current = false;
       setIsCreating(false);
+      setPendingEmail(null);
     }
   };
 
   const selectOption = (managerId: string) => {
+    if (isCreating || pendingEmail) {
+      return;
+    }
     if (managerId.startsWith(ADD_MANAGER_PREFIX)) {
-      void addManager(managerId.slice(ADD_MANAGER_PREFIX.length));
+      setPendingEmail(managerId.slice(ADD_MANAGER_PREFIX.length));
       return;
     }
     onChange(managerId);
     closeSearch();
+  };
+
+  const cancelAdd = () => {
+    if (isCreating) {
+      return;
+    }
+    setPendingEmail(null);
   };
 
   const handleInputChange = (nextQuery: string) => {
@@ -302,27 +335,39 @@ export function ManagerCombobox({
               {emptyMessage}
             </li>
           ) : (
-            options.map((option, index) => (
-              <li
-                key={`${option.id || 'empty'}-${index}`}
-                id={`${listboxId}-option-${index}`}
-                role='option'
-                aria-selected={option.id === value}
-                className={
-                  'cursor-pointer px-3 py-2 text-sm ' +
-                  (index === activeIndex
-                    ? 'bg-brand-50 text-ink-900'
-                    : option.id === value
-                      ? 'bg-brand-50 text-ink-900'
-                      : 'text-ink-700 hover:bg-brand-50')
-                }
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => selectOption(option.id)}
-                onMouseEnter={() => setActiveIndex(index)}
-              >
-                {option.label}
-              </li>
-            ))
+            options.map((option, index) => {
+              const addDisabled =
+                option.id.startsWith(ADD_MANAGER_PREFIX) &&
+                (isCreating || pendingEmail !== null);
+              const highlighted =
+                index === activeIndex || option.id === value;
+              return (
+                <li
+                  key={`${option.id || 'empty'}-${index}`}
+                  id={`${listboxId}-option-${index}`}
+                  role='option'
+                  aria-selected={option.id === value}
+                  aria-disabled={addDisabled || undefined}
+                  className={
+                    'px-3 py-2 text-sm ' +
+                    (addDisabled
+                      ? 'cursor-not-allowed text-ink-500'
+                      : highlighted
+                        ? 'cursor-pointer bg-brand-50 text-ink-900'
+                        : 'cursor-pointer text-ink-700 hover:bg-brand-50')
+                  }
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    if (!addDisabled) {
+                      selectOption(option.id);
+                    }
+                  }}
+                  onMouseEnter={() => setActiveIndex(index)}
+                >
+                  {option.label}
+                </li>
+              );
+            })
           )}
           {!isLoading && users.length === 0 && query.trim() && !showAdd ? (
             <li className='px-3 py-2 text-sm text-ink-500'>
@@ -331,6 +376,20 @@ export function ManagerCombobox({
           ) : null}
         </ul>
       ) : null}
+      <ConfirmDialog
+        open={pendingEmail !== null}
+        title='Add manager'
+        message={pendingEmail ? addManagerMessage(pendingEmail) : ''}
+        confirmLabel='Add manager'
+        confirmLoading={isCreating}
+        confirmLoadingLabel='Adding…'
+        onConfirm={() => {
+          if (pendingEmail) {
+            void addManager(pendingEmail);
+          }
+        }}
+        onCancel={cancelAdd}
+      />
     </div>
   );
 }

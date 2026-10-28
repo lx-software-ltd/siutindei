@@ -313,18 +313,28 @@ test.describe('Organizations Panel', () => {
       path: '/opt/cursor/artifacts/add-manager-by-email.png',
     });
 
+    await addOption.click();
+    const dialog = adminPage.getByRole('alertdialog', { name: 'Add manager' });
+    await expect(dialog).toContainText('new.manager@example.com');
+    await expect(dialog).toContainText('signed out of every device');
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/add-manager-confirm.png',
+    });
     const requestPromise = adminPage.waitForRequest(
       (request) =>
         request.method() === 'POST' &&
         request.url().includes('/admin/cognito-users') &&
         !request.url().includes('/groups/')
     );
-    await addOption.click();
+    await dialog.getByRole('button', { name: 'Add manager' }).click();
     const request = await requestPromise;
     expect(request.postDataJSON()).toEqual({
       email: 'new.manager@example.com',
     });
-    await expect(managerField).toHaveValue('new.manager@example.com');
+    await expect(dialog).toBeHidden();
+    await expect(adminPage.getByRole('combobox', { name: 'Manager' })).toHaveValue(
+      'new.manager@example.com'
+    );
   });
 
   test('should validate required fields on submit', async ({ adminPage }) => {

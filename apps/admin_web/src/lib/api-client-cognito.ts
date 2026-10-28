@@ -24,7 +24,9 @@ function buildCognitoUsersUrl() {
 }
 
 function buildUserGroupsUrl(username: string) {
-  return buildApiUrl(`v1/admin/cognito-users/groups/${username}`);
+  return buildApiUrl(
+    `v1/admin/users/${encodeURIComponent(username)}/groups`
+  );
 }
 
 export async function createCognitoManager(

@@ -150,6 +150,15 @@ describe('ManagerCombobox', () => {
       })
     );
 
+    const dialog = await screen.findByRole('alertdialog', {
+      name: 'Add manager',
+    });
+    expect(dialog).toHaveTextContent('signed out of every device');
+    expect(dialog).toHaveTextContent('Google or Apple');
+    expect(createCognitoManagerMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Add manager' }));
+
     await waitFor(() => {
       expect(createCognitoManagerMock).toHaveBeenCalledWith(
         'new.manager@example.com'
@@ -217,5 +226,77 @@ describe('ManagerCombobox', () => {
     expect(
       screen.queryByRole('option', { name: /Add manager@example.com/ })
     ).toBeNull();
+  });
+
+  it('waits for the email search before offering add', async () => {
+    const user = userEvent.setup();
+    let resolveSearch: (value: {
+      items: CognitoUser[];
+      pagination_token: null;
+    }) => void = () => undefined;
+    listCognitoUsersMock.mockImplementation((_token, _limit, query) => {
+      if (query === 'new.manager@example.com') {
+        return new Promise((resolve) => {
+          resolveSearch = resolve;
+        });
+      }
+      return Promise.resolve({ items: [], pagination_token: null });
+    });
+
+    render(
+      <ManagerCombobox id='org-manager' value='' onChange={vi.fn()} />
+    );
+
+    await user.type(
+      screen.getByRole('combobox'),
+      'new.manager@example.com'
+    );
+    await waitFor(() => {
+      expect(listCognitoUsersMock).toHaveBeenCalledWith(
+        undefined,
+        60,
+        'new.manager@example.com'
+      );
+    });
+
+    expect(
+      screen.queryByRole('option', {
+        name: 'Add new.manager@example.com as manager',
+      })
+    ).toBeNull();
+
+    resolveSearch({ items: [], pagination_token: null });
+
+    expect(
+      await screen.findByRole('option', {
+        name: 'Add new.manager@example.com as manager',
+      })
+    ).toBeVisible();
+  });
+
+  it('does not create a manager when confirmation is cancelled', async () => {
+    const user = userEvent.setup();
+    listCognitoUsersMock.mockResolvedValue({
+      items: [],
+      pagination_token: null,
+    });
+
+    render(
+      <ManagerCombobox id='org-manager' value='' onChange={vi.fn()} />
+    );
+
+    await user.type(
+      screen.getByRole('combobox'),
+      'new.manager@example.com'
+    );
+    await user.click(
+      await screen.findByRole('option', {
+        name: 'Add new.manager@example.com as manager',
+      })
+    );
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(createCognitoManagerMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alertdialog')).toBeNull();
   });
 });

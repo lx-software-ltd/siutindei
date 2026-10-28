@@ -1869,7 +1869,7 @@ export async function setupApiMocks(
     });
   });
 
-  await page.route('**/api/mock/**/admin/cognito-users/groups/*', async (route) => {
+  await page.route('**/api/mock/**/admin/users/*/groups*', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

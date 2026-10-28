@@ -65,3 +65,17 @@ Accounts already created stay ordinary Cognito users.
 
 None. Create-on-click, grant the manager group, and send no invitation
 email were accepted with the implementation request.
+
+## Follow-up
+
+The admin confirms the address before the account is created. The
+dialog warns that an existing account is signed out and that Google
+or Apple joins this account only when that provider is not already a
+separate user. Pre sign-up links a new verified Google or Apple
+identity to the native account. A `RESET_REQUIRED` account is not
+confirmed or granted the role. Partial Cognito failures return 400
+with a specific message. The acting admin is stored on `cognito_user`
+in the audit log. The group toggle calls
+`/v1/admin/users/{username}/groups`. `GET` and `POST` on
+`/cognito-users`, and `POST` and `DELETE` on user groups, each share
+one ANY method so the stack stays within 500 resources.

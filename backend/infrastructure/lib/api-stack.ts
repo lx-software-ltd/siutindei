@@ -1710,11 +1710,31 @@ export class ApiStack extends cdk.Stack {
     });
 
     // Auth Lambda triggers
+    // Outside the VPC so it can call Cognito's public API. A new Google
+    // or Apple sign-in is linked to the existing email account there.
     const preSignUpFunction = createPythonFunction("AuthPreSignUpFunction", {
       handler: "lambda/auth/pre_signup/handler.lambda_handler",
       memorySize: 256,
       timeout: cdk.Duration.seconds(10),
+      noVpc: true,
     });
+    // A pool ARN here would cycle: the pool trigger depends on this
+    // function, and the policy would depend on the pool.
+    preSignUpFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: [
+          "cognito-idp:ListUsers",
+          "cognito-idp:AdminLinkProviderForUser",
+        ],
+        resources: [
+          cdk.Stack.of(this).formatArn({
+            service: "cognito-idp",
+            resource: "userpool",
+            resourceName: "*",
+          }),
+        ],
+      })
+    );
 
     const defineAuthChallengeFunction = createPythonFunction(
       "AuthDefineChallengeFunction",
@@ -2585,22 +2605,19 @@ export class ApiStack extends cdk.Stack {
     const users = admin.addResource("users");
     const userByName = users.addResource("{username}");
     const userGroups = userByName.addResource("groups");
-    userGroups.addMethod("POST", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.CUSTOM,
-      authorizer: adminAuthorizer,
-    });
-    userGroups.addMethod("DELETE", adminIntegration, {
+    // One ANY method covers POST and DELETE. A second method pushes
+    // the stack past the CloudFormation 500-resource cap. The Lambda
+    // rejects methods it does not implement.
+    userGroups.addMethod("ANY", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
       authorizer: adminAuthorizer,
     });
 
-    // Cognito users listing and management endpoint - admin only
+    // Cognito users listing and management endpoint - admin only.
+    // One ANY method covers GET and POST. A separate POST method
+    // pushes the stack past the CloudFormation 500-resource cap.
     const cognitoUsers = admin.addResource("cognito-users");
-    cognitoUsers.addMethod("GET", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.CUSTOM,
-      authorizer: adminAuthorizer,
-    });
-    cognitoUsers.addMethod("POST", adminIntegration, {
+    cognitoUsers.addMethod("ANY", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
       authorizer: adminAuthorizer,
     });

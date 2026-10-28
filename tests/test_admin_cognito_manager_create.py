@@ -12,6 +12,8 @@ from app.api.admin import lambda_handler
 from app.exceptions import ValidationError
 from app.services.aws_proxy import AwsProxyError
 
+_REAL_GRANT = manager_accounts._record_manager_grant
+
 SUB = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 EMAIL = "new.manager@example.com"
 SECRET = "Aa1!sentinel-secret-value"
@@ -62,10 +64,17 @@ def _event(body: dict[str, Any] | None, *, groups: str = "admin") -> dict[str, A
 
 
 @pytest.fixture(autouse=True)
-def _cognito_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def _cognito_env(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
     monkeypatch.setenv("COGNITO_USER_POOL_ID", "pool-1")
     monkeypatch.delenv("ADMIN_GROUP", raising=False)
     monkeypatch.delenv("MANAGER_GROUP", raising=False)
+    grants: list[dict[str, Any]] = []
+
+    def _record_grant(*_args: Any, **kwargs: Any) -> None:
+        grants.append(kwargs)
+
+    monkeypatch.setattr(manager_accounts, "_record_manager_grant", _record_grant)
+    return grants
 
 
 def _patch_proxy(monkeypatch: pytest.MonkeyPatch, responder) -> list[tuple]:
@@ -90,12 +99,13 @@ def test_confirmation_secret_meets_pool_policy() -> None:
     assert any(char.islower() for char in secret)
     assert any(char.isupper() for char in secret)
     assert any(char.isdigit() for char in secret)
-    assert any(char in manager_accounts._PASSWORD_SYMBOLS for char in secret)
+    assert any(char in manager_accounts._CONFIRMATION_SYMBOLS for char in secret)
 
 
 def test_create_confirms_user_and_grants_manager(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
+    _cognito_env: list[dict[str, Any]],
 ) -> None:
     monkeypatch.setattr(
         manager_accounts,
@@ -106,6 +116,7 @@ def test_create_confirms_user_and_grants_manager(
 
     def responder(action: str, params: dict) -> dict:
         if action == "list_users":
+            assert params["Filter"] == f'email = "{EMAIL}"'
             return {"Users": []}
         if action == "admin_create_user":
             assert params["MessageAction"] == "SUPPRESS"
@@ -146,6 +157,17 @@ def test_create_confirms_user_and_grants_manager(
     assert body["email"] == EMAIL
     assert body["groups"] == ["manager"]
     assert body["status"] == "CONFIRMED"
+    assert body["account_created"] is True
+    assert body["signed_out"] is True
+    assert _cognito_env == [
+        {
+            "email": EMAIL,
+            "user_sub": SUB,
+            "created": True,
+            "signed_out": True,
+            "groups": ["manager"],
+        }
+    ]
     assert SECRET not in response["body"]
     assert SECRET not in caplog.text
 
@@ -268,6 +290,226 @@ def test_missing_email_is_rejected() -> None:
 def test_manager_group_cannot_create_accounts() -> None:
     response = lambda_handler(_event({"email": EMAIL}, groups="manager"), None)
     assert response["statusCode"] == 403
+
+
+def test_importer_cannot_create_accounts() -> None:
+    response = lambda_handler(_event({"email": EMAIL}, groups="importer"), None)
+    assert response["statusCode"] == 403
+
+
+def test_put_on_the_collection_is_rejected() -> None:
+    event = _event({"email": EMAIL})
+    event["httpMethod"] = "PUT"
+    response = lambda_handler(event, None)
+    assert response["statusCode"] == 405
+
+
+def test_reset_required_account_is_left_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    existing = _list_user(status="RESET_REQUIRED")
+
+    def responder(action: str, params: dict) -> dict:
+        if action == "list_users":
+            return {"Users": [existing]}
+        raise AssertionError(action)
+
+    calls = _patch_proxy(monkeypatch, responder)
+
+    with pytest.raises(ValidationError, match="password reset"):
+        manager_accounts._handle_create_cognito_manager(_event({"email": EMAIL}))
+
+    assert [action for action, _ in calls] == ["list_users"]
+
+
+def test_native_account_wins_over_a_provider_account(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    native = _list_user()
+    federated = _list_user(sub="bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee")
+    federated["Username"] = "Google_123"
+
+    def responder(action: str, params: dict) -> dict:
+        if action == "list_users":
+            return {"Users": [federated, native]}
+        if action == "admin_list_groups_for_user":
+            assert params["Username"] == EMAIL
+            return {"Groups": [{"GroupName": "manager"}]}
+        raise AssertionError(action)
+
+    _patch_proxy(monkeypatch, responder)
+
+    response = manager_accounts._handle_create_cognito_manager(_event({"email": EMAIL}))
+
+    assert response["statusCode"] == 200
+    assert _body(response)["username"] == EMAIL
+    assert _body(response)["signed_out"] is False
+
+
+def test_several_native_accounts_are_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    first = _list_user()
+    second = _list_user(sub="bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee")
+    second["Username"] = "other-native"
+
+    def responder(action: str, params: dict) -> dict:
+        if action == "list_users":
+            return {"Users": [first, second]}
+        raise AssertionError(action)
+
+    calls = _patch_proxy(monkeypatch, responder)
+
+    with pytest.raises(ValidationError, match="More than one account"):
+        manager_accounts._handle_create_cognito_manager(_event({"email": EMAIL}))
+
+    assert [action for action, _ in calls] == ["list_users"]
+
+
+def test_lookup_follows_the_pagination_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    existing = _list_user()
+    pages = iter(
+        [
+            {"Users": [], "PaginationToken": "next"},
+            {"Users": [existing]},
+        ]
+    )
+
+    def responder(action: str, params: dict) -> dict:
+        if action == "list_users":
+            return next(pages)
+        if action == "admin_list_groups_for_user":
+            return {"Groups": [{"GroupName": "manager"}]}
+        raise AssertionError(action)
+
+    calls = _patch_proxy(monkeypatch, responder)
+
+    response = manager_accounts._handle_create_cognito_manager(_event({"email": EMAIL}))
+
+    actions = [action for action, _ in calls]
+    assert actions == ["list_users", "list_users", "admin_list_groups_for_user"]
+    assert response["statusCode"] == 200
+
+
+def test_confirm_failure_names_the_partial_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    created = _list_user(status="FORCE_CHANGE_PASSWORD")
+
+    def responder(action: str, params: dict) -> dict:
+        if action == "list_users":
+            return {"Users": []}
+        if action == "admin_create_user":
+            return {"User": created}
+        if action == "admin_set_user_password":
+            raise AwsProxyError("InvalidPasswordException", "rejected")
+        raise AssertionError(action)
+
+    _patch_proxy(monkeypatch, responder)
+
+    with pytest.raises(ValidationError, match="could not be confirmed"):
+        manager_accounts._handle_create_cognito_manager(_event({"email": EMAIL}))
+
+
+def test_group_failure_names_the_partial_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    existing = _list_user()
+
+    def responder(action: str, params: dict) -> dict:
+        if action == "list_users":
+            return {"Users": [existing]}
+        if action == "admin_list_groups_for_user":
+            return {"Groups": []}
+        if action == "admin_add_user_to_group":
+            raise AwsProxyError("TooManyRequestsException", "slow")
+        raise AssertionError(action)
+
+    _patch_proxy(monkeypatch, responder)
+
+    with pytest.raises(ValidationError, match="manager role"):
+        manager_accounts._handle_create_cognito_manager(_event({"email": EMAIL}))
+
+
+def test_record_manager_grant_writes_an_audit_row(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    committed: list[bool] = []
+
+    class _Session:
+        def __enter__(self) -> Any:
+            return self
+
+        def __exit__(self, *_args: object) -> bool:
+            return False
+
+        def commit(self) -> None:
+            committed.append(True)
+
+    logged: list[dict[str, Any]] = []
+
+    class _Audit:
+        def __init__(self, _session: object, **kwargs: Any) -> None:
+            logged.append(kwargs)
+
+        def log_custom(
+            self,
+            table_name: str,
+            record_id: str,
+            action: str,
+            **kwargs: Any,
+        ) -> None:
+            logged.append(
+                {
+                    "table_name": table_name,
+                    "record_id": record_id,
+                    "action": action,
+                    **kwargs,
+                }
+            )
+
+    monkeypatch.setattr(manager_accounts, "_record_manager_grant", _REAL_GRANT)
+    monkeypatch.setattr(manager_accounts, "get_engine", lambda: object())
+    monkeypatch.setattr(manager_accounts, "Session", lambda _engine: _Session())
+    monkeypatch.setattr(manager_accounts, "AuditService", _Audit)
+    monkeypatch.setattr(manager_accounts, "_set_session_audit_context", lambda *_: None)
+
+    _REAL_GRANT(
+        _event({"email": EMAIL}),
+        email=EMAIL,
+        user_sub=SUB,
+        created=False,
+        signed_out=True,
+        groups=["manager"],
+    )
+
+    assert committed == [True]
+    assert logged[0]["user_id"] == "admin-sub"
+    assert logged[1]["table_name"] == "cognito_user"
+    assert logged[1]["action"] == "UPDATE"
+    assert logged[1]["new_values"]["signed_out"] is True
+
+
+def test_audit_failure_still_returns_the_manager(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    existing = _list_user()
+
+    def responder(action: str, params: dict) -> dict:
+        if action == "list_users":
+            return {"Users": [existing]}
+        if action == "admin_list_groups_for_user":
+            return {"Groups": [{"GroupName": "manager"}]}
+        raise AssertionError(action)
+
+    def _engine() -> object:
+        raise RuntimeError("database down")
+
+    monkeypatch.setattr(manager_accounts, "_record_manager_grant", _REAL_GRANT)
+    monkeypatch.setattr(manager_accounts, "get_engine", _engine)
+    _patch_proxy(monkeypatch, responder)
+
+    response = manager_accounts._handle_create_cognito_manager(_event({"email": EMAIL}))
+
+    assert response["statusCode"] == 200
 
 
 def test_admin_route_creates_a_manager(monkeypatch: pytest.MonkeyPatch) -> None:

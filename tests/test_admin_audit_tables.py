@@ -31,6 +31,7 @@ DROPPED_AUDITED_TABLES = frozenset(
 # Rows written by AuditService without a table trigger.
 APPLICATION_AUDIT_TABLES = frozenset(
     {
+        "cognito_user",
         "organization_duplicate_dismissals",
         "organization_merges",
     }
@@ -68,6 +69,7 @@ def test_auditable_tables_sort_alphabetically() -> None:
         "api_keys",
         "category_suggestion_settings",
         "category_suggestions",
+        "cognito_user",
         "feedback_labels",
         "import_settings",
         "locations",
