@@ -15,3 +15,4 @@ alwaysApply: false
 - When UI behavior changes, update Playwright specs and fixtures under `apps/admin_web/e2e`. [why: convention]
 - Keep `npm run generate:api` output committed when OpenAPI changes. [why: 1f0b8c7 generated OpenAPI types]
 - Auth routes under `src/app/auth/` are red. Plan in chat and wait for approval. [why: c37612e admin login redirect loop]
+- Brand tokens in `globals.css` mirror `apps/public_www`. Change both or neither. [why: convention]

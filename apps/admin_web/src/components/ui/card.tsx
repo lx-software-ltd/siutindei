@@ -1,6 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
 import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export interface CardProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   title?: string;
@@ -25,9 +26,11 @@ export function Card({
   return (
     <section
       {...rest}
-      className={clsx(
-        'rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:rounded-xl sm:p-6',
-        className
+      className={twMerge(
+        clsx(
+          'rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:rounded-xl sm:p-6',
+          className
+        )
       )}
     >
       {(title || titleAccessory || description) && (

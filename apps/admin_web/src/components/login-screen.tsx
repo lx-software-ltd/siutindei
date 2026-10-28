@@ -4,14 +4,35 @@ import { AdminInlineError } from './ui/admin-inline-error';
 
 import { useState, type FormEvent } from 'react';
 
+import { twMerge } from 'tailwind-merge';
+
 import { useAuth } from './auth-provider';
 import { AppleIcon, GoogleIcon } from './icons/action-icons';
-import { LegalLinks } from './legal-links';
+import { LoginBackdrop } from './login/login-backdrop';
+import { LoginBrandHeader } from './login/login-brand-header';
+import { LoginFooter } from './login/login-footer';
 import { StatusBanner } from './status-banner';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
+
+/** brand-700 on white is about 7.7:1. brand-600 is about 2.1:1. */
+const loginFieldClassName =
+  'h-11 w-full rounded-lg border border-ink-900/15 bg-white px-3 text-base ' +
+  'text-ink-900 shadow-sm focus:border-brand-700 focus:outline-none ' +
+  'focus:ring-1 focus:ring-brand-700 disabled:cursor-not-allowed ' +
+  'disabled:bg-slate-100';
+
+const fieldLabelClassName = 'mb-1 block text-sm font-semibold text-ink-900';
+
+const socialButtonClassName =
+  'admin-login-focus h-11 w-full justify-start gap-3 rounded-lg border-ink-900/15 text-sm font-semibold text-ink-900 hover:bg-brand-50 focus-visible:ring-0 sm:h-11';
+
+const primaryButtonClassName =
+  'admin-login-focus h-11 w-full rounded-lg text-base focus-visible:ring-0 sm:h-11 sm:text-sm';
+
+function loginFieldClass(invalid: boolean) {
+  return twMerge(loginFieldClassName, invalid ? formErrorClassName : '');
+}
 
 const socialProviders = [
   {
@@ -51,8 +72,6 @@ export function LoginScreen() {
   const [codeTouched, setCodeTouched] = useState(false);
   const [emailSubmitted, setEmailSubmitted] = useState(false);
   const [codeSubmitted, setCodeSubmitted] = useState(false);
-
-  const errorInputClassName = formErrorClassName;
 
   const hasConfigErrors = configErrors.length > 0;
   const hasError = error.length > 0;
@@ -110,209 +129,167 @@ export function LoginScreen() {
   };
 
   return (
-    <main className='min-h-screen bg-slate-50'>
-      <div className='mx-auto grid min-h-screen max-w-6xl grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]'>
-        <section className='relative hidden flex-col justify-between overflow-hidden bg-slate-900 text-white lg:flex'>
-          <div className='absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700' />
-          <div className='relative z-10 p-10'>
-            <p className='text-xs font-semibold uppercase tracking-[0.3em] text-slate-300'>
-              Siu Tin Dei
-            </p>
-            <h2 className='mt-4 text-3xl font-semibold leading-tight'>
-              Admin console access
-            </h2>
-            <p className='mt-4 text-sm text-slate-200'>
-              Manage organizations, activities, and schedules with secure
-              sign-in and audit-ready tools.
-            </p>
-            <ul className='mt-6 space-y-3 text-sm text-slate-200'>
-              <li className='flex items-start gap-3'>
-                <span className='mt-2 h-1.5 w-1.5 rounded-full bg-emerald-300' />
-                Review updates, approvals, and access requests in one place.
-              </li>
-              <li className='flex items-start gap-3'>
-                <span className='mt-2 h-1.5 w-1.5 rounded-full bg-emerald-300' />
-                Track changes with audit logs and real-time status updates.
-              </li>
-              <li className='flex items-start gap-3'>
-                <span className='mt-2 h-1.5 w-1.5 rounded-full bg-emerald-300' />
-                Keep teams aligned with role-based access controls.
-              </li>
-            </ul>
+    <LoginBackdrop footer={<LoginFooter />}>
+      <LoginBrandHeader
+        title={
+          <>
+            Sign in to <span className='whitespace-nowrap'>Siu Tin Dei</span>{' '}
+            Admin
+          </>
+        }
+        subtitle='For the team that curates trusted classes, workshops, and outdoor adventures across Hong Kong.'
+      />
+      <Card className='w-full rounded-2xl border-brand-100 shadow-xl shadow-ink-900/10 sm:rounded-2xl sm:p-8'>
+        {(hasError || hasConfigErrors || hasPasswordlessError) && (
+          <div className='mb-4 space-y-2'>
+            {hasError && (
+              <StatusBanner kind='error'>
+                {error}
+              </StatusBanner>
+            )}
+            {hasPasswordlessError && (
+              <StatusBanner kind='error'>
+                {passwordlessError}
+              </StatusBanner>
+            )}
+            {configErrors.map((configError) => (
+              <StatusBanner
+                key={configError}
+                kind='error'
+              >
+                {configError}
+              </StatusBanner>
+            ))}
           </div>
-          <div className='relative z-10 p-10 text-xs text-slate-300'>
-            Need access? Use your organization email or contact support.
-          </div>
-        </section>
+        )}
 
-        <section className='flex items-center justify-center px-6 py-10 sm:px-10'>
-          <div className='w-full max-w-md'>
-            <div className='mb-6 space-y-2'>
-              <p className='text-xs font-semibold uppercase tracking-[0.3em] text-slate-500'>
-                Siu Tin Dei Admin
-              </p>
-              <h1 className='text-2xl font-semibold text-slate-900'>
-                Welcome back
-              </h1>
-              <p className='text-sm text-slate-600'>
-                Sign in with social accounts or request a magic link by email.
+        <div className='space-y-3'>
+          {socialProviders.map(({ key, label, provider, Icon }) => (
+            <Button
+              key={key}
+              type='button'
+              variant='outline'
+              onClick={() => handleProviderLogin(provider)}
+              disabled={hasConfigErrors || isLoading}
+              className={socialButtonClassName}
+            >
+              <span
+                aria-hidden='true'
+                className='flex h-5 w-5 items-center justify-center'
+              >
+                <Icon className='h-5 w-5' />
+              </span>
+              {label}
+            </Button>
+          ))}
+        </div>
+
+        <div className='relative my-6'>
+          <div className='absolute inset-0 flex items-center'>
+            <div className='w-full border-t border-brand-100' />
+          </div>
+          <div className='relative flex justify-center text-xs uppercase tracking-[0.3em] text-ink-700'>
+            <span className='bg-white px-3'>Or</span>
+          </div>
+        </div>
+
+        {!showCodeInput ? (
+          <form onSubmit={handleEmailSubmit} className='space-y-4'>
+            <div className='space-y-2'>
+              <label htmlFor='email' className={fieldLabelClassName}>
+                Work email <RequiredMark />
+              </label>
+              <input
+                id='email'
+                type='email'
+                placeholder='you@example.com'
+                value={email}
+                onChange={(event) => {
+                  setEmailTouched(true);
+                  setEmail(event.target.value);
+                }}
+                disabled={isLoading || hasConfigErrors}
+                required
+                autoComplete='email'
+                autoFocus
+                className={loginFieldClass(showEmailError)}
+                aria-invalid={showEmailError || undefined}
+              />
+              {showEmailError ? (
+                <AdminInlineError size='xs'>{emailError}</AdminInlineError>
+              ) : null}
+            </div>
+            <Button
+              type='submit'
+              variant='brand'
+              disabled={hasConfigErrors || !email.trim()}
+              loading={isSending}
+              loadingLabel='Sending link…'
+              className={primaryButtonClassName}
+            >
+              Email me a magic link
+            </Button>
+            <p className='text-center text-xs text-ink-700'>
+              We&apos;ll send a one-time code if links are blocked.
+            </p>
+          </form>
+        ) : (
+          <form onSubmit={handleCodeSubmit} className='space-y-4'>
+            <div className='space-y-2'>
+              <label htmlFor='code' className={fieldLabelClassName}>
+                Verification code <RequiredMark />
+              </label>
+              <input
+                id='code'
+                type='text'
+                inputMode='numeric'
+                pattern='[0-9]*'
+                placeholder='123456'
+                value={code}
+                onChange={(event) => {
+                  setCodeTouched(true);
+                  setCode(event.target.value);
+                }}
+                disabled={isLoading}
+                required
+                autoComplete='one-time-code'
+                autoFocus
+                className={loginFieldClass(showCodeError)}
+                aria-invalid={showCodeError || undefined}
+              />
+              {showCodeError ? (
+                <AdminInlineError size='xs'>{codeError}</AdminInlineError>
+              ) : null}
+              <p className='text-xs text-ink-700'>
+                Enter the 6-digit code sent to{' '}
+                <span className='font-medium'>{passwordlessEmail}</span>
               </p>
             </div>
+            <Button
+              type='submit'
+              variant='brand'
+              disabled={!code.trim()}
+              loading={isVerifying}
+              loadingLabel='Verifying…'
+              className={primaryButtonClassName}
+            >
+              Verify code
+            </Button>
+            <button
+              type='button'
+              onClick={handleBackToEmail}
+              disabled={isLoading}
+              className='w-full text-center text-sm text-ink-700 underline-offset-2 hover:text-ink-900 hover:underline disabled:opacity-50'
+            >
+              Use a different email
+            </button>
+          </form>
+        )}
 
-            <Card className='w-full'>
-              {(hasError || hasConfigErrors || hasPasswordlessError) && (
-                <div className='mb-4 space-y-2'>
-                  {hasError && (
-                    <StatusBanner kind='error'>
-                      {error}
-                    </StatusBanner>
-                  )}
-                  {hasPasswordlessError && (
-                    <StatusBanner kind='error'>
-                      {passwordlessError}
-                    </StatusBanner>
-                  )}
-                  {configErrors.map((configError) => (
-                    <StatusBanner
-                      key={configError}
-                      kind='error'
-                    >
-                      {configError}
-                    </StatusBanner>
-                  ))}
-                </div>
-              )}
-
-              <div className='space-y-3'>
-                {socialProviders.map(({ key, label, provider, Icon }) => (
-                  <Button
-                    key={key}
-                    type='button'
-                    variant='outline'
-                    onClick={() => handleProviderLogin(provider)}
-                    disabled={hasConfigErrors || isLoading}
-                    className='h-11 w-full justify-start gap-3 text-sm font-semibold'
-                  >
-                    <span
-                      aria-hidden='true'
-                      className='flex h-5 w-5 items-center justify-center'
-                    >
-                      <Icon className='h-5 w-5' />
-                    </span>
-                    {label}
-                  </Button>
-                ))}
-              </div>
-
-              <div className='relative my-6'>
-                <div className='absolute inset-0 flex items-center'>
-                  <div className='w-full border-t border-slate-200' />
-                </div>
-                <div className='relative flex justify-center text-xs uppercase tracking-[0.3em] text-slate-500'>
-                  <span className='bg-white px-3'>Or</span>
-                </div>
-              </div>
-
-              {!showCodeInput ? (
-                <form onSubmit={handleEmailSubmit} className='space-y-4'>
-                  <div className='space-y-2'>
-                    <Label htmlFor='email'>
-                      Work email <RequiredMark />
-                    </Label>
-                    <Input
-                      id='email'
-                      type='email'
-                      placeholder='you@example.com'
-                      value={email}
-                      onChange={(event) => {
-                        setEmailTouched(true);
-                        setEmail(event.target.value);
-                      }}
-                      disabled={isLoading || hasConfigErrors}
-                      required
-                      autoComplete='email'
-                      autoFocus
-                      className={showEmailError ? errorInputClassName : ''}
-                      aria-invalid={showEmailError || undefined}
-                    />
-                    {showEmailError ? (
-                      <AdminInlineError size='xs'>{emailError}</AdminInlineError>
-                    ) : null}
-                  </div>
-                  <Button
-                    type='submit'
-                    disabled={hasConfigErrors || !email.trim()}
-                    loading={isSending}
-                    loadingLabel='Sending link…'
-                    className='h-11 w-full text-base sm:text-sm'
-                  >
-                    Email me a magic link
-                  </Button>
-                  <p className='text-center text-xs text-slate-600'>
-                    We&apos;ll send a one-time code if links are blocked.
-                  </p>
-                </form>
-              ) : (
-                <form onSubmit={handleCodeSubmit} className='space-y-4'>
-                  <div className='space-y-2'>
-                    <Label htmlFor='code'>
-                      Verification code <RequiredMark />
-                    </Label>
-                    <Input
-                      id='code'
-                      type='text'
-                      inputMode='numeric'
-                      pattern='[0-9]*'
-                      placeholder='123456'
-                      value={code}
-                      onChange={(event) => {
-                        setCodeTouched(true);
-                        setCode(event.target.value);
-                      }}
-                      disabled={isLoading}
-                      required
-                      autoComplete='one-time-code'
-                      autoFocus
-                      className={showCodeError ? errorInputClassName : ''}
-                      aria-invalid={showCodeError || undefined}
-                    />
-                    {showCodeError ? (
-                      <AdminInlineError size='xs'>{codeError}</AdminInlineError>
-                    ) : null}
-                    <p className='text-xs text-slate-600'>
-                      Enter the 6-digit code sent to{' '}
-                      <span className='font-medium'>{passwordlessEmail}</span>
-                    </p>
-                  </div>
-                  <Button
-                    type='submit'
-                    disabled={!code.trim()}
-                    loading={isVerifying}
-                    loadingLabel='Verifying…'
-                    className='h-11 w-full text-base sm:text-sm'
-                  >
-                    Verify code
-                  </Button>
-                  <button
-                    type='button'
-                    onClick={handleBackToEmail}
-                    disabled={isLoading}
-                    className='w-full text-center text-sm text-slate-600 hover:text-slate-900 disabled:opacity-50'
-                  >
-                    Use a different email
-                  </button>
-                </form>
-              )}
-
-              <p className='mt-6 text-center text-xs text-slate-600'>
-                You must be in the admin or manager group to access tools.
-              </p>
-            </Card>
-
-            <LegalLinks className='mt-6 text-center text-xs text-slate-500' />
-          </div>
-        </section>
-      </div>
-    </main>
+        <p className='mt-6 text-center text-xs text-ink-700'>
+          You must be in the admin or manager group to access tools.
+        </p>
+      </Card>
+    </LoginBackdrop>
   );
 }

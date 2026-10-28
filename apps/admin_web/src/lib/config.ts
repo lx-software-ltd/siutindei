@@ -72,14 +72,14 @@ export function getApiBaseUrl() {
   return trimTrailingSlashes(trimmed);
 }
 
-function getPublicWwwBaseUrl() {
+export function getPublicWwwUrl() {
   return trimTrailingSlashes(appConfig.publicWwwBaseUrl.trim());
 }
 
 export function getPrivacyPolicyUrl() {
-  return `${getPublicWwwBaseUrl()}/privacy`;
+  return `${getPublicWwwUrl()}/privacy`;
 }
 
 export function getTermsOfUseUrl() {
-  return `${getPublicWwwBaseUrl()}/terms`;
+  return `${getPublicWwwUrl()}/terms`;
 }

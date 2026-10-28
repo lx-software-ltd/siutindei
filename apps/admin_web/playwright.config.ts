@@ -50,7 +50,7 @@ export default defineConfig({
       NEXT_PUBLIC_API_BASE_URL: 'http://localhost:3000/api/mock',
       NEXT_PUBLIC_COGNITO_DOMAIN: 'mock-cognito.auth.us-east-1.amazoncognito.com',
       NEXT_PUBLIC_COGNITO_CLIENT_ID: 'mock-client-id-12345',
-      NEXT_PUBLIC_COGNITO_USER_POOL_ID: 'mock-user-pool-id',
+      NEXT_PUBLIC_COGNITO_USER_POOL_ID: 'us-east-1_TestPool01',
       NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: 'test-maps-key',
     },
   },

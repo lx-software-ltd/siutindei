@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 
 import { AuthGate } from '../../../components/auth-gate';
 import { AuthProvider } from '../../../components/auth-provider';
+import { LoginBackdrop } from '../../../components/login/login-backdrop';
+import { LoginBrandHeader } from '../../../components/login/login-brand-header';
 import { StatusBanner } from '../../../components/status-banner';
 
 function ImportsRedirect() {
@@ -15,11 +17,12 @@ function ImportsRedirect() {
   }, [router]);
 
   return (
-    <main className='mx-auto flex min-h-screen max-w-lg items-center px-6'>
+    <LoginBackdrop>
+      <LoginBrandHeader />
       <StatusBanner kind='info'>
         Opening the imports section.
       </StatusBanner>
-    </main>
+    </LoginBackdrop>
   );
 }
 

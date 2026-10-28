@@ -45,6 +45,20 @@ rules use.
 | Icons | `src/components/icons/action-icons.tsx` |
 | In-flight buttons | `Button` `loading` |
 
+## Pre-auth surfaces
+
+The signed-out login page, the session-loading state, and the imports
+redirect use the public site's Small World backdrop: stacked logo,
+golden gradient, and a fixed set of kawaii pictures. The heading keeps
+"Siu Tin Dei" on one line. Focus rings on the sign-in card use
+`brand-700` so they stay visible on white. The footer is wide enough
+that Privacy Policy and Terms of Use stay on one line. Brand colour
+tokens in `apps/admin_web/src/app/globals.css` mirror
+`apps/public_www/src/app/globals.css`. Change both or neither. Console
+fields stay on `Input` and `Label` (slate). The login fields are
+separate so those primitives are unchanged. There is no environment
+label on the login pill.
+
 ## Exceptions
 
 Organization media stays a drag-reorder grid. It uses the same save

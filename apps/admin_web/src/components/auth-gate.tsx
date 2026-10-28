@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react';
 
 import { useAuth } from './auth-provider';
+import { LoginBackdrop } from './login/login-backdrop';
+import { LoginBrandHeader } from './login/login-brand-header';
 import { LoginScreen } from './login-screen';
 import { StatusBanner } from './status-banner';
 
@@ -26,11 +28,12 @@ export function AuthGate({
 
   if (status === 'loading') {
     return (
-      <main className='mx-auto flex min-h-screen max-w-lg items-center px-6'>
+      <LoginBackdrop>
+        <LoginBrandHeader />
         <StatusBanner kind='info'>
           Preparing your admin session.
         </StatusBanner>
-      </main>
+      </LoginBackdrop>
     );
   }
 
