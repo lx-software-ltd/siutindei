@@ -24,7 +24,7 @@ ORG_STATUSES = (
 PUBLIC_LISTING_STATUSES = ("operational", "closed_temporarily")
 STATUS_SOURCES = ("owner", "provider", "places", "importer")
 DESCRIPTION_SOURCES = ("template", "official", "places", "enrich")
-ORG_SOURCES = ("lcsd", "edb", "swd", "places", "competitor")
+ORG_SOURCES = ("lcsd", "edb", "swd", "places", "competitor", "recommendation")
 
 MAX_PLACE_ID_LENGTH = 255
 MAX_AREA_NAME_LENGTH = 80

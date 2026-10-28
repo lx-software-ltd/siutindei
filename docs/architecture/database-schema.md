@@ -50,7 +50,7 @@ Columns:
 - `status_source` (text, optional) — `owner`, `provider`, `places`,
   or `importer`
 - `source` (text, optional) — catalog source (`lcsd`, `edb`, `swd`,
-  `places`, `competitor`)
+  `places`, `competitor`, `recommendation`)
 - `source_id` (text, optional) — explicit import field, or parsed from
   `sourceId=` in `vetting_note`
 - `source_url` (text, optional) — page the listing was taken from.

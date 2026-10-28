@@ -13,7 +13,10 @@ from app.api.admin_imports import (
     _parse_allow_updates,
     _parse_dry_run,
 )
-from app.api.admin_imports_catalog import apply_vetting_columns
+from app.api.admin_imports_catalog import (
+    apply_vetting_columns,
+    parse_org_source,
+)
 from app.api.admin_imports_fields import (
     apply_source_fields,
     collect_flat_org_warnings,
@@ -317,6 +320,29 @@ def test_apply_source_fields_strips_catalog_pairs() -> None:
     assert record["source_id"] == "lcsd-1"
     assert record["description_source"] == "template"
     assert record["source_note"] == "age_range=5-12"
+
+
+def test_parse_org_source_accepts_recommendation() -> None:
+    assert parse_org_source("recommendation") == "recommendation"
+    assert parse_org_source(" recommendation ") == "recommendation"
+    assert parse_org_source("") is None
+    assert parse_org_source(None) is None
+
+
+def test_parse_org_source_rejects_unknown() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        parse_org_source("referral")
+    assert exc_info.value.field == "source"
+    assert exc_info.value.message == "Invalid source"
+
+
+def test_apply_vetting_columns_recommendation_source() -> None:
+    record = {
+        "vetting_note": "source=recommendation; sourceId=rec-1",
+    }
+    apply_vetting_columns(record)
+    assert record["source"] == "recommendation"
+    assert record["source_id"] == "rec-1"
 
 
 def test_collect_flat_org_warnings_for_nested_and_website() -> None:

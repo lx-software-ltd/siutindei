@@ -95,6 +95,7 @@ test.describe('Organizations Panel', () => {
       'SWD',
       'Places',
       'Competitor',
+      'Recommendation',
     ]) {
       await expect(
         sourceFilter.getByRole('option', { name: label, exact: true })

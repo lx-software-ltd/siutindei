@@ -95,6 +95,7 @@ export const ORG_SOURCE_OPTIONS = [
   { value: 'swd', label: 'SWD' },
   { value: 'places', label: 'Places' },
   { value: 'competitor', label: 'Competitor' },
+  { value: 'recommendation', label: 'Recommendation' },
 ] as const;
 
 export const DESCRIPTION_SOURCE_OPTIONS = [
