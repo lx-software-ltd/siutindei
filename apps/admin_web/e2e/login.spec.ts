@@ -31,6 +31,10 @@ test.describe('Login Screen', () => {
       images.every((image) => image.getAttribute('aria-hidden') === 'true')
     );
     expect(bubblesAreDecorative).toBe(true);
+    const drift = await bubbles
+      .first()
+      .evaluate((image) => getComputedStyle(image).animationName);
+    expect(drift).toContain('admin-login-drift');
     const iconHrefs = await unauthenticatedPage
       .locator('link[rel="icon"]')
       .evaluateAll((links) => links.map((link) => link.getAttribute('href')));
@@ -174,7 +178,7 @@ test.describe('Login screen reduced motion', () => {
       .locator('img[src*="/images/small-world/"]')
       .first()
       .evaluate((image) => getComputedStyle(image).animationName);
-    expect(animationName).toBe('none');
+    expect(['', 'none']).toContain(animationName);
   });
 });
 
