@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LoginScreen } from '@/components/login-screen';
 
@@ -44,18 +44,24 @@ vi.mock('next/image', () => ({
 }));
 
 describe('LoginScreen', () => {
-  it('shows the Siu Tin Dei admin identity and the email form', () => {
+  beforeEach(() => {
+    authState.configErrors = [];
+    authState.error = '';
     authState.passwordlessStatus = 'idle';
+    authState.passwordlessError = '';
     authState.passwordlessEmail = '';
+  });
 
+  it('shows the Siu Tin Dei admin identity and the email form', () => {
     const { container } = render(<LoginScreen />);
 
-    expect(
-      screen.getByRole('heading', {
-        level: 1,
-        name: 'Sign in to Siu Tin Dei Admin',
-      })
-    ).toBeVisible();
+    const heading = screen.getByRole('heading', {
+      level: 1,
+      name: 'Sign in to Siu Tin Dei Admin',
+    });
+    expect(heading).toBeVisible();
+    expect(heading.querySelector('span')).toHaveClass('whitespace-nowrap');
+    expect(heading.querySelector('span')).toHaveTextContent('Siu Tin Dei');
     expect(screen.getByText('Admin console')).toBeVisible();
     expect(screen.getByRole('img', { name: 'Siu Tin Dei' })).toHaveAttribute(
       'src',
@@ -78,8 +84,8 @@ describe('LoginScreen', () => {
     }
 
     const email = screen.getByLabelText(/Work email/);
-    expect(email).toHaveClass('border-ink-900/15', 'focus:border-brand-600');
-    expect(email).not.toHaveClass('border-slate-300', 'focus:border-slate-500');
+    expect(email).toHaveClass('border-ink-900/15', 'focus:border-brand-700', 'focus:ring-brand-700');
+    expect(email).not.toHaveClass('border-slate-300', 'focus:border-slate-500', 'focus:ring-brand-600');
     const label = container.querySelector('label[for="email"]');
     expect(label).toHaveClass('text-ink-900');
     expect(label).not.toHaveClass('text-slate-700');
@@ -97,7 +103,27 @@ describe('LoginScreen', () => {
     await user.type(email, 'not-an-email');
 
     expect(email).toHaveClass('border-red-500', 'focus:border-red-500');
-    expect(email).not.toHaveClass('border-ink-900/15', 'focus:border-brand-600');
+    expect(email).not.toHaveClass('border-ink-900/15', 'focus:border-brand-700');
+  });
+
+  it('shows configuration errors and disables sign-in', () => {
+    authState.configErrors = ['NEXT_PUBLIC_COGNITO_DOMAIN is missing.'];
+
+    render(<LoginScreen />);
+
+    expect(
+      screen.getByText('NEXT_PUBLIC_COGNITO_DOMAIN is missing.')
+    ).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: 'Continue with Google' })
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Continue with Apple' })
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Email me a magic link' })
+    ).toBeDisabled();
+    expect(screen.getByLabelText(/Work email/)).toBeDisabled();
   });
 
   it('keeps the verification step', () => {

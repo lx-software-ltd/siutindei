@@ -26,6 +26,19 @@ passwordless email sign-in stay as they are.
 3. `LegalLinks` keeps `hover:text-slate-900`.
 4. Six fixed bubbles: junk, tram, clock tower, bauhinia, lantern, teacup.
 5. No staging or environment label.
+6. Focus rings on the sign-in card use `brand-700` (about 7.7:1 on
+   white). `brand-600` is about 2.1:1 and is not used for focus.
+7. The heading keeps "Siu Tin Dei" on one line (`whitespace-nowrap`).
+   `text-balance` was splitting the name.
+8. The footer inner width is `max-w-3xl`. `max-w-md` wrapped
+   "Terms of Use" on a desktop window.
+9. Reduced motion sets `animation: none` on the pictures. The
+   Playwright headless shell can still report an empty animation-name;
+   the test treats that as still and rejects a named drift animation.
+10. `Input` and `Label` stay on string concatenation. Login fields are
+    separate elements so the console slate styles are unchanged.
+11. The imports redirect and the dashboard's own loading branch use the
+    same backdrop as the sign-in gate.
 
 ## Files
 
@@ -33,8 +46,8 @@ passwordless email sign-in stay as they are.
 - `apps/admin_web/public/images/small-world/bubble-*.webp` (six copies)
 - `apps/admin_web/src/app/globals.css` (brand tokens and login backdrop)
 - `apps/admin_web/src/app/layout.tsx` (`themeColor`)
-- `apps/admin_web/src/components/ui/card.tsx`, `button.tsx`, `input.tsx`,
-  `label.tsx` (`twMerge`, plus a `brand` button variant)
+- `apps/admin_web/src/components/ui/card.tsx` (`twMerge`), `button.tsx`
+  (`brand` variant). `input.tsx` and `label.tsx` stay as they were.
 - `apps/admin_web/src/lib/config.ts` (`getPublicWwwUrl`)
 - `apps/admin_web/src/components/login/login-backdrop.tsx`
 - `apps/admin_web/src/components/login/login-brand-header.tsx`
@@ -46,10 +59,6 @@ passwordless email sign-in stay as they are.
 - `apps/admin_web/tests/components/ui/card.test.tsx`
 - `docs/architecture/admin-web-ui.md`
 - `.cursor/rules/admin-web.mdc`
-
-`Input` and `Label` use `twMerge` so a passed `className` wins over the
-default border, focus ring, and text colour. Tailwind does not resolve
-those conflicts by source order in the class string.
 
 ## Invariants this change preserves
 

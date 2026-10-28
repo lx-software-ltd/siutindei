@@ -4,6 +4,8 @@ import { AdminInlineError } from './ui/admin-inline-error';
 
 import { useState, type FormEvent } from 'react';
 
+import { twMerge } from 'tailwind-merge';
+
 import { useAuth } from './auth-provider';
 import { AppleIcon, GoogleIcon } from './icons/action-icons';
 import { LoginBackdrop } from './login/login-backdrop';
@@ -12,17 +14,25 @@ import { LoginFooter } from './login/login-footer';
 import { StatusBanner } from './status-banner';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
 
-const loginInputClassName =
-  'h-11 rounded-lg border-ink-900/15 focus:border-brand-600 focus:ring-brand-600 sm:h-11 sm:text-base';
+/** brand-700 on white is about 7.7:1. brand-600 is about 2.1:1. */
+const loginFieldClassName =
+  'h-11 w-full rounded-lg border border-ink-900/15 bg-white px-3 text-base ' +
+  'text-ink-900 shadow-sm focus:border-brand-700 focus:outline-none ' +
+  'focus:ring-1 focus:ring-brand-700 disabled:cursor-not-allowed ' +
+  'disabled:bg-slate-100';
+
+const fieldLabelClassName = 'mb-1 block text-sm font-semibold text-ink-900';
 
 const socialButtonClassName =
-  'h-11 w-full justify-start gap-3 rounded-lg border-ink-900/15 text-sm font-semibold text-ink-900 hover:bg-brand-50 focus-visible:ring-brand-600 sm:h-11';
+  'admin-login-focus h-11 w-full justify-start gap-3 rounded-lg border-ink-900/15 text-sm font-semibold text-ink-900 hover:bg-brand-50 focus-visible:ring-0 sm:h-11';
 
 const primaryButtonClassName =
-  'h-11 w-full rounded-lg text-base focus-visible:ring-brand-600 sm:h-11 sm:text-sm';
+  'admin-login-focus h-11 w-full rounded-lg text-base focus-visible:ring-0 sm:h-11 sm:text-sm';
+
+function loginFieldClass(invalid: boolean) {
+  return twMerge(loginFieldClassName, invalid ? formErrorClassName : '');
+}
 
 const socialProviders = [
   {
@@ -62,8 +72,6 @@ export function LoginScreen() {
   const [codeTouched, setCodeTouched] = useState(false);
   const [emailSubmitted, setEmailSubmitted] = useState(false);
   const [codeSubmitted, setCodeSubmitted] = useState(false);
-
-  const errorInputClassName = formErrorClassName;
 
   const hasConfigErrors = configErrors.length > 0;
   const hasError = error.length > 0;
@@ -123,7 +131,12 @@ export function LoginScreen() {
   return (
     <LoginBackdrop footer={<LoginFooter />}>
       <LoginBrandHeader
-        title='Sign in to Siu Tin Dei Admin'
+        title={
+          <>
+            Sign in to <span className='whitespace-nowrap'>Siu Tin Dei</span>{' '}
+            Admin
+          </>
+        }
         subtitle='For the team that curates trusted classes, workshops, and outdoor adventures across Hong Kong.'
       />
       <Card className='w-full rounded-2xl border-brand-100 shadow-xl shadow-ink-900/10 sm:rounded-2xl sm:p-8'>
@@ -183,10 +196,10 @@ export function LoginScreen() {
         {!showCodeInput ? (
           <form onSubmit={handleEmailSubmit} className='space-y-4'>
             <div className='space-y-2'>
-              <Label htmlFor='email' className='text-ink-900'>
+              <label htmlFor='email' className={fieldLabelClassName}>
                 Work email <RequiredMark />
-              </Label>
-              <Input
+              </label>
+              <input
                 id='email'
                 type='email'
                 placeholder='you@example.com'
@@ -199,11 +212,7 @@ export function LoginScreen() {
                 required
                 autoComplete='email'
                 autoFocus
-                className={
-                  showEmailError
-                    ? `${loginInputClassName} ${errorInputClassName}`
-                    : loginInputClassName
-                }
+                className={loginFieldClass(showEmailError)}
                 aria-invalid={showEmailError || undefined}
               />
               {showEmailError ? (
@@ -227,10 +236,10 @@ export function LoginScreen() {
         ) : (
           <form onSubmit={handleCodeSubmit} className='space-y-4'>
             <div className='space-y-2'>
-              <Label htmlFor='code' className='text-ink-900'>
+              <label htmlFor='code' className={fieldLabelClassName}>
                 Verification code <RequiredMark />
-              </Label>
-              <Input
+              </label>
+              <input
                 id='code'
                 type='text'
                 inputMode='numeric'
@@ -245,11 +254,7 @@ export function LoginScreen() {
                 required
                 autoComplete='one-time-code'
                 autoFocus
-                className={
-                  showCodeError
-                    ? `${loginInputClassName} ${errorInputClassName}`
-                    : loginInputClassName
-                }
+                className={loginFieldClass(showCodeError)}
                 aria-invalid={showCodeError || undefined}
               />
               {showCodeError ? (

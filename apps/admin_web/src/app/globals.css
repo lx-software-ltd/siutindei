@@ -99,6 +99,16 @@
     }
   }
 
+  /* Set the value explicitly. An omitted animation can compute to an
+     empty animation-name in Chromium instead of the initial "none". */
+  @media (prefers-reduced-motion: reduce) {
+    .admin-login-bubble--drift-a,
+    .admin-login-bubble--drift-b,
+    .admin-login-bubble--drift-c {
+      animation: none;
+    }
+  }
+
   .admin-expand {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -186,6 +196,18 @@
   .safe-top {
     padding-top: env(safe-area-inset-top);
   }
+}
+
+/* Unlayered so it wins over the button's focus-visible:outline-none utility.
+   brand-700 on white is about 7.7:1. The shared button `transition` includes
+   outline-color, which would fade the ring in from currentColor (ink). */
+.admin-login-focus {
+  transition-property: color, background-color, border-color, opacity, box-shadow;
+}
+
+.admin-login-focus:focus-visible {
+  outline: 2px solid var(--color-brand-700);
+  outline-offset: 2px;
 }
 
 @keyframes admin-login-drift-a {

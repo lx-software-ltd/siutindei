@@ -1,7 +1,8 @@
+import type { ReactNode } from 'react';
 import Image from 'next/image';
 
 interface LoginBrandHeaderProps {
-  title?: string;
+  title?: ReactNode;
   subtitle?: string;
 }
 
@@ -20,7 +21,7 @@ export function LoginBrandHeader({ title, subtitle }: LoginBrandHeaderProps) {
         Admin console
       </p>
       {title ? (
-        <h1 className='brand-title mt-4 text-balance text-2xl font-bold leading-tight text-ink-900 md:text-3xl xl:text-4xl'>
+        <h1 className='brand-title mt-4 text-2xl font-bold leading-tight text-ink-900 md:text-3xl xl:text-4xl'>
           {title}
         </h1>
       ) : null}
