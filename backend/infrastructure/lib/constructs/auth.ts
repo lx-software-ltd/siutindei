@@ -128,6 +128,7 @@ export class AuthConstruct extends Construct {
           userPoolId: this.userPool.userPoolId,
           attributeMapping: {
             email: "email",
+            email_verified: "email_verified",
             given_name: "given_name",
             family_name: "family_name",
           },
@@ -152,6 +153,7 @@ export class AuthConstruct extends Construct {
           userPoolId: this.userPool.userPoolId,
           attributeMapping: {
             email: "email",
+            email_verified: "email_verified",
           },
           providerDetails: {
             client_id: props.identityProviders.apple.clientId,

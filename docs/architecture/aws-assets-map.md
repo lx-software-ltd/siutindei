@@ -194,8 +194,8 @@ Cognito operations are proxied through `AwsApiProxyFunction` instead.
 
 | Resource Type | Logical ID | Provider Name | Notes |
 |--------------|------------|---------------|-------|
-| User Pool Identity Provider | `GoogleIdentityProvider` | `Google` | Google OAuth |
-| User Pool Identity Provider | `AppleIdentityProvider` | `SignInWithApple` | Apple Sign In |
+| User Pool Identity Provider | `GoogleIdentityProvider` | `Google` | Google OAuth. Maps `email` and `email_verified`. |
+| User Pool Identity Provider | `AppleIdentityProvider` | `SignInWithApple` | Apple Sign In. Maps `email` and `email_verified`. |
 
 **User Pool Client Configuration:**
 - OAuth Flows: `code`

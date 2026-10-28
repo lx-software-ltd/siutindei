@@ -761,6 +761,9 @@ export class ApiStack extends cdk.Stack {
         userPoolId: userPool.userPoolId,
         attributeMapping: {
           email: "email",
+          // Without this, pre sign-up never sees a verified email and
+          // will not link Google to the existing manager account.
+          email_verified: "email_verified",
           given_name: "given_name",
           family_name: "family_name",
         },
@@ -781,6 +784,9 @@ export class ApiStack extends cdk.Stack {
         userPoolId: userPool.userPoolId,
         attributeMapping: {
           email: "email",
+          // Apple sends email_verified. Pre sign-up links only when it
+          // arrives as true.
+          email_verified: "email_verified",
         },
         providerDetails: {
           client_id: appleClientId.valueAsString,

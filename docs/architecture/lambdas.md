@@ -226,7 +226,10 @@ their primary responsibilities.
 - Trigger: Cognito User Pool PRE_SIGN_UP
 - Purpose: auto-confirm passwordless sign-up, and link a new Google
   or Apple sign-in to the existing account when that provider has
-  verified the email. Runs outside the VPC so it can call Cognito.
+  verified the email. The Google and Apple identity providers map
+  `email_verified`; without that mapping the trigger never receives
+  it and leaves the federated user unlinked. Runs outside the VPC
+  so it can call Cognito.
 
 ### Define auth challenge
 - Function: AuthDefineChallengeFunction
