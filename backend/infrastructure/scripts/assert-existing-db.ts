@@ -3,6 +3,7 @@ import { Match, Template } from "aws-cdk-lib/assertions";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import { ApiStack } from "../lib/api-stack";
 import {
   API_LATENCY_MIN_SAMPLES,
   DatabaseConstruct,
@@ -175,10 +176,70 @@ function assertOpsAlarms(): void {
   });
 }
 
+const LOG_STREAM_SCOPED_ACTIONS = new Set([
+  "logs:PutLogEvents",
+  "logs:GetLogEvents",
+  "logs:CreateLogStream",
+  "logs:DeleteLogStream",
+]);
+
+function flattenArn(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value && typeof value === "object" && "Fn::Join" in value) {
+    const [, parts] = (value as { "Fn::Join": [string, unknown[]] })["Fn::Join"];
+    return parts.map((part) => (typeof part === "string" ? part : "<token>")).join("");
+  }
+  return JSON.stringify(value);
+}
+
+// From April 26, 2027 CloudWatch Logs only authorizes log-group actions
+// against a log-group ARN; a log-stream ARN (`...:*`) no longer grants them.
+function assertLogGroupActionsUseLogGroupArn(): void {
+  const app = new cdk.App({ context: { "aws:cdk:bundling-stacks": [] } });
+  const stack = new ApiStack(app, "LogGroupArnStack", {
+    env: { account: "111111111111", region: "us-east-1" },
+  });
+  const policies = Template.fromStack(stack).findResources("AWS::IAM::Policy");
+  for (const [logicalId, resource] of Object.entries(policies)) {
+    const statements: Record<string, unknown>[] =
+      resource.Properties?.PolicyDocument?.Statement ?? [];
+    for (const statement of statements) {
+      if (statement.Effect !== "Allow") {
+        continue;
+      }
+      const actions = ([] as unknown[]).concat(statement.Action ?? []);
+      const groupActions = actions.filter(
+        (action): action is string =>
+          typeof action === "string" &&
+          action.startsWith("logs:") &&
+          !LOG_STREAM_SCOPED_ACTIONS.has(action),
+      );
+      if (groupActions.length === 0) {
+        continue;
+      }
+      const arns = ([] as unknown[])
+        .concat(statement.Resource ?? [])
+        .map(flattenArn)
+        .filter((arn) => arn.includes(":logs:"));
+      const isStreamArn = (arn: string): boolean =>
+        arn.endsWith(":*") || arn.includes(":log-stream:");
+      if (arns.some(isStreamArn) && !arns.some((arn) => !isStreamArn(arn))) {
+        throw new Error(
+          `${logicalId} grants ${groupActions.join(", ")} only on log-stream ARNs ` +
+            `(${arns.join(", ")}); add the log-group ARN`,
+        );
+      }
+    }
+  }
+}
+
 function main(): void {
   assertExistingResources();
   assertNewResources();
   assertOpsAlarms();
+  assertLogGroupActionsUseLogGroupArn();
   // eslint-disable-next-line no-console
   console.log("OK");
 }
