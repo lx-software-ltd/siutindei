@@ -55,13 +55,13 @@ describe('LoginScreen', () => {
   it('shows the Siu Tin Dei admin identity and the email form', () => {
     const { container } = render(<LoginScreen />);
 
-    const heading = screen.getByRole('heading', {
-      level: 1,
-      name: 'Sign in to Siu Tin Dei Admin',
-    });
-    expect(heading).toBeVisible();
-    expect(heading.querySelector('span')).toHaveClass('whitespace-nowrap');
-    expect(heading.querySelector('span')).toHaveTextContent('Siu Tin Dei');
+    expect(
+      screen.queryByRole('heading', {
+        level: 1,
+        name: 'Sign in to Siu Tin Dei Admin',
+      })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
     expect(screen.getByText('Admin console')).toBeVisible();
     expect(screen.getByRole('img', { name: 'Siu Tin Dei' })).toHaveAttribute(
       'src',
@@ -83,7 +83,7 @@ describe('LoginScreen', () => {
       expect(bubble).toHaveAttribute('aria-hidden', 'true');
     }
 
-    const email = screen.getByLabelText(/Work email/);
+    const email = screen.getByLabelText(/Sign in with your email/);
     expect(email).toHaveClass('border-ink-900/15', 'focus:border-brand-700', 'focus:ring-brand-700');
     expect(email).not.toHaveClass('border-slate-300', 'focus:border-slate-500', 'focus:ring-brand-600');
     const label = container.querySelector('label[for="email"]');
@@ -99,7 +99,7 @@ describe('LoginScreen', () => {
     const user = userEvent.setup();
 
     render(<LoginScreen />);
-    const email = screen.getByLabelText(/Work email/);
+    const email = screen.getByLabelText(/Sign in with your email/);
     await user.type(email, 'not-an-email');
 
     expect(email).toHaveClass('border-red-500', 'focus:border-red-500');
@@ -115,15 +115,15 @@ describe('LoginScreen', () => {
       screen.getByText('NEXT_PUBLIC_COGNITO_DOMAIN is missing.')
     ).toBeVisible();
     expect(
-      screen.getByRole('button', { name: 'Continue with Google' })
+      screen.getByRole('button', { name: 'Sign in with Google' })
     ).toBeDisabled();
     expect(
-      screen.getByRole('button', { name: 'Continue with Apple' })
+      screen.getByRole('button', { name: 'Sign in with Apple' })
     ).toBeDisabled();
     expect(
       screen.getByRole('button', { name: 'Email me a magic link' })
     ).toBeDisabled();
-    expect(screen.getByLabelText(/Work email/)).toBeDisabled();
+    expect(screen.getByLabelText(/Sign in with your email/)).toBeDisabled();
   });
 
   it('keeps the verification step', () => {

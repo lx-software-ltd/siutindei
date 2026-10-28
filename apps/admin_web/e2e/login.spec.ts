@@ -10,7 +10,7 @@ test.describe('Login Screen', () => {
         name: 'Sign in to Siu Tin Dei Admin',
         level: 1,
       })
-    ).toBeVisible();
+    ).toHaveCount(0);
     await expect(
       unauthenticatedPage.getByRole('img', { name: 'Siu Tin Dei' })
     ).toBeVisible();
@@ -36,10 +36,6 @@ test.describe('Login Screen', () => {
       .first()
       .evaluate((image) => getComputedStyle(image).animationName);
     expect(drift).toContain('admin-login-drift');
-    const brandNameLines = await unauthenticatedPage
-      .locator('h1 span')
-      .evaluate((name) => name.getClientRects().length);
-    expect(brandNameLines).toBe(1);
     const iconHrefs = await unauthenticatedPage
       .locator('link[rel="icon"]')
       .evaluateAll((links) => links.map((link) => link.getAttribute('href')));
@@ -49,10 +45,10 @@ test.describe('Login Screen', () => {
 
     // Check for social login buttons
     await expect(
-      unauthenticatedPage.getByRole('button', { name: 'Continue with Google' })
+      unauthenticatedPage.getByRole('button', { name: 'Sign in with Google' })
     ).toBeVisible();
     await expect(
-      unauthenticatedPage.getByRole('button', { name: 'Continue with Apple' })
+      unauthenticatedPage.getByRole('button', { name: 'Sign in with Apple' })
     ).toBeVisible();
 
     // Check for email magic link
@@ -100,7 +96,7 @@ test.describe('Login Screen', () => {
     await unauthenticatedPage.goto('/');
 
     const googleButton = unauthenticatedPage.getByRole('button', {
-      name: 'Continue with Google',
+      name: 'Sign in with Google',
     });
     await expect(googleButton).toBeVisible();
     await expect(googleButton).toBeEnabled();
@@ -145,6 +141,9 @@ test.describe('Login Screen', () => {
         name: 'Sign in to Siu Tin Dei Admin',
         level: 1,
       })
+    ).toHaveCount(0);
+    await expect(
+      unauthenticatedPage.getByRole('img', { name: 'Siu Tin Dei' })
     ).toBeVisible();
   });
 
@@ -157,9 +156,9 @@ test.describe('Login Screen', () => {
         name: 'Sign in to Siu Tin Dei Admin',
         level: 1,
       })
-    ).toBeVisible();
+    ).toHaveCount(0);
     await expect(
-      unauthenticatedPage.getByRole('button', { name: 'Continue with Google' })
+      unauthenticatedPage.getByRole('button', { name: 'Sign in with Google' })
     ).toBeVisible();
     await expect(
       unauthenticatedPage
@@ -170,22 +169,21 @@ test.describe('Login Screen', () => {
       () => document.documentElement.scrollWidth <= window.innerWidth
     );
     expect(fits).toBe(true);
-    const brandNameLines = await unauthenticatedPage
-      .locator('h1 span')
-      .evaluate((name) => name.getClientRects().length);
-    expect(brandNameLines).toBe(1);
+    await expect(
+      unauthenticatedPage.getByRole('img', { name: 'Siu Tin Dei' })
+    ).toBeVisible();
   });
 
   test('moves focus through the sign-in controls', async ({ unauthenticatedPage }) => {
     await unauthenticatedPage.goto('/');
 
     const google = unauthenticatedPage.getByRole('button', {
-      name: 'Continue with Google',
+      name: 'Sign in with Google',
     });
     const apple = unauthenticatedPage.getByRole('button', {
-      name: 'Continue with Apple',
+      name: 'Sign in with Apple',
     });
-    const email = unauthenticatedPage.getByLabel(/Work email/);
+    const email = unauthenticatedPage.getByLabel(/Sign in with your email/);
     const submit = unauthenticatedPage.getByRole('button', {
       name: 'Email me a magic link',
     });
@@ -255,7 +253,7 @@ test.describe('Login Screen', () => {
     );
 
     await unauthenticatedPage.goto('/');
-    await unauthenticatedPage.getByLabel(/Work email/).fill('editor@example.com');
+    await unauthenticatedPage.getByLabel(/Sign in with your email/).fill('editor@example.com');
     await unauthenticatedPage
       .getByRole('button', { name: 'Email me a magic link' })
       .click();
@@ -271,7 +269,7 @@ test.describe('Login Screen', () => {
     await unauthenticatedPage
       .getByRole('button', { name: 'Use a different email' })
       .click();
-    await expect(unauthenticatedPage.getByLabel(/Work email/)).toBeVisible();
+    await expect(unauthenticatedPage.getByLabel(/Sign in with your email/)).toBeVisible();
   });
 });
 
