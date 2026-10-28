@@ -18,6 +18,12 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByLabel('Name')).toBeVisible();
     await expect(adminPage.getByLabel('Manager')).toBeVisible();
     await expect(adminPage.getByLabel('Description', { exact: true })).toBeVisible();
+    await expect(
+      adminPage.getByLabel('Source', { exact: true }).getByRole('option', {
+        name: 'Recommendation',
+        exact: true,
+      })
+    ).toHaveCount(1);
     await expect(adminPage.getByLabel('Source URL')).toBeVisible();
     await expect(
       adminPage
@@ -61,7 +67,7 @@ test.describe('Organizations Panel', () => {
   test('should display the catalog of organizations', async ({ adminPage }) => {
     await expect(adminPage.getByRole('table', { name: 'Catalog' })).toBeVisible();
     const kpiCards = adminPage.getByTestId('admin-kpi-card');
-    await expect(kpiCards).toHaveCount(3);
+    await expect(kpiCards).toHaveCount(4);
     for (const card of await kpiCards.all()) {
       await expect(card).toHaveCSS('background-color', 'rgb(255, 255, 255)');
     }
@@ -69,6 +75,7 @@ test.describe('Organizations Panel', () => {
       'Pending review',
       'With missing details',
       'Approved',
+      'Added since rejected',
     ]);
 
     await expect(adminPage.getByRole('columnheader', { name: 'Name' })).toBeVisible();
@@ -405,7 +412,7 @@ test.describe('Organizations Panel', () => {
     await adminPage
       .getByLabel('Description', { exact: true })
       .fill('A brand new organization');
-    await adminPage.getByLabel('Source', { exact: true }).selectOption('places');
+    await adminPage.getByLabel('Source', { exact: true }).selectOption('recommendation');
 
     // Submit the form
     await adminPage.getByRole('button', { name: 'Create' }).click();
