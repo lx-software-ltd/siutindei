@@ -27,6 +27,18 @@ function buildUserGroupsUrl(username: string) {
   return buildApiUrl(`v1/admin/cognito-users/groups/${username}`);
 }
 
+export async function createCognitoManager(
+  email: string
+): Promise<CognitoUser> {
+  return request<CognitoUser>(buildCognitoUsersUrl(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  });
+}
+
 export async function listCognitoUsers(
   paginationToken?: string,
   limit = 50,

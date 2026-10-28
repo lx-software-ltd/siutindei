@@ -4978,7 +4978,47 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /**
+         * Add a manager by email
+         * @description Create a passwordless Cognito user for this email, or return
+         *     the existing user, and ensure they belong to the manager group.
+         *     No invitation email is sent. The account signs in with the
+         *     existing one-time code. Admin only.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Manager account */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CognitoUser"];
+                    };
+                };
+                /** @description Invalid email */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;

@@ -165,7 +165,9 @@ their primary responsibilities.
   user, so the proxy hop count is constant per page.
   `include=managed_organizations` adds the organizations each user on
   that page manages. Callers that omit `include` do not query the
-  database.
+  database. `POST /v1/admin/cognito-users` ensures a passwordless
+  manager account for an email and adds the manager group. It sends
+  no invitation; sign-in stays the existing one-time code.
 - Catalog import routes also honor `IMPORTER_GROUP` (default `importer`)
   via the admin authorizer path gate and `_is_importer` in the handler
 - Environment:

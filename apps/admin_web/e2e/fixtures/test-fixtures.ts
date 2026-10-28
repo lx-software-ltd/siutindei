@@ -1480,8 +1480,34 @@ export async function setupApiMocks(
     }
   });
 
-  // Mock Cognito users list
+  // Mock Cognito users list and manager creation
   await page.route('**/api/mock/**/admin/cognito-users*', async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (
+      request.method() === 'POST' &&
+      path.endsWith('/admin/cognito-users')
+    ) {
+      const body = request.postDataJSON() as { email?: string };
+      const email = body.email ?? '';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sub: 'new-manager-id-001',
+          username: email,
+          email,
+          email_verified: true,
+          enabled: true,
+          status: 'CONFIRMED',
+          groups: ['manager'],
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+          attributes: { email },
+        }),
+      });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

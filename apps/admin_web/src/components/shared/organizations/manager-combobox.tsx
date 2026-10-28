@@ -9,10 +9,16 @@ import {
 } from 'react';
 
 import { ApiError } from '../../../lib/api-client';
-import { listCognitoUsers } from '../../../lib/api-client-cognito';
+import {
+  createCognitoManager,
+  listCognitoUsers,
+} from '../../../lib/api-client-cognito';
 import type { CognitoUser } from '../../../types/admin';
 import { ChevronDownIcon, SpinnerIcon } from '../../icons/action-icons';
 import { Input } from '../../ui/input';
+
+const MANAGER_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ADD_MANAGER_PREFIX = 'add:';
 
 interface ManagerComboboxProps {
   id: string;
@@ -49,19 +55,42 @@ export function ManagerCombobox({
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isTyping, setIsTyping] = useState(false);
   const [query, setQuery] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [addedUser, setAddedUser] = useState<CognitoUser | null>(null);
+  const [remembered, setRemembered] = useState<{
+    id: string;
+    label: string;
+  } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const listboxId = `${id}-listbox`;
 
-  const selectedUser = useMemo(
-    () => users.find((user) => user.sub === value) ?? null,
-    [users, value]
-  );
+  const selectedUser = useMemo(() => {
+    const listed = users.find((user) => user.sub === value);
+    if (listed) {
+      return listed;
+    }
+    return addedUser?.sub === value ? addedUser : null;
+  }, [addedUser, users, value]);
+
+  if (selectedUser) {
+    const label = formatManagerLabel(selectedUser);
+    if (remembered?.id !== selectedUser.sub || remembered.label !== label) {
+      setRemembered({ id: selectedUser.sub, label });
+    }
+  }
 
   const selectedLabel = selectedUser
     ? formatManagerLabel(selectedUser)
-    : value;
+    : remembered?.id === value
+      ? remembered.label
+      : value;
 
   const inputValue = isTyping ? query : selectedLabel;
+  const pendingEmail = query.trim().toLowerCase();
+  const showAdd =
+    isTyping &&
+    MANAGER_EMAIL.test(pendingEmail) &&
+    !users.some((user) => (user.email || '').toLowerCase() === pendingEmail);
 
   const options = useMemo(() => {
     const items: Array<{ id: string; label: string }> = [];
@@ -70,13 +99,21 @@ export function ManagerCombobox({
       label: allowEmpty ? 'You (leave blank)' : 'Select a manager',
     });
     if (value && !users.some((user) => user.sub === value)) {
-      items.push({ id: value, label: value });
+      items.push({ id: value, label: selectedLabel || value });
     }
     for (const user of users) {
       items.push({ id: user.sub, label: formatManagerLabel(user) });
     }
+    if (showAdd) {
+      items.push({
+        id: `${ADD_MANAGER_PREFIX}${pendingEmail}`,
+        label: isCreating
+          ? `Adding ${pendingEmail} as manager`
+          : `Add ${pendingEmail} as manager`,
+      });
+    }
     return items;
-  }, [allowEmpty, users, value]);
+  }, [allowEmpty, isCreating, pendingEmail, selectedLabel, showAdd, users, value]);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,7 +169,35 @@ export function ManagerCombobox({
     setActiveIndex(-1);
   };
 
+  const addManager = async (email: string) => {
+    if (isCreating) {
+      return;
+    }
+    setIsCreating(true);
+    try {
+      const created = await createCognitoManager(email);
+      setAddedUser(created);
+      setUsers((current) =>
+        current.some((user) => user.sub === created.sub)
+          ? current.map((user) => (user.sub === created.sub ? created : user))
+          : [created, ...current]
+      );
+      onChange(created.sub);
+      closeSearch();
+    } catch (err: unknown) {
+      const message =
+        err instanceof ApiError ? err.message : 'Failed to add this manager.';
+      onError?.(message);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const selectOption = (managerId: string) => {
+    if (managerId.startsWith(ADD_MANAGER_PREFIX)) {
+      void addManager(managerId.slice(ADD_MANAGER_PREFIX.length));
+      return;
+    }
     onChange(managerId);
     closeSearch();
   };
@@ -259,7 +324,7 @@ export function ManagerCombobox({
               </li>
             ))
           )}
-          {!isLoading && users.length === 0 && query.trim() ? (
+          {!isLoading && users.length === 0 && query.trim() && !showAdd ? (
             <li className='px-3 py-2 text-sm text-ink-500'>
               No matching users
             </li>

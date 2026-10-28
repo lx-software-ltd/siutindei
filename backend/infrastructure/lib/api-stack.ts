@@ -2600,6 +2600,10 @@ export class ApiStack extends cdk.Stack {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
       authorizer: adminAuthorizer,
     });
+    cognitoUsers.addMethod("POST", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
 
     const cognitoUserByName = cognitoUsers.addResource("{username}");
     cognitoUserByName.addMethod("DELETE", adminIntegration, {

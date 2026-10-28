@@ -2936,6 +2936,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CognitoUserListResponse'
+    post:
+      summary: Add a manager by email
+      description: |
+        Create a passwordless Cognito user for this email, or return
+        the existing user, and ensure they belong to the manager group.
+        No invitation email is sent. The account signs in with the
+        existing one-time code. Admin only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          description: Manager account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CognitoUser'
+        "400":
+          description: Invalid email
 
   /v1/admin/cognito-users/{username}:
     parameters:
