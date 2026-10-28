@@ -2038,7 +2038,7 @@ export class ApiStack extends cdk.Stack {
             "logs:AssociateKmsKey",
             "logs:PutRetentionPolicy",
           ],
-          resources: [apiAccessLogGroupArnWildcard],
+          resources: [apiAccessLogGroupArn, apiAccessLogGroupArnWildcard],
         }),
       ]);
 
