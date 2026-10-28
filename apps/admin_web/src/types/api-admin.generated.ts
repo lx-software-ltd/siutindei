@@ -4978,7 +4978,57 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /**
+         * Add a manager by email
+         * @description Create a passwordless Cognito user for this email, or return
+         *     the existing user, and ensure they belong to the manager group.
+         *     No invitation email is sent. The account signs in with the
+         *     existing one-time code. When the role is newly granted, the
+         *     user is signed out so the next token includes it. An account
+         *     in `RESET_REQUIRED` is left unchanged. Admin only. A native
+         *     account is preferred when a Google or Apple user shares the
+         *     email. The acting admin is recorded on `cognito_user` in the
+         *     audit log.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Manager account */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CognitoUser"];
+                    };
+                };
+                /**
+                 * @description Invalid email, more than one account uses the email, the
+                 *     account is waiting for a password reset, or the account
+                 *     was created but could not be confirmed or granted the
+                 *     manager role.
+                 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -8500,6 +8550,16 @@ export interface components {
              *     whose manager is this user, ordered by name.
              */
             managed_organizations?: components["schemas"]["OrganizationLookup"][];
+            /**
+             * @description Present on `POST /v1/admin/cognito-users`. True when this
+             *     request created the account.
+             */
+            account_created?: boolean;
+            /**
+             * @description Present on `POST /v1/admin/cognito-users`. True when
+             *     granting the manager group signed the user out.
+             */
+            signed_out?: boolean;
         };
         CognitoUserListResponse: {
             items: components["schemas"]["CognitoUser"][];

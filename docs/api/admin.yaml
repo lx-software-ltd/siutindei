@@ -2936,6 +2936,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CognitoUserListResponse'
+    post:
+      summary: Add a manager by email
+      description: |
+        Create a passwordless Cognito user for this email, or return
+        the existing user, and ensure they belong to the manager group.
+        No invitation email is sent. The account signs in with the
+        existing one-time code. When the role is newly granted, the
+        user is signed out so the next token includes it. An account
+        in `RESET_REQUIRED` is left unchanged. Admin only. A native
+        account is preferred when a Google or Apple user shares the
+        email. The acting admin is recorded on `cognito_user` in the
+        audit log.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          description: Manager account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CognitoUser'
+        "400":
+          description: |
+            Invalid email, more than one account uses the email, the
+            account is waiting for a password reset, or the account
+            was created but could not be confirmed or granted the
+            manager role.
 
   /v1/admin/cognito-users/{username}:
     parameters:
@@ -6521,6 +6557,16 @@ components:
             whose manager is this user, ordered by name.
           items:
             $ref: '#/components/schemas/OrganizationLookup'
+        account_created:
+          type: boolean
+          description: |
+            Present on `POST /v1/admin/cognito-users`. True when this
+            request created the account.
+        signed_out:
+          type: boolean
+          description: |
+            Present on `POST /v1/admin/cognito-users`. True when
+            granting the manager group signed the user out.
 
     CognitoUserListResponse:
       type: object

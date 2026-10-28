@@ -291,6 +291,52 @@ test.describe('Organizations Panel', () => {
     ).toBeVisible();
   });
 
+  test('should add a typed email as a manager on organization details', async ({
+    adminPage,
+  }) => {
+    await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
+    await adminPage.getByRole('row', { name: /Test Organization 1/ }).first().click();
+    const managerField = adminPage.getByLabel('Manager');
+    const searchResponse = adminPage.waitForResponse(
+      (response) =>
+        response.request().method() === 'GET' &&
+        response.url().includes('/admin/cognito-users') &&
+        response.url().includes('new.manager%40example.com')
+    );
+    await managerField.fill('new.manager@example.com');
+    await searchResponse;
+    const addOption = adminPage.getByRole('option', {
+      name: 'Add new.manager@example.com as manager',
+    });
+    await expect(addOption).toBeVisible();
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/add-manager-by-email.png',
+    });
+
+    await addOption.click();
+    const dialog = adminPage.getByRole('alertdialog', { name: 'Add manager' });
+    await expect(dialog).toContainText('new.manager@example.com');
+    await expect(dialog).toContainText('signed out of every device');
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/add-manager-confirm.png',
+    });
+    const requestPromise = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'POST' &&
+        request.url().includes('/admin/cognito-users') &&
+        !request.url().includes('/groups/')
+    );
+    await dialog.getByRole('button', { name: 'Add manager' }).click();
+    const request = await requestPromise;
+    expect(request.postDataJSON()).toEqual({
+      email: 'new.manager@example.com',
+    });
+    await expect(dialog).toBeHidden();
+    await expect(adminPage.getByRole('combobox', { name: 'Manager' })).toHaveValue(
+      'new.manager@example.com'
+    );
+  });
+
   test('should validate required fields on submit', async ({ adminPage }) => {
     // Try to submit empty form
     await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();

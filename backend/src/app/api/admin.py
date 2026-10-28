@@ -30,6 +30,7 @@ from app.api.admin_cognito import (
     _handle_list_cognito_users,
     _handle_user_group,
 )
+from app.api.admin_cognito_manager import _handle_create_cognito_manager
 from app.api.admin_crud import _handle_crud
 from app.api.admin_deleted_organizations import handle_deleted_organizations
 from app.api.admin_feedback import (
@@ -187,8 +188,12 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
             lambda: handle_org_enrichment(event, method, resource_id),
             event,
         )
-    if resource == "cognito-users" and method == "GET":
-        return _safe_handler(lambda: _handle_list_cognito_users(event), event)
+    if resource == "cognito-users" and not resource_id:
+        if method == "GET":
+            return _safe_handler(lambda: _handle_list_cognito_users(event), event)
+        if method == "POST":
+            return _safe_handler(lambda: _handle_create_cognito_manager(event), event)
+        return json_response(405, {"error": "Method not allowed"}, event=event)
     if resource == "cognito-users" and method == "DELETE" and resource_id:
         return _safe_handler(
             lambda: _handle_delete_cognito_user(event, resource_id),

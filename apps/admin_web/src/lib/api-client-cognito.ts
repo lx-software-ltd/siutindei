@@ -24,7 +24,21 @@ function buildCognitoUsersUrl() {
 }
 
 function buildUserGroupsUrl(username: string) {
-  return buildApiUrl(`v1/admin/cognito-users/groups/${username}`);
+  return buildApiUrl(
+    `v1/admin/users/${encodeURIComponent(username)}/groups`
+  );
+}
+
+export async function createCognitoManager(
+  email: string
+): Promise<CognitoUser> {
+  return request<CognitoUser>(buildCognitoUsersUrl(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  });
 }
 
 export async function listCognitoUsers(

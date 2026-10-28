@@ -11,6 +11,7 @@ const EXPECTED = [
   'api_keys',
   'category_suggestion_settings',
   'category_suggestions',
+  'cognito_user',
   'feedback_labels',
   'import_settings',
   'locations',

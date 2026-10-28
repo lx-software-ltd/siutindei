@@ -41,6 +41,7 @@ export {
 
 export {
   addUserToGroup,
+  createCognitoManager,
   deleteCognitoUser,
   listCognitoUsers,
   removeUserFromGroup,

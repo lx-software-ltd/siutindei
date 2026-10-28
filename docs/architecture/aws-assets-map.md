@@ -226,7 +226,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 
 | Function Logical ID | Handler | Memory | Timeout | VPC | Notes |
 |---------------------|---------|--------|---------|-----|-------|
-| `AuthPreSignUpFunction` | `lambda/auth/pre_signup/handler.lambda_handler` | 256 MB | 10s | No | Cognito trigger |
+| `AuthPreSignUpFunction` | `lambda/auth/pre_signup/handler.lambda_handler` | 256 MB | 10s | No | Cognito trigger; links a new verified Google or Apple sign-in to the existing email account |
 | `AuthDefineChallengeFunction` | `lambda/auth/define_auth_challenge/handler.lambda_handler` | 256 MB | 10s | No | Cognito trigger |
 | `AuthCreateChallengeFunction` | `lambda/auth/create_auth_challenge/handler.lambda_handler` | 256 MB | 10s | No | Cognito trigger, SES permissions |
 | `AuthVerifyChallengeFunction` | `lambda/auth/verify_auth_challenge/handler.lambda_handler` | 256 MB | 10s | No | Cognito trigger |
@@ -338,7 +338,7 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/admin/{resource}/{id}` | GET, PUT, DELETE | Admin Group | `SiutindeiAdminFunction` | CRUD by ID |
 | `/v1/admin/organizations/{id}/media` | POST, DELETE | Admin Group | `SiutindeiAdminFunction` | Media upload/delete |
 | `/v1/admin/users/{username}/groups` | POST, DELETE | Admin Group | `SiutindeiAdminFunction` | Group management |
-| `/v1/admin/cognito-users` | GET | Admin Group | `SiutindeiAdminFunction` | List Cognito users |
+| `/v1/admin/cognito-users` | GET, POST | Admin Group | `SiutindeiAdminFunction` | List Cognito users, or ensure a manager account by email |
 | `/v1/admin/cognito-users/{username}` | DELETE | Admin Group | `SiutindeiAdminFunction` | Delete Cognito user |
 | `/v1/admin/access-requests` | GET | Admin Group | `SiutindeiAdminFunction` | List access requests |
 | `/v1/admin/access-requests/{id}` | PUT | Admin Group | `SiutindeiAdminFunction` | Review access request |

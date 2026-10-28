@@ -89,7 +89,7 @@ def _handle_user_group(
     return json_response(405, {"error": "Method not allowed"}, event=event)
 
 
-def _invalidate_user_session(user_pool_id: str, username: str) -> None:
+def _invalidate_user_session(user_pool_id: str, username: str) -> bool:
     """Invalidate a user's session by signing them out globally."""
     masked_username = _mask_cognito_username(username)
     try:
@@ -99,11 +99,13 @@ def _invalidate_user_session(user_pool_id: str, username: str) -> None:
             Username=username,
         )
         logger.info(f"Invalidated session for user: {masked_username}")
+        return True
     except AwsProxyError as exc:
         logger.warning(
             f"Failed to invalidate session for user {masked_username}: "
             f"{exc.code}: {exc.message}"
         )
+        return False
 
 
 def _validate_user_sub(user_sub: str) -> str:
