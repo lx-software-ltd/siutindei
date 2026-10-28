@@ -78,4 +78,7 @@ with a specific message. The acting admin is stored on `cognito_user`
 in the audit log. The group toggle calls
 `/v1/admin/users/{username}/groups`. `GET` and `POST` on
 `/cognito-users`, and `POST` and `DELETE` on user groups, each share
-one ANY method so the stack stays within 500 resources.
+one ANY method so the stack stays within 500 resources. Google and
+Apple map `email_verified` into the user pool. Pre sign-up skips
+linking when that attribute is absent, which is what happens when
+the mapping is missing.
