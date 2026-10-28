@@ -182,6 +182,29 @@ test.describe('Organizations Panel', () => {
     });
   });
 
+  test('offers Recommendation as a catalog source', async ({ adminPage }) => {
+    const sourceFilter = adminPage.locator('#review-source-filter');
+    await expect(
+      sourceFilter.getByRole('option', { name: 'Recommendation', exact: true })
+    ).toHaveCount(1);
+    await sourceFilter.selectOption('recommendation');
+    await expect(sourceFilter).toHaveValue('recommendation');
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/catalog-source-filter-recommendation.png',
+    });
+
+    await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
+    const sourceField = adminPage.getByLabel('Source', { exact: true });
+    await expect(
+      sourceField.getByRole('option', { name: 'Recommendation', exact: true })
+    ).toHaveCount(1);
+    await sourceField.selectOption('recommendation');
+    await expect(sourceField).toHaveValue('recommendation');
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/org-editor-source-recommendation.png',
+    });
+  });
+
   test('filters the catalog by an import time', async ({ adminPage }) => {
     const listed = adminPage.waitForRequest((request) => {
       const url = new URL(request.url());
