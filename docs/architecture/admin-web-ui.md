@@ -45,6 +45,16 @@ rules use.
 | Icons | `src/components/icons/action-icons.tsx` |
 | In-flight buttons | `Button` `loading` |
 
+## Pre-auth surfaces
+
+The signed-out login page and the session-loading state use the public
+site's Small World backdrop: stacked logo, golden gradient, and a fixed
+set of kawaii pictures. Brand colour tokens in
+`apps/admin_web/src/app/globals.css` mirror
+`apps/public_www/src/app/globals.css`. Change both or neither. The
+signed-in console stays on the slate primitives below. There is no
+environment label on the login pill.
+
 ## Exceptions
 
 Organization media stays a drag-reorder grid. It uses the same save

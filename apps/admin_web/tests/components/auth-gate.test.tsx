@@ -20,6 +20,16 @@ vi.mock('@/components/login-screen', () => ({
   LoginScreen: () => <div>Login screen</div>,
 }));
 
+vi.mock('next/image', () => ({
+  default: ({
+    alt,
+    src,
+  }: {
+    alt: string;
+    src: string;
+  }) => <img alt={alt} src={src} />,
+}));
+
 describe('AuthGate', () => {
   it('shows the signed-in view on a public route without redirecting', () => {
     authState.status = 'authenticated';
@@ -34,6 +44,21 @@ describe('AuthGate', () => {
     expect(screen.queryByText('Redirecting')).not.toBeInTheDocument();
     expect(screen.queryByText('Login screen child')).not.toBeInTheDocument();
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('brands the loading state with the Siu Tin Dei mark', () => {
+    authState.status = 'loading';
+
+    render(
+      <AuthGate>
+        <div>Protected console</div>
+      </AuthGate>
+    );
+
+    expect(screen.getByText('Preparing your admin session.')).toBeVisible();
+    expect(screen.getByRole('img', { name: 'Siu Tin Dei' })).toBeVisible();
+    expect(screen.getByText('Admin console')).toBeVisible();
+    expect(screen.queryByText('Protected console')).not.toBeInTheDocument();
   });
 
   it('shows the login screen on a public route when signed out', () => {

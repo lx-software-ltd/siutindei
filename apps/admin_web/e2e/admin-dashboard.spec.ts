@@ -5,7 +5,9 @@ test.describe('Admin Dashboard', () => {
     await adminPage.goto('/admin/dashboard');
 
     // Check header
-    await expect(adminPage.getByRole('heading', { name: 'Siu Tin Dei Admin' })).toBeVisible();
+    await expect(
+      adminPage.getByRole('heading', { name: 'Siu Tin Dei Admin', exact: true })
+    ).toBeVisible();
     await expect(
       adminPage.getByText('Manage organizations, activities, and schedules.')
     ).toBeVisible();

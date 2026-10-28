@@ -17,6 +17,8 @@ const variantStyles = {
   primary: 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800',
   secondary: 'border-slate-900 bg-slate-100 text-slate-900 hover:bg-slate-200',
   outline: 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
+  brand:
+    'border-ink-900/20 bg-accent-500 text-ink-900 hover:bg-accent-600',
   ghost: 'border-transparent text-slate-700 hover:bg-slate-100',
   danger: 'border-red-600 bg-red-600 text-white hover:bg-red-500',
   success: 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-500',

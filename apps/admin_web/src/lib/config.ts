@@ -76,6 +76,10 @@ function getPublicWwwBaseUrl() {
   return trimTrailingSlashes(appConfig.publicWwwBaseUrl.trim());
 }
 
+export function getPublicWwwUrl() {
+  return getPublicWwwBaseUrl();
+}
+
 export function getPrivacyPolicyUrl() {
   return `${getPublicWwwBaseUrl()}/privacy`;
 }
