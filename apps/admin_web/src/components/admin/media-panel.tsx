@@ -475,7 +475,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
         organization={organization}
       />
       {isLoadingOrg ? (
-        <p className='text-sm text-slate-600'>Loading media…</p>
+        <p className='text-sm text-ink-700'>Loading media…</p>
       ) : null}
       {!selectedOrgId && error ? (
         <StatusBanner kind='error'>{error}</StatusBanner>
@@ -536,7 +536,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
                       {historicalMedia.urls.map((url, index) => (
                         <div
                           key={`${url}-${index}`}
-                          className='overflow-hidden rounded-lg border border-slate-200'
+                          className='overflow-hidden rounded-lg border border-brand-100'
                         >
                           <img
                             src={url}
@@ -545,13 +545,13 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
                             loading='lazy'
                           />
                           {historicalMedia.logo === url ? (
-                            <p className='px-3 py-2 text-xs font-medium text-slate-700'>Logo</p>
+                            <p className='px-3 py-2 text-xs font-medium text-ink-700'>Logo</p>
                           ) : null}
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className='text-sm text-slate-500'>No media in this version.</p>
+                    <p className='text-sm text-ink-500'>No media in this version.</p>
                   )}
                   {mediaChanged ? (
                     <p className='text-sm text-amber-800'>
@@ -561,7 +561,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
                 </div>
               ) : (
                 <>
-                  <p className='text-sm text-slate-600'>
+                  <p className='text-sm text-ink-700'>
                     Add or remove media for{' '}
                     {selectedOrganization?.name ?? 'this organization'}.
                   </p>
@@ -606,7 +606,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
                     >
                       Choose files
                     </Button>
-                    <p className='text-xs text-slate-500 sm:self-center'>
+                    <p className='text-xs text-ink-500 sm:self-center'>
                       Upload files or add URLs. Drag or use arrows to reorder.
                       Select a logo, then save to apply changes.
                     </p>
@@ -628,7 +628,7 @@ export function MediaPanel({ mode = 'admin' }: MediaPanelProps) {
                       onRemoveMedia={removeMediaAt}
                     />
                   ) : (
-                    <p className='text-sm text-slate-500'>
+                    <p className='text-sm text-ink-500'>
                       No media added yet. Upload files or add URLs above.
                     </p>
                   )}

@@ -16,7 +16,7 @@ export function sweepLimitNote(truncated: boolean): string {
 
 export function ReviewQueueScopeNote({ onClear }: { onClear: () => void }) {
   return (
-    <p className='text-sm text-slate-600'>
+    <p className='text-sm text-ink-700'>
       Filtered to the organization from the review queue. Sweep pending only
       includes organizations still in review. Sweep all orgs includes this
       organization when it is already approved.{' '}

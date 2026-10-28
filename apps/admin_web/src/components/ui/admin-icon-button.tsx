@@ -10,16 +10,15 @@ import { twMerge } from 'tailwind-merge';
  * colour so destructive actions stay visually aligned with their siblings.
  */
 export const ADMIN_ICON_BUTTON_BASE_CLASS =
-  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-white transition ' +
+  'admin-focus inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-ink-900/15 bg-white transition ' +
   '[&>svg]:h-4 [&>svg]:w-4 ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ' +
   'disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:opacity-50';
 
 const toneStyles = {
-  default: 'text-slate-700 hover:bg-slate-50',
+  default: 'text-ink-700 hover:bg-brand-50',
   danger: 'text-red-600 hover:bg-red-50',
   success: 'text-emerald-700 hover:bg-emerald-50',
-  primary: 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800',
+  primary: 'border-ink-900 bg-ink-900 text-white hover:bg-ink-700',
 } as const;
 
 export type AdminIconButtonTone = keyof typeof toneStyles;
@@ -49,7 +48,7 @@ function Badge({ count }: { count: number }) {
   return (
     <span
       aria-hidden
-      className='pointer-events-none absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-900 px-1 text-[10px] font-semibold leading-none text-white'
+      className='pointer-events-none absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-ink-900 px-1 text-[10px] font-semibold leading-none text-white'
     >
       {count > 99 ? '99+' : count}
     </span>

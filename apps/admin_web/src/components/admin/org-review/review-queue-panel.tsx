@@ -650,7 +650,7 @@ export function CatalogPanel() {
         ]}
       />
       {jobParam ? (
-        <p className='text-sm text-slate-600'>
+        <p className='text-sm text-ink-700'>
           Filtered to this import.{' '}
           <button
             type='button'

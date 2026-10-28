@@ -48,7 +48,7 @@ export function FileUploadButton({
     .join(' ');
 
   const fileNameClasses = [
-    'text-sm text-slate-600',
+    'text-sm text-ink-700',
     fileNameClassName,
   ]
     .filter(Boolean)

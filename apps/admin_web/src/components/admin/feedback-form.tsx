@@ -171,7 +171,7 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
             )}
           />
           {selectedOrganization && (
-            <p className='mt-2 text-xs text-slate-500'>
+            <p className='mt-2 text-xs text-ink-500'>
               Selected: {selectedOrganization.name}
             </p>
           )}
@@ -194,13 +194,13 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
                 validation.markTouched('stars');
               }}
             />
-            <span className='text-sm text-slate-500'>{stars}/5</span>
+            <span className='text-sm text-ink-500'>{stars}/5</span>
           </div>
         </AdminField>
 
         <AdminField label='Labels'>
           {labels.length === 0 ? (
-            <p className='text-sm text-slate-500'>
+            <p className='text-sm text-ink-500'>
               No labels available.
             </p>
           ) : (
@@ -220,7 +220,7 @@ export function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
             </div>
           )}
           {selectedLabelNames.length > 0 && (
-            <p className='mt-2 text-xs text-slate-500'>
+            <p className='mt-2 text-xs text-ink-500'>
               Selected: {selectedLabelNames.join(', ')}
             </p>
           )}

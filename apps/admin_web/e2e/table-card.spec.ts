@@ -126,7 +126,7 @@ test.describe('Table card slots', () => {
     await expect(kpiCards).toHaveCount(1);
     await expect(kpiCards).toContainText(['Pending']);
     await expect(card.getByTestId('admin-kpi-card')).toHaveCount(0);
-    await expect(adminPage.locator('p.text-sm.text-slate-700').filter({ hasText: /pending/i })).toHaveCount(0);
+    await expect(adminPage.locator('p.text-sm.text-ink-700').filter({ hasText: /pending/i })).toHaveCount(0);
 
     const filterBox = await filters.boundingBox();
     const actionBox = await actions.boundingBox();

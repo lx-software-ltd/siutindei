@@ -41,7 +41,7 @@ export function PendingRequestNotice({ request }: PendingRequestNoticeProps) {
               {formatDateTime(request.created_at)}
             </AdminReadOnlyValue>
           </AdminFieldGrid>
-        <p className='text-sm text-slate-600'>
+        <p className='text-sm text-ink-700'>
           You will be notified once your request has been reviewed. In the
           meantime, you cannot submit another request. If you have any
           questions, please contact support.

@@ -125,18 +125,18 @@ export function ImportSettingsPanel() {
         }
       >
         <section className='space-y-2'>
-          <h4 className='text-sm font-semibold text-slate-900'>Matching</h4>
-          <p className='text-sm text-slate-600'>
+          <h4 className='text-sm font-semibold text-ink-900'>Matching</h4>
+          <p className='text-sm text-ink-700'>
             An import matches a place id, then a source id, then the same
             manager and name, then a cleaned name. Merges are always followed.
             Catalog version 1 is protected.
           </p>
         </section>
         <section className='space-y-3'>
-          <h4 className='text-sm font-semibold text-slate-900'>While writing</h4>
+          <h4 className='text-sm font-semibold text-ink-900'>While writing</h4>
           <AdminFieldGrid columns={1}>
             <AdminField span='full'>
-              <label className='flex items-center gap-2 text-sm text-slate-700'>
+              <label className='flex items-center gap-2 text-sm text-ink-700'>
                 <input
                   type='checkbox'
                   checked={settings.skip_deleted_organizations}
@@ -181,8 +181,8 @@ export function ImportSettingsPanel() {
           </AdminFieldGrid>
         </section>
         <section className='space-y-3'>
-          <h4 className='text-sm font-semibold text-slate-900'>After import</h4>
-          <p className='text-sm text-slate-600'>
+          <h4 className='text-sm font-semibold text-ink-900'>After import</h4>
+          <p className='text-sm text-ink-700'>
             These checks run on the organizations and activities this import
             created or updated, and after an enrichment apply. Duplicates
             then cover that organization. Locations run when a venue or

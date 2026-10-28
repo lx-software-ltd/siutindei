@@ -6,7 +6,7 @@ export interface LabelProps
 export function Label({ className = '', ...props }: LabelProps) {
   return (
     <label
-      className={`mb-1 block text-sm font-semibold text-slate-700 ${className}`}
+      className={`mb-1 block text-sm font-semibold text-ink-900 ${className}`}
       {...props}
     />
   );

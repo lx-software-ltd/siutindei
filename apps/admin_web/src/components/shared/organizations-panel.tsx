@@ -831,7 +831,7 @@ export function OrganizationsPanel({
         />
       ) : (
         <div className='flex flex-wrap items-center gap-2'>
-          <h2 className='text-lg font-semibold text-slate-900'>
+          <h2 className='text-lg font-semibold text-ink-900'>
             {organizationInputTitle(null, panel.editorMode)}
           </h2>
         </div>

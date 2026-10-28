@@ -14,24 +14,20 @@ import { LoginFooter } from './login/login-footer';
 import { StatusBanner } from './status-banner';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
-/** brand-700 on white is about 7.7:1. brand-600 is about 2.1:1. */
-const loginFieldClassName =
-  'h-11 w-full rounded-lg border border-ink-900/15 bg-white px-3 text-base ' +
-  'text-ink-900 shadow-sm focus:border-brand-700 focus:outline-none ' +
-  'focus:ring-1 focus:ring-brand-700 disabled:cursor-not-allowed ' +
-  'disabled:bg-slate-100';
-
-const fieldLabelClassName = 'mb-1 block text-sm font-semibold text-ink-900';
+/** Taller than the console field. Input supplies the brand border and focus. */
+const loginFieldSizeClassName = 'h-11 rounded-lg sm:h-11 sm:text-base';
 
 const socialButtonClassName =
-  'admin-login-focus h-11 w-full justify-start gap-3 rounded-lg border-ink-900/15 text-sm font-semibold text-ink-900 hover:bg-brand-50 focus-visible:ring-0 sm:h-11';
+  'h-11 w-full justify-start gap-3 rounded-lg border-ink-900/15 text-sm font-semibold text-ink-900 hover:bg-brand-50 sm:h-11';
 
 const primaryButtonClassName =
-  'admin-login-focus h-11 w-full rounded-lg text-base focus-visible:ring-0 sm:h-11 sm:text-sm';
+  'h-11 w-full rounded-lg text-base sm:h-11 sm:text-sm';
 
 function loginFieldClass(invalid: boolean) {
-  return twMerge(loginFieldClassName, invalid ? formErrorClassName : '');
+  return twMerge(loginFieldSizeClassName, invalid ? formErrorClassName : '');
 }
 
 const socialProviders = [
@@ -196,10 +192,10 @@ export function LoginScreen() {
         {!showCodeInput ? (
           <form onSubmit={handleEmailSubmit} className='space-y-4'>
             <div className='space-y-2'>
-              <label htmlFor='email' className={fieldLabelClassName}>
+              <Label htmlFor='email'>
                 Work email <RequiredMark />
-              </label>
-              <input
+              </Label>
+              <Input
                 id='email'
                 type='email'
                 placeholder='you@example.com'
@@ -236,10 +232,10 @@ export function LoginScreen() {
         ) : (
           <form onSubmit={handleCodeSubmit} className='space-y-4'>
             <div className='space-y-2'>
-              <label htmlFor='code' className={fieldLabelClassName}>
+              <Label htmlFor='code'>
                 Verification code <RequiredMark />
-              </label>
-              <input
+              </Label>
+              <Input
                 id='code'
                 type='text'
                 inputMode='numeric'

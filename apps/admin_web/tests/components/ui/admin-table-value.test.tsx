@@ -47,7 +47,7 @@ describe('table cell roles', () => {
     expect(name?.querySelectorAll('wbr').length).toBe(2);
   });
 
-  it('renders a time in slate-600 and emphasises the row identity', () => {
+  it('renders a time in ink and emphasises the row identity', () => {
     const afternoon = new Date(2026, 9, 13, 14, 36);
     render(
       <>
@@ -58,10 +58,10 @@ describe('table cell roles', () => {
     );
 
     const times = screen.getAllByText('Oct 13, 02:36 PM');
-    expect(times[0]).toHaveClass('text-slate-600');
+    expect(times[0]).toHaveClass('text-ink-700');
     expect(times[0].className).not.toContain('font-medium');
-    expect(times[1]).toHaveClass('font-medium', 'text-slate-600');
-    expect(screen.getByText(ADMIN_TABLE_EMPTY)).toHaveClass('text-slate-600');
+    expect(times[1]).toHaveClass('font-medium', 'text-ink-700');
+    expect(screen.getByText(ADMIN_TABLE_EMPTY)).toHaveClass('text-ink-700');
   });
 
   it('renders an id in mono and an em dash when blank', () => {
@@ -72,7 +72,7 @@ describe('table cell roles', () => {
       </>
     );
 
-    expect(screen.getByText('job-1')).toHaveClass('font-mono', 'text-xs', 'text-slate-600');
+    expect(screen.getByText('job-1')).toHaveClass('font-mono', 'text-xs', 'text-ink-700');
     expect(screen.getByText(ADMIN_TABLE_EMPTY)).toBeInTheDocument();
   });
 

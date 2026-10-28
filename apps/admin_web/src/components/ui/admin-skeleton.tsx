@@ -8,7 +8,7 @@ export interface AdminSkeletonProps {
 
 /** Neutral shimmer block; size it with width/height classes. */
 export function AdminSkeleton({ className }: AdminSkeletonProps) {
-  return <span aria-hidden className={clsx('block animate-pulse rounded bg-slate-200', className)} />;
+  return <span aria-hidden className={clsx('block animate-pulse rounded bg-brand-100', className)} />;
 }
 
 export interface AdminSkeletonRowsProps {

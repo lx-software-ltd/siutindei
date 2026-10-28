@@ -199,7 +199,7 @@ export function FeedbackPanel() {
                 }))
               }
             />
-            <span className='text-sm text-slate-500'>
+            <span className='text-sm text-ink-500'>
               {panel.formState.stars}/5
             </span>
           </div>
@@ -245,7 +245,7 @@ export function FeedbackPanel() {
         </AdminField>
         <AdminField label='Labels' span={2}>
           {labels.length === 0 ? (
-            <p className='text-sm text-slate-500'>
+            <p className='text-sm text-ink-500'>
               No feedback labels available.
             </p>
           ) : (

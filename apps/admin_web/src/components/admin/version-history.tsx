@@ -364,7 +364,7 @@ export function VersionSwitcher({ view }: { view: CatalogVersionView }) {
   }
   if (!view.isAdmin) {
     return (
-      <span className='inline-flex h-8 items-center rounded-full bg-slate-100 px-2.5 text-xs font-medium text-slate-700'>
+      <span className='inline-flex h-8 items-center rounded-full bg-brand-50 px-2.5 text-xs font-medium text-ink-700'>
         {`Version ${view.latestVersion}`}
       </span>
     );
@@ -376,7 +376,7 @@ export function VersionSwitcher({ view }: { view: CatalogVersionView }) {
           type='button'
           disabled
           aria-describedby={view.error ? errorId : undefined}
-          className='inline-flex h-8 cursor-not-allowed items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium text-slate-500'
+          className='inline-flex h-8 cursor-not-allowed items-center rounded-full border border-brand-100 bg-brand-50 px-2.5 text-xs font-medium text-ink-500'
         >
           Versions unavailable
         </button>
@@ -393,7 +393,7 @@ export function VersionSwitcher({ view }: { view: CatalogVersionView }) {
       <button
         type='button'
         disabled
-        className='inline-flex h-8 cursor-not-allowed items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium text-slate-500'
+        className='inline-flex h-8 cursor-not-allowed items-center rounded-full border border-brand-100 bg-brand-50 px-2.5 text-xs font-medium text-ink-500'
       >
         Loading versions…
       </button>
@@ -443,7 +443,7 @@ export function VersionSwitcher({ view }: { view: CatalogVersionView }) {
           'inline-flex h-8 items-center gap-1 rounded-full border px-2.5 text-xs font-medium',
           view.isHistorical
             ? 'border-amber-300 bg-amber-50 text-amber-950'
-            : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+            : 'border-brand-100 bg-brand-50 text-ink-700 hover:bg-brand-100'
         )}
       >
         {label}
@@ -460,10 +460,10 @@ export function VersionSwitcher({ view }: { view: CatalogVersionView }) {
             left: menuStyle.left,
             transform: menuStyle.flip ? 'translateY(-100%)' : undefined,
           }}
-          className='z-50 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg'
+          className='z-50 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-md border border-brand-100 bg-white shadow-lg'
         >
           {view.isLoading ? (
-            <p className='px-3 py-2 text-sm text-slate-600'>Loading versions…</p>
+            <p className='px-3 py-2 text-sm text-ink-700'>Loading versions…</p>
           ) : (
             <ul className='max-h-72 overflow-auto py-1'>
               {rows.map((row) => {
@@ -479,16 +479,16 @@ export function VersionSwitcher({ view }: { view: CatalogVersionView }) {
                         setOpen(false);
                       }}
                       className={clsx(
-                        'flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-slate-50',
-                        selected && 'bg-slate-50'
+                        'flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-brand-50',
+                        selected && 'bg-brand-50'
                       )}
                     >
-                      <span className='font-medium text-slate-900'>
+                      <span className='font-medium text-ink-900'>
                         {`Version ${row.version}`}
                         {latest ? ' · Latest' : ''}
                       </span>
                       {row.created_at ? (
-                        <span className='text-xs text-slate-500'>
+                        <span className='text-xs text-ink-500'>
                           {formatVersionDate(row.created_at)}
                           {' · '}
                           {sourceLabel(row, emailById)}
@@ -545,17 +545,17 @@ export function RemovedCatalogRecords({ orgId }: { orgId: string }) {
   }
 
   return (
-    <div className='col-span-full space-y-2 border-t border-slate-200 pt-4'>
-      <p className='text-sm font-medium text-slate-900'>Removed records</p>
-      <p className='text-sm text-slate-600'>
+    <div className='col-span-full space-y-2 border-t border-brand-100 pt-4'>
+      <p className='text-sm font-medium text-ink-900'>Removed records</p>
+      <p className='text-sm text-ink-700'>
         Forgetting one lets the next import create it again.
       </p>
       {forgetError ? <p className='text-sm text-red-700'>{forgetError}</p> : null}
-      <ul className='space-y-2 text-sm text-slate-700'>
+      <ul className='space-y-2 text-sm text-ink-700'>
         {removedItems.map((row) => (
           <li
             key={row.id}
-            className='flex items-center justify-between gap-3 rounded border border-slate-200 bg-white p-2'
+            className='flex items-center justify-between gap-3 rounded border border-brand-100 bg-white p-2'
           >
             <span>
               {fieldLabel(row.entity_type)} · {recordName(row)}

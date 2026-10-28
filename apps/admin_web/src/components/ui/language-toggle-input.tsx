@@ -90,7 +90,7 @@ export function LanguageToggleInput({
   return (
     <div className='space-y-1'>
       <div className='flex flex-wrap items-start justify-between gap-3'>
-        <Label className='mb-0' htmlFor={id}>
+        <Label htmlFor={id}>
           {label}
           {required ? <RequiredMark /> : null}
         </Label>
@@ -103,10 +103,10 @@ export function LanguageToggleInput({
                 key={option.code}
                 type='button'
                 onClick={() => setActiveLanguage(option.code)}
-                className={`relative flex h-5 items-center justify-center rounded border px-1 py-0 box-border transition ${
+                className={`admin-focus relative flex h-5 items-center justify-center rounded border px-1 py-0 box-border transition ${
                   isActive
-                    ? 'border-slate-400 bg-slate-50 ring-2 ring-slate-200'
-                    : 'border-slate-200 hover:border-slate-300'
+                    ? 'border-ink-900 bg-white ring-2 ring-ink-900'
+                    : 'border-ink-900/20 hover:border-ink-900'
                 }`}
                 aria-pressed={isActive}
                 aria-label={`Select ${option.label}`}
@@ -129,7 +129,7 @@ export function LanguageToggleInput({
         </div>
       </div>
       {description ? (
-        <p className='text-xs text-slate-500'>{description}</p>
+        <p className='text-xs text-ink-500'>{description}</p>
       ) : null}
       {input}
       {error ? (
