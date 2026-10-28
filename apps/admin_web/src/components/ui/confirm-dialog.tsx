@@ -52,7 +52,7 @@ export function ConfirmDialog({
           </Button>
           <Button
             type='button'
-            variant={variant === 'danger' ? 'danger' : 'primary'}
+            variant={variant === 'danger' ? 'danger' : 'ink'}
             disabled={confirmDisabled}
             loading={confirmLoading}
             loadingLabel={confirmLoadingLabel}

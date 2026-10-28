@@ -347,7 +347,7 @@ export function CategoryChecksPanel() {
         </StatusBanner>
       ) : null}
       {scopedOrgId ? (
-        <p className='text-sm text-slate-600'>
+        <p className='text-sm text-ink-700'>
           Filtered to the organization from the review queue.{' '}
           <button
             type='button'
@@ -527,7 +527,7 @@ export function CategoryChecksPanel() {
         onCancel={() => setConfirmMode(null)}
       >
         {confirmMode === 'pending_review' || confirmMode === 'all' ? (
-          <label className='mt-3 flex items-start gap-2 text-sm text-slate-700'>
+          <label className='mt-3 flex items-start gap-2 text-sm text-ink-700'>
             <input
               id='check-ignore-current'
               type='checkbox'

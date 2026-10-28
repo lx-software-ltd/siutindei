@@ -321,7 +321,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
                 rel='noreferrer'
                 title='Open in Google Maps'
                 aria-label='Open in Google Maps'
-                className='text-slate-500 hover:text-slate-900'
+                className='text-ink-500 hover:text-ink-900'
               >
                 <MapServiceIcon
                   className='h-4 w-4'
@@ -336,7 +336,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
                 rel='noreferrer'
                 title='Open in Apple Maps'
                 aria-label='Open in Apple Maps'
-                className='text-slate-500 hover:text-slate-900'
+                className='text-ink-500 hover:text-ink-900'
               >
                 <MapServiceIcon
                   className='h-4 w-4'

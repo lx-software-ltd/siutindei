@@ -240,7 +240,7 @@ function AdminActionMenu({ actions, label }: AdminActionMenuProps) {
               id={menuId}
               role='menu'
               aria-label={label}
-              className='admin-action-menu z-50 min-w-52 rounded-md border border-slate-200 bg-white p-1 text-sm shadow-lg'
+              className='admin-action-menu admin-focus z-50 min-w-52 rounded-md border border-brand-100 bg-white p-1 text-sm shadow-lg'
               onKeyDown={handleMenuKeyDown}
               onClick={(event) => {
                 event.stopPropagation();
@@ -264,10 +264,10 @@ function AdminActionMenu({ actions, label }: AdminActionMenuProps) {
 }
 
 const menuItemToneStyles: Record<AdminIconButtonTone, string> = {
-  default: 'text-slate-700 hover:bg-slate-100 focus-visible:bg-slate-100',
+  default: 'text-ink-700 hover:bg-brand-50 focus-visible:bg-brand-50',
   danger: 'text-red-600 hover:bg-red-50 focus-visible:bg-red-50',
   success: 'text-emerald-700 hover:bg-emerald-50 focus-visible:bg-emerald-50',
-  primary: 'text-slate-900 hover:bg-slate-100 focus-visible:bg-slate-100',
+  primary: 'text-ink-900 hover:bg-brand-50 focus-visible:bg-brand-50',
 };
 
 function MenuItem({ action, onActivated }: { action: AdminRowAction; onActivated: () => void }) {
@@ -279,7 +279,7 @@ function MenuItem({ action, onActivated }: { action: AdminRowAction; onActivated
   const iconWrap = <span className='inline-flex h-4 w-4 shrink-0 items-center justify-center'>{action.icon}</span>;
   const badge =
     action.badge ? (
-      <span className='ml-auto rounded-full bg-slate-900 px-1.5 text-[10px] font-semibold leading-4 text-white'>
+      <span className='ml-auto rounded-full bg-ink-900 px-1.5 text-[10px] font-semibold leading-4 text-white'>
         {action.badge > 99 ? '99+' : action.badge}
       </span>
     ) : null;

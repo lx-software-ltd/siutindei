@@ -50,14 +50,27 @@ rules use.
 The signed-out login page, the session-loading state, and the imports
 redirect use the public site's Small World backdrop: stacked logo,
 golden gradient, and a fixed set of kawaii pictures. The heading keeps
-"Siu Tin Dei" on one line. Focus rings on the sign-in card use
-`brand-700` so they stay visible on white. The footer is wide enough
-that Privacy Policy and Terms of Use stay on one line. Brand colour
-tokens in `apps/admin_web/src/app/globals.css` mirror
-`apps/public_www/src/app/globals.css`. Change both or neither. Console
-fields stay on `Input` and `Label` (slate). The login fields are
-separate so those primitives are unchanged. There is no environment
-label on the login pill.
+"Siu Tin Dei" on one line. Focus rings use `brand-700` so they stay
+visible on white. The footer is wide enough that Privacy Policy and
+Terms of Use stay on one line. There is no environment label on the
+login pill.
+
+The signed-in console uses the same tokens for its frame: cream
+canvas, white cards with `border-brand-100`, yellow primary buttons,
+a filled cream secondary, a white outline, and an ink confirm.
+A disabled primary is grey. The active nav item is ink. Focus rings
+use `brand-700` inside `.admin-focus`, with transform still allowed
+and table rings inset. `Input`, `Select`, and `Textarea` merge a
+caller border so an invalid field turns red. `Label` keeps its margin.
+The header title is "Siu Tin Dei" next to an Admin console pill.
+The public-site link is shared and opens in a new tab. Route-level
+admin loading is a spinner on the cream page. Table row hover,
+expanded rows, and draft rows stay neutral, and the expanded-row
+frame stays slate. Status tones stay semantic, including a grey
+neutral badge. Info banners are white. Pending review stays blue.
+Colour and font tokens in `apps/admin_web/src/app/globals.css` mirror
+`apps/public_www/src/app/globals.css` in both directions, including
+the emoji faces on `--font-sans`. Change both or neither.
 
 ## Exceptions
 

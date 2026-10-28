@@ -153,14 +153,14 @@ function ProposalValue({ row }: { row: EnrichmentProposal }) {
 function MediaPreview({ src, alt }: { src: string; alt: string }) {
   const [failed, setFailed] = useState(false);
   if (failed) {
-    return <p className='text-xs text-slate-500'>Preview unavailable</p>;
+    return <p className='text-xs text-ink-500'>Preview unavailable</p>;
   }
   return (
     <img
       src={src}
       alt={alt}
       data-testid='enrichment-media-preview'
-      className='h-28 w-full max-w-xs rounded-md border border-slate-200 bg-slate-50 object-contain'
+      className='h-28 w-full max-w-xs rounded-md border border-brand-100 bg-brand-50 object-contain'
       loading='lazy'
       referrerPolicy='no-referrer'
       onError={() => setFailed(true)}
@@ -235,7 +235,7 @@ export function ProposalTable({
               </AdminDataTableCell>
               <AdminDataTableCell priority='secondary'>
                 <ProposalValue row={row} />
-                <div className='mt-1 text-xs text-slate-500'>Now: {current}</div>
+                <div className='mt-1 text-xs text-ink-500'>Now: {current}</div>
                 {pending ? (
                   <ProposalFields
                     row={row}
@@ -286,8 +286,8 @@ function ProposalFields({
     const note = proposed.area_note ? String(proposed.area_note) : '';
     return (
       <div className='mt-3 max-w-xl'>
-        {note ? <p className='mb-2 text-xs text-slate-500'>{note}</p> : null}
-        <p className='mb-2 text-xs text-slate-500'>
+        {note ? <p className='mb-2 text-xs text-ink-500'>{note}</p> : null}
+        <p className='mb-2 text-xs text-ink-500'>
           {path
             ? `Matched ${path}.`
             : said
@@ -312,7 +312,7 @@ function ProposalFields({
     return (
       <div className='mt-3 max-w-xl space-y-3'>
         {said ? (
-          <p className='text-xs text-slate-500'>Website said {said}.</p>
+          <p className='text-xs text-ink-500'>Website said {said}.</p>
         ) : null}
         <CascadingCategorySelect
           tree={categoryTree}
@@ -368,7 +368,7 @@ function ProposalFields({
       <div className='mt-3 max-w-sm'>
         <Label htmlFor={`venue-${row.id}`}>Venue</Label>
         {venues.length === 0 ? (
-          <p className='text-xs text-slate-500'>Add a location before this row.</p>
+          <p className='text-xs text-ink-500'>Add a location before this row.</p>
         ) : (
           <Select
             id={`venue-${row.id}`}

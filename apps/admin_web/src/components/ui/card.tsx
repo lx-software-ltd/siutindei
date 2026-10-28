@@ -28,7 +28,7 @@ export function Card({
       {...rest}
       className={twMerge(
         clsx(
-          'rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:rounded-xl sm:p-6',
+          'rounded-lg border border-brand-100 bg-white p-4 shadow-sm sm:rounded-xl sm:p-6',
           className
         )
       )}
@@ -48,7 +48,7 @@ export function Card({
             </div>
           )}
           {description && (
-            <p className='mt-1 text-xs text-slate-600 sm:text-sm'>
+            <p className='mt-1 text-xs text-ink-700 sm:text-sm'>
               {description}
             </p>
           )}

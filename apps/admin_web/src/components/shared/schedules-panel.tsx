@@ -453,7 +453,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
           return (
             <span
               key={option.code}
-              className='inline-flex items-center justify-center rounded border border-slate-200 bg-white px-1.5 py-1'
+              className='inline-flex items-center justify-center rounded border border-brand-100 bg-white px-1.5 py-1'
               title={option.label}
             >
               <img
@@ -604,7 +604,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                 versionKey='entries'
                 error={showDaysError ? daysError : undefined}
               >
-                <p id='schedule-days-help' className='text-xs text-slate-500'>
+                <p id='schedule-days-help' className='text-xs text-ink-500'>
                   Select one or more days, then add timeslots.
                 </p>
                 <div
@@ -634,13 +634,13 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
                 .filter((day) => day.entries.length > 0)
                 .map((day) => (
                   <div key={day.value}>
-                    <div className='space-y-3 rounded border border-slate-200 bg-slate-50 p-4'>
+                    <div className='space-y-3 rounded border border-brand-100 bg-brand-50 p-4'>
                       <div className='flex flex-wrap items-center justify-between gap-2'>
                         <div>
-                          <p className='text-sm font-semibold text-slate-900'>
+                          <p className='text-sm font-semibold text-ink-900'>
                             {day.label}
                           </p>
-                          <p className='text-xs text-slate-500'>
+                          <p className='text-xs text-ink-500'>
                             Add one or more timeslots.
                           </p>
                         </div>
@@ -799,7 +799,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
             versionKey='languages'
             error={showLanguagesError ? languagesError : undefined}
           >
-            <p id='schedule-languages-help' className='text-xs text-slate-500'>
+            <p id='schedule-languages-help' className='text-xs text-ink-500'>
               Select one or more flags.
             </p>
             <div

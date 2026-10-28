@@ -471,10 +471,10 @@ export function LocationsPanel() {
           open && open.status === 'pending' ? (
             <AdminEditorPanel>
               {open.rationale ? (
-                <p className='text-sm text-slate-700'>{open.rationale}</p>
+                <p className='text-sm text-ink-700'>{open.rationale}</p>
               ) : null}
               {open.proposed_location?.register?.name ? (
-                <p className='text-sm text-slate-700'>
+                <p className='text-sm text-ink-700'>
                   Register {open.proposed_location.register.name}
                   {open.proposed_location.register.name_similarity == null
                     ? ''
@@ -482,7 +482,7 @@ export function LocationsPanel() {
                 </p>
               ) : null}
               {open.proposed_location?.lookup?.grade ? (
-                <p className='text-sm text-slate-700'>
+                <p className='text-sm text-ink-700'>
                   Lookup {open.proposed_location.lookup.grade}
                   {open.proposed_location.lookup.display_name
                     ? `: ${open.proposed_location.lookup.display_name}`
@@ -490,7 +490,7 @@ export function LocationsPanel() {
                 </p>
               ) : null}
               {open.proposed_location?.lookup?.district_consistent === false ? (
-                <p className='text-sm text-slate-700'>Pin is outside this district.</p>
+                <p className='text-sm text-ink-700'>Pin is outside this district.</p>
               ) : null}
               {open.proposed_location?.lat != null && open.proposed_location?.lng != null ? (
                 <a

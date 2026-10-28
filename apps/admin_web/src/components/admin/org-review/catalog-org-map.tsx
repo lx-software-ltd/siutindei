@@ -206,7 +206,7 @@ function CatalogGoogleMap({
   return (
     <div
       ref={containerRef}
-      className='h-[28rem] w-full rounded-md border border-slate-200'
+      className='h-[28rem] w-full rounded-md border border-brand-100'
       role='application'
       aria-label='Filtered organizations'
     />
@@ -230,10 +230,10 @@ export function CatalogOrgMap({
     <div className='space-y-3'>
       {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
       {showFirstLoad ? (
-        <p className='text-sm text-slate-500'>Loading the map…</p>
+        <p className='text-sm text-ink-500'>Loading the map…</p>
       ) : null}
       {loadingMore ? (
-        <p className='text-sm text-slate-500'>Loading more locations…</p>
+        <p className='text-sm text-ink-500'>Loading more locations…</p>
       ) : null}
       {truncated ? (
         <StatusBanner kind='info'>
@@ -248,7 +248,7 @@ export function CatalogOrgMap({
         </StatusBanner>
       ) : null}
       {showEmpty ? (
-        <p className='text-sm text-slate-500'>
+        <p className='text-sm text-ink-500'>
           No mapped locations match these filters.
         </p>
       ) : null}
@@ -256,9 +256,9 @@ export function CatalogOrgMap({
       {pins.length > 0 ? (
         <ul className='space-y-2'>
           {pins.map((pin) => (
-            <li key={pin.id} className='text-sm text-slate-700'>
+            <li key={pin.id} className='text-sm text-ink-700'>
               <a
-                className='font-medium text-slate-900 underline underline-offset-2 hover:text-slate-900'
+                className='font-medium text-ink-900 underline underline-offset-2 hover:text-ink-900'
                 href={catalogOrganizationHref(pin.orgId)}
               >
                 {pin.orgName}

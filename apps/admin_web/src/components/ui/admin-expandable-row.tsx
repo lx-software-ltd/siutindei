@@ -117,7 +117,7 @@ export function AdminExpandableRow({
         onClick={onToggle}
         onKeyDown={handleRowKeyDown}
         className={clsx(
-          'cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400',
+          'cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-700',
           isDraft ? 'bg-amber-50' : expanded ? 'bg-slate-100' : 'hover:bg-slate-50',
           // Frame the selected record (see `.admin-row-framed` in globals.css).
           expanded && 'admin-row-framed',
@@ -145,7 +145,7 @@ export function AdminExpandableRow({
               event.stopPropagation();
               onToggle();
             }}
-            className='inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400'
+            className='inline-flex h-7 w-7 items-center justify-center rounded-md text-ink-500 transition hover:bg-brand-100 hover:text-ink-900'
           >
             <ChevronDownIcon className='admin-chevron h-4 w-4' />
           </button>
@@ -173,7 +173,7 @@ export function AdminExpandableRow({
             <div
               ref={detailRef}
               className={clsx(
-                'admin-row-detail admin-row-detail-framed border-t border-slate-200 px-4 py-4 sm:px-6',
+                'admin-row-detail admin-row-detail-framed border-t border-brand-100 px-4 py-4 sm:px-6',
                 isDraft ? 'bg-amber-50/40' : 'bg-white'
               )}
             >

@@ -100,7 +100,7 @@ export function CategorySuggestionSettingsCard() {
         }
       >
         {error ? null : (
-          <p className='text-sm text-slate-600'>Loading settings...</p>
+          <p className='text-sm text-ink-700'>Loading settings...</p>
         )}
       </AdminInputCard>
     );
@@ -153,7 +153,7 @@ export function CategorySuggestionSettingsCard() {
     >
       <AdminFieldGrid columns={2}>
           <AdminField span='full'>
-            <p className='text-sm text-slate-600'>
+            <p className='text-sm text-ink-700'>
               Capture unknown categories on import is set in{' '}
               <a
                 className='underline underline-offset-2'

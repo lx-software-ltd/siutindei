@@ -107,7 +107,7 @@ export function DecisionDialog({
         </>
       }
     >
-      <p className='text-sm text-slate-600'>
+      <p className='text-sm text-ink-700'>
         Approve a new category, map to one, or reject.
       </p>
       <AdminFieldGrid columns={1}>
@@ -156,7 +156,7 @@ export function DecisionDialog({
         </AdminField>
       </AdminFieldGrid>
       {!mapId ? (
-        <p className='text-sm text-slate-600'>
+        <p className='text-sm text-ink-700'>
           Reject without a target leaves these activities in Pending
           categorisation. Organization review stays blocked until you map
           them.

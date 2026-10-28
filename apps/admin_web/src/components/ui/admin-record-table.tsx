@@ -100,12 +100,12 @@ export function AdminRecordTable({
       ) : null}
       <div
         ref={scrollRef}
-        className='admin-record-table-scroll overflow-x-auto rounded-md border border-slate-200 bg-white'
+        className='admin-record-table-scroll overflow-x-auto rounded-md border border-brand-100 bg-white'
         aria-busy={isLoading || isLoadingMore ? true : undefined}
       >
         <table
           aria-label={ariaLabel}
-          className={clsx('w-full divide-y divide-slate-200 text-left', tableClassName)}
+          className={clsx('w-full divide-y divide-brand-100 text-left', tableClassName)}
         >
           <AdminDataTableHead>
             <tr>{head}</tr>

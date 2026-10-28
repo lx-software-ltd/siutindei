@@ -79,7 +79,7 @@ export function OrganizationEnrichmentSettings() {
   }
 
   return (
-    <div className='mt-4 border-t border-slate-200 pt-3'>
+    <div className='mt-4 border-t border-brand-100 pt-3'>
       <Button
         type='button'
         variant='secondary'
@@ -163,7 +163,7 @@ export function OrganizationEnrichmentSettings() {
               }
             />
           </div>
-          <label className='flex items-center gap-2 text-sm text-slate-700'>
+          <label className='flex items-center gap-2 text-sm text-ink-700'>
             <input
               type='checkbox'
               checked={form.copy_media}

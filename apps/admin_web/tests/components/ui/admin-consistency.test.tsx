@@ -44,7 +44,7 @@ describe('AdminReadOnlyValue', () => {
     render(<AdminReadOnlyValue label='File'>import.json</AdminReadOnlyValue>);
 
     expect(screen.getByText('File')).toHaveClass('font-semibold');
-    expect(screen.getByText('File')).toHaveClass('text-sm', 'text-slate-700');
+    expect(screen.getByText('File')).toHaveClass('text-sm', 'text-ink-900');
   });
 });
 
@@ -79,7 +79,7 @@ describe('ConfirmDialog', () => {
     );
 
     expect(screen.getByRole('alertdialog', { name: 'Discard unsaved changes?' })).toBeVisible();
-    expect(document.querySelector('.bg-slate-900\\/45')).not.toBeNull();
+    expect(document.querySelector('.bg-ink-900\\/45')).not.toBeNull();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onCancel).toHaveBeenCalledOnce();
     trigger.remove();
