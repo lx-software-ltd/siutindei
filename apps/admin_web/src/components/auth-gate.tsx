@@ -5,8 +5,8 @@ import type { ReactNode } from 'react';
 import { useAuth } from './auth-provider';
 import { LoginBackdrop } from './login/login-backdrop';
 import { LoginBrandHeader } from './login/login-brand-header';
+import { LoginLoadingNotice } from './login/login-loading-notice';
 import { LoginScreen } from './login-screen';
-import { StatusBanner } from './status-banner';
 
 interface AuthGateProps {
   children: ReactNode;
@@ -30,9 +30,7 @@ export function AuthGate({
     return (
       <LoginBackdrop>
         <LoginBrandHeader />
-        <StatusBanner kind='info'>
-          Preparing your admin session.
-        </StatusBanner>
+        <LoginLoadingNotice />
       </LoginBackdrop>
     );
   }
