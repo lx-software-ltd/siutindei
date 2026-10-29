@@ -653,11 +653,10 @@ All other resources are deleted when the stack is deleted (unless they are impor
 
 ## Estimated Resource Count
 
-**Minimum (all existing resources imported):**
-- ~50-60 resources (Lambdas, IAM roles, API Gateway resources, etc.)
-
-**Maximum (all resources created):**
-- ~150-200 resources (includes VPC, subnets, NAT, Aurora, RDS Proxy, all Lambdas with DLQs/KMS, API Gateway, etc.)
+The main stack synthesizes to 500 resources, CloudFormation's per-stack
+maximum. `cdk synth` fails on the next resource added there. Put new
+resources in a nested stack (as `ApiRateLimitStack` does) or move an
+existing group out first.
 
 ---
 
