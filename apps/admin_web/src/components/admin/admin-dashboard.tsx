@@ -84,7 +84,37 @@ const recognizedSections = [
 ];
 
 export function AdminDashboard() {
-  const { status, user, isAdmin, isManager, logout, error } = useAuth();
+  const { status, isAdmin, isManager } = useAuth();
+
+  if (status === 'loading') {
+    return (
+      <LoginBackdrop>
+        <LoginBrandHeader />
+        <LoginLoadingNotice />
+      </LoginBackdrop>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    return <LoginScreen />;
+  }
+
+  // The admin section query rewrites unknown sections and drops `org`.
+  // It must not stay mounted for a manager: Suggest a Place is unknown
+  // here, and Feedback then fights the manager console over `org`.
+  if (isManager && !isAdmin) {
+    return <ManagerDashboard />;
+  }
+
+  if (!isAdmin && !isManager) {
+    return <AccountHome />;
+  }
+
+  return <AdminConsole />;
+}
+
+function AdminConsole() {
+  const { user, logout, error } = useAuth();
   const { orgId } = useOrganizationScope();
   const prefetchSection = usePrefetchAdminSection('admin', orgId);
   const { activeSection, selectSection } = useAdminSectionQuery(
@@ -130,32 +160,6 @@ export function AdminDashboard() {
     }
   }, [activeSection]);
 
-  if (status === 'loading') {
-    return (
-      <LoginBackdrop>
-        <LoginBrandHeader />
-        <LoginLoadingNotice />
-      </LoginBackdrop>
-    );
-  }
-
-  if (status === 'unauthenticated') {
-    return <LoginScreen />;
-  }
-
-  // If user is in the manager group but NOT in the admin group,
-  // show the manager-specific experience
-  if (isManager && !isAdmin) {
-    return <ManagerDashboard />;
-  }
-
-  // If user is neither admin nor manager, show the user dashboard
-  // where they can request to become a manager
-  if (!isAdmin && !isManager) {
-    return <AccountHome />;
-  }
-
-  // Admin experience (full access)
   return (
     <AppShell
       sections={sectionLabels}

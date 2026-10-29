@@ -19,6 +19,7 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import {
+  addOpsAlarmRules,
   ApiRateLimitConstruct,
   DatabaseConstruct,
   OpsAlarmsConstruct,
@@ -3113,13 +3114,8 @@ export class ApiStack extends cdk.Stack {
     // ---------------------------------------------------------------------
     // Per-session rate limit on signed-in routes (all served by the admin
     // Lambda). One looping browser tab must not exhaust its concurrency.
-    // Nested because this stack is at CloudFormation's 500-resource limit;
-    // a nested stack counts as one resource here.
     // ---------------------------------------------------------------------
-    const apiRateLimitStack = new cdk.NestedStack(this, "ApiRateLimitStack", {
-      description: "Per-session WAF rate limit on the API prod stage",
-    });
-    const apiRateLimit = new ApiRateLimitConstruct(apiRateLimitStack, "ApiRateLimit", {
+    const apiRateLimit = new ApiRateLimitConstruct(this, "ApiRateLimit", {
       resourcePrefix,
       api,
       corsOrigin: corsAllowedOrigins.includes(ADMIN_WEB_ORIGIN)
@@ -3136,31 +3132,47 @@ export class ApiStack extends cdk.Stack {
     new OpsAlarmsConstruct(this, "OpsAlarms", {
       resourcePrefix,
       alertsEmail: opsAlertsEmail.valueAsString,
-      api,
-      monitoredFunctions: [
-        // Public search path: user-facing SLO.
-        { label: "Search", fn: searchFunction, durationP99ThresholdMs: 3000 },
-        {
-          label: "ListingEventsIngest",
-          fn: listingEventsIngestFunction,
-          durationP99ThresholdMs: 2000,
-        },
-        {
-          label: "ListingEventsRollup",
-          fn: listingEventsRollupFunction,
-          durationP99ThresholdMs: 15000,
-        },
-        // Admin also consumes category-suggestion SQS (OpenRouter up to
-        // 90s, function timeout 120s). A 10s p99 pages on every category
-        // check. HTTP latency stays on the API Gateway p99 alarm.
-        { label: "Admin", fn: adminFunction, durationP99ThresholdMs: 90000 },
-      ],
-      dbClusterIdentifier: database.cluster.clusterIdentifier,
       additionalAlarms: [
         dlqAlarm,
         categorySuggestionDlqAlarm,
         apiRateLimit.blockedAlarm,
       ],
+    });
+    // Nested because this stack is at CloudFormation's 500-resource limit.
+    // The scope id "OpsAlarms" fixes the alarms' deployed logical IDs.
+    const opsAlarmsStack = new cdk.NestedStack(this, "OpsAlarmsStack", {
+      description: "Operational CloudWatch alarms for the API stack",
+    });
+    addOpsAlarmRules(new Construct(opsAlarmsStack, "OpsAlarms"), {
+      resourcePrefix,
+      apiName: api.restApiName,
+      monitoredFunctions: [
+        // Public search path: user-facing SLO.
+        {
+          label: "Search",
+          functionName: name("SiutindeiSearchFunction"),
+          durationP99ThresholdMs: 3000,
+        },
+        {
+          label: "ListingEventsIngest",
+          functionName: name("ListingEventsIngestFunction"),
+          durationP99ThresholdMs: 2000,
+        },
+        {
+          label: "ListingEventsRollup",
+          functionName: name("ListingEventsRollupFunction"),
+          durationP99ThresholdMs: 15000,
+        },
+        // Admin also consumes category-suggestion SQS (OpenRouter up to
+        // 90s, function timeout 120s). A 10s p99 pages on every category
+        // check. HTTP latency stays on the API Gateway p99 alarm.
+        {
+          label: "Admin",
+          functionName: name("SiutindeiAdminFunction"),
+          durationP99ThresholdMs: 90000,
+        },
+      ],
+      dbClusterIdentifier: database.clusterIdentifier,
     });
 
     // Apply Checkov suppressions to CDK-internal Lambda functions

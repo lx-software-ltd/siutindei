@@ -387,11 +387,10 @@ read error status codes instead of silently blocking them.
 | API Key | `MobileSearchApiKey` | `lxsoftware-siutindei-mobile-search-key` | Value from `PublicApiKeyValue` parameter |
 | Usage Plan | `MobileSearchUsagePlan` | `lxsoftware-siutindei-mobile-search-plan` | Linked to API key and `prod` stage |
 
-### API Gateway WAF (nested stack `ApiRateLimitStack`)
+### API Gateway WAF
 
 Created by `ApiRateLimitConstruct` (`lib/constructs/api-rate-limit.ts`)
-inside a nested stack. The main stack is at the 500-resource limit, and the
-nested stack counts as one resource there.
+in the main stack.
 
 | Resource Type | Logical ID | Physical Name/ID | Notes |
 |--------------|------------|------------------|-------|
@@ -420,7 +419,12 @@ nested stack counts as one resource there.
 
 ## Operational Alarms (OpsAlarms construct)
 
-Created by `OpsAlarmsConstruct` (`lib/constructs/ops-alarms.ts`).
+The topic, key, and subscription come from `OpsAlarmsConstruct` in the main
+stack. The 16 API, Lambda, and Aurora alarms come from `addOpsAlarmRules`
+(`lib/constructs/ops-alarms.ts`) in the `OpsAlarmsStack` nested stack. They
+use literal names and a literal topic ARN, so the nested stack takes no
+parameters. They were moved there by a one-off stack refactor, described in
+[`docs/deployment/ops-alarms-stack-refactor.md`](../deployment/ops-alarms-stack-refactor.md).
 
 | Resource Type | Physical Name | Notes |
 |--------------|---------------|-------|
@@ -437,9 +441,9 @@ Created by `OpsAlarmsConstruct` (`lib/constructs/ops-alarms.ts`).
 | CloudWatch Alarm | `lxsoftware-siutindei-admin-lambda-throttles-alarm` | Admin Lambda throttles ≥ 1 |
 | CloudWatch Alarm | `lxsoftware-siutindei-aurora-acu-utilization-alarm` | Aurora ACU utilization ≥ 90% for 15 min |
 | CloudWatch Alarm | `lxsoftware-siutindei-aurora-connections-alarm` | Aurora connections ≥ 300 for 15 min |
-| CloudWatch Alarm | `lxsoftware-siutindei-api-session-rate-limit-alarm` | API WAF blocked ≥ 1 request in 5 min (defined in the `ApiRateLimitStack` nested stack) |
+| CloudWatch Alarm | `lxsoftware-siutindei-api-session-rate-limit-alarm` | API WAF blocked ≥ 1 request in 5 min (main stack, from `ApiRateLimitConstruct`) |
 
-The pre-existing manager-request DLQ alarm (`lxsoftware-siutindei-manager-request-dlq-alarm`) is also routed to the ops-alerts topic. Thresholds are launch-sizing early warnings; tune as real traffic patterns emerge.
+The manager-request and category-suggestion DLQ alarms are in the main stack and are also routed to the ops-alerts topic. Thresholds are launch-sizing early warnings; tune as real traffic patterns emerge.
 
 Latency alarms are split by traffic regime: the API-wide p99 alarm only
 evaluates periods with enough requests for a percentile to be meaningful
@@ -653,10 +657,11 @@ All other resources are deleted when the stack is deleted (unless they are impor
 
 ## Estimated Resource Count
 
-The main stack synthesizes to 500 resources, CloudFormation's per-stack
-maximum. `cdk synth` fails on the next resource added there. Put new
-resources in a nested stack (as `ApiRateLimitStack` does) or move an
-existing group out first.
+CloudFormation allows 500 resources per stack, and a nested stack counts
+as one. The main stack synthesizes to 491 resources. The API Gateway alone
+accounts for 241 of them: 154 methods and 70 path resources. The 16 ops
+alarm rules live in the `OpsAlarmsStack` nested stack. New resource groups
+that don't reference the rest of the stack belong in a nested stack.
 
 ---
 

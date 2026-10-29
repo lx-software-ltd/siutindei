@@ -76,6 +76,11 @@ export interface DatabaseConstructProps {
 export class DatabaseConstruct extends Construct {
   /** The Aurora database cluster. */
   public readonly cluster: rds.IDatabaseCluster;
+  /**
+   * Cluster identifier as a plain string rather than a `Ref`, so it can be
+   * used from another stack without a cross-stack reference.
+   */
+  public readonly clusterIdentifier: string;
   /** The RDS Proxy for connection pooling. */
   public readonly proxy: rds.IDatabaseProxy;
   /** The database credentials secret. */
@@ -348,6 +353,9 @@ export class DatabaseConstruct extends Construct {
     this.adminUserSecretKmsKey = adminUserSecretKmsKey;
 
     // Aurora PostgreSQL Serverless v2 cluster
+    this.clusterIdentifier = useExistingCluster
+      ? dbClusterIdentifier!
+      : name("db-cluster");
     if (useExistingCluster) {
       const readerEndpoint = dbClusterReaderEndpoint ?? dbClusterEndpoint;
       this.cluster = rds.DatabaseCluster.fromDatabaseClusterAttributes(

@@ -76,6 +76,40 @@ test.describe('Manager Dashboard', () => {
     // Navigate back to Organizations
     await managerPage.getByRole('button', { name: 'Organization' }).click();
   });
+
+  test('opens suggest a place and feedback without reloading the account', async ({
+    managerPage,
+  }) => {
+    await managerPage.goto('/admin/dashboard');
+    await expect(
+      managerPage.getByText('Manage your organization, Test Organization 1.')
+    ).toBeVisible();
+    await expect(managerPage).toHaveURL(/org=org-1/);
+
+    await managerPage.getByRole('button', { name: 'Suggest a Place' }).click();
+    await expect(
+      managerPage.getByRole('heading', { name: 'Suggest a place' })
+    ).toBeVisible();
+    await expect(managerPage).toHaveURL(/section=suggest-place/);
+    await expect(managerPage).toHaveURL(/org=org-1/);
+    await expect(
+      managerPage.getByText('Loading your account information...')
+    ).toHaveCount(0);
+
+    await managerPage.getByRole('button', { name: 'Feedback' }).click();
+    await expect(
+      managerPage.getByRole('heading', { name: 'Leave feedback' })
+    ).toBeVisible();
+    await expect(managerPage).toHaveURL(/section=feedback/);
+    await expect(managerPage).toHaveURL(/org=org-1/);
+    await expect(
+      managerPage.getByText('Loading your account information...')
+    ).toHaveCount(0);
+
+    await managerPage.getByRole('button', { name: 'Organization' }).click();
+    await expect(managerPage.getByRole('button', { name: 'Update' })).toBeVisible();
+    await expect(managerPage).toHaveURL(/org=org-1/);
+  });
 });
 
 test.describe('Manager Organizations Panel', () => {

@@ -31,6 +31,34 @@ describe('admin section params', () => {
     });
   });
 
+  it('keeps a preserved org on sections outside the workspace', () => {
+    const suggest = patchForSectionChange('suggest-place', ['org']);
+    expect(suggest.section).toBe('suggest-place');
+    expect(suggest).not.toHaveProperty('org');
+    expect(suggest.location).toBeNull();
+
+    const feedback = patchForSectionChange('feedback', ['org']);
+    expect(feedback).not.toHaveProperty('org');
+    expect(feedback).not.toHaveProperty('feedback');
+    expect(
+      staleRecordParams(
+        'suggest-place',
+        { org: 'org-1', location: 'loc-1' },
+        ['org']
+      )
+    ).toEqual({ location: null });
+    expect(
+      staleRecordParams('feedback', { org: 'org-1', ticket: 't-1' }, ['org'])
+    ).toEqual({ ticket: null });
+  });
+
+  it('drops org on admin feedback when nothing is preserved', () => {
+    expect(patchForSectionChange('feedback').org).toBeNull();
+    expect(staleRecordParams('feedback', { org: 'org-1' })).toEqual({
+      org: null,
+    });
+  });
+
   it('keeps feedback entry and label links on the feedback page', () => {
     expect(
       staleRecordParams('feedback', {

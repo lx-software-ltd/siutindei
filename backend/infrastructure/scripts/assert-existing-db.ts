@@ -1,10 +1,15 @@
 import * as cdk from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
-import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
-import * as lambda from "aws-cdk-lib/aws-lambda";
 import { ApiStack } from "../lib/api-stack";
 import {
+  buildOpsAlarmsRefactor,
+  CfnTemplate,
+  EXPECTED_ALARM_COUNT,
+  externalReferences,
+} from "./build-ops-alarms-refactor";
+import {
+  addOpsAlarmRules,
   API_LATENCY_MIN_SAMPLES,
   DatabaseConstruct,
   OpsAlarmsConstruct,
@@ -119,25 +124,24 @@ function assertOpsAlarms(): void {
     env: { account: "111111111111", region: "us-east-1" },
   });
 
-  const fn = new lambda.Function(stack, "Fn", {
-    runtime: lambda.Runtime.PYTHON_3_12,
-    handler: "index.handler",
-    code: lambda.Code.fromInline("def handler(event, context): return {}"),
-  });
-  const api = new apigateway.RestApi(stack, "Api");
-  api.root.addMethod("GET", new apigateway.LambdaIntegration(fn));
-
   const alertsEmail = new cdk.CfnParameter(stack, "AlertsEmail", {
     type: "String",
     default: "",
   });
 
-  new OpsAlarmsConstruct(stack, "OpsAlarms", {
+  const opsAlarms = new OpsAlarmsConstruct(stack, "OpsAlarms", {
     resourcePrefix: "test",
     alertsEmail: alertsEmail.valueAsString,
-    api,
+  });
+  addOpsAlarmRules(opsAlarms, {
+    resourcePrefix: "test",
+    apiName: "test-api",
     monitoredFunctions: [
-      { label: "Search", fn, durationP99ThresholdMs: 3000 },
+      {
+        label: "Search",
+        functionName: "test-SearchFunction",
+        durationP99ThresholdMs: 3000,
+      },
     ],
     dbClusterIdentifier: "test-db-cluster",
   });
@@ -146,6 +150,18 @@ function assertOpsAlarms(): void {
   template.resourceCountIs("AWS::SNS::Topic", 1);
   // 2 API alarms + 3 Lambda alarms (errors, throttles, duration) + 2 Aurora
   template.resourceCountIs("AWS::CloudWatch::Alarm", 7);
+  template.hasResourceProperties("AWS::CloudWatch::Alarm", {
+    AlarmName: "test-search-lambda-errors-alarm",
+    Dimensions: [{ Name: "FunctionName", Value: "test-SearchFunction" }],
+    AlarmActions: [
+      {
+        "Fn::Join": [
+          "",
+          Match.arrayWith([Match.stringLikeRegexp(":test-ops-alerts$")]),
+        ],
+      },
+    ],
+  });
   // The API latency alarm is a volume-gated metric-math expression.
   template.hasResourceProperties("AWS::CloudWatch::Alarm", {
     AlarmName: "test-api-latency-p99-alarm",
@@ -174,6 +190,47 @@ function assertOpsAlarms(): void {
     Condition: Match.stringLikeRegexp("HasOpsAlertsEmail"),
     Properties: { Protocol: "email" },
   });
+}
+
+// The ops alarms move into the OpsAlarmsStack nested stack with a one-off
+// CloudFormation stack refactor (docs/deployment/ops-alarms-stack-refactor.md).
+// Run the refactor builder against the synthesized templates so a new
+// cross-stack reference fails here rather than in production.
+function assertOpsAlarmsRefactorBuilds(): void {
+  const app = new cdk.App({
+    context: {
+      "aws:cdk:bundling-stacks": [],
+      "aws:cdk:enable-path-metadata": true,
+    },
+  });
+  const stack = new ApiStack(app, "OpsAlarmRulesStack", {
+    env: { account: "111111111111", region: "us-east-1" },
+  });
+  const nestedStack = stack.node.findChild("OpsAlarmsStack") as cdk.NestedStack;
+  const parent = Template.fromStack(stack).toJSON() as CfnTemplate;
+  const nested = Template.fromStack(nestedStack).toJSON() as CfnTemplate;
+
+  const refactor = buildOpsAlarmsRefactor(parent, nested, "parent", "nested");
+  for (const id of refactor.moved) {
+    if (!id.startsWith("OpsAlarms")) {
+      throw new Error(`Unexpected alarm selected for the refactor: ${id}`);
+    }
+    if (externalReferences(refactor.nested.Resources[id]).length > 0) {
+      throw new Error(`${id} would need a nested stack parameter`);
+    }
+  }
+  const parentCount = Object.keys(parent.Resources).length;
+  if (Object.keys(refactor.parent.Resources).length !== parentCount - EXPECTED_ALARM_COUNT) {
+    throw new Error("Refactor must remove exactly the ops alarms from the parent");
+  }
+  if (
+    refactor.resourceMappings.some(
+      (mapping) =>
+        mapping.Source.LogicalResourceId !== mapping.Destination.LogicalResourceId,
+    )
+  ) {
+    throw new Error("Refactor must keep logical IDs unchanged");
+  }
 }
 
 const LOG_STREAM_SCOPED_ACTIONS = new Set([
@@ -239,6 +296,7 @@ function main(): void {
   assertExistingResources();
   assertNewResources();
   assertOpsAlarms();
+  assertOpsAlarmsRefactorBuilds();
   assertLogGroupActionsUseLogGroupArn();
   // eslint-disable-next-line no-console
   console.log("OK");

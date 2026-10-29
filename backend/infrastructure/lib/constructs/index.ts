@@ -25,8 +25,11 @@ export {
   ApiRateLimitConstructProps,
 } from "./api-rate-limit";
 export {
+  addOpsAlarmRules,
   API_LATENCY_MIN_SAMPLES,
   MonitoredFunction,
+  OpsAlarmRulesProps,
   OpsAlarmsConstruct,
   OpsAlarmsConstructProps,
+  opsAlertsTopicName,
 } from "./ops-alarms";
