@@ -1,13 +1,11 @@
+import { execFileSync } from "child_process";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import * as cdk from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { ApiStack } from "../lib/api-stack";
-import {
-  buildOpsAlarmsRefactor,
-  CfnTemplate,
-  EXPECTED_ALARM_COUNT,
-  externalReferences,
-} from "./build-ops-alarms-refactor";
 import {
   addOpsAlarmRules,
   API_LATENCY_MIN_SAMPLES,
@@ -194,8 +192,8 @@ function assertOpsAlarms(): void {
 
 // The ops alarms move into the OpsAlarmsStack nested stack with a one-off
 // CloudFormation stack refactor (docs/deployment/ops-alarms-stack-refactor.md).
-// Run the refactor builder against the synthesized templates so a new
-// cross-stack reference fails here rather than in production.
+// Run the refactor script's offline build against the synthesized templates
+// so a new cross-stack reference fails here rather than in production.
 function assertOpsAlarmsRefactorBuilds(): void {
   const app = new cdk.App({
     context: {
@@ -207,29 +205,52 @@ function assertOpsAlarmsRefactorBuilds(): void {
     env: { account: "111111111111", region: "us-east-1" },
   });
   const nestedStack = stack.node.findChild("OpsAlarmsStack") as cdk.NestedStack;
-  const parent = Template.fromStack(stack).toJSON() as CfnTemplate;
-  const nested = Template.fromStack(nestedStack).toJSON() as CfnTemplate;
+  const parent = Template.fromStack(stack).toJSON();
+  const nested = Template.fromStack(nestedStack).toJSON();
 
-  const refactor = buildOpsAlarmsRefactor(parent, nested, "parent", "nested");
-  for (const id of refactor.moved) {
-    if (!id.startsWith("OpsAlarms")) {
-      throw new Error(`Unexpected alarm selected for the refactor: ${id}`);
-    }
-    if (externalReferences(refactor.nested.Resources[id]).length > 0) {
-      throw new Error(`${id} would need a nested stack parameter`);
-    }
+  const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "ops-alarms-refactor-"));
+  const write = (file: string, body: unknown) =>
+    fs.writeFileSync(path.join(workDir, file), JSON.stringify(body));
+  write("parent.deployed.json", parent);
+  write("nested.deployed.json", nested);
+  execFileSync(
+    "python3",
+    [
+      path.join(__dirname, "ops_alarms_refactor.py"),
+      "build",
+      "--parent", path.join(workDir, "parent.deployed.json"),
+      "--nested", path.join(workDir, "nested.deployed.json"),
+      "--out", path.join(workDir, "out"),
+    ],
+    { stdio: ["ignore", "ignore", "inherit"] },
+  );
+  const read = (file: string) =>
+    JSON.parse(fs.readFileSync(path.join(workDir, "out", file), "utf8"));
+  const refactoredParent = read("parent.json");
+  const refactoredNested = read("nested.json");
+  const mappings: { Source: { LogicalResourceId: string }; Destination: { LogicalResourceId: string } }[] =
+    read("resource-mappings.json");
+  fs.rmSync(workDir, { recursive: true, force: true });
+
+  if (mappings.length !== 16) {
+    throw new Error(`Expected the refactor to move 16 alarms, got ${mappings.length}`);
   }
-  const parentCount = Object.keys(parent.Resources).length;
-  if (Object.keys(refactor.parent.Resources).length !== parentCount - EXPECTED_ALARM_COUNT) {
-    throw new Error("Refactor must remove exactly the ops alarms from the parent");
+  for (const { Source, Destination } of mappings) {
+    if (!Source.LogicalResourceId.startsWith("OpsAlarms")) {
+      throw new Error(`Unexpected alarm selected for the refactor: ${Source.LogicalResourceId}`);
+    }
+    if (Source.LogicalResourceId !== Destination.LogicalResourceId) {
+      throw new Error("Refactor must keep logical IDs unchanged");
+    }
+    if (!(Source.LogicalResourceId in refactoredNested.Resources)) {
+      throw new Error(`${Source.LogicalResourceId} missing from the nested template`);
+    }
   }
   if (
-    refactor.resourceMappings.some(
-      (mapping) =>
-        mapping.Source.LogicalResourceId !== mapping.Destination.LogicalResourceId,
-    )
+    Object.keys(refactoredParent.Resources).length !==
+    Object.keys(parent.Resources).length - mappings.length
   ) {
-    throw new Error("Refactor must keep logical IDs unchanged");
+    throw new Error("Refactor must remove exactly the ops alarms from the parent");
   }
 }
 

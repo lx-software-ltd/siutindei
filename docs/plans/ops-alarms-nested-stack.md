@@ -27,7 +27,7 @@ Stage 1 (preparation PR):
 - `backend/infrastructure/lib/constructs/database.ts`
 - `backend/infrastructure/lib/constructs/index.ts`
 - `backend/infrastructure/lib/api-stack.ts`
-- `backend/infrastructure/scripts/build-ops-alarms-refactor.ts`
+- `backend/infrastructure/scripts/ops_alarms_refactor.py` and its tests
 - `backend/infrastructure/scripts/assert-existing-db.ts`
 - `docs/deployment/ops-alarms-stack-refactor.md`
 - `docs/architecture/aws-assets-map.md`
@@ -51,7 +51,7 @@ Stage 3 (follow-up PR): `api-stack.ts` builds the alarms inside
 - `npm run build`, `npm run test:infra`, and `npx cdk synth` pass.
 - The synthesized main stack differs from `main` only in the 16 alarms
   (literal values) and the new nested stack resource.
-- `scripts/build-ops-alarms-refactor.ts` moves 16 alarms verbatim when
+- `scripts/ops_alarms_refactor.py build` moves 16 alarms verbatim when
   given the synthesized templates, and refuses templates with a
   cross-reference.
 - Stage 2 runbook completed in production; stage 3 deployed.
