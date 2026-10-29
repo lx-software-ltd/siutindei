@@ -33,7 +33,8 @@ create alarms whose names already exist and roll back.
 - Credentials for the production account with CloudFormation, CloudWatch,
   and S3 access to the CDK assets bucket.
 - Node and this repository at the `main` commit that stage 1 deployed,
-  with `npm ci` run in `backend/infrastructure`.
+  with `npm ci` run in `backend/infrastructure`. Stage 3 deletes
+  `scripts/build-ops-alarms-refactor.ts`, so a later checkout won't have it.
 
 ## 1. Collect the deployed templates
 
