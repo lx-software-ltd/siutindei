@@ -1,4 +1,28 @@
+import type { Page } from '@playwright/test';
+
 import { test, expect, setupAuth, mockAdminUser } from './fixtures/test-fixtures';
+
+/** Midpoint of the bao plus sentence, compared with the logo midpoint.
+ * The bao's painted box grows while it spins, so use its layout width. */
+async function contentCenterDelta(page: Page) {
+  return page.evaluate(() => {
+    const logo = document.querySelector('img[alt="Siu Tin Dei"]');
+    const status = document.querySelector('[role="status"]');
+    const picture = status?.querySelector('img');
+    const sentence = status?.querySelector('p');
+    if (!logo || !picture || !sentence) {
+      return Number.POSITIVE_INFINITY;
+    }
+    const logoRect = logo.getBoundingClientRect();
+    const pictureRect = picture.getBoundingClientRect();
+    const sentenceRect = sentence.getBoundingClientRect();
+    const logoCenter = logoRect.left + logoRect.width / 2;
+    const pictureCenter = pictureRect.left + pictureRect.width / 2;
+    const pictureLeft = pictureCenter - picture.offsetWidth / 2;
+    const contentCenter = (pictureLeft + sentenceRect.right) / 2;
+    return Math.abs(logoCenter - contentCenter);
+  });
+}
 
 test.describe('Login Screen', () => {
   test('should display login screen when unauthenticated', async ({ unauthenticatedPage }) => {
@@ -81,15 +105,90 @@ test.describe('Login Screen', () => {
     await page.goto('/');
 
     // The page should show loading state
-    const loadingText = page.getByText('Preparing your admin session.');
+    const loadingText = page.getByRole('status');
 
     // Note: This may be very brief, so we use a short timeout
     // If the loading state is too fast, this test may need adjustment
     try {
       await expect(loadingText).toBeVisible({ timeout: 1000 });
+      await expect(loadingText).toHaveText('Preparing your admin session…');
     } catch {
       // Loading may have finished too quickly, which is fine
     }
+  });
+
+  test('holds the callback on the bao notice until the code exchange finishes', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      sessionStorage.setItem('admin_auth_pkce', 'test-verifier');
+    });
+    let release = () => {};
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route('**/oauth2/token', async (route) => {
+      await hold;
+      await route.abort();
+    });
+
+    try {
+      await page.goto('/auth/callback?code=test-code');
+
+      const status = page.getByRole('status');
+      await expect(status).toHaveText('Preparing your admin session…');
+      await expect(page.getByText('Info')).toHaveCount(0);
+      await expect(page.getByText('Signing you in...')).toHaveCount(0);
+      await expect(page.locator('.admin-login-hero')).toBeVisible();
+      await expect(page.getByRole('img', { name: 'Siu Tin Dei' })).toBeVisible();
+
+      const bao = page.locator('img.admin-login-bao');
+      await expect(bao).toBeVisible();
+      await expect(bao).toHaveAttribute(
+        'src',
+        '/images/small-world/bubble-bao.webp'
+      );
+      const notice = await status.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const picture = element.querySelector('img');
+        const pictureStyle = picture ? getComputedStyle(picture) : null;
+        return {
+          backgroundColor: style.backgroundColor,
+          borderTopWidth: style.borderTopWidth,
+          baoIsFirst: element.firstElementChild === picture,
+          animationName: pictureStyle?.animationName ?? '',
+        };
+      });
+      expect(notice.backgroundColor).toMatch(
+        /rgba\(0,\s*0,\s*0,\s*0\)|transparent/
+      );
+      expect(notice.borderTopWidth).toBe('0px');
+      expect(notice.baoIsFirst).toBe(true);
+      expect(notice.animationName).toContain('admin-login-bao-spin');
+      expect(await contentCenterDelta(page)).toBeLessThan(2);
+
+      await page.setViewportSize({ width: 375, height: 812 });
+      const fits = await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      );
+      expect(fits).toBe(true);
+      await expect(status).toBeVisible();
+      await expect(bao).toBeVisible();
+      expect(await contentCenterDelta(page)).toBeLessThan(2);
+    } finally {
+      release();
+    }
+  });
+
+  test('keeps the login-failed banner when the callback has no code', async ({
+    page,
+  }) => {
+    await page.goto('/auth/callback');
+
+    await expect(page.getByText('Login failed')).toBeVisible();
+    await expect(page.getByText('Authorization code is missing.')).toBeVisible();
+    await expect(page.getByRole('status')).toHaveCount(0);
+    await expect(page.locator('.admin-login-hero')).toHaveCount(0);
   });
 
   test('login button should be enabled when config is present', async ({ unauthenticatedPage }) => {
@@ -294,6 +393,40 @@ test.describe('Login screen reduced motion', () => {
     expect(motion.animationName).not.toContain('admin-login-drift');
     expect(['none', '']).toContain(motion.animationName);
     expect(['0s', '']).toContain(motion.animationDuration);
+  });
+
+  test('keeps the session bao still', async ({ page }) => {
+    await page.addInitScript(() => {
+      sessionStorage.setItem('admin_auth_pkce', 'test-verifier');
+    });
+    let release = () => {};
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route('**/oauth2/token', async (route) => {
+      await hold;
+      await route.abort();
+    });
+
+    try {
+      await page.goto('/auth/callback?code=test-code');
+      const bao = page.locator('img.admin-login-bao');
+      await expect(bao).toBeVisible();
+      await expect(page.getByRole('status')).toHaveText(
+        'Preparing your admin session…'
+      );
+      const motion = await bao.evaluate((image) => ({
+        animationName: getComputedStyle(image).animationName,
+        animationDuration: getComputedStyle(image).animationDuration,
+        reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      }));
+      expect(motion.reduced).toBe(true);
+      expect(motion.animationName).not.toContain('admin-login-bao-spin');
+      expect(['none', '']).toContain(motion.animationName);
+      expect(['0s', '']).toContain(motion.animationDuration);
+    } finally {
+      release();
+    }
   });
 });
 

@@ -96,6 +96,12 @@
     pointer-events: none;
   }
 
+  /* The sentence on the notice is the status. The bao only spins when
+     motion is welcome, and stops with the drifting pictures. */
+  .admin-login-bao {
+    transform-origin: center;
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     .admin-login-bubble--drift-a {
       animation: admin-login-drift-a 9s ease-in-out infinite;
@@ -108,6 +114,10 @@
     .admin-login-bubble--drift-c {
       animation: admin-login-drift-c 13s ease-in-out infinite;
     }
+
+    .admin-login-bao {
+      animation: admin-login-bao-spin 2.4s linear infinite;
+    }
   }
 
   /* Set the value explicitly. An omitted animation can compute to an
@@ -115,7 +125,8 @@
   @media (prefers-reduced-motion: reduce) {
     .admin-login-bubble--drift-a,
     .admin-login-bubble--drift-b,
-    .admin-login-bubble--drift-c {
+    .admin-login-bubble--drift-c,
+    .admin-login-bao {
       animation: none;
     }
   }
@@ -226,6 +237,12 @@
 
 .admin-focus .admin-record-table-scroll :is(button, a):focus-visible {
   outline-offset: -2px;
+}
+
+@keyframes admin-login-bao-spin {
+  to {
+    rotate: 1turn;
+  }
 }
 
 @keyframes admin-login-drift-a {

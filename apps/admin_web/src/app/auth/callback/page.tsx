@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 
+import { LoginBackdrop } from '../../../components/login/login-backdrop';
+import { LoginBrandHeader } from '../../../components/login/login-brand-header';
+import { LoginLoadingNotice } from '../../../components/login/login-loading-notice';
 import { StatusBanner } from '../../../components/status-banner';
 import { completeLogin } from '../../../lib/auth';
 
@@ -45,10 +48,9 @@ export default function AuthCallbackPage() {
   }
 
   return (
-    <main className='mx-auto flex min-h-screen max-w-lg items-center px-6'>
-      <StatusBanner variant='info' title='Signing you in...'>
-        Completing your admin session.
-      </StatusBanner>
-    </main>
+    <LoginBackdrop>
+      <LoginBrandHeader />
+      <LoginLoadingNotice />
+    </LoginBackdrop>
   );
 }

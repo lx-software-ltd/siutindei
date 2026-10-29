@@ -56,6 +56,17 @@ visible on white. The footer is wide enough that Privacy Policy and
 Terms of Use stay on one line. There is no environment label on the
 login pill.
 
+Session loading, the auth callback while the code is exchanged, and
+route-level admin loading share `LoginLoadingNotice`: the bao picture
+on the left of the sentence "Preparing your admin session…". That pair
+is centered on the page, on the same line as the Siu Tin Dei logo. The
+notice has no fill, so the page colour shows through. The bao spins
+one turn every 2.4s and is still when the user prefers reduced motion.
+The callback exchange and session loading sit on the Small World
+backdrop. Route-level admin loading stays on the cream page, without
+that backdrop, so a signed-in navigation does not flash the login
+hero. The callback error stays an error banner on the plain page.
+
 The signed-in console uses the same tokens for its frame: cream
 canvas, white cards with `border-brand-100`, yellow primary buttons,
 a filled cream secondary, a white outline, and an ink confirm.
@@ -65,7 +76,7 @@ and table rings inset. `Input`, `Select`, and `Textarea` merge a
 caller border so an invalid field turns red. `Label` keeps its margin.
 The header title is "Siu Tin Dei" next to an Admin console pill.
 The public-site link is shared and opens in a new tab. Route-level
-admin loading is a spinner on the cream page. Table row hover,
+admin loading is the session notice on the cream page. Table row hover,
 expanded rows, and draft rows stay neutral, and the expanded-row
 frame stays slate. Status tones stay semantic, including a grey
 neutral badge. Info banners are white. Pending review stays blue.

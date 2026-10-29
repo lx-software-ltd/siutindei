@@ -45,10 +45,18 @@ describe('console brand corrections', () => {
     );
   });
 
-  it('loads the admin route with a spinner instead of the login backdrop', () => {
+  it('loads the admin route with the bao notice instead of the login backdrop', () => {
     render(<AdminLoading />);
 
-    expect(screen.getByText('Loading admin workspace...')).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Preparing your admin session…'
+    );
+    expect(screen.getByRole('status')).not.toHaveClass('bg-white');
+    expect(document.querySelector('img.admin-login-bao')).toHaveAttribute(
+      'src',
+      '/images/small-world/bubble-bao.webp'
+    );
+    expect(screen.queryByText('Loading admin workspace...')).not.toBeInTheDocument();
     expect(document.querySelector('.admin-login-hero')).toBeNull();
   });
 

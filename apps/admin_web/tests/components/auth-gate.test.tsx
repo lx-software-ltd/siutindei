@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AuthGate } from '@/components/auth-gate';
+import { ADMIN_SESSION_LOADING_COPY } from '@/components/login/login-loading-notice';
 
 const replace = vi.fn();
 const authState = {
@@ -55,7 +56,15 @@ describe('AuthGate', () => {
       </AuthGate>
     );
 
-    expect(screen.getByText('Preparing your admin session.')).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      ADMIN_SESSION_LOADING_COPY
+    );
+    expect(screen.queryByText('Info')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).not.toHaveClass('bg-white');
+    expect(document.querySelector('img.admin-login-bao')).toHaveAttribute(
+      'src',
+      '/images/small-world/bubble-bao.webp'
+    );
     expect(screen.getByRole('img', { name: 'Siu Tin Dei' })).toBeVisible();
     expect(screen.getByText('Admin console')).toBeVisible();
     expect(screen.queryByText('Protected console')).not.toBeInTheDocument();

@@ -1,10 +1,9 @@
-import { SpinnerIcon } from '@/components/icons/action-icons';
+import { LoginLoadingNotice } from '@/components/login/login-loading-notice';
 
 export default function AdminLoading() {
   return (
-    <main className='mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-4 bg-brand-50 px-6'>
-      <SpinnerIcon className='h-8 w-8 animate-spin text-ink-700' />
-      <p className='text-sm text-ink-700'>Loading admin workspace...</p>
+    <main className='mx-auto flex min-h-screen w-full max-w-lg items-center justify-center bg-brand-50 px-6'>
+      <LoginLoadingNotice />
     </main>
   );
 }

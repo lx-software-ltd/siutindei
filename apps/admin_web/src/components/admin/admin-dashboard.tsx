@@ -12,6 +12,7 @@ import { AppShell } from '../app-shell';
 import { useAuth } from '../auth-provider';
 import { LoginBackdrop } from '../login/login-backdrop';
 import { LoginBrandHeader } from '../login/login-brand-header';
+import { LoginLoadingNotice } from '../login/login-loading-notice';
 import { LoginScreen } from '../login-screen';
 import { StatusBanner } from '../status-banner';
 import {
@@ -133,9 +134,7 @@ export function AdminDashboard() {
     return (
       <LoginBackdrop>
         <LoginBrandHeader />
-        <StatusBanner kind='info'>
-          Preparing your admin session.
-        </StatusBanner>
+        <LoginLoadingNotice />
       </LoginBackdrop>
     );
   }
