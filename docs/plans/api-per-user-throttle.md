@@ -38,6 +38,10 @@ that sends more than 300 requests in 60 seconds to `/v1/admin/*`,
 synthesized stack has the web ACL, the stage association, the logging
 configuration, and the blocked-requests alarm on the ops-alerts topic.
 
+The web ACL is in the main stack, which has room only after the ops
+alarms move into `OpsAlarmsStack` (`docs/plans/ops-alarms-nested-stack.md`).
+Merge after that runbook's stage 2.
+
 ## Rollback
 
 Revert this change and deploy. The web ACL, association, alarm, and key

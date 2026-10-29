@@ -1,6 +1,6 @@
 # Plan: Move the ops alarms into a nested stack
 
-**Status**: Stage 1 implemented
+**Status**: Stage 3 implemented; merge only after the stage 2 runbook
 **Zone**: red (approved in chat)
 
 ## Goal
