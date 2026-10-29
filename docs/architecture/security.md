@@ -276,6 +276,24 @@ If no origins are configured, defaults to mobile app schemes only:
 - `ionic://localhost`
 - `http://localhost` (for development)
 
+### Per-session rate limit
+
+A regional WAF web ACL (`lxsoftware-siutindei-api-waf`) on the `prod`
+stage limits each signed-in session to 300 requests per 60 seconds on
+`/v1/admin/*`, `/v1/manager/*`, and `/v1/user/*`. All three are served by
+the admin Lambda, so one looping browser tab cannot exhaust its
+concurrency. The key is the `Authorization` header, the same key the JWT
+authorizers cache on. Requests without that header are not counted.
+
+- A blocked request gets HTTP 429, `Retry-After: 60`, the admin web
+  CORS origin, and `{"error": "Too many requests. Wait a minute and try again."}`.
+- WAF needs roughly 30 to 60 seconds to start blocking. Short bursts still
+  reach the Lambda.
+- Blocks alarm on the ops-alerts topic
+  (`lxsoftware-siutindei-api-session-rate-limit-alarm`).
+- The web ACL lives in a nested stack because the main stack is at the
+  500-resource CloudFormation limit.
+
 ### Input Validation
 
 Always validate and sanitize user input:

@@ -387,6 +387,21 @@ read error status codes instead of silently blocking them.
 | API Key | `MobileSearchApiKey` | `lxsoftware-siutindei-mobile-search-key` | Value from `PublicApiKeyValue` parameter |
 | Usage Plan | `MobileSearchUsagePlan` | `lxsoftware-siutindei-mobile-search-plan` | Linked to API key and `prod` stage |
 
+### API Gateway WAF (nested stack `ApiRateLimitStack`)
+
+Created by `ApiRateLimitConstruct` (`lib/constructs/api-rate-limit.ts`)
+inside a nested stack. The main stack is at the 500-resource limit, and the
+nested stack counts as one resource there.
+
+| Resource Type | Logical ID | Physical Name/ID | Notes |
+|--------------|------------|------------------|-------|
+| WAFv2 WebACL | `ApiRateLimitApiWebAcl*` | `lxsoftware-siutindei-api-waf` | REGIONAL; blocks a session over 300 requests / 60 s on `/v1/admin/*`, `/v1/manager/*`, `/v1/user/*` with a 429 |
+| WAFv2 WebACL Association | `ApiRateLimitApiWebAclAssociation*` | — | Attaches the web ACL to the `prod` stage |
+| KMS Key + Alias | `ApiRateLimitApiWafLogKey*` | `lxsoftware-siutindei-kms-api-waf-log` | WAF log encryption (rotation enabled) |
+| Log Group | `ApiRateLimitApiWafLogGroup*` | `aws-waf-logs-lxsoftware-siutindei-api` | Retained on delete; `authorization` and `cookie` redacted |
+| WAFv2 Logging Configuration | `ApiRateLimitApiWafLoggingConfig*` | — | Sends web ACL logs to the log group |
+| CloudWatch Alarm | `ApiRateLimitApiRateLimitBlockedAlarm*` | `lxsoftware-siutindei-api-session-rate-limit-alarm` | Rate rule blocked ≥ 1 request in 5 min; routed to ops-alerts |
+
 ### API Gateway IAM Roles
 
 | Resource Type | Logical ID | Purpose | Notes |
@@ -422,6 +437,7 @@ Created by `OpsAlarmsConstruct` (`lib/constructs/ops-alarms.ts`).
 | CloudWatch Alarm | `lxsoftware-siutindei-admin-lambda-throttles-alarm` | Admin Lambda throttles ≥ 1 |
 | CloudWatch Alarm | `lxsoftware-siutindei-aurora-acu-utilization-alarm` | Aurora ACU utilization ≥ 90% for 15 min |
 | CloudWatch Alarm | `lxsoftware-siutindei-aurora-connections-alarm` | Aurora connections ≥ 300 for 15 min |
+| CloudWatch Alarm | `lxsoftware-siutindei-api-session-rate-limit-alarm` | API WAF blocked ≥ 1 request in 5 min (defined in the `ApiRateLimitStack` nested stack) |
 
 The pre-existing manager-request DLQ alarm (`lxsoftware-siutindei-manager-request-dlq-alarm`) is also routed to the ops-alerts topic. Thresholds are launch-sizing early warnings; tune as real traffic patterns emerge.
 

@@ -19,11 +19,15 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import {
+  ApiRateLimitConstruct,
   DatabaseConstruct,
   OpsAlarmsConstruct,
   PythonLambdaFactory,
   STANDARD_LOG_RETENTION,
 } from "./constructs";
+
+/** Admin console origin. The only browser client of the signed-in routes. */
+const ADMIN_WEB_ORIGIN = "https://siutindei.lx-software.com";
 
 /**
  * CDK Aspect that adds Checkov suppressions to CDK-internal Lambda functions.
@@ -3107,6 +3111,26 @@ export class ApiStack extends cdk.Stack {
     apiCustomDomainUrlOutput.condition = useApiCustomDomain;
 
     // ---------------------------------------------------------------------
+    // Per-session rate limit on signed-in routes (all served by the admin
+    // Lambda). One looping browser tab must not exhaust its concurrency.
+    // Nested because this stack is at CloudFormation's 500-resource limit;
+    // a nested stack counts as one resource here.
+    // ---------------------------------------------------------------------
+    const apiRateLimitStack = new cdk.NestedStack(this, "ApiRateLimitStack", {
+      description: "Per-session WAF rate limit on the API prod stage",
+    });
+    const apiRateLimit = new ApiRateLimitConstruct(apiRateLimitStack, "ApiRateLimit", {
+      resourcePrefix,
+      api,
+      corsOrigin: corsAllowedOrigins.includes(ADMIN_WEB_ORIGIN)
+        ? ADMIN_WEB_ORIGIN
+        : corsAllowedOrigins[0],
+      limit: 300,
+      evaluationWindowSec: 60,
+      pathSegments: ["/v1/admin/", "/v1/manager/", "/v1/user/"],
+    });
+
+    // ---------------------------------------------------------------------
     // Operational alarms (SNS ops-alerts topic + CloudWatch alarms)
     // ---------------------------------------------------------------------
     new OpsAlarmsConstruct(this, "OpsAlarms", {
@@ -3132,7 +3156,11 @@ export class ApiStack extends cdk.Stack {
         { label: "Admin", fn: adminFunction, durationP99ThresholdMs: 90000 },
       ],
       dbClusterIdentifier: database.cluster.clusterIdentifier,
-      additionalAlarms: [dlqAlarm, categorySuggestionDlqAlarm],
+      additionalAlarms: [
+        dlqAlarm,
+        categorySuggestionDlqAlarm,
+        apiRateLimit.blockedAlarm,
+      ],
     });
 
     // Apply Checkov suppressions to CDK-internal Lambda functions

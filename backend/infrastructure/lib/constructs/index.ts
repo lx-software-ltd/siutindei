@@ -21,6 +21,10 @@ export {
   STANDARD_LOG_RETENTION,
 } from "./python-lambda";
 export {
+  ApiRateLimitConstruct,
+  ApiRateLimitConstructProps,
+} from "./api-rate-limit";
+export {
   API_LATENCY_MIN_SAMPLES,
   MonitoredFunction,
   OpsAlarmsConstruct,
