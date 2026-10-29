@@ -15,6 +15,7 @@ import {
 import { useAdminSectionQuery } from '@/hooks/use-admin-section-query';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { usePrefetchAdminSection } from '@/hooks/use-prefetch-admin-section';
+import type { AdminRecordParam } from '@/lib/admin-section-params';
 
 import type { Organization } from '../../types/admin';
 import { useAuth } from '../auth-provider';
@@ -38,6 +39,10 @@ import { SuggestionForm } from './suggestion-form';
 import { PendingSuggestionNotice } from './pending-suggestion-notice';
 
 type ManagerView = 'loading' | 'request-form' | 'pending' | 'dashboard' | 'error';
+
+/** Suggest a Place and Feedback are outside the workspace keep-list.
+ * Dropping `org` there makes this console reload and write it back. */
+const MANAGER_PRESERVED_PARAMS: readonly AdminRecordParam[] = ['org'];
 
 const managerSectionLabels = [
   { key: 'organizations', label: 'Organization' },
@@ -67,7 +72,8 @@ export function ManagerDashboard() {
   const [seenOrgParam, setSeenOrgParam] = useState(orgParam);
   const { activeSection, selectSection } = useAdminSectionQuery(
     managerSectionLabels,
-    'organizations'
+    'organizations',
+    MANAGER_PRESERVED_PARAMS
   );
 
   const loadManagerOrgs = useCallback(async (): Promise<Organization[]> => {

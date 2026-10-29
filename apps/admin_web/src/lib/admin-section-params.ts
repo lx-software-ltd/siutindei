@@ -62,14 +62,21 @@ const LEGACY_EDIT_SECTIONS = new Set([
   'schedules',
 ]);
 
+const NO_PRESERVED_PARAMS: readonly AdminRecordParam[] = [];
+
 /**
  * Query update for a sidebar click: open `nextSection` and drop record params
  * that belong to other sections, including a stale `edit` link.
+ * `preserve` stays even when this section does not list those params.
  */
 export function patchForSectionChange(
-  nextSection: string
+  nextSection: string,
+  preserve: readonly AdminRecordParam[] = NO_PRESERVED_PARAMS
 ): Record<string, string | null> {
-  const keep = new Set<string>(KEEP_BY_SECTION[nextSection] ?? []);
+  const keep = new Set<string>([
+    ...(KEEP_BY_SECTION[nextSection] ?? []),
+    ...preserve,
+  ]);
   const patch: Record<string, string | null> = { section: nextSection };
   for (const key of ADMIN_RECORD_PARAMS) {
     if (!keep.has(key)) {
@@ -86,12 +93,16 @@ export function patchForSectionChange(
  */
 export function staleRecordParams(
   section: string,
-  current: Partial<Record<AdminRecordParam, string | null>>
+  current: Partial<Record<AdminRecordParam, string | null>>,
+  preserve: readonly AdminRecordParam[] = NO_PRESERVED_PARAMS
 ): Partial<Record<AdminRecordParam, null>> {
   const own = KEEP_BY_SECTION[section]?.[0];
   const editHoldsLink =
     LEGACY_EDIT_SECTIONS.has(section) && Boolean(current.edit) && (!own || !current[own]);
-  const keep = new Set<string>(KEEP_BY_SECTION[section] ?? []);
+  const keep = new Set<string>([
+    ...(KEEP_BY_SECTION[section] ?? []),
+    ...preserve,
+  ]);
   if (editHoldsLink) {
     keep.add('edit');
   }
