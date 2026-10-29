@@ -1,6 +1,6 @@
 # Plan: Move the ops alarms into a nested stack
 
-**Status**: Stage 1 implemented
+**Status**: Stage 3 implemented; merge only after the stage 2 runbook
 **Zone**: red (approved in chat)
 
 ## Goal
@@ -33,7 +33,8 @@ Stage 1 (preparation PR):
 - `docs/architecture/aws-assets-map.md`
 
 Stage 3 (follow-up PR): `api-stack.ts` builds the alarms inside
-`OpsAlarmsStack` and drops the placeholder.
+`OpsAlarmsStack` and drops the placeholder. The one-off refactor script
+and its tests are deleted.
 
 ## Invariants this change preserves
 

@@ -20,11 +20,15 @@ import * as fs from "fs";
 import * as path from "path";
 import {
   addOpsAlarmRules,
+  ApiRateLimitConstruct,
   DatabaseConstruct,
   OpsAlarmsConstruct,
   PythonLambdaFactory,
   STANDARD_LOG_RETENTION,
 } from "./constructs";
+
+/** Admin console origin. The only browser client of the signed-in routes. */
+const ADMIN_WEB_ORIGIN = "https://siutindei.lx-software.com";
 
 /**
  * CDK Aspect that adds Checkov suppressions to CDK-internal Lambda functions.
@@ -3108,14 +3112,38 @@ export class ApiStack extends cdk.Stack {
     apiCustomDomainUrlOutput.condition = useApiCustomDomain;
 
     // ---------------------------------------------------------------------
+    // Per-session rate limit on signed-in routes (all served by the admin
+    // Lambda). One looping browser tab must not exhaust its concurrency.
+    // ---------------------------------------------------------------------
+    const apiRateLimit = new ApiRateLimitConstruct(this, "ApiRateLimit", {
+      resourcePrefix,
+      api,
+      corsOrigin: corsAllowedOrigins.includes(ADMIN_WEB_ORIGIN)
+        ? ADMIN_WEB_ORIGIN
+        : corsAllowedOrigins[0],
+      limit: 300,
+      evaluationWindowSec: 60,
+      pathSegments: ["/v1/admin/", "/v1/manager/", "/v1/user/"],
+    });
+
+    // ---------------------------------------------------------------------
     // Operational alarms (SNS ops-alerts topic + CloudWatch alarms)
     // ---------------------------------------------------------------------
-    const opsAlarms = new OpsAlarmsConstruct(this, "OpsAlarms", {
+    new OpsAlarmsConstruct(this, "OpsAlarms", {
       resourcePrefix,
       alertsEmail: opsAlertsEmail.valueAsString,
-      additionalAlarms: [dlqAlarm, categorySuggestionDlqAlarm],
+      additionalAlarms: [
+        dlqAlarm,
+        categorySuggestionDlqAlarm,
+        apiRateLimit.blockedAlarm,
+      ],
     });
-    addOpsAlarmRules(opsAlarms, {
+    // Nested because this stack is at CloudFormation's 500-resource limit.
+    // The scope id "OpsAlarms" fixes the alarms' deployed logical IDs.
+    const opsAlarmsStack = new cdk.NestedStack(this, "OpsAlarmsStack", {
+      description: "Operational CloudWatch alarms for the API stack",
+    });
+    addOpsAlarmRules(new Construct(opsAlarmsStack, "OpsAlarms"), {
       resourcePrefix,
       apiName: api.restApiName,
       monitoredFunctions: [
@@ -3146,14 +3174,6 @@ export class ApiStack extends cdk.Stack {
       ],
       dbClusterIdentifier: database.clusterIdentifier,
     });
-
-    // The ops alarms move into this nested stack through a CloudFormation
-    // stack refactor (docs/deployment/ops-alarms-stack-refactor.md). It
-    // must exist, with at least one resource, before the refactor runs.
-    const opsAlarmsStack = new cdk.NestedStack(this, "OpsAlarmsStack", {
-      description: "Operational CloudWatch alarms for the API stack",
-    });
-    new cdk.CfnWaitConditionHandle(opsAlarmsStack, "RefactorPlaceholder");
 
     // Apply Checkov suppressions to CDK-internal Lambda functions
     cdk.Aspects.of(this).add(new CdkInternalLambdaCheckovSuppression());

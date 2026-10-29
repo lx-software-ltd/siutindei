@@ -1,7 +1,3 @@
-import { execFileSync } from "child_process";
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
 import * as cdk from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
@@ -190,67 +186,68 @@ function assertOpsAlarms(): void {
   });
 }
 
-// The ops alarms move into the OpsAlarmsStack nested stack with a one-off
-// CloudFormation stack refactor (docs/deployment/ops-alarms-stack-refactor.md).
-// Run the refactor script's offline build against the synthesized templates
-// so a new cross-stack reference fails here rather than in production.
-function assertOpsAlarmsRefactorBuilds(): void {
-  const app = new cdk.App({
-    context: {
-      "aws:cdk:bundling-stacks": [],
-      "aws:cdk:enable-path-metadata": true,
-    },
-  });
+const STACK_INDEPENDENT_PSEUDO_PARAMETERS = new Set([
+  "AWS::AccountId",
+  "AWS::Partition",
+  "AWS::Region",
+  "AWS::URLSuffix",
+]);
+
+function collectReferences(value: unknown, found: Set<string>): void {
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectReferences(item, found));
+    return;
+  }
+  if (!value || typeof value !== "object") {
+    return;
+  }
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "Ref" && typeof child === "string") {
+      found.add(child);
+    } else if (key === "Fn::GetAtt") {
+      found.add(Array.isArray(child) ? String(child[0]) : String(child).split(".")[0]);
+    } else if (key === "Fn::ImportValue" || key === "Fn::Sub") {
+      found.add(key);
+    }
+    collectReferences(child, found);
+  }
+}
+
+// The ops alarm rules were moved into OpsAlarmsStack by a stack refactor
+// that kept their logical IDs. They must keep referencing only literals and
+// pseudo parameters: a nested stack parameter or a rename would make
+// CloudFormation replace alarms whose fixed names already exist.
+function assertOpsAlarmRulesInNestedStack(): void {
+  const app = new cdk.App({ context: { "aws:cdk:bundling-stacks": [] } });
   const stack = new ApiStack(app, "OpsAlarmRulesStack", {
     env: { account: "111111111111", region: "us-east-1" },
   });
   const nestedStack = stack.node.findChild("OpsAlarmsStack") as cdk.NestedStack;
-  const parent = Template.fromStack(stack).toJSON();
   const nested = Template.fromStack(nestedStack).toJSON();
+  const parentAlarms = Template.fromStack(stack).findResources("AWS::CloudWatch::Alarm");
 
-  const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "ops-alarms-refactor-"));
-  const write = (file: string, body: unknown) =>
-    fs.writeFileSync(path.join(workDir, file), JSON.stringify(body));
-  write("parent.deployed.json", parent);
-  write("nested.deployed.json", nested);
-  execFileSync(
-    "python3",
-    [
-      path.join(__dirname, "ops_alarms_refactor.py"),
-      "build",
-      "--parent", path.join(workDir, "parent.deployed.json"),
-      "--nested", path.join(workDir, "nested.deployed.json"),
-      "--out", path.join(workDir, "out"),
-    ],
-    { stdio: ["ignore", "ignore", "inherit"] },
-  );
-  const read = (file: string) =>
-    JSON.parse(fs.readFileSync(path.join(workDir, "out", file), "utf8"));
-  const refactoredParent = read("parent.json");
-  const refactoredNested = read("nested.json");
-  const mappings: { Source: { LogicalResourceId: string }; Destination: { LogicalResourceId: string } }[] =
-    read("resource-mappings.json");
-  fs.rmSync(workDir, { recursive: true, force: true });
-
-  if (mappings.length !== 16) {
-    throw new Error(`Expected the refactor to move 16 alarms, got ${mappings.length}`);
+  if (Object.keys(parentAlarms).some((id) => id.startsWith("OpsAlarms"))) {
+    throw new Error("Ops alarm rules belong in OpsAlarmsStack, not the main stack");
   }
-  for (const { Source, Destination } of mappings) {
-    if (!Source.LogicalResourceId.startsWith("OpsAlarms")) {
-      throw new Error(`Unexpected alarm selected for the refactor: ${Source.LogicalResourceId}`);
-    }
-    if (Source.LogicalResourceId !== Destination.LogicalResourceId) {
-      throw new Error("Refactor must keep logical IDs unchanged");
-    }
-    if (!(Source.LogicalResourceId in refactoredNested.Resources)) {
-      throw new Error(`${Source.LogicalResourceId} missing from the nested template`);
-    }
+  if (Object.keys(nested.Parameters ?? {}).length > 0) {
+    throw new Error("OpsAlarmsStack must not take parameters");
   }
-  if (
-    Object.keys(refactoredParent.Resources).length !==
-    Object.keys(parent.Resources).length - mappings.length
-  ) {
-    throw new Error("Refactor must remove exactly the ops alarms from the parent");
+  const alarms = Object.entries(nested.Resources as Record<string, Record<string, unknown>>)
+    .filter(([, resource]) => resource.Type === "AWS::CloudWatch::Alarm");
+  if (alarms.length !== 16) {
+    throw new Error(`Expected 16 ops alarm rules in OpsAlarmsStack, found ${alarms.length}`);
+  }
+  for (const [logicalId, resource] of alarms) {
+    const found = new Set<string>();
+    collectReferences(resource, found);
+    const external = [...found].filter(
+      (ref) => !STACK_INDEPENDENT_PSEUDO_PARAMETERS.has(ref),
+    );
+    if (!logicalId.startsWith("OpsAlarms") || external.length > 0) {
+      throw new Error(
+        `${logicalId} must keep its OpsAlarms logical ID and reference only literals; found ${external.join(", ")}`,
+      );
+    }
   }
 }
 
@@ -317,7 +314,7 @@ function main(): void {
   assertExistingResources();
   assertNewResources();
   assertOpsAlarms();
-  assertOpsAlarmsRefactorBuilds();
+  assertOpsAlarmRulesInNestedStack();
   assertLogGroupActionsUseLogGroupArn();
   // eslint-disable-next-line no-console
   console.log("OK");
