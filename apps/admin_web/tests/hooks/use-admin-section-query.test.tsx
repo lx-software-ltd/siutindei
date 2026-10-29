@@ -68,4 +68,43 @@ describe('useAdminSectionQuery', () => {
     await waitFor(() => expect(updates.at(-1) ?? '').toContain('section=locations'));
     expect(updates.at(-1)).not.toContain('organization=');
   });
+
+  it('keeps a preserved org when the section does not list it', async () => {
+    const managerSections = [
+      { key: 'organizations' },
+      { key: 'suggest-place' },
+      { key: 'feedback' },
+    ];
+    const updates: string[] = [];
+    const { result } = renderHook(
+      () => useAdminSectionQuery(managerSections, 'organizations', ['org']),
+      {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <NuqsTestingAdapter
+            hasMemory
+            searchParams='?section=organizations&org=org-1&location=loc-1'
+            onUrlUpdate={(event) => updates.push(event.queryString)}
+          >
+            {children}
+          </NuqsTestingAdapter>
+        ),
+      }
+    );
+
+    act(() => {
+      result.current.selectSection('suggest-place');
+    });
+
+    await waitFor(() => expect(updates.at(-1) ?? '').toContain('section=suggest-place'));
+    expect(updates.at(-1)).toContain('org=org-1');
+    expect(updates.at(-1)).not.toContain('location=');
+
+    act(() => {
+      result.current.selectSection('feedback');
+    });
+
+    await waitFor(() => expect(updates.at(-1) ?? '').toContain('section=feedback'));
+    expect(updates.at(-1)).toContain('org=org-1');
+    expect(result.current.activeSection).toBe('feedback');
+  });
 });

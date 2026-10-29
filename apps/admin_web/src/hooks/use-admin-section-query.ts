@@ -41,11 +41,19 @@ interface SectionLabel {
   key: string;
 }
 
+const NO_PRESERVED_PARAMS: readonly AdminRecordParam[] = [];
+
 /**
  * Dashboard section plus the record params that belong to it. Choosing a
  * section drops params from other sections so they do not pile up in the URL.
+ * `preserve` is for params every section of this console keeps, such as the
+ * manager organization id.
  */
-export function useAdminSectionQuery(sections: readonly SectionLabel[], fallback: string) {
+export function useAdminSectionQuery(
+  sections: readonly SectionLabel[],
+  fallback: string,
+  preserve: readonly AdminRecordParam[] = NO_PRESERVED_PARAMS
+) {
   const [query, setQuery] = useQueryStates(parsers);
   const sectionParam = query.section;
   const isValidSection = sections.some((section) => section.key === sectionParam);
@@ -61,7 +69,7 @@ export function useAdminSectionQuery(sections: readonly SectionLabel[], fallback
     for (const key of ADMIN_RECORD_PARAMS) {
       current[key] = query[key] ?? null;
     }
-    const stale = staleRecordParams(activeSection, current);
+    const stale = staleRecordParams(activeSection, current, preserve);
     const staleKey = Object.keys(stale).sort().join(',');
     if (!staleKey) {
       appliedStale.current = '';
@@ -72,16 +80,18 @@ export function useAdminSectionQuery(sections: readonly SectionLabel[], fallback
     }
     appliedStale.current = staleKey;
     void setQuery(stale, { history: 'replace' });
-  }, [activeSection, isValidSection, query, sectionParam, setQuery]);
+  }, [activeSection, isValidSection, preserve, query, sectionParam, setQuery]);
 
   const selectSection = useCallback(
     (nextSection: string) => {
       if (!sections.some((section) => section.key === nextSection)) {
         return;
       }
-      void setQuery(patchForSectionChange(nextSection), { history: 'push' });
+      void setQuery(patchForSectionChange(nextSection, preserve), {
+        history: 'push',
+      });
     },
-    [sections, setQuery]
+    [preserve, sections, setQuery]
   );
 
   return { activeSection, selectSection };
