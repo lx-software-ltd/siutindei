@@ -12,6 +12,7 @@ describe('LoginLoadingNotice', () => {
 
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent(ADMIN_SESSION_LOADING_COPY);
+    expect(status).toHaveClass('justify-center');
     expect(status).not.toHaveClass('bg-white', 'border', 'border-brand-200');
     expect(screen.queryByText('Info')).not.toBeInTheDocument();
 

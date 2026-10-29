@@ -1,4 +1,28 @@
+import type { Page } from '@playwright/test';
+
 import { test, expect, setupAuth, mockAdminUser } from './fixtures/test-fixtures';
+
+/** Midpoint of the bao plus sentence, compared with the logo midpoint.
+ * The bao's painted box grows while it spins, so use its layout width. */
+async function contentCenterDelta(page: Page) {
+  return page.evaluate(() => {
+    const logo = document.querySelector('img[alt="Siu Tin Dei"]');
+    const status = document.querySelector('[role="status"]');
+    const picture = status?.querySelector('img');
+    const sentence = status?.querySelector('p');
+    if (!logo || !picture || !sentence) {
+      return Number.POSITIVE_INFINITY;
+    }
+    const logoRect = logo.getBoundingClientRect();
+    const pictureRect = picture.getBoundingClientRect();
+    const sentenceRect = sentence.getBoundingClientRect();
+    const logoCenter = logoRect.left + logoRect.width / 2;
+    const pictureCenter = pictureRect.left + pictureRect.width / 2;
+    const pictureLeft = pictureCenter - picture.offsetWidth / 2;
+    const contentCenter = (pictureLeft + sentenceRect.right) / 2;
+    return Math.abs(logoCenter - contentCenter);
+  });
+}
 
 test.describe('Login Screen', () => {
   test('should display login screen when unauthenticated', async ({ unauthenticatedPage }) => {
@@ -141,6 +165,7 @@ test.describe('Login Screen', () => {
       expect(notice.borderTopWidth).toBe('0px');
       expect(notice.baoIsFirst).toBe(true);
       expect(notice.animationName).toContain('admin-login-bao-spin');
+      expect(await contentCenterDelta(page)).toBeLessThan(2);
 
       await page.setViewportSize({ width: 375, height: 812 });
       const fits = await page.evaluate(
@@ -149,6 +174,7 @@ test.describe('Login Screen', () => {
       expect(fits).toBe(true);
       await expect(status).toBeVisible();
       await expect(bao).toBeVisible();
+      expect(await contentCenterDelta(page)).toBeLessThan(2);
     } finally {
       release();
     }

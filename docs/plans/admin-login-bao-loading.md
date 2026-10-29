@@ -31,6 +31,8 @@ of the page behind it. There is no "Info" heading.
    backdrop, so a signed-in admin navigation does not flash the login
    hero. It uses the same notice and the same sentence.
 5. The callback error state stays a `StatusBanner` on the plain page.
+6. The bao and the sentence are one centered group. Their midpoint
+   lines up with the logo, on desktop and on a phone width.
 
 ## Files
 

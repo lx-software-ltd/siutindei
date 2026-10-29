@@ -58,7 +58,8 @@ login pill.
 
 Session loading, the auth callback while the code is exchanged, and
 route-level admin loading share `LoginLoadingNotice`: the bao picture
-on the left and the sentence "Preparing your admin session…". The
+on the left of the sentence "Preparing your admin session…". That pair
+is centered on the page, on the same line as the Siu Tin Dei logo. The
 notice has no fill, so the page colour shows through. The bao spins
 one turn every 2.4s and is still when the user prefers reduced motion.
 The callback exchange and session loading sit on the Small World

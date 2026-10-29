@@ -6,7 +6,7 @@ export function LoginLoadingNotice() {
     <div
       role='status'
       aria-live='polite'
-      className='flex w-full items-center gap-3'
+      className='flex w-full items-center justify-center gap-3'
     >
       <img
         src='/images/small-world/bubble-bao.webp'
