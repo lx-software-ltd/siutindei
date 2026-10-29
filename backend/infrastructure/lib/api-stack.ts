@@ -19,6 +19,7 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import {
+  addOpsAlarmRules,
   DatabaseConstruct,
   OpsAlarmsConstruct,
   PythonLambdaFactory,
@@ -3109,31 +3110,50 @@ export class ApiStack extends cdk.Stack {
     // ---------------------------------------------------------------------
     // Operational alarms (SNS ops-alerts topic + CloudWatch alarms)
     // ---------------------------------------------------------------------
-    new OpsAlarmsConstruct(this, "OpsAlarms", {
+    const opsAlarms = new OpsAlarmsConstruct(this, "OpsAlarms", {
       resourcePrefix,
       alertsEmail: opsAlertsEmail.valueAsString,
-      api,
+      additionalAlarms: [dlqAlarm, categorySuggestionDlqAlarm],
+    });
+    addOpsAlarmRules(opsAlarms, {
+      resourcePrefix,
+      apiName: api.restApiName,
       monitoredFunctions: [
         // Public search path: user-facing SLO.
-        { label: "Search", fn: searchFunction, durationP99ThresholdMs: 3000 },
+        {
+          label: "Search",
+          functionName: name("SiutindeiSearchFunction"),
+          durationP99ThresholdMs: 3000,
+        },
         {
           label: "ListingEventsIngest",
-          fn: listingEventsIngestFunction,
+          functionName: name("ListingEventsIngestFunction"),
           durationP99ThresholdMs: 2000,
         },
         {
           label: "ListingEventsRollup",
-          fn: listingEventsRollupFunction,
+          functionName: name("ListingEventsRollupFunction"),
           durationP99ThresholdMs: 15000,
         },
         // Admin also consumes category-suggestion SQS (OpenRouter up to
         // 90s, function timeout 120s). A 10s p99 pages on every category
         // check. HTTP latency stays on the API Gateway p99 alarm.
-        { label: "Admin", fn: adminFunction, durationP99ThresholdMs: 90000 },
+        {
+          label: "Admin",
+          functionName: name("SiutindeiAdminFunction"),
+          durationP99ThresholdMs: 90000,
+        },
       ],
-      dbClusterIdentifier: database.cluster.clusterIdentifier,
-      additionalAlarms: [dlqAlarm, categorySuggestionDlqAlarm],
+      dbClusterIdentifier: database.clusterIdentifier,
     });
+
+    // The ops alarms move into this nested stack through a CloudFormation
+    // stack refactor (docs/deployment/ops-alarms-stack-refactor.md). It
+    // must exist, with at least one resource, before the refactor runs.
+    const opsAlarmsStack = new cdk.NestedStack(this, "OpsAlarmsStack", {
+      description: "Operational CloudWatch alarms for the API stack",
+    });
+    new cdk.CfnWaitConditionHandle(opsAlarmsStack, "RefactorPlaceholder");
 
     // Apply Checkov suppressions to CDK-internal Lambda functions
     cdk.Aspects.of(this).add(new CdkInternalLambdaCheckovSuppression());

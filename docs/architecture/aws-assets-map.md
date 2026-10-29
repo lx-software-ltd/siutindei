@@ -405,7 +405,12 @@ read error status codes instead of silently blocking them.
 
 ## Operational Alarms (OpsAlarms construct)
 
-Created by `OpsAlarmsConstruct` (`lib/constructs/ops-alarms.ts`).
+The topic, key, and subscription come from `OpsAlarmsConstruct` and stay in
+the main stack. The 16 alarms come from `addOpsAlarmRules`
+(`lib/constructs/ops-alarms.ts`). They use literal names and a literal topic
+ARN so they can move into the `OpsAlarmsStack` nested stack. The move is a
+one-off stack refactor, described in
+[`docs/deployment/ops-alarms-stack-refactor.md`](../deployment/ops-alarms-stack-refactor.md).
 
 | Resource Type | Physical Name | Notes |
 |--------------|---------------|-------|
@@ -423,7 +428,7 @@ Created by `OpsAlarmsConstruct` (`lib/constructs/ops-alarms.ts`).
 | CloudWatch Alarm | `lxsoftware-siutindei-aurora-acu-utilization-alarm` | Aurora ACU utilization ≥ 90% for 15 min |
 | CloudWatch Alarm | `lxsoftware-siutindei-aurora-connections-alarm` | Aurora connections ≥ 300 for 15 min |
 
-The pre-existing manager-request DLQ alarm (`lxsoftware-siutindei-manager-request-dlq-alarm`) is also routed to the ops-alerts topic. Thresholds are launch-sizing early warnings; tune as real traffic patterns emerge.
+The manager-request and category-suggestion DLQ alarms stay in the main stack and are also routed to the ops-alerts topic. Thresholds are launch-sizing early warnings; tune as real traffic patterns emerge.
 
 Latency alarms are split by traffic regime: the API-wide p99 alarm only
 evaluates periods with enough requests for a percentile to be meaningful
@@ -637,11 +642,14 @@ All other resources are deleted when the stack is deleted (unless they are impor
 
 ## Estimated Resource Count
 
-**Minimum (all existing resources imported):**
-- ~50-60 resources (Lambdas, IAM roles, API Gateway resources, etc.)
+CloudFormation allows 500 resources per stack, and a nested stack counts
+as one. With every resource created, the main stack is at 500. The
+API Gateway alone accounts for 241 of them: 154 methods and 70 path
+resources.
 
-**Maximum (all resources created):**
-- ~150-200 resources (includes VPC, subnets, NAT, Aurora, RDS Proxy, all Lambdas with DLQs/KMS, API Gateway, etc.)
+After the ops alarms move into `OpsAlarmsStack`, the main stack drops to
+484. New resource groups that don't reference the rest of the stack
+belong in a nested stack.
 
 ---
 
