@@ -291,8 +291,6 @@ authorizers cache on. Requests without that header are not counted.
   reach the Lambda.
 - Blocks alarm on the ops-alerts topic
   (`lxsoftware-siutindei-api-session-rate-limit-alarm`).
-- The web ACL lives in a nested stack because the main stack is at the
-  500-resource CloudFormation limit.
 
 ### Input Validation
 
