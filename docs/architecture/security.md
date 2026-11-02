@@ -276,21 +276,31 @@ If no origins are configured, defaults to mobile app schemes only:
 - `ionic://localhost`
 - `http://localhost` (for development)
 
-### Per-session rate limit
+### API WAF
 
 A regional WAF web ACL (`lxsoftware-siutindei-api-waf`) on the `prod`
-stage limits each signed-in session to 300 requests per 60 seconds on
-`/v1/admin/*`, `/v1/manager/*`, and `/v1/user/*`. All three are served by
-the admin Lambda, so one looping browser tab cannot exhaust its
-concurrency. The key is the `Authorization` header, the same key the JWT
-authorizers cache on. Requests without that header are not counted.
+stage evaluates two rules.
 
-- A blocked request gets HTTP 429, `Retry-After: 60`, the admin web
+`AWSManagedRulesKnownBadInputsRuleSet` (priority 0) blocks known
+malicious inputs on every request, including Log4j2 JNDI message lookups
+(CVE-2021-44228). The group keeps its own block actions.
+
+The session rule (priority 1) limits each signed-in session to 300
+requests per 60 seconds on `/v1/admin/*`, `/v1/manager/*`, and
+`/v1/user/*`. All three are served by the admin Lambda, so one looping
+browser tab cannot exhaust its concurrency. The key is the
+`Authorization` header, the same key the JWT authorizers cache on.
+Requests without that header are not counted.
+
+- A rate-limited request gets HTTP 429, `Retry-After: 60`, the admin web
   CORS origin, and `{"error": "Too many requests. Wait a minute and try again."}`.
-- WAF needs roughly 30 to 60 seconds to start blocking. Short bursts still
-  reach the Lambda.
-- Blocks alarm on the ops-alerts topic
+- The rate rule needs roughly 30 to 60 seconds to start blocking. Short
+  bursts still reach the Lambda.
+- Rate-limit blocks alarm on the ops-alerts topic
   (`lxsoftware-siutindei-api-session-rate-limit-alarm`).
+- Known-bad-inputs blocks use that rule group's own block response.
+  They are counted on `lxsoftware-siutindei-api-known-bad-inputs` and do
+  not raise the rate-limit alarm.
 
 ### Input Validation
 

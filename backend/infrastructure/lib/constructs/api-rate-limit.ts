@@ -27,9 +27,15 @@ export interface ApiRateLimitConstructProps {
 const TOO_MANY_REQUESTS_BODY = "too-many-requests";
 
 /**
- * Regional WAF web ACL on the API stage that rate limits each signed-in
- * session. The aggregation key is the `Authorization` header, so requests
- * without one (preflights, public routes) are not counted.
+ * Regional WAF web ACL on the API stage.
+ *
+ * `AWSManagedRulesKnownBadInputsRuleSet` blocks Log4j2 JNDI message
+ * lookups (CVE-2021-44228) and other known malicious payloads on every
+ * request. Its own block actions apply (`overrideAction: none`).
+ *
+ * A second rule rate limits each signed-in session. The aggregation key
+ * is the `Authorization` header, so requests without one (preflights,
+ * public routes) are not counted.
  *
  * Paths are matched with CONTAINS because the default `execute-api` host
  * includes the stage name (`/prod/v1/...`) and the custom domain does not.
@@ -62,7 +68,8 @@ export class ApiRateLimitConstruct extends Construct {
 
     this.webAcl = new wafv2.CfnWebACL(this, "ApiWebAcl", {
       name: webAclName,
-      description: "Per-session rate limit for signed-in API routes",
+      description:
+        "Known-bad-inputs rule group and per-session rate limit for the API",
       scope: "REGIONAL",
       defaultAction: { allow: {} },
       customResponseBodies: {
@@ -80,8 +87,24 @@ export class ApiRateLimitConstruct extends Construct {
       },
       rules: [
         {
-          name: "SignedInSessionRateLimit",
+          name: "AWSManagedRulesKnownBadInputsRuleSet",
           priority: 0,
+          overrideAction: { none: {} },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: "AWS",
+              name: "AWSManagedRulesKnownBadInputsRuleSet",
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: name("api-known-bad-inputs"),
+            sampledRequestsEnabled: true,
+          },
+        },
+        {
+          name: "SignedInSessionRateLimit",
+          priority: 1,
           action: {
             block: {
               customResponse: {
@@ -115,17 +138,6 @@ export class ApiRateLimitConstruct extends Construct {
             metricName: ruleMetricName,
             sampledRequestsEnabled: true,
           },
-        },
-      ],
-    });
-
-    this.webAcl.addMetadata("checkov", {
-      skip: [
-        {
-          id: "CKV_AWS_192",
-          comment:
-            "Rate limit only. The API backend is Python with no Log4j; " +
-            "managed input rules would block admin traffic untested.",
         },
       ],
     });
