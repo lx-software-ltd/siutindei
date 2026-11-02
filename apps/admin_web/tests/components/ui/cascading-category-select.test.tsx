@@ -145,6 +145,7 @@ describe('CascadingCategorySelect add subcategory', () => {
     }));
     createResource.mockImplementation(
       async (
+        _basePath: string,
         _resource: string,
         payload: { name: string; parent_id: string; display_order: number }
       ) => ({
@@ -202,7 +203,7 @@ describe('CascadingCategorySelect add subcategory', () => {
     await waitFor(() => {
       expect(first().getByLabelText('Subcategory')).toHaveValue('cat-kayak');
     });
-    expect(createResource).toHaveBeenCalledWith('activity-categories', {
+    expect(createResource).toHaveBeenCalledWith('v1/admin', 'activity-categories', {
       name: 'Kayaking',
       name_translations: {},
       parent_id: 'cat-sport',

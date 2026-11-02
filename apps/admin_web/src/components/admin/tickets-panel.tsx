@@ -123,7 +123,7 @@ export function TicketsPanel() {
   useEffect(() => {
     const loadLabels = async () => {
       try {
-        const response = await listResource<FeedbackLabel>('feedback-labels');
+        const response = await listResource<FeedbackLabel>('v1/admin', 'feedback-labels');
         setFeedbackLabels(response.items);
       } catch {
         setFeedbackLabels([]);
@@ -148,7 +148,7 @@ export function TicketsPanel() {
       setIsLoadingOrgs(true);
       try {
         const [orgsResponse, usersResponse] = await Promise.all([
-          listResource<Organization>('organizations'),
+          listResource<Organization>('v1/admin', 'organizations'),
           listCognitoUsers(),
         ]);
         if (cancelled) {

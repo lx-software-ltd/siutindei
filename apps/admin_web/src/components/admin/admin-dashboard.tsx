@@ -15,25 +15,59 @@ import { LoginBrandHeader } from '../login/login-brand-header';
 import { LoginLoadingNotice } from '../login/login-loading-notice';
 import { LoginScreen } from '../login-screen';
 import { StatusBanner } from '../status-banner';
-import {
-  OrganizationsPanel,
-  LocationsPanel,
-  ActivitiesPanel,
-  PricingPanel,
-  SchedulesPanel,
-} from '../shared';
-import { ApiKeysPanel } from './api-keys-panel';
-import { AuditLogsPanel } from './audit-logs-panel';
-import { CategoriesPage } from './categories-page';
-import { CognitoUsersPanel } from './cognito-users-panel';
-import { FeedbackPage } from './feedback-page';
-import { DataQualityPage } from './data-quality/data-quality-page';
-import { ImportsPanel } from './imports-panel';
-import { CatalogPanel } from './org-review/review-queue-panel';
-import { MediaPanel } from './media-panel';
-import { ManagerDashboard } from './manager-dashboard';
-import { TicketsPanel } from './tickets-panel';
-import { AccountHome } from './user-dashboard';
+import { loadDashboardSection } from './dashboard-section';
+
+const MediaPanel = loadDashboardSection(() =>
+  import('./media-panel').then((mod) => mod.MediaPanel)
+);
+const LocationsPanel = loadDashboardSection(() =>
+  import('../shared/locations-panel').then((mod) => mod.LocationsPanel)
+);
+const CategoriesPage = loadDashboardSection(() =>
+  import('./categories-page').then((mod) => mod.CategoriesPage)
+);
+const ActivitiesPanel = loadDashboardSection(() =>
+  import('../shared/activities-panel').then((mod) => mod.ActivitiesPanel)
+);
+const PricingPanel = loadDashboardSection(() =>
+  import('../shared/pricing-panel').then((mod) => mod.PricingPanel)
+);
+const SchedulesPanel = loadDashboardSection(() =>
+  import('../shared/schedules-panel').then((mod) => mod.SchedulesPanel)
+);
+const ImportsPanel = loadDashboardSection(() =>
+  import('./imports-panel').then((mod) => mod.ImportsPanel)
+);
+const CatalogPanel = loadDashboardSection(() =>
+  import('./org-review/review-queue-panel').then((mod) => mod.CatalogPanel)
+);
+const DataQualityPage = loadDashboardSection(() =>
+  import('./data-quality/data-quality-page').then((mod) => mod.DataQualityPage)
+);
+const TicketsPanel = loadDashboardSection(() =>
+  import('./tickets-panel').then((mod) => mod.TicketsPanel)
+);
+const FeedbackPage = loadDashboardSection(() =>
+  import('./feedback-page').then((mod) => mod.FeedbackPage)
+);
+const CognitoUsersPanel = loadDashboardSection(() =>
+  import('./cognito-users-panel').then((mod) => mod.CognitoUsersPanel)
+);
+const ApiKeysPanel = loadDashboardSection(() =>
+  import('./api-keys-panel').then((mod) => mod.ApiKeysPanel)
+);
+const AuditLogsPanel = loadDashboardSection(() =>
+  import('./audit-logs-panel').then((mod) => mod.AuditLogsPanel)
+);
+const OrganizationsPanel = loadDashboardSection(() =>
+  import('../shared/organizations-panel').then((mod) => mod.OrganizationsPanel)
+);
+const ManagerDashboard = loadDashboardSection(() =>
+  import('./manager-dashboard').then((mod) => mod.ManagerDashboard)
+);
+const AccountHome = loadDashboardSection(() =>
+  import('./user-dashboard').then((mod) => mod.AccountHome)
+);
 
 const sectionLabels = buildAdminNavSections([
   { sections: [{ key: 'catalog', label: 'Catalog' }] },

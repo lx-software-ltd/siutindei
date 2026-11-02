@@ -1,4 +1,4 @@
-import type { ApiMode, ResourceType } from '@/lib/resource-api';
+import type { ApiMode, ResourceType } from '@/lib/api-client-admin';
 
 /** Cache keys for admin server state. Feature hooks must use these. */
 export const adminQueryKeys = {

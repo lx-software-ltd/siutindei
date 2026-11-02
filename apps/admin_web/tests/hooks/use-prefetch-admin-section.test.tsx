@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { usePrefetchAdminSection } from '@/hooks/use-prefetch-admin-section';
-import { getResourceApi } from '@/lib/resource-api';
+import { getResourceApi } from '@/lib/api-client-admin';
 
 describe('usePrefetchAdminSection', () => {
   it('does not throw when a manager hovers the feedback section', () => {

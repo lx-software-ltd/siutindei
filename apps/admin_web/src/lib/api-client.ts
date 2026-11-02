@@ -51,33 +51,6 @@ export {
 } from './api-client-cognito';
 
 export {
-  createManagerActivity,
-  createManagerLocation,
-  createManagerPricing,
-  createManagerSchedule,
-  deleteManagerActivity,
-  deleteManagerLocation,
-  deleteManagerOrganization,
-  deleteManagerPricing,
-  deleteManagerSchedule,
-  getManagerActivity,
-  getManagerLocation,
-  getManagerOrganization,
-  getManagerPricing,
-  getManagerSchedule,
-  listManagerActivities,
-  listManagerLocations,
-  listManagerOrganizations,
-  listManagerPricing,
-  listManagerSchedules,
-  updateManagerActivity,
-  updateManagerLocation,
-  updateManagerOrganization,
-  updateManagerPricing,
-  updateManagerSchedule,
-} from './api-client-manager';
-
-export {
   fetchActiveAreas,
   fetchActivityCategories,
   getUserAccessStatus,

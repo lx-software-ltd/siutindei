@@ -8,7 +8,7 @@ import {
   getResourceApi,
   type ResourceListFilters,
   type ResourceType,
-} from '@/lib/resource-api';
+} from '@/lib/api-client-admin';
 
 import { prefetchPaginatedList } from './use-paginated-list';
 

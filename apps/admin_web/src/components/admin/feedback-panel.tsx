@@ -89,8 +89,8 @@ export function FeedbackPanel() {
       setLookupError('');
       try {
         const [orgResponse, labelResponse] = await Promise.all([
-          listResource<Organization>('organizations'),
-          listResource<FeedbackLabel>('feedback-labels'),
+          listResource<Organization>('v1/admin', 'organizations'),
+          listResource<FeedbackLabel>('v1/admin', 'feedback-labels'),
         ]);
         setOrganizations(orgResponse.items);
         setLabels(labelResponse.items);

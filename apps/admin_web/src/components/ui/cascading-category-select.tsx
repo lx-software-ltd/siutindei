@@ -228,7 +228,7 @@ export function CascadingCategorySelect({
           display_order: number;
         },
         CreatedCategory
-      >('activity-categories', {
+      >('v1/admin', 'activity-categories', {
         name,
         name_translations: buildTranslationsPayload(draftTranslations),
         parent_id: parentId,

@@ -24,7 +24,7 @@ import {
   type ApiMode,
   type ResourceListFilters,
   type ResourceType,
-} from '@/lib/resource-api';
+} from '@/lib/api-client-admin';
 
 interface UseResourceEditorOptions<T extends { id: string }, TForm> {
   resource: ResourceType;

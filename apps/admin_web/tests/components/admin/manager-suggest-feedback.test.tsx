@@ -12,7 +12,7 @@ import {
   listFeedbackLabels,
   fetchActiveAreas,
 } from '@/lib/api-client-user';
-import { listManagerOrganizations } from '@/lib/api-client-manager';
+import { listResource } from '@/lib/api-client-admin';
 
 vi.mock('next/image', () => ({
   default: ({ alt, src }: { alt: string; src: string }) => (
@@ -32,11 +32,19 @@ vi.mock('@/components/auth-provider', () => ({
   }),
 }));
 
-vi.mock('@/components/shared', () => ({
+vi.mock('@/components/shared/organizations-panel', () => ({
   OrganizationsPanel: () => <div>Organization workspace</div>,
+}));
+vi.mock('@/components/shared/locations-panel', () => ({
   LocationsPanel: () => <div>Locations workspace</div>,
+}));
+vi.mock('@/components/shared/activities-panel', () => ({
   ActivitiesPanel: () => <div>Activities workspace</div>,
+}));
+vi.mock('@/components/shared/pricing-panel', () => ({
   PricingPanel: () => <div>Pricing workspace</div>,
+}));
+vi.mock('@/components/shared/schedules-panel', () => ({
   SchedulesPanel: () => <div>Schedules workspace</div>,
 }));
 
@@ -54,13 +62,13 @@ vi.mock('@/lib/api-client-user', async () => {
   };
 });
 
-vi.mock('@/lib/api-client-manager', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/api-client-manager')>(
-    '@/lib/api-client-manager'
+vi.mock('@/lib/api-client-admin', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/api-client-admin')>(
+    '@/lib/api-client-admin'
   );
   return {
     ...actual,
-    listManagerOrganizations: vi.fn(),
+    listResource: vi.fn(),
   };
 });
 
@@ -98,7 +106,7 @@ describe('manager suggest and feedback pages', () => {
     });
     vi.mocked(listFeedbackLabels).mockResolvedValue({ items: [] });
     vi.mocked(fetchActiveAreas).mockResolvedValue({ items: [] });
-    vi.mocked(listManagerOrganizations).mockResolvedValue({
+    vi.mocked(listResource).mockResolvedValue({
       items: [{ id: 'org-1', name: 'Test Organization 1' }],
       next_cursor: null,
     });

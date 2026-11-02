@@ -3,18 +3,16 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import Image from 'next/image';
 
+import { useLockBodyScroll } from '@/hooks/use-lock-body-scroll';
 import { formatDateTime } from '@/lib/date-utils';
 
 import { CloseIcon, MenuIcon } from './icons/action-icons';
 import { LegalLinks } from './legal-links';
+import { NavList, type NavSection } from './nav-list';
 import { PublicSiteLink } from './public-site-link';
 import { Button } from './ui/button';
 
-export interface NavSection {
-  key: string;
-  label: string;
-  dividerBefore?: boolean;
-}
+export type { NavSection } from './nav-list';
 
 export interface AppShellProps {
   sections: NavSection[];
@@ -64,17 +62,7 @@ export function AppShell({
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
-  // Prevent body scroll when mobile menu is open
-  useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [mobileMenuOpen]);
+  useLockBodyScroll(mobileMenuOpen);
 
   const handleNavSelect = useCallback(
     (key: string) => {
@@ -186,29 +174,19 @@ export function AppShell({
           )}
           <nav className='flex-1 overflow-y-auto p-4'>
             <div className='space-y-1'>
-              {sections.map((section) => {
-                const isActive = section.key === activeKey;
-                return (
-                  <div key={section.key}>
-                    {section.dividerBefore && (
-                      <hr className='my-3 border-brand-100' />
-                    )}
-                    <button
-                      type='button'
-                      onClick={() => handleNavSelect(section.key)}
-                      onMouseEnter={() => onIntent?.(section.key)}
-                      onFocus={() => onIntent?.(section.key)}
-                      className={`w-full rounded-md px-3 py-2.5 text-left text-sm font-medium ${
-                        isActive
-                          ? 'bg-ink-900 font-semibold text-white'
-                          : 'text-ink-700 hover:bg-brand-50'
-                      }`}
-                    >
-                      {section.label}
-                    </button>
-                  </div>
-                );
-              })}
+              <NavList
+                sections={sections}
+                activeKey={activeKey}
+                onSelect={handleNavSelect}
+                onIntent={onIntent}
+                itemClassName={(isActive) =>
+                  `w-full rounded-md px-3 py-2.5 text-left text-sm font-medium ${
+                    isActive
+                      ? 'bg-ink-900 font-semibold text-white'
+                      : 'text-ink-700 hover:bg-brand-50'
+                  }`
+                }
+              />
             </div>
           </nav>
         </div>
@@ -220,29 +198,19 @@ export function AppShell({
         {sections.length > 0 && (
           <aside className='hidden w-56 shrink-0 lg:block'>
             <nav className='sticky top-20 space-y-1'>
-              {sections.map((section) => {
-                const isActive = section.key === activeKey;
-                return (
-                  <div key={section.key}>
-                    {section.dividerBefore && (
-                      <hr className='my-3 border-brand-100' />
-                    )}
-                    <button
-                      type='button'
-                      onClick={() => onSelect(section.key)}
-                      onMouseEnter={() => onIntent?.(section.key)}
-                      onFocus={() => onIntent?.(section.key)}
-                      className={`w-full rounded-md px-3 py-2 text-left text-sm ${
-                        isActive
-                          ? 'bg-ink-900 font-semibold text-white'
-                          : 'text-ink-700 hover:bg-brand-50'
-                      }`}
-                    >
-                      {section.label}
-                    </button>
-                  </div>
-                );
-              })}
+              <NavList
+                sections={sections}
+                activeKey={activeKey}
+                onSelect={onSelect}
+                onIntent={onIntent}
+                itemClassName={(isActive) =>
+                  `w-full rounded-md px-3 py-2 text-left text-sm ${
+                    isActive
+                      ? 'bg-ink-900 font-semibold text-white'
+                      : 'text-ink-700 hover:bg-brand-50'
+                  }`
+                }
+              />
             </nav>
           </aside>
         )}

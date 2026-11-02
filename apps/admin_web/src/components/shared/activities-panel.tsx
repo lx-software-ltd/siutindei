@@ -8,7 +8,7 @@ import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { formatAdminPageName } from '../../lib/admin-page-name';
 import { parseRequiredNumber } from '../../lib/number-parsers';
-import type { ApiMode } from '../../lib/resource-api';
+import type { ApiMode } from '../../lib/api-client-admin';
 import { normalizeKey } from '../../lib/string-utils';
 import {
   buildTranslationsPayload,
