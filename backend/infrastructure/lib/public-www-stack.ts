@@ -1,3 +1,4 @@
+import * as fs from "node:fs";
 import * as path from "node:path";
 
 import * as cdk from "aws-cdk-lib";
@@ -25,7 +26,19 @@ import { Construct } from "constructs";
 //     Referrer-Policy, X-Content-Type-Options, XSS-Protection, X-Robots-Tag
 //     (staging-only noindex)
 //   * Optional WAF (us-east-1) attached via CfnCondition; reuses the same WAF
-//     WebACL ARN as the admin web distribution.
+//     WebACL ARN as the admin web distribution. Detached automatically while
+//     the environment's edge-verify secret is set (see below), because the
+//     WebACL rate rule counts viewer IPs and behind Cloudflare every viewer
+//     IP is a Cloudflare egress IP.
+//
+// Cloudflare origin lock (docs/plans/cloudflare-edge-protection.md):
+//   * When `siutindei.com` is proxied by Cloudflare, a Transform Rule adds
+//     `x-edge-verify: <secret>` to every request. Each viewer-request
+//     function on the distribution starts with the check in
+//     functions/public-www-edge-verify.js and returns 403 when the header
+//     does not match the environment's current or previous secret. Both
+//     secrets empty (the default) disables the check, so the stack deploys
+//     unchanged until an operator opts in per environment.
 //
 // Search API edge caching:
 //   * A `/v1/activities/search` CloudFront behavior fronts the public search
@@ -62,6 +75,35 @@ const LISTING_EVENTS_FORWARDED_HEADERS = [
 // Edge cache TTL mirrors the previous API Gateway method cache (5 minutes).
 const SEARCH_API_CACHE_TTL = cdk.Duration.minutes(5);
 
+// Secrets are spliced into CloudFront Function source as JS string literals,
+// so the allowed alphabet excludes quotes and backslashes. Minimum 32 chars.
+const EDGE_VERIFY_SECRET_PATTERN = "^$|^[A-Za-z0-9+/=_-]{32,}$";
+const EDGE_VERIFY_SNIPPET = fs.readFileSync(
+  path.join(__dirname, "functions/public-www-edge-verify.js"),
+  "utf8",
+);
+const PATH_REWRITE_SOURCE = fs.readFileSync(
+  path.join(__dirname, "functions/public-www-path-rewrite.js"),
+  "utf8",
+);
+
+interface EdgeVerifySecrets {
+  readonly current: string;
+  readonly previous: string;
+}
+
+/**
+ * Prepend the edge-verify check to a viewer-request function body. The
+ * placeholders resolve to CloudFormation parameter references at deploy.
+ */
+function withEdgeVerify(body: string, secrets: EdgeVerifySecrets): string {
+  const snippet = EDGE_VERIFY_SNIPPET.replace(
+    "__EDGE_VERIFY_SECRET__",
+    secrets.current,
+  ).replace("__EDGE_VERIFY_SECRET_PREVIOUS__", secrets.previous);
+  return `${snippet}\n${body}`;
+}
+
 interface WebsiteEnvironmentConfig {
   readonly idPrefix: "PublicWww" | "PublicWwwStaging";
   readonly environmentLabel: "production" | "staging";
@@ -75,10 +117,11 @@ interface WebsiteEnvironmentConfig {
   readonly searchApiOriginDomain: string;
   readonly searchApiCachePolicy: cloudfront.ICachePolicy;
   readonly searchApiOriginRequestPolicy: cloudfront.IOriginRequestPolicy;
-  readonly listingEventsProxyFunction: cloudfront.Function;
   readonly listingEventsOriginRequestPolicy: cloudfront.IOriginRequestPolicy;
   readonly originVerifySecret: string;
   readonly hasOriginVerifySecret: cdk.CfnCondition;
+  readonly edgeVerifySecrets: EdgeVerifySecrets;
+  readonly hasEdgeVerifySecret: cdk.CfnCondition;
 }
 
 interface WebsiteEnvironmentResources {
@@ -87,6 +130,7 @@ interface WebsiteEnvironmentResources {
   readonly loggingBucket: s3.Bucket;
   readonly pathRewriteFunction: cloudfront.Function;
   readonly searchProxyFunction: cloudfront.Function;
+  readonly listingEventsProxyFunction: cloudfront.Function;
 }
 
 const PUBLIC_WWW_HEADER_CONTENT_SECURITY_POLICY = [
@@ -222,6 +266,14 @@ export class PublicWwwStack extends cdk.Stack {
       },
     );
 
+    // Cloudflare origin lock, one pair per environment so staging can stay
+    // open while production is proxied (and the other way round). The
+    // previous value keeps rotation from refusing traffic while Cloudflare
+    // still sends the old header.
+    const productionEdgeVerify = this.createEdgeVerifyParameters("PublicWww");
+    const stagingEdgeVerify =
+      this.createEdgeVerifyParameters("PublicWwwStaging");
+
     // Shared cache + origin-request policies (CloudFront policies are global to
     // the account; create once and reuse across both website environments).
     const searchApiCachePolicy = new cloudfront.CachePolicy(
@@ -270,30 +322,6 @@ export class PublicWwwStack extends cdk.Stack {
         cookieBehavior: cloudfront.OriginRequestCookieBehavior.none(),
       },
     );
-    const listingEventsProxyFunction = new cloudfront.Function(
-      this,
-      "ListingEventsProxyAllowlistFunction",
-      {
-        comment:
-          "Allow only POST/OPTIONS on the listing-events ingest behavior.",
-        runtime: cloudfront.FunctionRuntime.JS_2_0,
-        code: cloudfront.FunctionCode.fromInline(`
-function handler(event) {
-  var request = event.request;
-  var method = request.method;
-  if (method === 'POST' || method === 'OPTIONS') {
-    return request;
-  }
-  return {
-    statusCode: 405,
-    statusDescription: 'Method Not Allowed',
-    headers: { 'allow': { value: 'POST, OPTIONS' } },
-  };
-}
-`),
-      },
-    );
-
     const productionResources = this.createWebsiteEnvironment({
       idPrefix: "PublicWww",
       environmentLabel: "production",
@@ -311,10 +339,11 @@ function handler(event) {
       searchApiOriginDomain: searchApiOriginDomain.valueAsString,
       searchApiCachePolicy,
       searchApiOriginRequestPolicy,
-      listingEventsProxyFunction,
       listingEventsOriginRequestPolicy,
       originVerifySecret: publicWwwOriginVerifySecret.valueAsString,
       hasOriginVerifySecret,
+      edgeVerifySecrets: productionEdgeVerify.secrets,
+      hasEdgeVerifySecret: productionEdgeVerify.condition,
     });
     this.bucket = productionResources.bucket;
     this.distribution = productionResources.distribution;
@@ -335,10 +364,11 @@ function handler(event) {
       searchApiOriginDomain: searchApiOriginDomain.valueAsString,
       searchApiCachePolicy,
       searchApiOriginRequestPolicy,
-      listingEventsProxyFunction,
       listingEventsOriginRequestPolicy,
       originVerifySecret: publicWwwOriginVerifySecret.valueAsString,
       hasOriginVerifySecret,
+      edgeVerifySecrets: stagingEdgeVerify.secrets,
+      hasEdgeVerifySecret: stagingEdgeVerify.condition,
     });
     this.stagingBucket = stagingResources.bucket;
     this.stagingDistribution = stagingResources.distribution;
@@ -348,20 +378,19 @@ function handler(event) {
     // into a single linear chain. Deploying functions in parallel can
     // breach the regional CloudFront Functions API rate limit, so each function
     // depends on the previous one:
-    //   prod path-rewrite → prod search-proxy → listing-events allow-list →
-    //   staging path-rewrite → staging search-proxy.
-    productionResources.searchProxyFunction.node.addDependency(
+    //   prod path-rewrite → prod search-proxy → prod listing-events →
+    //   staging path-rewrite → staging search-proxy → staging listing-events.
+    const functionChain = [
       productionResources.pathRewriteFunction,
-    );
-    listingEventsProxyFunction.node.addDependency(
       productionResources.searchProxyFunction,
-    );
-    stagingResources.pathRewriteFunction.node.addDependency(
-      listingEventsProxyFunction,
-    );
-    stagingResources.searchProxyFunction.node.addDependency(
+      productionResources.listingEventsProxyFunction,
       stagingResources.pathRewriteFunction,
-    );
+      stagingResources.searchProxyFunction,
+      stagingResources.listingEventsProxyFunction,
+    ];
+    for (let index = 1; index < functionChain.length; index += 1) {
+      functionChain[index].node.addDependency(functionChain[index - 1]);
+    }
 
     new cdk.CfnOutput(this, "PublicWwwBucketName", {
       value: this.bucket.bucketName,
@@ -390,6 +419,56 @@ function handler(event) {
       value: this.stagingLoggingBucket.bucketName,
       description: "S3 bucket for CloudFront and S3 access logs (staging).",
     });
+  }
+
+  private createEdgeVerifyParameters(idPrefix: "PublicWww" | "PublicWwwStaging"): {
+    secrets: EdgeVerifySecrets;
+    condition: cdk.CfnCondition;
+  } {
+    const label = idPrefix === "PublicWww" ? "production" : "staging";
+    const current = new cdk.CfnParameter(this, `${idPrefix}EdgeVerifySecret`, {
+      type: "String",
+      noEcho: true,
+      default: "",
+      allowedPattern: EDGE_VERIFY_SECRET_PATTERN,
+      description:
+        `Cloudflare origin-lock secret for the ${label} public website. ` +
+        "Viewer requests without a matching x-edge-verify header are refused " +
+        "and the CloudFront WAF is detached for this distribution. Empty " +
+        "disables the check. When set: 32+ chars of [A-Za-z0-9+/=_-].",
+    });
+    const previous = new cdk.CfnParameter(
+      this,
+      `${idPrefix}EdgeVerifySecretPrevious`,
+      {
+        type: "String",
+        noEcho: true,
+        default: "",
+        allowedPattern: EDGE_VERIFY_SECRET_PATTERN,
+        description:
+          `Previous ${label} edge-verify secret, accepted during rotation. ` +
+          "Clear it once Cloudflare sends only the new value.",
+      },
+    );
+    const condition = new cdk.CfnCondition(
+      this,
+      `Has${idPrefix}EdgeVerifySecret`,
+      {
+        expression: cdk.Fn.conditionNot(
+          cdk.Fn.conditionAnd(
+            cdk.Fn.conditionEquals(current.valueAsString, ""),
+            cdk.Fn.conditionEquals(previous.valueAsString, ""),
+          ),
+        ),
+      },
+    );
+    return {
+      secrets: {
+        current: current.valueAsString,
+        previous: previous.valueAsString,
+      },
+      condition,
+    };
   }
 
   private createWebsiteEnvironment(
@@ -470,19 +549,17 @@ function handler(event) {
     // Path rewrite for Next.js static export: incoming request paths without
     // a file extension or with a trailing slash get mapped to "<path>/index.html"
     // so that `output: 'export'` builds resolve cleanly through CloudFront.
+    // Every viewer-request function first runs the edge-verify check.
     const pathRewriteFunction = new cloudfront.Function(
       this,
       `${config.idPrefix}PathRewriteFunction`,
       {
         comment:
-          "Redirect unprefixed routes to a locale, then rewrite extensionless paths to index.html.",
+          "Edge-verify, redirect unprefixed routes to a locale, then rewrite extensionless paths to index.html.",
         runtime: cloudfront.FunctionRuntime.JS_2_0,
-        code: cloudfront.FunctionCode.fromFile({
-          filePath: path.join(
-            __dirname,
-            "functions/public-www-path-rewrite.js",
-          ),
-        }),
+        code: cloudfront.FunctionCode.fromInline(
+          withEdgeVerify(PATH_REWRITE_SOURCE, config.edgeVerifySecrets),
+        ),
       },
     );
 
@@ -546,11 +623,17 @@ function handler(event) {
       `${config.idPrefix}SearchProxyAllowlistFunction`,
       {
         comment:
-          "Allow only GET/HEAD/OPTIONS on the public search proxy behavior.",
+          "Edge-verify, then allow only GET/HEAD/OPTIONS on the public search proxy behavior.",
         runtime: cloudfront.FunctionRuntime.JS_2_0,
-        code: cloudfront.FunctionCode.fromInline(`
+        code: cloudfront.FunctionCode.fromInline(
+          withEdgeVerify(
+            `
 function handler(event) {
   var request = event.request;
+  var rejection = edgeVerifyRejection(request);
+  if (rejection) {
+    return rejection;
+  }
   var method = request.method;
   if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
     return request;
@@ -561,7 +644,45 @@ function handler(event) {
     headers: { 'allow': { value: 'GET, HEAD, OPTIONS' } },
   };
 }
-`),
+`,
+            config.edgeVerifySecrets,
+          ),
+        ),
+      },
+    );
+
+    // Allow-list for the listing-events ingest behavior. One per environment
+    // because the edge-verify secret differs between production and staging.
+    const listingEventsProxyFunction = new cloudfront.Function(
+      this,
+      `${config.idPrefix}ListingEventsProxyAllowlistFunction`,
+      {
+        comment:
+          "Edge-verify, then allow only POST/OPTIONS on the listing-events ingest behavior.",
+        runtime: cloudfront.FunctionRuntime.JS_2_0,
+        code: cloudfront.FunctionCode.fromInline(
+          withEdgeVerify(
+            `
+function handler(event) {
+  var request = event.request;
+  var rejection = edgeVerifyRejection(request);
+  if (rejection) {
+    return rejection;
+  }
+  var method = request.method;
+  if (method === 'POST' || method === 'OPTIONS') {
+    return request;
+  }
+  return {
+    statusCode: 405,
+    statusDescription: 'Method Not Allowed',
+    headers: { 'allow': { value: 'POST, OPTIONS' } },
+  };
+}
+`,
+            config.edgeVerifySecrets,
+          ),
+        ),
       },
     );
 
@@ -646,7 +767,7 @@ function handler(event) {
             originRequestPolicy: config.listingEventsOriginRequestPolicy,
             functionAssociations: [
               {
-                function: config.listingEventsProxyFunction,
+                function: listingEventsProxyFunction,
                 eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
               },
             ],
@@ -657,10 +778,24 @@ function handler(event) {
 
     const cfnDistribution = distribution.node
       .defaultChild as cloudfront.CfnDistribution;
+    // The shared WebACL rate rule aggregates by viewer IP. Behind Cloudflare
+    // every viewer IP is a Cloudflare egress IP, so the rule would block
+    // real visitors together. Attach the WAF only while this environment is
+    // not origin-locked; Cloudflare's own WAF and rate limit take over.
+    const attachWaf = new cdk.CfnCondition(
+      this,
+      `${config.idPrefix}AttachWaf`,
+      {
+        expression: cdk.Fn.conditionAnd(
+          config.hasWafWebAclArn,
+          cdk.Fn.conditionNot(config.hasEdgeVerifySecret),
+        ),
+      },
+    );
     cfnDistribution.addPropertyOverride(
       "DistributionConfig.WebACLId",
       cdk.Fn.conditionIf(
-        config.hasWafWebAclArn.logicalId,
+        attachWaf.logicalId,
         config.wafWebAclArn.valueAsString,
         cdk.Aws.NO_VALUE,
       ),
@@ -691,6 +826,7 @@ function handler(event) {
       loggingBucket,
       pathRewriteFunction,
       searchProxyFunction,
+      listingEventsProxyFunction,
     };
   }
 }

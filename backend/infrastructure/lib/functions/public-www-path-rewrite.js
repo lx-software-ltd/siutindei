@@ -71,8 +71,14 @@ function redirectResponse(location) {
   };
 }
 
+// edgeVerifyRejection comes from public-www-edge-verify.js, which the stack
+// prepends to this file.
 function handler(event) {
   var request = event.request;
+  var rejection = edgeVerifyRejection(request);
+  if (rejection) {
+    return rejection;
+  }
   var uri = request.uri;
 
   if (uri.indexOf('/_next/') === 0) {

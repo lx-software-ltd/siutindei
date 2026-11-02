@@ -178,6 +178,10 @@ jobs:
               "PublicWwwStagingCertificateArn",
               "WafWebAclArn",
               "SearchApiProxyOriginDomain",
+              "PublicWwwEdgeVerifySecret",
+              "PublicWwwEdgeVerifySecretPrevious",
+              "PublicWwwStagingEdgeVerifySecret",
+              "PublicWwwStagingEdgeVerifySecretPrevious",
           }
           # Authorizer (API stack) and CloudFront origin header (public stack).
           origin_verify_param = "PublicWwwOriginVerifySecret"
@@ -452,6 +456,10 @@ jobs:
           CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS }}
           CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS }}
+          CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY }}
+          CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS }}
+          CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
+          CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
           CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD: ${{ secrets.CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD }}
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
           MIGRATIONS_FORCE_RUN_ID: >-
