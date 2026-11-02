@@ -277,9 +277,11 @@ The script also enforces `robots.txt: User-agent: *\nDisallow: /` whenever
 the target environment is `staging`.
 
 CloudFront is the only edge cache on the CloudFront aliases
-(`siutindei.com` / `siutindei-www-staging`). Those records CNAME directly
-to CloudFront (DNS-only / grey cloud). `www.siutindei.com` and
+(`siutindei.com` / `siutindei-www-staging`). Today those records CNAME
+directly to CloudFront (DNS-only / grey cloud). `www.siutindei.com` and
 `siutindei-www.lx-software.com` are Cloudflare-proxied 301s to the apex.
+The planned move of the apex behind the Cloudflare proxy is described in
+[Cloudflare edge](#cloudflare-edge); it keeps CloudFront as the only cache.
 Standard deploys do not invalidate `/*` so they stay under CloudFront's
 15-wildcard-in-progress
 cap. The site-scope list is aligned with evolvesprouts and adapted to
@@ -336,10 +338,12 @@ distributions (production + staging) carry an extra cache behavior:
 | Origin-request policy (`SearchApiOriginRequestPolicy`) | Forwards all query strings + `x-api-key`, `x-device-attestation`, `Accept` headers to the origin on a cache **miss** |
 
 CloudFront Function creation is serialized across both environments via an
-`addDependency` chain (prod path-rewrite → prod search-proxy → shared
-listing-events allow-list → staging path-rewrite → staging search-proxy)
-so a single deploy does not breach the regional CloudFront Functions API
-rate limit.
+`addDependency` chain (prod path-rewrite → prod search-proxy → prod
+listing-events → staging path-rewrite → staging search-proxy → staging
+listing-events) so a single deploy does not breach the regional CloudFront
+Functions API rate limit. Every one of those viewer-request functions
+starts with the edge-verify check from
+`lib/functions/public-www-edge-verify.js` (see [Cloudflare edge](#cloudflare-edge)).
 
 ## Listing-event ingest (first-party funnel)
 
@@ -384,3 +388,77 @@ website domain.
 Distribution-level custom error responses (403/404 → `/404.html`) still apply
 to this behavior; validate API error handling on staging before pointing
 production traffic at the edge.
+
+## Cloudflare edge
+
+Plan: [`docs/plans/cloudflare-edge-protection.md`](../plans/cloudflare-edge-protection.md).
+Status: designed and coded, **not applied**. The apex is still grey-cloud.
+
+Cloudflare (Free plan) becomes the public entry point for `siutindei.com`
+so that rate limits, request-shape rules, and AI-crawler blocking run where
+the real client IP is visible, and CloudFront refuses requests that did not
+come through Cloudflare. The configuration is code:
+
+| Piece | Where |
+|---|---|
+| Desired state (zone settings, rate limit, custom rules, cache rules, transform rule, bot management, DNS proxy flag) | `scripts/cloudflare/public_www_edge_policy.json` |
+| Plan/apply tool (`plan` is read-only; `apply` needs `--yes`, is idempotent, and can be limited with `--section`) | `scripts/cloudflare/edge_policy.py` |
+| Contract test: the `limit` allow-list equals the values the site sends | `apps/public_www/tests/lib/cloudflare-edge-policy.test.ts` |
+| Origin lock on CloudFront | `backend/infrastructure/lib/functions/public-www-edge-verify.js`, parameters `PublicWww[Staging]EdgeVerifySecret[Previous]` |
+
+Request path once applied:
+
+```
+browser → Cloudflare (siutindei.com, proxied)
+            rate limit /v1/activities/search: 15 req / 10 s / IP, block 10 s
+            custom rules on /v1/activities/search only (block):
+              limit ∉ {1, 12, 24, 30}; Sec-Fetch-Site present and ≠ same-origin;
+              empty or HTTP-library/headless User-Agent
+            cache rules: bypass everything except /_next/static/*
+            transform: add x-edge-verify: <secret>
+          → CloudFront (SSL mode strict, Host preserved)
+              viewer-request functions: 403 unless x-edge-verify matches the
+              environment's current or previous secret; WAF detached while
+              the secret is set
+          → S3 / API Gateway as today
+```
+
+Rules of the design:
+
+- Only `block` actions on the API path. A Managed Challenge returned to a
+  `fetch()` is an HTML page the site cannot parse.
+- No rule targets verified bots or HTML navigations, so indexing is
+  unaffected. `robots.txt` disallows `/v1/` and `/cdn-cgi/` because they are
+  not pages; AI crawlers are blocked by Cloudflare's `ai_bots_protection`.
+- Cloudflare does not cache HTML or the search API. CloudFront stays the
+  single cache, so deploy invalidations keep their meaning and the
+  five-minute search cache is not doubled.
+- Zone settings `ssl=strict`, `email_obfuscation=off`,
+  `browser_cache_ttl=0`, `rocket_loader=off`: no edge HTML rewriting, so
+  the hash-based CSP `<meta>` keeps matching, and origin `Cache-Control`
+  is respected.
+- Bot Fight Mode stays **off**. On Free it cannot be scoped or skipped, so
+  a false positive on the same-origin search fetch breaks search for that
+  visitor, and its JavaScript Detections inline script is refused by a
+  `<meta>` CSP without nonces.
+- The origin lock is per environment. Both edge-verify parameters empty
+  (the default) means no enforcement and the WAF stays attached; the
+  CloudFront stack is unchanged until an operator sets a secret. Setting a
+  secret also detaches the shared WAF WebACL from that distribution: its
+  rate rule counts viewer IPs, and behind Cloudflare every viewer IP is a
+  Cloudflare egress IP.
+- Rotation: set `…Previous` to the live value, put the new value in the
+  current parameter, deploy, update the Cloudflare transform rule
+  (`edge_policy.py apply --yes --section rulesets` with the new
+  `PUBLIC_WWW_EDGE_VERIFY_SECRET`), then clear `…Previous` and deploy again.
+
+Rollback is `edge_policy.py apply --yes --section dns --proxied false`
+(apex back to grey within a minute). If the origin lock is already
+enforced, redeploy the stack with the edge-verify parameters empty
+**before** the DNS rollback, otherwise direct traffic is refused for the
+deploy duration.
+
+Not solved by this layer: a patient scraper with residential proxies and a
+real browser stays under the limits and gets the catalogue in hours
+instead of seconds. What the API returns per request is unchanged until
+the backend field-minimisation work lands.
