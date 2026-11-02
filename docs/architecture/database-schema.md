@@ -708,6 +708,9 @@ Indexes:
 - `activity_schedule_entries_schedule_idx` on `schedule_id`
 - `activity_schedule_entries_day_idx` on
   `day_of_week_utc`, `start_minutes_utc`, `end_minutes_utc`
+- `activity_schedule_entries_order_idx` on
+  `schedule_id`, `day_of_week_utc`, `start_minutes_utc`, `id`
+  (first entry per schedule for public search)
 
 ## Table: organizations (migration notes)
 

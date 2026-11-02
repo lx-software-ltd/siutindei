@@ -2,29 +2,21 @@
 
 import { useCallback, useMemo, useRef } from 'react';
 
-import { useActivitiesByMode } from '../../hooks/use-activities-by-mode';
 import { useFormValidation } from '../../hooks/use-form-validation';
-import { useLocationsByMode } from '../../hooks/use-locations-by-mode';
+import { useResourceByMode } from '../../hooks/use-resource-by-mode';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { formatAdminPageName } from '../../lib/admin-page-name';
 import { parseOptionalNumber } from '../../lib/number-parsers';
-import type { ApiMode } from '../../lib/resource-api';
+import type { ApiMode } from '../../lib/api-client-admin';
 import type { LanguageCode } from '../../lib/translations';
 import { languageOptions } from '../../lib/translations';
-import type { ActivitySchedule } from '../../types/admin';
-import { StatusBanner } from '../status-banner';
+import type { Activity, ActivitySchedule, Location } from '../../types/admin';
 import { scheduleFormFromSnapshot } from '../admin/catalog-version-snapshot';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
-import {
-  HistoricalRowMark,
-  useCatalogVersion,
-  VersionField,
-  VersionFields,
-  VersionSwitcher,
-} from '../admin/version-history';
-import { Button } from '../ui/button';
+import { HistoricalRowMark, useCatalogVersion, VersionField } from '../admin/version-history';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
+import { Button } from '../ui/button';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import { ADMIN_TABLE_EMPTY, AdminTableName } from '../ui/admin-table-value';
 import {
@@ -33,14 +25,14 @@ import {
   AdminDataTableHeadCell,
 } from '../ui/admin-data-table';
 import { AdminDisclosure } from '../ui/admin-disclosure';
-import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
-import { AdminField, AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
+import { AdminField, formErrorClassName } from '../ui/admin-field-grid';
 import { AdminToggleChip } from '../ui/admin-tab-strip';
 import {
   deleteRowActions,
   ResourceTableShell,
 } from '../ui/resource-table-shell';
 import { Select } from '../ui/select';
+import { CatalogInlineEditor } from './catalog-inline-editor';
 import {
   dayOfWeekOptions,
   emptyForm,
@@ -108,11 +100,11 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     noun: 'schedule',
   });
 
-  const { items: activities } = useActivitiesByMode(mode, {
+  const { items: activities } = useResourceByMode<Activity>('activities', mode, {
     limit: 200,
     orgId: scopedOrgId,
   });
-  const { items: locations } = useLocationsByMode(mode, {
+  const { items: locations } = useResourceByMode<Location>('locations', mode, {
     limit: 200,
     orgId: scopedOrgId,
   });
@@ -499,92 +491,35 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     Boolean(languagesError)
   );
   const detail = (
-    <AdminEditorPanel
-      accessory={
-        panel.editingId ? <VersionSwitcher view={versionView} /> : undefined
-      }
-      status={
-        panel.error ? (
-          <StatusBanner kind='error'>
-            {panel.error}
-          </StatusBanner>
-        ) : null
-      }
-      actions={
-        versionView.isHistorical ? (
-          <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
-            Back to latest
-          </Button>
-        ) : (
-          <AdminEditorActions
-            mode={panel.editorMode}
-            onSubmit={handleSubmit}
-            isSaving={panel.isSaving}
-          />
-        )
-      }
+    <CatalogInlineEditor
+      idPrefix='schedule'
+      view={versionView}
+      editingId={panel.editingId}
+      error={panel.error}
+      isHistorical={versionView.isHistorical}
+      onBackToLatest={versionView.backToLatest}
+      editorMode={panel.editorMode}
+      onSubmit={handleSubmit}
+      isSaving={panel.isSaving}
+      locations={locations}
+      activities={activities}
+      locationId={editorForm.location_id}
+      activityId={editorForm.activity_id}
+      locked={locked}
+      showLocationError={showLocationError}
+      showActivityError={showActivityError}
+      locationError={locationError}
+      activityError={activityError}
+      errorClassName={errorInputClassName}
+      onLocationChange={(value) => {
+        markTouched('location_id');
+        panel.setFormState((prev) => ({ ...prev, location_id: value }));
+      }}
+      onActivityChange={(value) => {
+        markTouched('activity_id');
+        panel.setFormState((prev) => ({ ...prev, activity_id: value }));
+      }}
     >
-      <VersionFields view={versionView}>
-      <div className='space-y-4'>
-      <AdminFieldGrid columns={2}>
-        <VersionField
-          label='Location'
-          htmlFor='schedule-location'
-          required
-          versionKey='location_id'
-          error={showLocationError ? locationError : undefined}
-        >
-          <Select
-            id='schedule-location'
-            value={editorForm.location_id}
-            disabled={locked}
-            onChange={(e) => {
-              markTouched('location_id');
-              panel.setFormState((prev) => ({
-                ...prev,
-                location_id: e.target.value,
-              }));
-            }}
-            className={showLocationError ? errorInputClassName : ''}
-            aria-invalid={showLocationError || undefined}
-          >
-            <option value=''>Select location</option>
-            {locations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.address || location.area_id}
-              </option>
-            ))}
-          </Select>
-        </VersionField>
-        <VersionField
-          label='Activity'
-          htmlFor='schedule-activity'
-          required
-          versionKey='activity_id'
-          error={showActivityError ? activityError : undefined}
-        >
-          <Select
-            id='schedule-activity'
-            value={editorForm.activity_id}
-            disabled={locked}
-            onChange={(e) => {
-              markTouched('activity_id');
-              panel.setFormState((prev) => ({
-                ...prev,
-                activity_id: e.target.value,
-              }));
-            }}
-            className={showActivityError ? errorInputClassName : ''}
-            aria-invalid={showActivityError || undefined}
-          >
-            <option value=''>Select activity</option>
-            {activities.map((activity) => (
-              <option key={activity.id} value={activity.id}>
-                {activity.name}
-              </option>
-            ))}
-          </Select>
-        </VersionField>
         <div className='sm:col-span-2'>
           <AdminDisclosure
             id='schedule-weekly'
@@ -835,10 +770,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
             </div>
           </VersionField>
         </div>
-      </AdminFieldGrid>
-      </div>
-      </VersionFields>
-    </AdminEditorPanel>
+    </CatalogInlineEditor>
   );
 
   return (

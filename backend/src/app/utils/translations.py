@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Mapping
-from typing import Optional
+from collections.abc import Mapping
 
 
 def build_translation_map(
-    base_value: Optional[str],
-    translations: Optional[Mapping[str, str]],
+    base_value: str | None,
+    translations: Mapping[str, str] | None,
 ) -> dict[str, str]:
     """Build a language map with English fallback.
 

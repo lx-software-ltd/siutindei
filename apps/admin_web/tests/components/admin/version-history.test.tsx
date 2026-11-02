@@ -17,7 +17,7 @@ import {
 } from '@/components/admin/version-history';
 import { resetAdminQueryClientForTests } from '@/lib/admin-query-client';
 import { listEntireCatalogHistory } from '@/lib/api-client-versions';
-import type { ApiMode } from '@/lib/resource-api';
+import type { ApiMode } from '@/lib/api-client-admin';
 import { emptyForm } from '@/components/shared/organizations/organization-form-utils';
 
 vi.mock('@/lib/api-client-versions', () => ({

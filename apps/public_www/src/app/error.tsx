@@ -1,11 +1,11 @@
 'use client';
 
-import { LocaleChromeStatusPage } from '@/components/shared/locale-chrome-status-page';
+import { MinimalStatusChrome } from '@/components/shared/minimal-status-chrome';
 
 interface RootErrorPageProps {
   readonly reset: () => void;
 }
 
 export default function RootErrorPage({ reset }: RootErrorPageProps) {
-  return <LocaleChromeStatusPage variant="serverError" onRetry={reset} />;
+  return <MinimalStatusChrome variant="serverError" onRetry={reset} />;
 }

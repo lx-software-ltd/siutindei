@@ -9,7 +9,10 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "backend" / "src"))
 
-from app.api.admin import (  # noqa: E402
+from app.api.admin_validators import (  # noqa: E402
+    MAX_LANGUAGES_COUNT,
+    MAX_MEDIA_URLS_COUNT,
+    MAX_URL_LENGTH,
     _validate_currency,
     _validate_language_code,
     _validate_languages,
@@ -17,11 +20,6 @@ from app.api.admin import (  # noqa: E402
     _validate_media_urls,
     _validate_string_length,
     _validate_url,
-    MAX_NAME_LENGTH,
-    MAX_DESCRIPTION_LENGTH,
-    MAX_URL_LENGTH,
-    MAX_LANGUAGES_COUNT,
-    MAX_MEDIA_URLS_COUNT,
 )
 from app.exceptions import ValidationError  # noqa: E402
 
@@ -191,9 +189,7 @@ class TestValidateLogoMediaUrl:
         urls = ["https://example.com/image.png"]
         with pytest.raises(ValidationError) as exc_info:
             _validate_logo_media_url("https://example.com/other.png", urls)
-        assert "logo_media_url must match one of media_urls" in str(
-            exc_info.value
-        )
+        assert "logo_media_url must match one of media_urls" in str(exc_info.value)
 
 
 class TestValidateCurrency:

@@ -5,7 +5,8 @@ from __future__ import annotations
 import base64
 import json
 import os
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 from uuid import UUID
 
 from app.exceptions import ValidationError
@@ -45,7 +46,7 @@ def _raw_body(event: Mapping[str, Any]) -> str:
     return str(raw)
 
 
-def _parse_path(path: str) -> tuple[str, str, Optional[str], Optional[str]]:
+def _parse_path(path: str) -> tuple[str, str, str | None, str | None]:
     """Parse base path, resource name, and id from the request path.
 
     Returns:
@@ -91,7 +92,7 @@ def _is_version_segment(segment: str) -> bool:
     return segment.startswith("v") and segment[1:].isdigit()
 
 
-def _query_param(event: Mapping[str, Any], name: str) -> Optional[str]:
+def _query_param(event: Mapping[str, Any], name: str) -> str | None:
     """Return a query parameter value."""
     params = collect_query_params(event)
     return first_param(params, name)
@@ -163,7 +164,7 @@ def _require_env(name: str) -> str:
     return value
 
 
-def _parse_cursor(value: Optional[str]) -> Optional[UUID]:
+def _parse_cursor(value: str | None) -> UUID | None:
     """Parse cursor for admin listing."""
     if value is None or value == "":
         return None

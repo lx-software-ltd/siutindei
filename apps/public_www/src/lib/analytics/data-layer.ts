@@ -12,8 +12,7 @@ import {
   type SearchFiltersState,
 } from '@/lib/activities/search-params';
 import type { ActivityListing } from '@/lib/activities/types';
-import type { Locale } from '@/content';
-
+import type { Locale } from '@/content/locales';
 export type LeadType =
   | 'whatsapp_activity'
   | 'whatsapp_fab'

@@ -1,5 +1,5 @@
-import { LocaleChromeStatusPage } from '@/components/shared/locale-chrome-status-page';
+import { MinimalStatusChrome } from '@/components/shared/minimal-status-chrome';
 
 export default function NotFound() {
-  return <LocaleChromeStatusPage variant="notFound" />;
+  return <MinimalStatusChrome variant="notFound" />;
 }

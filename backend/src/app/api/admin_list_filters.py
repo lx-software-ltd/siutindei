@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -32,8 +33,8 @@ class OrganizationListFilters:
 
 def resolve_list_org_scope(
     event: Mapping[str, Any],
-    managed_org_ids: Optional[set[str]],
-) -> tuple[Optional[set[str]], dict[str, Any] | None]:
+    managed_org_ids: set[str] | None,
+) -> tuple[set[str] | None, dict[str, Any] | None]:
     """Return the org ids a list may include, or a 403 response.
 
     Admins with no ``org_id`` get ``None`` (no extra restriction).
@@ -71,10 +72,10 @@ def parse_organization_list_filters(
 
 def list_organizations(
     session: Session,
-    scope: Optional[set[str]],
+    scope: set[str] | None,
     filters: OrganizationListFilters,
     limit: int,
-    cursor: Optional[UUID],
+    cursor: UUID | None,
 ) -> list[Organization]:
     """Cursor page of organizations matching scope and filters."""
     stmt = select(Organization)

@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import os
 import re
-from datetime import datetime
-from datetime import timezone
-from decimal import Decimal
-from decimal import InvalidOperation
+from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -119,7 +117,7 @@ def apply_settings_update(
     if "monthly_cost_limit_usd" in body:
         row.monthly_cost_limit_usd = _parse_cost_limit(body["monthly_cost_limit_usd"])
     row.updated_by = updated_by
-    row.updated_at = datetime.now(timezone.utc)
+    row.updated_at = datetime.now(UTC)
     session.flush()
     from app.services.openrouter_client import clear_openrouter_model_cache
 

@@ -12,15 +12,16 @@ changes.
 
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0052_import_time_backfill"
 down_revision: Union[str, None] = "0051_data_quality_runs"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 # last_imported_at and import_job_id are outside catalog version
 # tracking, so this update does not bump version or updated_at.

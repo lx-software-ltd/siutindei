@@ -3,7 +3,8 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import type { Locale, SiteContent } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { SiteContent } from '@/content/types';
 import { Button } from '@/components/shared/ui/button';
 import { ChoiceTile } from '@/components/shared/ui/choice-tile';
 import { Modal } from '@/components/shared/ui/modal';
@@ -11,14 +12,15 @@ import { useSearchContext } from '@/components/shared/search/search-context';
 import { formatContentTemplate } from '@/content/content-field-utils';
 import { saveRecentSearch } from '@/lib/activities/recent-storage';
 import {
-  buildSearchQueryString,
   toggleActivityTypeId,
   type SearchFiltersState,
 } from '@/lib/activities/search-params';
+import { buildSearchPageHref } from '@/lib/activities/map-search-url';
 import {
   homeWizardChoices,
   labelForLocale,
   neighbourhoodsForRegion,
+  REGIONS_BY_ID,
 } from '@/lib/home-wizard/choices';
 import {
   ALL_HONG_KONG_ICON_SRC,
@@ -27,7 +29,6 @@ import {
   iconSrcForAge,
   iconSrcForRegion,
 } from '@/lib/home-wizard/choice-icons';
-import { localizePath } from '@/lib/locale-routing';
 
 function regionLabel(regionId: string | null, locale: Locale): string {
   const region = homeWizardChoices.regions.find((entry) => entry.id === regionId);
@@ -131,15 +132,9 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   function handleSeeActivities() {
     setFilters(draft);
     saveRecentSearch(draft);
-    const query = buildSearchQueryString(draft);
-    const path = localizePath('/search', locale);
     closeNavigator();
-    router.push(query ? `${path}?${query}` : path);
+    router.push(buildSearchPageHref(locale, draft));
   }
-
-  const regionsById = new Map(
-    homeWizardChoices.regions.map((region) => [region.id, region]),
-  );
 
   return (
     <>
@@ -179,7 +174,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
                 onClick={() => selectLocation(null)}
               />
               {REGION_ROW_ORDER.map((regionId) => {
-                const region = regionsById.get(regionId);
+                const region = REGIONS_BY_ID.get(regionId);
                 const iconSrc = iconSrcForRegion(regionId);
                 if (!region || !iconSrc) {
                   return null;

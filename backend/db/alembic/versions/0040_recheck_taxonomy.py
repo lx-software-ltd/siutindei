@@ -16,15 +16,16 @@ and the new group names are distinct, and no seed column was added.
 
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = "0040_recheck_taxonomy"
 down_revision: Union[str, None] = "0039_act_source_category"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _FORMER_WIZARD = (
     "c1111111-1111-1111-1111-111111111101",
@@ -343,8 +344,7 @@ def upgrade() -> None:
         _insert_category(row[0], row[1], row[2], row[3], row[4], False)
     former = ", ".join(f"'{item}'" for item in _FORMER_WIZARD)
     op.execute(
-        "UPDATE activity_categories SET show_in_wizard = false "
-        f"WHERE id IN ({former})"
+        f"UPDATE activity_categories SET show_in_wizard = false WHERE id IN ({former})"
     )
     op.create_index(
         "uq_activity_category_root_name",
@@ -373,8 +373,7 @@ def downgrade() -> None:
     op.execute(f"DELETE FROM activity_categories WHERE id IN ({group_ids})")
     former = ", ".join(f"'{item}'" for item in _FORMER_WIZARD)
     op.execute(
-        "UPDATE activity_categories SET show_in_wizard = true "
-        f"WHERE id IN ({former})"
+        f"UPDATE activity_categories SET show_in_wizard = true WHERE id IN ({former})"
     )
     op.execute(
         "UPDATE category_suggestion_settings "

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -208,7 +208,10 @@ def upsert_proposal(
     scan_run_id: str | UUID | None = None,
     decided_by: str | None = None,
 ) -> str:
-    """Insert or refresh one proposal. Returns created, updated, skipped, or unchanged."""
+    """Insert or refresh one proposal.
+
+    Returns created, updated, skipped, or unchanged.
+    """
     if dismissed_same(
         session,
         entity_type=entity_type,
@@ -232,7 +235,7 @@ def upsert_proposal(
         confidence=confidence,
         rationale=rationale,
     )
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     row = pending_row(session, entity_type, entity_id)
     if row is not None and row.input_hash == digest and status != "applied":
         return "unchanged"
@@ -317,7 +320,7 @@ def _fill(row: LocationFixProposal, **kwargs: Any) -> None:
 def _mark(row: LocationFixProposal, status: str, decided_by: str | None) -> None:
     row.status = status
     row.decided_by = decided_by
-    row.decided_at = datetime.now(timezone.utc)
+    row.decided_at = datetime.now(UTC)
     row.updated_at = row.decided_at
 
 

@@ -121,13 +121,13 @@ def _send_ticket_decision_email(
                 )
         else:
             if action == "approve":
-                subject = "Your feedback has been approved! " f"[{ticket.ticket_id}]"
+                subject = f"Your feedback has been approved! [{ticket.ticket_id}]"
                 status_message = (
                     f"Thanks for your feedback about '{ticket.organization_name}'. "
                     "It has been approved by our team."
                 )
             else:
-                subject = "Update on your feedback " f"[{ticket.ticket_id}]"
+                subject = f"Update on your feedback [{ticket.ticket_id}]"
                 status_message = (
                     "Thank you for your feedback. "
                     "Unfortunately, we were unable to approve it at this time."

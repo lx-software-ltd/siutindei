@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { getContent } from '@/content';
+import { useChromeCopy } from '@/components/shared/chrome-copy';
 import {
   ANALYTICS_CONSENT_GRANTED_EVENT,
   ANALYTICS_CONSENT_STORAGE_KEY,
@@ -30,6 +30,8 @@ function storeConsent(value: 'granted' | 'denied'): void {
 
 export function AnalyticsConsentBanner() {
   const pathname = usePathname();
+  const locale = getLocaleFromPath(pathname ?? '/');
+  const consentContent = useChromeCopy(locale).consent;
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -47,8 +49,6 @@ export function AnalyticsConsentBanner() {
     return null;
   }
 
-  const locale = getLocaleFromPath(pathname ?? '/');
-  const consentContent = getContent(locale).common.consent;
   const privacyHref = localizeHref(`${ROUTES.privacy}#cookies`, locale);
 
   const handleAccept = () => {

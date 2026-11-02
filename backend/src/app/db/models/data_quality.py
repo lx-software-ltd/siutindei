@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from sqlalchemy import (
@@ -48,7 +48,7 @@ class OrganizationMerge(Base):
         default=uuid4,
     )
     merged_org_id: Mapped[str] = mapped_column(UUID(as_uuid=True), nullable=False)
-    survivor_org_id: Mapped[Optional[str]] = mapped_column(
+    survivor_org_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=True,
@@ -59,16 +59,16 @@ class OrganizationMerge(Base):
         default="merge",
         server_default=text("'merge'"),
     )
-    source: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    source_id: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    place_id: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    source: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    source_id: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    place_id: Mapped[str | None] = mapped_column(Text(), nullable=True)
     snapshot: Mapped[dict[str, Any]] = mapped_column(JSONB(), nullable=False)
     moved_counts: Mapped[dict[str, Any]] = mapped_column(
         JSONB(),
         nullable=False,
         default=dict,
     )
-    merged_by: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    merged_by: Mapped[str | None] = mapped_column(Text(), nullable=True)
     merged_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=False,
@@ -96,7 +96,7 @@ class OrganizationDuplicateDismissal(Base):
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
     )
-    dismissed_by: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    dismissed_by: Mapped[str | None] = mapped_column(Text(), nullable=True)
     dismissed_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=False,
@@ -137,7 +137,7 @@ class NameFixProposal(Base):
     current_value: Mapped[str] = mapped_column(Text(), nullable=False)
     proposed_value: Mapped[str] = mapped_column(Text(), nullable=False)
     rules: Mapped[list[Any]] = mapped_column(JSONB(), nullable=False, default=list)
-    translation_patch: Mapped[Optional[dict[str, Any]]] = mapped_column(
+    translation_patch: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB(),
         nullable=True,
     )
@@ -147,13 +147,13 @@ class NameFixProposal(Base):
         default="pending",
         server_default=text("'pending'"),
     )
-    scan_run_id: Mapped[Optional[str]] = mapped_column(
+    scan_run_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=True),
         nullable=True,
     )
-    input_hash: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    decided_by: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    decided_at: Mapped[Optional[datetime]] = mapped_column(
+    input_hash: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    decided_by: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=True,
     )

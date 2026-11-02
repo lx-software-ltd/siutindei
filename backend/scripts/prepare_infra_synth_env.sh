@@ -32,3 +32,7 @@ PYTHON_BIN="$(resolve_python312)"
 "$PYTHON_BIN" "$REPO_ROOT/backend/scripts/build_lambda_bundle.py" \
   --source-root "$REPO_ROOT/backend" \
   --deps-only
+"$PYTHON_BIN" "$REPO_ROOT/backend/scripts/build_lambda_bundle.py" \
+  --source-root "$REPO_ROOT/backend" \
+  --profile search \
+  --deps-only

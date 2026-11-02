@@ -1,4 +1,4 @@
-import type { Locale } from '@/content';
+import type { Locale } from '@/content/locales';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 
 import type {
@@ -52,7 +52,7 @@ export function listingImageUrl(listing: ActivityListing): string | null {
   return listing.organization.logoMediaUrl;
 }
 
-export function formatMinutesAsTime(minutes: number): string {
+function formatMinutesAsTime(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;

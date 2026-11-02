@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import type { Locale, SiteContent } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { SiteContent } from '@/content/types';
 import { TrackedWhatsappLink } from '@/components/shared/tracked-whatsapp-link';
 import { preloadActivityImage } from '@/lib/activity-image-preload';
 import { logActivityLoadError } from '@/lib/activities/load-error';
@@ -35,6 +36,7 @@ interface ActivityDetailPageProps {
   readonly locale: Locale;
   readonly activityId: string;
   readonly copy: SiteContent['activityDetail'];
+  readonly initialListing?: ActivityListing | null;
 }
 
 function buildWhatsappHref(
@@ -59,16 +61,20 @@ export function ActivityDetailPage({
   locale,
   activityId,
   copy,
+  initialListing = null,
 }: ActivityDetailPageProps) {
-  const [listing, setListing] = useState<ActivityListing | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [listing, setListing] = useState<ActivityListing | null>(initialListing);
+  const [isLoading, setIsLoading] = useState(initialListing == null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { contact, siteName } = getSiteConfig();
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
-    setErrorMessage(null);
+    const hasInitial = initialListing?.activity.id === activityId;
+    if (!hasInitial) {
+      setIsLoading(true);
+      setErrorMessage(null);
+    }
 
     fetchActivityListingById(activityId)
       .then((item) => {
@@ -76,8 +82,10 @@ export function ActivityDetailPage({
           return;
         }
         if (!item) {
-          setErrorMessage(copy.notFoundLabel);
-          setListing(null);
+          if (!hasInitial) {
+            setErrorMessage(copy.notFoundLabel);
+            setListing(null);
+          }
           return;
         }
         setListing(item);
@@ -85,7 +93,7 @@ export function ActivityDetailPage({
       })
       .catch((error: unknown) => {
         logActivityLoadError('activity detail', error);
-        if (!cancelled) {
+        if (!cancelled && !hasInitial) {
           setErrorMessage(copy.errorLabel);
           setListing(null);
         }
@@ -99,7 +107,7 @@ export function ActivityDetailPage({
     return () => {
       cancelled = true;
     };
-  }, [activityId, copy.errorLabel, copy.notFoundLabel]);
+  }, [activityId, copy.errorLabel, copy.notFoundLabel, initialListing]);
 
   const imageUrl = listing ? listingImageUrl(listing) : null;
 
@@ -141,10 +149,17 @@ export function ActivityDetailPage({
         priceCurrency: listing.pricing.currency,
       },
     };
-    const script = document.createElement('script');
-    script.type = 'application/ld+json';
-    script.textContent = JSON.stringify(structuredData);
-    document.head.appendChild(script);
+    const existing = document.querySelector(
+      `script[data-activity-jsonld="${listing.activity.id}"]`,
+    );
+    let created: HTMLScriptElement | null = null;
+    if (!existing) {
+      created = document.createElement('script');
+      created.type = 'application/ld+json';
+      created.dataset.activityJsonld = listing.activity.id;
+      created.textContent = JSON.stringify(structuredData);
+      document.head.appendChild(created);
+    }
 
     // The static export ships one generic /activity/ page; give each
     // activity a real tab/browser title once its data loads.
@@ -152,7 +167,9 @@ export function ActivityDetailPage({
     document.title = `${activityTitle} · ${siteName}`;
 
     return () => {
-      document.head.removeChild(script);
+      if (created) {
+        created.remove();
+      }
       document.title = previousTitle;
     };
   }, [listing, locale, siteName]);

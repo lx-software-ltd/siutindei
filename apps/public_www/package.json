@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && npm run redirect:inject && npm run lang:inject && npm run jsonld:inject && npm run csp:inject && npm run csp:validate",
+    "build": "next build && npm run activity:prune-placeholder && npm run redirect:inject && npm run lang:inject && npm run jsonld:inject && npm run csp:inject && npm run csp:validate",
     "start": "next start",
     "lint": "eslint --max-warnings=0 .",
     "lint:fix": "eslint --fix .",
@@ -15,6 +15,7 @@
     "audit:assets": "node ./scripts/audit-assets.mjs",
     "audit:deps:prod": "npm audit --omit=dev --audit-level=high",
     "assert:build-env-contract": "node ./scripts/assert-build-env-contract.mjs",
+    "activity:prune-placeholder": "node ./scripts/prune-activity-export-placeholder.mjs",
     "redirect:inject": "node ./scripts/inject-static-redirects.mjs",
     "lang:inject": "node ./scripts/inject-html-lang.mjs",
     "jsonld:inject": "node ./scripts/inject-structured-data.mjs",

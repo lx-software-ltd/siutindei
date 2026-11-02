@@ -2,24 +2,22 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0027_add_feedback_tables"
 down_revision: Union[str, None] = "0026_org_name_unique"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
     """Create feedback labels, feedback records, and ticket fields."""
-    op.execute(
-        "ALTER TYPE ticket_type " "ADD VALUE IF NOT EXISTS 'organization_feedback'"
-    )
+    op.execute("ALTER TYPE ticket_type ADD VALUE IF NOT EXISTS 'organization_feedback'")
 
     op.add_column(
         "tickets",
@@ -220,7 +218,7 @@ def upgrade() -> None:
 
     op.execute("GRANT SELECT ON feedback_labels TO siutindei_app;")
     op.execute(
-        "GRANT SELECT, INSERT, UPDATE, DELETE " "ON feedback_labels TO siutindei_admin;"
+        "GRANT SELECT, INSERT, UPDATE, DELETE ON feedback_labels TO siutindei_admin;"
     )
     op.execute("GRANT SELECT ON organization_feedback TO siutindei_app;")
     op.execute(

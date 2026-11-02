@@ -12,15 +12,16 @@ The four wizard categories are flagged when present.
 
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = "0039_act_source_category"
 down_revision: Union[str, None] = "0038_capture_default_on"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _WIZARD_IDS = (
     "c1111111-1111-1111-1111-111111111101",
@@ -84,7 +85,7 @@ def upgrade() -> None:
     )
     ids = ", ".join(f"'{item}'" for item in _WIZARD_IDS)
     op.execute(
-        "UPDATE activity_categories SET show_in_wizard = true " f"WHERE id IN ({ids})"
+        f"UPDATE activity_categories SET show_in_wizard = true WHERE id IN ({ids})"
     )
 
 

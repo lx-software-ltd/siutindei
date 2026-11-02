@@ -26,7 +26,7 @@ export function listingsWithCoordinates(
   return listings.filter((listing) => listingCoordinate(listing) !== null);
 }
 
-export function boundsForCoordinates(
+function boundsForCoordinates(
   coordinates: readonly MapCoordinate[],
 ): { readonly north: number; readonly south: number; readonly east: number; readonly west: number } | null {
   if (coordinates.length === 0) {

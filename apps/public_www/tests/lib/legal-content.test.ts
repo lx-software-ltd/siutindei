@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import enContent from '@/content/en.json';
-import zhHKContent from '@/content/zh-HK.json';
+import { getLegalContent } from '@/lib/legal-copy';
+
+const enContent = { legal: getLegalContent('en') };
+const zhHKContent = { legal: getLegalContent('zh-HK') };
 
 const CONTACT_EMAIL = 'support@lx-software.com';
 

@@ -3,23 +3,37 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Optional
+from typing import NamedTuple
 
 from app.api.admin_validators import _validate_language_code
 from app.exceptions import ValidationError
 
+_VIEWS = frozenset({"card", "full"})
+_MIN_QUERY_LENGTH = 2
+_MAX_QUERY_LENGTH = 100
+
+
+class SearchQueryValidation(NamedTuple):
+    """Validated search query values that are not plain filter numbers."""
+
+    languages: list[str]
+    text_query: str | None
+    view: str
+
 
 def validate_search_query_params(
     *,
-    age: Optional[int],
-    day_of_week_utc: Optional[int],
-    start_minutes_utc: Optional[int],
-    end_minutes_utc: Optional[int],
-    price_min: Optional[Decimal],
-    price_max: Optional[Decimal],
+    age: int | None,
+    day_of_week_utc: int | None,
+    start_minutes_utc: int | None,
+    end_minutes_utc: int | None,
+    price_min: Decimal | None,
+    price_max: Decimal | None,
     languages: list[str],
     limit: int,
-) -> list[str]:
+    q: str | None = None,
+    view: str | None = None,
+) -> SearchQueryValidation:
     """Validate search filters against the OpenAPI contract."""
 
     if age is not None and age < 0:
@@ -74,4 +88,29 @@ def validate_search_query_params(
         if code not in validated_languages:
             validated_languages.append(code)
 
-    return validated_languages
+    return SearchQueryValidation(
+        languages=validated_languages,
+        text_query=_validate_text_query(q),
+        view=_validate_view(view),
+    )
+
+
+def _validate_text_query(q: str | None) -> str | None:
+    if q is None:
+        return None
+    text = q.strip()
+    if not text:
+        return None
+    if len(text) < _MIN_QUERY_LENGTH:
+        raise ValidationError("q must be at least 2 characters", field="q")
+    if len(text) > _MAX_QUERY_LENGTH:
+        raise ValidationError("q must be at most 100 characters", field="q")
+    return text
+
+
+def _validate_view(view: str | None) -> str:
+    if view is None or view == "":
+        return "full"
+    if view not in _VIEWS:
+        raise ValidationError("view must be card or full", field="view")
+    return view

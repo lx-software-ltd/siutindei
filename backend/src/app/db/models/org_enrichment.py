@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import uuid4
@@ -36,9 +36,7 @@ ACTIVE_RUN_STATUSES = ("queued", "running", "extracting")
 
 
 def _utcnow() -> datetime:
-    from datetime import timezone
-
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class OrgEnrichmentRun(Base):

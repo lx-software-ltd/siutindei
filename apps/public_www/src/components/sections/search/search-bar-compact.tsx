@@ -3,17 +3,17 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import type { Locale } from '@/content';
+import type { Locale } from '@/content/locales';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { buildMapSearchHref } from '@/lib/activities/map-search-url';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 import {
   areaIdForFilters,
-  buildSearchQueryString,
   placeLabelForFilters,
   searchAgeForGroup,
 } from '@/lib/activities/search-params';
-import { localizePath } from '@/lib/locale-routing';
+import { buildSearchPageHref } from '@/lib/activities/map-search-url';
+import { summarizeTypes } from '@/lib/activities/search/summarize-types';
 
 interface SearchBarCompactProps {
   readonly locale: Locale;
@@ -27,30 +27,6 @@ interface SearchBarCompactProps {
     readonly anyType: string;
     readonly openMapForAreaLabel: string;
   };
-}
-
-function summarizeTypes(
-  locale: Locale,
-  typeIds: readonly string[],
-): string {
-  if (typeIds.length === 0) {
-    return '';
-  }
-  const labels = typeIds
-    .map((id) => {
-      const match = homeWizardChoices.activityTypes.find(
-        (entry) => entry.id === id,
-      );
-      return match ? labelForLocale(match.labels, locale) : null;
-    })
-    .filter((value): value is string => Boolean(value));
-  if (labels.length === 0) {
-    return '';
-  }
-  if (labels.length === 1) {
-    return labels[0];
-  }
-  return `${labels[0]} +${labels.length - 1}`;
 }
 
 export function SearchBarCompact({ locale, labels }: SearchBarCompactProps) {
@@ -71,11 +47,7 @@ export function SearchBarCompact({ locale, labels }: SearchBarCompactProps) {
   const hasArea = Boolean(areaIdForFilters(filters));
   const hasAge = Boolean(searchAgeForGroup(filters.ageGroupId));
   const mapHref = buildMapSearchHref(locale, filters);
-  const searchHref = (() => {
-    const query = buildSearchQueryString(filters);
-    const path = localizePath('/search', locale);
-    return query ? `${path}?${query}` : path;
-  })();
+  const searchHref = buildSearchPageHref(locale, filters);
 
   function handleSearchNavigate() {
     router.push(searchHref);

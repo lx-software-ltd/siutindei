@@ -1,10 +1,11 @@
-"""Fill neighbourhoods, categories, names, and social logos before a proposal is saved."""
+"""Fill neighbourhoods, categories, names, and logos before a proposal is saved."""
 
 from __future__ import annotations
 
 import re
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session

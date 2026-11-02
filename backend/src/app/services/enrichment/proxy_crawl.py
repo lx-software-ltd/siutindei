@@ -5,8 +5,9 @@ from __future__ import annotations
 import hashlib
 import os
 import time
-from datetime import datetime, timezone
-from typing import Any, Mapping
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
 from urllib.parse import urljoin
 
 from app.services.enrichment.constants import (
@@ -55,11 +56,9 @@ def crawl_requested(event: Mapping[str, Any]) -> dict[str, Any]:
         max_page_bytes=max_bytes,
         time_budget_seconds=budget,
     )
-    pages = []
     raw_pages = crawled.get("pages")
-    for page in raw_pages if isinstance(raw_pages, list) else []:
-        if isinstance(page, dict):
-            pages.append(_public_page(page))
+    page_list = raw_pages if isinstance(raw_pages, list) else []
+    pages = [_public_page(page) for page in page_list if isinstance(page, dict)]
     return {
         "status": crawled.get("status"),
         "error": crawled.get("error") or "",
@@ -101,7 +100,7 @@ def copy_image(event: Mapping[str, Any]) -> dict[str, Any]:
         Metadata={
             "source-url": url[:1024],
             "copyright": COPYRIGHT_NOTICE,
-            "copied-at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "copied-at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         },
     )
     return {

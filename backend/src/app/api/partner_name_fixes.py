@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.admin_crud import _handle_crud
-from app.api.admin_request import parse_limit, _query_param
+from app.api.admin_request import _query_param, parse_limit
 from app.api.admin_resources import _RESOURCE_CONFIG
+from app.api.partner_location_fixes import pending_location_fixes_by_org
 from app.db.engine import get_engine
 from app.db.models import Activity, NameFixProposal, Organization
 from app.exceptions import ValidationError
-from app.api.partner_location_fixes import pending_location_fixes_by_org
 from app.services.name_fixes import list_proposals
 from app.utils import json_response
 

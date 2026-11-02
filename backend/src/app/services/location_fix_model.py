@@ -10,17 +10,17 @@ from sqlalchemy.orm import Session
 
 from app.db.engine import get_engine
 from app.db.models import Activity, GeographicArea, Location, Organization
-from app.services.area_assignment import resolve_leaf
 from app.db.models.location_fix import LocationScanRun
+from app.services.area_assignment import resolve_leaf
 from app.services.category_suggestions.settings import (
     get_settings,
     resolved_fallback_models,
     resolved_model_name,
 )
-from app.services.location_fix_geocode import geocode_address
-from app.services.location_fix_prompt import (
-    build_activity_prompt,
-    build_organization_prompt,
+from app.services.data_quality.answers import (
+    LOCATION_PROMPT_VERSION,
+    recorded_completion,
+    recording_flags,
 )
 from app.services.data_quality.sweep_support import (
     advance_scan_batch,
@@ -29,13 +29,13 @@ from app.services.data_quality.sweep_support import (
     openrouter_timeout_seconds,
     rationale_text,
 )
+from app.services.location_fix_geocode import geocode_address
+from app.services.location_fix_prompt import (
+    build_activity_prompt,
+    build_organization_prompt,
+)
 from app.services.location_fix_query import over_budget
 from app.services.location_fixes import upsert_proposal
-from app.services.data_quality.answers import (
-    LOCATION_PROMPT_VERSION,
-    recorded_completion,
-    recording_flags,
-)
 from app.services.openrouter_client import (
     OpenRouterError,
     extract_message_text,

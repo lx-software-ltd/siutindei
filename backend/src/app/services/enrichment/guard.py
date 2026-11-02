@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import socket
-from typing import Callable
+from collections.abc import Callable
 from urllib.parse import urlparse
 
 from app.services.enrichment.constants import MULTI_PART_SUFFIXES, SOCIAL_HOSTS
@@ -74,10 +74,7 @@ def host_is_blocked(host: str, *, resolve: Resolve = socket.getaddrinfo) -> bool
         return True
     if not infos:
         return True
-    for info in infos:
-        if _ip_blocked(info[4][0]):
-            return True
-    return False
+    return any(_ip_blocked(info[4][0]) for info in infos)
 
 
 def _ip_blocked(raw: str) -> bool:
@@ -85,7 +82,7 @@ def _ip_blocked(raw: str) -> bool:
         ip = ipaddress.ip_address(raw)
     except ValueError:
         return True
-    if (
+    return bool(
         ip.is_loopback
         or ip.is_link_local
         or ip.is_private
@@ -93,9 +90,7 @@ def _ip_blocked(raw: str) -> bool:
         or ip.is_reserved
         or ip.is_unspecified
         or (ip.version == 4 and ip in CGNAT_V4)
-    ):
-        return True
-    return False
+    )
 
 
 def validate_seed_url(url: str) -> str:

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
 
 import sqlalchemy as sa
 from sqlalchemy import ForeignKey, Numeric, Text, text
@@ -57,7 +56,7 @@ class Ticket(Base):
         nullable=False,
         comment="Organization name referenced by this ticket",
     )
-    message: Mapped[Optional[str]] = mapped_column(
+    message: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Free-text message from the submitter",
@@ -82,77 +81,77 @@ class Ticket(Base):
         nullable=False,
         server_default=text("now()"),
     )
-    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
+    reviewed_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=True,
         comment="When the ticket was reviewed",
     )
-    reviewed_by: Mapped[Optional[str]] = mapped_column(
+    reviewed_by: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Cognito user sub of the admin who reviewed",
     )
-    admin_notes: Mapped[Optional[str]] = mapped_column(
+    admin_notes: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Notes from the reviewing admin",
     )
 
-    organization_id: Mapped[Optional[str]] = mapped_column(
+    organization_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="SET NULL"),
         nullable=True,
         comment="Organization referenced by feedback tickets",
     )
-    feedback_stars: Mapped[Optional[int]] = mapped_column(
+    feedback_stars: Mapped[int | None] = mapped_column(
         sa.SmallInteger(),
         nullable=True,
         comment="Feedback rating from 0 to 5",
     )
-    feedback_label_ids: Mapped[List[str]] = mapped_column(
+    feedback_label_ids: Mapped[list[str]] = mapped_column(
         ARRAY(UUID(as_uuid=True)),
         nullable=False,
         server_default=text("'{}'::uuid[]"),
         comment="Selected feedback label IDs",
     )
-    feedback_text: Mapped[Optional[str]] = mapped_column(
+    feedback_text: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Free-form feedback description",
     )
 
-    description: Mapped[Optional[str]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Extended description",
     )
-    suggested_district: Mapped[Optional[str]] = mapped_column(
+    suggested_district: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="District or area",
     )
-    suggested_address: Mapped[Optional[str]] = mapped_column(
+    suggested_address: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Full address",
     )
-    suggested_lat: Mapped[Optional[Decimal]] = mapped_column(
+    suggested_lat: Mapped[Decimal | None] = mapped_column(
         Numeric(9, 6),
         nullable=True,
         comment="Latitude coordinate",
     )
-    suggested_lng: Mapped[Optional[Decimal]] = mapped_column(
+    suggested_lng: Mapped[Decimal | None] = mapped_column(
         Numeric(9, 6),
         nullable=True,
         comment="Longitude coordinate",
     )
-    media_urls: Mapped[List[str]] = mapped_column(
+    media_urls: Mapped[list[str]] = mapped_column(
         ARRAY(Text()),
         nullable=False,
         server_default=text("'{}'::text[]"),
         comment="URLs of uploaded media files",
     )
-    created_organization_id: Mapped[Optional[str]] = mapped_column(
+    created_organization_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="SET NULL"),
         nullable=True,

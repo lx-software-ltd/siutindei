@@ -2,10 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import {
-  ApiError,
-} from '../../lib/api-client';
-import { listManagerOrganizations } from '../../lib/api-client-manager';
+import { ApiError } from '../../lib/api-client';
+import { listResource } from '../../lib/api-client-admin';
 import {
   getUserAccessStatus,
   getUserFeedback,
@@ -24,19 +22,41 @@ import { StatusBanner } from '../status-banner';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Select } from '../ui/select';
-import {
-  OrganizationsPanel,
-  LocationsPanel,
-  ActivitiesPanel,
-  PricingPanel,
-  SchedulesPanel,
-} from '../shared';
-import { AccountHome } from './user-dashboard';
-import { FeedbackForm } from './feedback-form';
-import { MediaPanel } from './media-panel';
-import { PendingFeedbackNotice } from './pending-feedback-notice';
-import { SuggestionForm } from './suggestion-form';
-import { PendingSuggestionNotice } from './pending-suggestion-notice';
+import { loadDashboardSection } from './dashboard-section';
+
+const OrganizationsPanel = loadDashboardSection(() =>
+  import('../shared/organizations-panel').then((mod) => mod.OrganizationsPanel)
+);
+const LocationsPanel = loadDashboardSection(() =>
+  import('../shared/locations-panel').then((mod) => mod.LocationsPanel)
+);
+const ActivitiesPanel = loadDashboardSection(() =>
+  import('../shared/activities-panel').then((mod) => mod.ActivitiesPanel)
+);
+const PricingPanel = loadDashboardSection(() =>
+  import('../shared/pricing-panel').then((mod) => mod.PricingPanel)
+);
+const SchedulesPanel = loadDashboardSection(() =>
+  import('../shared/schedules-panel').then((mod) => mod.SchedulesPanel)
+);
+const AccountHome = loadDashboardSection(() =>
+  import('./user-dashboard').then((mod) => mod.AccountHome)
+);
+const FeedbackForm = loadDashboardSection(() =>
+  import('./feedback-form').then((mod) => mod.FeedbackForm)
+);
+const MediaPanel = loadDashboardSection(() =>
+  import('./media-panel').then((mod) => mod.MediaPanel)
+);
+const PendingFeedbackNotice = loadDashboardSection(() =>
+  import('./pending-feedback-notice').then((mod) => mod.PendingFeedbackNotice)
+);
+const SuggestionForm = loadDashboardSection(() =>
+  import('./suggestion-form').then((mod) => mod.SuggestionForm)
+);
+const PendingSuggestionNotice = loadDashboardSection(() =>
+  import('./pending-suggestion-notice').then((mod) => mod.PendingSuggestionNotice)
+);
 
 type ManagerView = 'loading' | 'request-form' | 'pending' | 'dashboard' | 'error';
 
@@ -77,7 +97,7 @@ export function ManagerDashboard() {
   );
 
   const loadManagerOrgs = useCallback(async (): Promise<Organization[]> => {
-    const response = await listManagerOrganizations<Organization>();
+    const response = await listResource<Organization>('v1/manager', 'organizations');
     return response.items;
   }, []);
 

@@ -1,12 +1,12 @@
 import { notFound } from 'next/navigation';
 
+import { getContent } from '@/content';
 import {
-  getContent,
   isValidLocale,
   SUPPORTED_LOCALES,
   type Locale,
-  type SiteContent,
-} from '@/content';
+} from '@/content/locales';
+import type { SiteContent } from '@/content/types';
 
 export type LocaleRouteParams = Promise<{ locale: string }>;
 

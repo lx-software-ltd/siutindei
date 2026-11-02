@@ -14,7 +14,7 @@ const api = {
   delete: vi.fn(async () => undefined),
 };
 
-vi.mock('@/lib/resource-api', () => ({
+vi.mock('@/lib/api-client-admin', () => ({
   getResourceApi: () => api,
 }));
 

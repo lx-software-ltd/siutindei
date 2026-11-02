@@ -82,3 +82,69 @@ def test_validate_search_rejects_limit_out_of_range() -> None:
             limit=0,
         )
     assert exc.value.field == "limit"
+
+
+def test_validate_search_rejects_short_q() -> None:
+    with pytest.raises(ValidationError) as exc:
+        validate_search_query_params(
+            age=None,
+            day_of_week_utc=None,
+            start_minutes_utc=None,
+            end_minutes_utc=None,
+            price_min=None,
+            price_max=None,
+            languages=[],
+            limit=50,
+            q="a",
+        )
+    assert exc.value.field == "q"
+    assert "at least 2" in str(exc.value)
+
+
+def test_validate_search_blank_q_is_no_filter() -> None:
+    result = validate_search_query_params(
+        age=None,
+        day_of_week_utc=None,
+        start_minutes_utc=None,
+        end_minutes_utc=None,
+        price_min=None,
+        price_max=None,
+        languages=[],
+        limit=50,
+        q="  ",
+    )
+    assert result.text_query is None
+    assert result.view == "full"
+
+
+def test_validate_search_accepts_q_and_card_view() -> None:
+    result = validate_search_query_params(
+        age=None,
+        day_of_week_utc=None,
+        start_minutes_utc=None,
+        end_minutes_utc=None,
+        price_min=None,
+        price_max=None,
+        languages=[],
+        limit=50,
+        q="  swim ",
+        view="card",
+    )
+    assert result.text_query == "swim"
+    assert result.view == "card"
+
+
+def test_validate_search_rejects_unknown_view() -> None:
+    with pytest.raises(ValidationError) as exc:
+        validate_search_query_params(
+            age=None,
+            day_of_week_utc=None,
+            start_minutes_utc=None,
+            end_minutes_utc=None,
+            price_min=None,
+            price_max=None,
+            languages=[],
+            limit=50,
+            view="compact",
+        )
+    assert exc.value.field == "view"

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
-from typing import Sequence
+from datetime import UTC, date, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import delete, func, select
@@ -51,7 +51,7 @@ class ListingEventRepository(BaseRepository[ListingEvent]):
         if not events:
             return 0
 
-        now = occurred_at or datetime.now(timezone.utc)
+        now = occurred_at or datetime.now(UTC)
         occurred_on = now.date()
         client_ids = [event.client_event_id for event in events]
         existing = {

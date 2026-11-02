@@ -41,6 +41,10 @@ export interface HomeWizardChoices {
 
 export const homeWizardChoices = choicesJson as HomeWizardChoices;
 
+export const REGIONS_BY_ID: ReadonlyMap<string, WizardRegionOption> = new Map(
+  homeWizardChoices.regions.map((region) => [region.id, region]),
+);
+
 export function neighbourhoodsForRegion(
   regionId: string | null,
 ): readonly WizardNeighbourhoodOption[] {

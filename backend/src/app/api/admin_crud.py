@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Optional, Protocol, Sequence, Type
+from typing import Any, Protocol
 from uuid import UUID
 
 from sqlalchemy import select
@@ -45,9 +46,7 @@ class RepositoryProtocol(Protocol):
 
     def get_by_id(self, entity_id: UUID) -> Any: ...
 
-    def get_all(
-        self, limit: int = 50, cursor: Optional[UUID] = None
-    ) -> Sequence[Any]: ...
+    def get_all(self, limit: int = 50, cursor: UUID | None = None) -> Sequence[Any]: ...
 
     def create(self, entity: Any) -> Any: ...
 
@@ -61,13 +60,13 @@ class ResourceConfig:
     """Configuration for admin resources."""
 
     name: str
-    model: Type[Any]
-    repository_class: Type[RepositoryProtocol]
+    model: type[Any]
+    repository_class: type[RepositoryProtocol]
     serializer: Callable[[Any], dict[str, Any]]
     create_handler: Callable[..., Any]
     update_handler: Callable[..., Any]
     # Optional: different update handler for manager routes (e.g., to restrict fields)
-    manager_update_handler: Optional[Callable[..., Any]] = None
+    manager_update_handler: Callable[..., Any] | None = None
 
 
 _ADMIN_ONLY_WRITE_FIELDS = ("source_url", "source_note")
@@ -83,8 +82,8 @@ def _handle_crud(
     event: Mapping[str, Any],
     method: str,
     config: ResourceConfig,
-    resource_id: Optional[str],
-    managed_org_ids: Optional[set[str]] = None,
+    resource_id: str | None,
+    managed_org_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Unified CRUD handler for both admin and manager routes.
 
@@ -125,8 +124,8 @@ def _crud_get(
     event: Mapping[str, Any],
     session: Session,
     config: ResourceConfig,
-    resource_id: Optional[str],
-    managed_org_ids: Optional[set[str]] = None,
+    resource_id: str | None,
+    managed_org_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Handle GET requests with optional management filtering."""
     limit = parse_limit(event)
@@ -189,7 +188,7 @@ def _crud_post(
     event: Mapping[str, Any],
     session: Session,
     config: ResourceConfig,
-    managed_org_ids: Optional[set[str]] = None,
+    managed_org_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Handle POST requests with optional management validation."""
     body = _parse_body(event)
@@ -197,7 +196,7 @@ def _crud_post(
     # Validate management if filtering is enabled
     if managed_org_ids is not None:
         _drop_admin_only_write_fields(body)
-        org_id = _get_org_id_from_body(body, config.name)
+        org_id = _get_org_id_from_body(body)
         if org_id and org_id not in managed_org_ids:
             return json_response(
                 403,
@@ -237,8 +236,8 @@ def _crud_put(
     event: Mapping[str, Any],
     session: Session,
     config: ResourceConfig,
-    resource_id: Optional[str],
-    managed_org_ids: Optional[set[str]] = None,
+    resource_id: str | None,
+    managed_org_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Handle PUT requests with optional management validation."""
     if not resource_id:
@@ -281,8 +280,8 @@ def _crud_delete(
     event: Mapping[str, Any],
     session: Session,
     config: ResourceConfig,
-    resource_id: Optional[str],
-    managed_org_ids: Optional[set[str]] = None,
+    resource_id: str | None,
+    managed_org_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Handle DELETE requests with optional management validation."""
     if not resource_id:
@@ -315,7 +314,7 @@ def _crud_delete(
     return json_response(204, {}, event=event)
 
 
-def _get_entity_org_id(entity: Any, session: Session) -> Optional[str]:
+def _get_entity_org_id(entity: Any, session: Session) -> str | None:
     """Get the organization ID for an entity.
 
     Works for:
@@ -347,7 +346,7 @@ def _get_entity_org_id(entity: Any, session: Session) -> Optional[str]:
 def _lookup_organization(
     session: Session,
     event: Mapping[str, Any],
-    managed_org_ids: Optional[set[str]] = None,
+    managed_org_ids: set[str] | None = None,
 ) -> dict[str, Any] | None:
     """Resolve GET /organizations?place_id= or ?source_id= lookups."""
     from app.api.admin_imports_catalog import (
@@ -379,11 +378,11 @@ def _lookup_organization(
     )
 
 
-def _get_org_id_from_body(body: dict[str, Any], resource_name: str) -> Optional[str]:
+def _get_org_id_from_body(body: dict[str, Any]) -> str | None:
     """Extract the organization ID from a request body.
 
     For locations/activities, reads org_id directly.
-    For pricing/schedules, would need to look up via activity_id (handled separately).
+    For pricing/schedules, management is checked through activity_id separately.
 
     Returns:
         The organization ID as a string, or None if not in body.
@@ -399,7 +398,7 @@ def _get_all_filtered_by_org(
     config: ResourceConfig,
     managed_org_ids: set[str],
     limit: int,
-    cursor: Optional[UUID],
+    cursor: UUID | None,
 ) -> Sequence[Any]:
     """Get all entities filtered by organization management.
 

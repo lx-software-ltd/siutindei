@@ -11,15 +11,16 @@ foreign key used by seed rows changes.
 
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0050_import_job_source"
 down_revision: Union[str, None] = "0049_catalog_version_fixes"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 # Sets summary.source only. Omitting updated_at keeps Last changed.
 BACKFILL_SQL = """

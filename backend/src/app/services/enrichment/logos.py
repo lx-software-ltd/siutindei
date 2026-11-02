@@ -6,7 +6,8 @@ import json
 import os
 import re
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 from urllib.parse import quote, urlencode, urljoin, urlparse
 
 from app.services.aws_proxy import AwsProxyError, http_invoke
@@ -151,7 +152,7 @@ def _social_request(field: str, handle: str) -> tuple[str, str] | None:
 
 
 def _page_logo(page: dict[str, Any]) -> tuple[int, str, str] | None:
-    """JSON-LD, then a logo image, then a touch icon, then a favicon, then Open Graph."""
+    """JSON-LD, then a logo, a touch icon, a favicon, then Open Graph."""
     best: tuple[int, str, str] | None = None
 
     def consider(rank: int, src: str, alt: str) -> None:

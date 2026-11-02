@@ -10,7 +10,8 @@ by seed_data.sql. No seed column, enum, or foreign key changes.
 
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import sqlalchemy as sa
 from alembic import op
@@ -18,8 +19,8 @@ from sqlalchemy.dialects import postgresql
 
 revision: str = "0042_location_fixes"
 down_revision: Union[str, None] = "0041_data_quality"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

@@ -1,14 +1,8 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-
-import type { SiteContent } from '@/content';
+import type { SiteContent } from '@/content/types';
 import {
   BUBBLE_SLOTS,
-  LARGE_BUBBLE_COUNT,
   type BubbleId,
   bubbleSrc,
-  pickBubbleIds,
 } from '@/lib/small-world/kawaii-bubbles';
 
 const DRIFT = [
@@ -19,21 +13,13 @@ const DRIFT = [
 
 interface FloatingKawaiiBubblesProps {
   readonly copy: SiteContent['smallWorld'];
+  readonly ids: readonly BubbleId[];
 }
 
 export function FloatingKawaiiBubbles({
   copy,
+  ids,
 }: FloatingKawaiiBubblesProps) {
-  const [ids, setIds] = useState<readonly BubbleId[] | null>(null);
-
-  useEffect(() => {
-    setIds(pickBubbleIds(LARGE_BUBBLE_COUNT));
-  }, []);
-
-  if (ids === null) {
-    return null;
-  }
-
   return (
     <div
       className="pointer-events-none absolute inset-0"

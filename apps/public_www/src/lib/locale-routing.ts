@@ -1,8 +1,4 @@
-import {
-  DEFAULT_LOCALE,
-  isValidLocale,
-  type Locale,
-} from '@/content';
+import { DEFAULT_LOCALE, isValidLocale, type Locale } from '@/content/locales';
 import { getHrefKind, isExternalHref } from '@/lib/url-utils';
 
 function sanitizePath(path: string): string {

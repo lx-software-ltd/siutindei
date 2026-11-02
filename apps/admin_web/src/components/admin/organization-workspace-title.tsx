@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { getAdminQueryClient } from '../../lib/admin-query-client';
-import { getResourceApi, type ApiMode } from '../../lib/resource-api';
+import { getResourceApi, type ApiMode } from '../../lib/api-client-admin';
 import type { Organization } from '../../types/admin';
 import { StatusBadge } from '../ui/status-badge';
 

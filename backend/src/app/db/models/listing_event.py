@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import CheckConstraint, Date, Index, Integer, Text, text
@@ -35,7 +34,7 @@ class ListingEvent(Base):
     __tablename__ = "listing_events"
     __table_args__ = (
         CheckConstraint(
-            "event_type IN ('search', 'listing_view', 'cta_tap', " "'lead_relayed')",
+            "event_type IN ('search', 'listing_view', 'cta_tap', 'lead_relayed')",
             name="listing_events_type_allowed",
         ),
         CheckConstraint(
@@ -73,7 +72,7 @@ class ListingEvent(Base):
         nullable=False,
         server_default=text("'00000000-0000-0000-0000-000000000000'"),
     )
-    activity_id: Mapped[Optional[UUID]] = mapped_column(
+    activity_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         nullable=True,
     )

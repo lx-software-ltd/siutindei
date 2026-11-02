@@ -7,9 +7,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MediaPanel } from '@/components/admin/media-panel';
 import { resetAdminQueryClientForTests } from '@/lib/admin-query-client';
 import { ApiError } from '@/lib/api-client-core';
-import { getResourceApi } from '@/lib/resource-api';
+import { getResourceApi } from '@/lib/api-client-admin';
 
-vi.mock('@/lib/resource-api', () => ({
+vi.mock('@/lib/api-client-admin', () => ({
   getResourceApi: vi.fn(),
 }));
 

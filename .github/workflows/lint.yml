@@ -127,9 +127,9 @@ jobs:
         working-directory: apps/admin_web
         run: |
           npm run generate:api
-          if ! git diff --quiet src/types/api-admin.generated.ts src/types/api-search.generated.ts; then
+          if ! git diff --quiet src/types/api-admin.generated.ts; then
             echo "::error::Generated types are out of date. Run 'npm run generate:api' in apps/admin_web and commit the result."
-            git diff src/types/api-admin.generated.ts src/types/api-search.generated.ts
+            git diff src/types/api-admin.generated.ts
             exit 1
           fi
           echo "Generated types are up-to-date."

@@ -72,7 +72,7 @@ def summarize_catalog(session: Session) -> dict[str, Any]:
             status_source_key,
         )
     ).all()
-    by_review = {status: 0 for status in REVIEW_STATUSES}
+    by_review = dict.fromkeys(REVIEW_STATUSES, 0)
     by_review_reason = _reason_counts(session)
     by_source: dict[str, int] = {}
     by_status_source: dict[str, int] = {}
@@ -122,7 +122,7 @@ def _reason_counts(session: Session) -> dict[str, int]:
         .where(Organization.review_status == "rejected")
         .group_by(reason_key)
     ).all()
-    counts = {reason: 0 for reason in (*REVIEW_REASONS, "none")}
+    counts = dict.fromkeys((*REVIEW_REASONS, "none"), 0)
     for reason, count in grouped:
         counts[str(reason)] = counts.get(str(reason), 0) + int(count)
     return counts

@@ -5,13 +5,12 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   getCountries,
   getCountryCallingCode,
-} from 'libphonenumber-js';
+} from 'libphonenumber-js/min';
 
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
-import { listResource } from '../../lib/api-client-admin';
-import { getResourceApi, type ApiMode } from '../../lib/resource-api';
+import { getResourceApi, listResource, type ApiMode } from '../../lib/api-client-admin';
 import { normalizeKey } from '../../lib/string-utils';
 import {
   buildTranslationsPayload,
@@ -75,6 +74,7 @@ async function organizationNameTaken(
   editingId: string | null
 ): Promise<boolean> {
   const page = await listResource<Organization>(
+    'v1/admin',
     'organizations',
     undefined,
     50,

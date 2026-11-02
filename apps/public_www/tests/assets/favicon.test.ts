@@ -54,9 +54,8 @@ describe('public favicon assets', () => {
     expect(entries.map((entry) => `${entry.width}x${entry.height}`)).toEqual([
       '16x16',
       '32x32',
-      '48x48',
-      '256x256',
     ]);
     expect(entries.every((entry) => entry.isPng)).toBe(true);
+    expect(readFileSync(FAVICON_ICO).length).toBeLessThan(15 * 1024);
   });
 });

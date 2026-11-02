@@ -21,8 +21,8 @@ from app.db.models import (
     ActivityPricing,
     ActivitySchedule,
     Location,
+    Organization,
 )
-from app.db.models import Organization
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.services.name_sanitizer import NameSanitizeConfig
 from app.services.org_review_children import (
@@ -366,7 +366,6 @@ def load_snapshots(
     linked_ids = linked_activity_ids(session, activity_ids)
     from app.services.name_fixes import load_name_fix_config
     from app.services.org_duplicates import orgs_with_duplicate_signals
-
     from app.services.org_review_names import pending_name_fix_ids as load_name_ids
 
     name_config = load_name_fix_config(session)
@@ -422,8 +421,8 @@ def load_snapshots(
 
 def summarize_snapshots(snapshots: list[OrgReviewSnapshot]) -> dict[str, Any]:
     """Python summary used to check the SQL aggregate stays equivalent."""
-    by_review = {status: 0 for status in REVIEW_STATUSES}
-    by_review_reason = {reason: 0 for reason in (*REVIEW_REASONS, "none")}
+    by_review = dict.fromkeys(REVIEW_STATUSES, 0)
+    by_review_reason = dict.fromkeys((*REVIEW_REASONS, "none"), 0)
     by_source: dict[str, int] = {}
     by_status_source: dict[str, int] = {}
     by_issue: dict[str, int] = {}

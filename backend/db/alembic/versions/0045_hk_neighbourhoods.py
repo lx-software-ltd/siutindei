@@ -10,18 +10,18 @@ review rows this upgrade added, and deletes the neighbourhood rows.
 from __future__ import annotations
 
 import json
-from typing import Sequence
+from collections.abc import Sequence
 from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 revision: str = "0045_hk_neighbourhoods"
 down_revision: Union[str, None] = "0044_location_enrichment"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _ASSIGNMENT = "nearest_neighbourhood"
 
@@ -40,11 +40,13 @@ GEO_AREAS = sa.table(
 
 def _catalog():
     """Load after Alembic adds backend/src to sys.path."""
-    from app.data.hk_neighbourhoods import DISTRICT_NAME_ZH
-    from app.data.hk_neighbourhoods import HK_COUNTRY_NAME_ZH
-    from app.data.hk_neighbourhoods import NEIGHBOURHOODS
-    from app.data.hk_neighbourhoods import assign_among
-    from app.data.hk_neighbourhoods import assign_in_district
+    from app.data.hk_neighbourhoods import (
+        DISTRICT_NAME_ZH,
+        HK_COUNTRY_NAME_ZH,
+        NEIGHBOURHOODS,
+        assign_among,
+        assign_in_district,
+    )
 
     return (
         NEIGHBOURHOODS,
@@ -68,7 +70,7 @@ def _hk_district_ids(connection: sa.Connection) -> dict[str, object]:
             """
         )
     ).all()
-    return {name: area_id for name, area_id in rows}
+    return dict(rows)
 
 
 def _insert_neighbourhoods(connection: sa.Connection) -> None:

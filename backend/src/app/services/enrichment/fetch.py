@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import http.client
 import re
-import socket
 import ssl
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import urljoin, urlparse, urlunparse
 from urllib.robotparser import RobotFileParser
 
@@ -155,7 +155,7 @@ def fetch_public(
         final = url
         ctype = str(exc.headers.get("Content-Type") or "") if exc.headers else ""
         location = str(exc.headers.get("Location") or "") if exc.headers else ""
-    except socket.timeout as exc:
+    except TimeoutError as exc:
         raise TimeoutError("crawl budget exceeded") from exc
     return FetchResult(
         status=status,
@@ -205,7 +205,7 @@ def _read_bounded(
         _set_socket_timeout(response, budget)
         try:
             block = reader(min(65536, limit - total))
-        except socket.timeout as exc:
+        except TimeoutError as exc:
             raise TimeoutError("crawl budget exceeded") from exc
         if not block:
             break

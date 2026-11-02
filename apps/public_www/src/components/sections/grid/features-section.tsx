@@ -1,5 +1,4 @@
-import type { FeaturesContent } from '@/content';
-
+import type { FeaturesContent } from '@/content/types';
 interface FeaturesSectionProps {
   readonly content: FeaturesContent;
 }

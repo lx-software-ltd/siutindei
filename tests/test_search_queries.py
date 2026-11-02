@@ -10,6 +10,8 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "backend" / "src"))
 
+from sqlalchemy.dialects import postgresql  # noqa: E402
+
 from app.db.queries import ActivitySearchCursor  # noqa: E402
 from app.db.queries import ActivitySearchFilters  # noqa: E402
 from app.db.queries import build_search_query  # noqa: E402
@@ -62,6 +64,26 @@ def test_build_search_query_no_org_filter_by_default() -> None:
     query = build_search_query(filters)
     where_clause = str(query.whereclause)
     assert "activities.org_id IN" not in where_clause
+
+
+def test_build_search_query_uses_distinct_on_first_entry() -> None:
+    """The first entry per schedule is DISTINCT ON, not a window."""
+
+    query = build_search_query(ActivitySearchFilters())
+    sql = str(query.compile(dialect=postgresql.dialect())).lower()
+    assert "distinct on (activity_schedule_entries.schedule_id)" in sql
+    assert "row_number" not in sql
+    assert "entry_rank" not in sql
+
+
+def test_build_search_query_filters_text_on_names() -> None:
+    """q matches names and name translation values."""
+
+    query = build_search_query(ActivitySearchFilters(text_query="swim"))
+    sql = str(query.compile(dialect=postgresql.dialect())).lower()
+    assert "jsonb_each_text" in sql
+    assert "ilike" in sql
+    assert "name_translations" in sql
 
 
 def test_build_search_query_applies_cursor() -> None:

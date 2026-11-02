@@ -5,6 +5,7 @@ import { AnalyticsConsentBanner } from '@/components/shared/analytics-consent-ba
 import enContent from '@/content/en.json';
 import zhHKContent from '@/content/zh-HK.json';
 import { ANALYTICS_CONSENT_STORAGE_KEY } from '@/lib/analytics/consent';
+import { withChromeCopy } from '../helpers/chrome-copy';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
@@ -25,7 +26,7 @@ describe('AnalyticsConsentBanner', () => {
   });
 
   it('shows the banner when analytics are configured and consent is unset', () => {
-    render(<AnalyticsConsentBanner />);
+    render(withChromeCopy(<AnalyticsConsentBanner />));
 
     expect(
       screen.getByText(enContent.common.consent.message, { exact: false }),
@@ -40,7 +41,7 @@ describe('AnalyticsConsentBanner', () => {
   it('stays hidden when analytics are not configured', () => {
     document.documentElement.removeAttribute('data-gtm-id');
 
-    render(<AnalyticsConsentBanner />);
+    render(withChromeCopy(<AnalyticsConsentBanner />));
 
     expect(
       screen.queryByTestId('analytics-consent-banner'),
@@ -50,7 +51,7 @@ describe('AnalyticsConsentBanner', () => {
   it('stays hidden when a consent decision is already stored', () => {
     window.localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, 'denied');
 
-    render(<AnalyticsConsentBanner />);
+    render(withChromeCopy(<AnalyticsConsentBanner />));
 
     expect(
       screen.queryByTestId('analytics-consent-banner'),
@@ -64,7 +65,7 @@ describe('AnalyticsConsentBanner', () => {
       consentListener,
     );
 
-    render(<AnalyticsConsentBanner />);
+    render(withChromeCopy(<AnalyticsConsentBanner />));
     fireEvent.click(
       screen.getByRole('button', {
         name: enContent.common.consent.acceptLabel,
@@ -92,7 +93,7 @@ describe('AnalyticsConsentBanner', () => {
       consentListener,
     );
 
-    render(<AnalyticsConsentBanner />);
+    render(withChromeCopy(<AnalyticsConsentBanner />));
     fireEvent.click(
       screen.getByRole('button', {
         name: enContent.common.consent.declineLabel,
@@ -116,7 +117,7 @@ describe('AnalyticsConsentBanner', () => {
   it('renders localized copy on zh-HK pages', () => {
     mockPathname = '/zh-HK/search/';
 
-    render(<AnalyticsConsentBanner />);
+    render(withChromeCopy(<AnalyticsConsentBanner />));
 
     expect(
       screen.getByText(zhHKContent.common.consent.message, { exact: false }),

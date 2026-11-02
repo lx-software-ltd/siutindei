@@ -1,28 +1,24 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import type { Locale, SiteContent } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { SiteContent } from '@/content/types';
 import { FilterChipRow } from '@/components/sections/search/filter-chip-row';
 import { SearchMapSplitLayout } from '@/components/sections/search/search-map-split-layout';
 import { SearchViewToggle } from '@/components/sections/search/search-view-toggle';
 import { ListingGrid } from '@/components/sections/listings/listing-grid';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { SEARCH_RESULTS_PAGE_LIMIT } from '@/lib/activities/search-limits';
-import { fetchActivitySearch } from '@/lib/activities/search-client';
-import { buildMapSearchHref } from '@/lib/activities/map-search-url';
+import { buildMapSearchHref, buildSearchPageHref } from '@/lib/activities/map-search-url';
+import { useActivitySearch } from '@/lib/activities/search/use-activity-search';
 import {
-  buildSearchQueryString,
-  filtersToApiParams,
   parseSearchFiltersFromQuery,
   parseSearchViewMode,
 } from '@/lib/activities/search-params';
-import { matchesTextQuery } from '@/lib/activities/listing-utils';
 import { listingsWithCoordinates } from '@/lib/google-maps/coordinates';
 import { isGoogleMapsEnabled } from '@/lib/google-maps/config';
-import { localizePath } from '@/lib/locale-routing';
-import type { ActivityListing } from '@/lib/activities/types';
 import { trackSearch } from '@/lib/analytics/data-layer';
 
 interface SearchResultsPageProps {
@@ -34,12 +30,6 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setFilters } = useSearchContext();
-  const [listings, setListings] = useState<readonly ActivityListing[]>([]);
-  const [categoryMatch, setCategoryMatch] = useState<
-    'exact' | 'legacy_fallback'
-  >('exact');
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const ageParam = searchParams.get('age');
@@ -77,33 +67,23 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
     setFilters(urlFilters);
   }, [setFilters, urlFilters]);
 
-  const loadResults = useCallback(async () => {
-    setIsLoading(true);
-    setErrorMessage(null);
-    try {
-      const apiParams = filtersToApiParams(urlFilters);
-      const response = await fetchActivitySearch({
-        ...apiParams,
-        limit: SEARCH_RESULTS_PAGE_LIMIT,
-      });
-      const filtered = response.items.filter((listing) =>
-        matchesTextQuery(listing, locale, urlFilters.textQuery),
-      );
-      setListings(filtered);
-      setCategoryMatch(response.categoryMatch ?? 'exact');
-      trackSearch(urlFilters);
-    } catch {
-      setErrorMessage(copy.errorLabel);
-      setListings([]);
-      setCategoryMatch('exact');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [copy.errorLabel, locale, urlFilters]);
+  const search = useActivitySearch({
+    filters: urlFilters,
+    locale,
+    pageSize: SEARCH_RESULTS_PAGE_LIMIT,
+    view: 'card',
+  });
+  const listings = search.items;
+  const isLoading = search.isLoading;
+  const categoryMatch = search.categoryMatch;
+  const errorMessage = search.errorMessage ? copy.errorLabel : null;
+  const loadMoreError = search.loadMoreError ? copy.errorLabel : null;
 
   useEffect(() => {
-    loadResults();
-  }, [loadResults]);
+    if (!isLoading && !search.errorMessage) {
+      trackSearch(urlFilters);
+    }
+  }, [isLoading, search.errorMessage, urlFilters]);
 
   useEffect(() => {
     if (!showMapSplit || listings.length === 0) {
@@ -122,9 +102,7 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
   }, [listings, selectedId, showMapSplit]);
 
   function navigateToListView() {
-    const query = buildSearchQueryString(urlFilters, { view: 'list' });
-    const path = localizePath('/search', locale);
-    router.push(`${path}?${query}`);
+    router.push(buildSearchPageHref(locale, urlFilters, { view: 'list' }));
   }
 
   function navigateToMapView() {
@@ -146,7 +124,7 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
         </p>
       ) : null}
       <div className="relative">
-        {showMapSplit ? (
+        {errorMessage ? null : showMapSplit ? (
           <SearchMapSplitLayout
             locale={locale}
             copy={copy}
@@ -171,6 +149,21 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
             />
           </div>
         )}
+        {search.hasMore ? (
+          <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 py-8">
+            {loadMoreError ? (
+              <p className="text-center text-red-700">{loadMoreError}</p>
+            ) : null}
+            <button
+              type="button"
+              onClick={search.loadMore}
+              disabled={search.isLoadingMore}
+              className="rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-ink-900 hover:bg-brand-600 disabled:opacity-60"
+            >
+              {copy.loadMoreLabel}
+            </button>
+          </div>
+        ) : null}
         {mapsEnabled ? (
           <SearchViewToggle
             isMapView={showMapSplit}

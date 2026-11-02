@@ -11,15 +11,17 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "backend" / "src"))
 
-from app.api.admin import (  # noqa: E402
-    _validate_age_range,
-    _validate_coordinates,
+from app.api.admin_resource_activity import _validate_age_range  # noqa: E402
+from app.api.admin_resource_location import _validate_coordinates  # noqa: E402
+from app.api.admin_resource_pricing import (  # noqa: E402
+    _validate_pricing_amount,
+    _validate_sessions_count,
+)
+from app.api.admin_validators import (  # noqa: E402
     _validate_email,
     _validate_manager_id,
     _validate_phone_fields,
-    _validate_pricing_amount,
     _validate_social_value,
-    _validate_sessions_count,
 )
 from app.exceptions import ValidationError  # noqa: E402
 

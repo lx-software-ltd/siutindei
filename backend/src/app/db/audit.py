@@ -29,15 +29,12 @@ Usage:
 
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timezone
+from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import Any
-from typing import Optional
-from typing import Sequence
 from uuid import UUID
 
-from sqlalchemy import select
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditLog
@@ -48,8 +45,8 @@ logger = get_logger(__name__)
 
 def set_audit_context(
     session: Session,
-    user_id: Optional[str] = None,
-    request_id: Optional[str] = None,
+    user_id: str | None = None,
+    request_id: str | None = None,
 ) -> None:
     """Set audit context for the current database session.
 
@@ -111,10 +108,10 @@ class AuditService:
     def __init__(
         self,
         session: Session,
-        user_id: Optional[str] = None,
-        request_id: Optional[str] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
     ):
         """Initialize the audit service.
 
@@ -135,7 +132,7 @@ class AuditService:
         self,
         table_name: str,
         record_id: str | UUID,
-        new_values: Optional[dict[str, Any]] = None,
+        new_values: dict[str, Any] | None = None,
     ) -> AuditLog:
         """Log a record creation.
 
@@ -158,9 +155,9 @@ class AuditService:
         self,
         table_name: str,
         record_id: str | UUID,
-        old_values: Optional[dict[str, Any]] = None,
-        new_values: Optional[dict[str, Any]] = None,
-        changed_fields: Optional[list[str]] = None,
+        old_values: dict[str, Any] | None = None,
+        new_values: dict[str, Any] | None = None,
+        changed_fields: list[str] | None = None,
     ) -> AuditLog:
         """Log a record update.
 
@@ -195,7 +192,7 @@ class AuditService:
         self,
         table_name: str,
         record_id: str | UUID,
-        old_values: Optional[dict[str, Any]] = None,
+        old_values: dict[str, Any] | None = None,
     ) -> AuditLog:
         """Log a record deletion.
 
@@ -219,9 +216,9 @@ class AuditService:
         table_name: str,
         record_id: str | UUID,
         action: str,
-        old_values: Optional[dict[str, Any]] = None,
-        new_values: Optional[dict[str, Any]] = None,
-        changed_fields: Optional[list[str]] = None,
+        old_values: dict[str, Any] | None = None,
+        new_values: dict[str, Any] | None = None,
+        changed_fields: list[str] | None = None,
     ) -> AuditLog:
         """Log a custom action.
 
@@ -255,9 +252,9 @@ class AuditService:
         table_name: str,
         record_id: str,
         action: str,
-        old_values: Optional[dict[str, Any]] = None,
-        new_values: Optional[dict[str, Any]] = None,
-        changed_fields: Optional[list[str]] = None,
+        old_values: dict[str, Any] | None = None,
+        new_values: dict[str, Any] | None = None,
+        changed_fields: list[str] | None = None,
     ) -> AuditLog:
         """Create an audit log entry.
 
@@ -273,7 +270,7 @@ class AuditService:
             The created AuditLog entry.
         """
         entry = AuditLog(
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             table_name=table_name,
             record_id=record_id,
             action=action,
@@ -306,7 +303,7 @@ class AuditLogRepository:
         """
         self._session = session
 
-    def get_by_id(self, audit_id: UUID) -> Optional[AuditLog]:
+    def get_by_id(self, audit_id: UUID) -> AuditLog | None:
         """Get an audit log entry by ID.
 
         Args:
@@ -346,7 +343,7 @@ class AuditLogRepository:
         self,
         user_id: str,
         limit: int = 100,
-        since: Optional[datetime] = None,
+        since: datetime | None = None,
     ) -> Sequence[AuditLog]:
         """Get audit logs for a specific user.
 
@@ -372,8 +369,8 @@ class AuditLogRepository:
         self,
         table_name: str,
         limit: int = 100,
-        since: Optional[datetime] = None,
-        action: Optional[str] = None,
+        since: datetime | None = None,
+        action: str | None = None,
     ) -> Sequence[AuditLog]:
         """Get audit logs for a specific table.
 
@@ -401,8 +398,8 @@ class AuditLogRepository:
     def get_recent_activity(
         self,
         limit: int = 100,
-        since: Optional[datetime] = None,
-        cursor: Optional[UUID] = None,
+        since: datetime | None = None,
+        cursor: UUID | None = None,
     ) -> Sequence[AuditLog]:
         """Get recent audit log entries.
 
@@ -427,7 +424,7 @@ class AuditLogRepository:
     def count_by_table(
         self,
         table_name: str,
-        since: Optional[datetime] = None,
+        since: datetime | None = None,
     ) -> dict[str, int]:
         """Count audit entries by action for a table.
 
@@ -449,11 +446,11 @@ class AuditLogRepository:
             query = query.where(AuditLog.timestamp >= since)
 
         results = self._session.execute(query).all()
-        return {action: count for action, count in results}
+        return {str(action): int(count) for action, count in results}
 
 
 def serialize_for_audit(
-    entity: Any, exclude_fields: Optional[set[str]] = None
+    entity: Any, exclude_fields: set[str] | None = None
 ) -> dict[str, Any]:
     """Serialize a SQLAlchemy entity for audit logging.
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Optional
+from typing import Any
 
 from app.services.aws_proxy import AwsProxyError
 from app.utils.logging import get_logger
@@ -44,7 +44,7 @@ def _iter_group_members(user_pool_id: str, group_name: str) -> list[str]:
     from app.api.admin_cognito import _cognito
 
     members: list[str] = []
-    next_token: Optional[str] = None
+    next_token: str | None = None
     for _ in range(MAX_GROUP_PAGES):
         params: dict[str, Any] = {
             "UserPoolId": user_pool_id,

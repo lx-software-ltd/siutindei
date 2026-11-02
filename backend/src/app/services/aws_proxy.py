@@ -32,7 +32,8 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 from urllib.parse import urlparse
 
 from botocore.config import Config
@@ -173,7 +174,7 @@ def _handle_http(event: Mapping[str, Any]) -> dict[str, Any]:
     method: str = (event.get("method") or "GET").upper()
     url: str = event.get("url") or ""
     headers: dict[str, str] = event.get("headers") or {}
-    body: Optional[str] = event.get("body")
+    body: str | None = event.get("body")
     timeout: int = min(int(event.get("timeout") or 10), _MAX_HTTP_TIMEOUT_SECONDS)
 
     if not any(key.lower() == "user-agent" for key in headers):
@@ -364,8 +365,8 @@ def crawl_invoke(payload: Mapping[str, Any]) -> dict[str, Any]:
 def http_invoke(
     method: str,
     url: str,
-    headers: Optional[dict[str, str]] = None,
-    body: Optional[str] = None,
+    headers: dict[str, str] | None = None,
+    body: str | None = None,
     timeout: int = 10,
 ) -> dict[str, Any]:
     """Make an HTTP request via the proxy Lambda.

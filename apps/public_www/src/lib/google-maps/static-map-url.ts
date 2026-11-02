@@ -16,13 +16,14 @@ export function buildStaticMapUrl(params: {
   readonly coordinate: MapCoordinate;
   readonly variant: StaticMapVariant;
   readonly zoom?: number;
+  readonly scale?: 1 | 2;
 }): string {
   const size = STATIC_MAP_SIZE[params.variant];
   const url = new URL('https://maps.googleapis.com/maps/api/staticmap');
   url.searchParams.set('center', `${params.coordinate.lat},${params.coordinate.lng}`);
   url.searchParams.set('zoom', String(params.zoom ?? 14));
   url.searchParams.set('size', `${size.width}x${size.height}`);
-  url.searchParams.set('scale', '2');
+  url.searchParams.set('scale', String(params.scale ?? 2));
   url.searchParams.set('maptype', 'roadmap');
   url.searchParams.append('markers', encodeMarker(params.coordinate));
   url.searchParams.set('key', params.apiKey);

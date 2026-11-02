@@ -10,14 +10,15 @@ valid. No seed column, enum, or foreign key changes.
 
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 from alembic import op
 
 revision: str = "0043_location_quality"
 down_revision: Union[str, None] = "0042_location_fixes"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _ENTITY = "entity_type IN ('organization', 'activity', 'location')"
 _KIND = "kind IN ('link_existing', 'create_location', 'unresolved', 'update_location')"

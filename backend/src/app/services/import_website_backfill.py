@@ -16,8 +16,9 @@ from __future__ import annotations
 import json
 import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 from uuid import UUID
 
 from botocore.exceptions import ClientError
@@ -133,9 +134,7 @@ def _apply_payload(
         if status == "skipped" or followed_merge:
             if current:
                 continue
-        elif org_id not in written_ids and current:
-            continue
-        elif current == website:
+        elif org_id not in written_ids and current or current == website:
             continue
         org.website = website
         written_ids.add(org_id)

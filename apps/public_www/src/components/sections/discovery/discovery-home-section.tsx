@@ -1,27 +1,36 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 
-import type { Locale, SiteContent } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { SiteContent } from '@/content/types';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { ListingCarouselSection } from '@/components/sections/listings/listing-carousel-section';
-import { logActivityLoadError } from '@/lib/activities/load-error';
-import { DISCOVERY_HOME_SEARCH_LIMIT } from '@/lib/activities/search-limits';
-import { fetchActivitySearch } from '@/lib/activities/search-client';
+import { buildSearchHref, regionIdForAreaId } from '@/lib/activities/map-search-url';
 import {
-  buildSearchHref,
-  regionIdForAreaId,
-} from '@/lib/activities/map-search-url';
-import {
-  filtersToApiParams,
-  type SearchFiltersState,
-} from '@/lib/activities/search-params';
+  DISCOVERY_HOME_SEARCH_LIMIT,
+  DISCOVERY_RECENT_SEARCH_LIMIT,
+} from '@/lib/activities/search-limits';
+import { useActivitySearch } from '@/lib/activities/search/use-activity-search';
+import type { SearchFiltersState } from '@/lib/activities/search-params';
 import {
   groupListingsByRegion,
-  matchesTextQuery,
   sortListingsForDiscovery,
 } from '@/lib/activities/listing-utils';
-import { loadRecentSearch, loadRecentViewedIds } from '@/lib/activities/recent-storage';
+import {
+  getRecentSearchServerSnapshot,
+  getRecentSearchSnapshot,
+  loadRecentViewedIds,
+  subscribeRecentSearch,
+} from '@/lib/activities/recent-storage';
 import type { ActivityListing } from '@/lib/activities/types';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 
@@ -30,87 +39,185 @@ interface DiscoveryHomeSectionProps {
   readonly copy: SiteContent['discovery'];
 }
 
-async function fetchDiscoveryListings(
-  locale: Locale,
-  filters: SearchFiltersState,
-): Promise<readonly ActivityListing[]> {
-  const apiParams = filtersToApiParams(filters);
-  const response = await fetchActivitySearch({
-    ...apiParams,
-    limit: DISCOVERY_HOME_SEARCH_LIMIT,
+interface CardLabels {
+  readonly parentVerified: string;
+  readonly freeTrial: string;
+  readonly imageFallback: string;
+  readonly mapAlt: string;
+}
+
+function DeferredCarousel({
+  active,
+  onVisible,
+  children,
+}: {
+  readonly active: boolean;
+  readonly onVisible?: () => void;
+  readonly children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(active);
+
+  useEffect(() => {
+    if (visible) {
+      onVisible?.();
+    }
+  }, [onVisible, visible]);
+
+  useEffect(() => {
+    if (active || visible) {
+      return;
+    }
+    const node = ref.current;
+    const Observer = globalThis.IntersectionObserver;
+    if (!node || typeof Observer !== 'function') {
+      setVisible(true);
+      return;
+    }
+    const observer = new Observer(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '240px' },
+    );
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+    };
+  }, [active, visible]);
+
+  return <div ref={ref}>{visible ? children : <div className="min-h-40" />}</div>;
+}
+
+function ContinueSearchingSection({
+  locale,
+  copy,
+  filters,
+  cardLabels,
+}: {
+  readonly locale: Locale;
+  readonly copy: SiteContent['discovery'];
+  readonly filters: SearchFiltersState;
+  readonly cardLabels: CardLabels;
+}) {
+  const [enabled, setEnabled] = useState(false);
+  const show = useCallback(() => setEnabled(true), []);
+  const recent = useActivitySearch({
+    filters,
+    locale,
+    pageSize: DISCOVERY_RECENT_SEARCH_LIMIT,
+    enabled,
+    view: 'card',
   });
-  return sortListingsForDiscovery(
-    response.items.filter((listing) =>
-      matchesTextQuery(listing, locale, filters.textQuery),
-    ),
+  if (enabled && !recent.isLoading && recent.items.length === 0) {
+    return null;
+  }
+  return (
+    <DeferredCarousel active={false} onVisible={show}>
+      <ListingCarouselSection
+        locale={locale}
+        title={copy.continueSearchingTitle}
+        searchHref={buildSearchHref(locale, filters)}
+        seeAllLabel={copy.carousel.seeAllLabel}
+        listings={recent.items.slice(0, 12)}
+        isLoading={!enabled || recent.isLoading}
+        sectionIndex={2}
+        labels={cardLabels}
+      />
+    </DeferredCarousel>
+  );
+}
+
+function RegionCarousel({
+  locale,
+  copy,
+  filters,
+  regionKey,
+  seed,
+  cardLabels,
+  sectionIndex,
+}: {
+  readonly locale: Locale;
+  readonly copy: SiteContent['discovery'];
+  readonly filters: SearchFiltersState;
+  readonly regionKey: string;
+  readonly seed: readonly ActivityListing[];
+  readonly cardLabels: CardLabels;
+  readonly sectionIndex: number;
+}) {
+  const [enabled, setEnabled] = useState(false);
+  const show = useCallback(() => setEnabled(true), []);
+  const regionId = regionIdForAreaId(regionKey);
+  const regionFilters = useMemo(
+    () => ({
+      ...filters,
+      regionId: regionId ?? filters.regionId,
+      neighbourhoodId: null,
+    }),
+    [filters, regionId],
+  );
+  const search = useActivitySearch({
+    filters: regionFilters,
+    locale,
+    pageSize: 12,
+    view: 'card',
+    enabled: enabled && regionId !== null,
+  });
+  const region = homeWizardChoices.regions.find(
+    (entry) => entry.areaId === regionKey,
+  );
+  const title = region
+    ? `${copy.nearRegionTitle} ${labelForLocale(region.labels, locale)}`
+    : copy.nearRegionTitle;
+  const listings = search.items.length > 0 ? search.items : seed;
+  return (
+    <DeferredCarousel active={false} onVisible={show}>
+      <ListingCarouselSection
+        locale={locale}
+        title={title}
+        searchHref={buildSearchHref(locale, regionFilters)}
+        seeAllLabel={copy.carousel.seeAllLabel}
+        listings={listings.slice(0, 12)}
+        isLoading={search.isLoading && listings.length === 0}
+        sectionIndex={sectionIndex}
+        labels={cardLabels}
+      />
+    </DeferredCarousel>
   );
 }
 
 export function DiscoveryHomeSection({ locale, copy }: DiscoveryHomeSectionProps) {
   const { filters } = useSearchContext();
-  const [listings, setListings] = useState<readonly ActivityListing[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    fetchDiscoveryListings(locale, filters)
-      .then((items) => {
-        if (!cancelled) {
-          setListings(items);
-        }
-      })
-      .catch((error: unknown) => {
-        logActivityLoadError('discovery home', error);
-        if (!cancelled) {
-          setErrorMessage(copy.errorLabel);
-          setListings([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [copy.errorLabel, filters, locale]);
-
-  const recentSearchFilters = useMemo(() => loadRecentSearch(), []);
-  const [recentListings, setRecentListings] = useState<readonly ActivityListing[]>(
-    [],
+  const recentSearchFilters = useSyncExternalStore(
+    subscribeRecentSearch,
+    getRecentSearchSnapshot,
+    getRecentSearchServerSnapshot,
   );
+  const primary = useActivitySearch({
+    filters,
+    locale,
+    pageSize: DISCOVERY_HOME_SEARCH_LIMIT,
+    view: 'card',
+  });
 
+  const listings = useMemo(
+    () => sortListingsForDiscovery(primary.items),
+    [primary.items],
+  );
+  const [viewedIds, setViewedIds] = useState<readonly string[]>([]);
   useEffect(() => {
-    if (!recentSearchFilters) {
-      return;
-    }
-    fetchDiscoveryListings(locale, recentSearchFilters)
-      .then((items) => setRecentListings(items.slice(0, 12)))
-      .catch(() => setRecentListings([]));
-  }, [locale, recentSearchFilters]);
-
-  const viewedIds = useMemo(() => loadRecentViewedIds(), []);
+    setViewedIds(loadRecentViewedIds());
+  }, []);
   const viewedListings = useMemo(
     () =>
       listings.filter((listing) => viewedIds.includes(listing.activity.id)).slice(0, 12),
     [listings, viewedIds],
   );
-
-  const popularListings = useMemo(
-    () => listings.slice(0, 12),
-    [listings],
-  );
-
-  const regionGroups = useMemo(
-    () => groupListingsByRegion(listings),
-    [listings],
-  );
+  const popularListings = useMemo(() => listings.slice(0, 12), [listings]);
+  const regionGroups = useMemo(() => groupListingsByRegion(listings), [listings]);
 
   const cardLabels = {
     parentVerified: copy.parentVerifiedLabel,
@@ -119,101 +226,63 @@ export function DiscoveryHomeSection({ locale, copy }: DiscoveryHomeSectionProps
     mapAlt: copy.mapAltLabel,
   };
 
-  const carouselSections = useMemo(() => {
-    const sections: Array<{
-      readonly key: string;
-      readonly title: string;
-      readonly listings: readonly ActivityListing[];
-      readonly isLoading: boolean;
-      readonly searchHref: string;
-    }> = [];
-
-    if (recentSearchFilters && recentListings.length > 0) {
-      sections.push({
-        key: 'recent-search',
-        title: copy.continueSearchingTitle,
-        listings: recentListings,
-        isLoading: false,
-        searchHref: buildSearchHref(locale, recentSearchFilters),
-      });
-    }
-
-    if (viewedListings.length > 0) {
-      sections.push({
-        key: 'recently-viewed',
-        title: copy.recentlyViewedTitle,
-        listings: viewedListings,
-        isLoading: false,
-        searchHref: buildSearchHref(locale, filters),
-      });
-    }
-
-    sections.push({
-      key: 'popular',
-      title: copy.popularTitle,
-      listings: popularListings,
-      isLoading,
-      searchHref: buildSearchHref(locale, filters),
-    });
-
-    for (const [regionKey, regionListings] of regionGroups.entries()) {
-      const region = homeWizardChoices.regions.find(
-        (entry) => entry.areaId === regionKey,
-      );
-      const title = region
-        ? `${copy.nearRegionTitle} ${labelForLocale(region.labels, locale)}`
-        : copy.nearRegionTitle;
-      const regionId = regionIdForAreaId(regionKey);
-      sections.push({
-        key: `region-${regionKey}`,
-        title,
-        listings: regionListings.slice(0, 12),
-        isLoading,
-        searchHref: buildSearchHref(locale, {
-          ...filters,
-          regionId: regionId ?? filters.regionId,
-        }),
-      });
-    }
-
-    return sections;
-  }, [
-    copy.continueSearchingTitle,
-    copy.nearRegionTitle,
-    copy.popularTitle,
-    copy.recentlyViewedTitle,
-    filters,
-    isLoading,
-    locale,
-    popularListings,
-    recentListings,
-    recentSearchFilters,
-    regionGroups,
-    viewedListings,
-  ]);
-
-  if (errorMessage) {
+  if (primary.errorMessage) {
     return (
       <p className="mx-auto max-w-3xl px-4 py-12 text-center text-red-700">
-        {errorMessage}
+        {copy.errorLabel}
       </p>
     );
   }
 
+  const regionEntries = [...regionGroups.entries()];
+
   return (
     <div className="bg-white">
-      {carouselSections.map((section, sectionIndex) => (
+      <DeferredCarousel active>
         <ListingCarouselSection
-          key={section.key}
           locale={locale}
-          title={section.title}
-          searchHref={section.searchHref}
+          title={copy.popularTitle}
+          searchHref={buildSearchHref(locale, filters)}
           seeAllLabel={copy.carousel.seeAllLabel}
-          listings={section.listings}
-          isLoading={section.isLoading}
-          sectionIndex={sectionIndex}
-          isPrimaryCarousel={sectionIndex === 0}
+          listings={popularListings}
+          isLoading={primary.isLoading}
+          sectionIndex={0}
+          isPrimaryCarousel
           labels={cardLabels}
+        />
+      </DeferredCarousel>
+      {viewedListings.length > 0 ? (
+        <DeferredCarousel active={false}>
+          <ListingCarouselSection
+            locale={locale}
+            title={copy.recentlyViewedTitle}
+            searchHref={buildSearchHref(locale, filters)}
+            seeAllLabel={copy.carousel.seeAllLabel}
+            listings={viewedListings}
+            isLoading={false}
+            sectionIndex={1}
+            labels={cardLabels}
+          />
+        </DeferredCarousel>
+      ) : null}
+      {recentSearchFilters ? (
+        <ContinueSearchingSection
+          locale={locale}
+          copy={copy}
+          filters={recentSearchFilters}
+          cardLabels={cardLabels}
+        />
+      ) : null}
+      {regionEntries.map(([regionKey, seed], index) => (
+        <RegionCarousel
+          key={regionKey}
+          locale={locale}
+          copy={copy}
+          filters={filters}
+          regionKey={regionKey}
+          seed={seed}
+          cardLabels={cardLabels}
+          sectionIndex={index + 3}
         />
       ))}
     </div>

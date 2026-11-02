@@ -7,8 +7,8 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.api.admin_validators import MAX_NAME_LENGTH, _validate_string_length
-from app.db.models.organization import Organization
 from app.db.models.org_enrichment import OrgEnrichmentProposal
+from app.db.models.organization import Organization
 from app.db.repositories.organization import OrganizationRepository
 from app.exceptions import ValidationError
 from app.services.name_sanitizer import sanitize_name

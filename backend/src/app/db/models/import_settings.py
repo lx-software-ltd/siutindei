@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID as UUIDType
 from uuid import uuid4
@@ -25,9 +25,7 @@ from app.db.base import Base
 
 
 def _utcnow() -> datetime:
-    from datetime import timezone
-
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class ImportSettings(Base):

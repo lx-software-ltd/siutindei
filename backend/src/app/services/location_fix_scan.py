@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -19,8 +19,10 @@ from app.services import location_fix_quality as location_quality
 from app.services.data_quality.sweep_support import (
     chunk_entity_batches,
     fail_stale_runs,
-    out_of_time as past_deadline,
     take_limited,
+)
+from app.services.data_quality.sweep_support import (
+    out_of_time as past_deadline,
 )
 from app.services.location_fix_lookup import (
     affordable_google_lookups,
@@ -103,7 +105,7 @@ def start_location_scan(
     )
     if active is not None:
         raise LocationScanBusy()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     run = LocationScanRun(
         status="queued",
         requested_by=requested_by,
@@ -254,7 +256,7 @@ def start_location_scan(
     model_queued = sum(len(ids) for ids in queued.values())
     run.queued_count = model_queued + len(lookup_ids)
     run.truncated = truncated
-    run.updated_at = datetime.now(timezone.utc)
+    run.updated_at = datetime.now(UTC)
     if batches:
         run.status = "queued"
     else:

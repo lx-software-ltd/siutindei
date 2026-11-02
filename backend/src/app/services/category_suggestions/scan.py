@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -19,14 +19,16 @@ from app.services.category_suggestions.scan_apply import (
     record_batch_failure,
     store_scan_batch,
 )
+from app.services.category_suggestions.scan_candidates import (
+    count_candidates as count_candidates,
+)
+from app.services.category_suggestions.scan_candidates import (
+    select_candidate_ids as select_candidate_ids,
+)
 from app.services.category_suggestions.settings import (
     get_settings,
     resolved_fallback_models,
     resolved_model_name,
-)
-from app.services.category_suggestions.scan_candidates import (
-    count_candidates as count_candidates,
-    select_candidate_ids as select_candidate_ids,
 )
 from app.services.data_quality.answers import (
     CATEGORY_PROMPT_VERSION,
@@ -119,7 +121,7 @@ def start_scan(
         review_scope=review_scope,
         activity_ids=raw_ids if isinstance(raw_ids, list) else None,
     )
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     batches = _chunks([str(item) for item in ids], batch_size)
     run = CategoryScanRun(
         status="done" if not batches else "queued",
@@ -328,7 +330,7 @@ def _prepare(
             session.commit()
             return None
         if _over_budget(session):
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             run.status = "failed"
             run.error = "Monthly category-check budget is used"
             run.finished_at = now
@@ -371,9 +373,7 @@ def _fail(
 
 
 def _month_start() -> datetime:
-    return datetime.now(timezone.utc).replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0
-    )
+    return datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
 def _month_scan_cost(session: Session) -> float:
@@ -399,8 +399,8 @@ def _reject_over_budget(session: Session) -> None:
 
 
 def _fail_stale_runs(session: Session) -> None:
-    cutoff = datetime.now(timezone.utc) - STALE_AFTER
-    now = datetime.now(timezone.utc)
+    cutoff = datetime.now(UTC) - STALE_AFTER
+    now = datetime.now(UTC)
     stale = session.scalars(
         select(CategoryScanRun).where(
             CategoryScanRun.status.in_(_ACTIVE),

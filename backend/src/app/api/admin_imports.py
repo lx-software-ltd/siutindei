@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -19,10 +20,6 @@ from app.api.admin_imports_export import (
     load_export_organizations,
 )
 from app.api.admin_imports_importer import process_import_payload
-from app.api.admin_imports_retry import (
-    merge_import_results,
-    select_retry_organizations,
-)
 from app.api.admin_imports_jobs import (
     begin_import_job,
     begin_import_retry,
@@ -43,10 +40,22 @@ from app.api.admin_imports_objects import (
     EXPORT_PREFIX,
     IMPORT_PREFIX,
     PRESIGN_EXPIRY_SECONDS,
+)
+from app.api.admin_imports_objects import (
     build_download_url as _build_download_url,
+)
+from app.api.admin_imports_objects import (
     load_import_payload as _load_import_payload,
+)
+from app.api.admin_imports_objects import (
     presign_import_downloads as _presign_import_downloads,
+)
+from app.api.admin_imports_objects import (
     write_export_payload as _write_export_payload,
+)
+from app.api.admin_imports_retry import (
+    merge_import_results,
+    select_retry_organizations,
 )
 from app.api.admin_imports_utils import (
     build_object_key,
@@ -465,35 +474,27 @@ def _handle_export(event: Mapping[str, Any]) -> dict[str, Any]:
     )
 
 
+def _parse_bool_field(
+    body: dict[str, Any],
+    field: str,
+    default: bool,
+) -> bool:
+    value = body.get(field, default)
+    if value is None:
+        value = default
+    if not isinstance(value, bool):
+        raise ValidationError(f"{field} must be a boolean", field=field)
+    return value
+
+
 def _parse_retry_failed(body: dict[str, Any]) -> bool:
-    retry_failed = body.get("retry_failed", False)
-    if retry_failed is None:
-        retry_failed = False
-    if not isinstance(retry_failed, bool):
-        raise ValidationError(
-            "retry_failed must be a boolean",
-            field="retry_failed",
-        )
-    return retry_failed
+    return _parse_bool_field(body, "retry_failed", False)
 
 
 def _parse_allow_updates(body: dict[str, Any]) -> bool:
     """True keeps today's update behaviour. False skips existing rows."""
-    allow_updates = body.get("allow_updates", True)
-    if allow_updates is None:
-        allow_updates = True
-    if not isinstance(allow_updates, bool):
-        raise ValidationError(
-            "allow_updates must be a boolean",
-            field="allow_updates",
-        )
-    return allow_updates
+    return _parse_bool_field(body, "allow_updates", True)
 
 
 def _parse_dry_run(body: dict[str, Any]) -> bool:
-    dry_run = body.get("dry_run", False)
-    if dry_run is None:
-        dry_run = False
-    if not isinstance(dry_run, bool):
-        raise ValidationError("dry_run must be a boolean", field="dry_run")
-    return dry_run
+    return _parse_bool_field(body, "dry_run", False)

@@ -10,7 +10,7 @@ import {
 } from '../../lib/api-client-media';
 import { useConfirmDialog } from '../../hooks/use-confirm-dialog';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
-import { getResourceApi } from '../../lib/resource-api';
+import { getResourceApi } from '../../lib/api-client-admin';
 import type { Organization } from '../../types/admin';
 import { PlusIcon } from '../icons/action-icons';
 import { mediaFromSnapshot } from './catalog-version-snapshot';

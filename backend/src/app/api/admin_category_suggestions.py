@@ -4,16 +4,12 @@ from __future__ import annotations
 
 import base64
 import json
-from datetime import datetime
-from datetime import timezone
+from collections.abc import Mapping
+from datetime import UTC, datetime
 from typing import Any
-from typing import Mapping
 from uuid import UUID
 
-from sqlalchemy import and_
-from sqlalchemy import func
-from sqlalchemy import or_
-from sqlalchemy import select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.admin_auth import _get_user_sub, _set_session_audit_context
@@ -215,7 +211,7 @@ def _summary(session: Session, *, org_id: UUID | None = None) -> dict[str, Any]:
         )
         or 0
     )
-    month_start = datetime.now(timezone.utc).replace(
+    month_start = datetime.now(UTC).replace(
         day=1,
         hour=0,
         minute=0,
@@ -289,7 +285,7 @@ def _parse_event_time(value: Any) -> datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
+        return parsed.replace(tzinfo=UTC)
     return parsed
 
 

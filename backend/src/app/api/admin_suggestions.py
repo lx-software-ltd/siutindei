@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from botocore.exceptions import BotoCoreError, ClientError
 from sqlalchemy import text as sa_text
@@ -88,7 +89,7 @@ def _get_user_suggestions(
 def _submit_organization_suggestion(
     event: Mapping[str, Any],
     user_sub: str,
-    user_email: Optional[str],
+    user_email: str | None,
 ) -> dict[str, Any]:
     """Submit a new organization suggestion."""
     body = _parse_body(event)
@@ -206,12 +207,12 @@ def _publish_suggestion_to_sns(
     user_sub: str,
     user_email: str,
     organization_name: str,
-    description: Optional[str],
-    suggested_district: Optional[str],
-    suggested_address: Optional[str],
-    suggested_lat: Optional[float],
-    suggested_lng: Optional[float],
-    additional_notes: Optional[str],
+    description: str | None,
+    suggested_district: str | None,
+    suggested_address: str | None,
+    suggested_lat: float | None,
+    suggested_lng: float | None,
+    additional_notes: str | None,
     media_urls: list[str],
 ) -> dict[str, Any]:
     """Publish organization suggestion to SNS."""

@@ -1084,6 +1084,7 @@ export class ApiStack extends cdk.Stack {
         environment?: Record<string, string>;
         timeout?: cdk.Duration;
         extraCopyPaths?: string[];
+        requirementsFile?: string;
         securityGroups?: ec2.ISecurityGroup[];
         memorySize?: number;
         // Set to true for functions that need internet access but not database
@@ -1102,6 +1103,7 @@ export class ApiStack extends cdk.Stack {
         environment: props.environment,
         timeout: props.timeout,
         extraCopyPaths: props.extraCopyPaths,
+        requirementsFile: props.requirementsFile,
         securityGroups: props.noVpc ? undefined : (props.securityGroups ?? [lambdaSecurityGroup]),
         memorySize: props.memorySize,
         reservedConcurrentExecutions: props.reservedConcurrentExecutions,
@@ -1352,7 +1354,8 @@ export class ApiStack extends cdk.Stack {
     // Search function
     const searchFunction = createPythonFunction("SiutindeiSearchFunction", {
       handler: "lambda/search/handler.lambda_handler",
-      extraCopyPaths: ["fixtures"],
+      requirementsFile: "requirements-core.txt",
+      memorySize: 1024,
       environment: {
         DATABASE_SECRET_ARN: database.appUserSecret.secretArn,
         DATABASE_NAME: "siutindei",
@@ -1362,8 +1365,6 @@ export class ApiStack extends cdk.Stack {
         CORS_ALLOWED_ORIGINS: corsAllowedOrigins.join(","),
         // Production search always uses Aurora; fixture mode is staging-www only.
         STAGING_SEARCH_DATA_ENABLED: "false",
-        STAGING_SEARCH_DATA_PATH:
-          "/var/task/fixtures/activity_search_staging.json",
         ORG_REVIEW_GATE_ENABLED: orgReviewGateEnabled.valueAsString,
       },
     });
@@ -2464,6 +2465,8 @@ export class ApiStack extends cdk.Stack {
       "method.request.querystring.language",
       "method.request.querystring.limit",
       "method.request.querystring.cursor",
+      "method.request.querystring.q",
+      "method.request.querystring.view",
     ];
     const requestParameters: Record<string, boolean> = {};
     for (const param of cacheKeyParameters) {

@@ -10,11 +10,23 @@ their primary responsibilities.
 - CDK runs `backend/scripts/run-cdk-app.sh`, which builds the local
   bundle via `backend/scripts/build_lambda_bundle.py` before synth/deploy.
 - `build_lambda_bundle.py` caches Python dependencies under
-  `backend/.lambda-build/deps-cache/` using a hash of
-  `backend/requirements.txt` and runtime settings, so repeat synth runs do
-  not reinstall pip packages unless requirements change. Cache pruning keeps
-  only the most recent keys (default: 3), configurable with
-  `LAMBDA_DEPS_CACHE_RETENTION` or `--cache-retention`.
+  `backend/.lambda-build/deps-cache/` using a hash of the selected
+  requirements file (including `-r` includes) and runtime settings, so
+  repeat synth runs do not reinstall pip packages unless requirements
+  change. Cache pruning keeps only the most recent keys (default: 3),
+  configurable with `LAMBDA_DEPS_CACHE_RETENTION` or `--cache-retention`.
+- `--profile search` installs `backend/requirements-core.txt` into
+  `backend/.lambda-build/search`. That set is pydantic, psycopg, and
+  SQLAlchemy. boto3 comes from the Lambda runtime. It does not ship
+  phonenumbers, pycountry, pypdf, alembic, or pyjwt.
+- `--profile admin` installs `backend/requirements-admin.txt` into
+  `backend/.lambda-build/admin`. Admin adds boto3, alembic, PyJWT,
+  pycountry, pypdf, and phonenumberslite (imported as `phonenumbers`).
+- `backend/requirements.txt` includes the admin set, so the default
+  bundle (`.lambda-build/base`) still has admin dependencies. The search
+  function sets `requirementsFile` to `requirements-core.txt` and stages
+  `.lambda-build/search`. Other functions keep the default file.
+  `extraCopyPaths` stay under the backend root.
 
 ## API Gateway Lambdas
 
@@ -48,9 +60,15 @@ their primary responsibilities.
 - Auth: API key + device attestation authorizer (mobile route);
   partner API-key authorizer (partner route, org-scoped keys are
   filtered to their organization)
-- Purpose: public activity search with cursor pagination
+- Purpose: public activity search with cursor pagination. Query `q`
+  (minimum 2 characters) matches activity name, organization name, and
+  name translation values. Query `view` is `card` or `full` (default
+  `full`). Card omits descriptions, description translations, manager
+  id, and place id, and keeps the first media URL and first weekly entry.
+- Memory: 1024 MB
 - DB access: RDS Proxy with IAM auth (`activities_app`). Production always
   queries Aurora (`STAGING_SEARCH_DATA_ENABLED=false` on the Lambda).
+  The engine for IAM auth is reused for 10 minutes with one connection.
 - Environment:
   - `STAGING_SEARCH_DATA_ENABLED` (always `false` in deployed stacks)
   - `STAGING_SEARCH_DATA_PATH` (bundled fixture path; unused when disabled)

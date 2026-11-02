@@ -11,15 +11,16 @@ default to 12. Existing seed SQL still runs.
 
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0056_org_enrichment_pages"
 down_revision: Union[str, None] = "0055_org_enrichment"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _TABLE = "org_enrichment_settings"
 _CHECK = "org_enrichment_settings_pages_check"

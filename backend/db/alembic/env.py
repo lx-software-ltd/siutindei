@@ -7,8 +7,7 @@ from pathlib import Path
 
 from alembic import context
 from alembic.script import ScriptDirectory
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 config = context.config
 
@@ -19,10 +18,11 @@ MAX_REVISION_LENGTH = 32
 def validate_revision_lengths() -> None:
     """Ensure all revision IDs fit in alembic_version.version_num (varchar(32))."""
     script_dir = ScriptDirectory.from_config(config)
-    violations = []
-    for script in script_dir.walk_revisions():
-        if len(script.revision) > MAX_REVISION_LENGTH:
-            violations.append(f"  {script.revision} ({len(script.revision)} chars)")
+    violations = [
+        f"  {script.revision} ({len(script.revision)} chars)"
+        for script in script_dir.walk_revisions()
+        if len(script.revision) > MAX_REVISION_LENGTH
+    ]
     if violations:
         raise RuntimeError(
             f"Revision IDs must be ≤{MAX_REVISION_LENGTH} characters:\n"
@@ -38,8 +38,8 @@ if config.config_file_name is not None:
 base_dir = Path(__file__).resolve().parents[2]
 sys.path.append(str(base_dir / "src"))
 
-from app.db.base import Base  # noqa: E402
 from app.db import models  # noqa: F401,E402
+from app.db.base import Base  # noqa: E402
 
 target_metadata = Base.metadata
 

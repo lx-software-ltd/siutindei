@@ -1,6 +1,6 @@
 'use client';
 
-import type { Locale } from '@/content';
+import type { Locale } from '@/content/locales';
 import type { ActivityListing } from '@/lib/activities/types';
 import { shouldDeferListingCardRender } from '@/lib/listing-image';
 
@@ -57,6 +57,7 @@ export function ListingGrid({
           imageAltFallback={labels.imageFallback}
           mapAltLabel={labels.mapAlt}
           deferRendering={shouldDeferListingCardRender(cardIndex)}
+          showMiniMap={cardIndex < 6}
         />
       ))}
     </div>

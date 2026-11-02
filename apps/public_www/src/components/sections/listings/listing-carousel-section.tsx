@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-import type { Locale } from '@/content';
+import type { Locale } from '@/content/locales';
 import { Carousel } from '@/components/shared/ui/carousel';
 import type { ActivityListing } from '@/lib/activities/types';
 import {
@@ -95,6 +95,7 @@ export function ListingCarouselSection({
                       mapAltLabel={labels.mapAlt}
                       imageLoading={imageProps.imageLoading}
                       imageFetchPriority={imageProps.imageFetchPriority}
+                      showMiniMap={isPrimaryCarousel && cardIndex < 6}
                     />
                   );
                 })}

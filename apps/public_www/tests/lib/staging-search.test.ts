@@ -68,4 +68,33 @@ describe('fetchStagingActivitySearch', () => {
       expect(item.schedule.languages).toEqual(['en']);
     }
   });
+
+  it('filters names with q and omits detail fields in card view', async () => {
+    const first = await fetchStagingActivitySearch({ limit: 1 });
+    const name = first.items[0]?.activity.name ?? '';
+    const needle = name.slice(0, Math.min(12, name.length));
+    expect(needle.length).toBeGreaterThanOrEqual(2);
+
+    const response = await fetchStagingActivitySearch({
+      q: needle,
+      view: 'card',
+      limit: 5,
+    });
+    expect(response.items.length).toBeGreaterThan(0);
+    for (const item of response.items) {
+      const haystack = [
+        item.activity.name,
+        item.organization.name,
+        ...Object.values(item.activity.nameTranslations),
+        ...Object.values(item.organization.nameTranslations),
+      ]
+        .join('\n')
+        .toLowerCase();
+      expect(haystack).toContain(needle.toLowerCase());
+      expect(item.activity.description).toBeNull();
+      expect(item.organization.placeId).toBeNull();
+      expect(item.organization.mediaUrls.length).toBeLessThanOrEqual(1);
+      expect(item.schedule.weeklyEntries.length).toBeLessThanOrEqual(1);
+    }
+  });
 });

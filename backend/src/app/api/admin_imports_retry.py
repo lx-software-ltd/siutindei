@@ -172,10 +172,7 @@ def _belongs_to_retry(row: dict[str, Any], paths: set[str], names: set[str]) -> 
     folded = normalize_org_name(key) if key else ""
     if folded and folded in names:
         return True
-    for name in names:
-        if key.casefold().startswith(f"{name} /"):
-            return True
-    return False
+    return any(key.casefold().startswith(f"{name} /") for name in names)
 
 
 def _unmatched_result(row: dict[str, Any]) -> dict[str, Any]:

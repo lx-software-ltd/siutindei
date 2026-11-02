@@ -30,7 +30,7 @@ import os
 import secrets
 import string
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from botocore.exceptions import ClientError
@@ -243,7 +243,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     apigw_client = get_client("apigateway")
     secrets_client = get_client("secretsmanager")
 
-    rotation_date = datetime.now(timezone.utc).isoformat()
+    rotation_date = datetime.now(UTC).isoformat()
 
     # Check for pending cleanup of old keys
     old_key_info = _get_old_key_info_from_secret(secrets_client, secret_arn)

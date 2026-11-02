@@ -88,7 +88,7 @@ export function ApiKeysPanel() {
   const organizationsQuery = useQuery(
     {
       queryKey: ['admin', 'organizations', 'api-key-picker'],
-      queryFn: () => listResource<Organization>('organizations', undefined, 100),
+      queryFn: () => listResource<Organization>('v1/admin', 'organizations', undefined, 100),
     },
     getAdminQueryClient()
   );

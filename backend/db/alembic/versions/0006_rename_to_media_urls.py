@@ -1,14 +1,14 @@
 """Rename picture_urls to media_urls in organizations table."""
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 from alembic import op
 
-
 revision: str = "0006_rename_to_media_urls"
 down_revision: Union[str, None] = "0005_add_organization_owner"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

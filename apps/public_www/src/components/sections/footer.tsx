@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
-import type { FooterContent, Locale } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { FooterContent } from '@/content/types';
 import { formatContentTemplate } from '@/content/content-field-utils';
 import { TrackedWhatsappLink } from '@/components/shared/tracked-whatsapp-link';
 import { localizeHref } from '@/lib/locale-routing';

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import type { Locale } from '@/content';
+import type { Locale } from '@/content/locales';
 import { localizePath } from '@/lib/locale-routing';
 import { ROUTES } from '@/lib/routes';
 

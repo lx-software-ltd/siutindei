@@ -1,12 +1,15 @@
-import type { Locale, SiteContent } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { SiteContent } from '@/content/types';
 import { HeroSearchBar } from '@/components/sections/hero/hero-search-bar';
 import { FloatingKawaiiBubbles } from '@/components/sections/hero/floating-kawaii-bubbles';
 import { SearchNavigator } from '@/components/sections/hero/search-navigator';
+import type { BubbleId } from '@/lib/small-world/kawaii-bubbles';
 
 interface SmallWorldHeroProps {
   readonly locale: Locale;
   readonly copy: SiteContent['smallWorld'];
   readonly searchBarLabels: SiteContent['navbar']['searchBar'];
+  readonly bubbleIds: readonly BubbleId[];
 }
 
 /**
@@ -17,11 +20,12 @@ export function SmallWorldHero({
   locale,
   copy,
   searchBarLabels,
+  bubbleIds,
 }: SmallWorldHeroProps) {
   return (
     <section className="small-world-hero" aria-label={copy.sceneAriaLabel}>
       <div className="small-world-hero__stars" aria-hidden="true" />
-      <FloatingKawaiiBubbles copy={copy} />
+      <FloatingKawaiiBubbles copy={copy} ids={bubbleIds} />
       <div className="relative z-10 mx-auto max-w-3xl px-4 pb-16 pt-8 text-center sm:px-6 md:pb-24 md:pt-12">
         <img
           src="/images/brand/siutindei-logo-stacked.svg"

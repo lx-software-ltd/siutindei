@@ -1,4 +1,5 @@
-import type { HeroContent, Locale } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { HeroContent } from '@/content/types';
 import { localizeHref } from '@/lib/locale-routing';
 
 interface HeroSectionProps {

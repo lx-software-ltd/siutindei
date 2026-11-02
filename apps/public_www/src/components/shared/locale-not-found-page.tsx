@@ -2,17 +2,20 @@
 
 import { usePathname } from 'next/navigation';
 
+import { useChromeCopy } from '@/components/shared/chrome-copy';
 import { StatusPage } from '@/components/shared/status-page';
-import { getContent } from '@/content';
 import { getLocaleFromPath } from '@/lib/locale-routing';
 
 export function LocaleNotFoundPage() {
   const pathname = usePathname();
   const locale = getLocaleFromPath(pathname ?? '/');
-  const content = getContent(locale);
-  const copy = content.common.errors.notFound;
+  const copy = useChromeCopy(locale);
 
   return (
-    <StatusPage locale={locale} copy={copy} homeLabel={copy.homeLabel} />
+    <StatusPage
+      locale={locale}
+      copy={copy.notFound}
+      homeLabel={copy.notFound.homeLabel}
+    />
   );
 }

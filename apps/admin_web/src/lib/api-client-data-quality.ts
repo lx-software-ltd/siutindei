@@ -1,5 +1,7 @@
+import type { components } from '../types/api-admin.generated';
 import { buildApiUrl, request, type ListResponse } from './api-client-core';
-import type { AdminSchemas } from './api-admin-client';
+
+type AdminSchemas = components['schemas'];
 
 export interface OrgDuplicateMember {
   id: string;

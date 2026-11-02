@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -22,8 +22,8 @@ class HealthCheck:
 
     name: str
     healthy: bool
-    latency_ms: Optional[float] = None
-    error: Optional[str] = None
+    latency_ms: float | None = None
+    error: str | None = None
     details: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -60,7 +61,7 @@ AUDITABLE_TABLES: frozenset[str] = frozenset(
 
 def _handle_audit_logs(
     event: Mapping[str, Any],
-    audit_id: Optional[str],
+    audit_id: str | None,
 ) -> dict[str, Any]:
     """Handle audit log queries."""
     if audit_id:
@@ -83,7 +84,7 @@ def _get_audit_log_by_id(
         try:
             entry = repo.get_by_id(_parse_uuid(audit_id))
         except ValidationError:
-            raise NotFoundError("audit_log", audit_id)
+            raise NotFoundError("audit_log", audit_id) from None
 
         if entry is None:
             raise NotFoundError("audit_log", audit_id)

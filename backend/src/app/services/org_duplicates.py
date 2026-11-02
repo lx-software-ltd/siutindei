@@ -408,9 +408,9 @@ def _group_matches(group, signal, source, review_status, query, org_id) -> bool:
         org.get("review_status") == review_status for org in orgs
     ):
         return False
-    if query and not any(query.casefold() in org["name"].casefold() for org in orgs):
-        return False
-    return True
+    return not (
+        query and not any(query.casefold() in org["name"].casefold() for org in orgs)
+    )
 
 
 def _org_summary(org: Organization) -> dict:

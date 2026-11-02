@@ -6,8 +6,8 @@ import json
 import ssl
 import urllib.error
 import urllib.request
+from collections.abc import Mapping
 from typing import Any
-from typing import Mapping
 from urllib.parse import urlparse
 
 from app.utils.logging import get_logger

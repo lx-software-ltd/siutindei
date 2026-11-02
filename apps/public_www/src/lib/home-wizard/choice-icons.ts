@@ -1,6 +1,6 @@
 import { homeWizardChoices } from './choices';
 
-export const ACTIVITY_ICON_SRC: Record<string, string> = {
+const ACTIVITY_ICON_SRC: Record<string, string> = {
   'early-years': '/images/categories/early-years.svg',
   learning: '/images/categories/learning.svg',
   arts: '/images/categories/arts.svg',

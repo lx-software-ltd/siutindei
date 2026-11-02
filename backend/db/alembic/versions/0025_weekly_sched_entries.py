@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0025_weekly_sched_entries"
 down_revision: Union[str, None] = "0024_rename_search_idx"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -193,7 +193,7 @@ def downgrade() -> None:
 
     op.execute("ALTER TYPE schedule_type RENAME TO schedule_type_new")
     op.execute(
-        "CREATE TYPE schedule_type AS ENUM " "('weekly', 'monthly', 'date_specific')"
+        "CREATE TYPE schedule_type AS ENUM ('weekly', 'monthly', 'date_specific')"
     )
     op.execute(
         "ALTER TABLE activity_schedule "
@@ -283,7 +283,7 @@ def downgrade() -> None:
     op.create_check_constraint(
         "schedule_date_order",
         "activity_schedule",
-        "start_at_utc IS NULL OR end_at_utc IS NULL OR " "start_at_utc < end_at_utc",
+        "start_at_utc IS NULL OR end_at_utc IS NULL OR start_at_utc < end_at_utc",
     )
     op.create_check_constraint(
         "schedule_type_fields_check",

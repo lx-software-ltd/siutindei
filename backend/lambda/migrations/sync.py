@@ -22,10 +22,9 @@ def _sync_proxy_user_passwords(database_url: str) -> None:
         os.getenv("DATABASE_APP_USER_SECRET_ARN"),
         os.getenv("DATABASE_ADMIN_USER_SECRET_ARN"),
     ]
-    user_secrets = []
-    for secret_arn in secret_arns:
-        if secret_arn:
-            user_secrets.append(_load_db_user_secret(secret_arn))
+    user_secrets = [
+        _load_db_user_secret(secret_arn) for secret_arn in secret_arns if secret_arn
+    ]
 
     if not user_secrets:
         return

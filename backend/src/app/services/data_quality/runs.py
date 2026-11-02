@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import UUID
 
@@ -222,7 +222,7 @@ def process_run(
         return True
     run.attempts = int(run.attempts or 0) + 1
     if run.started_at is None:
-        run.started_at = datetime.now(timezone.utc)
+        run.started_at = datetime.now(UTC)
     run.status = "running"
     checks = [dict(item) for item in (run.checks or [])]
     work: list[dict[str, Any]] = []
@@ -246,7 +246,7 @@ def process_run(
                 break
         session.flush()
     run.checks = checks
-    run.updated_at = datetime.now(timezone.utc)
+    run.updated_at = datetime.now(UTC)
     if hold_for_busy or deferred:
         run.status = "queued"
         session.flush()
@@ -262,7 +262,7 @@ def process_run(
         refresh_check(session, run, check)
     run.status = _aggregate(checks)
     if run.status in _TERMINAL:
-        run.finished_at = datetime.now(timezone.utc)
+        run.finished_at = datetime.now(UTC)
         run.refresh = False
     session.flush()
     return True
@@ -279,9 +279,9 @@ def refresh_run(session: Session, run: DataQualityRun) -> DataQualityRun:
     if status != run.status or checks != list(run.checks or []):
         run.checks = checks
         run.status = status
-        run.updated_at = datetime.now(timezone.utc)
+        run.updated_at = datetime.now(UTC)
         if status in _TERMINAL:
-            run.finished_at = run.finished_at or datetime.now(timezone.utc)
+            run.finished_at = run.finished_at or datetime.now(UTC)
             run.refresh = False
         session.flush()
     return run
@@ -311,7 +311,7 @@ def retry_run(session: Session, run: DataQualityRun, *, refresh: bool = False) -
     run.finished_at = None
     run.attempt = int(run.attempt or 1) + 1
     run.refresh = refresh
-    run.updated_at = datetime.now(timezone.utc)
+    run.updated_at = datetime.now(UTC)
     session.flush()
     return True
 
@@ -346,7 +346,7 @@ def serialize_run(run: DataQualityRun, *, summary: bool = False) -> dict[str, An
 def _new_run(**kwargs: Any) -> DataQualityRun:
     checks = list(kwargs.pop("checks"))
     scope = kwargs.pop("scope")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return DataQualityRun(
         trigger=kwargs["trigger"],
         import_job_id=kwargs.get("import_job_id"),
@@ -496,5 +496,5 @@ def _iso(value: datetime | None) -> str | None:
     if value is None:
         return None
     if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc).isoformat()
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).isoformat()

@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import type { Locale, NavbarContent } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { NavbarContent } from '@/content/types';
 import { SearchBarCompact } from '@/components/sections/search/search-bar-compact';
 import { SearchPanel } from '@/components/sections/search/search-panel';
 import { useHomeHeaderReveal } from '@/lib/home-header-reveal';

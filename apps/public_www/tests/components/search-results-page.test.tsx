@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SearchResultsPage } from '@/components/pages/search-results-page';
 import { SearchProvider } from '@/components/shared/search/search-context';
 import { getContent } from '@/content';
+import { withChromeCopy } from '../helpers/chrome-copy';
 import { fetchActivitySearch } from '@/lib/activities/search-client';
 import type { ActivityListing } from '@/lib/activities/types';
 import { ANALYTICS_CONSENT_STORAGE_KEY } from '@/lib/analytics/consent';
@@ -84,9 +85,11 @@ function buildListing(): ActivityListing {
 function renderPage() {
   const copy = getContent('en').searchPage;
   render(
-    <SearchProvider>
-      <SearchResultsPage locale="en" copy={copy} />
-    </SearchProvider>,
+    withChromeCopy(
+      <SearchProvider>
+        <SearchResultsPage locale="en" copy={copy} />
+      </SearchProvider>,
+    ),
   );
   return copy;
 }
@@ -168,10 +171,10 @@ describe('SearchResultsPage', () => {
   it('does not refetch when only the view query changes', async () => {
     const copy = getContent('en').searchPage;
     function Tree() {
-      return (
+      return withChromeCopy(
         <SearchProvider>
           <SearchResultsPage locale="en" copy={copy} />
-        </SearchProvider>
+        </SearchProvider>,
       );
     }
 
@@ -240,6 +243,7 @@ describe('SearchResultsPage', () => {
         expect.objectContaining({
           areaId: '817456a3-b9ae-5b02-9e2b-f88caafe4f72',
         }),
+        expect.anything(),
       );
     });
   });
@@ -285,6 +289,7 @@ describe('SearchResultsPage', () => {
     await waitFor(() => {
       expect(screen.getByText(copy.errorLabel)).toBeInTheDocument();
     });
+    expect(screen.queryByText(copy.emptyLabel)).not.toBeInTheDocument();
     expect(window.dataLayer).toEqual([]);
   });
 });

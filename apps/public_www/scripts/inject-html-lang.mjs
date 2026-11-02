@@ -1,6 +1,5 @@
 // Sets <html lang="..."> on each exported HTML file from its locale path segment
-// (e.g. out/en/... → en, out/zh-HK/... → zh-HK). Complements set-html-lang.js for
-// client-side locale switches after hydration.
+// (e.g. out/en/... → en, out/zh-HK/... → zh-HK).
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';

@@ -6,18 +6,18 @@ Requests are reviewed by admins and trigger email notifications.
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import UUID
 
 revision: str = "0007_org_access_requests"
 down_revision: Union[str, None] = "0006_rename_to_media_urls"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

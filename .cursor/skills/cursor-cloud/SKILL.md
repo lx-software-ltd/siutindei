@@ -9,6 +9,14 @@ Source Node before npm: `export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh"`.
 
 PostgreSQL is `postgresql+psycopg://postgres:postgres@localhost:5432/backend_test`. Alembic needs `DATABASE_URL`. Local auth is `md5`, not `peer`.
 
+Pytest from the repo root requires both of these. It fails immediately if `TEST_DATABASE_URL` is unset. SQLite is not supported.
+
+```bash
+TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/backend_test \
+  PYTHONPATH=backend/src:backend \
+  pytest
+```
+
 Install backend deps with `pip install --ignore-installed` so Debian packages such as PyJWT do not block the install.
 
 Admin Playwright reuses a server already listening on port 3000 and then skips the mock `NEXT_PUBLIC_*` values. Stop a plain `npm run dev` before `npx playwright test`.

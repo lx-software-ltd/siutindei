@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, ForeignKey, Integer, Text, text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
@@ -28,12 +28,12 @@ class Organization(Base):
         server_default=text("gen_random_uuid()"),
     )
     name: Mapped[str] = mapped_column(Text(), nullable=False)
-    name_key: Mapped[Optional[str]] = mapped_column(
+    name_key: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Normalized name for duplicate matching; maintained by trigger",
     )
-    description: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text(), nullable=True)
     name_translations: Mapped[dict[str, str]] = mapped_column(
         JSONB(),
         nullable=False,
@@ -53,85 +53,85 @@ class Organization(Base):
         nullable=False,
         comment="Cognito user sub (subject) identifier of the organization manager",
     )
-    phone_country_code: Mapped[Optional[str]] = mapped_column(
+    phone_country_code: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="ISO 3166-1 alpha-2 country code for phone number",
     )
-    phone_number: Mapped[Optional[str]] = mapped_column(
+    phone_number: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="National phone number digits (no country code)",
     )
-    email: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    whatsapp: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    facebook: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    instagram: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    tiktok: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    twitter: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    xiaohongshu: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    wechat: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    website: Mapped[Optional[str]] = mapped_column(
+    email: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    whatsapp: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    facebook: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    instagram: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    tiktok: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    twitter: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    xiaohongshu: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    wechat: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    website: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Organization website",
     )
-    media_urls: Mapped[List[str]] = mapped_column(
+    media_urls: Mapped[list[str]] = mapped_column(
         ARRAY(Text()),
         nullable=False,
         server_default=text("'{}'::text[]"),
     )
-    logo_media_url: Mapped[Optional[str]] = mapped_column(
+    logo_media_url: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
     )
-    place_id: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    place_id: Mapped[str | None] = mapped_column(Text(), nullable=True)
     status: Mapped[str] = mapped_column(
         Text(),
         nullable=False,
         default="operational",
         server_default=text("'operational'"),
     )
-    status_changed_at: Mapped[Optional[datetime]] = mapped_column(
+    status_changed_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=True,
     )
-    status_source: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    source: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    source_id: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    description_source: Mapped[Optional[str]] = mapped_column(
+    status_source: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    source: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    source_id: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    description_source: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
     )
-    source_url: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    source_note: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    source_note: Mapped[str | None] = mapped_column(Text(), nullable=True)
     review_status: Mapped[str] = mapped_column(
         Text(),
         nullable=False,
         default="pending_review",
         server_default=text("'pending_review'"),
     )
-    reviewed_at: Mapped[Optional[datetime]] = mapped_column(
+    reviewed_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=True,
     )
-    reviewed_by: Mapped[Optional[str]] = mapped_column(
+    reviewed_by: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Cognito sub of the admin who last set review_status",
     )
-    review_notes: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    review_reason: Mapped[Optional[str]] = mapped_column(
+    review_notes: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    review_reason: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Why review_status is rejected",
     )
-    import_job_id: Mapped[Optional[str]] = mapped_column(
+    import_job_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("import_jobs.id", ondelete="SET NULL"),
         nullable=True,
     )
-    last_imported_at: Mapped[Optional[datetime]] = mapped_column(
+    last_imported_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=True,
     )
@@ -158,11 +158,11 @@ class Organization(Base):
         server_default=text("1"),
     )
 
-    locations: Mapped[List["Location"]] = relationship(
+    locations: Mapped[list[Location]] = relationship(
         back_populates="organization",
         cascade="all, delete-orphan",
     )
-    activities: Mapped[List["Activity"]] = relationship(
+    activities: Mapped[list[Activity]] = relationship(
         back_populates="organization",
         cascade="all, delete-orphan",
     )

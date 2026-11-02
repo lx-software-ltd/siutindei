@@ -2,7 +2,7 @@ import {
   createOrganizationMediaUpload,
   deleteOrganizationMedia,
 } from '../../../lib/api-client-media';
-import type { ApiMode } from '../../../lib/resource-api';
+import type { ApiMode } from '../../../lib/api-client-admin';
 
 export interface MediaPanelProps {
   mode?: ApiMode;

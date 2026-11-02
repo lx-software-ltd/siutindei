@@ -14,10 +14,12 @@ from app.db.models import ActivityCategory
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.db.repositories import ActivityCategoryRepository
 from app.exceptions import ValidationError
-from app.services.activity_categories import create_activity_category
-from app.services.activity_categories import parse_display_order
-from app.services.activity_categories import reject_same_parent_name
-from app.services.activity_categories import validate_category_parent
+from app.services.activity_categories import (
+    create_activity_category,
+    parse_display_order,
+    reject_same_parent_name,
+    validate_category_parent,
+)
 from app.utils.translations import build_translation_map
 
 _create_activity_category = create_activity_category

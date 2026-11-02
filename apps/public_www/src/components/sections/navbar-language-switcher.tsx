@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { isValidLocale, type Locale, type NavbarContent } from '@/content';
+import { isValidLocale, type Locale } from '@/content/locales';
+import type { NavbarContent } from '@/content/types';
 import { localizeHref, normalizeLocalizedPath } from '@/lib/locale-routing';
 
 const LANGUAGE_FLAG_SRC = {

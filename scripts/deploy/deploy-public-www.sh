@@ -39,7 +39,7 @@ RELEASE_ID="${PUBLIC_WWW_RELEASE_ID:-}"
 PROMOTE_RELEASE_ID="${PUBLIC_WWW_PROMOTE_RELEASE_ID:-}"
 MAINTENANCE_MODE="${PUBLIC_WWW_MAINTENANCE_MODE:-false}"
 ASSET_CACHE_CONTROL="public, max-age=31536000, immutable"
-DOCUMENT_CACHE_CONTROL="public, max-age=300, must-revalidate"
+DOCUMENT_CACHE_CONTROL="public, max-age=300, must-revalidate, stale-while-revalidate=60"
 NO_STORE_CACHE_CONTROL="no-store, max-age=0"
 MAINTENANCE_ASSET_CACHE_CONTROL="public, max-age=3600, must-revalidate"
 DEFAULT_LX_SOFTWARE_URL="https://www.lx-software.com"
@@ -405,20 +405,33 @@ invalidate_distribution() {
   return 1
 }
 
+remove_production_fixtures() {
+  local destination_uri="$1"
+  if [ "$DEPLOY_ENVIRONMENT" = "production" ]; then
+    aws s3 rm "${destination_uri%/}/fixtures" --recursive
+  fi
+}
+
 sync_site_artifacts() {
   local source_dir="$1"
   local destination_uri="$2"
+  local fixture_excludes=()
+  if [ "$DEPLOY_ENVIRONMENT" = "production" ]; then
+    fixture_excludes=(--exclude "fixtures/*")
+  fi
   if [ -d "$source_dir/_next/static" ]; then
     aws s3 sync \
       "$source_dir/_next/static" \
       "$destination_uri/_next/static" \
       --cache-control "$ASSET_CACHE_CONTROL"
   fi
+  remove_production_fixtures "$destination_uri"
   aws s3 sync \
     "$source_dir" \
     "$destination_uri" \
     --exclude "_next/static/*" \
     --exclude "releases/*" \
+    "${fixture_excludes[@]}" \
     --cache-control "$DOCUMENT_CACHE_CONTROL" \
     --delete
 }
@@ -426,17 +439,23 @@ sync_site_artifacts() {
 sync_release_artifacts() {
   local source_uri="$1"
   local destination_uri="$2"
+  local fixture_excludes=()
+  if [ "$DEPLOY_ENVIRONMENT" = "production" ]; then
+    fixture_excludes=(--exclude "fixtures/*")
+  fi
   if aws s3 ls "$source_uri/_next/static/" >/dev/null 2>&1; then
     aws s3 sync \
       "$source_uri/_next/static" \
       "$destination_uri/_next/static" \
       --cache-control "$ASSET_CACHE_CONTROL"
   fi
+  remove_production_fixtures "$destination_uri"
   aws s3 sync \
     "$source_uri" \
     "$destination_uri" \
     --exclude "_next/static/*" \
     --exclude "releases/*" \
+    "${fixture_excludes[@]}" \
     --cache-control "$DOCUMENT_CACHE_CONTROL" \
     --delete
 }

@@ -8,18 +8,18 @@ Adds area_id FK to locations and backfills from existing district+country.
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 from typing import Union
 from uuid import uuid4
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0014_add_geo_areas"
 down_revision: Union[str, None] = "0013_add_loc_country"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -38,15 +38,15 @@ def _build_seed_data() -> list[dict]:
     # ---- Hong Kong ----
     hk_id = _uuid()
     rows.append(
-        dict(
-            id=hk_id,
-            parent_id=None,
-            name="Hong Kong",
-            level="country",
-            code="HK",
-            active=True,
-            display_order=1,
-        )
+        {
+            "id": hk_id,
+            "parent_id": None,
+            "name": "Hong Kong",
+            "level": "country",
+            "code": "HK",
+            "active": True,
+            "display_order": 1,
+        }
     )
     hk_districts = [
         "Central and Western",
@@ -70,29 +70,29 @@ def _build_seed_data() -> list[dict]:
     ]
     for i, d in enumerate(hk_districts, 1):
         rows.append(
-            dict(
-                id=_uuid(),
-                parent_id=hk_id,
-                name=d,
-                level="district",
-                code=None,
-                active=True,
-                display_order=i,
-            )
+            {
+                "id": _uuid(),
+                "parent_id": hk_id,
+                "name": d,
+                "level": "district",
+                "code": None,
+                "active": True,
+                "display_order": i,
+            }
         )
 
     # ---- Singapore ----
     sg_id = _uuid()
     rows.append(
-        dict(
-            id=sg_id,
-            parent_id=None,
-            name="Singapore",
-            level="country",
-            code="SG",
-            active=False,
-            display_order=2,
-        )
+        {
+            "id": sg_id,
+            "parent_id": None,
+            "name": "Singapore",
+            "level": "country",
+            "code": "SG",
+            "active": False,
+            "display_order": 2,
+        }
     )
     sg_districts = [
         "Ang Mo Kio",
@@ -125,29 +125,29 @@ def _build_seed_data() -> list[dict]:
     ]
     for i, d in enumerate(sg_districts, 1):
         rows.append(
-            dict(
-                id=_uuid(),
-                parent_id=sg_id,
-                name=d,
-                level="district",
-                code=None,
-                active=True,
-                display_order=i,
-            )
+            {
+                "id": _uuid(),
+                "parent_id": sg_id,
+                "name": d,
+                "level": "district",
+                "code": None,
+                "active": True,
+                "display_order": i,
+            }
         )
 
     # ---- UAE ----
     ae_id = _uuid()
     rows.append(
-        dict(
-            id=ae_id,
-            parent_id=None,
-            name="United Arab Emirates",
-            level="country",
-            code="AE",
-            active=False,
-            display_order=3,
-        )
+        {
+            "id": ae_id,
+            "parent_id": None,
+            "name": "United Arab Emirates",
+            "level": "country",
+            "code": "AE",
+            "active": False,
+            "display_order": 3,
+        }
     )
 
     uae_structure: dict[str, list[str]] = {
@@ -170,27 +170,27 @@ def _build_seed_data() -> list[dict]:
     for eidx, (emirate, districts) in enumerate(uae_structure.items(), 1):
         emirate_id = _uuid()
         rows.append(
-            dict(
-                id=emirate_id,
-                parent_id=ae_id,
-                name=emirate,
-                level="region",
-                code=None,
-                active=True,
-                display_order=eidx,
-            )
+            {
+                "id": emirate_id,
+                "parent_id": ae_id,
+                "name": emirate,
+                "level": "region",
+                "code": None,
+                "active": True,
+                "display_order": eidx,
+            }
         )
         for didx, d in enumerate(districts, 1):
             rows.append(
-                dict(
-                    id=_uuid(),
-                    parent_id=emirate_id,
-                    name=d,
-                    level="district",
-                    code=None,
-                    active=True,
-                    display_order=didx,
-                )
+                {
+                    "id": _uuid(),
+                    "parent_id": emirate_id,
+                    "name": d,
+                    "level": "district",
+                    "code": None,
+                    "active": True,
+                    "display_order": didx,
+                }
             )
 
     return rows

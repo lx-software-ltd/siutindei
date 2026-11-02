@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -37,10 +36,10 @@ from app.services.category_suggestions.settings import (
     resolved_model_name,
 )
 from app.services.openrouter_client import (
-    openrouter_chat_completion,
     WORKLOAD_CATEGORY_SUGGESTION,
     OpenRouterError,
     extract_message_text,
+    openrouter_chat_completion,
     usage_from_body,
 )
 from app.services.openrouter_json_parse import loads_openrouter_json
@@ -125,7 +124,7 @@ def store_discover_batch(
         return
     indexed = _index_results(parsed)
     counts = {"auto_applied": 0, "failed": 0}
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     threshold = _threshold(session)
     audited = False
     for raw_id in suggestion_ids:
@@ -179,7 +178,7 @@ def _prepare(
         from app.services.category_suggestions.scan import _over_budget
 
         if _over_budget(session):
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             run.status = "failed"
             run.error = "Monthly category-check budget is used"
             run.finished_at = now

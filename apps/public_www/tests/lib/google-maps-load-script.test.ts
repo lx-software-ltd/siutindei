@@ -61,8 +61,10 @@ describe('loadGoogleMapsScript', () => {
     ) as HTMLScriptElement | null;
     expect(script).not.toBeNull();
     expect(script?.src).toContain('loading=async');
+    expect(script?.src).toContain('callback=siutindeiMapsReady');
 
     installGoogleMapsStub({ includeMap: false, importLibrary });
+    (window as Window & { siutindeiMapsReady?: () => void }).siutindeiMapsReady?.();
 
     await vi.waitFor(() => {
       expect(importLibrary).toHaveBeenCalledWith('maps');
@@ -108,6 +110,7 @@ describe('loadGoogleMapsScript', () => {
     expect(settled).toBe(false);
 
     installGoogleMapsStub({ includeMap: false, importLibrary });
+    (window as Window & { siutindeiMapsReady?: () => void }).siutindeiMapsReady?.();
     await vi.waitFor(() => {
       expect(importLibrary).toHaveBeenCalledWith('maps');
     });
@@ -131,6 +134,7 @@ describe('loadGoogleMapsScript', () => {
       window.setTimeout(resolve, 30);
     });
     installGoogleMapsStub();
+    existing.dispatchEvent(new Event('load'));
     await expect(load).resolves.toBeUndefined();
   });
 });

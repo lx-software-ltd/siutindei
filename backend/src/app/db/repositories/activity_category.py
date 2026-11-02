@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Activity
-from app.db.models import ActivityCategory
+from app.db.models import Activity, ActivityCategory
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.db.repositories.base import BaseRepository
 from app.exceptions import ValidationError

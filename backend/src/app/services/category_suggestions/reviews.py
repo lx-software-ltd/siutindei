@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_
-from sqlalchemy import func
-from sqlalchemy import or_
-from sqlalchemy import select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.db.models import Activity, ActivityCategory, Organization
@@ -69,7 +65,7 @@ def apply_suggestion_to_reviews(
             )
         ).all()
     )
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for review in reviews:
         activity = session.get(Activity, review.activity_id)
         if target_id is not None and activity is not None:
@@ -136,7 +132,7 @@ def _decide(
 ) -> ActivityCategoryReview:
     review.status = status
     review.decided_by = decided_by
-    review.decided_at = datetime.now(timezone.utc)
+    review.decided_at = datetime.now(UTC)
     return review
 
 

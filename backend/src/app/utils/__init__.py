@@ -1,5 +1,14 @@
 """Utility modules for the backend application."""
 
+from app.utils.logging import (
+    clear_request_context,
+    configure_logging,
+    get_logger,
+    hash_for_correlation,
+    mask_email,
+    mask_pii,
+    set_request_context,
+)
 from app.utils.parsers import (
     parse_datetime,
     parse_decimal,
@@ -17,15 +26,6 @@ from app.utils.validators import (
     validate_email,
     validate_range,
     validate_uuid,
-)
-from app.utils.logging import (
-    configure_logging,
-    get_logger,
-    hash_for_correlation,
-    mask_email,
-    mask_pii,
-    set_request_context,
-    clear_request_context,
 )
 
 __all__ = [

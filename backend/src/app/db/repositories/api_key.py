@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
@@ -23,7 +22,7 @@ class ApiKeyRepository(BaseRepository[ApiKey]):
         """
         super().__init__(session, ApiKey)
 
-    def find_active_by_hash(self, key_hash: str) -> Optional[ApiKey]:
+    def find_active_by_hash(self, key_hash: str) -> ApiKey | None:
         """Find an active (non-revoked, non-expired) key by its hash.
 
         Args:
@@ -32,7 +31,7 @@ class ApiKeyRepository(BaseRepository[ApiKey]):
         Returns:
             The matching active key, or None.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         query = select(ApiKey).where(
             ApiKey.key_hash == key_hash,
             ApiKey.revoked_at.is_(None),
@@ -50,7 +49,7 @@ class ApiKeyRepository(BaseRepository[ApiKey]):
             The revoked key entity.
         """
         if api_key.revoked_at is None:
-            api_key.revoked_at = datetime.now(timezone.utc)
+            api_key.revoked_at = datetime.now(UTC)
         return self.update(api_key)
 
     def touch_last_used(self, api_key: ApiKey) -> None:
@@ -59,6 +58,6 @@ class ApiKeyRepository(BaseRepository[ApiKey]):
         Args:
             api_key: The key entity to touch.
         """
-        api_key.last_used_at = datetime.now(timezone.utc)
+        api_key.last_used_at = datetime.now(UTC)
         self._session.add(api_key)
         self._session.flush()

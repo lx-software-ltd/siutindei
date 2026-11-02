@@ -7,17 +7,17 @@ become managers - they simply inform about new places.
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0011_add_org_suggestions"
 down_revision: Union[str, None] = "0010_add_audit_logging"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

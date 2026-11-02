@@ -10,14 +10,15 @@ insert ``data_quality_runs``. Existing rows use ``import`` or
 
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 from alembic import op
 
 revision: str = "0057_dq_enrich_trigger"
 down_revision: Union[str, None] = "0056_org_enrichment_pages"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _CHECK = "data_quality_runs_trigger_check"
 _TABLE = "data_quality_runs"

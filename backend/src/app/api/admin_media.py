@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 from urllib.parse import urlparse
 from uuid import UUID, uuid4
 
@@ -17,7 +18,7 @@ from app.utils import json_response
 def _handle_organization_media(
     event: Mapping[str, Any],
     method: str,
-    organization_id: Optional[str],
+    organization_id: str | None,
 ) -> dict[str, Any]:
     """Handle organization media uploads and deletions."""
     if not organization_id:

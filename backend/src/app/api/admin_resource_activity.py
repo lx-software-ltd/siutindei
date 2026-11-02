@@ -7,11 +7,11 @@ from uuid import UUID
 
 from psycopg.types.range import Range
 
-from app.api.admin_request import _parse_uuid
 from app.api.admin_imports_catalog import (
     MAX_VETTING_NOTE_LENGTH,
     MAX_WEBSITE_LENGTH,
 )
+from app.api.admin_request import _parse_uuid
 from app.api.admin_validators import (
     MAX_DESCRIPTION_LENGTH,
     MAX_NAME_LENGTH,

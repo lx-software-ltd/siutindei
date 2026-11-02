@@ -6,8 +6,6 @@ import json
 import re
 from typing import Any
 
-import phonenumbers
-
 from app.services.enrichment.logos import media_proposals
 from app.services.enrichment.parse import quote_supported
 from app.services.enrichment.sheet import checked_value, schedule_entries, section_rows
@@ -30,17 +28,17 @@ def proposals_from_pages(
         if description:
             field = "description_zh" if lang.startswith("zh") else "description"
             found.append(_fact(field, description, url, description[:180], org))
-        for email in page.get("mailtos") or []:
-            found.append(_fact("email", str(email).lower(), url, str(email), org))
+        found.extend(
+            _fact("email", str(email).lower(), url, str(email), org)
+            for email in page.get("mailtos") or []
+        )
         for phone in page.get("tels") or []:
             found.extend(_phone_facts(str(phone), url, org))
-        for item in page.get("social") or []:
-            if isinstance(item, dict) and item.get("field") and item.get("url"):
-                found.append(
-                    _fact(
-                        str(item["field"]), str(item["url"]), url, str(item["url"]), org
-                    )
-                )
+        found.extend(
+            _fact(str(item["field"]), str(item["url"]), url, str(item["url"]), org)
+            for item in page.get("social") or []
+            if isinstance(item, dict) and item.get("field") and item.get("url")
+        )
         site_name = str(og.get("og:site_name") or "").strip()
         if site_name:
             found.append(_fact("name", site_name, url, site_name, org))
@@ -233,12 +231,11 @@ def _fact(
         {"final_url": url, "url": url, "text": quote, "jsonld_raw": [], "og": {}}
     ]
     unverified = False
-    if not quote_supported(corpus, url, quote):
-        if pages is not None or (
-            quote and quote not in cleaned and cleaned not in quote
-        ):
-            unverified = True
-            confidence = min(confidence, 0.5)
+    if not quote_supported(corpus, url, quote) and (
+        pages is not None or (quote and quote not in cleaned and cleaned not in quote)
+    ):
+        unverified = True
+        confidence = min(confidence, 0.5)
     if field == "description_zh":
         current = {
             "description_translations": {
@@ -295,6 +292,8 @@ def _phone_facts(
     checked: dict[str, Any] | None = None,
     pages: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
+    import phonenumbers
+
     try:
         parsed = phonenumbers.parse(raw, "HK")
     except phonenumbers.NumberParseException:

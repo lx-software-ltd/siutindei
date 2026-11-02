@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import secrets
 import string
-from typing import Optional
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from app.services.aws_clients import get_ses_client
@@ -14,7 +13,7 @@ from app.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-def _build_login_link(base_url: str, email: str, code: str) -> Optional[str]:
+def _build_login_link(base_url: str, email: str, code: str) -> str | None:
     if not base_url:
         return None
     parsed = urlparse(base_url)

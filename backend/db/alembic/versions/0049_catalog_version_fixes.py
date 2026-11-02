@@ -17,16 +17,17 @@ before loading the SQL again.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Union
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0049_catalog_version_fixes"
 down_revision: Union[str, None] = "0048_catalog_versions"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _DB = Path(__file__).resolve().parents[2]
 _TABLES = (

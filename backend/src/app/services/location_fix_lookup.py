@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from urllib.parse import quote
@@ -301,7 +301,7 @@ def _store(
         return
     lookup: dict[str, Any] = {
         "provider": provider,
-        "looked_up_at": datetime.now(timezone.utc).isoformat(),
+        "looked_up_at": datetime.now(UTC).isoformat(),
     }
     if hit is None:
         lookup["grade"] = "miss"
@@ -393,5 +393,5 @@ def _fresh(proposed: dict | None, provider: str) -> bool:
     except ValueError:
         return False
     if stamp.tzinfo is None:
-        stamp = stamp.replace(tzinfo=timezone.utc)
-    return datetime.now(timezone.utc) - stamp < timedelta(days=_FRESH_DAYS)
+        stamp = stamp.replace(tzinfo=UTC)
+    return datetime.now(UTC) - stamp < timedelta(days=_FRESH_DAYS)

@@ -2,20 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any
-from typing import Mapping
-from typing import Optional
-from typing import Sequence
-from typing import TypeVar
+from typing import Any, TypeVar
 from uuid import UUID
 
-T = TypeVar("T", bound=Enum)
+TEnum = TypeVar("TEnum", bound=Enum)
 
 
-def parse_int(value: Optional[str]) -> Optional[int]:
+def parse_int(value: str | None) -> int | None:
     """Parse an integer from a string.
 
     Args:
@@ -32,7 +29,7 @@ def parse_int(value: Optional[str]) -> Optional[int]:
     return int(value)
 
 
-def parse_decimal(value: Optional[str]) -> Optional[Decimal]:
+def parse_decimal(value: str | None) -> Decimal | None:
     """Parse a Decimal from a string.
 
     Args:
@@ -49,7 +46,7 @@ def parse_decimal(value: Optional[str]) -> Optional[Decimal]:
     return Decimal(value)
 
 
-def parse_datetime(value: Optional[str]) -> Optional[datetime]:
+def parse_datetime(value: str | None) -> datetime | None:
     """Parse an ISO-8601 datetime string.
 
     Handles both 'Z' suffix and '+00:00' timezone notation.
@@ -69,7 +66,7 @@ def parse_datetime(value: Optional[str]) -> Optional[datetime]:
     return datetime.fromisoformat(cleaned)
 
 
-def parse_enum(value: Optional[str], enum_type: type[T]) -> Optional[T]:
+def parse_enum(value: str | None, enum_type: type[TEnum]) -> TEnum | None:
     """Parse an enum value from a string.
 
     Args:
@@ -122,7 +119,7 @@ def parse_languages(values: Sequence[str]) -> list[str]:
     return languages
 
 
-def first_param(params: dict[str, list[str]], key: str) -> Optional[str]:
+def first_param(params: dict[str, list[str]], key: str) -> str | None:
     """Return the first query parameter value for a key.
 
     Args:

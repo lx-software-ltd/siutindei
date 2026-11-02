@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
 
 import sqlalchemy as sa
 from sqlalchemy import ForeignKey, Text, text
@@ -29,12 +28,12 @@ class OrganizationFeedback(Base):
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
     )
-    submitter_id: Mapped[Optional[str]] = mapped_column(
+    submitter_id: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Cognito user sub for the submitter",
     )
-    submitter_email: Mapped[Optional[str]] = mapped_column(
+    submitter_email: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Submitter email for reference",
@@ -44,18 +43,18 @@ class OrganizationFeedback(Base):
         nullable=False,
         comment="Star rating from 0 to 5",
     )
-    label_ids: Mapped[List[str]] = mapped_column(
+    label_ids: Mapped[list[str]] = mapped_column(
         ARRAY(UUID(as_uuid=True)),
         nullable=False,
         server_default=text("'{}'::uuid[]"),
         comment="List of feedback label IDs",
     )
-    description: Mapped[Optional[str]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Free-form feedback description",
     )
-    source_ticket_id: Mapped[Optional[str]] = mapped_column(
+    source_ticket_id: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Source feedback ticket ID, if applicable",

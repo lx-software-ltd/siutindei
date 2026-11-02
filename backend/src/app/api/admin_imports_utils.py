@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import TypeVar
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -75,7 +75,7 @@ def collect_unknown_fields(
     path: str,
     warnings: list[str],
 ) -> None:
-    unknown = sorted({key for key in payload.keys() if key not in allowed})
+    unknown = sorted({key for key in payload if key not in allowed})
     if unknown:
         warnings.append(f"{path} has unknown fields: {', '.join(unknown)}")
 
@@ -161,8 +161,8 @@ def to_utc_weekly(
         days=1 if wraps else 0,
         minutes=local_end_minutes,
     )
-    start_utc = start_local.astimezone(timezone.utc)
-    end_utc = end_local.astimezone(timezone.utc)
+    start_utc = start_local.astimezone(UTC)
+    end_utc = end_local.astimezone(UTC)
     day_utc = _weekday_to_sunday_index(start_utc.weekday())
     return (
         day_utc,
@@ -234,7 +234,7 @@ def _local_weekday_base(day_of_week: int, tzinfo: ZoneInfo) -> datetime:
 
 
 def _utc_weekday_base(day_of_week: int) -> datetime:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     current_day = _weekday_to_sunday_index(now.weekday())
     delta = day_of_week - current_day
     return now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(

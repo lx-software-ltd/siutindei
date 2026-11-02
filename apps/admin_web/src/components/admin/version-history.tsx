@@ -22,7 +22,7 @@ import {
   listEntireCatalogHistory,
   type CatalogVersionRow,
 } from '../../lib/api-client-versions';
-import type { ApiMode } from '../../lib/resource-api';
+import type { ApiMode } from '../../lib/api-client-admin';
 import { AdminField, type AdminFieldProps } from '../ui/admin-field-grid';
 import { Button } from '../ui/button';
 import { snapshotFieldText } from './catalog-version-snapshot';

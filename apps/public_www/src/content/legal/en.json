@@ -1,0 +1,264 @@
+{
+  "lastUpdatedLabel": "Last updated",
+  "lastUpdated": "19 August 2026",
+  "onThisPageLabel": "On this page",
+  "privacy": {
+    "title": "Privacy Policy",
+    "intro": [
+      "Siu Tin Dei is operated by LX Software Limited (\"LX Software\", \"we\", \"us\", \"our\"). This Privacy Policy explains how we collect, use, store, and share personal data when you use the Siu Tin Dei website and mobile app (together, the \"Service\").",
+      "We handle personal data in accordance with the Personal Data (Privacy) Ordinance (Cap. 486) of Hong Kong (the \"PDPO\"). By using the Service you acknowledge the practices described in this policy."
+    ],
+    "sections": [
+      {
+        "id": "data-we-collect",
+        "heading": "1. Personal data we collect",
+        "paragraphs": [
+          "You can browse and search activities on the website without creating an account. We collect the following categories of personal data:"
+        ],
+        "bullets": [
+          "Account data: your email address when you sign in with a one-time code, and your name and email address if you sign in with Google or Apple.",
+          "Content you submit: feedback about organisations, suggestions for new places, requests to manage an organisation listing, and any other messages you send us.",
+          "Organisation listing data: if you manage an organisation on Siu Tin Dei, the business contact details, descriptions, images, schedules, and pricing you provide for publication.",
+          "Technical data: IP address, browser and device information, and server logs generated when you use the Service, including device integrity signals used to protect our public API from abuse.",
+          "Analytics data: information collected by cookies and similar technologies, only if you accept analytics on our website (see section 3)."
+        ]
+      },
+      {
+        "id": "how-we-use",
+        "heading": "2. How we use personal data",
+        "paragraphs": [
+          "We use personal data for the following purposes:"
+        ],
+        "bullets": [
+          "To provide and operate the Service, including signing you in and showing you relevant activities.",
+          "To review and respond to feedback, suggestions, and listing management requests.",
+          "To keep the Service secure, prevent abuse and fraud, and enforce our Terms of Use.",
+          "To understand how the Service is used and improve it, and to measure the effectiveness of our marketing, where you have accepted analytics.",
+          "To comply with legal obligations that apply to us."
+        ]
+      },
+      {
+        "id": "cookies",
+        "heading": "3. Cookies and analytics",
+        "paragraphs": [
+          "The website uses a small amount of strictly necessary local storage, for example to remember your language choice and your analytics preference. This storage does not track you.",
+          "With your consent, we also use optional analytics and marketing measurement tools (Google Tag Manager and the Meta Pixel). These tools are only loaded after you accept them in the consent banner. If you decline, they are not loaded.",
+          "You can change your decision at any time by clearing this website's site data in your browser, after which the consent banner will be shown again."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "children",
+        "heading": "4. Children",
+        "paragraphs": [
+          "The Service helps parents and guardians discover activities for their children. It is intended for use by adults aged 18 or over, and we do not knowingly collect personal data from children.",
+          "Activity listings describe programmes offered for children but do not contain personal data about any individual child. If you believe a child has provided us with personal data, please contact us and we will delete it."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "sharing",
+        "heading": "5. How we share personal data",
+        "paragraphs": [
+          "We do not sell personal data. We share personal data only with service providers that help us operate the Service, and only to the extent needed:"
+        ],
+        "bullets": [
+          "Amazon Web Services (cloud hosting and email delivery).",
+          "Google (sign-in with Google, device integrity checks via Firebase, and analytics tags if you accept analytics).",
+          "Apple (sign-in with Apple).",
+          "Meta (marketing measurement via the Meta Pixel, only if you accept analytics).",
+          "We may also disclose personal data where required by law, or to protect the rights, property, or safety of LX Software, our users, or others.",
+          "Activity providers listed on Siu Tin Dei do not receive your identity from us. If you contact a provider directly, you share your details with them under their own privacy practices."
+        ]
+      },
+      {
+        "id": "transfers",
+        "heading": "6. Where we store data",
+        "paragraphs": [
+          "The Service is hosted on Amazon Web Services infrastructure located in Singapore, with content delivered through a global content delivery network. Your personal data may therefore be transferred to, and stored in, jurisdictions outside Hong Kong.",
+          "Where personal data is transferred outside Hong Kong, we take reasonable steps to ensure it receives a similar level of protection to that required under the PDPO."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "retention",
+        "heading": "7. How long we keep personal data",
+        "paragraphs": [
+          "We keep personal data only for as long as necessary for the purposes described in this policy:"
+        ],
+        "bullets": [
+          "Account data is kept while your account remains active, and deleted within a reasonable period after the account is closed.",
+          "Feedback, suggestions, and listing requests are kept while we need them to operate the Service and maintain a record of decisions.",
+          "Server and security logs are retained for up to 90 days.",
+          "We may keep data for longer where required by law, after which it is deleted or anonymised."
+        ]
+      },
+      {
+        "id": "security",
+        "heading": "8. Security",
+        "paragraphs": [
+          "We protect personal data with technical and organisational measures, including encryption in transit and at rest, role-based access controls, and audit logging of administrative actions. No method of transmission or storage is completely secure, but we work to protect your data against unauthorised access, loss, and misuse."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "your-rights",
+        "heading": "9. Your rights",
+        "paragraphs": [
+          "Under the PDPO you have the right to request access to the personal data we hold about you, and to request the correction of any inaccurate personal data.",
+          "To make a data access or correction request, contact us at support@lx-software.com. We will respond within the time limits set by the PDPO, and we may charge a reasonable fee for processing a data access request as permitted by law."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "pics",
+        "heading": "10. Personal Information Collection Statement",
+        "paragraphs": [
+          "This statement is provided in accordance with the PDPO and applies whenever you provide personal data to us, for example when you sign in, send feedback, suggest a place, or request to manage an organisation listing."
+        ],
+        "bullets": [
+          "Purpose of collection: to operate the Service, respond to your submission, administer your account, and keep the Service secure. It is voluntary for you to supply your personal data, but without it we may be unable to provide the relevant part of the Service.",
+          "Transferees: your data may be processed by the service providers listed in section 5, acting on our behalf.",
+          "Access and correction: you may request access to or correction of your personal data as described in section 9.",
+          "Contact: support@lx-software.com."
+        ]
+      },
+      {
+        "id": "changes",
+        "heading": "11. Changes to this policy",
+        "paragraphs": [
+          "We may update this policy from time to time. The date at the top of this page shows when it was last revised. If we make material changes, we will take reasonable steps to bring them to your attention, for example with a notice on the website."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "contact",
+        "heading": "12. Contact us",
+        "paragraphs": [
+          "If you have any questions about this policy or how we handle personal data, contact LX Software Limited at support@lx-software.com."
+        ],
+        "bullets": []
+      }
+    ]
+  },
+  "terms": {
+    "title": "Terms of Use",
+    "intro": [
+      "These Terms of Use (the \"Terms\") govern your use of the Siu Tin Dei website and mobile app (together, the \"Service\"), operated by LX Software Limited (\"LX Software\", \"we\", \"us\", \"our\").",
+      "By using the Service you agree to these Terms. If you do not agree, please do not use the Service."
+    ],
+    "sections": [
+      {
+        "id": "service",
+        "heading": "1. The Service",
+        "paragraphs": [
+          "Siu Tin Dei helps families in Hong Kong discover children's activities offered by independent organisations (\"providers\"). We curate and publish information about providers and their activities, but we are not a provider ourselves and we do not deliver, supervise, or take responsibility for any activity.",
+          "The inclusion of a provider or activity on the Service is not an endorsement, recommendation, or guarantee of quality or safety. You are responsible for assessing whether an activity is suitable for your child."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "bookings",
+        "heading": "2. Bookings and payments",
+        "paragraphs": [
+          "Enquiries, bookings, and payments are made directly between you and the provider unless we state otherwise. We are not a party to any agreement between you and a provider, and any dispute about an activity, booking, refund, or payment must be resolved with the provider concerned."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "accounts",
+        "heading": "3. Accounts",
+        "paragraphs": [
+          "Some features require an account, which you can create by signing in with your email address or with Google or Apple. You agree to provide accurate information, to keep your sign-in method secure, and to be responsible for activity that occurs under your account.",
+          "We may suspend or close accounts that breach these Terms or that we reasonably believe are being used for abuse or fraud."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "acceptable-use",
+        "heading": "4. Acceptable use",
+        "paragraphs": [
+          "When using the Service you must not:"
+        ],
+        "bullets": [
+          "Use the Service for any unlawful purpose or in breach of any applicable law or regulation.",
+          "Scrape, harvest, or systematically extract data from the Service, or interfere with its operation or security measures.",
+          "Submit information that is false, misleading, defamatory, infringing, or that includes personal data about another person without their consent.",
+          "Impersonate any person or organisation, or misrepresent your affiliation with a provider.",
+          "Attempt to bypass authentication, device integrity checks, or other access controls."
+        ]
+      },
+      {
+        "id": "listings",
+        "heading": "5. Organisation listings and manager terms",
+        "paragraphs": [
+          "Providers may request to manage their listing on the Service. If you manage a listing, the following additional terms apply:"
+        ],
+        "bullets": [
+          "You warrant that you are authorised to represent the organisation and that the information you submit is accurate and kept up to date.",
+          "You grant LX Software a non-exclusive, royalty-free, worldwide licence to host, display, translate, and promote the content you submit, for the purpose of operating and promoting the Service.",
+          "You are responsible for ensuring your listing complies with applicable law, including advertising and consumer protection requirements.",
+          "We may edit, decline, or remove any listing content at our discretion, including where we believe it is inaccurate, outdated, or in breach of these Terms."
+        ]
+      },
+      {
+        "id": "content",
+        "heading": "6. Feedback and submissions",
+        "paragraphs": [
+          "If you send us feedback, suggestions, or other submissions, you grant us a non-exclusive, royalty-free, worldwide licence to use them to operate and improve the Service. Do not include personal data about another person in a submission unless you have their consent."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "ip",
+        "heading": "7. Intellectual property",
+        "paragraphs": [
+          "The Service, including its design, text, graphics, and software, is owned by LX Software or its licensors and is protected by intellectual property laws. We grant you a limited, non-exclusive, non-transferable licence to use the Service for personal, non-commercial purposes. Provider content remains the property of the relevant provider."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "disclaimers",
+        "heading": "8. Disclaimers",
+        "paragraphs": [
+          "The Service is provided on an \"as is\" and \"as available\" basis. Activity details such as schedules, availability, pricing, and age suitability can change without notice, and we do not guarantee that the information on the Service is complete, accurate, or current. Always confirm details with the provider before booking.",
+          "We do not guarantee that the Service will be uninterrupted, error-free, or free of harmful components."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "liability",
+        "heading": "9. Limitation of liability",
+        "paragraphs": [
+          "To the maximum extent permitted by law, LX Software is not liable for any loss or damage arising from your use of the Service, from any activity delivered by a provider, or from any dealings between you and a provider. We are not liable for indirect, incidental, or consequential losses.",
+          "Nothing in these Terms excludes or limits any liability that cannot be excluded or limited under Hong Kong law."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "changes",
+        "heading": "10. Changes to the Service and these Terms",
+        "paragraphs": [
+          "We may change, suspend, or discontinue any part of the Service at any time. We may also update these Terms from time to time; the date at the top of this page shows when they were last revised. Your continued use of the Service after changes take effect constitutes acceptance of the updated Terms."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "law",
+        "heading": "11. Governing law",
+        "paragraphs": [
+          "These Terms are governed by the laws of the Hong Kong Special Administrative Region, and you agree to submit to the non-exclusive jurisdiction of the courts of Hong Kong."
+        ],
+        "bullets": []
+      },
+      {
+        "id": "contact",
+        "heading": "12. Contact us",
+        "paragraphs": [
+          "Questions about these Terms can be sent to LX Software Limited at support@lx-software.com."
+        ],
+        "bullets": []
+      }
+    ]
+  }
+}

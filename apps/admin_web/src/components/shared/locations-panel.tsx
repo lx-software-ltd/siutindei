@@ -9,7 +9,7 @@ import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { formatAdminPageName } from '../../lib/admin-page-name';
 import type { GeographicAreaNode } from '../../lib/api-client';
 import { parseOptionalNumber } from '../../lib/number-parsers';
-import type { ApiMode } from '../../lib/resource-api';
+import type { ApiMode } from '../../lib/api-client-admin';
 import { normalizeKey } from '../../lib/string-utils';
 import type { Location } from '../../types/admin';
 import { AdminCreateButton } from '../ui/admin-create-button';

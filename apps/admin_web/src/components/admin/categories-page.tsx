@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { parseAsString, useQueryStates } from 'nuqs';
 
 import { adminTabLabel } from '../../lib/admin-page-name';
-import { ActivityCategoriesPanel } from '../shared';
+import { ActivityCategoriesPanel } from '../shared/activity-categories-panel';
 import { AdminTabStrip } from '../ui/admin-tab-strip';
 import { CategorySuggestionsPanel } from './category-suggestions/category-suggestions-panel';
 

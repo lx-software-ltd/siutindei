@@ -5,7 +5,7 @@ from __future__ import annotations
 import io
 import re
 import time
-from typing import Callable
+from collections.abc import Callable
 
 from app.services.enrichment.constants import MAX_PAGE_TEXT, MAX_PDF_PAGES
 

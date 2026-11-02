@@ -1,5 +1,6 @@
 import { getSearchConfig, getSiteConfig } from '@/lib/site-config';
 
+import { mapActivityListing } from './map-listing';
 import type {
   ActivityListing,
   ActivitySearchParams,
@@ -106,7 +107,7 @@ function sortedPublishedItems(fixture: StagingFixture): StagingFixtureItem[] {
   return items;
 }
 
-export function resolveStagingSearchFixtureUrl(): string {
+function resolveStagingSearchFixtureUrl(): string {
   const search = getSearchConfig();
   if (search.stagingSearchFixtureUrl) {
     return search.stagingSearchFixtureUrl;
@@ -184,6 +185,11 @@ function matchesItem(
     }
   }
 
+  const query = params.q?.trim().toLowerCase() ?? '';
+  if (query.length >= 2 && !matchesText(item, query)) {
+    return false;
+  }
+
   const status = item.organization.status;
   if (status === 'closed_permanently' || status === 'hidden') {
     return false;
@@ -192,57 +198,38 @@ function matchesItem(
   return true;
 }
 
-function mapStagingListing(item: StagingFixtureItem): ActivityListing {
+function matchesText(item: StagingFixtureItem, query: string): boolean {
+  const fields = [
+    item.activity.name,
+    item.organization.name,
+    ...Object.values(item.activity.name_translations ?? {}),
+    ...Object.values(item.organization.name_translations ?? {}),
+  ];
+  return fields.some((value) => value.toLowerCase().includes(query));
+}
+
+function listingFromFixture(
+  item: StagingFixtureItem,
+  view: 'card' | 'full',
+): ActivityListing {
   const isTemplate = item.organization.description_source === 'template';
-  return {
-    activity: {
-      id: item.activity.id,
-      name: item.activity.name,
-      description: isTemplate ? null : item.activity.description,
-      nameTranslations: item.activity.name_translations ?? {},
-      descriptionTranslations: isTemplate
-        ? {}
-        : item.activity.description_translations ?? {},
-      ageMin: item.activity.age_min ?? null,
-      ageMax: item.activity.age_max ?? null,
-      categoryId: item.activity.category_id ?? null,
+  return mapActivityListing(
+    {
+      ...item,
+      activity: {
+        ...item.activity,
+        description: isTemplate ? null : item.activity.description,
+        description_translations: isTemplate
+          ? {}
+          : item.activity.description_translations,
+      },
+      organization: {
+        ...item.organization,
+        description: isTemplate ? null : item.organization.description,
+      },
     },
-    organization: {
-      id: item.organization.id,
-      name: item.organization.name,
-      description: isTemplate ? null : item.organization.description ?? null,
-      nameTranslations: item.organization.name_translations ?? {},
-      mediaUrls: item.organization.media_urls ?? [],
-      logoMediaUrl: item.organization.logo_media_url ?? null,
-      status: item.organization.status ?? null,
-      descriptionSource: item.organization.description_source ?? null,
-      placeId: item.organization.place_id ?? null,
-    },
-    location: {
-      id: item.location.id,
-      areaId: item.location.area_id,
-      regionAreaId: item.location.region_area_id ?? null,
-      address: item.location.address ?? null,
-      lat: item.location.lat != null ? Number(item.location.lat) : null,
-      lng: item.location.lng != null ? Number(item.location.lng) : null,
-    },
-    pricing: {
-      pricingType: item.pricing.pricing_type,
-      amount: Number(item.pricing.amount),
-      currency: item.pricing.currency,
-      sessionsCount: item.pricing.sessions_count ?? null,
-      freeTrialClassOffered: item.pricing.free_trial_class_offered,
-    },
-    schedule: {
-      scheduleType: item.schedule.schedule_type,
-      weeklyEntries: item.schedule.weekly_entries.map((entry) => ({
-        dayOfWeekUtc: entry.day_of_week_utc,
-        startMinutesUtc: entry.start_minutes_utc,
-        endMinutesUtc: entry.end_minutes_utc,
-      })),
-      languages: item.schedule.languages ?? [],
-    },
-  };
+    view,
+  );
 }
 
 function decodeCursor(cursor: string): StagingSortMeta | null {
@@ -313,7 +300,9 @@ export async function fetchStagingActivitySearch(
   const last = page[page.length - 1];
 
   return {
-    items: page.map(mapStagingListing),
+    items: page.map((item) =>
+      listingFromFixture(item, params.view === 'card' ? 'card' : 'full'),
+    ),
     nextCursor: hasMore && last ? encodeCursor(last._sort) : null,
   };
 }

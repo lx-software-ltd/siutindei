@@ -2,41 +2,35 @@
 
 import { useCallback, useMemo } from 'react';
 
-import currencyCodes from 'currency-codes';
-
-import { useActivitiesByMode } from '../../hooks/use-activities-by-mode';
 import { useFormValidation } from '../../hooks/use-form-validation';
-import { useLocationsByMode } from '../../hooks/use-locations-by-mode';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
+import { useResourceByMode } from '../../hooks/use-resource-by-mode';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
+import { adminCurrencyOptions } from '../../lib/admin-currencies';
 import { formatAdminPageName } from '../../lib/admin-page-name';
+import type { ApiMode } from '../../lib/api-client-admin';
 import {
   formatPriceAmount,
   parseOptionalNumber,
 } from '../../lib/number-parsers';
-import type { ApiMode } from '../../lib/resource-api';
-import type { ActivityPricing } from '../../types/admin';
-import { StatusBanner } from '../status-banner';
+import type { Activity, ActivityPricing, Location } from '../../types/admin';
 import { pricingFormFromSnapshot } from '../admin/catalog-version-snapshot';
 import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-title';
 import {
   HistoricalRowMark,
   useCatalogVersion,
   VersionField,
-  VersionFields,
-  VersionSwitcher,
 } from '../admin/version-history';
-import { Button } from '../ui/button';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 import { AdminCreateButton } from '../ui/admin-create-button';
-import { AdminTableName } from '../ui/admin-table-value';
 import {
   AdminDataTableCell,
   AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '../ui/admin-data-table';
-import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
-import { AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
+import { formErrorClassName } from '../ui/admin-field-grid';
+import { AdminTableName } from '../ui/admin-table-value';
+import { CatalogInlineEditor } from './catalog-inline-editor';
 import { Input } from '../ui/input';
 import {
   deleteRowActions,
@@ -50,7 +44,6 @@ import {
   itemToForm,
   normalizeCurrencyCode,
   pricingOptions,
-  type CurrencyOption,
   type PricingFormState,
 } from './pricing/pricing-types';
 
@@ -104,11 +97,11 @@ export function PricingPanel({ mode }: PricingPanelProps) {
     noun: 'pricing',
   });
 
-  const { items: activities } = useActivitiesByMode(mode, {
+  const { items: activities } = useResourceByMode<Activity>('activities', mode, {
     limit: 200,
     orgId: scopedOrgId,
   });
-  const { items: locations } = useLocationsByMode(mode, {
+  const { items: locations } = useResourceByMode<Location>('locations', mode, {
     limit: 200,
     orgId: scopedOrgId,
   });
@@ -137,38 +130,6 @@ export function PricingPanel({ mode }: PricingPanelProps) {
   const { markTouched } = validation;
   const shouldShowError = (field: string, message: string) =>
     validation.shouldShowError(field, Boolean(message));
-
-  const currencyOptions = useMemo<CurrencyOption[]>(() => {
-    const display =
-      typeof Intl !== 'undefined' &&
-      typeof Intl.DisplayNames === 'function'
-        ? new Intl.DisplayNames(['en'], { type: 'currency' })
-        : null;
-    const optionsMap = new Map<string, CurrencyOption>();
-    for (const record of currencyCodes.data) {
-      const code = record.code?.toUpperCase();
-      if (!code) {
-        continue;
-      }
-      const name = display?.of(code) ?? record.currency ?? code;
-      optionsMap.set(code, {
-        code,
-        name,
-        label: `${name} (${code})`,
-      });
-    }
-    if (!optionsMap.has(defaultCurrencyCode)) {
-      const name = display?.of(defaultCurrencyCode) ?? defaultCurrencyCode;
-      optionsMap.set(defaultCurrencyCode, {
-        code: defaultCurrencyCode,
-        name,
-        label: `${name} (${defaultCurrencyCode})`,
-      });
-    }
-    return Array.from(optionsMap.values()).sort((a, b) =>
-      a.label.localeCompare(b.label)
-    );
-  }, []);
 
   const isFreeType = formState.pricing_type === 'free';
   const showSessionsField = formState.pricing_type === 'per_sessions';
@@ -299,92 +260,35 @@ export function PricingPanel({ mode }: PricingPanelProps) {
   const editorShowSessions = editorForm.pricing_type === 'per_sessions';
 
   const detail = (
-    <AdminEditorPanel
-      accessory={
-        panel.editingId ? <VersionSwitcher view={versionView} /> : undefined
-      }
-      status={
-        panel.error ? (
-          <StatusBanner kind='error'>
-            {panel.error}
-          </StatusBanner>
-        ) : null
-      }
-      actions={
-        versionView.isHistorical ? (
-          <Button type='button' variant='secondary' onClick={versionView.backToLatest}>
-            Back to latest
-          </Button>
-        ) : (
-          <AdminEditorActions
-            mode={panel.editorMode}
-            onSubmit={handleSubmit}
-            isSaving={panel.isSaving}
-          />
-        )
-      }
+    <CatalogInlineEditor
+      idPrefix='pricing'
+      view={versionView}
+      editingId={panel.editingId}
+      error={panel.error}
+      isHistorical={versionView.isHistorical}
+      onBackToLatest={versionView.backToLatest}
+      editorMode={panel.editorMode}
+      onSubmit={handleSubmit}
+      isSaving={panel.isSaving}
+      locations={locations}
+      activities={activities}
+      locationId={editorForm.location_id}
+      activityId={editorForm.activity_id}
+      locked={locked}
+      showLocationError={showLocationError}
+      showActivityError={showActivityError}
+      locationError={locationError}
+      activityError={activityError}
+      errorClassName={errorInputClassName}
+      onLocationChange={(value) => {
+        markTouched('location_id');
+        panel.setFormState((prev) => ({ ...prev, location_id: value }));
+      }}
+      onActivityChange={(value) => {
+        markTouched('activity_id');
+        panel.setFormState((prev) => ({ ...prev, activity_id: value }));
+      }}
     >
-      <VersionFields view={versionView}>
-      <div className='space-y-4'>
-      <AdminFieldGrid columns={2}>
-        <VersionField
-          label='Location'
-          htmlFor='pricing-location'
-          required
-          versionKey='location_id'
-          error={showLocationError ? locationError : undefined}
-        >
-          <Select
-            id='pricing-location'
-            value={editorForm.location_id}
-            disabled={locked}
-            onChange={(event) => {
-              markTouched('location_id');
-              panel.setFormState((prev) => ({
-                ...prev,
-                location_id: event.target.value,
-              }));
-            }}
-            className={showLocationError ? errorInputClassName : ''}
-            aria-invalid={showLocationError || undefined}
-          >
-            <option value=''>Select location</option>
-            {locations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.address || location.area_id}
-              </option>
-            ))}
-          </Select>
-        </VersionField>
-        <VersionField
-          label='Activity'
-          htmlFor='pricing-activity'
-          required
-          versionKey='activity_id'
-          error={showActivityError ? activityError : undefined}
-        >
-          <Select
-            id='pricing-activity'
-            value={editorForm.activity_id}
-            disabled={locked}
-            onChange={(event) => {
-              markTouched('activity_id');
-              panel.setFormState((prev) => ({
-                ...prev,
-                activity_id: event.target.value,
-              }));
-            }}
-            className={showActivityError ? errorInputClassName : ''}
-            aria-invalid={showActivityError || undefined}
-          >
-            <option value=''>Select activity</option>
-            {activities.map((activity) => (
-              <option key={activity.id} value={activity.id}>
-                {activity.name}
-              </option>
-            ))}
-          </Select>
-        </VersionField>
         <VersionField
           label='Pricing Type'
           htmlFor='pricing-type'
@@ -477,7 +381,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
               }))
             }
           >
-            {currencyOptions.map((option) => (
+            {adminCurrencyOptions.map((option) => (
               <option key={option.code} value={option.code}>
                 {option.label}
               </option>
@@ -508,10 +412,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
             aria-invalid={showAmountError || undefined}
           />
         </VersionField>
-      </AdminFieldGrid>
-      </div>
-      </VersionFields>
-    </AdminEditorPanel>
+    </CatalogInlineEditor>
   );
 
   return (

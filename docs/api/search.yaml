@@ -159,6 +159,29 @@ paths:
             items:
               type: string
               enum: [en, zh, ja, ko, fr, de, es, pt, it, ru, ar, hi, th, vi, id, ms, tl, nl, pl, tr, yue]
+        - name: q
+          in: query
+          required: false
+          description: |
+            Case-insensitive match on activity name, organization name, and
+            name translation values. Fewer than 2 characters is rejected.
+            Longer than 100 characters is rejected.
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+        - name: view
+          in: query
+          required: false
+          description: |
+            Response shape. `full` is the default and matches the existing
+            payload. `card` omits descriptions, description translations,
+            manager_id, and place_id, and keeps only the first media URL
+            and the first weekly entry.
+          schema:
+            type: string
+            enum: [card, full]
+            default: full
         - name: limit
           in: query
           required: false
@@ -317,8 +340,6 @@ components:
         - id
         - name
         - name_translations
-        - description_translations
-        - manager_id
         - media_urls
       properties:
         id:
@@ -400,7 +421,7 @@ components:
           nullable: true
     Activity:
       type: object
-      required: [id, name, name_translations, description_translations]
+      required: [id, name, name_translations]
       properties:
         id:
           type: string

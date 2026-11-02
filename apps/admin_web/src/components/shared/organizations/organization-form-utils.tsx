@@ -3,7 +3,7 @@
 import {
   parsePhoneNumberFromString,
   type CountryCode,
-} from 'libphonenumber-js';
+} from 'libphonenumber-js/min';
 
 import {
   emptyTranslations,

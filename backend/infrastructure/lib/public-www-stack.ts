@@ -1,3 +1,5 @@
+import * as path from "node:path";
+
 import * as cdk from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
@@ -473,29 +475,14 @@ function handler(event) {
       `${config.idPrefix}PathRewriteFunction`,
       {
         comment:
-          "Rewrite extensionless and trailing-slash paths to index.html for static export.",
+          "Redirect unprefixed routes to a locale, then rewrite extensionless paths to index.html.",
         runtime: cloudfront.FunctionRuntime.JS_2_0,
-        code: cloudfront.FunctionCode.fromInline(`
-function handler(event) {
-  var request = event.request;
-  var uri = request.uri;
-
-  if (uri.startsWith('/_next/')) {
-    return request;
-  }
-
-  if (uri.endsWith('/')) {
-    request.uri = uri + 'index.html';
-    return request;
-  }
-
-  if (uri.indexOf('.') === -1) {
-    request.uri = uri + '/index.html';
-  }
-
-  return request;
-}
-`),
+        code: cloudfront.FunctionCode.fromFile({
+          filePath: path.join(
+            __dirname,
+            "functions/public-www-path-rewrite.js",
+          ),
+        }),
       },
     );
 

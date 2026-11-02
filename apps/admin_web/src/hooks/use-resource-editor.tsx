@@ -16,7 +16,10 @@ import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell
 import { useExpandedRecordForm } from '@/hooks/use-expanded-record-form';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { ApiError } from '@/lib/api-client-core';
-import { refreshCatalogHistory } from '@/lib/admin-query-client';
+import {
+  refreshCatalogHistory,
+  refreshResourceLists,
+} from '@/lib/admin-query-client';
 import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import {
@@ -24,7 +27,7 @@ import {
   type ApiMode,
   type ResourceListFilters,
   type ResourceType,
-} from '@/lib/resource-api';
+} from '@/lib/api-client-admin';
 
 interface UseResourceEditorOptions<T extends { id: string }, TForm> {
   resource: ResourceType;
@@ -223,6 +226,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
           setFormStateRaw(itemToFormRef.current(updated));
           clearDirty();
           refreshCatalogHistory();
+          refreshResourceLists(resource, mode);
         } else if (api.create) {
           const created = await api.create(payload);
           setPinnedCreated(created);
@@ -233,6 +237,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
           clearDirty();
           expand(created.id);
           refreshCatalogHistory();
+          refreshResourceLists(resource, mode);
         } else {
           setSaveError('Creating new items is not allowed.');
         }
@@ -244,7 +249,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
         setIsSaving(false);
       }
     },
-    [api, clearDirty, expand, list, noun, selectedId]
+    [api, clearDirty, expand, list, mode, noun, resource, selectedId]
   );
 
   const handleDelete = useCallback(
@@ -262,6 +267,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
       try {
         await api.delete(item.id);
         refreshCatalogHistory();
+        refreshResourceLists(resource, mode);
         setPinnedCreated((current) => (current?.id === item.id ? null : current));
         list.setItems((prev) => prev.filter((entry) => entry.id !== item.id));
         if (expandedId === item.id) {
@@ -276,7 +282,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
         return false;
       }
     },
-    [api, clearDirty, collapse, confirm, deleteMessage, expandedId, list, noun]
+    [api, clearDirty, collapse, confirm, deleteMessage, expandedId, list, mode, noun, resource]
   );
 
   const confirmDialog: ReactElement = (

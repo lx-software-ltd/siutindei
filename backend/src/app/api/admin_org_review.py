@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -226,11 +227,10 @@ def _matches_issue(snapshot: OrgReviewSnapshot, filters: ReviewListFilters) -> b
         return False
     if filters.has_blockers is False and snapshot.blocker_count > 0:
         return False
-    if filters.issue and not any(
-        issue.code == filters.issue for issue in snapshot.issues
-    ):
-        return False
-    return True
+    return not (
+        filters.issue
+        and not any(issue.code == filters.issue for issue in snapshot.issues)
+    )
 
 
 def _parse_filters(event: Mapping[str, Any]) -> ReviewListFilters:

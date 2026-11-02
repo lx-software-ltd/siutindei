@@ -18,9 +18,9 @@ from app.api.admin_resource_location import _create_location
 from app.db.models import ActivityLocation, GeographicArea, Organization
 from app.db.repositories import LocationRepository
 from app.exceptions import ValidationError
+from app.services.area_assignment import resolve_leaf
 from app.services.aws_proxy import http_invoke
 from app.services.location_fix_apply import _link_sole_venue
-from app.services.area_assignment import resolve_leaf
 from app.services.location_fix_districts import in_hong_kong_bbox
 from app.services.location_fix_quality import area_chains
 from app.services.location_fixes import clear_pending, dismissed_same, upsert_proposal

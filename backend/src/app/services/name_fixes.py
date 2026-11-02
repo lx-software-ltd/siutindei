@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -89,7 +89,7 @@ def update_settings(session: Session, body: dict[str, Any]) -> dict[str, Any]:
     row.enabled_rules = [code for code in RULE_CODES if code in enabled]
     row.exception_words = clean_words
     row.bracket_suffixes = clean_suffixes
-    row.updated_at = datetime.now(timezone.utc)
+    row.updated_at = datetime.now(UTC)
     session.flush()
     return settings_payload(session)
 
@@ -342,7 +342,7 @@ def _merge_patch(entity, column: str, patch: dict | None) -> None:
 def _mark(row: NameFixProposal, status: str, decided_by: str | None) -> None:
     row.status = status
     row.decided_by = decided_by
-    row.decided_at = datetime.now(timezone.utc)
+    row.decided_at = datetime.now(UTC)
     row.updated_at = row.decided_at
 
 

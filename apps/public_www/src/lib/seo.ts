@@ -1,10 +1,6 @@
 import type { Metadata } from 'next';
 
-import {
-  DEFAULT_LOCALE,
-  SUPPORTED_LOCALES,
-  type Locale,
-} from '@/content';
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type Locale } from '@/content/locales';
 import {
   localizePath as localizeLocalizedPath,
   normalizeLocalizedPath,
@@ -14,7 +10,7 @@ const SITE_ORIGIN_ENV_NAME = 'NEXT_PUBLIC_SITE_ORIGIN';
 let cachedSiteOrigin: string | undefined;
 let cachedSiteHost: string | undefined;
 
-export function normalizeSiteOrigin(rawOrigin: string): string {
+function normalizeSiteOrigin(rawOrigin: string): string {
   const normalizedOrigin = rawOrigin.trim();
   if (normalizedOrigin === '') {
     throw new Error(`${SITE_ORIGIN_ENV_NAME} must not be empty.`);
@@ -87,20 +83,15 @@ export function getSiteHost(): string {
   return cachedSiteHost;
 }
 
-export function _resetSeoCacheForTests(): void {
-  cachedSiteOrigin = undefined;
-  cachedSiteHost = undefined;
-}
+const DEFAULT_SOCIAL_IMAGE = '/images/seo/siutindei-og-default.jpg';
+const DEFAULT_SOCIAL_IMAGE_WIDTH = 1200;
+const DEFAULT_SOCIAL_IMAGE_HEIGHT = 630;
 
-export const DEFAULT_SOCIAL_IMAGE = '/images/seo/siutindei-og-default.png';
-export const DEFAULT_SOCIAL_IMAGE_WIDTH = 1200;
-export const DEFAULT_SOCIAL_IMAGE_HEIGHT = 630;
-
-export function localizePath(path: string, locale: Locale): string {
+function localizePath(path: string, locale: Locale): string {
   return localizeLocalizedPath(path, locale);
 }
 
-export function buildLocaleAlternates(path: string): Record<string, string> {
+function buildLocaleAlternates(path: string): Record<string, string> {
   const normalizedPath = normalizeLocalizedPath(path);
   const languages = Object.fromEntries(
     SUPPORTED_LOCALES.map((locale) => [
