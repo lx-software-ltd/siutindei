@@ -446,7 +446,7 @@ class AuditLogRepository:
             query = query.where(AuditLog.timestamp >= since)
 
         results = self._session.execute(query).all()
-        return dict(results)
+        return {str(action): int(count) for action, count in results}
 
 
 def serialize_for_audit(

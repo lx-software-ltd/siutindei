@@ -32,6 +32,8 @@ select = [
   'PLR0915',
   'PLR0917',
 ]
+# Keep TypeVar generics so pre-commit mypy 1.8 can read them.
+ignore = ["UP046", "UP047"]
 
 [tool.ruff.lint.pylint]
 # Ceilings are the measured maxima in this tree (ruff 0.17). Requested
@@ -40,7 +42,7 @@ select = [
 max-args = 13
 max-positional-args = 13
 max-returns = 17
-max-branches = 34
+max-branches = 35
 max-statements = 113
 
 [tool.ruff.lint.per-file-ignores]

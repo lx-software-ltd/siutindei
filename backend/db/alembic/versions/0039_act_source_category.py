@@ -85,7 +85,7 @@ def upgrade() -> None:
     )
     ids = ", ".join(f"'{item}'" for item in _WIZARD_IDS)
     op.execute(
-        "UPDATE activity_categories SET show_in_wizard = true " f"WHERE id IN ({ids})"
+        f"UPDATE activity_categories SET show_in_wizard = true WHERE id IN ({ids})"
     )
 
 

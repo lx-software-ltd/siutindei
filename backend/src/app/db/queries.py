@@ -11,7 +11,7 @@ from uuid import UUID
 
 import sqlalchemy as sa
 from sqlalchemy import and_, func, or_, select
-from sqlalchemy.dialects.postgresql import distinct_on
+from sqlalchemy.dialects.postgresql import distinct_on  # type: ignore[attr-defined]
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import Select
 from sqlalchemy.sql.selectable import CompoundSelect
@@ -181,7 +181,7 @@ def _entry_order_subquery(filters: ActivitySearchFilters) -> sa.Subquery:
             ActivityScheduleEntry.start_minutes_utc.label("start_minutes_utc"),
             ActivityScheduleEntry.id.label("entry_id"),
         )
-        .ext(distinct_on(ActivityScheduleEntry.schedule_id))
+        .ext(distinct_on(ActivityScheduleEntry.schedule_id))  # type: ignore[attr-defined]
         .order_by(
             ActivityScheduleEntry.schedule_id,
             ActivityScheduleEntry.day_of_week_utc,

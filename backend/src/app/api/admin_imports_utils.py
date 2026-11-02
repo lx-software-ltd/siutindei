@@ -6,6 +6,7 @@ import os
 import re
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from typing import TypeVar
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -13,6 +14,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.exceptions import ValidationError
+
+T = TypeVar("T")
 
 
 def persist_import_change(session: Session, *, dry_run: bool) -> None:
@@ -52,7 +55,7 @@ def finish_import_batch(session: Session, *, dry_run: bool) -> None:
         session.commit()
 
 
-def run_import_upsert[T](
+def run_import_upsert(
     session: Session,
     dry_run: bool,
     fn: Callable[[], T],

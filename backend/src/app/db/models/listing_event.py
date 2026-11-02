@@ -34,7 +34,7 @@ class ListingEvent(Base):
     __tablename__ = "listing_events"
     __table_args__ = (
         CheckConstraint(
-            "event_type IN ('search', 'listing_view', 'cta_tap', " "'lead_relayed')",
+            "event_type IN ('search', 'listing_view', 'cta_tap', 'lead_relayed')",
             name="listing_events_type_allowed",
         ),
         CheckConstraint(

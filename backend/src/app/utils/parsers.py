@@ -6,8 +6,10 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any
+from typing import Any, TypeVar
 from uuid import UUID
+
+TEnum = TypeVar("TEnum", bound=Enum)
 
 
 def parse_int(value: str | None) -> int | None:
@@ -64,7 +66,7 @@ def parse_datetime(value: str | None) -> datetime | None:
     return datetime.fromisoformat(cleaned)
 
 
-def parse_enum[T: Enum](value: str | None, enum_type: type[T]) -> T | None:
+def parse_enum(value: str | None, enum_type: type[TEnum]) -> TEnum | None:
     """Parse an enum value from a string.
 
     Args:

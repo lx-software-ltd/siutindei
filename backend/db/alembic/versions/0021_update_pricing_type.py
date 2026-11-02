@@ -58,7 +58,7 @@ def downgrade() -> None:
         type_="check",
     )
     op.execute(
-        "DELETE FROM activity_pricing " "WHERE pricing_type IN ('per_hour', 'per_day')"
+        "DELETE FROM activity_pricing WHERE pricing_type IN ('per_hour', 'per_day')"
     )
     op.execute(
         "CREATE TYPE pricing_type_old AS ENUM "

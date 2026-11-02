@@ -113,8 +113,7 @@ def backfill_appended_sources(bind: sa.Connection) -> None:
 
     activity_rows = bind.execute(
         sa.text(
-            "SELECT id, description FROM activities "
-            "WHERE description LIKE '%Source:%'"
+            "SELECT id, description FROM activities WHERE description LIKE '%Source:%'"
         )
     ).mappings()
     for row in activity_rows:

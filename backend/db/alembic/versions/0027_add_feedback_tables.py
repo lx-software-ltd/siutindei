@@ -17,9 +17,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """Create feedback labels, feedback records, and ticket fields."""
-    op.execute(
-        "ALTER TYPE ticket_type " "ADD VALUE IF NOT EXISTS 'organization_feedback'"
-    )
+    op.execute("ALTER TYPE ticket_type ADD VALUE IF NOT EXISTS 'organization_feedback'")
 
     op.add_column(
         "tickets",
@@ -220,7 +218,7 @@ def upgrade() -> None:
 
     op.execute("GRANT SELECT ON feedback_labels TO siutindei_app;")
     op.execute(
-        "GRANT SELECT, INSERT, UPDATE, DELETE " "ON feedback_labels TO siutindei_admin;"
+        "GRANT SELECT, INSERT, UPDATE, DELETE ON feedback_labels TO siutindei_admin;"
     )
     op.execute("GRANT SELECT ON organization_feedback TO siutindei_app;")
     op.execute(

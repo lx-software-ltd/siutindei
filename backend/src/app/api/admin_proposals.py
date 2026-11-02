@@ -63,9 +63,10 @@ from app.utils.logging import get_logger
 logger = get_logger(__name__)
 
 _REVIEW_SCOPES = frozenset({"pending_review", "all"})
-_NAME_STATUSES = {"pending", "applied", "dismissed"}
-_NAME_ENTITY_TYPES = {"organization", "activity"}
-_ACTIONS = {"apply", "dismiss"}
+_NAME_STATUSES = frozenset({"pending", "applied", "dismissed"})
+_NAME_ENTITY_TYPES = frozenset({"organization", "activity"})
+_ACTIONS = frozenset({"apply", "dismiss"})
+_NAME_RULES = frozenset(RULE_CODES)
 
 
 def handle_proposals(
@@ -171,7 +172,7 @@ def _name_list_filters(event: Mapping[str, Any], session: Session) -> dict[str, 
             _NAME_ENTITY_TYPES,
             "entity_type",
         ),
-        "rule": choice(_query_param(event, "rule"), set(RULE_CODES), "rule"),
+        "rule": choice(_query_param(event, "rule"), _NAME_RULES, "rule"),
         "org_id": parse_uuid(org_raw, "org_id") if org_raw else None,
         "query": _blank(_query_param(event, "q")),
         "cursor": _blank(_query_param(event, "cursor")),

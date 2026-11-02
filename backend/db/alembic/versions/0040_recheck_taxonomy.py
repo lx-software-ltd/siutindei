@@ -344,8 +344,7 @@ def upgrade() -> None:
         _insert_category(row[0], row[1], row[2], row[3], row[4], False)
     former = ", ".join(f"'{item}'" for item in _FORMER_WIZARD)
     op.execute(
-        "UPDATE activity_categories SET show_in_wizard = false "
-        f"WHERE id IN ({former})"
+        f"UPDATE activity_categories SET show_in_wizard = false WHERE id IN ({former})"
     )
     op.create_index(
         "uq_activity_category_root_name",
@@ -374,8 +373,7 @@ def downgrade() -> None:
     op.execute(f"DELETE FROM activity_categories WHERE id IN ({group_ids})")
     former = ", ".join(f"'{item}'" for item in _FORMER_WIZARD)
     op.execute(
-        "UPDATE activity_categories SET show_in_wizard = true "
-        f"WHERE id IN ({former})"
+        f"UPDATE activity_categories SET show_in_wizard = true WHERE id IN ({former})"
     )
     op.execute(
         "UPDATE category_suggestion_settings "

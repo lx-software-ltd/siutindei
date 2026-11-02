@@ -56,7 +56,7 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
         ),
         sa.CheckConstraint(
-            "event_type IN ('search', 'listing_view', 'cta_tap', " "'lead_relayed')",
+            "event_type IN ('search', 'listing_view', 'cta_tap', 'lead_relayed')",
             name="listing_events_type_allowed",
         ),
         sa.CheckConstraint(

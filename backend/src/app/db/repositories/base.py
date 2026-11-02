@@ -7,6 +7,7 @@ for specific entity types.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Generic, TypeVar
 from uuid import UUID
 
 from sqlalchemy import select
@@ -14,8 +15,10 @@ from sqlalchemy.orm import Session
 
 from app.db.base import Base
 
+T = TypeVar("T", bound=Base)
 
-class BaseRepository[T: Base]:
+
+class BaseRepository(Generic[T]):
     """Base repository with common CRUD operations.
 
     Provides standard database operations that can be inherited

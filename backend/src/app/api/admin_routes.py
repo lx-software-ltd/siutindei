@@ -145,6 +145,8 @@ def _cognito_delete(
 ) -> dict[str, Any]:
     from app.api.admin_cognito import _handle_delete_cognito_user
 
+    if resource_id is None:
+        return json_response(404, {"error": "Not found"}, event=event)
     return _handle_delete_cognito_user(event, resource_id)
 
 
@@ -289,6 +291,8 @@ def _areas_toggle(
 ) -> dict[str, Any]:
     from app.api.admin_areas import _handle_toggle_area
 
+    if resource_id is None:
+        return json_response(404, {"error": "Not found"}, event=event)
     return _handle_toggle_area(event, resource_id)
 
 
