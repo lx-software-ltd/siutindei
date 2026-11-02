@@ -9,6 +9,8 @@ const eslintConfig = [
       'out/**',
       'maintenance/**',
       'public/scripts/**',
+      'playwright-report/**',
+      'test-results/**',
     ],
   },
   {

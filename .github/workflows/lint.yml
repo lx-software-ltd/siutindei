@@ -109,7 +109,7 @@ jobs:
       - name: Run React lint
         run: |
           set -e
-          for dir in apps/admin_web packages/react_ui packages/api_client_ts; do
+          for dir in apps/admin_web apps/public_www packages/react_ui packages/api_client_ts; do
             if [ -f "$dir/package.json" ]; then
               echo "Linting React in $dir"
               if [ -f "$dir/package-lock.json" ]; then

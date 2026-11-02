@@ -206,6 +206,8 @@ apps/public_www/out/
 # Playwright
 apps/admin_web/playwright-report/
 apps/admin_web/test-results/
+apps/public_www/playwright-report/
+apps/public_www/test-results/
 
 # TypeScript build info
 *.tsbuildinfo
