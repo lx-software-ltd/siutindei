@@ -2,7 +2,9 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { LegalPage } from '@/components/sections/legal-page';
-import enContent from '@/content/en.json';
+import { getContent } from '@/content';
+
+const enContent = getContent('en');
 
 describe('LegalPage', () => {
   it('renders the privacy policy with anchored sections', () => {

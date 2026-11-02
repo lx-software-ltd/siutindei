@@ -3,10 +3,15 @@ import Script from 'next/script';
 import type { ReactNode } from 'react';
 
 import { AnalyticsConsentBanner } from '@/components/shared/analytics-consent-banner';
+import {
+  ChromeCopyProvider,
+  type ChromeCopy,
+} from '@/components/shared/chrome-copy';
 import { AnalyticsResourceHints } from '@/components/shared/analytics-resource-hints';
 import { GoogleTagManager } from '@/components/shared/google-tag-manager';
 import { MetaPixel } from '@/components/shared/meta-pixel';
 import enContent from '@/content/en.json';
+import zhHKContent from '@/content/zh-HK.json';
 import {
   getGtmAllowedHosts,
   getGtmId,
@@ -20,6 +25,20 @@ import './globals.css';
 const GTM_ID = getGtmId();
 const META_PIXEL_ID = getMetaPixelId();
 const rootShellContent = enContent.common.shell;
+
+function chromeCopyFor(content: typeof enContent): ChromeCopy {
+  return {
+    consent: content.common.consent,
+    notFound: content.common.errors.notFound,
+    serverError: content.common.errors.serverError,
+    temporarilyClosedLabel: content.searchPage.temporarilyClosedLabel,
+  };
+}
+
+const chromeCopy = {
+  en: chromeCopyFor(enContent),
+  'zh-HK': chromeCopyFor(zhHKContent),
+} as const;
 
 function resolveGtmAllowedHosts(): string {
   const configuredHosts = getGtmAllowedHosts();
@@ -102,7 +121,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <AnalyticsResourceHints />
       </head>
       <body className="min-h-screen antialiased" suppressHydrationWarning>
-        <Script src="/scripts/set-html-lang.js" strategy="beforeInteractive" />
         <a
           href="#main-content"
           className="sr-only fixed left-4 top-4 z-[80] rounded-md bg-black px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-black"
@@ -123,8 +141,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
         ) : null}
         <GoogleTagManager />
         <MetaPixel />
-        <AnalyticsConsentBanner />
-        {children}
+        <ChromeCopyProvider copy={chromeCopy}>
+          <AnalyticsConsentBanner />
+          {children}
+        </ChromeCopyProvider>
       </body>
     </html>
   );

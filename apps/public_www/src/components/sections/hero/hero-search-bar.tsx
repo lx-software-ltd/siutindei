@@ -2,42 +2,20 @@
 
 import { useRouter } from 'next/navigation';
 
-import type { Locale, NavbarContent } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { NavbarContent } from '@/content/types';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
-import {
-  buildSearchQueryString,
-  placeLabelForFilters,
-} from '@/lib/activities/search-params';
+import { placeLabelForFilters } from '@/lib/activities/search-params';
+import { buildSearchPageHref } from '@/lib/activities/map-search-url';
+import { summarizeTypes } from '@/lib/activities/search/summarize-types';
 import { HERO_SEARCH_SENTINEL_ATTR } from '@/lib/home-header-reveal';
-import { localizePath } from '@/lib/locale-routing';
 
 type SearchBarLabels = NavbarContent['searchBar'];
 
 interface HeroSearchBarProps {
   readonly locale: Locale;
   readonly labels: SearchBarLabels;
-}
-
-function summarizeTypes(
-  locale: Locale,
-  typeIds: readonly string[],
-): string {
-  const typeLabels = typeIds
-    .map((id) => {
-      const match = homeWizardChoices.activityTypes.find(
-        (entry) => entry.id === id,
-      );
-      return match ? labelForLocale(match.labels, locale) : null;
-    })
-    .filter((value): value is string => Boolean(value));
-  if (typeLabels.length === 0) {
-    return '';
-  }
-  if (typeLabels.length === 1) {
-    return typeLabels[0];
-  }
-  return `${typeLabels[0]} +${typeLabels.length - 1}`;
 }
 
 /**
@@ -60,9 +38,7 @@ export function HeroSearchBar({ locale, labels }: HeroSearchBarProps) {
     summarizeTypes(locale, filters.activityTypeIds) || labels.anyType;
 
   function handleSearchNavigate() {
-    const query = buildSearchQueryString(filters);
-    const path = localizePath('/search', locale);
-    router.push(query ? `${path}?${query}` : path);
+    router.push(buildSearchPageHref(locale, filters));
   }
 
   const segments = [

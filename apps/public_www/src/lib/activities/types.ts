@@ -75,4 +75,6 @@ export interface ActivitySearchParams {
   readonly activityId?: string;
   readonly limit?: number;
   readonly cursor?: string;
+  readonly q?: string;
+  readonly view?: 'card' | 'full';
 }

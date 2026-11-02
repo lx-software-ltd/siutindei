@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 
-import type { Locale, SiteContent } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { SiteContent } from '@/content/types';
 import { ActivityGoogleMap } from '@/components/shared/maps/activity-google-map';
 import { isGoogleMapsEnabled } from '@/lib/google-maps/config';
 import { listingsWithCoordinates } from '@/lib/google-maps/coordinates';

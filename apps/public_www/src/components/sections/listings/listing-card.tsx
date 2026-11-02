@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 
-import type { Locale } from '@/content';
-import { getContent } from '@/content';
+import type { Locale } from '@/content/locales';
+import { useChromeCopy } from '@/components/shared/chrome-copy';
 import type { ActivityListing } from '@/lib/activities/types';
 import { regionIdForListing } from '@/lib/activities/map-search-url';
 import {
@@ -50,6 +50,7 @@ export function ListingCard({
   deferRendering = false,
 }: ListingCardProps) {
   const { filters } = useSearchContext();
+  const closedLabel = useChromeCopy(locale).temporarilyClosedLabel;
   const widthClassName =
     layout === 'grid' ? 'w-full' : 'w-[280px] shrink-0 sm:w-[300px]';
   const deferClassName = deferRendering ? 'listing-card-deferred' : '';
@@ -61,8 +62,6 @@ export function ListingCard({
   const regionId = regionIdForListing(listing);
   const schedule = formatScheduleSnippet(locale, listing.schedule.weeklyEntries);
   const price = formatListingPrice(locale, listing);
-  const closedLabel = getContent(locale).searchPage.temporarilyClosedLabel;
-
   return (
     <article
       className={`listing-card ${widthClassName} ${deferClassName}`.trim()}

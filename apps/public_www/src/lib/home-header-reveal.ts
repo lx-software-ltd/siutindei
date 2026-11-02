@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 export const HERO_SEARCH_SENTINEL_ATTR = 'data-hero-search-sentinel';
 
-export const HERO_SEARCH_SENTINEL_SELECTOR =
+const HERO_SEARCH_SENTINEL_SELECTOR =
   `[${HERO_SEARCH_SENTINEL_ATTR}]`;
 
 export function shouldRevealHomeHeader(

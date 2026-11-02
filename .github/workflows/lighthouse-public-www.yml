@@ -64,7 +64,7 @@ jobs:
           const baseConfigPath = path.resolve('.lighthouserc.json');
           const runtimeConfigPath = path.resolve('.lighthouserc.runtime.json');
           const rawInput = (process.env.LIGHTHOUSE_PAGE_PATHS ?? '').trim();
-          const defaultTargets = ['/'];
+          const defaultTargets = ['/en/', '/zh-HK/', '/en/search/'];
           const requestedTargets = (rawInput ? rawInput.split(/[\n,]+/) : defaultTargets)
             .map((value) => value.trim())
             .filter(Boolean);

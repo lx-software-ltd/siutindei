@@ -1,4 +1,5 @@
-import type { Locale, SiteContent } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { SiteContent } from '@/content/types';
 import { FeaturesSection } from '@/components/sections/grid/features-section';
 import { HeroSection } from '@/components/sections/grid/hero-section';
 import { RichTextSection } from '@/components/sections/grid/rich-text-section';

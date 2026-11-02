@@ -93,7 +93,7 @@ Source: [`apps/public_www`](../../apps/public_www).
   earth-teal / leaf-green support colors and chocolate ink, sampled from
   the logo artwork), the cropped source logo assets (mark, wordmark,
   stacked lockup) and badge SVGs in `public/images/brand/`, a favicon
-  copied from the logo mark (`public/favicon.svg` plus a multi-size
+  copied from the logo mark (`public/favicon.svg` plus a 16×16 and 32×32
   `public/favicon.ico`). The navbar pairs the mark with the wordmark and
   stays sticky on inner pages. On the home route it stays off-screen
   until the hero search box scrolls out of view, then slides down. The
@@ -125,8 +125,10 @@ Source: [`apps/public_www`](../../apps/public_www).
   Tapping a pin selects that activity; tapping the card opens the activity
   detail page. From `lg` (iPad landscape and computer) the default is a 50/50
   list + map split, with enlarge/reduce controls to switch into the mobile
-  map+card layout and back. Activity detail is `/[locale]/activity/?id=<uuid>`
-  (detail + WhatsApp CTA). Optional `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` enables
+  map+card layout and back. Known activities are static pages at
+  `/[locale]/activity/<uuid>/` (Course JSON-LD in the exported HTML). The
+  query shell `/[locale]/activity/?id=<uuid>` remains for ids that were not
+  in the fixture at build time. Optional `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` enables
   Static Maps on listing cards, map markers on the search map view, and CSP
   entries for
   `maps.googleapis.com` / `maps.gstatic.com`. The search bar **area** label links
@@ -150,9 +152,9 @@ Source: [`apps/public_www`](../../apps/public_www).
 - **SEO:** `buildLocalizedMetadata` (canonical, hreflang). Sitewide
   WebSite + Organization JSON-LD is injected into the exported locale home
   pages at build time (`scripts/inject-structured-data.mjs`, the
-  `jsonld:inject` build step); per-activity `Course` JSON-LD and the
-  document title are set client-side by `activity-detail-page.tsx` once the
-  activity loads (static export cannot pre-render per-activity metadata).
+  `jsonld:inject` build step). Fixture activities also ship `Course` JSON-LD
+  in `/[locale]/activity/<uuid>/`. The query-param shell still sets
+  `Course` JSON-LD and the document title client-side once the activity loads.
   Optional GTM / Meta Pixel via `NEXT_PUBLIC_GTM_ID` /
   `NEXT_PUBLIC_META_PIXEL_ID` and host allow-lists; CSP `script-src` /
   `connect-src` extended at build time when those env vars are set

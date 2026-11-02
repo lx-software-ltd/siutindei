@@ -18,6 +18,24 @@ const eslintConfig = [
     },
   },
   {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/content/**', 'src/lib/locale-page.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@/content',
+              message:
+                'Do not import @/content from client or shared modules. It loads both locale JSON files. Use @/content/locales and @/content/types, and pass copy from a server component.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['src/components/**/*.{ts,tsx}', 'src/app/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-syntax': [

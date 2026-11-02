@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
-import type { FooterContent, Locale, NavbarContent } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { FooterContent, NavbarContent } from '@/content/types';
 import { Footer } from '@/components/sections/footer';
 import { Navbar } from '@/components/sections/navbar';
 import { SearchProvider } from '@/components/shared/search/search-context';

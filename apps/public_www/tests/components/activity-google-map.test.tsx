@@ -102,6 +102,8 @@ function installGoogleMaps(): void {
         }
         setMap(): void {}
         setIcon(): void {}
+        setPosition(): void {}
+        setTitle(): void {}
         addListener(): void {}
       },
       event: {

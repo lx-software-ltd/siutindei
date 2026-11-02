@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-import type { Locale } from '@/content';
+import type { Locale } from '@/content/locales';
 import {
   buildMapSearchHref,
   buildMapSearchHrefForRegion,

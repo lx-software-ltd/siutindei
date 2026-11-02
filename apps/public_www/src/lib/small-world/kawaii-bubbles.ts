@@ -68,7 +68,7 @@ export function bubbleSrc(id: BubbleId): string {
   return `/images/small-world/bubble-${id}.webp`;
 }
 
-export function shuffleIds(
+function shuffleIds(
   ids: readonly BubbleId[],
   random: () => number = Math.random,
 ): BubbleId[] {
@@ -84,6 +84,27 @@ export function shuffleIds(
     next[swap] = current;
   }
   return next;
+}
+
+/** Stable seed so the hero bubbles are in the static HTML and match hydration. */
+export const BUBBLE_BUILD_SEED = 20261102;
+
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function pickBubbleIdsForSeed(
+  seed: number,
+  count: number = LARGE_BUBBLE_COUNT,
+): BubbleId[] {
+  return pickBubbleIds(count, mulberry32(seed));
 }
 
 export function pickBubbleIds(

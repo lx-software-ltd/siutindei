@@ -48,6 +48,8 @@ declare namespace google.maps {
     constructor(options?: MarkerOptions);
     setMap(map: Map | null): void;
     setIcon(icon: Icon | string): void;
+    setPosition(position: LatLng): void;
+    setTitle(title: string): void;
     addListener(eventName: string, handler: () => void): void;
   }
 

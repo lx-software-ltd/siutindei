@@ -2,17 +2,16 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import type { Locale } from '@/content';
+import type { Locale } from '@/content/locales';
 import { Chip } from '@/components/shared/ui/chip';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 import { iconSrcForActivity } from '@/lib/home-wizard/choice-icons';
 import {
-  buildSearchQueryString,
   parseSearchViewMode,
   toggleActivityTypeId,
 } from '@/lib/activities/search-params';
-import { localizePath } from '@/lib/locale-routing';
+import { buildSearchPageHref } from '@/lib/activities/map-search-url';
 
 interface FilterChipRowProps {
   readonly locale: Locale;
@@ -27,11 +26,7 @@ export function FilterChipRow({ locale }: FilterChipRowProps) {
     const nextFilters = toggleActivityTypeId(filters, typeId);
     setFilters(nextFilters);
     const viewMode = parseSearchViewMode(searchParams);
-    const query = buildSearchQueryString(nextFilters, {
-      view: viewMode,
-    });
-    const path = localizePath('/search', locale);
-    router.replace(query ? `${path}?${query}` : path);
+    router.replace(buildSearchPageHref(locale, nextFilters, { view: viewMode }));
   }
 
   return (

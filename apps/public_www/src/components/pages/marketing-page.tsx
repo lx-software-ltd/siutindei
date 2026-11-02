@@ -1,4 +1,5 @@
-import type { Locale, PageBodyGridConfig, SiteContent } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { PageBodyGridConfig, SiteContent } from '@/content/types';
 import { PageBodyGrid } from '@/components/sections/grid/page-body-grid';
 
 interface MarketingPageProps {

@@ -1,9 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DiscoveryHomeSection } from '@/components/sections/discovery/discovery-home-section';
 import { SearchProvider } from '@/components/shared/search/search-context';
 import { getContent } from '@/content';
+import { withChromeCopy } from '../helpers/chrome-copy';
 import type { ActivityListing } from '@/lib/activities/types';
 
 vi.mock('@/lib/activities/search-client', () => ({
@@ -56,7 +57,12 @@ function buildListing(): ActivityListing {
 }
 
 describe('DiscoveryHomeSection', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('links popular and region titles to filtered search pages', async () => {
+    vi.stubGlobal('IntersectionObserver', undefined);
     vi.mocked(fetchActivitySearch).mockResolvedValue({
       items: [buildListing()],
       nextCursor: null,
@@ -64,9 +70,11 @@ describe('DiscoveryHomeSection', () => {
 
     const content = getContent('en');
     render(
-      <SearchProvider>
-        <DiscoveryHomeSection locale="en" copy={content.discovery} />
-      </SearchProvider>,
+      withChromeCopy(
+        <SearchProvider>
+          <DiscoveryHomeSection locale="en" copy={content.discovery} />
+        </SearchProvider>,
+      ),
     );
 
     await waitFor(() => {
@@ -76,7 +84,7 @@ describe('DiscoveryHomeSection', () => {
     });
 
     const regionTitle = `${content.discovery.nearRegionTitle} Kowloon`;
-    expect(screen.getByRole('link', { name: regionTitle })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: regionTitle })).toHaveAttribute(
       'href',
       '/en/search?age=3-6&region=kowloon&view=map',
     );

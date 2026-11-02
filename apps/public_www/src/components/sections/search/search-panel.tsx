@@ -3,15 +3,17 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
-import type { Locale } from '@/content';
+import type { Locale } from '@/content/locales';
 import { Button } from '@/components/shared/ui/button';
 import { Modal } from '@/components/shared/ui/modal';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { saveRecentSearch } from '@/lib/activities/recent-storage';
 import {
-  buildSearchQueryString,
+  toggleActivityTypeId,
   type SearchFiltersState,
 } from '@/lib/activities/search-params';
+import { buildSearchPageHref } from '@/lib/activities/map-search-url';
+import { REGIONS_BY_ID } from '@/lib/home-wizard/choices';
 import {
   homeWizardChoices,
   labelForLocale,
@@ -24,8 +26,6 @@ import {
   iconSrcForAge,
   iconSrcForRegion,
 } from '@/lib/home-wizard/choice-icons';
-import { localizePath } from '@/lib/locale-routing';
-
 import { SearchChoiceButton } from './search-choice-button';
 
 interface SearchPanelCopy {
@@ -36,15 +36,12 @@ interface SearchPanelCopy {
   readonly childAgeLabel: string;
   readonly activityTypesLabel: string;
   readonly searchLabel: string;
+  readonly allHongKongLabel: string;
 }
 
 interface SearchPanelProps {
   readonly locale: Locale;
   readonly copy: SearchPanelCopy;
-}
-
-function allHongKongLabel(locale: Locale): string {
-  return locale === 'zh-HK' ? '全港' : 'All Hong Kong';
 }
 
 export function SearchPanel({ locale, copy }: SearchPanelProps) {
@@ -63,18 +60,7 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
   }
 
   function toggleType(typeId: string) {
-    setDraft((current) => {
-      const next = new Set(current.activityTypeIds);
-      if (next.has(typeId)) {
-        next.delete(typeId);
-      } else {
-        next.add(typeId);
-      }
-      return {
-        ...current,
-        activityTypeIds: [...next],
-      };
-    });
+    setDraft((current) => toggleActivityTypeId(current, typeId));
   }
 
   function handleSubmit(event: FormEvent) {
@@ -82,14 +68,8 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
     setFilters(draft);
     saveRecentSearch(draft);
     closeSearch();
-    const query = buildSearchQueryString(draft);
-    const path = localizePath('/search', locale);
-    router.push(query ? `${path}?${query}` : path);
+    router.push(buildSearchPageHref(locale, draft));
   }
-
-  const regionsById = new Map(
-    homeWizardChoices.regions.map((region) => [region.id, region]),
-  );
 
   return (
     <Modal isOpen={isSearchOpen} title={copy.title} onClose={closeSearch}>
@@ -100,7 +80,7 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
           </legend>
           <div className="flex flex-nowrap items-stretch gap-2 overflow-x-auto md:grid md:grid-cols-5 md:gap-3 md:overflow-visible">
             <SearchChoiceButton
-              label={allHongKongLabel(locale)}
+              label={copy.allHongKongLabel}
               iconSrc={ALL_HONG_KONG_ICON_SRC}
               iconShape="flag"
               isSelected={draft.regionId === null}
@@ -109,7 +89,7 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
               }
             />
             {REGION_ROW_ORDER.map((regionId) => {
-              const region = regionsById.get(regionId);
+              const region = REGIONS_BY_ID.get(regionId);
               if (!region) {
                 return null;
               }

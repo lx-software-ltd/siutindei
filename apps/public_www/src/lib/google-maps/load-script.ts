@@ -1,7 +1,7 @@
 'use client';
 
 const SCRIPT_ID = 'siutindei-google-maps-script';
-const BOOTSTRAP_POLL_MS = 50;
+const MAPS_CALLBACK = 'siutindeiMapsReady';
 const BOOTSTRAP_TIMEOUT_MS = 10_000;
 let loadPromise: Promise<void> | null = null;
 
@@ -16,30 +16,60 @@ function getImportLibrary():
   return typeof importLibrary === 'function' ? importLibrary : undefined;
 }
 
-function waitForMapsBootstrap(): Promise<void> {
-  if (hasMapsConstructor() || getImportLibrary()) {
+function mapsReady(): boolean {
+  return hasMapsConstructor() || Boolean(getImportLibrary());
+}
+
+function waitForMapsBootstrap(script: HTMLScriptElement): Promise<void> {
+  if (mapsReady()) {
     return Promise.resolve();
   }
 
   return new Promise<void>((resolve, reject) => {
-    const startedAt = Date.now();
-    const intervalId = window.setInterval(() => {
-      if (hasMapsConstructor() || getImportLibrary()) {
-        window.clearInterval(intervalId);
-        resolve();
+    let settled = false;
+    const timeoutId = window.setTimeout(() => {
+      if (settled) {
         return;
       }
-      if (Date.now() - startedAt >= BOOTSTRAP_TIMEOUT_MS) {
-        window.clearInterval(intervalId);
-        reject(new Error('Google Maps failed to load.'));
+      settled = true;
+      reject(new Error('Google Maps failed to load.'));
+    }, BOOTSTRAP_TIMEOUT_MS);
+
+    const finish = () => {
+      if (settled || !mapsReady()) {
+        return;
       }
-    }, BOOTSTRAP_POLL_MS);
+      settled = true;
+      window.clearTimeout(timeoutId);
+      resolve();
+    };
+
+    const callbackWindow = window as Window & { [MAPS_CALLBACK]?: () => void };
+    const previous = callbackWindow[MAPS_CALLBACK];
+    callbackWindow[MAPS_CALLBACK] = () => {
+      previous?.();
+      finish();
+    };
+    script.addEventListener('load', finish, { once: true });
+    script.addEventListener(
+      'error',
+      () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        window.clearTimeout(timeoutId);
+        reject(new Error('Google Maps failed to load.'));
+      },
+      { once: true },
+    );
   });
 }
 
-function ensureScriptTag(apiKey: string, onError: () => void): void {
-  if (document.getElementById(SCRIPT_ID)) {
-    return;
+function ensureScriptTag(apiKey: string): HTMLScriptElement {
+  const existing = document.getElementById(SCRIPT_ID);
+  if (existing instanceof HTMLScriptElement) {
+    return existing;
   }
 
   const script = document.createElement('script');
@@ -47,13 +77,12 @@ function ensureScriptTag(apiKey: string, onError: () => void): void {
   script.async = true;
   script.src =
     `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}` +
-    '&loading=async';
-  script.onerror = onError;
+    `&loading=async&callback=${MAPS_CALLBACK}`;
   document.head.appendChild(script);
+  return script;
 }
 
 async function loadMapsLibraries(): Promise<void> {
-  await waitForMapsBootstrap();
   const importLibrary = getImportLibrary();
   if (importLibrary && !hasMapsConstructor()) {
     await importLibrary('maps');
@@ -73,12 +102,8 @@ export async function loadGoogleMapsScript(apiKey: string): Promise<void> {
   }
 
   if (!loadPromise) {
-    loadPromise = new Promise<void>((resolve, reject) => {
-      ensureScriptTag(apiKey, () => {
-        reject(new Error('Google Maps failed to load.'));
-      });
-      void waitForMapsBootstrap().then(resolve).catch(reject);
-    })
+    const script = ensureScriptTag(apiKey);
+    loadPromise = waitForMapsBootstrap(script)
       .then(() => loadMapsLibraries())
       .catch((error: unknown) => {
         loadPromise = null;

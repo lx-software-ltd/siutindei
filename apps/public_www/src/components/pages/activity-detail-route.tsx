@@ -2,8 +2,8 @@
 
 import { useSearchParams } from 'next/navigation';
 
-import type { Locale, SiteContent } from '@/content';
-
+import type { Locale } from '@/content/locales';
+import type { SiteContent } from '@/content/types';
 import { ActivityDetailPage } from './activity-detail-page';
 
 interface ActivityDetailRouteProps {

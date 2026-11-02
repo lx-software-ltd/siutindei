@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import enContent from '@/content/en.json';
-import zhHKContent from '@/content/zh-HK.json';
+import { getContent } from '@/content';
+
+const enContent = getContent('en');
+const zhHKContent = getContent('zh-HK');
 
 const CONTACT_EMAIL = 'support@lx-software.com';
 

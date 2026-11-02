@@ -2,8 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 
+import { useChromeCopy } from '@/components/shared/chrome-copy';
 import { StatusPage } from '@/components/shared/status-page';
-import { getContent } from '@/content';
 import { getLocaleFromPath } from '@/lib/locale-routing';
 
 interface LocaleErrorPageProps {
@@ -13,16 +13,15 @@ interface LocaleErrorPageProps {
 export function LocaleErrorPage({ reset }: LocaleErrorPageProps) {
   const pathname = usePathname();
   const locale = getLocaleFromPath(pathname ?? '/');
-  const content = getContent(locale);
-  const copy = content.common.errors.serverError;
+  const copy = useChromeCopy(locale);
 
   return (
     <StatusPage
       locale={locale}
-      copy={copy}
-      homeLabel={content.common.errors.notFound.homeLabel}
+      copy={copy.serverError}
+      homeLabel={copy.notFound.homeLabel}
       action={{
-        label: copy.retryLabel,
+        label: copy.serverError.retryLabel,
         onClick: reset,
       }}
     />

@@ -1,5 +1,5 @@
 import { StaticLocaleRedirect } from '@/components/shared/static-locale-redirect';
-import { DEFAULT_LOCALE } from '@/content';
+import { DEFAULT_LOCALE } from '@/content/locales';
 import { localizePath } from '@/lib/locale-routing';
 import { ROUTES } from '@/lib/routes';
 

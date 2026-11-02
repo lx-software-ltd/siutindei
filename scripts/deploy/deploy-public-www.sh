@@ -39,7 +39,7 @@ RELEASE_ID="${PUBLIC_WWW_RELEASE_ID:-}"
 PROMOTE_RELEASE_ID="${PUBLIC_WWW_PROMOTE_RELEASE_ID:-}"
 MAINTENANCE_MODE="${PUBLIC_WWW_MAINTENANCE_MODE:-false}"
 ASSET_CACHE_CONTROL="public, max-age=31536000, immutable"
-DOCUMENT_CACHE_CONTROL="public, max-age=300, must-revalidate"
+DOCUMENT_CACHE_CONTROL="public, max-age=300, must-revalidate, stale-while-revalidate=60"
 NO_STORE_CACHE_CONTROL="no-store, max-age=0"
 MAINTENANCE_ASSET_CACHE_CONTROL="public, max-age=3600, must-revalidate"
 DEFAULT_LX_SOFTWARE_URL="https://www.lx-software.com"
@@ -405,20 +405,57 @@ invalidate_distribution() {
   return 1
 }
 
+sync_immutable_tree() {
+  local source_dir="$1"
+  local destination_uri="$2"
+  local prefix="$3"
+  if [ -d "$source_dir/$prefix" ]; then
+    aws s3 sync \
+      "$source_dir/$prefix" \
+      "$destination_uri/$prefix" \
+      --cache-control "$ASSET_CACHE_CONTROL" \
+      --delete
+  fi
+}
+
+sync_immutable_file() {
+  local source_file="$1"
+  local destination_uri="$2"
+  if [ -f "$source_file" ]; then
+    aws s3 cp \
+      "$source_file" \
+      "$destination_uri" \
+      --cache-control "$ASSET_CACHE_CONTROL"
+  fi
+}
+
 sync_site_artifacts() {
   local source_dir="$1"
   local destination_uri="$2"
+  local fixture_excludes=()
+  if [ "$DEPLOY_ENVIRONMENT" = "production" ]; then
+    fixture_excludes=(--exclude "fixtures/*")
+  fi
   if [ -d "$source_dir/_next/static" ]; then
     aws s3 sync \
       "$source_dir/_next/static" \
       "$destination_uri/_next/static" \
       --cache-control "$ASSET_CACHE_CONTROL"
   fi
+  sync_immutable_tree "$source_dir" "$destination_uri" "images"
+  sync_immutable_tree "$source_dir" "$destination_uri" "scripts"
+  sync_immutable_file "$source_dir/favicon.ico" "$destination_uri/favicon.ico"
+  sync_immutable_file "$source_dir/favicon.svg" "$destination_uri/favicon.svg"
   aws s3 sync \
     "$source_dir" \
     "$destination_uri" \
     --exclude "_next/static/*" \
+    --exclude "images/*" \
+    --exclude "scripts/*" \
+    --exclude "favicon.ico" \
+    --exclude "favicon.svg" \
     --exclude "releases/*" \
+    "${fixture_excludes[@]}" \
     --cache-control "$DOCUMENT_CACHE_CONTROL" \
     --delete
 }
@@ -426,17 +463,43 @@ sync_site_artifacts() {
 sync_release_artifacts() {
   local source_uri="$1"
   local destination_uri="$2"
+  local fixture_excludes=()
+  if [ "$DEPLOY_ENVIRONMENT" = "production" ]; then
+    fixture_excludes=(--exclude "fixtures/*")
+  fi
   if aws s3 ls "$source_uri/_next/static/" >/dev/null 2>&1; then
     aws s3 sync \
       "$source_uri/_next/static" \
       "$destination_uri/_next/static" \
       --cache-control "$ASSET_CACHE_CONTROL"
   fi
+  for prefix in images scripts; do
+    if aws s3 ls "$source_uri/$prefix/" >/dev/null 2>&1; then
+      aws s3 sync \
+        "$source_uri/$prefix" \
+        "$destination_uri/$prefix" \
+        --cache-control "$ASSET_CACHE_CONTROL" \
+        --delete
+    fi
+  done
+  for file in favicon.ico favicon.svg; do
+    if aws s3 ls "$source_uri/$file" >/dev/null 2>&1; then
+      aws s3 cp \
+        "$source_uri/$file" \
+        "$destination_uri/$file" \
+        --cache-control "$ASSET_CACHE_CONTROL"
+    fi
+  done
   aws s3 sync \
     "$source_uri" \
     "$destination_uri" \
     --exclude "_next/static/*" \
+    --exclude "images/*" \
+    --exclude "scripts/*" \
+    --exclude "favicon.ico" \
+    --exclude "favicon.svg" \
     --exclude "releases/*" \
+    "${fixture_excludes[@]}" \
     --cache-control "$DOCUMENT_CACHE_CONTROL" \
     --delete
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import type { Locale } from '@/content';
+import type { Locale } from '@/content/locales';
 import type { ActivityListing } from '@/lib/activities/types';
 import { shouldDeferListingCardRender } from '@/lib/listing-image';
 

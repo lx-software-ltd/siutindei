@@ -1,4 +1,4 @@
-import type { Locale } from '@/content';
+import type { Locale } from '@/content/locales';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 
 export type SearchViewMode = 'list' | 'map';
@@ -46,7 +46,7 @@ export function searchAgeForGroup(ageGroupId: string | null): number | undefined
   return group?.searchAge;
 }
 
-export function areaIdForRegion(regionId: string | null): string | undefined {
+function areaIdForRegion(regionId: string | null): string | undefined {
   if (!regionId) {
     return undefined;
   }
@@ -157,10 +157,13 @@ export function filtersToApiParams(filters: SearchFiltersState): {
   readonly age?: number;
   readonly areaId?: string;
   readonly categoryIds: readonly string[];
+  readonly q?: string;
 } {
+  const textQuery = filters.textQuery.trim();
   return {
     age: searchAgeForGroup(filters.ageGroupId),
     areaId: areaIdForFilters(filters),
     categoryIds: categoryIdsForTypes(filters.activityTypeIds),
+    ...(textQuery.length >= 2 ? { q: textQuery } : {}),
   };
 }

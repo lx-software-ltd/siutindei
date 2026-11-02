@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef } from 'react';
 
-import type { Locale } from '@/content';
+import type { Locale } from '@/content/locales';
 import {
   centerForCoordinates,
   HONG_KONG_CENTER,
@@ -97,14 +97,10 @@ function syncMarkers(options: {
   readonly markers: Map<string, google.maps.Marker>;
 }): void {
   const { map, listings, locale, selectedId, onSelect, markers } = options;
-  for (const marker of markers.values()) {
-    marker.setMap(null);
-  }
-  markers.clear();
-
   const mappableListings = listingsWithCoordinates(listings);
   const coordinates = coordinatesFor(listings);
   const bounds = new google.maps.LatLngBounds();
+  const seen = new Set<string>();
 
   for (const listing of mappableListings) {
     const coordinate = listingCoordinate(listing);
@@ -113,19 +109,36 @@ function syncMarkers(options: {
     }
     const position = new google.maps.LatLng(coordinate.lat, coordinate.lng);
     bounds.extend(position);
+    seen.add(listing.activity.id);
+    const icon = markerIcon(
+      listing.activity.categoryId,
+      listing.activity.id === selectedId,
+    );
+    const title = listingTitle(locale, listing);
+    const existing = markers.get(listing.activity.id);
+    if (existing) {
+      existing.setPosition(position);
+      existing.setIcon(icon);
+      existing.setTitle(title);
+      continue;
+    }
     const marker = new google.maps.Marker({
       map,
       position,
-      title: listingTitle(locale, listing),
-      icon: markerIcon(
-        listing.activity.categoryId,
-        listing.activity.id === selectedId,
-      ),
+      title,
+      icon,
     });
     marker.addListener('click', () => {
       onSelect(listing.activity.id);
     });
     markers.set(listing.activity.id, marker);
+  }
+
+  for (const [activityId, marker] of markers) {
+    if (!seen.has(activityId)) {
+      marker.setMap(null);
+      markers.delete(activityId);
+    }
   }
 
   if (coordinates.length > 1) {

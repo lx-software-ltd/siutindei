@@ -1,9 +1,12 @@
-'use client';
-
-import type { Locale, SiteContent } from '@/content';
+import type { Locale } from '@/content/locales';
+import type { SiteContent } from '@/content/types';
 import { DiscoveryHomeSection } from '@/components/sections/discovery/discovery-home-section';
 import { SmallWorldHero } from '@/components/sections/hero/small-world-hero';
 import { FeaturesSection } from '@/components/sections/grid/features-section';
+import {
+  BUBBLE_BUILD_SEED,
+  pickBubbleIdsForSeed,
+} from '@/lib/small-world/kawaii-bubbles';
 
 interface DiscoveryHomePageProps {
   readonly locale: Locale;
@@ -11,6 +14,7 @@ interface DiscoveryHomePageProps {
 }
 
 export function DiscoveryHomePage({ locale, content }: DiscoveryHomePageProps) {
+  const bubbleIds = pickBubbleIdsForSeed(BUBBLE_BUILD_SEED);
   return (
     <>
       <p className="sr-only">{content.discovery.pageTitle}</p>
@@ -18,6 +22,7 @@ export function DiscoveryHomePage({ locale, content }: DiscoveryHomePageProps) {
         locale={locale}
         copy={content.smallWorld}
         searchBarLabels={content.navbar.searchBar}
+        bubbleIds={bubbleIds}
       />
       <DiscoveryHomeSection locale={locale} copy={content.discovery} />
       <section className="border-t border-brand-100 bg-brand-50 py-10">

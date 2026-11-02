@@ -4,6 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { SmallWorldHero } from '@/components/sections/hero/small-world-hero';
 import { SearchProvider } from '@/components/shared/search/search-context';
 import { getContent } from '@/content';
+import {
+  BUBBLE_BUILD_SEED,
+  pickBubbleIdsForSeed,
+} from '@/lib/small-world/kawaii-bubbles';
+
+const bubbleIds = pickBubbleIdsForSeed(BUBBLE_BUILD_SEED);
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -19,6 +25,7 @@ describe('SmallWorldHero', () => {
       <SearchProvider>
         <SmallWorldHero
           locale="en"
+          bubbleIds={bubbleIds}
           copy={content.smallWorld}
           searchBarLabels={content.navbar.searchBar}
         />
@@ -76,6 +83,7 @@ describe('SmallWorldHero', () => {
       <SearchProvider>
         <SmallWorldHero
           locale="en"
+          bubbleIds={bubbleIds}
           copy={content.smallWorld}
           searchBarLabels={content.navbar.searchBar}
         />
