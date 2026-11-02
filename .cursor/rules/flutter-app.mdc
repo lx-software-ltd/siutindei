@@ -7,7 +7,7 @@ alwaysApply: false
 # Flutter
 
 - Use Material widgets, `ThemeData`, and Riverpod. Prefer `StatelessWidget` and `const` constructors. [why: convention]
-- Keep MVVM: models, viewmodels, views, services, utils. [why: convention]
+- Keep MVVM: models, viewmodels, `features/*/screens` for views, services, utils. Domain and data layers live in `domain/` and `data/`. [why: convention]
 - Files and directories use snake_case. Types use UpperCamelCase. Members use lowerCamelCase. [why: convention]
 - Auth feature code is red. Plan in chat and wait for approval. [why: convention]
 - Amplify config arrives via dart-define. Do not hardcode pool ids. [why: convention]

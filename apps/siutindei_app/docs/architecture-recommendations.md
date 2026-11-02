@@ -10,7 +10,7 @@ This document details how the Siutindei app implements Flutter's architecture re
 
 **Implementation**:
 - **UI Layer** (`features/`): Contains only widgets that render UI
-- **ViewModel Layer** (`viewmodels/`): Manages state with `StateNotifier`
+- **ViewModel Layer** (`viewmodels/`): Manages state with Riverpod `Notifier`
 - **Domain Layer** (`domain/`): Contains business logic in use cases
 - **Data Layer** (`data/`): Handles data access and transformation
 
@@ -25,7 +25,7 @@ class SearchScreen extends ConsumerWidget {
 }
 
 // ViewModel handles state
-class ActivitiesViewModel extends StateNotifier<ActivitiesState> {
+class ActivitiesViewModel extends Notifier<ActivitiesState> {
   Future<void> search(SearchFilters filters) async {
     state = state.copyWith(isLoading: true);
     final result = await _searchUseCase.execute(filters);
@@ -195,17 +195,14 @@ return ResultsList(items: state.items);
 
 **Implementation**:
 - Riverpod providers for all dependencies
-- Constructor injection in ViewModels and Use Cases
+- Provider injection in ViewModels (`build()` watches use-case providers) and constructor injection in Use Cases
 - ServiceLocator for centralized dependency management
 
 ```dart
 final activitiesViewModelProvider =
-    StateNotifierProvider<ActivitiesViewModel, ActivitiesState>((ref) {
-  return ActivitiesViewModel(
-    searchUseCase: ref.watch(searchActivitiesUseCaseProvider),
-    loadMoreUseCase: ref.watch(loadMoreActivitiesUseCaseProvider),
-  );
-});
+    NotifierProvider<ActivitiesViewModel, ActivitiesState>(
+      ActivitiesViewModel.new,
+    );
 
 // Testing with overrides
 final container = ProviderContainer(

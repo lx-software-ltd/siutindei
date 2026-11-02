@@ -18,10 +18,19 @@ lib/features/
 │   ├── search.dart
 │   ├── screens/
 │   │   └── search_screen.dart
+│   ├── utils/
+│   │   └── area_filter_options.dart
 │   └── widgets/
 │       ├── activity_card.dart
+│       ├── area_filter_chips.dart
 │       ├── filter_chip_bar.dart
 │       └── search_filters_sheet.dart
+├── home_wizard/            # Guided home search
+│   ├── home_wizard_viewmodel.dart
+│   ├── models/
+│   │   └── home_wizard_choices.dart
+│   └── screens/
+│       └── home_wizard_screen.dart
 ├── activity_detail/        # Activity detail feature
 │   ├── activity_detail.dart
 │   └── screens/

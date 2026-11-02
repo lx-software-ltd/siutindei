@@ -32,6 +32,13 @@ repository.
 
 ## `.github/workflows/board-agent.yml`
 
+The block below is the original hand-off sketch. The live workflow pins
+actions by SHA, checks out `staging`, runs migrations and `pytest tests
+backend` against a Postgres service, installs a pinned `cursor-agent`,
+runs `scripts/ci/board_policy.py` before opening the draft PR, and uses
+`BOARD_PR_TOKEN` with a `GITHUB_TOKEN` fallback. Read
+`.github/workflows/board-agent.yml` for the current steps.
+
 ```yaml
 name: board-agent
 run-name: board-agent ${{ inputs.task_id }}

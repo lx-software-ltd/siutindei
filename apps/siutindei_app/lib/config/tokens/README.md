@@ -103,7 +103,7 @@ class MyCard extends TokenAwareWidget {
 ```dart
 // Shorthand access
 final tokens = ref.tokens;
-final buttonTokens = ref.buttonTokens;
+final designTokens = ref.designTokens;
 ```
 
 ## Ingesting Custom Tokens
@@ -141,6 +141,10 @@ void main() async {
 ```
 
 ### Method 2: Runtime Update
+
+Not wired yet: `designTokensProvider` returns `DesignTokens.defaults()`
+and does not watch `designTokensNotifierProvider`, so the call below
+updates the notifier but not the widgets that read `ref.tokens`.
 
 ```dart
 // Load new tokens dynamically
