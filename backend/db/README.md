@@ -5,15 +5,17 @@ schema.
 
 ## Requirements
 
-- Python 3.13+
-- `alembic` and `sqlalchemy` installed in your environment.
+- Python 3.12+
+- The backend dependencies installed (`backend/requirements-core.txt`
+  pins `alembic`, `sqlalchemy`, and `psycopg` 3).
 
 ## Run migrations
 
-Set your database URL (UTC only):
+Set your database URL (UTC only). Use the `psycopg` (v3) driver and add
+`?sslmode=require` for any remote database:
 
 ```
-export DATABASE_URL="postgresql+psycopg2://user:pass@host:5432/dbname"
+export DATABASE_URL="postgresql+psycopg://user:pass@host:5432/dbname"
 ```
 
 Apply migrations:
