@@ -28,6 +28,9 @@ from app.services.enrichment.guard import (
 )
 from app.services.enrichment.parse import link_score, parse_html, url_key
 from app.services.enrichment.pdf import parse_pdf
+from app.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 _FILE_RE = re.compile(
     r"\.(?:jpe?g|png|gif|webp|svg|zip|docx?|xlsx?|pptx?|mp4|mp3)$", re.I
@@ -404,6 +407,9 @@ def _allowed(parser: RobotFileParser, url: str) -> bool:
     try:
         return bool(parser.can_fetch(USER_AGENT, url))
     except Exception:
+        logger.warning(
+            "robots.txt check failed; treating URL as allowed", exc_info=True
+        )
         return True
 
 

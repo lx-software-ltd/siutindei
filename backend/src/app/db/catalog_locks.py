@@ -8,6 +8,7 @@ that flush keeps every writer on the same order.
 from __future__ import annotations
 
 from sqlalchemy import event, select
+from sqlalchemy.exc import UnboundExecutionError
 from sqlalchemy.orm import Session
 
 _REGISTERED = False
@@ -28,7 +29,7 @@ def _lock_catalog_parents(
     del flush_context, instances
     try:
         bind = session.get_bind()
-    except Exception:
+    except UnboundExecutionError:
         return
     if getattr(getattr(bind, "dialect", None), "name", "") != "postgresql":
         return

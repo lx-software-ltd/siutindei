@@ -343,6 +343,7 @@ def _load_settings_fallbacks() -> list[str]:
 
         return load_fallback_models()
     except Exception:
+        logger.debug("category suggestion fallback models unavailable")
         return []
 
 
@@ -354,6 +355,7 @@ def _load_deny_data_collection() -> bool:
 
         return load_deny_data_collection()
     except Exception:
+        logger.debug("deny-data-collection setting unavailable; defaulting to deny")
         return True
 
 
