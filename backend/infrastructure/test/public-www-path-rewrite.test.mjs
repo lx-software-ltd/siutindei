@@ -42,7 +42,7 @@ function run(uri, extra = {}) {
 
 test('serves normally when no edge-verify secret is configured', () => {
   const response = run('/en/about/', {
-    headers: { 'x-edge-verify': { value: 'anything' } },
+    headers: { 'x-proxy-verify': { value: 'anything' } },
   });
   assert.equal(response.uri, '/en/about/index.html');
 });
@@ -66,7 +66,7 @@ test('refuses requests without the edge header once a secret is set', () => {
     request: {
       uri: '/en/',
       headers: {
-        'x-edge-verify': { value: 'current-secret-value-0123456789abcdef' },
+        'x-proxy-verify': { value: 'current-secret-value-0123456789abcdef' },
       },
       rawQueryString: () => '',
     },

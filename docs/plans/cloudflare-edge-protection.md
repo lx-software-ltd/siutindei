@@ -1,10 +1,13 @@
 # Plan: Cloudflare edge protection for the public website
 
-**Status**: In progress. Rollout steps 1-5 applied to the live zone on
-2026-11-02 (settings, four rulesets, AI-bot block, apex proxied); the
-CloudFront origin lock (step 7) activates with the first `PublicWwwStack`
-deploy after this branch merges, because `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY`
-is already set.
+**Status**: In progress. Rollout steps 1-5 and 7 applied on 2026-11-02
+(settings, four rulesets, AI-bot block, apex proxied, origin lock
+deployed). The first lock deploy took the site down: the header was named
+`x-edge-verify`, and CloudFront strips every `X-Edge-*` header before edge
+functions run, so no request could ever match. The header is now
+`x-proxy-verify`, and `public-www-edge-verify.test.mjs` fails if the name
+ever falls into CloudFront's disallowed set or drifts from the Cloudflare
+policy file.
 **Zone**: red (touches `backend/infrastructure/**`); the Cloudflare policy
 tool, the public website, and the docs are green.
 
@@ -89,10 +92,10 @@ browser ──TLS──> Cloudflare edge (siutindei.com, orange cloud)
                    │ rate limit  (/v1/activities/search, per IP, 10 s)
                    │ custom rules (limit allow-list, Sec-Fetch-Site, tooling UAs)
                    │ cache rules (bypass; only /_next/static/* cacheable)
-                   │ transform   (adds x-edge-verify: <secret>)
+                   │ transform   (adds x-proxy-verify: <secret>)
                    ▼
                  CloudFront d2zpx4ub70d0qj  (SSL strict, Host preserved)
-                   │ viewer-request functions reject when x-edge-verify
+                   │ viewer-request functions reject when x-proxy-verify
                    │ does not match the current or previous secret
                    ├── default behaviour ─> S3 static export
                    ├── /v1/activities/search ─> API Gateway (+X-Origin-Verify)
@@ -156,7 +159,7 @@ Cache rules (phase `http_request_cache_settings`):
 
 Transform rule (phase `http_request_late_transform`):
 
-- `edge-verify-header`: set request header `x-edge-verify` to the value of
+- `edge-verify-header`: set request header `x-proxy-verify` to the value of
   `PUBLIC_WWW_EDGE_VERIFY_SECRET` on every request to `siutindei.com`. The
   value is read from the environment at apply time; the policy file holds
   the placeholder `${PUBLIC_WWW_EDGE_VERIFY_SECRET}` and the tool refuses
@@ -191,7 +194,7 @@ Cloudflare rule is decorative for anyone who finds it.
   without a window where traffic is refused.
 - Every viewer-request function on the public distributions (path rewrite,
   search allow-list, listing-events allow-list) first checks the
-  `x-edge-verify` header against the configured values and returns `403`
+  `x-proxy-verify` header against the configured values and returns `403`
   otherwise. The check is shared code prepended to each function body
   because CloudFront allows one viewer-request function per behaviour.
 - Staging gets its own pair (`PublicWwwStagingEdgeVerifySecret`,
