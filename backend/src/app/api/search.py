@@ -66,6 +66,7 @@ configure_logging()
 logger = get_logger(__name__)
 
 _REGION_CACHE_TTL_SECONDS = 600
+_PUBLIC_SEARCH_CACHE_CONTROL = "public, max-age=60, s-maxage=300"
 _region_area_cache: tuple[float, dict[str, str | None]] | None = None
 
 
@@ -97,7 +98,13 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
                 "has_more": response.next_cursor is not None,
             },
         )
-        return _create_response(200, response, event, view=filters.view)
+        return _create_response(
+            200,
+            response,
+            event,
+            view=filters.view,
+            edge_cacheable=partner is None,
+        )
     except (ValidationError, CursorError) as exc:
         logger.warning(f"Validation error: {exc.message}")
         return json_response(exc.status_code, exc.to_dict(), event=event)
@@ -286,7 +293,6 @@ def map_row_to_result(
                 organization.name, organization.name_translations
             ),
             description_translations=org_desc_translations,
-            manager_id=organization.manager_id,
             media_urls=media_urls,
             logo_media_url=organization.logo_media_url,
             status=organization.status,
@@ -398,6 +404,7 @@ def _create_response(
     body: ActivitySearchResponseSchema,
     event: Mapping[str, Any] | None = None,
     view: str = "full",
+    edge_cacheable: bool = False,
 ) -> dict[str, Any]:
     """Create a JSON API Gateway response for Pydantic models."""
 
@@ -408,6 +415,11 @@ def _create_response(
         "Content-Type": "application/json",
         **get_security_headers(),
     }
+    if edge_cacheable:
+        # Public results are shared by every caller. The public-website
+        # CloudFront search behavior caps its TTL at 300 seconds.
+        headers.pop("Pragma", None)
+        headers["Cache-Control"] = _PUBLIC_SEARCH_CACHE_CONTROL
     headers.update(get_cors_headers(event))
 
     return {

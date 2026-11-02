@@ -19,7 +19,6 @@ from app.data.hk_neighbourhoods import NEIGHBOURHOODS, neighbourhoods_for
 OUTPUT = ROOT / "shared" / "fixtures" / "activity_search_staging.json"
 
 NAMESPACE = uuid.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
-MANAGER_ID = "00000000-0000-0000-0000-000000000001"
 
 HK_ISLAND_REGION = "a1111111-1111-1111-1111-111111111101"
 KOWLOON_REGION = "a1111111-1111-1111-1111-111111111102"
@@ -178,7 +177,6 @@ def _build_item(
             "description_translations": {
                 "en": (f"English-language {cat_label.lower()} provider in Hong Kong."),
             },
-            "manager_id": MANAGER_ID,
             "media_urls": ["https://placekitten.com/400/300"],
             "logo_media_url": "https://placekitten.com/120/120",
         },

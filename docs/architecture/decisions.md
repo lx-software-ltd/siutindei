@@ -417,9 +417,8 @@ Every organization already in the database is backfilled to
 `pending_review`. Public search keeps returning those rows until the
 CDK parameter `OrgReviewGateEnabled` (`ORG_REVIEW_GATE_ENABLED`) is
 `true`. `v_catalog_health` counts approved organizations only, because
-a SQL view cannot read the Lambda flag. The CloudFront search behavior
-has a 5-minute TTL, but the search Lambda's `Cache-Control: no-store`
-means a release shows up on the next request today.
+a SQL view cannot read the Lambda flag. CloudFront caches public
+search for up to 5 minutes, so a release can lag by that long.
 
 Catalog is the release tool. It lists every organization with stage,
 source, missing detail, and import job, and bulk actions approve,

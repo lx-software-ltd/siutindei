@@ -352,10 +352,11 @@ distributions (production + staging) carry an extra cache behavior:
 | Cache policy (`SearchApiCachePolicy`) | TTL min `0` / default `300s` / max `300s`; cache key = **all query strings**, **no** headers, **no** cookies (a single cached entry is shared across all callers) |
 | Origin-request policy (`SearchApiOriginRequestPolicy`) | Forwards all query strings + `x-api-key`, `x-device-attestation`, `Accept` headers to the origin on a cache **miss** |
 
-The search Lambda currently returns `Cache-Control: no-store, no-cache,
-must-revalidate` from `get_security_headers()`. With TTL min `0`,
-CloudFront honours that header, so search responses are not cached at
-the edge until the origin sends a cacheable `Cache-Control`.
+The search Lambda sends `Cache-Control: public, max-age=60,
+s-maxage=300` on successful public searches, so CloudFront keeps each
+query for up to 300 seconds and browsers for 60. Error responses and
+partner search keep `no-store` from `get_security_headers()`, and
+CloudFront does not cache them.
 
 CloudFront Function creation is serialized across both environments via an
 `addDependency` chain (prod path-rewrite → prod search-proxy → shared
