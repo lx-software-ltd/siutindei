@@ -1,6 +1,6 @@
 # Plan: Suggestions spending KPI copy
 
-**Status**: Active
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

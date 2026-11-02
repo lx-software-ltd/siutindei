@@ -1,6 +1,6 @@
 # Plan: Data quality KPI cards
 
-**Status**: Active
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

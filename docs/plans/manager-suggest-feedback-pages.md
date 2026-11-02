@@ -1,6 +1,6 @@
 # Plan: Manager Suggest a Place and Feedback pages
 
-**Status**: Implemented
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

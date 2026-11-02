@@ -1,6 +1,6 @@
 # Plan: Location quality checks
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow, plus one red migration under `backend/db/alembic/versions/`
 
 ## Goal

@@ -1,6 +1,6 @@
 # Plan: Catalog from import history View orgs
 
-**Status**: Implemented
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

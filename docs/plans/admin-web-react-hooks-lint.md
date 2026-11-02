@@ -1,6 +1,6 @@
 # Plan: Admin web React hooks lint for Next 16.4
 
-**Status**: Implemented
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

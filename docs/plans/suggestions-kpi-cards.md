@@ -1,6 +1,6 @@
 # Plan: Category suggestions KPI cards
 
-**Status**: Active
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

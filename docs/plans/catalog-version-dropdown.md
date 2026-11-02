@@ -1,6 +1,6 @@
 # Plan: Catalog version dropdown and source dividers
 
-**Status**: Revised
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

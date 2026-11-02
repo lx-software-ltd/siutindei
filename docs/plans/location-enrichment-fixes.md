@@ -1,6 +1,6 @@
 # Plan: Location enrichment review fixes
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

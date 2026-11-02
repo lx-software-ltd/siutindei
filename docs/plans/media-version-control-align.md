@@ -1,6 +1,6 @@
 # Plan: Right-align media version control
 
-**Status**: Implemented
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

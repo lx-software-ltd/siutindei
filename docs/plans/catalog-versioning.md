@@ -1,6 +1,6 @@
 # Plan: Catalog versioning
 
-**Status**: Implemented, with review fixes in revision `0049_catalog_version_fixes`
+**Status**: Done, with review fixes in revision `0049_catalog_version_fixes`
 **Zone**: red (Alembic revisions), then yellow for backend and admin
 
 ## Review fixes

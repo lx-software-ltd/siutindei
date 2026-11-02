@@ -1,6 +1,6 @@
 # Plan: Merge user table email and roles
 
-**Status**: Accepted. Table-cell placement of roles and the provider icon is superseded by `docs/plans/admin-table-content-style.md`. The editor half of this plan stays.
+**Status**: Done. Table-cell placement of roles and the provider icon is superseded by `docs/plans/admin-table-content-style.md`. The editor half of this plan stays.
 **Zone**: yellow
 
 ## Goal

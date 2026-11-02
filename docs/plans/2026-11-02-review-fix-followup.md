@@ -1,6 +1,6 @@
 # Plan: Fix the review findings on the remediation branch
 
-**Status**: Approved (user asked to fix every issue in the 2026-11-02 review of PR #779)
+**Status**: Done
 **Zone**: red (stricter of the paths below). Yellow paths follow this plan and get tests first. Red paths are included because the user explicitly asked for those fixes: the CloudFront function, `api-stack.ts`, `scripts/deploy/deploy-public-www.sh`, and `promote-public-www.yml`.
 
 ## Goal

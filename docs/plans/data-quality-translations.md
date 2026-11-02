@@ -1,6 +1,6 @@
 # Plan: Data quality Translations tab
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow, plus one red migration under `backend/db/alembic/versions/`
 
 ## Decisions

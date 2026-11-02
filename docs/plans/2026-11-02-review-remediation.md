@@ -1,6 +1,6 @@
 # Plan: Review remediation (public speed, admin reuse, backend hot path)
 
-**Status**: Approved (implement the 2026-11-02 review)
+**Status**: Done
 **Zone**: yellow (touches `backend/src`, `apps/admin_web/src`, `docs/api`; red paths are the CloudFront function, deploy script, and the schedule-entry index migration, included because the review plan named them)
 
 ## Goal

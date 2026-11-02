@@ -1,6 +1,6 @@
 # Plan: Align the admin console chrome with the public site
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

@@ -1,6 +1,6 @@
 # Plan: Names filter and accordion actions
 
-**Status**: Active
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

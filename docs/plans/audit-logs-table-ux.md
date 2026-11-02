@@ -1,6 +1,6 @@
 # Plan: Audit logs table UX
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

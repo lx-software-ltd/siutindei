@@ -1,6 +1,6 @@
 # Plan: Admin view consolidation
 
-**Status**: Approved
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

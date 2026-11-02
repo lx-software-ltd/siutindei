@@ -1,6 +1,6 @@
 # Plan: Enrich one organization from its website
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow, plus red for the migration, the HTTP proxy, the
 authorizer, and `api-stack.ts`
 
