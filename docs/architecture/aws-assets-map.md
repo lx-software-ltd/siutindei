@@ -423,8 +423,8 @@ The topic, key, and subscription come from `OpsAlarmsConstruct` in the main
 stack. The 16 API, Lambda, and Aurora alarms come from `addOpsAlarmRules`
 (`lib/constructs/ops-alarms.ts`) in the `OpsAlarmsStack` nested stack. They
 use literal names and a literal topic ARN, so the nested stack takes no
-parameters. They were moved there by a one-off stack refactor, described in
-[`docs/deployment/ops-alarms-stack-refactor.md`](../deployment/ops-alarms-stack-refactor.md).
+parameters. They were moved there by a one-off stack refactor, recorded in
+[`docs/plans/ops-alarms-nested-stack.md`](../plans/ops-alarms-nested-stack.md).
 
 | Resource Type | Physical Name | Notes |
 |--------------|---------------|-------|
