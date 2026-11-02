@@ -1,11 +1,9 @@
 # Remediation Plan — Public Website (`apps/public_www`) & Search API
 
 **Audience:** Junior developer executing fixes one item at a time.
-**Status:** Mostly resolved (reviewed 2026-11-02). Every P0, P1, and P2 item
-is fixed. Open: P3-4 (`img-src` still allows `https:`), P3-6 (full view still
-returns `manager_id`), and P3-7 (no public_www Playwright suite and no
-API Gateway-event test of `search.lambda_handler`). Per-item notes and line
-numbers below are from the original review and may have moved.
+**Status:** Closed (reviewed 2026-11-02). Every item is resolved except
+P3-4, which is an accepted risk. Per-item notes and line numbers below are
+from the original review and may have moved.
 **Scope:** The public marketing/discovery site (`apps/public_www`) and the public
 search API path it depends on (`backend/src/app/api/search.py`, the API Gateway
 config in `backend/infrastructure/lib/api-stack.ts`, and the CI deploy/promote
@@ -508,7 +506,7 @@ Add `400`/`500` response schemas to match the implementation.
 
 ### P3-3. Search Lambda response omits some security headers
 
-**Status: RESOLVED.** Search responses use `get_security_headers()`. Side effect: its `Cache-Control: no-store` disables the CloudFront edge cache.
+**Status: RESOLVED.** Search responses use `get_security_headers()`. Public search then replaces its `Cache-Control: no-store` with `public, max-age=60, s-maxage=300` so CloudFront can cache it; partner search and errors keep `no-store`.
 
 `backend/src/app/api/search.py:298-316` builds a partial header set, unlike
 `json_response()` (`responses.py:60-77`) which adds `X-Frame-Options`,
@@ -516,7 +514,11 @@ Add `400`/`500` response schemas to match the implementation.
 
 ### P3-4. CSP `img-src` is very permissive
 
-**Status: OPEN.** `inject-csp-meta.mjs` still sets `img-src 'self' data: https:`.
+**Status: ACCEPTED RISK.** `inject-csp-meta.mjs` keeps `img-src 'self' data: https:`.
+Listing media URLs can point at any HTTPS host: admins and imports set them,
+and enrichment stores the source URL when it does not copy media. An
+allow-list would break those images. `img-src` cannot run script, so the
+exposure is limited to image beacons.
 
 `apps/public_www/scripts/inject-csp-meta.mjs` allows `img-src 'self' data:
 https:` (any HTTPS origin). If the set of image hosts is known (CDN/API),
@@ -533,7 +535,7 @@ tighten to an allow-list.
 
 ### P3-6. Public exposure of `manager_id`
 
-**Status: PARTIAL.** `view=card` drops `manager_id`; the full view still returns it.
+**Status: RESOLVED.** The search schema no longer has `manager_id`, so neither view returns it (`tests/test_search_text_and_view.py`).
 
 Public search org responses include `manager_id` (a Cognito sub):
 `backend/src/app/api/schemas.py:23`, `search.py` (~line 200). Confirm this is
@@ -541,7 +543,7 @@ intentional; if not, drop it from the public schema.
 
 ### P3-7. Test coverage gaps
 
-**Status: PARTIAL.** Unit tests cover search, activity detail, `search-client`, and the navbar. There is no public_www Playwright suite and no API Gateway-event test of `search.lambda_handler`.
+**Status: RESOLVED.** Unit tests cover search, activity detail, `search-client`, and the navbar. `apps/public_www/e2e/smoke.spec.ts` is a Playwright smoke suite run by the `Test Public Website E2E` job, and `tests/test_search_handler.py` drives `search.lambda_handler` with API Gateway events.
 
 No tests for `search-results-page`, `activity-detail-page`, the live
 `search-client` API path, navbar/search panel, footer, or
@@ -570,14 +572,11 @@ reality and add a CI check that generated admin types are committed.
 
 ## Suggested execution order
 
-Resolved: every P0, P1, and P2 item, plus P3-1, P3-2, P3-3, P3-5, P3-8, and
-P3-9. P1-1 moved in-VPC Cognito calls to `aws_proxy`, P2-2 landed as
+Resolved: every item except P3-4, which is an accepted risk. P1-1 moved
+in-VPC Cognito calls to `aws_proxy`, P2-2 landed as
 `backend/src/app/api/search_validation.py`, and P2-8 moved reads into
 `site-config.ts` (`seo.ts` and `static-activity-catalog.ts` still read
-`process.env` at build time). Remaining: P3-4, P3-6, and P3-7.
-
-P3-3 has a side effect: `get_security_headers()` sends
-`Cache-Control: no-store`, so CloudFront does not cache search responses.
+`process.env` at build time).
 
 ## Notes / things that are actually fine (do not "fix")
 

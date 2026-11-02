@@ -84,6 +84,17 @@ flutter run \
 See `lib/config/amplify_config.dart`, `site_links.dart`, and
 `firebase_config.dart` for every `--dart-define` the app reads.
 
+To build `AMPLIFY_CONFIG` from a deployed API stack instead of writing it
+by hand (this is what `deploy-mobile.yml` and `deploy-ios.yml` do):
+
+```bash
+python3 scripts/deploy/build_amplify_config.py \
+  --params backend/infrastructure/params/production.json \
+  --output apps/siutindei_app/build/amplify-defines.json
+flutter run --dart-define-from-file=build/amplify-defines.json \
+  --dart-define=AMPLIFY_API_KEY=your-api-key
+```
+
 ## Running the App
 
 ### iOS Simulator

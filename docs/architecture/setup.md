@@ -90,6 +90,9 @@ For the OIDC provider itself, add the same tags:
 
 - `CDK_PARAM_GOOGLE_CLIENT_SECRET`
 - `CDK_PARAM_GOOGLE_PLACES_API_KEY` (optional; empty disables pin lookup)
+- `CDK_PARAM_OPENROUTER_API_KEY` (optional; empty keeps the
+  `openrouter-api-key` secret at `pending`, which blocks category and
+  enrichment scans)
 - `CDK_PARAM_APPLE_PRIVATE_KEY`
 - `CDK_PARAM_PUBLIC_API_KEY_VALUE`
 - `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`

@@ -90,7 +90,7 @@ def _allow_policy(
     *,
     importer_only: bool,
 ) -> dict[str, Any]:
-    """Allow admin (cached ``/*``) or importer (two import ARNs only)."""
+    """Allow admin (cached ``/*``) or importer (``_importer_method_arns`` only)."""
     if not importer_only:
         return policy("Allow", method_arn, user_sub, context)
     allowed = policy(

@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: deploy-ios
@@ -98,9 +99,27 @@ jobs:
           IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
           IOS_PROVISIONING_PROFILE: ${{ vars.IOS_PROVISIONING_PROFILE }}
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: GitHubActions-${{ github.run_id }}
+
+      - name: Build Amplify configuration from the API stack
+        run: |
+          python3 scripts/deploy/build_amplify_config.py \
+            --params "${CDK_PARAM_FILE:-backend/infrastructure/params/production.json}" \
+            --region "$AWS_REGION" \
+            --output apps/siutindei_app/build/amplify-defines.json
+        env:
+          CDK_PARAM_FILE: ${{ vars.CDK_PARAM_FILE }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+
       - name: Build release IPA
         run: |
           flutter build ipa --release --export-options-plist=ios/ExportOptions.plist \
+            --dart-define-from-file=build/amplify-defines.json \
             --dart-define=AMPLIFY_API_KEY=${{ secrets.AMPLIFY_API_KEY }} \
             --dart-define=FIREBASE_API_KEY=${{ vars.FIREBASE_API_KEY }} \
             --dart-define=FIREBASE_PROJECT_ID=${{ vars.FIREBASE_PROJECT_ID }} \

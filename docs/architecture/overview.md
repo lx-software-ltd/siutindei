@@ -200,9 +200,10 @@ pull requests for dependency updates:
 
 ## Caching
 
-- The public-website distribution has a `/v1/activities/search` cache
-  behavior (5-minute TTL), but the search Lambda currently returns
-  `Cache-Control: no-store`, so CloudFront does not cache it. The API
+- Public search responses are cached at the CloudFront edge (5-minute TTL)
+  via the public-website distribution's `/v1/activities/search` behavior.
+  The search Lambda sends `Cache-Control: public, max-age=60,
+  s-maxage=300` on successful public searches. The API
   Gateway stage cache cluster is intentionally disabled (Checkov CKV_AWS_120 is
   suppressed via `skip-check` in `.checkov.yaml`); see
   [`decisions.md`](decisions.md) for the cost rationale.

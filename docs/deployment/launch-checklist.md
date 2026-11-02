@@ -92,11 +92,11 @@ On the **production** environment:
   `CDK_PARAM_PUBLIC_API_KEY_VALUE`,
   `CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD`,
   `CDK_PARAM_GOOGLE_PLACES_API_KEY`,
+  `CDK_PARAM_OPENROUTER_API_KEY`,
   `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`, and
-  `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`. `deploy-backend.yml` does not export
-  `CDK_PARAM_OPENROUTER_API_KEY`, so the `OpenRouterApiKey` parameter stays
-  empty and the `openrouter-api-key` secret holds `pending`; set the real key
-  in Secrets Manager before enabling category or enrichment scans. Generate
+  `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`. Until `CDK_PARAM_OPENROUTER_API_KEY`
+  is set, the `openrouter-api-key` secret holds `pending` and category and
+  enrichment scans cannot call the model. Generate
   the attestation token and origin-verify secret with
   `python3 -c "import secrets; print(secrets.token_urlsafe(48))"` and store
   each value once. The promote workflow reads the attestation token from

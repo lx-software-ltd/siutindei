@@ -176,7 +176,7 @@ paths:
           description: |
             Response shape. `full` is the default and matches the existing
             payload. `card` omits descriptions, description translations,
-            manager_id, and place_id, keeps only the first media URL
+            and place_id, keeps only the first media URL
             and the first weekly entry, and drops `name_translations.en`
             when it equals `name`.
           schema:
@@ -201,6 +201,15 @@ paths:
       responses:
         "200":
           description: Search results
+          headers:
+            Cache-Control:
+              description: |
+                `public, max-age=60, s-maxage=300`. Results are public and
+                shared by every caller, so the public-website CloudFront
+                behavior caches them for up to 5 minutes. Error responses
+                and partner search send `no-store`.
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -355,9 +364,6 @@ components:
           $ref: "#/components/schemas/TranslationMap"
         description_translations:
           $ref: "#/components/schemas/TranslationMap"
-        manager_id:
-          type: string
-          description: Cognito user sub of the organization manager
         media_urls:
           type: array
           items:

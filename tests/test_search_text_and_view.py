@@ -79,7 +79,7 @@ def test_card_view_omits_heavy_fields_and_stays_under_900_bytes(
     assert len(card_item["schedule"]["weekly_entries"]) == 1
     assert card_item["schedule"]["weekly_entries"][0]["day_of_week_utc"] == 1
     assert full_item["activity"]["description"]
-    assert "manager_id" in full_item["organization"]
+    assert "manager_id" not in full_item["organization"]
     assert len(full_item["schedule"]["weekly_entries"]) == 2
     assert "age_min" in card_item["activity"]
     assert "lat" in card_item["location"]

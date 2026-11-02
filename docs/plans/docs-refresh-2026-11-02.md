@@ -10,7 +10,8 @@ Bring living docs, skills, and READMEs back in line with the code after
 
 ## Non-goals
 
-- Code changes. Drift that is a code bug is reported, not fixed:
+- Code changes. Drift that is a code bug is reported, not fixed. All of
+  it except the ruleset is fixed in `left-out-fixes-2026-11-02.md`:
   - The search Lambda's `Cache-Control: no-store` disables the
     CloudFront edge cache; the docs now say so.
   - `deploy-mobile.yml` and `deploy-ios.yml` do not pass

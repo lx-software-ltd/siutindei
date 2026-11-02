@@ -17,7 +17,6 @@ class OrganizationSchema(BaseModel):
     description: str | None
     name_translations: dict[str, str]
     description_translations: dict[str, str]
-    manager_id: str
     media_urls: list[str]
     logo_media_url: str | None
     status: str | None = None
@@ -112,7 +111,6 @@ _CARD_OMITTED_FIELDS = (
     ("activity", "description_translations"),
     ("organization", "description"),
     ("organization", "description_translations"),
-    ("organization", "manager_id"),
     ("organization", "place_id"),
 )
 

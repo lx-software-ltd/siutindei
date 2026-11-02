@@ -9,12 +9,13 @@ Source Node before npm: `export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh"`.
 
 PostgreSQL is `postgresql+psycopg://postgres:postgres@localhost:5432/backend_test`. Alembic needs `DATABASE_URL`. Local auth is `md5`, not `peer`.
 
-Run pytest from the repo root with both of these. Database-backed tests error with a usage message when `TEST_DATABASE_URL` is unset. SQLite is not supported.
+Run pytest from the repo root with both of these. Database-backed tests error with a usage message when `TEST_DATABASE_URL` is unset. SQLite is not supported. Apply migrations first, as CI does: triggers and functions such as `catalog_versions_delete_guard` come only from Alembic, and the session teardown drops tables but leaves `alembic_version`. When `alembic_version` says head but tables are missing, migrate a fresh database (`createdb -h localhost -U postgres backend_ci`) and point both URLs at it.
 
 ```bash
-TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/backend_test \
-  PYTHONPATH=backend/src:backend \
-  pytest
+export DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/backend_test
+export TEST_DATABASE_URL="$DATABASE_URL"
+python -m alembic -c backend/db/alembic.ini upgrade head
+PYTHONPATH=backend/src:backend pytest tests backend
 ```
 
 Install backend deps with `pip install --ignore-installed` so Debian packages such as PyJWT do not block the install.

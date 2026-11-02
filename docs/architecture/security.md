@@ -245,10 +245,10 @@ The cache key includes all query strings but **no** request headers, so a
 single cached response is shared across callers (no per-token cache
 fragmentation, no leakage of caller-specific data).
 
-The search Lambda currently returns `Cache-Control: no-store`, so
-CloudFront does not cache these responses and every request reaches the
-origin checks. See
-[`public-www.md`](./public-www.md#search-api-edge-caching).
+Successful public searches send `Cache-Control: public, max-age=60,
+s-maxage=300`. Error responses and partner search
+(`/v1/partner/activities/search`, which can be organization-scoped)
+keep `no-store`. Search responses do not include `manager_id`.
 
 ---
 
