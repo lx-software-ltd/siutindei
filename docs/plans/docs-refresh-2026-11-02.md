@@ -29,7 +29,17 @@ Bring living docs, skills, and READMEs back in line with the code after
   `.cursor/skills/admin-api-endpoint/SKILL.md`, ticket references in
   `organization-suggestions.md`, `audit-logging.md`, `overview.md`, and
   `aws-assets-map.md`.
-- Backend, infrastructure, repo, and mobile docs found by the same pass.
+- Repo and tooling: `AGENTS.md` (hook list), `SECURITY.md` (CORS, WAF,
+  PyJWT pin), `scripts/codegen/README.md`, `docs/architecture/zones.md`,
+  the `cursor-cloud` and `verify-change` skills, and
+  `.cursor/rules/flutter-app.mdc` (directory names only).
+- Mobile: markdown only under `apps/siutindei_app/**` (README,
+  CONTRIBUTING, `docs/**`, `android/README.md`,
+  `lib/config/tokens/README.md`), plus `docs/deployment/android-play-store.md`
+  and `ios-testflight.md`. Samples now show Riverpod 3 `Notifier`, the
+  real `--dart-define` names, JDK 17, and the flat `test/` layout. No Dart
+  or Gradle source changes.
+- Backend and infrastructure docs found by the same pass.
 - `docs/plans/*.md` status lines for plans that already shipped.
 
 ## Invariants this change preserves
