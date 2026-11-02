@@ -1,0 +1,108 @@
+{
+  "$comment": "Desired Cloudflare state for the public website edge. Applied by scripts/cloudflare/edge_policy.py. ${HOSTNAME} is the proxied hostname; ${PUBLIC_WWW_EDGE_VERIFY_SECRET} is read from the environment at apply time and never stored here. Plan: docs/plans/cloudflare-edge-protection.md.",
+  "zone_name": "siutindei.com",
+  "hostname": "siutindei.com",
+  "dns": {
+    "name": "${HOSTNAME}",
+    "type": "CNAME",
+    "proxied": true
+  },
+  "settings": {
+    "ssl": "strict",
+    "email_obfuscation": "off",
+    "browser_cache_ttl": 0,
+    "rocket_loader": "off",
+    "always_use_https": "on",
+    "browser_check": "on"
+  },
+  "bot_management": {
+    "fight_mode": false,
+    "ai_bots_protection": "block"
+  },
+  "rulesets": {
+    "http_ratelimit": {
+      "name": "Public website rate limits",
+      "rules": [
+        {
+          "description": "search-per-ip",
+          "expression": "(http.request.uri.path eq \"/v1/activities/search\")",
+          "action": "block",
+          "ratelimit": {
+            "characteristics": ["cf.colo.id", "ip.src"],
+            "period": 10,
+            "requests_per_period": 15,
+            "mitigation_timeout": 10
+          },
+          "enabled": true
+        }
+      ]
+    },
+    "http_request_firewall_custom": {
+      "name": "Public website custom rules",
+      "rules": [
+        {
+          "description": "search-limit-allowlist",
+          "expression": "(http.request.uri.path eq \"/v1/activities/search\" and not (any(http.request.uri.args[\"limit\"][*] eq \"1\") or any(http.request.uri.args[\"limit\"][*] eq \"12\") or any(http.request.uri.args[\"limit\"][*] eq \"24\") or any(http.request.uri.args[\"limit\"][*] eq \"30\")))",
+          "action": "block",
+          "enabled": true
+        },
+        {
+          "description": "search-sec-fetch-site",
+          "expression": "(http.request.uri.path eq \"/v1/activities/search\" and len(http.request.headers[\"sec-fetch-site\"]) > 0 and not any(http.request.headers[\"sec-fetch-site\"][*] eq \"same-origin\"))",
+          "action": "block",
+          "enabled": true
+        },
+        {
+          "description": "search-tooling-user-agents",
+          "expression": "(http.request.uri.path eq \"/v1/activities/search\" and (http.user_agent eq \"\" or lower(http.user_agent) contains \"python\" or lower(http.user_agent) contains \"curl/\" or lower(http.user_agent) contains \"wget/\" or lower(http.user_agent) contains \"go-http-client\" or lower(http.user_agent) contains \"scrapy\" or lower(http.user_agent) contains \"httpx\" or lower(http.user_agent) contains \"aiohttp\" or lower(http.user_agent) contains \"java/\" or lower(http.user_agent) contains \"okhttp\" or lower(http.user_agent) contains \"node-fetch\" or lower(http.user_agent) contains \"axios/\" or lower(http.user_agent) contains \"headlesschrome\" or lower(http.user_agent) contains \"phantomjs\" or lower(http.user_agent) contains \"puppeteer\" or lower(http.user_agent) contains \"playwright\" or lower(http.user_agent) contains \"selenium\"))",
+          "action": "block",
+          "enabled": true
+        }
+      ]
+    },
+    "http_request_cache_settings": {
+      "name": "Public website cache rules",
+      "rules": [
+        {
+          "description": "static-assets-cacheable",
+          "expression": "(http.host eq \"${HOSTNAME}\" and starts_with(http.request.uri.path, \"/_next/static/\"))",
+          "action": "set_cache_settings",
+          "action_parameters": {
+            "cache": true,
+            "edge_ttl": { "mode": "respect_origin" },
+            "browser_ttl": { "mode": "respect_origin" }
+          },
+          "enabled": true
+        },
+        {
+          "description": "bypass-everything-else",
+          "expression": "(http.host eq \"${HOSTNAME}\" and not starts_with(http.request.uri.path, \"/_next/static/\"))",
+          "action": "set_cache_settings",
+          "action_parameters": {
+            "cache": false
+          },
+          "enabled": true
+        }
+      ]
+    },
+    "http_request_late_transform": {
+      "name": "Public website request headers",
+      "rules": [
+        {
+          "description": "edge-verify-header",
+          "expression": "(http.host eq \"${HOSTNAME}\")",
+          "action": "rewrite",
+          "action_parameters": {
+            "headers": {
+              "x-edge-verify": {
+                "operation": "set",
+                "value": "${PUBLIC_WWW_EDGE_VERIFY_SECRET}"
+              }
+            }
+          },
+          "enabled": true
+        }
+      ]
+    }
+  }
+}
