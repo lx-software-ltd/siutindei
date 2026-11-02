@@ -7,7 +7,6 @@ appropriate HTTP status codes and structured error information.
 from __future__ import annotations
 
 from typing import Any
-from typing import Optional
 
 
 class AppError(Exception):
@@ -26,7 +25,7 @@ class AppError(Exception):
         self,
         message: str,
         status_code: int = 500,
-        detail: Optional[str] = None,
+        detail: str | None = None,
     ):
         super().__init__(message)
         self.message = message
@@ -48,7 +47,7 @@ class ValidationError(AppError):
     or constraint violations in user input.
     """
 
-    def __init__(self, message: str, field: Optional[str] = None):
+    def __init__(self, message: str, field: str | None = None):
         detail = f"Field: {field}" if field else None
         super().__init__(message, status_code=400, detail=detail)
         self.field = field
@@ -110,7 +109,7 @@ class DatabaseError(AppError):
     Use for connection errors, query failures, or constraint violations.
     """
 
-    def __init__(self, message: str, detail: Optional[str] = None):
+    def __init__(self, message: str, detail: str | None = None):
         super().__init__(
             message,
             status_code=500,
@@ -134,6 +133,6 @@ class CursorError(ValidationError):
     Use when cursor parsing or validation fails.
     """
 
-    def __init__(self, detail: Optional[str] = None):
+    def __init__(self, detail: str | None = None):
         super().__init__("Invalid cursor", field="cursor")
         self.detail = detail

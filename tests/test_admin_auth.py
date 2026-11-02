@@ -9,7 +9,7 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "backend" / "src"))
 
-from app.api.admin import _is_admin, _is_importer  # noqa: E402
+from app.api.admin_auth import _is_admin, _is_importer  # noqa: E402
 
 
 def test_is_admin_true_with_group() -> None:
@@ -71,9 +71,9 @@ def test_is_importer_false_without_group() -> None:
 def test_admin_cursor_roundtrip() -> None:
     """Ensure admin cursor roundtrip works."""
 
-    from app.api.admin import _decode_cursor
-    from app.api.admin import _encode_cursor
-    from app.api.admin import _parse_cursor
+    from app.api.admin_request import _decode_cursor
+    from app.api.admin_request import _encode_cursor
+    from app.api.admin_request import _parse_cursor
     from uuid import uuid4
 
     cursor_id = uuid4()

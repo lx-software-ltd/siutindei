@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -218,7 +218,7 @@ def stamp_imported_organization(
         entity.review_status = "pending_review"
         if import_job_id is not None:
             entity.import_job_id = import_job_id
-    entity.last_imported_at = datetime.now(timezone.utc)
+    entity.last_imported_at = datetime.now(UTC)
 
 
 def apply_listing_status(
@@ -236,7 +236,7 @@ def apply_listing_status(
         return
     entity.status = status
     entity.status_source = status_source
-    entity.status_changed_at = datetime.now(timezone.utc)
+    entity.status_changed_at = datetime.now(UTC)
 
 
 def find_import_organization(

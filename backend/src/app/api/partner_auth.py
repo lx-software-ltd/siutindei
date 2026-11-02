@@ -12,8 +12,9 @@ handlers through the authorizer context:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional
+from typing import Any
 
 from app.exceptions import AuthorizationError
 
@@ -27,10 +28,10 @@ class PartnerContext:
 
     api_key_id: str
     scope: str
-    org_id: Optional[str]
+    org_id: str | None
 
 
-def get_partner_context(event: Mapping[str, Any]) -> Optional[PartnerContext]:
+def get_partner_context(event: Mapping[str, Any]) -> PartnerContext | None:
     """Extract the partner API-key context set by the authorizer.
 
     Returns:

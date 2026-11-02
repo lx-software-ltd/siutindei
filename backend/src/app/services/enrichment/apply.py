@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -58,8 +58,9 @@ def apply_proposals(
         pending.append((index, raw_id, proposal))
     logo_ids = {raw for _index, raw, proposal in pending if _is_logo(proposal)}
     if len(logo_ids) > 1:
-        for raw in logo_ids:
-            results.append({"id": raw, "status": "error", "error": "Pick one logo"})
+        results.extend(
+            {"id": raw, "status": "error", "error": "Pick one logo"} for raw in logo_ids
+        )
         pending = [item for item in pending if item[1] not in logo_ids]
     pending.sort(key=lambda item: (_KIND_ORDER.get(item[2].kind, 99), item[0]))
     applied: list[OrgEnrichmentProposal] = []
@@ -85,7 +86,7 @@ def apply_proposals(
                 )
                 proposal.status = "applied"
                 proposal.decided_by = user_id
-                proposal.decided_at = datetime.now(timezone.utc)
+                proposal.decided_at = datetime.now(UTC)
         except (ValidationError, AppError) as exc:
             results.append({"id": raw_id, "status": "error", "error": exc.message})
             continue
@@ -147,7 +148,7 @@ def dismiss_proposals(
             continue
         proposal.status = "dismissed"
         proposal.decided_by = user_id
-        proposal.decided_at = datetime.now(timezone.utc)
+        proposal.decided_at = datetime.now(UTC)
         results.append({"id": raw_id, "status": "dismissed"})
     session.flush()
     return results

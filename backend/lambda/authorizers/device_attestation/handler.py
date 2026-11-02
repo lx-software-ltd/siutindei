@@ -24,11 +24,11 @@ import hmac
 import os
 from typing import Any
 
-from app.auth.authorizer_helpers import get_header, policy
 from app.auth.attestation import (
     is_attestation_enabled,
     verify_attestation_token,
 )
+from app.auth.authorizer_helpers import get_header, policy
 from app.utils.logging import configure_logging, get_logger
 
 configure_logging()

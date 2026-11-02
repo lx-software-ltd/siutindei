@@ -7,46 +7,44 @@ SQLAlchemy engines with settings appropriate for Lambda execution.
 from __future__ import annotations
 
 import os
+import time
 from typing import Any
-from typing import Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
-from sqlalchemy.pool import NullPool
 
 from app.db.connection import get_database_url
 
-# Module-level engine cache for connection reuse across Lambda invocations
-_ENGINE_CACHE: dict[str, Engine] = {}
+# Module-level engine cache for connection reuse across Lambda invocations.
+# IAM engines are kept for ten minutes, inside the 15-minute token lifetime.
+_IAM_ENGINE_TTL_SECONDS = 600
+_ENGINE_CACHE: dict[str, tuple[float, Engine]] = {}
 
 
 def get_engine(
     use_cache: bool = True,
-    pool_class: Optional[type] = None,
+    pool_class: type | None = None,
 ) -> Engine:
     """Get or create a SQLAlchemy engine.
 
-    For IAM authentication, a new engine is always created since
-    auth tokens expire. For password authentication, the engine
-    is cached and reused across invocations.
+    Password authentication reuses one engine for the life of the container.
+    IAM authentication reuses one engine for ten minutes so the auth token
+    stays inside its lifetime. IAM engines use a one-connection pool.
 
     Args:
-        use_cache: Whether to use the engine cache (ignored for IAM auth).
+        use_cache: Whether to use the engine cache.
         pool_class: Override the connection pool class.
 
     Returns:
         A configured SQLAlchemy engine.
     """
     use_iam_auth = _use_iam_auth()
-
-    # IAM auth tokens expire, so don't cache the engine
-    if use_iam_auth:
-        use_cache = False
-        pool_class = NullPool
-
-    cache_key = "default"
-    if use_cache and cache_key in _ENGINE_CACHE:
-        return _ENGINE_CACHE[cache_key]
+    cache_key = "iam" if use_iam_auth else "default"
+    now = time.monotonic()
+    if use_cache:
+        cached = _cached_engine(cache_key, now, use_iam_auth)
+        if cached is not None:
+            return cached
 
     database_url = get_database_url()
     pool_settings = _get_pool_settings(use_iam_auth, pool_class)
@@ -59,8 +57,24 @@ def get_engine(
     )
 
     if use_cache:
-        _ENGINE_CACHE[cache_key] = engine
+        _ENGINE_CACHE[cache_key] = (now, engine)
 
+    return engine
+
+
+def _cached_engine(
+    cache_key: str,
+    now: float,
+    use_iam_auth: bool,
+) -> Engine | None:
+    cached = _ENGINE_CACHE.get(cache_key)
+    if cached is None:
+        return None
+    created_at, engine = cached
+    if use_iam_auth and now - created_at >= _IAM_ENGINE_TTL_SECONDS:
+        engine.dispose()
+        del _ENGINE_CACHE[cache_key]
+        return None
     return engine
 
 
@@ -69,6 +83,8 @@ def clear_engine_cache() -> None:
 
     Useful for testing or when connection settings change.
     """
+    for _created_at, engine in _ENGINE_CACHE.values():
+        engine.dispose()
     _ENGINE_CACHE.clear()
 
 
@@ -85,13 +101,13 @@ def _get_connect_args() -> dict[str, str]:
 
 def _get_pool_settings(
     use_iam_auth: bool,
-    pool_class: Optional[type],
+    pool_class: type | None,
 ) -> dict[str, Any]:
     """Return connection pool settings tuned for Lambda.
 
-    For IAM auth or when NullPool is specified, disable pooling.
-    Otherwise, use minimal pool settings suitable for Lambda's
-    execution model.
+    IAM auth uses one connection recycled every ten minutes.
+    An explicit pool class, including NullPool, is honored.
+    Password auth uses the small Lambda pool from the environment.
 
     Args:
         use_iam_auth: Whether IAM authentication is being used.
@@ -100,8 +116,15 @@ def _get_pool_settings(
     Returns:
         Dictionary of pool configuration options.
     """
-    if use_iam_auth or pool_class == NullPool:
-        return {"poolclass": NullPool}
+    if pool_class is not None:
+        return {"poolclass": pool_class}
+
+    if use_iam_auth:
+        return {
+            "pool_size": 1,
+            "max_overflow": 0,
+            "pool_recycle": _IAM_ENGINE_TTL_SECONDS,
+        }
 
     return {
         "pool_size": int(os.getenv("DB_POOL_SIZE", "1")),

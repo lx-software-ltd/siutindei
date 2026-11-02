@@ -6,16 +6,15 @@ the role terminology used throughout the application.
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 from typing import Union
 
 from alembic import op
 
-
 revision: str = "0009_rename_owner_to_manager"
 down_revision: Union[str, None] = "0008_access_req_ticket_id"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

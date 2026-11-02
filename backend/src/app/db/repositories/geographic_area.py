@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
-from typing import Sequence
+from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import select
@@ -23,7 +22,7 @@ class GeographicAreaRepository:
         """
         self._session = session
 
-    def get_by_id(self, area_id: UUID) -> Optional[GeographicArea]:
+    def get_by_id(self, area_id: UUID) -> GeographicArea | None:
         """Get a geographic area by its ID.
 
         Args:
@@ -113,7 +112,7 @@ class GeographicAreaRepository:
                 .all()
             )
 
-    def toggle_active(self, area_id: UUID, active: bool) -> Optional[GeographicArea]:
+    def toggle_active(self, area_id: UUID, active: bool) -> GeographicArea | None:
         """Toggle the active flag on a geographic area (typically a country).
 
         Args:

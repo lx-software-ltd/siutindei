@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from app.services.aws_proxy import AwsProxyError
 from app.services.aws_proxy import invoke as aws_proxy
 from app.utils.cfn_response import send_cfn_response
-from app.utils.logging import configure_logging, get_logger
-from app.utils.logging import hash_for_correlation, mask_email
+from app.utils.logging import (
+    configure_logging,
+    get_logger,
+    hash_for_correlation,
+    mask_email,
+)
 
 configure_logging()
 logger = get_logger(__name__)

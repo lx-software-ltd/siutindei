@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
 
 import sqlalchemy as sa
 from sqlalchemy import Text, text
@@ -44,27 +43,27 @@ class AuditLog(Base):
         nullable=False,
         comment="INSERT, UPDATE, or DELETE",
     )
-    user_id: Mapped[Optional[str]] = mapped_column(
+    user_id: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Cognito user sub who made the change",
     )
-    request_id: Mapped[Optional[str]] = mapped_column(
+    request_id: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Lambda request ID for correlation",
     )
-    old_values: Mapped[Optional[dict]] = mapped_column(
+    old_values: Mapped[dict | None] = mapped_column(
         sa.dialects.postgresql.JSONB(),
         nullable=True,
         comment="Previous values (for UPDATE/DELETE)",
     )
-    new_values: Mapped[Optional[dict]] = mapped_column(
+    new_values: Mapped[dict | None] = mapped_column(
         sa.dialects.postgresql.JSONB(),
         nullable=True,
         comment="New values (for INSERT/UPDATE)",
     )
-    changed_fields: Mapped[Optional[List[str]]] = mapped_column(
+    changed_fields: Mapped[list[str] | None] = mapped_column(
         ARRAY(Text()),
         nullable=True,
         comment="List of fields that changed (for UPDATE)",
@@ -75,12 +74,12 @@ class AuditLog(Base):
         server_default=text("'trigger'"),
         comment="Source of the audit entry: trigger or application",
     )
-    ip_address: Mapped[Optional[str]] = mapped_column(
+    ip_address: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Client IP address if available",
     )
-    user_agent: Mapped[Optional[str]] = mapped_column(
+    user_agent: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Client user agent if available",

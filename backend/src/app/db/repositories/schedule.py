@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
-from typing import Sequence
+from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -128,7 +127,7 @@ class ActivityScheduleRepository(BaseRepository[ActivitySchedule]):
         day_of_week_utc: int,
         start_minutes_utc: int,
         end_minutes_utc: int,
-        languages: Optional[list[str]] = None,
+        languages: list[str] | None = None,
     ) -> ActivitySchedule:
         """Create a weekly schedule with a single entry.
 
@@ -163,7 +162,7 @@ class ActivityScheduleRepository(BaseRepository[ActivitySchedule]):
         activity_id: UUID,
         location_id: UUID,
         languages: list[str],
-    ) -> Optional[ActivitySchedule]:
+    ) -> ActivitySchedule | None:
         """Find a schedule by activity, location, and language set."""
         query = (
             select(ActivitySchedule)

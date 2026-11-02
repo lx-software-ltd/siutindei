@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import os
 import re
-from datetime import datetime, timezone
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -51,7 +52,7 @@ def _cognito(action: str, **params: Any) -> dict[str, Any]:
 def _handle_user_group(
     event: Mapping[str, Any],
     method: str,
-    username: Optional[str],
+    username: str | None,
 ) -> dict[str, Any]:
     """Handle user group assignment."""
     if not username:
@@ -118,7 +119,7 @@ def _validate_user_sub(user_sub: str) -> str:
 
 def _add_user_to_manager_group(user_sub: str) -> None:
     """Add a user to the 'manager' Cognito group (best effort)."""
-    valid_user_sub: Optional[str] = None
+    valid_user_sub: str | None = None
     masked_user_sub = mask_pii(user_sub)
     try:
         valid_user_sub = _validate_user_sub(user_sub)
@@ -272,7 +273,7 @@ def _handle_list_cognito_users(event: Mapping[str, Any]) -> dict[str, Any]:
     return json_response(200, result, event=event)
 
 
-def _serialize_cognito_user(user: dict[str, Any]) -> Optional[dict[str, Any]]:
+def _serialize_cognito_user(user: dict[str, Any]) -> dict[str, Any] | None:
     """Serialize a Cognito user for the API response."""
     raw_attributes = user.get("Attributes", [])
     attributes = {attr["Name"]: attr["Value"] for attr in raw_attributes}
@@ -329,7 +330,7 @@ def _adjust_user_feedback_stars(user_sub: str, delta: int) -> None:
 def _get_user_by_sub(
     user_pool_id: str,
     user_sub: str,
-) -> Optional[tuple[str, dict[str, str]]]:
+) -> tuple[str, dict[str, str]] | None:
     """Return Cognito username and attributes for a given user sub."""
     valid_user_sub = _validate_user_sub(user_sub)
     response = _cognito(
@@ -360,7 +361,7 @@ def _parse_feedback_stars(attributes: Mapping[str, str]) -> int:
     return max(0, parsed)
 
 
-def _parse_last_auth_time(value: Optional[str]) -> Optional[str]:
+def _parse_last_auth_time(value: str | None) -> str | None:
     if not value:
         return None
 
@@ -372,7 +373,7 @@ def _parse_last_auth_time(value: Optional[str]) -> Optional[str]:
     if epoch_time is not None:
         if epoch_time > 10**11:
             epoch_time = epoch_time / 1000
-        return datetime.fromtimestamp(epoch_time, tz=timezone.utc).isoformat()
+        return datetime.fromtimestamp(epoch_time, tz=UTC).isoformat()
 
     try:
         parsed = parse_datetime(value)
@@ -383,9 +384,9 @@ def _parse_last_auth_time(value: Optional[str]) -> Optional[str]:
         return None
 
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
+        parsed = parsed.replace(tzinfo=UTC)
 
-    return parsed.astimezone(timezone.utc).isoformat()
+    return parsed.astimezone(UTC).isoformat()
 
 
 def _handle_delete_cognito_user(
@@ -405,7 +406,7 @@ def _handle_delete_cognito_user(
         )
     except AwsProxyError as exc:
         if exc.code == "UserNotFoundException":
-            raise NotFoundError("cognito_user", username)
+            raise NotFoundError("cognito_user", username) from exc
         raise
 
     user_sub = None

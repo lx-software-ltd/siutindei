@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
-from typing import Mapping
 
 from app.api.listing_events import lambda_handler as _handler
 

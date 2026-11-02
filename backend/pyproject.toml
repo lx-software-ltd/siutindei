@@ -16,7 +16,38 @@ target-version = 'py312'
 src = ['src', 'lambda']
 
 [tool.ruff.lint]
-select = ['E4', 'E7', 'E9', 'F']
+select = [
+  'E',
+  'W',
+  'F',
+  'I',
+  'UP',
+  'B',
+  'SIM',
+  'C4',
+  'PERF',
+  'PLR0911',
+  'PLR0912',
+  'PLR0913',
+  'PLR0915',
+  'PLR0917',
+]
+
+[tool.ruff.lint.pylint]
+# Ceilings are the measured maxima in this tree (ruff 0.17). Requested
+# starting points were 108, 51, 30, 26, and 9. Args, positional args, and
+# returns are lower than those guesses. Branches and statements are higher.
+max-args = 13
+max-positional-args = 13
+max-returns = 17
+max-branches = 34
+max-statements = 113
+
+[tool.ruff.lint.per-file-ignores]
+# Email HTML and historical SQL stay on one line.
+"src/app/templates/*.py" = ["E501"]
+# Historical revisions keep Union[str, None] so the revision contract matches.
+"db/alembic/versions/*.py" = ["E501", "UP007"]
 
 [tool.pytest.ini_options]
 testpaths = ['../tests', 'tests']

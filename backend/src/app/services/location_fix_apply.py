@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -14,12 +14,10 @@ from app.db.models import Activity, ActivityLocation, GeographicArea, Location
 from app.db.models.location_fix import LocationFixProposal
 from app.db.repositories import LocationRepository
 from app.exceptions import NotFoundError, ValidationError
-from app.services.area_assignment import get_leaf
-from app.services.area_assignment import resolve_leaf
+from app.services.area_assignment import get_leaf, resolve_leaf
 from app.services.location_fix_districts import in_hong_kong_bbox, pin_consistency
 from app.services.location_fix_geocode import geocode_address
 from app.services.location_fix_query import pending_row
-
 
 _PIN = Decimal("0.000001")
 
@@ -148,7 +146,7 @@ def _set_manual_pin(
         "grade": "manual",
         "district_consistent": consistent,
         "other_district": other,
-        "looked_up_at": datetime.now(timezone.utc).isoformat(),
+        "looked_up_at": datetime.now(UTC).isoformat(),
     }
     row.proposed_location = proposed
 

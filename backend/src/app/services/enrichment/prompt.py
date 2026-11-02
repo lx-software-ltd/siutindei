@@ -105,7 +105,7 @@ def _joined(headers: list[str], bodies: list[str], room: int) -> str:
     caps = _fair_caps([len(body) for body in bodies], room)
     chunks = [
         f"{header}{body[:cap]}\n"
-        for header, body, cap in zip(headers, bodies, caps)
+        for header, body, cap in zip(headers, bodies, caps, strict=True)
         if body[:cap].strip()
     ]
     return "\n".join(chunks)

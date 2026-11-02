@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -50,7 +50,7 @@ def remember_deleted_organization(
     the organization just deleted. Contact fields are not kept.
     """
     group_id = str(uuid4())
-    deleted_at = datetime.now(timezone.utc)
+    deleted_at = datetime.now(UTC)
     audit = AuditService(session, user_id=deleted_by)
     forwarded = session.scalars(
         select(OrganizationMerge).where(OrganizationMerge.survivor_org_id == org.id)
@@ -186,9 +186,11 @@ def _remembered_names(session: Session, org: Organization) -> list[str]:
         )
     )
     for old_values, new_values in audit_rows:
-        for payload in (old_values, new_values):
-            if isinstance(payload, dict) and isinstance(payload.get("name"), str):
-                values.append(payload["name"])
+        values.extend(
+            payload["name"]
+            for payload in (old_values, new_values)
+            if isinstance(payload, dict) and isinstance(payload.get("name"), str)
+        )
     return _unique_names(values)
 
 

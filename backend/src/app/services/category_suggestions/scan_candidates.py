@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -81,7 +81,7 @@ def resolve_scan_ids(
 
 def _candidate_stmt(*, org_id: UUID | None, rescan: bool, review_scope: str):
     """Activities with no open review, limited by ``review_scope``."""
-    from app.services.category_suggestions.scan import SKIP_WINDOW, _SETTLED
+    from app.services.category_suggestions.scan import _SETTLED, SKIP_WINDOW
 
     query = select(Activity.id).join(Organization, Organization.id == Activity.org_id)
     if review_scope != "all":
@@ -95,7 +95,7 @@ def _candidate_stmt(*, org_id: UUID | None, rescan: bool, review_scope: str):
     )
     query = query.where(~pending.exists())
     if not rescan:
-        cutoff = datetime.now(timezone.utc) - SKIP_WINDOW
+        cutoff = datetime.now(UTC) - SKIP_WINDOW
         settled = (
             select(ActivityCategoryReview.id)
             .where(ActivityCategoryReview.activity_id == Activity.id)

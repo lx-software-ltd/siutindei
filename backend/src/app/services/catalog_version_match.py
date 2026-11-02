@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from app.db.models import CatalogVersion, Organization, OrganizationMerge
 from app.exceptions import ValidationError
-from app.services.catalog_version_payload import organization_payload
 from app.services.catalog_version_lookup import (
     _find_org_version1,
     _find_removed,
@@ -18,6 +17,7 @@ from app.services.catalog_version_lookup import (
     _merge_by_name,
     _visible,
 )
+from app.services.catalog_version_payload import organization_payload
 from app.services.catalog_version_shape import (
     ACTIVITY_SHAPE_KEYS,
     LOCATION_SHAPE_KEYS,

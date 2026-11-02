@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from decimal import Decimal
-from typing import Optional
-from typing import Sequence
 from uuid import UUID
 
-from sqlalchemy import and_
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
-from app.db.models import ActivityPricing
-from app.db.models import PricingType
+from app.db.models import ActivityPricing, PricingType
 from app.db.repositories.base import BaseRepository
 
 
@@ -53,7 +50,7 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
         self,
         activity_id: UUID,
         location_id: UUID,
-    ) -> Optional[ActivityPricing]:
+    ) -> ActivityPricing | None:
         """Find pricing for a specific activity at a location.
 
         Args:
@@ -76,7 +73,7 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
         activity_id: UUID,
         location_id: UUID,
         pricing_type: PricingType,
-    ) -> Optional[ActivityPricing]:
+    ) -> ActivityPricing | None:
         """Find pricing by activity, location, and pricing type."""
         query = select(ActivityPricing).where(
             and_(
@@ -89,9 +86,9 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
 
     def find_by_price_range(
         self,
-        min_amount: Optional[Decimal] = None,
-        max_amount: Optional[Decimal] = None,
-        pricing_type: Optional[PricingType] = None,
+        min_amount: Decimal | None = None,
+        max_amount: Decimal | None = None,
+        pricing_type: PricingType | None = None,
         limit: int = 50,
     ) -> Sequence[ActivityPricing]:
         """Find pricing within a price range.
@@ -128,7 +125,7 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
         pricing_type: PricingType,
         amount: Decimal,
         currency: str = "HKD",
-        sessions_count: Optional[int] = None,
+        sessions_count: int | None = None,
         free_trial_class_offered: bool = False,
     ) -> ActivityPricing:
         """Create new pricing.
@@ -159,11 +156,11 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
     def update_pricing(
         self,
         pricing: ActivityPricing,
-        pricing_type: Optional[PricingType] = None,
-        amount: Optional[Decimal] = None,
-        currency: Optional[str] = None,
-        sessions_count: Optional[int] = None,
-        free_trial_class_offered: Optional[bool] = None,
+        pricing_type: PricingType | None = None,
+        amount: Decimal | None = None,
+        currency: str | None = None,
+        sessions_count: int | None = None,
+        free_trial_class_offered: bool | None = None,
     ) -> ActivityPricing:
         """Update pricing.
 

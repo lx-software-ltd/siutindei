@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -22,7 +22,7 @@ class OrganizationRepository(BaseRepository[Organization]):
         """
         super().__init__(session, Organization)
 
-    def find_by_name(self, name: str) -> Optional[Organization]:
+    def find_by_name(self, name: str) -> Organization | None:
         """Find an organization by exact name.
 
         Args:
@@ -34,7 +34,7 @@ class OrganizationRepository(BaseRepository[Organization]):
         query = select(Organization).where(Organization.name == name)
         return self._session.execute(query).scalar_one_or_none()
 
-    def find_by_name_case_insensitive(self, name: str) -> Optional[Organization]:
+    def find_by_name_case_insensitive(self, name: str) -> Organization | None:
         """Find an organization by case-insensitive name."""
         normalized = name.strip()
         query = select(Organization).where(
@@ -43,7 +43,7 @@ class OrganizationRepository(BaseRepository[Organization]):
         )
         return self._session.execute(query).scalar_one_or_none()
 
-    def find_by_place_id(self, place_id: str) -> Optional[Organization]:
+    def find_by_place_id(self, place_id: str) -> Organization | None:
         """Find an organization by Google place_id, including merge forwarding."""
         query = select(Organization).where(Organization.place_id == place_id)
         found = self._session.execute(query).scalar_one_or_none()
@@ -51,7 +51,7 @@ class OrganizationRepository(BaseRepository[Organization]):
             return found
         return self._find_merged_survivor("place_id", place_id)
 
-    def find_by_source_id(self, source_id: str) -> Optional[Organization]:
+    def find_by_source_id(self, source_id: str) -> Organization | None:
         """Find an organization by parsed catalog source_id."""
         query = select(Organization).where(Organization.source_id == source_id)
         found = self._session.execute(query).scalar_one_or_none()
@@ -59,7 +59,7 @@ class OrganizationRepository(BaseRepository[Organization]):
             return found
         return self._find_merged_survivor("source_id", source_id)
 
-    def _find_merged_survivor(self, field: str, value: str) -> Optional[Organization]:
+    def _find_merged_survivor(self, field: str, value: str) -> Organization | None:
         from app.db.models import OrganizationMerge
 
         column = getattr(OrganizationMerge, field)
@@ -76,7 +76,7 @@ class OrganizationRepository(BaseRepository[Organization]):
         self,
         manager_id: str,
         name: str,
-    ) -> Optional[Organization]:
+    ) -> Organization | None:
         """Find by manager and case-insensitive trimmed name."""
         query = (
             select(Organization)
@@ -160,8 +160,8 @@ class OrganizationRepository(BaseRepository[Organization]):
         self,
         name: str,
         manager_id: str,
-        description: Optional[str] = None,
-        media_urls: Optional[Sequence[str]] = None,
+        description: str | None = None,
+        media_urls: Sequence[str] | None = None,
     ) -> Organization:
         """Create a new organization.
 
@@ -185,9 +185,9 @@ class OrganizationRepository(BaseRepository[Organization]):
     def update_organization(
         self,
         organization: Organization,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        media_urls: Optional[Sequence[str]] = None,
+        name: str | None = None,
+        description: str | None = None,
+        media_urls: Sequence[str] | None = None,
     ) -> Organization:
         """Update an organization.
 

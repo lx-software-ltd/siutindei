@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Iterable, Optional
+from collections.abc import Iterable
+from typing import Any
 
 from app.services.aws_clients import get_ses_client
 
@@ -14,7 +15,7 @@ def send_email(
     to_addresses: Iterable[str],
     subject: str,
     body_text: str,
-    body_html: Optional[str] = None,
+    body_html: str | None = None,
 ) -> None:
     """Send a plain or HTML email via SES."""
     message: dict[str, Any] = {

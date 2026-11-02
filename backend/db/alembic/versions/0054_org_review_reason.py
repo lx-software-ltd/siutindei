@@ -10,15 +10,16 @@ a reason exists only on rejected rows holds. No seed rows change.
 
 from __future__ import annotations
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0054_org_review_reason"
 down_revision: Union[str, None] = "0053_translation_fixes"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 REVIEW_REASONS = ("not_relevant", "duplicate", "poor_data", "other")
 

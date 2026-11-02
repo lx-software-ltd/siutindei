@@ -13,7 +13,7 @@ SECURITY NOTES:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -82,10 +82,10 @@ def _touch_last_used(
     api_key: Any,
 ) -> None:
     """Refresh last_used_at, throttled to avoid a write per request."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     last_used = api_key.last_used_at
     if last_used is not None and last_used.tzinfo is None:
-        last_used = last_used.replace(tzinfo=timezone.utc)
+        last_used = last_used.replace(tzinfo=UTC)
     if last_used is not None and now - last_used < _LAST_USED_REFRESH_INTERVAL:
         return
     try:

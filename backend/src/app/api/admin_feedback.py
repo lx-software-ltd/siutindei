@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from botocore.exceptions import BotoCoreError, ClientError
 from sqlalchemy import text as sa_text
@@ -133,7 +134,7 @@ def _get_user_feedback(
 def _submit_user_feedback(
     event: Mapping[str, Any],
     user_sub: str,
-    user_email: Optional[str],
+    user_email: str | None,
 ) -> dict[str, Any]:
     """Submit new organization feedback."""
     body = _parse_body(event)
@@ -217,7 +218,7 @@ def _publish_feedback_to_sns(
     organization_name: str,
     stars: int,
     label_ids: list[str],
-    description: Optional[str],
+    description: str | None,
 ) -> dict[str, Any]:
     """Publish feedback to SNS for async processing."""
     sns_client = get_sns_client()
@@ -278,7 +279,7 @@ def _generate_feedback_ticket_id(session: Session) -> str:
 def _handle_admin_feedback(
     event: Mapping[str, Any],
     method: str,
-    feedback_id: Optional[str],
+    feedback_id: str | None,
 ) -> dict[str, Any]:
     """Handle admin feedback CRUD endpoints."""
     if method == "GET":
@@ -294,7 +295,7 @@ def _handle_admin_feedback(
 
 def _list_feedback(
     event: Mapping[str, Any],
-    feedback_id: Optional[str],
+    feedback_id: str | None,
 ) -> dict[str, Any]:
     """List feedback entries or return a specific one."""
     limit = parse_limit(event)
@@ -453,7 +454,7 @@ def _delete_feedback(
     feedback_id: str,
 ) -> dict[str, Any]:
     """Delete a feedback entry."""
-    submitter_id: Optional[str] = None
+    submitter_id: str | None = None
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event)
         repo = OrganizationFeedbackRepository(session)

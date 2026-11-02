@@ -152,3 +152,23 @@ def test_dependency_install_stops_after_retry_budget(
 
     assert len(_install_calls(calls)) == bundle.PIP_INSTALL_ATTEMPTS
     assert sleeps == [2, 4]
+
+
+def test_search_profile_omits_admin_packages(bundle) -> None:
+    root = Path(__file__).resolve().parents[1] / "backend"
+    search = bundle.requirements_for_profile(root, "search")
+    admin = bundle.requirements_for_profile(root, "admin")
+    default = bundle.requirements_for_profile(root, "default")
+    assert search.name == "requirements-core.txt"
+    assert admin.name == "requirements-admin.txt"
+    assert default.name == "requirements.txt"
+    core_text = search.read_text(encoding="utf-8").lower()
+    for banned in ("phonenumbers", "pycountry", "pypdf", "alembic", "pyjwt"):
+        assert banned not in core_text
+    admin_text = admin.read_text(encoding="utf-8")
+    assert "phonenumberslite==" in admin_text
+    assert "\nphonenumbers==" not in admin_text
+    assert default.read_text(encoding="utf-8").strip() == "-r requirements-admin.txt"
+    resolved = bundle._resolved_requirements_bytes(default)
+    assert b"phonenumberslite==" in resolved
+    assert b"boto3==" in resolved

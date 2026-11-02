@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -96,11 +96,11 @@ def upsert_name_proposal(
         if status == "applied":
             _mark_applied(pending, decided_by)
             return "applied"
-        pending.updated_at = datetime.now(timezone.utc)
+        pending.updated_at = datetime.now(UTC)
         return "updated"
     if status == "applied" and _applied_same(session, entity_type, entity_id, digest):
         return "unchanged"
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     applied = status == "applied"
     session.add(
         NameFixProposal(
@@ -213,7 +213,7 @@ def _fill(row, current, proposed, rules, patch, scan_run_id, digest) -> None:
 
 
 def _mark_applied(row: NameFixProposal, decided_by: str | None) -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     row.status = "applied"
     row.decided_by = decided_by
     row.decided_at = now

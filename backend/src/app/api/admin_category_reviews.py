@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import base64
 import json
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
-from typing import Mapping
 from uuid import UUID
 
 from sqlalchemy import and_, func, or_, select

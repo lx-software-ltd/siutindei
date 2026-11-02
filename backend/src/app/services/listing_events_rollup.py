@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
-from typing import Any, Mapping
+from collections.abc import Mapping
+from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -46,4 +47,4 @@ def _resolve_day(event: Mapping[str, Any] | None) -> date:
         raw = event.get("day")
     if raw:
         return date.fromisoformat(str(raw))
-    return datetime.now(timezone.utc).date() - timedelta(days=1)
+    return datetime.now(UTC).date() - timedelta(days=1)

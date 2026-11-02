@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -12,13 +12,13 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models.organization import Organization
 from app.db.models.org_enrichment import (
     ACTIVE_RUN_STATUSES,
     OrgEnrichmentProposal,
     OrgEnrichmentRun,
     OrgEnrichmentSettings,
 )
+from app.db.models.organization import Organization
 from app.exceptions import AppError, NotFoundError, ValidationError
 from app.services.enrichment.constants import STALE_RUN_MINUTES
 
@@ -58,13 +58,13 @@ def update_settings(session: Session, body: dict[str, Any]) -> OrgEnrichmentSett
             Decimal("0"),
             Decimal("1"),
         )
-    row.updated_at = datetime.now(timezone.utc)
+    row.updated_at = datetime.now(UTC)
     session.flush()
     return row
 
 
 def month_spend(session: Session, now: datetime | None = None) -> Decimal:
-    moment = now or datetime.now(timezone.utc)
+    moment = now or datetime.now(UTC)
     start = moment.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     total = session.scalar(
         select(func.coalesce(func.sum(OrgEnrichmentRun.cost_usd), 0)).where(
@@ -119,7 +119,7 @@ def start_run(
 
 def expire_stale_runs(session: Session, org_id: UUID) -> bool:
     """Fail active runs that outlived the queue retries. Returns True if any changed."""
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=STALE_RUN_MINUTES)
+    cutoff = datetime.now(UTC) - timedelta(minutes=STALE_RUN_MINUTES)
     rows = session.scalars(
         select(OrgEnrichmentRun).where(
             OrgEnrichmentRun.org_id == org_id,
@@ -127,13 +127,13 @@ def expire_stale_runs(session: Session, org_id: UUID) -> bool:
         )
     ).all()
     changed = False
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for row in rows:
         created = row.created_at
         if created is None:
             continue
         if created.tzinfo is None:
-            created = created.replace(tzinfo=timezone.utc)
+            created = created.replace(tzinfo=UTC)
         if created >= cutoff:
             continue
         row.status = "failed"

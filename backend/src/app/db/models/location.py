@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Integer, Numeric, Text, text
 from sqlalchemy.dialects.postgresql import UUID
@@ -40,10 +40,10 @@ class Location(Base):
         nullable=False,
         comment="FK to geographic_areas leaf node",
     )
-    address: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    lat: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
-    lng: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
-    place_id: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    address: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    lat: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)
+    lng: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)
+    place_id: Mapped[str | None] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=False,
@@ -61,13 +61,13 @@ class Location(Base):
         server_default=text("1"),
     )
 
-    organization: Mapped["Organization"] = relationship(back_populates="locations")
-    area: Mapped["GeographicArea"] = relationship()
-    activity_pricing: Mapped[List["ActivityPricing"]] = relationship(
+    organization: Mapped[Organization] = relationship(back_populates="locations")
+    area: Mapped[GeographicArea] = relationship()
+    activity_pricing: Mapped[list[ActivityPricing]] = relationship(
         back_populates="location",
         cascade="all, delete-orphan",
     )
-    activity_schedules: Mapped[List["ActivitySchedule"]] = relationship(
+    activity_schedules: Mapped[list[ActivitySchedule]] = relationship(
         back_populates="location",
         cascade="all, delete-orphan",
     )

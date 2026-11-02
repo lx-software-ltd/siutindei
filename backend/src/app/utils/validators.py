@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from typing import Optional
 from uuid import UUID
 
 
@@ -70,10 +69,10 @@ def validate_range(
 
 
 def sanitize_string(
-    value: Optional[str],
+    value: str | None,
     max_length: int = 1000,
     strip: bool = True,
-) -> Optional[str]:
+) -> str | None:
     """Sanitize a string input.
 
     Args:

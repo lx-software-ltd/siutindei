@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
-from datetime import timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -74,7 +73,7 @@ def start_discover(
     review_scope: str = "pending_review",
 ) -> tuple[CategoryScanRun, list[list[str]]]:
     """Assign known labels now and queue unknown labels for the model."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     run = CategoryScanRun(
         status="running",
         requested_by=requested_by,

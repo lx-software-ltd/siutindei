@@ -7,8 +7,9 @@ one place.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
-from typing import Any, Mapping
+from typing import Any
 
 from app.api.admin_imports_catalog import normalize_org_name
 from app.db.age_bounds import inclusive_age_bounds

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -177,7 +177,7 @@ def upsert_proposal(
     if _dismissed_hash(session, entity_type, entity_id, field, digest):
         clear_pending(session, entity_type, entity_id, field)
         return "skipped"
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     row = pending_row(session, entity_type, entity_id, field)
     if (
         row is not None
@@ -330,7 +330,7 @@ def _proposed_text(
 
 
 def _mark(row: TranslationFixProposal, status: str, decided_by: str | None) -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     row.status = status
     row.decided_by = decided_by
     row.decided_at = now

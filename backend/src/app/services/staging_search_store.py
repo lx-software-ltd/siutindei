@@ -81,7 +81,7 @@ def fetch_staging_search_response(
         )
 
     return ActivitySearchResponseSchema(
-        items=[_to_schema(row) for row in trimmed],
+        items=[_to_schema(row, filters.view) for row in trimmed],
         next_cursor=next_cursor,
     )
 
@@ -212,9 +212,8 @@ def _matches(
     pricing = item["pricing"]
     schedule = item["schedule"]
 
-    if filters.activity_id is not None:
-        if UUID(activity["id"]) != filters.activity_id:
-            return False
+    if filters.activity_id is not None and UUID(activity["id"]) != filters.activity_id:
+        return False
 
     if filters.age is not None:
         age_min = activity.get("age_min")
@@ -242,21 +241,29 @@ def _matches(
         }:
             return False
 
-    if filters.pricing_type is not None:
-        if pricing.get("pricing_type") != filters.pricing_type.value:
-            return False
+    if (
+        filters.pricing_type is not None
+        and pricing.get("pricing_type") != filters.pricing_type.value
+    ):
+        return False
 
-    if filters.price_min is not None:
-        if Decimal(str(pricing.get("amount", 0))) < filters.price_min:
-            return False
+    if (
+        filters.price_min is not None
+        and Decimal(str(pricing.get("amount", 0))) < filters.price_min
+    ):
+        return False
 
-    if filters.price_max is not None:
-        if Decimal(str(pricing.get("amount", 0))) > filters.price_max:
-            return False
+    if (
+        filters.price_max is not None
+        and Decimal(str(pricing.get("amount", 0))) > filters.price_max
+    ):
+        return False
 
-    if filters.schedule_type is not None:
-        if schedule.get("schedule_type") != filters.schedule_type.value:
-            return False
+    if (
+        filters.schedule_type is not None
+        and schedule.get("schedule_type") != filters.schedule_type.value
+    ):
+        return False
 
     if filters.languages:
         langs = schedule.get("languages") or []
@@ -267,7 +274,22 @@ def _matches(
     if not _entries_match(entries, filters):
         return False
 
-    return True
+    return not (filters.text_query and not _text_matches(item, filters.text_query))
+
+
+def _text_matches(item: dict[str, Any], text_query: str) -> bool:
+    """Case-insensitive match on names and name translation values."""
+    needle = text_query.casefold()
+    activity = item.get("activity") or {}
+    organization = item.get("organization") or {}
+    values = [activity.get("name") or "", organization.get("name") or ""]
+    for translations in (
+        activity.get("name_translations") or {},
+        organization.get("name_translations") or {},
+    ):
+        if isinstance(translations, dict):
+            values.extend(translations.values())
+    return any(needle in str(value).casefold() for value in values)
 
 
 def _entries_match(
@@ -282,9 +304,11 @@ def _entries_match(
         return True
 
     for entry in entries:
-        if filters.day_of_week_utc is not None:
-            if entry.get("day_of_week_utc") != filters.day_of_week_utc:
-                continue
+        if (
+            filters.day_of_week_utc is not None
+            and entry.get("day_of_week_utc") != filters.day_of_week_utc
+        ):
+            continue
 
         start = entry.get("start_minutes_utc")
         end = entry.get("end_minutes_utc")
@@ -317,20 +341,31 @@ def _entries_match(
     return False
 
 
-def _to_schema(row: dict[str, Any]) -> ActivitySearchResultSchema:
+def _to_schema(
+    row: dict[str, Any],
+    view: str = "full",
+) -> ActivitySearchResultSchema:
     activity = row["activity"]
     organization = row["organization"]
     location = row["location"]
     pricing = row["pricing"]
     schedule = row["schedule"]
+    card = view == "card"
+    media_urls = list(organization.get("media_urls") or [])
+    entries = list(schedule.get("weekly_entries") or [])
+    if card:
+        media_urls = media_urls[:1]
+        entries = _sorted_entries(entries)[:1]
 
     return ActivitySearchResultSchema(
         activity=ActivitySchema(
             id=activity["id"],
             name=activity["name"],
-            description=activity.get("description"),
+            description=None if card else activity.get("description"),
             name_translations=activity.get("name_translations") or {},
-            description_translations=activity.get("description_translations") or {},
+            description_translations=(
+                {} if card else activity.get("description_translations") or {}
+            ),
             age_min=activity.get("age_min"),
             age_max=activity.get("age_max"),
             category_id=activity.get("category_id"),
@@ -338,11 +373,13 @@ def _to_schema(row: dict[str, Any]) -> ActivitySearchResultSchema:
         organization=OrganizationSchema(
             id=organization["id"],
             name=organization["name"],
-            description=organization.get("description"),
+            description=None if card else organization.get("description"),
             name_translations=organization.get("name_translations") or {},
-            description_translations=organization.get("description_translations") or {},
+            description_translations=(
+                {} if card else organization.get("description_translations") or {}
+            ),
             manager_id=organization["manager_id"],
-            media_urls=organization.get("media_urls") or [],
+            media_urls=media_urls,
             logo_media_url=organization.get("logo_media_url"),
         ),
         location=LocationSchema(
@@ -370,9 +407,20 @@ def _to_schema(row: dict[str, Any]) -> ActivitySearchResultSchema:
                     start_minutes_utc=entry["start_minutes_utc"],
                     end_minutes_utc=entry["end_minutes_utc"],
                 )
-                for entry in schedule.get("weekly_entries") or []
+                for entry in entries
             ],
             languages=schedule.get("languages") or [],
+        ),
+    )
+
+
+def _sorted_entries(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
+        entries,
+        key=lambda entry: (
+            entry.get("day_of_week_utc", 0),
+            entry.get("start_minutes_utc", 0),
+            entry.get("end_minutes_utc", 0),
         ),
     )
 

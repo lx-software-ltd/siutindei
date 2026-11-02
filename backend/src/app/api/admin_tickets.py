@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
 
 from botocore.exceptions import BotoCoreError, ClientError
 from sqlalchemy import text as sa_text
@@ -154,7 +155,7 @@ def _publish_manager_request_to_sns(
     user_sub: str,
     user_email: str,
     organization_name: str,
-    request_message: Optional[str],
+    request_message: str | None,
 ) -> dict[str, Any]:
     """Publish manager request to SNS for async processing."""
     sns_client = get_sns_client()
@@ -214,7 +215,7 @@ def _generate_ticket_id(session: Session) -> str:
     return f"R{next_number:05d}"
 
 
-def _serialize_ticket(ticket: Optional[Ticket]) -> Optional[dict[str, Any]]:
+def _serialize_ticket(ticket: Ticket | None) -> dict[str, Any] | None:
     """Serialize a ticket for the API response."""
     if ticket is None:
         return None
@@ -260,7 +261,7 @@ def _serialize_ticket(ticket: Optional[Ticket]) -> Optional[dict[str, Any]]:
 def _handle_admin_tickets(
     event: Mapping[str, Any],
     method: str,
-    ticket_id_param: Optional[str],
+    ticket_id_param: str | None,
 ) -> dict[str, Any]:
     """Handle admin ticket management."""
     if method == "GET":
@@ -284,7 +285,7 @@ def _list_admin_tickets(event: Mapping[str, Any]) -> dict[str, Any]:
                 f"Invalid status: {status_filter}. "
                 "Must be pending, approved, or rejected",
                 field="status",
-            )
+            ) from None
 
     type_filter = _query_param(event, "ticket_type")
     ticket_type = None
@@ -297,7 +298,7 @@ def _list_admin_tickets(event: Mapping[str, Any]) -> dict[str, Any]:
                 "Must be access_request, organization_suggestion, or "
                 "organization_feedback",
                 field="ticket_type",
-            )
+            ) from None
 
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event)
@@ -375,7 +376,7 @@ def _review_ticket(
             TicketStatus.APPROVED if action == "approve" else TicketStatus.REJECTED
         )
         ticket.status = new_status
-        ticket.reviewed_at = datetime.now(timezone.utc)
+        ticket.reviewed_at = datetime.now(UTC)
         ticket.reviewed_by = reviewer_sub
         ticket.admin_notes = admin_notes
 

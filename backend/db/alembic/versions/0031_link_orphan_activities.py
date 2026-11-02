@@ -5,15 +5,15 @@ Revision ID: 0031_link_orphan_activities
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 from typing import Union
 
 from alembic import op
 
 revision: str = "0031_link_orphan_activities"
 down_revision: Union[str, None] = "0030_listing_events"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 # Activities with no activity_locations row, when the org has exactly
 # one location. Seed rows already insert joins with NOT EXISTS, so this

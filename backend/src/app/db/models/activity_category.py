@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, ForeignKey, Integer, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -24,7 +24,7 @@ class ActivityCategory(Base):
         primary_key=True,
         server_default=text("gen_random_uuid()"),
     )
-    parent_id: Mapped[Optional[str]] = mapped_column(
+    parent_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("activity_categories.id", ondelete="RESTRICT"),
         nullable=True,
@@ -50,14 +50,14 @@ class ActivityCategory(Base):
         server_default=text("false"),
     )
 
-    parent: Mapped[Optional["ActivityCategory"]] = relationship(
+    parent: Mapped[ActivityCategory | None] = relationship(
         remote_side="ActivityCategory.id",
         back_populates="children",
     )
-    children: Mapped[List["ActivityCategory"]] = relationship(
+    children: Mapped[list[ActivityCategory]] = relationship(
         back_populates="parent",
         order_by="ActivityCategory.display_order",
     )
-    activities: Mapped[List["Activity"]] = relationship(
+    activities: Mapped[list[Activity]] = relationship(
         back_populates="category",
     )

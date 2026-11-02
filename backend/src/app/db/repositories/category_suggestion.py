@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -58,5 +57,5 @@ class CategorySuggestionRepository(BaseRepository[CategorySuggestion]):
             .where(CategorySuggestionActivity.suggestion_id == suggestion.id)
         )
         suggestion.activity_count = int(count or 0)
-        suggestion.updated_at = datetime.now(timezone.utc)
+        suggestion.updated_at = datetime.now(UTC)
         return suggestion.activity_count

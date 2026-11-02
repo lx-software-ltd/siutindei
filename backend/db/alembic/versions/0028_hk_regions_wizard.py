@@ -8,18 +8,18 @@ and seeds workshop/class/outdoor/indoor categories for the home wizard.
 from __future__ import annotations
 
 import uuid
-from typing import Sequence
+from collections.abc import Sequence
 from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 revision: str = "0028_hk_regions_wizard"
 down_revision: Union[str, None] = "0027_add_feedback_tables"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 HK_ISLAND_ID = uuid.UUID("a1111111-1111-1111-1111-111111111101")
 KOWLOON_ID = uuid.UUID("a1111111-1111-1111-1111-111111111102")

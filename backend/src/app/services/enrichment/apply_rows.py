@@ -20,13 +20,19 @@ from app.api.admin_validators import (
     _validate_string_length,
     _validate_url,
 )
-from app.db.models import Activity, ActivityLocation, ActivityPricing, ActivitySchedule
-from app.db.models import ActivityScheduleEntry, Location, Organization
+from app.db.models import (
+    Activity,
+    ActivityLocation,
+    ActivityPricing,
+    ActivitySchedule,
+    ActivityScheduleEntry,
+    Location,
+    Organization,
+)
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.db.models.enums import PricingType, ScheduleType
 from app.db.models.org_enrichment import OrgEnrichmentProposal
 from app.exceptions import ValidationError
-from app.services.enrichment.apply_names import apply_name, apply_name_translation
 from app.services.area_assignment import get_leaf
 from app.services.category_suggestions.capture import (
     capture_pending,
@@ -36,6 +42,7 @@ from app.services.category_suggestions.resolve import (
     capture_enabled,
     matching_category_id,
 )
+from app.services.enrichment.apply_names import apply_name, apply_name_translation
 from app.services.enrichment.refine import bare_category_name
 
 HK = ZoneInfo("Asia/Hong_Kong")
@@ -234,7 +241,8 @@ def _apply_activity(
     if category_id is None:
         if org.review_status == "approved":
             raise ValidationError(
-                "Pick a category before adding this activity to an approved organization",
+                "Pick a category before adding this activity "
+                "to an approved organization",
                 field="category_id",
             )
         category_id = PENDING_CATEGORY_ID

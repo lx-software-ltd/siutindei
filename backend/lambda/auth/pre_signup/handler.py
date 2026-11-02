@@ -11,7 +11,8 @@ SECURITY NOTES:
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from app.services.aws_clients import get_cognito_idp_client
 from app.utils.logging import configure_logging, get_logger, mask_email

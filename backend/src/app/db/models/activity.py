@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from sqlalchemy import (
@@ -52,7 +52,7 @@ class Activity(Base):
         comment="FK to activity_categories",
     )
     name: Mapped[str] = mapped_column(Text(), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text(), nullable=True)
     name_translations: Mapped[dict[str, str]] = mapped_column(
         sa.dialects.postgresql.JSONB(),
         nullable=False,
@@ -67,9 +67,9 @@ class Activity(Base):
         server_default=text("'{}'::jsonb"),
         comment="Language map for non-English description translations",
     )
-    source_url: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    source_note: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
-    source_category_name: Mapped[Optional[str]] = mapped_column(
+    source_url: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    source_note: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    source_category_name: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
     )
@@ -91,17 +91,17 @@ class Activity(Base):
         server_default=text("1"),
     )
 
-    organization: Mapped["Organization"] = relationship(back_populates="activities")
-    category: Mapped["ActivityCategory"] = relationship(back_populates="activities")
-    locations: Mapped[List["ActivityLocation"]] = relationship(
+    organization: Mapped[Organization] = relationship(back_populates="activities")
+    category: Mapped[ActivityCategory] = relationship(back_populates="activities")
+    locations: Mapped[list[ActivityLocation]] = relationship(
         back_populates="activity",
         cascade="all, delete-orphan",
     )
-    pricing: Mapped[List["ActivityPricing"]] = relationship(
+    pricing: Mapped[list[ActivityPricing]] = relationship(
         back_populates="activity",
         cascade="all, delete-orphan",
     )
-    schedules: Mapped[List["ActivitySchedule"]] = relationship(
+    schedules: Mapped[list[ActivitySchedule]] = relationship(
         back_populates="activity",
         cascade="all, delete-orphan",
     )
@@ -123,8 +123,8 @@ class ActivityLocation(Base):
         primary_key=True,
     )
 
-    activity: Mapped["Activity"] = relationship(back_populates="locations")
-    location: Mapped["Location"] = relationship()
+    activity: Mapped[Activity] = relationship(back_populates="locations")
+    location: Mapped[Location] = relationship()
 
 
 class ActivityPricing(Base):
@@ -157,7 +157,7 @@ class ActivityPricing(Base):
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     currency: Mapped[str] = mapped_column(Text(), nullable=False, server_default="HKD")
-    sessions_count: Mapped[Optional[int]] = mapped_column(Integer(), nullable=True)
+    sessions_count: Mapped[int | None] = mapped_column(Integer(), nullable=True)
     free_trial_class_offered: Mapped[bool] = mapped_column(
         sa.Boolean(),
         nullable=False,
@@ -179,8 +179,8 @@ class ActivityPricing(Base):
         ),
     )
 
-    activity: Mapped["Activity"] = relationship(back_populates="pricing")
-    location: Mapped["Location"] = relationship(back_populates="activity_pricing")
+    activity: Mapped[Activity] = relationship(back_populates="pricing")
+    location: Mapped[Location] = relationship(back_populates="activity_pricing")
 
 
 class ActivitySchedule(Base):
@@ -211,7 +211,7 @@ class ActivitySchedule(Base):
         ),
         nullable=False,
     )
-    languages: Mapped[List[str]] = mapped_column(
+    languages: Mapped[list[str]] = mapped_column(
         ARRAY(Text()),
         nullable=False,
         server_default=text("'{}'::text[]"),
@@ -236,9 +236,9 @@ class ActivitySchedule(Base):
         ),
     )
 
-    activity: Mapped["Activity"] = relationship(back_populates="schedules")
-    location: Mapped["Location"] = relationship(back_populates="activity_schedules")
-    entries: Mapped[List["ActivityScheduleEntry"]] = relationship(
+    activity: Mapped[Activity] = relationship(back_populates="schedules")
+    location: Mapped[Location] = relationship(back_populates="activity_schedules")
+    entries: Mapped[list[ActivityScheduleEntry]] = relationship(
         back_populates="schedule",
         cascade="all, delete-orphan",
         order_by=(
@@ -268,7 +268,7 @@ class ActivityScheduleEntry(Base):
     start_minutes_utc: Mapped[int] = mapped_column(Integer(), nullable=False)
     end_minutes_utc: Mapped[int] = mapped_column(Integer(), nullable=False)
 
-    schedule: Mapped["ActivitySchedule"] = relationship(back_populates="entries")
+    schedule: Mapped[ActivitySchedule] = relationship(back_populates="entries")
 
     __table_args__ = (
         CheckConstraint(

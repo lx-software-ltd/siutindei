@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -77,7 +77,7 @@ def update_settings(session: Session, body: dict[str, Any]) -> dict[str, Any]:
     row = load_settings(session)
     if "monthly_cost_limit_usd" in body:
         row.monthly_cost_limit_usd = _parse_cost_limit(body["monthly_cost_limit_usd"])
-    row.updated_at = datetime.now(timezone.utc)
+    row.updated_at = datetime.now(UTC)
     session.flush()
     return settings_payload(session)
 

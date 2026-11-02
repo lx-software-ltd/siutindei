@@ -159,6 +159,27 @@ paths:
             items:
               type: string
               enum: [en, zh, ja, ko, fr, de, es, pt, it, ru, ar, hi, th, vi, id, ms, tl, nl, pl, tr, yue]
+        - name: q
+          in: query
+          required: false
+          description: |
+            Case-insensitive match on activity name, organization name, and
+            name translation values. Fewer than 2 characters is rejected.
+          schema:
+            type: string
+            minLength: 2
+        - name: view
+          in: query
+          required: false
+          description: |
+            Response shape. `full` is the default and matches the existing
+            payload. `card` omits descriptions, description translations,
+            manager_id, and place_id, and keeps only the first media URL
+            and the first weekly entry.
+          schema:
+            type: string
+            enum: [card, full]
+            default: full
         - name: limit
           in: query
           required: false

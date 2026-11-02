@@ -5,7 +5,8 @@ from __future__ import annotations
 import re
 import time
 import unicodedata
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -315,12 +316,12 @@ def _address_district(index: _Index, address: str) -> GeographicArea | None:
 
 def _district_aliases_in(index: _Index, address: str) -> list[str]:
     folded = _fold(address)
-    found: list[str] = []
-    for area in index.districts:
-        for alias in _aliases(area):
-            if _long_enough(alias) and _contains(folded, alias):
-                found.append(alias)
-    return found
+    return [
+        alias
+        for area in index.districts
+        for alias in _aliases(area)
+        if _long_enough(alias) and _contains(folded, alias)
+    ]
 
 
 def _blocked(alias: str, district_aliases: list[str]) -> bool:

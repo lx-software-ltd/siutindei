@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
-from typing import Any, Callable
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, or_, select
@@ -65,9 +66,7 @@ def parse_cost_limit(value: Any) -> Decimal:
 
 def month_total(session: Session, cost_column, created_column) -> float:
     """Sum sweep cost since the start of the UTC month."""
-    start = datetime.now(timezone.utc).replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0
-    )
+    start = datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     value = session.scalar(
         select(func.coalesce(func.sum(cost_column), 0)).where(created_column >= start)
     )
@@ -91,20 +90,18 @@ def take_limited(session: Session, stmt, limit: int) -> tuple[list, bool]:
 def chunk_entity_batches(
     queued: dict[str, list[str]], batch_size: int
 ) -> list[dict[str, Any]]:
-    batches = []
-    for entity_type, ids in queued.items():
-        for index in range(0, len(ids), batch_size):
-            batches.append(
-                {
-                    "entity_type": entity_type,
-                    "entity_ids": ids[index : index + batch_size],
-                }
-            )
-    return batches
+    return [
+        {
+            "entity_type": entity_type,
+            "entity_ids": ids[index : index + batch_size],
+        }
+        for entity_type, ids in queued.items()
+        for index in range(0, len(ids), batch_size)
+    ]
 
 
 def fail_open_run(run: Any, error: str) -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     run.status = "failed"
     run.error = error
     run.finished_at = now
@@ -120,8 +117,8 @@ def fail_stale_runs(
     error: str = STALE_SWEEP_ERROR,
     on_each: Callable[[Any], None] | None = None,
 ) -> None:
-    cutoff = datetime.now(timezone.utc) - stale_after
-    now = datetime.now(timezone.utc)
+    cutoff = datetime.now(UTC) - stale_after
+    now = datetime.now(UTC)
     stale = session.scalars(
         select(model).where(
             model.status.in_(active),
@@ -164,7 +161,7 @@ def advance_scan_batch(
     if failed:
         run.failed_count = int(run.failed_count or 0) + failed_entities
         run.error = (error or default_error)[:500]
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     run.updated_at = now
     if run.batches_done < int(run.batches_total or 0):
         run.status = "running"

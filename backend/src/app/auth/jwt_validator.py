@@ -16,7 +16,7 @@ import json
 import os
 import time
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 import jwt
 from jwt import PyJWKClient, PyJWKClientError
@@ -183,8 +183,8 @@ def _extract_user_pool_from_issuer(issuer: str) -> tuple[str, str]:
 
 def decode_and_verify_token(
     token: str,
-    user_pool_id: Optional[str] = None,
-    region: Optional[str] = None,
+    user_pool_id: str | None = None,
+    region: str | None = None,
     verify_expiration: bool = True,
 ) -> TokenClaims:
     """Decode and verify a Cognito JWT token.
@@ -325,8 +325,8 @@ def decode_and_verify_token(
 def validate_token_for_groups(
     token: str,
     allowed_groups: set[str],
-    user_pool_id: Optional[str] = None,
-    region: Optional[str] = None,
+    user_pool_id: str | None = None,
+    region: str | None = None,
 ) -> tuple[TokenClaims, set[str]]:
     """Validate a token and check group membership.
 

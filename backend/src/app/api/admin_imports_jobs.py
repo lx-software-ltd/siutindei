@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -58,7 +58,7 @@ def store_import_job(
         existing.summary = summary
         existing.results = results
         existing.file_warnings = file_warnings
-        existing.updated_at = datetime.now(timezone.utc)
+        existing.updated_at = datetime.now(UTC)
         session.flush()
         return existing
     job = ImportJob(
@@ -78,7 +78,7 @@ def begin_import_retry(session: Session, job: ImportJob) -> ImportJob:
     """Mark a completed job running without dropping its stored results."""
     job.status = "running"
     job.dry_run = False
-    job.updated_at = datetime.now(timezone.utc)
+    job.updated_at = datetime.now(UTC)
     session.flush()
     return job
 
@@ -139,7 +139,7 @@ def begin_import_job(
 ) -> ImportJob:
     """Create or reuse a live job row before organizations are written."""
     existing = find_import_job_by_key(session, object_key)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     summary = _summary_with_source(source)
     if existing is not None:
         existing.dry_run = False
@@ -180,7 +180,7 @@ def finish_import_job(
     job.summary = summary
     job.results = results
     job.file_warnings = file_warnings
-    job.updated_at = datetime.now(timezone.utc)
+    job.updated_at = datetime.now(UTC)
     session.flush()
     return job
 
@@ -200,7 +200,7 @@ def fail_import_job(
     job = session.get(ImportJob, job_id)
     if job is None:
         return
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if keep_completed:
         job.status = "completed"
         warnings = list(job.file_warnings or [])

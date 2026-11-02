@@ -10,14 +10,11 @@ SECURITY NOTES:
 from __future__ import annotations
 
 import time
+from collections.abc import Mapping
 from typing import Any
-from typing import Mapping
 
-from app.utils.logging import configure_logging
-from app.utils.logging import get_logger
-from app.utils.logging import mask_email
-from app.utils.logging import mask_pii
 from app.services.aws_clients import get_cognito_idp_client
+from app.utils.logging import configure_logging, get_logger, mask_email, mask_pii
 
 configure_logging()
 logger = get_logger(__name__)

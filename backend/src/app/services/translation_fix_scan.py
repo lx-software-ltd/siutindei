@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -68,7 +68,7 @@ def start_translation_scan(
     )
     if active is not None:
         raise TranslationScanBusy()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     run = TranslationScanRun(
         status="queued",
         requested_by=requested_by,
@@ -151,7 +151,7 @@ def start_translation_scan(
     run.cleared_count = counts["cleared"]
     run.queued_count = sum(len(ids) for ids in queued.values())
     run.truncated = truncated
-    run.updated_at = datetime.now(timezone.utc)
+    run.updated_at = datetime.now(UTC)
     if batches:
         run.status = "queued"
     else:

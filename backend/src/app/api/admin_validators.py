@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -86,7 +86,7 @@ def _validate_string_length(
     field_name: str,
     max_length: int,
     required: bool = False,
-) -> Optional[str]:
+) -> str | None:
     """Validate and sanitize a string input."""
     if value is None:
         if required:
@@ -138,16 +138,13 @@ def _validate_media_urls(urls: list[str]) -> list[str]:
             f"media_urls cannot have more than {MAX_MEDIA_URLS_COUNT} items",
             field="media_urls",
         )
-    validated: list[str] = []
-    for url in cleaned:
-        validated.append(_validate_url(url, "media_urls"))
-    return sorted(validated)
+    return sorted(_validate_url(url, "media_urls") for url in cleaned)
 
 
 def _validate_logo_media_url(
-    logo_media_url: Optional[str],
+    logo_media_url: str | None,
     media_urls: list[str],
-) -> Optional[str]:
+) -> str | None:
     """Validate that logo URL is in media URLs list."""
     if logo_media_url is None:
         return None
@@ -160,7 +157,7 @@ def _validate_logo_media_url(
     return logo_media_url
 
 
-def _validate_social_value(value: Any, field_name: str) -> Optional[str]:
+def _validate_social_value(value: Any, field_name: str) -> str | None:
     """Validate a social field."""
     if value is None:
         return None
@@ -184,7 +181,7 @@ def _validate_social_value(value: Any, field_name: str) -> Optional[str]:
     return value
 
 
-def _validate_email(value: Any) -> Optional[str]:
+def _validate_email(value: Any) -> str | None:
     """Validate email address."""
     if value is None:
         return None
@@ -203,7 +200,7 @@ def _validate_email(value: Any) -> Optional[str]:
     return value
 
 
-def _validate_phone_country_code(value: Any) -> Optional[str]:
+def _validate_phone_country_code(value: Any) -> str | None:
     """Validate phone country code (ISO 3166-1 alpha-2)."""
     if value is None:
         return None
@@ -233,7 +230,7 @@ def _validate_phone_country_code(value: Any) -> Optional[str]:
 
 def _validate_phone_fields(
     phone_country_code: Any, phone_number: Any
-) -> tuple[Optional[str], Optional[str]]:
+) -> tuple[str | None, str | None]:
     """Validate phone fields, returning normalized values."""
     if phone_country_code is None and phone_number is None:
         return None, None
@@ -306,7 +303,7 @@ def _validate_currency(currency: str) -> str:
     return currency
 
 
-def _validate_manager_id(manager_id: Any, required: bool = False) -> Optional[str]:
+def _validate_manager_id(manager_id: Any, required: bool = False) -> str | None:
     """Validate a manager_id as UUID string."""
     if manager_id is None:
         if required:

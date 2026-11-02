@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import select
@@ -22,7 +22,7 @@ class OrganizationFeedbackRepository(BaseRepository[OrganizationFeedback]):
     def get_all(
         self,
         limit: int = 50,
-        cursor: Optional[UUID] = None,
+        cursor: UUID | None = None,
     ) -> Sequence[OrganizationFeedback]:
         """Get feedback entries with cursor pagination."""
         query = select(OrganizationFeedback).order_by(OrganizationFeedback.id)

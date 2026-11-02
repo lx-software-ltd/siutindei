@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Any
-from typing import Optional
 from uuid import UUID
 
 from app.api.admin_request import _parse_uuid
@@ -39,8 +38,8 @@ def parse_display_order(value: Any) -> int:
 
 def validate_category_parent(
     repo: ActivityCategoryRepository,
-    category_id: Optional[UUID | str],
-    parent_id: Optional[UUID],
+    category_id: UUID | str | None,
+    parent_id: UUID | None,
 ) -> None:
     """Validate that a parent exists and does not create cycles."""
     category_uuid = _as_uuid(category_id) if category_id is not None else None
@@ -123,8 +122,8 @@ def create_activity_category(
 def reject_same_parent_name(
     repo: ActivityCategoryRepository,
     name: str,
-    parent_id: Optional[UUID],
-    category_id: Optional[UUID] = None,
+    parent_id: UUID | None,
+    category_id: UUID | None = None,
 ) -> None:
     """Reject a sibling whose name matches, ignoring case and extra space.
 
@@ -133,10 +132,7 @@ def reject_same_parent_name(
     when ``kayaking`` is already under that parent.
     """
     folded = " ".join(name.split()).casefold()
-    if parent_id is None:
-        rows = repo.get_all_roots()
-    else:
-        rows = repo.get_children(parent_id)
+    rows = repo.get_all_roots() if parent_id is None else repo.get_children(parent_id)
     for row in rows:
         if category_id is not None and _as_uuid(row.id) == category_id:
             continue

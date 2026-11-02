@@ -317,9 +317,9 @@ def _starts_with_cjk(value: str) -> bool:
 def _should_keep_mixed(original: str, english: str, chinese: str) -> bool:
     if _BRANCH_SUFFIX.search(chinese):
         return True
-    if _starts_with_cjk(original) and len(chinese) >= 6 and len(english.split()) <= 2:
-        return True
-    return False
+    return bool(
+        _starts_with_cjk(original) and len(chinese) >= 6 and len(english.split()) <= 2
+    )
 
 
 def _restore_place_brackets(original: str, english: str) -> str:

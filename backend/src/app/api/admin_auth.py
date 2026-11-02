@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -62,13 +63,13 @@ def _is_importer(event: Mapping[str, Any]) -> bool:
     return importer_group in groups.split(",") if groups else False
 
 
-def _get_user_sub(event: Mapping[str, Any]) -> Optional[str]:
+def _get_user_sub(event: Mapping[str, Any]) -> str | None:
     """Extract the user's Cognito sub (subject) from authorizer context."""
     ctx = _get_authorizer_context(event)
     return ctx.get("sub") or None
 
 
-def _get_user_email(event: Mapping[str, Any]) -> Optional[str]:
+def _get_user_email(event: Mapping[str, Any]) -> str | None:
     """Extract the user's email from authorizer context."""
     ctx = _get_authorizer_context(event)
     return ctx.get("email") or None

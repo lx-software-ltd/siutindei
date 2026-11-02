@@ -13,15 +13,16 @@ not put Source lines back into descriptions.
 from __future__ import annotations
 
 import re
-from typing import Any, Mapping, Sequence, Union
+from collections.abc import Mapping, Sequence
+from typing import Any, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = "0035_org_source_fields"
 down_revision: Union[str, None] = "0034_category_suggestions"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _SOURCE_LINE = re.compile(r"^Source: (.*)$")
 _URL = re.compile(r"^https?://", re.IGNORECASE)

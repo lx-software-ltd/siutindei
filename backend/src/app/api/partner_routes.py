@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from app.api.admin_crud import _handle_crud
 from app.api.admin_resources import _RESOURCE_CONFIG
@@ -42,7 +43,7 @@ def handle_partner_routes(
     event: Mapping[str, Any],
     method: str,
     resource: str,
-    resource_id: Optional[str],
+    resource_id: str | None,
 ) -> dict[str, Any]:
     """Handle CRUD routes authenticated with a partner API key.
 
@@ -115,13 +116,12 @@ def handle_partner_routes(
 
     # An org-scoped key cannot create organizations: any new organization
     # would fall outside the key's scope.
-    if managed_org_ids is not None and resource == "organizations":
-        if method == "POST":
-            return json_response(
-                403,
-                {"error": "Organization-scoped keys cannot create organizations"},
-                event=event,
-            )
+    if managed_org_ids is not None and resource == "organizations" and method == "POST":
+        return json_response(
+            403,
+            {"error": "Organization-scoped keys cannot create organizations"},
+            event=event,
+        )
 
     if resource == "organizations" and method == "GET":
         return _safe_handler(

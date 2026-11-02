@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 from app.templates.types import EmailContent
 
@@ -112,9 +112,9 @@ def render_new_feedback_email(
     ticket_id: str,
     submitter_email: str,
     organization_name: str,
-    stars: Optional[int],
-    labels: Optional[Iterable[str]],
-    description: Optional[str],
+    stars: int | None,
+    labels: Iterable[str] | None,
+    description: str | None,
     submitted_at: str,
 ) -> EmailContent:
     """Render the new feedback notification email."""
@@ -158,9 +158,9 @@ def build_new_feedback_template_data(
     ticket_id: str,
     submitter_email: str,
     organization_name: str,
-    stars: Optional[int],
-    labels: Optional[Iterable[str]],
-    description: Optional[str],
+    stars: int | None,
+    labels: Iterable[str] | None,
+    description: str | None,
     submitted_at: str,
 ) -> dict[str, str]:
     """Build template data for a new feedback email."""
@@ -175,7 +175,7 @@ def build_new_feedback_template_data(
     }
 
 
-def _format_labels(labels: Optional[Iterable[str]]) -> str:
+def _format_labels(labels: Iterable[str] | None) -> str:
     if not labels:
         return "None"
     cleaned = [label for label in labels if label]

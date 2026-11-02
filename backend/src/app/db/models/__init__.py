@@ -9,14 +9,14 @@ from app.db.models.activity import (
 )
 from app.db.models.activity_category import ActivityCategory
 from app.db.models.api_key import ApiKey
+from app.db.models.audit_log import AuditLog
+from app.db.models.catalog_version import CatalogVersion
 from app.db.models.category_scan import ActivityCategoryReview, CategoryScanRun
 from app.db.models.category_suggestion import (
     CategorySuggestion,
     CategorySuggestionActivity,
     CategorySuggestionSettings,
 )
-from app.db.models.audit_log import AuditLog
-from app.db.models.catalog_version import CatalogVersion
 from app.db.models.data_quality import (
     NameFixProposal,
     NameFixSettings,
@@ -40,19 +40,19 @@ from app.db.models.location_fix import (
     LocationFixSettings,
     LocationScanRun,
 )
-from app.db.models.translation_fix import (
-    TranslationFixProposal,
-    TranslationFixSettings,
-    TranslationScanRun,
-)
 from app.db.models.org_enrichment import (
     OrgEnrichmentProposal,
     OrgEnrichmentRun,
     OrgEnrichmentSettings,
 )
-from app.db.models.organization_feedback import OrganizationFeedback
 from app.db.models.organization import Organization
+from app.db.models.organization_feedback import OrganizationFeedback
 from app.db.models.ticket import Ticket
+from app.db.models.translation_fix import (
+    TranslationFixProposal,
+    TranslationFixSettings,
+    TranslationScanRun,
+)
 
 __all__ = [
     "Activity",

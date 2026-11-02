@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import delete, select
@@ -88,7 +87,7 @@ def capture_pending(
     suggestion = repo.get_by_fingerprint(fingerprint)
     reopened = False
     created = False
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if suggestion is None:
         suggestion = CategorySuggestion(
             fingerprint=fingerprint,

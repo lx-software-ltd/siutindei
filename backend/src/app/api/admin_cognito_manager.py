@@ -5,7 +5,8 @@ from __future__ import annotations
 import os
 import secrets
 import string
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -108,7 +109,7 @@ def _matching_users(user_pool_id: str, email: str) -> list[dict[str, Any]]:
     happens to share the address.
     """
     matches: list[dict[str, Any]] = []
-    token: Optional[str] = None
+    token: str | None = None
     for _ in range(_MAX_LOOKUP_PAGES):
         params: dict[str, Any] = {
             "UserPoolId": user_pool_id,
@@ -142,7 +143,7 @@ def _choose_existing_user(matches: list[dict[str, Any]]) -> dict[str, Any]:
 def _admin_get_as_list_user(
     user_pool_id: str,
     username: str,
-) -> Optional[dict[str, Any]]:
+) -> dict[str, Any] | None:
     try:
         response = _cognito(
             "admin_get_user",

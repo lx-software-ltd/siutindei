@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import CheckConstraint, ForeignKey, Text, text
 from sqlalchemy.dialects.postgresql import UUID
@@ -54,13 +53,13 @@ class ApiKey(Base):
         nullable=False,
         comment="Access scope: read (query only) or crud (query + edit)",
     )
-    org_id: Mapped[Optional[str]] = mapped_column(
+    org_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=True,
         comment="Restrict the key to one organization; NULL = full access",
     )
-    created_by: Mapped[Optional[str]] = mapped_column(
+    created_by: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
         comment="Cognito sub of the admin who created the key",
@@ -70,17 +69,17 @@ class ApiKey(Base):
         nullable=False,
         server_default=text("now()"),
     )
-    expires_at: Mapped[Optional[datetime]] = mapped_column(
+    expires_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=True,
         comment="Optional expiry; NULL = does not expire",
     )
-    revoked_at: Mapped[Optional[datetime]] = mapped_column(
+    revoked_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=True,
         comment="Set when the key is revoked; NULL = active",
     )
-    last_used_at: Mapped[Optional[datetime]] = mapped_column(
+    last_used_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=True,
     )

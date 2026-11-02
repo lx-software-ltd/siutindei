@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -33,7 +34,7 @@ _ALLOWED_SCOPES = ("read", "crud")
 def _handle_admin_api_keys(
     event: Mapping[str, Any],
     method: str,
-    resource_id: Optional[str],
+    resource_id: str | None,
 ) -> dict[str, Any]:
     """Handle /admin/api-keys routes (list, create, get, revoke)."""
     if method == "GET" and resource_id is None:
@@ -159,7 +160,7 @@ def _parse_optional_org_id(value: Any) -> Any:
     return _parse_uuid(str(value))
 
 
-def _parse_optional_expiry(value: Any) -> Optional[datetime]:
+def _parse_optional_expiry(value: Any) -> datetime | None:
     """Parse an optional expiry timestamp; must be in the future."""
     if value is None or value == "":
         return None
@@ -173,8 +174,8 @@ def _parse_optional_expiry(value: Any) -> Optional[datetime]:
             field="expires_at",
         )
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    if parsed <= datetime.now(timezone.utc):
+        parsed = parsed.replace(tzinfo=UTC)
+    if parsed <= datetime.now(UTC):
         raise ValidationError(
             "expires_at must be in the future",
             field="expires_at",
@@ -206,7 +207,7 @@ def _key_status(entity: ApiKey) -> str:
     expires_at = entity.expires_at
     if expires_at is not None:
         if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
-        if expires_at <= datetime.now(timezone.utc):
+            expires_at = expires_at.replace(tzinfo=UTC)
+        if expires_at <= datetime.now(UTC):
             return "expired"
     return "active"

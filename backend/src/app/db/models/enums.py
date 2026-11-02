@@ -5,7 +5,7 @@ from __future__ import annotations
 import enum
 
 
-class PricingType(str, enum.Enum):
+class PricingType(enum.StrEnum):
     """Supported pricing types for activities."""
 
     PER_CLASS = "per_class"
@@ -15,13 +15,13 @@ class PricingType(str, enum.Enum):
     FREE = "free"
 
 
-class ScheduleType(str, enum.Enum):
+class ScheduleType(enum.StrEnum):
     """Supported schedule types for activities."""
 
     WEEKLY = "weekly"
 
 
-class TicketType(str, enum.Enum):
+class TicketType(enum.StrEnum):
     """Discriminator for ticket types."""
 
     ACCESS_REQUEST = "access_request"
@@ -29,7 +29,7 @@ class TicketType(str, enum.Enum):
     ORGANIZATION_FEEDBACK = "organization_feedback"
 
 
-class TicketStatus(str, enum.Enum):
+class TicketStatus(enum.StrEnum):
     """Lifecycle status for tickets."""
 
     PENDING = "pending"

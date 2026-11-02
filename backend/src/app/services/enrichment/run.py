@@ -5,18 +5,19 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, Callable
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.models.org_enrichment import OrgEnrichmentProposal, OrgEnrichmentRun
 from app.db.models.organization import Organization
 from app.services.aws_proxy import AwsProxyError
-from app.db.models.org_enrichment import OrgEnrichmentProposal, OrgEnrichmentRun
 from app.services.enrichment.constants import (
     EXTRACT_TIMEOUT_SECONDS,
     EXTRACTION_VERSION,
@@ -33,9 +34,9 @@ from app.services.enrichment.prompt import (
     instructions_for,
     prompt_pages,
 )
+from app.services.enrichment.queue import enqueue_enrichment
 from app.services.enrichment.refine import annotate, catalog_names
 from app.services.enrichment.sheet import SECTIONS, read_sheet, section_rows
-from app.services.enrichment.queue import enqueue_enrichment
 from app.services.enrichment.store import load_settings, month_spend, save_proposals
 from app.utils.logging import get_logger
 
@@ -81,7 +82,7 @@ def _fail_open_run(session: Session, run_id: UUID | str, error: str) -> None:
         return
     row.status = "failed"
     row.error = error
-    row.finished_at = datetime.now(timezone.utc)
+    row.finished_at = datetime.now(UTC)
     session.flush()
 
 
@@ -94,7 +95,7 @@ def fail_enrichment_run(run_id: UUID | str, error: str = "enrichment failed") ->
             return
         row.status = "failed"
         row.error = error
-        row.finished_at = datetime.now(timezone.utc)
+        row.finished_at = datetime.now(UTC)
         session.commit()
 
 
@@ -165,12 +166,12 @@ def _crawl(
     if status == "render_required":
         run.status = "render_required"
         run.error = str(crawled.get("error") or "")
-        run.finished_at = datetime.now(timezone.utc)
+        run.finished_at = datetime.now(UTC)
         return None
     if status != "ok" or not run.pages:
         run.status = "failed"
         run.error = str(crawled.get("error") or "website returned no readable page")
-        run.finished_at = datetime.now(timezone.utc)
+        run.finished_at = datetime.now(UTC)
         return None
     run.input_hash = _hash_pages(run.pages)
     run.status = "extracting"
@@ -188,7 +189,7 @@ def _extract(
     if month_spend(session) >= Decimal(str(settings.monthly_cost_limit_usd)):
         run.status = "failed"
         run.error = "The monthly enrichment budget is spent"
-        run.finished_at = datetime.now(timezone.utc)
+        run.finished_at = datetime.now(UTC)
         return
     org = session.get(Organization, run.org_id)
     snapshot = _org_snapshot(org)
@@ -232,7 +233,7 @@ def _extract(
         min_confidence=Decimal(str(settings.min_confidence_shown)),
     )
     run.status = "ready"
-    run.finished_at = datetime.now(timezone.utc)
+    run.finished_at = datetime.now(UTC)
 
 
 def _proxy_crawl(run: OrgEnrichmentRun, settings: Any) -> dict[str, Any]:

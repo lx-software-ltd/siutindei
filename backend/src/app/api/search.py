@@ -8,14 +8,17 @@ from __future__ import annotations
 
 import base64
 import json
+import os
+import time
+from collections.abc import Mapping
 from dataclasses import replace
-from typing import Any, Mapping
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.db.age_bounds import inclusive_age_bounds
+from app.api.partner_auth import PartnerContext, get_partner_context
 from app.api.schemas import (
     ActivitySchema,
     ActivitySearchResponseSchema,
@@ -25,7 +28,10 @@ from app.api.schemas import (
     PricingSchema,
     ScheduleEntrySchema,
     ScheduleSchema,
+    dump_search_response,
 )
+from app.api.search_validation import validate_search_query_params
+from app.db.age_bounds import inclusive_age_bounds
 from app.db.engine import get_engine
 from app.db.models import (
     Activity,
@@ -43,8 +49,6 @@ from app.db.queries import (
     build_search_query,
     category_match_mode,
 )
-from app.api.partner_auth import PartnerContext, get_partner_context
-from app.api.search_validation import validate_search_query_params
 from app.exceptions import CursorError, ValidationError
 from app.utils import json_response, parse_decimal, parse_enum, parse_int
 from app.utils.logging import configure_logging, get_logger, set_request_context
@@ -60,6 +64,9 @@ from app.utils.translations import build_translation_map
 # Configure logging on module load
 configure_logging()
 logger = get_logger(__name__)
+
+_REGION_CACHE_TTL_SECONDS = 600
+_region_area_cache: tuple[float, dict[str, str | None]] | None = None
 
 
 def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
@@ -90,7 +97,7 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
                 "has_more": response.next_cursor is not None,
             },
         )
-        return _create_response(200, response, event)
+        return _create_response(200, response, event, view=filters.view)
     except (ValidationError, CursorError) as exc:
         logger.warning(f"Validation error: {exc.message}")
         return json_response(exc.status_code, exc.to_dict(), event=event)
@@ -130,7 +137,7 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
     languages = parse_languages(params.get("language", []))
     limit = parse_int(first_param(params, "limit")) or 50
 
-    validated_languages = validate_search_query_params(
+    validated = validate_search_query_params(
         age=age,
         day_of_week_utc=day_of_week_utc,
         start_minutes_utc=start_minutes_utc,
@@ -139,6 +146,8 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
         price_max=price_max,
         languages=languages,
         limit=limit,
+        q=first_param(params, "q"),
+        view=first_param(params, "view"),
     )
 
     return ActivitySearchFilters(
@@ -156,9 +165,11 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
         day_of_week_utc=day_of_week_utc,
         start_minutes_utc=start_minutes_utc,
         end_minutes_utc=end_minutes_utc,
-        languages=validated_languages,
+        languages=validated.languages,
         cursor=_parse_cursor(first_param(params, "cursor")),
         limit=limit,
+        text_query=validated.text_query,
+        view=validated.view,
     )
 
 
@@ -195,6 +206,7 @@ def fetch_search_response(
             row,
             region_cache,
             include_place_id=include_place_id,
+            view=filters.view,
         )
         for row in trimmed_rows
     ]
@@ -216,6 +228,7 @@ def map_row_to_result(
     row: Any,
     region_cache: dict[str, str | None],
     include_place_id: bool = False,
+    view: str = "full",
 ) -> ActivitySearchResultSchema:
     """Map a SQLAlchemy row to a search result schema."""
 
@@ -227,23 +240,27 @@ def map_row_to_result(
     schedule: ActivitySchedule = mapping[ActivitySchedule]
 
     age_min, age_max = _extract_age_bounds(activity.age_range)
+    card = view == "card"
     is_template = organization.description_source == "template"
-    org_description = None if is_template else organization.description
+    org_description = None if is_template or card else organization.description
     org_desc_translations = (
         {}
-        if is_template
+        if is_template or card
         else build_translation_map(
             organization.description, organization.description_translations
         )
     )
-    activity_description = None if is_template else activity.description
+    activity_description = None if is_template or card else activity.description
     activity_desc_translations = (
         {}
-        if is_template
+        if is_template or card
         else build_translation_map(
             activity.description, activity.description_translations
         )
     )
+    media_urls = list(organization.media_urls or [])
+    if card:
+        media_urls = media_urls[:1]
 
     return ActivitySearchResultSchema(
         activity=ActivitySchema(
@@ -267,7 +284,7 @@ def map_row_to_result(
             ),
             description_translations=org_desc_translations,
             manager_id=organization.manager_id,
-            media_urls=organization.media_urls or [],
+            media_urls=media_urls,
             logo_media_url=organization.logo_media_url,
             status=organization.status,
             description_source=organization.description_source,
@@ -290,7 +307,9 @@ def map_row_to_result(
         ),
         schedule=ScheduleSchema(
             schedule_type=schedule.schedule_type.value,
-            weekly_entries=_serialize_weekly_entries(schedule),
+            weekly_entries=_serialize_weekly_entries(
+                schedule, limit=1 if card else None
+            ),
             languages=schedule.languages or [],
         ),
     )
@@ -298,6 +317,7 @@ def map_row_to_result(
 
 def _serialize_weekly_entries(
     schedule: ActivitySchedule,
+    limit: int | None = None,
 ) -> list[ScheduleEntrySchema]:
     """Serialize schedule entries for search responses."""
     entries = sorted(
@@ -308,6 +328,8 @@ def _serialize_weekly_entries(
             entry.end_minutes_utc,
         ),
     )
+    if limit is not None:
+        entries = entries[:limit]
     return [
         ScheduleEntrySchema(
             day_of_week_utc=entry.day_of_week_utc,
@@ -319,8 +341,25 @@ def _serialize_weekly_entries(
 
 
 def _load_region_area_cache(session: Session) -> dict[str, str | None]:
-    """Map each geographic area id to its level=region ancestor id."""
+    """Map each geographic area id to its level=region ancestor id.
 
+    The map is reused for ten minutes inside one Lambda container. Tests
+    rebuild it on every call so fixtures do not leak across cases.
+    """
+    global _region_area_cache
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return _build_region_area_map(session)
+    now = time.monotonic()
+    cached = _region_area_cache
+    if cached is not None and now - cached[0] < _REGION_CACHE_TTL_SECONDS:
+        return cached[1]
+    built = _build_region_area_map(session)
+    _region_area_cache = (now, built)
+    return built
+
+
+def _build_region_area_map(session: Session) -> dict[str, str | None]:
+    """Load the area-to-region map from the current session."""
     areas = session.execute(select(GeographicArea)).scalars().all()
     by_id = {str(area.id): area for area in areas}
     cache: dict[str, str | None] = {}
@@ -357,10 +396,11 @@ def _create_response(
     status_code: int,
     body: ActivitySearchResponseSchema,
     event: Mapping[str, Any] | None = None,
+    view: str = "full",
 ) -> dict[str, Any]:
     """Create a JSON API Gateway response for Pydantic models."""
 
-    payload = body.model_dump() if hasattr(body, "model_dump") else body.dict()
+    payload = dump_search_response(body, view)
 
     headers = {
         "Content-Type": "application/json",

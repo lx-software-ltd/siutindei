@@ -23,12 +23,16 @@ from app.api.admin_imports_utils import (
     parse_time_minutes,
     to_utc_weekly,
 )
-from app.db.models import ActivityCategory, ActivitySchedule, GeographicArea
-from app.db.models import Location, Organization
+from app.db.models import (
+    ActivityCategory,
+    ActivitySchedule,
+    GeographicArea,
+    Location,
+    Organization,
+)
 from app.db.repositories import LocationRepository
 from app.exceptions import ValidationError
-from app.services.area_assignment import is_leaf
-from app.services.area_assignment import resolve_leaf
+from app.services.area_assignment import is_leaf, resolve_leaf
 
 ALLOWED_ENTRY_FIELDS = {"day_of_week", "start_time", "end_time"}
 

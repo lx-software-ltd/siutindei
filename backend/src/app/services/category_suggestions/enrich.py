@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -70,10 +68,7 @@ def process_suggestion(
             return True
         if suggestion.enrichment_status == "running" and not force:
             updated = suggestion.updated_at
-            if (
-                updated is not None
-                and datetime.now(timezone.utc) - updated < stale_after
-            ):
+            if updated is not None and datetime.now(UTC) - updated < stale_after:
                 return False
             suggestion.enrichment_status = "failed"
             suggestion.enrichment_error = "Previous enrichment attempt did not finish"
@@ -81,7 +76,7 @@ def process_suggestion(
             return True
         suggestion.enrichment_status = "running"
         suggestion.enrichment_error = None
-        suggestion.updated_at = datetime.now(timezone.utc)
+        suggestion.updated_at = datetime.now(UTC)
         session.commit()
 
     try:
@@ -178,7 +173,7 @@ def _apply_parsed(
     suggestion.usage = _merge_usage(suggestion.usage, usage)
     suggestion.enrichment_status = "done"
     suggestion.enrichment_error = None
-    suggestion.enriched_at = datetime.now(timezone.utc)
+    suggestion.enriched_at = datetime.now(UTC)
     suggestion.updated_at = suggestion.enriched_at
 
 
@@ -223,7 +218,7 @@ def _merge_usage(existing: Any, delta: dict[str, Any]) -> dict[str, Any]:
     completion_tokens = int(delta.get("completion_tokens") or 0)
     cost_usd = float(delta.get("cost_usd") or 0)
     event = {
-        "at": datetime.now(timezone.utc).isoformat(),
+        "at": datetime.now(UTC).isoformat(),
         "prompt_tokens": prompt_tokens,
         "completion_tokens": completion_tokens,
         "cost_usd": cost_usd,
@@ -282,7 +277,7 @@ def _fail_or_requeue(suggestion_id: UUID, message: str, *, receive_count: int) -
             return
         suggestion.enrichment_status = "queued"
         suggestion.enrichment_error = message[:500]
-        suggestion.updated_at = datetime.now(timezone.utc)
+        suggestion.updated_at = datetime.now(UTC)
         session.commit()
 
 
@@ -295,5 +290,5 @@ def _mark_failed(suggestion_id: UUID, message: str) -> None:
             return
         suggestion.enrichment_status = "failed"
         suggestion.enrichment_error = message[:500]
-        suggestion.updated_at = datetime.now(timezone.utc)
+        suggestion.updated_at = datetime.now(UTC)
         session.commit()

@@ -8,97 +8,60 @@ from __future__ import annotations
 
 import os
 import sys
-from datetime import datetime
-from datetime import timezone
+from collections.abc import Generator
 from decimal import Decimal
 from pathlib import Path
-from typing import Generator
-from uuid import UUID
 from uuid import uuid4
 
 import pytest
 
 # Add backend source to path for imports
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'backend' / 'src'))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend" / "src"))
 
 
 # --- Database Fixtures ---
 
 
-@pytest.fixture(scope='session')
+def _required_test_database_url() -> str:
+    """PostgreSQL URL for the suite. SQLite is not a fallback."""
+    url = os.getenv("TEST_DATABASE_URL", "").strip()
+    if not url:
+        raise pytest.UsageError(
+            "TEST_DATABASE_URL is unset. Set "
+            "TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/backend_test "
+            "and PYTHONPATH=backend/src:backend from the repo root."
+        )
+    if url.startswith("sqlite"):
+        raise pytest.UsageError(
+            "SQLite is not supported. Set "
+            "TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/backend_test"
+        )
+    return url
+
+
+_required_test_database_url()
+
+
+@pytest.fixture(scope="session")
 def test_database_url() -> str:
-    """Get or create a test database URL.
-
-    Uses SQLite in-memory by default for fast, isolated tests.
-    Set TEST_DATABASE_URL environment variable to use a real PostgreSQL database.
-    """
-    return os.getenv('TEST_DATABASE_URL', 'sqlite:///:memory:')
+    """PostgreSQL URL from TEST_DATABASE_URL."""
+    return _required_test_database_url()
 
 
-def _enable_sqlite_postgres_ddl() -> None:
-    """Let create_all build Postgres column defaults on SQLite.
-
-    Models keep ``::jsonb`` and ``gen_random_uuid()`` server defaults.
-    SQLite rejects the cast token, so tests rewrite those defaults and
-    the Postgres-only column types before creating tables.
-    """
-    from sqlalchemy.dialects.postgresql import ARRAY, INT4RANGE, JSONB
-    from sqlalchemy.ext.compiler import compiles
-    from sqlalchemy.sql.elements import TextClause
-
-    @compiles(JSONB, 'sqlite')
-    def _compile_jsonb_sqlite(_element, _compiler, **_kw):
-        return 'JSON'
-
-    @compiles(ARRAY, 'sqlite')
-    def _compile_array_sqlite(_element, _compiler, **_kw):
-        return 'JSON'
-
-    @compiles(INT4RANGE, 'sqlite')
-    def _compile_int4range_sqlite(_element, _compiler, **_kw):
-        return 'TEXT'
-
-    @compiles(TextClause, 'sqlite')
-    def _compile_text_sqlite(element, _compiler, **_kw):
-        # Column defaults are compiled as text, not as DefaultClause.
-        import re
-
-        return re.sub(r'::[A-Za-z0-9_\[\]]+', '', element.text)
-
-
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def test_engine(test_database_url: str):
     """Create a test database engine and schema.
 
     This fixture creates all tables at the start of the test session
     and tears them down at the end.
     """
-    from sqlalchemy import create_engine, event
-
     from app.db.base import Base
+    from sqlalchemy import create_engine
 
     engine = create_engine(
         test_database_url,
-        echo=os.getenv('TEST_SQL_ECHO', '').lower() == 'true',
+        echo=os.getenv("TEST_SQL_ECHO", "").lower() == "true",
     )
-    if engine.dialect.name == 'sqlite':
-        _enable_sqlite_postgres_ddl()
-
-        @event.listens_for(engine, 'connect')
-        def _sqlite_functions(dbapi_connection, _connection_record):
-            import uuid
-            from datetime import datetime, timezone
-
-            # UUID binds on SQLite are 32-character hex. A dashed default
-            # never matches those binds, so area and org filters miss.
-            dbapi_connection.create_function(
-                'gen_random_uuid', 0, lambda: uuid.uuid4().hex
-            )
-            dbapi_connection.create_function(
-                'now',
-                0,
-                lambda: datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
-            )
 
     # Create all tables
     Base.metadata.create_all(engine)
@@ -140,9 +103,9 @@ def db_session(test_engine) -> Generator:
 def sample_organization_data() -> dict:
     """Sample data for creating an organization."""
     return {
-        'name': 'Test Organization',
-        'description': 'A test organization for unit tests',
-        'manager_id': '00000000-0000-0000-0000-000000000001',
+        "name": "Test Organization",
+        "description": "A test organization for unit tests",
+        "manager_id": "00000000-0000-0000-0000-000000000001",
     }
 
 
@@ -162,7 +125,7 @@ def sample_activity_category(db_session):
     """Create a sample activity category in the test database."""
     from app.db.models import ActivityCategory
 
-    category = ActivityCategory(name='Test Sport Category', display_order=0)
+    category = ActivityCategory(name="Test Sport Category", display_order=0)
     db_session.add(category)
     db_session.flush()
     return category
@@ -174,8 +137,8 @@ def sample_geographic_area(db_session):
     from app.db.models import GeographicArea
 
     area = GeographicArea(
-        name='Test Import District',
-        level='district',
+        name="Test Import District",
+        level="district",
         active=True,
     )
     db_session.add(area)
@@ -187,11 +150,11 @@ def sample_geographic_area(db_session):
 def sample_location_data(sample_organization, sample_geographic_area) -> dict:
     """Sample data for creating a location."""
     return {
-        'org_id': sample_organization.id,
-        'area_id': sample_geographic_area.id,
-        'address': '123 Test Street',
-        'lat': Decimal('22.282667'),
-        'lng': Decimal('114.158167'),
+        "org_id": sample_organization.id,
+        "area_id": sample_geographic_area.id,
+        "address": "123 Test Street",
+        "lat": Decimal("22.282667"),
+        "lng": Decimal("114.158167"),
     }
 
 
@@ -212,11 +175,11 @@ def sample_activity_data(sample_organization, sample_activity_category) -> dict:
     from psycopg.types.range import Range
 
     return {
-        'org_id': sample_organization.id,
-        'category_id': sample_activity_category.id,
-        'name': 'Swimming Class',
-        'description': 'Learn to swim in our heated pool',
-        'age_range': Range(5, 12, bounds='[]'),
+        "org_id": sample_organization.id,
+        "category_id": sample_activity_category.id,
+        "name": "Swimming Class",
+        "description": "Learn to swim in our heated pool",
+        "age_range": Range(5, 12, bounds="[]"),
     }
 
 
@@ -237,11 +200,11 @@ def sample_pricing_data(sample_activity, sample_location) -> dict:
     from app.db.models import PricingType
 
     return {
-        'activity_id': sample_activity.id,
-        'location_id': sample_location.id,
-        'pricing_type': PricingType.PER_CLASS,
-        'amount': Decimal('150.00'),
-        'currency': 'HKD',
+        "activity_id": sample_activity.id,
+        "location_id": sample_location.id,
+        "pricing_type": PricingType.PER_CLASS,
+        "amount": Decimal("150.00"),
+        "currency": "HKD",
     }
 
 
@@ -262,11 +225,11 @@ def sample_schedule_data(sample_activity, sample_location) -> dict:
     from app.db.models import ActivityScheduleEntry, ScheduleType
 
     return {
-        'activity_id': sample_activity.id,
-        'location_id': sample_location.id,
-        'schedule_type': ScheduleType.WEEKLY,
-        'languages': ['en', 'zh'],
-        'entries': [
+        "activity_id": sample_activity.id,
+        "location_id": sample_location.id,
+        "schedule_type": ScheduleType.WEEKLY,
+        "languages": ["en", "zh"],
+        "entries": [
             ActivityScheduleEntry(
                 day_of_week_utc=1,  # Monday
                 start_minutes_utc=600,  # 10:00 AM
@@ -294,17 +257,17 @@ def sample_schedule(db_session, sample_schedule_data):
 def api_gateway_event() -> dict:
     """Base API Gateway event structure."""
     return {
-        'httpMethod': 'GET',
-        'path': '/v1/activities/search',
-        'queryStringParameters': {},
-        'multiValueQueryStringParameters': {},
-        'headers': {},
-        'requestContext': {
-            'requestId': str(uuid4()),
-            'authorizer': {},
+        "httpMethod": "GET",
+        "path": "/v1/activities/search",
+        "queryStringParameters": {},
+        "multiValueQueryStringParameters": {},
+        "headers": {},
+        "requestContext": {
+            "requestId": str(uuid4()),
+            "authorizer": {},
         },
-        'body': None,
-        'isBase64Encoded': False,
+        "body": None,
+        "isBase64Encoded": False,
     }
 
 
@@ -312,13 +275,13 @@ def api_gateway_event() -> dict:
 def admin_api_event(api_gateway_event) -> dict:
     """API Gateway event with admin authorization."""
     event = api_gateway_event.copy()
-    event['requestContext'] = {
-        'requestId': str(uuid4()),
-        'authorizer': {
-            'claims': {
-                'cognito:groups': 'admin,staff',
-                'sub': str(uuid4()),
-                'email': 'admin@example.com',
+    event["requestContext"] = {
+        "requestId": str(uuid4()),
+        "authorizer": {
+            "claims": {
+                "cognito:groups": "admin,staff",
+                "sub": str(uuid4()),
+                "email": "admin@example.com",
             },
         },
     }
@@ -331,7 +294,7 @@ def admin_api_event(api_gateway_event) -> dict:
 @pytest.fixture
 def mock_boto3_client(mocker):
     """Mock boto3 client for AWS service calls."""
-    mock = mocker.patch('boto3.client')
+    mock = mocker.patch("boto3.client")
     return mock
 
 
@@ -341,21 +304,21 @@ def mock_boto3_client(mocker):
 def make_search_filters(**kwargs) -> dict:
     """Create search filter kwargs with defaults."""
     defaults = {
-        'age': None,
-        'area_id': None,
-        'pricing_type': None,
-        'price_min': None,
-        'price_max': None,
-        'schedule_type': None,
-        'day_of_week_utc': None,
-        'day_of_month': None,
-        'start_minutes_utc': None,
-        'end_minutes_utc': None,
-        'start_at_utc': None,
-        'end_at_utc': None,
-        'languages': (),
-        'cursor': None,
-        'limit': 50,
+        "age": None,
+        "area_id": None,
+        "pricing_type": None,
+        "price_min": None,
+        "price_max": None,
+        "schedule_type": None,
+        "day_of_week_utc": None,
+        "day_of_month": None,
+        "start_minutes_utc": None,
+        "end_minutes_utc": None,
+        "start_at_utc": None,
+        "end_at_utc": None,
+        "languages": (),
+        "cursor": None,
+        "limit": 50,
     }
     defaults.update(kwargs)
     return defaults

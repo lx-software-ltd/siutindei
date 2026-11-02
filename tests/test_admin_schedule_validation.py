@@ -10,7 +10,7 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "backend" / "src"))
 
-from app.api.admin import _validate_schedule  # noqa: E402
+from app.api.admin_resource_schedule import _validate_schedule  # noqa: E402
 from app.db.models import (  # noqa: E402
     ActivitySchedule,
     ActivityScheduleEntry,
@@ -109,9 +109,7 @@ class TestValidateScheduleWeekly:
         )
         with pytest.raises(ValidationError) as exc_info:
             _validate_schedule(schedule)
-        assert "start_minutes_utc must not equal end_minutes_utc" in str(
-            exc_info.value
-        )
+        assert "start_minutes_utc must not equal end_minutes_utc" in str(exc_info.value)
         assert exc_info.value.field == "weekly_entries[0].start_minutes_utc"
 
     def test_start_minutes_utc_greater_than_end_minutes_utc(self) -> None:

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -34,7 +35,7 @@ def apply_ticket_approval(
     ticket: Ticket,
     body: Mapping[str, Any],
     reviewer_sub: str,
-) -> tuple[Optional[Organization], int]:
+) -> tuple[Organization | None, int]:
     """Apply approval side-effects for a ticket and return derived outputs."""
     if ticket.ticket_type == TicketType.ACCESS_REQUEST:
         organization = _approve_access_request(session, ticket, body)
@@ -55,7 +56,7 @@ def _approve_access_request(
     session: Session,
     ticket: Ticket,
     body: Mapping[str, Any],
-) -> Optional[Organization]:
+) -> Organization | None:
     """Approve an access request by assigning or creating an organization."""
     organization_id = body.get("organization_id")
     create_organization = body.get("create_organization", False)
@@ -72,7 +73,7 @@ def _approve_access_request(
         )
 
     org_repo = OrganizationRepository(session)
-    organization: Optional[Organization] = None
+    organization: Organization | None = None
     if organization_id:
         try:
             parsed_org_id = UUID(str(organization_id))
@@ -112,7 +113,7 @@ def _approve_suggestion(
     ticket: Ticket,
     body: Mapping[str, Any],
     reviewer_sub: str,
-) -> Optional[Organization]:
+) -> Organization | None:
     """Approve an organization suggestion and optionally create an org."""
     create_organization = body.get("create_organization", False)
     if not create_organization:

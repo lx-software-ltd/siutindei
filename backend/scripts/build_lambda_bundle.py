@@ -23,6 +23,16 @@ CACHE_FORMAT_VERSION = "1"
 DEFAULT_CACHE_RETENTION = 3
 CACHE_RETENTION_ENV_VAR = "LAMBDA_DEPS_CACHE_RETENTION"
 PIP_INSTALL_ATTEMPTS = 3
+REQUIREMENT_PROFILES = {
+    "default": "requirements.txt",
+    "search": "requirements-core.txt",
+    "admin": "requirements-admin.txt",
+}
+_PROFILE_OUTPUT = {
+    "default": "base",
+    "search": "search",
+    "admin": "admin",
+}
 # A truncated PyPI simple-index body is a 200 with invalid JSON. Pip does
 # not retry that, and one occurrence fails the whole backend deploy.
 RETRYABLE_PIP_MARKERS = (
@@ -167,9 +177,42 @@ def _default_cache_retention() -> int:
         raise SystemExit(f"Invalid {CACHE_RETENTION_ENV_VAR}: {exc}") from exc
 
 
+def requirements_for_profile(source_root: Path, profile: str) -> Path:
+    """Return the requirements file for a Lambda bundle profile."""
+    try:
+        name = REQUIREMENT_PROFILES[profile]
+    except KeyError as exc:
+        known = ", ".join(sorted(REQUIREMENT_PROFILES))
+        raise ValueError(
+            f"Unknown requirements profile {profile!r}. Use {known}."
+        ) from exc
+    return source_root / name
+
+
+def _resolved_requirements_bytes(
+    requirements: Path,
+    seen: set[Path] | None = None,
+) -> bytes:
+    """Hash a requirements file and any ``-r`` includes it pulls in."""
+    seen = set() if seen is None else seen
+    resolved = requirements.resolve()
+    if resolved in seen:
+        return b""
+    seen.add(resolved)
+    text = requirements.read_bytes()
+    chunks = [text]
+    for line in text.decode("utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("-r "):
+            continue
+        included = (requirements.parent / stripped[3:].strip()).resolve()
+        chunks.append(_resolved_requirements_bytes(included, seen))
+    return b"\n".join(chunks)
+
+
 def _dependency_cache_key(requirements: Path) -> str:
     hasher = hashlib.sha256()
-    hasher.update(requirements.read_bytes())
+    hasher.update(_resolved_requirements_bytes(requirements))
     hasher.update(CACHE_FORMAT_VERSION.encode("utf-8"))
     hasher.update(PIP_VERSION.encode("utf-8"))
     hasher.update(TARGET_PLATFORM.encode("utf-8"))
@@ -340,11 +383,13 @@ def build_bundle(
     source_root: Path,
     output_dir: Path,
     cache_retention: int,
+    profile: str = "default",
+    requirements: Path | None = None,
 ) -> None:
-    requirements = source_root / "requirements.txt"
+    requirements_path = requirements or requirements_for_profile(source_root, profile)
     dependency_cache = _ensure_dependency_cache(
         source_root,
-        requirements,
+        requirements_path,
         cache_retention,
     )
 
@@ -375,6 +420,15 @@ def _parse_args() -> argparse.Namespace:
         help="Warm dependency cache without building bundle output.",
     )
     parser.add_argument(
+        "--profile",
+        choices=sorted(REQUIREMENT_PROFILES),
+        default="default",
+        help=(
+            "Requirements profile. default and admin install the admin set. "
+            "search installs requirements-core.txt."
+        ),
+    )
+    parser.add_argument(
         "--cache-retention",
         type=_cache_retention_arg,
         default=default_retention,
@@ -394,9 +448,9 @@ def main() -> None:
     output_dir = (
         Path(args.output_dir).resolve()
         if args.output_dir
-        else source_root / ".lambda-build" / "base"
+        else source_root / ".lambda-build" / _PROFILE_OUTPUT[args.profile]
     )
-    requirements = source_root / "requirements.txt"
+    requirements = requirements_for_profile(source_root, args.profile)
 
     if args.deps_only:
         _ensure_dependency_cache(source_root, requirements, args.cache_retention)
@@ -404,7 +458,13 @@ def main() -> None:
         return
 
     logger.info("Building Lambda bundle in %s", output_dir)
-    build_bundle(source_root, output_dir, args.cache_retention)
+    build_bundle(
+        source_root,
+        output_dir,
+        args.cache_retention,
+        profile=args.profile,
+        requirements=requirements,
+    )
     logger.info("Lambda bundle ready.")
 
 

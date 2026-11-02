@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -22,7 +23,7 @@ from app.api.admin_category_reviews import (
     _serialize,
 )
 from app.api.admin_crud import _handle_crud
-from app.api.admin_request import parse_limit, parse_object_body, _query_param
+from app.api.admin_request import _query_param, parse_limit, parse_object_body
 from app.api.admin_resources import _RESOURCE_CONFIG
 from app.api.partner_auth import PartnerContext, require_full_access
 from app.api.partner_location_fixes import (

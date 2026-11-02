@@ -74,9 +74,12 @@ def results_skipped_deleted(results: Any) -> bool:
     for item in results:
         if not isinstance(item, dict):
             continue
-        if item.get("type") == "organizations" and item.get("status") == "skipped":
-            if _result_says_deleted(item):
-                return True
+        if (
+            item.get("type") == "organizations"
+            and item.get("status") == "skipped"
+            and _result_says_deleted(item)
+        ):
+            return True
     return False
 
 
@@ -159,13 +162,11 @@ def _name_contradicts(
     row_source_id = _optional(row.source_id)
     if place_id and row_place and place_id != row_place:
         return True
-    if (
+    return bool(
         source_id
         and row_source_id
         and (_source(row.source) != source or source_id != row_source_id)
-    ):
-        return True
-    return False
+    )
 
 
 def _normalized_names(row: OrganizationMerge) -> set[str]:

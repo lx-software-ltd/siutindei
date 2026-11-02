@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from app.templates.types import EmailContent
 
 DECISION_APPROVED_SUBJECT = (
@@ -100,7 +98,7 @@ def render_request_decision_email(
     organization_name: str,
     reviewed_at: str,
     action: str,
-    admin_message: Optional[str] = None,
+    admin_message: str | None = None,
 ) -> EmailContent:
     """Render the request decision notification email."""
     is_approved = action == "approve"
@@ -166,7 +164,7 @@ def build_request_decision_template_data(
     organization_name: str,
     reviewed_at: str,
     action: str,
-    admin_message: Optional[str],
+    admin_message: str | None,
 ) -> dict[str, str]:
     """Build template data for an access request decision."""
     is_approved = action == "approve"

@@ -9,12 +9,12 @@ from uuid import UUID
 from app.events.sqs_batch import failure_response
 from app.services.category_suggestions.enrich import process_suggestion
 from app.services.category_suggestions.scan import process_scan_batch
-from app.services.location_fix_lookup import process_lookup_batch
-from app.services.location_fix_model import process_location_batch
-from app.services.translation_fix_model import process_translation_batch
 from app.services.category_suggestions.scan_discover_batch import (
     process_discover_batch,
 )
+from app.services.location_fix_lookup import process_lookup_batch
+from app.services.location_fix_model import process_location_batch
+from app.services.translation_fix_model import process_translation_batch
 from app.utils.logging import configure_logging, get_logger
 
 configure_logging()

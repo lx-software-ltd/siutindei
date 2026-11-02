@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import CheckConstraint, Date, Index, Integer, Text, text
@@ -73,7 +72,7 @@ class ListingEvent(Base):
         nullable=False,
         server_default=text("'00000000-0000-0000-0000-000000000000'"),
     )
-    activity_id: Mapped[Optional[UUID]] = mapped_column(
+    activity_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         nullable=True,
     )

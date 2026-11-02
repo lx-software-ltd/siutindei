@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -70,7 +69,7 @@ def apply_decision(
     if target_id is not None:
         _reassign_pending(session, suggestion.id, target_id)
     suggestion.decided_by = decided_by
-    suggestion.decided_at = datetime.now(timezone.utc)
+    suggestion.decided_at = datetime.now(UTC)
     suggestion.decision_notes = _notes(body.get("notes", body.get("decision_notes")))
     suggestion.updated_at = suggestion.decided_at
     CategorySuggestionRepository(session).refresh_activity_count(suggestion)

@@ -32,8 +32,14 @@ from app.api.admin_imports_lookups import (
     resolve_activity_category_fields,
     resolve_location_area_fields,
 )
-from app.api.admin_imports_venues import link_activity_to_venue
 from app.api.admin_imports_utils import persist_import_change
+from app.api.admin_imports_venues import link_activity_to_venue
+from app.api.admin_imports_version import (
+    activity_terminal,
+    hold_existing,
+    location_terminal,
+    pricing_terminal,
+)
 from app.api.admin_resource_activity import _create_activity, _update_activity
 from app.api.admin_resource_location import _create_location, _update_location
 from app.api.admin_resource_organization import (
@@ -45,20 +51,12 @@ from app.api.admin_validators import (
     MAX_NAME_LENGTH,
     _validate_string_length,
 )
-from app.db.models import Activity
-from app.db.models import ActivityPricing
-from app.db.models import Location, Organization, PricingType
+from app.db.models import Activity, ActivityPricing, Location, Organization, PricingType
 from app.db.repositories import (
     ActivityPricingRepository,
     ActivityRepository,
     LocationRepository,
     OrganizationRepository,
-)
-from app.api.admin_imports_version import (
-    activity_terminal,
-    hold_existing,
-    location_terminal,
-    pricing_terminal,
 )
 from app.exceptions import ValidationError
 from app.services.catalog_version_match import apply_org_gate
@@ -350,9 +348,8 @@ def upsert_activity(
         return updated, "updated"
 
     body["org_id"] = str(org.id)
-    if org.review_status == "rejected" and org.review_reason:
-        if warnings is not None:
-            warnings.append(REJECTED_ACTIVITY_IMPORT_WARNING)
+    if org.review_status == "rejected" and org.review_reason and warnings is not None:
+        warnings.append(REJECTED_ACTIVITY_IMPORT_WARNING)
     created = _create_activity(repo, body)
     repo.create(created)
     link_activity_to_venue(session, created, venue)

@@ -1353,6 +1353,7 @@ export class ApiStack extends cdk.Stack {
     const searchFunction = createPythonFunction("SiutindeiSearchFunction", {
       handler: "lambda/search/handler.lambda_handler",
       extraCopyPaths: ["fixtures"],
+      memorySize: 1024,
       environment: {
         DATABASE_SECRET_ARN: database.appUserSecret.secretArn,
         DATABASE_NAME: "siutindei",

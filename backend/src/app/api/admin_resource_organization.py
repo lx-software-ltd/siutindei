@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from app.api.admin_imports_catalog import (
     MAX_SOURCE_ID_LENGTH,
@@ -84,7 +84,7 @@ def _apply_organization_contact_fields(
         entity.website = _parse_website(body.get("website"))
 
 
-def _parse_website(value: Any) -> Optional[str]:
+def _parse_website(value: Any) -> str | None:
     """Parse an optional organization website."""
     return _validate_string_length(value, "website", MAX_WEBSITE_LENGTH)
 
@@ -135,7 +135,7 @@ def _update_organization_for_manager(
             "description_translations",
             MAX_DESCRIPTION_LENGTH,
         )
-    updated_media_urls: Optional[list[str]] = None
+    updated_media_urls: list[str] | None = None
     if "media_urls" in body:
         updated_media_urls = _parse_media_urls(body["media_urls"])
         if updated_media_urls:
@@ -151,9 +151,12 @@ def _update_organization_for_manager(
             body.get("logo_media_url"),
             media_urls_for_logo,
         )
-    elif updated_media_urls is not None:
-        if entity.logo_media_url and entity.logo_media_url not in media_urls_for_logo:
-            entity.logo_media_url = None
+    elif (
+        updated_media_urls is not None
+        and entity.logo_media_url
+        and entity.logo_media_url not in media_urls_for_logo
+    ):
+        entity.logo_media_url = None
     _apply_organization_contact_fields(entity, body)
     _apply_organization_listing_fields(repo, entity, body)
     return entity
@@ -206,7 +209,7 @@ def _create_organization(
         status_source = "owner"
     status_changed_at = None
     if status != "operational":
-        status_changed_at = datetime.now(timezone.utc)
+        status_changed_at = datetime.now(UTC)
 
     entity = Organization(
         name=name,
@@ -278,7 +281,7 @@ def _update_organization(
         )
     if "manager_id" in body:
         entity.manager_id = _validate_manager_id(body["manager_id"], required=True)  # type: ignore[assignment]
-    updated_media_urls: Optional[list[str]] = None
+    updated_media_urls: list[str] | None = None
     if "media_urls" in body:
         updated_media_urls = _parse_media_urls(body["media_urls"])
         if updated_media_urls:
@@ -294,9 +297,12 @@ def _update_organization(
             body.get("logo_media_url"),
             media_urls_for_logo,
         )
-    elif updated_media_urls is not None:
-        if entity.logo_media_url and entity.logo_media_url not in media_urls_for_logo:
-            entity.logo_media_url = None
+    elif (
+        updated_media_urls is not None
+        and entity.logo_media_url
+        and entity.logo_media_url not in media_urls_for_logo
+    ):
+        entity.logo_media_url = None
     _apply_organization_contact_fields(entity, body)
     _apply_organization_listing_fields(repo, entity, body)
     from app.services.data_quality.names import record_imported_name

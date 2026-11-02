@@ -3,37 +3,37 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
-from typing import Iterable
-from typing import Sequence
 from uuid import UUID
 
 import sqlalchemy as sa
-from sqlalchemy import and_
-from sqlalchemy import func
-from sqlalchemy import or_
-from sqlalchemy import select
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import Select
 from sqlalchemy.sql.selectable import CompoundSelect
 
-from app.db.models import Activity
-from app.db.models import ActivityCategory
-from app.db.models import ActivityPricing
-from app.db.models import ActivitySchedule
-from app.db.models import ActivityScheduleEntry
-from app.db.models import GeographicArea
-from app.db.models import Location
-from app.db.models import Organization
-from app.db.models import PricingType
-from app.db.models import ScheduleType
+from app.db.models import (
+    Activity,
+    ActivityCategory,
+    ActivityPricing,
+    ActivitySchedule,
+    ActivityScheduleEntry,
+    GeographicArea,
+    Location,
+    Organization,
+    PricingType,
+    ScheduleType,
+)
 from app.db.models.category_suggestion import (
     LEGACY_CATEGORY_IDS,
     PENDING_CATEGORY_ID,
     WIZARD_GROUP_IDS,
 )
+from app.services.data_quality.list_params import ilike_pattern
 
 
 @dataclass(frozen=True)
@@ -64,14 +64,19 @@ class ActivitySearchFilters:
     org_ids: Sequence[UUID] = ()
     cursor: ActivitySearchCursor | None = None
     limit: int = 50
+    text_query: str | None = None
+    view: str = "full"
 
 
 def validate_filters(filters: ActivitySearchFilters) -> None:
     """Validate filter combinations for search."""
 
-    if filters.start_minutes_utc is not None and filters.end_minutes_utc is not None:
-        if filters.start_minutes_utc >= filters.end_minutes_utc:
-            raise ValueError("start_minutes_utc must be less than end_minutes_utc.")
+    if (
+        filters.start_minutes_utc is not None
+        and filters.end_minutes_utc is not None
+        and filters.start_minutes_utc >= filters.end_minutes_utc
+    ):
+        raise ValueError("start_minutes_utc must be less than end_minutes_utc.")
 
     if filters.limit <= 0 or filters.limit > 200:
         raise ValueError("limit must be between 1 and 200.")
@@ -107,7 +112,6 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
                 ActivityPricing.location_id == Location.id,
             ),
         )
-        .where(entry_subquery.c.entry_rank == 1)
         .where(Organization.status.in_(("operational", "closed_temporarily")))
     )
     if review_gate_enabled():
@@ -149,6 +153,9 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
         language_conditions = _build_language_conditions(filters.languages)
         conditions.append(or_(*language_conditions))
 
+    if filters.text_query:
+        conditions.append(_text_query_condition(filters.text_query))
+
     order_columns = _order_columns(entry_subquery)
     if filters.cursor is not None:
         cursor_values = _cursor_values(filters.cursor)
@@ -162,28 +169,52 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
 
 
 def _entry_order_subquery(filters: ActivitySearchFilters) -> sa.Subquery:
-    """Build a subquery to order entries per schedule."""
-    entry_query = select(
-        ActivityScheduleEntry.schedule_id.label("schedule_id"),
-        ActivityScheduleEntry.day_of_week_utc.label("day_of_week_utc"),
-        ActivityScheduleEntry.start_minutes_utc.label("start_minutes_utc"),
-        ActivityScheduleEntry.id.label("entry_id"),
-        sa.func.row_number()
-        .over(
-            partition_by=ActivityScheduleEntry.schedule_id,
-            order_by=[
-                ActivityScheduleEntry.day_of_week_utc,
-                ActivityScheduleEntry.start_minutes_utc,
-                ActivityScheduleEntry.id,
-            ],
+    """Pick the first entry per schedule without a window over every row.
+
+    Inner order is schedule, day, start, id. The outer query still orders
+    by day, start, then schedule id.
+    """
+    entry_query = (
+        select(
+            ActivityScheduleEntry.schedule_id.label("schedule_id"),
+            ActivityScheduleEntry.day_of_week_utc.label("day_of_week_utc"),
+            ActivityScheduleEntry.start_minutes_utc.label("start_minutes_utc"),
+            ActivityScheduleEntry.id.label("entry_id"),
         )
-        .label("entry_rank"),
+        .ext(distinct_on(ActivityScheduleEntry.schedule_id))
+        .order_by(
+            ActivityScheduleEntry.schedule_id,
+            ActivityScheduleEntry.day_of_week_utc,
+            ActivityScheduleEntry.start_minutes_utc,
+            ActivityScheduleEntry.id,
+        )
     )
     conditions: list = []
     _apply_entry_filters(filters, conditions)
     if conditions:
         entry_query = entry_query.where(and_(*conditions))
     return entry_query.subquery()
+
+
+def _text_query_condition(text_query: str) -> Any:
+    """Case-insensitive match on names and name translation values."""
+    pattern = ilike_pattern(text_query)
+    return or_(
+        Activity.name.ilike(pattern, escape="\\"),
+        Organization.name.ilike(pattern, escape="\\"),
+        _translation_values_ilike(Activity.name_translations, pattern),
+        _translation_values_ilike(Organization.name_translations, pattern),
+    )
+
+
+def _translation_values_ilike(column: Any, pattern: str) -> Any:
+    """True when any jsonb name translation value matches the pattern."""
+    translations = sa.func.jsonb_each_text(column).table_valued("key", "value")
+    return sa.exists(
+        sa.select(sa.literal(1))
+        .select_from(translations)
+        .where(translations.c.value.ilike(pattern, escape="\\"))
+    )
 
 
 def _apply_entry_filters(filters: ActivitySearchFilters, conditions: list) -> None:

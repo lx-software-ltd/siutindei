@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -47,7 +47,7 @@ def _transient(unknown_categories: str) -> ImportSettings:
         duplicates="off",
         locations="off",
         categories="off",
-        updated_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(UTC),
     )
 
 
@@ -131,7 +131,7 @@ def update_import_settings(
         "categories",
     )
     current.updated_by = updated_by
-    current.updated_at = datetime.now(timezone.utc)
+    current.updated_at = datetime.now(UTC)
     session.flush()
     return current
 
@@ -172,8 +172,8 @@ def _stamp(value: datetime | None) -> str | None:
     if value is None:
         return None
     if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc).isoformat()
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).isoformat()
 
 
 def _same_stamp(stored: datetime | None, raw: Any) -> bool:

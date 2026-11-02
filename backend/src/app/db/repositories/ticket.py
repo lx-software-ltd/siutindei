@@ -5,8 +5,7 @@ This module provides data access methods for the tickets table.
 
 from __future__ import annotations
 
-from typing import Optional
-from typing import Sequence
+from collections.abc import Sequence
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -30,7 +29,7 @@ class TicketRepository(BaseRepository[Ticket]):
     def find_by_ticket_id(
         self,
         ticket_id: str,
-    ) -> Optional[Ticket]:
+    ) -> Ticket | None:
         """Find a ticket by its ticket ID.
 
         Used for idempotency checks in async processing.
@@ -47,8 +46,8 @@ class TicketRepository(BaseRepository[Ticket]):
     def find_pending_by_submitter(
         self,
         submitter_id: str,
-        ticket_type: Optional[TicketType] = None,
-    ) -> Optional[Ticket]:
+        ticket_type: TicketType | None = None,
+    ) -> Ticket | None:
         """Find a pending ticket for a specific user.
 
         Args:
@@ -71,9 +70,9 @@ class TicketRepository(BaseRepository[Ticket]):
     def find_by_submitter(
         self,
         submitter_id: str,
-        ticket_type: Optional[TicketType] = None,
+        ticket_type: TicketType | None = None,
         limit: int = 50,
-        cursor: Optional[UUID] = None,
+        cursor: UUID | None = None,
     ) -> Sequence[Ticket]:
         """Find tickets by submitter.
 
@@ -99,10 +98,10 @@ class TicketRepository(BaseRepository[Ticket]):
 
     def find_all(
         self,
-        ticket_type: Optional[TicketType] = None,
-        status: Optional[TicketStatus] = None,
+        ticket_type: TicketType | None = None,
+        status: TicketStatus | None = None,
         limit: int = 50,
-        cursor: Optional[UUID] = None,
+        cursor: UUID | None = None,
     ) -> Sequence[Ticket]:
         """Find all tickets with optional filters.
 
@@ -126,7 +125,7 @@ class TicketRepository(BaseRepository[Ticket]):
 
     def count_pending(
         self,
-        ticket_type: Optional[TicketType] = None,
+        ticket_type: TicketType | None = None,
     ) -> int:
         """Count pending tickets.
 

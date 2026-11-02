@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from datetime import timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -69,7 +68,7 @@ def store_scan_batch(
         "skipped": 0,
         "failed": 0,
     }
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     proposals: list[tuple[Activity, dict[str, Any]]] = []
     for activity_id in ids:
         activity = by_id.get(str(activity_id))
@@ -133,7 +132,7 @@ def record_batch_failure(
         return
     run.failed = int(run.failed or 0) + len(activity_ids)
     run.error = message[:500]
-    _bump(run, {}, {}, datetime.now(timezone.utc))
+    _bump(run, {}, {}, datetime.now(UTC))
     _settle_parent(session, run)
     session.flush()
 

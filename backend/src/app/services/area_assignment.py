@@ -5,13 +5,14 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import Session, aliased
 
-from app.data.hk_neighbourhoods import CONFIDENT_RADIUS_KM
-from app.data.hk_neighbourhoods import NEIGHBOURHOODS
-from app.data.hk_neighbourhoods import assign_among
-from app.data.hk_neighbourhoods import distance_km
+from app.data.hk_neighbourhoods import (
+    CONFIDENT_RADIUS_KM,
+    NEIGHBOURHOODS,
+    assign_among,
+    distance_km,
+)
 from app.db.models import GeographicArea
 
 

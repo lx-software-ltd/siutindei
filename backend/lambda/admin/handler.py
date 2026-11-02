@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import importlib.util
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
-from typing import Callable
-from typing import Mapping
 
 from app.api.admin import lambda_handler as _handler
 

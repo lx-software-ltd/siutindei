@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Mapping
 from dataclasses import asdict
 from typing import Any
-from typing import Mapping
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -49,7 +48,8 @@ def validate_content_type(
             field="Content-Type",
         )
 
-    # Check if it's JSON (allowing for charset parameters like "application/json; charset=utf-8")
+    # Check if it's JSON (charset parameters such as
+    # "application/json; charset=utf-8" are allowed).
     if not content_type.startswith("application/json"):
         raise ValidationError(
             "Content-Type must be application/json",
@@ -90,7 +90,7 @@ _DEFAULT_CORS_ORIGINS = [
 
 
 def get_cors_headers(
-    event: Optional[Mapping[str, Any]] = None,
+    event: Mapping[str, Any] | None = None,
 ) -> dict[str, str]:
     """Get CORS headers for the response.
 
@@ -142,8 +142,8 @@ def get_cors_headers(
 def json_response(
     status_code: int,
     body: Any,
-    headers: Optional[dict[str, str]] = None,
-    event: Optional[Mapping[str, Any]] = None,
+    headers: dict[str, str] | None = None,
+    event: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Create a JSON API Gateway response.
 
@@ -183,7 +183,7 @@ def text_response(
     body: str,
     *,
     content_type: str,
-    event: Optional[Mapping[str, Any]] = None,
+    event: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """API Gateway response whose body is already text."""
     headers = {"Content-Type": content_type}
@@ -215,8 +215,8 @@ def _serialize_body(body: Any) -> Any:
 def error_response(
     status_code: int,
     message: str,
-    detail: Optional[str] = None,
-    event: Optional[Mapping[str, Any]] = None,
+    detail: str | None = None,
+    event: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Create an error response.
 

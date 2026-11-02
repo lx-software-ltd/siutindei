@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
-from typing import Optional
-from typing import Sequence
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -44,7 +43,7 @@ class ActivityRepository(BaseRepository[Activity]):
         self,
         org_id: UUID,
         limit: int = 50,
-        cursor: Optional[UUID] = None,
+        cursor: UUID | None = None,
     ) -> Sequence[Activity]:
         """Find all activities for an organization.
 
@@ -87,7 +86,7 @@ class ActivityRepository(BaseRepository[Activity]):
         self,
         org_id: UUID,
         name: str,
-    ) -> Optional[Activity]:
+    ) -> Activity | None:
         """Find an activity by organization and exact name."""
         query = (
             select(Activity)
@@ -100,7 +99,7 @@ class ActivityRepository(BaseRepository[Activity]):
         self,
         org_id: UUID,
         name: str,
-    ) -> Optional[Activity]:
+    ) -> Activity | None:
         """Find an activity by organization and case-insensitive name."""
         normalized = name.strip()
         query = (
@@ -142,7 +141,7 @@ class ActivityRepository(BaseRepository[Activity]):
         org_id: UUID,
         name: str,
         age_range: Any,
-        description: Optional[str] = None,
+        description: str | None = None,
     ) -> Activity:
         """Create a new activity.
 
@@ -166,9 +165,9 @@ class ActivityRepository(BaseRepository[Activity]):
     def update_activity(
         self,
         activity: Activity,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        age_range: Optional[Any] = None,
+        name: str | None = None,
+        description: str | None = None,
+        age_range: Any | None = None,
     ) -> Activity:
         """Update an activity.
 

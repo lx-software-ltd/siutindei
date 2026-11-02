@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Mapping
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -131,22 +132,22 @@ def handle_bulk(event: Mapping[str, Any]) -> dict[str, Any]:
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event)
         repo = OrganizationRepository(session)
-        for org_id in org_ids:
-            results.append(
-                _apply_one(
-                    session,
-                    repo,
-                    org_id,
-                    action=action,
-                    force=force,
-                    notes=notes,
-                    notes_provided=notes_provided,
-                    status=status,
-                    fields=fields,
-                    reviewer_sub=reviewer,
-                    reason=reason,
-                )
+        results.extend(
+            _apply_one(
+                session,
+                repo,
+                org_id,
+                action=action,
+                force=force,
+                notes=notes,
+                notes_provided=notes_provided,
+                status=status,
+                fields=fields,
+                reviewer_sub=reviewer,
+                reason=reason,
             )
+            for org_id in org_ids
+        )
         session.commit()
     ok_count = sum(1 for item in results if item["status"] == "ok")
     logger.info(
@@ -245,7 +246,7 @@ def _apply_decision(
     else:
         organization.review_status = "pending_review"
         organization.review_reason = None
-    organization.reviewed_at = datetime.now(timezone.utc)
+    organization.reviewed_at = datetime.now(UTC)
     organization.reviewed_by = reviewer_sub
     if notes_provided:
         organization.review_notes = _parse_notes(notes)

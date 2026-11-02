@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from app.templates.types import EmailContent
 
 NEW_REQUEST_SUBJECT = (
@@ -104,7 +102,7 @@ def render_new_request_email(
     ticket_id: str,
     requester_email: str,
     organization_name: str,
-    request_message: Optional[str],
+    request_message: str | None,
     submitted_at: str,
 ) -> EmailContent:
     """Render the new access request notification email."""
@@ -142,7 +140,7 @@ def build_new_request_template_data(
     ticket_id: str,
     requester_email: str,
     organization_name: str,
-    request_message: Optional[str],
+    request_message: str | None,
     submitted_at: str,
 ) -> dict[str, str]:
     """Build template data for a new access request."""

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -27,11 +27,11 @@ from app.db.models import Ticket, TicketType
 from app.db.repositories import FeedbackLabelRepository, TicketRepository
 from app.services.email import send_email, send_templated_email
 from app.templates import (
-    build_new_request_template_data,
     build_new_feedback_template_data,
+    build_new_request_template_data,
     build_new_suggestion_template_data,
-    render_new_request_email,
     render_new_feedback_email,
+    render_new_request_email,
     render_new_suggestion_email,
 )
 from app.utils.logging import configure_logging, get_logger
@@ -223,7 +223,7 @@ def _send_notification_email(ticket: Ticket) -> None:
         submitted_at = (
             ticket.created_at.isoformat()
             if ticket.created_at
-            else datetime.now(timezone.utc).isoformat()
+            else datetime.now(UTC).isoformat()
         )
 
         if ticket.ticket_type == TicketType.ACCESS_REQUEST:
