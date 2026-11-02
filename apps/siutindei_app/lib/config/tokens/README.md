@@ -142,9 +142,11 @@ void main() async {
 
 ### Method 2: Runtime Update
 
-Not wired yet: `designTokensProvider` returns `DesignTokens.defaults()`
-and does not watch `designTokensNotifierProvider`, so the call below
-updates the notifier but not the widgets that read `ref.tokens`.
+`designTokensProvider` watches `designTokensNotifierProvider`, so the
+call below rebuilds every widget that reads `ref.tokens` and the
+`ThemeData` from `tokenThemeDataProvider`. Overriding
+`designTokensProvider` (Methods 1 and 3) pins the value and turns this
+off.
 
 ```dart
 // Load new tokens dynamically
