@@ -5,7 +5,7 @@ import type { Locale } from './locales';
 
 type BaseSiteContent = typeof enContent;
 export type LegalContent = typeof enLegal;
-export type SiteContent = BaseSiteContent & { readonly legal: LegalContent };
+export type SiteContent = BaseSiteContent;
 
 export type NavbarContent = SiteContent['navbar'];
 export type FooterContent = SiteContent['footer'];

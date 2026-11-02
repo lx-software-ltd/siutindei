@@ -10,6 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy import (
     CheckConstraint,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     SmallInteger,
@@ -293,5 +294,12 @@ class ActivityScheduleEntry(Base):
             "start_minutes_utc",
             "end_minutes_utc",
             name="schedule_entry_unique",
+        ),
+        Index(
+            "activity_schedule_entries_order_idx",
+            "schedule_id",
+            "day_of_week_utc",
+            "start_minutes_utc",
+            "id",
         ),
     )

@@ -6,10 +6,11 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { collectInlineScriptHashesFromOutDir } from './csp-inline-script-hashes.mjs';
+import { collectInlineScriptHashesFromHtml } from './csp-inline-script-hashes.mjs';
 
 const OUT_DIR = path.resolve('out');
 const META_MARKER = '<!-- csp-meta -->';
+const MAX_CSP_META_LENGTH = 8192;
 
 const GTM_SCRIPT_ORIGINS = [
   'https://www.googletagmanager.com',
@@ -97,9 +98,8 @@ async function* walk(dir) {
 
 /**
  * @param {string} filePath
- * @param {string} metaTag
  */
-async function injectIntoFile(filePath, metaTag) {
+async function injectIntoFile(filePath) {
   const original = await fs.readFile(filePath, 'utf8');
   if (original.includes(META_MARKER)) {
     return false;
@@ -107,6 +107,14 @@ async function injectIntoFile(filePath, metaTag) {
   const headOpenRegex = /<head([^>]*)>/i;
   if (!headOpenRegex.test(original)) {
     return false;
+  }
+  const inlineScriptHashes = collectInlineScriptHashesFromHtml(original);
+  const metaTag = `<meta http-equiv="Content-Security-Policy" content="${buildCspDirectives(inlineScriptHashes)}">`;
+  if (metaTag.length > MAX_CSP_META_LENGTH) {
+    throw new Error(
+      `CSP meta tag is ${metaTag.length} bytes in ${filePath}; ` +
+        `the limit is ${MAX_CSP_META_LENGTH}. Hash only this page's scripts.`,
+    );
   }
   const replacement = `<head$1>\n    ${META_MARKER}\n    ${metaTag}`;
   const updated = original.replace(headOpenRegex, replacement);
@@ -122,26 +130,18 @@ async function main() {
     process.exit(1);
   }
 
-  const inlineScriptHashes = await collectInlineScriptHashesFromOutDir(OUT_DIR);
-  if (inlineScriptHashes.length === 0) {
-    console.warn(
-      'csp:inject — no inline script hashes found; hydration may be blocked.',
-    );
-  }
-
-  const metaTag = `<meta http-equiv="Content-Security-Policy" content="${buildCspDirectives(inlineScriptHashes)}">`;
   let updatedCount = 0;
   let totalCount = 0;
   for await (const filePath of walk(OUT_DIR)) {
     totalCount += 1;
-    const updated = await injectIntoFile(filePath, metaTag);
+    const updated = await injectIntoFile(filePath);
     if (updated) {
       updatedCount += 1;
     }
   }
   console.log(
     `csp:inject — ${updatedCount}/${totalCount} HTML files updated ` +
-      `(${inlineScriptHashes.length} inline script hashes).`,
+      '(one CSP policy per page).',
   );
 }
 

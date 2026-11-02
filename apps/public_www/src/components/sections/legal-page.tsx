@@ -1,5 +1,4 @@
-import type { SiteContent } from '@/content/types';
-type LegalContent = SiteContent['legal'];
+import type { LegalContent } from '@/content/types';
 type LegalDocument = LegalContent['privacy'];
 type LegalSection = LegalDocument['sections'][number];
 

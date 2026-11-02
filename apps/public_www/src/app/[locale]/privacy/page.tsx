@@ -1,4 +1,5 @@
 import { LegalPage } from '@/components/sections/legal-page';
+import { getLegalContent } from '@/lib/legal-copy';
 import {
   generateLocaleStaticParams,
   type LocaleRouteProps,
@@ -30,14 +31,15 @@ export async function generateMetadata({ params }: LocaleRouteProps) {
 }
 
 export default async function PrivacyRoutePage({ params }: LocaleRouteProps) {
-  const { content } = await resolveLocalePageContext(params);
+  const { locale } = await resolveLocalePageContext(params);
+  const legal = getLegalContent(locale);
 
   return (
     <LegalPage
-      document={content.legal.privacy}
-      lastUpdatedLabel={content.legal.lastUpdatedLabel}
-      lastUpdated={content.legal.lastUpdated}
-      onThisPageLabel={content.legal.onThisPageLabel}
+      document={legal.privacy}
+      lastUpdatedLabel={legal.lastUpdatedLabel}
+      lastUpdated={legal.lastUpdated}
+      onThisPageLabel={legal.onThisPageLabel}
     />
   );
 }

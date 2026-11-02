@@ -77,6 +77,7 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
   const isLoading = search.isLoading;
   const categoryMatch = search.categoryMatch;
   const errorMessage = search.errorMessage ? copy.errorLabel : null;
+  const loadMoreError = search.loadMoreError ? copy.errorLabel : null;
 
   useEffect(() => {
     if (!isLoading && !search.errorMessage) {
@@ -149,7 +150,10 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
           </div>
         )}
         {search.hasMore ? (
-          <div className="mx-auto flex max-w-7xl justify-center px-4 py-8">
+          <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 py-8">
+            {loadMoreError ? (
+              <p className="text-center text-red-700">{loadMoreError}</p>
+            ) : null}
             <button
               type="button"
               onClick={search.loadMore}

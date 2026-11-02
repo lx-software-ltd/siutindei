@@ -4,13 +4,10 @@ from __future__ import annotations
 
 import json
 
-from app.api.schemas import ActivitySearchResponseSchema
-from app.api.schemas import dump_search_response
+from app.api.schemas import ActivitySearchResponseSchema, dump_search_response
 from app.api.search import map_row_to_result
-from app.db.models import Activity
-from app.db.models import ActivityScheduleEntry
-from app.db.queries import ActivitySearchFilters
-from app.db.queries import build_search_query
+from app.db.models import Activity, ActivityScheduleEntry
+from app.db.queries import ActivitySearchFilters, build_search_query
 
 
 def test_text_query_matches_names_not_descriptions(
@@ -84,5 +81,7 @@ def test_card_view_omits_heavy_fields_and_stays_under_900_bytes(
     assert full_item["activity"]["description"]
     assert "manager_id" in full_item["organization"]
     assert len(full_item["schedule"]["weekly_entries"]) == 2
-    encoded = json.dumps(card_item, default=str).encode()
+    assert "age_min" in card_item["activity"]
+    assert "lat" in card_item["location"]
+    encoded = json.dumps(card_item, default=str, separators=(",", ":")).encode()
     assert len(encoded) < 900

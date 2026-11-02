@@ -9,6 +9,7 @@ import { collectInlineScriptHashesFromHtml } from './csp-inline-script-hashes.mj
 
 const OUT_DIR = path.resolve('out');
 const META_MARKER = '<!-- csp-meta -->';
+const MAX_CSP_META_LENGTH = 8192;
 
 async function* walk(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -35,6 +36,7 @@ function readCspMetaContent(contents) {
 async function main() {
   const missing = [];
   const missingHashes = [];
+  const oversized = [];
   for await (const filePath of walk(OUT_DIR)) {
     const contents = await fs.readFile(filePath, 'utf8');
     if (!contents.includes(META_MARKER)) {
@@ -42,14 +44,25 @@ async function main() {
       continue;
     }
     const csp = readCspMetaContent(contents);
+    if (csp && csp.length > MAX_CSP_META_LENGTH) {
+      oversized.push(`${filePath} (${csp.length} bytes)`);
+    }
     const inlineHashes = collectInlineScriptHashesFromHtml(contents);
-    if (inlineHashes.length > 0 && csp && !csp.includes('sha256-')) {
+    const absent = inlineHashes.filter((hash) => !csp?.includes(hash));
+    if (absent.length > 0) {
       missingHashes.push(filePath);
     }
   }
   if (missing.length > 0) {
     console.error('csp:validate — HTML files without CSP meta:');
     for (const filePath of missing) {
+      console.error(`- ${filePath}`);
+    }
+    process.exit(1);
+  }
+  if (oversized.length > 0) {
+    console.error('csp:validate — CSP meta content longer than 8192 bytes:');
+    for (const filePath of oversized) {
       console.error(`- ${filePath}`);
     }
     process.exit(1);

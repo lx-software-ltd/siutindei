@@ -20,6 +20,13 @@ interface FixtureFile {
 
 let cachedListings: Map<string, ActivityListing> | null = null;
 
+function stagingStaticPagesEnabled(): boolean {
+  const raw = (process.env.NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED ?? '')
+    .trim()
+    .toLowerCase();
+  return raw === 'true' || raw === '1' || raw === 'yes';
+}
+
 function fixturePath(): string {
   return path.resolve(
     process.cwd(),
@@ -29,6 +36,10 @@ function fixturePath(): string {
 
 function loadListings(): Map<string, ActivityListing> {
   if (cachedListings) {
+    return cachedListings;
+  }
+  if (!stagingStaticPagesEnabled()) {
+    cachedListings = new Map();
     return cachedListings;
   }
   const parsed = JSON.parse(readFileSync(fixturePath(), 'utf8')) as FixtureFile;
@@ -60,6 +71,13 @@ function loadListings(): Map<string, ActivityListing> {
   return listings;
 }
 
+/**
+ * Next.js `output: 'export'` rejects `generateStaticParams()` when it is
+ * empty. This id is not a listing. The build deletes the two HTML files
+ * after export so they are not published or sitemapped.
+ */
+export const STATIC_ACTIVITY_EXPORT_PLACEHOLDER_ID = '__export_placeholder__';
+
 export function listStaticActivityParams(): Array<{
   locale: Locale;
   id: string;
@@ -68,6 +86,20 @@ export function listStaticActivityParams(): Array<{
   return SUPPORTED_LOCALES.flatMap((locale) =>
     ids.map((id) => ({ locale, id })),
   );
+}
+
+export function listStaticActivityExportParams(): Array<{
+  locale: Locale;
+  id: string;
+}> {
+  const params = listStaticActivityParams();
+  if (params.length > 0) {
+    return params;
+  }
+  return SUPPORTED_LOCALES.map((locale) => ({
+    locale,
+    id: STATIC_ACTIVITY_EXPORT_PLACEHOLDER_ID,
+  }));
 }
 
 export function getStaticActivityListing(

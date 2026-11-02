@@ -405,27 +405,10 @@ invalidate_distribution() {
   return 1
 }
 
-sync_immutable_tree() {
-  local source_dir="$1"
-  local destination_uri="$2"
-  local prefix="$3"
-  if [ -d "$source_dir/$prefix" ]; then
-    aws s3 sync \
-      "$source_dir/$prefix" \
-      "$destination_uri/$prefix" \
-      --cache-control "$ASSET_CACHE_CONTROL" \
-      --delete
-  fi
-}
-
-sync_immutable_file() {
-  local source_file="$1"
-  local destination_uri="$2"
-  if [ -f "$source_file" ]; then
-    aws s3 cp \
-      "$source_file" \
-      "$destination_uri" \
-      --cache-control "$ASSET_CACHE_CONTROL"
+remove_production_fixtures() {
+  local destination_uri="$1"
+  if [ "$DEPLOY_ENVIRONMENT" = "production" ]; then
+    aws s3 rm "${destination_uri%/}/fixtures" --recursive
   fi
 }
 
@@ -442,18 +425,11 @@ sync_site_artifacts() {
       "$destination_uri/_next/static" \
       --cache-control "$ASSET_CACHE_CONTROL"
   fi
-  sync_immutable_tree "$source_dir" "$destination_uri" "images"
-  sync_immutable_tree "$source_dir" "$destination_uri" "scripts"
-  sync_immutable_file "$source_dir/favicon.ico" "$destination_uri/favicon.ico"
-  sync_immutable_file "$source_dir/favicon.svg" "$destination_uri/favicon.svg"
+  remove_production_fixtures "$destination_uri"
   aws s3 sync \
     "$source_dir" \
     "$destination_uri" \
     --exclude "_next/static/*" \
-    --exclude "images/*" \
-    --exclude "scripts/*" \
-    --exclude "favicon.ico" \
-    --exclude "favicon.svg" \
     --exclude "releases/*" \
     "${fixture_excludes[@]}" \
     --cache-control "$DOCUMENT_CACHE_CONTROL" \
@@ -473,31 +449,11 @@ sync_release_artifacts() {
       "$destination_uri/_next/static" \
       --cache-control "$ASSET_CACHE_CONTROL"
   fi
-  for prefix in images scripts; do
-    if aws s3 ls "$source_uri/$prefix/" >/dev/null 2>&1; then
-      aws s3 sync \
-        "$source_uri/$prefix" \
-        "$destination_uri/$prefix" \
-        --cache-control "$ASSET_CACHE_CONTROL" \
-        --delete
-    fi
-  done
-  for file in favicon.ico favicon.svg; do
-    if aws s3 ls "$source_uri/$file" >/dev/null 2>&1; then
-      aws s3 cp \
-        "$source_uri/$file" \
-        "$destination_uri/$file" \
-        --cache-control "$ASSET_CACHE_CONTROL"
-    fi
-  done
+  remove_production_fixtures "$destination_uri"
   aws s3 sync \
     "$source_uri" \
     "$destination_uri" \
     --exclude "_next/static/*" \
-    --exclude "images/*" \
-    --exclude "scripts/*" \
-    --exclude "favicon.ico" \
-    --exclude "favicon.svg" \
     --exclude "releases/*" \
     "${fixture_excludes[@]}" \
     --cache-control "$DOCUMENT_CACHE_CONTROL" \

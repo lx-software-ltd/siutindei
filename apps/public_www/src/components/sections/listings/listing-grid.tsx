@@ -57,6 +57,7 @@ export function ListingGrid({
           imageAltFallback={labels.imageFallback}
           mapAltLabel={labels.mapAlt}
           deferRendering={shouldDeferListingCardRender(cardIndex)}
+          showMiniMap={cardIndex < 6}
         />
       ))}
     </div>

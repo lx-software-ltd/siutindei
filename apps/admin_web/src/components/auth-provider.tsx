@@ -14,11 +14,6 @@ import {
   storeTokensFromPasswordless,
   type LoginOptions,
 } from '../lib/auth';
-import {
-  initiatePasswordlessSignIn,
-  respondToPasswordlessChallenge,
-  signUpPasswordlessUser,
-} from '../lib/cognito-auth';
 import { getConfigErrors } from '../lib/config';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
@@ -142,11 +137,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPasswordlessStatus('sending');
 
     try {
-      // First, try to sign up the user (will be ignored if they already exist)
-      await signUpPasswordlessUser(normalizedEmail);
-
-      // Then initiate the passwordless sign-in
-      const user = await initiatePasswordlessSignIn(normalizedEmail);
+      const passwordless = await import('../lib/cognito-auth');
+      await passwordless.signUpPasswordlessUser(normalizedEmail);
+      const user = await passwordless.initiatePasswordlessSignIn(normalizedEmail);
       setCognitoUser(user);
       setPasswordlessStatus('challenge');
     } catch (err) {
@@ -175,7 +168,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPasswordlessStatus('verifying');
 
     try {
-      const tokens = await respondToPasswordlessChallenge(cognitoUser, trimmedCode);
+      const passwordless = await import('../lib/cognito-auth');
+      const tokens = await passwordless.respondToPasswordlessChallenge(
+        cognitoUser,
+        trimmedCode,
+      );
 
       // Store tokens and update auth state
       storeTokensFromPasswordless(tokens);

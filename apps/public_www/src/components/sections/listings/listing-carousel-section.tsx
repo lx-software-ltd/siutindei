@@ -95,6 +95,7 @@ export function ListingCarouselSection({
                       mapAltLabel={labels.mapAlt}
                       imageLoading={imageProps.imageLoading}
                       imageFetchPriority={imageProps.imageFetchPriority}
+                      showMiniMap={isPrimaryCarousel && cardIndex < 6}
                     />
                   );
                 })}

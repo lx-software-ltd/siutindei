@@ -165,9 +165,11 @@ paths:
           description: |
             Case-insensitive match on activity name, organization name, and
             name translation values. Fewer than 2 characters is rejected.
+            Longer than 100 characters is rejected.
           schema:
             type: string
             minLength: 2
+            maxLength: 100
         - name: view
           in: query
           required: false
@@ -338,8 +340,6 @@ components:
         - id
         - name
         - name_translations
-        - description_translations
-        - manager_id
         - media_urls
       properties:
         id:
@@ -421,7 +421,7 @@ components:
           nullable: true
     Activity:
       type: object
-      required: [id, name, name_translations, description_translations]
+      required: [id, name, name_translations]
       properties:
         id:
           type: string

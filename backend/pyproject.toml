@@ -36,13 +36,11 @@ select = [
 ignore = ["UP046", "UP047"]
 
 [tool.ruff.lint.pylint]
-# Ceilings are the measured maxima in this tree (ruff 0.17). Requested
-# starting points were 108, 51, 30, 26, and 9. Args, positional args, and
-# returns are lower than those guesses. Branches and statements are higher.
+# Ceilings match the measured maxima in this tree (ruff 0.17).
 max-args = 13
 max-positional-args = 13
 max-returns = 17
-max-branches = 35
+max-branches = 34
 max-statements = 113
 
 [tool.ruff.lint.per-file-ignores]

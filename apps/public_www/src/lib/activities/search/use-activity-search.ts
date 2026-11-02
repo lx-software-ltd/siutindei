@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Locale } from '@/content/locales';
 import { fetchActivitySearch } from '@/lib/activities/search-client';
@@ -23,6 +23,7 @@ export interface UseActivitySearchResult {
   readonly isLoading: boolean;
   readonly isLoadingMore: boolean;
   readonly errorMessage: string | null;
+  readonly loadMoreError: string | null;
   readonly hasMore: boolean;
   readonly categoryMatch: 'exact' | 'legacy_fallback';
   readonly loadMore: () => void;
@@ -44,18 +45,28 @@ export function useActivitySearch({
   const [isLoading, setIsLoading] = useState(enabled);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [categoryMatch, setCategoryMatch] = useState<
     'exact' | 'legacy_fallback'
   >('exact');
   const filtersKey = JSON.stringify(filters);
+  const generation = useRef(0);
+  const inFlight = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!enabled) {
       return;
     }
+    inFlight.current?.abort();
     const controller = new AbortController();
+    inFlight.current = controller;
+    const requestGeneration = generation.current + 1;
+    generation.current = requestGeneration;
     setIsLoading(true);
+    setIsLoadingMore(false);
     setErrorMessage(null);
+    setLoadMoreError(null);
+    setNextCursor(null);
     const apiParams = filtersToApiParams(filters);
     fetchActivitySearch(
       {
@@ -66,12 +77,15 @@ export function useActivitySearch({
       { signal: controller.signal },
     )
       .then((response) => {
+        if (requestGeneration !== generation.current) {
+          return;
+        }
         setItems(response.items);
         setNextCursor(response.nextCursor);
         setCategoryMatch(response.categoryMatch ?? 'exact');
       })
       .catch((error: unknown) => {
-        if (isAbortError(error)) {
+        if (isAbortError(error) || requestGeneration !== generation.current) {
           return;
         }
         setItems([]);
@@ -80,7 +94,7 @@ export function useActivitySearch({
         setErrorMessage('error');
       })
       .finally(() => {
-        if (!controller.signal.aborted) {
+        if (!controller.signal.aborted && requestGeneration === generation.current) {
           setIsLoading(false);
         }
       });
@@ -97,8 +111,12 @@ export function useActivitySearch({
     if (!enabled || isLoading || isLoadingMore || !nextCursor) {
       return;
     }
+    inFlight.current?.abort();
     const controller = new AbortController();
+    inFlight.current = controller;
+    const requestGeneration = generation.current;
     setIsLoadingMore(true);
+    setLoadMoreError(null);
     const apiParams = filtersToApiParams(filters);
     fetchActivitySearch(
       {
@@ -110,17 +128,21 @@ export function useActivitySearch({
       { signal: controller.signal },
     )
       .then((response) => {
+        if (requestGeneration !== generation.current) {
+          return;
+        }
         setItems((current) => [...current, ...response.items]);
         setNextCursor(response.nextCursor);
         setCategoryMatch(response.categoryMatch ?? 'exact');
       })
       .catch((error: unknown) => {
-        if (!isAbortError(error)) {
-          setErrorMessage('error');
+        if (isAbortError(error) || requestGeneration !== generation.current) {
+          return;
         }
+        setLoadMoreError('error');
       })
       .finally(() => {
-        if (!controller.signal.aborted) {
+        if (!controller.signal.aborted && requestGeneration === generation.current) {
           setIsLoadingMore(false);
         }
       });
@@ -131,6 +153,7 @@ export function useActivitySearch({
     isLoading: enabled ? isLoading : false,
     isLoadingMore,
     errorMessage,
+    loadMoreError,
     hasMore: nextCursor !== null,
     categoryMatch,
     loadMore,

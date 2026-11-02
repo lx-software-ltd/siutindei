@@ -29,7 +29,10 @@ def get_engine(
 
     Password authentication reuses one engine for the life of the container.
     IAM authentication reuses one engine for ten minutes so the auth token
-    stays inside its lifetime. IAM engines use a one-connection pool.
+    stays inside its lifetime. Every IAM caller, including admin and health,
+    gets that one-connection pool. Do not open a second session on the same
+    engine before the first session commits or rolls back. An explicit
+    ``pool_class`` skips the cache so the override is honored.
 
     Args:
         use_cache: Whether to use the engine cache.
@@ -39,6 +42,8 @@ def get_engine(
         A configured SQLAlchemy engine.
     """
     use_iam_auth = _use_iam_auth()
+    if pool_class is not None:
+        use_cache = False
     cache_key = "iam" if use_iam_auth else "default"
     now = time.monotonic()
     if use_cache:

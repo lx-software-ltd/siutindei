@@ -208,12 +208,20 @@ def _text_query_condition(text_query: str) -> Any:
 
 
 def _translation_values_ilike(column: Any, pattern: str) -> Any:
-    """True when any jsonb name translation value matches the pattern."""
+    """True when any jsonb object of name translations matches the pattern.
+
+    ``jsonb_each_text`` errors on null, scalars, and arrays. The match is
+    evaluated only when the column is an object.
+    """
     translations = sa.func.jsonb_each_text(column).table_valued("key", "value")
-    return sa.exists(
+    matches = sa.exists(
         sa.select(sa.literal(1))
         .select_from(translations)
         .where(translations.c.value.ilike(pattern, escape="\\"))
+    )
+    return sa.case(
+        (sa.func.jsonb_typeof(column) == "object", matches),
+        else_=sa.false(),
     )
 
 

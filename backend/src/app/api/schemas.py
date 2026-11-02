@@ -122,16 +122,22 @@ def dump_search_response(
     view: str = "full",
 ) -> dict:
     """Serialize a search response. Card view drops the heavy fields."""
+    payload = body.model_dump()
     if view != "card":
-        return body.model_dump() if hasattr(body, "model_dump") else body.dict()
-    payload = (
-        body.model_dump(exclude_none=True)
-        if hasattr(body, "model_dump")
-        else body.dict(exclude_none=True)
-    )
+        return payload
     for item in payload.get("items", []):
         _apply_card_view(item)
     return payload
+
+
+def _drop_duplicate_english_name(section: dict) -> None:
+    translations = section.get("name_translations")
+    if not isinstance(translations, dict):
+        return
+    if translations.get("en") == section.get("name"):
+        trimmed = dict(translations)
+        trimmed.pop("en", None)
+        section["name_translations"] = trimmed
 
 
 def _apply_card_view(item: dict) -> None:
@@ -139,6 +145,10 @@ def _apply_card_view(item: dict) -> None:
         section_payload = item.get(section)
         if isinstance(section_payload, dict):
             section_payload.pop(field, None)
+    for section_name in ("activity", "organization"):
+        section_payload = item.get(section_name)
+        if isinstance(section_payload, dict):
+            _drop_duplicate_english_name(section_payload)
     organization = item.get("organization")
     if isinstance(organization, dict):
         media_urls = organization.get("media_urls") or []

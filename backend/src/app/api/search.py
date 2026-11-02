@@ -173,17 +173,20 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
     )
 
 
+def _staging_search_enabled() -> bool:
+    """True when this process should read the staging fixture."""
+    raw = os.environ.get("STAGING_SEARCH_DATA_ENABLED", "").strip().lower()
+    return raw in {"1", "true", "yes"}
+
+
 def fetch_search_response(
     filters: ActivitySearchFilters,
 ) -> ActivitySearchResponseSchema:
     """Fetch search response from the database or staging fixture."""
 
-    from app.services.staging_search_store import (
-        fetch_staging_search_response,
-        staging_search_data_enabled,
-    )
+    if _staging_search_enabled():
+        from app.services.staging_search_store import fetch_staging_search_response
 
-    if staging_search_data_enabled():
         return fetch_staging_search_response(filters)
 
     engine = get_engine()
@@ -239,7 +242,7 @@ def map_row_to_result(
     pricing: ActivityPricing = mapping[ActivityPricing]
     schedule: ActivitySchedule = mapping[ActivitySchedule]
 
-    age_min, age_max = _extract_age_bounds(activity.age_range)
+    age_min, age_max = inclusive_age_bounds(activity.age_range)
     card = view == "card"
     is_template = organization.description_source == "template"
     org_description = None if is_template or card else organization.description
@@ -340,15 +343,18 @@ def _serialize_weekly_entries(
     ]
 
 
+def clear_region_area_cache() -> None:
+    """Drop the cached area-to-region map. Tests call this between cases."""
+    global _region_area_cache
+    _region_area_cache = None
+
+
 def _load_region_area_cache(session: Session) -> dict[str, str | None]:
     """Map each geographic area id to its level=region ancestor id.
 
-    The map is reused for ten minutes inside one Lambda container. Tests
-    rebuild it on every call so fixtures do not leak across cases.
+    The map is reused for ten minutes inside one Lambda container.
     """
     global _region_area_cache
-    if os.environ.get("PYTEST_CURRENT_TEST"):
-        return _build_region_area_map(session)
     now = time.monotonic()
     cached = _region_area_cache
     if cached is not None and now - cached[0] < _REGION_CACHE_TTL_SECONDS:
@@ -387,11 +393,6 @@ def _build_region_area_map(session: Session) -> dict[str, str | None]:
     return cache
 
 
-def _extract_age_bounds(age_range: Any) -> tuple[int | None, int | None]:
-    """Extract inclusive age bounds from a database range value."""
-    return inclusive_age_bounds(age_range)
-
-
 def _create_response(
     status_code: int,
     body: ActivitySearchResponseSchema,
@@ -401,6 +402,7 @@ def _create_response(
     """Create a JSON API Gateway response for Pydantic models."""
 
     payload = dump_search_response(body, view)
+    separators = (",", ":") if view == "card" else (", ", ": ")
 
     headers = {
         "Content-Type": "application/json",
@@ -411,7 +413,7 @@ def _create_response(
     return {
         "statusCode": status_code,
         "headers": headers,
-        "body": json.dumps(payload, default=str),
+        "body": json.dumps(payload, default=str, separators=separators),
     }
 
 

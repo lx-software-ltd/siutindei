@@ -16,12 +16,12 @@ their primary responsibilities.
   change. Cache pruning keeps only the most recent keys (default: 3),
   configurable with `LAMBDA_DEPS_CACHE_RETENTION` or `--cache-retention`.
 - `--profile search` installs `backend/requirements-core.txt` into
-  `backend/.lambda-build/search`. That set is boto3, pydantic, psycopg,
-  and SQLAlchemy. It does not ship phonenumbers, pycountry, pypdf,
-  alembic, or pyjwt.
+  `backend/.lambda-build/search`. That set is pydantic, psycopg, and
+  SQLAlchemy. boto3 comes from the Lambda runtime. It does not ship
+  phonenumbers, pycountry, pypdf, alembic, or pyjwt.
 - `--profile admin` installs `backend/requirements-admin.txt` into
-  `backend/.lambda-build/admin`. Admin adds alembic, PyJWT, pycountry,
-  pypdf, and phonenumberslite (imported as `phonenumbers`).
+  `backend/.lambda-build/admin`. Admin adds boto3, alembic, PyJWT,
+  pycountry, pypdf, and phonenumberslite (imported as `phonenumbers`).
 - `backend/requirements.txt` includes the admin set, so the default
   bundle (`.lambda-build/base`) still has admin dependencies. The search
   function sets `requirementsFile` to `requirements-core.txt` and stages

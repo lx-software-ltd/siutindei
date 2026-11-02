@@ -1,7 +1,5 @@
 import enContent from './en.json';
 import zhHKContent from './zh-HK.json';
-import enLegal from './legal/en.json';
-import zhHKLegal from './legal/zh-HK.json';
 
 import {
   DEFAULT_LOCALE,
@@ -33,15 +31,7 @@ const contentMap = {
   'zh-HK': zhHKContent,
 } as const;
 
-const legalMap = {
-  en: enLegal,
-  'zh-HK': zhHKLegal,
-} as const;
-
 export function getContent(locale: string): SiteContent {
   const key: Locale = isValidLocale(locale) ? locale : DEFAULT_LOCALE;
-  return {
-    ...contentMap[key],
-    legal: legalMap[key],
-  };
+  return contentMap[key];
 }

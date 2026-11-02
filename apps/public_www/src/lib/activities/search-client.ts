@@ -48,6 +48,19 @@ export function buildActivitySearchRequest(
   for (const categoryId of params.categoryIds ?? []) {
     url.searchParams.append('category_id', categoryId);
   }
+  const sortedEntries = [...url.searchParams.entries()].sort((left, right) => {
+    if (left[0] === right[0]) {
+      if (left[1] === right[1]) {
+        return 0;
+      }
+      return left[1] < right[1] ? -1 : 1;
+    }
+    return left[0] < right[0] ? -1 : 1;
+  });
+  url.search = '';
+  for (const [key, value] of sortedEntries) {
+    url.searchParams.append(key, value);
+  }
 
   const headers: Record<string, string> = {
     Accept: 'application/json',

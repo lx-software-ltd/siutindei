@@ -54,7 +54,7 @@ function managerListFilters(filters?: ResourceListFilters) {
   return filters?.org_id ? { org_id: filters.org_id } : undefined;
 }
 
-export async function getResource<T>(
+async function getResource<T>(
   basePath: ApiBasePath,
   resource: ResourceName,
   id: string,
@@ -99,7 +99,7 @@ export async function createResource<TInput, TOutput>(
   });
 }
 
-export async function updateResource<TInput, TOutput>(
+async function updateResource<TInput, TOutput>(
   basePath: ApiBasePath,
   resource: ResourceName,
   id: string,
@@ -112,7 +112,7 @@ export async function updateResource<TInput, TOutput>(
   });
 }
 
-export async function deleteResource(basePath: ApiBasePath, resource: ResourceName, id: string) {
+async function deleteResource(basePath: ApiBasePath, resource: ResourceName, id: string) {
   return request<void>(buildResourceUrl(basePath, resource, id), {
     method: 'DELETE',
   });

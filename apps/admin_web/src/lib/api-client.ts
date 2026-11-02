@@ -2,16 +2,11 @@ export { ApiError, type ListResponse } from './api-client-core';
 
 export {
   createResource,
-  deleteResource,
-  getResource,
   listResource,
-  updateResource,
   type ResourceName,
 } from './api-client-admin';
 
 export {
-  createOrganizationMediaUpload,
-  deleteOrganizationMedia,
   type OrganizationMediaDeleteRequest,
   type OrganizationMediaUploadRequest,
   type OrganizationMediaUploadResponse,
@@ -20,10 +15,7 @@ export {
 export {
   createAdminExport,
   createAdminImportPresign,
-  getAdminImportJob,
-  getImportSettings,
   runAdminImport,
-  updateImportSettings,
   type AdminExportResponse,
   type AdminImportCounts,
   type AdminImportError,
@@ -40,11 +32,6 @@ export {
 } from './api-client-imports';
 
 export {
-  addUserToGroup,
-  createCognitoManager,
-  deleteCognitoUser,
-  listCognitoUsers,
-  removeUserFromGroup,
   type CognitoUsersResponse,
   type DeleteCognitoUserResponse,
   type UserGroupResponse,
@@ -53,15 +40,7 @@ export {
 export {
   fetchActiveAreas,
   fetchActivityCategories,
-  getUserAccessStatus,
-  getUserFeedback,
-  getUserSuggestions,
-  listFeedbackLabels,
   searchAddress,
-  searchUserOrganizations,
-  submitAccessRequest,
-  submitOrganizationSuggestion,
-  submitUserFeedback,
   type ActivityCategoryNode,
   type AddressSearchResponse,
   type GeographicAreaNode,
@@ -81,39 +60,25 @@ export {
 } from './api-client-user';
 
 export {
-  getAuditLog,
-  listAuditLogs,
   type AuditLogsFilters,
   type AuditLogsResponse,
 } from './api-client-audit';
 
 export {
-  decideOrgEnrichment,
-  getOrgEnrichment,
-  startOrgEnrichment,
   type EnrichmentProposal,
   type EnrichmentRead,
   type EnrichmentRun,
 } from './api-client-enrichment';
 
 export {
-  listCatalogVersions,
   type CatalogVersionFilters,
   type CatalogVersionListResponse,
   type CatalogVersionRow,
 } from './api-client-versions';
 
-export {
-  createApiKey,
-  getApiKey,
-  listApiKeys,
-  revokeApiKey,
-  type ApiKeysResponse,
-} from './api-client-api-keys';
+export { type ApiKeysResponse } from './api-client-api-keys';
 
 export {
-  listTickets,
-  reviewTicket,
   type ReviewTicketPayload,
   type ReviewTicketResponse,
   type Ticket,

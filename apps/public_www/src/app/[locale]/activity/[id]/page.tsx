@@ -2,7 +2,10 @@ import type { Metadata } from 'next';
 
 import { ActivityDetailPage } from '@/components/pages/activity-detail-page';
 import type { Locale } from '@/content/locales';
-import { getStaticActivityListing, listStaticActivityParams } from '@/lib/activities/static-activity-catalog';
+import {
+  getStaticActivityListing,
+  listStaticActivityExportParams,
+} from '@/lib/activities/static-activity-catalog';
 import {
   listingOrgName,
   listingTitle,
@@ -17,8 +20,10 @@ interface ActivityIdRouteProps {
   params: Promise<{ locale: string; id: string }>;
 }
 
+export const dynamicParams = false;
+
 export function generateStaticParams() {
-  return listStaticActivityParams();
+  return listStaticActivityExportParams();
 }
 
 function courseJsonLd(locale: Locale, listing: ActivityListing) {

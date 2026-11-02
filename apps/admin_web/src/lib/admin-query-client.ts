@@ -1,5 +1,6 @@
 import { QueryClient, type DefaultOptions } from '@tanstack/react-query';
 
+import type { ApiMode, ResourceType } from './api-client-admin';
 import { adminQueryKeys } from './admin-query-keys';
 
 /**
@@ -31,6 +32,12 @@ let client: QueryClient | null = null;
 export function refreshCatalogHistory() {
   void getAdminQueryClient().invalidateQueries({
     queryKey: adminQueryKeys.catalogVersions(),
+  });
+}
+
+export function refreshResourceLists(resource: ResourceType, mode: ApiMode) {
+  void getAdminQueryClient().invalidateQueries({
+    queryKey: adminQueryKeys.resourceList(resource, mode),
   });
 }
 

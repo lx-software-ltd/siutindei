@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { getContent } from '@/content';
+import { getLegalContent } from '@/lib/legal-copy';
 
-const enContent = getContent('en');
-const zhHKContent = getContent('zh-HK');
+const enContent = { legal: getLegalContent('en') };
+const zhHKContent = { legal: getLegalContent('zh-HK') };
 
 const CONTACT_EMAIL = 'support@lx-software.com';
 

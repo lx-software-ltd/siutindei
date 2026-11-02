@@ -10,6 +10,7 @@ from app.exceptions import ValidationError
 
 _VIEWS = frozenset({"card", "full"})
 _MIN_QUERY_LENGTH = 2
+_MAX_QUERY_LENGTH = 100
 
 
 class SearchQueryValidation(NamedTuple):
@@ -102,6 +103,8 @@ def _validate_text_query(q: str | None) -> str | None:
         return None
     if len(text) < _MIN_QUERY_LENGTH:
         raise ValidationError("q must be at least 2 characters", field="q")
+    if len(text) > _MAX_QUERY_LENGTH:
+        raise ValidationError("q must be at most 100 characters", field="q")
     return text
 
 

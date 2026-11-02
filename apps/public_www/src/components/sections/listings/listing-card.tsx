@@ -35,6 +35,7 @@ interface ListingCardProps {
   readonly imageLoading?: 'lazy' | 'eager';
   readonly imageFetchPriority?: 'high' | 'low';
   readonly deferRendering?: boolean;
+  readonly showMiniMap?: boolean;
 }
 
 export function ListingCard({
@@ -48,6 +49,7 @@ export function ListingCard({
   imageLoading = 'lazy',
   imageFetchPriority,
   deferRendering = false,
+  showMiniMap = true,
 }: ListingCardProps) {
   const { filters } = useSearchContext();
   const closedLabel = useChromeCopy(locale).temporarilyClosedLabel;
@@ -108,11 +110,13 @@ export function ListingCard({
               </span>
             ) : null}
           </span>
-          <ListingCardMiniMap
-            locale={locale}
-            listing={listing}
-            mapAltLabel={mapAltLabel}
-          />
+          {showMiniMap ? (
+            <ListingCardMiniMap
+              locale={locale}
+              listing={listing}
+              mapAltLabel={mapAltLabel}
+            />
+          ) : null}
         </div>
       </Link>
       <div className="mt-3 space-y-1">

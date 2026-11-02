@@ -220,9 +220,13 @@ def _ops(kind: ProposalKind) -> _KindOps:
 def list_proposals(
     kind: ProposalKind,
     session: Session,
+    /,
     **filters: Any,
 ) -> dict[str, Any]:
-    """List proposals for ``kind`` using that kind's existing filters."""
+    """List proposals for ``kind`` using that kind's existing filters.
+
+    ``kind`` is positional-only because location filters also use a ``kind`` key.
+    """
     return _ops(kind).list_proposals(session, **filters)
 
 

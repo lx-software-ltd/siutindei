@@ -39,7 +39,18 @@ def _required_test_database_url() -> str:
     return url
 
 
-_required_test_database_url()
+@pytest.fixture(autouse=True)
+def _clear_search_region_cache() -> Generator[None, None, None]:
+    """Drop a cached region map without importing the search module early."""
+    import sys
+
+    module = sys.modules.get("app.api.search")
+    if module is not None:
+        module.clear_region_area_cache()
+    yield
+    module = sys.modules.get("app.api.search")
+    if module is not None:
+        module.clear_region_area_cache()
 
 
 @pytest.fixture(scope="session")
