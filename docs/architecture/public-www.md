@@ -438,9 +438,9 @@ browser → Cloudflare (siutindei.com, proxied)
               limit ∉ {1, 12, 24, 30}; Sec-Fetch-Site present and ≠ same-origin;
               empty or HTTP-library/headless User-Agent
             cache rules: bypass everything except /_next/static/*
-            transform: add x-edge-verify: <secret>
+            transform: add x-proxy-verify: <secret>
           → CloudFront (SSL mode strict, Host preserved)
-              viewer-request functions: 403 unless x-edge-verify matches the
+              viewer-request functions: 403 unless x-proxy-verify matches the
               environment's current or previous secret; WAF detached while
               the secret is set
           → S3 / API Gateway as today

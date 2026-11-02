@@ -33,7 +33,7 @@ import { Construct } from "constructs";
 //
 // Cloudflare origin lock (docs/plans/cloudflare-edge-protection.md):
 //   * When `siutindei.com` is proxied by Cloudflare, a Transform Rule adds
-//     `x-edge-verify: <secret>` to every request. Each viewer-request
+//     `x-proxy-verify: <secret>` to every request. Each viewer-request
 //     function on the distribution starts with the check in
 //     functions/public-www-edge-verify.js and returns 403 when the header
 //     does not match the environment's current or previous secret. Both
@@ -433,7 +433,7 @@ export class PublicWwwStack extends cdk.Stack {
       allowedPattern: EDGE_VERIFY_SECRET_PATTERN,
       description:
         `Cloudflare origin-lock secret for the ${label} public website. ` +
-        "Viewer requests without a matching x-edge-verify header are refused " +
+        "Viewer requests without a matching x-proxy-verify header are refused " +
         "and the CloudFront WAF is detached for this distribution. Empty " +
         "disables the check. When set: 32+ chars of [A-Za-z0-9+/=_-].",
     });

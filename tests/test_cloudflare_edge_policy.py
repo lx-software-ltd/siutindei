@@ -94,7 +94,7 @@ def test_policy_resolves_hostname_and_secret_placeholders():
     assert policy.hostname == "siutindei.com"
     assert policy.dns["name"] == "siutindei.com"
     transform = policy.rulesets["http_request_late_transform"]["rules"][0]
-    header = transform["action_parameters"]["headers"]["x-edge-verify"]
+    header = transform["action_parameters"]["headers"]["x-proxy-verify"]
     assert header["value"] == _SECRET
     assert policy.secrets == (_SECRET,)
     assert policy.missing == {}

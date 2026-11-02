@@ -26,21 +26,54 @@ function load({ current, previous }) {
   return (headers) => context.edgeVerifyRejection({ headers });
 }
 
+// CloudFront strips these before any edge function runs, so a header with
+// one of these names can never be checked by the function.
+// https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/edge-function-restrictions-all.html
+const CLOUDFRONT_DISALLOWED_HEADER = /^(x-edge-|x-amz-cf-|x-amzn-|x-accel-|x-cache$|x-real-ip$|x-forwarded-proto$)/i;
+
+function headerName() {
+  const match = template.match(/var EDGE_VERIFY_HEADER = '([^']+)'/);
+  assert.ok(match, 'EDGE_VERIFY_HEADER declaration not found');
+  return match[1];
+}
+
+test('uses a header name CloudFront exposes to functions', () => {
+  const name = headerName();
+  assert.equal(name, name.toLowerCase());
+  assert.doesNotMatch(name, CLOUDFRONT_DISALLOWED_HEADER);
+});
+
+test('uses the same header name Cloudflare sets in the edge policy', () => {
+  const policy = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        path.dirname(sourcePath),
+        '../../../../scripts/cloudflare/public_www_edge_policy.json',
+      ),
+      'utf8',
+    ),
+  );
+  const transform = policy.rulesets.http_request_late_transform.rules.find(
+    (rule) => rule.description === 'edge-verify-header',
+  );
+  assert.deepEqual(Object.keys(transform.action_parameters.headers), [headerName()]);
+});
+
 test('does nothing when both secrets are empty', () => {
   const check = load({ current: '', previous: '' });
   assert.equal(check({}), null);
-  assert.equal(check({ 'x-edge-verify': { value: 'anything' } }), null);
+  assert.equal(check({ 'x-proxy-verify': { value: 'anything' } }), null);
 });
 
 test('accepts the current secret', () => {
   const check = load({ current: CURRENT, previous: '' });
-  assert.equal(check({ 'x-edge-verify': { value: CURRENT } }), null);
+  assert.equal(check({ 'x-proxy-verify': { value: CURRENT } }), null);
 });
 
 test('accepts the previous secret during rotation', () => {
   const check = load({ current: CURRENT, previous: PREVIOUS });
-  assert.equal(check({ 'x-edge-verify': { value: PREVIOUS } }), null);
-  assert.equal(check({ 'x-edge-verify': { value: CURRENT } }), null);
+  assert.equal(check({ 'x-proxy-verify': { value: PREVIOUS } }), null);
+  assert.equal(check({ 'x-proxy-verify': { value: CURRENT } }), null);
 });
 
 test('refuses a missing, empty, or wrong header with an uncacheable 403', () => {
@@ -48,9 +81,9 @@ test('refuses a missing, empty, or wrong header with an uncacheable 403', () => 
   for (const headers of [
     {},
     undefined,
-    { 'x-edge-verify': { value: '' } },
-    { 'x-edge-verify': { value: `${CURRENT}x` } },
-    { 'x-edge-verify': { value: PREVIOUS } },
+    { 'x-proxy-verify': { value: '' } },
+    { 'x-proxy-verify': { value: `${CURRENT}x` } },
+    { 'x-proxy-verify': { value: PREVIOUS } },
   ]) {
     const response = check(headers);
     assert.equal(response.statusCode, 403);
@@ -61,7 +94,7 @@ test('refuses a missing, empty, or wrong header with an uncacheable 403', () => 
 test('enforces when only the previous secret is set', () => {
   const check = load({ current: '', previous: PREVIOUS });
   assert.equal(check({}).statusCode, 403);
-  assert.equal(check({ 'x-edge-verify': { value: PREVIOUS } }), null);
+  assert.equal(check({ 'x-proxy-verify': { value: PREVIOUS } }), null);
 });
 
 test('stays within the CloudFront Functions size budget with the largest body', () => {

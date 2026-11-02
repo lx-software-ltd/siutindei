@@ -94,7 +94,7 @@
           "action": "rewrite",
           "action_parameters": {
             "headers": {
-              "x-edge-verify": {
+              "x-proxy-verify": {
                 "operation": "set",
                 "value": "${PUBLIC_WWW_EDGE_VERIFY_SECRET}"
               }

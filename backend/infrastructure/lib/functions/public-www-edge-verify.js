@@ -4,7 +4,12 @@
 // way in (scripts/cloudflare/public_www_edge_policy.json), so a request
 // that reaches CloudFront without it did not come through Cloudflare.
 // Both placeholders empty disables the check.
-var EDGE_VERIFY_HEADER = 'x-edge-verify';
+//
+// The header name must stay outside CloudFront's disallowed set, which is
+// stripped before any edge function runs: X-Edge-*, X-Amz-Cf-*, X-Amzn-*,
+// X-Accel-*, X-Cache, X-Real-IP, X-Forwarded-Proto. A disallowed name makes
+// every request look unauthenticated and takes the site down.
+var EDGE_VERIFY_HEADER = 'x-proxy-verify';
 var EDGE_VERIFY_SECRETS = [
   '__EDGE_VERIFY_SECRET__',
   '__EDGE_VERIFY_SECRET_PREVIOUS__',
