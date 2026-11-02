@@ -44,6 +44,11 @@ export interface PythonLambdaProps {
   securityGroups?: ec2.ISecurityGroup[];
   /** Extra paths (relative to backend root) to copy. */
   extraCopyPaths?: string[];
+  /**
+   * Requirements file under the backend root. Search uses
+   * requirements-core.txt. Defaults to requirements.txt.
+   */
+  requirementsFile?: string;
   /** Custom code asset (overrides default bundling). */
   code?: lambda.Code;
   /**
@@ -84,7 +89,12 @@ export class PythonLambda extends Construct {
 
     const sourceRoot = path.join(__dirname, "../../../");
     const extraCopyPaths = normalizeExtraCopyPaths(props.extraCopyPaths);
-    const localBundleBase = path.join(sourceRoot, ".lambda-build", "base");
+    const requirementsFile = normalizeRequirementsFile(props.requirementsFile);
+    const localBundleBase = path.join(
+      sourceRoot,
+      ".lambda-build",
+      localBundleName(requirementsFile)
+    );
     const cleanupCommands = [
       "find /asset-output -type d -name __pycache__ -prune -exec rm -rf {} +",
       'find /asset-output -type f -name "*.pyc" -delete',
@@ -93,8 +103,8 @@ export class PythonLambda extends Construct {
     const copyCommands = [
       "PYTHONDONTWRITEBYTECODE=1 python -m pip install --upgrade " +
         "pip==25.3 --no-warn-script-location",
-      "PYTHONDONTWRITEBYTECODE=1 python -m pip install -r requirements.txt " +
-        "-t /asset-output --no-compile",
+      "PYTHONDONTWRITEBYTECODE=1 python -m pip install -r " +
+        `"${requirementsFile}" -t /asset-output --no-compile`,
       "cp -au lambda /asset-output/lambda",
       "cp -au src /asset-output/src",
       ...extraCopyPaths.map(
@@ -102,6 +112,30 @@ export class PythonLambda extends Construct {
       ),
       ...cleanupCommands,
     ];
+
+    function normalizeRequirementsFile(value: string | undefined): string {
+      const name = (value ?? "requirements.txt").trim();
+      if (
+        name !== "requirements.txt" &&
+        name !== "requirements-core.txt" &&
+        name !== "requirements-admin.txt"
+      ) {
+        throw new Error(
+          "Requirements file must be a backend requirements profile."
+        );
+      }
+      return name;
+    }
+
+    function localBundleName(fileName: string): string {
+      if (fileName === "requirements-core.txt") {
+        return "search";
+      }
+      if (fileName === "requirements-admin.txt") {
+        return "admin";
+      }
+      return "base";
+    }
 
     function normalizeExtraCopyPaths(
       paths: string[] | undefined
@@ -129,9 +163,16 @@ export class PythonLambda extends Construct {
 
     function tryLocalBundle(outputDir: string): boolean {
       if (!fs.existsSync(localBundleBase)) {
+        const profileFlag =
+          requirementsFile === "requirements-core.txt"
+            ? " --profile search"
+            : requirementsFile === "requirements-admin.txt"
+              ? " --profile admin"
+              : "";
         throw new Error(
           "Local Lambda bundle missing. Run `python3 " +
-            "backend/scripts/build_lambda_bundle.py` first."
+            `backend/scripts/build_lambda_bundle.py${profileFlag}` +
+            "` first."
         );
       }
       fs.cpSync(localBundleBase, outputDir, { recursive: true });

@@ -1084,6 +1084,7 @@ export class ApiStack extends cdk.Stack {
         environment?: Record<string, string>;
         timeout?: cdk.Duration;
         extraCopyPaths?: string[];
+        requirementsFile?: string;
         securityGroups?: ec2.ISecurityGroup[];
         memorySize?: number;
         // Set to true for functions that need internet access but not database
@@ -1102,6 +1103,7 @@ export class ApiStack extends cdk.Stack {
         environment: props.environment,
         timeout: props.timeout,
         extraCopyPaths: props.extraCopyPaths,
+        requirementsFile: props.requirementsFile,
         securityGroups: props.noVpc ? undefined : (props.securityGroups ?? [lambdaSecurityGroup]),
         memorySize: props.memorySize,
         reservedConcurrentExecutions: props.reservedConcurrentExecutions,
@@ -1353,6 +1355,7 @@ export class ApiStack extends cdk.Stack {
     const searchFunction = createPythonFunction("SiutindeiSearchFunction", {
       handler: "lambda/search/handler.lambda_handler",
       extraCopyPaths: ["fixtures"],
+      requirementsFile: "requirements-core.txt",
       memorySize: 1024,
       environment: {
         DATABASE_SECRET_ARN: database.appUserSecret.secretArn,

@@ -58,5 +58,6 @@ ensure_staging_search_fixture
 
 PYTHON_BIN="$(resolve_python312)"
 "$PYTHON_BIN" "$SCRIPT_DIR/build_lambda_bundle.py"
+"$PYTHON_BIN" "$SCRIPT_DIR/build_lambda_bundle.py" --profile search
 cd "$SCRIPT_DIR/../infrastructure"
 npx ts-node --prefer-ts-exts bin/app.ts

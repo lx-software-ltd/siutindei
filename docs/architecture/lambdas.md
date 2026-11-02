@@ -23,10 +23,9 @@ their primary responsibilities.
   `backend/.lambda-build/admin`. Admin adds alembic, PyJWT, pycountry,
   pypdf, and phonenumberslite (imported as `phonenumbers`).
 - `backend/requirements.txt` includes the admin set, so the default
-  single-bundle path (`.lambda-build/base`) still has admin dependencies.
-  The CDK Python Lambda factory still installs that default file for
-  every function, including search. A search deploy therefore still
-  ships the admin set until the factory selects `--profile search`.
+  bundle (`.lambda-build/base`) still has admin dependencies. The search
+  function sets `requirementsFile` to `requirements-core.txt` and stages
+  `.lambda-build/search`. Other functions keep the default file.
   `extraCopyPaths` stay under the backend root.
 
 ## API Gateway Lambdas
