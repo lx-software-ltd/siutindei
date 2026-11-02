@@ -38,6 +38,17 @@ jobs:
           channel: "stable"
           cache: true
 
+      # ubuntu-latest's default JDK is 25. Gradle 8.14 refuses to start on it.
+      # The app compiles as Java 17, which Gradle 8.14 can run.
+      - name: Set up Java 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Point Flutter at Java 17
+        run: flutter config --jdk-dir "$JAVA_HOME"
+
       - name: Configure Android signing
         run: |
           if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ]; then
