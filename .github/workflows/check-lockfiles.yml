@@ -108,18 +108,49 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
-          path = Path("backend/requirements.txt")
-          if not path.exists():
+          backend = Path("backend").resolve()
+          start = backend / "requirements.txt"
+          if not start.exists():
               raise SystemExit("backend/requirements.txt is missing")
 
-          errors = []
-          for line in path.read_text(encoding="utf-8").splitlines():
-              stripped = line.strip()
-              if not stripped or stripped.startswith("#"):
-                  continue
-              if "==" not in stripped:
-                  errors.append(stripped)
+          def include_path(line: str) -> str | None:
+              if line.startswith("-r ") or line.startswith("--requirement "):
+                  return line.split(None, 1)[1]
+              if line.startswith("-r="):
+                  return line[3:]
+              if line.startswith("--requirement="):
+                  return line.split("=", 1)[1]
+              return None
 
+          errors: list[str] = []
+          seen: set[Path] = set()
+
+          def check_file(path: Path) -> None:
+              resolved = path.resolve()
+              try:
+                  resolved.relative_to(backend)
+              except ValueError:
+                  errors.append(f"include escapes backend/: {path}")
+                  return
+              if resolved in seen:
+                  errors.append(f"circular include: {path}")
+                  return
+              if not path.exists():
+                  errors.append(f"missing include: {path}")
+                  return
+              seen.add(resolved)
+              for line in path.read_text(encoding="utf-8").splitlines():
+                  stripped = line.strip()
+                  if not stripped or stripped.startswith("#"):
+                      continue
+                  included = include_path(stripped)
+                  if included is not None:
+                      check_file(path.parent / included)
+                      continue
+                  if "==" not in stripped:
+                      errors.append(f"{path}: {stripped}")
+
+          check_file(start)
           if errors:
               print("Unpinned requirements found:")
               for entry in errors:
