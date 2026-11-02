@@ -18,7 +18,7 @@
     "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.104.4",
+    "@tanstack/react-query": "^5.104.5",
     "amazon-cognito-identity-js": "^6.3.22",
     "clsx": "^2.1.1",
     "currency-codes": "^2.2.0",
