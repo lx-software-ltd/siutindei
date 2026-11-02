@@ -1,6 +1,10 @@
 # Plan: Cloudflare edge protection for the public website
 
-**Status**: Draft (nothing applied, nothing committed)
+**Status**: In progress. Rollout steps 1-5 applied to the live zone on
+2026-11-02 (settings, four rulesets, AI-bot block, apex proxied); the
+CloudFront origin lock (step 7) activates with the first `PublicWwwStack`
+deploy after this branch merges, because `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY`
+is already set.
 **Zone**: red (touches `backend/infrastructure/**`); the Cloudflare policy
 tool, the public website, and the docs are green.
 
@@ -219,7 +223,8 @@ Cloudflare rule is decorative for anyone who finds it.
 
 ## Rollout order
 
-Each step is independently reversible. Nothing here is applied yet.
+Each step is independently reversible. Steps 1-5 are applied; step 6
+(observation) is running; steps 7-9 are pending.
 
 1. **Token.** Create a Cloudflare API token scoped to zone
    `siutindei.com` with Zone Settings:Edit, DNS:Edit, Zone WAF:Edit,
