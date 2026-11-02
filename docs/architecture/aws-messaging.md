@@ -37,12 +37,14 @@ Ticket submissions are processed asynchronously using SNS + SQS messaging. This 
 - Subscribes to SNS topic
 - 60 second visibility timeout (6x Lambda timeout)
 - 3 retry attempts before DLQ
-- SQS-managed encryption
+- Encrypted with the shared customer-managed SQS KMS key (the SNS topic
+  uses the same key)
 
 ### Dead Letter Queue: `lxsoftware-siutindei-manager-request-dlq`
 
 - Receives messages that fail processing 3 times
 - 14 day retention for debugging
+- Encrypted with the shared SQS KMS key
 - CloudWatch alarm triggers when messages arrive
 
 ### Processor Lambda: `ManagerRequestProcessor`
@@ -140,7 +142,7 @@ backfills one day.
 | File | Description |
 |------|-------------|
 | `backend/infrastructure/lib/api-stack.ts` | CDK infrastructure |
-| `backend/src/app/api/admin.py` | API handler with SNS publish |
+| `backend/src/app/api/admin_tickets.py`, `admin_suggestions.py`, `admin_feedback.py` | Submission handlers that publish to SNS |
 | `backend/lambda/manager_request_processor/handler.py` | SQS processor |
 | `backend/src/app/db/repositories/ticket.py` | Repository with `find_by_ticket_id` |
 

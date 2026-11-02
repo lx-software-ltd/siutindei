@@ -66,7 +66,7 @@ their primary responsibilities.
   `full`). Card omits descriptions, description translations, manager
   id, and place id, and keeps the first media URL and first weekly entry.
 - Memory: 1024 MB
-- DB access: RDS Proxy with IAM auth (`activities_app`). Production always
+- DB access: RDS Proxy with IAM auth (`siutindei_app`). Production always
   queries Aurora (`STAGING_SEARCH_DATA_ENABLED=false` on the Lambda).
   The engine for IAM auth is reused for 10 minutes with one connection.
 - Environment:
@@ -208,8 +208,8 @@ their primary responsibilities.
 - Hosts the organization review queue (Catalog) and import-job history. Shapes
   are in `docs/api/admin.yaml`.
 - Hosts data-quality routes under `/v1/admin/org-duplicates`,
-  `/v1/admin/name-fixes`, and `/v1/admin/location-fixes` (admin group
-  only). These families share one `/v1/admin/{proxy+}` method so the
+  `/v1/admin/name-fixes`, `/v1/admin/location-fixes`, and
+  `/v1/admin/translation-fixes` (admin group only). These families share one `/v1/admin/{proxy+}` method so the
   stack stays within the CloudFormation 500-resource cap. Partner
   venue reads and writes use the existing `/v1/partner/{proxy+}`.
   Get-by-id for a duplicate group, a name proposal, or a venue
@@ -234,7 +234,7 @@ their primary responsibilities.
 - Trigger: API Gateway `GET /health`
 - Auth: IAM
 - Purpose: service health and configuration checks
-- DB access: RDS Proxy with IAM auth (`activities_app`)
+- DB access: RDS Proxy with IAM auth (`siutindei_app`)
 
 ## Auth and security Lambdas
 

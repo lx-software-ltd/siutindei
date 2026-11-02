@@ -34,12 +34,19 @@ The `main` branch requires protection as it triggers production deployments.
 
 ### Required Status Checks
 
-These workflows must pass before merging to `main`:
+GitHub matches required checks by job name. `verify_github_rulesets.py`
+only asks for at least one required check whose name contains `lint` and
+one that contains `test` (case-insensitive). The job names are:
 
-| Check | Workflow | Purpose |
-|-------|----------|---------|
-| `lint` | `.github/workflows/lint.yml` | Code style and linting |
-| `test` | `.github/workflows/test.yml` | Unit and integration tests |
+| Workflow | Job names |
+|----------|-----------|
+| `.github/workflows/lint.yml` | `Validate agent harness`, `Lint Dart`, `Lint React`, `Lint Python`, `Lint CDK` |
+| `.github/workflows/test.yml` | `PII denylist`, `Test Flutter`, `Test Node`, `Test Python`, `Test Infrastructure` |
+
+Require the job names, not the workflow names. As of 2026-11-02 the
+`main-protection` ruleset exists but its enforcement is `disabled` and it
+lists no required status checks, so the weekly verify job fails until an
+admin fixes both.
 
 ---
 
@@ -108,7 +115,7 @@ Release tags should be protected from modification or deletion.
      - ✅ Dismiss stale pull request approvals when new commits are pushed
    - ✅ Require status checks to pass
      - ✅ Require branches to be up to date before merging
-     - Add checks: `lint`, `test`
+     - Add checks: `Lint Python`, `Test Python` (add other job names as needed)
    - ✅ Block force pushes
 5. Click **Create**
 
@@ -143,8 +150,8 @@ gh api repos/{owner}/{repo}/rulesets \
   --field 'rules[2][parameters][dismiss_stale_reviews_on_push]=true' \
   --field 'rules[][type]=required_status_checks' \
   --field 'rules[3][parameters][strict_required_status_checks_policy]=true' \
-  --field 'rules[3][parameters][required_status_checks][][context]=lint' \
-  --field 'rules[3][parameters][required_status_checks][][context]=test'
+  --field 'rules[3][parameters][required_status_checks][][context]=Lint Python' \
+  --field 'rules[3][parameters][required_status_checks][][context]=Test Python'
 
 # Tag protection for releases
 gh api repos/{owner}/{repo}/rulesets \

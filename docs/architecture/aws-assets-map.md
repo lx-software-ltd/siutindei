@@ -73,8 +73,8 @@ Created once per account/region when `cdk bootstrap` runs. Not part of the main 
 
 | Resource Type | Logical ID | Physical Name/ID | Notes |
 |--------------|------------|------------------|-------|
-| Security Group | `LambdaSecurityGroup` | `lxsoftware-siutindei-lambda-sg` | For Lambda functions (RETAIN policy) |
-| Security Group | `MigrationSecurityGroup` | `lxsoftware-siutindei-migration-sg` | For migration Lambda (RETAIN policy) |
+| Security Group | `LambdaSecurityGroup` | `lxsoftware-siutindei-lambda-sg` | For Lambda functions (retained on replacement) |
+| Security Group | `MigrationSecurityGroup` | `lxsoftware-siutindei-migration-sg` | For migration Lambda (retained on replacement) |
 | Security Group | `DatabaseSecurityGroup` | `lxsoftware-siutindei-db-sg` | For Aurora cluster |
 | Security Group | `ProxySecurityGroup` | `lxsoftware-siutindei-proxy-sg` | For RDS Proxy |
 
@@ -217,7 +217,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 
 | Function Logical ID | Handler | Memory | Timeout | VPC | Extra Paths |
 |---------------------|---------|--------|---------|-----|-------------|
-| `SiutindeiSearchFunction` | `lambda/search/handler.lambda_handler` | 512 MB | 30s | Yes | - |
+| `SiutindeiSearchFunction` | `lambda/search/handler.lambda_handler` | 1024 MB | 30s | Yes | - |
 | `SiutindeiAdminFunction` | `lambda/admin/handler.lambda_handler` | 1024 MB | 120s | Yes | Also consumes the category-suggestion SQS queue |
 | `SiutindeiMigrationFunction` | `lambda/migrations/handler.lambda_handler` | 512 MB | 5 min | Yes | `db` |
 | `HealthCheckFunction` | `lambda/health/handler.lambda_handler` | 256 MB | 10s | Yes | - |
@@ -230,13 +230,14 @@ Each Lambda function created by `PythonLambda` construct includes:
 | `AuthDefineChallengeFunction` | `lambda/auth/define_auth_challenge/handler.lambda_handler` | 256 MB | 10s | No | Cognito trigger |
 | `AuthCreateChallengeFunction` | `lambda/auth/create_auth_challenge/handler.lambda_handler` | 256 MB | 10s | No | Cognito trigger, SES permissions |
 | `AuthVerifyChallengeFunction` | `lambda/auth/verify_auth_challenge/handler.lambda_handler` | 256 MB | 10s | No | Cognito trigger |
+| `AuthPostAuthFunction` | `lambda/auth/post_authentication/handler.lambda_handler` | 256 MB | 10s | No | Cognito post-authentication trigger; `AdminUpdateUserAttributes` |
 
 ### Authorizer Functions
 
 | Function Logical ID | Handler | Memory | Timeout | VPC | Notes |
 |---------------------|---------|--------|---------|-----|-------|
 | `DeviceAttestationAuthorizer` | `lambda/authorizers/device_attestation/handler.lambda_handler` | 256 MB | 5s | No | Device attestation authorizer |
-| `AdminGroupAuthorizerFunction` | `lambda/authorizers/cognito_group/handler.lambda_handler` | 256 MB | 5s | No | Admin group authorizer; importer group on import POST/presign only |
+| `AdminGroupAuthorizerFunction` | `lambda/authorizers/cognito_group/handler.lambda_handler` | 256 MB | 5s | No | Admin group authorizer; importer group on catalog import, import history, owner-UI organization lookup and PATCH, and organization enrichment GET/POST |
 | `ManagerGroupAuthorizerFunction` | `lambda/authorizers/cognito_group/handler.lambda_handler` | 256 MB | 5s | No | Manager group authorizer |
 | `UserAuthorizerFunction` | `lambda/authorizers/cognito_user/handler.lambda_handler` | 256 MB | 5s | No | Any-user authorizer |
 | `PartnerApiKeyAuthorizerFunction` | `lambda/authorizers/api_key/handler.lambda_handler` | 256 MB | 10s | Yes | Partner API-key authorizer (DB lookup via RDS Proxy) |
@@ -283,7 +284,7 @@ For each function above, the following resources are created:
 | `SiutindeiSearchFunction` | Read DB secret, connect to RDS Proxy as `siutindei_app` |
 | `PartnerApiKeyAuthorizerFunction` | Read app DB secret, connect to RDS Proxy as `siutindei_app` |
 | `SiutindeiAdminFunction` | Read DB secret, connect to RDS Proxy as `siutindei_admin`, invoke `AwsApiProxyFunction`, read the OpenRouter secret, send to and consume the category suggestion queue, SNS publish to manager request topic, SES send email, S3 read/write for org media and admin import/export |
-| `AwsApiProxyFunction` | Cognito admin operations (`ListUsers`, `AdminGetUser`, `AdminDeleteUser`, `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `AdminUserGlobalSignOut`); `s3:PutObject` on `organizations/*/enrichment/*` |
+| `AwsApiProxyFunction` | Cognito admin operations (`ListUsers`, `AdminGetUser`, `AdminDeleteUser`, `AdminCreateUser`, `AdminSetUserPassword`, `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `ListUsersInGroup`, `AdminUserGlobalSignOut`, `AdminUpdateUserAttributes`); `s3:PutObject` on `organizations/*/enrichment/*` |
 | `SiutindeiMigrationFunction` | Read DB secret, direct connect to Aurora as `postgres`, Cognito user management, CloudFormation invoke permission |
 | `HealthCheckFunction` | Read DB secret, connect to RDS Proxy as `siutindei_app` |
 | `AuthCreateChallengeFunction` | SES `SendEmail`, `SendRawEmail` for the configured email address |
@@ -320,8 +321,8 @@ For each function above, the following resources are created:
   [`public-www.md`](./public-www.md#search-api-edge-caching).
 
 **CORS Configuration:**
-- Allowed Origins: From `CORS_ALLOWED_ORIGINS` env var or context, defaults to `capacitor://localhost`, `ionic://localhost`, `http://localhost`
-- Allowed Methods: `GET`, `OPTIONS`
+- Allowed Origins: From `CORS_ALLOWED_ORIGINS` env var or context, defaults to `capacitor://localhost`, `ionic://localhost`, `http://localhost`, `http://localhost:3000`, `https://siutindei.lx-software.com`, `https://siutindei-api.lx-software.com`
+- Allowed Methods: `GET`, `OPTIONS`, `POST`, `PUT`, `PATCH`, `DELETE`
 
 ### API Gateway Resources and Methods
 
@@ -334,20 +335,23 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/health` | GET | IAM | `HealthCheckFunction` | Health check |
 | `/v1/activities/search` | GET | Device Attestation + API Key | `SiutindeiSearchFunction` | Website behavior has a 5-min TTL, but the Lambda's `no-store` header currently disables edge caching |
 | `/v1/listing-events` | POST | Device Attestation + API Key | `ListingEventsIngestFunction` | First-party funnel ingest; never cached |
-| `/v1/admin/{resource}` | GET, POST | Admin Group | `SiutindeiAdminFunction` | CRUD (orgs, locations, activities, pricing, schedules) |
-| `/v1/admin/{resource}/{id}` | GET, PUT, DELETE | Admin Group | `SiutindeiAdminFunction` | CRUD by ID |
+| `/v1/admin/{resource}` | GET, POST | Admin Group | `SiutindeiAdminFunction` | CRUD (organizations, locations, activity-categories, activities, pricing, schedules, feedback-labels, organization-feedback) |
+| `/v1/admin/{resource}/{id}` | ANY | Admin Group | `SiutindeiAdminFunction` | CRUD by ID |
 | `/v1/admin/organizations/{id}/media` | POST, DELETE | Admin Group | `SiutindeiAdminFunction` | Media upload/delete |
-| `/v1/admin/users/{username}/groups` | POST, DELETE | Admin Group | `SiutindeiAdminFunction` | Group management |
-| `/v1/admin/cognito-users` | GET, POST | Admin Group | `SiutindeiAdminFunction` | List Cognito users, or ensure a manager account by email |
+| `/v1/admin/users/{username}/groups` | ANY | Admin Group | `SiutindeiAdminFunction` | Group management |
+| `/v1/admin/cognito-users` | ANY | Admin Group | `SiutindeiAdminFunction` | List Cognito users, or ensure a manager account by email |
 | `/v1/admin/cognito-users/{username}` | DELETE | Admin Group | `SiutindeiAdminFunction` | Delete Cognito user |
 | `/v1/admin/tickets` | GET | Admin Group | `SiutindeiAdminFunction` | List access requests, place suggestions, and feedback tickets |
 | `/v1/admin/tickets/{id}` | PUT | Admin Group | `SiutindeiAdminFunction` | Decide a ticket |
 | `/v1/admin/audit-logs` | GET | Admin Group | `SiutindeiAdminFunction` | List audit logs |
 | `/v1/admin/audit-logs/{id}` | GET | Admin Group | `SiutindeiAdminFunction` | Get audit log entry |
-| `/v1/admin/imports` | GET | Admin Group | `SiutindeiAdminFunction` | Import job history |
+| `/v1/admin/imports` | GET, POST | Admin Group | `SiutindeiAdminFunction` | Import job history; run an import |
+| `/v1/admin/imports/presign` | POST | Admin Group | `SiutindeiAdminFunction` | Presigned upload URL for an import file |
+| `/v1/admin/imports/export` | GET | Admin Group | `SiutindeiAdminFunction` | Catalog export |
+| `/v1/admin/imports/{id}` | GET | Admin Group | `SiutindeiAdminFunction` | Import job detail |
 | `/v1/admin/org-review` | GET | Admin Group | `SiutindeiAdminFunction` | Organization review queue |
 | `/v1/admin/org-review/{proxy+}` | ANY | Admin Group | `SiutindeiAdminFunction` | Summary, detail, decision, bulk |
-| `/v1/admin/{proxy+}` | ANY | Admin Group | `SiutindeiAdminFunction` | Greedy proxy for data-quality routes (`org-duplicates`, `name-fixes`). Explicit admin resources still win. One method stays under the CloudFormation resource cap. |
+| `/v1/admin/{proxy+}` | ANY | Admin Group | `SiutindeiAdminFunction` | Greedy proxy for `org-duplicates`, `name-fixes`, `location-fixes`, `translation-fixes`, `data-quality`, `deleted-organizations`, `import-settings`, `enrichment-settings`, and `versions`. Explicit admin resources still win. One method stays under the CloudFormation resource cap. |
 | `/v1/admin/api-keys` | GET, POST | Admin Group | `SiutindeiAdminFunction` | Partner API key management |
 | `/v1/admin/api-keys/{id}` | GET, DELETE | Admin Group | `SiutindeiAdminFunction` | Get / revoke partner API key |
 | `/v1/manager/{resource}` | GET, POST | Manager Group | `SiutindeiAdminFunction` | Filtered CRUD |
@@ -357,6 +361,12 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/partner/{proxy+}` | ANY | Partner API Key | `SiutindeiAdminFunction` | Greedy proxy for remaining partner CRUD (orgs, locations, activities/{id}, pricing, schedules), `GET /name-fixes`, `GET`/`POST /category-reviews`, and `GET`/`DELETE /activity-categories`; scope/org enforced in Lambda. Review writes and category routes require a full-access key. |
 | `/v1/user/access-request` | GET, POST | User Auth | `SiutindeiAdminFunction` | Access request |
 | `/v1/user/organization-suggestion` | GET, POST | User Auth | `SiutindeiAdminFunction` | Org suggestion |
+| `/v1/user/organization-feedback` | GET, POST | User Auth | `SiutindeiAdminFunction` | Organization feedback |
+| `/v1/user/feedback-labels` | GET | User Auth | `SiutindeiAdminFunction` | Feedback labels |
+| `/v1/user/organizations` | GET | User Auth | `SiutindeiAdminFunction` | Organization lookup |
+| `/v1/user/areas` | GET | User Auth | `SiutindeiAdminFunction` | Geographic areas |
+| `/v1/user/activity-categories` | GET | User Auth | `SiutindeiAdminFunction` | Activity categories |
+| `/v1/user/address-search` | GET | User Auth | `SiutindeiAdminFunction` | Address search |
 
 ### API Gateway Gateway Responses
 
@@ -373,7 +383,7 @@ read error status codes instead of silently blocking them.
 | Resource Type | Logical ID | Type | Handler | Notes |
 |--------------|------------|------|---------|-------|
 | Request Authorizer | `DeviceAttestationRequestAuthorizer` | Lambda | `DeviceAttestationAuthorizer` | Validates `x-device-attestation` header, no caching |
-| Request Authorizer | `AdminGroupAuthorizer` | Lambda | `AdminGroupAuthorizerFunction` | JWT + admin group, or importer on import POST/presign, 5-min cache |
+| Request Authorizer | `AdminGroupAuthorizer` | Lambda | `AdminGroupAuthorizerFunction` | JWT + admin group, or importer on catalog import, import history, owner-UI organization lookup and PATCH, and organization enrichment GET/POST, 5-min cache |
 | Request Authorizer | `ManagerGroupAuthorizer` | Lambda | `ManagerGroupAuthorizerFunction` | JWT + admin/manager group check, 5-min cache |
 | Request Authorizer | `UserAuthorizer` | Lambda | `UserAuthorizerFunction` | JWT validation (any user), 5-min cache |
 | Request Authorizer | `PartnerApiKeyAuthorizer` | Lambda | `PartnerApiKeyAuthorizerFunction` | Validates `x-partner-key` against hashed DB keys, 5-min cache |
@@ -434,6 +444,12 @@ parameters. They were moved there by a one-off stack refactor, recorded in
 | CloudWatch Alarm | `lxsoftware-siutindei-search-lambda-duration-p99-alarm` | Search Lambda p99 `Duration` ≥ 3 s for 15 min |
 | CloudWatch Alarm | `lxsoftware-siutindei-search-lambda-errors-alarm` | Search Lambda errors ≥ 3 in 5 min |
 | CloudWatch Alarm | `lxsoftware-siutindei-search-lambda-throttles-alarm` | Search Lambda throttles ≥ 1 |
+| CloudWatch Alarm | `lxsoftware-siutindei-listingeventsingest-lambda-duration-p99-alarm` | Listing-events ingest Lambda p99 `Duration` ≥ 2 s for 15 min |
+| CloudWatch Alarm | `lxsoftware-siutindei-listingeventsingest-lambda-errors-alarm` | Listing-events ingest Lambda errors ≥ 3 in 5 min |
+| CloudWatch Alarm | `lxsoftware-siutindei-listingeventsingest-lambda-throttles-alarm` | Listing-events ingest Lambda throttles ≥ 1 |
+| CloudWatch Alarm | `lxsoftware-siutindei-listingeventsrollup-lambda-duration-p99-alarm` | Listing-events rollup Lambda p99 `Duration` ≥ 15 s for 15 min |
+| CloudWatch Alarm | `lxsoftware-siutindei-listingeventsrollup-lambda-errors-alarm` | Listing-events rollup Lambda errors ≥ 3 in 5 min |
+| CloudWatch Alarm | `lxsoftware-siutindei-listingeventsrollup-lambda-throttles-alarm` | Listing-events rollup Lambda throttles ≥ 1 |
 | CloudWatch Alarm | `lxsoftware-siutindei-admin-lambda-duration-p99-alarm` | Admin Lambda p99 `Duration` ≥ 90 s for 15 min (75% of the 120 s timeout; expected OpenRouter scan/enrich batches are 10–90 s). HTTP latency is the API Gateway p99 alarm. |
 | CloudWatch Alarm | `lxsoftware-siutindei-admin-lambda-errors-alarm` | Admin Lambda errors ≥ 3 in 5 min |
 | CloudWatch Alarm | `lxsoftware-siutindei-admin-lambda-throttles-alarm` | Admin Lambda throttles ≥ 1 |
@@ -523,6 +539,8 @@ resource silently.
 | `CognitoDomainPrefix` | String | Yes | No | Hosted UI domain prefix |
 | `CognitoCallbackUrls` | CommaDelimitedList | Yes | No | OAuth callback URLs |
 | `CognitoLogoutUrls` | CommaDelimitedList | Yes | No | OAuth logout URLs |
+| `CognitoCustomDomainName` | String | No | No | Custom Hosted UI domain (default: empty) |
+| `CognitoCustomDomainCertificateArn` | String | No | No | ACM certificate ARN for the custom Hosted UI domain (us-east-1) |
 | `GoogleClientId` | String | Yes | No | Google OAuth client ID |
 | `GoogleClientSecret` | String | Yes | Yes | Google OAuth client secret |
 | `AppleClientId` | String | Yes | No | Apple Services ID |
@@ -541,7 +559,9 @@ resource silently.
 | `DeviceAttestationIssuer` | String | No | No | Expected issuer (default: empty) |
 | `DeviceAttestationAudience` | String | No | No | Expected audience (default: empty) |
 | `DeviceAttestationFailClosed` | String | No | No | Fail-closed mode (default: `true`, allowed: `true`/`false`) |
+| `ActiveCountryCodes` | String | No | No | Comma-separated ISO country codes kept active in `geographic_areas` (default: `HK`) |
 | `RunSeedData` | String | No | No | Run seed data after migrations (default: `false`) |
+| `FeedbackStarsPerApproval` | Number | No | No | Stars awarded per approved feedback entry (default: 1) |
 | `FallbackManagerEmail` | String | No | No | Fallback manager email for migration |
 | `SupportEmail` | String | No | No | Email to receive manager request notifications |
 | `SesSenderEmail` | String | No | No | SES-verified sender email for notifications |
@@ -550,6 +570,13 @@ resource silently.
 | `ApiCustomDomainCertificateArn` | String | No | No | ACM certificate ARN for API custom domain |
 | `AdminBootstrapEmail` | String | No | No | Admin email for bootstrap (default: empty) |
 | `AdminBootstrapTempPassword` | String | No | Yes | Temporary password for bootstrap (default: empty) |
+| `NominatimUserAgent` | String | No | No | User-Agent header for Nominatim address lookups |
+| `NominatimReferer` | String | No | No | Referer header for Nominatim address lookups |
+| `GooglePlacesApiKey` | String | No | Yes | Places API (New) key for pin lookup. Empty disables Google lookup |
+| `MetaGraphApiKey` | String | No | Yes | Meta Graph token for Facebook and Instagram logos. Empty skips social logos |
+| `MetaInstagramUserId` | String | No | No | Instagram professional account id for Business Discovery logos |
+| `BoardCatalogManagerId` | String | No | No | Cognito sub that importer-only tokens must use as `manager_id` (default: empty) |
+| `OrgReviewGateEnabled` | String | No | No | When `true`, public search hides organizations not yet approved (default: `false`) |
 | `OpenRouterApiKey` | String | No | Yes | OpenRouter key stored in Secrets Manager (default: empty) |
 | `OpenRouterChatCompletionsUrl` | String | No | No | Chat completions URL allowed on the HTTP proxy |
 | `OpenRouterModel` | String | No | No | Default model when admin settings leave the model blank |
@@ -644,12 +671,20 @@ Tags are **not guaranteed** on the following:
 
 ## Resource Retention Policies
 
-The following resources have **RETAIN** deletion policy (survive stack deletion):
+These API stack resources have a **RETAIN** removal policy and survive
+stack deletion:
 
-- `LambdaSecurityGroup`
-- `MigrationSecurityGroup`
+- `OrganizationImagesBucket` and `OrganizationImagesLogBucket` (when created, not imported)
+- `AdminImportExportBucket` and `AdminImportExportLogBucket`
+- Every Lambda log group created by `PythonLambda`
+- The API WAF log group (`aws-waf-logs-lxsoftware-siutindei-api`)
 
-All other resources are deleted when the stack is deleted (unless they are imported/existing resources).
+`LambdaSecurityGroup` and `MigrationSecurityGroup` set only
+`UpdateReplacePolicy: Retain`, so a replacement keeps the old group, but
+stack deletion removes them. The Aurora cluster has deletion protection.
+KMS keys use the CDK default (retain). The Cognito user pool is
+`DESTROY`. The admin web, public website, and WAF stacks retain their
+own buckets and log groups.
 
 ---
 
@@ -670,7 +705,10 @@ that don't reference the rest of the stack belong in a nested stack.
 3. **Existing Resources**: The workflow detects and imports existing VPC, database, and security group resources to avoid recreation.
 4. **CDK Bootstrap**: Required once per account/region. The workflow runs `cdk bootstrap` if needed.
 5. **Lambda Bundling**: Lambda code is bundled during `cdk synth` using
-   Docker or local bundle from `.lambda-build/base`. Python dependencies are
-   cached under `.lambda-build/deps-cache` and reused across synth runs until
-   `backend/requirements.txt` changes. Cache pruning keeps only the most
-   recent dependency cache keys.
+   Docker or a local bundle. There is one bundle per requirements profile:
+   `.lambda-build/base` (`requirements.txt`), `.lambda-build/search`
+   (`requirements-core.txt`), and `.lambda-build/admin`
+   (`requirements-admin.txt`). `backend/scripts/build_lambda_bundle.py`
+   caches dependencies under `.lambda-build/deps-cache`, keyed by a hash of
+   the selected requirements file. Cache pruning keeps only the most recent
+   dependency cache keys.

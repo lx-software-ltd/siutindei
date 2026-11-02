@@ -201,7 +201,8 @@ The `importer` Cognito group can call catalog import and owner-UI
 listing routes: `POST /v1/admin/imports`,
 `POST /v1/admin/imports/presign`, `GET /v1/admin/imports/{job_id}`,
 `GET /v1/admin/organizations` (lookup by `place_id` or `source_id`
-only; a full list is 403), and `PATCH /v1/admin/organizations/{id}`.
+only; a full list is 403), `GET` and `PATCH /v1/admin/organizations/{id}`,
+and `GET`/`POST /v1/admin/organizations/{id}/enrichment`.
 Those routes reuse `AdminGroupAuthorizer` with `IMPORTER_GROUP` so a
 second authorizer Lambda is not required (CloudFormation 500-resource
 cap). An importer Allow policy lists those method ARNs only — it does
@@ -244,6 +245,11 @@ The cache key includes all query strings but **no** request headers, so a
 single cached response is shared across callers (no per-token cache
 fragmentation, no leakage of caller-specific data).
 
+The search Lambda currently returns `Cache-Control: no-store`, so
+CloudFront does not cache these responses and every request reaches the
+origin checks. See
+[`public-www.md`](./public-www.md#search-api-edge-caching).
+
 ---
 
 ## API Security
@@ -258,23 +264,24 @@ defaultCorsPreflightOptions: {
   allowOrigins: apigateway.Cors.ALL_ORIGINS,
 }
 
-// GOOD - restrict to specific origins
-const corsAllowedOrigins = new cdk.CfnParameter(this, "CorsAllowedOrigins", {
-  type: "CommaDelimitedList",
-  description: "SECURITY: Never use '*' in production.",
-});
+// GOOD - restrict to specific origins, concrete at synth time
+const corsAllowedOrigins = resolveCorsAllowedOrigins(this);
 
 defaultCorsPreflightOptions: {
-  allowOrigins: corsAllowedOrigins.valueAsList,
+  allowOrigins: corsAllowedOrigins,
 }
 ```
 
 ### Default Allowed Origins
 
-If no origins are configured, defaults to mobile app schemes only:
+`resolveCorsAllowedOrigins()` in `api-stack.ts` reads the
+`corsAllowedOrigins` CDK context first, then `CORS_ALLOWED_ORIGINS`. When
+neither is set, it uses:
 - `capacitor://localhost`
 - `ionic://localhost`
-- `http://localhost` (for development)
+- `http://localhost` and `http://localhost:3000` (for development)
+- `https://siutindei.lx-software.com`
+- `https://siutindei-api.lx-software.com`
 
 ### API WAF
 

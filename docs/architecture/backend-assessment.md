@@ -4,6 +4,11 @@
 > **Branch:** `cursor/backend-improvements-assessment-04ed`
 > **Scope:** All Python code under `backend/`, `tests/`, and related Lambda handlers.
 > **Remediation commit:** `f238cdd`
+> **Status (2026-11-02):** Every item is fixed. Later code still has a few
+> unlogged `except Exception:` blocks (for example
+> `backend/src/app/db/catalog_locks.py` and
+> `backend/src/app/services/enrichment/fetch.py`), so the checklist's
+> `except Exception:` line is open.
 
 ---
 
@@ -200,6 +205,11 @@ issues) become invisible in CloudWatch, making debugging impossible.
    caching like the cognito authorizers do. Unify the logic with an optional
    `broaden_resource` parameter (default `True`), or keep a separate slim
    version. Document the difference.
+
+**Resolution:** the shared helpers live in
+`backend/src/app/auth/authorizer_helpers.py` (`get_header`, `extract_token`,
+`policy`),
+not in `backend/lambda/authorizers/_common.py`.
 
 ---
 

@@ -9,10 +9,13 @@ Seed data lives in `backend/db/seed/seed_data.sql`.
 ## Extensions and enums
 
 - Extension: `pgcrypto` (used by `gen_random_uuid()` defaults).
+- Extension: `pg_trgm` (created by `0041_data_quality`; trigram indexes
+  and duplicate scoring).
 - Enum `pricing_type`: `per_class`, `per_sessions`, `per_hour`, `per_day`,
   `free`.
 - Enum `schedule_type`: `weekly`.
-- Enum `ticket_type`: `access_request`, `organization_suggestion`.
+- Enum `ticket_type`: `access_request`, `organization_suggestion`,
+  `organization_feedback`.
 - Enum `ticket_status`: `pending`, `approved`, `rejected`.
 
 ## Table: organizations
@@ -171,13 +174,15 @@ Columns:
 - `id` (UUID, PK)
 - `entity_type` (text) — `organization` or `activity`
 - `entity_id` (UUID, required)
-- `org_id` (UUID, optional, FK → `organizations.id`, ON DELETE CASCADE)
 - `field` (text) — `name`
 - `current_value` (text, required)
 - `proposed_value` (text, required)
 - `rules` (jsonb, default `[]`)
 - `translation_patch` (jsonb, optional)
 - `status` (text) — `pending`, `applied`, or `dismissed`
+- `scan_run_id` (UUID, optional) — the data-quality run that proposed it
+- `input_hash` (text, optional) — hash of the scanned input, so an
+  unchanged row is not re-proposed
 - `decided_by` (text, optional)
 - `decided_at` (timestamptz, optional)
 - `created_at` / `updated_at` (timestamptz)
@@ -578,7 +583,6 @@ Columns:
 - `version` (integer, default 1)
 
 Indexes:
-- `locations_district_idx` on `district`
 - `locations_org_idx` on `org_id`
 - `locations_area_idx` on `area_id`
 - Partial UNIQUE on `place_id` where `place_id IS NOT NULL`
@@ -893,6 +897,8 @@ Columns:
 - `id` (UUID, PK, default `gen_random_uuid()`)
 - `object_key` (text, required, unique)
 - `dry_run` (boolean, default false)
+- `status` (text, default `completed`) — `running`, `completed`, or
+  `failed`
 - `summary` (jsonb)
 - `results` (jsonb)
 - `file_warnings` (jsonb)

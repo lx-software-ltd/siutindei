@@ -10,9 +10,19 @@ Bring living docs, skills, and READMEs back in line with the code after
 
 ## Non-goals
 
-- Code changes. Drift that is a code bug is reported, not fixed. The
-  search Lambda's `Cache-Control: no-store` disables the CloudFront
-  edge cache; the docs now say so.
+- Code changes. Drift that is a code bug is reported, not fixed:
+  - The search Lambda's `Cache-Control: no-store` disables the
+    CloudFront edge cache; the docs now say so.
+  - `deploy-mobile.yml` and `deploy-ios.yml` do not pass
+    `AMPLIFY_CONFIG`, and `AmplifyService` throws without it.
+  - Runtime design-token updates do not reach `designTokensProvider`.
+  - The `main-protection` ruleset is disabled and has no required
+    status checks, so `verify-rulesets.yml` fails.
+  - A few `except Exception:` blocks still swallow errors without
+    logging (`catalog_locks.py`, `enrichment/fetch.py`).
+- Red-zone READMEs. `backend/db/README.md` (Python version, the
+  `postgresql+psycopg://` URL) and `backend/infrastructure/params/README.md`
+  (`PublicWwwOriginVerifySecret`) are reported, not edited.
 - Rewriting historical plans beyond their status line.
 
 ## Files
@@ -39,7 +49,12 @@ Bring living docs, skills, and READMEs back in line with the code after
   and `ios-testflight.md`. Samples now show Riverpod 3 `Notifier`, the
   real `--dart-define` names, JDK 17, and the flat `test/` layout. No Dart
   or Gradle source changes.
-- Backend and infrastructure docs found by the same pass.
+- Backend and infrastructure: `lambdas.md`, `aws-assets-map.md` (routes,
+  alarms, parameters, retention, bundling), `security.md` (importer
+  routes, CORS defaults), `overview.md`, `setup.md`, `decisions.md`,
+  `aws-messaging.md`, `database-schema.md`, `backend-assessment.md`,
+  `github-rulesets.md` (real job names), and a status note in
+  `cloudflare-optimization.md`.
 - `docs/plans/*.md` status lines for plans that already shipped.
 
 ## Invariants this change preserves
