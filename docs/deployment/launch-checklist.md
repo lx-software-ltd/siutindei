@@ -114,6 +114,15 @@ On the **production** environment:
   and `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`, and deploy the API stack first.
   Then deploy the public website stack and promote. After both are serving
   the new values, clear the previous secrets and deploy the API stack again.
+- Cloudflare origin lock (only after the apex is proxied, see
+  [section 6](#6-dns--certificates)): `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY`
+  and, for staging, `CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY`
+  (`[A-Za-z0-9+/=_-]`, 32+ chars; `token_urlsafe(48)` fits). The same value
+  goes into the Cloudflare transform rule through
+  `PUBLIC_WWW_EDGE_VERIFY_SECRET` when running
+  `scripts/cloudflare/edge_policy.py apply`. Empty leaves the check off
+  and the CloudFront WAF attached. `…_PREVIOUS` variants exist for
+  rotation.
 - Variables: `APPLE_TEAM_ID`, `CDK_PARAM_FILE` pointing at
   `params/production.json`.
 
@@ -143,6 +152,16 @@ CloudFront aliases are Cloudflare CNAMEs with the proxy **disabled**
 | `siutindei-auth.lx-software.com` | `CognitoCustomDomainCloudFront` stack output |
 | `siutindei.lx-software.com` | admin-web CloudFront distribution |
 | `siutindei-www-staging.lx-software.com` | public-www staging distribution |
+
+Planned change (`docs/plans/cloudflare-edge-protection.md`): the apex moves
+to orange cloud so Cloudflare rate limits and request rules protect the
+search API. Order matters: `edge_policy.py apply` for settings, rulesets,
+and bot management while the apex is still grey; deploy the public
+website stack with the edge-verify parameters empty; flip DNS with
+`edge_policy.py apply --yes --section dns`; observe; then set the
+edge-verify secrets and deploy again so `d2zpx4ub70d0qj.cloudfront.net`
+returns 403 without the Cloudflare header. Cloudflare SSL mode must be
+`strict` before the flip. Rollback is the DNS step with `--proxied false`.
 
 Verify each with `curl -sI https://<domain>` (expect 200/301, valid cert).
 

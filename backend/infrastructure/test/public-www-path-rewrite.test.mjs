@@ -5,14 +5,26 @@ import test from 'node:test';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
-const sourcePath = path.join(
+const functionsDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../lib/functions/public-www-path-rewrite.js',
+  '../lib/functions',
 );
-const source = fs.readFileSync(sourcePath, 'utf8');
+const source = fs.readFileSync(
+  path.join(functionsDir, 'public-www-path-rewrite.js'),
+  'utf8',
+);
+// The stack prepends the edge-verify snippet; load it the same way with the
+// placeholders resolved so the check can be exercised here too.
+const edgeVerifySource = fs
+  .readFileSync(path.join(functionsDir, 'public-www-edge-verify.js'), 'utf8')
+  .replace('__EDGE_VERIFY_SECRET__', '')
+  .replace('__EDGE_VERIFY_SECRET_PREVIOUS__', '');
 const context = {};
 vm.createContext(context);
-vm.runInContext(`${source}\nglobalThis.handler = handler;`, context);
+vm.runInContext(
+  `${edgeVerifySource}\n${source}\nglobalThis.handler = handler;`,
+  context,
+);
 
 function run(uri, extra = {}) {
   const raw = extra.rawQueryString ?? '';
@@ -27,6 +39,40 @@ function run(uri, extra = {}) {
     },
   });
 }
+
+test('serves normally when no edge-verify secret is configured', () => {
+  const response = run('/en/about/', {
+    headers: { 'x-edge-verify': { value: 'anything' } },
+  });
+  assert.equal(response.uri, '/en/about/index.html');
+});
+
+test('refuses requests without the edge header once a secret is set', () => {
+  const enforced = {};
+  vm.createContext(enforced);
+  const enforcedEdge = fs
+    .readFileSync(path.join(functionsDir, 'public-www-edge-verify.js'), 'utf8')
+    .replace('__EDGE_VERIFY_SECRET__', 'current-secret-value-0123456789abcdef')
+    .replace('__EDGE_VERIFY_SECRET_PREVIOUS__', '');
+  vm.runInContext(
+    `${enforcedEdge}\n${source}\nglobalThis.handler = handler;`,
+    enforced,
+  );
+  const refused = enforced.handler({
+    request: { uri: '/en/', headers: {}, rawQueryString: () => '' },
+  });
+  assert.equal(refused.statusCode, 403);
+  const allowed = enforced.handler({
+    request: {
+      uri: '/en/',
+      headers: {
+        'x-edge-verify': { value: 'current-secret-value-0123456789abcdef' },
+      },
+      rawQueryString: () => '',
+    },
+  });
+  assert.equal(allowed.uri, '/en/index.html');
+});
 
 test('redirects the bare home path to the english locale', () => {
   const response = run('/');
