@@ -165,7 +165,10 @@ flutter run --dart-define=AMPLIFY_CONFIG='<amplifyconfiguration JSON>' \
             --dart-define=AMPLIFY_API_NAME=activitiesApi
 ```
 
-See `lib/config/` for all configuration options.
+See `lib/config/` for all configuration options. CI generates
+`AMPLIFY_CONFIG` from the `lxsoftware-siutindei` stack outputs with
+`scripts/deploy/build_amplify_config.py`; see
+[Getting started](docs/getting-started.md#running-with-configuration).
 
 ## Layer Documentation
 

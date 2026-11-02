@@ -405,6 +405,10 @@ way to run it.
 - [ ] `IOS_BUNDLE_ID`
 - [ ] `APPLE_TEAM_ID`
 - [ ] `IOS_PROVISIONING_PROFILE` (optional)
+- [ ] `AWS_ACCOUNT_ID` and `AWS_REGION` (the build assumes `GitHubActionsRole`
+  and reads the `lxsoftware-siutindei` stack outputs to generate
+  `AMPLIFY_CONFIG`)
+- [ ] `CDK_PARAM_FILE` (optional, defaults to `backend/infrastructure/params/production.json`)
 - [ ] Firebase variables (if applicable)
 
 ### One-Time Setup

@@ -229,6 +229,10 @@ Lambdas or NAT Gateway.
 
 **Decisions:**
 - Amplify config is passed via `--dart-define=AMPLIFY_CONFIG=...`.
+- Release builds generate it from the API stack outputs with
+  `scripts/deploy/build_amplify_config.py` and pass it with
+  `--dart-define-from-file`. The Android manifest registers the
+  `com.lxsoftware.siutindei` redirect scheme for the Cognito hosted UI.
 - API name is set with `--dart-define=AMPLIFY_API_NAME=...`.
 
 ## 3) CI/CD Authentication
