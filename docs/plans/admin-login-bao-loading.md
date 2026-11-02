@@ -1,6 +1,6 @@
 # Plan: Spinning bao on the admin session notice
 
-**Status**: Approved
+**Status**: Done
 **Zone**: yellow, plus the approved red callback page
 
 ## Goal

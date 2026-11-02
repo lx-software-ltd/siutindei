@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "smoke:staging": "node ./scripts/smoke-staging.mjs",
     "audit:assets": "node ./scripts/audit-assets.mjs",
     "audit:deps:prod": "npm audit --omit=dev --audit-level=high",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@lhci/cli": "^0.15.1",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.9.1",

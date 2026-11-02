@@ -1,6 +1,6 @@
 # Plan: Lowercase audit log action filter values
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

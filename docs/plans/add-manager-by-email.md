@@ -1,6 +1,6 @@
 # Plan: Add a manager by email
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: red
 
 ## Goal

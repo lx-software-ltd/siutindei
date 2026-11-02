@@ -1,6 +1,6 @@
 # Plan: Users table email and detail fields
 
-**Status**: Implemented
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

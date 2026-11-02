@@ -34,12 +34,20 @@ The `main` branch requires protection as it triggers production deployments.
 
 ### Required Status Checks
 
-These workflows must pass before merging to `main`:
+GitHub matches required checks by job name. `verify_github_rulesets.py`
+only asks for at least one required check whose name contains `lint` and
+one that contains `test` (case-insensitive). The job names are:
 
-| Check | Workflow | Purpose |
-|-------|----------|---------|
-| `lint` | `.github/workflows/lint.yml` | Code style and linting |
-| `test` | `.github/workflows/test.yml` | Unit and integration tests |
+| Workflow | Job names |
+|----------|-----------|
+| `.github/workflows/lint.yml` | `Validate agent harness`, `Lint Dart`, `Lint React`, `Lint Python`, `Lint CDK` |
+| `.github/workflows/test.yml` | `PII denylist`, `Test Flutter`, `Test Node`, `Test Python`, `Test Infrastructure` |
+
+Require the job names, not the workflow names. As of 2026-11-02 the
+`main-protection` ruleset (id `12176289`) exists but its enforcement is
+`disabled` and it has only the deletion and force-push rules, so the
+weekly verify job fails until an admin runs
+[Update the existing `main-protection` ruleset](#update-the-existing-main-protection-ruleset).
 
 ---
 
@@ -108,7 +116,7 @@ Release tags should be protected from modification or deletion.
      - ✅ Dismiss stale pull request approvals when new commits are pushed
    - ✅ Require status checks to pass
      - ✅ Require branches to be up to date before merging
-     - Add checks: `lint`, `test`
+     - Add checks: `Lint Python`, `Test Python` (add other job names as needed)
    - ✅ Block force pushes
 5. Click **Create**
 
@@ -143,10 +151,10 @@ gh api repos/{owner}/{repo}/rulesets \
   --field 'rules[2][parameters][dismiss_stale_reviews_on_push]=true' \
   --field 'rules[][type]=required_status_checks' \
   --field 'rules[3][parameters][strict_required_status_checks_policy]=true' \
-  --field 'rules[3][parameters][required_status_checks][][context]=lint' \
-  --field 'rules[3][parameters][required_status_checks][][context]=test'
+  --field 'rules[3][parameters][required_status_checks][][context]=Lint Python' \
+  --field 'rules[3][parameters][required_status_checks][][context]=Test Python'
 
-# Tag protection for releases
+# Tag protection for releases (already exists here as `release-tags`)
 gh api repos/{owner}/{repo}/rulesets \
   --method POST \
   --field name='release-tags' \
@@ -156,6 +164,42 @@ gh api repos/{owner}/{repo}/rulesets \
   --field 'rules[][type]=deletion' \
   --field 'rules[][type]=update'
 ```
+
+### Update the existing `main-protection` ruleset
+
+The ruleset already exists, so update it instead of creating a second
+one. `rules` replaces the whole list; conditions and bypass actors stay
+as they are. An admin token is required.
+
+```bash
+gh api repos/lx-software-ltd/siutindei/rulesets/12176289 \
+  --method PUT \
+  --input - <<'JSON'
+{
+  "enforcement": "active",
+  "rules": [
+    {"type": "deletion"},
+    {"type": "non_fast_forward"},
+    {"type": "pull_request", "parameters": {
+      "required_approving_review_count": 1,
+      "dismiss_stale_reviews_on_push": true,
+      "require_code_owner_review": false,
+      "require_last_push_approval": false,
+      "required_review_thread_resolution": false
+    }},
+    {"type": "required_status_checks", "parameters": {
+      "strict_required_status_checks_policy": true,
+      "required_status_checks": [
+        {"context": "Lint Python"},
+        {"context": "Test Python"}
+      ]
+    }}
+  ]
+}
+JSON
+```
+
+Then run **Verify GitHub Rulesets** (`verify-rulesets.yml`) by hand to confirm.
 
 ---
 

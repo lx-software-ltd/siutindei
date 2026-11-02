@@ -1,7 +1,9 @@
 # Remediation Plan — Public Website (`apps/public_www`) & Search API
 
 **Audience:** Junior developer executing fixes one item at a time.
-**Status:** Draft for review. No code changes have been made; this is a worklist.
+**Status:** Closed (reviewed 2026-11-02). Every item is resolved except
+P3-4, which is an accepted risk. Per-item notes and line numbers below are
+from the original review and may have moved.
 **Scope:** The public marketing/discovery site (`apps/public_www`) and the public
 search API path it depends on (`backend/src/app/api/search.py`, the API Gateway
 config in `backend/infrastructure/lib/api-stack.ts`, and the CI deploy/promote
@@ -152,6 +154,8 @@ response for a **different** activity. This is a correctness/data-integrity bug.
 
 ### P1-1. In-VPC Lambdas call Cognito directly instead of the AWS proxy
 
+**Status: RESOLVED.** `admin_bootstrap`, `migrations/seed.py`, and `0005_add_organization_owner` call Cognito through `app.services.aws_proxy`.
+
 **Problem.** `admin_bootstrap` and the migration `seed` call Cognito IDP
 directly via `get_cognito_idp_client()` / `boto3.client("cognito-idp")`. Both
 run **in-VPC** (no `noVpc: true`). The VPC is created with `natGateways: 0` and
@@ -301,6 +305,8 @@ diff query params between code, OpenAPI, and clients.
 
 ### P2-2. Search input validation is weaker than the OpenAPI contract
 
+**Status: RESOLVED.** `backend/src/app/api/search_validation.py` enforces the OpenAPI bounds, `price_min <= price_max`, language codes, `q`, and `view` (`tests/test_search_validation.py`).
+
 **Problem.** OpenAPI documents ranges (age ≥ 0, day 0–6, minutes 0–1439,
 limit 1–200) and the parser only does `int()`/`Decimal()`/`UUID()`. Invalid
 values (negative age, out-of-range day, `price_min > price_max`) yield generic
@@ -432,7 +438,7 @@ referenced from the root layout metadata.
 
 ### P2-7. Accessibility / HTML validity issues
 
-**Status: RESOLVED.** Home and search pages render an `sr-only` `<h1>`; the
+**Status: RESOLVED.** The home hero has a visible `<h1>` and search renders an `sr-only` `<h1>`; the
 activity-detail CTA is a link styled as a button (no nested interactive
 elements); the loading state has `aria-live="polite"`.
 
@@ -456,6 +462,8 @@ elements are invalid and confuse assistive tech.
 ---
 
 ### P2-8. Reads of `NEXT_PUBLIC_*` bypass `site-config.ts`
+
+**Status: MOSTLY RESOLVED.** Components read `site-config.ts` getters. `seo.ts` and `static-activity-catalog.ts` still read `process.env` at build time.
 
 **Problem.** Several files read `process.env.NEXT_PUBLIC_*` directly instead of
 going through `src/lib/site-config.ts`, which `.cursorrules` requires.
@@ -481,6 +489,8 @@ when their env vars are set.
 
 ### P3-1. Unused `HomeWizardSection` component and `homeWizard` content
 
+**Status: RESOLVED.** `sections/home-wizard/` and the `homeWizard` content are gone.
+
 `HomeWizardSection` is registered in the page grid and has copy in
 `content/en.json`, but no content page uses `"component": "homeWizard"`. Decide:
 wire it into a page, or remove the component, grid registration, and copy.
@@ -489,10 +499,14 @@ wire it into a page, or remove the component, grid registration, and copy.
 
 ### P3-2. OpenAPI search spec lacks error responses
 
+**Status: RESOLVED.** `docs/api/search.yaml` documents the 400 and 500 responses.
+
 `docs/api/search.yaml` documents only `200`; the handler returns `400`/`500`.
 Add `400`/`500` response schemas to match the implementation.
 
 ### P3-3. Search Lambda response omits some security headers
+
+**Status: RESOLVED.** Search responses use `get_security_headers()`. Public search then replaces its `Cache-Control: no-store` with `public, max-age=60, s-maxage=300` so CloudFront can cache it; partner search and errors keep `no-store`.
 
 `backend/src/app/api/search.py:298-316` builds a partial header set, unlike
 `json_response()` (`responses.py:60-77`) which adds `X-Frame-Options`,
@@ -500,11 +514,19 @@ Add `400`/`500` response schemas to match the implementation.
 
 ### P3-4. CSP `img-src` is very permissive
 
+**Status: ACCEPTED RISK.** `inject-csp-meta.mjs` keeps `img-src 'self' data: https:`.
+Listing media URLs can point at any HTTPS host: admins and imports set them,
+and enrichment stores the source URL when it does not copy media. An
+allow-list would break those images. `img-src` cannot run script, so the
+exposure is limited to image beacons.
+
 `apps/public_www/scripts/inject-csp-meta.mjs` allows `img-src 'self' data:
 https:` (any HTTPS origin). If the set of image hosts is known (CDN/API),
 tighten to an allow-list.
 
 ### P3-5. Logging hygiene
+
+**Status: RESOLVED.** `seed.py` masks emails and `passwordless.py` uses `get_logger`.
 
 - Migration seed logs unmasked email (`backend/db/migrations/.../seed.py`
   around lines 67/109/125). Use `mask_email()` / `mask_pii()`.
@@ -513,11 +535,15 @@ tighten to an allow-list.
 
 ### P3-6. Public exposure of `manager_id`
 
+**Status: RESOLVED.** The search schema no longer has `manager_id`, so neither view returns it (`tests/test_search_text_and_view.py`).
+
 Public search org responses include `manager_id` (a Cognito sub):
 `backend/src/app/api/schemas.py:23`, `search.py` (~line 200). Confirm this is
 intentional; if not, drop it from the public schema.
 
 ### P3-7. Test coverage gaps
+
+**Status: RESOLVED.** Unit tests cover search, activity detail, `search-client`, and the navbar. `apps/public_www/e2e/smoke.spec.ts` is a Playwright smoke suite run by the `Test Public Website E2E` job, and `tests/test_search_handler.py` drives `search.lambda_handler` with API Gateway events.
 
 No tests for `search-results-page`, `activity-detail-page`, the live
 `search-client` API path, navbar/search panel, footer, or
@@ -527,10 +553,14 @@ event. Add targeted unit tests where cheap; consider a minimal e2e later.
 
 ### P3-8. Doc drift
 
+**Status: RESOLVED.** The README names `next.config.ts`.
+
 `apps/public_www/README.md:35` references `next.config.js`; the actual file is
 `next.config.ts`.
 
 ### P3-9. Missing shared API client packages
+
+**Status: RESOLVED.** `scripts/codegen/README.md` marks the packages historical and `lint.yml` diffs `api-admin.generated.ts`.
 
 `.cursorrules` and `scripts/codegen/README.md` reference
 `packages/api_client_ts` and `packages/api_client_dart`, which do not exist.
@@ -542,12 +572,11 @@ reality and add a CI check that generated admin types are committed.
 
 ## Suggested execution order
 
-Resolved so far: P0-1, P0-2, P1-2, P1-3 (option 1), P2-1, P2-3, P2-4, P2-5,
-P2-6, P2-7. Remaining, in order:
-
-1. **P1-1** (aws_proxy for in-VPC Cognito) — architectural correctness/runtime.
-2. **P2-2** (search input validation), **P2-8** (`site-config.ts` env reads).
-3. P3 cleanup.
+Resolved: every item except P3-4, which is an accepted risk. P1-1 moved
+in-VPC Cognito calls to `aws_proxy`, P2-2 landed as
+`backend/src/app/api/search_validation.py`, and P2-8 moved reads into
+`site-config.ts` (`seo.ts` and `static-activity-catalog.ts` still read
+`process.env` at build time).
 
 ## Notes / things that are actually fine (do not "fix")
 

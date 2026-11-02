@@ -1,6 +1,6 @@
 # Plan: Complete A–Z Audit logs table filter
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

@@ -5,18 +5,20 @@ pricing, and schedules.
 
 ## Configuration
 
-Create a `.env.local` with:
+Copy `.env.example` to `.env.local` and fill it in.
 
-```
-NEXT_PUBLIC_API_BASE_URL=
-NEXT_PUBLIC_COGNITO_DOMAIN=
-NEXT_PUBLIC_COGNITO_CLIENT_ID=
-```
-
-Values:
+Required:
 - `NEXT_PUBLIC_API_BASE_URL`: API Gateway base URL (ends with `/prod`).
 - `NEXT_PUBLIC_COGNITO_DOMAIN`: Cognito hosted UI domain (full URL or domain).
 - `NEXT_PUBLIC_COGNITO_CLIENT_ID`: User pool app client ID.
+- `NEXT_PUBLIC_COGNITO_USER_POOL_ID`: User pool ID.
+
+Optional:
+- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: Catalog neighbourhood map.
+- `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`: Advanced-marker map id. Empty uses
+  Google's `DEMO_MAP_ID`.
+- `NEXT_PUBLIC_PUBLIC_WWW_URL`: Public site base URL. Defaults to
+  `https://siutindei.com`.
 
 ## Development
 

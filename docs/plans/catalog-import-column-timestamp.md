@@ -1,6 +1,6 @@
 # Plan: Catalog import column shows the import time
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

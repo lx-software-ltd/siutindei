@@ -24,7 +24,9 @@ npm ci
 npm run dev
 ```
 
-The dev server runs at <http://localhost:3000>.
+`next dev` defaults to <http://localhost:3000>, which the admin web also
+uses. Run `npm run dev -- -p 3100` to serve this site at
+<http://localhost:3100> alongside it.
 
 ## Static export build
 
@@ -33,8 +35,9 @@ npm run build
 ```
 
 This runs `next build` (which produces `out/` because `next.config.ts` sets
-`output: 'export'`), patches locale redirects and `<html lang>`, then injects
-a CSP `<meta http-equiv>` into every generated HTML and validates it.
+`output: 'export'`), removes the activity export placeholder, injects
+fallback locale redirects, `<html lang>`, and JSON-LD, then injects a
+per-page CSP `<meta http-equiv>` into every generated HTML and validates it.
 
 ## Deployment model
 
@@ -45,14 +48,13 @@ There is **one CloudFormation stack** (`lxsoftware-siutindei-public-www`) with
 
 | Trigger | Action |
 |---|---|
-| Push to `main` touching `apps/public_www/**` or `scripts/**` | Build + deploy to **staging**, write a release marker `releases/<sha>/` to the staging bucket. |
+| Push to `staging` touching `apps/public_www/**`, `scripts/deploy/deploy-public-www.sh`, or the workflow | Build + deploy to **staging**, write a release marker `releases/<sha>/` to the staging bucket. |
 | `workflow_dispatch` of `Promote Public Website Release` | Promote a release id (default: latest staging marker) **or** flip production to the branded coming-soon holding page (`apps/public_www/maintenance/`). |
 | `workflow_dispatch` of `Smoke Public Website Staging` | Crawl staging sitemap and check every page returns 2xx/3xx. |
 | `workflow_dispatch` of `Lighthouse Public Website` | Run Lighthouse CI against the production build. |
 
-A promotion is either a fresh build with production env vars or an S3-only
-artifact copy (`releases/<id>/` → root of production bucket) followed by a
-CloudFront invalidation.
+A promotion is always a fresh build with production env vars, uploaded to the
+production bucket, followed by a `/*` CloudFront invalidation.
 
 ## Required environment variables (build time)
 
@@ -78,11 +80,13 @@ Optional `NEXT_PUBLIC_*` variables documented in `.env.example` are read by
 - No `dangerouslySetInnerHTML`, no `eval`/`new Function`.
 - **i18n:** `src/content/<locale>.json` (e.g. `en.json`, `zh-HK.json`) is the
   source of truth for copy, navigation, SEO strings, and per-page body grids.
-  Routes live under `src/app/[locale]/...` with root redirects (e.g. `/` →
-  `/en/`).
+  Legal pages read `src/content/legal/<locale>.json`. Routes live under
+  `src/app/[locale]/...`; CloudFront redirects unprefixed routes to the
+  visitor's locale.
 - **Page template:** `[locale]/layout.tsx` wraps every locale route with
-  `PageLayout` (shared `Navbar` header + `main` + `Footer`). Page routes
-  render `PageBodyGrid` via `MarketingPage`. Mobile nav uses a drawer;
+  `PageLayout` (shared `Navbar` header + `main` + `Footer`). Marketing
+  routes (About) render `PageBodyGrid` via `MarketingPage`; home, search,
+  activity, and legal routes use their own page components. Mobile nav uses a drawer;
   WhatsApp FAB shows on small screens, footer link on `sm+`.
 - **12-column body grid:** Each page defines `pages.<key>.body.rows[]` with
   cells (`component`, `colStart`, `colSpan`, optional `props`). Register new
@@ -95,5 +99,5 @@ Optional `NEXT_PUBLIC_*` variables documented in `.env.example` are read by
   `generate_lead`, and `search` to `window.dataLayer` for GTM. Do not add
   GA4 `G-` or Ads `AW-` IDs to git or `NEXT_PUBLIC_*`.
 
-See the `Public Website` section in the repository root `.cursorrules` for the
-authoritative checklist.
+See `.cursor/rules/public-www.mdc` and `.cursor/skills/public-www-section/SKILL.md`
+for the authoritative checklist.

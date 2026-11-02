@@ -1,6 +1,6 @@
 # Plan: New label button copy
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

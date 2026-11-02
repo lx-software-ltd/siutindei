@@ -144,10 +144,14 @@ command.addListener(() {
 Commands complement the Result type in ViewModels:
 
 ```dart
-class ActivitiesViewModel extends StateNotifier<ActivitiesState> {
-  ActivitiesViewModel(this._searchUseCase) : super(ActivitiesState.initial);
-  
-  final SearchActivitiesUseCase _searchUseCase;
+class ActivitiesViewModel extends Notifier<ActivitiesState> {
+  late final SearchActivitiesUseCase _searchUseCase;
+
+  @override
+  ActivitiesState build() {
+    _searchUseCase = ref.watch(searchActivitiesUseCaseProvider);
+    return ActivitiesState.initial;
+  }
   
   Future<void> search(SearchFilters filters) async {
     state = state.copyWith(isLoading: true, clearError: true);
@@ -167,16 +171,16 @@ class ActivitiesViewModel extends StateNotifier<ActivitiesState> {
 }
 ```
 
-## When to Use Commands vs StateNotifier
+## When to Use Commands vs Notifier
 
 | Scenario | Recommendation |
 |----------|---------------|
 | Single async operation | Command |
-| Multiple related operations | StateNotifier |
+| Multiple related operations | Notifier |
 | Simple loading state | Command |
-| Complex state with multiple fields | StateNotifier |
+| Complex state with multiple fields | Notifier |
 | Form submission | Command |
-| Feature-wide state | StateNotifier |
+| Feature-wide state | Notifier |
 
 ## Extension Method
 
@@ -237,4 +241,4 @@ test('command prevents duplicate execution', () async {
 ## Related
 
 - [Result Type](result.md) - Return type for Command operations
-- [ViewModels](../viewmodels/README.md) - Using Commands with StateNotifier
+- [ViewModels](../viewmodels/README.md) - Using Commands with Notifier

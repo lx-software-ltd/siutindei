@@ -1,6 +1,6 @@
 # Plan: Reject reason and "added since rejected" signal
 
-**Status**: Implemented
+**Status**: Done
 **Zone**: red (migration under `backend/db/**`); the rest is yellow
 
 ## Goal

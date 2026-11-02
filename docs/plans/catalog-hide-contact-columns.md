@@ -1,6 +1,6 @@
 # Plan: Hide catalog contact columns
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

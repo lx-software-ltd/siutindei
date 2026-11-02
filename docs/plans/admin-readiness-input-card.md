@@ -1,6 +1,6 @@
 # Plan: Readiness as an input card
 
-**Status**: Approved
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

@@ -1,6 +1,6 @@
 # Plan: Catalog pending review label
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

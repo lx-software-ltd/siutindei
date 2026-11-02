@@ -1,6 +1,6 @@
 # Plan: Remove table-card style leftovers
 
-**Status**: Approved
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

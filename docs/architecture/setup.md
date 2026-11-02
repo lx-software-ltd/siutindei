@@ -66,7 +66,7 @@ For the OIDC provider itself, add the same tags:
 
 - `AWS_ACCOUNT_ID`
 - `AWS_REGION`
-- `CDK_STACKS` (optional; comma/space-separated list, e.g. `ActivitiesApiStack`)
+- `CDK_STACKS` (optional; comma/space-separated list, e.g. `lxsoftware-siutindei`)
 - `CDK_BOOTSTRAP_QUALIFIER` (optional)
 - `CDK_PARAM_FILE` (e.g. `backend/infrastructure/params/production.json`)
 - `AMPLIFY_APP_ID`
@@ -89,6 +89,10 @@ For the OIDC provider itself, add the same tags:
 ### Secrets
 
 - `CDK_PARAM_GOOGLE_CLIENT_SECRET`
+- `CDK_PARAM_GOOGLE_PLACES_API_KEY` (optional; empty disables pin lookup)
+- `CDK_PARAM_OPENROUTER_API_KEY` (optional; empty keeps the
+  `openrouter-api-key` secret at `pending`, which blocks category and
+  enrichment scans)
 - `CDK_PARAM_APPLE_PRIVATE_KEY`
 - `CDK_PARAM_PUBLIC_API_KEY_VALUE`
 - `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`

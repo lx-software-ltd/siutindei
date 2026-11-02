@@ -7,8 +7,8 @@ Every other surface links to it instead of embedding its own copy:
 
 | Document | Canonical URL | Source of the text |
 |---|---|---|
-| Privacy Policy (incl. PICS) | `https://siutindei.com/privacy` | `apps/public_www/src/content/en.json` + `zh-HK.json` → `legal.privacy` |
-| Terms of Use (incl. manager/listing terms) | `https://siutindei.com/terms` | same files → `legal.terms` |
+| Privacy Policy (incl. PICS) | `https://siutindei.com/privacy` | `apps/public_www/src/content/legal/en.json` + `zh-HK.json` → `privacy` |
+| Terms of Use (incl. manager/listing terms) | `https://siutindei.com/terms` | same files → `terms` |
 
 Rendering component: `apps/public_www/src/components/sections/legal-page.tsx`.
 
@@ -38,11 +38,11 @@ Surfaces that link to the canonical pages:
 
 ## Update procedure
 
-1. Edit `legal.privacy` / `legal.terms` in **both**
-   `apps/public_www/src/content/en.json` and `zh-HK.json`. The two locales
-   must keep identical section `id` lists (enforced by
+1. Edit `privacy` / `terms` in **both**
+   `apps/public_www/src/content/legal/en.json` and `zh-HK.json`. The two
+   locales must keep identical section `id` lists (enforced by
    `apps/public_www/tests/lib/legal-content.test.ts`).
-2. Bump `legal.lastUpdated` in both locales.
+2. Bump `lastUpdated` in both locale files.
 3. If data practices changed (new processor, new data category, new
    retention rule), update `store-disclosures.md` and re-submit the Play
    Data Safety form / App Store privacy answers.

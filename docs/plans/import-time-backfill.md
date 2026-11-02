@@ -1,6 +1,6 @@
 # Plan: Backfill catalog import times from history
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: red
 
 The user asked to fill empty Catalog Import cells from history.

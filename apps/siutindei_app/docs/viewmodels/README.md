@@ -1,11 +1,11 @@
 # ViewModels
 
-ViewModels manage feature state and coordinate between the UI and domain layer. They use Riverpod's `StateNotifier` pattern for reactive state management.
+ViewModels manage feature state and coordinate between the UI and domain layer. They use Riverpod 3's `Notifier` for reactive state management. `AuthViewModel` still uses the legacy `StateNotifier` from `flutter_riverpod/legacy.dart`.
 
 ## Overview
 
 ViewModels:
-- Extend `StateNotifier<State>` for reactive state
+- Extend `Notifier<State>` and return the initial state from `build()`
 - Use Use Cases for business logic
 - Expose immutable state objects
 - Handle async operations with loading/error states
@@ -73,16 +73,16 @@ class ActivitiesState {
 ### ViewModel Class
 
 ```dart
-class ActivitiesViewModel extends StateNotifier<ActivitiesState> {
-  ActivitiesViewModel({
-    required SearchActivitiesUseCase searchUseCase,
-    required LoadMoreActivitiesUseCase loadMoreUseCase,
-  })  : _searchUseCase = searchUseCase,
-        _loadMoreUseCase = loadMoreUseCase,
-        super(ActivitiesState.initial);
+class ActivitiesViewModel extends Notifier<ActivitiesState> {
+  late final SearchActivitiesUseCase _searchUseCase;
+  late final LoadMoreActivitiesUseCase _loadMoreUseCase;
 
-  final SearchActivitiesUseCase _searchUseCase;
-  final LoadMoreActivitiesUseCase _loadMoreUseCase;
+  @override
+  ActivitiesState build() {
+    _searchUseCase = ref.watch(searchActivitiesUseCaseProvider);
+    _loadMoreUseCase = ref.watch(loadMoreActivitiesUseCaseProvider);
+    return ActivitiesState.initial;
+  }
 
   /// Performs a new search with the given filters.
   Future<void> search(SearchFilters filters) async {
@@ -150,8 +150,8 @@ class ActivitiesViewModel extends StateNotifier<ActivitiesState> {
   }
 
   String _formatError(Exception e) {
-    if (e is ArgumentError) {
-      return e.message?.toString() ?? 'Invalid input';
+    if (e is AppException) {
+      return e.displayMessage;
     }
     return 'An error occurred. Please try again.';
   }
@@ -162,12 +162,9 @@ class ActivitiesViewModel extends StateNotifier<ActivitiesState> {
 
 ```dart
 final activitiesViewModelProvider =
-    StateNotifierProvider<ActivitiesViewModel, ActivitiesState>((ref) {
-  return ActivitiesViewModel(
-    searchUseCase: ref.watch(searchActivitiesUseCaseProvider),
-    loadMoreUseCase: ref.watch(loadMoreActivitiesUseCaseProvider),
-  );
-});
+    NotifierProvider<ActivitiesViewModel, ActivitiesState>(
+      ActivitiesViewModel.new,
+    );
 ```
 
 ### Selectors
@@ -257,21 +254,22 @@ state = state.copyWith(isLoading: true);
 state.isLoading = true; // Won't trigger rebuild
 ```
 
-### 2. Constructor Injection
+### 2. Provider Injection
 
-Inject dependencies through constructor:
+Read dependencies from providers in `build()`. Tests override those
+providers:
 
 ```dart
-class MyViewModel extends StateNotifier<MyState> {
-  MyViewModel({
-    required UseCase1 useCase1,
-    required UseCase2 useCase2,
-  })  : _useCase1 = useCase1,
-        _useCase2 = useCase2,
-        super(MyState.initial);
+class MyViewModel extends Notifier<MyState> {
+  late final UseCase1 _useCase1;
+  late final UseCase2 _useCase2;
 
-  final UseCase1 _useCase1;
-  final UseCase2 _useCase2;
+  @override
+  MyState build() {
+    _useCase1 = ref.watch(useCase1Provider);
+    _useCase2 = ref.watch(useCase2Provider);
+    return MyState.initial;
+  }
 }
 ```
 
@@ -356,12 +354,14 @@ class MyFeatureState {
 }
 
 // 2. Define ViewModel class
-class MyFeatureViewModel extends StateNotifier<MyFeatureState> {
-  MyFeatureViewModel({required MyUseCase useCase})
-      : _useCase = useCase,
-        super(MyFeatureState.initial);
+class MyFeatureViewModel extends Notifier<MyFeatureState> {
+  late final MyUseCase _useCase;
 
-  final MyUseCase _useCase;
+  @override
+  MyFeatureState build() {
+    _useCase = ref.watch(myUseCaseProvider);
+    return MyFeatureState.initial;
+  }
 
   Future<void> loadData() async {
     state = state.copyWith(isLoading: true, clearError: true);
@@ -379,11 +379,9 @@ class MyFeatureViewModel extends StateNotifier<MyFeatureState> {
 
 // 3. Define provider
 final myFeatureViewModelProvider =
-    StateNotifierProvider<MyFeatureViewModel, MyFeatureState>((ref) {
-  return MyFeatureViewModel(
-    useCase: ref.watch(myUseCaseProvider),
-  );
-});
+    NotifierProvider<MyFeatureViewModel, MyFeatureState>(
+      MyFeatureViewModel.new,
+    );
 ```
 
 ## Testing ViewModels
@@ -393,16 +391,24 @@ void main() {
   group('ActivitiesViewModel', () {
     late MockSearchActivitiesUseCase mockSearchUseCase;
     late MockLoadMoreActivitiesUseCase mockLoadMoreUseCase;
+    late ProviderContainer container;
     late ActivitiesViewModel viewModel;
 
     setUp(() {
       mockSearchUseCase = MockSearchActivitiesUseCase();
       mockLoadMoreUseCase = MockLoadMoreActivitiesUseCase();
-      viewModel = ActivitiesViewModel(
-        searchUseCase: mockSearchUseCase,
-        loadMoreUseCase: mockLoadMoreUseCase,
+      container = ProviderContainer(
+        overrides: [
+          searchActivitiesUseCaseProvider.overrideWithValue(mockSearchUseCase),
+          loadMoreActivitiesUseCaseProvider.overrideWithValue(
+            mockLoadMoreUseCase,
+          ),
+        ],
       );
+      viewModel = container.read(activitiesViewModelProvider.notifier);
     });
+
+    tearDown(() => container.dispose());
 
     test('initial state is correct', () {
       expect(viewModel.state.isLoading, isFalse);

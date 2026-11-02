@@ -1,6 +1,6 @@
 # Plan: Per-session API rate limit
 
-**Status**: Implemented
+**Status**: Done
 **Zone**: red (approved in chat)
 
 ## Goal

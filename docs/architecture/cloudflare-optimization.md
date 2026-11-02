@@ -2,6 +2,14 @@
 
 This document outlines Cloudflare optimization strategies for the Siu Tin Dei project, using a hybrid AWS + Cloudflare architecture. Cloudflare acts as an edge layer in front of your existing AWS infrastructure.
 
+> **Status:** Proposal. None of the Terraform or Cloudflare rules below are
+> deployed. Today the API stack already has the `ApiCustomDomainName` and
+> `ApiCustomDomainCertificateArn` parameters and the `ApiCustomDomainTarget`
+> and `ApiCustomDomainUrl` outputs, and the regional API WAF
+> (`lxsoftware-siutindei-api-waf`) is always attached. Public search is
+> fronted by the public-website CloudFront distribution
+> ([`public-www.md`](public-www.md#search-api-edge-caching)).
+
 ## Table of Contents
 
 - [Architecture Overview](#architecture-overview)
@@ -28,7 +36,7 @@ This document outlines Cloudflare optimization strategies for the Siu Tin Dei pr
 │                                                                         │
 │  Flutter Mobile ──────────► API Gateway ──────────► Lambda (Python)     │
 │       │                        │                         │              │
-│       │                   WAF (optional)            RDS Proxy           │
+│       │                   WAF (regional)            RDS Proxy           │
 │       │                        │                         │              │
 │       └──── x-api-key ─────────┘                   Aurora PostgreSQL    │
 │             x-device-attestation                                        │
@@ -149,7 +157,9 @@ resource "cloudflare_zone_settings_override" "ssl" {
 
 ### 3. API Gateway Custom Domain
 
-Update your CDK stack to add a custom domain for API Gateway:
+The API stack already creates this domain when `ApiCustomDomainName` and
+`ApiCustomDomainCertificateArn` are set (`ApiCustomDomain` in
+`api-stack.ts`). The sketch below shows the shape:
 
 ```typescript
 // backend/infrastructure/lib/api-stack.ts
@@ -249,7 +259,7 @@ resource "cloudflare_ruleset" "cache_api" {
     action_parameters {
       edge_ttl {
         mode    = "override_origin"
-        default = 300  # 5 minutes, matches API Gateway cache
+        default = 300  # 5 minutes, matches the CloudFront search behavior
       }
       browser_ttl {
         mode    = "override_origin"
@@ -259,10 +269,10 @@ resource "cloudflare_ruleset" "cache_api" {
         custom_key {
           query_string {
             include = [
-              "age", "district", "pricing_type", "price_min", "price_max",
-              "schedule_type", "day_of_week_utc", "day_of_month",
-              "start_minutes_utc", "end_minutes_utc", "start_at_utc",
-              "end_at_utc", "language", "limit", "cursor"
+              "age", "area_id", "activity_id", "category_id",
+              "pricing_type", "price_min", "price_max", "schedule_type",
+              "day_of_week_utc", "start_minutes_utc", "end_minutes_utc",
+              "language", "q", "view", "limit", "cursor"
             ]
           }
           header {

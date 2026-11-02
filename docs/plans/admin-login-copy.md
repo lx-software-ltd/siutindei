@@ -1,6 +1,6 @@
 # Plan: Tighten admin login copy
 
-**Status**: Draft
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

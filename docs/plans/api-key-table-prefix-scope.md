@@ -1,6 +1,6 @@
 # Plan: Hide API key prefix and lowercase scope
 
-**Status**: Implemented
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

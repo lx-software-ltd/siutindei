@@ -18,16 +18,17 @@ Flutter mobile app, Next.js admin console, and AWS serverless backend.
 
 ## 2) Infrastructure as Code
 
-**Decision:** AWS CDK (TypeScript) + CDK Pipelines.
+**Decision:** AWS CDK (TypeScript), deployed by GitHub Actions workflows.
 
 **Why:**
 - TypeScript-first IaC aligned with the frontend stack.
 - Full AWS construct coverage and strong integration.
 - Programmatic abstractions (loops, conditions, helpers).
-- Self-mutating pipelines with approval gates and rollbacks.
+- GitHub environments provide approval gates; CloudFormation rolls back failed deploys.
 
 **Canonical structure:**
-- `backend/infrastructure/` contains CDK app, stacks, and pipeline.
+- `backend/infrastructure/` contains the CDK app and stacks. There is no
+  CDK Pipelines stack; `deploy-backend.yml` runs the CDK deploy.
 - Deploy workflows detect and reuse existing database resources and VPCs
   to avoid replacements.
 - Imports use environment variables for existing resource identifiers,
@@ -42,10 +43,9 @@ parallel environments (production + staging) inside a single CDK stack
 **Why:**
 - A purely static site keeps marketing pages cheap, fast, and free of
   attack surface tied to runtime servers.
-- Promoting a release from staging to production by **byte-for-byte S3
-  artifact copy** removes the "rebuild between environments" risk entirely.
-  The same artifact that passed the smoke test in staging is the artifact
-  that goes live.
+- Promotion rebuilds the static export with production settings, because
+  build-time values (API base URL, analytics ids, indexing) differ per
+  environment. Staging smoke checks gate which release id is eligible.
 - Two CloudFront distributions in one stack (instead of two stacks) keep
   the response-headers policy, CloudFront Functions, and WAF wiring in a
   single place and let CDK deduplicate IAM and parameter logic.
@@ -71,22 +71,23 @@ parallel environments (production + staging) inside a single CDK stack
 
 | Mode | Effect |
 |---|---|
-| `latest_staging` (default) | Read `releases/latest-release-id.txt` from the staging bucket, S3-copy that release into the production bucket, invalidate. |
+| `latest_staging` (default) | Read `releases/latest-release-id.txt` from the staging bucket, rebuild with **production** env vars, upload to the production bucket, invalidate. |
 | `release_id` | Operator supplies the SHA. The workflow rebuilds with **production** env vars and uploads the local build to production (the release id only gates eligibility). |
 | `maintenance_on` | Upload the branded coming-soon holding page from `apps/public_www/maintenance/` (plus copied logo and bubble assets) to the production bucket with `Cache-Control: no-store`, invalidate. |
 
 ## Database schema (Aurora PostgreSQL)
 
 **Decisions:**
-- District filter uses `locations.district` only.
+- Area filter uses `locations.area_id` (a `geographic_areas` row).
 - Pricing is per location with `per_class`, `per_sessions`, `per_hour`,
   `per_day`, or `free`.
-- Languages are session-specific (stored on schedule entries).
+- Languages are stored on `activity_schedule.languages`; the same
+  activity and location can have one schedule per language set.
 - Times are stored in UTC.
 - DB changes are versioned with Alembic.
 - Lambda connections use RDS Proxy for connection pooling.
 - RDS Proxy uses IAM authentication; Lambda generates IAM tokens.
-- IAM DB roles `activities_app` (read) and `activities_admin` (write)
+- IAM DB roles `siutindei_app` (read) and `siutindei_admin` (write)
   are created via migrations and granted `rds_iam`.
 - DB connections enforce TLS and use small pools tuned for Lambda.
 - Migrations Lambda uses password auth directly against the cluster endpoint.
@@ -136,7 +137,9 @@ parallel environments (production + staging) inside a single CDK stack
 **Decisions:**
 - Lambda entrypoint lives at `backend/lambda/search/handler.py`.
 - Shared application code lives under `backend/src/app`.
-- Python dependencies are listed in `backend/requirements.txt`.
+- Python dependencies are split into profiles: `requirements-core.txt`
+  (search) is a subset of `requirements-admin.txt` (admin), which is a
+  subset of `requirements.txt` (every other function).
 - Database migrations and seed are executed during CDK deploy
   via a custom resource Lambda.
 - Lambda packaging is deterministic (no bytecode) to reduce no-op deploys.
@@ -226,6 +229,10 @@ Lambdas or NAT Gateway.
 
 **Decisions:**
 - Amplify config is passed via `--dart-define=AMPLIFY_CONFIG=...`.
+- Release builds generate it from the API stack outputs with
+  `scripts/deploy/build_amplify_config.py` and pass it with
+  `--dart-define-from-file`. The Android manifest registers the
+  `com.lxsoftware.siutindei` redirect scheme for the Cognito hosted UI.
 - API name is set with `--dart-define=AMPLIFY_API_NAME=...`.
 
 ## 3) CI/CD Authentication
@@ -278,6 +285,7 @@ Lambdas or NAT Gateway.
 - Flutter: `pubspec.lock`
 - Node.js: `package-lock.json`
 - iOS: `Podfile.lock`
+- Python: exact `==` pins in the backend requirements files
 - CI workflow: `.github/workflows/check-lockfiles.yml`
 
 ## 7) Dependency Updates
@@ -340,7 +348,7 @@ Lambdas or NAT Gateway.
 **GitHub Variables**
 - `AWS_ACCOUNT_ID`
 - `AWS_REGION`
-- `CDK_STACKS` (optional; comma/space-separated list, e.g. `ActivitiesApiStack`)
+- `CDK_STACKS` (optional; comma/space-separated list, e.g. `lxsoftware-siutindei`)
 - `CDK_BOOTSTRAP_QUALIFIER` (optional)
 - `CDK_PARAM_FILE` (optional path to CDK parameter JSON)
 - `AMPLIFY_APP_ID`
@@ -363,6 +371,7 @@ Lambdas or NAT Gateway.
 **GitHub Secrets**
 - `AMPLIFY_API_KEY` (mobile API key injected at build time)
 - `CDK_PARAM_GOOGLE_CLIENT_SECRET`
+- `CDK_PARAM_GOOGLE_PLACES_API_KEY` (optional; empty disables pin lookup)
 - `CDK_PARAM_APPLE_PRIVATE_KEY`
 - `CDK_PARAM_PUBLIC_API_KEY_VALUE`
 - `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`
@@ -413,7 +422,7 @@ Every organization already in the database is backfilled to
 CDK parameter `OrgReviewGateEnabled` (`ORG_REVIEW_GATE_ENABLED`) is
 `true`. `v_catalog_health` counts approved organizations only, because
 a SQL view cannot read the Lambda flag. CloudFront caches public
-search for 5 minutes, so a release can lag by that long.
+search for up to 5 minutes, so a release can lag by that long.
 
 Catalog is the release tool. It lists every organization with stage,
 source, missing detail, and import job, and bulk actions approve,
@@ -485,7 +494,8 @@ full list.
 - Organization media stays a drag-reorder grid. That is the documented
   exception.
 
-The standard lives in `.cursorrules` under "Admin Web CRUD UX pattern".
+The standard lives in `.cursor/rules/admin-web.mdc` and the
+`admin-crud-screen` skill.
 Endpoint shapes stay in `docs/api/admin.yaml`. This change does not add
 routes or columns.
 
@@ -534,7 +544,8 @@ Design notes:
 ## Data quality
 
 **Decision:** Duplicate organizations and display-name cleanup live on
-a Data quality nav item, with Duplicates and Names tabs. Merge fills
+a Data quality nav item. Its tabs are Duplicates, Names, Locations,
+Translations, Categories (category checks), Runs, and Deleted. Merge fills
 blank fields on the survivor and lets the admin override a field that
 conflicts. The removed organization's `source_id` and `place_id` are
 stored on `organization_merges` so a later import updates the survivor.
@@ -548,8 +559,10 @@ is `pending_review`. Duplicate scoring uses exact identity fields,
 `difflib`, and `pg_trgm` when the extension is present.
 
 Design notes: `docs/architecture/data-quality.md`. Endpoint shapes:
-`docs/api/admin.yaml` under `/v1/admin/org-duplicates` and
-`/v1/admin/name-fixes`.
+`docs/api/admin.yaml` under `/v1/admin/org-duplicates`,
+`/v1/admin/name-fixes`, `/v1/admin/location-fixes`,
+`/v1/admin/translation-fixes`, `/v1/admin/data-quality/runs`, and
+`/v1/admin/deleted-organizations`.
 
 ## 10) Agent harness
 

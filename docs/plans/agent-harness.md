@@ -1,6 +1,6 @@
 # Plan: Agent harness for siutindei
 
-**Status**: Implemented
+**Status**: Done
 **Zone**: red
 
 ## Goal

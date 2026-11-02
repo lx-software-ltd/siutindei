@@ -1,6 +1,6 @@
 # Plan: Remove organization listing-status review hint
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

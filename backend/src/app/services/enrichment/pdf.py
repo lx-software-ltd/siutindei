@@ -8,6 +8,9 @@ import time
 from collections.abc import Callable
 
 from app.services.enrichment.constants import MAX_PAGE_TEXT, MAX_PDF_PAGES
+from app.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 _WS_RE = re.compile(r"\s+")
 
@@ -40,6 +43,7 @@ def parse_pdf(
         title = str(metadata.title or "") if metadata is not None else ""
     except Exception:
         # pypdf raises many error types on malformed files; any of them means skip.
+        logger.info("skipping unreadable PDF", exc_info=True)
         return None
     text = _WS_RE.sub(" ", " ".join(parts)).strip()[:MAX_PAGE_TEXT]
     if not text:

@@ -1,6 +1,6 @@
 # Plan: Location enrichment from the sweep
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow, plus a red migration and the proxy allow-list
 
 ## Decisions

@@ -1,6 +1,6 @@
 # Plan: Remove location-fix CSV export
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

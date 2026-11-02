@@ -313,9 +313,11 @@ class TokenLoader {
 ///   }
 /// }
 /// ```
+///
+/// Overriding this provider with a fixed value bypasses
+/// [designTokensNotifierProvider], so runtime updates stop applying.
 final designTokensProvider = Provider<DesignTokens>((ref) {
-  // Default implementation - can be overridden
-  return DesignTokens.defaults();
+  return ref.watch(designTokensNotifierProvider);
 });
 
 /// Provider for just the component (leaf) tokens.

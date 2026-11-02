@@ -34,4 +34,4 @@ A change is done when the `verify-change` skill's checks pass and the pull reque
 
 ## Hooks
 
-`.cursor/hooks.json` denies force-push, pushes to `main` or `staging`, `git reset --hard`, deleting those refs, `rm -rf` outside `/tmp`, destructive SQL, `cdk deploy` or `destroy`, and `aws delete-*`. It asks before `git commit --amend` and `alembic downgrade`.
+`.cursor/hooks.json` denies force-push, pushes to `main` or `staging`, `git reset --hard`, deleting those refs, `rm -rf` on the repository root or outside the repository and `/tmp`, destructive SQL, `cdk deploy` or `destroy`, `aws delete-*` and `terminate-*`, and `alembic stamp`. It asks before `git commit --amend` and `alembic downgrade`.

@@ -1,6 +1,6 @@
 # Plan: Brand the admin login page as Siu Tin Dei
 
-**Status**: Approved
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

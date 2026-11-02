@@ -1,6 +1,6 @@
 # Plan: Catalog rejected review label
 
-**Status**: Implemented
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

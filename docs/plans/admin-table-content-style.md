@@ -1,6 +1,6 @@
 # Plan: One table cell content style
 
-**Status**: Approved
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

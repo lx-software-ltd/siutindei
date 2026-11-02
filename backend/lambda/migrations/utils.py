@@ -7,6 +7,7 @@ from typing import Any
 
 import psycopg
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ArgumentError
 
 from app.utils.logging import get_logger
 
@@ -65,7 +66,7 @@ def _psycopg_connect(database_url: str) -> psycopg.Connection:
     """Connect using keyword args to avoid DSN parsing issues."""
     try:
         url = make_url(database_url)
-    except Exception:
+    except ArgumentError:
         url = make_url(f"postgresql://{database_url}")
 
     connect_kwargs: dict[str, Any] = {

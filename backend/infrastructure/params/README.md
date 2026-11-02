@@ -36,6 +36,9 @@ or `all stacks`). Deploy static site artifacts with
 | `PublicWwwStagingDomainName` | Staging CloudFront alias (e.g. `siutindei-www-staging.lx-software.com`). |
 | `PublicWwwStagingCertificateArn` | ACM cert ARN in **us-east-1** that covers the staging alias. |
 | `WafWebAclArn` | (Optional) us-east-1 WAF WebACL ARN; reuse the admin-web ACL. |
+| `SearchApiProxyOriginDomain` | API custom domain CloudFront forwards `/v1/activities/search` to. |
+| `PublicWwwOriginVerifySecret` | Shared secret CloudFront sends to the API origin as `X-Origin-Verify`; the API authorizer checks it. Empty disables the header; otherwise at least 32 characters. CI passes it to both the API and public website stacks. Store it in GitHub secret `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`. |
+| `PublicWwwOriginVerifySecretPrevious` | (API stack only) Previous value the authorizer still accepts during rotation. GitHub secret `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS`. |
 
 Static-export branding defaults (site name, tagline, contact email,
 WhatsApp URL, and WhatsApp display number) live in

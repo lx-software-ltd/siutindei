@@ -32,6 +32,13 @@ repository.
 
 ## `.github/workflows/board-agent.yml`
 
+The block below is the original hand-off sketch. The live workflow pins
+actions by SHA, checks out `staging`, runs migrations and `pytest tests
+backend` against a Postgres service, installs a pinned `cursor-agent`,
+runs `scripts/ci/board_policy.py` before opening the draft PR, and uses
+`BOARD_PR_TOKEN` with a `GITHUB_TOKEN` fallback. Read
+`.github/workflows/board-agent.yml` for the current steps.
+
 ```yaml
 name: board-agent
 run-name: board-agent ${{ inputs.task_id }}
@@ -126,5 +133,6 @@ approval. **The owner merges that PR in GitHub.**
 
 ## Deploy
 
-On push to `staging`, deploy a staging stack/URL and run a smoke test. On
-push to `main`, deploy production (existing).
+On push to `staging`, `deploy-public-www.yml` deploys the public site to
+staging and runs its smoke checks. Backend, admin web, and mobile deploy
+from `main` or a manual dispatch.

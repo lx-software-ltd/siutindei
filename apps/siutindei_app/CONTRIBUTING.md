@@ -213,17 +213,14 @@ final state = ref.watch(viewModelProvider);
 
 ```
 test/
-├── core/           # Core utilities tests
-├── domain/         # Domain layer tests
-│   ├── entities/
-│   ├── use_cases/
-│   └── repositories/
-├── data/           # Data layer tests
-│   ├── repositories/
-│   └── mappers/
-├── features/       # Widget tests
-└── integration/    # Integration tests
+├── area_filter_chips_test.dart
+├── area_filter_options_test.dart
+├── geographic_area_tree_test.dart
+└── home_wizard_choices_test.dart
 ```
+
+Tests are flat today. Name each file after the source it covers
+(`area_filter_options_test.dart` for `area_filter_options.dart`).
 
 ### Writing Tests
 

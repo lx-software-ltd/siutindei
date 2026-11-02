@@ -107,7 +107,9 @@ lib/
 ├── features/                 # Feature modules
 │   ├── search/
 │   │   ├── screens/
+│   │   ├── utils/
 │   │   └── widgets/
+│   ├── home_wizard/
 │   ├── activity_detail/
 │   ├── organization/
 │   └── auth/
@@ -129,8 +131,9 @@ lib/
 
 ### Prerequisites
 
-- Flutter SDK 3.x+
-- Dart 3.x+
+- Flutter 3.41+ (stable)
+- Dart 3.10.3+ (`pubspec.yaml` `sdk: ">=3.10.3 <4.0.0"`)
+- Android: JDK 17 (Gradle 8.14 does not start on JDK 25)
 - iOS: Xcode 14+
 - Android: Android Studio with SDK 33+
 
@@ -157,12 +160,15 @@ The app requires configuration for AWS Amplify and Firebase:
 
 ```bash
 # Development
-flutter run --dart-define=AMPLIFY_API_ENDPOINT=https://api.example.com \
+flutter run --dart-define=AMPLIFY_CONFIG='<amplifyconfiguration JSON>' \
             --dart-define=AMPLIFY_API_KEY=your-api-key \
-            --dart-define=COGNITO_USER_POOL_ID=your-pool-id
+            --dart-define=AMPLIFY_API_NAME=activitiesApi
 ```
 
-See `lib/config/` for all configuration options.
+See `lib/config/` for all configuration options. CI generates
+`AMPLIFY_CONFIG` from the `lxsoftware-siutindei` stack outputs with
+`scripts/deploy/build_amplify_config.py`; see
+[Getting started](docs/getting-started.md#running-with-configuration).
 
 ## Layer Documentation
 
@@ -215,7 +221,7 @@ Primitive Tokens → Semantic Tokens → Component Tokens
 
 State is managed using [Riverpod](https://riverpod.dev/) with the following patterns:
 
-1. **ViewModels** extend `StateNotifier<State>` for feature state
+1. **ViewModels** extend `Notifier<State>` (Riverpod 3) for feature state; `AuthViewModel` still uses the legacy `StateNotifier`
 2. **Providers** are used for dependency injection
 3. **Selectors** minimize widget rebuilds
 
@@ -236,9 +242,6 @@ ref.read(activitiesViewModelProvider.notifier).search(filters);
 # Unit tests
 flutter test
 
-# Integration tests
-flutter test integration_test/
-
 # With coverage
 flutter test --coverage
 ```
@@ -247,11 +250,12 @@ flutter test --coverage
 
 ```
 test/
-├── core/           # Core utilities tests
-├── domain/         # Domain layer tests
-├── data/           # Data layer tests
-├── features/       # Widget tests
-└── integration/    # Integration tests
+├── area_filter_chips_test.dart
+├── area_filter_options_test.dart
+├── geographic_area_tree_test.dart
+└── home_wizard_choices_test.dart
+
+There is no `integration_test/` suite yet.
 ```
 
 ## Performance

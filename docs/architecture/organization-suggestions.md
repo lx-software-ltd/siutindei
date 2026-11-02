@@ -38,14 +38,14 @@ groups:
 - **User endpoints** (`/v1/user/organization-suggestion`): Any
   authenticated user can view their suggestion history and submit new
   suggestions.
-- **Admin endpoints** (`/v1/admin/organization-suggestions`): Admins
-  can list all suggestions and approve/reject them.
+- **Admin review** (`/v1/admin/tickets`): Suggestions are tickets with
+  `ticket_type = 'organization_suggestion'`. Admins list and decide
+  them through the tickets route.
 
 For full endpoint details (parameters, request/response schemas,
 authentication requirements), see the OpenAPI spec:
 [`docs/api/admin.yaml`](../api/admin.yaml) — search for
-`/v1/user/organization-suggestion` and
-`/v1/admin/organization-suggestions`.
+`/v1/user/organization-suggestion` and `/v1/admin/tickets`.
 
 ## Database Schema
 
@@ -80,13 +80,4 @@ See `docs/architecture/database-schema.md` for the full `tickets` table schema.
 
 ## Migration
 
-Apply the migration:
-```bash
-cd backend/db
-alembic upgrade head
-```
-
-Rollback:
-```bash
-alembic downgrade 0010_add_audit_logging
-```
+Schema changes follow `.cursor/skills/db-migration/SKILL.md`.

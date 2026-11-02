@@ -1,6 +1,6 @@
 # Plan: Sort categories by path then display order
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

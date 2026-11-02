@@ -177,16 +177,16 @@ class GetOrganizationUseCase {
 ### In ViewModels
 
 ```dart
-class ActivitiesViewModel extends StateNotifier<ActivitiesState> {
-  ActivitiesViewModel({
-    required SearchActivitiesUseCase searchUseCase,
-    required LoadMoreActivitiesUseCase loadMoreUseCase,
-  })  : _searchUseCase = searchUseCase,
-        _loadMoreUseCase = loadMoreUseCase,
-        super(ActivitiesState.initial);
+class ActivitiesViewModel extends Notifier<ActivitiesState> {
+  late final SearchActivitiesUseCase _searchUseCase;
+  late final LoadMoreActivitiesUseCase _loadMoreUseCase;
 
-  final SearchActivitiesUseCase _searchUseCase;
-  final LoadMoreActivitiesUseCase _loadMoreUseCase;
+  @override
+  ActivitiesState build() {
+    _searchUseCase = ref.watch(searchActivitiesUseCaseProvider);
+    _loadMoreUseCase = ref.watch(loadMoreActivitiesUseCaseProvider);
+    return ActivitiesState.initial;
+  }
 
   Future<void> search(SearchFilters filters) async {
     state = state.copyWith(isLoading: true, clearError: true);
@@ -247,12 +247,9 @@ final loadMoreActivitiesUseCaseProvider = Provider<LoadMoreActivitiesUseCase>((r
 
 // ViewModel provider
 final activitiesViewModelProvider =
-    StateNotifierProvider<ActivitiesViewModel, ActivitiesState>((ref) {
-  return ActivitiesViewModel(
-    searchUseCase: ref.watch(searchActivitiesUseCaseProvider),
-    loadMoreUseCase: ref.watch(loadMoreActivitiesUseCaseProvider),
-  );
-});
+    NotifierProvider<ActivitiesViewModel, ActivitiesState>(
+      ActivitiesViewModel.new,
+    );
 ```
 
 ## Creating New Use Cases

@@ -1,6 +1,6 @@
 # Plan: Admin review fixes
 
-**Status**: Approved
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

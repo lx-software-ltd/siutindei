@@ -6,8 +6,8 @@ This guide will help you set up and run the Siutindei App locally.
 
 ### Required Tools
 
-- **Flutter SDK** 3.x or later
-- **Dart SDK** 3.x or later (included with Flutter)
+- **Flutter SDK** 3.41 or later (stable)
+- **Dart SDK** 3.10.3 or later (included with Flutter)
 - **Git** for version control
 
 ### Platform-Specific
@@ -20,7 +20,7 @@ This guide will help you set up and run the Siutindei App locally.
 #### Android Development
 - Android Studio with Android SDK 33+
 - Android Emulator or physical device
-- Java 11 or later
+- JDK 17 (`flutter config --jdk-dir <jdk17>`; Gradle 8.14 does not start on JDK 25)
 
 ## Installation
 
@@ -58,17 +58,18 @@ Ensure all required components show checkmarks.
 The app requires configuration for AWS Amplify services. Create environment variables or use `--dart-define`:
 
 ```bash
-# Required
-AMPLIFY_API_ENDPOINT=https://api.example.com
+# Required: the Amplify configuration JSON (API, Auth). Startup throws
+# "AMPLIFY_CONFIG is not set" without it.
+AMPLIFY_CONFIG='<amplifyconfiguration JSON>'
 AMPLIFY_API_KEY=your-api-key
-AMPLIFY_API_NAME=siutindei-api
 
-# Optional - Cognito Auth
-COGNITO_USER_POOL_ID=us-east-1_xxxxx
-COGNITO_APP_CLIENT_ID=xxxxxxxxxx
-COGNITO_IDENTITY_POOL_ID=us-east-1:xxxxx
+# Optional
+AMPLIFY_API_NAME=activitiesApi          # default
+PUBLIC_WWW_BASE_URL=https://siutindei.com  # default
+STAGING_SEARCH_DATA_ENABLED=false
+STAGING_SEARCH_FIXTURE_URL=https://.../fixtures/activity_search_staging.json
 
-# Optional - Firebase
+# Firebase (see lib/config/firebase_config.dart)
 FIREBASE_PROJECT_ID=your-project-id
 ```
 
@@ -76,21 +77,22 @@ FIREBASE_PROJECT_ID=your-project-id
 
 ```bash
 flutter run \
-  --dart-define=AMPLIFY_API_ENDPOINT=https://api.example.com \
-  --dart-define=AMPLIFY_API_KEY=your-api-key \
-  --dart-define=AMPLIFY_API_NAME=siutindei-api
+  --dart-define=AMPLIFY_CONFIG='<amplifyconfiguration JSON>' \
+  --dart-define=AMPLIFY_API_KEY=your-api-key
 ```
 
-### Using a Configuration File
+See `lib/config/amplify_config.dart`, `site_links.dart`, and
+`firebase_config.dart` for every `--dart-define` the app reads.
 
-Create `lib/config/local_config.dart` (gitignored):
+To build `AMPLIFY_CONFIG` from a deployed API stack instead of writing it
+by hand (this is what `deploy-mobile.yml` and `deploy-ios.yml` do):
 
-```dart
-class LocalConfig {
-  static const apiEndpoint = 'https://api.example.com';
-  static const apiKey = 'your-api-key';
-  static const apiName = 'siutindei-api';
-}
+```bash
+python3 scripts/deploy/build_amplify_config.py \
+  --params backend/infrastructure/params/production.json \
+  --output apps/siutindei_app/build/amplify-defines.json
+flutter run --dart-define-from-file=build/amplify-defines.json \
+  --dart-define=AMPLIFY_API_KEY=your-api-key
 ```
 
 ## Running the App
@@ -172,7 +174,7 @@ Press `R` in the terminal for a full restart (resets state).
 flutter test
 
 # Specific test file
-flutter test test/domain/use_cases/search_test.dart
+flutter test test/area_filter_options_test.dart
 
 # With coverage
 flutter test --coverage

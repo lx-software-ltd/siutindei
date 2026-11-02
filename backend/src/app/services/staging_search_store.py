@@ -378,7 +378,6 @@ def _to_schema(
             description_translations=(
                 {} if card else organization.get("description_translations") or {}
             ),
-            manager_id=organization["manager_id"],
             media_urls=media_urls,
             logo_media_url=organization.get("logo_media_url"),
         ),

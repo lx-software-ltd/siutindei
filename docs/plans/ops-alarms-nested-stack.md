@@ -1,6 +1,8 @@
 # Plan: Move the ops alarms into a nested stack
 
-**Status**: Stage 3 implemented; merge only after the stage 2 runbook
+**Status**: Done. Stage 3 is deployed, and the stage 2 runbook
+(`docs/deployment/ops-alarms-stack-refactor.md`) was retired with the
+script in `docs/plans/remove-one-off-scripts.md`.
 **Zone**: red (approved in chat)
 
 ## Goal

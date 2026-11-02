@@ -318,16 +318,11 @@ This creates:
    - Name: `MATCH_DEPLOY_KEY`
    - Value: Paste contents of `match_deploy_key` (private key)
 
-### 5.4 Update Workflow (if needed)
+### 5.4 Workflow SSH step
 
-Add SSH key setup step to the workflow before the match step:
-
-```yaml
-- name: Setup SSH for match
-  uses: webfactory/ssh-agent@v0.9.0
-  with:
-    ssh-private-key: ${{ secrets.MATCH_DEPLOY_KEY }}
-```
+`deploy-ios.yml` already loads `MATCH_DEPLOY_KEY` with
+`webfactory/ssh-agent` (v0.10.0, SHA-pinned) before the match step,
+and skips that step when the secret is empty.
 
 ---
 
@@ -346,12 +341,8 @@ Add SSH key setup step to the workflow before the match step:
 gh workflow run deploy-ios.yml
 ```
 
-### Via Git Tag (if configured)
-
-```bash
-git tag ios-v1.0.0
-git push origin ios-v1.0.0
-```
+The workflow has no tag or push trigger; `workflow_dispatch` is the only
+way to run it.
 
 ---
 
@@ -414,6 +405,10 @@ git push origin ios-v1.0.0
 - [ ] `IOS_BUNDLE_ID`
 - [ ] `APPLE_TEAM_ID`
 - [ ] `IOS_PROVISIONING_PROFILE` (optional)
+- [ ] `AWS_ACCOUNT_ID` and `AWS_REGION` (the build assumes `GitHubActionsRole`
+  and reads the `lxsoftware-siutindei` stack outputs to generate
+  `AMPLIFY_CONFIG`)
+- [ ] `CDK_PARAM_FILE` (optional, defaults to `backend/infrastructure/params/production.json`)
 - [ ] Firebase variables (if applicable)
 
 ### One-Time Setup

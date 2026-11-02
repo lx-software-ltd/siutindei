@@ -44,6 +44,8 @@ rules use.
 | Multi-select chips | `AdminToggleChip` |
 | Icons | `src/components/icons/action-icons.tsx` |
 | In-flight buttons | `Button` `loading` |
+| Data-quality queues | `DataQualityPanel` with `useDataQualityQueue` (sweep, select visible or all matching, bulk apply or dismiss, budget). Names, Locations, and Translations share it |
+| Dashboard sections | `loadDashboardSection(() => import(...))` from `dashboard-section.tsx`, which shows `DashboardSectionFallback` while the section loads |
 
 ## Pre-auth surfaces
 

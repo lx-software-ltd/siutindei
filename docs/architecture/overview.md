@@ -34,7 +34,10 @@ Public Website (Next.js static export)        Flutter Mobile / Next.js Admin
 
 ### Admin console (Next.js App Router)
 - Admin users manage organizations, activities, schedules, and pricing.
-- Hosted on Amplify Hosting (release jobs triggered in CI).
+- Static export synced to S3 and served by CloudFront from the
+  `lxsoftware-siutindei-admin-web` stack (`scripts/deploy/deploy-admin-web.sh`).
+  `deploy-admin-web.yml` also starts an Amplify Hosting job when the
+  `AMPLIFY_*` repository variables are set.
 - See [`docs/architecture/admin-web-ui.md`](admin-web-ui.md) for the
   shared layout primitives.
 
@@ -46,10 +49,9 @@ Public Website (Next.js static export)        Flutter Mobile / Next.js Admin
   same `lxsoftware-siutindei-public-www` CloudFormation stack, with the
   staging distribution noindexed via `X-Robots-Tag` and a deny-all
   `robots.txt` synced by the deploy script.
-- Releases are deployed to staging on push-to-main, then promoted to
+- Releases are deployed to staging on push to `staging`, then promoted to
   production via `workflow_dispatch` (`Promote Public Website Release`).
-  Promotion can be a fresh production-built static export *or* an
-  S3-only artifact copy from `releases/<id>/` on the staging bucket.
+  Promotion always rebuilds the static export with production settings.
 - See [`docs/architecture/public-www.md`](public-www.md) for the design.
 
 ### Backend
@@ -68,8 +70,8 @@ Public Website (Next.js static export)        Flutter Mobile / Next.js Admin
   Requests are gated by allow-lists (`ALLOWED_ACTIONS` for AWS API
   calls, `ALLOWED_HTTP_URLS` for outbound HTTP).  See
   `backend/src/app/services/aws_proxy.py`.
-- Asynchronous messaging (SNS + SQS) is used for manager access requests
-  and organization suggestions. See [`docs/architecture/aws-messaging.md`](aws-messaging.md).
+- Asynchronous messaging (SNS + SQS) is used for manager access requests,
+  organization suggestions, and organization feedback. See [`docs/architecture/aws-messaging.md`](aws-messaging.md).
 - SQLAlchemy models map to Aurora PostgreSQL.
 - Alembic manages schema migrations, executed via a custom resource Lambda
   during deploy.
@@ -82,15 +84,17 @@ Public Website (Next.js static export)        Flutter Mobile / Next.js Admin
 
 Key entities:
 - `organizations` (with manager assignment)
-- `locations` (district used for filtering)
+- `locations` (`area_id` into `geographic_areas`, used for filtering)
 - `activities`
 - `activity_locations`
 - `activity_pricing` (per-class, per-month, per-sessions)
 - `activity_schedule` (weekly only; languages per schedule)
 - `activity_schedule_entries` (per-day timeslots for schedules)
-- `organization_access_requests` (manager access workflow)
-- `organization_suggestions` (user-submitted place suggestions)
+- `tickets` (access requests, place suggestions, and feedback, keyed by
+  `ticket_type`)
+- `organization_feedback` and `feedback_labels`
 - `audit_log` (automatic change tracking via triggers)
+- `catalog_versions` (per-record version history)
 
 All times are stored in UTC.
 See [`docs/architecture/database-schema.md`](database-schema.md) for full table details.
@@ -108,7 +112,8 @@ See [`docs/architecture/database-schema.md`](database-schema.md) for full table 
 - Alembic migrations live under `backend/db/`.
 - Seed data stored in `backend/db/seed/seed_data.sql`.
 - Migrations run via a custom resource Lambda using password auth.
-- Application traffic uses IAM auth via the proxy and the `activities_app` role.
+- Application traffic uses IAM auth via the proxy: search connects as
+  `siutindei_app`, admin and listing-events functions as `siutindei_admin`.
 - Deployments reuse existing DB clusters, proxies, and VPCs when detected.
 
 ## CI/CD
@@ -124,8 +129,8 @@ See [`docs/architecture/database-schema.md`](database-schema.md) for full table 
   (opens `staging → main` for the owner). See
   [`executive-board-autonomy-siutindei-appendix-a.md`](executive-board-autonomy-siutindei-appendix-a.md).
 - CDK bootstrap workflow for initial environment setup.
-- Lockfile checks for Flutter, Node, and iOS.
-- Amplify promotion workflow with gating (staging -> main).
+- Lockfile checks for Flutter, Node, iOS, and Python requirement pins.
+- `amplify-promote.yml` promotes an Amplify branch on manual dispatch.
 - Dependabot enabled for automated dependency updates (see below).
 - Infrastructure tests validate CDK templates for new and imported
   database resources.
@@ -157,8 +162,10 @@ pull requests for dependency updates:
 - Secrets stored in GitHub Secrets or AWS Secrets Manager.
 - Public activity search requires an API key plus device attestation. Mobile clients present a JWKS-validated App Check JWT. The public website presents a static token that is accepted only with the CloudFront `X-Origin-Verify` secret.
 - Admin routes require membership in the Cognito `admin` group.
-- Catalog import (`POST /v1/admin/imports` and `/presign`) also allows
-  the `importer` group via a dedicated password-auth app client.
+- Catalog import (`POST /v1/admin/imports` and `/presign`), import
+  history, owner-UI organization lookup and PATCH, and organization
+  enrichment also allow the `importer` group via a dedicated
+  password-auth app client.
   Imports update a matching organization when `allow_updates` is true
   (the default) and the payload `manager_id` matches. `allow_updates`
   false skips existing organizations, venues, activities, pricing, and
@@ -183,8 +190,9 @@ pull requests for dependency updates:
 - X-Ray tracing enabled for API Gateway, with active tracing on the admin
   and AWS-proxy Lambdas.
 - Operational alarms (API Gateway 5XX and volume-gated p99 latency,
-  search/admin Lambda errors, throttles, and per-function p99 duration,
-  Aurora ACU utilization and connection count, manager request DLQ) publish
+  search, admin, and listing-events Lambda errors, throttles, and
+  per-function p99 duration, Aurora ACU utilization and connection count,
+  manager-request and category-suggestion DLQs, API WAF blocks) publish
   to the KMS-encrypted `ops-alerts` SNS topic, with an
   optional email subscription via the `OpsAlertsEmail` parameter. See
   [`aws-assets-map.md`](aws-assets-map.md) for the alarm inventory.
@@ -192,8 +200,10 @@ pull requests for dependency updates:
 
 ## Caching
 
-- Public search responses are cached at the CloudFront edge (5-minute TTL) via
-  the public-website distribution's `/v1/activities/search` behavior. The API
+- Public search responses are cached at the CloudFront edge (5-minute TTL)
+  via the public-website distribution's `/v1/activities/search` behavior.
+  The search Lambda sends `Cache-Control: public, max-age=60,
+  s-maxage=300` on successful public searches. The API
   Gateway stage cache cluster is intentionally disabled (Checkov CKV_AWS_120 is
   suppressed via `skip-check` in `.checkov.yaml`); see
   [`decisions.md`](decisions.md) for the cost rationale.

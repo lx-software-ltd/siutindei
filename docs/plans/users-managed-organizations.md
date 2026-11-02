@@ -1,6 +1,6 @@
 # Plan: Managed organizations on the user accordion
 
-**Status**: Accepted
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

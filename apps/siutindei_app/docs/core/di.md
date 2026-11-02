@@ -93,12 +93,9 @@ final searchActivitiesUseCaseProvider = Provider<SearchActivitiesUseCase>((ref) 
 ```dart
 // lib/viewmodels/activities_viewmodel.dart
 final activitiesViewModelProvider =
-    StateNotifierProvider<ActivitiesViewModel, ActivitiesState>((ref) {
-  return ActivitiesViewModel(
-    searchUseCase: ref.watch(searchActivitiesUseCaseProvider),
-    loadMoreUseCase: ref.watch(loadMoreActivitiesUseCaseProvider),
-  );
-});
+    NotifierProvider<ActivitiesViewModel, ActivitiesState>(
+      ActivitiesViewModel.new,
+    );
 ```
 
 ## ServiceLocator Class
@@ -227,25 +224,17 @@ final activityRepositoryProvider = Provider<ActivityRepository>((ref) {
 });
 ```
 
-### 2. Use Constructor Injection
+### 2. Resolve Dependencies in `build()`
 
 ```dart
-// Good - dependencies injected through constructor
-class ActivitiesViewModel extends StateNotifier<ActivitiesState> {
-  ActivitiesViewModel({
-    required SearchActivitiesUseCase searchUseCase,
-    required LoadMoreActivitiesUseCase loadMoreUseCase,
-  }) : _searchUseCase = searchUseCase,
-       _loadMoreUseCase = loadMoreUseCase;
-}
+// Good - watch use-case providers once in build(); tests override them
+class ActivitiesViewModel extends Notifier<ActivitiesState> {
+  late final SearchActivitiesUseCase _searchUseCase;
 
-// Avoid - accessing providers directly
-class ActivitiesViewModel extends StateNotifier<ActivitiesState> {
-  ActivitiesViewModel(this._ref);
-  final Ref _ref;
-  
-  void search() {
-    _ref.read(searchUseCaseProvider).execute(); // Harder to test
+  @override
+  ActivitiesState build() {
+    _searchUseCase = ref.watch(searchActivitiesUseCaseProvider);
+    return ActivitiesState.initial;
   }
 }
 ```
@@ -258,9 +247,10 @@ class ActivitiesViewModel extends StateNotifier<ActivitiesState> {
 /// Dependencies:
 /// - [searchActivitiesUseCaseProvider]
 /// - [loadMoreActivitiesUseCaseProvider]
-final activitiesViewModelProvider = StateNotifierProvider<...>((ref) {
-  // ...
-});
+final activitiesViewModelProvider =
+    NotifierProvider<ActivitiesViewModel, ActivitiesState>(
+      ActivitiesViewModel.new,
+    );
 ```
 
 ## Related

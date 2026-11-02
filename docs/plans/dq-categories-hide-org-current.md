@@ -1,6 +1,6 @@
 # Plan: Hide Data quality · Categories org and current columns
 
-**Status**: Active
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

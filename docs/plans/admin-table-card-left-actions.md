@@ -1,6 +1,6 @@
 # Plan: Left-align table actions; Catalog filters in the card
 
-**Status**: Approved
+**Status**: Done
 **Zone**: yellow
 
 ## Goal

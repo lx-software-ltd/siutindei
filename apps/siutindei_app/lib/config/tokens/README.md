@@ -103,7 +103,7 @@ class MyCard extends TokenAwareWidget {
 ```dart
 // Shorthand access
 final tokens = ref.tokens;
-final buttonTokens = ref.buttonTokens;
+final designTokens = ref.designTokens;
 ```
 
 ## Ingesting Custom Tokens
@@ -141,6 +141,12 @@ void main() async {
 ```
 
 ### Method 2: Runtime Update
+
+`designTokensProvider` watches `designTokensNotifierProvider`, so the
+call below rebuilds every widget that reads `ref.tokens` and the
+`ThemeData` from `tokenThemeDataProvider`. Overriding
+`designTokensProvider` (Methods 1 and 3) pins the value and turns this
+off.
 
 ```dart
 // Load new tokens dynamically

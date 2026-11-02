@@ -250,7 +250,7 @@ Your app's package name (application ID).
 Check `apps/siutindei_app/android/app/build.gradle.kts`:
 ```kotlin
 defaultConfig {
-    applicationId = "com.yourcompany.customerapp"
+    applicationId = "com.lxsoftware.siutindei"
     ...
 }
 ```
@@ -337,9 +337,10 @@ After this initial upload, the GitHub Actions workflow can upload subsequent bui
 
 The workflow automatically triggers on pushes to `main` that modify:
 - `apps/siutindei_app/**`
-- `packages/flutter_ui/**`
-- `packages/api_client_dart/**`
-- `packages/models_shared/**`
+- `scripts/**`
+
+The workflow also lists three historical `packages/**` paths that do not
+exist in this repository.
 
 ### Via GitHub CLI
 
@@ -386,7 +387,8 @@ Testers can install via:
 
 ### "Version code already exists"
 
-- Increment `versionCode` in `pubspec.yaml` or `build.gradle.kts`
+- Increment the build number after `+` in the `pubspec.yaml` `version:`
+  (`build.gradle.kts` reads `versionCode` from `flutter.versionCode`)
 - Each upload must have a unique, higher version code
 
 ### "Package name mismatch"
@@ -404,7 +406,9 @@ Testers can install via:
 
 ## Local Development Setup
 
-For testing release builds locally:
+For testing release builds locally. Use JDK 17 and point Flutter at it
+with `flutter config --jdk-dir <jdk17>`; Gradle 8.14 does not start on
+JDK 25, and CI pins Temurin 17 the same way.
 
 ### 1. Create Local Key Properties
 
@@ -425,8 +429,11 @@ storeFile=keystore.p12
 ### 3. Copy Keystore
 
 ```bash
-cp /path/to/release-keystore.p12 apps/siutindei_app/android/app/keystore.p12
+cp /path/to/release-keystore.p12 apps/siutindei_app/android/keystore.p12
 ```
+
+`storeFile` resolves relative to `apps/siutindei_app/android/`. A
+missing keystore silently falls back to debug signing.
 
 ### 4. Build Locally
 
@@ -474,6 +481,10 @@ internal → alpha → beta → production
 - [ ] `PLAY_STORE_UPLOAD_ENABLED` (set to `true` when ready to upload)
 - [ ] `ANDROID_PACKAGE_NAME`
 - [ ] `ANDROID_RELEASE_TRACK`
+- [ ] `AWS_ACCOUNT_ID` and `AWS_REGION` (the build assumes `GitHubActionsRole`
+  and reads the `lxsoftware-siutindei` stack outputs to generate
+  `AMPLIFY_CONFIG`)
+- [ ] `CDK_PARAM_FILE` (optional, defaults to `backend/infrastructure/params/production.json`)
 - [ ] Firebase variables (if applicable)
 
 ### One-Time Setup

@@ -4,6 +4,10 @@
 > **Branch:** `cursor/backend-improvements-assessment-04ed`
 > **Scope:** All Python code under `backend/`, `tests/`, and related Lambda handlers.
 > **Remediation commit:** `f238cdd`
+> **Status (2026-11-02):** Every item is fixed. The later unlogged
+> `except Exception:` blocks now either log or catch the specific error
+> (`UnboundExecutionError` in `catalog_locks.py`, `ArgumentError` in the
+> migrations `utils.py`).
 
 ---
 
@@ -200,6 +204,11 @@ issues) become invisible in CloudWatch, making debugging impossible.
    caching like the cognito authorizers do. Unify the logic with an optional
    `broaden_resource` parameter (default `True`), or keep a separate slim
    version. Document the difference.
+
+**Resolution:** the shared helpers live in
+`backend/src/app/auth/authorizer_helpers.py` (`get_header`, `extract_token`,
+`policy`),
+not in `backend/lambda/authorizers/_common.py`.
 
 ---
 
@@ -498,7 +507,7 @@ After all fixes are applied:
 - [ ] `pytest tests/` passes with no skipped tests (except PostgreSQL-only if
   no DB available).
 - [ ] No `str(exc)` in any HTTP 500 response body.
-- [ ] `grep -r "except Exception:" backend/src/` returns only intentional
+- [x] `grep -r "except Exception:" backend/src/` returns only intentional
   safety-net handlers, each with logging.
 - [ ] No bare email addresses in any `logger.*()` call under `backend/lambda/`.
 - [ ] No duplicate function definitions across files (authorizer helpers,

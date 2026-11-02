@@ -103,13 +103,13 @@ This project implements the following security measures:
 
 Please review the following when deploying to production:
 
-1. **CORS Configuration**: Default configuration uses wildcard (`*`) for allowed origins. Restrict this for production deployments.
+1. **CORS Configuration**: The API uses an explicit origin allow-list (`resolveCorsAllowedOrigins` in `backend/infrastructure/lib/api-stack.ts`), overridable with the `corsAllowedOrigins` context or `CORS_ALLOWED_ORIGINS`. Keep it to known hosts; `Cors.ALL_ORIGINS` is not allowed.
 
 2. **MFA**: Cognito MFA is currently set to OFF. Consider enabling for sensitive applications.
 
 3. **API Rate Limiting**: Configure API Gateway throttling based on your requirements.
 
-4. **WAF**: Consider adding AWS WAF for additional API protection.
+4. **WAF**: A CloudFront WebACL (`backend/infrastructure/lib/waf-stack.ts`) and an API WebACL with rate limits and the known-bad-inputs managed rule (`lib/constructs/api-rate-limit.ts`) are deployed. Review their rules before widening exposure.
 
 5. **CloudTrail**: Ensure CloudTrail is enabled for audit logging.
 
@@ -129,7 +129,7 @@ This repository uses the following automated security tools:
 - **pip-audit**: Python dependency vulnerability scanning
   - Suppressed: `PYSEC-2025-183` (PyJWT weak-encryption advisory; supplier-disputed,
     last affected release is `pyjwt==2.10.1`; Cognito JWT paths use RS256 via JWKS).
-    The backend pins `pyjwt[crypto]==2.15.0`, which is outside that range and
+    The backend pins `pyjwt[crypto]==2.15.1`, which is outside that range and
     includes the fix for `PYSEC-2026-4141` (nested JWT payload `RecursionError`).
 - **Bandit**: Python security linter
 - **Checkov**: Infrastructure as Code security scanning

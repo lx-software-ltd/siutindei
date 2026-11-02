@@ -41,7 +41,9 @@ pairs on the change.
 - `.pre-commit-config.yaml`
 
 `.github/**` is also refused by the board policy, because workflow
-edits ship with the same blast radius as a deploy.
+edits ship with the same blast radius as a deploy. The policy also
+refuses `infra/**` and any path with a directory named `auth`,
+`payments`, or `migrations`, so the lx-software mirror stays a subset.
 
 ## Yellow
 

@@ -1,6 +1,6 @@
 # Plan: Users “You” mark in the Email column
 
-**Status**: Implemented
+**Status**: Done
 **Zone**: yellow
 
 ## Goal
