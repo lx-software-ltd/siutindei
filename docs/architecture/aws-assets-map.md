@@ -340,12 +340,10 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/admin/users/{username}/groups` | POST, DELETE | Admin Group | `SiutindeiAdminFunction` | Group management |
 | `/v1/admin/cognito-users` | GET, POST | Admin Group | `SiutindeiAdminFunction` | List Cognito users, or ensure a manager account by email |
 | `/v1/admin/cognito-users/{username}` | DELETE | Admin Group | `SiutindeiAdminFunction` | Delete Cognito user |
-| `/v1/admin/access-requests` | GET | Admin Group | `SiutindeiAdminFunction` | List access requests |
-| `/v1/admin/access-requests/{id}` | PUT | Admin Group | `SiutindeiAdminFunction` | Review access request |
+| `/v1/admin/tickets` | GET | Admin Group | `SiutindeiAdminFunction` | List access requests, place suggestions, and feedback tickets |
+| `/v1/admin/tickets/{id}` | PUT | Admin Group | `SiutindeiAdminFunction` | Decide a ticket |
 | `/v1/admin/audit-logs` | GET | Admin Group | `SiutindeiAdminFunction` | List audit logs |
 | `/v1/admin/audit-logs/{id}` | GET | Admin Group | `SiutindeiAdminFunction` | Get audit log entry |
-| `/v1/admin/organization-suggestions` | GET | Admin Group | `SiutindeiAdminFunction` | List suggestions |
-| `/v1/admin/organization-suggestions/{id}` | PUT | Admin Group | `SiutindeiAdminFunction` | Review suggestion |
 | `/v1/admin/imports` | GET | Admin Group | `SiutindeiAdminFunction` | Import job history |
 | `/v1/admin/org-review` | GET | Admin Group | `SiutindeiAdminFunction` | Organization review queue |
 | `/v1/admin/org-review/{proxy+}` | ANY | Admin Group | `SiutindeiAdminFunction` | Summary, detail, decision, bulk |

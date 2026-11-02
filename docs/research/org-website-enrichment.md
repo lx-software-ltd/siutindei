@@ -1,6 +1,8 @@
 # Research: Enrich one organization from its website
 
-**Status**: Draft (design only, no commitment to build)
+**Status**: Superseded. The feature shipped from
+`docs/plans/org-website-enrichment.md`; its Decisions section wins
+where it differs from this memo.
 **Zone**: this memo is green. The design touches yellow (admin API,
 services, admin web, `docs/api/admin.yaml`) and red (a migration, the
 HTTP proxy, `api-stack.ts`). Implementation needs a plan under

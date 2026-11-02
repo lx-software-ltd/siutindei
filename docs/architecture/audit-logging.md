@@ -127,7 +127,7 @@ with Session(get_engine()) as session:
 
     # Log a custom action
     audit.log_custom(
-        table_name="organization_access_requests",
+        table_name="tickets",
         record_id=request.id,
         action="APPROVE",
         old_values={"status": "pending"},

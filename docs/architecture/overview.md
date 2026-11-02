@@ -88,9 +88,10 @@ Key entities:
 - `activity_pricing` (per-class, per-month, per-sessions)
 - `activity_schedule` (weekly only; languages per schedule)
 - `activity_schedule_entries` (per-day timeslots for schedules)
-- `organization_access_requests` (manager access workflow)
-- `organization_suggestions` (user-submitted place suggestions)
+- `tickets` (access requests, place suggestions, and feedback, keyed by
+  `ticket_type`)
 - `audit_log` (automatic change tracking via triggers)
+- `catalog_versions` (per-record version history)
 
 All times are stored in UTC.
 See [`docs/architecture/database-schema.md`](database-schema.md) for full table details.
