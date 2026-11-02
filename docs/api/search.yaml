@@ -176,8 +176,9 @@ paths:
           description: |
             Response shape. `full` is the default and matches the existing
             payload. `card` omits descriptions, description translations,
-            manager_id, and place_id, and keeps only the first media URL
-            and the first weekly entry.
+            manager_id, and place_id, keeps only the first media URL
+            and the first weekly entry, and drops `name_translations.en`
+            when it equals `name`.
           schema:
             type: string
             enum: [card, full]
@@ -387,9 +388,9 @@ components:
           type: string
           nullable: true
           description: |
-            Google Places id. Present only when searching by `activity_id`
-            (listing detail) so the app can deep-link to Google Maps. Omitted
-            from search result cards.
+            Google Places id. Set only when searching by `activity_id`
+            (listing detail) so the app can deep-link to Google Maps. Other
+            full-view results send `null`; `view=card` omits the field.
     Location:
       type: object
       required: [id, area_id]
@@ -499,5 +500,6 @@ components:
       additionalProperties:
         type: string
       description: |
-        Language map for translated text. The server always includes English as "en".
+        Language map for translated text. The full view always includes English as "en";
+        `view=card` omits "en" from name translations when it equals `name`.
         Additional entries must use ISO 639-1 codes plus "yue" (Cantonese, ISO 639-3).

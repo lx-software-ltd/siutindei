@@ -8,9 +8,10 @@ deployment lifecycle of the Siu Tin Dei marketing/public website.
 1. Serve a fast, statically-rendered marketing site to anonymous users.
 2. Provide an isolated **staging** environment that mirrors production
    exactly so we can validate releases before promoting them.
-3. Make production promotion **rebuild-or-copy**: either rebuild with
-   production env vars (default) or perform an S3-only artifact copy from
-   the staging bucket (cheaper, faster, byte-for-byte identical artifact).
+3. Promote to production by **rebuilding** the chosen staging release
+   with production env vars. The release id must exist under
+   `releases/<id>/` in the staging bucket. Production syncs drop
+   `fixtures/`.
 4. Default-deny indexing on staging so search engines never see a draft.
 
 ## Hosting topology
@@ -25,7 +26,7 @@ environment has:
 | S3 logging bucket | Same hardening, 90-day expiration lifecycle, 30-day non-current expiration. |
 | CloudFront Origin Access Identity | Restricts S3 reads to the distribution. |
 | CloudFront Distribution | TLS 1.2 (2021), HTTP/2 + HTTP/3, CloudFront access logs into the logging bucket, `defaultRootObject=index.html`, custom 4xx → `/404.html`. |
-| CloudFront Function (`pathRewriteFunction`) | Maps `/foo/` and `/foo` → `/foo/index.html` for Next.js `output: 'export'`. |
+| CloudFront Function (`pathRewriteFunction`) | 302s the unprefixed routes (`/`, `/search`, `/about`, `/privacy`, `/terms`, `/activity`) to `/zh-HK/…` when the top `Accept-Language` entry starts with `zh`, otherwise `/en/…`, keeping the raw query string. Then maps `/foo/` and `/foo` → `/foo/index.html` for Next.js `output: 'export'`. Source: `backend/infrastructure/lib/functions/public-www-path-rewrite.js`. |
 | Response Headers Policy | HSTS (`max-age=31536000; includeSubDomains; preload`), CSP (`base-uri 'self'; object-src 'none'; frame-ancestors 'none'`), `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Content-Type-Options`, `XSS-Protection`, restrictive `Permissions-Policy`, and `X-Robots-Tag: noindex,nofollow,noarchive` on **staging only**. |
 | WAF (optional) | Reuses the admin web WebACL ARN from `params/production.json`. Attached via `CfnCondition` so the stack can deploy to lower environments before the WAF is created. |
 
@@ -72,13 +73,17 @@ Source: [`apps/public_www`](../../apps/public_www).
 - Tailwind CSS v4 via `@tailwindcss/postcss`.
 - Vitest + Testing Library for unit/component tests.
 - Lighthouse CI configured at `apps/public_www/.lighthouserc.json`.
-- Build script: `next build` → `inject-static-redirects.mjs` →
-  `inject-html-lang.mjs` → `inject-csp-meta.mjs` → `validate-csp-meta.mjs`.
+- Build script: `next build` → `prune-activity-export-placeholder.mjs` →
+  `inject-static-redirects.mjs` → `inject-html-lang.mjs` →
+  `inject-structured-data.mjs` → `inject-csp-meta.mjs` →
+  `validate-csp-meta.mjs`.
 
 ### Page composition (evolvesprouts-aligned)
 
 - **Locales:** `src/content/en.json`, `zh-HK.json`, … with routes under
-  `src/app/[locale]/…` and root redirects (`/` → `/en/`).
+  `src/app/[locale]/…`. CloudFront 302s unprefixed routes to the
+  visitor's locale; the exported unprefixed pages keep an `/en/`
+  meta-refresh fallback for local static hosting.
 - **Template:** `[locale]/layout.tsx` wraps routes with `PageLayout`
   (`Navbar` header + `<main>` + `Footer`). Mobile drawer nav; WhatsApp FAB
   on small screens, footer link on larger breakpoints.
@@ -103,10 +108,12 @@ Source: [`apps/public_www`](../../apps/public_www).
   Display titles use the brand face Aero BC (`--font-display`,
   `.brand-title`: letter-spacing 0.09em, 52px at desktop) with rounded
   system fallbacks; the licensed webfont file is not committed. The hero
-  (`src/components/sections/hero/small-world-hero.tsx`) shows a random
-  subset of 20 original kawaii pictures cropped from the Hong Kong icon
-  sheet (`public/images/small-world/bubble-*.webp`): 6 on large screens
-  and 3 otherwise, with a CSS drift only. There is no WebGL / three.js
+  (`src/components/sections/hero/small-world-hero.tsx`) shows a fixed,
+  build-seeded set of 6 of the 20 original kawaii pictures cropped from
+  the Hong Kong icon sheet (`public/images/small-world/bubble-*.webp`,
+  `BUBBLE_BUILD_SEED` in `src/lib/small-world/kawaii-bubbles.ts`). They
+  are rendered in the static HTML; 3 are hidden below `lg`. Motion is a
+  CSS drift only. There is no WebGL / three.js
   upgrade. A
   canvas-based sparkle cursor trail
   (`src/components/shared/sparkle-cursor.tsx`) is mounted from the locale
@@ -125,10 +132,14 @@ Source: [`apps/public_www`](../../apps/public_www).
   Tapping a pin selects that activity; tapping the card opens the activity
   detail page. From `lg` (iPad landscape and computer) the default is a 50/50
   list + map split, with enlarge/reduce controls to switch into the mobile
-  map+card layout and back. Known activities are static pages at
-  `/[locale]/activity/<uuid>/` (Course JSON-LD in the exported HTML). The
-  query shell `/[locale]/activity/?id=<uuid>` remains for ids that were not
-  in the fixture at build time. Optional `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` enables
+  map+card layout and back. Search and the home carousels request
+  `view=card` and page with the API `cursor` (Load more); page sizes live
+  in `src/lib/activities/search-limits.ts`. `search-client.ts` sorts query
+  params so CloudFront cache keys are stable. In-app links open
+  `/[locale]/activity/?id=<uuid>`. Staging builds (fixture enabled) also
+  export each fixture activity at `/[locale]/activity/<uuid>/` with
+  Course JSON-LD; production exports only a placeholder, which
+  `prune-activity-export-placeholder.mjs` deletes. Optional `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` enables
   Static Maps on listing cards, map markers on the search map view, and CSP
   entries for
   `maps.googleapis.com` / `maps.gstatic.com`. The search bar **area** label links
@@ -152,8 +163,8 @@ Source: [`apps/public_www`](../../apps/public_www).
 - **SEO:** `buildLocalizedMetadata` (canonical, hreflang). Sitewide
   WebSite + Organization JSON-LD is injected into the exported locale home
   pages at build time (`scripts/inject-structured-data.mjs`, the
-  `jsonld:inject` build step). Fixture activities also ship `Course` JSON-LD
-  in `/[locale]/activity/<uuid>/`. The query-param shell still sets
+  `jsonld:inject` build step). On staging, fixture activities also ship
+  `Course` JSON-LD in `/[locale]/activity/<uuid>/`. The query-param shell still sets
   `Course` JSON-LD and the document title client-side once the activity loads.
   Optional GTM / Meta Pixel via `NEXT_PUBLIC_GTM_ID` /
   `NEXT_PUBLIC_META_PIXEL_ID` and host allow-lists; CSP `script-src` /
@@ -170,7 +181,7 @@ Source: [`apps/public_www`](../../apps/public_www).
   fires. `AnalyticsConsentBanner` (rendered from the root layout) collects
   the decision and links to `/privacy#cookies`. Legal pages (`/privacy`,
   `/terms`) render structured bilingual content from
-  `src/content/{en,zh-HK}.json#legal` via
+  `src/content/legal/{en,zh-HK}.json` (loaded by `src/lib/legal-copy.ts`) via
   `src/components/sections/legal-page.tsx`; `docs/legal/README.md` documents
   the update procedure.
 - **Data layer (GTM only):** After consent, `src/lib/analytics/data-layer.ts`
@@ -198,15 +209,17 @@ The build is deliberately **gated** by:
   the gate. Dev `extract-zip` (GHSA-jmr9-qjv8-65gv via `@lhci/cli`) is
   overridden to `@electron-internal/extract-zip` 1.0.5. `js-yaml` Highs
   are pinned via `overrides` to 3.15.2 / 4.3.2. |
-| `inject-static-redirects.mjs` | Injects locale redirect helpers into exported HTML. |
+| `prune-activity-export-placeholder.mjs` | Deletes the `__export_placeholder__` activity pages that production exports. |
+| `inject-static-redirects.mjs` | Injects locale redirect fallbacks into the exported unprefixed pages. |
 | `inject-html-lang.mjs` | Sets `<html lang>` per locale folder (`en`, `zh-HK`) for crawlers and no-JS. |
-| `inject-csp-meta.mjs` | Adds a CSP `<meta http-equiv>` defense-in-depth tag to every exported HTML. |
-| `validate-csp-meta.mjs` | Fails the build if any HTML in `out/` is missing the marker. |
+| `inject-structured-data.mjs` | Adds sitewide WebSite + Organization JSON-LD to the locale home pages. |
+| `inject-csp-meta.mjs` | Adds a per-page CSP `<meta http-equiv>` with hashes for that page's inline scripts. Throws above 8192 bytes. |
+| `validate-csp-meta.mjs` | Fails the build on a missing marker, an inline script whose hash is not in its page's policy, or a policy over 8192 bytes. |
 
 ## Deployment lifecycle
 
 ```
-push to main (apps/public_www/**)
+push to staging (apps/public_www/**, deploy script, workflow)
         |
         v
 deploy-public-www.yml  ── npm ci → assert env → audit → build (with SHA as release id) ──> staging
@@ -219,8 +232,8 @@ deploy-public-www.yml  ── npm ci → assert env → audit → build (with SH
         |
         v
 workflow_dispatch (Promote Public Website Release)
-        ├── promotion_mode=latest_staging  → reads marker, S3-copy + invalidate (default)
-        ├── promotion_mode=release_id      → operator supplies sha, fresh prod build then deploy
+        ├── promotion_mode=latest_staging  → reads marker, fresh prod build, upload + /* invalidation (default)
+        ├── promotion_mode=release_id      → operator supplies sha, same fresh prod build and upload
         └── promotion_mode=maintenance_on  → upload apps/public_www/maintenance/ to production
 ```
 
@@ -244,13 +257,16 @@ and is invoked by both workflows. It supports three primary modes:
    `apps/public_www/out` to the bucket, writes a release marker, and
    invalidates CloudFront with a site-scope path list (locale prefixes
    `/en*` and `/zh-HK*`, exported pages, `/_next/static/*`,
-   `/fixtures/*`, and `/v1/activities/search*`). Promotion and
-   maintenance still invalidate `/*`.
+   `/fixtures/*`, `/v1/activities/search*`, `/robots.txt`, `/sitemap.xml`,
+   and the root and 404 pages). Promotion and maintenance still
+   invalidate `/*`.
 2. **Promotion**: when `PUBLIC_WWW_PROMOTE_RELEASE_ID` is set:
    - if `PUBLIC_WWW_PROMOTION_BUILD_DIR` is also set, the local build (with
-     production env vars) is uploaded to production;
+     production env vars) is uploaded to production. The promote
+     workflow always sets it;
    - otherwise the script does an S3-side `aws s3 sync` from
-     `s3://staging/releases/<id>/` to `s3://production/`.
+     `s3://staging/releases/<id>/` to `s3://production/`. CI does not
+     use this path.
 3. **Maintenance / pre-launch mode**: `PUBLIC_WWW_MAINTENANCE_MODE=true`
    uploads the branded coming-soon holding page from
    `apps/public_www/maintenance/` to the target bucket. HTML/CSS stay
@@ -284,9 +300,10 @@ Standard deploys do not invalidate `/*` so they stay under CloudFront's
 15-wildcard-in-progress
 cap. The site-scope list is aligned with evolvesprouts and adapted to
 this site's locales, pages, staging search fixture, and search-API
-proxy. HTML objects still carry `Cache-Control: public, max-age=300,
-must-revalidate`, so browsers may keep a page for up to five minutes
-after the CloudFront invalidation.
+proxy. Every unhashed object (anything outside `/_next/static/`) carries
+`Cache-Control: public, max-age=300, must-revalidate,
+stale-while-revalidate=60`, so browsers may keep a page for up to five
+minutes after the CloudFront invalidation.
 
 ## Security headers and CSP
 
@@ -309,11 +326,11 @@ Styles load from external stylesheets (`/_next/static/chunks/*.css` and
 and the optional staging badge use CSS classes instead of JS-assigned
 inline styles so `style-src` does not need `'unsafe-inline'`.
 Next.js static export embeds required inline flight/hydration scripts; the
-build collects a `sha256-` hash for each unique inline script body across
-`out/**/*.html` and adds those hashes to `script-src` so React can hydrate
+build hashes each page's own inline scripts and writes a page-specific
+`script-src` (at most 8192 bytes per meta tag) so React can hydrate
 without allowing arbitrary inline script. Ad-hoc inline scripts and inline
-event handlers remain disallowed via the `.cursorrules` "no
-`dangerouslySetInnerHTML`, no `eval`" rule.
+event handlers remain disallowed via the `.cursor/rules/public-www.mdc`
+"no `dangerouslySetInnerHTML`, no `eval`" rule.
 
 CloudFront’s response headers policy applies a smaller CSP fragment
 (`base-uri`, `object-src`, `frame-ancestors` only); the meta tag carries
@@ -334,6 +351,11 @@ distributions (production + staging) carry an extra cache behavior:
 | Allow-list function | `${env}SearchProxyAllowlistFunction` CloudFront Function (viewer-request) returns `405` for any other method |
 | Cache policy (`SearchApiCachePolicy`) | TTL min `0` / default `300s` / max `300s`; cache key = **all query strings**, **no** headers, **no** cookies (a single cached entry is shared across all callers) |
 | Origin-request policy (`SearchApiOriginRequestPolicy`) | Forwards all query strings + `x-api-key`, `x-device-attestation`, `Accept` headers to the origin on a cache **miss** |
+
+The search Lambda currently returns `Cache-Control: no-store, no-cache,
+must-revalidate` from `get_security_headers()`. With TTL min `0`,
+CloudFront honours that header, so search responses are not cached at
+the edge until the origin sends a cacheable `Cache-Control`.
 
 CloudFront Function creation is serialized across both environments via an
 `addDependency` chain (prod path-rewrite → prod search-proxy → shared

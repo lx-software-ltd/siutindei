@@ -332,7 +332,7 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | Resource Path | Method | Authorization | Integration | Notes |
 |--------------|--------|---------------|-------------|-------|
 | `/health` | GET | IAM | `HealthCheckFunction` | Health check |
-| `/v1/activities/search` | GET | Device Attestation + API Key | `SiutindeiSearchFunction` | Cached at CloudFront edge (5-min TTL) |
+| `/v1/activities/search` | GET | Device Attestation + API Key | `SiutindeiSearchFunction` | Website behavior has a 5-min TTL, but the Lambda's `no-store` header currently disables edge caching |
 | `/v1/listing-events` | POST | Device Attestation + API Key | `ListingEventsIngestFunction` | First-party funnel ingest; never cached |
 | `/v1/admin/{resource}` | GET, POST | Admin Group | `SiutindeiAdminFunction` | CRUD (orgs, locations, activities, pricing, schedules) |
 | `/v1/admin/{resource}/{id}` | GET, PUT, DELETE | Admin Group | `SiutindeiAdminFunction` | CRUD by ID |

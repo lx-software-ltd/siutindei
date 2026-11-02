@@ -115,8 +115,13 @@ On the **production** environment:
 On the **staging** environment (public www):
 
 - `STAGING_SEARCH_DATA_ENABLED=true` only while staging should serve the
-  fixture. **Set to `false` (or remove) when staging should exercise the live
-  API before launch.**
+  fixture. Removing the variable keeps the fixture on, because the workflow
+  defaults it to `true`. **To exercise the live API before launch, set it to
+  `false` and first add `NEXT_PUBLIC_SEARCH_API_BASE_URL`,
+  `NEXT_PUBLIC_SEARCH_API_KEY`, and `NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN` to
+  the staging workflow's assert and build steps**, or the build-env
+  contract fails. This also drops the staging-only
+  `/[locale]/activity/<uuid>/` pages.
 
 ## 6. DNS / certificates
 
@@ -148,8 +153,10 @@ Verify each with `curl -sI https://<domain>` (expect 200/301, valid cert).
 
 1. Deploy to staging (`deploy-public-www.yml`); smoke checks run
    automatically after the deploy.
-2. Run the Lighthouse workflow against staging; investigate any score
-   regression before promoting.
+2. Run the Lighthouse workflow with `page_paths` set to full staging URLs
+   (for example `https://siutindei-www-staging.lx-software.com/en/`); bare
+   paths audit a local build. Investigate any score regression before
+   promoting.
 3. Verify legal pages render (`/en/privacy`, `/zh-HK/privacy`, `/en/terms`)
    and the analytics consent banner appears when GTM/Meta Pixel IDs are
    configured. Set GitHub Environment `NEXT_PUBLIC_GTM_ID` (`GTM-…` only)
@@ -161,8 +168,8 @@ Verify each with `curl -sI https://<domain>` (expect 200/301, valid cert).
    load `gtm.js`; accept loads `gtm.js?id=GTM-…`. GTM Preview should show
    All Pages → GA4 Config, activity → `view_item`, WhatsApp →
    `generate_lead`.
-4. Promote with `promote-public-www.yml`
-   (`PUBLIC_WWW_PROMOTE_RELEASE_ID` = the staging release to promote).
+4. Promote with `promote-public-www.yml` (`promotion_mode=latest_staging`,
+   or `promotion_mode=release_id` with the `release_id` input).
    The API stack and public website stack must already be deployed with
    non-empty `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN` and
    `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`. Empty defaults leave website search
