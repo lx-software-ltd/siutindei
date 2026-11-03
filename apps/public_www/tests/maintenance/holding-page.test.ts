@@ -105,7 +105,12 @@ describe('pre-launch holding page', () => {
     expect(html).toContain('Coming soon');
     expect(html).toContain('Every child deserves their own small world');
     expect(html).toContain('Siu Tin Dei is launching soon');
-    expect(assembleHoldingPage('index.html')).toContain('LX Software');
+    expect(assembleHoldingPage('index.html')).toContain(
+      'LX Software (a sole proprietorship registered in Hong Kong)',
+    );
+    expect(assembleHoldingPage('index.html')).not.toContain(
+      'LX Software Limited',
+    );
   });
 
   it('keeps brand tokens, reduced-motion, and dynamic viewport height', () => {

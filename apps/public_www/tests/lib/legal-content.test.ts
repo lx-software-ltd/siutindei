@@ -44,4 +44,15 @@ describe('legal content', () => {
       }
     },
   );
+
+  it('names LX Software as a Hong Kong sole proprietorship', () => {
+    const enSerialized = JSON.stringify(enContent.legal);
+    const zhSerialized = JSON.stringify(zhHKContent.legal);
+    expect(enSerialized).not.toContain('LX Software Limited');
+    expect(zhSerialized).not.toContain('LX Software Limited');
+    expect(enSerialized).toContain(
+      'LX Software (a sole proprietorship registered in Hong Kong)',
+    );
+    expect(zhSerialized).toContain('於香港註冊的獨資企業');
+  });
 });

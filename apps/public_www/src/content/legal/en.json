@@ -1,11 +1,11 @@
 {
   "lastUpdatedLabel": "Last updated",
-  "lastUpdated": "19 August 2026",
+  "lastUpdated": "3 November 2026",
   "onThisPageLabel": "On this page",
   "privacy": {
     "title": "Privacy Policy",
     "intro": [
-      "Siu Tin Dei is operated by LX Software Limited (\"LX Software\", \"we\", \"us\", \"our\"). This Privacy Policy explains how we collect, use, store, and share personal data when you use the Siu Tin Dei website and mobile app (together, the \"Service\").",
+      "Siu Tin Dei is operated by LX Software (a sole proprietorship registered in Hong Kong) (\"LX Software\", \"we\", \"us\", \"our\"). This Privacy Policy explains how we collect, use, store, and share personal data when you use the Siu Tin Dei website and mobile app (together, the \"Service\").",
       "We handle personal data in accordance with the Personal Data (Privacy) Ordinance (Cap. 486) of Hong Kong (the \"PDPO\"). By using the Service you acknowledge the practices described in this policy."
     ],
     "sections": [
@@ -135,7 +135,7 @@
         "id": "contact",
         "heading": "12. Contact us",
         "paragraphs": [
-          "If you have any questions about this policy or how we handle personal data, contact LX Software Limited at support@lx-software.com."
+          "If you have any questions about this policy or how we handle personal data, contact LX Software at support@lx-software.com."
         ],
         "bullets": []
       }
@@ -144,7 +144,7 @@
   "terms": {
     "title": "Terms of Use",
     "intro": [
-      "These Terms of Use (the \"Terms\") govern your use of the Siu Tin Dei website and mobile app (together, the \"Service\"), operated by LX Software Limited (\"LX Software\", \"we\", \"us\", \"our\").",
+      "These Terms of Use (the \"Terms\") govern your use of the Siu Tin Dei website and mobile app (together, the \"Service\"), operated by LX Software (a sole proprietorship registered in Hong Kong) (\"LX Software\", \"we\", \"us\", \"our\").",
       "By using the Service you agree to these Terms. If you do not agree, please do not use the Service."
     ],
     "sections": [
@@ -255,7 +255,7 @@
         "id": "contact",
         "heading": "12. Contact us",
         "paragraphs": [
-          "Questions about these Terms can be sent to LX Software Limited at support@lx-software.com."
+          "Questions about these Terms can be sent to LX Software at support@lx-software.com."
         ],
         "bullets": []
       }

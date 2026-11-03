@@ -43,7 +43,7 @@ function buildStructuredData({ siteName, siteOrigin, locale, description }) {
     '@type': 'Organization',
     '@id': `${siteOrigin}/#organization`,
     name: siteName,
-    legalName: 'LX Software Limited',
+    legalName: 'LX Software',
     url: siteOrigin,
     logo: `${siteOrigin}${DEFAULT_SOCIAL_IMAGE}`,
   };

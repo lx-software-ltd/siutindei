@@ -27,7 +27,7 @@ Surfaces that link to the canonical pages:
 
 ## Key facts encoded in the documents
 
-- Legal entity: LX Software Limited (Hong Kong).
+- Legal entity: LX Software, a sole proprietorship registered in Hong Kong.
 - Data access / correction contact: `support@lx-software.com`.
 - Hosting: AWS Singapore (`ap-southeast-1`); the privacy policy therefore
   discloses cross-border transfer outside Hong Kong.
