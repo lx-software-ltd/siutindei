@@ -44,7 +44,7 @@
   },
   "footer": {
     "tagline": "An LX Software product. Hong Kong, SAR.",
-    "copyrightTemplate": "© {year} LX Software Limited. All rights reserved.",
+    "copyrightTemplate": "© {year} LX Software (a sole proprietorship registered in Hong Kong). All rights reserved.",
     "contactHeading": "Contact",
     "columns": [
       {
@@ -88,7 +88,7 @@
     },
     "privacy": {
       "title": "Privacy Policy | Siu Tin Dei",
-      "description": "How LX Software Limited collects, uses, and protects personal data on Siu Tin Dei."
+      "description": "How LX Software (a sole proprietorship registered in Hong Kong) collects, uses, and protects personal data on Siu Tin Dei."
     },
     "terms": {
       "title": "Terms of Use | Siu Tin Dei",

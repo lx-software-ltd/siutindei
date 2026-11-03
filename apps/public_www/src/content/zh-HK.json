@@ -44,7 +44,7 @@
   },
   "footer": {
     "tagline": "LX Software 產品。香港特別行政區。",
-    "copyrightTemplate": "© {year} LX Software Limited. 版權所有。",
+    "copyrightTemplate": "© {year} LX Software（於香港註冊的獨資企業）。版權所有。",
     "contactHeading": "聯絡我們",
     "columns": [
       {
@@ -88,7 +88,7 @@
     },
     "privacy": {
       "title": "私隱政策 | Siu Tin Dei",
-      "description": "LX Software Limited 如何在 Siu Tin Dei 收集、使用及保護個人資料。"
+      "description": "LX Software（於香港註冊的獨資企業）如何在 Siu Tin Dei 收集、使用及保護個人資料。"
     },
     "terms": {
       "title": "使用條款 | Siu Tin Dei",

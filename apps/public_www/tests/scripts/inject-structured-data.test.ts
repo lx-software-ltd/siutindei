@@ -63,7 +63,7 @@ describe('inject-structured-data', () => {
 
       expect(organization).toMatchObject({
         name: 'Siu Tin Dei',
-        legalName: 'LX Software Limited',
+        legalName: 'LX Software',
         url: 'https://example.com',
       });
       expect(webSite).toMatchObject({
