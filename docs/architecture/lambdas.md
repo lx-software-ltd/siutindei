@@ -100,7 +100,8 @@ their primary responsibilities.
   (scope- and organization-filtered by API key; full-access keys list
   every organization, `GET /v1/partner/name-fixes`, and
   `GET /v1/partner/category-reviews`; a full-access `crud` key can
-  also `POST` review decisions and bulk apply/dismiss, and `GET` /
+  also `POST` review decisions and bulk apply/dismiss,
+  `POST /v1/partner/org-duplicates/merge`, and `GET` /
   `DELETE` `/v1/partner/activity-categories`), user self-service
   (tickets), Cognito user management, audit logs, catalog versions
   (`GET /v1/admin/versions`, `POST /v1/admin/versions/{id}/forget`), media upload, admin
@@ -127,8 +128,9 @@ their primary responsibilities.
 - Category suggestions and category checks: admin-only routes under
   `/v1/admin/category-suggestions` (see `docs/api/admin.yaml`),
   including `/scan` and `/reviews`. Full-access partner keys can
-  decide reviews and delete empty leftover categories on
-  `/v1/partner/category-reviews` and
+  decide reviews, merge organizations, and delete empty leftover
+  categories on `/v1/partner/category-reviews`,
+  `/v1/partner/org-duplicates/merge`, and
   `/v1/partner/activity-categories`; org-scoped keys cannot.
   Discover batches send
   `suggestion_ids` on the same queue; verify batches send

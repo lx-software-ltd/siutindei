@@ -40,8 +40,10 @@ info:
       /v1/partner/category-reviews/{id}` and `POST
       /v1/partner/category-reviews/bulk`), decide venue proposals
       (`POST /v1/partner/location-fixes/{id}` and `POST
-      /v1/partner/location-fixes/bulk`), and list or delete activity
-      categories (`GET` / `DELETE /v1/partner/activity-categories`).
+      /v1/partner/location-fixes/bulk`), merge organizations
+      (`POST /v1/partner/org-duplicates/merge`), and list or delete
+      activity categories (`GET` / `DELETE
+      /v1/partner/activity-categories`).
       Organization-scoped keys receive `403` on those write and
       category routes. Organization list
       and detail responses include `pending_name_fixes` with the record
@@ -462,6 +464,39 @@ paths:
           description: Read-only key or organization-scoped key
         "404":
           description: Review not found
+
+  /v1/partner/org-duplicates/merge:
+    post:
+      summary: Merge organizations into one survivor
+      description: |
+        Full-access `crud` keys only. Same body and result as
+        `POST /v1/admin/org-duplicates/merge`. Organization-scoped
+        keys and `read` keys receive `403`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./admin.yaml#/components/schemas/OrgMergeRequest"
+      responses:
+        "200":
+          description: Dry-run preview
+          content:
+            application/json:
+              schema:
+                $ref: "./admin.yaml#/components/schemas/OrgMergeResult"
+        "201":
+          description: Organizations merged
+          content:
+            application/json:
+              schema:
+                $ref: "./admin.yaml#/components/schemas/OrgMergeResult"
+        "400":
+          description: Invalid merge request
+        "403":
+          description: Read-only key or organization-scoped key
+        "404":
+          description: Organization not found
 
   /v1/partner/activity-categories:
     get:

@@ -16,7 +16,8 @@ can read venue proposals at `GET /v1/partner/location-fixes`, sees
 plus `pending_location_fix` on activities. It can read category-check
 reviews at `GET /v1/partner/category-reviews` and sees
 `category_review` on `GET /v1/partner/activities`. A full-access
-`crud` key can decide category reviews, decide venue proposals, and
+`crud` key can decide category reviews, decide venue proposals, merge
+organizations at `POST /v1/partner/org-duplicates/merge`, and
 list or delete empty leftover categories. An org-scoped key can read
 its own venue rows and receives `403` on those writes. See
 `docs/api/partner.yaml`.

@@ -10,7 +10,7 @@ from app.api.admin_resources import _RESOURCE_CONFIG
 from app.api.partner_activity_categories import (
     handle_partner_activity_categories,
 )
-from app.api.partner_auth import SCOPE_CRUD, get_partner_context
+from app.api.partner_auth import SCOPE_CRUD, PartnerContext, get_partner_context
 from app.api.partner_category_reviews import (
     handle_partner_category_review_write,
     handle_partner_category_reviews,
@@ -24,6 +24,7 @@ from app.api.partner_name_fixes import (
     handle_partner_name_fixes,
     partner_get_organizations,
 )
+from app.api.partner_org_merge import handle_partner_org_merge
 from app.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.utils import json_response
 from app.utils.logging import get_logger
@@ -65,6 +66,54 @@ def handle_partner_routes(
             event=event,
         )
 
+    special = _dispatch_special(event, method, resource, resource_id, partner)
+    if special is not None:
+        return special
+
+    if resource not in _PARTNER_RESOURCES:
+        return json_response(404, {"error": "Not found"}, event=event)
+
+    managed_org_ids = {partner.org_id} if partner.org_id else None
+
+    # An org-scoped key cannot create organizations: any new organization
+    # would fall outside the key's scope.
+    if managed_org_ids is not None and resource == "organizations" and method == "POST":
+        return json_response(
+            403,
+            {"error": "Organization-scoped keys cannot create organizations"},
+            event=event,
+        )
+
+    if resource == "organizations" and method == "GET":
+        return _safe_handler(
+            lambda: partner_get_organizations(event, resource_id, managed_org_ids),
+            event,
+        )
+
+    if resource == "activities" and method == "GET":
+        return _safe_handler(
+            lambda: partner_get_activities(event, resource_id, managed_org_ids),
+            event,
+        )
+
+    config = _RESOURCE_CONFIG.get(resource)
+    if not config:
+        return json_response(404, {"error": "Not found"}, event=event)
+
+    return _safe_handler(
+        lambda: _handle_crud(event, method, config, resource_id, managed_org_ids),
+        event,
+    )
+
+
+def _dispatch_special(
+    event: Mapping[str, Any],
+    method: str,
+    resource: str,
+    resource_id: str | None,
+    partner: PartnerContext,
+) -> dict[str, Any] | None:
+    """Dispatch partner routes that are not generic CRUD resources."""
     if resource == "name-fixes":
         if method != "GET":
             return json_response(404, {"error": "Not found"}, event=event)
@@ -109,40 +158,15 @@ def handle_partner_routes(
             event,
         )
 
-    if resource not in _PARTNER_RESOURCES:
+    if resource == "org-duplicates":
+        if method == "POST" and resource_id == "merge":
+            return _safe_handler(
+                lambda: handle_partner_org_merge(event, partner),
+                event,
+            )
         return json_response(404, {"error": "Not found"}, event=event)
 
-    managed_org_ids = {partner.org_id} if partner.org_id else None
-
-    # An org-scoped key cannot create organizations: any new organization
-    # would fall outside the key's scope.
-    if managed_org_ids is not None and resource == "organizations" and method == "POST":
-        return json_response(
-            403,
-            {"error": "Organization-scoped keys cannot create organizations"},
-            event=event,
-        )
-
-    if resource == "organizations" and method == "GET":
-        return _safe_handler(
-            lambda: partner_get_organizations(event, resource_id, managed_org_ids),
-            event,
-        )
-
-    if resource == "activities" and method == "GET":
-        return _safe_handler(
-            lambda: partner_get_activities(event, resource_id, managed_org_ids),
-            event,
-        )
-
-    config = _RESOURCE_CONFIG.get(resource)
-    if not config:
-        return json_response(404, {"error": "Not found"}, event=event)
-
-    return _safe_handler(
-        lambda: _handle_crud(event, method, config, resource_id, managed_org_ids),
-        event,
-    )
+    return None
 
 
 def _safe_handler(
