@@ -294,7 +294,7 @@ neither is set, it uses:
 ### API WAF
 
 A regional WAF web ACL (`lxsoftware-siutindei-api-waf`) on the `prod`
-stage evaluates two rules.
+stage evaluates three rules.
 
 `AWSManagedRulesKnownBadInputsRuleSet` (priority 0) blocks known
 malicious inputs on every request, including Log4j2 JNDI message lookups
@@ -306,6 +306,10 @@ requests per 60 seconds on `/v1/admin/*`, `/v1/manager/*`, and
 browser tab cannot exhaust its concurrency. The key is the
 `Authorization` header, the same key the JWT authorizers cache on.
 Requests without that header are not counted.
+
+The partner rule (priority 2) applies the same limit on
+`/v1/partner/*`. Its key is the `x-partner-key` header. WAF logs
+redact that header along with `authorization` and `cookie`.
 
 - A rate-limited request gets HTTP 429, `Retry-After: 60`, the admin web
   CORS origin, and `{"error": "Too many requests. Wait a minute and try again."}`.

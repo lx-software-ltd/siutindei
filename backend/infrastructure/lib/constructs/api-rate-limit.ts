@@ -37,6 +37,10 @@ const TOO_MANY_REQUESTS_BODY = "too-many-requests";
  * is the `Authorization` header, so requests without one (preflights,
  * public routes) are not counted.
  *
+ * A third rule rate limits each partner API key on `/v1/partner/`. Its
+ * key is the `x-partner-key` header. Partner requests do not send
+ * `Authorization`, so the session rule does not count them.
+ *
  * Paths are matched with CONTAINS because the default `execute-api` host
  * includes the stage name (`/prod/v1/...`) and the custom domain does not.
  */
@@ -51,6 +55,7 @@ export class ApiRateLimitConstruct extends Construct {
     const name = (suffix: string) => `${props.resourcePrefix}-${suffix}`;
     const webAclName = name("api-waf");
     const ruleMetricName = name("api-session-rate-limit");
+    const partnerMetricName = name("api-partner-rate-limit");
 
     const pathStatements: wafv2.CfnWebACL.StatementProperty[] =
       props.pathSegments.map((segment) => ({
@@ -139,6 +144,20 @@ export class ApiRateLimitConstruct extends Construct {
             sampledRequestsEnabled: true,
           },
         },
+        rateRule(props, {
+          name: "PartnerKeyRateLimit",
+          priority: 2,
+          metricName: partnerMetricName,
+          headerName: "x-partner-key",
+          scopeDown: {
+            byteMatchStatement: {
+              fieldToMatch: { uriPath: {} },
+              positionalConstraint: "CONTAINS",
+              searchString: "/v1/partner/",
+              textTransformations: [{ priority: 0, type: "NONE" }],
+            },
+          },
+        }),
       ],
     });
 
@@ -187,28 +206,93 @@ export class ApiRateLimitConstruct extends Construct {
       redactedFields: [
         { singleHeader: { Name: "authorization" } },
         { singleHeader: { Name: "cookie" } },
+        { singleHeader: { Name: "x-partner-key" } },
       ],
     });
 
     this.blockedAlarm = new cloudwatch.Alarm(this, "ApiRateLimitBlockedAlarm", {
       alarmName: name("api-session-rate-limit-alarm"),
       alarmDescription:
-        `A signed-in session sent more than ${props.limit} requests in ` +
-        `${props.evaluationWindowSec}s and was blocked by the API WAF`,
-      metric: new cloudwatch.Metric({
-        namespace: "AWS/WAFV2",
-        metricName: "BlockedRequests",
-        dimensionsMap: {
-          WebACL: webAclName,
-          Rule: ruleMetricName,
-          Region: region,
+        `A signed-in session or partner key sent more than ${props.limit} ` +
+        `requests in ${props.evaluationWindowSec}s and was blocked by the API WAF`,
+      metric: new cloudwatch.MathExpression({
+        expression: "FILL(session, 0) + FILL(partner, 0)",
+        usingMetrics: {
+          session: blockedMetric(webAclName, ruleMetricName, region),
+          partner: blockedMetric(webAclName, partnerMetricName, region),
         },
         period: cdk.Duration.minutes(5),
-        statistic: "sum",
       }),
       threshold: 1,
       evaluationPeriods: 1,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
   }
+}
+
+function rateRule(
+  props: ApiRateLimitConstructProps,
+  rule: {
+    name: string;
+    priority: number;
+    metricName: string;
+    headerName: string;
+    scopeDown: wafv2.CfnWebACL.StatementProperty;
+  }
+): wafv2.CfnWebACL.RuleProperty {
+  return {
+    name: rule.name,
+    priority: rule.priority,
+    action: {
+      block: {
+        customResponse: {
+          responseCode: 429,
+          customResponseBodyKey: TOO_MANY_REQUESTS_BODY,
+          responseHeaders: [
+            { name: "Access-Control-Allow-Origin", value: props.corsOrigin },
+            { name: "Retry-After", value: `${props.evaluationWindowSec}` },
+          ],
+        },
+      },
+    },
+    statement: {
+      rateBasedStatement: {
+        limit: props.limit,
+        evaluationWindowSec: props.evaluationWindowSec,
+        aggregateKeyType: "CUSTOM_KEYS",
+        customKeys: [
+          {
+            header: {
+              name: rule.headerName,
+              textTransformations: [{ priority: 0, type: "NONE" }],
+            },
+          },
+        ],
+        scopeDownStatement: rule.scopeDown,
+      },
+    },
+    visibilityConfig: {
+      cloudWatchMetricsEnabled: true,
+      metricName: rule.metricName,
+      sampledRequestsEnabled: true,
+    },
+  };
+}
+
+function blockedMetric(
+  webAclName: string,
+  ruleName: string,
+  region: string
+): cloudwatch.Metric {
+  return new cloudwatch.Metric({
+    namespace: "AWS/WAFV2",
+    metricName: "BlockedRequests",
+    dimensionsMap: {
+      WebACL: webAclName,
+      Rule: ruleName,
+      Region: region,
+    },
+    period: cdk.Duration.minutes(5),
+    statistic: "sum",
+  });
 }
