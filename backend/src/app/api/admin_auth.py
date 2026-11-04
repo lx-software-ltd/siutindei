@@ -75,19 +75,27 @@ def _get_user_email(event: Mapping[str, Any]) -> str | None:
     return ctx.get("email") or None
 
 
-def _set_session_audit_context(session: Session, event: Mapping[str, Any]) -> None:
+def _set_session_audit_context(
+    session: Session,
+    event: Mapping[str, Any],
+    *,
+    user_id: str | None = None,
+) -> None:
     """Set audit context on the database session for trigger-based logging.
 
     This sets PostgreSQL session variables that the audit trigger function
     reads to populate user_id and request_id fields in audit_log entries.
+    ``user_id`` overrides the authorizer subject when the caller already
+    resolved the actor, such as a partner key with no ``userSub``.
 
     Args:
         session: SQLAlchemy database session.
         event: Lambda event containing user and request context.
+        user_id: Actor to record. The authorizer subject is used when omitted.
     """
-    user_sub = _get_user_sub(event)
+    resolved = _get_user_sub(event) if user_id is None else user_id
     request_id = event.get("requestContext", {}).get("requestId", "")
-    set_audit_context(session, user_id=user_sub, request_id=request_id)
+    set_audit_context(session, user_id=resolved, request_id=request_id)
 
 
 def _get_managed_organization_ids(event: Mapping[str, Any]) -> set[str]:

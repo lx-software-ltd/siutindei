@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Organization, OrganizationDuplicateDismissal
 from app.services.org_duplicate_scoring import score_pairs_stable
-from app.services.org_merge import suggest_survivor_id
+from app.services.org_merge_plan import suggest_survivor_id
 
 _MAX_ORGS = 5000
 _MAX_GROUPS = 200

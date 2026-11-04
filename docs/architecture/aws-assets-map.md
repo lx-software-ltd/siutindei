@@ -358,7 +358,7 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/manager/{resource}/{id}` | ANY | Manager Group | `SiutindeiAdminFunction` | Filtered CRUD by ID. One method stays under the CloudFormation resource cap; the Lambda rejects methods it does not implement. |
 | `/v1/partner/activities/search` | GET | Partner API Key | `SiutindeiSearchFunction` | Partner search (org-filtered) |
 | `/v1/partner/activities` | GET, POST | Partner API Key | `SiutindeiAdminFunction` | Partner activities CRUD (explicit; literal resource shadows the proxy) |
-| `/v1/partner/{proxy+}` | ANY | Partner API Key | `SiutindeiAdminFunction` | Greedy proxy for remaining partner CRUD (orgs, locations, activities/{id}, pricing, schedules), `GET /name-fixes`, `GET`/`POST /category-reviews`, and `GET`/`DELETE /activity-categories`; scope/org enforced in Lambda. Review writes and category routes require a full-access key. |
+| `/v1/partner/{proxy+}` | ANY | Partner API Key | `SiutindeiAdminFunction` | Greedy proxy for remaining partner CRUD (orgs, locations, activities/{id}, pricing, schedules), `GET /name-fixes`, `GET`/`POST /category-reviews`, `POST /organization-merges`, organization enrichment, `GET`/`PUT /enrichment-settings`, and `GET`/`DELETE /activity-categories`; scope/org enforced in Lambda. Review writes, merge, enrichment, and category routes require a full-access `crud` key, the partner equivalent of an admin. |
 | `/v1/user/access-request` | GET, POST | User Auth | `SiutindeiAdminFunction` | Access request |
 | `/v1/user/organization-suggestion` | GET, POST | User Auth | `SiutindeiAdminFunction` | Org suggestion |
 | `/v1/user/organization-feedback` | GET, POST | User Auth | `SiutindeiAdminFunction` | Organization feedback |
@@ -402,7 +402,7 @@ in the main stack.
 
 | Resource Type | Logical ID | Physical Name/ID | Notes |
 |--------------|------------|------------------|-------|
-| WAFv2 WebACL | `ApiRateLimitApiWebAcl*` | `lxsoftware-siutindei-api-waf` | REGIONAL. Known-bad-inputs rule group blocks Log4j2 lookups (CVE-2021-44228) on every request. Session rule blocks over 300 requests / 60 s on `/v1/admin/*`, `/v1/manager/*`, `/v1/user/*` with a 429 |
+| WAFv2 WebACL | `ApiRateLimitApiWebAcl*` | `lxsoftware-siutindei-api-waf` | REGIONAL. Known-bad-inputs rule group blocks Log4j2 lookups (CVE-2021-44228) on every request. Session rule blocks over 300 requests / 60 s on `/v1/admin/*`, `/v1/manager/*`, `/v1/user/*` with a 429. Partner rule applies the same limit on `/v1/partner/*`, keyed by `x-partner-key` |
 | WAFv2 WebACL Association | `ApiRateLimitApiWebAclAssociation*` | — | Attaches the web ACL to the `prod` stage |
 | KMS Key + Alias | `ApiRateLimitApiWafLogKey*` | `lxsoftware-siutindei-kms-api-waf-log` | WAF log encryption (rotation enabled) |
 | Log Group | `ApiRateLimitApiWafLogGroup*` | `aws-waf-logs-lxsoftware-siutindei-api` | Retained on delete; `authorization` and `cookie` redacted |

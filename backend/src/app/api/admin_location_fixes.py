@@ -62,7 +62,7 @@ def _decide_body(
             )
         target_location_id = parse_uuid(target_raw, "target_location_id")
     with Session(get_engine()) as session:
-        _set_session_audit_context(session, event)
+        _set_session_audit_context(session, event, user_id=decided_by)
         payload = decide(
             ProposalKind.LOCATIONS,
             session,

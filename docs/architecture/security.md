@@ -170,16 +170,24 @@ in the `x-partner-key` header:
   cached for 5 minutes, which bounds how long a revoked key keeps working.
 - Keys carry a scope (`read` = GET only, `crud` = full CRUD) and an
   optional organization scope. Because the cached Allow policy covers all
-  partner routes, **scope and organization enforcement is re-checked in
-  the handlers** (defense in depth, same pattern as the Cognito group
-  checks). A full-access key lists every organization review status and
-  can read pending name-cleanup proposals and category-check reviews.
-  Full-access `crud` keys can decide category-check reviews and list
-  or delete leftover activity categories. Org-scoped keys only see
-  that organization's proposals and reviews, and those write and
-  category routes return `403`.
+  partner routes, **scope is re-checked before dispatch, and a route
+  marked full-access rejects an organization-scoped key in the route
+  table and again in the handler** (defense in depth, same pattern as
+  the Cognito group checks). A full-access key lists every organization
+  review status and can read pending name-cleanup proposals and
+  category-check reviews. A full-access `crud` key is the partner
+  equivalent of an admin: it can decide category-check reviews, merge
+  organizations, read and run website enrichment (including apply,
+  dismiss, and enrichment settings), and list or delete leftover
+  activity categories. A `read` key is rejected on those enrichment
+  routes, including GET.
+  Merge moves API keys onto the survivor and cannot be undone.
+  Org-scoped keys only see that organization's proposals and reviews,
+  and those write, enrichment, and category routes return `403`.
 - Writes performed with a key are attributed to `api-key:<id>` in the
-  audit log.
+  audit log. Organization merge and website enrichment use the
+  authorizer `userSub` when it is present, and `api-key:<id>` when
+  `userSub` is omitted.
 - Admins manage keys via `/v1/admin/api-keys` (generate, list, revoke);
   revocation is a soft delete so the audit trail is preserved.
 
@@ -286,7 +294,7 @@ neither is set, it uses:
 ### API WAF
 
 A regional WAF web ACL (`lxsoftware-siutindei-api-waf`) on the `prod`
-stage evaluates two rules.
+stage evaluates three rules.
 
 `AWSManagedRulesKnownBadInputsRuleSet` (priority 0) blocks known
 malicious inputs on every request, including Log4j2 JNDI message lookups
@@ -298,6 +306,10 @@ requests per 60 seconds on `/v1/admin/*`, `/v1/manager/*`, and
 browser tab cannot exhaust its concurrency. The key is the
 `Authorization` header, the same key the JWT authorizers cache on.
 Requests without that header are not counted.
+
+The partner rule (priority 2) applies the same limit on
+`/v1/partner/*`. Its key is the `x-partner-key` header. WAF logs
+redact that header along with `authorization` and `cookie`.
 
 - A rate-limited request gets HTTP 429, `Retry-After: 60`, the admin web
   CORS origin, and `{"error": "Too many requests. Wait a minute and try again."}`.

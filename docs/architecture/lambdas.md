@@ -100,8 +100,12 @@ their primary responsibilities.
   (scope- and organization-filtered by API key; full-access keys list
   every organization, `GET /v1/partner/name-fixes`, and
   `GET /v1/partner/category-reviews`; a full-access `crud` key can
-  also `POST` review decisions and bulk apply/dismiss, and `GET` /
-  `DELETE` `/v1/partner/activity-categories`), user self-service
+  also `POST` review decisions and bulk apply/dismiss,
+  `POST /v1/partner/organization-merges`, `GET` and `POST`
+  `/v1/partner/organizations/{id}/enrichment` (apply and dismiss
+  included), `GET` and `PUT /v1/partner/enrichment-settings`, and
+  `GET` / `DELETE` `/v1/partner/activity-categories`; a full-access
+  `crud` key is the partner equivalent of an admin), user self-service
   (tickets), Cognito user management, audit logs, catalog versions
   (`GET /v1/admin/versions`, `POST /v1/admin/versions/{id}/forget`), media upload, admin
   import/export (`POST /v1/admin/imports` accepts `dry_run` to validate
@@ -127,8 +131,11 @@ their primary responsibilities.
 - Category suggestions and category checks: admin-only routes under
   `/v1/admin/category-suggestions` (see `docs/api/admin.yaml`),
   including `/scan` and `/reviews`. Full-access partner keys can
-  decide reviews and delete empty leftover categories on
-  `/v1/partner/category-reviews` and
+  decide reviews, merge organizations, run website enrichment, and
+  delete empty leftover categories on `/v1/partner/category-reviews`,
+  `/v1/partner/organization-merges`,
+  `/v1/partner/organizations/{id}/enrichment`,
+  `/v1/partner/enrichment-settings`, and
   `/v1/partner/activity-categories`; org-scoped keys cannot.
   Discover batches send
   `suggestion_ids` on the same queue; verify batches send
@@ -223,7 +230,9 @@ their primary responsibilities.
   `/v1/admin/name-fixes`, `/v1/admin/location-fixes`, and
   `/v1/admin/translation-fixes` (admin group only). These families share one `/v1/admin/{proxy+}` method so the
   stack stays within the CloudFormation 500-resource cap. Partner
-  venue reads and writes use the existing `/v1/partner/{proxy+}`.
+  venue reads and writes, `POST /v1/partner/organization-merges`,
+  website enrichment, and enrichment settings use the existing
+  `/v1/partner/{proxy+}`.
   Get-by-id for a duplicate group, a name proposal, or a venue
   proposal uses that same proxy. An unknown extra path segment
   on a CRUD resource returns 404. Shapes are in `docs/api/admin.yaml`.

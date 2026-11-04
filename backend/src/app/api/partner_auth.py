@@ -16,6 +16,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from app.api.admin_auth import _get_user_sub
 from app.exceptions import AuthorizationError
 
 SCOPE_READ = "read"
@@ -54,3 +55,14 @@ def require_full_access(partner: PartnerContext) -> None:
     """Reject organization-scoped keys on full-catalog partner routes."""
     if partner.org_id:
         raise AuthorizationError("This API key is limited to one organization")
+
+
+def require_crud(partner: PartnerContext) -> None:
+    """Reject read-only keys on routes reserved for crud keys."""
+    if partner.scope != SCOPE_CRUD:
+        raise AuthorizationError("This API key does not allow write access")
+
+
+def partner_actor(event: Mapping[str, Any], partner: PartnerContext) -> str:
+    """Authorizer subject, or the API key id when ``userSub`` is omitted."""
+    return _get_user_sub(event) or f"api-key:{partner.api_key_id}"

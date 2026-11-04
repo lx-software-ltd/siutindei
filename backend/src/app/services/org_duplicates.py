@@ -38,7 +38,7 @@ def invalidate_duplicate_cache() -> None:
 def list_stable_duplicate_groups(session: Session, org_ids: list[str]) -> dict:
     """Recompute groups for a run with the deterministic scorer."""
     from app.services.data_quality.duplicates import report_duplicates
-    from app.services.org_merge import suggest_survivor_id
+    from app.services.org_merge_plan import suggest_survivor_id
 
     report = report_duplicates(session, org_ids)
     items = []
@@ -115,7 +115,7 @@ def get_duplicate_group(session: Session, group_id: str) -> dict:
     groups = _build_groups(orgs, scores, 0.0, dismissed)
     match = next((group for group in groups if group["id"] == group_id), None)
     if match is None:
-        from app.services.org_merge import suggest_survivor_id
+        from app.services.org_merge_plan import suggest_survivor_id
 
         ordered = sorted(orgs, key=lambda org: str(org.id))
         match = {
@@ -356,7 +356,7 @@ def _build_groups(orgs, scores, min_score: float, dismissed) -> list[dict]:
             best = max(best, score)
             signals.update(pair_signals)
         ordered = sorted(grouped, key=lambda org: str(org.id))
-        from app.services.org_merge import suggest_survivor_id
+        from app.services.org_merge_plan import suggest_survivor_id
 
         groups.append(
             {

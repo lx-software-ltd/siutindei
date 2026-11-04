@@ -16,8 +16,10 @@ can read venue proposals at `GET /v1/partner/location-fixes`, sees
 plus `pending_location_fix` on activities. It can read category-check
 reviews at `GET /v1/partner/category-reviews` and sees
 `category_review` on `GET /v1/partner/activities`. A full-access
-`crud` key can decide category reviews, decide venue proposals, and
-list or delete empty leftover categories. An org-scoped key can read
+`crud` key is the partner equivalent of an admin: it can decide category
+reviews, decide venue proposals, merge organizations at
+`POST /v1/partner/organization-merges`, and list or delete empty leftover
+categories. An org-scoped key can read
 its own venue rows and receives `403` on those writes. See
 `docs/api/partner.yaml`.
 
@@ -34,7 +36,11 @@ stay, even when the places are close. Media URLs are unioned. Object
 copy runs only when `ORGANIZATION_MEDIA_BUCKET` and
 `ORGANIZATION_MEDIA_BASE_URL` are set and the key is
 `organizations/{source id}/…`. The source object is deleted only after
-the merge transaction commits.
+the merge transaction commits. A delete that fails is logged with the
+survivor id and the object key. Repeating a completed merge returns
+the stored outcome and does not write again. A full-access `crud`
+partner key uses `POST /v1/partner/organization-merges` for the same
+merge.
 
 `organization_merges` stores the removed `source_id` and `place_id`.
 Later imports that look up those values load the survivor. An admin

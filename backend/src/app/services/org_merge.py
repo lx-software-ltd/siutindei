@@ -5,88 +5,25 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.db.audit import AuditService
-from app.db.models import (
-    Activity,
-    ActivityCategoryReview,
-    ActivityPricing,
-    ActivitySchedule,
-    ApiKey,
-    CategoryScanRun,
-    CategorySuggestionActivity,
-    Location,
-    Organization,
-    OrganizationFeedback,
-    OrganizationMerge,
-    Ticket,
-)
+from app.db.models import Activity, Location, Organization, OrganizationMerge
 from app.exceptions import NotFoundError, ValidationError
-from app.services.org_merge_checks import assert_identity_unique, merge_warnings
+from app.services.org_merge_checks import assert_identity_unique
 from app.services.org_merge_children import fold_merged_records
 from app.services.org_merge_media import copy_merged_media
-
-_FILL_FIELDS = (
-    "description",
-    "phone_country_code",
-    "phone_number",
-    "email",
-    "website",
-    "whatsapp",
-    "facebook",
-    "instagram",
-    "tiktok",
-    "twitter",
-    "xiaohongshu",
-    "wechat",
-    "logo_media_url",
-    "place_id",
-    "source",
-    "source_id",
-    "source_url",
-    "source_note",
-    "description_source",
-)
-
-_PREVIEW_FIELDS = (
-    ("name", "Name"),
-    ("description", "Description"),
-    ("phone_country_code", "Phone country"),
-    ("phone_number", "Phone"),
-    ("email", "Email"),
-    ("website", "Website"),
-    ("source_url", "Source URL"),
-    ("place_id", "Place id"),
-    ("source", "Source"),
-    ("source_id", "Source id"),
-    ("manager_id", "Manager"),
-)
-
-_TRANSLATION_FIELDS = (
-    ("name_zh", "name_translations", "zh", "Chinese name"),
-    ("name_yue", "name_translations", "yue", "Cantonese name"),
-    ("description_zh", "description_translations", "zh", "Chinese description"),
-    ("description_yue", "description_translations", "yue", "Cantonese description"),
+from app.services.org_merge_plan import (
+    FILL_FIELDS,
+    REPARENT_TARGETS,
+    TRANSLATION_FIELDS,
+    build_merge_plan,
+    text_value,
 )
 
 _OVERRIDE_FIELDS = (
-    set(_FILL_FIELDS)
-    | {"name", "manager_id"}
-    | {item[0] for item in _TRANSLATION_FIELDS}
-)
-
-_REPARENT = (
-    (Location, Location.org_id, "locations"),
-    (Activity, Activity.org_id, "activities"),
-    (OrganizationFeedback, OrganizationFeedback.organization_id, "feedback"),
-    (ApiKey, ApiKey.org_id, "api_keys"),
-    (ActivityCategoryReview, ActivityCategoryReview.org_id, "category_reviews"),
-    (CategorySuggestionActivity, CategorySuggestionActivity.org_id, "suggestion_links"),
-    (CategoryScanRun, CategoryScanRun.org_id, "scan_runs"),
-    (Ticket, Ticket.organization_id, "tickets"),
-    (Ticket, Ticket.created_organization_id, "tickets"),
+    set(FILL_FIELDS) | {"name", "manager_id"} | {item[0] for item in TRANSLATION_FIELDS}
 )
 
 
@@ -99,7 +36,12 @@ def merge_organizations(
     dry_run: bool = False,
     merged_by: str | None = None,
 ) -> dict[str, Any]:
-    """Fill blanks on the survivor, reparent children, and delete sources."""
+    """Fill blanks on the survivor, reparent children, and delete sources.
+
+    A request whose sources were already merged into this survivor returns
+    ``already_merged`` and writes nothing. A source or survivor that now
+    belongs to a different organization is rejected.
+    """
     chosen = dict(overrides or {})
     unknown = sorted(set(chosen) - _OVERRIDE_FIELDS)
     if unknown:
@@ -113,16 +55,19 @@ def merge_organizations(
     by_id = {str(org.id): org for org in orgs}
     survivor = by_id.get(str(survivor_id))
     if survivor is None:
+        if _forwarded_survivor(session, survivor_id) is not None:
+            raise ValidationError(
+                "survivor was already merged",
+                field="survivor_id",
+            )
         raise NotFoundError("organizations", str(survivor_id))
-    sources: list[Organization] = []
-    for source_id in source_ids:
-        source = by_id.get(str(source_id))
-        if source is None:
-            raise NotFoundError("organizations", str(source_id))
-        sources.append(source)
-
-    plan = _plan(session, survivor, sources, chosen)
+    sources, already = _partition_sources(session, survivor, source_ids, by_id)
+    if not sources:
+        return _replay_plan(survivor, source_ids, dry_run)
+    plan = build_merge_plan(session, survivor, sources, chosen)
     plan["dry_run"] = dry_run
+    if already:
+        plan["already_merged_source_ids"] = [str(source_id) for source_id in already]
     if dry_run:
         return plan
     _apply(session, survivor, sources, plan, merged_by)
@@ -130,20 +75,82 @@ def merge_organizations(
     return plan
 
 
-def suggest_survivor_id(organizations: list[Organization]) -> str:
-    """Prefer an approved, operational, complete, older organization."""
+def _partition_sources(
+    session: Session,
+    survivor: Organization,
+    source_ids: list[UUID],
+    by_id: dict[str, Organization],
+) -> tuple[list[Organization], list[UUID]]:
+    """Split sources into rows still present and rows already merged here."""
+    pending: list[Organization] = []
+    already: list[UUID] = []
+    for source_id in source_ids:
+        source = by_id.get(str(source_id))
+        if source is not None:
+            pending.append(source)
+            continue
+        target = _forwarded_survivor(session, source_id)
+        if target is None:
+            raise NotFoundError("organizations", str(source_id))
+        if str(target) != str(survivor.id):
+            raise ValidationError(
+                "source was already merged into another organization",
+                field="source_ids",
+            )
+        already.append(source_id)
+    return pending, already
 
-    def rank(org: Organization) -> tuple:
-        review = {"approved": 0, "pending_review": 1, "rejected": 2}.get(
-            org.review_status,
-            3,
+
+def _forwarded_survivor(session: Session, org_id: UUID) -> UUID | None:
+    """Live organization a removed id currently forwards to."""
+    seen: set[str] = set()
+    current: UUID | None = org_id
+    while current is not None and str(current) not in seen:
+        seen.add(str(current))
+        row = session.scalar(
+            select(OrganizationMerge)
+            .where(
+                OrganizationMerge.merged_org_id == current,
+                OrganizationMerge.kind == "merge",
+            )
+            .order_by(OrganizationMerge.merged_at.desc())
         )
-        status = 0 if org.status == "operational" else 1
-        filled = sum(1 for field in _FILL_FIELDS if _text(getattr(org, field)))
-        created = org.created_at.timestamp() if org.created_at is not None else 0
-        return (review, status, -filled, created, str(org.id))
+        if row is None or row.survivor_org_id is None:
+            return None
+        survivor = session.get(Organization, row.survivor_org_id)
+        if survivor is not None:
+            return _as_uuid(survivor.id)
+        current = _as_uuid(row.survivor_org_id)
+    return None
 
-    return str(min(organizations, key=rank).id)
+
+def _as_uuid(value: object) -> UUID:
+    if isinstance(value, UUID):
+        return value
+    return UUID(str(value))
+
+
+def _replay_plan(
+    survivor: Organization,
+    source_ids: list[UUID],
+    dry_run: bool,
+) -> dict[str, Any]:
+    ids = [str(source_id) for source_id in source_ids]
+    return {
+        "survivor_id": str(survivor.id),
+        "source_ids": ids,
+        "suggested_survivor_id": str(survivor.id),
+        "fields": [],
+        "moved": {},
+        "warnings": [],
+        "media_urls": list(survivor.media_urls or []),
+        "values": {},
+        "pending_deletes": [],
+        "dry_run": dry_run,
+        "already_merged": True,
+        "already_merged_source_ids": ids,
+        "merged": not dry_run,
+    }
 
 
 def _lock_orgs(session: Session, ids: list[UUID]) -> list[Organization]:
@@ -154,154 +161,12 @@ def _lock_orgs(session: Session, ids: list[UUID]) -> list[Organization]:
     return list(session.scalars(stmt).all())
 
 
-def _plan(
-    session: Session,
-    survivor: Organization,
-    sources: list[Organization],
-    overrides: dict[str, Any],
-) -> dict[str, Any]:
-    source_ids = [source.id for source in sources]
-    fields = [
-        _field_plan(survivor, sources, overrides, name, label)
-        for name, label in _PREVIEW_FIELDS
-    ]
-    fields.extend(_translation_plans(survivor, sources, overrides))
-    values = {field["field"]: field["result"] for field in fields}
-    shown = {field["field"] for field in fields}
-    for field in _FILL_FIELDS:
-        if field in shown:
-            continue
-        picked = _field_plan(survivor, sources, overrides, field, field)
-        if picked["result"]:
-            values[field] = picked["result"]
-    warnings = merge_warnings(session, survivor, sources)
-    media = _union_media(survivor, sources)
-    return {
-        "survivor_id": str(survivor.id),
-        "source_ids": [str(source.id) for source in sources],
-        "suggested_survivor_id": suggest_survivor_id([survivor, *sources]),
-        "fields": fields,
-        "moved": _moved_counts(session, source_ids),
-        "warnings": warnings,
-        "media_urls": media,
-        "values": values,
-    }
-
-
-def _field_plan(survivor, sources, overrides, field: str, label: str) -> dict[str, Any]:
-    survivor_value = _text(getattr(survivor, field))
-    source_values = [
-        {
-            "id": str(source.id),
-            "name": source.name,
-            "value": _text(getattr(source, field)),
-        }
-        for source in sources
-        if _text(getattr(source, field))
-    ]
-    if field in overrides:
-        result = _text(overrides[field]) if overrides[field] is not None else ""
-    elif survivor_value or field == "manager_id":
-        result = survivor_value
-    else:
-        result = next((item["value"] for item in source_values), "")
-    conflict = bool(survivor_value) and any(
-        item["value"] != survivor_value for item in source_values
-    )
-    return {
-        "field": field,
-        "label": label,
-        "survivor_value": survivor_value or None,
-        "source_values": source_values,
-        "result": result or None,
-        "conflict": conflict,
-    }
-
-
-def _translation_plans(survivor, sources, overrides) -> list[dict[str, Any]]:
-    plans = []
-    for field, column, key, label in _TRANSLATION_FIELDS:
-        survivor_map = getattr(survivor, column) or {}
-        survivor_value = _text(
-            survivor_map.get(key) if isinstance(survivor_map, dict) else ""
-        )
-        source_values = []
-        for source in sources:
-            raw = getattr(source, column) or {}
-            value = _text(raw.get(key) if isinstance(raw, dict) else "")
-            if value:
-                source_values.append(
-                    {"id": str(source.id), "name": source.name, "value": value}
-                )
-        if field in overrides:
-            result = _text(overrides[field])
-        elif survivor_value:
-            result = survivor_value
-        else:
-            result = next((item["value"] for item in source_values), "")
-        conflict = bool(survivor_value) and any(
-            item["value"] != survivor_value for item in source_values
-        )
-        if not survivor_value and not source_values and field not in overrides:
-            continue
-        plans.append(
-            {
-                "field": field,
-                "label": label,
-                "survivor_value": survivor_value or None,
-                "source_values": source_values,
-                "result": result or None,
-                "conflict": conflict,
-            }
-        )
-    return plans
-
-
-def _moved_counts(session: Session, source_ids: list) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for model, column, key in _REPARENT:
-        amount = int(
-            session.scalar(
-                select(func.count()).select_from(model).where(column.in_(source_ids))
-            )
-            or 0
-        )
-        counts[key] = counts.get(key, 0) + amount
-    activity_ids = select(Activity.id).where(Activity.org_id.in_(source_ids))
-    counts["pricing"] = int(
-        session.scalar(
-            select(func.count())
-            .select_from(ActivityPricing)
-            .where(ActivityPricing.activity_id.in_(activity_ids))
-        )
-        or 0
-    )
-    counts["schedules"] = int(
-        session.scalar(
-            select(func.count())
-            .select_from(ActivitySchedule)
-            .where(ActivitySchedule.activity_id.in_(activity_ids))
-        )
-        or 0
-    )
-    return counts
-
-
-def _union_media(survivor: Organization, sources: list[Organization]) -> list[str]:
-    urls = list(survivor.media_urls or [])
-    for source in sources:
-        for url in source.media_urls or []:
-            if url not in urls:
-                urls.append(url)
-    return urls
-
-
 def _apply(session, survivor, sources, plan, merged_by: str | None) -> None:
     values = plan["values"]
     filled = [
         field
         for field, value in values.items()
-        if _text(value) and _changed(survivor, field, value)
+        if text_value(value) and _changed(survivor, field, value)
     ]
     originals = [
         {
@@ -320,8 +185,8 @@ def _apply(session, survivor, sources, plan, merged_by: str | None) -> None:
     assert_identity_unique(
         session,
         survivor,
-        _text(values.get("name", survivor.name)),
-        _text(values.get("place_id", survivor.place_id)),
+        text_value(values.get("name", survivor.name)),
+        text_value(values.get("place_id", survivor.place_id)),
     )
     _write_scalars(survivor, values)
     _write_translations(survivor, values)
@@ -339,9 +204,9 @@ def _apply(session, survivor, sources, plan, merged_by: str | None) -> None:
             if rewritten not in media and rewritten not in (survivor.media_urls or []):
                 media.append(rewritten)
     survivor.media_urls = [*(survivor.media_urls or []), *media]
-    if not _text(survivor.logo_media_url):
+    if not text_value(survivor.logo_media_url):
         for source in sources:
-            if _text(source.logo_media_url):
+            if text_value(source.logo_media_url):
                 rewritten, delete_key = copy_merged_media(
                     source.logo_media_url,
                     str(source.id),
@@ -373,7 +238,7 @@ def _apply(session, survivor, sources, plan, merged_by: str | None) -> None:
         )
     session.flush()
     fold_merged_records(session, survivor, sources)
-    for model, column, _key in _REPARENT:
+    for model, column, _key in REPARENT_TARGETS:
         if model in (Location, Activity):
             continue
         rows = session.scalars(select(model).where(column.in_(source_ids))).all()
@@ -406,13 +271,13 @@ def _apply(session, survivor, sources, plan, merged_by: str | None) -> None:
 
 
 def _changed(survivor, field: str, value: str) -> bool:
-    if field in {item[0] for item in _TRANSLATION_FIELDS}:
+    if field in {item[0] for item in TRANSLATION_FIELDS}:
         return True
-    return _text(getattr(survivor, field, "")) != value
+    return text_value(getattr(survivor, field, "")) != value
 
 
 def _write_scalars(survivor: Organization, values: dict[str, Any]) -> None:
-    for field in ("name", "manager_id", *_FILL_FIELDS):
+    for field in ("name", "manager_id", *FILL_FIELDS):
         if field not in values:
             continue
         result = values[field]
@@ -424,7 +289,7 @@ def _write_scalars(survivor: Organization, values: dict[str, Any]) -> None:
 
 
 def _write_translations(survivor: Organization, values: dict[str, Any]) -> None:
-    for field, column, key, _label in _TRANSLATION_FIELDS:
+    for field, column, key, _label in TRANSLATION_FIELDS:
         if field not in values:
             continue
         current = dict(getattr(survivor, column) or {})
@@ -454,9 +319,3 @@ def _snapshot(org: Organization) -> dict[str, Any]:
         "status": org.status,
         "media_urls": list(org.media_urls or []),
     }
-
-
-def _text(value: Any) -> str:
-    if value is None:
-        return ""
-    return str(value).strip()
