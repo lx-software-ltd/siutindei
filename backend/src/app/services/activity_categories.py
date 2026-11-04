@@ -102,7 +102,7 @@ def create_activity_category(
         body.get("name_translations"), "name_translations", MAX_NAME_LENGTH
     )
     parent_id_raw = body.get("parent_id")
-    parent_id = _parse_uuid(parent_id_raw) if parent_id_raw else None
+    parent_id = _parse_uuid(parent_id_raw, "parent_id") if parent_id_raw else None
     validate_category_parent(repo, None, parent_id)
     if not isinstance(name, str):
         raise ValidationError("name is required", field="name")
@@ -129,9 +129,12 @@ def reject_same_parent_name(
 
     ``uq_activity_category_parent_name`` already rejects an exact
     ``(parent_id, name)`` pair. This check also rejects ``Kayaking``
-    when ``kayaking`` is already under that parent.
+    when ``kayaking`` is already under that parent. The sibling name is
+    locked for this transaction first, so two creates cannot both pass
+    the check.
     """
     folded = " ".join(name.split()).casefold()
+    repo.lock_sibling_name(parent_id, folded)
     rows = repo.get_all_roots() if parent_id is None else repo.get_children(parent_id)
     for row in rows:
         if category_id is not None and _as_uuid(row.id) == category_id:

@@ -178,8 +178,9 @@ in the `x-partner-key` header:
   category-check reviews. A full-access `crud` key is the partner
   equivalent of an admin: it can decide category-check reviews, merge
   organizations, read and run website enrichment (including apply,
-  dismiss, and enrichment settings), and list or delete leftover
-  activity categories. A `read` key is rejected on those enrichment
+  dismiss, and enrichment settings), and manage activity categories.
+  A full-access `read` key can list and fetch categories. A `read` key
+  is rejected on category writes and on those enrichment
   routes, including GET.
   Merge moves API keys onto the survivor and cannot be undone.
   Org-scoped keys only see that organization's proposals and reviews,

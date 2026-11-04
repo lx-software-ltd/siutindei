@@ -45,8 +45,11 @@ info:
       enrichment (`GET` / `POST
       /v1/partner/organizations/{id}/enrichment`, including apply and
       dismiss), read and update enrichment settings (`GET` / `PUT
-      /v1/partner/enrichment-settings`), and list or delete activity
-      categories (`GET` / `DELETE /v1/partner/activity-categories`).
+      /v1/partner/enrichment-settings`), and manage activity
+      categories (`GET`, `POST`, `PUT`, and `DELETE
+      /v1/partner/activity-categories`). A full-access `read` key can
+      list and fetch categories. Creating, updating, and deleting
+      require a full-access `crud` key.
       A full-access `crud` key is the partner equivalent of an admin
       for these routes. A `read` key receives `403` on website
       enrichment and enrichment settings, including GET.
@@ -670,6 +673,31 @@ paths:
                 $ref: "./admin.yaml#/components/schemas/ActivityCategoryTreeResponse"
         "403":
           description: Organization-scoped key
+    post:
+      summary: Create an activity category
+      description: |
+        Full-access `crud` keys only. Same body and validation as
+        `POST /v1/admin/activity-categories`, except `show_in_wizard`.
+        Home-wizard membership stays on the admin console, so that
+        field is `400`. A `read` key and an organization-scoped key
+        receive `403`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./admin.yaml#/components/schemas/ActivityCategoryCreate"
+      responses:
+        "201":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: "./admin.yaml#/components/schemas/ActivityCategory"
+        "400":
+          description: Validation error
+        "403":
+          description: Read-only key or organization-scoped key
 
   /v1/partner/activity-categories/{id}:
     parameters:
@@ -686,6 +714,57 @@ paths:
                 $ref: "./admin.yaml#/components/schemas/ActivityCategory"
         "403":
           description: Organization-scoped key
+        "404":
+          description: Not found
+    put:
+      summary: Update an activity category
+      description: |
+        Full-access `crud` keys only. Same body and validation as
+        `PUT /v1/admin/activity-categories/{id}`, except
+        `show_in_wizard`, which stays on the admin console. Pending
+        categorisation cannot be renamed or re-parented. `PATCH` is
+        the same operation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./admin.yaml#/components/schemas/ActivityCategoryUpdate"
+      responses:
+        "200":
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: "./admin.yaml#/components/schemas/ActivityCategory"
+        "400":
+          description: Validation error
+        "403":
+          description: Read-only key or organization-scoped key
+        "404":
+          description: Not found
+    patch:
+      summary: Update an activity category
+      description: |
+        Same operation as `PUT` on this path. `show_in_wizard` stays
+        on the admin console.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./admin.yaml#/components/schemas/ActivityCategoryUpdate"
+      responses:
+        "200":
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: "./admin.yaml#/components/schemas/ActivityCategory"
+        "400":
+          description: Validation error
+        "403":
+          description: Read-only key or organization-scoped key
         "404":
           description: Not found
     delete:

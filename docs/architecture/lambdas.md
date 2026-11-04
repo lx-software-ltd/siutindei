@@ -104,7 +104,10 @@ their primary responsibilities.
   `POST /v1/partner/organization-merges`, `GET` and `POST`
   `/v1/partner/organizations/{id}/enrichment` (apply and dismiss
   included), `GET` and `PUT /v1/partner/enrichment-settings`, and
-  `GET` / `DELETE` `/v1/partner/activity-categories`; a full-access
+  `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`
+  `/v1/partner/activity-categories` (a full-access `read` key can
+  list and fetch; creating, updating, and deleting require `crud`);
+  a full-access
   `crud` key is the partner equivalent of an admin), user self-service
   (tickets), Cognito user management, audit logs, catalog versions
   (`GET /v1/admin/versions`, `POST /v1/admin/versions/{id}/forget`), media upload, admin
@@ -132,7 +135,8 @@ their primary responsibilities.
   `/v1/admin/category-suggestions` (see `docs/api/admin.yaml`),
   including `/scan` and `/reviews`. Full-access partner keys can
   decide reviews, merge organizations, run website enrichment, and
-  delete empty leftover categories on `/v1/partner/category-reviews`,
+  create, update, or delete activity categories. Those routes are
+  `/v1/partner/category-reviews`,
   `/v1/partner/organization-merges`,
   `/v1/partner/organizations/{id}/enrichment`,
   `/v1/partner/enrichment-settings`, and

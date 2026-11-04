@@ -126,12 +126,14 @@ def uuid_resource_id(resource_id: str | None) -> str | None:
     return resource_id
 
 
-def _parse_uuid(value: str) -> UUID:
-    """Parse a UUID string."""
+def _parse_uuid(value: str, field: str = "id") -> UUID:
+    """Parse a UUID string. Other JSON types are a validation error."""
+    if not isinstance(value, str):
+        raise ValidationError(f"Invalid UUID: {value}", field=field)
     try:
         return UUID(value)
-    except (ValueError, TypeError) as exc:
-        raise ValidationError(f"Invalid UUID: {value}", field="id") from exc
+    except (ValueError, TypeError, AttributeError) as exc:
+        raise ValidationError(f"Invalid UUID: {value}", field=field) from exc
 
 
 def _to_uuid(value: UUID | str) -> UUID:
