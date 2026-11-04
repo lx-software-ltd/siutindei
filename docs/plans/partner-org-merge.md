@@ -25,6 +25,7 @@ commit are logged.
 - `backend/src/app/api/partner_routes.py`
 - `backend/src/app/api/admin_org_duplicates.py`
 - `backend/src/app/services/org_merge.py`
+- `backend/src/app/services/org_merge_plan.py`
 - `backend/src/app/services/org_merge_media.py`
 - `tests/test_partner_org_merge.py`
 - `tests/test_org_merge.py`
