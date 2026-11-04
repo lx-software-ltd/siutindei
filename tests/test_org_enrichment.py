@@ -1385,3 +1385,170 @@ def test_dismiss_does_not_enqueue_a_quality_run(db_session, monkeypatch) -> None
     assert "data_quality_run_id" not in body
     assert enqueued == []
     assert db_session.scalars(select(DataQualityRun)).all() == []
+
+
+def _extracting_run(session) -> OrgEnrichmentRun:
+    org = _org(session, website="https://ok.test")
+    run = OrgEnrichmentRun(
+        org_id=org.id,
+        status="extracting",
+        seed_url="https://ok.test/",
+        pages_fetched=12,
+        pages=[
+            {
+                "url": "https://ok.test/",
+                "final_url": "https://ok.test/",
+                "text": "Saturday art classes for children in the hall.",
+                "jsonld": [],
+                "jsonld_raw": [],
+                "og": {},
+                "links": [],
+                "images": [],
+                "social": [],
+                "mailtos": [],
+                "tels": [],
+            }
+        ],
+    )
+    session.add(run)
+    session.flush()
+    return run
+
+
+def test_extract_passes_model_settings_from_the_open_session(
+    db_session, monkeypatch
+) -> None:
+    import json
+
+    from app.services.category_suggestions.settings import get_settings
+
+    row = get_settings(db_session)
+    row.openrouter_model = "openai/gpt-test"
+    row.fallback_models = ["google/gemini-test", "mistralai/mistral-test"]
+    row.deny_data_collection = False
+    db_session.flush()
+
+    def refuse_second_session(*args, **kwargs):
+        del args, kwargs
+        raise AssertionError("model settings opened a second database session")
+
+    monkeypatch.setattr(
+        "app.services.category_suggestions.settings.Session",
+        refuse_second_session,
+    )
+    monkeypatch.setenv(
+        "OPENROUTER_CHAT_COMPLETIONS_URL",
+        "https://openrouter.ai/api/v1/chat/completions",
+    )
+    monkeypatch.setattr(
+        "app.services.openrouter_client.get_openrouter_api_key",
+        lambda: "test-key",
+    )
+    seen: dict[str, object] = {}
+
+    def http_invoke(**kwargs):
+        seen["payload"] = json.loads(kwargs["body"])
+        seen["timeout"] = kwargs["timeout"]
+        return {
+            "status": 200,
+            "headers": {},
+            "body": json.dumps(
+                {
+                    "model": "openai/gpt-test",
+                    "choices": [
+                        {
+                            "finish_reason": "stop",
+                            "message": {"content": "{}"},
+                        }
+                    ],
+                    "usage": {
+                        "prompt_tokens": 3,
+                        "completion_tokens": 1,
+                        "cost": 0,
+                    },
+                }
+            ),
+        }
+
+    monkeypatch.setattr("app.services.openrouter_client.http_invoke", http_invoke)
+    run = _extracting_run(db_session)
+    step = process_enrichment(
+        db_session,
+        run.id,
+        "m-model",
+        receive_count=1,
+        stage="extract",
+    )
+    assert step.acked is True
+    assert run.status == "ready"
+    payload = seen["payload"]
+    assert isinstance(payload, dict)
+    assert payload["model"] == "openai/gpt-test"
+    assert payload["models"] == ["google/gemini-test", "mistralai/mistral-test"]
+    assert "provider" not in payload
+    assert seen["timeout"] == 90
+
+
+def _busy_provider(monkeypatch) -> list[str]:
+    import json
+
+    monkeypatch.setenv(
+        "OPENROUTER_CHAT_COMPLETIONS_URL",
+        "https://openrouter.ai/api/v1/chat/completions",
+    )
+    monkeypatch.setattr(
+        "app.services.openrouter_client.get_openrouter_api_key",
+        lambda: "test-key",
+    )
+    recorded: list[str] = []
+
+    def fail(run_id, error="enrichment failed") -> None:
+        del run_id
+        recorded.append(error)
+
+    monkeypatch.setattr("app.services.enrichment.run.fail_enrichment_run", fail)
+
+    def http_invoke(**kwargs):
+        del kwargs
+        return {
+            "status": 429,
+            "headers": {},
+            "body": json.dumps(
+                {"error": {"message": "Provider returned error", "code": 429}}
+            ),
+        }
+
+    monkeypatch.setattr("app.services.openrouter_client.http_invoke", http_invoke)
+    return recorded
+
+
+def test_provider_busy_stays_retryable(db_session, monkeypatch) -> None:
+    recorded = _busy_provider(monkeypatch)
+    run = _extracting_run(db_session)
+    step = process_enrichment(
+        db_session,
+        run.id,
+        "m-busy-1",
+        receive_count=1,
+        stage="extract",
+    )
+    assert step.acked is False
+    assert recorded == []
+
+
+def test_provider_busy_on_the_last_delivery_explains_the_failure(
+    db_session, monkeypatch
+) -> None:
+    from app.services.enrichment.run import PROVIDER_BUSY_ERROR
+
+    recorded = _busy_provider(monkeypatch)
+    run = _extracting_run(db_session)
+    step = process_enrichment(
+        db_session,
+        run.id,
+        "m-busy-3",
+        receive_count=3,
+        stage="extract",
+    )
+    assert step.acked is True
+    assert recorded == [PROVIDER_BUSY_ERROR]

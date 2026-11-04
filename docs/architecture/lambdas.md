@@ -149,7 +149,17 @@ their primary responsibilities.
   categories only when an activity was saved. A busy check is published
   again up to twice, delayed ten minutes, before it is marked busy. Crawl uses proxy `type: "crawl"` and stops after 20 seconds;
   extract is a second delivery because both stages do not fit in the
-  120 second function. They
+  120 second function. Extract reads the category-suggestion model,
+  fallbacks, and data-collection flag on the session it already holds
+  and passes `model`, `fallback_models`, and `deny_data_collection`
+  into the OpenRouter call. The admin function's database pool is one
+  connection. A second session opened while that one is checked out
+  waits out the pool timeout, about 30 seconds, and the client then
+  ignores the saved model. Three such reads cost about 90 seconds and
+  leave no time for the reply. Configured fallbacks travel in that
+  same request, so a busy provider is routed around without a second
+  paid call. A 408, 425, 429, or 5xx on the last queue delivery is
+  stored as "The model provider was busy. Try again later." They
   spend `translation_fix_settings.monthly_cost_limit_usd`, which is
   separate from category-check and location-sweep spend. The location
   sweep also loads the EDB school register through the HTTP proxy.

@@ -332,8 +332,11 @@ def _load_settings_model() -> str:
         from app.services.category_suggestions.settings import load_model_name
 
         return load_model_name() or ""
-    except Exception:
-        logger.debug("category suggestion model unavailable; using environment")
+    except Exception as exc:
+        logger.warning(
+            "category suggestion model unavailable; using environment",
+            extra={"extra": {"error_type": type(exc).__name__}},
+        )
         return ""
 
 
@@ -342,8 +345,11 @@ def _load_settings_fallbacks() -> list[str]:
         from app.services.category_suggestions.settings import load_fallback_models
 
         return load_fallback_models()
-    except Exception:
-        logger.debug("category suggestion fallback models unavailable")
+    except Exception as exc:
+        logger.warning(
+            "category suggestion fallback models unavailable",
+            extra={"extra": {"error_type": type(exc).__name__}},
+        )
         return []
 
 
@@ -354,8 +360,11 @@ def _load_deny_data_collection() -> bool:
         )
 
         return load_deny_data_collection()
-    except Exception:
-        logger.debug("deny-data-collection setting unavailable; defaulting to deny")
+    except Exception as exc:
+        logger.warning(
+            "deny-data-collection setting unavailable; defaulting to deny",
+            extra={"extra": {"error_type": type(exc).__name__}},
+        )
         return True
 
 
