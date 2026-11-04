@@ -625,7 +625,8 @@ export interface paths {
          * Update website enrichment settings
          * @description Admin only. `monthly_cost_limit_usd` is greater than 0 and at
          *     most 1000. `max_pages` is 1 to 20. `max_page_bytes` is 10000 to
-         *     2000000. `min_confidence_shown` is 0 to 1.
+         *     2000000. `min_confidence_shown` is 0 to 1. A change is written
+         *     to the audit log with the admin subject.
          */
         put: {
             parameters: {
@@ -1591,11 +1592,21 @@ export interface paths {
          * @description Fills blank survivor fields from the sources. `field_overrides`
          *     replaces a field with the given value. `dry_run` returns the same
          *     preview without writing. Children move onto the survivor.
-         *     Locations that share an address, and activities that share a
-         *     name, are combined. Each source's `source_id` and `place_id` are
-         *     stored on `organization_merges` so a later import resolves to
-         *     the survivor. The survivor's own values win unless overridden.
+         *     Locations, activities, pricing, schedules, tickets, feedback,
+         *     category reviews, category-scan rows, and API keys move onto
+         *     the survivor. An API key scoped to a source becomes scoped to
+         *     the survivor. Locations that share an address, and activities
+         *     that share a name, are combined. Each source's `source_id` and
+         *     `place_id` are stored on `organization_merges` so a later import
+         *     resolves to the survivor. The survivor's own values win unless
+         *     overridden. There is no unmerge.
          *     Copied media objects are deleted only after the merge commits.
+         *     A delete that fails is logged with the survivor id and the
+         *     object key; the merge stays committed.
+         *     Sending the same survivor and sources again, after the merge
+         *     has completed, returns `200` with `already_merged: true` and
+         *     does not write again. A source or survivor that was merged into
+         *     a different organization returns `400`.
          */
         post: {
             parameters: {
@@ -1610,7 +1621,10 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Dry-run preview */
+                /**
+                 * @description Dry-run preview, or a repeat of a merge that already
+                 *     completed (`already_merged: true`).
+                 */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1627,6 +1641,23 @@ export interface paths {
                     content: {
                         "application/json": components["schemas"]["OrgMergeResult"];
                     };
+                };
+                /**
+                 * @description Invalid body, or a source or survivor already merged into
+                 *     a different organization.
+                 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Organization not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
             };
         };
@@ -9238,6 +9269,17 @@ export interface components {
             media_urls?: string[];
             dry_run: boolean;
             merged?: boolean;
+            /**
+             * @description True when every source was already merged into this survivor.
+             *     The request wrote nothing.
+             */
+            already_merged?: boolean;
+            /**
+             * @description Sources in this request that were already merged into the
+             *     survivor. When other sources are still present, those are
+             *     merged and this list names the ones that were skipped.
+             */
+            already_merged_source_ids?: string[];
         };
         NameFixProposal: {
             /** Format: uuid */
