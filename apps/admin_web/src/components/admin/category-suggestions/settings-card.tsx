@@ -194,7 +194,11 @@ export function CategorySuggestionSettingsCard() {
               Deny provider data collection
             </label>
           </AdminField>
-          <AdminField label='OpenRouter model' htmlFor='suggestion-model'>
+          <AdminField
+            label='OpenRouter model'
+            htmlFor='suggestion-model'
+            hint='Website enrichment uses this model and the fallbacks. The prompt is sized for a 40,960-token window. A smaller model can cut the reply.'
+          >
             <Input
               id='suggestion-model'
               value={settings.openrouter_model || ''}

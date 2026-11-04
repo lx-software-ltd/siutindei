@@ -70,10 +70,18 @@ def test_enrichment_asks_for_reply_room(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.services.openrouter_client.openrouter_chat_completion", fake_completion
     )
-    run_module._model("page text")
+    run_module._model(
+        "page text",
+        model_name="openai/gpt-test",
+        fallback_models=["google/gemini-test"],
+        deny_data_collection=False,
+    )
 
     assert calls[0]["max_tokens"] == MAX_REPLY_TOKENS
     assert calls[0]["reasoning_off"] is True
+    assert calls[0]["model"] == "openai/gpt-test"
+    assert calls[0]["fallback_models"] == ["google/gemini-test"]
+    assert calls[0]["deny_data_collection"] is False
 
 
 def test_enrichment_retries_plainly_when_the_model_refuses_the_settings(
@@ -92,10 +100,18 @@ def test_enrichment_retries_plainly_when_the_model_refuses_the_settings(
     monkeypatch.setattr(
         "app.services.openrouter_client.openrouter_chat_completion", fake_completion
     )
-    run_module._model("page text")
+    run_module._model(
+        "page text",
+        model_name="openai/gpt-test",
+        fallback_models=["google/gemini-test"],
+        deny_data_collection=False,
+    )
 
     assert len(calls) == 2
     assert "max_tokens" not in calls[1] and "reasoning_off" not in calls[1]
+    assert calls[1]["model"] == "openai/gpt-test"
+    assert calls[1]["fallback_models"] == ["google/gemini-test"]
+    assert calls[1]["deny_data_collection"] is False
 
 
 def test_enrichment_does_not_retry_other_failures(monkeypatch) -> None:
@@ -111,5 +127,10 @@ def test_enrichment_does_not_retry_other_failures(monkeypatch) -> None:
         "app.services.openrouter_client.openrouter_chat_completion", fake_completion
     )
     with pytest.raises(OpenRouterError):
-        run_module._model("page text")
+        run_module._model(
+            "page text",
+            model_name="openai/gpt-test",
+            fallback_models=["google/gemini-test"],
+            deny_data_collection=True,
+        )
     assert len(calls) == 1

@@ -45,6 +45,16 @@ const SECTIONS = [
 
 const ACTIVE = new Set(['queued', 'running', 'extracting']);
 
+export function enrichmentActivityCopy(status: string): string | null {
+  if (status === 'extracting') {
+    return 'Reading pages with the model…';
+  }
+  if (status === 'queued' || status === 'running') {
+    return 'Reading the website…';
+  }
+  return null;
+}
+
 type Scope = {
   orgId: string | null;
   draftWebsite: string;
@@ -347,8 +357,10 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
           </span>
         </div>
       ) : null}
-      {run && ACTIVE.has(run.status) ? (
-        <p className='text-sm text-ink-700'>Reading the website…</p>
+      {run && enrichmentActivityCopy(run.status) ? (
+        <p className='text-sm text-ink-700' data-testid='enrichment-activity'>
+          {enrichmentActivityCopy(run.status)}
+        </p>
       ) : null}
       {run && run.status === 'ready' && proposals.length === 0 ? (
         <p className='text-sm text-ink-700'>No new fields were found.</p>

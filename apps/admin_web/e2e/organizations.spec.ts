@@ -865,6 +865,48 @@ test.describe('Organizations Panel', () => {
       area_id: 'area-hk-causeway',
     });
   });
+
+  test('says the model is reading once the pages are stored', async ({
+    adminPage,
+  }) => {
+    await adminPage.route(
+      '**/api/mock/**/admin/organizations/org-1/enrichment',
+      async (route) => {
+        if (route.request().method() !== 'GET') {
+          await route.fallback();
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            run: {
+              id: 'run-extracting',
+              org_id: 'org-1',
+              status: 'extracting',
+              seed_url: 'https://org-one.example',
+              pages_fetched: 12,
+              bytes_fetched: 1200,
+              model: null,
+              cost_usd: 0,
+              error: null,
+              created_at: new Date().toISOString(),
+              finished_at: null,
+            },
+            proposals: [],
+            venues: [],
+          }),
+        });
+      }
+    );
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    await expect(adminPage.getByTestId('enrichment-activity')).toHaveText(
+      'Reading pages with the model…'
+    );
+    await expect(adminPage.getByText('12 pages')).toBeVisible();
+    await expect(adminPage.getByText('Reading the website…')).toHaveCount(0);
+    await expect(adminPage.getByTestId('enrichment-settings')).toBeVisible();
+  });
 });
 
 test.describe('Organizations Panel - versions unavailable', () => {

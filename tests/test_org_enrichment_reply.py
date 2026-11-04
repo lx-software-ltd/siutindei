@@ -168,7 +168,12 @@ def test_model_reply_log_names_the_finish_reason(monkeypatch, caplog) -> None:
     )
 
     with caplog.at_level(logging.INFO, logger=run_module.logger.logger.name):
-        sheet, _cost, _model = run_module._model("page text")
+        sheet, _cost, _model = run_module._model(
+            "page text",
+            model_name="openai/gpt-test",
+            fallback_models=["google/gemini-test"],
+            deny_data_collection=False,
+        )
 
     assert len(sheet["locations"]) == 1
     record = next(

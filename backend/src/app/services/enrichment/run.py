@@ -38,9 +38,12 @@ from app.services.enrichment.queue import enqueue_enrichment
 from app.services.enrichment.refine import annotate, catalog_names
 from app.services.enrichment.sheet import SECTIONS, read_sheet, section_rows
 from app.services.enrichment.store import load_settings, month_spend, save_proposals
+from app.services.openrouter_client import _RETRYABLE_HTTP_STATUSES, OpenRouterError
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+PROVIDER_BUSY_ERROR = "The model provider was busy. Try again later."
 
 CrawlFn = Callable[[OrgEnrichmentRun, Any], dict[str, Any]]
 ModelFn = Callable[[str], tuple[dict[str, Any], Decimal, str]]
@@ -136,6 +139,27 @@ def process_enrichment(
         logger.exception("Enrichment crawl failed", extra={"run_id": str(run_id)})
         _fail_open_run(session, run_id, _proxy_failure_message(exc))
         return EnrichmentStep(acked=True)
+    except OpenRouterError as exc:
+        logger.exception(
+            "Enrichment run will retry",
+            extra={
+                "extra": {
+                    "run_id": str(run_id),
+                    "status": exc.status,
+                    "receive_count": receive_count,
+                }
+            },
+        )
+        session.rollback()
+        if receive_count >= 3:
+            message = (
+                PROVIDER_BUSY_ERROR
+                if exc.status in _RETRYABLE_HTTP_STATUSES
+                else "enrichment failed"
+            )
+            fail_enrichment_run(run_id, message)
+            return EnrichmentStep(acked=True)
+        return EnrichmentStep(acked=False)
     except Exception:
         logger.exception("Enrichment run will retry", extra={"run_id": str(run_id)})
         session.rollback()
@@ -198,7 +222,16 @@ def _extract(
     copied = _copy_cached(session, run)
     if copied is None:
         prompt = instructions_for(catalog_names(session)) + prompt_pages(pages)
-        sheet, cost, model = (complete or _model)(prompt)
+        if complete is None:
+            model_name, fallbacks, deny = _openrouter_settings(session)
+            sheet, cost, model = _model(
+                prompt,
+                model_name=model_name,
+                fallback_models=fallbacks,
+                deny_data_collection=deny,
+            )
+        else:
+            sheet, cost, model = complete(prompt)
         checked = validate_model_sheet(sheet, pages, snapshot)
         run.cost_usd = cost
         run.model = model
@@ -251,9 +284,35 @@ def _proxy_crawl(run: OrgEnrichmentRun, settings: Any) -> dict[str, Any]:
     )
 
 
-def _model(user_content: str) -> tuple[dict[str, Any], Decimal, str]:
+def _openrouter_settings(session: Session) -> tuple[str, list[str], bool]:
+    """Model, fallbacks, and the data-collection flag from this session.
+
+    The admin function keeps one database connection. Loading these
+    through another session waits out the pool timeout and then drops
+    the saved model, so the client never opens that second session.
+    """
+    from app.services.category_suggestions.settings import (
+        get_settings,
+        resolved_fallback_models,
+        resolved_model_name,
+    )
+
+    row = get_settings(session)
+    return (
+        resolved_model_name(row.openrouter_model),
+        resolved_fallback_models(row.fallback_models),
+        bool(row.deny_data_collection),
+    )
+
+
+def _model(
+    user_content: str,
+    *,
+    model_name: str,
+    fallback_models: list[str],
+    deny_data_collection: bool,
+) -> tuple[dict[str, Any], Decimal, str]:
     from app.services.openrouter_client import (
-        OpenRouterError,
         extract_message_text,
         openrouter_chat_completion,
         usage_from_body,
@@ -265,6 +324,9 @@ def _model(user_content: str) -> tuple[dict[str, Any], Decimal, str]:
         "timeout": EXTRACT_TIMEOUT_SECONDS,
         "workload": "org-enrichment",
         "max_attempts": 1,
+        "model": model_name,
+        "fallback_models": fallback_models,
+        "deny_data_collection": deny_data_collection,
     }
     started = time.monotonic()
     try:
