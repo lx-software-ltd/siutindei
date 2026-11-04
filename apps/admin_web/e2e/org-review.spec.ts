@@ -124,17 +124,19 @@ test.describe('Organization review queue', () => {
         request.method() === 'GET' &&
         request.url().includes('/admin/org-review') &&
         !request.url().includes('/summary') &&
-        request.url().includes('import_job_id=job-1')
+        request.url().includes('import_job_id=job-1') &&
+        !request.url().includes('area_id=')
     );
     await adminPage
       .getByTestId('admin-row-job-1')
       .getByRole('button', { name: 'View orgs' })
       .click();
-    await requestPromise;
+    const jobRequest = await requestPromise;
+    expect(jobRequest.url()).not.toContain('area_id=');
     await expect(adminPage).toHaveURL(/section=catalog/);
     await expect(adminPage).toHaveURL(/[?&]job=job-1/);
     await expect(adminPage.getByRole('heading', { name: 'Catalog' })).toBeVisible();
-    await showAllCatalogNeighbourhoods(adminPage);
+    await expect(adminPage.getByLabel('Neighbourhood')).toHaveValue('');
     await expect(adminPage.getByText('Filtered to this import.')).toBeVisible();
     await expect(
       adminPage.getByRole('cell', { name: 'Test Organization 1', exact: true })
