@@ -126,7 +126,13 @@ def test_duplicate_routes_and_the_old_merge_path_are_404() -> None:
     assert response["statusCode"] == 404
 
 
-def test_merge_rejects_a_bad_id_and_a_survivor_that_is_also_a_source() -> None:
+def test_merge_rejects_a_bad_id_and_a_survivor_that_is_also_a_source(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.api.admin_org_duplicates.get_engine",
+        lambda: (_ for _ in ()).throw(AssertionError("database")),
+    )
     bad = _merge_event(
         uuid4(),
         uuid4(),

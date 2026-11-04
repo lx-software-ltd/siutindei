@@ -121,6 +121,8 @@ def merge_organizations_from_request(
             "field_overrides must be an object", field="field_overrides"
         )
     dry_run = bool(body.get("dry_run"))
+    if survivor_id in source_ids:
+        raise ValidationError("survivor_id is also a source", field="survivor_id")
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event, user_id=merged_by)
         payload = merge_organizations(

@@ -19,11 +19,8 @@ from app.services.org_merge_plan import (
     REPARENT_TARGETS,
     TRANSLATION_FIELDS,
     build_merge_plan,
-    suggest_survivor_id,
     text_value,
 )
-
-__all__ = ["merge_organizations", "suggest_survivor_id"]
 
 _OVERRIDE_FIELDS = (
     set(FILL_FIELDS) | {"name", "manager_id"} | {item[0] for item in TRANSLATION_FIELDS}
@@ -122,9 +119,15 @@ def _forwarded_survivor(session: Session, org_id: UUID) -> UUID | None:
             return None
         survivor = session.get(Organization, row.survivor_org_id)
         if survivor is not None:
-            return survivor.id
-        current = row.survivor_org_id
+            return _as_uuid(survivor.id)
+        current = _as_uuid(row.survivor_org_id)
     return None
+
+
+def _as_uuid(value: object) -> UUID:
+    if isinstance(value, UUID):
+        return value
+    return UUID(str(value))
 
 
 def _replay_plan(
