@@ -1415,140 +1415,194 @@ def _extracting_run(session) -> OrgEnrichmentRun:
     return run
 
 
-def test_extract_passes_model_settings_from_the_open_session(
-    db_session, monkeypatch
+def _stub_openrouter(monkeypatch, *, status: int, body: dict, seen=None):
+    import json
+
+    monkeypatch.setenv(
+        "OPENROUTER_CHAT_COMPLETIONS_URL",
+        "https://openrouter.ai/api/v1/chat/completions",
+    )
+    monkeypatch.setattr(
+        "app.services.openrouter_client.get_openrouter_api_key",
+        lambda: "test-key",
+    )
+
+    def http_invoke(**kwargs):
+        if seen is not None:
+            seen["payload"] = json.loads(kwargs["body"])
+            seen["timeout"] = kwargs["timeout"]
+        return {
+            "status": status,
+            "headers": {},
+            "body": json.dumps(body),
+        }
+
+    monkeypatch.setattr("app.services.openrouter_client.http_invoke", http_invoke)
+
+
+def _delete_run(session, run_id, org_id) -> None:
+    from app.db.models import Organization
+    from app.db.models.org_enrichment import OrgEnrichmentProposal
+    from sqlalchemy import delete
+
+    if run_id is not None:
+        session.execute(
+            delete(OrgEnrichmentProposal).where(OrgEnrichmentProposal.run_id == run_id)
+        )
+        row = session.get(OrgEnrichmentRun, run_id)
+        if row is not None:
+            session.delete(row)
+    if org_id is not None:
+        org = session.get(Organization, org_id)
+        if org is not None:
+            session.delete(org)
+    session.commit()
+
+
+def test_extract_completes_on_a_one_connection_pool(
+    test_engine, test_database_url, monkeypatch
 ) -> None:
-    import json
-
     from app.services.category_suggestions.settings import get_settings
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
 
-    row = get_settings(db_session)
-    row.openrouter_model = "openai/gpt-test"
-    row.fallback_models = ["google/gemini-test", "mistralai/mistral-test"]
-    row.deny_data_collection = False
-    db_session.flush()
-
-    def refuse_second_session(*args, **kwargs):
-        del args, kwargs
-        raise AssertionError("model settings opened a second database session")
-
-    monkeypatch.setattr(
-        "app.services.category_suggestions.settings.Session",
-        refuse_second_session,
+    del test_engine
+    engine = create_engine(
+        test_database_url,
+        pool_size=1,
+        max_overflow=0,
+        pool_timeout=1,
     )
-    monkeypatch.setenv(
-        "OPENROUTER_CHAT_COMPLETIONS_URL",
-        "https://openrouter.ai/api/v1/chat/completions",
-    )
-    monkeypatch.setattr(
-        "app.services.openrouter_client.get_openrouter_api_key",
-        lambda: "test-key",
-    )
+    monkeypatch.setattr("app.db.engine.get_engine", lambda **_kwargs: engine)
     seen: dict[str, object] = {}
-
-    def http_invoke(**kwargs):
-        seen["payload"] = json.loads(kwargs["body"])
-        seen["timeout"] = kwargs["timeout"]
-        return {
-            "status": 200,
-            "headers": {},
-            "body": json.dumps(
-                {
-                    "model": "openai/gpt-test",
-                    "choices": [
-                        {
-                            "finish_reason": "stop",
-                            "message": {"content": "{}"},
-                        }
-                    ],
-                    "usage": {
-                        "prompt_tokens": 3,
-                        "completion_tokens": 1,
-                        "cost": 0,
-                    },
-                }
-            ),
-        }
-
-    monkeypatch.setattr("app.services.openrouter_client.http_invoke", http_invoke)
-    run = _extracting_run(db_session)
-    step = process_enrichment(
-        db_session,
-        run.id,
-        "m-model",
-        receive_count=1,
-        stage="extract",
+    _stub_openrouter(
+        monkeypatch,
+        status=200,
+        seen=seen,
+        body={
+            "model": "openai/gpt-test",
+            "choices": [{"finish_reason": "stop", "message": {"content": "{}"}}],
+            "usage": {"prompt_tokens": 3, "completion_tokens": 1, "cost": 0},
+        },
     )
-    assert step.acked is True
-    assert run.status == "ready"
-    payload = seen["payload"]
-    assert isinstance(payload, dict)
-    assert payload["model"] == "openai/gpt-test"
-    assert payload["models"] == ["google/gemini-test", "mistralai/mistral-test"]
-    assert "provider" not in payload
-    assert seen["timeout"] == 90
+    run_id = None
+    org_id = None
+    saved = None
+    try:
+        with Session(engine) as session:
+            row = get_settings(session)
+            saved = (
+                row.openrouter_model,
+                list(row.fallback_models or []),
+                bool(row.deny_data_collection),
+            )
+            row.openrouter_model = "openai/gpt-test"
+            row.fallback_models = ["google/gemini-test", "mistralai/mistral-test"]
+            row.deny_data_collection = False
+            run = _extracting_run(session)
+            run_id = run.id
+            org_id = run.org_id
+            session.commit()
+        with Session(engine) as session:
+            step = process_enrichment(
+                session,
+                run_id,
+                "m-model",
+                receive_count=1,
+                stage="extract",
+            )
+            session.commit()
+            stored = session.get(OrgEnrichmentRun, run_id)
+            assert step.acked is True
+            assert stored is not None
+            assert stored.status == "ready"
+        payload = seen["payload"]
+        assert isinstance(payload, dict)
+        assert payload["model"] == "openai/gpt-test"
+        assert payload["models"] == ["google/gemini-test", "mistralai/mistral-test"]
+        assert "provider" not in payload
+        assert seen["timeout"] == 90
+    finally:
+        with Session(engine) as session:
+            if saved is not None:
+                row = get_settings(session)
+                row.openrouter_model, row.fallback_models, row.deny_data_collection = (
+                    saved
+                )
+            _delete_run(session, run_id, org_id)
+        engine.dispose()
 
 
-def _busy_provider(monkeypatch) -> list[str]:
-    import json
+def test_provider_busy_stays_retryable(test_engine, monkeypatch) -> None:
+    from sqlalchemy.orm import Session
 
-    monkeypatch.setenv(
-        "OPENROUTER_CHAT_COMPLETIONS_URL",
-        "https://openrouter.ai/api/v1/chat/completions",
+    monkeypatch.setattr("app.db.engine.get_engine", lambda **_kwargs: test_engine)
+    _stub_openrouter(
+        monkeypatch,
+        status=429,
+        body={"error": {"message": "Provider returned error", "code": 429}},
     )
-    monkeypatch.setattr(
-        "app.services.openrouter_client.get_openrouter_api_key",
-        lambda: "test-key",
-    )
-    recorded: list[str] = []
-
-    def fail(run_id, error="enrichment failed") -> None:
-        del run_id
-        recorded.append(error)
-
-    monkeypatch.setattr("app.services.enrichment.run.fail_enrichment_run", fail)
-
-    def http_invoke(**kwargs):
-        del kwargs
-        return {
-            "status": 429,
-            "headers": {},
-            "body": json.dumps(
-                {"error": {"message": "Provider returned error", "code": 429}}
-            ),
-        }
-
-    monkeypatch.setattr("app.services.openrouter_client.http_invoke", http_invoke)
-    return recorded
-
-
-def test_provider_busy_stays_retryable(db_session, monkeypatch) -> None:
-    recorded = _busy_provider(monkeypatch)
-    run = _extracting_run(db_session)
-    step = process_enrichment(
-        db_session,
-        run.id,
-        "m-busy-1",
-        receive_count=1,
-        stage="extract",
-    )
-    assert step.acked is False
-    assert recorded == []
+    run_id = None
+    org_id = None
+    try:
+        with Session(test_engine) as session:
+            run = _extracting_run(session)
+            run_id = run.id
+            org_id = run.org_id
+            session.commit()
+        with Session(test_engine) as session:
+            step = process_enrichment(
+                session,
+                run_id,
+                "m-busy-1",
+                receive_count=1,
+                stage="extract",
+            )
+            assert step.acked is False
+        with Session(test_engine) as session:
+            stored = session.get(OrgEnrichmentRun, run_id)
+            assert stored is not None
+            assert stored.status == "extracting"
+            assert stored.error is None
+    finally:
+        with Session(test_engine) as session:
+            _delete_run(session, run_id, org_id)
 
 
 def test_provider_busy_on_the_last_delivery_explains_the_failure(
-    db_session, monkeypatch
+    test_engine, monkeypatch
 ) -> None:
     from app.services.enrichment.run import PROVIDER_BUSY_ERROR
+    from sqlalchemy.orm import Session
 
-    recorded = _busy_provider(monkeypatch)
-    run = _extracting_run(db_session)
-    step = process_enrichment(
-        db_session,
-        run.id,
-        "m-busy-3",
-        receive_count=3,
-        stage="extract",
+    monkeypatch.setattr("app.db.engine.get_engine", lambda **_kwargs: test_engine)
+    _stub_openrouter(
+        monkeypatch,
+        status=429,
+        body={"error": {"message": "Provider returned error", "code": 429}},
     )
-    assert step.acked is True
-    assert recorded == [PROVIDER_BUSY_ERROR]
+    run_id = None
+    org_id = None
+    try:
+        with Session(test_engine) as session:
+            run = _extracting_run(session)
+            run_id = run.id
+            org_id = run.org_id
+            session.commit()
+        with Session(test_engine) as session:
+            step = process_enrichment(
+                session,
+                run_id,
+                "m-busy-3",
+                receive_count=3,
+                stage="extract",
+            )
+            assert step.acked is True
+        with Session(test_engine) as session:
+            stored = session.get(OrgEnrichmentRun, run_id)
+            assert stored is not None
+            assert stored.status == "failed"
+            assert stored.error == PROVIDER_BUSY_ERROR
+    finally:
+        with Session(test_engine) as session:
+            _delete_run(session, run_id, org_id)

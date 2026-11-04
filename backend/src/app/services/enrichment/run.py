@@ -38,14 +38,11 @@ from app.services.enrichment.queue import enqueue_enrichment
 from app.services.enrichment.refine import annotate, catalog_names
 from app.services.enrichment.sheet import SECTIONS, read_sheet, section_rows
 from app.services.enrichment.store import load_settings, month_spend, save_proposals
-from app.services.openrouter_client import OpenRouterError
+from app.services.openrouter_client import _RETRYABLE_HTTP_STATUSES, OpenRouterError
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Same statuses the OpenRouter client treats as transient. The message is
-# stored on the run only after the queue's last delivery.
-_PROVIDER_BUSY_STATUSES = frozenset({408, 425, 429, 500, 502, 503, 504})
 PROVIDER_BUSY_ERROR = "The model provider was busy. Try again later."
 
 CrawlFn = Callable[[OrgEnrichmentRun, Any], dict[str, Any]]
@@ -157,7 +154,7 @@ def process_enrichment(
         if receive_count >= 3:
             message = (
                 PROVIDER_BUSY_ERROR
-                if exc.status in _PROVIDER_BUSY_STATUSES
+                if exc.status in _RETRYABLE_HTTP_STATUSES
                 else "enrichment failed"
             )
             fail_enrichment_run(run_id, message)
