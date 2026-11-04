@@ -11,6 +11,7 @@ import { formatAdminPageName } from '../../../lib/admin-page-name';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { getAdminQueryClient } from '../../../lib/admin-query-client';
 import { formatDateTime } from '../../../lib/date-utils';
+import { areaIdForCatalogDefault } from '../../../lib/catalog-defaults';
 import {
   CATALOG_MAP_ORG_CAP,
   CATALOG_MAP_PAGE_CAP,
@@ -197,13 +198,80 @@ function issueSummary(item: OrgReviewListItem) {
     .join('; ');
 }
 
+function CatalogPanelLoading() {
+  return (
+    <div className='space-y-4'>
+      <h2 className='sr-only'>{PAGE_NAME}</h2>
+      <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
+        <AdminKpiCard label='Pending review' value={0} />
+        <AdminKpiCard label='With missing details' value={0} />
+        <AdminKpiCard label='Approved' value={0} />
+        <AdminKpiCard label='Added since rejected' value={0} />
+      </div>
+      <ResourceTableShell
+        ariaLabel={PAGE_NAME}
+        rows={[]}
+        getLabel={() => ''}
+        middleColumnCount={6}
+        hasActions={false}
+        isLoading
+        isExpanded={() => false}
+        onToggle={() => undefined}
+        detail={null}
+        head={
+          <>
+            <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Source
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
+              Review
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Import
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Missing
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>
+              Complete
+            </AdminDataTableHeadCell>
+          </>
+        }
+        renderCells={() => null}
+      />
+    </div>
+  );
+}
+
 export function CatalogPanel() {
+  const areas = useGeographicAreas();
+  const [jobParam] = useQueryState('job');
+  if (areas.isLoading) {
+    return <CatalogPanelLoading />;
+  }
+  return (
+    <CatalogPanelReady
+      areas={areas}
+      defaultAreaId={jobParam ? '' : areaIdForCatalogDefault(areas.tree)}
+    />
+  );
+}
+
+function CatalogPanelReady({
+  areas,
+  defaultAreaId,
+}: {
+  areas: ReturnType<typeof useGeographicAreas>;
+  defaultAreaId: string;
+}) {
   const scope = useOrganizationScope();
   const [jobParam, setJobParam] = useQueryState('job');
   const defaultFilters = useMemo(
     () => ({
       ...DEFAULT_REVIEW_FILTERS,
       import_job_id: jobParam ?? '',
+      area_id: defaultAreaId,
     }),
     // The hook reads defaults once. Later job changes go through setFilter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -279,7 +347,6 @@ export function CatalogPanel() {
     },
     [setViewParam]
   );
-  const areas = useGeographicAreas();
   const importsQuery = useQuery(
     {
       queryKey: [
@@ -298,6 +365,10 @@ export function CatalogPanel() {
   const [importAt, setImportAt] = useState('');
   const { items, filters, setFilter, refetch, loadMore, hasMore, isLoading, isLoadingMore } =
     list;
+  const neighbourhoodOptions = useMemo(
+    () => neighbourhoodFilterOptions(areas.tree),
+    [areas.tree]
+  );
 
   const refreshSummary = useCallback(async () => {
     try {
@@ -573,7 +644,7 @@ export function CatalogPanel() {
               <NeighbourhoodFilter
                 id='review-neighbourhood-filter'
                 value={filters.area_id}
-                options={neighbourhoodFilterOptions(areas.tree)}
+                options={neighbourhoodOptions}
                 onChange={(areaId) => setFilter('area_id', areaId)}
               />
             </AdminFilterField>

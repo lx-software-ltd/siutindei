@@ -1,4 +1,6 @@
-import { test as base, Page, Route } from '@playwright/test';
+import { expect, test as base, Page, Route } from '@playwright/test';
+
+import { DEFAULT_CATALOG_NEIGHBOURHOOD_NAME } from '../../src/lib/catalog-defaults';
 
 /**
  * Mock user data for testing different auth states
@@ -485,6 +487,8 @@ export const mockAuditLogs = [
   },
 ];
 
+export const MOCK_STANLEY_AREA_ID = '8e20eb5e-f30a-5b98-b60c-6c9b4b4a81e3';
+
 export const mockAreaTree = [
   {
     id: 'area-hk',
@@ -564,11 +568,59 @@ export const mockAreaTree = [
               },
             ],
           },
+          {
+            id: 'area-hk-southern',
+            parent_id: 'area-hk-island',
+            name: 'Southern',
+            name_translations: {
+              en: 'Southern',
+              zh: 'Southern (zh)',
+              yue: 'Southern (yue)',
+            },
+            level: 'district',
+            code: null,
+            active: true,
+            display_order: 2,
+            children: [
+              {
+                id: MOCK_STANLEY_AREA_ID,
+                parent_id: 'area-hk-southern',
+                name: 'Stanley',
+                name_translations: {
+                  en: 'Stanley',
+                  zh: 'Stanley (zh)',
+                  yue: 'Stanley (yue)',
+                },
+                level: 'neighbourhood',
+                code: null,
+                active: true,
+                display_order: 1,
+                lat: 22.2188,
+                lng: 114.2114,
+                children: [],
+              },
+            ],
+          },
         ],
       },
     ],
   },
 ];
+
+export { DEFAULT_CATALOG_NEIGHBOURHOOD_NAME };
+
+/** Clear Catalog's default neighbourhood so list assertions see every org. */
+export async function showAllCatalogNeighbourhoods(page: Page): Promise<void> {
+  const input = page.getByLabel('Neighbourhood');
+  if (!DEFAULT_CATALOG_NEIGHBOURHOOD_NAME) {
+    await expect(input).toHaveValue('');
+    return;
+  }
+  await expect(input).toHaveValue(DEFAULT_CATALOG_NEIGHBOURHOOD_NAME);
+  await input.click();
+  await page.getByRole('option', { name: 'All neighbourhoods' }).click();
+  await expect(input).toHaveValue('');
+}
 
 /**
  * Mock tickets data
@@ -2260,6 +2312,35 @@ export async function setupApiMocks(
             version: 3,
             area_id: null,
             map_locations: [],
+          },
+          {
+            id: 'org-stanley',
+            name: 'Stanley Beach Club',
+            status: 'operational',
+            review_status: 'pending_review',
+            source: 'manual',
+            import_job_id: null,
+            last_imported_at: null,
+            touched_by: [] as string[],
+            location_count: 1,
+            activity_count: 0,
+            pricing_count: 0,
+            schedule_count: 0,
+            issues: [],
+            completeness: 1,
+            blocker_count: 0,
+            warning_count: 0,
+            version: 1,
+            area_id: MOCK_STANLEY_AREA_ID,
+            map_locations: [
+              {
+                id: 'loc-stanley',
+                address: '1 Beach Road',
+                area_name: 'Stanley',
+                lat: 22.2188,
+                lng: 114.2114,
+              },
+            ],
           },
         ]
           .filter((item) => {
