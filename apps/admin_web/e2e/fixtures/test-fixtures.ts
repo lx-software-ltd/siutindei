@@ -1,4 +1,4 @@
-import { test as base, Page, Route } from '@playwright/test';
+import { expect, test as base, Page, Route } from '@playwright/test';
 
 /**
  * Mock user data for testing different auth states
@@ -564,11 +564,56 @@ export const mockAreaTree = [
               },
             ],
           },
+          {
+            id: 'area-hk-southern',
+            parent_id: 'area-hk-island',
+            name: 'Southern',
+            name_translations: {
+              en: 'Southern',
+              zh: 'Southern (zh)',
+              yue: 'Southern (yue)',
+            },
+            level: 'district',
+            code: null,
+            active: true,
+            display_order: 2,
+            children: [
+              {
+                id: '8e20eb5e-f30a-5b98-b60c-6c9b4b4a81e3',
+                parent_id: 'area-hk-southern',
+                name: 'Stanley',
+                name_translations: {
+                  en: 'Stanley',
+                  zh: 'Stanley (zh)',
+                  yue: 'Stanley (yue)',
+                },
+                level: 'neighbourhood',
+                code: null,
+                active: true,
+                display_order: 1,
+                lat: 22.2188,
+                lng: 114.2114,
+                children: [],
+              },
+            ],
+          },
         ],
       },
     ],
   },
 ];
+
+/** Clear Catalog's default neighbourhood so list assertions see every org. */
+export async function showAllCatalogNeighbourhoods(page: Page): Promise<void> {
+  const input = page.getByLabel('Neighbourhood');
+  await expect(input).toHaveValue('Stanley');
+  await input.click();
+  await page.getByRole('option', { name: 'All neighbourhoods' }).click();
+  await expect(input).toHaveValue('');
+  // Option mousedown keeps focus on the input without reopening; blur so a
+  // later click fires focus and opens the list again.
+  await input.blur();
+}
 
 /**
  * Mock tickets data

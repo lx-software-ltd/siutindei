@@ -12,6 +12,10 @@ import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { getAdminQueryClient } from '../../../lib/admin-query-client';
 import { formatDateTime } from '../../../lib/date-utils';
 import {
+  DEFAULT_CATALOG_NEIGHBOURHOOD_NAME,
+  areaIdForCatalogDefault,
+} from '../../../lib/catalog-defaults';
+import {
   CATALOG_MAP_ORG_CAP,
   CATALOG_MAP_PAGE_CAP,
   CATALOG_MAP_PAGE_SIZE,
@@ -298,6 +302,24 @@ export function CatalogPanel() {
   const [importAt, setImportAt] = useState('');
   const { items, filters, setFilter, refetch, loadMore, hasMore, isLoading, isLoadingMore } =
     list;
+  const neighbourhoodOptions = useMemo(
+    () => neighbourhoodFilterOptions(areas.tree),
+    [areas.tree]
+  );
+  const catalogDefaultApplied = useRef(false);
+  useEffect(() => {
+    if (catalogDefaultApplied.current || areas.isLoading) {
+      return;
+    }
+    catalogDefaultApplied.current = true;
+    if (!DEFAULT_CATALOG_NEIGHBOURHOOD_NAME) {
+      return;
+    }
+    const areaId = areaIdForCatalogDefault(neighbourhoodOptions);
+    if (areaId) {
+      setFilter('area_id', areaId);
+    }
+  }, [areas.isLoading, neighbourhoodOptions, setFilter]);
 
   const refreshSummary = useCallback(async () => {
     try {
@@ -573,7 +595,7 @@ export function CatalogPanel() {
               <NeighbourhoodFilter
                 id='review-neighbourhood-filter'
                 value={filters.area_id}
-                options={neighbourhoodFilterOptions(areas.tree)}
+                options={neighbourhoodOptions}
                 onChange={(areaId) => setFilter('area_id', areaId)}
               />
             </AdminFilterField>

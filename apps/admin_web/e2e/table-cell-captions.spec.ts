@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures/test-fixtures';
+import { expect, showAllCatalogNeighbourhoods, test } from './fixtures/test-fixtures';
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -32,6 +32,7 @@ test.describe('Listing captions on a phone', () => {
 
   test('Catalog repeats source and review under the name', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=catalog');
+    await showAllCatalogNeighbourhoods(adminPage);
     const table = adminPage.getByRole('table', { name: 'Catalog' });
     await expect(table).toBeVisible();
     await expect(table.getByRole('columnheader', { name: 'Source' })).toBeHidden();

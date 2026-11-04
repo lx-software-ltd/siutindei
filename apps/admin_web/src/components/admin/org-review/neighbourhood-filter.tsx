@@ -82,6 +82,11 @@ export function NeighbourhoodFilter({
           setActiveIndex(0);
           setOpen(true);
         }}
+        onClick={() => {
+          setQuery('');
+          setActiveIndex(0);
+          setOpen(true);
+        }}
         onChange={(event) => {
           setQuery(event.target.value);
           setActiveIndex(0);

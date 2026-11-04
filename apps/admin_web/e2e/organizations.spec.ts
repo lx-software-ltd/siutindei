@@ -1,8 +1,24 @@
-import { test, expect, mockOrganizations, mockCognitoUsers } from './fixtures/test-fixtures';
+import {
+  test,
+  expect,
+  mockOrganizations,
+  mockCognitoUsers,
+  showAllCatalogNeighbourhoods,
+} from './fixtures/test-fixtures';
+
+test.describe('Catalog default neighbourhood', () => {
+  test('opens Catalog on Stanley', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=catalog');
+    await expect(adminPage.getByLabel('Neighbourhood')).toHaveValue('Stanley');
+    await expect(adminPage.getByText('Test Organization 1')).toHaveCount(0);
+    await expect(adminPage.getByText('Test Organization 2')).toHaveCount(0);
+  });
+});
 
 test.describe('Organizations Panel', () => {
   test.beforeEach(async ({ adminPage }) => {
-  await adminPage.goto('/admin/dashboard?section=catalog');
+    await adminPage.goto('/admin/dashboard?section=catalog');
+    await showAllCatalogNeighbourhoods(adminPage);
   });
 
   test('should display the organizations form', async ({ adminPage }) => {
@@ -925,7 +941,8 @@ test.describe('Organizations Panel - versions unavailable', () => {
 
 test.describe('Organizations Panel - Admin vs Manager', () => {
   test('admin should see all organizations', async ({ adminPage }) => {
-  await adminPage.goto('/admin/dashboard');
+    await adminPage.goto('/admin/dashboard');
+    await showAllCatalogNeighbourhoods(adminPage);
 
     // Should see both organizations
     await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
@@ -938,7 +955,7 @@ test.describe('Organizations Panel - Admin vs Manager', () => {
   });
 
   test('admin should see manager selector in form', async ({ adminPage }) => {
-  await adminPage.goto('/admin/dashboard');
+    await adminPage.goto('/admin/dashboard');
     await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
 
     // Should see Manager field
@@ -946,7 +963,7 @@ test.describe('Organizations Panel - Admin vs Manager', () => {
   });
 
   test('admin should be able to create new organizations', async ({ adminPage }) => {
-  await adminPage.goto('/admin/dashboard');
+    await adminPage.goto('/admin/dashboard');
 
     await expect(adminPage.getByRole('button', { name: 'New organization', exact: true })).toBeVisible();
     await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();

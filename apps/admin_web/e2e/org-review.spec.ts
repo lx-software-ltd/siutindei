@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/test-fixtures';
+import { test, expect, showAllCatalogNeighbourhoods } from './fixtures/test-fixtures';
 
 test.describe('Organization review queue', () => {
   test('shows missing details and bulk-approves a pending organization', async ({
@@ -8,6 +8,7 @@ test.describe('Organization review queue', () => {
     await expect(
       adminPage.getByRole('heading', { name: 'Catalog' })
     ).toBeVisible();
+    await showAllCatalogNeighbourhoods(adminPage);
     await expect(
       adminPage.getByRole('cell', { name: 'Test Organization 1', exact: true })
     ).toBeVisible();
@@ -133,6 +134,7 @@ test.describe('Organization review queue', () => {
     await expect(adminPage).toHaveURL(/section=catalog/);
     await expect(adminPage).toHaveURL(/[?&]job=job-1/);
     await expect(adminPage.getByRole('heading', { name: 'Catalog' })).toBeVisible();
+    await showAllCatalogNeighbourhoods(adminPage);
     await expect(adminPage.getByText('Filtered to this import.')).toBeVisible();
     await expect(
       adminPage.getByRole('cell', { name: 'Test Organization 1', exact: true })
@@ -349,6 +351,7 @@ test.describe('Organization review queue', () => {
 
   test('shows a property error once, inside the dialog', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=catalog');
+    await showAllCatalogNeighbourhoods(adminPage);
     await adminPage.getByRole('checkbox', { name: 'Select row' }).first().check();
     await adminPage.getByRole('button', { name: 'Apply properties' }).click();
     await adminPage.getByRole('button', { name: 'Apply to selected' }).click();
@@ -357,6 +360,7 @@ test.describe('Organization review queue', () => {
 
   test('applies a bulk property and opens the fix link', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=catalog');
+    await showAllCatalogNeighbourhoods(adminPage);
     await adminPage.getByRole('checkbox', { name: 'Select row' }).first().check();
     await adminPage.getByRole('button', { name: 'Apply properties' }).click();
     await adminPage.getByRole('checkbox', { name: 'Email' }).check();
@@ -428,6 +432,7 @@ test.describe('Organization review queue', () => {
     await expect(
       adminPage.getByTestId('admin-kpi-card').filter({ hasText: 'Added since rejected' })
     ).toBeVisible();
+    await showAllCatalogNeighbourhoods(adminPage);
     await adminPage.getByLabel('Review').selectOption('rejected');
     await expect(adminPage.getByLabel('Reject reason')).toBeVisible();
     await adminPage.getByLabel('Reject reason').selectOption('not_relevant');
