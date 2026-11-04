@@ -41,13 +41,17 @@ info:
       /v1/partner/category-reviews/bulk`), decide venue proposals
       (`POST /v1/partner/location-fixes/{id}` and `POST
       /v1/partner/location-fixes/bulk`), merge organizations
-      (`POST /v1/partner/organization-merges`), and list or delete
-      activity categories (`GET` / `DELETE
-      /v1/partner/activity-categories`).
+      (`POST /v1/partner/organization-merges`), read and run website
+      enrichment (`GET` / `POST
+      /v1/partner/organizations/{id}/enrichment`, including apply and
+      dismiss), read and update enrichment settings (`GET` / `PUT
+      /v1/partner/enrichment-settings`), and list or delete activity
+      categories (`GET` / `DELETE /v1/partner/activity-categories`).
       A full-access `crud` key is the partner equivalent of an admin
-      for these writes.
-      Organization-scoped keys receive `403` on those write and
-      category routes. Organization list
+      for these routes. A `read` key receives `403` on website
+      enrichment and enrichment settings, including GET.
+      Organization-scoped keys receive `403` on those write, enrichment,
+      and category routes. Organization list
       and detail responses include `pending_name_fixes` with the record
       type, current name, proposed name, and rules, and
       `pending_location_fixes` for that organization and its activities.
@@ -528,6 +532,122 @@ paths:
           description: Read-only key or organization-scoped key
         "404":
           description: Organization not found
+
+  /v1/partner/organizations/{id}/enrichment:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    get:
+      summary: Read website enrichment for one organization
+      description: |
+        Full-access `crud` keys only. Same response as
+        `GET /v1/admin/organizations/{id}/enrichment`. A `read` key
+        and an organization-scoped key receive `403`, including when
+        the key's organization is the target. Nothing is written to
+        the catalog.
+      parameters:
+        - name: run_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Run, proposals, and venues
+        "403":
+          description: Read-only key or organization-scoped key
+    post:
+      summary: Start website enrichment for one organization
+      description: |
+        Full-access `crud` keys only. Same body and result as
+        `POST /v1/admin/organizations/{id}/enrichment`. The typed
+        website is not saved onto the organization. An empty website
+        is 422, a bad URL is 400, an active run is 409, and a spent
+        monthly budget is 422. The requester is the authorizer
+        `userSub` when it is present, and `api-key:<key id>` when
+        `userSub` is omitted.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                website:
+                  type: string
+      responses:
+        "202":
+          description: Run queued
+        "400":
+          description: Website URL is not crawlable
+        "403":
+          description: Read-only key or organization-scoped key
+        "409":
+          description: A run is already active
+        "422":
+          description: Website is missing or the monthly budget is spent
+        "503":
+          description: Enrichment queue is not configured
+
+  /v1/partner/organizations/{id}/enrichment/apply:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    post:
+      summary: Apply selected enrichment proposals
+      description: |
+        Full-access `crud` keys only. Same body and result as
+        `POST /v1/admin/organizations/{id}/enrichment/apply`.
+      responses:
+        "200":
+          description: Per-proposal results
+        "400":
+          description: Invalid proposal ids
+        "403":
+          description: Read-only key or organization-scoped key
+
+  /v1/partner/organizations/{id}/enrichment/dismiss:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    post:
+      summary: Dismiss selected enrichment proposals
+      description: |
+        Full-access `crud` keys only. Same body and result as
+        `POST /v1/admin/organizations/{id}/enrichment/dismiss`.
+        A dismissed proposal stores its hash so a later run does not
+        suggest the same value again.
+      responses:
+        "200":
+          description: Per-proposal results
+        "400":
+          description: Invalid proposal ids
+        "403":
+          description: Read-only key or organization-scoped key
+
+  /v1/partner/enrichment-settings:
+    get:
+      summary: Read website enrichment settings
+      description: |
+        Full-access `crud` keys only. Same singleton as
+        `GET /v1/admin/enrichment-settings`. A `read` key receives
+        `403`.
+      responses:
+        "200":
+          description: Settings
+        "403":
+          description: Read-only key or organization-scoped key
+    put:
+      summary: Update website enrichment settings
+      description: |
+        Full-access `crud` keys only. Same body and limits as
+        `PUT /v1/admin/enrichment-settings`.
+      responses:
+        "200":
+          description: Settings saved
+        "400":
+          description: Validation error
+        "403":
+          description: Read-only key or organization-scoped key
 
   /v1/partner/activity-categories:
     get:

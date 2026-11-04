@@ -6,6 +6,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from app.api.admin_crud import _handle_crud
+from app.api.admin_enrichment import organization_tail
 from app.api.admin_resources import _RESOURCE_CONFIG
 from app.api.partner_activity_categories import (
     handle_partner_activity_categories,
@@ -14,6 +15,7 @@ from app.api.partner_auth import (
     SCOPE_CRUD,
     PartnerContext,
     get_partner_context,
+    require_crud,
     require_full_access,
 )
 from app.api.partner_category_reviews import (
@@ -29,8 +31,12 @@ from app.api.partner_name_fixes import (
     handle_partner_name_fixes,
     partner_get_organizations,
 )
+from app.api.partner_org_enrichment import (
+    handle_partner_enrichment_settings,
+    handle_partner_org_enrichment,
+)
 from app.api.partner_org_merge import handle_partner_org_merge
-from app.exceptions import AuthorizationError, NotFoundError, ValidationError
+from app.exceptions import AppError, AuthorizationError, NotFoundError, ValidationError
 from app.utils import json_response
 from app.utils.logging import get_logger
 
@@ -66,19 +72,35 @@ class PartnerRoute:
         methods: frozenset[str] | None = None,
         has_id: bool | None = None,
         full_access: bool = False,
+        crud_only: bool = False,
+        tail: str | None = None,
+        overlay: bool = False,
     ) -> None:
         self.resource = resource
         self.handler = handler
         self.methods = methods
         self.has_id = has_id
         self.full_access = full_access
+        self.crud_only = crud_only
+        self.tail = tail
+        self.overlay = overlay
 
-    def matches(self, method: str, resource_id: str | None) -> bool:
+    def matches(
+        self,
+        method: str,
+        resource_id: str | None,
+        event: Mapping[str, Any],
+    ) -> bool:
         if self.methods is not None and method not in self.methods:
             return False
         if self.has_id is True and not resource_id:
             return False
-        return not (self.has_id is False and resource_id)
+        if self.has_id is False and resource_id:
+            return False
+        if self.tail is None:
+            return True
+        segments = organization_tail(str(event.get("path") or ""))
+        return bool(segments) and segments[0] == self.tail
 
 
 def _partner_name_fixes(
@@ -135,6 +157,24 @@ def _partner_activity_categories(
     return handle_partner_activity_categories(event, method, partner, resource_id)
 
 
+def _partner_org_enrichment(
+    event: Mapping[str, Any],
+    method: str,
+    resource_id: str | None,
+    partner: PartnerContext,
+) -> dict[str, Any]:
+    return handle_partner_org_enrichment(event, method, resource_id, partner)
+
+
+def _partner_enrichment_settings(
+    event: Mapping[str, Any],
+    method: str,
+    _resource_id: str | None,
+    partner: PartnerContext,
+) -> dict[str, Any]:
+    return handle_partner_enrichment_settings(event, method, partner)
+
+
 def _partner_org_merge(
     event: Mapping[str, Any],
     _method: str,
@@ -188,6 +228,24 @@ _PARTNER_ROUTES = (
         methods=frozenset({"POST"}),
         has_id=False,
         full_access=True,
+    ),
+    PartnerRoute(
+        "organizations",
+        _partner_org_enrichment,
+        methods=frozenset({"GET", "POST"}),
+        has_id=True,
+        full_access=True,
+        crud_only=True,
+        tail="enrichment",
+        overlay=True,
+    ),
+    PartnerRoute(
+        "enrichment-settings",
+        _partner_enrichment_settings,
+        methods=frozenset({"GET", "PUT"}),
+        has_id=False,
+        full_access=True,
+        crud_only=True,
     ),
 )
 
@@ -269,7 +327,7 @@ def _dispatch_listed(
     if not routes:
         return None
     for route in routes:
-        if not route.matches(method, resource_id):
+        if not route.matches(method, resource_id, event):
             continue
         return _safe_handler(
             lambda route=route: _run_partner_route(
@@ -277,7 +335,13 @@ def _dispatch_listed(
             ),
             event,
         )
-    return json_response(404, {"error": "Not found"}, event=event)
+    segments = organization_tail(str(event.get("path") or ""))
+    overlay_tails = {route.tail for route in routes if route.overlay and route.tail}
+    if segments and segments[0] in overlay_tails:
+        return json_response(404, {"error": "Not found"}, event=event)
+    if any(not route.overlay for route in routes):
+        return json_response(404, {"error": "Not found"}, event=event)
+    return None
 
 
 def _run_partner_route(
@@ -289,6 +353,8 @@ def _run_partner_route(
 ) -> dict[str, Any]:
     if route.full_access:
         require_full_access(partner)
+    if route.crud_only:
+        require_crud(partner)
     return route.handler(event, method, resource_id, partner)
 
 
@@ -306,6 +372,9 @@ def _safe_handler(
         logger.warning(f"Authorization error: {exc.message}")
         return json_response(exc.status_code, exc.to_dict(), event=event)
     except NotFoundError as exc:
+        return json_response(exc.status_code, exc.to_dict(), event=event)
+    except AppError as exc:
+        logger.warning(f"Application error: {exc.message}")
         return json_response(exc.status_code, exc.to_dict(), event=event)
     except ValueError as exc:
         logger.warning(f"Value error: {exc}")

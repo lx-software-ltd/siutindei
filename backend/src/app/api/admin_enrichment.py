@@ -45,21 +45,44 @@ def handle_org_enrichment(
     method: str,
     org_id_raw: str | None,
 ) -> dict[str, Any]:
+    """Admin and importer website enrichment. Apply and dismiss are admin-only."""
+    return perform_org_enrichment(
+        event,
+        method,
+        org_id_raw,
+        actor=_get_user_sub(event),
+        allow_decide=_is_admin(event),
+    )
+
+
+def perform_org_enrichment(
+    event: Mapping[str, Any],
+    method: str,
+    org_id_raw: str | None,
+    *,
+    actor: str | None,
+    allow_decide: bool,
+) -> dict[str, Any]:
+    """Read, start, apply, or dismiss enrichment for one organization.
+
+    ``allow_decide`` is false for an importer JWT. A full-access partner
+    key passes true. ``actor`` is stored as the requester.
+    """
     org_id = _parse_uuid(org_id_raw or "")
     tail = organization_tail(str(event.get("path") or ""))
     action = tail[1] if len(tail) > 1 else None
     if not tail or tail[0] != "enrichment" or action not in {None, "apply", "dismiss"}:
         return json_response(404, {"error": "Not found"}, event=event)
-    if not _is_admin(event) and (action is not None or method not in {"GET", "POST"}):
+    if not allow_decide and (action is not None or method not in {"GET", "POST"}):
         return json_response(403, {"error": "Forbidden"}, event=event)
     if method == "GET" and action is None:
         return _read(event, org_id)
     if method == "POST" and action is None:
-        return _start(event, org_id)
+        return _start(event, org_id, actor)
     if method == "POST" and action == "apply":
-        return _decide(event, org_id, apply=True)
+        return _decide(event, org_id, apply=True, actor=actor)
     if method == "POST" and action == "dismiss":
-        return _decide(event, org_id, apply=False)
+        return _decide(event, org_id, apply=False, actor=actor)
     return json_response(404, {"error": "Not found"}, event=event)
 
 
@@ -113,17 +136,21 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
     return json_response(200, payload, event=event)
 
 
-def _start(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
+def _start(
+    event: Mapping[str, Any],
+    org_id: UUID,
+    actor: str | None,
+) -> dict[str, Any]:
     body = parse_object_body(event)
     website = body.get("website")
     if website is not None and not isinstance(website, str):
         raise ValidationError("website must be a string", field="website")
     with Session(get_engine()) as session:
-        _set_session_audit_context(session, event)
+        _set_session_audit_context(session, event, user_id=actor)
         run = start_run(
             session,
             org_id,
-            requested_by=_get_user_sub(event),
+            requested_by=actor,
             website=website if isinstance(website, str) else None,
         )
         session.commit()
@@ -144,7 +171,13 @@ def _start(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
     return json_response(202, {"run": payload}, event=event)
 
 
-def _decide(event: Mapping[str, Any], org_id: UUID, *, apply: bool) -> dict[str, Any]:
+def _decide(
+    event: Mapping[str, Any],
+    org_id: UUID,
+    *,
+    apply: bool,
+    actor: str | None,
+) -> dict[str, Any]:
     body = parse_object_body(event)
     ids = body.get("ids")
     if not isinstance(ids, list):
@@ -159,7 +192,7 @@ def _decide(event: Mapping[str, Any], org_id: UUID, *, apply: bool) -> dict[str,
         }
     request_id = event.get("requestContext", {}).get("requestId", "")
     with Session(get_engine()) as session:
-        _set_session_audit_context(session, event)
+        _set_session_audit_context(session, event, user_id=actor)
         quality_run_id = None
         if apply:
             results, quality_run_id = apply_proposals(
@@ -167,7 +200,7 @@ def _decide(event: Mapping[str, Any], org_id: UUID, *, apply: bool) -> dict[str,
                 org_id,
                 [str(item) for item in ids],
                 overrides,
-                user_id=_get_user_sub(event),
+                user_id=actor,
                 request_id=request_id,
             )
         else:
@@ -175,7 +208,7 @@ def _decide(event: Mapping[str, Any], org_id: UUID, *, apply: bool) -> dict[str,
                 session,
                 org_id,
                 [str(item) for item in ids],
-                user_id=_get_user_sub(event),
+                user_id=actor,
             )
         session.commit()
     if quality_run_id:

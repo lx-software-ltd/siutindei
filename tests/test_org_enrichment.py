@@ -1294,7 +1294,7 @@ def test_apply_route_enqueues_the_quality_run(db_session, monkeypatch) -> None:
     )
     monkeypatch.setattr(
         "app.api.admin_enrichment._set_session_audit_context",
-        lambda _session, _event: None,
+        lambda _session, _event, **_kwargs: None,
     )
     monkeypatch.setattr(db_session, "commit", db_session.flush)
     monkeypatch.setattr(
@@ -1359,7 +1359,7 @@ def test_dismiss_does_not_enqueue_a_quality_run(db_session, monkeypatch) -> None
     )
     monkeypatch.setattr(
         "app.api.admin_enrichment._set_session_audit_context",
-        lambda _session, _event: None,
+        lambda _session, _event, **_kwargs: None,
     )
     monkeypatch.setattr(db_session, "commit", db_session.flush)
     monkeypatch.setattr(

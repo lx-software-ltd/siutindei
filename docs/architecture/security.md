@@ -177,13 +177,17 @@ in the `x-partner-key` header:
   review status and can read pending name-cleanup proposals and
   category-check reviews. A full-access `crud` key is the partner
   equivalent of an admin: it can decide category-check reviews, merge
-  organizations, and list or delete leftover activity categories.
+  organizations, read and run website enrichment (including apply,
+  dismiss, and enrichment settings), and list or delete leftover
+  activity categories. A `read` key is rejected on those enrichment
+  routes, including GET.
   Merge moves API keys onto the survivor and cannot be undone.
   Org-scoped keys only see that organization's proposals and reviews,
-  and those write and category routes return `403`.
+  and those write, enrichment, and category routes return `403`.
 - Writes performed with a key are attributed to `api-key:<id>` in the
-  audit log. Organization merge uses the authorizer `userSub` when it
-  is present, and `api-key:<id>` when `userSub` is omitted.
+  audit log. Organization merge and website enrichment use the
+  authorizer `userSub` when it is present, and `api-key:<id>` when
+  `userSub` is omitted.
 - Admins manage keys via `/v1/admin/api-keys` (generate, list, revoke);
   revocation is a soft delete so the audit trail is preserved.
 

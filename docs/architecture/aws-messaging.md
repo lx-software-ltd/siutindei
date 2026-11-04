@@ -123,7 +123,8 @@ retried; the third receive records the batch as failed and the
 message moves to the DLQ.
 
 Website enrichment uses the same queue. `POST
-/v1/admin/organizations/{id}/enrichment` sends
+/v1/admin/organizations/{id}/enrichment` and `POST
+/v1/partner/organizations/{id}/enrichment` send
 `{"enrichment_run_id": "<uuid>", "stage": "crawl"}`. The crawl stage
 then sends `stage: "extract"`. The worker handles `enrichment_run_id`
 before the other keys. A repeated message id is acknowledged. The third
