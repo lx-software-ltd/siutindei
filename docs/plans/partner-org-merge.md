@@ -5,10 +5,12 @@
 
 ## Goal
 
-Expose the existing organization-merge service on the partner API, and
-restrict it to a full-access `crud` key (the partner equivalent of an
-admin). Org-scoped keys and `read` keys receive `403`. The request and
-response stay the same as `POST /v1/admin/org-duplicates/merge`.
+Expose organization merge on the partner API at
+`POST /v1/partner/organization-merges`. A full-access `crud` key is the
+partner equivalent of an admin. Org-scoped keys and `read` keys receive
+`403`. Admin and partner share one request helper. A repeat of a
+completed merge does not write again. Media keys that remain after
+commit are logged.
 
 ## Non-goals
 
@@ -21,7 +23,12 @@ response stay the same as `POST /v1/admin/org-duplicates/merge`.
 
 - `backend/src/app/api/partner_org_merge.py`
 - `backend/src/app/api/partner_routes.py`
+- `backend/src/app/api/admin_org_duplicates.py`
+- `backend/src/app/services/org_merge.py`
+- `backend/src/app/services/org_merge_media.py`
 - `tests/test_partner_org_merge.py`
+- `tests/test_org_merge.py`
+- `tests/test_org_merge_media.py`
 - `docs/api/partner.yaml`
 - `docs/architecture/lambdas.md`
 - `docs/architecture/data-quality.md`
@@ -30,7 +37,7 @@ response stay the same as `POST /v1/admin/org-duplicates/merge`.
 
 ## Invariants this change preserves
 
-- Admin JWT merge at `/v1/admin/org-duplicates/merge` is unchanged.
+- Admin JWT merge stays at `/v1/admin/org-duplicates/merge` and uses the same request helper.
 - Org-scoped partner keys cannot merge organizations they do not own,
   and cannot merge across organizations.
 - `read` keys still cannot POST.
@@ -38,7 +45,7 @@ response stay the same as `POST /v1/admin/org-duplicates/merge`.
 
 ## Done when
 
-- `pytest tests/test_partner_org_merge.py tests/test_partner_routes.py`
+- `pytest tests/test_partner_org_merge.py tests/test_partner_routes.py tests/test_org_merge.py tests/test_org_merge_media.py tests/test_partner_location_fixes.py tests/test_partner_activity_categories.py`
 - `python3 scripts/check_openapi_routes.py`
 - `node scripts/check-lambda-docs.mjs`
 

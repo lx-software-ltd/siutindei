@@ -170,17 +170,20 @@ in the `x-partner-key` header:
   cached for 5 minutes, which bounds how long a revoked key keeps working.
 - Keys carry a scope (`read` = GET only, `crud` = full CRUD) and an
   optional organization scope. Because the cached Allow policy covers all
-  partner routes, **scope and organization enforcement is re-checked in
-  the handlers** (defense in depth, same pattern as the Cognito group
-  checks). A full-access key lists every organization review status and
-  can read pending name-cleanup proposals and category-check reviews.
-  Full-access `crud` keys can decide category-check reviews, merge
+  partner routes, **scope is re-checked before dispatch, and a route
+  marked full-access rejects an organization-scoped key in the route
+  table and again in the handler** (defense in depth, same pattern as
+  the Cognito group checks). A full-access key lists every organization
+  review status and can read pending name-cleanup proposals and
+  category-check reviews. A full-access `crud` key is the partner
+  equivalent of an admin: it can decide category-check reviews, merge
   organizations, and list or delete leftover activity categories.
-  Org-scoped keys only see
-  that organization's proposals and reviews, and those write and
-  category routes return `403`.
+  Merge moves API keys onto the survivor and cannot be undone.
+  Org-scoped keys only see that organization's proposals and reviews,
+  and those write and category routes return `403`.
 - Writes performed with a key are attributed to `api-key:<id>` in the
-  audit log.
+  audit log. Organization merge uses the authorizer `userSub` when it
+  is present, and `api-key:<id>` when `userSub` is omitted.
 - Admins manage keys via `/v1/admin/api-keys` (generate, list, revoke);
   revocation is a soft delete so the audit trail is preserved.
 

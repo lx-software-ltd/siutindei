@@ -45,20 +45,49 @@ def copy_merged_media(
     return f"{base}/{new_key}", key
 
 
-def delete_merged_media(keys: list[str]) -> None:
-    """Delete source media keys after the merge transaction has committed."""
+def delete_merged_media(
+    keys: list[str],
+    *,
+    survivor_id: str | None = None,
+) -> list[str]:
+    """Delete source media keys after the merge transaction has committed.
+
+    Returns keys that are still present. Each failure is logged with the
+    survivor id and the object key so the committed merge can be reconciled.
+    """
+    if not keys:
+        return []
+    label = survivor_id or "unknown"
     bucket = os.environ.get("ORGANIZATION_MEDIA_BUCKET")
-    if not bucket or not keys:
-        return
+    if not bucket:
+        logger.error(
+            "Merge of %s left media objects because the media bucket is unset: %s",
+            label,
+            keys,
+        )
+        return list(keys)
     try:
         from app.services.aws_clients import get_s3_client
 
         client = get_s3_client()
     except Exception:
-        logger.warning("Organization media delete failed", exc_info=True)
-        return
+        logger.error(
+            "Merge of %s left media objects: %s",
+            label,
+            keys,
+            exc_info=True,
+        )
+        return list(keys)
+    failed: list[str] = []
     for key in keys:
         try:
             client.delete_object(Bucket=bucket, Key=key)
         except Exception:
-            logger.warning("Organization media delete failed", exc_info=True)
+            logger.error(
+                "Merge of %s left media object %s",
+                label,
+                key,
+                exc_info=True,
+            )
+            failed.append(key)
+    return failed

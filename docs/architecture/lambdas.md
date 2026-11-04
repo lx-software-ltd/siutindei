@@ -101,8 +101,9 @@ their primary responsibilities.
   every organization, `GET /v1/partner/name-fixes`, and
   `GET /v1/partner/category-reviews`; a full-access `crud` key can
   also `POST` review decisions and bulk apply/dismiss,
-  `POST /v1/partner/org-duplicates/merge`, and `GET` /
-  `DELETE` `/v1/partner/activity-categories`), user self-service
+  `POST /v1/partner/organization-merges`, and `GET` /
+  `DELETE` `/v1/partner/activity-categories`; a full-access `crud`
+  key is the partner equivalent of an admin), user self-service
   (tickets), Cognito user management, audit logs, catalog versions
   (`GET /v1/admin/versions`, `POST /v1/admin/versions/{id}/forget`), media upload, admin
   import/export (`POST /v1/admin/imports` accepts `dry_run` to validate
@@ -130,7 +131,7 @@ their primary responsibilities.
   including `/scan` and `/reviews`. Full-access partner keys can
   decide reviews, merge organizations, and delete empty leftover
   categories on `/v1/partner/category-reviews`,
-  `/v1/partner/org-duplicates/merge`, and
+  `/v1/partner/organization-merges`, and
   `/v1/partner/activity-categories`; org-scoped keys cannot.
   Discover batches send
   `suggestion_ids` on the same queue; verify batches send
@@ -225,7 +226,8 @@ their primary responsibilities.
   `/v1/admin/name-fixes`, `/v1/admin/location-fixes`, and
   `/v1/admin/translation-fixes` (admin group only). These families share one `/v1/admin/{proxy+}` method so the
   stack stays within the CloudFormation 500-resource cap. Partner
-  venue reads and writes use the existing `/v1/partner/{proxy+}`.
+  venue reads and writes, and `POST /v1/partner/organization-merges`,
+  use the existing `/v1/partner/{proxy+}`.
   Get-by-id for a duplicate group, a name proposal, or a venue
   proposal uses that same proxy. An unknown extra path segment
   on a CRUD resource returns 404. Shapes are in `docs/api/admin.yaml`.

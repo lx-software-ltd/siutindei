@@ -1077,11 +1077,21 @@ paths:
         Fills blank survivor fields from the sources. `field_overrides`
         replaces a field with the given value. `dry_run` returns the same
         preview without writing. Children move onto the survivor.
-        Locations that share an address, and activities that share a
-        name, are combined. Each source's `source_id` and `place_id` are
-        stored on `organization_merges` so a later import resolves to
-        the survivor. The survivor's own values win unless overridden.
+        Locations, activities, pricing, schedules, tickets, feedback,
+        category reviews, category-scan rows, and API keys move onto
+        the survivor. An API key scoped to a source becomes scoped to
+        the survivor. Locations that share an address, and activities
+        that share a name, are combined. Each source's `source_id` and
+        `place_id` are stored on `organization_merges` so a later import
+        resolves to the survivor. The survivor's own values win unless
+        overridden. There is no unmerge.
         Copied media objects are deleted only after the merge commits.
+        A delete that fails is logged with the survivor id and the
+        object key; the merge stays committed.
+        Sending the same survivor and sources again, after the merge
+        has completed, returns `200` with `already_merged: true` and
+        does not write again. A source or survivor that was merged into
+        a different organization returns `400`.
       requestBody:
         required: true
         content:
@@ -1090,7 +1100,9 @@ paths:
               $ref: '#/components/schemas/OrgMergeRequest'
       responses:
         "200":
-          description: Dry-run preview
+          description: |
+            Dry-run preview, or a repeat of a merge that already
+            completed (`already_merged: true`).
           content:
             application/json:
               schema:
@@ -1101,6 +1113,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrgMergeResult'
+        "400":
+          description: |
+            Invalid body, or a source or survivor already merged into
+            a different organization.
+        "404":
+          description: Organization not found
 
   /v1/admin/org-duplicates/{id}:
     get:
@@ -7967,6 +7985,20 @@ components:
           type: boolean
         merged:
           type: boolean
+        already_merged:
+          type: boolean
+          description: |
+            True when every source was already merged into this survivor.
+            The request wrote nothing.
+        already_merged_source_ids:
+          type: array
+          description: |
+            Sources in this request that were already merged into the
+            survivor. When other sources are still present, those are
+            merged and this list names the ones that were skipped.
+          items:
+            type: string
+            format: uuid
 
     NameFixProposal:
       type: object

@@ -96,6 +96,22 @@ def _dismiss(event: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _merge(event: Mapping[str, Any]) -> dict[str, Any]:
+    return merge_organizations_from_request(
+        event,
+        merged_by=_get_user_sub(event),
+    )
+
+
+def merge_organizations_from_request(
+    event: Mapping[str, Any],
+    *,
+    merged_by: str | None,
+) -> dict[str, Any]:
+    """Merge organizations from an admin or partner request body.
+
+    ``merged_by`` is stored on the merge row and the audit context. A
+    repeat of a completed merge returns 200 and does not write again.
+    """
     body = parse_object_body(event)
     survivor_id = _uuid(body.get("survivor_id"), "survivor_id")
     source_ids = _uuid_list(body.get("source_ids"), "source_ids", minimum=1)
@@ -106,20 +122,24 @@ def _merge(event: Mapping[str, Any]) -> dict[str, Any]:
         )
     dry_run = bool(body.get("dry_run"))
     with Session(get_engine()) as session:
-        _set_session_audit_context(session, event)
+        _set_session_audit_context(session, event, user_id=merged_by)
         payload = merge_organizations(
             session,
             survivor_id,
             source_ids,
             overrides,
             dry_run=dry_run,
-            merged_by=_get_user_sub(event),
+            merged_by=merged_by,
         )
-        if not dry_run:
+        wrote = not dry_run and not payload.get("already_merged")
+        if wrote:
             session.commit()
-    if not dry_run:
-        delete_merged_media(list(payload.get("pending_deletes") or []))
-    status = 200 if dry_run else 201
+    if wrote:
+        delete_merged_media(
+            list(payload.get("pending_deletes") or []),
+            survivor_id=str(payload.get("survivor_id") or ""),
+        )
+    status = 200 if dry_run or payload.get("already_merged") else 201
     return json_response(status, _public_plan(payload), event=event)
 
 

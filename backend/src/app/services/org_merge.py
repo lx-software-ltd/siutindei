@@ -99,7 +99,12 @@ def merge_organizations(
     dry_run: bool = False,
     merged_by: str | None = None,
 ) -> dict[str, Any]:
-    """Fill blanks on the survivor, reparent children, and delete sources."""
+    """Fill blanks on the survivor, reparent children, and delete sources.
+
+    A request whose sources were already merged into this survivor returns
+    ``already_merged`` and writes nothing. A source or survivor that now
+    belongs to a different organization is rejected.
+    """
     chosen = dict(overrides or {})
     unknown = sorted(set(chosen) - _OVERRIDE_FIELDS)
     if unknown:
@@ -113,21 +118,96 @@ def merge_organizations(
     by_id = {str(org.id): org for org in orgs}
     survivor = by_id.get(str(survivor_id))
     if survivor is None:
+        if _forwarded_survivor(session, survivor_id) is not None:
+            raise ValidationError(
+                "survivor was already merged",
+                field="survivor_id",
+            )
         raise NotFoundError("organizations", str(survivor_id))
-    sources: list[Organization] = []
-    for source_id in source_ids:
-        source = by_id.get(str(source_id))
-        if source is None:
-            raise NotFoundError("organizations", str(source_id))
-        sources.append(source)
-
+    sources, already = _partition_sources(session, survivor, source_ids, by_id)
+    if not sources:
+        return _replay_plan(survivor, source_ids, dry_run)
     plan = _plan(session, survivor, sources, chosen)
     plan["dry_run"] = dry_run
+    if already:
+        plan["already_merged_source_ids"] = [str(source_id) for source_id in already]
     if dry_run:
         return plan
     _apply(session, survivor, sources, plan, merged_by)
     plan["merged"] = True
     return plan
+
+
+def _partition_sources(
+    session: Session,
+    survivor: Organization,
+    source_ids: list[UUID],
+    by_id: dict[str, Organization],
+) -> tuple[list[Organization], list[UUID]]:
+    """Split sources into rows still present and rows already merged here."""
+    pending: list[Organization] = []
+    already: list[UUID] = []
+    for source_id in source_ids:
+        source = by_id.get(str(source_id))
+        if source is not None:
+            pending.append(source)
+            continue
+        target = _forwarded_survivor(session, source_id)
+        if target is None:
+            raise NotFoundError("organizations", str(source_id))
+        if str(target) != str(survivor.id):
+            raise ValidationError(
+                "source was already merged into another organization",
+                field="source_ids",
+            )
+        already.append(source_id)
+    return pending, already
+
+
+def _forwarded_survivor(session: Session, org_id: UUID) -> UUID | None:
+    """Live organization a removed id currently forwards to."""
+    seen: set[str] = set()
+    current: UUID | None = org_id
+    while current is not None and str(current) not in seen:
+        seen.add(str(current))
+        row = session.scalar(
+            select(OrganizationMerge)
+            .where(
+                OrganizationMerge.merged_org_id == current,
+                OrganizationMerge.kind == "merge",
+            )
+            .order_by(OrganizationMerge.merged_at.desc())
+        )
+        if row is None or row.survivor_org_id is None:
+            return None
+        survivor = session.get(Organization, row.survivor_org_id)
+        if survivor is not None:
+            return survivor.id
+        current = row.survivor_org_id
+    return None
+
+
+def _replay_plan(
+    survivor: Organization,
+    source_ids: list[UUID],
+    dry_run: bool,
+) -> dict[str, Any]:
+    ids = [str(source_id) for source_id in source_ids]
+    return {
+        "survivor_id": str(survivor.id),
+        "source_ids": ids,
+        "suggested_survivor_id": str(survivor.id),
+        "fields": [],
+        "moved": {},
+        "warnings": [],
+        "media_urls": list(survivor.media_urls or []),
+        "values": {},
+        "pending_deletes": [],
+        "dry_run": dry_run,
+        "already_merged": True,
+        "already_merged_source_ids": ids,
+        "merged": not dry_run,
+    }
 
 
 def suggest_survivor_id(organizations: list[Organization]) -> str:

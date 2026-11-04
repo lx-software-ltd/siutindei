@@ -41,9 +41,11 @@ info:
       /v1/partner/category-reviews/bulk`), decide venue proposals
       (`POST /v1/partner/location-fixes/{id}` and `POST
       /v1/partner/location-fixes/bulk`), merge organizations
-      (`POST /v1/partner/org-duplicates/merge`), and list or delete
+      (`POST /v1/partner/organization-merges`), and list or delete
       activity categories (`GET` / `DELETE
       /v1/partner/activity-categories`).
+      A full-access `crud` key is the partner equivalent of an admin
+      for these writes.
       Organization-scoped keys receive `403` on those write and
       category routes. Organization list
       and detail responses include `pending_name_fixes` with the record
@@ -465,13 +467,38 @@ paths:
         "404":
           description: Review not found
 
-  /v1/partner/org-duplicates/merge:
+  /v1/partner/organization-merges:
     post:
       summary: Merge organizations into one survivor
       description: |
-        Full-access `crud` keys only. Same body and result as
-        `POST /v1/admin/org-duplicates/merge`. Organization-scoped
-        keys and `read` keys receive `403`.
+        Full-access `crud` keys only. A full-access `crud` key is the
+        partner equivalent of an admin. Organization-scoped keys and
+        `read` keys receive `403`, including when the key's organization
+        is the survivor.
+
+        Same body and result as `POST /v1/admin/org-duplicates/merge`.
+        The survivor keeps its name, manager, status, and review status
+        unless `field_overrides` sets name or manager. Blank contact,
+        place, source, and translation fields are filled from the
+        sources. Locations, activities, pricing, schedules, tickets,
+        feedback, category reviews, category-scan rows, and API keys
+        move onto the survivor. An API key that was limited to a source
+        organization becomes limited to the survivor. Locations that
+        share an address, and activities that share a name, are combined.
+        Each source's `source_id` and `place_id` are stored on
+        `organization_merges`, so a later import resolves to the survivor.
+        There is no unmerge.
+
+        `dry_run` previews the same result and writes nothing. A repeat
+        of a merge that already completed returns `200` with
+        `already_merged: true` and does not write again. A source or
+        survivor that was merged into a different organization returns
+        `400`. Copied media objects are deleted only after the database
+        commit. A delete that fails is logged with the survivor id and
+        the object key; the merge itself stays committed.
+
+        The audit actor is the authorizer `userSub` when it is present,
+        and `api-key:<key id>` when `userSub` is omitted.
       requestBody:
         required: true
         content:
@@ -480,7 +507,9 @@ paths:
               $ref: "./admin.yaml#/components/schemas/OrgMergeRequest"
       responses:
         "200":
-          description: Dry-run preview
+          description: |
+            Dry-run preview, or a repeat of a merge that already
+            completed (`already_merged: true`).
           content:
             application/json:
               schema:
@@ -492,7 +521,9 @@ paths:
               schema:
                 $ref: "./admin.yaml#/components/schemas/OrgMergeResult"
         "400":
-          description: Invalid merge request
+          description: |
+            Invalid merge request, or a source or survivor already
+            merged into a different organization.
         "403":
           description: Read-only key or organization-scoped key
         "404":

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from app.db.models import Activity, AuditLog, Location, Organization
+from app.db.models import Activity, AuditLog, Location, Organization, OrganizationMerge
 from app.db.repositories.organization import OrganizationRepository
 from app.exceptions import ValidationError
 from app.services.org_merge import merge_organizations
@@ -192,3 +192,67 @@ def test_merge_folds_matching_activity_names(
     )
     assert len(rows) == 1
     assert rows[0].id == kept.id
+
+
+def test_repeat_merge_does_not_write_again(db_session) -> None:
+    survivor = _org(db_session, "Harbour Club")
+    source = _org(db_session, "Harbour Club Limited")
+    merge_organizations(db_session, survivor.id, [source.id], merged_by="admin")
+    again = merge_organizations(
+        db_session,
+        survivor.id,
+        [source.id],
+        merged_by="admin",
+    )
+    assert again["already_merged"] is True
+    assert again["dry_run"] is False
+    assert again["merged"] is True
+    rows = db_session.scalars(
+        select(OrganizationMerge).where(OrganizationMerge.merged_org_id == source.id)
+    ).all()
+    assert len(rows) == 1
+
+
+def test_repeat_dry_run_reports_already_merged(db_session) -> None:
+    survivor = _org(db_session, "Harbour Club")
+    source = _org(db_session, "Harbour Club Limited")
+    merge_organizations(db_session, survivor.id, [source.id])
+    preview = merge_organizations(
+        db_session,
+        survivor.id,
+        [source.id],
+        dry_run=True,
+    )
+    assert preview["already_merged"] is True
+    assert preview["dry_run"] is True
+    assert preview["merged"] is False
+
+
+def test_merge_rejects_a_source_already_merged_elsewhere(db_session) -> None:
+    survivor = _org(db_session, "Harbour Club")
+    other = _org(db_session, "Other Club")
+    source = _org(db_session, "Harbour Club Limited")
+    merge_organizations(db_session, other.id, [source.id])
+    with pytest.raises(ValidationError, match="another organization"):
+        merge_organizations(db_session, survivor.id, [source.id])
+
+
+def test_merge_rejects_a_survivor_that_was_merged(db_session) -> None:
+    survivor = _org(db_session, "Harbour Club")
+    other = _org(db_session, "Other Club")
+    source = _org(db_session, "Harbour Club Limited")
+    merge_organizations(db_session, other.id, [survivor.id])
+    with pytest.raises(ValidationError, match="survivor was already merged"):
+        merge_organizations(db_session, survivor.id, [source.id])
+
+
+def test_partial_repeat_merges_only_the_remaining_source(db_session) -> None:
+    survivor = _org(db_session, "Harbour Club")
+    done = _org(db_session, "Harbour Club Limited")
+    left = _org(db_session, "Harbour Club Ltd")
+    merge_organizations(db_session, survivor.id, [done.id])
+    plan = merge_organizations(db_session, survivor.id, [done.id, left.id])
+    assert plan.get("already_merged") is not True
+    assert plan["already_merged_source_ids"] == [str(done.id)]
+    assert db_session.get(Organization, left.id) is None
+    assert db_session.get(Organization, survivor.id) is not None
