@@ -159,7 +159,9 @@ their primary responsibilities.
   leave no time for the reply. Configured fallbacks travel in that
   same request, so a busy provider is routed around without a second
   paid call. A 408, 425, 429, or 5xx on the last queue delivery is
-  stored as "The model provider was busy. Try again later." They
+  stored as "The model provider was busy. Try again later." The
+  prompt and reply caps assume a 40,960-token window; pick a model
+  that fits. Translation sweeps
   spend `translation_fix_settings.monthly_cost_limit_usd`, which is
   separate from category-check and location-sweep spend. The location
   sweep also loads the EDB school register through the HTTP proxy.
