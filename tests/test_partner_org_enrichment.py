@@ -8,7 +8,8 @@ from uuid import uuid4
 
 from app.api import partner_routes
 from app.api.admin import _handle_partner_routes
-from app.db.models import Organization
+from app.db.models import AuditLog, Organization
+from app.db.models.import_settings import DataQualityRun
 from app.db.models.org_enrichment import OrgEnrichmentProposal, OrgEnrichmentRun
 from app.services.enrichment.store import load_settings
 from sqlalchemy import delete, select
@@ -379,11 +380,76 @@ def test_full_access_dismisses_a_proposal(monkeypatch, test_engine) -> None:
         _cleanup(test_engine, org_id)
 
 
+def test_full_access_applies_a_proposal(monkeypatch, test_engine) -> None:
+    _patch_engines(monkeypatch, test_engine)
+    enqueued: list[str] = []
+    monkeypatch.setattr(
+        "app.services.data_quality.runs.enqueue_staged_run",
+        lambda run_id: enqueued.append(run_id),
+    )
+    token = uuid4().hex[:8]
+    with Session(test_engine) as session:
+        org = _org(session, f"Harbour Club {token}")
+        run = OrgEnrichmentRun(
+            org_id=org.id,
+            status="ready",
+            seed_url="https://ok.test/",
+        )
+        session.add(run)
+        session.flush()
+        proposal = OrgEnrichmentProposal(
+            run_id=run.id,
+            org_id=org.id,
+            section="Organization",
+            kind="update_organization",
+            field="description",
+            label="Description",
+            proposed_value={"description": "Saturday art class for children."},
+            confidence=Decimal("0.900"),
+            evidence=[],
+            proposed_hash=uuid4().hex,
+        )
+        session.add(proposal)
+        session.flush()
+        org_id = org.id
+        proposal_id = proposal.id
+        session.commit()
+    try:
+        response = _enrich(
+            org_id,
+            "POST",
+            "/apply",
+            body={"ids": [str(proposal_id)]},
+        )
+        assert response["statusCode"] == 200
+        body = json.loads(response["body"])
+        assert body["results"] == [{"id": str(proposal_id), "status": "applied"}]
+        if body.get("data_quality_run_id"):
+            assert enqueued == [body["data_quality_run_id"]]
+        else:
+            assert enqueued == []
+        with Session(test_engine) as session:
+            saved = session.get(Organization, org_id)
+            assert saved is not None
+            assert saved.description == "Saturday art class for children."
+    finally:
+        with Session(test_engine) as session:
+            session.execute(delete(AuditLog).where(AuditLog.record_id == str(org_id)))
+            session.execute(
+                delete(DataQualityRun).where(
+                    DataQualityRun.scope.contains({"organization_ids": [str(org_id)]})
+                )
+            )
+            session.commit()
+        _cleanup(test_engine, org_id)
+
+
 def test_full_access_reads_and_updates_enrichment_settings(
     monkeypatch, test_engine
 ) -> None:
     _patch_engines(monkeypatch, test_engine)
     pages, limit = _settings_snapshot(test_engine)
+    actor = ""
     try:
         read = _call(
             _event("GET", "/v1/partner/enrichment-settings"),
@@ -394,18 +460,27 @@ def test_full_access_reads_and_updates_enrichment_settings(
         assert read["statusCode"] == 200
         assert "max_pages" in json.loads(read["body"])
 
-        updated = _call(
-            _event(
-                "PUT",
-                "/v1/partner/enrichment-settings",
-                body={"max_pages": 8},
-            ),
+        put = _event(
             "PUT",
-            "enrichment-settings",
-            None,
+            "/v1/partner/enrichment-settings",
+            body={"max_pages": 8},
         )
+        actor = put["requestContext"]["authorizer"]["userSub"]
+        updated = _call(put, "PUT", "enrichment-settings", None)
         assert updated["statusCode"] == 200
         assert json.loads(updated["body"])["max_pages"] == 8
+        with Session(test_engine) as session:
+            audit = session.scalar(
+                select(AuditLog)
+                .where(
+                    AuditLog.table_name == "org_enrichment_settings",
+                    AuditLog.user_id == actor,
+                )
+                .order_by(AuditLog.timestamp.desc())
+            )
+            assert audit is not None
+            assert audit.action == "UPDATE"
+            assert audit.new_values == {"max_pages": 8}
 
         invalid = _call(
             _event(
@@ -422,3 +497,12 @@ def test_full_access_reads_and_updates_enrichment_settings(
             assert load_settings(session).max_pages == 8
     finally:
         _restore_settings(test_engine, pages, limit)
+        if actor:
+            with Session(test_engine) as session:
+                session.execute(
+                    delete(AuditLog).where(
+                        AuditLog.table_name == "org_enrichment_settings",
+                        AuditLog.user_id == actor,
+                    )
+                )
+                session.commit()

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.api.admin_auth import _get_user_sub, _is_admin, _set_session_audit_context
 from app.api.admin_request import _parse_uuid, parse_object_body
+from app.db.audit import AuditService
 from app.db.engine import get_engine
 from app.db.models import Location
 from app.db.models.org_enrichment import OrgEnrichmentProposal
@@ -86,7 +87,18 @@ def perform_org_enrichment(
     return json_response(404, {"error": "Not found"}, event=event)
 
 
-def handle_enrichment_settings(event: Mapping[str, Any], method: str) -> dict[str, Any]:
+def handle_enrichment_settings(
+    event: Mapping[str, Any],
+    method: str,
+    *,
+    actor: str | None = None,
+) -> dict[str, Any]:
+    """Read or update the website enrichment settings singleton.
+
+    ``actor`` is the audit user. When it is omitted, the authorizer
+    subject is used. A partner key passes its resolved actor.
+    """
+    recorded = _get_user_sub(event) if actor is None else actor
     if method == "GET":
         with Session(get_engine()) as session:
             return json_response(
@@ -96,9 +108,26 @@ def handle_enrichment_settings(event: Mapping[str, Any], method: str) -> dict[st
             )
     if method == "PUT":
         body = parse_object_body(event)
+        request_id = event.get("requestContext", {}).get("requestId", "")
         with Session(get_engine()) as session:
+            _set_session_audit_context(session, event, user_id=recorded)
+            before = serialize_settings(load_settings(session))
             row = update_settings(session, body)
             payload = serialize_settings(row)
+            changed = [key for key in payload if payload[key] != before.get(key)]
+            if changed:
+                AuditService(
+                    session,
+                    user_id=recorded,
+                    request_id=request_id,
+                ).log_custom(
+                    "org_enrichment_settings",
+                    "1",
+                    "UPDATE",
+                    old_values={key: before.get(key) for key in changed},
+                    new_values={key: payload[key] for key in changed},
+                    changed_fields=changed,
+                )
             session.commit()
         return json_response(200, payload, event=event)
     return json_response(404, {"error": "Not found"}, event=event)

@@ -10,6 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models.org_enrichment import (
@@ -113,8 +114,21 @@ def start_run(
         seed_url=seed,
     )
     session.add(run)
-    session.flush()
+    try:
+        session.flush()
+    except IntegrityError as exc:
+        if not _active_run_conflict(exc):
+            raise
+        raise AppError("An enrichment is already running", status_code=409) from exc
     return run
+
+
+def _active_run_conflict(exc: IntegrityError) -> bool:
+    orig = getattr(exc, "orig", None)
+    constraint = getattr(getattr(orig, "diag", None), "constraint_name", None)
+    if constraint == "org_enrichment_runs_active_org_idx":
+        return True
+    return "org_enrichment_runs_active_org_idx" in str(orig or exc)
 
 
 def expire_stale_runs(session: Session, org_id: UUID) -> bool:

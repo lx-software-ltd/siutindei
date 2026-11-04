@@ -36,6 +36,8 @@ receive `403`.
 - Admin and importer JWT behavior on the admin enrichment routes.
 - Partner organization CRUD when the path has no `enrichment` tail.
 - The enrichment queue message stays `enrichment_run_id` plus `stage`.
+- A settings change writes an audit row for the caller. An unchanged
+  body does not.
 
 ## Done when
 

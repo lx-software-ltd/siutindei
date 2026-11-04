@@ -585,6 +585,8 @@ paths:
           description: Read-only key or organization-scoped key
         "409":
           description: A run is already active
+        "404":
+          description: Organization not found
         "422":
           description: Website is missing or the monthly budget is spent
         "503":
@@ -605,6 +607,8 @@ paths:
           description: Invalid proposal ids
         "403":
           description: Read-only key or organization-scoped key
+        "404":
+          description: Organization not found
 
   /v1/partner/organizations/{id}/enrichment/dismiss:
     parameters:
@@ -640,7 +644,8 @@ paths:
       summary: Update website enrichment settings
       description: |
         Full-access `crud` keys only. Same body and limits as
-        `PUT /v1/admin/enrichment-settings`.
+        `PUT /v1/admin/enrichment-settings`. A change is written to
+        the audit log with the key's actor.
       responses:
         "200":
           description: Settings saved

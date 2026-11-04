@@ -239,6 +239,46 @@ def test_typed_website_wins_over_the_stored_one(db_session, monkeypatch) -> None
     assert org.website == "https://saved.example"
 
 
+def test_losing_the_active_run_race_is_409(test_engine, monkeypatch) -> None:
+    from sqlalchemy import select
+    from sqlalchemy.orm import Session
+
+    monkeypatch.setattr(
+        "app.services.enrichment.guard.host_is_blocked",
+        lambda host, resolve=None: False,
+    )
+    # Hide the active-run check so the insert reaches the unique index.
+    monkeypatch.setattr("app.services.enrichment.store.ACTIVE_RUN_STATUSES", ())
+    with Session(test_engine) as session:
+        org = _org(session, website="https://ok.test")
+        session.add(
+            OrgEnrichmentRun(
+                org_id=org.id, status="queued", seed_url="https://ok.test/"
+            )
+        )
+        session.commit()
+        org_id = org.id
+    try:
+        with Session(test_engine) as session:
+            with pytest.raises(AppError) as caught:
+                start_run(
+                    session,
+                    org_id,
+                    requested_by="admin",
+                    website="https://ok.test/",
+                )
+            assert caught.value.status_code == 409
+    finally:
+        with Session(test_engine) as session:
+            run_ids = session.scalars(
+                select(OrgEnrichmentRun.id).where(OrgEnrichmentRun.org_id == org_id)
+            ).all()
+            for run_id in run_ids:
+                _delete_run(session, run_id, None)
+            _delete_run(session, None, org_id)
+            session.commit()
+
+
 def test_start_run_requires_a_website(db_session) -> None:
     org = _org(db_session)
     with pytest.raises(AppError) as exc:

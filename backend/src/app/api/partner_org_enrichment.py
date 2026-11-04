@@ -47,4 +47,8 @@ def handle_partner_enrichment_settings(
     """Read or update the website enrichment settings singleton."""
     require_full_access(partner)
     require_crud(partner)
-    return handle_enrichment_settings(event, method)
+    return handle_enrichment_settings(
+        event,
+        method,
+        actor=partner_actor(event, partner),
+    )
