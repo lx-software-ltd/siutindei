@@ -1,4 +1,4 @@
-"""Full-access partner list and delete for activity categories."""
+"""Full-access partner read and write for activity categories."""
 
 from __future__ import annotations
 
@@ -9,14 +9,21 @@ from sqlalchemy.orm import Session
 
 from app.api.admin_areas import _build_activity_category_tree
 from app.api.admin_auth import _set_session_audit_context
-from app.api.admin_request import _parse_uuid
+from app.api.admin_request import _parse_uuid, parse_object_body
 from app.api.admin_resource_activity_category import (
     _serialize_activity_category,
+    _update_activity_category,
 )
-from app.api.partner_auth import PartnerContext, require_full_access
+from app.api.partner_auth import (
+    PartnerContext,
+    partner_actor,
+    require_crud,
+    require_full_access,
+)
 from app.db.engine import get_engine
 from app.db.repositories import ActivityCategoryRepository
 from app.exceptions import NotFoundError
+from app.services.activity_categories import create_activity_category
 from app.utils import json_response
 
 
@@ -26,14 +33,23 @@ def handle_partner_activity_categories(
     partner: PartnerContext,
     resource_id: str | None,
 ) -> dict[str, Any]:
-    """List the category tree or delete an empty leftover category."""
+    """Read the catalog, or create, update, and delete a category.
+
+    A full-access key can read. Writes require a full-access ``crud`` key.
+    """
     require_full_access(partner)
     if method == "GET" and resource_id is None:
         return _list_tree(event)
     if method == "GET" and resource_id:
         return _detail(event, resource_id)
+    if method in {"POST", "PUT", "DELETE"}:
+        require_crud(partner)
+    if method == "POST" and resource_id is None:
+        return _create(event, partner)
+    if method == "PUT" and resource_id:
+        return _update(event, partner, resource_id)
     if method == "DELETE" and resource_id:
-        return _delete(event, resource_id)
+        return _delete(event, partner, resource_id)
     return json_response(404, {"error": "Not found"}, event=event)
 
 
@@ -58,10 +74,46 @@ def _detail(event: Mapping[str, Any], raw_id: str) -> dict[str, Any]:
         )
 
 
-def _delete(event: Mapping[str, Any], raw_id: str) -> dict[str, Any]:
+def _create(event: Mapping[str, Any], partner: PartnerContext) -> dict[str, Any]:
+    body = parse_object_body(event)
+    with Session(get_engine()) as session:
+        _audit(session, event, partner)
+        repo = ActivityCategoryRepository(session)
+        entity = create_activity_category(repo, body)
+        repo.create(entity)
+        payload = _serialize_activity_category(entity)
+        session.commit()
+    return json_response(201, payload, event=event)
+
+
+def _update(
+    event: Mapping[str, Any],
+    partner: PartnerContext,
+    raw_id: str,
+) -> dict[str, Any]:
+    category_id = _parse_uuid(raw_id)
+    body = parse_object_body(event)
+    with Session(get_engine()) as session:
+        _audit(session, event, partner)
+        repo = ActivityCategoryRepository(session)
+        entity = repo.get_by_id(category_id)
+        if entity is None:
+            raise NotFoundError("activity-categories", raw_id)
+        updated = _update_activity_category(repo, entity, body)
+        repo.update(updated)
+        payload = _serialize_activity_category(updated)
+        session.commit()
+    return json_response(200, payload, event=event)
+
+
+def _delete(
+    event: Mapping[str, Any],
+    partner: PartnerContext,
+    raw_id: str,
+) -> dict[str, Any]:
     category_id = _parse_uuid(raw_id)
     with Session(get_engine()) as session:
-        _set_session_audit_context(session, event)
+        _audit(session, event, partner)
         repo = ActivityCategoryRepository(session)
         entity = repo.get_by_id(category_id)
         if entity is None:
@@ -69,3 +121,7 @@ def _delete(event: Mapping[str, Any], raw_id: str) -> dict[str, Any]:
         repo.delete(entity)
         session.commit()
     return json_response(204, {}, event=event)
+
+
+def _audit(session: Session, event: Mapping[str, Any], partner: PartnerContext) -> None:
+    _set_session_audit_context(session, event, user_id=partner_actor(event, partner))
