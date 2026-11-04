@@ -22,7 +22,7 @@ from app.api.partner_auth import (
 )
 from app.db.engine import get_engine
 from app.db.repositories import ActivityCategoryRepository
-from app.exceptions import NotFoundError
+from app.exceptions import NotFoundError, ValidationError
 from app.services.activity_categories import create_activity_category
 from app.utils import json_response
 
@@ -42,11 +42,11 @@ def handle_partner_activity_categories(
         return _list_tree(event)
     if method == "GET" and resource_id:
         return _detail(event, resource_id)
-    if method in {"POST", "PUT", "DELETE"}:
+    if method in {"POST", "PUT", "PATCH", "DELETE"}:
         require_crud(partner)
     if method == "POST" and resource_id is None:
         return _create(event, partner)
-    if method == "PUT" and resource_id:
+    if method in {"PUT", "PATCH"} and resource_id:
         return _update(event, partner, resource_id)
     if method == "DELETE" and resource_id:
         return _delete(event, partner, resource_id)
@@ -76,6 +76,7 @@ def _detail(event: Mapping[str, Any], raw_id: str) -> dict[str, Any]:
 
 def _create(event: Mapping[str, Any], partner: PartnerContext) -> dict[str, Any]:
     body = parse_object_body(event)
+    _reject_wizard_membership(body)
     with Session(get_engine()) as session:
         _audit(session, event, partner)
         repo = ActivityCategoryRepository(session)
@@ -93,6 +94,7 @@ def _update(
 ) -> dict[str, Any]:
     category_id = _parse_uuid(raw_id)
     body = parse_object_body(event)
+    _reject_wizard_membership(body)
     with Session(get_engine()) as session:
         _audit(session, event, partner)
         repo = ActivityCategoryRepository(session)
@@ -125,3 +127,12 @@ def _delete(
 
 def _audit(session: Session, event: Mapping[str, Any], partner: PartnerContext) -> None:
     _set_session_audit_context(session, event, user_id=partner_actor(event, partner))
+
+
+def _reject_wizard_membership(body: Mapping[str, Any]) -> None:
+    """Home-wizard membership is published from the admin console."""
+    if "show_in_wizard" in body:
+        raise ValidationError(
+            "show_in_wizard is managed in the admin console",
+            field="show_in_wizard",
+        )

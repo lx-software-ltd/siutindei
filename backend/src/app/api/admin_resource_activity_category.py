@@ -67,7 +67,7 @@ def _update_activity_category(
 
     if "parent_id" in body:
         parent_id_raw = body["parent_id"]
-        parent_id = _parse_uuid(parent_id_raw) if parent_id_raw else None
+        parent_id = _parse_uuid(parent_id_raw, "parent_id") if parent_id_raw else None
         _validate_category_parent(repo, entity.id, parent_id)
         entity.parent_id = parent_id  # type: ignore[assignment]
 

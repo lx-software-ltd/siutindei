@@ -104,7 +104,7 @@ their primary responsibilities.
   `POST /v1/partner/organization-merges`, `GET` and `POST`
   `/v1/partner/organizations/{id}/enrichment` (apply and dismiss
   included), `GET` and `PUT /v1/partner/enrichment-settings`, and
-  `GET`, `POST`, `PUT`, and `DELETE`
+  `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`
   `/v1/partner/activity-categories` (a full-access `read` key can
   list and fetch; creating, updating, and deleting require `crud`);
   a full-access

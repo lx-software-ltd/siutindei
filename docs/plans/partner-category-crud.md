@@ -38,7 +38,13 @@ category already exists for a full-access `crud` key.
 - Organization-scoped keys still receive `403`.
 - Delete still refuses Pending categorisation, wizard categories,
   categories with children, and categories assigned to an activity.
-- The same name under one parent is still rejected.
+- The same name under one parent is still rejected. The check takes
+  a transaction lock first, and the unique constraint is returned as
+  that same validation error. The model declares
+  `uq_activity_category_parent_name`, which migration 0018 already
+  created.
+- Partner create and update reject `show_in_wizard`. Admin can still
+  set it. `PATCH` updates a category the same way `PUT` does.
 
 ## Done when
 

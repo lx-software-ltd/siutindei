@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import Activity, ActivityCategory
@@ -37,6 +39,31 @@ class ActivityCategoryRepository(BaseRepository[ActivityCategory]):
             ActivityCategory.id,
         )
         return self._session.execute(query).scalars().all()
+
+    def lock_sibling_name(self, parent_id: UUID | None, folded_name: str) -> None:
+        """Block other transactions that create the same sibling name."""
+        raw = f"{parent_id or ''}:{folded_name}".encode()
+        key = int.from_bytes(hashlib.sha256(raw).digest()[:8], "big", signed=True)
+        self._session.execute(
+            text("SELECT pg_advisory_xact_lock(CAST(:key AS bigint))"),
+            {"key": key},
+        )
+
+    def create(self, entity: ActivityCategory) -> ActivityCategory:
+        """Insert a category. An exact name collision is a validation error."""
+        try:
+            return super().create(entity)
+        except IntegrityError as exc:
+            _reraise_duplicate_name(exc)
+            raise
+
+    def update(self, entity: ActivityCategory) -> ActivityCategory:
+        """Save a category. An exact name collision is a validation error."""
+        try:
+            return super().update(entity)
+        except IntegrityError as exc:
+            _reraise_duplicate_name(exc)
+            raise
 
     def get_all_roots(self) -> Sequence[ActivityCategory]:
         """Get root categories (no parent)."""
@@ -113,3 +140,17 @@ def _to_uuid(value: UUID | str) -> UUID:
     if isinstance(value, UUID):
         return value
     return UUID(str(value))
+
+
+def _reraise_duplicate_name(exc: IntegrityError) -> None:
+    """Turn the sibling-name constraint into the same error as the pre-check."""
+    orig = getattr(exc, "orig", None)
+    constraint = getattr(getattr(orig, "diag", None), "constraint_name", None)
+    if (
+        constraint == "uq_activity_category_parent_name"
+        or "uq_activity_category_parent_name" in str(orig or exc)
+    ):
+        raise ValidationError(
+            "A category with this name already exists under that parent.",
+            field="name",
+        ) from exc

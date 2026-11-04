@@ -165,7 +165,7 @@ A full-access partner API key can read those reviews at
 apply, dismiss, or revert a review (`POST
 /v1/partner/category-reviews/{id}` and `POST
 /v1/partner/category-reviews/bulk`) and manage activity
-categories (`GET`, `POST`, `PUT`, and `DELETE
+categories (`GET`, `POST`, `PUT`, `PATCH`, and `DELETE
 /v1/partner/activity-categories`). A full-access `read` key can list
 and fetch them. Creating, updating, and deleting require `crud`.
 An org-scoped key sees only that organization's reviews and receives

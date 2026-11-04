@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, ForeignKey, Integer, Text, text
+from sqlalchemy import Boolean, ForeignKey, Integer, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,6 +18,13 @@ class ActivityCategory(Base):
     """Hierarchical activity category."""
 
     __tablename__ = "activity_categories"
+    __table_args__ = (
+        UniqueConstraint(
+            "parent_id",
+            "name",
+            name="uq_activity_category_parent_name",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(
         UUID(as_uuid=True),
