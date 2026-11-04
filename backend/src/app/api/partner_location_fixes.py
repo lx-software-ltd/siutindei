@@ -9,10 +9,10 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.admin_auth import _get_user_sub, _set_session_audit_context
+from app.api.admin_auth import _set_session_audit_context
 from app.api.admin_location_fixes import _decide_body
 from app.api.admin_request import _query_param, parse_limit, parse_object_body
-from app.api.partner_auth import PartnerContext, require_full_access
+from app.api.partner_auth import PartnerContext, partner_actor, require_full_access
 from app.db.engine import get_engine
 from app.db.models import ActivityLocation
 from app.db.models.location_fix import LocationFixProposal
@@ -67,11 +67,11 @@ def handle_partner_location_fix_write(
 ) -> dict[str, Any]:
     """Apply or dismiss proposals. Full-access crud keys only."""
     require_full_access(partner)
-    decided_by = _get_user_sub(event) or f"api-key:{partner.api_key_id}"
+    decided_by = partner_actor(event, partner)
     if resource_id == "bulk":
         body = parse_object_body(event)
         with Session(get_engine()) as session:
-            _set_session_audit_context(session, event)
+            _set_session_audit_context(session, event, user_id=decided_by)
             payload = decide_bulk(session, body, decided_by)
             if not body.get("dry_run"):
                 session.commit()
