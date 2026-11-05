@@ -343,6 +343,7 @@ def test_catalog_source_key_treats_unset_as_manual() -> None:
     assert catalog_source_key("lcsd") == "lcsd"
     assert catalog_source_matches(None, "manual")
     assert catalog_source_matches("manual", "Manual")
+    assert catalog_source_matches(None, "Manual")
     assert not catalog_source_matches("lcsd", "manual")
 
 

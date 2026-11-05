@@ -365,7 +365,7 @@ def test_review_list_manual_source_includes_unset(db_session) -> None:
     db_session.flush()
     found = _load_filtered_organizations(
         db_session,
-        _review_filters(source="manual", query=suffix),
+        _review_filters(source="Manual", query=suffix),
         None,
         20,
     )

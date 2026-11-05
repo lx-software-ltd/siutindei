@@ -214,14 +214,17 @@ def catalog_source_matches(stored: Any, wanted: str) -> bool:
 
 
 def catalog_source_filter(wanted: str):
-    """SQL clause for a catalog source filter."""
-    if catalog_source_key(wanted) == "manual":
-        return or_(
-            Organization.source == "manual",
-            Organization.source.is_(None),
-            Organization.source == "",
-        )
-    return Organization.source == wanted
+    """SQL clause for a catalog source filter.
+
+    Comparison is case-insensitive. Unset and blank rows are Manual.
+    """
+    key = catalog_source_key(wanted).casefold()
+    normalized = func.lower(
+        func.nullif(func.btrim(func.coalesce(Organization.source, "")), "")
+    )
+    if key == "manual":
+        return or_(normalized == "manual", normalized.is_(None))
+    return normalized == key
 
 
 def parse_description_source(value: Any) -> str | None:

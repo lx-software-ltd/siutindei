@@ -54,8 +54,8 @@ Columns:
   or `importer`
 - `source` (text, optional) — catalog source (`lcsd`, `edb`, `swd`,
   `places`, `competitor`, `recommendation`, `manual`). Unset and
-  blank values are Manual. `0059_manual_org_source` stamps those
-  rows `manual`.
+  blank values are Manual. The column stays nullable; readers treat
+  empty the same as `manual`.
 - `source_id` (text, optional) — explicit import field, or parsed from
   `sourceId=` in `vetting_note`
 - `source_url` (text, optional) — page the listing was taken from.

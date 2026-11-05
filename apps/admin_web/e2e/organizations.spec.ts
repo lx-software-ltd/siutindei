@@ -189,9 +189,14 @@ test.describe('Organizations Panel', () => {
     });
     const importedRow = adminPage.getByRole('row', { name: /Test Organization 1/ });
     await expect(importedRow).toContainText(importedAt);
+    await expect(importedRow).toContainText('LCSD');
     await expect(importedRow).not.toContainText('job-1');
     const neverImported = adminPage.getByRole('row', { name: /Quiet Hall/ });
     await expect(neverImported).toContainText('—');
+    await expect(neverImported).toContainText('Manual');
+    await expect(
+      adminPage.getByRole('row', { name: /Test Organization 2/ })
+    ).toContainText('Manual');
     await expect(neverImported).not.toContainText('job-');
     await adminPage
       .getByRole('table', { name: 'Catalog' })

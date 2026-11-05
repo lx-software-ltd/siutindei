@@ -62,7 +62,7 @@ def test_list_organizations_manual_source_includes_unset(db_session) -> None:
     matches = list_organizations(
         db_session,
         None,
-        OrganizationListFilters(source="manual", query=suffix),
+        OrganizationListFilters(source="Manual", query=suffix),
         limit=20,
         cursor=None,
     )

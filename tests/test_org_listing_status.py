@@ -212,6 +212,20 @@ def test_create_organization_accepts_manual_source(db_session) -> None:
     assert created.source == "manual"
 
 
+def test_update_keeps_unset_source_when_client_sends_null(db_session) -> None:
+    repo = OrganizationRepository(db_session)
+    created = _create_organization(
+        repo,
+        {
+            "name": f"Unset Studio {uuid4()}",
+            "manager_id": "00000000-0000-0000-0000-000000000003",
+        },
+    )
+    assert created.source is None
+    updated = _update_organization(repo, created, {"source": None})
+    assert updated.source is None
+
+
 def test_update_organization_rejects_unknown_source(
     db_session, sample_organization
 ) -> None:

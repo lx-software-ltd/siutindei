@@ -81,7 +81,7 @@ export function itemToForm(item: Organization): OrganizationFormState {
     xiaohongshu: item.xiaohongshu ?? '',
     wechat: item.wechat ?? '',
     status: item.status ?? 'operational',
-    source: item.source?.trim() || 'manual',
+    source: item.source?.trim() ?? '',
     source_id: item.source_id ?? '',
     source_url: item.source_url ?? '',
     source_note: item.source_note ?? '',
@@ -100,11 +100,14 @@ export const ORG_SOURCE_OPTIONS = [
 ] as const;
 
 export function orgSourceLabel(value: string | null | undefined): string {
-  const source = value?.trim();
-  if (!source || source === 'manual') {
-    return 'Manual';
-  }
-  return source;
+  const source = value?.trim() || 'manual';
+  return (
+    ORG_SOURCE_OPTIONS.find((option) => option.value === source)?.label ?? source
+  );
+}
+
+export function catalogSourcePayload(value: string): string | null {
+  return value.trim() || null;
 }
 
 export const DESCRIPTION_SOURCE_OPTIONS = [
