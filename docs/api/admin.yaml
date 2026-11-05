@@ -5952,11 +5952,12 @@ components:
           description: Geographic area UUID (required, must be a leaf node)
         name:
           type: string
+          nullable: true
           maxLength: 200
           description: |
-            Optional venue label (max 200 characters). Blank is stored
-            as null. Pricing and Schedules show this instead of the
-            address.
+            Optional venue label (max 200 characters). Blank or null
+            is stored as null. Pricing and Schedules show this instead
+            of the address.
         address:
           type: string
           maxLength: 500

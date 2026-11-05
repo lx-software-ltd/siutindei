@@ -15,7 +15,7 @@ test.describe('Locations Panel', () => {
     await expect(adminPage.getByText('Organization Version 2')).toBeVisible();
     const editor = adminPage.getByTestId('admin-editor-panel');
     const accessory = editor.getByTestId('admin-editor-accessory');
-    const version = accessory.getByRole('button', { name: 'Version 1 · Latest' });
+    const version = accessory.getByRole('button', { name: 'Version 2 · Latest' });
     await expect(version).toBeVisible();
     await expect(adminPage.getByRole('button', { name: 'History' })).toHaveCount(0);
     const accessoryBox = await accessory.boundingBox();
@@ -31,6 +31,13 @@ test.describe('Locations Panel', () => {
     expect(addressBox).toBeTruthy();
     expect(accessoryBox!.y).toBeLessThan(nameBox!.y);
     expect(nameBox!.y).toBeLessThan(addressBox!.y);
+    await expect(nameField).toHaveValue('Harbour Hall');
+    await expect(nameField).toHaveAttribute('maxlength', '200');
+    await version.click();
+    await adminPage.getByRole('menuitem', { name: /Version 1/ }).click();
+    await expect(nameField).toHaveValue('');
+    await expect(editor.getByText('Latest: Harbour Hall')).toBeVisible();
+    await editor.getByRole('button', { name: 'Back to latest' }).click();
     await expect(nameField).toHaveValue('Harbour Hall');
     await nameField.fill('Studio Hall');
     const saved = adminPage.waitForRequest(

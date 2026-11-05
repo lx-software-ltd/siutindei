@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   ageBoundsFromSnapshot,
+  locationFormFromSnapshot,
   organizationFormFromSnapshot,
 } from '@/components/admin/catalog-version-snapshot';
 import {
@@ -76,6 +77,41 @@ describe('snapshot forms', () => {
     const next = organizationFormFromSnapshot({ name: 'Original' }, fallback);
     expect(next.name).toBe('Original');
     expect(next.email).toBe('live@example.com');
+  });
+
+  it('shows an empty name when an older location snapshot has no name', () => {
+    const fallback = {
+      org_id: 'org-1',
+      area_id: 'area-1',
+      name: 'Harbour Hall',
+      address: '1 Name Road',
+      lat: '22.1',
+      lng: '114.1',
+    };
+    const next = locationFormFromSnapshot(
+      { address: '1 Name Road', area_id: 'area-1' },
+      fallback
+    );
+    expect(next.name).toBe('');
+    expect(next.address).toBe('1 Name Road');
+    expect(next.area_id).toBe('area-1');
+  });
+
+  it('keeps a location name the snapshot stored', () => {
+    const fallback = {
+      org_id: 'org-1',
+      area_id: 'area-1',
+      name: 'Harbour Hall',
+      address: '1 Name Road',
+      lat: '',
+      lng: '',
+    };
+    const next = locationFormFromSnapshot(
+      { name: 'Studio Hall', address: '9 Hill Road' },
+      fallback
+    );
+    expect(next.name).toBe('Studio Hall');
+    expect(next.address).toBe('9 Hill Road');
   });
 });
 

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 
-import { locationDisplayName } from '../../lib/location-label';
+import { locationListLabel } from '../../lib/location-label';
 import type { CatalogVersionView } from '../admin/version-history';
 import { VersionField, VersionFields, VersionSwitcher } from '../admin/version-history';
 import { StatusBanner } from '../status-banner';
@@ -109,7 +109,11 @@ export function CatalogInlineEditor({
                 <option value=''>Select location</option>
                 {locations.map((location) => (
                   <option key={location.id} value={location.id}>
-                    {locationDisplayName(location, location.area_id ?? '')}
+                    {locationListLabel(
+                      location,
+                      locations,
+                      location.area_id ?? ''
+                    )}
                   </option>
                 ))}
               </Select>

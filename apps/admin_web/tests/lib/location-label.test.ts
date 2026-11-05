@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { locationDisplayName } from '@/lib/location-label';
+import {
+  locationDisplayName,
+  locationListLabel,
+} from '@/lib/location-label';
 
 describe('locationDisplayName', () => {
   it('uses the venue name when one is set', () => {
@@ -21,12 +24,40 @@ describe('locationDisplayName', () => {
     ).toBe('1 Name Road');
   });
 
-  it('uses the fallback when the name and address are empty', () => {
+  it('uses the caller fallback when the name and address are empty', () => {
     expect(locationDisplayName({ name: '', address: null }, 'loc-1')).toBe(
       'loc-1'
     );
-    expect(
-      locationDisplayName({ address: '  ', area_id: 'area-1' }, '')
-    ).toBe('area-1');
+    expect(locationDisplayName({ address: '  ' }, '')).toBe('');
+  });
+});
+
+describe('locationListLabel', () => {
+  const venues = [
+    { name: ' Main Hall ', address: '1 Name Road' },
+    { name: 'Main Hall', address: '2 Name Road' },
+    { name: 'Side Hall', address: '3 Name Road' },
+  ];
+
+  it('adds the address when the same name is used twice', () => {
+    expect(locationListLabel(venues[0], venues, 'loc-1')).toBe(
+      'Main Hall · 1 Name Road'
+    );
+    expect(locationListLabel(venues[1], venues, 'loc-2')).toBe(
+      'Main Hall · 2 Name Road'
+    );
+  });
+
+  it('leaves a name that is used once', () => {
+    expect(locationListLabel(venues[2], venues, 'loc-3')).toBe('Side Hall');
+  });
+
+  it('does not repeat a name that is also the address', () => {
+    const shared = [
+      { name: 'Main Hall', address: 'Main Hall' },
+      { name: 'Main Hall', address: '' },
+    ];
+    expect(locationListLabel(shared[0], shared)).toBe('Main Hall');
+    expect(locationListLabel(shared[1], shared, 'loc-2')).toBe('Main Hall');
   });
 });

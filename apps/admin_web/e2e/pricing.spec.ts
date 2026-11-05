@@ -38,7 +38,10 @@ test.describe('Pricing Panel', () => {
       'Yearly',
     ]);
     await expect(adminPage.locator('#pricing-location')).toContainText(
-      'Harbour Hall'
+      'Harbour Hall · 123 Test Street'
+    );
+    await expect(adminPage.locator('#pricing-location')).toContainText(
+      'Harbour Hall · 9 Hill Road'
     );
     await adminPage.locator('#pricing-location').selectOption('loc-1');
     await adminPage.locator('#pricing-activity').selectOption('activity-1');

@@ -51,7 +51,7 @@ ACTIVITY_SHAPE_KEYS = (
     "source_note",
     "source_category_name",
 )
-LOCATION_SHAPE_KEYS = ("name", "address", "area_id", "lat", "lng", "place_id")
+LOCATION_SHAPE_KEYS = ("address", "area_id", "lat", "lng", "place_id")
 PRICING_SHAPE_KEYS = (
     "location_address",
     "pricing_type",
@@ -149,9 +149,12 @@ def activity_shape(data: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def location_shape(data: Mapping[str, Any]) -> dict[str, Any]:
-    """Location identity: label, address, area, pin, and place id."""
+    """Location fields an import may change.
+
+    The venue label is an admin field. Imports never write it, so a
+    label edit is not an overwritten catalog change.
+    """
     return {
-        "name": _norm_name(data.get("name")),
         "address": _norm_name(data.get("address")),
         "area_id": _text(data.get("area_id")),
         "lat": _quantize(data.get("lat"), 6),
