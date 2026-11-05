@@ -168,7 +168,7 @@ def apply_org_gate(
         existing.id,
         incoming,
         _present(raw_org, body, "organization"),
-        organization_payload(existing),
+        _org_current(existing),
         allow_updates,
         warnings,
         review_status=existing.review_status,
@@ -232,7 +232,7 @@ def _absent_organization(
             adopted.id,
             incoming,
             present,
-            organization_payload(adopted),
+            _org_current(adopted),
             allow_updates,
             warnings,
             review_status=adopted.review_status,
@@ -249,7 +249,7 @@ def _absent_organization(
                 live.id,
                 incoming,
                 present,
-                organization_payload(live),
+                _org_current(live),
                 allow_updates,
                 warnings,
                 review_status=live.review_status,
@@ -271,7 +271,7 @@ def _absent_organization(
                     survivor.id,
                     incoming,
                     present,
-                    organization_payload(survivor),
+                    _org_current(survivor),
                     allow_updates,
                     warnings,
                     review_status=survivor.review_status,
@@ -299,7 +299,7 @@ def _absent_organization(
         survivor.id,
         incoming,
         present,
-        organization_payload(survivor),
+        _org_current(survivor),
         allow_updates,
         warnings,
         review_status=survivor.review_status,
@@ -439,6 +439,13 @@ def _present(
 def _warn(warnings: list[str] | None, message: str) -> None:
     if warnings is not None and message not in warnings:
         warnings.append(message)
+
+
+def _org_current(org: Organization) -> dict[str, Any]:
+    """Compare payload plus listing source, which is not a source field."""
+    payload = organization_payload(org)
+    payload["status_source"] = org.status_source
+    return payload
 
 
 def _text_or_none(value: Any) -> str | None:

@@ -218,3 +218,258 @@ def test_deleted_entity_is_dismissed_on_read(test_engine) -> None:
         session.commit()
         assert page == []
         assert _proposal(session, org_id).status == "dismissed"
+
+
+def _queue(session: Session, **fields: object) -> ImportChangeProposal:
+    row = ImportChangeProposal(status="pending", **fields)
+    session.add(row)
+    session.flush()
+    session.execute(text("SELECT set_config('app.current_user_id', 'admin-sub', true)"))
+    return row
+
+
+def test_accept_age_keeps_the_other_bound(db_session, sample_activity) -> None:
+    from app.db.age_bounds import inclusive_age_bounds
+
+    row = _queue(
+        db_session,
+        entity_type="activity",
+        entity_id=sample_activity.id,
+        org_id=sample_activity.org_id,
+        field="age_min",
+        base_value=5,
+        current_value=5,
+        proposed_value=8,
+    )
+    accept_proposal(db_session, row.id, "admin-sub")
+    db_session.refresh(sample_activity)
+    assert inclusive_age_bounds(sample_activity.age_range) == (8, 12)
+
+
+def test_accept_status_records_the_importer(db_session, sample_organization) -> None:
+    sample_organization.status_source = "provider"
+    row = _queue(
+        db_session,
+        entity_type="organization",
+        entity_id=sample_organization.id,
+        org_id=sample_organization.id,
+        field="status",
+        base_value="operational",
+        current_value="operational",
+        proposed_value="hidden",
+    )
+    accept_proposal(db_session, row.id, "admin-sub")
+    db_session.refresh(sample_organization)
+    assert sample_organization.status == "hidden"
+    assert sample_organization.status_source == "importer"
+
+
+def test_accept_refuses_an_owner_listing_status(
+    db_session, sample_organization
+) -> None:
+    from app.exceptions import ValidationError
+
+    sample_organization.status = "operational"
+    sample_organization.status_source = "owner"
+    row = _queue(
+        db_session,
+        entity_type="organization",
+        entity_id=sample_organization.id,
+        org_id=sample_organization.id,
+        field="status",
+        base_value="operational",
+        current_value="operational",
+        proposed_value="hidden",
+    )
+    with pytest.raises(ValidationError, match="owner listing status"):
+        accept_proposal(db_session, row.id, "admin-sub")
+    db_session.refresh(sample_organization)
+    db_session.refresh(row)
+    assert sample_organization.status == "operational"
+    assert row.status == "pending"
+
+
+def test_accept_phone_keeps_the_country_code(db_session, sample_organization) -> None:
+    sample_organization.phone_country_code = "HK"
+    sample_organization.phone_number = "21234567"
+    row = _queue(
+        db_session,
+        entity_type="organization",
+        entity_id=sample_organization.id,
+        org_id=sample_organization.id,
+        field="phone_number",
+        base_value="21234567",
+        current_value="21234567",
+        proposed_value="29876543",
+    )
+    accept_proposal(db_session, row.id, "admin-sub")
+    db_session.refresh(sample_organization)
+    assert sample_organization.phone_number == "29876543"
+    assert sample_organization.phone_country_code == "HK"
+
+
+def test_accept_category_name_sets_the_category(
+    db_session, sample_activity, sample_activity_category
+) -> None:
+    from app.db.models import ActivityCategory
+
+    other = ActivityCategory(name=f"Other Sport {uuid4()}", display_order=1)
+    db_session.add(other)
+    db_session.flush()
+    row = _queue(
+        db_session,
+        entity_type="activity",
+        entity_id=sample_activity.id,
+        org_id=sample_activity.org_id,
+        field="source_category_name",
+        base_value=sample_activity_category.name,
+        current_value=sample_activity_category.name,
+        proposed_value=other.name,
+    )
+    accept_proposal(db_session, row.id, "admin-sub")
+    db_session.refresh(sample_activity)
+    assert sample_activity.category_id == other.id
+    assert sample_activity.source_category_name == other.name
+
+
+def test_accept_pricing_amount(db_session, sample_pricing) -> None:
+    from decimal import Decimal
+
+    row = _queue(
+        db_session,
+        entity_type="pricing",
+        entity_id=sample_pricing.id,
+        org_id=sample_pricing.activity.org_id,
+        field="amount",
+        base_value="150.00",
+        current_value="150.00",
+        proposed_value="200.00",
+    )
+    accept_proposal(db_session, row.id, "admin-sub")
+    db_session.refresh(sample_pricing)
+    assert sample_pricing.amount == Decimal("200.00")
+
+
+def test_accept_schedule_entries(db_session, sample_activity, sample_location) -> None:
+    from app.db.models import ActivitySchedule, ScheduleType
+
+    schedule = ActivitySchedule(
+        activity_id=sample_activity.id,
+        location_id=sample_location.id,
+        schedule_type=ScheduleType.WEEKLY,
+        languages=["en"],
+    )
+    db_session.add(schedule)
+    db_session.flush()
+    row = _queue(
+        db_session,
+        entity_type="schedule",
+        entity_id=schedule.id,
+        org_id=sample_activity.org_id,
+        field="weekly_entries",
+        base_value=[],
+        current_value=[],
+        proposed_value=[
+            {
+                "day_of_week_utc": 1,
+                "start_minutes_utc": 540,
+                "end_minutes_utc": 600,
+            }
+        ],
+    )
+    accept_proposal(db_session, row.id, "admin-sub")
+    db_session.refresh(schedule)
+    assert len(schedule.entries) == 1
+    assert schedule.entries[0].start_minutes_utc == 540
+
+
+def test_bad_cursor_is_rejected(db_session) -> None:
+    from app.exceptions import ValidationError
+
+    with pytest.raises(ValidationError, match="cursor"):
+        list_pending(db_session, cursor="not-a-cursor")
+
+
+def test_accept_all_requires_a_scope(db_session) -> None:
+    from app.exceptions import ValidationError
+
+    with pytest.raises(ValidationError, match="org_id or import_job_id"):
+        accept_all(db_session, "admin-sub")
+
+
+def test_handler_lists_and_dismisses(test_engine, monkeypatch) -> None:
+    import json
+
+    from app.api.admin_import_changes import handle_import_changes
+
+    monkeypatch.setattr("app.api.admin_import_changes.get_engine", lambda: test_engine)
+    with Session(test_engine) as session:
+        org = Organization(
+            name=f"Handler Org {uuid4()}",
+            description="Original",
+            manager_id="00000000-0000-0000-0000-000000000086",
+        )
+        session.add(org)
+        session.flush()
+        row = ImportChangeProposal(
+            entity_type="organization",
+            entity_id=org.id,
+            org_id=org.id,
+            field="description",
+            base_value="Original",
+            current_value="Admin",
+            proposed_value="From file",
+            status="pending",
+        )
+        session.add(row)
+        session.commit()
+        org_id = str(org.id)
+        proposal_id = str(row.id)
+    event = {
+        "requestContext": {"authorizer": {"groups": "admin", "userSub": "admin-sub"}},
+        "queryStringParameters": {"org_id": org_id},
+    }
+    listed = handle_import_changes(event, "GET", None, None)
+    body = json.loads(listed["body"])
+    assert listed["statusCode"] == 200
+    assert body["items"][0]["field"] == "description"
+    dismissed = handle_import_changes(event, "POST", proposal_id, "dismiss")
+    assert dismissed["statusCode"] == 200
+    with Session(test_engine) as session:
+        found = session.get(ImportChangeProposal, proposal_id)
+        assert found is not None
+        assert found.status == "dismissed"
+
+
+def test_owner_status_is_not_queued(test_engine) -> None:
+    name = f"Owner Status {uuid4()}"
+    manager_id = "00000000-0000-0000-0000-000000000087"
+    with Session(test_engine) as session:
+        org = Organization(
+            name=name,
+            description="Original",
+            manager_id=manager_id,
+            status="operational",
+            status_source="owner",
+        )
+        session.add(org)
+        session.flush()
+        _remember(session, org)
+        session.commit()
+        org_id = org.id
+    with Session(test_engine) as session:
+        _summary, results = process_import_payload(
+            session,
+            _file(name, manager_id, status="hidden"),
+            [],
+            allow_org_updates=True,
+        )
+        assert results[0]["status"] == "unchanged"
+        pending = session.scalars(
+            select(ImportChangeProposal).where(ImportChangeProposal.org_id == org_id)
+        ).all()
+        assert pending == []
+        found = session.get(Organization, org_id)
+        assert found is not None
+        assert found.status == "operational"
+        assert found.status_source == "owner"

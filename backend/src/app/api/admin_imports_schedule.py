@@ -20,6 +20,7 @@ from app.api.admin_validators import _parse_languages
 from app.db.models import Activity, ActivitySchedule, Location
 from app.db.repositories import ActivityScheduleRepository
 from app.exceptions import ValidationError
+from app.services.catalog_version_payload import schedule_payload
 
 
 def upsert_schedule(
@@ -88,11 +89,6 @@ def upsert_schedule(
         "schedule",
         created.id,
         activity.org_id,
-        {
-            "languages": languages,
-            "weekly_entries": entries,
-            "location_address": location.address,
-        },
-        {"languages", "weekly_entries", "location_address"},
+        schedule_payload(created, location),
     )
     return created, "created"

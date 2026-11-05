@@ -206,7 +206,9 @@ def test_propose_mode_queues_a_clean_change(test_engine) -> None:
         found = session.get(Organization, org_id)
         assert found is not None
         assert found.description == "Original"
-        pending = session.scalars(select(ImportChangeProposal)).all()
+        pending = session.scalars(
+            select(ImportChangeProposal).where(ImportChangeProposal.org_id == org_id)
+        ).all()
         assert len(pending) == 1
         assert pending[0].field == "description"
 

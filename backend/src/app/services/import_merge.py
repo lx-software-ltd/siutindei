@@ -158,6 +158,17 @@ def same_json(left: Any, right: Any) -> bool:
     return jsonable(left) == jsonable(right)
 
 
+def drop_fields(plan: RowPlan, fields: set[str]) -> RowPlan:
+    """Treat named fields as unchanged and rebuild the row status."""
+    kept = [
+        FieldChange(change.field, "keep", change.base, change.current, change.proposed)
+        if change.field in fields
+        else change
+        for change in plan.changes
+    ]
+    return _plan(kept)
+
+
 def _plan(changes: list[FieldChange]) -> RowPlan:
     applied = tuple(change.field for change in changes if change.action == "apply")
     proposed = tuple(change for change in changes if change.action == "proposal")

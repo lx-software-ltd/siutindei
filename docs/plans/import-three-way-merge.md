@@ -215,7 +215,7 @@ Green, docs and API:
 - `tests/test_import_change_proposals.py`: pending row replaced by a
   newer proposed value; dismissed value does not return while the
   source still says it; accept writes one admin version and marks
-  `applied`; accept-all is scoped to one organization; a proposal
+  `applied`; accept-all requires an organization or an import job; a proposal
   whose entity was deleted is dismissed on read.
 - `tests/test_import_versions.py` and `tests/test_admin_imports.py`
   updated: `test_changed_source_updates_and_warns_when_admin_edited`

@@ -23,9 +23,16 @@ from app.db.repositories.import_baseline import (
     save_baseline,
     save_proposals,
 )
+from app.db.repositories.import_change_apply import write_accepted_field
 from app.exceptions import NotFoundError, ValidationError
 from app.services.catalog_version_shape import _snapshot_shape_keys, payload_differs
-from app.services.import_merge import RowPlan, decide_fields, merge_mode, next_payload
+from app.services.import_merge import (
+    RowPlan,
+    decide_fields,
+    drop_fields,
+    merge_mode,
+    next_payload,
+)
 from app.services.import_settings import load_import_settings
 
 
@@ -103,6 +110,16 @@ def plan_live_row(
             mode=mode,
             only=only,
         )
+        if entity_type == "organization" and current.get("status_source") == "owner":
+            if any(
+                change.field == "status" and change.action != "keep"
+                for change in plan.changes
+            ):
+                _warn(
+                    warnings,
+                    "owner listing status preserved; importer status ignored",
+                )
+            plan = drop_fields(plan, {"status"})
         if not allow_updates and plan.status != "unchanged":
             plan = RowPlan(status="skipped", apply_fields=frozenset())
         else:
@@ -124,7 +141,7 @@ def plan_live_row(
         org_id,
         incoming,
         present,
-        stored if stored is not None else _snapshot_of(forced_base, version1),
+        _baseline_previous(stored, forced_base, version1, current),
         source,
     )
     return plan
@@ -227,12 +244,12 @@ def accept_proposal(
     """Write one field through the admin update path and mark it applied."""
     row = session.get(ImportChangeProposal, proposal_id)
     if row is None or row.status != "pending":
-        raise NotFoundError("Import change not found")
+        raise NotFoundError("Import change", str(proposal_id))
     entity = _load_entity(session, row.entity_type, row.entity_id)
     if entity is None:
         _mark(row, "dismissed", actor)
-        raise NotFoundError("Import change not found")
-    _write_field(session, row, entity)
+        raise NotFoundError("Import change", str(proposal_id))
+    write_accepted_field(session, row, entity)
     _mark(row, "applied", actor)
     return row
 
@@ -243,7 +260,7 @@ def dismiss_proposal(
     """Keep the catalog value and remember that this source value was refused."""
     row = session.get(ImportChangeProposal, proposal_id)
     if row is None or row.status != "pending":
-        raise NotFoundError("Import change not found")
+        raise NotFoundError("Import change", str(proposal_id))
     _mark(row, "dismissed", actor)
     return row
 
@@ -256,6 +273,11 @@ def accept_all(
     import_job_id: Any = None,
 ) -> int:
     """Accept every pending proposal for one organization or one import job."""
+    if org_id is None and import_job_id is None:
+        raise ValidationError(
+            "org_id or import_job_id is required",
+            field="org_id",
+        )
     stmt = select(ImportChangeProposal).where(ImportChangeProposal.status == "pending")
     if org_id is not None:
         stmt = stmt.where(ImportChangeProposal.org_id == org_id)
@@ -268,7 +290,7 @@ def accept_all(
         if entity is None:
             _mark(row, "dismissed", actor)
             continue
-        _write_field(session, row, entity)
+        write_accepted_field(session, row, entity)
         _mark(row, "applied", actor)
         applied += 1
     return applied
@@ -332,6 +354,23 @@ def _base_missing(
     return stored is None and forced_base is None and version1 is None
 
 
+def _baseline_previous(
+    stored: dict[str, Any] | None,
+    forced_base: dict[str, Any] | None,
+    version1: Any,
+    current: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Previous source shape. A merge snapshot is not this row's base."""
+    if stored is not None:
+        return stored
+    own = _snapshot_of(None, version1)
+    if own is not None:
+        return own
+    if forced_base is not None:
+        return current
+    return None
+
+
 def _snapshot_of(
     forced_base: dict[str, Any] | None, version1: Any
 ) -> dict[str, Any] | None:
@@ -385,41 +424,6 @@ def _load_entity(session: Session, entity_type: str, entity_id: Any) -> Any:
     if model is None:
         return None
     return session.get(model, entity_id)
-
-
-def _write_field(session: Session, row: ImportChangeProposal, entity: Any) -> None:
-    from app.api.admin_resource_activity import _update_activity
-    from app.api.admin_resource_location import _update_location
-    from app.api.admin_resource_organization import _update_organization
-    from app.api.admin_resource_pricing import _update_pricing
-    from app.api.admin_resource_schedule import _update_schedule
-    from app.db.repositories import (
-        ActivityPricingRepository,
-        ActivityRepository,
-        ActivityScheduleRepository,
-        LocationRepository,
-        OrganizationRepository,
-    )
-
-    body = {row.field: row.proposed_value}
-    if row.entity_type == "organization":
-        updated = _update_organization(OrganizationRepository(session), entity, body)
-        OrganizationRepository(session).update(updated)
-        return
-    if row.entity_type == "location":
-        updated = _update_location(LocationRepository(session), entity, body)
-        LocationRepository(session).update(updated)
-        return
-    if row.entity_type == "activity":
-        updated = _update_activity(ActivityRepository(session), entity, body)
-        ActivityRepository(session).update(updated)
-        return
-    if row.entity_type == "pricing":
-        updated = _update_pricing(ActivityPricingRepository(session), entity, body)
-        ActivityPricingRepository(session).update(updated)
-        return
-    updated = _update_schedule(ActivityScheduleRepository(session), entity, body)
-    ActivityScheduleRepository(session).update(updated)
 
 
 def _mark(row: ImportChangeProposal, status: str, actor: str | None) -> None:

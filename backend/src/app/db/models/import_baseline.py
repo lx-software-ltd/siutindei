@@ -48,6 +48,16 @@ class ImportBaseline(Base):
 
     __table_args__ = (
         CheckConstraint(_ENTITY, name="import_baselines_entity_type_check"),
+        Index(
+            "import_baselines_org_name_idx",
+            "org_id",
+            text("lower(trim(payload ->> 'name'))"),
+        ),
+        Index(
+            "import_baselines_org_address_idx",
+            "org_id",
+            text("lower(trim(payload ->> 'address'))"),
+        ),
     )
 
 
@@ -100,4 +110,12 @@ class ImportChangeProposal(Base):
             name="import_change_proposals_status_check",
         ),
         Index("import_change_proposals_org_idx", "org_id", "status"),
+        Index(
+            "import_change_proposals_pending_idx",
+            "entity_type",
+            "entity_id",
+            "field",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+        ),
     )

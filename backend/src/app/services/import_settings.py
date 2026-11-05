@@ -33,11 +33,16 @@ _REQUIRED = (
 
 def load_import_settings(session: Session) -> ImportSettings:
     """Return the singleton. A missing row uses today's import behaviour."""
+    info = getattr(session, "info", None)
+    if isinstance(info, dict) and "import_settings" in info:
+        return info["import_settings"]
     getter = getattr(session, "get", None)
     if getter is None:
         return _transient("capture")
     row = getter(ImportSettings, 1)
     if row is not None:
+        if isinstance(info, dict):
+            info["import_settings"] = row
         return row
     return _transient(_legacy_unknown_categories(session))
 
@@ -152,6 +157,9 @@ def update_import_settings(
     )
     current.updated_by = updated_by
     current.updated_at = datetime.now(UTC)
+    info = getattr(session, "info", None)
+    if isinstance(info, dict):
+        info["import_settings"] = current
     session.flush()
     return current
 

@@ -40,7 +40,10 @@ def handle_import_changes(
     resource_id: str | None,
     sub_resource: str | None,
 ) -> dict[str, Any]:
-    """Dispatch the import-change queue."""
+    """Dispatch the import-change queue.
+
+    A list commits because it dismisses a proposal whose record is gone.
+    """
     if method == "GET" and resource_id is None and sub_resource is None:
         return _list(event)
     if method == "POST" and resource_id == "accept-all" and sub_resource is None:
@@ -107,7 +110,7 @@ def _decide(event: Mapping[str, Any], resource_id: str, action: Any) -> dict[str
 
 
 def _item(session: Session, row: ImportChangeProposal) -> dict[str, Any]:
-    actor = _current_actor(session, row.entity_type, row.entity_id)
+    actor = _current_actor(session, row.entity_type, row.entity_id, row.field)
     return {
         "id": str(row.id),
         "entity_type": row.entity_type,
@@ -139,16 +142,16 @@ def _org_name(session: Session, org_id: Any) -> str | None:
 def _record_name(session: Session, row: ImportChangeProposal) -> str:
     entity = _entity(session, row.entity_type, row.entity_id)
     if isinstance(entity, Organization):
-        return entity.name
+        return entity.name or row.entity_type
     if isinstance(entity, Activity):
-        return entity.name
+        return entity.name or row.entity_type
     if isinstance(entity, Location):
-        return entity.address
+        return entity.address or row.entity_type
     if isinstance(entity, ActivityPricing):
         kind = entity.pricing_type
         return kind.value if hasattr(kind, "value") else str(kind)
     if isinstance(entity, ActivitySchedule):
-        return ", ".join(entity.languages or [])
+        return ", ".join(entity.languages or []) or row.entity_type
     return row.entity_type
 
 
@@ -166,21 +169,58 @@ def _entity(session: Session, entity_type: str, entity_id: Any) -> Any:
 
 
 def _current_actor(
-    session: Session, entity_type: str, entity_id: Any
+    session: Session, entity_type: str, entity_id: Any, field: str
 ) -> tuple[str | None, str | None]:
-    version = session.scalars(
-        select(CatalogVersion)
-        .where(
-            CatalogVersion.entity_type == entity_type,
-            CatalogVersion.entity_id == entity_id,
-            CatalogVersion.version > 1,
-        )
-        .order_by(CatalogVersion.version.desc())
-    ).first()
-    if version is None:
+    """Actor of the version that last changed this field."""
+    versions = list(
+        session.scalars(
+            select(CatalogVersion)
+            .where(
+                CatalogVersion.entity_type == entity_type,
+                CatalogVersion.entity_id == entity_id,
+            )
+            .order_by(CatalogVersion.version.desc())
+        ).all()
+    )
+    chosen = _version_for_field(versions, field)
+    if chosen is None or chosen.version <= 1:
         return None, None
-    job = None if version.import_job_id is None else str(version.import_job_id)
-    return version.user_id, job
+    job = None if chosen.import_job_id is None else str(chosen.import_job_id)
+    return chosen.user_id, job
+
+
+def _version_for_field(
+    versions: list[CatalogVersion], field: str
+) -> CatalogVersion | None:
+    if not any(_snap_has(version.snapshot, field) for version in versions):
+        return next((version for version in versions if version.version > 1), None)
+    for index, version in enumerate(versions):
+        older = versions[index + 1] if index + 1 < len(versions) else None
+        if older is None or _snap_field(version.snapshot, field) != _snap_field(
+            older.snapshot, field
+        ):
+            return version if version.version > 1 else None
+    return None
+
+
+def _snap_has(snapshot: Any, field: str) -> bool:
+    if not isinstance(snapshot, dict):
+        return False
+    if field == "weekly_entries":
+        return "entries" in snapshot or "weekly_entries" in snapshot
+    if field in {"age_min", "age_max"}:
+        return field in snapshot or "age_range" in snapshot
+    return field in snapshot
+
+
+def _snap_field(snapshot: Any, field: str) -> Any:
+    if not isinstance(snapshot, dict):
+        return None
+    if field == "weekly_entries":
+        return snapshot.get("entries", snapshot.get("weekly_entries"))
+    if field in {"age_min", "age_max"}:
+        return snapshot.get(field, snapshot.get("age_range"))
+    return snapshot.get(field)
 
 
 def _pending_total(session: Session) -> int:

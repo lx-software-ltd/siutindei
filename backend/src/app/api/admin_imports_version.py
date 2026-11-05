@@ -51,17 +51,39 @@ def restrict_import_body(body: dict[str, Any], plan: RowPlan) -> None:
             body.pop(key, None)
 
 
+def stage_source_category(body: dict[str, Any]) -> None:
+    """Show the file label to the merge before category resolution."""
+    name = body.get("category_name")
+    if isinstance(name, str) and name.strip():
+        body["source_category_name"] = name.strip()
+
+
+def keep_applied_category(body: dict[str, Any], plan: RowPlan) -> str | None:
+    """Keep a resolved category id when the source label is applied."""
+    capture_name = body.pop("_capture_category_name", None)
+    category_id = body.pop("category_id", None)
+    if (
+        plan.apply_fields is not None
+        and "source_category_name" not in plan.apply_fields
+    ):
+        capture_name = None
+        category_id = None
+    restrict_import_body(body, plan)
+    if category_id is not None:
+        body["category_id"] = category_id
+    return capture_name
+
+
 def remember_created(
     session: Any,
     entity_type: str,
     entity_id: Any,
     org_id: Any,
-    incoming: dict[str, Any],
-    present: set[str],
+    payload: dict[str, Any],
     *,
     source: str | None = None,
 ) -> None:
-    """Store the file shape for a row this import created."""
+    """Store the created row, including defaults the file left out."""
     from app.db.repositories.import_baseline import save_baseline
     from app.services.import_merge import next_payload
 
@@ -70,7 +92,7 @@ def remember_created(
         entity_type,
         entity_id,
         org_id,
-        next_payload(entity_type, None, incoming, present),
+        next_payload(entity_type, payload, payload, set(payload)),
         source=source,
     )
 

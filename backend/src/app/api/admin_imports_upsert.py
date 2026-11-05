@@ -37,10 +37,12 @@ from app.api.admin_imports_venues import link_activity_to_venue
 from app.api.admin_imports_version import (
     activity_terminal,
     hold_existing,
+    keep_applied_category,
     location_terminal,
     pricing_terminal,
     remember_created,
     restrict_import_body,
+    stage_source_category,
 )
 from app.api.admin_resource_activity import _create_activity, _update_activity
 from app.api.admin_resource_location import _create_location, _update_location
@@ -62,6 +64,12 @@ from app.db.repositories import (
 )
 from app.exceptions import ValidationError
 from app.services.catalog_version_match import apply_org_gate
+from app.services.catalog_version_payload import (
+    activity_payload,
+    location_payload,
+    organization_payload,
+    pricing_payload,
+)
 from app.services.category_suggestions.capture import record_import_capture
 from app.services.import_names import (
     activity_name_translations,
@@ -197,8 +205,7 @@ def upsert_organization(
         "organization",
         created.id,
         created.id,
-        {**body, "name": created.name},
-        set(body) | {"name"},
+        organization_payload(created),
         source=str(raw_org.get("source") or "") or None,
     )
     return created, "created"
@@ -310,8 +317,7 @@ def upsert_location(
         "location",
         created.id,
         org.id,
-        {**body, "address": address_value},
-        set(body) | {"address"},
+        location_payload(created),
     )
     return created, "created"
 
@@ -370,6 +376,7 @@ def upsert_activity(
                 field="name",
             ) from exc
 
+    stage_source_category(body)
     plan = activity_terminal(
         session,
         org,
@@ -384,15 +391,9 @@ def upsert_activity(
     if held:
         return held
     resolve_activity_category_fields(session, body)
-    if (
-        plan.apply_fields is not None
-        and "source_category_name" not in plan.apply_fields
-    ):
-        body.pop("category_id", None)
-    restrict_import_body(body, plan)
+    capture_name = keep_applied_category(body, plan)
     if existing is not None:
         _keep_age_pair(body, existing)
-    capture_name = body.pop("_capture_category_name", None)
 
     if existing:
         updated = _update_activity(repo, existing, body)
@@ -419,8 +420,7 @@ def upsert_activity(
         "activity",
         created.id,
         org.id,
-        {**body, "name": created.name},
-        set(body) | {"name"},
+        activity_payload(created),
     )
     return created, "created"
 
@@ -490,7 +490,6 @@ def upsert_pricing(
         "pricing",
         created.id,
         activity.org_id,
-        {**body, "location_address": location.address},
-        set(body) | {"location_address"},
+        pricing_payload(created, location),
     )
     return created, "created"

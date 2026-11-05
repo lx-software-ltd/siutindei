@@ -197,3 +197,18 @@ def test_dry_run_leaves_no_baseline(test_engine) -> None:
             if (row.payload or {}).get("name") == name
         ]
         assert named == []
+
+
+def test_reimport_of_a_created_row_has_no_kept_later_warning(test_engine) -> None:
+    name = f"Created Twice {uuid4()}"
+    manager_id = "00000000-0000-0000-0000-000000000075"
+    payload = _file(name, manager_id)
+    with Session(test_engine) as session:
+        process_import_payload(session, payload, [], allow_org_updates=True)
+        session.commit()
+    with Session(test_engine) as session:
+        _summary, results = process_import_payload(
+            session, payload, [], allow_org_updates=True
+        )
+    assert results[0]["status"] == "unchanged"
+    assert results[0]["warnings"] == []

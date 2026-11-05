@@ -19,6 +19,7 @@ from app.db.models import (
     Location,
     Organization,
 )
+from app.exceptions import ValidationError
 from app.services.import_merge import FieldChange, jsonable, same_json
 
 
@@ -167,8 +168,7 @@ def list_pending(
     if import_job_id is not None:
         stmt = stmt.where(ImportChangeProposal.import_job_id == import_job_id)
     if cursor:
-        stamp, ident = cursor.split("|", 1)
-        created = datetime.fromisoformat(stamp)
+        created, ident = _cursor_bound(cursor)
         stmt = stmt.where(
             or_(
                 ImportChangeProposal.created_at < created,
@@ -267,6 +267,19 @@ def _entity_exists(session: Session, entity_type: str, entity_id: Any) -> bool:
     if model is None:
         return False
     return session.get(model, entity_id) is not None
+
+
+def _cursor_bound(cursor: str) -> tuple[datetime, UUID]:
+    """Parse ``created_at|id``. A bad cursor is a client error."""
+    stamp, separator, ident = cursor.partition("|")
+    parsed = parse_uuid(ident) if separator else None
+    try:
+        created = datetime.fromisoformat(stamp) if separator else None
+    except ValueError:
+        created = None
+    if created is None or parsed is None:
+        raise ValidationError("cursor is invalid", field="cursor")
+    return created, parsed
 
 
 def parse_uuid(value: Any) -> UUID | None:

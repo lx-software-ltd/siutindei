@@ -360,6 +360,11 @@ export function ImportsPanel() {
                     />
                     Skip records that already exist
                   </label>
+                  <p className='text-sm text-ink-700'>
+                    A skipped row still records what the file said. The next
+                    import that updates existing rows treats that file as the
+                    source.
+                  </p>
                 </AdminField>
               </AdminFieldGrid>
           </AdminInputCard>
