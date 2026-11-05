@@ -3,7 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { getAdminQueryClient } from '../../lib/admin-query-client';
+import { adminQueryKeys } from '../../lib/admin-query-keys';
 import { getResourceApi, type ApiMode } from '../../lib/api-client-admin';
+import { importChangeCount } from '../../lib/api-client-import-changes';
 import type { Organization } from '../../types/admin';
 import { StatusBadge } from '../ui/status-badge';
 
@@ -32,6 +34,28 @@ export function OrganizationStatusBadges({
         </span>
       ) : null}
     </span>
+  );
+}
+
+function ImportChangeCount({ orgId }: { orgId: string }) {
+  const query = useQuery(
+    {
+      queryKey: adminQueryKeys.importChanges(orgId),
+      queryFn: () => importChangeCount(orgId),
+    },
+    getAdminQueryClient()
+  );
+  const count = query.data ?? 0;
+  if (!count) {
+    return null;
+  }
+  return (
+    <a
+      className='rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800'
+      href={`/admin/dashboard?section=data-quality&tab=import-changes&organization=${encodeURIComponent(orgId)}`}
+    >
+      {`${count} import ${count === 1 ? 'change' : 'changes'}`}
+    </a>
   );
 }
 
@@ -70,6 +94,7 @@ export function OrganizationWorkspaceTitle({
     <div className='flex flex-wrap items-center gap-2'>
       <h2 className='text-lg font-semibold text-ink-900'>{name}</h2>
       {shown ? <OrganizationStatusBadges organization={shown} /> : null}
+      {mode === 'admin' && shown ? <ImportChangeCount orgId={shown.id} /> : null}
     </div>
   );
 }

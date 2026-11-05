@@ -54,6 +54,7 @@ const RESULT_STATUS_TONE: Record<string, StatusBadgeTone> = {
   created: 'green',
   updated: 'blue',
   unchanged: 'slate',
+  proposed: 'amber',
   failed: 'red',
   skipped: 'yellow',
 };

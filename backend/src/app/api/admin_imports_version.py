@@ -14,6 +14,7 @@ from app.services.catalog_version_payload import (
     pricing_payload,
     schedule_payload,
 )
+from app.services.import_merge import RowPlan
 
 _ACTIVITY_KEYS = (
     "name",
@@ -30,15 +31,48 @@ _ACTIVITY_KEYS = (
 
 def hold_existing(
     existing: Any,
-    terminal: str | None,
+    plan: RowPlan,
     allow_updates: bool,
 ) -> tuple[Any, str] | None:
     """Return a finished upsert result when the row must not be written."""
-    if terminal:
-        return existing, terminal
+    if plan.status:
+        return existing, plan.status
     if existing is not None and not allow_updates:
         return existing, "skipped"
     return None
+
+
+def restrict_import_body(body: dict[str, Any], plan: RowPlan) -> None:
+    """Keep only the fields the merge plan allows the file to write."""
+    if plan.apply_fields is None:
+        return
+    for key in list(body):
+        if key not in plan.apply_fields:
+            body.pop(key, None)
+
+
+def remember_created(
+    session: Any,
+    entity_type: str,
+    entity_id: Any,
+    org_id: Any,
+    incoming: dict[str, Any],
+    present: set[str],
+    *,
+    source: str | None = None,
+) -> None:
+    """Store the file shape for a row this import created."""
+    from app.db.repositories.import_baseline import save_baseline
+    from app.services.import_merge import next_payload
+
+    save_baseline(
+        session,
+        entity_type,
+        entity_id,
+        org_id,
+        next_payload(entity_type, None, incoming, present),
+        source=source,
+    )
 
 
 def location_terminal(
@@ -49,7 +83,7 @@ def location_terminal(
     address_value: str,
     allow_updates: bool,
     warnings: list[str] | None,
-) -> str | None:
+) -> RowPlan:
     incoming = {**body, "address": address_value}
     return apply_child_gate(
         session,
@@ -77,7 +111,7 @@ def activity_terminal(
     name: str,
     allow_updates: bool,
     warnings: list[str] | None,
-) -> str | None:
+) -> RowPlan:
     return apply_child_gate(
         session,
         entity_type="activity",
@@ -99,7 +133,7 @@ def pricing_terminal(
     existing: Any,
     body: dict[str, Any],
     allow_updates: bool,
-) -> str | None:
+) -> RowPlan:
     incoming = {
         **body,
         "location_address": location.address,
@@ -128,7 +162,7 @@ def schedule_terminal(
     entries: list[dict[str, int]],
     allow_updates: bool,
     warnings: list[str],
-) -> str | None:
+) -> RowPlan:
     incoming = {
         "languages": languages,
         "weekly_entries": entries,

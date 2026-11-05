@@ -121,9 +121,11 @@ their primary responsibilities.
   a catalog `website` is stored on the organization;
   re-imports update description/hours/price; `closed_permanently`
   updates an existing match only;   `GET /v1/admin/imports/{job_id}`
-  returns the stored result; `GET` and `PUT /v1/admin/import-settings`
-  store how an import matches, writes names and unknown categories,
-  and which checks run afterwards; `POST /v1/admin/data-quality/runs`
+  returns the stored result;   `GET` and `PUT /v1/admin/import-settings`
+  store how an import matches, merges existing rows, writes names and
+  unknown categories, and which checks run afterwards;
+  `GET /v1/admin/import-changes` lists fields waiting on an admin, and
+  `POST` accept, dismiss, and accept-all write or keep one field; `POST /v1/admin/data-quality/runs`
   starts those checks on demand and the category-suggestion queue
   runs them; `GET /v1/admin/imports` includes a
   1-hour presigned download URL for each file under

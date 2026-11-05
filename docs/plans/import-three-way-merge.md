@@ -1,6 +1,6 @@
 # Plan: Three-way merge for catalog imports
 
-**Status**: Draft, waits for approval. Revision `0059` is red.
+**Status**: Implemented on this branch. Revision `0059` is red.
 **Zone**: red (one Alembic revision), then yellow for backend and admin
 
 ## Problem

@@ -16,6 +16,7 @@ export const adminTabLabel = {
   translations: 'Translations',
   deleted: 'Deleted',
   runs: 'Runs',
+  importChanges: 'Import changes',
 } as const;
 
 /**

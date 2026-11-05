@@ -126,13 +126,27 @@ stored name is the cleaned form of the name in the file, using the
 file's name translations. A skipped activity is not joined to the
 imported venue. A new venue on a skipped organization is still created.
 
-Imports · Settings stores skip-deleted, name cleanup, unknown
-categories, and whether duplicates, locations, and categories run
-after a live import and after a website-enrichment apply. The row is
-`import_settings`. PUT replaces every field and locks the row. A
-missing row keeps today's import behaviour. Post-import checks use
+An import decides each field the file sends. The base is what the
+source last said (`import_baselines`), or version 1 when no baseline
+exists yet. A source change on a field nobody edited is written. A
+field both sides changed stays as the admin left it and waits in
+Import changes. A pending proposal does not change the public
+listing. `existing_rows` is `merge` (the default), `apply` (the file
+wins for the whole row), or `propose` (every change waits). An
+approved organization uses `approved_organizations`, which defaults
+to `propose`. A new activity under an approved organization is still
+created. `allow_updates` false still skips an existing row and writes
+no proposal. Accept writes one field through the admin update path.
+
+Imports · Settings stores skip-deleted, name cleanup, the two merge
+choices, unknown categories, and whether duplicates, locations, and
+categories run after a live import and after a website-enrichment
+apply. The row is `import_settings`. PUT replaces every field and
+locks the row. A missing row uses merge for existing rows, propose
+for approved organizations, and the legacy flag for unknown
+categories. Post-import checks use
 the queue and skip an unchanged fingerprint. An enrichment apply uses
-those same three flags. Duplicates cover that organization. Locations
+the duplicates, locations, and categories flags. Duplicates cover that organization. Locations
 runs only when the apply saved a venue or an activity. Categories runs
 only for activities that apply created. The trigger is `enrichment`.
 Names stay on the import write path. A dismiss, a crawl, and an apply

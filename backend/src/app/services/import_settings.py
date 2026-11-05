@@ -16,6 +16,8 @@ _UNKNOWN = frozenset({"capture", "fail"})
 _DUPLICATES = frozenset({"off", "report"})
 _LOCATIONS = frozenset({"off", "check"})
 _CATEGORIES = frozenset({"off", "check"})
+_EXISTING_ROWS = frozenset({"apply", "merge", "propose"})
+_APPROVED = frozenset({"merge", "propose"})
 _REQUIRED = (
     "updated_at",
     "skip_deleted_organizations",
@@ -24,6 +26,8 @@ _REQUIRED = (
     "duplicates",
     "locations",
     "categories",
+    "existing_rows",
+    "approved_organizations",
 )
 
 
@@ -47,6 +51,8 @@ def _transient(unknown_categories: str) -> ImportSettings:
         duplicates="off",
         locations="off",
         categories="off",
+        existing_rows="merge",
+        approved_organizations="propose",
         updated_at=datetime.now(UTC),
     )
 
@@ -70,6 +76,8 @@ def serialize_import_settings(row: ImportSettings) -> dict[str, Any]:
         "duplicates": row.duplicates,
         "locations": row.locations,
         "categories": row.categories,
+        "existing_rows": row.existing_rows,
+        "approved_organizations": row.approved_organizations,
         "updated_by": row.updated_by,
         "updated_at": _stamp(row.updated_at) if _is_persisted(row) else None,
     }
@@ -97,6 +105,8 @@ def update_import_settings(
             duplicates="off",
             locations="off",
             categories="off",
+            existing_rows="merge",
+            approved_organizations="propose",
         )
         session.add(current)
     elif not _same_stamp(current.updated_at, body.get("updated_at")):
@@ -129,6 +139,16 @@ def update_import_settings(
         body.get("categories"),
         _CATEGORIES,
         "categories",
+    )
+    current.existing_rows = _choice(
+        body.get("existing_rows"),
+        _EXISTING_ROWS,
+        "existing_rows",
+    )
+    current.approved_organizations = _choice(
+        body.get("approved_organizations"),
+        _APPROVED,
+        "approved_organizations",
     )
     current.updated_by = updated_by
     current.updated_at = datetime.now(UTC)

@@ -39,6 +39,8 @@ from app.api.admin_imports_version import (
     hold_existing,
     location_terminal,
     pricing_terminal,
+    remember_created,
+    restrict_import_body,
 )
 from app.api.admin_resource_activity import _create_activity, _update_activity
 from app.api.admin_resource_location import _create_location, _update_location
@@ -115,7 +117,7 @@ def upsert_organization(
         warnings,
     )
     requested_status = parse_org_status(raw_org.get("status"))
-    adopted, terminal = apply_org_gate(
+    adopted, plan = apply_org_gate(
         session,
         raw_org,
         body,
@@ -134,18 +136,22 @@ def upsert_organization(
         )
         if allow_updates:
             guard_import_organization_update(existing, body)
-    if terminal:
+    if plan.status:
         if existing is None:
             raise RuntimeError(
                 "catalog version gate returned a status without an organization"
             )
-        return existing, terminal
+        return existing, plan.status
 
     if existing:
         if not allow_updates:
             return existing, "skipped"
         guard_import_organization_update(existing, body)
-        if requested_status:
+        restrict_import_body(body, plan)
+        _keep_phone_pair(body, existing)
+        if requested_status and (
+            plan.apply_fields is None or "status" in plan.apply_fields
+        ):
             if existing.status_source == "owner":
                 if warnings is not None:
                     warnings.append(
@@ -186,7 +192,35 @@ def upsert_organization(
     repo.create(created)
     persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
+    remember_created(
+        session,
+        "organization",
+        created.id,
+        created.id,
+        {**body, "name": created.name},
+        set(body) | {"name"},
+        source=str(raw_org.get("source") or "") or None,
+    )
     return created, "created"
+
+
+def _keep_age_pair(body: dict[str, Any], existing: Activity) -> None:
+    """An age change still has to carry the other bound the validator needs."""
+    from app.db.age_bounds import inclusive_age_bounds
+
+    age_min, age_max = inclusive_age_bounds(existing.age_range)
+    if "age_min" in body and "age_max" not in body:
+        body["age_max"] = age_max
+    if "age_max" in body and "age_min" not in body:
+        body["age_min"] = age_min
+
+
+def _keep_phone_pair(body: dict[str, Any], existing: Organization) -> None:
+    """A phone change still has to carry the other half the validator needs."""
+    if "phone_number" in body and "phone_country_code" not in body:
+        body["phone_country_code"] = existing.phone_country_code
+    if "phone_country_code" in body and "phone_number" not in body:
+        body["phone_number"] = existing.phone_number
 
 
 def _find_import_location(
@@ -208,10 +242,15 @@ def _find_import_location(
                     "place_id already used by another organization; matching by address"
                 )
             raw_location.pop("place_id", None)
-    return repo.find_by_org_and_address_case_insensitive(
+    found = repo.find_by_org_and_address_case_insensitive(
         coerce_uuid(org.id),
         address_value,
     )
+    if found is not None:
+        return found
+    from app.db.repositories.import_change_proposal import find_location_baseline
+
+    return find_location_baseline(repo.session, org.id, address_value)
 
 
 def upsert_location(
@@ -239,22 +278,20 @@ def upsert_location(
     body = filter_fields(raw_location, ALLOWED_LOCATION_FIELDS)
     if raw_location.get("name") is not None or raw_location.get("address") is not None:
         body["address"] = address_value
-    held = hold_existing(
+    plan = location_terminal(
+        session,
+        org,
         existing,
-        location_terminal(
-            session,
-            org,
-            existing,
-            body,
-            address_value,
-            allow_updates,
-            warnings,
-        ),
+        body,
+        address_value,
         allow_updates,
+        warnings,
     )
+    held = hold_existing(existing, plan, allow_updates)
     if held:
         return held
     resolve_location_area_fields(session, body)
+    restrict_import_body(body, plan)
     if existing:
         updated = _update_location(repo, existing, body)
         repo.update(updated)
@@ -268,6 +305,14 @@ def upsert_location(
     repo.create(created)
     persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
+    remember_created(
+        session,
+        "location",
+        created.id,
+        org.id,
+        {**body, "address": address_value},
+        set(body) | {"address"},
+    )
     return created, "created"
 
 
@@ -302,6 +347,14 @@ def upsert_activity(
     if translations:
         body["name_translations"] = translations
     existing = prepare_imported_activity(session, repo, org, name, body, warnings)
+    if existing is None:
+        from app.db.repositories.import_change_proposal import find_activity_baseline
+
+        existing = find_activity_baseline(
+            session,
+            org.id,
+            {name, str(body.get("name") or name)},
+        )
     if existing is None and not allow_updates:
         try:
             existing = find_cleaned_activity(
@@ -317,23 +370,28 @@ def upsert_activity(
                 field="name",
             ) from exc
 
-    held = hold_existing(
+    plan = activity_terminal(
+        session,
+        org,
         existing,
-        activity_terminal(
-            session,
-            org,
-            existing,
-            raw_activity,
-            body,
-            name,
-            allow_updates,
-            warnings,
-        ),
+        raw_activity,
+        body,
+        name,
         allow_updates,
+        warnings,
     )
+    held = hold_existing(existing, plan, allow_updates)
     if held:
         return held
     resolve_activity_category_fields(session, body)
+    if (
+        plan.apply_fields is not None
+        and "source_category_name" not in plan.apply_fields
+    ):
+        body.pop("category_id", None)
+    restrict_import_body(body, plan)
+    if existing is not None:
+        _keep_age_pair(body, existing)
     capture_name = body.pop("_capture_category_name", None)
 
     if existing:
@@ -356,6 +414,14 @@ def upsert_activity(
     persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
     record_import_capture(session, created, org, capture_name, import_job_id, warnings)
+    remember_created(
+        session,
+        "activity",
+        created.id,
+        org.id,
+        {**body, "name": created.name},
+        set(body) | {"name"},
+    )
     return created, "created"
 
 
@@ -394,20 +460,18 @@ def upsert_pricing(
 
     body = filter_fields(raw_pricing, ALLOWED_PRICING_FIELDS)
     body["pricing_type"] = pricing_enum.value
-    held = hold_existing(
+    plan = pricing_terminal(
+        session,
+        activity,
+        location,
         existing,
-        pricing_terminal(
-            session,
-            activity,
-            location,
-            existing,
-            body,
-            allow_updates,
-        ),
+        body,
         allow_updates,
     )
+    held = hold_existing(existing, plan, allow_updates)
     if held:
         return held
+    restrict_import_body(body, plan)
     if existing:
         updated = _update_pricing(repo, existing, body)
         repo.update(updated)
@@ -421,4 +485,12 @@ def upsert_pricing(
     repo.create(created)
     persist_import_change(session, dry_run=dry_run)
     session.refresh(created)
+    remember_created(
+        session,
+        "pricing",
+        created.id,
+        activity.org_id,
+        {**body, "location_address": location.address},
+        set(body) | {"location_address"},
+    )
     return created, "created"

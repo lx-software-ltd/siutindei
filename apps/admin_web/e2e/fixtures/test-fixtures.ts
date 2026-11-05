@@ -2428,6 +2428,8 @@ export async function setupApiMocks(
         duplicates: 'off',
         locations: 'off',
         categories: 'off',
+        existing_rows: 'merge',
+        approved_organizations: 'propose',
         updated_at: '2026-10-14T00:00:00+00:00',
       }),
     });
@@ -2669,15 +2671,23 @@ export async function setupApiMocks(
       contentType: 'application/json',
       body: JSON.stringify({
         summary: {
-          organizations: { created: 1, updated: 0, failed: 0, skipped: 0 },
+          organizations: { created: 1, updated: 0, proposed: 1, failed: 0, skipped: 0 },
           locations: { created: 1, updated: 0, failed: 0, skipped: 0 },
           activities: { created: 1, updated: 0, failed: 0, skipped: 0 },
           pricing: { created: 1, updated: 0, failed: 0, skipped: 0 },
           schedules: { created: 1, updated: 0, failed: 0, skipped: 0 },
-          warnings: 0,
+          warnings: 1,
           errors: 0,
         },
-        results: [],
+        results: [
+          {
+            type: 'organizations',
+            key: 'Harbor Arts',
+            status: 'proposed',
+            warnings: ['Proposed: description'],
+            errors: [],
+          },
+        ],
         file_warnings: [],
       }),
     });

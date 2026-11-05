@@ -9,6 +9,15 @@ from sqlalchemy import or_, select, text, update
 from sqlalchemy.orm import Session
 
 from app.db.models import CatalogVersion, Organization, OrganizationMerge
+from app.db.repositories.import_change_proposal import (
+    adopt_baseline_organization as _adopt_baseline_org,
+)
+from app.db.repositories.import_change_proposal import (
+    plan_live_row as _live_plan,
+)
+from app.db.repositories.import_change_proposal import (
+    review_status_of as _review_of,
+)
 from app.exceptions import ValidationError
 from app.services.catalog_version_lookup import (
     _find_org_version1,
@@ -27,6 +36,7 @@ from app.services.catalog_version_shape import (
     file_matches_snapshot,
     payload_differs,
 )
+from app.services.import_merge import RowPlan
 from app.services.org_delete import (
     ORGANIZATION_DELETED,
     import_matches_deleted_organization,
@@ -144,24 +154,27 @@ def apply_org_gate(
     existing: Organization | None,
     allow_updates: bool,
     warnings: list[str] | None,
-) -> tuple[Organization | None, str | None]:
-    """Return a terminal status, or None when the caller should write."""
+) -> tuple[Organization | None, RowPlan]:
+    """Return a field plan. A terminal status means the caller writes nothing."""
     if existing is None:
         return _absent_organization(session, raw_org, body, allow_updates, warnings)
     incoming = {**body, "name": body.get("name") or raw_org.get("name")}
     if raw_org.get("status") not in (None, ""):
         incoming["status"] = raw_org.get("status")
-    status = _live_status(
+    plan = _live_plan(
         session,
         "organization",
+        existing.id,
         existing.id,
         incoming,
         _present(raw_org, body, "organization"),
         organization_payload(existing),
         allow_updates,
         warnings,
+        review_status=existing.review_status,
+        source=_text_or_none(raw_org.get("source")),
     )
-    return existing, status
+    return existing, plan
 
 
 def apply_child_gate(
@@ -176,26 +189,27 @@ def apply_child_gate(
     allow_updates: bool,
     warnings: list[str] | None,
     names: set[str] | None = None,
-) -> Any:
-    """Return the live row when the caller should continue, else a status.
-
-    A removed version-1 row raises ``ImportRowOutcome`` instead.
-    """
+) -> RowPlan:
+    """Return the field plan. A removed version-1 row raises instead."""
     if live is not None:
-        return _live_status(
+        review = _review_of(session, org_id)
+        return _live_plan(
             session,
             entity_type,
             live.id,
+            org_id,
             incoming,
             present,
             current or {},
             allow_updates,
             warnings,
+            review_status=review,
         )
     baseline = _find_removed(session, entity_type, org_id, incoming, names)
     if baseline is None:
-        return None
+        return RowPlan(status=None, apply_fields=None)
     _raise_removed(entity_type, incoming, baseline.snapshot or {}, present)
+    return RowPlan(status=None, apply_fields=None)
 
 
 def _absent_organization(
@@ -204,28 +218,43 @@ def _absent_organization(
     body: dict[str, Any],
     allow_updates: bool,
     warnings: list[str] | None,
-) -> tuple[Organization | None, str | None]:
+) -> tuple[Organization | None, RowPlan]:
     incoming = {**body, "name": body.get("name") or raw_org.get("name")}
     if raw_org.get("status") not in (None, ""):
         incoming["status"] = raw_org.get("status")
     present = _present(raw_org, body, "organization")
+    adopted = _adopt_baseline_org(session, raw_org, incoming)
+    if adopted is not None:
+        return adopted, _live_plan(
+            session,
+            "organization",
+            adopted.id,
+            adopted.id,
+            incoming,
+            present,
+            organization_payload(adopted),
+            allow_updates,
+            warnings,
+            review_status=adopted.review_status,
+            source=_text_or_none(raw_org.get("source")),
+        )
     baseline = _find_org_version1(session, raw_org, incoming)
     if baseline is not None:
         live = session.get(Organization, baseline.entity_id)
         if live is not None:
-            status = _status_for_snapshot(
+            return live, _live_plan(
                 session,
                 "organization",
                 live.id,
+                live.id,
                 incoming,
-                baseline.snapshot or {},
                 present,
                 organization_payload(live),
                 allow_updates,
                 warnings,
-                partial=False,
+                review_status=live.review_status,
+                source=_text_or_none(raw_org.get("source")),
             )
-            return live, status
         merge = session.scalars(
             select(OrganizationMerge).where(
                 OrganizationMerge.merged_org_id == baseline.entity_id,
@@ -235,19 +264,20 @@ def _absent_organization(
         if merge is not None and merge.survivor_org_id is not None:
             survivor = session.get(Organization, merge.survivor_org_id)
             if survivor is not None:
-                status = _status_for_snapshot(
+                return survivor, _live_plan(
                     session,
                     "organization",
                     survivor.id,
+                    survivor.id,
                     incoming,
-                    baseline.snapshot or {},
                     present,
                     organization_payload(survivor),
                     allow_updates,
                     warnings,
-                    partial=False,
+                    review_status=survivor.review_status,
+                    source=_text_or_none(raw_org.get("source")),
+                    forced_base=baseline.snapshot or {},
                 )
-                return survivor, status
         _raise_removed("organization", incoming, baseline.snapshot or {}, present)
     from app.services.import_settings import skip_deleted_organizations
 
@@ -257,50 +287,25 @@ def _absent_organization(
         raise ValidationError(ORGANIZATION_DELETED, field="name")
     named = _merge_by_name(session, str(incoming.get("name") or ""))
     if named is None or named.survivor_org_id is None:
-        return None, None
+        return None, RowPlan(status=None, apply_fields=None)
     survivor = session.get(Organization, named.survivor_org_id)
     if survivor is None:
-        return None, None
+        return None, RowPlan(status=None, apply_fields=None)
     snapshot = named.snapshot if isinstance(named.snapshot, dict) else {}
-    status = _status_for_snapshot(
+    return survivor, _live_plan(
         session,
         "organization",
         survivor.id,
+        survivor.id,
         incoming,
-        snapshot,
         present,
         organization_payload(survivor),
         allow_updates,
         warnings,
+        review_status=survivor.review_status,
+        source=_text_or_none(raw_org.get("source")),
+        forced_base=snapshot,
         partial=True,
-    )
-    return survivor, status
-
-
-def _live_status(
-    session: Session,
-    entity_type: str,
-    entity_id: Any,
-    incoming: dict[str, Any],
-    present: set[str],
-    current: dict[str, Any],
-    allow_updates: bool,
-    warnings: list[str] | None,
-) -> str | None:
-    baseline = _version1(session, entity_type, entity_id)
-    if baseline is None:
-        return None
-    return _status_for_snapshot(
-        session,
-        entity_type,
-        entity_id,
-        incoming,
-        baseline.snapshot or {},
-        present,
-        current,
-        allow_updates,
-        warnings,
-        partial=False,
     )
 
 
@@ -434,3 +439,10 @@ def _present(
 def _warn(warnings: list[str] | None, message: str) -> None:
     if warnings is not None and message not in warnings:
         warnings.append(message)
+
+
+def _text_or_none(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
+    text = str(value).strip()
+    return text or None

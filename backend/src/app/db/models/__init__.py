@@ -26,6 +26,7 @@ from app.db.models.data_quality import (
 from app.db.models.enums import PricingType, ScheduleType, TicketStatus, TicketType
 from app.db.models.feedback_label import FeedbackLabel
 from app.db.models.geographic_area import GeographicArea
+from app.db.models.import_baseline import ImportBaseline, ImportChangeProposal
 from app.db.models.import_job import ImportJob
 from app.db.models.import_settings import (
     DataQualityRun,
@@ -72,6 +73,8 @@ __all__ = [
     "FeedbackLabel",
     "GeographicArea",
     "DataQualityRun",
+    "ImportBaseline",
+    "ImportChangeProposal",
     "ImportJob",
     "ImportSettings",
     "LookupAnswer",

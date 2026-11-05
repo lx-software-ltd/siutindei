@@ -56,6 +56,8 @@ def test_missing_row_keeps_today_defaults(db_session) -> None:
     assert row.duplicates == "off"
     assert row.locations == "off"
     assert row.categories == "off"
+    assert row.existing_rows == "merge"
+    assert row.approved_organizations == "propose"
     assert row.unknown_categories == "capture"
     assert serialize_import_settings(row)["updated_at"] is None
 
@@ -80,6 +82,8 @@ def _settings_body(**overrides: object) -> dict:
         "duplicates": "off",
         "locations": "off",
         "categories": "off",
+        "existing_rows": "merge",
+        "approved_organizations": "propose",
     }
     body.update(overrides)
     return body

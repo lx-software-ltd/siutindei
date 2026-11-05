@@ -26,6 +26,8 @@ const stored: ImportSettings = {
   duplicates: 'off',
   locations: 'off',
   categories: 'off',
+  existing_rows: 'merge',
+  approved_organizations: 'propose',
   updated_at: '2026-10-14T00:00:00+00:00',
 };
 

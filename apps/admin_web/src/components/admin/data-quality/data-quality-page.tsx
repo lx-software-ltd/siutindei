@@ -10,6 +10,7 @@ import { DuplicatesPanel } from './duplicates-panel';
 import { LocationsPanel } from './locations-panel';
 import { NamesPanel } from './names-panel';
 import { TranslationsPanel } from './translations-panel';
+import { ImportChangesPanel } from './import-changes-panel';
 import { RunsPanel } from './runs-panel';
 
 const TABS = [
@@ -20,6 +21,7 @@ const TABS = [
   { key: 'checks', label: adminTabLabel.categories },
   { key: 'runs', label: adminTabLabel.runs },
   { key: 'deleted', label: adminTabLabel.deleted },
+  { key: 'import-changes', label: adminTabLabel.importChanges },
 ] as const;
 
 export function DataQualityPage() {
@@ -30,7 +32,8 @@ export function DataQualityPage() {
     tabParam === 'translations' ||
     tabParam === 'checks' ||
     tabParam === 'runs' ||
-    tabParam === 'deleted'
+    tabParam === 'deleted' ||
+    tabParam === 'import-changes'
       ? tabParam
       : 'duplicates';
 
@@ -56,6 +59,8 @@ export function DataQualityPage() {
         <RunsPanel />
       ) : activeTab === 'deleted' ? (
         <DeletedPanel />
+      ) : activeTab === 'import-changes' ? (
+        <ImportChangesPanel />
       ) : (
         <DuplicatesPanel />
       )}

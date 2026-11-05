@@ -193,6 +193,48 @@ Columns:
 
 Constraints: partial unique index on pending `(entity_type, entity_id, field)`.
 
+## Table: import_baselines
+
+Purpose: The normalised file shape from the last import that saw an
+entity. Empty until an import writes it. `seed_data.sql` is unchanged.
+No foreign key, so a row outlives a deleted catalog record.
+
+Columns:
+- `entity_type` (text) — `organization`, `location`, `activity`,
+  `pricing`, or `schedule`
+- `entity_id` (UUID)
+- `org_id` (UUID, optional)
+- `source` (text, optional)
+- `payload` (jsonb)
+- `import_job_id` (UUID, optional)
+- `created_at` / `updated_at` (timestamptz)
+
+Primary key: `(entity_type, entity_id)`. Expression indexes on
+`(org_id, lower(trim(payload->>'name')))` and
+`(org_id, lower(trim(payload->>'address')))`.
+
+## Table: import_change_proposals
+
+Purpose: One field where the source and the catalog both moved since
+the source last reported it. Empty until an import queues a conflict.
+`seed_data.sql` is unchanged. No foreign key.
+
+Columns:
+- `id` (UUID, primary key)
+- `entity_type` (text) — same set as `import_baselines`
+- `entity_id` (UUID)
+- `org_id` (UUID, optional)
+- `field` (text)
+- `base_value` / `current_value` / `proposed_value` (jsonb, optional)
+- `import_job_id` (UUID, optional)
+- `status` (text) — `pending`, `applied`, or `dismissed`
+- `decided_by` (text, optional)
+- `decided_at` (timestamptz, optional)
+- `created_at` / `updated_at` (timestamptz)
+
+Constraints: partial unique index on pending
+`(entity_type, entity_id, field)`. Index on `(org_id, status)`.
+
 ## Table: import_settings
 
 Purpose: Singleton (`id = 1`) for what an import does. The migration
@@ -205,6 +247,8 @@ Columns:
 - `duplicates` (text) — `off` or `report`
 - `locations` (text) — `off` or `check`
 - `categories` (text) — `off` or `check`
+- `existing_rows` (text, default `merge`) — `apply`, `merge`, or `propose`
+- `approved_organizations` (text, default `propose`) — `merge` or `propose`
 - `updated_by` (text, optional)
 - `updated_at` (timestamptz)
 
