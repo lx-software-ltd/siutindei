@@ -36,6 +36,7 @@ from app.api.partner_org_enrichment import (
     handle_partner_org_enrichment,
 )
 from app.api.partner_org_merge import handle_partner_org_merge
+from app.api.partner_org_reject import handle_partner_org_reject
 from app.exceptions import AppError, AuthorizationError, NotFoundError, ValidationError
 from app.utils import json_response
 from app.utils.logging import get_logger
@@ -184,6 +185,15 @@ def _partner_org_merge(
     return handle_partner_org_merge(event, partner)
 
 
+def _partner_org_reject(
+    event: Mapping[str, Any],
+    method: str,
+    resource_id: str | None,
+    partner: PartnerContext,
+) -> dict[str, Any]:
+    return handle_partner_org_reject(event, method, resource_id, partner)
+
+
 _PARTNER_ROUTES = (
     PartnerRoute(
         "name-fixes",
@@ -228,6 +238,16 @@ _PARTNER_ROUTES = (
         methods=frozenset({"POST"}),
         has_id=False,
         full_access=True,
+    ),
+    PartnerRoute(
+        "organizations",
+        _partner_org_reject,
+        methods=frozenset({"POST"}),
+        has_id=True,
+        full_access=True,
+        crud_only=True,
+        tail="reject",
+        overlay=True,
     ),
     PartnerRoute(
         "organizations",
