@@ -6095,6 +6095,8 @@ components:
           minimum: 1
           maximum: 120
           description: Maximum age (required, 1-120, must be greater than age_min)
+        location_ids:
+          $ref: '#/components/schemas/ActivityLocationIds'
 
     ActivityUpdate:
       type: object
@@ -6142,6 +6144,8 @@ components:
           minimum: 1
           maximum: 120
           description: Maximum age (must provide both age_min and age_max together)
+        location_ids:
+          $ref: '#/components/schemas/ActivityLocationIds'
 
     Activity:
       type: object
@@ -6157,6 +6161,7 @@ components:
           age_max,
           created_at,
           updated_at,
+          location_ids,
         ]
       properties:
         id:
@@ -6200,6 +6205,20 @@ components:
           format: date-time
         version:
           type: integer
+        location_ids:
+          $ref: '#/components/schemas/ActivityLocationIds'
+
+    ActivityLocationIds:
+      type: array
+      maxItems: 100
+      items:
+        type: string
+        format: uuid
+      description: |
+        Venues for this activity. Present on create or update replaces
+        the join list. Omit to leave existing joins. An empty list
+        unlinks every venue. Each id must belong to the activity's
+        organization. Duplicates are dropped.
 
     ActivityListResponse:
       type: object

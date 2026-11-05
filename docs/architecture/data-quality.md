@@ -17,7 +17,8 @@ plus `pending_location_fix` on activities. It can read category-check
 reviews at `GET /v1/partner/category-reviews` and sees
 `category_review` on `GET /v1/partner/activities`. A full-access
 `crud` key is the partner equivalent of an admin: it can decide category
-reviews, decide venue proposals, merge organizations at
+reviews, decide venue proposals, set `location_ids` on activity create
+and update, merge organizations at
 `POST /v1/partner/organization-merges`, reject one organization at
 `POST /v1/partner/organizations/{id}/reject`, and list or delete empty leftover
 categories. An org-scoped key can read
@@ -216,6 +217,8 @@ Proposed addresses are geocoded through the
 Nominatim proxy, and again on apply when coordinates are missing or
 the address changed. Applying a new location that becomes the
 organization's only venue links activities that have no join.
+Admin and partner activity create or update can set `location_ids`
+directly. The sweep still skips activities that already have a join.
 
 The header checkbox selects the visible page, then all matching rows.
 Apply selected and Dismiss selected send `ids`, or the current filters

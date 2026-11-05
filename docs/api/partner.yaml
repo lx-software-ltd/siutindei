@@ -62,6 +62,7 @@ info:
       Activity list and detail responses include `category_review` for
       the latest check on that activity (`null` when none exists),
       `location_ids`, and `pending_location_fix` (`null` when none).
+      Create and update accept `location_ids` to replace those joins.
 
     ## Validation rules
 
@@ -1059,7 +1060,8 @@ paths:
       summary: Create activity
       description: |
         Requires a `crud` key. Org-scoped keys can only create activities
-        for their organization.
+        for their organization. Pass `location_ids` to attach venues that
+        belong to that organization.
       requestBody:
         required: true
         content:
@@ -1100,6 +1102,9 @@ paths:
           description: Not found
     put:
       summary: Update activity
+      description: |
+        Requires a `crud` key. Pass `location_ids` to replace venues.
+        Omit the field to leave existing joins.
       requestBody:
         required: true
         content:
