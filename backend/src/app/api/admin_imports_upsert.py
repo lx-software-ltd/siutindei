@@ -283,6 +283,8 @@ def upsert_location(
         raise ValidationError("Multiple locations found", field="name") from exc
 
     body = filter_fields(raw_location, ALLOWED_LOCATION_FIELDS)
+    # Import `name` is the address key, not the venue label.
+    body.pop("name", None)
     if raw_location.get("name") is not None or raw_location.get("address") is not None:
         body["address"] = address_value
     plan = location_terminal(

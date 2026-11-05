@@ -21,12 +21,25 @@ test.describe('Locations Panel', () => {
     const accessoryBox = await accessory.boundingBox();
     const editorBox = await editor.boundingBox();
     const versionBox = await version.boundingBox();
+    const nameField = editor.getByLabel('Name');
+    const nameBox = await nameField.boundingBox();
     const addressBox = await editor.getByLabel('Address').boundingBox();
     expect(accessoryBox).toBeTruthy();
     expect(editorBox).toBeTruthy();
     expect(versionBox).toBeTruthy();
+    expect(nameBox).toBeTruthy();
     expect(addressBox).toBeTruthy();
-    expect(accessoryBox!.y).toBeLessThan(addressBox!.y);
+    expect(accessoryBox!.y).toBeLessThan(nameBox!.y);
+    expect(nameBox!.y).toBeLessThan(addressBox!.y);
+    await expect(nameField).toHaveValue('Harbour Hall');
+    await nameField.fill('Studio Hall');
+    const saved = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'PUT' &&
+        request.url().includes('/admin/locations/')
+    );
+    await editor.getByRole('button', { name: 'Update' }).click();
+    expect((await saved).postDataJSON()).toMatchObject({ name: 'Studio Hall' });
     expect(
       Math.abs(versionBox!.x + versionBox!.width - (editorBox!.x + editorBox!.width))
     ).toBeLessThan(32);

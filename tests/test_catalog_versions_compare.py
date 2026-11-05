@@ -55,6 +55,8 @@ def test_location_and_money_quantize() -> None:
     assert location_shape({"lat": "22.2826674", "lng": 114.158167})["lat"] == (
         "22.282667"
     )
+    assert location_shape({"name": "  Harbour   Hall "})["name"] == "harbour hall"
+    assert location_shape({})["name"] is None
     assert pricing_shape({"amount": "10", "currency": "HKD"})["amount"] == "10.00"
 
 

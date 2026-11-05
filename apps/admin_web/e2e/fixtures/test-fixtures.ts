@@ -409,6 +409,7 @@ export const mockLocations = [
     id: 'loc-1',
     org_id: 'org-1',
     area_id: 'area-hk-wanchai-centre',
+    name: 'Harbour Hall',
     address: '123 Test Street',
     lat: 22.278,
     lng: 114.175,

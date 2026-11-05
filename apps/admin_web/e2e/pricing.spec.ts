@@ -8,7 +8,7 @@ test.describe('Pricing Panel', () => {
     await expect(adminPage.getByRole('cell', { name: 'v1' })).toHaveCount(0);
     await expect(adminPage.getByTestId('admin-filter-bar')).toHaveCount(0);
     await expect(adminPage.getByPlaceholder('Activity, location, or price')).toHaveCount(0);
-    await adminPage.getByRole('row', { name: /123 Test Street/ }).first().click();
+    await adminPage.getByRole('row', { name: /Harbour Hall/ }).first().click();
     await expect(adminPage.getByText('Organization Version 2')).toBeVisible();
     const editor = adminPage.getByTestId('admin-editor-panel');
     const accessory = editor.getByTestId('admin-editor-accessory');
@@ -37,6 +37,9 @@ test.describe('Pricing Panel', () => {
       'Monthly',
       'Yearly',
     ]);
+    await expect(adminPage.locator('#pricing-location')).toContainText(
+      'Harbour Hall'
+    );
     await adminPage.locator('#pricing-location').selectOption('loc-1');
     await adminPage.locator('#pricing-activity').selectOption('activity-1');
     await adminPage.locator('#pricing-currency').selectOption('HKD');

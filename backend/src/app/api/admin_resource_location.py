@@ -7,7 +7,11 @@ from uuid import UUID
 
 from app.api.admin_imports_catalog import parse_place_id
 from app.api.admin_request import _parse_uuid
-from app.api.admin_validators import MAX_ADDRESS_LENGTH, _validate_string_length
+from app.api.admin_validators import (
+    MAX_ADDRESS_LENGTH,
+    MAX_NAME_LENGTH,
+    _validate_string_length,
+)
 from app.db.models import Location
 from app.db.repositories import LocationRepository
 from app.exceptions import ValidationError
@@ -27,6 +31,7 @@ def _create_location(repo: LocationRepository, body: dict[str, Any]) -> Location
 
     _require_leaf_area(repo._session, area_uuid)
 
+    name = _validate_string_length(body.get("name"), "name", MAX_NAME_LENGTH)
     address = _validate_string_length(
         body.get("address"), "address", MAX_ADDRESS_LENGTH
     )
@@ -42,6 +47,7 @@ def _create_location(repo: LocationRepository, body: dict[str, Any]) -> Location
     return Location(
         org_id=_parse_uuid(org_id),
         area_id=area_uuid,
+        name=name,
         address=address,
         lat=lat,
         lng=lng,
@@ -59,6 +65,9 @@ def _update_location(
         area_uuid = _parse_uuid(body["area_id"])
         _require_leaf_area(repo._session, area_uuid)
         entity.area_id = area_uuid  # type: ignore[assignment]
+
+    if "name" in body:
+        entity.name = _validate_string_length(body["name"], "name", MAX_NAME_LENGTH)
 
     if "address" in body:
         address = _validate_string_length(
@@ -149,6 +158,7 @@ def _serialize_location(entity: Location) -> dict[str, Any]:
         "id": str(entity.id),
         "org_id": str(entity.org_id),
         "area_id": str(entity.area_id),
+        "name": entity.name,
         "address": entity.address,
         "lat": entity.lat,
         "lng": entity.lng,

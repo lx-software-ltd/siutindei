@@ -621,6 +621,10 @@ Columns:
 - `id` (UUID, PK, default `gen_random_uuid()`)
 - `org_id` (UUID, FK -> organizations.id, cascade delete)
 - `area_id` (UUID, FK -> geographic_areas.id, required, must be a leaf)
+- `name` (text, optional) — venue label. Blank is stored as null.
+  Not unique. The admin API limits it to 200 characters. Pricing and
+  Schedules show it, and the address when it is null. Imports do not
+  write it; import `name` is still the address.
 - `address` (text, optional)
 - `lat` (numeric(9,6), optional)
 - `lng` (numeric(9,6), optional)

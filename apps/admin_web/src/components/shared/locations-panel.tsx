@@ -81,6 +81,7 @@ function MapServiceIcon({
 interface LocationFormState {
   org_id: string;
   area_id: string;
+  name: string;
   address: string;
   lat: string;
   lng: string;
@@ -89,6 +90,7 @@ interface LocationFormState {
 const emptyForm: LocationFormState = {
   org_id: '',
   area_id: '',
+  name: '',
   address: '',
   lat: '',
   lng: '',
@@ -98,6 +100,7 @@ function itemToForm(item: Location): LocationFormState {
   return {
     org_id: item.org_id ?? '',
     area_id: item.area_id ?? '',
+    name: item.name ?? '',
     address: item.address ?? '',
     lat: item.lat !== undefined && item.lat !== null ? `${item.lat}` : '',
     lng: item.lng !== undefined && item.lng !== null ? `${item.lng}` : '',
@@ -294,6 +297,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   const formToPayload = (form: LocationFormState) => ({
     org_id: form.org_id,
     area_id: form.area_id,
+    name: form.name.trim() || null,
     address: form.address.trim() || null,
     lat: parseOptionalNumber(form.lat),
     lng: parseOptionalNumber(form.lng),
@@ -393,6 +397,24 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
       <VersionFields view={versionView}>
       <div className='space-y-4'>
       <AdminFieldGrid columns={2}>
+        <VersionField
+          label='Name'
+          htmlFor='location-name'
+          span={2}
+          versionKey='name'
+        >
+          <Input
+            id='location-name'
+            value={editorForm.name}
+            disabled={locked}
+            onChange={(event) =>
+              panel.setFormState((prev) => ({
+                ...prev,
+                name: event.target.value,
+              }))
+            }
+          />
+        </VersionField>
         <VersionField
           label='Address'
           htmlFor='location-address'
@@ -528,9 +550,11 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
         renderActions={(item) =>
           deleteRowActions(() => {
             const areaName = getAreaName(item.area_id);
-            panel.handleDelete(
-              areaName === '—' ? item : { ...item, name: areaName }
-            );
+            // The confirm dialog reads `name`. That slot stays the area.
+            panel.handleDelete({
+              ...item,
+              name: areaName === '—' ? undefined : areaName,
+            });
           })
         }
       />

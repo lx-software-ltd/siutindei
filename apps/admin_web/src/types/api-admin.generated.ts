@@ -7676,8 +7676,8 @@ export interface components {
         };
         AdminImportLocation: {
             /**
-             * @description Location name used for upsert. Stored as address in the database and
-             *     must be unique within the organization.
+             * @description Location name used for upsert. Stored as address. It does not
+             *     set the venue label. Must be unique within the organization.
              */
             name: string;
             /** @description Optional address (must match name if provided). */
@@ -8411,6 +8411,12 @@ export interface components {
              * @description Geographic area UUID (required, must be a leaf node)
              */
             area_id: string;
+            /**
+             * @description Optional venue label (max 200 characters). Blank is stored
+             *     as null. Pricing and Schedules show this instead of the
+             *     address.
+             */
+            name?: string;
             /** @description Full address (optional, max 500 characters) */
             address?: string;
             /** @description Latitude (-90 to 90) */
@@ -8424,6 +8430,11 @@ export interface components {
              * @description Geographic area UUID (must be a leaf node)
              */
             area_id?: string;
+            /**
+             * @description Optional venue label (max 200 characters). Blank is stored
+             *     as null.
+             */
+            name?: string | null;
             /** @description Full address (max 500 characters) */
             address?: string;
             /** @description Latitude (-90 to 90) */
@@ -8441,6 +8452,8 @@ export interface components {
              * @description Geographic area UUID (leaf node)
              */
             area_id: string;
+            /** @description Optional venue label. Null when unset. */
+            name?: string | null;
             address?: string | null;
             lat?: number | null;
             lng?: number | null;

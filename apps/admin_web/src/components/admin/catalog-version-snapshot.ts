@@ -200,6 +200,7 @@ export function activityFormFromSnapshot<T extends ActivitySnapshotForm>(
 export interface LocationSnapshotForm {
   org_id: string;
   area_id: string;
+  name: string;
   address: string;
   lat: string;
   lng: string;
@@ -209,7 +210,14 @@ export function locationFormFromSnapshot<T extends LocationSnapshotForm>(
   snapshot: Record<string, unknown>,
   fallback: T
 ): T {
-  return applyText(fallback, snapshot, ['org_id', 'area_id', 'address', 'lat', 'lng']);
+  return applyText(fallback, snapshot, [
+    'org_id',
+    'area_id',
+    'name',
+    'address',
+    'lat',
+    'lng',
+  ]);
 }
 
 export function pricingFormFromSnapshot(
