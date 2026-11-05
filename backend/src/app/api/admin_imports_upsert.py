@@ -398,7 +398,6 @@ def upsert_activity(
     if existing:
         updated = _update_activity(repo, existing, body)
         repo.update(updated)
-        link_activity_to_venue(session, updated, venue)
         persist_import_change(session, dry_run=dry_run)
         session.refresh(updated)
         record_import_capture(

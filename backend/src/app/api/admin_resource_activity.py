@@ -6,8 +6,8 @@ from typing import Any
 from uuid import UUID
 
 from psycopg.types.range import Range
-from sqlalchemy import delete, select
-from sqlalchemy.orm import object_session
+from sqlalchemy import select
+from sqlalchemy.orm import Session, object_session
 
 from app.api.admin_imports_catalog import (
     MAX_VETTING_NOTE_LENGTH,
@@ -21,7 +21,13 @@ from app.api.admin_validators import (
     _validate_translations_map,
 )
 from app.db.age_bounds import inclusive_age_bounds
-from app.db.models import Activity, ActivityLocation, Location
+from app.db.models import (
+    Activity,
+    ActivityLocation,
+    ActivityPricing,
+    ActivitySchedule,
+    Location,
+)
 from app.db.repositories import ActivityCategoryRepository, ActivityRepository
 from app.exceptions import ValidationError
 from app.utils.translations import build_translation_map
@@ -291,7 +297,7 @@ def _parse_location_ids(raw: Any) -> list[UUID]:
 
 
 def _assert_locations_for_org(
-    session: Any,
+    session: Session,
     org_id: UUID | str,
     location_ids: list[UUID],
 ) -> None:
@@ -312,16 +318,51 @@ def _assert_locations_for_org(
 
 
 def _replace_activity_locations(
-    session: Any,
+    session: Session,
     entity: Activity,
     location_ids: list[UUID],
 ) -> None:
-    session.execute(
-        delete(ActivityLocation).where(ActivityLocation.activity_id == entity.id)
+    current = list(
+        session.scalars(
+            select(ActivityLocation).where(ActivityLocation.activity_id == entity.id)
+        ).all()
     )
-    session.flush()
+    current_ids = {str(row.location_id) for row in current}
+    removed = current_ids - {str(item) for item in location_ids}
+    added = [item for item in location_ids if str(item) not in current_ids]
+    if removed:
+        _reject_venues_in_use(session, entity.id, removed)
+    if not removed and not added:
+        return
+    for row in current:
+        if str(row.location_id) in removed:
+            session.delete(row)
+    if removed:
+        session.flush()
+    _set_activity_locations(entity, added)
     session.expire(entity, ["locations"])
-    _set_activity_locations(entity, location_ids)
+
+
+def _reject_venues_in_use(
+    session: Session,
+    activity_id: UUID | str,
+    removed: set[str],
+) -> None:
+    removed_ids = [UUID(item) for item in removed]
+    for model in (ActivityPricing, ActivitySchedule):
+        used = session.scalar(
+            select(model.id)
+            .where(
+                model.activity_id == activity_id,
+                model.location_id.in_(removed_ids),
+            )
+            .limit(1)
+        )
+        if used is not None:
+            raise ValidationError(
+                "location_ids still used by pricing or schedules",
+                field="location_ids",
+            )
 
 
 def _set_activity_locations(entity: Activity, location_ids: list[UUID]) -> None:
@@ -334,13 +375,13 @@ def _set_activity_locations(entity: Activity, location_ids: list[UUID]) -> None:
 def _activity_location_ids(entity: Activity) -> list[str]:
     loaded = entity.__dict__.get("locations")
     if loaded is not None:
-        return [str(link.location_id) for link in loaded]
+        return sorted(str(link.location_id) for link in loaded)
     session = object_session(entity)
     if session is None:
         return []
     rows = session.scalars(
-        select(ActivityLocation.location_id).where(
-            ActivityLocation.activity_id == entity.id
-        )
+        select(ActivityLocation.location_id)
+        .where(ActivityLocation.activity_id == entity.id)
+        .order_by(ActivityLocation.location_id)
     ).all()
     return [str(row) for row in rows]

@@ -8,7 +8,7 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.admin_auth import (
     _get_user_sub,
@@ -421,6 +421,8 @@ def _get_all_filtered_by_org(
     elif hasattr(model, "org_id"):
         # Direct org_id (Location, Activity)
         query = select(model).where(model.org_id.in_(managed_org_ids))
+        if model is Activity:
+            query = query.options(selectinload(Activity.locations))
     elif hasattr(model, "activity_id"):
         # Through activity (Pricing, Schedule)
         query = (

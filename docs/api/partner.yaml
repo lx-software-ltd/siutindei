@@ -1103,8 +1103,11 @@ paths:
     put:
       summary: Update activity
       description: |
-        Requires a `crud` key. Pass `location_ids` to replace venues.
-        Omit the field to leave existing joins.
+        Requires a `crud` key. An organization-scoped key can replace
+        venues only on its own activities. Pass `location_ids` to
+        replace venues. Omit the field to leave existing joins.
+        Removing a venue that still has pricing or a schedule for
+        this activity is rejected.
       requestBody:
         required: true
         content:

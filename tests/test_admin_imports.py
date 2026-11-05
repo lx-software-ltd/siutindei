@@ -982,6 +982,63 @@ def test_importer_skips_existing_venue_and_activity(
     assert link is None
 
 
+def test_import_update_does_not_restore_a_removed_venue(
+    db_session,
+    sample_organization,
+    sample_activity,
+    sample_location,
+    sample_geographic_area,
+) -> None:
+    from app.api.admin_resource_activity import _update_activity
+    from app.db.repositories import ActivityRepository
+
+    repo = ActivityRepository(db_session)
+    _update_activity(repo, sample_activity, {"location_ids": [str(sample_location.id)]})
+    _update_activity(repo, sample_activity, {"location_ids": []})
+    repo.update(sample_activity)
+    payload = {
+        "organizations": [
+            {
+                "name": sample_organization.name,
+                "manager_id": str(sample_organization.manager_id),
+                "locations": [
+                    {
+                        "name": sample_location.address,
+                        "area_id": str(sample_geographic_area.id),
+                        "lat": 22.3,
+                        "lng": 114.2,
+                    }
+                ],
+                "activities": [
+                    {
+                        "name": sample_activity.name,
+                        "category_id": str(sample_activity.category_id),
+                        "description": "Updated by import",
+                        "age_min": 5,
+                        "age_max": 12,
+                    }
+                ],
+            }
+        ]
+    }
+    _summary, results = process_import_payload(
+        db_session,
+        payload,
+        [],
+        allow_org_updates=True,
+    )
+    by_type = {item["type"]: item for item in results}
+    assert by_type["activities"]["status"] == "updated"
+    db_session.refresh(sample_activity)
+    assert sample_activity.description == "Updated by import"
+    links = db_session.scalars(
+        select(ActivityLocation).where(
+            ActivityLocation.activity_id == sample_activity.id
+        )
+    ).all()
+    assert links == []
+
+
 def test_create_only_keeps_cleaned_name_and_category(
     db_session,
     sample_organization,

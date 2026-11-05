@@ -217,8 +217,15 @@ Proposed addresses are geocoded through the
 Nominatim proxy, and again on apply when coordinates are missing or
 the address changed. Applying a new location that becomes the
 organization's only venue links activities that have no join.
-Admin and partner activity create or update can set `location_ids`
-directly. The sweep still skips activities that already have a join.
+Admin, manager, and partner activity create or update can set
+`location_ids` directly, including an organization-scoped key for
+its own organization. The response lists those ids in location-id
+order. Sending the current list again does not rewrite joins.
+Removing a venue that still has pricing or a schedule for that
+activity is rejected. A later catalog import does not add a venue
+back onto an existing activity; it links a venue only when it
+creates the activity. The sweep still skips activities that already
+have a join.
 
 The header checkbox selects the visible page, then all matching rows.
 Apply selected and Dismiss selected send `ids`, or the current filters

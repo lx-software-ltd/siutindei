@@ -1,14 +1,18 @@
 # Plan: Writable activity location_ids
 
-**Status**: Done
+**Status**: In review
 **Zone**: yellow
 
 ## Goal
 
-Let admin and partner activity create and update set `location_ids`
-so a programme can attach to one or more venues of its organization.
-Omit the field to leave existing joins. Send `[]` to unlink every
-venue. Present, unknown, or other-organization ids are a `400`.
+Let admin, manager, and partner activity create and update set
+`location_ids` so a programme can attach to one or more venues of
+its organization. Omit the field to leave existing joins. Send `[]`
+to unlink every venue that has no pricing or schedule for that
+activity. Present, unknown, or other-organization ids are a `400`.
+The response lists ids in location-id order. Sending the current
+list again does not rewrite joins. A later import does not put a
+removed venue back on an existing activity.
 
 ## Non-goals
 
@@ -21,7 +25,13 @@ venue. Present, unknown, or other-organization ids are a `400`.
 ## Files
 
 - `backend/src/app/api/admin_resource_activity.py`
+- `backend/src/app/api/admin_crud.py`
+- `backend/src/app/api/admin_imports_upsert.py`
+- `backend/src/app/api/partner_category_reviews.py`
+- `backend/src/app/db/repositories/activity.py`
+- `backend/src/app/services/org_review.py`
 - `tests/test_activity_location_ids.py`
+- `tests/test_admin_imports.py`
 - `docs/api/admin.yaml`
 - `docs/api/partner.yaml`
 - `docs/architecture/data-quality.md`
@@ -30,11 +40,18 @@ venue. Present, unknown, or other-organization ids are a `400`.
 ## Invariants this change preserves
 
 - An omitted `location_ids` leaves `activity_locations` unchanged.
+- An unchanged list does not delete or insert join rows.
 - Joins still require locations of the same organization.
+- A venue that still has pricing or a schedule for the activity
+  cannot be removed.
 - Location-fix sweep still skips activities that already have a join.
-- Partner GET still overlays `location_ids` from the join table.
+- Partner GET returns the same `location_ids` the activity serializer
+  writes. It does not query the join table a second time.
+- A catalog import links a venue only when it creates the activity.
 - Org merge still unions joins only from source activities that had
   them.
+- Managers and organization-scoped keys can set venues only for their
+  own organization.
 
 ## Done when
 

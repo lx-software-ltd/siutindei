@@ -8536,10 +8536,13 @@ export interface components {
             location_ids: components["schemas"]["ActivityLocationIds"];
         };
         /**
-         * @description Venues for this activity. Present on create or update replaces
-         *     the join list. Omit to leave existing joins. An empty list
-         *     unlinks every venue. Each id must belong to the activity's
-         *     organization. Duplicates are dropped.
+         * @description Venues for this activity, ordered by location id. Present on
+         *     create or update replaces the join list. Omit to leave
+         *     existing joins. An empty list unlinks every venue. Each id
+         *     must belong to the activity's organization. Duplicates are
+         *     dropped. Sending the current list again does not rewrite
+         *     joins. Removing a venue that still has pricing or a schedule
+         *     for this activity is rejected.
          */
         ActivityLocationIds: string[];
         ActivityListResponse: {
