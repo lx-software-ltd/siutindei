@@ -118,7 +118,7 @@ class Organization(Base):
     reviewed_by: Mapped[str | None] = mapped_column(
         Text(),
         nullable=True,
-        comment="Cognito sub of the admin who last set review_status",
+        comment="Admin subject or partner actor who last set review_status",
     )
     review_notes: Mapped[str | None] = mapped_column(Text(), nullable=True)
     review_reason: Mapped[str | None] = mapped_column(

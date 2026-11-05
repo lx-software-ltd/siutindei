@@ -551,10 +551,13 @@ paths:
         Same reason, notes, and listing status as a reject decision on
         `POST /v1/admin/org-review/{id}/decision`. `reason` is required
         and is one of `not_relevant`, `duplicate`, `poor_data`, or
-        `other`. Approve, reopen, and `force` are not available on this
-        route. A later reject replaces the stored reason. The actor is
-        the authorizer `userSub` when it is present, and
-        `api-key:<key id>` when `userSub` is omitted.
+        `other`. An approved organization can be rejected, and `status`
+        can hide it. Approve, reopen, and `force` stay on the admin
+        console. A later reject replaces the stored reason. Anything
+        after `/reject` is `404`. Invalid `notes` or `status` is `400`
+        before the organization is looked up. The actor stored in
+        `reviewed_by` is the authorizer `userSub` when it is present,
+        and `api-key:<key id>` when `userSub` is omitted.
       requestBody:
         required: true
         content:

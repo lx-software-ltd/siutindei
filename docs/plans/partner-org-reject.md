@@ -35,7 +35,12 @@ authorizer `userSub`, or `api-key:<id>` when `userSub` is omitted.
 - Partner organization CRUD, merge, and enrichment.
 - A reject still requires a known reason and stores it only while the
   organization is rejected.
-- Organization-scoped keys and `read` keys still receive `403`.
+- Organization-scoped keys and `read` keys still receive `403`,
+  including when the target is the key's own organization.
+- A path with anything after `reject` is `404` and writes nothing.
+- Invalid notes and listing status are `400` before the lookup.
+- The organizations audit trigger records the partner actor. Cleanup
+  removes those rows.
 
 ## Done when
 

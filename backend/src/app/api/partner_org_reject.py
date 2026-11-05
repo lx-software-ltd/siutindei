@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from app.api.admin_enrichment import organization_tail
 from app.api.admin_org_review_actions import apply_organization_rejection
 from app.api.partner_auth import (
     PartnerContext,
@@ -30,7 +31,8 @@ def handle_partner_org_reject(
     """
     require_full_access(partner)
     require_crud(partner)
-    if method != "POST" or not org_id:
+    tail = organization_tail(str(event.get("path") or ""))
+    if method != "POST" or tail != ["reject"] or not org_id:
         return json_response(404, {"error": "Not found"}, event=event)
     return apply_organization_rejection(
         event,

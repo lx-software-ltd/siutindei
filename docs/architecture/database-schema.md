@@ -68,7 +68,9 @@ Columns:
   `ORG_REVIEW_GATE_ENABLED=true`. `v_catalog_health` always counts
   `approved` rows.
 - `reviewed_at` (timestamptz, optional)
-- `reviewed_by` (text, optional) — Cognito sub of the reviewing admin
+- `reviewed_by` (text, optional) — actor who last set review status.
+  An admin decision stores a Cognito sub. A partner rejection stores
+  the authorizer subject, or `api-key:<id>` when that subject is omitted.
 - `review_notes` (text, optional)
 - `review_reason` (text, optional) — `not_relevant`, `duplicate`,
   `poor_data`, or `other`. Null unless `review_status` is `rejected`.

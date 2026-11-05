@@ -122,9 +122,8 @@ def apply_organization_rejection(
 ) -> dict[str, Any]:
     """Reject one organization. Same fields as an admin reject decision."""
     body = parse_object_body(event)
-    _reject_other_actions(body)
+    reason = _validated_reject_body(body)
     org_id = _parse_uuid(resource_id, "id")
-    reason = _decision_reason(body.get("reason"), "reject")
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event, user_id=reviewer)
         organization = session.get(Organization, org_id)
@@ -152,6 +151,20 @@ def apply_organization_rejection(
             _serialize_organization(organization),
             event=event,
         )
+
+
+def _validated_reject_body(body: Mapping[str, Any]) -> str:
+    """Check the reject body before any organization lookup."""
+    _reject_other_actions(body)
+    reason = _decision_reason(body.get("reason"), "reject")
+    if reason is None:
+        raise ValidationError("reason is required", field="reason")
+    if "notes" in body:
+        _parse_notes(body.get("notes"))
+    status = body.get("status")
+    if status not in (None, ""):
+        parse_org_status(status)
+    return reason
 
 
 def _reject_other_actions(body: Mapping[str, Any]) -> None:

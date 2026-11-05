@@ -8,8 +8,9 @@ from uuid import uuid4
 from app.api.admin import _handle_partner_routes
 from app.api.partner_auth import get_partner_context
 from app.api.partner_org_reject import handle_partner_org_reject
-from app.db.models import Organization
+from app.db.models import AuditLog, Organization
 from app.exceptions import AuthorizationError
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from tests.test_partner_routes import _partner_event
@@ -35,6 +36,13 @@ def _delete(engine, org_id: str) -> None:
         if row is not None:
             session.delete(row)
             session.commit()
+        session.execute(
+            delete(AuditLog).where(
+                AuditLog.table_name == "organizations",
+                AuditLog.record_id == org_id,
+            )
+        )
+        session.commit()
 
 
 def _post(
@@ -119,8 +127,21 @@ def test_full_access_rejects_an_organization(monkeypatch, test_engine) -> None:
 
         again = _post(org_id, {"reason": "poor_data"})
         assert again["statusCode"] == 200
-        assert json.loads(again["body"])["review_reason"] == "poor_data"
-        assert json.loads(again["body"])["status"] == "hidden"
+        again_body = json.loads(again["body"])
+        assert again_body["review_reason"] == "poor_data"
+        assert again_body["status"] == "hidden"
+
+        with Session(test_engine) as session:
+            actors = session.scalars(
+                select(AuditLog.user_id)
+                .where(
+                    AuditLog.table_name == "organizations",
+                    AuditLog.record_id == org_id,
+                    AuditLog.action == "UPDATE",
+                )
+                .order_by(AuditLog.timestamp)
+            ).all()
+        assert actors == ["forwarded-actor", again_body["reviewed_by"]]
     finally:
         _delete(test_engine, org_id)
 
@@ -154,8 +175,34 @@ def test_reject_refuses_other_actions_and_unknown_organizations(
             assert row.review_status == "pending_review"
             assert row.review_reason is None
 
-        unknown = _post(str(uuid4()), {"reason": "other"})
-        assert unknown["statusCode"] == 404
+        unknown = str(uuid4())
+        missing = _post(unknown, {"reason": "other", "status": "gone"})
+        assert missing["statusCode"] == 400
+        assert "Invalid status" in json.loads(missing["body"])["error"]
+        notes = _post(unknown, {"reason": "other", "notes": 5})
+        assert notes["statusCode"] == 400
+        assert "notes must be a string" in json.loads(notes["body"])["error"]
+        absent = _post(unknown, {"reason": "other"})
+        assert absent["statusCode"] == 404
+
+        own_key = _post(org_id, {"reason": "other"}, org_scope=org_id)
+        assert own_key["statusCode"] == 403
+        assert "limited to one organization" in json.loads(own_key["body"])["error"]
+
+        extra_path = f"/v1/partner/organizations/{org_id}/reject/anything"
+        extra_event = _partner_event("POST", extra_path, "crud", "")
+        extra_event["body"] = json.dumps({"reason": "other"})
+        extra = _handle_partner_routes(
+            extra_event,
+            "POST",
+            "organizations",
+            org_id,
+        )
+        assert extra["statusCode"] == 404
+        with Session(test_engine) as session:
+            row = session.get(Organization, org_id)
+            assert row is not None
+            assert row.review_status == "pending_review"
 
         path = f"/v1/partner/organizations/{org_id}/reject"
         listed = _handle_partner_routes(
