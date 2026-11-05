@@ -70,6 +70,18 @@ class ImportSettings(Base):
         default="off",
         server_default=text("'off'"),
     )
+    existing_rows: Mapped[str] = mapped_column(
+        Text(),
+        nullable=False,
+        default="merge",
+        server_default=text("'merge'"),
+    )
+    approved_organizations: Mapped[str] = mapped_column(
+        Text(),
+        nullable=False,
+        default="propose",
+        server_default=text("'propose'"),
+    )
     updated_by: Mapped[str | None] = mapped_column(Text(), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
@@ -99,6 +111,14 @@ class ImportSettings(Base):
         CheckConstraint(
             "categories IN ('off', 'check')",
             name="import_settings_categories_check",
+        ),
+        CheckConstraint(
+            "existing_rows IN ('apply', 'merge', 'propose')",
+            name="import_settings_existing_rows_check",
+        ),
+        CheckConstraint(
+            "approved_organizations IN ('merge', 'propose')",
+            name="import_settings_approved_orgs_check",
         ),
     )
 

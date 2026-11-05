@@ -36,6 +36,8 @@ test.describe('Imports Panel', () => {
     expect(summaryBox).toBeTruthy();
     expect(summaryBox!.y).toBeGreaterThan(uploadBox!.y);
     await expect(adminPage.getByText(/^Organizations:/)).toBeVisible();
+    await expect(adminPage.getByText(/proposed 1/)).toBeVisible();
+    await expect(adminPage.getByText('Proposed: description')).toBeVisible();
     await expect(
       adminPage.getByText(/Existing organizations, venues, and activities stay/)
     ).toHaveCount(0);
@@ -64,6 +66,8 @@ test.describe('Imports Panel', () => {
       unknown_categories: 'capture',
       locations: 'off',
       categories: 'off',
+      existing_rows: 'merge',
+      approved_organizations: 'propose',
       skip_deleted_organizations: true,
     });
     await expect(

@@ -11,8 +11,12 @@ export type AdminImportStatus =
   | 'created'
   | 'updated'
   | 'unchanged'
+  | 'proposed'
   | 'failed'
   | 'skipped';
+
+export type ExistingRowsMode = 'apply' | 'merge' | 'propose';
+export type ApprovedOrganizationsMode = 'merge' | 'propose';
 
 export interface AdminImportPresignRequest {
   file_name: string;
@@ -37,6 +41,8 @@ export interface ImportSettings {
   duplicates: DuplicateCheckMode;
   locations: ScanCheckMode;
   categories: ScanCheckMode;
+  existing_rows: ExistingRowsMode;
+  approved_organizations: ApprovedOrganizationsMode;
   updated_by?: string | null;
   updated_at: string | null;
 }
@@ -67,6 +73,7 @@ export interface AdminImportCounts {
   created: number;
   updated: number;
   unchanged?: number;
+  proposed?: number;
   failed: number;
   skipped: number;
 }

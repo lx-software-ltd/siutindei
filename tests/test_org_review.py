@@ -206,10 +206,11 @@ def test_import_update_keeps_approved_review(db_session, sample_organization) ->
         [],
         allow_org_updates=True,
     )
-    assert results[0]["status"] == "updated"
+    assert results[0]["status"] == "proposed"
     db_session.refresh(sample_organization)
     assert sample_organization.review_status == "approved"
-    assert sample_organization.last_imported_at is not None
+    assert sample_organization.description == "A test organization for unit tests"
+    assert sample_organization.last_imported_at is None
 
 
 def test_admin_create_starts_in_review(db_session) -> None:
@@ -548,7 +549,8 @@ def test_import_update_keeps_creating_job(db_session, sample_organization) -> No
     db_session.refresh(sample_organization)
     assert sample_organization.import_job_id == created.id
     assert sample_organization.review_status == "approved"
-    assert sample_organization.last_imported_at is not None
+    assert sample_organization.description == "A test organization for unit tests"
+    assert sample_organization.last_imported_at is None
 
 
 def test_review_list_includes_orgs_created_or_updated_by_import(db_session) -> None:

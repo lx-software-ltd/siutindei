@@ -590,6 +590,31 @@ Pricing, schedules, schedule entries, and venue joins also bump the
 parent activity. Review fields bump. Bookkeeping columns do not.
 Imports compare version 1, including removed rows, and report
 `unchanged` when the file still matches. A file that differs overwrites
-admin edits only when `allow_updates` is true, and records a warning.
+admin edits only when `allow_updates` is true and `existing_rows` is
+`apply`, and records a warning.
 
 Design notes: `docs/plans/catalog-versioning.md`.
+
+## 12) Import three-way merge
+
+**Decision:** A catalog import compares each field the file sends with
+what the source last said and with the live row. The source value is
+`import_baselines`, falling back to catalog version 1 until a baseline
+exists. A genuine source change is applied. A field an admin edited
+since that base is kept, and the source value waits in
+`import_change_proposals`. Accept writes that field through the admin
+update path, so history shows the admin. Dismiss writes nothing. The
+public listing keeps the live value until then.
+
+`existing_rows` defaults to `merge`. `apply` restores the row-level
+overwrite. `propose` queues every change to an existing row. An
+approved organization uses `approved_organizations`, which defaults to
+`propose`. A new child under an approved organization is created.
+`allow_updates` false remains the hard off switch and writes no
+proposal.
+
+**Why:** Admins correct a few fields. The source later changes
+different fields. A row-level overwrite either throws away the
+correction or drops the genuine source change.
+
+Design notes: `docs/plans/import-three-way-merge.md`.

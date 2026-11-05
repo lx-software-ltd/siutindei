@@ -37,6 +37,7 @@ const emptyImportSummary = {
   updated: 0,
   unchanged: 0,
   failed: 0,
+  proposed: 0,
   skipped: 0,
 };
 
@@ -44,11 +45,12 @@ function formatCountLabel(counts: {
   created: number;
   updated: number;
   unchanged?: number;
+  proposed?: number;
   failed: number;
   skipped: number;
 }) {
   return `created ${counts.created}, updated ${counts.updated}, ` +
-    `unchanged ${counts.unchanged ?? 0}, ` +
+    `unchanged ${counts.unchanged ?? 0}, proposed ${counts.proposed ?? 0}, ` +
     `failed ${counts.failed}, skipped ${counts.skipped}`;
 }
 
@@ -358,6 +360,11 @@ export function ImportsPanel() {
                     />
                     Skip records that already exist
                   </label>
+                  <p className='text-sm text-ink-700'>
+                    A skipped row still records what the file said. The next
+                    import that updates existing rows treats that file as the
+                    source.
+                  </p>
                 </AdminField>
               </AdminFieldGrid>
           </AdminInputCard>

@@ -190,6 +190,14 @@ def _enrichment_settings(
     return handle_enrichment_settings(event, method)
 
 
+def _import_changes(
+    event: Mapping[str, Any], method: str, resource_id: str | None, sub: str | None
+) -> dict[str, Any]:
+    from app.api.admin_import_changes import handle_import_changes
+
+    return handle_import_changes(event, method, resource_id, sub)
+
+
 def _import_settings(
     event: Mapping[str, Any], method: str, _resource_id: str | None, _sub: str | None
 ) -> dict[str, Any]:
@@ -310,6 +318,7 @@ _ADMIN_ROUTES: tuple[AdminRoute, ...] = (
     AdminRoute("api-keys", _api_keys),
     AdminRoute("enrichment-settings", _enrichment_settings, admin_only=True),
     AdminRoute("import-settings", _import_settings, admin_only=True),
+    AdminRoute("import-changes", _import_changes, admin_only=True),
     AdminRoute("data-quality", _data_quality, admin_only=True),
     AdminRoute("imports", _imports),
     AdminRoute("category-suggestions", _category_suggestions, admin_only=True),

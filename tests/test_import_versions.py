@@ -223,8 +223,37 @@ def test_file_matching_version_1_keeps_admin_edit(test_engine) -> None:
         assert found.description == "Admin edit"
 
 
+def reset_import_mode(
+    engine: object,
+    existing_rows: str = "merge",
+    approved_organizations: str = "propose",
+) -> None:
+    """Put the singleton settings row on a known policy."""
+    from app.db.models import ImportSettings
+
+    with Session(engine) as session:
+        row = session.get(ImportSettings, 1)
+        if row is None:
+            row = ImportSettings(id=1)
+            session.add(row)
+        row.existing_rows = existing_rows
+        row.approved_organizations = approved_organizations
+        session.commit()
+
+
+def _apply_mode(engine: object) -> None:
+    """Keep the row-level overwrite path for the warning tests."""
+    reset_import_mode(engine, "apply", "merge")
+
+
+@pytest.fixture(autouse=True)
+def _merge_defaults(test_engine) -> None:
+    reset_import_mode(test_engine)
+
+
 def test_changed_source_names_an_earlier_import(test_engine) -> None:
     _require_postgres(test_engine)
+    _apply_mode(test_engine)
     name = f"Imported Org {uuid4()}"
     manager_id = "00000000-0000-0000-0000-000000000047"
     with Session(test_engine) as session:
@@ -254,6 +283,7 @@ def test_changed_source_names_an_earlier_import(test_engine) -> None:
 
 def test_changed_source_names_a_system_change(test_engine) -> None:
     _require_postgres(test_engine)
+    _apply_mode(test_engine)
     name = f"System Org {uuid4()}"
     manager_id = "00000000-0000-0000-0000-000000000048"
     with Session(test_engine) as session:
@@ -283,6 +313,7 @@ def test_changed_source_names_a_system_change(test_engine) -> None:
 
 def test_changed_source_names_admin_and_import(test_engine) -> None:
     _require_postgres(test_engine)
+    _apply_mode(test_engine)
     name = f"Mixed Org {uuid4()}"
     manager_id = "00000000-0000-0000-0000-000000000049"
     with Session(test_engine) as session:
@@ -335,12 +366,12 @@ def test_changed_source_updates_and_warns_when_admin_edited(test_engine) -> None
             allow_org_updates=True,
         )
 
-    assert results[0]["status"] == "updated"
-    assert any("admin edits" in warning for warning in results[0]["warnings"])
+    assert results[0]["status"] == "proposed"
+    assert any(warning.startswith("Proposed: ") for warning in results[0]["warnings"])
     with Session(test_engine) as session:
         found = session.get(Organization, org_id)
         assert found is not None
-        assert found.description == "From file"
+        assert found.description == "Admin edit"
 
 
 def test_removed_org_matching_version_1_is_not_recreated(test_engine) -> None:
@@ -454,3 +485,43 @@ def test_merge_name_does_not_duplicate_survivor(test_engine) -> None:
     with Session(test_engine) as session:
         names = session.query(Organization).all()
         assert sum(1 for org in names if org.name == source_name) == 0
+
+
+def test_changed_source_on_untouched_field_applies_and_keeps_edit(test_engine) -> None:
+    name = f"Split Org {uuid4()}"
+    manager_id = "00000000-0000-0000-0000-000000000050"
+    with Session(test_engine) as session:
+        org = Organization(
+            name=name,
+            description="Original",
+            phone_country_code="HK",
+            phone_number="21234567",
+            manager_id=manager_id,
+        )
+        session.add(org)
+        session.flush()
+        _remember(session, org)
+        session.commit()
+        org_id = org.id
+    _edit_later(test_engine, org_id, description="Admin edit")
+
+    with Session(test_engine) as session:
+        _summary, results = process_import_payload(
+            session,
+            _file(
+                name,
+                manager_id,
+                description="From file",
+                phone_number="29876543",
+            ),
+            [],
+            allow_org_updates=True,
+        )
+
+    assert results[0]["status"] == "updated"
+    assert "Proposed: description" in results[0]["warnings"]
+    with Session(test_engine) as session:
+        found = session.get(Organization, org_id)
+        assert found is not None
+        assert found.description == "Admin edit"
+        assert found.phone_number == "29876543"

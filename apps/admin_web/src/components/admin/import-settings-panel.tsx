@@ -27,6 +27,8 @@ const EMPTY_SETTINGS: ImportSettings = {
   duplicates: 'off',
   locations: 'off',
   categories: 'off',
+  existing_rows: 'merge',
+  approved_organizations: 'propose',
   updated_at: null,
 };
 
@@ -146,6 +148,46 @@ export function ImportSettingsPanel() {
                 />
                 Skip deleted organizations
               </label>
+            </AdminField>
+            <AdminField label='Existing rows' htmlFor='import-existing-rows'>
+              <Select
+                id='import-existing-rows'
+                value={settings.existing_rows}
+                onChange={(event) =>
+                  update(
+                    'existing_rows',
+                    event.target.value as ImportSettings['existing_rows']
+                  )
+                }
+              >
+                <option value='merge'>Merge</option>
+                <option value='apply'>Apply</option>
+                <option value='propose'>Propose</option>
+              </Select>
+              <p className='text-sm text-ink-700'>
+                Merge writes a source change when nobody edited that field.
+              </p>
+            </AdminField>
+            <AdminField
+              label='Approved organizations'
+              htmlFor='import-approved-organizations'
+            >
+              <Select
+                id='import-approved-organizations'
+                value={settings.approved_organizations}
+                onChange={(event) =>
+                  update(
+                    'approved_organizations',
+                    event.target.value as ImportSettings['approved_organizations']
+                  )
+                }
+              >
+                <option value='propose'>Propose</option>
+                <option value='merge'>Merge</option>
+              </Select>
+              <p className='text-sm text-ink-700'>
+                Approved organizations queue every source change.
+              </p>
             </AdminField>
             <AdminField label='Names' htmlFor='import-name-cleanup'>
               <Select

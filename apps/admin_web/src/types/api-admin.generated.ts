@@ -919,6 +919,183 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/import-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List pending import changes
+         * @description Admin JWT. One row per field where the source and the catalog
+         *     both moved. A missing record is dismissed. The live value stays
+         *     public until an admin accepts the proposal.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    org_id?: string;
+                    import_job_id?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Pending changes */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportChangeList"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/import-changes/accept-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept pending import changes
+         * @description Admin JWT. Accepts every pending change for one organization,
+         *     one import job, or both. At least one of those filters is
+         *     required. Each field is written through the admin update path.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ImportChangeAcceptAll"];
+                };
+            };
+            responses: {
+                /** @description How many changes were written */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            applied: number;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/import-changes/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept one import change
+         * @description Admin JWT. Writes the proposed value and records one admin
+         *     catalog version. A missing record is dismissed.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Applied change */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportChange"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/import-changes/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Keep the current value
+         * @description Admin JWT. Marks the proposal dismissed and writes nothing.
+         *     The same source value is not proposed again.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Dismissed change */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportChange"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/data-quality/runs": {
         parameters: {
             query?: never;
@@ -7599,9 +7776,60 @@ export interface components {
             locations: "off" | "check";
             /** @enum {string} */
             categories: "off" | "check";
+            /**
+             * @description How an import treats a row that is not on an approved
+             *     organization. `merge` writes a source change when that field
+             *     was not edited. `apply` overwrites the row. `propose` queues
+             *     every change.
+             * @enum {string}
+             */
+            existing_rows: "apply" | "merge" | "propose";
+            /**
+             * @description How an import treats an approved organization. `propose`
+             *     queues every source change. `merge` writes a change nobody
+             *     edited.
+             * @enum {string}
+             */
+            approved_organizations: "merge" | "propose";
             updated_by?: string | null;
             /** Format: date-time */
             updated_at: string | null;
+        };
+        ImportChange: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            entity_type: "organization" | "location" | "activity" | "pricing" | "schedule";
+            /** Format: uuid */
+            entity_id: string;
+            /** Format: uuid */
+            org_id?: string | null;
+            org_name?: string | null;
+            record_name?: string;
+            field: string;
+            base_value?: unknown;
+            current_value?: unknown;
+            proposed_value?: unknown;
+            /** Format: uuid */
+            import_job_id?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            current_user_id?: string | null;
+            /** Format: uuid */
+            current_import_job_id?: string | null;
+            /** @enum {string} */
+            status: "pending" | "applied" | "dismissed";
+        };
+        ImportChangeList: {
+            items: components["schemas"]["ImportChange"][];
+            next_cursor?: string | null;
+            pending_count: number;
+        };
+        ImportChangeAcceptAll: {
+            /** Format: uuid */
+            org_id?: string;
+            /** Format: uuid */
+            import_job_id?: string;
         };
         DataQualityRunRequest: {
             checks: ("names" | "duplicates" | "locations" | "categories")[];
@@ -7675,6 +7903,8 @@ export interface components {
              *     nothing. Omitted on jobs stored before catalog versions.
              */
             unchanged?: number;
+            /** @description Rows whose only source changes are waiting in Import changes. */
+            proposed?: number;
             failed: number;
             skipped: number;
         };
@@ -7720,7 +7950,7 @@ export interface components {
             type: "organizations" | "locations" | "activities" | "pricing" | "schedules";
             key: string;
             /** @enum {string} */
-            status: "created" | "updated" | "unchanged" | "failed" | "skipped";
+            status: "created" | "updated" | "unchanged" | "proposed" | "failed" | "skipped";
             id?: string | null;
             path?: string | null;
             warnings: string[];

@@ -14,6 +14,7 @@ export const IMPORT_RESULT_STATUSES = [
   'created',
   'updated',
   'unchanged',
+  'proposed',
   'failed',
   'skipped',
 ] as const satisfies readonly AdminImportStatus[];
@@ -135,6 +136,7 @@ const RESULT_STATUS_RANK: Record<string, number> = {
   created: 2,
   updated: 3,
   unchanged: 4,
+  proposed: 5,
 };
 
 export const IMPORT_RESULT_PREVIEW = 20;

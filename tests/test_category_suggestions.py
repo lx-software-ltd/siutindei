@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -239,6 +239,31 @@ def test_upsert_capture_sets_pending_category(
     ids = import_enrichment_ids(dry_run=False)
     assert summary["captured_categories"] == 1
     assert len(ids) == 1
+
+
+def test_upsert_update_still_captures_an_unknown_category(
+    db_session,
+    sample_organization,
+    sample_activity_category,
+) -> None:
+    _enable_capture(db_session)
+    upsert_activity(
+        db_session,
+        sample_organization,
+        _activity_payload(category_id=str(sample_activity_category.id)),
+        warnings=[],
+    )
+    activity, status = upsert_activity(
+        db_session,
+        sample_organization,
+        _activity_payload(category_name="Unknown Studio"),
+        warnings=[],
+    )
+    assert status == "updated"
+    assert activity.category_id == PENDING_CATEGORY_ID
+    summary: dict = {}
+    finish_capture_batch(summary)
+    assert summary["captured_categories"] == 1
 
 
 def test_decisions_reassign_and_alias(
@@ -497,7 +522,7 @@ def test_worker_success_repair_invalid_refusal_and_stale(
         assert row is not None
         assert row.enrichment_status == "failed"
         row.enrichment_status = "running"
-        row.updated_at = datetime.now(timezone.utc) - timedelta(seconds=400)
+        row.updated_at = datetime.now(UTC) - timedelta(seconds=400)
         session.commit()
     assert process_suggestion(suggestion_id, receive_count=1) is True
     with Session(engine) as session:

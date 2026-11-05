@@ -41,6 +41,7 @@ const statusToneByValue: Record<string, StatusBadgeTone> = {
   confirm: 'green',
   reassign: 'blue',
   propose: 'yellow',
+  proposed: 'amber',
   you: 'slate',
 };
 

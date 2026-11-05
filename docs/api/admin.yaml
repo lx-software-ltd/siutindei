@@ -612,6 +612,115 @@ paths:
         "409":
           description: Settings changed since updated_at
 
+  /v1/admin/import-changes:
+    get:
+      summary: List pending import changes
+      description: |
+        Admin JWT. One row per field where the source and the catalog
+        both moved. A missing record is dismissed. The live value stays
+        public until an admin accepts the proposal.
+      security:
+        - AdminGroupAuth: []
+      parameters:
+        - name: org_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: import_job_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pending changes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportChangeList'
+
+  /v1/admin/import-changes/accept-all:
+    post:
+      summary: Accept pending import changes
+      description: |
+        Admin JWT. Accepts every pending change for one organization,
+        one import job, or both. At least one of those filters is
+        required. Each field is written through the admin update path.
+      security:
+        - AdminGroupAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportChangeAcceptAll'
+      responses:
+        "200":
+          description: How many changes were written
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [applied]
+                properties:
+                  applied:
+                    type: integer
+
+  /v1/admin/import-changes/{id}/accept:
+    post:
+      summary: Accept one import change
+      description: |
+        Admin JWT. Writes the proposed value and records one admin
+        catalog version. A missing record is dismissed.
+      security:
+        - AdminGroupAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Applied change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportChange'
+
+  /v1/admin/import-changes/{id}/dismiss:
+    post:
+      summary: Keep the current value
+      description: |
+        Admin JWT. Marks the proposal dismissed and writes nothing.
+        The same source value is not proposed again.
+      security:
+        - AdminGroupAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Dismissed change
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportChange'
+
   /v1/admin/data-quality/runs:
     get:
       summary: List data-quality runs
@@ -4621,6 +4730,8 @@ components:
         - duplicates
         - locations
         - categories
+        - existing_rows
+        - approved_organizations
         - updated_at
       properties:
         skip_deleted_organizations:
@@ -4640,6 +4751,21 @@ components:
         categories:
           type: string
           enum: [off, check]
+        existing_rows:
+          type: string
+          enum: [apply, merge, propose]
+          description: |
+            How an import treats a row that is not on an approved
+            organization. `merge` writes a source change when that field
+            was not edited. `apply` overwrites the row. `propose` queues
+            every change.
+        approved_organizations:
+          type: string
+          enum: [merge, propose]
+          description: |
+            How an import treats an approved organization. `propose`
+            queues every source change. `merge` writes a change nobody
+            edited.
         updated_by:
           type: string
           nullable: true
@@ -4647,6 +4773,81 @@ components:
           type: string
           format: date-time
           nullable: true
+
+    ImportChange:
+      type: object
+      required:
+        - id
+        - entity_type
+        - entity_id
+        - field
+        - created_at
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity_type:
+          type: string
+          enum: [organization, location, activity, pricing, schedule]
+        entity_id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+          nullable: true
+        org_name:
+          type: string
+          nullable: true
+        record_name:
+          type: string
+        field:
+          type: string
+        base_value: {}
+        current_value: {}
+        proposed_value: {}
+        import_job_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        current_user_id:
+          type: string
+          nullable: true
+        current_import_job_id:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [pending, applied, dismissed]
+
+    ImportChangeList:
+      type: object
+      required: [items, pending_count]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportChange'
+        next_cursor:
+          type: string
+          nullable: true
+        pending_count:
+          type: integer
+
+    ImportChangeAcceptAll:
+      type: object
+      properties:
+        org_id:
+          type: string
+          format: uuid
+        import_job_id:
+          type: string
+          format: uuid
 
     DataQualityRunRequest:
       type: object
@@ -4760,6 +4961,10 @@ components:
           description: |
             Rows whose file matched version 1, so the import wrote
             nothing. Omitted on jobs stored before catalog versions.
+        proposed:
+          type: integer
+          description: |
+            Rows whose only source changes are waiting in Import changes.
         failed:
           type: integer
         skipped:
@@ -4838,7 +5043,7 @@ components:
           type: string
         status:
           type: string
-          enum: [created, updated, unchanged, failed, skipped]
+          enum: [created, updated, unchanged, proposed, failed, skipped]
         id:
           type: string
           nullable: true

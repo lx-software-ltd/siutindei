@@ -20,7 +20,10 @@ CloudFormation rewrite from this repo is reverted on the next merge.
 `scripts/ops/board-importer` only prints the keys after `setup`. Edit
 `production.json` in lx-software to change the switch or manager id.
 Leave `SiutindeiBoardCatalogImportEnabled` false until a remote board
-Preview succeeds.
+Preview succeeds. Preview uses the same per-field merge as a live
+import and writes nothing. A source change on an untouched field is
+applied. A field an admin edited waits in Import changes. Approved
+organizations queue every source change.
 
 Organizations created by that import are stored as `pending_review`.
 They are not a public listing until an admin releases them from

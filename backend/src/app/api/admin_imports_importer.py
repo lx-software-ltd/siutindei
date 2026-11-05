@@ -78,6 +78,9 @@ def process_import_payload(
     )
 
     begin_capture_batch(session)
+    session.info["import_job_id"] = (
+        None if import_job_id is None else str(import_job_id)
+    )
     try:
         for index, raw_org in enumerate(orgs_raw):
             process_organization(
