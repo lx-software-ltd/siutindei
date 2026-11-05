@@ -86,9 +86,11 @@ paths:
             - per_hour: Hourly pricing
             - per_day: Daily pricing
             - free: Free pricing
+            - per_month: Monthly pricing
+            - per_year: Yearly pricing
           schema:
             type: string
-            enum: [per_class, per_sessions, per_hour, per_day, free]
+            enum: [per_class, per_sessions, per_hour, per_day, free, per_month, per_year]
         - name: price_min
           in: query
           required: false
@@ -458,7 +460,7 @@ components:
       properties:
         pricing_type:
           type: string
-          enum: [per_class, per_sessions, per_hour, per_day, free]
+          enum: [per_class, per_sessions, per_hour, per_day, free, per_month, per_year]
         amount:
           type: number
         currency:

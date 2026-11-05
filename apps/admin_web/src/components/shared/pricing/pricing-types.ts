@@ -34,6 +34,8 @@ export const pricingOptions = [
   { value: 'per_hour', label: 'Hourly' },
   { value: 'per_day', label: 'Daily' },
   { value: 'free', label: 'Free' },
+  { value: 'per_month', label: 'Monthly' },
+  { value: 'per_year', label: 'Yearly' },
 ];
 
 const pricingTypeLabelByValue = new Map(

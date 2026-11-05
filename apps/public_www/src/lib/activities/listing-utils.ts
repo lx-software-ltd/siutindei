@@ -91,6 +91,8 @@ export function formatListingPrice(
     per_sessions: { en: ' / term', zh: ' / 期' },
     per_hour: { en: ' / hr', zh: ' / 小時' },
     per_day: { en: ' / day', zh: ' / 天' },
+    per_month: { en: ' / month', zh: ' / 月' },
+    per_year: { en: ' / year', zh: ' / 年' },
   };
   const suffix = suffixMap[pricing.pricingType];
   if (!suffix) {

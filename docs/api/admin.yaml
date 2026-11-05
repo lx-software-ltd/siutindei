@@ -48,7 +48,7 @@ info:
     |-------|---------------|
     | currency | Any ISO 4217 3-letter code (default HKD, case-insensitive) |
     | languages | en, zh, ja, ko, fr, de, es, pt, it, ru, ar, hi, th, vi, id, ms, tl, nl, pl, tr, yue (Cantonese, ISO 639-3) |
-    | pricing_type | per_class, per_sessions, per_hour, per_day, free |
+    | pricing_type | per_class, per_sessions, per_hour, per_day, free, per_month, per_year |
     | schedule_type | weekly |
 
     ### Contact Validation
@@ -4653,7 +4653,7 @@ components:
           description: Location name to link pricing with.
         pricing_type:
           type: string
-          enum: [per_class, per_sessions, per_hour, per_day, free]
+          enum: [per_class, per_sessions, per_hour, per_day, free, per_month, per_year]
         amount:
           type: number
           minimum: 0
@@ -6254,7 +6254,7 @@ components:
           description: Location UUID (required)
         pricing_type:
           type: string
-          enum: [per_class, per_sessions, per_hour, per_day, free]
+          enum: [per_class, per_sessions, per_hour, per_day, free, per_month, per_year]
           description: |
             Pricing type (required):
             - per_class: Price per individual class
@@ -6262,6 +6262,8 @@ components:
             - per_hour: Hourly price
             - per_day: Daily price
             - free: Free pricing
+            - per_month: Monthly price
+            - per_year: Yearly price
         amount:
           type: number
           minimum: 0
@@ -6287,7 +6289,7 @@ components:
       properties:
         pricing_type:
           type: string
-          enum: [per_class, per_sessions, per_hour, per_day, free]
+          enum: [per_class, per_sessions, per_hour, per_day, free, per_month, per_year]
         amount:
           type: number
           minimum: 0
