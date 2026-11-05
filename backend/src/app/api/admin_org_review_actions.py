@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.api.admin_auth import _get_user_sub, _set_session_audit_context
 from app.api.admin_imports_catalog import apply_listing_status, parse_org_status
-from app.api.admin_request import _parse_body
+from app.api.admin_request import _parse_body, parse_object_body
 from app.api.admin_resource_organization import (
     _serialize_organization,
     _update_organization,
@@ -111,6 +111,74 @@ def handle_decision(
             200,
             _serialize_organization(organization),
             event=event,
+        )
+
+
+def apply_organization_rejection(
+    event: Mapping[str, Any],
+    resource_id: str,
+    *,
+    reviewer: str,
+) -> dict[str, Any]:
+    """Reject one organization. Same fields as an admin reject decision."""
+    body = parse_object_body(event)
+    reason = _validated_reject_body(body)
+    org_id = _parse_uuid(resource_id, "id")
+    with Session(get_engine()) as session:
+        _set_session_audit_context(session, event, user_id=reviewer)
+        organization = session.get(Organization, org_id)
+        if organization is None:
+            raise NotFoundError("organizations", resource_id)
+        _apply_decision(
+            session,
+            organization,
+            "reject",
+            force=False,
+            notes=body.get("notes") if "notes" in body else None,
+            status=body.get("status"),
+            reviewer_sub=reviewer,
+            notes_provided="notes" in body,
+            reason=reason,
+        )
+        session.commit()
+        session.refresh(organization)
+        logger.info(
+            "Organization rejected",
+            extra={"org_id": str(organization.id)},
+        )
+        return json_response(
+            200,
+            _serialize_organization(organization),
+            event=event,
+        )
+
+
+def _validated_reject_body(body: Mapping[str, Any]) -> str:
+    """Check the reject body before any organization lookup."""
+    _reject_other_actions(body)
+    reason = _decision_reason(body.get("reason"), "reject")
+    if reason is None:
+        raise ValidationError("reason is required", field="reason")
+    if "notes" in body:
+        _parse_notes(body.get("notes"))
+    status = body.get("status")
+    if status not in (None, ""):
+        parse_org_status(status)
+    return reason
+
+
+def _reject_other_actions(body: Mapping[str, Any]) -> None:
+    """This route rejects. Approve, reopen, and force stay on admin."""
+    action = body.get("action")
+    if action not in (None, "", "reject"):
+        raise ValidationError(
+            "Only reject is available on this route",
+            field="action",
+        )
+    if "force" in body:
+        raise ValidationError(
+            "force is not available on this route",
+            field="force",
         )
 
 

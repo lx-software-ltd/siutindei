@@ -18,7 +18,8 @@ reviews at `GET /v1/partner/category-reviews` and sees
 `category_review` on `GET /v1/partner/activities`. A full-access
 `crud` key is the partner equivalent of an admin: it can decide category
 reviews, decide venue proposals, merge organizations at
-`POST /v1/partner/organization-merges`, and list or delete empty leftover
+`POST /v1/partner/organization-merges`, reject one organization at
+`POST /v1/partner/organizations/{id}/reject`, and list or delete empty leftover
 categories. An org-scoped key can read
 its own venue rows and receives `403` on those writes. See
 `docs/api/partner.yaml`.
