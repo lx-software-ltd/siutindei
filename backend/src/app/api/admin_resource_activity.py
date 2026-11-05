@@ -349,20 +349,27 @@ def _reject_venues_in_use(
     removed: set[str],
 ) -> None:
     removed_ids = [UUID(item) for item in removed]
-    for model in (ActivityPricing, ActivitySchedule):
-        used = session.scalar(
-            select(model.id)
-            .where(
-                model.activity_id == activity_id,
-                model.location_id.in_(removed_ids),
-            )
-            .limit(1)
+    priced = session.scalar(
+        select(ActivityPricing.id)
+        .where(
+            ActivityPricing.activity_id == activity_id,
+            ActivityPricing.location_id.in_(removed_ids),
         )
-        if used is not None:
-            raise ValidationError(
-                "location_ids still used by pricing or schedules",
-                field="location_ids",
-            )
+        .limit(1)
+    )
+    scheduled = session.scalar(
+        select(ActivitySchedule.id)
+        .where(
+            ActivitySchedule.activity_id == activity_id,
+            ActivitySchedule.location_id.in_(removed_ids),
+        )
+        .limit(1)
+    )
+    if priced is not None or scheduled is not None:
+        raise ValidationError(
+            "location_ids still used by pricing or schedules",
+            field="location_ids",
+        )
 
 
 def _set_activity_locations(entity: Activity, location_ids: list[UUID]) -> None:
