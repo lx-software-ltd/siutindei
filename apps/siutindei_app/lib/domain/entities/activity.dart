@@ -146,6 +146,8 @@ class PricingEntity {
             : '$priceStr/term',
       PricingType.perHour => '$priceStr/hour',
       PricingType.perDay => '$priceStr/day',
+      PricingType.perMonth => '$priceStr/month',
+      PricingType.perYear => '$priceStr/year',
       PricingType.free => 'Free',
     };
   }
@@ -165,14 +167,16 @@ class PricingEntity {
 /// Pricing type enumeration.
 ///
 /// Values must match the API enum: per_class, per_sessions, per_hour,
-/// per_day, free
+/// per_day, free, per_month, per_year
 /// (defined in docs/api/search.yaml).
 enum PricingType {
   perClass,
   perSessions,
   perHour,
   perDay,
-  free;
+  free,
+  perMonth,
+  perYear;
 
   /// Creates from API string value.
   static PricingType fromString(String value) => switch (value) {
@@ -181,6 +185,8 @@ enum PricingType {
     'per_hour' => PricingType.perHour,
     'per_day' => PricingType.perDay,
     'free' => PricingType.free,
+    'per_month' => PricingType.perMonth,
+    'per_year' => PricingType.perYear,
     _ => PricingType.perClass,
   };
 
@@ -191,6 +197,8 @@ enum PricingType {
     PricingType.perHour => 'per_hour',
     PricingType.perDay => 'per_day',
     PricingType.free => 'free',
+    PricingType.perMonth => 'per_month',
+    PricingType.perYear => 'per_year',
   };
 }
 

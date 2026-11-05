@@ -154,7 +154,9 @@ enum PricingType {
   perSessions,
   perHour,
   perDay,
-  free;
+  free,
+  perMonth,
+  perYear;
 
   static PricingType fromString(String value) => switch (value) {
     'per_class' => PricingType.perClass,
@@ -162,6 +164,8 @@ enum PricingType {
     'per_hour' => PricingType.perHour,
     'per_day' => PricingType.perDay,
     'free' => PricingType.free,
+    'per_month' => PricingType.perMonth,
+    'per_year' => PricingType.perYear,
     _ => PricingType.perClass,
   };
 
@@ -171,6 +175,8 @@ enum PricingType {
     PricingType.perHour => 'per_hour',
     PricingType.perDay => 'per_day',
     PricingType.free => 'free',
+    PricingType.perMonth => 'per_month',
+    PricingType.perYear => 'per_year',
   };
 }
 ```

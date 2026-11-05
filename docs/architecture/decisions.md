@@ -80,7 +80,7 @@ parallel environments (production + staging) inside a single CDK stack
 **Decisions:**
 - Area filter uses `locations.area_id` (a `geographic_areas` row).
 - Pricing is per location with `per_class`, `per_sessions`, `per_hour`,
-  `per_day`, or `free`.
+  `per_day`, `free`, `per_month`, or `per_year`.
 - Languages are stored on `activity_schedule.languages`; the same
   activity and location can have one schedule per language set.
 - Times are stored in UTC.

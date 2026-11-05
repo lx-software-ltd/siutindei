@@ -12,7 +12,7 @@ Seed data lives in `backend/db/seed/seed_data.sql`.
 - Extension: `pg_trgm` (created by `0041_data_quality`; trigram indexes
   and duplicate scoring).
 - Enum `pricing_type`: `per_class`, `per_sessions`, `per_hour`, `per_day`,
-  `free`.
+  `free`, `per_month`, `per_year`.
 - Enum `schedule_type`: `weekly`.
 - Enum `ticket_type`: `access_request`, `organization_suggestion`,
   `organization_feedback`.

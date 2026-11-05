@@ -94,6 +94,8 @@ class AppConstants {
     'per_hour': 'Hourly',
     'per_day': 'Daily',
     'free': 'Free',
+    'per_month': 'Monthly',
+    'per_year': 'Yearly',
   };
 
   // ============================================================

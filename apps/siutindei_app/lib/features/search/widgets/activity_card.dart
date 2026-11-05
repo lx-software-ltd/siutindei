@@ -294,6 +294,8 @@ class _ActivityCardTags extends StatelessWidget {
       PricingType.perHour => 'Hourly',
       PricingType.perDay => 'Daily',
       PricingType.free => 'Free',
+      PricingType.perMonth => 'Monthly',
+      PricingType.perYear => 'Yearly',
     };
   }
 }

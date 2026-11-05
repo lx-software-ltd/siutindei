@@ -7732,7 +7732,7 @@ export interface components {
             /** @description Location name to link pricing with. */
             location_name: string;
             /** @enum {string} */
-            pricing_type: "per_class" | "per_sessions" | "per_hour" | "per_day" | "free";
+            pricing_type: "per_class" | "per_sessions" | "per_hour" | "per_day" | "free" | "per_month" | "per_year";
             amount?: number;
             currency?: string;
             sessions_count?: number;
@@ -8567,9 +8567,11 @@ export interface components {
              *     - per_hour: Hourly price
              *     - per_day: Daily price
              *     - free: Free pricing
+             *     - per_month: Monthly price
+             *     - per_year: Yearly price
              * @enum {string}
              */
-            pricing_type: "per_class" | "per_sessions" | "per_hour" | "per_day" | "free";
+            pricing_type: "per_class" | "per_sessions" | "per_hour" | "per_day" | "free" | "per_month" | "per_year";
             /** @description Price amount (required, must be >= 0) */
             amount: number;
             /**
@@ -8587,7 +8589,7 @@ export interface components {
         };
         PricingUpdate: {
             /** @enum {string} */
-            pricing_type?: "per_class" | "per_sessions" | "per_hour" | "per_day" | "free";
+            pricing_type?: "per_class" | "per_sessions" | "per_hour" | "per_day" | "free" | "per_month" | "per_year";
             /** @description Price amount (must be >= 0) */
             amount?: number;
             /** @description ISO 4217 currency code (case-insensitive) */

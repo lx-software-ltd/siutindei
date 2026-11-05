@@ -27,6 +27,16 @@ test.describe('Pricing Panel', () => {
     ).toBeLessThan(32);
     await adminPage.getByRole('button', { name: 'New pricing' }).click();
 
+    const pricingType = adminPage.locator('#pricing-type');
+    await expect(pricingType.locator('option')).toHaveText([
+      'Per class',
+      'Per term',
+      'Hourly',
+      'Daily',
+      'Free',
+      'Monthly',
+      'Yearly',
+    ]);
     await adminPage.locator('#pricing-location').selectOption('loc-1');
     await adminPage.locator('#pricing-activity').selectOption('activity-1');
     await adminPage.locator('#pricing-currency').selectOption('HKD');

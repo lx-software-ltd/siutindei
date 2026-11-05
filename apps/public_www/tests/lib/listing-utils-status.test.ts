@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  formatListingPrice,
   googleMapsPlaceUrl,
   isTemplateDescription,
   isTemporarilyClosed,
@@ -76,5 +77,22 @@ describe('listing status helpers', () => {
     expect(googleMapsPlaceUrl('ChIJ123')).toBe(
       'https://www.google.com/maps/search/?api=1&query_place_id=ChIJ123',
     );
+  });
+
+  it('formats monthly tuition and a yearly levy', () => {
+    const monthly = buildListing();
+    const yearly = buildListing();
+    const monthListing = {
+      ...monthly,
+      pricing: { ...monthly.pricing, pricingType: 'per_month', amount: 3800 },
+    };
+    const yearListing = {
+      ...yearly,
+      pricing: { ...yearly.pricing, pricingType: 'per_year', amount: 35000 },
+    };
+    expect(formatListingPrice('en', monthListing)).toBe('HK$3,800 / month');
+    expect(formatListingPrice('zh-HK', monthListing)).toBe('HK$3,800 / 月');
+    expect(formatListingPrice('en', yearListing)).toBe('HK$35,000 / year');
+    expect(formatListingPrice('zh-HK', yearListing)).toBe('HK$35,000 / 年');
   });
 });

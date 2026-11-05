@@ -13,6 +13,8 @@ class PricingType(enum.StrEnum):
     PER_HOUR = "per_hour"
     PER_DAY = "per_day"
     FREE = "free"
+    PER_MONTH = "per_month"
+    PER_YEAR = "per_year"
 
 
 class ScheduleType(enum.StrEnum):
