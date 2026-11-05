@@ -4309,7 +4309,7 @@ components:
             source_note when source_note is empty.
         source:
           type: string
-          enum: [lcsd, edb, swd, places, competitor, recommendation]
+          enum: [lcsd, edb, swd, places, competitor, recommendation, manual]
         source_id:
           type: string
           maxLength: 80
@@ -5420,7 +5420,7 @@ components:
           enum: [owner, provider, places, importer]
         source:
           type: string
-          enum: [lcsd, edb, swd, places, competitor, recommendation]
+          enum: [lcsd, edb, swd, places, competitor, recommendation, manual]
         source_id:
           type: string
           maxLength: 80
@@ -5481,7 +5481,7 @@ components:
           enum: [owner, provider, places, importer]
         source:
           type: string
-          enum: [lcsd, edb, swd, places, competitor, recommendation]
+          enum: [lcsd, edb, swd, places, competitor, recommendation, manual]
         source_id:
           type: string
           maxLength: 80
@@ -5606,7 +5606,7 @@ components:
         source:
           type: string
           nullable: true
-          enum: [lcsd, edb, swd, places, competitor, recommendation]
+          enum: [lcsd, edb, swd, places, competitor, recommendation, manual]
         source_id:
           type: string
           nullable: true

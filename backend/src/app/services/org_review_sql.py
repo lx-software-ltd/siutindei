@@ -54,7 +54,7 @@ def summarize_catalog(session: Session) -> dict[str, Any]:
     """Aggregate review counts without loading every organization."""
     source_key = func.coalesce(
         func.nullif(Organization.source, literal("")),
-        literal("unknown"),
+        literal("manual"),
     )
     status_source_key = func.coalesce(
         func.nullif(Organization.status_source, literal("")),

@@ -58,10 +58,22 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByLabel('Description', { exact: true })).toBeVisible();
     await expect(
       adminPage.getByLabel('Source', { exact: true }).getByRole('option', {
+        name: 'Manual',
+        exact: true,
+      })
+    ).toHaveCount(1);
+    await expect(
+      adminPage.getByLabel('Source', { exact: true }).getByRole('option', {
         name: 'Recommendation',
         exact: true,
       })
     ).toHaveCount(1);
+    await expect(
+      adminPage.getByLabel('Source', { exact: true }).getByRole('option', {
+        name: 'None',
+        exact: true,
+      })
+    ).toHaveCount(0);
     await expect(adminPage.getByLabel('Source URL')).toBeVisible();
     await expect(
       adminPage
@@ -135,6 +147,7 @@ test.describe('Organizations Panel', () => {
     await expect(sourceFilter).toHaveValue('');
     for (const label of [
       'Any source',
+      'Manual',
       'LCSD',
       'EDB',
       'SWD',
@@ -176,9 +189,14 @@ test.describe('Organizations Panel', () => {
     });
     const importedRow = adminPage.getByRole('row', { name: /Test Organization 1/ });
     await expect(importedRow).toContainText(importedAt);
+    await expect(importedRow).toContainText('LCSD');
     await expect(importedRow).not.toContainText('job-1');
     const neverImported = adminPage.getByRole('row', { name: /Quiet Hall/ });
     await expect(neverImported).toContainText('—');
+    await expect(neverImported).toContainText('Manual');
+    await expect(
+      adminPage.getByRole('row', { name: /Test Organization 2/ })
+    ).toContainText('Manual');
     await expect(neverImported).not.toContainText('job-');
     await adminPage
       .getByRole('table', { name: 'Catalog' })
@@ -220,6 +238,39 @@ test.describe('Organizations Panel', () => {
     });
   });
 
+  test('offers Manual as a catalog source', async ({ adminPage }) => {
+    const sourceFilter = adminPage.locator('#review-source-filter');
+    await expect(
+      sourceFilter.getByRole('option', { name: 'Manual', exact: true })
+    ).toHaveCount(1);
+    await expect(
+      sourceFilter.getByRole('option', { name: 'None', exact: true })
+    ).toHaveCount(0);
+    await sourceFilter.selectOption('manual');
+    await expect(sourceFilter).toHaveValue('manual');
+    await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
+    await expect(adminPage.getByText('Quiet Hall')).toBeVisible();
+    await expect(
+      adminPage.getByRole('cell', { name: 'Test Organization 1', exact: true })
+    ).toHaveCount(0);
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/catalog-source-filter-manual.png',
+    });
+
+    await adminPage.getByRole('button', { name: 'New organization', exact: true }).click();
+    const sourceField = adminPage.getByLabel('Source', { exact: true });
+    await expect(sourceField).toHaveValue('manual');
+    await expect(
+      sourceField.getByRole('option', { name: 'Manual', exact: true })
+    ).toHaveCount(1);
+    await expect(
+      sourceField.getByRole('option', { name: 'None', exact: true })
+    ).toHaveCount(0);
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/org-editor-source-manual.png',
+    });
+  });
+
   test('offers Recommendation as a catalog source', async ({ adminPage }) => {
     const sourceFilter = adminPage.locator('#review-source-filter');
     await expect(
@@ -254,6 +305,7 @@ test.describe('Organizations Panel', () => {
     });
     await adminPage.reload();
     await listed;
+    await showAllCatalogNeighbourhoods(adminPage);
 
     const imports = adminPage.locator('#review-import-filter');
     const name = adminPage.locator('#review-name-filter');

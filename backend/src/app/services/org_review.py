@@ -15,6 +15,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.admin_imports_catalog import catalog_source_key
 from app.db.age_bounds import inclusive_age_bounds
 from app.db.models import (
     Activity,
@@ -433,7 +434,7 @@ def summarize_snapshots(snapshots: list[OrgReviewSnapshot]) -> dict[str, Any]:
         if org.review_status == "rejected":
             reason_key = org.review_reason or "none"
             by_review_reason[reason_key] = by_review_reason.get(reason_key, 0) + 1
-        source_key = org.source or "unknown"
+        source_key = catalog_source_key(org.source)
         by_source[source_key] = by_source.get(source_key, 0) + 1
         status_source_key = org.status_source or "unknown"
         by_status_source[status_source_key] = (

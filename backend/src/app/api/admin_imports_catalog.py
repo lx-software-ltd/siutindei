@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
@@ -24,7 +24,15 @@ ORG_STATUSES = (
 PUBLIC_LISTING_STATUSES = ("operational", "closed_temporarily")
 STATUS_SOURCES = ("owner", "provider", "places", "importer")
 DESCRIPTION_SOURCES = ("template", "official", "places", "enrich")
-ORG_SOURCES = ("lcsd", "edb", "swd", "places", "competitor", "recommendation")
+ORG_SOURCES = (
+    "lcsd",
+    "edb",
+    "swd",
+    "places",
+    "competitor",
+    "recommendation",
+    "manual",
+)
 
 MAX_PLACE_ID_LENGTH = 255
 MAX_AREA_NAME_LENGTH = 80
@@ -192,6 +200,31 @@ def parse_org_source(value: Any) -> str | None:
     if source not in ORG_SOURCES:
         raise ValidationError("Invalid source", field="source")
     return source
+
+
+def catalog_source_key(value: Any) -> str:
+    """Normalize a stored catalog source. Unset is Manual."""
+    source = str(value).strip() if value is not None else ""
+    return source or "manual"
+
+
+def catalog_source_matches(stored: Any, wanted: str) -> bool:
+    """True when a stored source matches a filter, including unset as Manual."""
+    return catalog_source_key(stored).casefold() == wanted.strip().casefold()
+
+
+def catalog_source_filter(wanted: str):
+    """SQL clause for a catalog source filter.
+
+    Comparison is case-insensitive. Unset and blank rows are Manual.
+    """
+    key = catalog_source_key(wanted).casefold()
+    normalized = func.lower(
+        func.nullif(func.btrim(func.coalesce(Organization.source, "")), "")
+    )
+    if key == "manual":
+        return or_(normalized == "manual", normalized.is_(None))
+    return normalized == key
 
 
 def parse_description_source(value: Any) -> str | None:

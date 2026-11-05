@@ -20,7 +20,10 @@ import {
   pinsForOrganizations,
 } from '../../../lib/catalog-map-pins';
 import { neighbourhoodFilterOptions } from '../../../lib/neighbourhood-options';
-import { ORG_SOURCE_OPTIONS } from '../../shared/organizations/organization-form-utils';
+import {
+  ORG_SOURCE_OPTIONS,
+  orgSourceLabel,
+} from '../../shared/organizations/organization-form-utils';
 import { ApiError } from '../../../lib/api-client';
 import {
   bulkOrgReview,
@@ -906,7 +909,7 @@ function CatalogPanelReady({
             <AdminDataTableCell>
               <AdminTableName>{item.name}</AdminTableName>
               <AdminDataTableCellMeta until='secondary' label='Source'>
-                {adminTableText(item.source)}
+                {adminTableText(orgSourceLabel(item.source))}
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='secondary'>
                 <StatusBadge
@@ -929,7 +932,7 @@ function CatalogPanelReady({
               </AdminDataTableCellMeta>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {adminTableText(item.source)}
+              {adminTableText(orgSourceLabel(item.source))}
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               <StatusBadge

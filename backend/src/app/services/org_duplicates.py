@@ -10,6 +10,7 @@ from uuid import UUID
 from sqlalchemy import String, cast, func, select
 from sqlalchemy.orm import Session
 
+from app.api.admin_imports_catalog import catalog_source_matches
 from app.db.audit import AuditService
 from app.db.models import (
     Activity,
@@ -401,7 +402,7 @@ def _group_matches(group, signal, source, review_status, query, org_id) -> bool:
     if org_id and not any(org["id"] == org_id for org in orgs):
         return False
     if source and not any(
-        (org.get("source") or "").casefold() == source.casefold() for org in orgs
+        catalog_source_matches(org.get("source"), source) for org in orgs
     ):
         return False
     if review_status and not any(

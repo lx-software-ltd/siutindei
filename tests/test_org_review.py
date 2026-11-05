@@ -342,6 +342,42 @@ def test_sql_summary_matches_python_snapshots(db_session, sample_organization) -
     assert summarize_catalog(db_session) == summarize_snapshots(snapshots)
 
 
+def test_review_list_manual_source_includes_unset(db_session) -> None:
+    suffix = uuid4().hex[:8]
+    typed = Organization(
+        name=f"Typed Manual {suffix}",
+        manager_id="00000000-0000-0000-0000-000000000051",
+        source="manual",
+        review_status="pending_review",
+    )
+    unset = Organization(
+        name=f"Unset Source {suffix}",
+        manager_id="00000000-0000-0000-0000-000000000052",
+        review_status="pending_review",
+    )
+    other = Organization(
+        name=f"LCSD Hall {suffix}",
+        manager_id="00000000-0000-0000-0000-000000000053",
+        source="lcsd",
+        review_status="pending_review",
+    )
+    db_session.add_all([typed, unset, other])
+    db_session.flush()
+    found = _load_filtered_organizations(
+        db_session,
+        _review_filters(source="Manual", query=suffix),
+        None,
+        20,
+    )
+    assert {org.name for org in found} == {typed.name, unset.name}
+    assert (
+        summarize_snapshots(load_snapshots(db_session, [typed, unset, other]))[
+            "by_source"
+        ]["manual"]
+        == 2
+    )
+
+
 def test_review_list_orders_by_name_and_blocker_filter(
     db_session,
     sample_geographic_area,

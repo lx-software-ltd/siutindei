@@ -195,7 +195,9 @@ def _load_filtered_organizations(
     elif filters.review_reason:
         stmt = stmt.where(Organization.review_reason == filters.review_reason)
     if filters.source:
-        stmt = stmt.where(Organization.source == filters.source)
+        from app.api.admin_imports_catalog import catalog_source_filter
+
+        stmt = stmt.where(catalog_source_filter(filters.source))
     if filters.import_job_id is not None:
         stmt = stmt.where(import_job_clause(session, filters.import_job_id))
     if filters.status:

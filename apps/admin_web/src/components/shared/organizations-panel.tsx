@@ -52,6 +52,7 @@ import { ManagerCombobox } from './organizations/manager-combobox';
 import {
   SOCIAL_FIELDS,
   DESCRIPTION_SOURCE_OPTIONS,
+  catalogSourcePayload,
   emptyForm,
   ORG_SOURCE_OPTIONS,
   isValidEmail,
@@ -422,7 +423,7 @@ export function OrganizationsPanel({
       }
       payload.status = form.status;
       payload.status_source = 'owner';
-      payload.source = form.source || null;
+      payload.source = catalogSourcePayload(form.source);
       payload.source_id = form.source_id.trim() || null;
       payload.source_url = form.source_url.trim() || null;
       payload.source_note = form.source_note.trim() || null;
@@ -629,7 +630,7 @@ export function OrganizationsPanel({
                 <Select
                 disabled={locked}
                   id='org-source'
-                  value={editorForm.source}
+                  value={editorForm.source || 'manual'}
                   onChange={(event) =>
                     panel.setFormState((prev) => ({
                       ...prev,
@@ -637,7 +638,6 @@ export function OrganizationsPanel({
                     }))
                   }
                 >
-                  <option value=''>None</option>
                   {ORG_SOURCE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}

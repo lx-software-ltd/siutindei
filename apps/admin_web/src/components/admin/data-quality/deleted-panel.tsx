@@ -21,6 +21,7 @@ import {
   AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '../../ui/admin-data-table';
+import { orgSourceLabel } from '../../shared/organizations/organization-form-utils';
 import {
   adminTableText,
   AdminTableId,
@@ -97,7 +98,7 @@ export function DeletedPanel() {
                 <AdminTableId>{item.place_id}</AdminTableId>
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='secondary' label='Source'>
-                {adminTableText(item.source)}
+                {adminTableText(orgSourceLabel(item.source))}
               </AdminDataTableCellMeta>
               <AdminDataTableCellMeta until='secondary' label='Deleted' empty={!item.deleted_at}>
                 <AdminTableTime value={item.deleted_at} />
@@ -110,7 +111,7 @@ export function DeletedPanel() {
               <AdminTableId>{item.place_id}</AdminTableId>
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
-              {adminTableText(item.source)}
+              {adminTableText(orgSourceLabel(item.source))}
             </AdminDataTableCell>
             <AdminDataTableCell priority='secondary'>
               <AdminTableTime value={item.deleted_at} />
@@ -215,7 +216,9 @@ function DeletedDetail({
         <AdminReadOnlyValue label='Place id' mono>
           {item.place_id || '—'}
         </AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Source'>{item.source || '—'}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Source'>
+          {orgSourceLabel(item.source)}
+        </AdminReadOnlyValue>
         <AdminReadOnlyValue label='Source id' mono>
           {item.source_id || '—'}
         </AdminReadOnlyValue>

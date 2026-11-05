@@ -7409,7 +7409,7 @@ export interface components {
              */
             vetting_note?: string;
             /** @enum {string} */
-            source?: "lcsd" | "edb" | "swd" | "places" | "competitor" | "recommendation";
+            source?: "lcsd" | "edb" | "swd" | "places" | "competitor" | "recommendation" | "manual";
             source_id?: string;
             /** @enum {string} */
             description_source?: "template" | "official" | "places" | "enrich";
@@ -8025,7 +8025,7 @@ export interface components {
             /** @enum {string} */
             status_source?: "owner" | "provider" | "places" | "importer";
             /** @enum {string} */
-            source?: "lcsd" | "edb" | "swd" | "places" | "competitor" | "recommendation";
+            source?: "lcsd" | "edb" | "swd" | "places" | "competitor" | "recommendation" | "manual";
             source_id?: string;
             /** @description Page the organization listing was taken from. Admin-write only; manager routes ignore this field. */
             source_url?: string | null;
@@ -8053,7 +8053,7 @@ export interface components {
             /** @enum {string} */
             status_source?: "owner" | "provider" | "places" | "importer";
             /** @enum {string} */
-            source?: "lcsd" | "edb" | "swd" | "places" | "competitor" | "recommendation";
+            source?: "lcsd" | "edb" | "swd" | "places" | "competitor" | "recommendation" | "manual";
             source_id?: string;
             /** @description Admin-write only; manager routes ignore this field. */
             source_url?: string | null;
@@ -8107,7 +8107,7 @@ export interface components {
             /** @enum {string|null} */
             status_source?: "owner" | "provider" | "places" | "importer" | null;
             /** @enum {string|null} */
-            source?: "lcsd" | "edb" | "swd" | "places" | "competitor" | "recommendation" | null;
+            source?: "lcsd" | "edb" | "swd" | "places" | "competitor" | "recommendation" | "manual" | null;
             source_id?: string | null;
             source_url?: string | null;
             source_note?: string | null;
