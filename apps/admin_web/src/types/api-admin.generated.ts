@@ -977,8 +977,8 @@ export interface paths {
         /**
          * Accept pending import changes
          * @description Admin JWT. Accepts every pending change for one organization,
-         *     one import job, or both. Omitted filters accept every pending
-         *     change. Each field is written through the admin update path.
+         *     one import job, or both. At least one of those filters is
+         *     required. Each field is written through the admin update path.
          */
         post: {
             parameters: {
