@@ -59,6 +59,7 @@ def _fold_locations(session: Session, survivor: Organization, org_ids: list) -> 
         address_key = _address_key(row.address)
         target = by_address.get(address_key) if address_key else None
         if target is not None:
+            _keep_missing_label(target, row)
             _retarget_location(session, row.id, target.id)
             session.flush()
             session.expire(row, ["activity_pricing", "activity_schedules"])
@@ -268,6 +269,20 @@ def _remember_location(by_address, by_place, row: Location) -> None:
         by_address[address_key] = row
     if row.place_id and row.place_id not in by_place:
         by_place[row.place_id] = row
+
+
+def _keep_missing_label(target: Location, source: Location) -> None:
+    """Keep a venue label when the surviving row has none."""
+    if _label_text(target.name):
+        return
+    label = _label_text(source.name)
+    if label:
+        target.name = label
+
+
+def _label_text(value: str | None) -> str | None:
+    text = (value or "").strip()
+    return text or None
 
 
 def _address_key(address: str | None) -> str:

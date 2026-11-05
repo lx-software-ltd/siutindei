@@ -11,9 +11,18 @@ from app.api.admin_resource_location import (
     _serialize_location,
     _update_location,
 )
+from app.db.models import CatalogVersion, ImportSettings
 from app.db.repositories import LocationRepository
 from app.exceptions import ValidationError
+from app.services.catalog_version_match import (
+    ADMIN_EDITS_OVERWRITTEN,
+    IMPORT_EDITS_OVERWRITTEN,
+    MIXED_EDITS_OVERWRITTEN,
+    SYSTEM_EDITS_OVERWRITTEN,
+)
 from app.services.catalog_version_payload import location_payload
+from app.services.import_merge import jsonable
+from sqlalchemy import select, text
 
 
 def test_create_location_stores_a_trimmed_name(
@@ -159,3 +168,84 @@ def test_import_keeps_an_admin_label(
     assert status == "updated"
     assert again.name == "Main Hall"
     assert again.lat == Decimal("22.290000")
+
+
+def test_reimport_does_not_warn_that_the_label_was_overwritten(
+    db_session,
+    sample_organization,
+    sample_geographic_area,
+) -> None:
+    _apply_mode(db_session)
+    location, _status = upsert_location(
+        db_session,
+        sample_organization,
+        {
+            "name": "Studio Hall",
+            "area_id": str(sample_geographic_area.id),
+            "lat": Decimal("22.280000"),
+            "lng": Decimal("114.150000"),
+        },
+        "Studio Hall",
+    )
+    version1 = db_session.scalars(
+        select(CatalogVersion).where(
+            CatalogVersion.entity_type == "location",
+            CatalogVersion.entity_id == location.id,
+            CatalogVersion.version == 1,
+        )
+    ).first()
+    if version1 is None:
+        version1 = CatalogVersion(
+            entity_type="location",
+            entity_id=location.id,
+            org_id=sample_organization.id,
+            version=1,
+            action="created",
+            snapshot=jsonable(location_payload(location)),
+            txid=1,
+        )
+        db_session.add(version1)
+        db_session.flush()
+    assert version1.snapshot.get("name") in (None, "")
+    if db_session.get_bind().dialect.name == "postgresql":
+        db_session.execute(
+            text("SELECT set_config('app.current_user_id', :user_id, true)"),
+            {"user_id": "admin-sub"},
+        )
+    location.name = "Main Hall"
+    db_session.flush()
+
+    warnings: list[str] = []
+    again, status = upsert_location(
+        db_session,
+        sample_organization,
+        {
+            "name": "Studio Hall",
+            "address": "Studio Hall",
+            "area_id": str(sample_geographic_area.id),
+            "lat": Decimal("22.290000"),
+            "lng": Decimal("114.150000"),
+        },
+        "Studio Hall",
+        warnings=warnings,
+    )
+    assert status == "updated"
+    assert again.name == "Main Hall"
+    assert again.lat == Decimal("22.290000")
+    overwritten = {
+        ADMIN_EDITS_OVERWRITTEN,
+        IMPORT_EDITS_OVERWRITTEN,
+        MIXED_EDITS_OVERWRITTEN,
+        SYSTEM_EDITS_OVERWRITTEN,
+    }
+    assert overwritten.isdisjoint(warnings)
+
+
+def _apply_mode(session) -> None:
+    row = session.get(ImportSettings, 1)
+    if row is None:
+        row = ImportSettings(id=1, existing_rows="apply")
+        session.add(row)
+    else:
+        row.existing_rows = "apply"
+    session.flush()

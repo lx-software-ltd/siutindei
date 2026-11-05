@@ -126,6 +126,53 @@ def test_merge_folds_the_same_address(db_session, sample_geographic_area) -> Non
     assert rows[0].id == kept.id
 
 
+def test_merge_keeps_a_label_from_the_folded_venue(
+    db_session,
+    sample_geographic_area,
+) -> None:
+    survivor = _org(db_session, "Harbour Club")
+    source = _org(db_session, "Harbour Club Limited")
+    kept = Location(
+        org_id=survivor.id,
+        area_id=sample_geographic_area.id,
+        address="1 Pier Road",
+    )
+    dropped = Location(
+        org_id=source.id,
+        area_id=sample_geographic_area.id,
+        address="1 pier road",
+        name="Harbour Hall",
+    )
+    db_session.add_all([kept, dropped])
+    db_session.flush()
+    merge_organizations(db_session, survivor.id, [source.id])
+    db_session.refresh(kept)
+    assert kept.name == "Harbour Hall"
+    assert db_session.get(Location, dropped.id) is None
+
+
+def test_merge_keeps_the_survivor_label(db_session, sample_geographic_area) -> None:
+    survivor = _org(db_session, "Harbour Club")
+    source = _org(db_session, "Harbour Club Limited")
+    kept = Location(
+        org_id=survivor.id,
+        area_id=sample_geographic_area.id,
+        address="1 Pier Road",
+        name="Main Hall",
+    )
+    dropped = Location(
+        org_id=source.id,
+        area_id=sample_geographic_area.id,
+        address="1 pier road",
+        name="Other Hall",
+    )
+    db_session.add_all([kept, dropped])
+    db_session.flush()
+    merge_organizations(db_session, survivor.id, [source.id])
+    db_session.refresh(kept)
+    assert kept.name == "Main Hall"
+
+
 def test_merge_keeps_different_addresses(db_session, sample_geographic_area) -> None:
     survivor = _org(db_session, "Harbour Club")
     source = _org(db_session, "Harbour Club Limited")

@@ -406,6 +406,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
           <Input
             id='location-name'
             value={editorForm.name}
+            maxLength={200}
             disabled={locked}
             onChange={(event) =>
               panel.setFormState((prev) => ({

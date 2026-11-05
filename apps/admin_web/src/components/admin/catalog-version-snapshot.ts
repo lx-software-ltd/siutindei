@@ -210,7 +210,7 @@ export function locationFormFromSnapshot<T extends LocationSnapshotForm>(
   snapshot: Record<string, unknown>,
   fallback: T
 ): T {
-  return applyText(fallback, snapshot, [
+  const next = applyText(fallback, snapshot, [
     'org_id',
     'area_id',
     'name',
@@ -218,6 +218,12 @@ export function locationFormFromSnapshot<T extends LocationSnapshotForm>(
     'lat',
     'lng',
   ]);
+  // Versions saved before the label column have no name key. Leaving
+  // the key out must show an empty name, not today's label.
+  if (!('name' in snapshot)) {
+    next.name = '';
+  }
+  return next;
 }
 
 export function pricingFormFromSnapshot(

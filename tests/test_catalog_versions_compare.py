@@ -5,6 +5,7 @@ from app.services.catalog_version_shape import (
     file_matches_snapshot,
     location_shape,
     organization_shape,
+    payload_differs,
     pricing_shape,
     schedule_shape,
 )
@@ -55,9 +56,31 @@ def test_location_and_money_quantize() -> None:
     assert location_shape({"lat": "22.2826674", "lng": 114.158167})["lat"] == (
         "22.282667"
     )
-    assert location_shape({"name": "  Harbour   Hall "})["name"] == "harbour hall"
-    assert location_shape({})["name"] is None
+    assert "name" not in location_shape({"name": "  Harbour   Hall "})
     assert pricing_shape({"amount": "10", "currency": "HKD"})["amount"] == "10.00"
+
+
+def test_venue_label_is_not_an_import_difference() -> None:
+    base = {"address": "1 Pier Road", "lat": "22.100000", "name": None}
+    live = {**base, "name": "Harbour Hall"}
+    assert payload_differs("location", live, base) is False
+    assert (
+        file_matches_snapshot(
+            "location",
+            {"address": "1 Pier Road", "lat": "22.100000", "name": "1 Pier Road"},
+            base,
+            {"address", "lat", "name"},
+        )
+        is True
+    )
+    assert (
+        payload_differs(
+            "location",
+            {"address": "2 Pier Road", "name": "Harbour Hall"},
+            {"address": "1 Pier Road"},
+        )
+        is True
+    )
 
 
 def test_schedule_shape_sorts_utc_slots() -> None:

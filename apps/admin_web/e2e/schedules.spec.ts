@@ -28,7 +28,10 @@ test.describe('Schedules Panel', () => {
     await adminPage.getByRole('button', { name: 'New schedule' }).click();
 
     await expect(adminPage.locator('#schedule-location')).toContainText(
-      'Harbour Hall'
+      'Harbour Hall · 123 Test Street'
+    );
+    await expect(adminPage.locator('#schedule-location')).toContainText(
+      'Harbour Hall · 9 Hill Road'
     );
     await adminPage.locator('#schedule-location').selectOption('loc-1');
     await adminPage.locator('#schedule-activity').selectOption('activity-1');

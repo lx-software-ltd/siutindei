@@ -7,7 +7,7 @@ import { useResourceByMode } from '../../hooks/use-resource-by-mode';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { formatAdminPageName } from '../../lib/admin-page-name';
-import { locationDisplayName } from '../../lib/location-label';
+import { locationListLabel } from '../../lib/location-label';
 import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/api-client-admin';
 import type { LanguageCode } from '../../lib/translations';
@@ -362,7 +362,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
       if (!location) {
         return locationId;
       }
-      return locationDisplayName(location, locationId);
+      return locationListLabel(location, locations, locationId);
     },
     [locations]
   );

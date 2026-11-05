@@ -8412,11 +8412,11 @@ export interface components {
              */
             area_id: string;
             /**
-             * @description Optional venue label (max 200 characters). Blank is stored
-             *     as null. Pricing and Schedules show this instead of the
-             *     address.
+             * @description Optional venue label (max 200 characters). Blank or null
+             *     is stored as null. Pricing and Schedules show this instead
+             *     of the address.
              */
-            name?: string;
+            name?: string | null;
             /** @description Full address (optional, max 500 characters) */
             address?: string;
             /** @description Latitude (-90 to 90) */

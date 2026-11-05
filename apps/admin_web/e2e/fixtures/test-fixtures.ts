@@ -417,6 +417,18 @@ export const mockLocations = [
     updated_at: '2024-01-01T00:00:00Z',
     version: 1,
   },
+  {
+    id: 'loc-2',
+    org_id: 'org-1',
+    area_id: 'area-hk-wanchai-centre',
+    name: 'Harbour Hall',
+    address: '9 Hill Road',
+    lat: 22.279,
+    lng: 114.176,
+    created_at: '2024-01-02T00:00:00Z',
+    updated_at: '2024-01-02T00:00:00Z',
+    version: 1,
+  },
 ];
 
 export const mockPricing = [
@@ -2051,14 +2063,56 @@ export async function setupApiMocks(
     }
     const entityType = url.searchParams.get('entity_type') ?? 'organization';
     const entityId = url.searchParams.get('entity_id') ?? 'org-1';
+    const locationHistory = entityType === 'location' && entityId === 'loc-1';
     const twoVersions =
       entityId === 'org-1' &&
       (entityType === 'organization' || entityType === 'media');
+    const locationItems = [
+      {
+        id: 'ver-loc-2',
+        entity_type: 'location',
+        entity_id: 'loc-1',
+        org_id: 'org-1',
+        version: 2,
+        action: 'updated',
+        snapshot: {
+          org_id: 'org-1',
+          area_id: 'area-hk-wanchai-centre',
+          name: 'Harbour Hall',
+          address: '123 Test Street',
+          lat: '22.278',
+          lng: '114.175',
+        },
+        changed_fields: ['name'],
+        user_id: 'admin-user-id-123',
+        created_at: '2024-02-01T00:00:00Z',
+      },
+      {
+        id: 'ver-loc-1',
+        entity_type: 'location',
+        entity_id: 'loc-1',
+        org_id: 'org-1',
+        version: 1,
+        action: 'created',
+        snapshot: {
+          org_id: 'org-1',
+          area_id: 'area-hk-wanchai-centre',
+          address: '123 Test Street',
+          lat: '22.278',
+          lng: '114.175',
+        },
+        changed_fields: ['address'],
+        import_job_id: 'job-1',
+        created_at: '2024-01-01T00:00:00Z',
+      },
+    ];
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        items: twoVersions
+        items: locationHistory
+          ? locationItems
+          : twoVersions
           ? [
               {
                 id: entityType === 'media' ? 'ver-media-2' : 'ver-2',
