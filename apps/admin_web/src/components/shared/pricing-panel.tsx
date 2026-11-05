@@ -8,6 +8,7 @@ import { useResourceByMode } from '../../hooks/use-resource-by-mode';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { adminCurrencyOptions } from '../../lib/admin-currencies';
 import { formatAdminPageName } from '../../lib/admin-page-name';
+import { locationDisplayName } from '../../lib/location-label';
 import type { ApiMode } from '../../lib/api-client-admin';
 import {
   formatPriceAmount,
@@ -236,9 +237,13 @@ export function PricingPanel({ mode }: PricingPanelProps) {
   );
 
   const getLocationName = useCallback(
-    (locationId: string) =>
-      locations.find((location) => location.id === locationId)?.address ??
-      locationId,
+    (locationId: string) => {
+      const location = locations.find((item) => item.id === locationId);
+      if (!location) {
+        return locationId;
+      }
+      return locationDisplayName(location, locationId);
+    },
     [locations]
   );
 

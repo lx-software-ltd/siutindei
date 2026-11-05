@@ -40,6 +40,7 @@ class Location(Base):
         nullable=False,
         comment="FK to geographic_areas leaf node",
     )
+    name: Mapped[str | None] = mapped_column(Text(), nullable=True)
     address: Mapped[str | None] = mapped_column(Text(), nullable=True)
     lat: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)
     lng: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)

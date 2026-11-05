@@ -4560,8 +4560,8 @@ components:
           type: string
           maxLength: 500
           description: |
-            Location name used for upsert. Stored as address in the database and
-            must be unique within the organization.
+            Location name used for upsert. Stored as address. It does not
+            set the venue label. Must be unique within the organization.
         address:
           type: string
           maxLength: 500
@@ -5950,6 +5950,13 @@ components:
           type: string
           format: uuid
           description: Geographic area UUID (required, must be a leaf node)
+        name:
+          type: string
+          maxLength: 200
+          description: |
+            Optional venue label (max 200 characters). Blank is stored
+            as null. Pricing and Schedules show this instead of the
+            address.
         address:
           type: string
           maxLength: 500
@@ -5972,6 +5979,13 @@ components:
           type: string
           format: uuid
           description: Geographic area UUID (must be a leaf node)
+        name:
+          type: string
+          maxLength: 200
+          nullable: true
+          description: |
+            Optional venue label (max 200 characters). Blank is stored
+            as null.
         address:
           type: string
           maxLength: 500
@@ -6001,6 +6015,10 @@ components:
           type: string
           format: uuid
           description: Geographic area UUID (leaf node)
+        name:
+          type: string
+          nullable: true
+          description: Optional venue label. Null when unset.
         address:
           type: string
           nullable: true

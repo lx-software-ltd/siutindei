@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 
+import { locationDisplayName } from '../../lib/location-label';
 import type { CatalogVersionView } from '../admin/version-history';
 import { VersionField, VersionFields, VersionSwitcher } from '../admin/version-history';
 import { StatusBanner } from '../status-banner';
@@ -12,6 +13,7 @@ import { Select } from '../ui/select';
 
 interface LocationChoice {
   id: string;
+  name?: string | null;
   address?: string | null;
   area_id?: string | null;
 }
@@ -107,7 +109,7 @@ export function CatalogInlineEditor({
                 <option value=''>Select location</option>
                 {locations.map((location) => (
                   <option key={location.id} value={location.id}>
-                    {location.address || location.area_id}
+                    {locationDisplayName(location, location.area_id ?? '')}
                   </option>
                 ))}
               </Select>
