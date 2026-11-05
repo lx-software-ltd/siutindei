@@ -7,7 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import Activity
 from app.db.repositories.base import BaseRepository
@@ -55,7 +55,12 @@ class ActivityRepository(BaseRepository[Activity]):
         Returns:
             Activities belonging to the organization.
         """
-        query = select(Activity).where(Activity.org_id == org_id).order_by(Activity.id)
+        query = (
+            select(Activity)
+            .options(selectinload(Activity.locations))
+            .where(Activity.org_id == org_id)
+            .order_by(Activity.id)
+        )
         if cursor is not None:
             query = query.where(Activity.id > cursor)
         return self._session.execute(query.limit(limit)).scalars().all()
@@ -111,6 +116,21 @@ class ActivityRepository(BaseRepository[Activity]):
             )
         )
         return self._session.execute(query).scalar_one_or_none()
+
+    def get_all(
+        self,
+        limit: int = 50,
+        cursor: UUID | None = None,
+    ) -> Sequence[Activity]:
+        """List activities with their venue joins loaded."""
+        query = (
+            select(Activity)
+            .options(selectinload(Activity.locations))
+            .order_by(Activity.id)
+        )
+        if cursor is not None:
+            query = query.where(Activity.id > cursor)
+        return self._session.execute(query.limit(limit)).scalars().all()
 
     def search_by_name(
         self,

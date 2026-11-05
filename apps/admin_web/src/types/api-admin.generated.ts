@@ -8483,6 +8483,7 @@ export interface components {
             age_min: number;
             /** @description Maximum age (required, 1-120, must be greater than age_min) */
             age_max: number;
+            location_ids?: components["schemas"]["ActivityLocationIds"];
         };
         ActivityUpdate: {
             /**
@@ -8508,6 +8509,7 @@ export interface components {
             age_min?: number;
             /** @description Maximum age (must provide both age_min and age_max together) */
             age_max?: number;
+            location_ids?: components["schemas"]["ActivityLocationIds"];
         };
         Activity: {
             /** Format: uuid */
@@ -8531,7 +8533,18 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
             version?: number;
+            location_ids: components["schemas"]["ActivityLocationIds"];
         };
+        /**
+         * @description Venues for this activity, ordered by location id. Present on
+         *     create or update replaces the join list. Omit to leave
+         *     existing joins. An empty list unlinks every venue. Each id
+         *     must belong to the activity's organization. Duplicates are
+         *     dropped. Sending the current list again does not rewrite
+         *     joins. Removing a venue that still has pricing or a schedule
+         *     for this activity is rejected.
+         */
+        ActivityLocationIds: string[];
         ActivityListResponse: {
             items: components["schemas"]["Activity"][];
             next_cursor?: string | null;

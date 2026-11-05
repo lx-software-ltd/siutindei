@@ -33,7 +33,11 @@ def link_activity_to_venue(
     activity: Activity,
     venue: Location | None,
 ) -> bool:
-    """Attach activity to a venue. Return True when a join row is added."""
+    """Attach a new activity to its only imported venue.
+
+    Return True when a join row is added. Updates do not call this, so
+    a venue removed by an edit is not put back by a later import.
+    """
     if venue is None:
         return False
     activity_id = activity.id

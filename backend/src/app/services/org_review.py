@@ -13,7 +13,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.admin_imports_catalog import catalog_source_key
 from app.db.age_bounds import inclusive_age_bounds
@@ -348,7 +348,11 @@ def load_snapshots(
         session.scalars(select(Location).where(Location.org_id.in_(org_ids))).all()
     )
     activities = list(
-        session.scalars(select(Activity).where(Activity.org_id.in_(org_ids))).all()
+        session.scalars(
+            select(Activity)
+            .options(selectinload(Activity.locations))
+            .where(Activity.org_id.in_(org_ids))
+        ).all()
     )
     activity_ids = [activity.id for activity in activities]
     pricing_counts = counts_by_activity(

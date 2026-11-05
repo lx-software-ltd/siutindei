@@ -6,6 +6,8 @@ from typing import Any
 from uuid import UUID
 
 from psycopg.types.range import Range
+from sqlalchemy import select
+from sqlalchemy.orm import Session, object_session
 
 from app.api.admin_imports_catalog import (
     MAX_VETTING_NOTE_LENGTH,
@@ -19,10 +21,18 @@ from app.api.admin_validators import (
     _validate_translations_map,
 )
 from app.db.age_bounds import inclusive_age_bounds
-from app.db.models import Activity
+from app.db.models import (
+    Activity,
+    ActivityLocation,
+    ActivityPricing,
+    ActivitySchedule,
+    Location,
+)
 from app.db.repositories import ActivityCategoryRepository, ActivityRepository
 from app.exceptions import ValidationError
 from app.utils.translations import build_translation_map
+
+MAX_ACTIVITY_LOCATIONS = 100
 
 
 def _create_activity(repo: ActivityRepository, body: dict[str, Any]) -> Activity:
@@ -66,8 +76,13 @@ def _create_activity(repo: ActivityRepository, body: dict[str, Any]) -> Activity
     if category_repo.get_by_id(category_uuid) is None:
         raise ValidationError("category_id not found", field="category_id")
 
+    location_ids = _optional_location_ids(body)
+    parsed_org_id = _parse_uuid(org_id)
+    if location_ids is not None:
+        _assert_locations_for_org(repo.session, parsed_org_id, location_ids)
+
     entity = Activity(
-        org_id=_parse_uuid(org_id),
+        org_id=parsed_org_id,
         category_id=category_uuid,
         name=name,
         description=description,
@@ -89,6 +104,10 @@ def _create_activity(repo: ActivityRepository, body: dict[str, Any]) -> Activity
     from app.services.data_quality.names import record_imported_name
 
     record_imported_name(repo.session, entity, body, "activity")
+    if location_ids:
+        repo.session.add(entity)
+        repo.session.flush()
+        _set_activity_locations(entity, location_ids)
     return entity
 
 
@@ -166,6 +185,10 @@ def _update_activity(
             raise ValidationError("age_min and age_max are required together")
         _validate_age_range(age_min, age_max)
         entity.age_range = Range(int(age_min), int(age_max), bounds="[]")
+    if "location_ids" in body:
+        location_ids = _parse_location_ids(body["location_ids"])
+        _assert_locations_for_org(repo.session, entity.org_id, location_ids)
+        _replace_activity_locations(repo.session, entity, location_ids)
     from app.services.data_quality.names import record_imported_name
 
     record_imported_name(repo.session, entity, body, "activity")
@@ -246,4 +269,126 @@ def _serialize_activity(entity: Activity) -> dict[str, Any]:
         "created_at": entity.created_at,
         "updated_at": entity.updated_at,
         "version": entity.version,
+        "location_ids": _activity_location_ids(entity),
     }
+
+
+def _optional_location_ids(body: dict[str, Any]) -> list[UUID] | None:
+    if "location_ids" not in body:
+        return None
+    return _parse_location_ids(body["location_ids"])
+
+
+def _parse_location_ids(raw: Any) -> list[UUID]:
+    if not isinstance(raw, list):
+        raise ValidationError("location_ids must be a list", field="location_ids")
+    if len(raw) > MAX_ACTIVITY_LOCATIONS:
+        raise ValidationError("location_ids is too long", field="location_ids")
+    parsed: list[UUID] = []
+    seen: set[str] = set()
+    for item in raw:
+        location_id = _parse_uuid(item, field="location_ids")
+        key = str(location_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        parsed.append(location_id)
+    return parsed
+
+
+def _assert_locations_for_org(
+    session: Session,
+    org_id: UUID | str,
+    location_ids: list[UUID],
+) -> None:
+    if not location_ids:
+        return
+    rows = session.scalars(select(Location).where(Location.id.in_(location_ids))).all()
+    found = {str(row.id): row for row in rows}
+    org_key = str(org_id)
+    for location_id in location_ids:
+        row = found.get(str(location_id))
+        if row is None:
+            raise ValidationError("location_ids not found", field="location_ids")
+        if str(row.org_id) != org_key:
+            raise ValidationError(
+                "location_ids must belong to this organization",
+                field="location_ids",
+            )
+
+
+def _replace_activity_locations(
+    session: Session,
+    entity: Activity,
+    location_ids: list[UUID],
+) -> None:
+    current = list(
+        session.scalars(
+            select(ActivityLocation).where(ActivityLocation.activity_id == entity.id)
+        ).all()
+    )
+    current_ids = {str(row.location_id) for row in current}
+    removed = current_ids - {str(item) for item in location_ids}
+    added = [item for item in location_ids if str(item) not in current_ids]
+    if removed:
+        _reject_venues_in_use(session, entity.id, removed)
+    if not removed and not added:
+        return
+    for row in current:
+        if str(row.location_id) in removed:
+            session.delete(row)
+    if removed:
+        session.flush()
+    _set_activity_locations(entity, added)
+    session.expire(entity, ["locations"])
+
+
+def _reject_venues_in_use(
+    session: Session,
+    activity_id: UUID | str,
+    removed: set[str],
+) -> None:
+    removed_ids = [UUID(item) for item in removed]
+    priced = session.scalar(
+        select(ActivityPricing.id)
+        .where(
+            ActivityPricing.activity_id == activity_id,
+            ActivityPricing.location_id.in_(removed_ids),
+        )
+        .limit(1)
+    )
+    scheduled = session.scalar(
+        select(ActivitySchedule.id)
+        .where(
+            ActivitySchedule.activity_id == activity_id,
+            ActivitySchedule.location_id.in_(removed_ids),
+        )
+        .limit(1)
+    )
+    if priced is not None or scheduled is not None:
+        raise ValidationError(
+            "location_ids still used by pricing or schedules",
+            field="location_ids",
+        )
+
+
+def _set_activity_locations(entity: Activity, location_ids: list[UUID]) -> None:
+    for location_id in location_ids:
+        entity.locations.append(
+            ActivityLocation(activity_id=entity.id, location_id=location_id)
+        )
+
+
+def _activity_location_ids(entity: Activity) -> list[str]:
+    loaded = entity.__dict__.get("locations")
+    if loaded is not None:
+        return sorted(str(link.location_id) for link in loaded)
+    session = object_session(entity)
+    if session is None:
+        return []
+    rows = session.scalars(
+        select(ActivityLocation.location_id)
+        .where(ActivityLocation.activity_id == entity.id)
+        .order_by(ActivityLocation.location_id)
+    ).all()
+    return [str(row) for row in rows]
