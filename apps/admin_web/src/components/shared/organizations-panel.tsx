@@ -422,7 +422,7 @@ export function OrganizationsPanel({
       }
       payload.status = form.status;
       payload.status_source = 'owner';
-      payload.source = form.source || null;
+      payload.source = form.source || 'manual';
       payload.source_id = form.source_id.trim() || null;
       payload.source_url = form.source_url.trim() || null;
       payload.source_note = form.source_note.trim() || null;
@@ -637,7 +637,6 @@ export function OrganizationsPanel({
                     }))
                   }
                 >
-                  <option value=''>None</option>
                   {ORG_SOURCE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}

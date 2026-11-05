@@ -15,6 +15,8 @@ from app.api.admin_imports import (
 )
 from app.api.admin_imports_catalog import (
     apply_vetting_columns,
+    catalog_source_key,
+    catalog_source_matches,
     parse_org_source,
 )
 from app.api.admin_imports_fields import (
@@ -329,6 +331,21 @@ def test_parse_org_source_accepts_recommendation() -> None:
     assert parse_org_source(None) is None
 
 
+def test_parse_org_source_accepts_manual() -> None:
+    assert parse_org_source("manual") == "manual"
+    assert parse_org_source(" manual ") == "manual"
+
+
+def test_catalog_source_key_treats_unset_as_manual() -> None:
+    assert catalog_source_key(None) == "manual"
+    assert catalog_source_key("") == "manual"
+    assert catalog_source_key("  ") == "manual"
+    assert catalog_source_key("lcsd") == "lcsd"
+    assert catalog_source_matches(None, "manual")
+    assert catalog_source_matches("manual", "Manual")
+    assert not catalog_source_matches("lcsd", "manual")
+
+
 def test_parse_org_source_rejects_unknown() -> None:
     with pytest.raises(ValidationError) as exc_info:
         parse_org_source("referral")
@@ -343,6 +360,15 @@ def test_apply_vetting_columns_recommendation_source() -> None:
     apply_vetting_columns(record)
     assert record["source"] == "recommendation"
     assert record["source_id"] == "rec-1"
+
+
+def test_apply_vetting_columns_manual_source() -> None:
+    record = {
+        "vetting_note": "source=manual; sourceId=hand-1",
+    }
+    apply_vetting_columns(record)
+    assert record["source"] == "manual"
+    assert record["source_id"] == "hand-1"
 
 
 def test_collect_flat_org_warnings_for_nested_and_website() -> None:

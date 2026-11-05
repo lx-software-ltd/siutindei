@@ -199,6 +199,19 @@ def test_create_organization_accepts_recommendation_source(db_session) -> None:
     assert created.source == "recommendation"
 
 
+def test_create_organization_accepts_manual_source(db_session) -> None:
+    repo = OrganizationRepository(db_session)
+    created = _create_organization(
+        repo,
+        {
+            "name": f"Manual Studio {uuid4()}",
+            "manager_id": "00000000-0000-0000-0000-000000000003",
+            "source": "manual",
+        },
+    )
+    assert created.source == "manual"
+
+
 def test_update_organization_rejects_unknown_source(
     db_session, sample_organization
 ) -> None:

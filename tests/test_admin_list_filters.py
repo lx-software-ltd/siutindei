@@ -51,6 +51,24 @@ def test_list_organizations_filters_name_review_and_scope(db_session) -> None:
     assert [item.id for item in scoped] == [live.id]
 
 
+def test_list_organizations_manual_source_includes_unset(db_session) -> None:
+    suffix = uuid4().hex[:8]
+    typed = _org(f"Typed Manual {suffix}", source="manual")
+    unset = _org(f"Unset Source {suffix}")
+    other = _org(f"LCSD Hall {suffix}", source="lcsd")
+    db_session.add_all([typed, unset, other])
+    db_session.flush()
+
+    matches = list_organizations(
+        db_session,
+        None,
+        OrganizationListFilters(source="manual", query=suffix),
+        limit=20,
+        cursor=None,
+    )
+    assert {item.name for item in matches} == {typed.name, unset.name}
+
+
 def test_parse_organization_filters_rejects_unknown_review_status() -> None:
     with pytest.raises(ValidationError) as exc_info:
         parse_organization_list_filters(

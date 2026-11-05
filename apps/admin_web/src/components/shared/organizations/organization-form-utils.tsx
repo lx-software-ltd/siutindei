@@ -55,7 +55,7 @@ export const emptyForm: OrganizationFormState = {
   xiaohongshu: '',
   wechat: '',
   status: 'operational',
-  source: '',
+  source: 'manual',
   source_id: '',
   source_url: '',
   source_note: '',
@@ -81,7 +81,7 @@ export function itemToForm(item: Organization): OrganizationFormState {
     xiaohongshu: item.xiaohongshu ?? '',
     wechat: item.wechat ?? '',
     status: item.status ?? 'operational',
-    source: item.source ?? '',
+    source: item.source?.trim() || 'manual',
     source_id: item.source_id ?? '',
     source_url: item.source_url ?? '',
     source_note: item.source_note ?? '',
@@ -90,6 +90,7 @@ export function itemToForm(item: Organization): OrganizationFormState {
 }
 
 export const ORG_SOURCE_OPTIONS = [
+  { value: 'manual', label: 'Manual' },
   { value: 'lcsd', label: 'LCSD' },
   { value: 'edb', label: 'EDB' },
   { value: 'swd', label: 'SWD' },
@@ -97,6 +98,14 @@ export const ORG_SOURCE_OPTIONS = [
   { value: 'competitor', label: 'Competitor' },
   { value: 'recommendation', label: 'Recommendation' },
 ] as const;
+
+export function orgSourceLabel(value: string | null | undefined): string {
+  const source = value?.trim();
+  if (!source || source === 'manual') {
+    return 'Manual';
+  }
+  return source;
+}
 
 export const DESCRIPTION_SOURCE_OPTIONS = [
   { value: 'template', label: 'Template' },

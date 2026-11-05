@@ -2360,7 +2360,11 @@ export async function setupApiMocks(
               jobId.length === 0 ||
               item.import_job_id === jobId ||
               (Array.isArray(touched) && touched.includes(jobId));
-            const sourceMatches = source.length === 0 || item.source === source;
+            const sourceMatches =
+              source.length === 0 ||
+              item.source === source ||
+              (source === 'manual' &&
+                (item.source == null || item.source === ''));
             const reviewMatches =
               reviewStatus.length === 0 || item.review_status === reviewStatus;
             const itemReason =

@@ -84,7 +84,9 @@ def list_organizations(
     if filters.review_status:
         stmt = stmt.where(Organization.review_status == filters.review_status)
     if filters.source:
-        stmt = stmt.where(Organization.source == filters.source)
+        from app.api.admin_imports_catalog import catalog_source_filter
+
+        stmt = stmt.where(catalog_source_filter(filters.source))
     if filters.status:
         stmt = stmt.where(Organization.status == filters.status)
     if filters.query:
