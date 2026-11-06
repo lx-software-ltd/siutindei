@@ -51,6 +51,7 @@
   "overrides": {
     "js-cookie": "^3.0.7",
     "js-yaml@4": "4.3.2",
-    "launch-editor": "2.14.2"
+    "launch-editor": "2.14.2",
+    "minimatch@10": "11.0.5"
   }
 }
