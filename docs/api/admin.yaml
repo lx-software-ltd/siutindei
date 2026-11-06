@@ -284,7 +284,7 @@ paths:
     get:
       summary: Read website enrichment for one organization
       description: |
-        Latest run, its proposals, and the organization's venues.
+        Latest run, its proposals, catalog activities, and venues.
         An admin or importer JWT may call this. Apply and dismiss
         stay admin-only. Nothing is written to the catalog.
         `current_value` is the live catalog for display: organization
@@ -292,6 +292,10 @@ paths:
         counts, and `changed_since_crawl` when apply would refuse.
         Blank fields and media URLs are omitted. The crawl snapshot
         used to detect a later edit stays on the stored proposal.
+        Each pending price or schedule includes `blockers`: the
+        reasons apply would refuse that row on its own, such as a
+        missing term length, activity, or venue. `activities` lists
+        catalog activities a reviewer can send back as `activity_id`.
       security:
         - AdminGroupAuth: []
         - ImporterGroupAuth: []
@@ -304,7 +308,11 @@ paths:
             format: uuid
       responses:
         "200":
-          description: Run, proposals, and venues
+          description: Run, proposals, activities, and venues
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrichmentRead'
         "403":
           description: Forbidden
     post:
@@ -366,8 +374,12 @@ paths:
         in dependency order: organization, media, locations, activities,
         pricing, then schedules. Each proposal is saved on its own, so
         one failure does not undo the others. `overrides` is keyed by
-        proposal id and may set `area_id`, `category_id`, `age_min`,
-        `age_max`, or `location_id`. Each id returns its own result.
+        proposal id. See `EnrichmentOverride`. A pricing override
+        replaces the stored proposal field for that apply and does not
+        rewrite the proposal. `sessions_count` is required when the
+        applied type is `per_sessions`. `activity_id` chooses a catalog
+        activity when the proposed name does not match. Each id returns
+        its own result, including `error` when that row was refused.
         Nothing is applied automatically. When at least one proposal
         is applied, the response includes `data_quality_run_id` for
         the checks selected in import settings. Locations is included
@@ -377,6 +389,12 @@ paths:
         the run does not undo proposals that saved.
       security:
         - AdminGroupAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrichmentApplyRequest'
       responses:
         "200":
           description: Per-proposal results
@@ -4399,6 +4417,140 @@ components:
         detail:
           type: string
           description: Additional details (e.g., field name)
+
+    EnrichmentBlocker:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+
+    EnrichmentActivityOption:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    EnrichmentOverride:
+      type: object
+      additionalProperties: false
+      properties:
+        area_id:
+          type: string
+          format: uuid
+        category_id:
+          type: string
+          format: uuid
+        age_min:
+          type: integer
+        age_max:
+          type: integer
+        activity_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        pricing_type:
+          type: string
+        amount:
+          type: string
+        currency:
+          type: string
+        sessions_count:
+          type: integer
+          minimum: 1
+
+    EnrichmentApplyRequest:
+      type: object
+      additionalProperties: false
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+        overrides:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/EnrichmentOverride'
+
+    EnrichmentProposal:
+      type: object
+      required: [id, section, kind, label, proposed_value, confidence, evidence, status]
+      properties:
+        id:
+          type: string
+        section:
+          type: string
+        kind:
+          type: string
+        field:
+          type: string
+          nullable: true
+        label:
+          type: string
+        current_value:
+          nullable: true
+        proposed_value:
+          type: object
+          additionalProperties: true
+        confidence:
+          type: number
+        unverified:
+          type: boolean
+        evidence:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        status:
+          type: string
+        copyright_notice:
+          type: string
+          nullable: true
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnrichmentBlocker'
+
+    EnrichmentRead:
+      type: object
+      required: [run, proposals, activities, venues]
+      properties:
+        run:
+          nullable: true
+        proposals:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnrichmentProposal'
+        activities:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnrichmentActivityOption'
+        venues:
+          type: array
+          items:
+            type: object
+            required: [id, address]
+            properties:
+              id:
+                type: string
+                format: uuid
+              address:
+                type: string
+              name:
+                type: string
+                nullable: true
+              status:
+                type: string
+                nullable: true
 
     TranslationMap:
       type: object

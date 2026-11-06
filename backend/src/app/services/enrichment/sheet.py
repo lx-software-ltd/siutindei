@@ -28,6 +28,7 @@ _ROW_FIELDS = {
         "pricing_type",
         "amount",
         "currency",
+        "sessions_count",
     ),
     "schedules": ("activity_name", "location_address"),
 }

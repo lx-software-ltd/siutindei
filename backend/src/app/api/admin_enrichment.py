@@ -168,11 +168,12 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
             venues = session.scalars(
                 select(Location).where(Location.org_id == org_id)
             ).all()
-            activity_names = list(
-                session.scalars(
-                    select(Activity.name).where(Activity.org_id == org_id)
-                ).all()
-            )
+            activity_rows = session.scalars(
+                select(Activity)
+                .where(Activity.org_id == org_id)
+                .order_by(Activity.name)
+            ).all()
+            activity_names = [row.name for row in activity_rows]
             activity_ids = select(Activity.id).where(Activity.org_id == org_id)
             pricing_count = int(
                 session.scalar(
@@ -202,6 +203,9 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
                         schedule_count=schedule_count,
                     )
                     for row in proposals
+                ],
+                "activities": [
+                    {"id": str(row.id), "name": row.name} for row in activity_rows
                 ],
                 "venues": [
                     {

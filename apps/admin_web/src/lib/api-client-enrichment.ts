@@ -15,6 +15,11 @@ export interface EnrichmentRun {
   finished_at: string | null;
 }
 
+export interface EnrichmentBlocker {
+  field: string;
+  message: string;
+}
+
 export interface EnrichmentProposal {
   id: string;
   section: string;
@@ -28,11 +33,16 @@ export interface EnrichmentProposal {
   evidence: Array<{ url?: string; quote?: string }>;
   status: string;
   copyright_notice?: string | null;
+  blockers?: EnrichmentBlocker[];
 }
 
 export interface EnrichmentRead {
   run: EnrichmentRun | null;
   proposals: EnrichmentProposal[];
+  activities?: Array<{
+    id: string;
+    name: string;
+  }>;
   venues: Array<{
     id: string;
     address: string;
@@ -110,7 +120,13 @@ export interface EnrichmentOverride {
   category_id?: string;
   age_min?: number;
   age_max?: number;
+  activity_id?: string;
   location_id?: string;
+  pricing_type?: string;
+  amount?: string;
+  currency?: string;
+  /** A whole count sent to apply, or the text still being typed. */
+  sessions_count?: number | string;
 }
 
 export interface EnrichmentSettings {

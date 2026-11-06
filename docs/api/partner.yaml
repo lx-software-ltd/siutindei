@@ -587,7 +587,8 @@ paths:
       description: |
         Full-access `crud` keys only. Same response as
         `GET /v1/admin/organizations/{id}/enrichment`, including a
-        live `current_value` for display. A `read` key
+        live `current_value` for display, `activities`, and `blockers`
+        on a pending price or schedule. A `read` key
         and an organization-scoped key receive `403`, including when
         the key's organization is the target. Nothing is written to
         the catalog.
@@ -600,7 +601,11 @@ paths:
             format: uuid
       responses:
         "200":
-          description: Run, proposals, and venues
+          description: Run, proposals, activities, and venues
+          content:
+            application/json:
+              schema:
+                $ref: "./admin.yaml#/components/schemas/EnrichmentRead"
         "403":
           description: Read-only key or organization-scoped key
     post:
@@ -652,6 +657,12 @@ paths:
       description: |
         Full-access `crud` keys only. Same body and result as
         `POST /v1/admin/organizations/{id}/enrichment/apply`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./admin.yaml#/components/schemas/EnrichmentApplyRequest"
       responses:
         "200":
           description: Per-proposal results
