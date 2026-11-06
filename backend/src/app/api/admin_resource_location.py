@@ -269,6 +269,13 @@ def _ensure_unique_location_address(
     )
 
 
+def _json_coordinate(value: Decimal | None) -> float | None:
+    """JSON number. A Numeric column otherwise becomes a string."""
+    if value is None:
+        return None
+    return float(value)
+
+
 def _serialize_location(entity: Location) -> dict[str, Any]:
     """Serialize a location."""
     return {
@@ -278,8 +285,8 @@ def _serialize_location(entity: Location) -> dict[str, Any]:
         "name": entity.name,
         "status": entity.status,
         "address": entity.address,
-        "lat": entity.lat,
-        "lng": entity.lng,
+        "lat": _json_coordinate(entity.lat),
+        "lng": _json_coordinate(entity.lng),
         "place_id": entity.place_id,
         "created_at": entity.created_at,
         "updated_at": entity.updated_at,
