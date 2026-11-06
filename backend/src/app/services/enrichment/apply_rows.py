@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 from app.api.admin_imports_lookups import lookup_district_area_id
 from app.api.admin_imports_utils import parse_time_minutes, to_utc_weekly
 from app.api.admin_validators import (
-    MAX_MEDIA_URLS_COUNT,
     _validate_email,
     _validate_phone_fields,
     _validate_social_value,
@@ -44,6 +43,7 @@ from app.services.category_suggestions.resolve import (
     matching_category_id,
 )
 from app.services.description_boilerplate import description_is_import_boilerplate
+from app.services.enrichment.apply_media import apply_media
 from app.services.enrichment.apply_names import apply_name, apply_name_translation
 from app.services.enrichment.refine import bare_category_name
 
@@ -66,7 +66,7 @@ def apply_one(
         _apply_org(session, org, proposal, proposed)
         return
     if proposal.kind == "add_media":
-        _apply_media(session, org, proposed, copy_image=copy_image)
+        apply_media(session, org, proposed, copy_image=copy_image)
         return
     if proposal.kind == "create_location":
         _apply_location(session, org, proposal, proposed, override)
@@ -142,65 +142,6 @@ def _apply_org(
         setattr(org, field, _validate_social_value(value, field))
     else:
         raise ValidationError("field cannot be enriched", field=field)
-
-
-def _apply_media(
-    session: Session,
-    org: Organization,
-    proposed: dict[str, Any],
-    *,
-    copy_image: CopyImage | None,
-) -> None:
-    source = str(proposed.get("source_url") or "")
-    if not source:
-        raise ValidationError("image URL is missing", field="source_url")
-    stored_leaflet = _stored_leaflet_url(str(org.id), proposed)
-    if stored_leaflet:
-        _append_media(org, stored_leaflet, logo=bool(proposed.get("logo")))
-        return
-    from app.services.enrichment.store import load_settings
-
-    settings = load_settings(session)
-    if settings.copy_media:
-        if copy_image is None:
-            from app.services.aws_proxy import crawl_invoke
-
-            def copy_image(image_url: str, org_id: str) -> str:
-                copied = crawl_invoke(
-                    {"op": "image", "url": image_url, "org_id": org_id}
-                )
-                return str(copied.get("url") or "")
-
-        stored = copy_image(source, str(org.id))
-    else:
-        stored = _validate_url(source, "media_urls")
-    _append_media(org, stored, logo=bool(proposed.get("logo")))
-
-
-def _stored_leaflet_url(org_id: str, proposed: dict[str, Any]) -> str | None:
-    """A leaflet file already in this organization's bucket."""
-    import os
-
-    from app.services.enrichment.leaflet import valid_leaflet_key
-
-    key = str(proposed.get("object_key") or "")
-    if not valid_leaflet_key(org_id, key):
-        return None
-    base = os.getenv("ORGANIZATION_MEDIA_BASE_URL", "").rstrip("/")
-    if not base:
-        return None
-    return f"{base}/{key}"
-
-
-def _append_media(org: Organization, stored: str, *, logo: bool) -> None:
-    urls = list(org.media_urls or [])
-    if stored not in urls:
-        if len(urls) >= MAX_MEDIA_URLS_COUNT:
-            raise ValidationError("media_urls is full", field="media_urls")
-        urls.append(stored)
-        org.media_urls = urls
-    if logo:
-        org.logo_media_url = stored
 
 
 def _apply_location(

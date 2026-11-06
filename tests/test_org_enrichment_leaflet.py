@@ -18,8 +18,8 @@ from app.services.enrichment.leaflet import (
     presign_leaflet,
     read_leaflets,
     sniff_leaflet,
-    transcript_parts,
 )
+from app.services.enrichment.leaflet_vision import transcript_parts
 from app.services.enrichment.proxy_crawl import handle_crawl_event
 from app.services.enrichment.run import process_enrichment
 from app.services.enrichment.store import start_run
