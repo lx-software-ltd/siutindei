@@ -12,6 +12,10 @@ export function isLocationStatus(value: unknown): value is LocationStatus {
   return LOCATION_STATUSES.some((item) => item.value === value);
 }
 
+export function isLocationClosed(value: unknown): boolean {
+  return value === 'temporarily_closed' || value === 'permanently_closed';
+}
+
 /** Label for a location status. Unknown values, including organization listing statuses, return null. */
 export function locationStatusLabel(value: unknown): string | null {
   if (typeof value !== 'string') {

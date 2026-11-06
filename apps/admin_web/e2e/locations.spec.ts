@@ -39,6 +39,40 @@ test.describe('Locations Panel', () => {
     await expect(nameField).toHaveValue('Harbour Hall');
     await expect(nameField).toHaveAttribute('maxlength', '200');
     await expect(statusField).toHaveValue('temporarily_closed');
+    const closedRow = adminPage.getByRole('row', { name: /123 Test Street/ });
+    await expect(
+      closedRow.getByRole('img', { name: 'Temporarily Closed' })
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('row', { name: /9 Hill Road/ }).getByRole('img', { name: /Closed/ })
+    ).toHaveCount(0);
+    const addressField = editor.getByLabel('Address');
+    const countryField = editor.getByLabel('Country');
+    const regionField = editor.getByLabel('Region');
+    const latField = editor.getByLabel('Latitude');
+    const lngField = editor.getByLabel('Longitude');
+    await expect(nameField).toBeEnabled();
+    await expect(statusField).toBeEnabled();
+    await expect(addressField).toBeDisabled();
+    await expect(countryField).toBeDisabled();
+    await expect(regionField).toBeDisabled();
+    await expect(editor.getByLabel('District')).toBeDisabled();
+    await expect(editor.getByLabel('Neighbourhood')).toBeDisabled();
+    await expect(latField).toBeDisabled();
+    await expect(lngField).toBeDisabled();
+    const addressBackground = await addressField.evaluate(
+      (element) => getComputedStyle(element).backgroundColor
+    );
+    const countryBackground = await countryField.evaluate(
+      (element) => getComputedStyle(element).backgroundColor
+    );
+    expect(addressBackground).toBe(countryBackground);
+    await statusField.selectOption('open');
+    await expect(addressField).toBeEnabled();
+    await expect(regionField).toBeEnabled();
+    await expect(countryField).toBeDisabled();
+    await statusField.selectOption('temporarily_closed');
+    await expect(addressField).toBeDisabled();
     await expect(statusField.locator('option')).toHaveText([
       'Open',
       'Temporarily Closed',
@@ -77,8 +111,12 @@ test.describe('Locations Panel', () => {
     await expect(adminPage.getByRole('alertdialog')).not.toBeVisible();
 
     await adminPage.getByRole('button', { name: 'New location' }).click();
-    await expect(
-      adminPage.getByTestId('admin-editor-panel').getByLabel('Status')
-    ).toHaveValue('open');
+    const draft = adminPage.getByTestId('admin-editor-panel');
+    await expect(draft.getByLabel('Status')).toHaveValue('open');
+    await expect(draft.getByLabel('Address')).toBeEnabled();
+    await draft.getByLabel('Status').selectOption('permanently_closed');
+    await expect(draft.getByLabel('Name')).toBeEnabled();
+    await expect(draft.getByLabel('Address')).toBeDisabled();
+    await expect(draft.getByLabel('Latitude')).toBeDisabled();
   });
 });

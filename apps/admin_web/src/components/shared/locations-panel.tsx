@@ -12,12 +12,15 @@ import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/api-client-admin';
 import {
   DEFAULT_LOCATION_STATUS,
+  isLocationClosed,
   isLocationStatus,
+  locationStatusLabel,
   LOCATION_STATUSES,
   type LocationStatus,
 } from '../../lib/location-status';
 import { normalizeKey } from '../../lib/string-utils';
 import type { Location } from '../../types/admin';
+import { ClosedCircleIcon } from '../icons/action-icons';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import { adminTableText, AdminTableName } from '../ui/admin-table-value';
 import {
@@ -64,6 +67,23 @@ const MAP_ICONS = {
   googleMaps: buildMapIconUrl('googlemaps', '4285F4'),
   appleMaps: buildMapIconUrl('apple', '000000'),
 };
+
+function ClosedLocationMark({ status }: { status: string }) {
+  const label = locationStatusLabel(status);
+  if (!isLocationClosed(status) || !label) {
+    return null;
+  }
+  return (
+    <span
+      role='img'
+      aria-label={label}
+      title={label}
+      className='ml-2 inline-flex text-red-600'
+    >
+      <ClosedCircleIcon className='h-4 w-4' />
+    </span>
+  );
+}
 
 function MapServiceIcon({
   className,
@@ -378,6 +398,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   const editorForm = versionView.snapshot
     ? locationFormFromSnapshot(versionView.snapshot, panel.formState)
     : panel.formState;
+  const detailsLocked = locked || isLocationClosed(editorForm.status);
 
   const detail = (
     <AdminEditorPanel
@@ -460,7 +481,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
           <AddressAutocomplete
             id='location-address'
             value={editorForm.address}
-            disabled={locked}
+            disabled={detailsLocked}
             onChange={(val) => {
               markTouched('address');
               panel.setFormState((prev) => ({
@@ -482,7 +503,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             value={editorForm.area_id}
             onChange={handleAreaChange}
             disableCountry
-            disabled={locked}
+            disabled={detailsLocked}
             required
             hasError={showAreaError}
             errorMessage={showAreaError ? areaError : undefined}
@@ -494,7 +515,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             type='number'
             step='0.000001'
             value={editorForm.lat}
-            disabled={locked}
+            disabled={detailsLocked}
             onChange={(e) =>
               panel.setFormState((prev) => ({
                 ...prev,
@@ -509,7 +530,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             type='number'
             step='0.000001'
             value={editorForm.lng}
-            disabled={locked}
+            disabled={detailsLocked}
             onChange={(e) =>
               panel.setFormState((prev) => ({
                 ...prev,
@@ -568,6 +589,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             <AdminDataTableCell>
               <span className='inline-flex items-center'>
                 <AdminTableName>{getAreaName(item.area_id)}</AdminTableName>
+                <ClosedLocationMark status={item.status} />
                 <HistoricalRowMark
                   active={versionView.isHistorical && item.id === panel.editingId}
                   version={versionView.selectedVersion}
