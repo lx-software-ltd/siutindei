@@ -323,6 +323,7 @@ export function useResourceEditor<T extends { id: string }, TForm>({
     confirmDialog,
     canCreate: Boolean(api.create),
     isDirty: () => shell.isDirty(),
+    clearDirty,
     replaceItem: (item: T) => {
       list.setItems((prev) =>
         prev.map((row) => (row.id === item.id ? item : row))

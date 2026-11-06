@@ -55,31 +55,65 @@ export function coordinatesMatch(
  */
 export function pinMoveDelay(
   current: { lat: number; lng: number } | null,
-  next: { lat: number; lng: number }
+  next: { lat: number; lng: number },
+  immediate = false
 ): number | null {
   if (current && coordinatesMatch(current, next)) {
     return null;
   }
+  if (immediate) {
+    return 0;
+  }
   return TYPED_PIN_DELAY_MS;
+}
+
+export interface LocationPlacement {
+  lat: string;
+  lng: string;
+  address: string;
+  area_id: string;
 }
 
 export function coordinatesChanged(
   current: { lat: string; lng: string },
   opened: { lat: string; lng: string }
 ): boolean {
-  return current.lat.trim() !== opened.lat.trim() || current.lng.trim() !== opened.lng.trim();
+  const left = locationCoordinates(current);
+  const right = locationCoordinates(opened);
+  if (left && right) {
+    return !coordinatesMatch(left, right);
+  }
+  return (
+    current.lat.trim() !== opened.lat.trim() ||
+    current.lng.trim() !== opened.lng.trim()
+  );
+}
+
+export function placementChanged(
+  current: LocationPlacement,
+  opened: LocationPlacement
+): boolean {
+  return (
+    current.address !== opened.address ||
+    current.area_id !== opened.area_id ||
+    coordinatesChanged(current, opened)
+  );
+}
+
+function placementMatches(form: LocationPlacement, saved: LocationPlacement): boolean {
+  return !placementChanged(form, saved);
 }
 
 /**
- * Coordinates loaded for this open editor. Stays on the opened record
+ * Placement loaded for this open editor. Stays on the opened record
  * while the fields change, and follows a save once the fields match it.
  */
 export function nextOpenedCoordinates(
-  current: { key: string; lat: string; lng: string } | null,
+  current: (LocationPlacement & { key: string }) | null,
   openKey: string | null,
-  saved: { lat: string; lng: string } | null,
-  form: { lat: string; lng: string }
-): { key: string; lat: string; lng: string } | null {
+  saved: LocationPlacement | null,
+  form: LocationPlacement
+): (LocationPlacement & { key: string }) | null {
   if (!openKey) {
     return null;
   }
@@ -87,25 +121,29 @@ export function nextOpenedCoordinates(
     if (current?.key === 'draft') {
       return current;
     }
-    if (form.lat.trim() !== '' || form.lng.trim() !== '') {
+    if (
+      form.lat.trim() !== '' ||
+      form.lng.trim() !== '' ||
+      form.address.trim() !== '' ||
+      form.area_id.trim() !== ''
+    ) {
       return current;
     }
-    return { key: 'draft', lat: '', lng: '' };
+    return { key: 'draft', lat: '', lng: '', address: '', area_id: '' };
   }
-  if (!saved) {
-    return current;
-  }
-  if (form.lat !== saved.lat || form.lng !== saved.lng) {
+  if (!saved || !placementMatches(form, saved)) {
     return current;
   }
   if (
     current?.key === openKey &&
     current.lat === saved.lat &&
-    current.lng === saved.lng
+    current.lng === saved.lng &&
+    current.address === saved.address &&
+    current.area_id === saved.area_id
   ) {
     return current;
   }
-  return { key: openKey, lat: saved.lat, lng: saved.lng };
+  return { key: openKey, ...saved };
 }
 
 function coordinateBlank(value: unknown): boolean {

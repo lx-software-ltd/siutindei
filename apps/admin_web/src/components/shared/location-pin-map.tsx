@@ -22,6 +22,8 @@ interface LocationPinMapProps {
   lat: string;
   lng: string;
   readOnly: boolean;
+  /** Bumps when Reset should move the pin without waiting for typing. */
+  jumpToken: number;
   onChange: (lat: string, lng: string) => void;
 }
 
@@ -105,11 +107,13 @@ function LocationGoogleMap({
   lat,
   lng,
   readOnly,
+  jumpToken,
   onChange,
 }: {
   lat: number;
   lng: number;
   readOnly: boolean;
+  jumpToken: number;
   onChange: (lat: string, lng: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -119,6 +123,7 @@ function LocationGoogleMap({
   const latRef = useRef(lat);
   const lngRef = useRef(lng);
   const readOnlyRef = useRef(readOnly);
+  const appliedJump = useRef(jumpToken);
   const [failed, setFailed] = useState(false);
   const [authRefused, setAuthRefused] = useState(false);
   const [ready, setReady] = useState(false);
@@ -222,22 +227,30 @@ function LocationGoogleMap({
     if (!ready || !pin || !map) {
       return;
     }
-    const delay = pinMoveDelay(coordinateFromPosition(pin.currentPosition()), {
-      lat,
-      lng,
-    });
+    const immediate = jumpToken !== appliedJump.current;
+    appliedJump.current = jumpToken;
+    const delay = pinMoveDelay(
+      coordinateFromPosition(pin.currentPosition()),
+      { lat, lng },
+      immediate
+    );
     if (delay == null) {
       return;
     }
-    const handle = window.setTimeout(() => {
+    const move = () => {
       const position = new google.maps.LatLng(lat, lng);
       pin.setPosition(position);
       map.setCenter(position);
-    }, delay);
+    };
+    if (delay === 0) {
+      move();
+      return;
+    }
+    const handle = window.setTimeout(move, delay);
     return () => {
       window.clearTimeout(handle);
     };
-  }, [lat, lng, ready]);
+  }, [jumpToken, lat, lng, ready]);
 
   if (authRefused) {
     return (
@@ -266,6 +279,7 @@ export function LocationPinMap({
   lat,
   lng,
   readOnly,
+  jumpToken,
   onChange,
 }: LocationPinMapProps) {
   const pin = locationCoordinates({ lat, lng });
@@ -287,6 +301,7 @@ export function LocationPinMap({
       lat={pin.lat}
       lng={pin.lng}
       readOnly={readOnly}
+      jumpToken={jumpToken}
       onChange={onChange}
     />
   );
