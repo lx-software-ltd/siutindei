@@ -32,6 +32,30 @@ export function locationCoordinates(location: {
   return { lat, lng };
 }
 
+export function formatMapCoordinate(value: number): string {
+  return value.toFixed(6).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+}
+
+export function coordinateFromPosition(
+  position: unknown,
+): { lat: number; lng: number } | null {
+  if (!position || typeof position !== 'object') {
+    return null;
+  }
+  const point = position as { lat?: unknown; lng?: unknown };
+  const read = (value: unknown): unknown =>
+    typeof value === 'function' ? (value as () => unknown)() : value;
+  const lat = read(point.lat);
+  const lng = read(point.lng);
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return null;
+  }
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
+  return { lat, lng };
+}
+
 export function googleMapsPinUrl(lat: number, lng: number): string {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
