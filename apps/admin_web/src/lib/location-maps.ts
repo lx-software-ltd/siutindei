@@ -32,6 +32,173 @@ export function locationCoordinates(location: {
   return { lat, lng };
 }
 
+export function formatMapCoordinate(value: number): string {
+  return value.toFixed(6).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+}
+
+/** How long a typed coordinate waits before the pin follows it. */
+export const TYPED_PIN_DELAY_MS = 400;
+
+export function coordinatesMatch(
+  left: { lat: number; lng: number },
+  right: { lat: number; lng: number }
+): boolean {
+  return (
+    Math.abs(left.lat - right.lat) < 1e-6 &&
+    Math.abs(left.lng - right.lng) < 1e-6
+  );
+}
+
+/**
+ * Null when the pin is already on `next`, including a drag that just
+ * landed. A typed change waits so each keystroke does not recenter.
+ */
+export function pinMoveDelay(
+  current: { lat: number; lng: number } | null,
+  next: { lat: number; lng: number },
+  immediate = false
+): number | null {
+  if (current && coordinatesMatch(current, next)) {
+    return null;
+  }
+  if (immediate) {
+    return 0;
+  }
+  return TYPED_PIN_DELAY_MS;
+}
+
+export interface LocationPlacement {
+  lat: string;
+  lng: string;
+  address: string;
+  area_id: string;
+}
+
+export function coordinatesChanged(
+  current: { lat: string; lng: string },
+  opened: { lat: string; lng: string }
+): boolean {
+  const left = locationCoordinates(current);
+  const right = locationCoordinates(opened);
+  if (left && right) {
+    return !coordinatesMatch(left, right);
+  }
+  return (
+    current.lat.trim() !== opened.lat.trim() ||
+    current.lng.trim() !== opened.lng.trim()
+  );
+}
+
+export function placementChanged(
+  current: LocationPlacement,
+  opened: LocationPlacement
+): boolean {
+  return (
+    current.address !== opened.address ||
+    current.area_id !== opened.area_id ||
+    coordinatesChanged(current, opened)
+  );
+}
+
+function placementMatches(form: LocationPlacement, saved: LocationPlacement): boolean {
+  return !placementChanged(form, saved);
+}
+
+/**
+ * Placement loaded for this open editor. Stays on the opened record
+ * while the fields change, and follows a save once the fields match it.
+ */
+export function nextOpenedCoordinates(
+  current: (LocationPlacement & { key: string }) | null,
+  openKey: string | null,
+  saved: LocationPlacement | null,
+  form: LocationPlacement
+): (LocationPlacement & { key: string }) | null {
+  if (!openKey) {
+    return null;
+  }
+  if (openKey === 'draft') {
+    if (current?.key === 'draft') {
+      return current;
+    }
+    if (
+      form.lat.trim() !== '' ||
+      form.lng.trim() !== '' ||
+      form.address.trim() !== '' ||
+      form.area_id.trim() !== ''
+    ) {
+      return current;
+    }
+    return { key: 'draft', lat: '', lng: '', address: '', area_id: '' };
+  }
+  if (!saved || !placementMatches(form, saved)) {
+    return current;
+  }
+  if (
+    current?.key === openKey &&
+    current.lat === saved.lat &&
+    current.lng === saved.lng &&
+    current.address === saved.address &&
+    current.area_id === saved.area_id
+  ) {
+    return current;
+  }
+  return { key: openKey, ...saved };
+}
+
+function coordinateBlank(value: unknown): boolean {
+  if (value == null) {
+    return true;
+  }
+  return typeof value === 'string' && value.trim() === '';
+}
+
+/** Sentence shown when the editor cannot place a pin. Null when it can. */
+export function locationPinHint(
+  lat: unknown,
+  lng: unknown,
+  readOnly: boolean
+): string | null {
+  if (locationCoordinates({ lat, lng })) {
+    return null;
+  }
+  const latBlank = coordinateBlank(lat);
+  const lngBlank = coordinateBlank(lng);
+  if (readOnly) {
+    if (latBlank && lngBlank) {
+      return 'This location has no latitude or longitude.';
+    }
+    return 'Latitude or longitude is not a valid coordinate.';
+  }
+  if (latBlank && lngBlank) {
+    return 'Enter latitude and longitude to place the pin.';
+  }
+  if (latBlank || lngBlank) {
+    return 'Enter both latitude and longitude to place the pin.';
+  }
+  return 'Latitude must be from -90 to 90 and longitude from -180 to 180.';
+}
+
+export function coordinateFromPosition(
+  position: unknown,
+): { lat: number; lng: number } | null {
+  if (!position || typeof position !== 'object') {
+    return null;
+  }
+  const point = position as { lat?: unknown; lng?: unknown };
+  const read = (value: unknown): unknown =>
+    typeof value === 'function' ? (value as () => unknown)() : value;
+  const lat = read(point.lat);
+  const lng = read(point.lng);
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return null;
+  }
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
+  return { lat, lng };
+}
+
 export function googleMapsPinUrl(lat: number, lng: number): string {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }

@@ -1,6 +1,8 @@
 declare namespace google.maps {
   class LatLng {
     constructor(lat: number, lng: number);
+    lat(): number;
+    lng(): number;
   }
 
   class LatLngBounds {
@@ -35,12 +37,16 @@ declare namespace google.maps {
     map?: Map;
     position?: LatLng;
     title?: string;
+    draggable?: boolean;
   }
 
   class Marker {
     constructor(options?: MarkerOptions);
     setMap(map: Map | null): void;
-    addListener(eventName: string, handler: () => void): void;
+    setPosition(position: LatLng): void;
+    setDraggable(draggable: boolean): void;
+    getPosition(): LatLng | null;
+    addListener(eventName: string, handler: () => void): MapsEventListener;
   }
 
   class InfoWindow {
@@ -57,13 +63,16 @@ declare namespace google.maps {
   namespace marker {
     interface AdvancedMarkerOptions {
       map?: Map | null;
-      position?: LatLng;
+      position?: LatLng | { lat: number; lng: number } | null;
       title?: string;
+      gmpDraggable?: boolean;
     }
 
     class AdvancedMarkerElement {
       constructor(options?: AdvancedMarkerOptions);
       map: Map | null;
+      position: LatLng | { lat: number; lng: number } | null;
+      gmpDraggable: boolean;
       addListener(eventName: string, handler: () => void): MapsEventListener;
     }
   }
