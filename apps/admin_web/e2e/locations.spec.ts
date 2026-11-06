@@ -138,6 +138,28 @@ test.describe('Locations Panel', () => {
     await expect(statusField).toHaveValue('temporarily_closed');
   });
 
+  test('pins map links at the stored coordinates with equal icon height', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=locations&org=org-1');
+    const row = adminPage.getByRole('row', { name: /123 Test Street/ }).first();
+    const google = row.getByRole('link', { name: 'Open in Google Maps' });
+    const apple = row.getByRole('link', { name: 'Open in Apple Maps' });
+    await expect(google).toHaveAttribute(
+      'href',
+      'https://www.google.com/maps?q=22.278,114.175&z=17'
+    );
+    await expect(apple).toHaveAttribute(
+      'href',
+      'https://maps.apple.com/?ll=22.278,114.175&q=22.278,114.175'
+    );
+    const googleBox = await google.locator('svg').boundingBox();
+    const appleBox = await apple.locator('svg').boundingBox();
+    expect(googleBox).toBeTruthy();
+    expect(appleBox).toBeTruthy();
+    expect(Math.abs(googleBox!.height - appleBox!.height)).toBeLessThan(1);
+  });
+
   test('deletes a location', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=locations&org=org-1');
     await adminPage.getByRole('button', { name: 'Delete' }).first().click();

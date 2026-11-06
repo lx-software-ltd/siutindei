@@ -617,7 +617,7 @@ test.describe('Organizations Panel', () => {
     await expect(mapsLink).toBeVisible();
     await expect(mapsLink).toHaveAttribute(
       'href',
-      'https://www.google.com/maps/search/?api=1&query=22.2803,114.1846'
+      'https://www.google.com/maps?q=22.2803,114.1846&z=17'
     );
     const orgLink = adminPage.getByRole('link', {
       name: 'Test Organization 2',

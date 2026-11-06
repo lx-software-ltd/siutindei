@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { useGeographicAreas } from '../../hooks/use-geographic-areas';
 import { useFormValidation } from '../../hooks/use-form-validation';
@@ -8,6 +8,10 @@ import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { formatAdminPageName } from '../../lib/admin-page-name';
 import type { GeographicAreaNode } from '../../lib/api-client';
+import {
+  buildAppleMapsUrl,
+  buildGoogleMapsUrl,
+} from '../../lib/location-maps';
 import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/api-client-admin';
 import {
@@ -19,6 +23,7 @@ import {
 } from '../../lib/location-status';
 import { normalizeKey } from '../../lib/string-utils';
 import type { Location } from '../../types/admin';
+import { AppleMapsIcon, GoogleMapsIcon } from '../icons/action-icons';
 import { ClosedLocationMark } from './closed-location-mark';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import { adminTableText, AdminTableName } from '../ui/admin-table-value';
@@ -55,38 +60,31 @@ import { WorkspaceScopeGate } from '../admin/workspace-empty';
 
 const PAGE_NAME = formatAdminPageName('Locations');
 
-const MAP_ICON_BASE_URL =
-  'https://api.iconify.design/simple-icons';
-
-function buildMapIconUrl(slug: string, color: string): string {
-  return `${MAP_ICON_BASE_URL}/${slug}.svg?color=%23${color}`;
-}
-
-const MAP_ICONS = {
-  googleMaps: buildMapIconUrl('googlemaps', '4285F4'),
-  appleMaps: buildMapIconUrl('apple', '000000'),
-};
+const MAP_ICON_CLASS = 'block h-4 w-4 shrink-0';
 
 const CLOSED_DETAILS_HINT =
   'Address, area, latitude, and longitude stay unchanged while this location is closed.';
 
-function MapServiceIcon({
-  className,
-  src,
+function MapServiceLink({
+  href,
+  label,
+  children,
 }: {
-  className?: string;
-  src: string;
+  href: string;
+  label: string;
+  children: ReactNode;
 }) {
   return (
-    <img
-      className={className}
-      src={src}
-      alt=''
-      aria-hidden='true'
-      loading='lazy'
-      width={16}
-      height={16}
-    />
+    <a
+      href={href}
+      target='_blank'
+      rel='noreferrer'
+      title={label}
+      aria-label={label}
+      className='inline-flex h-4 w-4 shrink-0 items-center justify-center text-ink-900 hover:text-ink-700'
+    >
+      {children}
+    </a>
   );
 }
 
@@ -120,39 +118,6 @@ function itemToForm(item: Location): LocationFormState {
     lat: item.lat !== undefined && item.lat !== null ? `${item.lat}` : '',
     lng: item.lng !== undefined && item.lng !== null ? `${item.lng}` : '',
   };
-}
-
-function buildMapQuery(location: Location): string | null {
-  const { address, lat, lng } = location;
-  const hasCoords =
-    typeof lat === 'number' &&
-    typeof lng === 'number' &&
-    Number.isFinite(lat) &&
-    Number.isFinite(lng);
-  const trimmedAddress = address?.trim();
-  const query = hasCoords ? `${lat},${lng}` : trimmedAddress ?? '';
-  if (!query) {
-    return null;
-  }
-  return encodeURIComponent(query);
-}
-
-function buildGoogleMapsUrl(location: Location): string | null {
-  const encodedQuery = buildMapQuery(location);
-  if (!encodedQuery) {
-    return null;
-  }
-  const baseUrl = 'https://www.google.com/maps/search/?api=1&query=';
-  return `${baseUrl}${encodedQuery}`;
-}
-
-function buildAppleMapsUrl(location: Location): string | null {
-  const encodedQuery = buildMapQuery(location);
-  if (!encodedQuery) {
-    return null;
-  }
-  const baseUrl = 'https://maps.apple.com/?q=';
-  return `${baseUrl}${encodedQuery}`;
 }
 
 interface LocationsPanelProps {
@@ -365,36 +330,16 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
       <div className='flex items-center gap-2'>
         <span>{adminTableText(item.address)}</span>
         {hasMapLinks && (
-          <span className='inline-flex items-center gap-2'>
+          <span className='inline-flex h-4 items-center gap-2'>
             {googleMapsUrl && (
-              <a
-                href={googleMapsUrl}
-                target='_blank'
-                rel='noreferrer'
-                title='Open in Google Maps'
-                aria-label='Open in Google Maps'
-                className='text-ink-500 hover:text-ink-900'
-              >
-                <MapServiceIcon
-                  className='h-4 w-4'
-                  src={MAP_ICONS.googleMaps}
-                />
-              </a>
+              <MapServiceLink href={googleMapsUrl} label='Open in Google Maps'>
+                <GoogleMapsIcon className={MAP_ICON_CLASS} />
+              </MapServiceLink>
             )}
             {appleMapsUrl && (
-              <a
-                href={appleMapsUrl}
-                target='_blank'
-                rel='noreferrer'
-                title='Open in Apple Maps'
-                aria-label='Open in Apple Maps'
-                className='text-ink-500 hover:text-ink-900'
-              >
-                <MapServiceIcon
-                  className='h-4 w-4'
-                  src={MAP_ICONS.appleMaps}
-                />
-              </a>
+              <MapServiceLink href={appleMapsUrl} label='Open in Apple Maps'>
+                <AppleMapsIcon className={MAP_ICON_CLASS} />
+              </MapServiceLink>
             )}
           </span>
         )}

@@ -26,6 +26,7 @@ import { useDataQualityQueue } from '@/hooks/use-data-quality-queue';
 import { useGeographicAreas } from '@/hooks/use-geographic-areas';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { adminTabLabel, formatAdminPageName } from '@/lib/admin-page-name';
+import { googleMapsPinUrl } from '@/lib/location-maps';
 import { isLocationClosed, locationStatusLabel } from '@/lib/location-status';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import {
@@ -360,7 +361,7 @@ export function LocationsPanel() {
             {place?.lat != null && place?.lng != null ? (
               <a
                 className='text-sm underline'
-                href={`https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`}
+                href={googleMapsPinUrl(place.lat, place.lng)}
                 target='_blank'
                 rel='noreferrer'
               >

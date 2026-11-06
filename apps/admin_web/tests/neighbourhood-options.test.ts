@@ -103,7 +103,7 @@ describe('pinsForOrganizations', () => {
         areaName: 'Central',
         lat: 22.28,
         lng: 114.15,
-        mapsUrl: 'https://www.google.com/maps/search/?api=1&query=22.28,114.15',
+        mapsUrl: 'https://www.google.com/maps?q=22.28,114.15&z=17',
       },
     ]);
     expect(catalogOrganizationHref('org-1')).toBe(
