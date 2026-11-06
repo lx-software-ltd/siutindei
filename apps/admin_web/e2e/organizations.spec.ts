@@ -807,6 +807,7 @@ test.describe('Organizations Panel', () => {
     const preview = media.getByRole('img', { name: 'Children painting' });
     await expect(preview).toBeVisible();
     await expect(preview).toHaveAttribute('src', 'https://cdn.example/class.png');
+    await expect(media.getByText('Now: photos: 2')).toBeVisible();
     await expect(media.getByText('https://cdn.example/class.png')).toHaveCount(0);
     await expect(media.getByText(/source_url/)).toHaveCount(0);
     await adminPage.setViewportSize({ width: 390, height: 844 });

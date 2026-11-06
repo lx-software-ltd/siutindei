@@ -975,7 +975,7 @@ export async function setupApiMocks(
                     kind: 'add_media',
                     field: 'media',
                     label: 'Photo 1',
-                    current_value: null,
+                    current_value: { photos: 2 },
                     proposed_value: {
                       source_url: 'https://cdn.example/class.png',
                       alt: 'Children painting',

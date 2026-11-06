@@ -25,6 +25,10 @@ from app.db.models import (
 )
 from app.db.models.category_scan import ActivityCategoryReview
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
+from app.services.description_boilerplate import (
+    CANTONESE_IMPORT_BOILERPLATE,
+    ENGLISH_IMPORT_BOILERPLATE,
+)
 from app.services.org_review import (
     ACTIVITY_ADDED_SINCE_REJECTED,
     REVIEW_REASONS,
@@ -143,7 +147,13 @@ def _issue_predicates() -> dict[str, ColumnElement[bool]]:
     return {
         "missing_description": _blank(Organization.description),
         "source_attribution": or_(
-            Organization.description_source == "template",
+            and_(
+                Organization.description_source == "template",
+                or_(
+                    Organization.description.contains(ENGLISH_IMPORT_BOILERPLATE),
+                    Organization.description.contains(CANTONESE_IMPORT_BOILERPLATE),
+                ),
+            ),
             Organization.description.contains("Source:"),
         ),
         "missing_zh_name": _translation_gap(

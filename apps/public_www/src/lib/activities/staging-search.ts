@@ -1,5 +1,6 @@
 import { getSearchConfig, getSiteConfig } from '@/lib/site-config';
 
+import { hideImportTemplateCopy } from './description-boilerplate';
 import { mapActivityListing } from './map-listing';
 import type {
   ActivityListing,
@@ -212,7 +213,10 @@ function listingFromFixture(
   item: StagingFixtureItem,
   view: 'card' | 'full',
 ): ActivityListing {
-  const isTemplate = item.organization.description_source === 'template';
+  const isTemplate = hideImportTemplateCopy(
+    item.organization.description_source,
+    item.organization.description,
+  );
   return mapActivityListing(
     {
       ...item,

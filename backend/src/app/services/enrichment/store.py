@@ -22,6 +22,7 @@ from app.db.models.org_enrichment import (
 from app.db.models.organization import Organization
 from app.exceptions import AppError, NotFoundError, ValidationError
 from app.services.enrichment.constants import STALE_RUN_MINUTES
+from app.services.enrichment.match import display_current
 
 _DEFAULT_LIMIT = Decimal("25")
 
@@ -251,15 +252,41 @@ def serialize_run(run: OrgEnrichmentRun) -> dict[str, Any]:
     }
 
 
-def serialize_proposal(row: OrgEnrichmentProposal) -> dict[str, Any]:
+_LIVE_CURRENT_KINDS = frozenset(
+    {
+        "update_organization",
+        "add_media",
+        "create_location",
+        "create_activity",
+    }
+)
+
+
+def serialize_proposal(
+    row: OrgEnrichmentProposal,
+    *,
+    organization: Organization | None = None,
+    venues: list[Any] | None = None,
+    activity_names: list[str] | None = None,
+) -> dict[str, Any]:
     proposed = row.proposed_value if isinstance(row.proposed_value, dict) else {}
+    current = row.current_value
+    if organization is not None and row.kind in _LIVE_CURRENT_KINDS:
+        current = display_current(
+            organization,
+            kind=row.kind,
+            field=row.field,
+            proposed=proposed,
+            venues=list(venues or []),
+            activity_names=list(activity_names or []),
+        )
     return {
         "id": str(row.id),
         "section": row.section,
         "kind": row.kind,
         "field": row.field,
         "label": row.label,
-        "current_value": row.current_value,
+        "current_value": current,
         "proposed_value": proposed,
         "confidence": float(row.confidence),
         "unverified": row.unverified,

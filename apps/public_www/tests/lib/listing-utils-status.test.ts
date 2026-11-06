@@ -70,6 +70,23 @@ describe('listing status helpers', () => {
     expect(
       isTemplateDescription(buildListing({ descriptionSource: 'template' })),
     ).toBe(true);
+    expect(
+      isTemplateDescription(
+        buildListing({
+          descriptionSource: 'template',
+          description: 'Saturday art class for children in the harbour.',
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      isTemplateDescription(
+        buildListing({
+          descriptionSource: 'template',
+          description:
+            'Harbour Club is a class or early-years centre in CENTRAL for children and families.',
+        }),
+      ),
+    ).toBe(true);
   });
 
   it('builds a Google Maps place URL only when placeId is set', () => {

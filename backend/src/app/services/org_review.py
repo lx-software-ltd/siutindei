@@ -25,6 +25,7 @@ from app.db.models import (
     Organization,
 )
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
+from app.services.description_boilerplate import description_is_import_boilerplate
 from app.services.name_sanitizer import NameSanitizeConfig
 from app.services.org_review_children import (
     added_since_rejected,
@@ -175,7 +176,10 @@ def collect_issues(
             "Description is missing",
         )
     note()
-    if organization.description_source == "template":
+    if (
+        organization.description_source == "template"
+        and description_is_import_boilerplate(organization.description)
+    ):
         add(
             "source_attribution",
             "warning",

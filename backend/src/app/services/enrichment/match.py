@@ -50,6 +50,96 @@ def _live_current(org: Organization, proposed: dict[str, Any]) -> dict[str, Any]
     return current or None
 
 
+def display_current(
+    org: Organization,
+    *,
+    kind: str,
+    field: str | None,
+    proposed: dict[str, Any],
+    venues: list[Any],
+    activity_names: list[str],
+) -> dict[str, Any] | None:
+    """Live catalog for the enrichment Now line.
+
+    The stored crawl snapshot stays on the proposal. Apply still
+    compares against that snapshot.
+    """
+    if kind == "update_organization":
+        raw = _live_current(org, proposed) or {}
+    elif kind == "add_media":
+        raw = _media_current(org, proposed, field)
+    elif kind == "create_location":
+        raw = _location_current(proposed, venues)
+    elif kind == "create_activity":
+        raw = _activity_current(proposed, activity_names)
+    else:
+        return None
+    kept = {key: value for key, value in raw.items() if _present(value)}
+    return kept or None
+
+
+def _media_current(
+    org: Organization, proposed: dict[str, Any], field: str | None
+) -> dict[str, Any]:
+    source = str(proposed.get("source_url") or "")
+    urls = [str(url) for url in (org.media_urls or []) if url]
+    saved = bool(source) and (source in urls or source == (org.logo_media_url or ""))
+    if proposed.get("logo") or field == "logo":
+        current: dict[str, Any] = {}
+        if org.logo_media_url:
+            current["logo_media_url"] = org.logo_media_url
+        if saved:
+            current["already_saved"] = True
+        return current
+    current = {}
+    if urls:
+        current["photos"] = len(urls)
+    if saved:
+        current["already_saved"] = True
+    return current
+
+
+def _location_current(proposed: dict[str, Any], venues: list[Any]) -> dict[str, Any]:
+    wanted = _folded(proposed.get("address"))
+    for venue in venues:
+        address = getattr(venue, "address", None)
+        if wanted and _folded(address) == wanted:
+            return {"address": address}
+    if venues:
+        return {"venues": len(venues)}
+    return {}
+
+
+def _activity_current(
+    proposed: dict[str, Any], activity_names: list[str]
+) -> dict[str, Any]:
+    wanted = _folded(proposed.get("name"))
+    for name in activity_names:
+        if wanted and _folded(name) == wanted:
+            return {"name": name}
+    if activity_names:
+        return {"activities": len(activity_names)}
+    return {}
+
+
+def _folded(value: object) -> str:
+    return " ".join(str(value or "").split()).casefold()
+
+
+def _present(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, dict):
+        return any(_present(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return bool(value) and any(_present(item) for item in value)
+    return True
+
+
 def _already_saved(
     session: Session,
     org: Organization,

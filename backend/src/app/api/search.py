@@ -50,6 +50,10 @@ from app.db.queries import (
     category_match_mode,
 )
 from app.exceptions import CursorError, ValidationError
+from app.services.description_boilerplate import (
+    hides_template_description,
+    omit_import_boilerplate,
+)
 from app.utils import json_response, parse_decimal, parse_enum, parse_int
 from app.utils.logging import configure_logging, get_logger, set_request_context
 from app.utils.parsers import (
@@ -251,21 +255,27 @@ def map_row_to_result(
 
     age_min, age_max = inclusive_age_bounds(activity.age_range)
     card = view == "card"
-    is_template = organization.description_source == "template"
+    is_template = hides_template_description(
+        organization.description_source, organization.description
+    )
     org_description = None if is_template or card else organization.description
     org_desc_translations = (
         {}
         if is_template or card
-        else build_translation_map(
-            organization.description, organization.description_translations
+        else omit_import_boilerplate(
+            build_translation_map(
+                organization.description, organization.description_translations
+            )
         )
     )
     activity_description = None if is_template or card else activity.description
     activity_desc_translations = (
         {}
         if is_template or card
-        else build_translation_map(
-            activity.description, activity.description_translations
+        else omit_import_boilerplate(
+            build_translation_map(
+                activity.description, activity.description_translations
+            )
         )
     )
     media_urls = list(organization.media_urls or [])

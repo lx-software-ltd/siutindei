@@ -98,6 +98,7 @@ def _apply_org(
         merged = dict(org.description_translations or {})
         merged.update(proposed["description_translations"])
         org.description_translations = merged
+        _note_enriched_description(org)
         return
     if "phone_country_code" in proposed or "phone_number" in proposed:
         if not _still(
@@ -122,6 +123,7 @@ def _apply_org(
     value = proposed[field]
     if field == "description":
         org.description = _validate_string_length(value, "description", 5000)
+        _note_enriched_description(org)
     elif field == "email":
         org.email = _validate_email(value)
     elif field == "website":
@@ -466,6 +468,12 @@ def activity_by_name(session: Session, org_id: Any, name: str) -> Activity | Non
         if " ".join(row.name.split()).casefold() == target:
             return row
     return None
+
+
+def _note_enriched_description(org: Organization) -> None:
+    """A website description replaces import filler. Curated sources stay."""
+    if org.description_source in (None, "template"):
+        org.description_source = "enrich"
 
 
 def _still(org: Organization, current: object, fields: tuple[str, ...]) -> bool:

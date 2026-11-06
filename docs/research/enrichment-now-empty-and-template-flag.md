@@ -1,6 +1,6 @@
 # Research: Enrichment "Now: Empty" and template description warning
 
-**Status**: Draft
+**Status**: Implemented from `docs/plans/enrichment-now-empty-and-template-flag.md`
 **Zone**: yellow
 
 Partner GET on 6 Nov 2026 (Hong Kong time) for The International

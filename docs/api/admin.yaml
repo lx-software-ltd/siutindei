@@ -287,6 +287,10 @@ paths:
         Latest run, its proposals, and the organization's venues.
         An admin or importer JWT may call this. Apply and dismiss
         stay admin-only. Nothing is written to the catalog.
+        `current_value` is the live catalog for display: organization
+        fields, the saved logo, a photo count, and a venue or activity
+        count. Blank fields are omitted. The crawl snapshot used to
+        detect a later edit stays on the stored proposal.
       security:
         - AdminGroupAuth: []
         - ImporterGroupAuth: []

@@ -1,6 +1,6 @@
 # Plan: Enrichment "Now" and template description flag
 
-**Status**: Draft
+**Status**: Done
 **Zone**: yellow
 
 ## Goal
@@ -22,14 +22,21 @@ Evidence and the International Montessori School example:
 - A new warning for leftover Chinese boilerplate after English is
   replaced. Call that out in the PR; do not build a second detector
   in this change.
+- Category recheck still treats `template` or an unset
+  `description_source` as untrusted.
 - Hiding applied/dismissed enrichment rows.
 
 ## Files
 
+- `backend/src/app/services/description_boilerplate.py` — shared
+  filler phrases. Search hides a `template` description when it is
+  blank or still that sentence. Readiness warns only when the
+  sentence is still there.
 - `backend/src/app/services/enrichment/store.py` — GET serializer
-  takes the live organization (and venues). `current_value` in the
-  response is display-only. Stored `current_value` is unchanged so
-  apply `_still` still detects edits since the crawl.
+  takes the live organization, venues, and activity names.
+  `current_value` in the response is display-only. Stored
+  `current_value` is unchanged so apply `_still` still detects edits
+  since the crawl.
 - `backend/src/app/services/enrichment/match.py` — reuse
   `_live_current` for org fields. Add display currents:
   - `add_media` logo: existing `logo_media_url` when set
@@ -54,10 +61,15 @@ Evidence and the International Montessori School example:
   `Source:` substring check.
 - `backend/src/app/api/search.py` — same boilerplate test before
   blanking descriptions, so a retagged **or** retagged-in-text-only
-  org is visible. Leave card view omitting descriptions.
+  org is visible. A translation that is still the import sentence
+  is omitted. Leave card view omitting descriptions.
 - `apps/admin_web/src/components/admin/organization-enrichment-proposals.tsx`
   — `proposedText`: drop null / blank entries; if none remain, `Empty`.
   Do not print `email: ` for `{ "email": null }`.
+- `apps/public_www/src/lib/activities/description-boilerplate.ts` and
+  the listing, staging, and static catalog callers — the activity
+  page uses the same blank-or-filler rule, so a unique description
+  tagged `template` is shown.
 - Tests: `tests/test_org_enrichment.py`, `tests/test_org_review.py`,
   search tests that cover template blanking,
   `apps/admin_web/tests/components/admin/organization-enrichment-proposals.test.tsx`

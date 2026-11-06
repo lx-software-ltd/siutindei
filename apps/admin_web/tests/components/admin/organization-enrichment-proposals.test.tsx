@@ -266,6 +266,35 @@ describe('ProposalTable media preview', () => {
     ).toBeGreaterThan(0);
   });
 
+  it('treats a null field as empty and shows a live photo count', () => {
+    renderTable([
+      proposal({
+        id: 'prop-email',
+        field: 'email',
+        label: 'Email',
+        current_value: { email: null },
+        proposed_value: { email: 'studio@example.com' },
+      }),
+      proposal({
+        id: 'prop-photos',
+        section: 'Media',
+        kind: 'add_media',
+        field: 'media',
+        label: 'Photo 1',
+        current_value: { photos: 2, already_saved: true },
+        proposed_value: { source_url: MEDIA_URL, alt: 'Class photo', logo: false },
+      }),
+    ]);
+
+    expect(screen.getAllByText('Now: Empty').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Now: email:')).not.toBeInTheDocument();
+    expect(screen.queryByText('Now: email: null')).not.toBeInTheDocument();
+    expect(screen.getAllByText('email: studio@example.com').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText('photos: 2 · already_saved: true').length
+    ).toBeGreaterThan(0);
+  });
+
   it('keeps a non-http source as text and does not request it', () => {
     renderTable([
       proposal({

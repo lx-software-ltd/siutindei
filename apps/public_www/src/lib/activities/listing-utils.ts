@@ -1,6 +1,7 @@
 import type { Locale } from '@/content/locales';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 
+import { descriptionIsImportBoilerplate } from './description-boilerplate';
 import type {
   ActivityListing,
   TranslationMap,
@@ -131,7 +132,14 @@ export function isTemporarilyClosed(listing: ActivityListing): boolean {
 }
 
 export function isTemplateDescription(listing: ActivityListing): boolean {
-  return listing.organization.descriptionSource === 'template';
+  if (listing.organization.descriptionSource !== 'template') {
+    return false;
+  }
+  const text = listing.organization.description ?? '';
+  if (text.trim() === '') {
+    return true;
+  }
+  return descriptionIsImportBoilerplate(text);
 }
 
 export function googleMapsPlaceUrl(placeId: string | null | undefined): string | null {

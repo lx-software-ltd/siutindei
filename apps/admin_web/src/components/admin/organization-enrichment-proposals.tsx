@@ -93,19 +93,39 @@ export function matchedAreaId(
   return fromPath || explicit;
 }
 
+function isBlankValue(item: unknown): boolean {
+  if (typeof item === 'boolean') {
+    return !item;
+  }
+  if (item == null) {
+    return true;
+  }
+  if (typeof item === 'string') {
+    return item.trim() === '';
+  }
+  if (Array.isArray(item)) {
+    return item.length === 0 || item.every((entry) => isBlankValue(entry));
+  }
+  if (typeof item === 'object') {
+    const values = Object.values(item as Record<string, unknown>);
+    return values.length === 0 || values.every((entry) => isBlankValue(entry));
+  }
+  return false;
+}
+
 export function proposedText(value: Record<string, unknown> | null): string {
   if (!value) {
     return 'Empty';
   }
-  return Object.entries(value)
-    .filter(([key]) => key !== 'copyright_notice')
+  const parts = Object.entries(value)
+    .filter(([key, item]) => key !== 'copyright_notice' && !isBlankValue(item))
     .map(([key, item]) => {
       if (item && typeof item === 'object') {
         return `${key}: ${JSON.stringify(item)}`;
       }
       return `${key}: ${String(item ?? '')}`;
-    })
-    .join(' · ');
+    });
+  return parts.length === 0 ? 'Empty' : parts.join(' · ');
 }
 
 function mediaPreviewUrl(value: Record<string, unknown> | null): string | null {
