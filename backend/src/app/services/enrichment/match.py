@@ -132,7 +132,8 @@ def _changed_since_crawl(
             raw = stored.get(key) or {}
             if isinstance(raw, dict):
                 stored_map = raw
-        wanted = proposed.get(key) if isinstance(proposed.get(key), dict) else {}
+        raw_wanted = proposed.get(key)
+        wanted = raw_wanted if isinstance(raw_wanted, dict) else {}
         languages = list(wanted) or ["zh"]
         for language in languages:
             live = (
