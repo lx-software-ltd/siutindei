@@ -1,15 +1,7 @@
-"""Authentication helpers for Cognito custom auth flows."""
+"""Authentication helpers.
 
-from app.auth.jwt_validator import (
-    JWTValidationError,
-    TokenClaims,
-    decode_and_verify_token,
-    validate_token_for_groups,
-)
-
-__all__ = [
-    "JWTValidationError",
-    "TokenClaims",
-    "decode_and_verify_token",
-    "validate_token_for_groups",
-]
+Submodules are imported directly. Importing the JWT validator here pulled
+PyJWT and cryptography into the partner API-key authorizer, which never
+verifies a JWT. That authorizer ships the search dependency profile and
+does not include PyJWT.
+"""

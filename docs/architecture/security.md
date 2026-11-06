@@ -167,7 +167,7 @@ in the `x-partner-key` header:
 - A dedicated in-VPC Lambda request authorizer
   (`PartnerApiKeyAuthorizerFunction`) validates the hash against the
   database and rejects revoked or expired keys. Authorizer results are
-  cached for 5 minutes, which bounds how long a revoked key keeps working.
+  cached for 15 minutes, which bounds how long a revoked key keeps working.
 - Keys carry a scope (`read` = GET only, `crud` = full CRUD) and an
   optional organization scope. Because the cached Allow policy covers all
   partner routes, **scope is re-checked before dispatch, and a route

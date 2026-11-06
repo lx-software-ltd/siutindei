@@ -6,7 +6,7 @@ Validates the ``x-partner-key`` header against hashed keys in the
 SECURITY NOTES:
 - Only SHA-256 hashes are compared; plaintext keys are never stored/logged.
 - Revoked and expired keys are rejected at lookup time. The API Gateway
-  authorizer cache (5 minutes) bounds how long a revoked key keeps working.
+  authorizer cache (15 minutes) bounds how long a revoked key keeps working.
 - Scope enforcement happens in the handlers (read vs crud), because a
   cached Allow policy applies to every partner route.
 """

@@ -218,7 +218,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 | Function Logical ID | Handler | Memory | Timeout | VPC | Extra Paths |
 |---------------------|---------|--------|---------|-----|-------------|
 | `SiutindeiSearchFunction` | `lambda/search/handler.lambda_handler` | 1024 MB | 30s | Yes | - |
-| `SiutindeiAdminFunction` | `lambda/admin/handler.lambda_handler` | 1024 MB | 120s | Yes | Also consumes the category-suggestion SQS queue |
+| `SiutindeiAdminFunction` | `lambda/admin/handler.lambda_handler` | 1024 MB | 120s | Yes | HTTP uses the `live` alias (2 provisioned executions). Category-suggestion SQS stays on `$LATEST` |
 | `SiutindeiMigrationFunction` | `lambda/migrations/handler.lambda_handler` | 512 MB | 5 min | Yes | `db` |
 | `HealthCheckFunction` | `lambda/health/handler.lambda_handler` | 256 MB | 10s | Yes | - |
 
@@ -240,7 +240,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 | `AdminGroupAuthorizerFunction` | `lambda/authorizers/cognito_group/handler.lambda_handler` | 256 MB | 5s | No | Admin group authorizer; importer group on catalog import, import history, owner-UI organization lookup and PATCH, and organization enrichment GET/POST |
 | `ManagerGroupAuthorizerFunction` | `lambda/authorizers/cognito_group/handler.lambda_handler` | 256 MB | 5s | No | Manager group authorizer |
 | `UserAuthorizerFunction` | `lambda/authorizers/cognito_user/handler.lambda_handler` | 256 MB | 5s | No | Any-user authorizer |
-| `PartnerApiKeyAuthorizerFunction` | `lambda/authorizers/api_key/handler.lambda_handler` | 256 MB | 10s | Yes | Partner API-key authorizer (DB lookup via RDS Proxy) |
+| `PartnerApiKeyAuthorizerFunction` | `lambda/authorizers/api_key/handler.lambda_handler` | 1024 MB | 10s | Yes | Partner API-key authorizer (DB lookup via RDS Proxy, `requirements-core.txt`) |
 
 ### Other Functions
 
@@ -386,7 +386,7 @@ read error status codes instead of silently blocking them.
 | Request Authorizer | `AdminGroupAuthorizer` | Lambda | `AdminGroupAuthorizerFunction` | JWT + admin group, or importer on catalog import, import history, owner-UI organization lookup and PATCH, and organization enrichment GET/POST, 5-min cache |
 | Request Authorizer | `ManagerGroupAuthorizer` | Lambda | `ManagerGroupAuthorizerFunction` | JWT + admin/manager group check, 5-min cache |
 | Request Authorizer | `UserAuthorizer` | Lambda | `UserAuthorizerFunction` | JWT validation (any user), 5-min cache |
-| Request Authorizer | `PartnerApiKeyAuthorizer` | Lambda | `PartnerApiKeyAuthorizerFunction` | Validates `x-partner-key` against hashed DB keys, 5-min cache |
+| Request Authorizer | `PartnerApiKeyAuthorizer` | Lambda | `PartnerApiKeyAuthorizerFunction` | Validates `x-partner-key` against hashed DB keys, 15-min cache |
 
 ### API Gateway API Key and Usage Plan
 
@@ -440,7 +440,7 @@ parameters. They were moved there by a one-off stack refactor, recorded in
 | KMS Key + Alias | `lxsoftware-siutindei-kms-ops-alerts` | Topic encryption key (rotation enabled; CloudWatch service principal granted) |
 | SNS Subscription | — | Email subscription to `OpsAlertsEmail` (conditional: only when the parameter is non-empty) |
 | CloudWatch Alarm | `lxsoftware-siutindei-api-5xx-alarm` | API Gateway 5XX ≥ 5 in 5 min |
-| CloudWatch Alarm | `lxsoftware-siutindei-api-latency-p99-alarm` | API Gateway p99 latency ≥ 3 s for 15 min, evaluated only in 5-min periods with ≥ 50 requests (metric math `IF(samples >= 50, p99)`; sparser periods are treated as missing) |
+| CloudWatch Alarm | `lxsoftware-siutindei-api-latency-p95-alarm` | API Gateway p95 latency ≥ 3 s for 3 consecutive 5-min periods with ≥ 50 requests (metric math `IF(FILL(samples, 0) >= 50, p95, 0)`; a period with no requests counts as zero samples and breaks the streak) |
 | CloudWatch Alarm | `lxsoftware-siutindei-search-lambda-duration-p99-alarm` | Search Lambda p99 `Duration` ≥ 3 s for 15 min |
 | CloudWatch Alarm | `lxsoftware-siutindei-search-lambda-errors-alarm` | Search Lambda errors ≥ 3 in 5 min |
 | CloudWatch Alarm | `lxsoftware-siutindei-search-lambda-throttles-alarm` | Search Lambda throttles ≥ 1 |
@@ -459,13 +459,14 @@ parameters. They were moved there by a one-off stack refactor, recorded in
 
 The manager-request and category-suggestion DLQ alarms are in the main stack and are also routed to the ops-alerts topic. Thresholds are launch-sizing early warnings; tune as real traffic patterns emerge.
 
-Latency alarms are split by traffic regime: the API-wide p99 alarm only
-evaluates periods with enough requests for a percentile to be meaningful
-(below the floor, p99 equals the slowest single request), while the
-per-function `Duration` alarms carry each function's own SLO (public search
-tight, admin SQS workers near the 120 s timeout) and cover low-traffic
-periods. Admin HTTP slowness is the volume-gated API Gateway p99 alarm,
-because `SiutindeiAdminFunction` also runs 90 s OpenRouter batches.
+Latency alarms are split by traffic regime: the API-wide p95 alarm only
+counts periods with enough requests for a percentile to be meaningful
+(below the floor the expression returns 0, so a quiet period breaks the
+streak instead of being skipped), while the per-function `Duration`
+alarms carry each function's own SLO (public search tight, admin SQS
+workers near the 120 s timeout) and cover low-traffic periods. Admin
+HTTP slowness is the volume-gated API Gateway p95 alarm, because
+`SiutindeiAdminFunction` also runs 90 s OpenRouter batches.
 
 ---
 
@@ -691,7 +692,8 @@ own buckets and log groups.
 ## Estimated Resource Count
 
 CloudFormation allows 500 resources per stack, and a nested stack counts
-as one. The main stack synthesizes to 491 resources. The API Gateway alone
+as one. The main stack synthesizes to 492 resources, including the admin
+`live` alias and its published version. The API Gateway alone
 accounts for 241 of them: 154 methods and 70 path resources. The 16 ops
 alarm rules live in the `OpsAlarmsStack` nested stack. New resource groups
 that don't reference the rest of the stack belong in a nested stack.

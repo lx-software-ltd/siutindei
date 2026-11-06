@@ -18,15 +18,17 @@ their primary responsibilities.
 - `--profile search` installs `backend/requirements-core.txt` into
   `backend/.lambda-build/search`. That set is pydantic, psycopg, and
   SQLAlchemy. boto3 comes from the Lambda runtime. It does not ship
-  phonenumbers, pycountry, pypdf, alembic, or pyjwt.
+  phonenumbers, pycountry, pypdf, alembic, or pyjwt. Search and the
+  partner API-key authorizer both use this profile.
 - `--profile admin` installs `backend/requirements-admin.txt` into
   `backend/.lambda-build/admin`. Admin adds boto3, alembic, PyJWT,
   pycountry, pypdf, and phonenumberslite (imported as `phonenumbers`).
 - `backend/requirements.txt` includes the admin set, so the default
-  bundle (`.lambda-build/base`) still has admin dependencies. The search
-  function sets `requirementsFile` to `requirements-core.txt` and stages
-  `.lambda-build/search`. Other functions keep the default file.
-  `extraCopyPaths` stay under the backend root.
+  bundle (`.lambda-build/base`) still has admin dependencies. Search and
+  `PartnerApiKeyAuthorizerFunction` set `requirementsFile` to
+  `requirements-core.txt` and stage `.lambda-build/search`. Other
+  functions keep the default file. `extraCopyPaths` stay under the
+  backend root.
 
 ## API Gateway Lambdas
 
@@ -85,6 +87,8 @@ their primary responsibilities.
   2, partial batch failures). The entrypoint dispatches `eventSource=aws:sqs` to
   `backend/lambda/category_suggestions/handler.py`. A separate worker
   function would exceed the CloudFormation 500-resource cap.
+  API Gateway invokes the `live` alias, which keeps 2 provisioned
+  executions. The SQS source stays on `$LATEST`.
 - Auth: Cognito JWT — admin group for `/v1/admin/*`,   admin or importer
   group for catalog import and owner-UI listing routes
   (`POST /v1/admin/imports`, `POST /v1/admin/imports/presign`,
@@ -203,7 +207,7 @@ their primary responsibilities.
 - Duration alarm: p99 ≥ 90 s for 15 min. Category-check and enrichment
   batches are expected to run 10–90 s on this same function, so a 10 s
   threshold pages on healthy scans. User-facing admin HTTP latency is
-  the API Gateway p99 alarm.
+  the API Gateway p95 alarm.
 - X-Ray: active tracing (function segment with init/invocation split)
 - Cognito user listing resolves group membership with one
   `list_users_in_group` call per managed group (`ADMIN_GROUP`,
@@ -357,7 +361,11 @@ their primary responsibilities.
 - DB access: RDS Proxy with IAM auth (`siutindei_app`; column-scoped
   UPDATE grant for `last_used_at`)
 - VPC: **Yes** (needs database access, no public JWKS)
-- Cache: authorizer results cached 5 minutes, bounding how long a
+- Memory: 1024 MB. The cold path is CPU-bound (imports plus the RDS
+  Proxy TLS handshake); 256 MB made one cold call about 7 seconds.
+- Dependencies: `requirements-core.txt`, same as search. The handler
+  must not import PyJWT, phonenumbers, pycountry, pypdf, or alembic.
+- Cache: authorizer results cached 15 minutes, bounding how long a
   revoked key keeps working
 - Concurrency: no reserved concurrency (account unreserved pool is at
   the AWS minimum of 100; authorizer caching keeps invocations low)

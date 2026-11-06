@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import threading
 from typing import Any
 
 import boto3
 from botocore.config import Config
 
 _CLIENT_CACHE: dict[tuple[Any, ...], Any] = {}
+# The admin user list calls the proxy from several threads. The first
+# request on a fresh Lambda builds this client, and that build has to
+# finish before another thread starts one.
+_CLIENT_LOCK = threading.Lock()
 
 
 def get_client(
@@ -18,14 +23,19 @@ def get_client(
 ) -> Any:
     """Return a cached boto3 client for the given service."""
     cache_key = (service, region_name, _config_key(config))
-    if cache_key in _CLIENT_CACHE:
-        return _CLIENT_CACHE[cache_key]
-    kwargs: dict[str, Any] = {"region_name": region_name}
-    if config is not None:
-        kwargs["config"] = config
-    client = boto3.client(service, **kwargs)  # type: ignore[call-overload]
-    _CLIENT_CACHE[cache_key] = client
-    return client
+    cached = _CLIENT_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+    with _CLIENT_LOCK:
+        cached = _CLIENT_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
+        kwargs: dict[str, Any] = {"region_name": region_name}
+        if config is not None:
+            kwargs["config"] = config
+        client = boto3.client(service, **kwargs)  # type: ignore[call-overload]
+        _CLIENT_CACHE[cache_key] = client
+        return client
 
 
 def _config_key(config: Config | None) -> tuple[Any, ...]:
@@ -46,7 +56,8 @@ def _config_key(config: Config | None) -> tuple[Any, ...]:
 
 def clear_client_cache() -> None:
     """Clear cached boto3 clients (useful in tests)."""
-    _CLIENT_CACHE.clear()
+    with _CLIENT_LOCK:
+        _CLIENT_CACHE.clear()
 
 
 def get_ses_client(region_name: str | None = None) -> Any:

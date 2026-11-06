@@ -138,8 +138,9 @@ parallel environments (production + staging) inside a single CDK stack
 - Lambda entrypoint lives at `backend/lambda/search/handler.py`.
 - Shared application code lives under `backend/src/app`.
 - Python dependencies are split into profiles: `requirements-core.txt`
-  (search) is a subset of `requirements-admin.txt` (admin), which is a
-  subset of `requirements.txt` (every other function).
+  (search and the partner API-key authorizer) is a subset of
+  `requirements-admin.txt` (admin), which is a subset of
+  `requirements.txt` (every other function).
 - Database migrations and seed are executed during CDK deploy
   via a custom resource Lambda.
 - Lambda packaging is deterministic (no bytecode) to reduce no-op deploys.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from app.services.aws_proxy import AwsProxyError
@@ -31,10 +32,23 @@ def _list_group_memberships(user_pool_id: str) -> dict[str, list[str]]:
 
     A failure for one group degrades to "no members" for that group only,
     so the user list still renders; the failure is logged for follow-up.
+    The managed groups are fetched together, and every load reads them
+    again, so a role change shows up on the next request.
     """
+    names = _managed_group_names()
     memberships: dict[str, list[str]] = {}
-    for group_name in _managed_group_names():
-        for username in _iter_group_members(user_pool_id, group_name):
+    if len(names) <= 1:
+        listed = [(name, _iter_group_members(user_pool_id, name)) for name in names]
+    else:
+        with ThreadPoolExecutor(max_workers=len(names)) as pool:
+            listed = list(
+                pool.map(
+                    lambda name: (name, _iter_group_members(user_pool_id, name)),
+                    names,
+                )
+            )
+    for group_name, usernames in listed:
+        for username in usernames:
             memberships.setdefault(username, []).append(group_name)
     return memberships
 
