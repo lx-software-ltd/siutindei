@@ -1,3 +1,8 @@
+import {
+  DEFAULT_LOCATION_STATUS,
+  isLocationStatus,
+  locationStatusLabel,
+} from '../../lib/location-status';
 import { extractTranslations } from '../../lib/translations';
 import type { OrganizationFormState } from '../shared/organizations/organization-form-utils';
 import type { PricingFormState } from '../shared/pricing/pricing-types';
@@ -201,6 +206,7 @@ export interface LocationSnapshotForm {
   org_id: string;
   area_id: string;
   name: string;
+  status: string;
   address: string;
   lat: string;
   lng: string;
@@ -214,6 +220,7 @@ export function locationFormFromSnapshot<T extends LocationSnapshotForm>(
     'org_id',
     'area_id',
     'name',
+    'status',
     'address',
     'lat',
     'lng',
@@ -222,6 +229,11 @@ export function locationFormFromSnapshot<T extends LocationSnapshotForm>(
   // the key out must show an empty name, not today's label.
   if (!('name' in snapshot)) {
     next.name = '';
+  }
+  // Versions saved before the status column were open. Leaving the
+  // key out must show Open, not today's status.
+  if (!('status' in snapshot) || !isLocationStatus(next.status)) {
+    next.status = DEFAULT_LOCATION_STATUS;
   }
   return next;
 }
@@ -310,6 +322,12 @@ export function mediaFromSnapshot(snapshot: Record<string, unknown> | null): {
 }
 
 export function snapshotFieldText(key: string, value: unknown): string {
+  if (key === 'status') {
+    const label = locationStatusLabel(value);
+    if (label) {
+      return label;
+    }
+  }
   if (key === 'age_range') {
     const bounds = ageBoundsFromSnapshot(value);
     if (!bounds || (!bounds.min && !bounds.max)) {

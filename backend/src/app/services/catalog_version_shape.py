@@ -151,8 +151,8 @@ def activity_shape(data: Mapping[str, Any]) -> dict[str, Any]:
 def location_shape(data: Mapping[str, Any]) -> dict[str, Any]:
     """Location fields an import may change.
 
-    The venue label is an admin field. Imports never write it, so a
-    label edit is not an overwritten catalog change.
+    The venue label and open/closed status are admin fields. Imports
+    never write them, so those edits are not overwritten catalog changes.
     """
     return {
         "address": _norm_name(data.get("address")),

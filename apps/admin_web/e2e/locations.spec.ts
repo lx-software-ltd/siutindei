@@ -22,31 +22,49 @@ test.describe('Locations Panel', () => {
     const editorBox = await editor.boundingBox();
     const versionBox = await version.boundingBox();
     const nameField = editor.getByLabel('Name');
+    const statusField = editor.getByLabel('Status');
     const nameBox = await nameField.boundingBox();
+    const statusBox = await statusField.boundingBox();
     const addressBox = await editor.getByLabel('Address').boundingBox();
     expect(accessoryBox).toBeTruthy();
     expect(editorBox).toBeTruthy();
     expect(versionBox).toBeTruthy();
     expect(nameBox).toBeTruthy();
+    expect(statusBox).toBeTruthy();
     expect(addressBox).toBeTruthy();
     expect(accessoryBox!.y).toBeLessThan(nameBox!.y);
+    expect(Math.abs(statusBox!.y - nameBox!.y)).toBeLessThan(8);
+    expect(statusBox!.x).toBeGreaterThan(nameBox!.x);
     expect(nameBox!.y).toBeLessThan(addressBox!.y);
     await expect(nameField).toHaveValue('Harbour Hall');
     await expect(nameField).toHaveAttribute('maxlength', '200');
+    await expect(statusField).toHaveValue('temporarily_closed');
+    await expect(statusField.locator('option')).toHaveText([
+      'Open',
+      'Temporarily Closed',
+      'Permanently Closed',
+    ]);
     await version.click();
     await adminPage.getByRole('menuitem', { name: /Version 1/ }).click();
     await expect(nameField).toHaveValue('');
+    await expect(statusField).toHaveValue('open');
     await expect(editor.getByText('Latest: Harbour Hall')).toBeVisible();
+    await expect(editor.getByText('Latest: Temporarily Closed')).toBeVisible();
     await editor.getByRole('button', { name: 'Back to latest' }).click();
     await expect(nameField).toHaveValue('Harbour Hall');
+    await expect(statusField).toHaveValue('temporarily_closed');
     await nameField.fill('Studio Hall');
+    await statusField.selectOption('permanently_closed');
     const saved = adminPage.waitForRequest(
       (request) =>
         request.method() === 'PUT' &&
         request.url().includes('/admin/locations/')
     );
     await editor.getByRole('button', { name: 'Update' }).click();
-    expect((await saved).postDataJSON()).toMatchObject({ name: 'Studio Hall' });
+    expect((await saved).postDataJSON()).toMatchObject({
+      name: 'Studio Hall',
+      status: 'permanently_closed',
+    });
     expect(
       Math.abs(versionBox!.x + versionBox!.width - (editorBox!.x + editorBox!.width))
     ).toBeLessThan(32);
@@ -57,5 +75,10 @@ test.describe('Locations Panel', () => {
       .getByRole('button', { name: 'Delete' })
       .click();
     await expect(adminPage.getByRole('alertdialog')).not.toBeVisible();
+
+    await adminPage.getByRole('button', { name: 'New location' }).click();
+    await expect(
+      adminPage.getByTestId('admin-editor-panel').getByLabel('Status')
+    ).toHaveValue('open');
   });
 });

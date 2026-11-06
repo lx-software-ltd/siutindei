@@ -8422,6 +8422,12 @@ export interface components {
              *     of the address.
              */
             name?: string | null;
+            /**
+             * @description Whether the venue is open. Omitted, blank, or null is
+             *     stored as `open`. Imports do not write this field.
+             * @enum {string}
+             */
+            status?: "open" | "temporarily_closed" | "permanently_closed";
             /** @description Full address (optional, max 500 characters) */
             address?: string;
             /** @description Latitude (-90 to 90) */
@@ -8440,6 +8446,11 @@ export interface components {
              *     as null.
              */
             name?: string | null;
+            /**
+             * @description Whether the venue is open. Blank or null is rejected.
+             * @enum {string}
+             */
+            status?: "open" | "temporarily_closed" | "permanently_closed";
             /** @description Full address (max 500 characters) */
             address?: string;
             /** @description Latitude (-90 to 90) */
@@ -8459,6 +8470,11 @@ export interface components {
             area_id: string;
             /** @description Optional venue label. Null when unset. */
             name?: string | null;
+            /**
+             * @description Whether the venue is open. Existing rows are `open`.
+             * @enum {string}
+             */
+            status: "open" | "temporarily_closed" | "permanently_closed";
             address?: string | null;
             lat?: number | null;
             lng?: number | null;

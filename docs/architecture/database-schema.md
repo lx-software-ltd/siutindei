@@ -625,6 +625,10 @@ Columns:
   Not unique. The admin API limits it to 200 characters. Pricing and
   Schedules show it, and the address when it is null. Imports do not
   write it; import `name` is still the address.
+- `status` (text, required, default `open`) — `open`,
+  `temporarily_closed`, or `permanently_closed`. The admin editor
+  shows Open, Temporarily Closed, or Permanently Closed. Imports do
+  not write it.
 - `address` (text, optional)
 - `lat` (numeric(9,6), optional)
 - `lng` (numeric(9,6), optional)
@@ -641,6 +645,8 @@ Indexes:
 
 Constraints:
 - UNIQUE (case-insensitive) on (`org_id`, `lower(trim(address))`)
+- `locations_status_check` — `status` is `open`, `temporarily_closed`,
+  or `permanently_closed`
 
 ## Table: activities
 

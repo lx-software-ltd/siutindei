@@ -17,6 +17,13 @@ from app.db.repositories import LocationRepository
 from app.exceptions import ValidationError
 from app.services.area_assignment import get_leaf
 
+LOCATION_STATUSES = (
+    "open",
+    "temporarily_closed",
+    "permanently_closed",
+)
+DEFAULT_LOCATION_STATUS = "open"
+
 
 def _create_location(repo: LocationRepository, body: dict[str, Any]) -> Location:
     """Create a location."""
@@ -32,6 +39,7 @@ def _create_location(repo: LocationRepository, body: dict[str, Any]) -> Location
     _require_leaf_area(repo._session, area_uuid)
 
     name = _validate_string_length(body.get("name"), "name", MAX_NAME_LENGTH)
+    status = _parse_location_status(body.get("status")) or DEFAULT_LOCATION_STATUS
     address = _validate_string_length(
         body.get("address"), "address", MAX_ADDRESS_LENGTH
     )
@@ -48,6 +56,7 @@ def _create_location(repo: LocationRepository, body: dict[str, Any]) -> Location
         org_id=_parse_uuid(org_id),
         area_id=area_uuid,
         name=name,
+        status=status,
         address=address,
         lat=lat,
         lng=lng,
@@ -68,6 +77,12 @@ def _update_location(
 
     if "name" in body:
         entity.name = _validate_string_length(body["name"], "name", MAX_NAME_LENGTH)
+
+    if "status" in body:
+        status = _parse_location_status(body.get("status"), required=True)
+        if status is None:
+            raise ValidationError("status is required", field="status")
+        entity.status = status
 
     if "address" in body:
         address = _validate_string_length(
@@ -95,6 +110,18 @@ def _update_location(
     if "place_id" in body:
         entity.place_id = parse_place_id(body.get("place_id"))
     return entity
+
+
+def _parse_location_status(value: Any, *, required: bool = False) -> str | None:
+    """Validate an optional location status. Blank is open on create."""
+    if value is None or (isinstance(value, str) and value.strip() == ""):
+        if required:
+            raise ValidationError("status is required", field="status")
+        return None
+    status = str(value).strip()
+    if status not in LOCATION_STATUSES:
+        raise ValidationError("Invalid status", field="status")
+    return status
 
 
 def _require_leaf_area(session: Any, area_id: Any) -> None:
@@ -159,6 +186,7 @@ def _serialize_location(entity: Location) -> dict[str, Any]:
         "org_id": str(entity.org_id),
         "area_id": str(entity.area_id),
         "name": entity.name,
+        "status": entity.status,
         "address": entity.address,
         "lat": entity.lat,
         "lng": entity.lng,

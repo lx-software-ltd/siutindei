@@ -10,6 +10,12 @@ import { formatAdminPageName } from '../../lib/admin-page-name';
 import type { GeographicAreaNode } from '../../lib/api-client';
 import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/api-client-admin';
+import {
+  DEFAULT_LOCATION_STATUS,
+  isLocationStatus,
+  LOCATION_STATUSES,
+  type LocationStatus,
+} from '../../lib/location-status';
 import { normalizeKey } from '../../lib/string-utils';
 import type { Location } from '../../types/admin';
 import { AdminCreateButton } from '../ui/admin-create-button';
@@ -27,6 +33,7 @@ import {
 } from '../ui/address-autocomplete';
 import { CascadingAreaSelect } from '../ui/cascading-area-select';
 import { Input } from '../ui/input';
+import { Select } from '../ui/select';
 import {
   deleteRowActions,
   ResourceTableShell,
@@ -82,6 +89,7 @@ interface LocationFormState {
   org_id: string;
   area_id: string;
   name: string;
+  status: LocationStatus;
   address: string;
   lat: string;
   lng: string;
@@ -91,6 +99,7 @@ const emptyForm: LocationFormState = {
   org_id: '',
   area_id: '',
   name: '',
+  status: DEFAULT_LOCATION_STATUS,
   address: '',
   lat: '',
   lng: '',
@@ -101,6 +110,7 @@ function itemToForm(item: Location): LocationFormState {
     org_id: item.org_id ?? '',
     area_id: item.area_id ?? '',
     name: item.name ?? '',
+    status: isLocationStatus(item.status) ? item.status : DEFAULT_LOCATION_STATUS,
     address: item.address ?? '',
     lat: item.lat !== undefined && item.lat !== null ? `${item.lat}` : '',
     lng: item.lng !== undefined && item.lng !== null ? `${item.lng}` : '',
@@ -298,6 +308,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     org_id: form.org_id,
     area_id: form.area_id,
     name: form.name.trim() || null,
+    status: form.status,
     address: form.address.trim() || null,
     lat: parseOptionalNumber(form.lat),
     lng: parseOptionalNumber(form.lng),
@@ -400,7 +411,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
         <VersionField
           label='Name'
           htmlFor='location-name'
-          span={2}
           versionKey='name'
         >
           <Input
@@ -415,6 +425,30 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
               }))
             }
           />
+        </VersionField>
+        <VersionField
+          label='Status'
+          htmlFor='location-status'
+          versionKey='status'
+        >
+          <Select
+            id='location-status'
+            value={editorForm.status}
+            disabled={locked}
+            onChange={(event) => {
+              const status = event.target.value;
+              if (!isLocationStatus(status)) {
+                return;
+              }
+              panel.setFormState((prev) => ({ ...prev, status }));
+            }}
+          >
+            {LOCATION_STATUSES.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
         </VersionField>
         <VersionField
           label='Address'

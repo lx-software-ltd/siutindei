@@ -5963,6 +5963,12 @@ components:
             Optional venue label (max 200 characters). Blank or null
             is stored as null. Pricing and Schedules show this instead
             of the address.
+        status:
+          type: string
+          enum: [open, temporarily_closed, permanently_closed]
+          description: |
+            Whether the venue is open. Omitted, blank, or null is
+            stored as `open`. Imports do not write this field.
         address:
           type: string
           maxLength: 500
@@ -5992,6 +5998,11 @@ components:
           description: |
             Optional venue label (max 200 characters). Blank is stored
             as null.
+        status:
+          type: string
+          enum: [open, temporarily_closed, permanently_closed]
+          description: |
+            Whether the venue is open. Blank or null is rejected.
         address:
           type: string
           maxLength: 500
@@ -6009,7 +6020,7 @@ components:
 
     Location:
       type: object
-      required: [id, org_id, area_id, created_at, updated_at]
+      required: [id, org_id, area_id, status, created_at, updated_at]
       properties:
         id:
           type: string
@@ -6025,6 +6036,11 @@ components:
           type: string
           nullable: true
           description: Optional venue label. Null when unset.
+        status:
+          type: string
+          enum: [open, temporarily_closed, permanently_closed]
+          description: |
+            Whether the venue is open. Existing rows are `open`.
         address:
           type: string
           nullable: true
