@@ -604,11 +604,14 @@ paths:
         "403":
           description: Read-only key or organization-scoped key
     post:
-      summary: Start website enrichment for one organization
+      summary: Start website or leaflet enrichment for one organization
       description: |
         Full-access `crud` keys only. Same body and result as
-        `POST /v1/admin/organizations/{id}/enrichment`. The typed
-        website is not saved onto the organization. An empty website
+        `POST /v1/admin/organizations/{id}/enrichment`, including a
+        `leaflet` body of one to four public picture or PDF URLs or
+        uploaded object keys. A website and a leaflet together are
+        400. The typed website is not saved onto the organization,
+        and a leaflet is not attached until apply. An empty website
         is 422, a bad URL is 400, an active run is 409, and a spent
         monthly budget is 422. The requester is the authorizer
         `userSub` when it is present, and `api-key:<key id>` when
@@ -623,11 +626,13 @@ paths:
               properties:
                 website:
                   type: string
+                leaflet:
+                  $ref: "./admin.yaml#/components/schemas/LeafletEnrichmentRequest"
       responses:
         "202":
           description: Run queued
         "400":
-          description: Website URL is not crawlable
+          description: Website or leaflet is not readable
         "403":
           description: Read-only key or organization-scoped key
         "409":
@@ -675,6 +680,34 @@ paths:
         "403":
           description: Read-only key or organization-scoped key
 
+  /v1/partner/organizations/{id}/enrichment/leaflet-upload:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    post:
+      summary: Presign a leaflet upload
+      description: |
+        Full-access `crud` keys only. Same body and result as
+        `POST /v1/admin/organizations/{id}/enrichment/leaflet-upload`.
+        A `read` key and an organization-scoped key receive `403`.
+        The file is not attached to the organization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./admin.yaml#/components/schemas/LeafletUploadRequest"
+      responses:
+        "200":
+          description: Upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: "./admin.yaml#/components/schemas/LeafletUploadResponse"
+        "400":
+          description: File name or content type is not a leaflet
+        "403":
+          description: Read-only key or organization-scoped key
+
   /v1/partner/enrichment-settings:
     get:
       summary: Read website enrichment settings
@@ -691,8 +724,9 @@ paths:
       summary: Update website enrichment settings
       description: |
         Full-access `crud` keys only. Same body and limits as
-        `PUT /v1/admin/enrichment-settings`. A change is written to
-        the audit log with the key's actor.
+        `PUT /v1/admin/enrichment-settings`, including the optional
+        `leaflet_model`. A change is written to the audit log with
+        the key's actor.
       responses:
         "200":
           description: Settings saved

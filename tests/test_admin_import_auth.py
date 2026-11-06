@@ -139,6 +139,28 @@ def test_importer_can_read_and_start_enrichment(mock_enrichment) -> None:
     assert mock_enrichment.call_count == 2
 
 
+def test_importer_cannot_start_a_leaflet() -> None:
+    event = _event(
+        "/v1/admin/organizations/00000000-0000-0000-0000-000000000001/enrichment",
+        method="POST",
+    )
+    event["body"] = json.dumps(
+        {"leaflet": {"url": "https://leaflets.example/term.pdf"}}
+    )
+    assert lambda_handler(event, None)["statusCode"] == 403
+
+
+def test_importer_cannot_presign_a_leaflet() -> None:
+    response = lambda_handler(
+        _event(
+            "/v1/admin/organizations/00000000-0000-0000-0000-000000000001/enrichment/leaflet-upload",
+            method="POST",
+        ),
+        None,
+    )
+    assert response["statusCode"] == 403
+
+
 def test_importer_cannot_apply_enrichment() -> None:
     response = lambda_handler(
         _event(

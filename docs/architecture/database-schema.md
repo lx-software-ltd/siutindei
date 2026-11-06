@@ -411,7 +411,9 @@ Columns:
 - `org_id` (UUID, FK → `organizations.id`, ON DELETE CASCADE)
 - `status` (text) — `queued`, `running`, `extracting`, `ready`, `failed`, or `render_required`
 - `requested_by` (text, optional)
-- `seed_url` (text, required)
+- `seed_url` (text, required) — website seed, or the first leaflet URL
+- `source` (text, required, default `website`) — `website` or `leaflet`
+- `leaflet_items` (jsonb, optional) — the one to four URLs or object keys for a leaflet run
 - `pages` (jsonb, default `[]`) — fetched page text kept for the extract stage
 - `pages_fetched` / `bytes_fetched` (integer)
 - `model` (text, optional)
@@ -422,7 +424,9 @@ Columns:
 - `created_at` / `finished_at` (timestamptz)
 
 Constraints: partial unique index `org_enrichment_runs_active_org_idx` on
-`org_id` where status is `queued`, `running`, or `extracting`.
+`org_id` where status is `queued`, `running`, or `extracting`. Check
+`org_enrichment_runs_source_check` limits `source` to `website` or
+`leaflet`.
 
 ## Table: org_enrichment_proposals
 
@@ -459,6 +463,7 @@ Columns:
 - `max_page_bytes` (integer, default 1000000)
 - `copy_media` (boolean, default true)
 - `min_confidence_shown` (numeric, 0 to 1, default 0.5)
+- `leaflet_model` (text, optional) — OpenRouter vision slug for leaflet transcription
 - `updated_at` (timestamptz)
 
 Seed assessment: migration `0055_org_enrichment` inserts the settings
@@ -466,7 +471,9 @@ row and grants `siutindei_admin` select, insert, update, and delete on
 these three tables. `org_enrichment_runs` and `org_enrichment_proposals`
 stay empty. No `seed_data.sql` change. `0056_org_enrichment_pages`
 widens `max_pages` from 1 to 8 to 1 to 20, and moves the default and a
-row still on 6 to 12.
+row still on 6 to 12. `0063_leaflet_enrich` adds `source`,
+`leaflet_items`, and `leaflet_model`. Existing runs stay `website`.
+No `seed_data.sql` change.
 
 ## Table: geographic_areas
 

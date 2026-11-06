@@ -619,3 +619,20 @@ different fields. A row-level overwrite either throws away the
 correction or drops the genuine source change.
 
 Design notes: `docs/plans/import-three-way-merge.md`.
+
+## 13) Leaflet enrichment
+
+**Decision:** A leaflet is one to four pictures or PDFs, uploaded or
+given as a public URL. The file is stored under
+`organizations/{id}/enrichment/leaflets/` before the model sees it.
+Catalog media stays empty until an admin applies the picture
+proposal. Text PDFs use the existing page parser. A scan sends the
+largest image on each of up to four pages to the vision model, then
+the existing text extract, so quotes exist in the page text. The
+default vision model is `qwen/qwen3-vl-30b-a3b-instruct`, overridable
+by `org_enrichment_settings.leaflet_model`. Full-access partner keys
+use the same start and presign bodies. An importer may not start or
+presign a leaflet. Pending files are tagged and are not a public read
+until a picture proposal is applied.
+
+Design notes: `docs/plans/leaflet-enrichment.md`.

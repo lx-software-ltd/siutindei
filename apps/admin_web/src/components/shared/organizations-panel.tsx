@@ -21,6 +21,7 @@ import { OrganizationMergeDialog } from '../admin/data-quality/organization-merg
 import {
   OrgEnrichmentScope,
   OrganizationEnrichButton,
+  OrganizationLeafletButton,
   OrganizationEnrichmentCard,
 } from '../admin/organization-enrichment';
 import { OrganizationReadiness } from '../admin/organization-readiness';
@@ -842,7 +843,12 @@ export function OrganizationsPanel({
         titleAccessory={
           current ? (
             <div className='flex items-center gap-2'>
-              {showEnrichment ? <OrganizationEnrichButton /> : null}
+              {showEnrichment ? (
+                <>
+                  <OrganizationEnrichButton />
+                  <OrganizationLeafletButton />
+                </>
+              ) : null}
               <VersionSwitcher view={versionView} />
             </div>
           ) : undefined

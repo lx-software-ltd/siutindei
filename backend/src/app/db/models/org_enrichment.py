@@ -61,7 +61,14 @@ class OrgEnrichmentRun(Base):
         server_default=text("'queued'"),
     )
     requested_by: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    source: Mapped[str] = mapped_column(
+        Text(),
+        nullable=False,
+        default="website",
+        server_default=text("'website'"),
+    )
     seed_url: Mapped[str] = mapped_column(Text(), nullable=False)
+    leaflet_items: Mapped[list[Any] | None] = mapped_column(JSONB(), nullable=True)
     pages: Mapped[list[Any]] = mapped_column(
         JSONB(),
         nullable=False,
@@ -111,6 +118,10 @@ class OrgEnrichmentRun(Base):
             "status IN ('queued', 'running', 'extracting', 'ready', "
             "'failed', 'render_required')",
             name="org_enrichment_runs_status_check",
+        ),
+        CheckConstraint(
+            "source IN ('website', 'leaflet')",
+            name="org_enrichment_runs_source_check",
         ),
         Index(
             "org_enrichment_runs_active_org_idx",
@@ -247,6 +258,7 @@ class OrgEnrichmentSettings(Base):
         default=Decimal("0.500"),
         server_default=text("0.500"),
     )
+    leaflet_model: Mapped[str | None] = mapped_column(Text(), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=False,

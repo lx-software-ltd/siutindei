@@ -172,3 +172,51 @@ def test_search_profile_omits_admin_packages(bundle) -> None:
     resolved = bundle._resolved_requirements_bytes(default)
     assert b"phonenumberslite==" in resolved
     assert b"boto3==" in resolved
+
+
+def test_dependency_install_lists_al2023_and_older_wheel_tags(
+    bundle, tmp_path, monkeypatch
+) -> None:
+    source = tmp_path / "backend"
+    source.mkdir()
+    requirements = source / "requirements.txt"
+    requirements.write_text("alembic==1.20.0\n", encoding="utf-8")
+    cache_dir = tmp_path / "deps-cache" / "abc"
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], cwd: Path, env: dict[str, str]) -> None:
+        del cwd, env
+        calls.append(command)
+
+    monkeypatch.setattr(bundle, "_run_pip", fake_run)
+    bundle._build_dependency_cache(source, requirements, cache_dir, {})
+
+    install = next(command for command in calls if "-r" in command)
+    platforms = [
+        install[index + 1] for index, arg in enumerate(install) if arg == "--platform"
+    ]
+    assert platforms == [
+        "manylinux_2_28_aarch64",
+        "manylinux_2_27_aarch64",
+        "manylinux_2_17_aarch64",
+        "manylinux2014_aarch64",
+    ]
+
+
+def test_docker_bundle_lists_the_same_wheel_tags() -> None:
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "backend"
+        / "infrastructure"
+        / "lib"
+        / "constructs"
+        / "python-lambda.ts"
+    ).read_text(encoding="utf-8")
+    for platform in (
+        "manylinux_2_28_aarch64",
+        "manylinux_2_27_aarch64",
+        "manylinux_2_17_aarch64",
+        "manylinux2014_aarch64",
+    ):
+        assert platform in source
+    assert "--only-binary=:all:" in source

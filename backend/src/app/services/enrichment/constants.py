@@ -29,6 +29,17 @@ EXTRACTION_VERSION = "3"
 MAX_PDF_BYTES = 8_000_000
 MAX_PDF_PAGES = 30
 MAX_IMAGE_BYTES = 5_000_000
+MAX_LEAFLETS = 4
+# One vision call. Four files, or a scanned PDF's first pages, share it.
+MAX_VISION_IMAGES = 8
+MAX_PDF_VISION_PAGES = 4
+# A shorter extract is treated as a scan and sent to the vision model.
+MIN_PDF_TEXT_CHARS = 80
+DEFAULT_LEAFLET_MODEL = "qwen/qwen3-vl-30b-a3b-instruct"
+LEAFLET_COPYRIGHT_NOTICE = (
+    "Copied from a leaflet supplied for this catalog. "
+    "Copyright remains with the provider."
+)
 MAX_APPLY_IDS = 200
 MAX_JSONLD_BLOCKS = 20
 # Three 180s queue receives, plus time waiting to start.

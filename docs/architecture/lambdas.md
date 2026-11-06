@@ -107,8 +107,8 @@ their primary responsibilities.
   also `POST` review decisions and bulk apply/dismiss,
   `POST /v1/partner/organization-merges`, `POST
   /v1/partner/organizations/{id}/reject`, `GET` and `POST`
-  `/v1/partner/organizations/{id}/enrichment` (apply and dismiss
-  included), `GET` and `PUT /v1/partner/enrichment-settings`, and
+  `/v1/partner/organizations/{id}/enrichment` (apply, dismiss, and
+  leaflet upload included), `GET` and `PUT /v1/partner/enrichment-settings`, and
   `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`
   `/v1/partner/activity-categories` (a full-access `read` key can
   list and fetch; creating, updating, and deleting require `crud`);
@@ -161,9 +161,20 @@ their primary responsibilities.
   The worker handles
   `location_scan_run_id` before `scan_run_id`. Translation sweeps send
   `translation_scan_run_id` and the worker reads that key first. Website
-  enrichment sends `enrichment_run_id` and `stage` (`crawl`, then
-  `extract`) on that same queue. The worker reads that key before the
-  others. Applying enrichment proposals stages a data-quality run from
+  enrichment sends `enrichment_run_id` and `stage` (`crawl` then
+  `extract`, or `leaflet` then `transcribe` then `extract`) on that
+  same queue. The worker reads that key before the
+  others. A leaflet run stores the picture or PDF under
+  `organizations/{id}/enrichment/leaflets/incoming/` with the
+  `leaflet-pending` tag. The vision call uses a presigned GET. A
+  picture is copied to the public prefix only when its proposal is
+  applied. Rasters under `rasters/` and unused uploads are deleted.
+  Text PDFs skip transcription. A scanned PDF sends its largest page
+  image to the vision model. Transcription is skipped when the monthly
+  budget is already spent, and it does not use the text-model
+  fallbacks. Facts taken from a transcript stay unverified.
+  Transcription cost is kept when extract adds its own cost, including
+  a cache hit. A cached run does not reuse an older leaflet picture. Applying enrichment proposals stages a data-quality run from
   import settings and publishes `data_quality_run_id` after commit.
   Locations is included only when a venue or activity was saved, and
   categories only when an activity was saved. A busy check is published
@@ -328,8 +339,10 @@ their primary responsibilities.
 - Purpose: verify JWT and check user belongs to the `admin` Cognito group.
   When `IMPORTER_GROUP` is set, also allow that group on catalog import
   routes, owner-UI organization lookup and PATCH, and
-  `GET` or `POST /v1/admin/organizations/{id}/enrichment`. Apply and
-  dismiss stay admin-only.
+  `GET` or `POST /v1/admin/organizations/{id}/enrichment`. Apply,
+  dismiss, leaflet start, and `POST .../enrichment/leaflet-upload` stay
+  admin-only. An importer may start a website enrichment on the
+  five-segment path. A leaflet body on that path is 403.
   A dedicated importer authorizer Lambda is not used (500-resource cap).
 - VPC: **No** (runs outside VPC to fetch JWKS from Cognito)
 - Environment: `ALLOWED_GROUPS=admin`, `IMPORTER_GROUP=importer`
@@ -431,10 +444,12 @@ their primary responsibilities.
     API calls (e.g. `cognito-idp:list_users`)
   - `ALLOWED_HTTP_URLS`: comma-separated URL prefixes for outbound HTTP
     requests (e.g. `https://api.example.com/v1/`)
-  - `type: "crawl"` fetches one provider website or copies one image.
-    SSRF, robots, and same-site checks live in the crawl handler.
-    `ORGANIZATION_MEDIA_BUCKET` and `ORGANIZATION_MEDIA_BASE_URL` let
-    it `PutObject` under `organizations/*/enrichment/*`.
+  - `type: "crawl"` fetches one provider website, copies one image, or
+    stores one public leaflet (`op: "leaflet"`). SSRF checks live in
+    the crawl handler. Leaflet fetch does not consult robots, matching
+    image copy. `ORGANIZATION_MEDIA_BUCKET` and
+    `ORGANIZATION_MEDIA_BASE_URL` let it `PutObject` under
+    `organizations/*/enrichment/*`.
 - Security: only invocable by Lambdas granted `lambda:InvokeFunction`;
   IAM role scoped to specific AWS actions; all requests validated
   against the allow-lists before execution
@@ -465,7 +480,8 @@ their primary responsibilities.
   batches whose messages carry `location_scan_run_id`, including pin
   lookups whose `lookup` is `nominatim` or `google`, and translation
   batches whose messages carry `translation_scan_run_id`, and website
-  enrichment whose messages carry `enrichment_run_id`
+  enrichment whose messages carry `enrichment_run_id` (`crawl`,
+  `leaflet`, `transcribe`, or `extract`)
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - VPC: Yes
 - Timeout: 120 seconds on the admin function. One OpenRouter attempt

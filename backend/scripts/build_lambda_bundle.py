@@ -16,7 +16,16 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 PIP_VERSION = "25.3"
-TARGET_PLATFORM = "manylinux_2_17_aarch64"
+# Python 3.12 Lambda runs on Amazon Linux 2023 (glibc 2.34). pip matches
+# each --platform tag literally, so list every tag that runtime can load.
+# Pillow 12.3+ publishes only manylinux_2_28 wheels. pydantic-core still
+# publishes only manylinux_2_17 wheels.
+TARGET_PLATFORMS = (
+    "manylinux_2_28_aarch64",
+    "manylinux_2_27_aarch64",
+    "manylinux_2_17_aarch64",
+    "manylinux2014_aarch64",
+)
 TARGET_IMPLEMENTATION = "cp"
 TARGET_PYTHON_VERSION = "3.12"
 CACHE_FORMAT_VERSION = "1"
@@ -215,7 +224,7 @@ def _dependency_cache_key(requirements: Path) -> str:
     hasher.update(_resolved_requirements_bytes(requirements))
     hasher.update(CACHE_FORMAT_VERSION.encode("utf-8"))
     hasher.update(PIP_VERSION.encode("utf-8"))
-    hasher.update(TARGET_PLATFORM.encode("utf-8"))
+    hasher.update("\n".join(TARGET_PLATFORMS).encode("utf-8"))
     hasher.update(TARGET_IMPLEMENTATION.encode("utf-8"))
     hasher.update(TARGET_PYTHON_VERSION.encode("utf-8"))
     return hasher.hexdigest()
@@ -273,25 +282,30 @@ def _build_dependency_cache(
         cwd=source_root,
         env=env,
     )
-    _run_pip_retrying(
+    install_command = [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "-r",
+        str(requirements),
+        "-t",
+        str(temp_cache_dir),
+        "--no-compile",
+    ]
+    for platform in TARGET_PLATFORMS:
+        install_command.extend(["--platform", platform])
+    install_command.extend(
         [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "-r",
-            str(requirements),
-            "-t",
-            str(temp_cache_dir),
-            "--no-compile",
-            "--platform",
-            TARGET_PLATFORM,
             "--only-binary=:all:",
             "--implementation",
             TARGET_IMPLEMENTATION,
             "--python-version",
             TARGET_PYTHON_VERSION,
-        ],
+        ]
+    )
+    _run_pip_retrying(
+        install_command,
         cwd=source_root,
         env=env,
         on_retry=reset_temp_cache,

@@ -27,7 +27,14 @@ from app.services.enrichment.extract import (
     merge_proposals,
     proposals_from_pages,
     validate_model_sheet,
+    without_cached_leaflet_media,
 )
+from app.services.enrichment.leaflet import LeafletReadError
+from app.services.enrichment.leaflet_stage import (
+    prepare_leaflet_run,
+    transcribe_leaflet_run,
+)
+from app.services.enrichment.leaflet_vision import media_from_pages
 from app.services.enrichment.match import prepare_proposals
 from app.services.enrichment.prompt import (
     MODEL_INSTRUCTIONS,
@@ -47,6 +54,8 @@ PROVIDER_BUSY_ERROR = "The model provider was busy. Try again later."
 
 CrawlFn = Callable[[OrgEnrichmentRun, Any], dict[str, Any]]
 ModelFn = Callable[[str], tuple[dict[str, Any], Decimal, str]]
+PrepareFn = Callable[[OrgEnrichmentRun], dict[str, Any]]
+TranscribeFn = Callable[[list[str], str], tuple[list[str], Decimal, str]]
 
 
 @dataclass
@@ -73,9 +82,11 @@ def commit_and_queue(session: Session, step: EnrichmentStep) -> None:
             fail_enrichment_run(step.run_id, "Enrichment queue is not configured")
 
 
-def _proxy_failure_message(exc: AwsProxyError) -> str:
+def _proxy_failure_message(exc: AwsProxyError, *, leaflet: bool) -> str:
     if exc.code == "CrawlRefused" and exc.message:
         return exc.message
+    if leaflet:
+        return "The leaflet could not be read"
     return "The website could not be read"
 
 
@@ -83,6 +94,10 @@ def _fail_open_run(session: Session, run_id: UUID | str, error: str) -> None:
     row = session.get(OrgEnrichmentRun, run_id)
     if row is None or row.status in {"ready", "failed", "render_required"}:
         return
+    if row.source == "leaflet":
+        from app.services.enrichment.leaflet_objects import release_leaflet_run
+
+        release_leaflet_run(row)
     row.status = "failed"
     row.error = error
     row.finished_at = datetime.now(UTC)
@@ -96,6 +111,10 @@ def fail_enrichment_run(run_id: UUID | str, error: str = "enrichment failed") ->
         row = session.get(OrgEnrichmentRun, run_id)
         if row is None or row.status in {"ready", "failed", "render_required"}:
             return
+        if row.source == "leaflet":
+            from app.services.enrichment.leaflet_objects import release_leaflet_run
+
+            release_leaflet_run(row)
         row.status = "failed"
         row.error = error
         row.finished_at = datetime.now(UTC)
@@ -111,6 +130,8 @@ def process_enrichment(
     stage: str,
     crawl: CrawlFn | None = None,
     complete: ModelFn | None = None,
+    prepare: PrepareFn | None = None,
+    transcribe: TranscribeFn | None = None,
 ) -> EnrichmentStep:
     """Return whether the message should be acknowledged, and any follow-up."""
     run = session.get(OrgEnrichmentRun, run_id)
@@ -126,8 +147,18 @@ def process_enrichment(
     try:
         if stage == "extract" or run.status == "extracting":
             _extract(session, run, complete=complete)
+        elif stage == "transcribe":
+            step.enqueue_stage = transcribe_leaflet_run(
+                session, run, transcribe=transcribe
+            )
+        elif stage == "leaflet" or run.source == "leaflet":
+            step.enqueue_stage = prepare_leaflet_run(session, run, prepare=prepare)
         else:
             step.enqueue_stage = _crawl(session, run, crawl=crawl)
+    except LeafletReadError as exc:
+        logger.exception("Leaflet could not be read", extra={"run_id": str(run_id)})
+        _fail_open_run(session, run_id, exc.message)
+        return EnrichmentStep(acked=True)
     except AwsProxyError as exc:
         if exc.code == "TimeoutError":
             logger.exception("Enrichment run will retry", extra={"run_id": str(run_id)})
@@ -137,7 +168,11 @@ def process_enrichment(
                 return EnrichmentStep(acked=True)
             return EnrichmentStep(acked=False)
         logger.exception("Enrichment crawl failed", extra={"run_id": str(run_id)})
-        _fail_open_run(session, run_id, _proxy_failure_message(exc))
+        _fail_open_run(
+            session,
+            run_id,
+            _proxy_failure_message(exc, leaflet=run.source == "leaflet"),
+        )
         return EnrichmentStep(acked=True)
     except OpenRouterError as exc:
         logger.exception(
@@ -220,6 +255,8 @@ def _extract(
     pages = list(run.pages or [])
     deterministic = proposals_from_pages(pages, snapshot)
     copied = _copy_cached(session, run)
+    if copied is not None:
+        copied = without_cached_leaflet_media(copied) or None
     if copied is None:
         prompt = instructions_for(catalog_names(session)) + prompt_pages(pages)
         if complete is None:
@@ -233,7 +270,7 @@ def _extract(
         else:
             sheet, cost, model = complete(prompt)
         checked = validate_model_sheet(sheet, pages, snapshot)
-        run.cost_usd = cost
+        run.cost_usd = Decimal(str(run.cost_usd or 0)) + cost
         run.model = model
         # StructuredLogFormatter prints only a field named "extra".
         logger.info(
@@ -253,9 +290,8 @@ def _extract(
         )
     else:
         checked = copied
-        run.cost_usd = Decimal("0")
         run.model = "cache"
-    merged = merge_proposals(deterministic, checked)
+    merged = merge_proposals(media_from_pages(pages), deterministic, checked)
     if org is not None:
         merged = annotate(session, org, merged)
         merged = prepare_proposals(session, org, merged)
@@ -267,6 +303,10 @@ def _extract(
     )
     run.status = "ready"
     run.finished_at = datetime.now(UTC)
+    if run.source == "leaflet":
+        from app.services.enrichment.leaflet_objects import release_finished_leaflet
+
+        release_finished_leaflet(run)
 
 
 def _proxy_crawl(run: OrgEnrichmentRun, settings: Any) -> dict[str, Any]:

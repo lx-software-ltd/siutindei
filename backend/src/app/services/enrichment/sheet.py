@@ -6,7 +6,7 @@ import json
 import re
 from typing import Any
 
-from app.services.enrichment.parse import find_quote
+from app.services.enrichment.parse import find_quote, find_quote_page, page_url
 from app.services.openrouter_json_parse import openrouter_json_text_candidates
 
 SECTIONS = ("locations", "activities", "pricing", "schedules")
@@ -175,9 +175,16 @@ def checked_value(raw: object, pages: list[dict[str, Any]]) -> dict[str, Any] | 
     for item in evidence:
         url = str(item.get("url") or "")
         quote = str(item.get("quote") or "")
-        found = find_quote(pages, url, quote)
-        if found is not None:
-            return _checked(value, found, quote, confidence, unverified=False)
+        page = find_quote_page(pages, url, quote)
+        if page is not None:
+            transcribed = bool(page.get("transcribed"))
+            return _checked(
+                value,
+                page_url(page),
+                quote,
+                min(confidence, 0.5) if transcribed else confidence,
+                unverified=transcribed,
+            )
     first = evidence[0]
     return _checked(
         value,

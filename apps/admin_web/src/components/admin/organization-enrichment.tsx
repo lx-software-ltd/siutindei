@@ -12,19 +12,25 @@ import { useQuery } from '@tanstack/react-query';
 
 import { adminQueryKeys } from '../../lib/admin-query-keys';
 import {
+  createLeafletUpload,
+  leafletUploadBody,
   decideOrgEnrichment,
   getOrgEnrichment,
   startOrgEnrichment,
   type EnrichmentOverride,
   type EnrichmentProposal,
+  type LeafletStartItem,
 } from '../../lib/api-client-enrichment';
 import { ApiError } from '../../lib/api-client';
 import { refreshCatalogHistory, getAdminQueryClient } from '../../lib/admin-query-client';
 import { StatusBanner } from '../status-banner';
 import { ImportRunStatus } from './import-run-status';
 import { AdminInputCard } from '../ui/admin-input-card';
+import { AdminDialog } from '../ui/admin-dialog';
 import { Button } from '../ui/button';
+import { Label } from '../ui/label';
 import { StatusBadge } from '../ui/status-badge';
+import { Textarea } from '../ui/textarea';
 import {
   ProposalTable,
   selectionAfterToggle,
@@ -33,6 +39,17 @@ import { OrganizationEnrichmentSettings } from './organization-enrichment-settin
 
 const COPYRIGHT_NOTICE =
   'Copied from the provider website for this catalog. Copyright remains with the provider.';
+
+const LEAFLET_COPYRIGHT_NOTICE =
+  'Copied from a leaflet supplied for this catalog. Copyright remains with the provider.';
+
+const LEAFLET_TYPES: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  pdf: 'application/pdf',
+};
 
 const SECTIONS = [
   'Organization',
@@ -45,14 +62,42 @@ const SECTIONS = [
 
 const ACTIVE = new Set(['queued', 'running', 'extracting']);
 
-export function enrichmentActivityCopy(status: string): string | null {
+export function enrichmentActivityCopy(
+  status: string,
+  source?: string
+): string | null {
   if (status === 'extracting') {
     return 'Reading pages with the model…';
   }
   if (status === 'queued' || status === 'running') {
-    return 'Reading the website…';
+    return source === 'leaflet' ? 'Reading the leaflet…' : 'Reading the website…';
   }
   return null;
+}
+
+export function leafletPresetIds(
+  proposals: Array<{
+    id: string;
+    status: string;
+    proposed_value: Record<string, unknown>;
+  }>,
+  seenIds: readonly string[]
+): string[] {
+  const seen = new Set(seenIds);
+  return proposals
+    .filter(
+      (row) => row.status === 'pending' && row.proposed_value.leaflet === true
+    )
+    .map((row) => row.id)
+    .filter((id) => !seen.has(id));
+}
+
+function leafletContentType(file: File): string {
+  if (Object.values(LEAFLET_TYPES).includes(file.type)) {
+    return file.type;
+  }
+  const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+  return LEAFLET_TYPES[extension] ?? '';
 }
 
 type Scope = {
@@ -62,6 +107,7 @@ type Scope = {
   pending: boolean;
   error: string;
   start: () => void;
+  startLeaflet: (items: LeafletStartItem[]) => Promise<void>;
   onApplied?: () => Promise<void>;
 };
 
@@ -102,6 +148,27 @@ export function OrgEnrichmentScope({
     }
   }
 
+  async function startLeaflet(items: LeafletStartItem[]) {
+    if (!orgId || pending) {
+      return;
+    }
+    setPending(true);
+    setError('');
+    try {
+      await startOrgEnrichment(orgId, { leaflet: { items } });
+      await getAdminQueryClient().invalidateQueries({
+        queryKey: adminQueryKeys.orgEnrichment(orgId),
+      });
+    } catch (err: unknown) {
+      const message =
+        err instanceof ApiError ? err.message : 'The leaflet could not be read.';
+      setError(message);
+      throw err instanceof Error ? err : new Error(message);
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
     <EnrichmentScopeContext.Provider
       value={{
@@ -111,6 +178,7 @@ export function OrgEnrichmentScope({
         pending,
         error,
         start,
+        startLeaflet,
         onApplied,
       }}
     >
@@ -141,6 +209,171 @@ export function OrganizationEnrichButton() {
     >
       Enrich from website
     </Button>
+  );
+}
+
+export function OrganizationLeafletButton() {
+  const scope = useContext(EnrichmentScopeContext);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [urls, setUrls] = useState('');
+  if (!scope?.orgId) {
+    return null;
+  }
+
+  async function submit() {
+    if (!scope?.orgId || busy || scope.pending) {
+      return;
+    }
+    const lines = urls
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (files.length + lines.length === 0) {
+      setError('Add a picture, a PDF, or a public URL.');
+      return;
+    }
+    if (files.length + lines.length > 4) {
+      setError('Send at most four leaflets.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const items: LeafletStartItem[] = [];
+      for (const file of files) {
+        const contentType = leafletContentType(file);
+        if (!contentType) {
+          setError('Use a JPEG, PNG, WebP, or PDF.');
+          return;
+        }
+        const limit =
+          contentType === 'application/pdf' ? 8_000_000 : 5_000_000;
+        if (file.size <= 0 || file.size > limit) {
+          setError(
+            file.size <= 0
+              ? 'The leaflet is empty.'
+              : 'The leaflet is too large.'
+          );
+          return;
+        }
+        const signed = await createLeafletUpload(
+          scope.orgId,
+          file.name,
+          contentType
+        );
+        const uploaded = await fetch(signed.upload_url, {
+          method: 'POST',
+          body: leafletUploadBody(signed.upload_fields, file),
+        });
+        if (!uploaded.ok) {
+          throw new Error('The leaflet could not be uploaded.');
+        }
+        items.push({ object_key: signed.object_key });
+      }
+      for (const url of lines) {
+        items.push({ url });
+      }
+      await scope.startLeaflet(items);
+      setOpen(false);
+      setFiles([]);
+      setUrls('');
+    } catch (err: unknown) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'The leaflet could not be read.'
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <Button
+        type='button'
+        variant='secondary'
+        size='md'
+        disabled={scope.pending}
+        title='Enrich from a picture or PDF'
+        data-testid='enrich-from-leaflet'
+        onClick={() => {
+          setError('');
+          setOpen(true);
+        }}
+      >
+        Enrich from leaflet
+      </Button>
+      <AdminDialog
+        open={open}
+        title='Enrich from leaflet'
+        description='A picture or a PDF. Up to four files or public URLs. A picture is proposed as media and is not attached until you apply it.'
+        onClose={() => {
+          if (!busy) {
+            setOpen(false);
+          }
+        }}
+        contentClassName='w-full max-w-lg'
+        footer={
+          <Button
+            type='submit'
+            form='leaflet-enrich'
+            variant='secondary'
+            loading={busy}
+            loadingLabel='Reading…'
+          >
+            Read leaflet
+          </Button>
+        }
+      >
+        <form
+          id='leaflet-enrich'
+          className='grid gap-3'
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+        >
+          {error ? (
+            <div id='leaflet-form-error'>
+              <StatusBanner kind='error'>{error}</StatusBanner>
+            </div>
+          ) : null}
+          <div>
+            <Label htmlFor='leaflet-files'>Leaflet files</Label>
+            <input
+              id='leaflet-files'
+              name='leaflet-files'
+              aria-describedby={error ? 'leaflet-form-error' : undefined}
+              className='block w-full text-sm text-ink-900 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink-900'
+              type='file'
+              accept='image/jpeg,image/png,image/webp,application/pdf'
+              multiple
+              onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+            />
+          </div>
+          <div>
+            <Label htmlFor='leaflet-urls'>Leaflet URLs</Label>
+            <Textarea
+              id='leaflet-urls'
+              name='leaflet-urls'
+              rows={4}
+              spellCheck={false}
+              autoCorrect='off'
+              autoCapitalize='off'
+              placeholder='One public URL per line'
+              value={urls}
+              onChange={(event) => setUrls(event.target.value)}
+            />
+          </div>
+        </form>
+      </AdminDialog>
+    </>
   );
 }
 
@@ -179,14 +412,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
   const runId = query.data?.run?.id ?? '';
   const enrichmentKey = `${orgId}\0${runId}`;
   const [seenEnrichmentKey, setSeenEnrichmentKey] = useState(enrichmentKey);
-  if (enrichmentKey !== seenEnrichmentKey) {
-    setSeenEnrichmentKey(enrichmentKey);
-    setSelected([]);
-    setOverrides({});
-    setNotice('');
-    setQualityRunId('');
-    setActionError('');
-  }
+  const [seenLeafletIds, setSeenLeafletIds] = useState('');
 
   const proposals = useMemo(
     () => query.data?.proposals ?? [],
@@ -196,6 +422,31 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
     () => proposals.filter((row) => row.status === 'pending').map((row) => row.id),
     [proposals]
   );
+  const leafletKey = proposals
+    .filter((row) => row.status === 'pending' && row.proposed_value.leaflet === true)
+    .map((row) => row.id)
+    .join(',');
+  if (enrichmentKey !== seenEnrichmentKey) {
+    setSeenEnrichmentKey(enrichmentKey);
+    setSeenLeafletIds(leafletKey);
+    setSelected(leafletPresetIds(proposals, []));
+    setOverrides({});
+    setNotice('');
+    setQualityRunId('');
+    setActionError('');
+  } else if (leafletKey !== seenLeafletIds) {
+    const incoming = leafletPresetIds(
+      proposals,
+      seenLeafletIds.split(',').filter(Boolean)
+    );
+    setSeenLeafletIds(leafletKey);
+    if (incoming.length > 0) {
+      setSelected((current) => [
+        ...current,
+        ...incoming.filter((id) => !current.includes(id)),
+      ]);
+    }
+  }
 
   if (hidden || !scope?.orgId) {
     return null;
@@ -289,12 +540,13 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
     }
   }
 
+  const leafletRun = run?.source === 'leaflet';
   return (
     <AdminInputCard
-      title='Website enrichment'
+      title={leafletRun ? 'Leaflet enrichment' : 'Website enrichment'}
       titleLevel='h3'
-      description={COPYRIGHT_NOTICE}
-      data-testid='website-enrichment'
+      description={leafletRun ? LEAFLET_COPYRIGHT_NOTICE : COPYRIGHT_NOTICE}
+      data-testid={leafletRun ? 'leaflet-enrichment' : 'website-enrichment'}
       status={
         scope.error || actionError || query.isError ? (
           <StatusBanner kind='error'>
@@ -352,14 +604,18 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
         <div className='mb-4 flex flex-wrap items-center gap-2'>
           <StatusBadge status={run.status} tone={statusTone(run.status)} />
           <span className='text-sm text-ink-700'>
-            {run.pages_fetched} pages
+            {leafletRun
+              ? run.pages_fetched === 1
+                ? '1 leaflet'
+                : `${run.pages_fetched} leaflets`
+              : `${run.pages_fetched} pages`}
             {run.error ? ` · ${run.error}` : ''}
           </span>
         </div>
       ) : null}
-      {run && enrichmentActivityCopy(run.status) ? (
+      {run && enrichmentActivityCopy(run.status, run.source) ? (
         <p className='text-sm text-ink-700' data-testid='enrichment-activity'>
-          {enrichmentActivityCopy(run.status)}
+          {enrichmentActivityCopy(run.status, run.source)}
         </p>
       ) : null}
       {run && run.status === 'ready' && proposals.length === 0 ? (

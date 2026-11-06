@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -60,6 +61,8 @@ def update_settings(session: Session, body: dict[str, Any]) -> OrgEnrichmentSett
             Decimal("0"),
             Decimal("1"),
         )
+    if "leaflet_model" in body:
+        row.leaflet_model = _leaflet_model(body.get("leaflet_model"))
     row.updated_at = datetime.now(UTC)
     session.flush()
     return row
@@ -82,20 +85,36 @@ def start_run(
     *,
     requested_by: str | None,
     website: str | None = None,
+    leaflet: object | None = None,
 ) -> OrgEnrichmentRun:
     org = session.get(Organization, org_id)
     if org is None:
         raise NotFoundError("organization", str(org_id))
-    # A typed address starts the crawl. It is not written onto the organization.
-    website = (website or "").strip() or (org.website or "").strip()
-    if not website:
-        raise AppError("Add a website before enriching", status_code=422)
-    from app.services.enrichment.guard import CrawlError, validate_seed_url
+    typed_website = (website or "").strip()
+    if leaflet is not None and typed_website:
+        raise ValidationError(
+            "Send a website or a leaflet, not both",
+            field="leaflet",
+        )
+    source = "website"
+    items: list[Any] | None = None
+    if leaflet is not None:
+        from app.services.enrichment.leaflet import normalize_leaflet_items
 
-    try:
-        seed = validate_seed_url(website)
-    except CrawlError as exc:
-        raise ValidationError(str(exc), field="website") from exc
+        items = normalize_leaflet_items(org_id, leaflet)
+        seed = str(items[0]["url"])
+        source = "leaflet"
+    else:
+        # A typed address starts the crawl. It is not written onto the organization.
+        website_value = typed_website or (org.website or "").strip()
+        if not website_value:
+            raise AppError("Add a website before enriching", status_code=422)
+        from app.services.enrichment.guard import CrawlError, validate_seed_url
+
+        try:
+            seed = validate_seed_url(website_value)
+        except CrawlError as exc:
+            raise ValidationError(str(exc), field="website") from exc
     expire_stale_runs(session, org_id)
     active = session.scalar(
         select(OrgEnrichmentRun.id).where(
@@ -112,7 +131,9 @@ def start_run(
         org_id=org_id,
         status="queued",
         requested_by=requested_by,
+        source=source,
         seed_url=seed,
+        leaflet_items=items,
     )
     session.add(run)
     try:
@@ -233,6 +254,7 @@ def serialize_settings(row: OrgEnrichmentSettings) -> dict[str, Any]:
         "max_page_bytes": row.max_page_bytes,
         "copy_media": row.copy_media,
         "min_confidence_shown": float(row.min_confidence_shown),
+        "leaflet_model": row.leaflet_model,
     }
 
 
@@ -241,6 +263,7 @@ def serialize_run(run: OrgEnrichmentRun) -> dict[str, Any]:
         "id": str(run.id),
         "org_id": str(run.org_id),
         "status": run.status,
+        "source": run.source,
         "seed_url": run.seed_url,
         "pages_fetched": run.pages_fetched,
         "bytes_fetched": run.bytes_fetched,
@@ -301,6 +324,24 @@ def serialize_proposal(
         "status": row.status,
         "copyright_notice": proposed.get("copyright_notice"),
     }
+
+
+_MODEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:@+/-]{0,199}$")
+
+
+def _leaflet_model(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValidationError("leaflet_model must be a string", field="leaflet_model")
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+    if len(cleaned) > 200 or any(char.isspace() for char in cleaned):
+        raise ValidationError("leaflet_model is out of range", field="leaflet_model")
+    if _MODEL_RE.fullmatch(cleaned) is None:
+        raise ValidationError("leaflet_model is out of range", field="leaflet_model")
+    return cleaned
 
 
 def _same(current: object, proposed: object) -> bool:

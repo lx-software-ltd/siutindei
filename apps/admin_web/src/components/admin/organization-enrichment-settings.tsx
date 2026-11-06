@@ -19,7 +19,12 @@ const EMPTY: EnrichmentSettings = {
   max_page_bytes: 1000000,
   copy_media: true,
   min_confidence_shown: 0.5,
+  leaflet_model: '',
 };
+
+function settingsForm(row: EnrichmentSettings): EnrichmentSettings {
+  return { ...row, leaflet_model: row.leaflet_model ?? '' };
+}
 
 export function OrganizationEnrichmentSettings() {
   const [open, setOpen] = useState(false);
@@ -45,7 +50,7 @@ export function OrganizationEnrichmentSettings() {
     getEnrichmentSettings()
       .then((row) => {
         if (!cancelled) {
-          setForm(row);
+          setForm(settingsForm(row));
         }
       })
       .catch((err: unknown) => {
@@ -68,8 +73,11 @@ export function OrganizationEnrichmentSettings() {
     setError('');
     setSaved(false);
     try {
-      const row = await updateEnrichmentSettings(form);
-      setForm(row);
+      const row = await updateEnrichmentSettings({
+        ...form,
+        leaflet_model: (form.leaflet_model ?? '').trim() || null,
+      });
+      setForm(settingsForm(row));
       setSaved(true);
     } catch (err: unknown) {
       setError(err instanceof ApiError ? err.message : 'Settings could not be saved.');
@@ -159,6 +167,26 @@ export function OrganizationEnrichmentSettings() {
                 setForm((current) => ({
                   ...current,
                   min_confidence_shown: Number(event.target.value),
+                }))
+              }
+            />
+          </div>
+          <div>
+            <Label htmlFor='enrich-leaflet-model'>Leaflet vision model</Label>
+            <Input
+              id='enrich-leaflet-model'
+              type='text'
+              maxLength={200}
+              spellCheck={false}
+              autoCorrect='off'
+              autoCapitalize='off'
+              placeholder='qwen/qwen3-vl-30b-a3b-instruct'
+              disabled={loading}
+              value={form.leaflet_model ?? ''}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  leaflet_model: event.target.value,
                 }))
               }
             />

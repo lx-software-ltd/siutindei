@@ -233,6 +233,95 @@ def test_full_access_post_queues_a_run(monkeypatch, test_engine) -> None:
         _cleanup(test_engine, org_id)
 
 
+def test_full_access_post_leaflet_queues_the_leaflet_stage(
+    monkeypatch, test_engine
+) -> None:
+    _patch_engines(monkeypatch, test_engine)
+    queued: list[tuple[str, str]] = []
+
+    def fake_enqueue(run_id, *, stage: str) -> None:
+        queued.append((str(run_id), stage))
+
+    monkeypatch.setattr("app.api.admin_enrichment.enqueue_enrichment", fake_enqueue)
+    token = uuid4().hex[:8]
+    with Session(test_engine) as session:
+        org = _org(session, f"Leaflet Club {token}")
+        org_id = org.id
+        session.commit()
+    try:
+        response = _enrich(
+            org_id,
+            "POST",
+            body={"leaflet": {"url": "https://leaflets.example/term.pdf"}},
+        )
+        assert response["statusCode"] == 202
+        payload = json.loads(response["body"])["run"]
+        assert queued == [(payload["id"], "leaflet")]
+        assert payload["source"] == "leaflet"
+        assert payload["seed_url"] == "https://leaflets.example/term.pdf"
+    finally:
+        _cleanup(test_engine, org_id)
+
+
+def test_full_access_presigns_a_leaflet(monkeypatch, test_engine) -> None:
+    _patch_engines(monkeypatch, test_engine)
+
+    def fake_presign(org_id, file_name: str, content_type: str) -> dict[str, object]:
+        assert file_name == "flyer.jpg"
+        assert content_type == "image/jpeg"
+        return {
+            "upload_url": "https://upload.example",
+            "media_url": "https://media.example/k.jpg",
+            "object_key": f"organizations/{org_id}/enrichment/leaflets/k.jpg",
+            "content_type": content_type,
+            "expires_in": 900,
+        }
+
+    monkeypatch.setattr("app.services.enrichment.leaflet.presign_leaflet", fake_presign)
+    token = uuid4().hex[:8]
+    with Session(test_engine) as session:
+        org = _org(session, f"Leaflet Upload {token}")
+        org_id = org.id
+        session.commit()
+    try:
+        response = _enrich(
+            org_id,
+            "POST",
+            "/leaflet-upload",
+            body={"file_name": "flyer.jpg", "content_type": "image/jpeg"},
+        )
+        assert response["statusCode"] == 200
+        body = json.loads(response["body"])
+        assert body["upload_url"] == "https://upload.example"
+        assert body["object_key"].endswith(".jpg")
+    finally:
+        _cleanup(test_engine, org_id)
+
+
+def test_read_key_cannot_presign_a_leaflet() -> None:
+    org_id = str(uuid4())
+    response = _enrich(
+        org_id,
+        "POST",
+        "/leaflet-upload",
+        scope="read",
+        body={"file_name": "flyer.jpg", "content_type": "image/jpeg"},
+    )
+    assert response["statusCode"] == 403
+
+
+def test_org_scoped_key_cannot_presign_a_leaflet() -> None:
+    org_id = str(uuid4())
+    event = _event(
+        "POST",
+        f"/v1/partner/organizations/{org_id}/enrichment/leaflet-upload",
+        org_id=org_id,
+        body={"file_name": "flyer.jpg", "content_type": "image/jpeg"},
+    )
+    response = _call(event, "POST", "organizations", org_id)
+    assert response["statusCode"] == 403
+
+
 def test_start_without_user_sub_records_the_api_key(monkeypatch, test_engine) -> None:
     _patch_engines(monkeypatch, test_engine)
     monkeypatch.setattr(

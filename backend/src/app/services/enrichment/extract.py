@@ -74,6 +74,7 @@ def validate_model_sheet(
                     org,
                     value["confidence"],
                     pages=pages,
+                    unverified=bool(value.get("unverified")),
                 )
             )
     for row in section_rows(sheet, "locations"):
@@ -169,6 +170,23 @@ def validate_model_sheet(
     return _dedupe(found)
 
 
+def without_cached_leaflet_media(
+    copied: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """A new upload is not the picture stored on the cached run."""
+    kept: list[dict[str, Any]] = []
+    for item in copied:
+        proposed = item.get("proposed")
+        if (
+            item.get("kind") == "add_media"
+            and isinstance(proposed, dict)
+            and proposed.get("leaflet")
+        ):
+            continue
+        kept.append(item)
+    return kept
+
+
 def merge_proposals(*groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Earlier groups win when the field key is the same."""
     merged: dict[str, dict[str, Any]] = {}
@@ -223,6 +241,8 @@ def _fact(
     org: dict[str, Any],
     confidence: float = 0.95,
     pages: list[dict[str, Any]] | None = None,
+    *,
+    unverified: bool = False,
 ) -> dict[str, Any]:
     cleaned = str(value).strip()
     proposed = _proposed_for(field, cleaned)
@@ -230,8 +250,9 @@ def _fact(
     corpus = pages or [
         {"final_url": url, "url": url, "text": quote, "jsonld_raw": [], "og": {}}
     ]
-    unverified = False
-    if not quote_supported(corpus, url, quote) and (
+    if unverified:
+        confidence = min(confidence, 0.5)
+    elif not quote_supported(corpus, url, quote) and (
         pages is not None or (quote and quote not in cleaned and cleaned not in quote)
     ):
         unverified = True
@@ -304,7 +325,16 @@ def _phone_facts(
     national = str(parsed.national_number)
     quote = (checked or {}).get("quote") or raw
     confidence = float((checked or {}).get("confidence") or 0.95)
-    fact = _fact("phone", national, url, str(quote), org, confidence, pages=pages)
+    fact = _fact(
+        "phone",
+        national,
+        url,
+        str(quote),
+        org,
+        confidence,
+        pages=pages,
+        unverified=bool((checked or {}).get("unverified")),
+    )
     fact["proposed"] = {"phone_country_code": region, "phone_number": national}
     fact["field"] = "phone"
     fact["current"] = {
