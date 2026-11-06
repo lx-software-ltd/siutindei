@@ -212,6 +212,7 @@ test.describe('Locations Panel', () => {
     await editor.getByLabel('Status').selectOption('open');
     await pin.click();
     await expect(latField).toHaveValue('22.278');
+    await expect(editor.getByRole('button', { name: 'Reset coordinates' })).toHaveCount(0);
     await dragPin(pin);
     await expect(latField).toHaveValue('22.279');
     await expect(lngField).toHaveValue('114.176');
@@ -224,12 +225,28 @@ test.describe('Locations Panel', () => {
     await expect(editor.getByText('Pin is outside this district.')).toHaveCount(0);
 
     await latField.fill('22.5');
-    await expect(editor.getByText('Pin is outside this district.')).toBeVisible();
+    const outsideDistrict = editor.getByText('Pin is outside this district.');
+    const resetCoordinates = editor.getByRole('button', { name: 'Reset coordinates' });
+    await expect(outsideDistrict).toBeVisible();
+    await expect(resetCoordinates).toBeVisible();
     await expect(pin).toHaveAttribute('data-lat', '22.5');
-    await editor.getByText('Pin is outside this district.').scrollIntoViewIfNeeded();
+    const warningBox = await outsideDistrict.boundingBox();
+    const resetBox = await resetCoordinates.boundingBox();
+    expect(warningBox).toBeTruthy();
+    expect(resetBox).toBeTruthy();
+    expect(resetBox!.x).toBeGreaterThan(warningBox!.x + warningBox!.width - 1);
+    expect(Math.abs(resetBox!.y - warningBox!.y)).toBeLessThan(12);
+    await outsideDistrict.scrollIntoViewIfNeeded();
     await adminPage.screenshot({
       path: '/opt/cursor/artifacts/location-pin-outside-district.png',
     });
+    await resetCoordinates.click();
+    await expect(latField).toHaveValue('22.278');
+    await expect(lngField).toHaveValue('114.175');
+    await expect(pin).toHaveAttribute('data-lat', '22.278');
+    await expect(pin).toHaveAttribute('data-lng', '114.175');
+    await expect(outsideDistrict).toHaveCount(0);
+    await expect(resetCoordinates).toHaveCount(0);
 
     await latField.fill('91');
     await expect(
