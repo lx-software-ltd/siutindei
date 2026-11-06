@@ -194,7 +194,7 @@ def _transcribe(
     for index, url in enumerate(urls, start=1):
         content.append({"type": "text", "text": f"Image {index}."})
         content.append({"type": "image_url", "image_url": {"url": url}})
-    request = {
+    request: dict[str, Any] = {
         "system_prompt": TRANSCRIBE_SYSTEM,
         "user_content": content,
         "timeout": 90,
