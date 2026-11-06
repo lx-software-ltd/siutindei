@@ -8,9 +8,11 @@ import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { formatAdminPageName } from '../../lib/admin-page-name';
 import type { GeographicAreaNode } from '../../lib/api-client';
+import { areaAncestry, pinOutsideDistrict } from '../../lib/location-districts';
 import {
   buildAppleMapsUrl,
   buildGoogleMapsUrl,
+  locationCoordinates,
 } from '../../lib/location-maps';
 import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/api-client-admin';
@@ -364,6 +366,20 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   const detailsLocked =
     locked ||
     (isLocationClosed(editorForm.status) && Boolean(editorForm.area_id));
+  const outsideDistrict = useMemo(() => {
+    const placed = locationCoordinates({
+      lat: editorForm.lat,
+      lng: editorForm.lng,
+    });
+    if (!placed || !editorForm.area_id) {
+      return false;
+    }
+    return pinOutsideDistrict(
+      placed.lat,
+      placed.lng,
+      areaAncestry(tree, editorForm.area_id)
+    );
+  }, [editorForm.area_id, editorForm.lat, editorForm.lng, tree]);
 
   const detail = (
     <AdminEditorPanel
@@ -521,6 +537,9 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
           }));
         }}
       />
+      {outsideDistrict ? (
+        <p className='text-sm text-ink-700'>Pin is outside this district.</p>
+      ) : null}
       </div>
       </VersionFields>
     </AdminEditorPanel>

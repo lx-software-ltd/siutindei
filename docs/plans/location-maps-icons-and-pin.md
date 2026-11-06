@@ -13,8 +13,14 @@ decimal strings.
 
 The location editor shows a map under Latitude and Longitude. The
 pin sits on those coordinates. Dragging the pin writes them back.
-Typing in the fields moves the pin. A closed location or an older
-version shows the pin and does not allow a drag.
+A click does not. Typing waits until the coordinates settle, then
+moves the pin. A closed location or an older version shows the pin
+and does not allow a drag.
+
+Empty, partial, invalid, and locked coordinates each have their own
+sentence. A pin outside the selected Hong Kong district says so.
+With no cloud map id, the editor uses a standard marker so Google's
+demo watermark stays off that map.
 
 ## Non-goals
 
@@ -25,7 +31,9 @@ version shows the pin and does not allow a drag.
 
 - `docs/plans/location-maps-icons-and-pin.md`
 - `apps/admin_web/src/lib/location-maps.ts`
+- `apps/admin_web/src/lib/location-districts.ts`
 - `apps/admin_web/tests/lib/location-maps.test.ts`
+- `apps/admin_web/tests/lib/location-districts.test.ts`
 - `apps/admin_web/src/lib/catalog-map-pins.ts`
 - `apps/admin_web/src/components/shared/location-pin-map.tsx`
 - `apps/admin_web/src/components/shared/locations-panel.tsx`
@@ -48,7 +56,7 @@ version shows the pin and does not allow a drag.
 
 ## Done when
 
-- `npm test -- tests/lib/location-maps.test.ts tests/neighbourhood-options.test.ts tests/components/admin/locations-panel.test.tsx` in `apps/admin_web`
+- `npm test -- tests/lib/location-maps.test.ts tests/lib/location-districts.test.ts tests/neighbourhood-options.test.ts tests/components/admin/locations-panel.test.tsx` in `apps/admin_web`
 - `npm run lint` and `npm run typecheck` in `apps/admin_web`
 - `npx playwright test e2e/locations.spec.ts` in `apps/admin_web`
 - `pytest tests/test_location_status.py -k serialized_coordinates`

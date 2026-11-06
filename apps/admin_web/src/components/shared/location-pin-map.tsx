@@ -2,12 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { getGoogleMapsApiKey, getGoogleMapsMapId } from '../../lib/config';
+import {
+  getConfiguredGoogleMapsMapId,
+  getGoogleMapsApiKey,
+} from '../../lib/config';
 import { loadGoogleMapsScript } from '../../lib/google-maps-script';
 import {
   coordinateFromPosition,
   formatMapCoordinate,
   locationCoordinates,
+  locationPinHint,
+  pinMoveDelay,
 } from '../../lib/location-maps';
 import { StatusBanner } from '../status-banner';
 
@@ -18,6 +23,82 @@ interface LocationPinMapProps {
   lng: string;
   readOnly: boolean;
   onChange: (lat: string, lng: string) => void;
+}
+
+interface DraggablePin {
+  setPosition(position: google.maps.LatLng): void;
+  setDraggable(draggable: boolean): void;
+  currentPosition(): unknown;
+  clear(): void;
+}
+
+function publishDrag(
+  position: unknown,
+  onChange: (lat: string, lng: string) => void
+) {
+  const next = coordinateFromPosition(position);
+  if (!next) {
+    return;
+  }
+  onChange(formatMapCoordinate(next.lat), formatMapCoordinate(next.lng));
+}
+
+function standardPin(
+  map: google.maps.Map,
+  position: google.maps.LatLng,
+  draggable: boolean,
+  onChange: (lat: string, lng: string) => void
+): DraggablePin {
+  const marker = new google.maps.Marker({
+    map,
+    position,
+    title: 'Location pin',
+    draggable,
+  });
+  const listener = marker.addListener('dragend', () => {
+    publishDrag(marker.getPosition(), onChange);
+  });
+  return {
+    setPosition(next) {
+      marker.setPosition(next);
+    },
+    setDraggable(next) {
+      marker.setDraggable(next);
+    },
+    currentPosition() {
+      return marker.getPosition();
+    },
+    clear() {
+      listener.remove();
+      marker.setMap(null);
+    },
+  };
+}
+
+function advancedPin(
+  marker: google.maps.marker.AdvancedMarkerElement,
+  draggable: boolean,
+  onChange: (lat: string, lng: string) => void
+): DraggablePin {
+  marker.gmpDraggable = draggable;
+  const listener = marker.addListener('dragend', () => {
+    publishDrag(marker.position, onChange);
+  });
+  return {
+    setPosition(next) {
+      marker.position = next;
+    },
+    setDraggable(next) {
+      marker.gmpDraggable = next;
+    },
+    currentPosition() {
+      return marker.position;
+    },
+    clear() {
+      listener.remove();
+      marker.map = null;
+    },
+  };
 }
 
 function LocationGoogleMap({
@@ -33,15 +114,25 @@ function LocationGoogleMap({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const pinRef = useRef<DraggablePin | null>(null);
   const onChangeRef = useRef(onChange);
+  const latRef = useRef(lat);
+  const lngRef = useRef(lng);
+  const readOnlyRef = useRef(readOnly);
   const [failed, setFailed] = useState(false);
   const [authRefused, setAuthRefused] = useState(false);
+  const [ready, setReady] = useState(false);
   const apiKey = getGoogleMapsApiKey();
 
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
+
+  useEffect(() => {
+    latRef.current = lat;
+    lngRef.current = lng;
+    readOnlyRef.current = readOnly;
+  }, [lat, lng, readOnly]);
 
   useEffect(() => {
     const previous = window.gm_authFailure;
@@ -62,50 +153,50 @@ function LocationGoogleMap({
     let cancelled = false;
     loadGoogleMapsScript(apiKey)
       .then(async () => {
-        const position = new google.maps.LatLng(lat, lng);
-        const library = (await google.maps.importLibrary('marker')) as {
-          AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement;
+        const position = new google.maps.LatLng(latRef.current, lngRef.current);
+        const mapId = getConfiguredGoogleMapsMapId();
+        const map = new google.maps.Map(container, {
+          center: position,
+          zoom: PIN_ZOOM,
+          ...(mapId ? { mapId } : {}),
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+        });
+        const report = (nextLat: string, nextLng: string) => {
+          onChangeRef.current(nextLat, nextLng);
         };
-        if (cancelled || !containerRef.current || !library.AdvancedMarkerElement) {
-          if (!cancelled && !library.AdvancedMarkerElement) {
-            setFailed(true);
+        let pin: DraggablePin;
+        if (mapId) {
+          const library = (await google.maps.importLibrary('marker')) as {
+            AdvancedMarkerElement: typeof google.maps.marker.AdvancedMarkerElement;
+          };
+          if (cancelled || !containerRef.current || !library.AdvancedMarkerElement) {
+            if (!cancelled && !library.AdvancedMarkerElement) {
+              setFailed(true);
+            }
+            return;
           }
+          pin = advancedPin(
+            new library.AdvancedMarkerElement({
+              map,
+              position,
+              title: 'Location pin',
+              gmpDraggable: !readOnlyRef.current,
+            }),
+            !readOnlyRef.current,
+            report
+          );
+        } else {
+          pin = standardPin(map, position, !readOnlyRef.current, report);
+        }
+        if (cancelled) {
+          pin.clear();
           return;
         }
-        const map =
-          mapRef.current ??
-          new google.maps.Map(containerRef.current, {
-            center: position,
-            zoom: PIN_ZOOM,
-            mapId: getGoogleMapsMapId(),
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false,
-          });
         mapRef.current = map;
-        if (!markerRef.current) {
-          const marker = new library.AdvancedMarkerElement({
-            map,
-            position,
-            title: 'Location pin',
-            gmpDraggable: !readOnly,
-          });
-          marker.addListener('dragend', () => {
-            const next = coordinateFromPosition(marker.position);
-            if (!next) {
-              return;
-            }
-            onChangeRef.current(
-              formatMapCoordinate(next.lat),
-              formatMapCoordinate(next.lng),
-            );
-          });
-          markerRef.current = marker;
-        } else {
-          markerRef.current.position = position;
-          markerRef.current.gmpDraggable = !readOnly;
-        }
-        map.setCenter(position);
+        pinRef.current = pin;
+        setReady(true);
       })
       .catch(() => {
         if (!cancelled) {
@@ -114,18 +205,39 @@ function LocationGoogleMap({
       });
     return () => {
       cancelled = true;
+      pinRef.current?.clear();
+      pinRef.current = null;
+      mapRef.current = null;
+      setReady(false);
     };
-  }, [apiKey, lat, lng, readOnly]);
+  }, [apiKey]);
 
   useEffect(() => {
+    pinRef.current?.setDraggable(!readOnly);
+  }, [readOnly, ready]);
+
+  useEffect(() => {
+    const pin = pinRef.current;
+    const map = mapRef.current;
+    if (!ready || !pin || !map) {
+      return;
+    }
+    const delay = pinMoveDelay(coordinateFromPosition(pin.currentPosition()), {
+      lat,
+      lng,
+    });
+    if (delay == null) {
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      const position = new google.maps.LatLng(lat, lng);
+      pin.setPosition(position);
+      map.setCenter(position);
+    }, delay);
     return () => {
-      if (markerRef.current) {
-        markerRef.current.map = null;
-        markerRef.current = null;
-      }
-      mapRef.current = null;
+      window.clearTimeout(handle);
     };
-  }, []);
+  }, [lat, lng, ready]);
 
   if (authRefused) {
     return (
@@ -167,9 +279,7 @@ export function LocationPinMap({
   }
   if (!pin) {
     return (
-      <p className='text-sm text-ink-500'>
-        Enter latitude and longitude to place the pin.
-      </p>
+      <p className='text-sm text-ink-500'>{locationPinHint(lat, lng, readOnly)}</p>
     );
   }
   return (

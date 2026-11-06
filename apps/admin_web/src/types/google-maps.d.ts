@@ -37,12 +37,16 @@ declare namespace google.maps {
     map?: Map;
     position?: LatLng;
     title?: string;
+    draggable?: boolean;
   }
 
   class Marker {
     constructor(options?: MarkerOptions);
     setMap(map: Map | null): void;
-    addListener(eventName: string, handler: () => void): void;
+    setPosition(position: LatLng): void;
+    setDraggable(draggable: boolean): void;
+    getPosition(): LatLng | null;
+    addListener(eventName: string, handler: () => void): MapsEventListener;
   }
 
   class InfoWindow {
