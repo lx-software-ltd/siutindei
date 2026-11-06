@@ -32,7 +32,12 @@ export interface EnrichmentProposal {
 export interface EnrichmentRead {
   run: EnrichmentRun | null;
   proposals: EnrichmentProposal[];
-  venues: Array<{ id: string; address: string }>;
+  venues: Array<{
+    id: string;
+    address: string;
+    name?: string | null;
+    status?: string | null;
+  }>;
 }
 
 export function getOrgEnrichment(orgId: string): Promise<EnrichmentRead> {

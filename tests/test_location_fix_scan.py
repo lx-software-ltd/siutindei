@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -90,6 +90,31 @@ def test_single_location_is_linked_immediately(
     ).one()
     assert proposal.status == "applied"
     assert proposal.source == "rule:single_location"
+
+
+def test_closed_location_is_not_scanned_or_auto_linked(
+    db_session, sample_activity_category
+) -> None:
+    org = _org(db_session, "Closed Club")
+    area = _area(db_session)
+    venue = _location(db_session, org, area, "1 Closed Road")
+    venue.status = "permanently_closed"
+    venue.lat = None
+    venue.lng = None
+    activity = _activity(db_session, org, sample_activity_category, "Closed Class")
+    db_session.flush()
+    result = start_location_scan(
+        db_session, review_scope="pending_review", org_id=org.id
+    )
+    assert result[0]["auto_applied"] == 0
+    assert result[0]["queued_for_model"] == 0
+    assert db_session.get(ActivityLocation, (activity.id, venue.id)) is None
+    proposals = list(
+        db_session.scalars(
+            select(LocationFixProposal).where(LocationFixProposal.org_id == org.id)
+        ).all()
+    )
+    assert proposals == []
 
 
 def test_pending_scope_skips_approved_orgs(
@@ -397,7 +422,7 @@ def test_sweep_order_puts_the_oldest_finding_first(db_session, monkeypatch) -> N
                 source="model",
                 status="dismissed",
                 proposed_location={"address": f"{day} Old Street"},
-                updated_at=datetime(2026, 10, day, tzinfo=timezone.utc),
+                updated_at=datetime(2026, 10, day, tzinfo=UTC),
             )
         )
     db_session.flush()

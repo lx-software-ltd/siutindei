@@ -32,6 +32,7 @@ export interface SearchLocation {
   readonly address: string | null;
   readonly lat: number | null;
   readonly lng: number | null;
+  readonly status?: string | null;
 }
 
 export interface SearchPricing {

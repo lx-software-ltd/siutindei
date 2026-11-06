@@ -4589,6 +4589,12 @@ components:
           type: number
           minimum: -180
           maximum: 180
+        status:
+          type: string
+          enum: [open, temporarily_closed, permanently_closed]
+          description: |
+            Stored when this import creates the location. A later import
+            leaves the stored status alone. Omitted or blank creates `open`.
 
     AdminImportActivity:
       type: object
@@ -5968,7 +5974,8 @@ components:
           enum: [open, temporarily_closed, permanently_closed]
           description: |
             Whether the venue is open. Omitted, blank, or null is
-            stored as `open`. Imports do not write this field.
+            stored as `open`. An import stores this only when it
+            creates the location.
         address:
           type: string
           maxLength: 500
@@ -6003,6 +6010,9 @@ components:
           enum: [open, temporarily_closed, permanently_closed]
           description: |
             Whether the venue is open. Blank or null is rejected.
+            Admins and managers may set it. While the location is
+            closed, or this request closes it, `address`, `area_id`,
+            `lat`, `lng`, and `place_id` must stay as stored.
         address:
           type: string
           maxLength: 500
@@ -8467,6 +8477,13 @@ components:
         entity_name:
           type: string
           nullable: true
+        venue_status:
+          type: string
+          nullable: true
+          enum: [open, temporarily_closed, permanently_closed]
+          description: |
+            Status of the location this row is about, or of the venue
+            it would link. Null when the row has no venue yet.
         org_id:
           type: string
           format: uuid

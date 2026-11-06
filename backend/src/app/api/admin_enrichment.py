@@ -196,7 +196,13 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
                     for row in proposals
                 ],
                 "venues": [
-                    {"id": str(row.id), "address": row.address} for row in venues
+                    {
+                        "id": str(row.id),
+                        "address": row.address,
+                        "name": row.name,
+                        "status": row.status,
+                    }
+                    for row in venues
                 ],
             }
         if expired:

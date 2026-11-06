@@ -269,6 +269,7 @@ class Location {
     this.address,
     this.lat,
     this.lng,
+    this.status = 'open',
   });
 
   final String id;
@@ -277,6 +278,7 @@ class Location {
   final String? address;
   final double? lat;
   final double? lng;
+  final String status;
 
   factory Location.fromJson(Map<String, dynamic> json) {
     return Location(
@@ -286,6 +288,7 @@ class Location {
       address: json['address'] as String?,
       lat: (json['lat'] as num?)?.toDouble(),
       lng: (json['lng'] as num?)?.toDouble(),
+      status: json['status'] as String? ?? 'open',
     );
   }
 }

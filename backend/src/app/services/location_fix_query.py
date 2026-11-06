@@ -380,6 +380,7 @@ def _serialize(
     linked_counts: dict[Any, int],
 ) -> dict[str, Any]:
     proposed = row.proposed_location or {}
+    venue = None
     if row.entity_type == "activity":
         entity_name = activity_names.get(row.entity_id)
     elif row.entity_type == "location":
@@ -413,6 +414,12 @@ def _serialize(
         }.get(row.source, "Needs review")
     else:
         proposed_label = "Needs a location"
+    if row.entity_type == "location" and venue is not None:
+        venue_status = venue.status
+    elif target is not None:
+        venue_status = target.status
+    else:
+        venue_status = None
     venue_count = int(location_counts.get(row.org_id, 0))
     if row.entity_type == "location":
         current_label = {
@@ -434,6 +441,7 @@ def _serialize(
         "entity_type": row.entity_type,
         "entity_id": str(row.entity_id),
         "entity_name": entity_name,
+        "venue_status": venue_status,
         "org_id": str(row.org_id),
         "org_name": org_names.get(row.org_id),
         "kind": row.kind,

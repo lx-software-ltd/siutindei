@@ -40,7 +40,9 @@ def upgrade() -> None:
         "locations_status_check",
         "locations",
         "status IN (" + ", ".join(f"'{value}'" for value in _STATUS_VALUES) + ")",
+        postgresql_not_valid=True,
     )
+    op.execute("ALTER TABLE locations VALIDATE CONSTRAINT locations_status_check")
 
 
 def downgrade() -> None:

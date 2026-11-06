@@ -126,7 +126,10 @@ def _sorted_published_items() -> list[dict[str, Any]]:
 
 def _is_visible_listing(item: dict[str, Any]) -> bool:
     status = item.get("organization", {}).get("status")
-    return status not in {"closed_permanently", "hidden"}
+    if status in {"closed_permanently", "hidden"}:
+        return False
+    location_status = item.get("location", {}).get("status")
+    return location_status != "permanently_closed"
 
 
 def _resolve_fixture_path() -> Path:
@@ -388,6 +391,7 @@ def _to_schema(
             address=location.get("address"),
             lat=location.get("lat"),
             lng=location.get("lng"),
+            status=location.get("status") or "open",
         ),
         pricing=PricingSchema(
             pricing_type=pricing["pricing_type"],

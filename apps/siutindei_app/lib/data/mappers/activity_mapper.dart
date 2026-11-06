@@ -40,6 +40,7 @@ class ActivityMapper {
       address: model.address,
       latitude: model.lat,
       longitude: model.lng,
+      status: model.status,
     );
   }
 

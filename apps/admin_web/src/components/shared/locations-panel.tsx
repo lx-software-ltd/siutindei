@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useGeographicAreas } from '../../hooks/use-geographic-areas';
 import { useFormValidation } from '../../hooks/use-form-validation';
@@ -14,13 +14,12 @@ import {
   DEFAULT_LOCATION_STATUS,
   isLocationClosed,
   isLocationStatus,
-  locationStatusLabel,
   LOCATION_STATUSES,
   type LocationStatus,
 } from '../../lib/location-status';
 import { normalizeKey } from '../../lib/string-utils';
 import type { Location } from '../../types/admin';
-import { ClosedCircleIcon } from '../icons/action-icons';
+import { ClosedLocationMark } from './closed-location-mark';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import { adminTableText, AdminTableName } from '../ui/admin-table-value';
 import {
@@ -68,22 +67,8 @@ const MAP_ICONS = {
   appleMaps: buildMapIconUrl('apple', '000000'),
 };
 
-function ClosedLocationMark({ status }: { status: string }) {
-  const label = locationStatusLabel(status);
-  if (!isLocationClosed(status) || !label) {
-    return null;
-  }
-  return (
-    <span
-      role='img'
-      aria-label={label}
-      title={label}
-      className='ml-2 inline-flex text-red-600'
-    >
-      <ClosedCircleIcon className='h-4 w-4' />
-    </span>
-  );
-}
+const CLOSED_DETAILS_HINT =
+  'Address, area, latitude, and longitude stay unchanged while this location is closed.';
 
 function MapServiceIcon({
   className,
@@ -265,12 +250,44 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     }));
   };
 
+  const [statusError, setStatusError] = useState('');
+
   const handleAreaChange = (areaId: string, _chain: GeographicAreaNode[]) => {
     markTouched('area_id');
+    setStatusError('');
     panel.setFormState((prev) => ({ ...prev, area_id: areaId }));
   };
 
+  const handleStatusChange = (status: LocationStatus) => {
+    if (isLocationClosed(status) && !panel.formState.area_id) {
+      setStatusError('Choose an area before closing this location.');
+    } else {
+      setStatusError('');
+    }
+    panel.setFormState((prev) => {
+      if (!isLocationClosed(status) || !panel.editingId) {
+        return { ...prev, status };
+      }
+      const saved = panel.items.find((item) => item.id === panel.editingId);
+      if (!saved) {
+        return { ...prev, status };
+      }
+      const restored = itemToForm(saved);
+      return {
+        ...prev,
+        status,
+        area_id: restored.area_id,
+        address: restored.address,
+        lat: restored.lat,
+        lng: restored.lng,
+      };
+    });
+  };
+
   const validate = () => {
+    if (isLocationClosed(panel.formState.status) && !panel.formState.area_id) {
+      return 'Choose an area before closing this location.';
+    }
     if (!panel.formState.org_id || !panel.formState.area_id) {
       return 'Organization and area are required.';
     }
@@ -398,7 +415,9 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   const editorForm = versionView.snapshot
     ? locationFormFromSnapshot(versionView.snapshot, panel.formState)
     : panel.formState;
-  const detailsLocked = locked || isLocationClosed(editorForm.status);
+  const detailsLocked =
+    locked ||
+    (isLocationClosed(editorForm.status) && Boolean(editorForm.area_id));
 
   const detail = (
     <AdminEditorPanel
@@ -451,6 +470,10 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
           label='Status'
           htmlFor='location-status'
           versionKey='status'
+          hint={
+            isLocationClosed(editorForm.status) ? CLOSED_DETAILS_HINT : undefined
+          }
+          error={statusError || undefined}
         >
           <Select
             id='location-status'
@@ -461,7 +484,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
               if (!isLocationStatus(status)) {
                 return;
               }
-              panel.setFormState((prev) => ({ ...prev, status }));
+              handleStatusChange(status);
             }}
           >
             {LOCATION_STATUSES.map((option) => (
@@ -589,7 +612,13 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             <AdminDataTableCell>
               <span className='inline-flex items-center'>
                 <AdminTableName>{getAreaName(item.area_id)}</AdminTableName>
-                <ClosedLocationMark status={item.status} />
+                <ClosedLocationMark
+                  status={
+                    item.id === panel.editingId && !versionView.isHistorical
+                      ? editorForm.status
+                      : item.status
+                  }
+                />
                 <HistoricalRowMark
                   active={versionView.isHistorical && item.id === panel.editingId}
                   version={versionView.selectedVersion}

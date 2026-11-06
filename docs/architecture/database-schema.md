@@ -627,8 +627,12 @@ Columns:
   write it; import `name` is still the address.
 - `status` (text, required, default `open`) — `open`,
   `temporarily_closed`, or `permanently_closed`. The admin editor
-  shows Open, Temporarily Closed, or Permanently Closed. Imports do
-  not write it.
+  shows Open, Temporarily Closed, or Permanently Closed. Admins and
+  managers may set it. While it is closed, address, area, latitude,
+  longitude, and `place_id` stay as stored. A new import may set it.
+  A later import does not change it and does not rewrite those
+  fields. Public search omits `permanently_closed` and returns the
+  status for venues that stay listed.
 - `address` (text, optional)
 - `lat` (numeric(9,6), optional)
 - `lng` (numeric(9,6), optional)
