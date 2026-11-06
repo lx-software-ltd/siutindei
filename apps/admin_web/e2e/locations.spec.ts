@@ -5,6 +5,66 @@ import { test } from './fixtures/test-fixtures';
 const CLOSED_HINT =
   'Address, area, latitude, and longitude stay unchanged while this location is closed.';
 
+async function paintedIcon(svg: ReturnType<Page['locator']>) {
+  return svg.evaluate((element) => {
+    if (!(element instanceof SVGSVGElement)) {
+      throw new Error('map icon is not an svg');
+    }
+    const path = element.querySelector('path');
+    const viewBox = element.viewBox.baseVal;
+    if (!path || viewBox.height <= viewBox.width) {
+      throw new Error('map icon viewBox must be the glyph, taller than it is wide');
+    }
+    const bounds = path.getBBox();
+    const topGap = bounds.y - viewBox.y;
+    const bottomGap = viewBox.y + viewBox.height - (bounds.y + bounds.height);
+    if (Math.abs(topGap) > 0.05 || Math.abs(bottomGap) > 0.05) {
+      throw new Error('map icon viewBox does not meet the glyph');
+    }
+    const height = 96;
+    const width = Math.max(1, Math.round((height * viewBox.width) / viewBox.height));
+    const clone = element.cloneNode(true) as SVGSVGElement;
+    clone.setAttribute('width', String(width));
+    clone.setAttribute('height', String(height));
+    const xml = new XMLSerializer().serializeToString(clone);
+    return new Promise<{ top: number; bottom: number; height: number }>(
+      (resolve, reject) => {
+        const image = new Image();
+        const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml' }));
+        image.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext('2d');
+          if (!context) {
+            reject(new Error('canvas is unavailable'));
+            return;
+          }
+          context.drawImage(image, 0, 0, width, height);
+          const pixels = context.getImageData(0, 0, width, height).data;
+          let top = -1;
+          let bottom = -1;
+          for (let y = 0; y < height; y += 1) {
+            for (let x = 0; x < width; x += 1) {
+              if (pixels[(y * width + x) * 4 + 3] > 16) {
+                if (top < 0) {
+                  top = y;
+                }
+                bottom = y;
+                break;
+              }
+            }
+          }
+          URL.revokeObjectURL(url);
+          resolve({ top, bottom, height });
+        };
+        image.onerror = () => reject(new Error('map icon failed to paint'));
+        image.src = url;
+      }
+    );
+  });
+}
+
 async function openHarbourHall(adminPage: Page) {
   await adminPage.goto('/admin/dashboard?section=locations&org=org-1');
   await adminPage.getByRole('row', { name: /123 Test Street/ }).first().click();
@@ -147,17 +207,19 @@ test.describe('Locations Panel', () => {
     const apple = row.getByRole('link', { name: 'Open in Apple Maps' });
     await expect(google).toHaveAttribute(
       'href',
-      'https://www.google.com/maps?q=22.278,114.175&z=17'
+      'https://www.google.com/maps/search/?api=1&query=22.278,114.175'
     );
     await expect(apple).toHaveAttribute(
       'href',
-      'https://maps.apple.com/?ll=22.278,114.175&q=22.278,114.175'
+      'https://maps.apple.com/?ll=22.278,114.175&q=123%20Test%20Street'
     );
-    const googleBox = await google.locator('svg').boundingBox();
-    const appleBox = await apple.locator('svg').boundingBox();
-    expect(googleBox).toBeTruthy();
-    expect(appleBox).toBeTruthy();
-    expect(Math.abs(googleBox!.height - appleBox!.height)).toBeLessThan(1);
+    const googleInk = await paintedIcon(google.locator('svg'));
+    const appleInk = await paintedIcon(apple.locator('svg'));
+    expect(googleInk.top).toBe(0);
+    expect(appleInk.top).toBe(0);
+    expect(googleInk.bottom).toBe(googleInk.height - 1);
+    expect(appleInk.bottom).toBe(appleInk.height - 1);
+    expect(googleInk.height).toBe(appleInk.height);
   });
 
   test('deletes a location', async ({ adminPage }) => {

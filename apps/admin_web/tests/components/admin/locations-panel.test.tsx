@@ -360,7 +360,7 @@ describe('LocationsPanel', () => {
     expect(await screen.findByText('Pin is outside this district.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open in Google Maps' })).toHaveAttribute(
       'href',
-      'https://www.google.com/maps?q=22.28,114.15&z=17'
+      'https://www.google.com/maps/search/?api=1&query=22.28,114.15'
     );
     expect(screen.getByLabelText('Latitude')).toHaveValue('22.28');
   });

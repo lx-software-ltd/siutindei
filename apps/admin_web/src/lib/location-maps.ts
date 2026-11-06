@@ -13,6 +13,10 @@ export function parseCoordinate(value: unknown): number | null {
   return null;
 }
 
+function inRange(value: number, min: number, max: number): boolean {
+  return value >= min && value <= max;
+}
+
 export function locationCoordinates(location: {
   lat?: unknown;
   lng?: unknown;
@@ -22,15 +26,24 @@ export function locationCoordinates(location: {
   if (lat == null || lng == null) {
     return null;
   }
+  if (!inRange(lat, -90, 90) || !inRange(lng, -180, 180)) {
+    return null;
+  }
   return { lat, lng };
 }
 
 export function googleMapsPinUrl(lat: number, lng: number): string {
-  return `https://www.google.com/maps?q=${lat},${lng}&z=17`;
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
 
-export function appleMapsPinUrl(lat: number, lng: number): string {
-  return `https://maps.apple.com/?ll=${lat},${lng}&q=${lat},${lng}`;
+export function appleMapsPinUrl(
+  lat: number,
+  lng: number,
+  label?: string | null,
+): string {
+  const trimmed = label?.trim();
+  const query = trimmed ? encodeURIComponent(trimmed) : `${lat},${lng}`;
+  return `https://maps.apple.com/?ll=${lat},${lng}&q=${query}`;
 }
 
 function encodedAddressQuery(location: {
@@ -63,7 +76,7 @@ export function buildAppleMapsUrl(location: {
 }): string | null {
   const pin = locationCoordinates(location);
   if (pin) {
-    return appleMapsPinUrl(pin.lat, pin.lng);
+    return appleMapsPinUrl(pin.lat, pin.lng, location.address);
   }
   const query = encodedAddressQuery(location);
   if (!query) {

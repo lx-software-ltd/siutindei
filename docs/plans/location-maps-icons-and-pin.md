@@ -5,10 +5,11 @@
 
 ## Goal
 
-On Locations, the Apple Maps and Google Maps icons are the same
-height. A row with latitude and longitude opens Google Maps with a
-pin on those coordinates, including when the API sends them as
-strings.
+On Locations, the Apple Maps and Google Maps glyphs touch the top
+and bottom of the same height. A row with latitude and longitude
+opens Google Maps with a pin on those coordinates. The location API
+sends coordinates as JSON numbers. The link still accepts the older
+decimal strings.
 
 ## Non-goals
 
@@ -29,6 +30,8 @@ strings.
 - `apps/admin_web/tests/components/admin/locations-panel.test.tsx`
 - `apps/admin_web/e2e/locations.spec.ts`
 - `apps/admin_web/e2e/organizations.spec.ts`
+- `backend/src/app/api/admin_resource_location.py`
+- `tests/test_location_status.py`
 
 ## Invariants this change preserves
 
@@ -41,7 +44,8 @@ strings.
 - `npm test -- tests/lib/location-maps.test.ts tests/neighbourhood-options.test.ts tests/components/admin/locations-panel.test.tsx` in `apps/admin_web`
 - `npm run lint` and `npm run typecheck` in `apps/admin_web`
 - `npx playwright test e2e/locations.spec.ts` in `apps/admin_web`
-- Browser: both icons share one height; Google Maps opens on the stored pin
+- `pytest tests/test_location_status.py -k serialized_coordinates`
+- Browser: both glyphs touch the top and bottom of one height; Google Maps opens on the stored pin
 
 ## Rollback
 

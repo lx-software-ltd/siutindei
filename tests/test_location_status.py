@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 
 import pytest
@@ -260,6 +261,45 @@ def test_pin_fix_does_not_move_a_closed_location(db_session, sample_location) ->
         )
     assert exc_info.value.field == "status"
     assert sample_location.lat == Decimal("22.280000")
+
+
+def test_serialized_coordinates_are_json_numbers(
+    db_session,
+    sample_organization,
+    sample_geographic_area,
+) -> None:
+    repo = LocationRepository(db_session)
+    location = _create_location(
+        repo,
+        {
+            "org_id": str(sample_organization.id),
+            "area_id": str(sample_geographic_area.id),
+            "address": "1 Pin Road",
+            "lat": Decimal("22.278000"),
+            "lng": Decimal("114.175000"),
+        },
+    )
+    body = _serialize_location(location)
+    assert body["lat"] == 22.278
+    assert body["lng"] == 114.175
+    assert isinstance(body["lat"], float)
+    assert isinstance(body["lng"], float)
+    encoded = json.loads(json.dumps(body, default=str))
+    assert encoded["lat"] == 22.278
+    assert encoded["lng"] == 114.175
+    assert isinstance(encoded["lat"], float)
+    assert isinstance(encoded["lng"], float)
+
+    blank = _create_location(
+        repo,
+        {
+            "org_id": str(sample_organization.id),
+            "area_id": str(sample_geographic_area.id),
+            "address": "2 Pin Road",
+        },
+    )
+    assert _serialize_location(blank)["lat"] is None
+    assert _serialize_location(blank)["lng"] is None
 
 
 def test_status_is_not_an_import_difference() -> None:

@@ -81,7 +81,7 @@ function MapServiceLink({
       rel='noreferrer'
       title={label}
       aria-label={label}
-      className='inline-flex h-4 w-4 shrink-0 items-center justify-center text-ink-900 hover:text-ink-700'
+      className='inline-flex h-4 w-4 shrink-0 items-center justify-center text-ink-500 hover:text-ink-900'
     >
       {children}
     </a>
