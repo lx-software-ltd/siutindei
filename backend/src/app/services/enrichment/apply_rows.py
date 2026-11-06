@@ -19,6 +19,7 @@ from app.api.admin_validators import (
     _validate_social_value,
     _validate_string_length,
     _validate_url,
+    schedule_languages,
 )
 from app.db.models import (
     Activity,
@@ -359,7 +360,7 @@ def _apply_schedule(
         activity_id=activity.id,
         location_id=location.id,
         schedule_type=ScheduleType.WEEKLY,
-        languages=list(proposed.get("languages") or ["zh-HK"]),
+        languages=schedule_languages(proposed.get("languages"), default=["yue"]),
     )
     session.add(schedule)
     session.flush()

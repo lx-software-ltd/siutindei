@@ -39,9 +39,9 @@ import {
   emptyForm,
   formatTimeLabelForMinutes,
   fromUtcWeekly,
-  getLanguageOption,
   getTimeOptions,
   itemToForm,
+  scheduleLanguageMarks,
   toUtcWeekly,
   type ScheduleFormState,
   type WeeklyEntryForm,
@@ -437,25 +437,25 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
   );
 
   const renderLanguages = useCallback((item: ActivitySchedule) => {
-    if (!item.languages?.length) {
+    const marks = scheduleLanguageMarks(item.languages);
+    if (!marks.length) {
       return ADMIN_TABLE_EMPTY;
     }
     return (
       <div className='flex flex-wrap items-center gap-2'>
-        {item.languages.map((language) => {
-          const option = getLanguageOption(language);
-          if (!option) {
-            return <span key={language}>{language}</span>;
+        {marks.map((mark) => {
+          if (mark.kind === 'text') {
+            return <span key={mark.code}>{mark.code}</span>;
           }
           return (
             <span
-              key={option.code}
+              key={mark.code}
               className='inline-flex items-center justify-center rounded border border-brand-100 bg-white px-1.5 py-1'
-              title={option.label}
+              title={mark.label}
             >
               <img
-                src={option.flagSrc}
-                alt={`${option.label} flag`}
+                src={mark.flagSrc}
+                alt={`${mark.label} flag`}
                 width={20}
                 height={14}
                 loading='lazy'

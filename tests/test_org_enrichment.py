@@ -1264,6 +1264,90 @@ def test_invalid_schedule_does_not_leave_an_empty_row(
     assert org.description == "Saturday art class for children."
 
 
+def test_zh_hk_schedule_matches_cantonese(
+    db_session, sample_activity, sample_location
+) -> None:
+    from app.db.models import ScheduleType
+
+    db_session.add(
+        ActivitySchedule(
+            activity_id=sample_activity.id,
+            location_id=sample_location.id,
+            schedule_type=ScheduleType.WEEKLY,
+            languages=["zh-HK"],
+        )
+    )
+    db_session.flush()
+    org = sample_activity.organization
+    cantonese = {
+        "activity_name": sample_activity.name,
+        "location_address": sample_location.address,
+        "languages": ["yue"],
+    }
+    assert (
+        prepare_proposals(
+            db_session,
+            org,
+            [{"kind": "create_schedule", "proposed": cantonese}],
+        )
+        == []
+    )
+    omitted = {
+        "activity_name": sample_activity.name,
+        "location_address": sample_location.address,
+    }
+    assert (
+        prepare_proposals(
+            db_session,
+            org,
+            [{"kind": "create_schedule", "proposed": omitted}],
+        )
+        == []
+    )
+    english = {**cantonese, "languages": ["en"]}
+    kept = prepare_proposals(
+        db_session,
+        org,
+        [{"kind": "create_schedule", "proposed": english}],
+    )
+    assert [item["kind"] for item in kept] == ["create_schedule"]
+
+
+def test_apply_stores_zh_hk_schedule_as_cantonese(
+    db_session, sample_activity, sample_location
+) -> None:
+    org = sample_activity.organization
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    schedule = _proposal(
+        run,
+        section="Schedules",
+        kind="create_schedule",
+        label="Schedule",
+        proposed_value={
+            "activity_name": sample_activity.name,
+            "location_address": sample_location.address,
+            "languages": ["zh-HK"],
+            "entries": [{"day_of_week": 1, "start_time": "15:00", "end_time": "15:45"}],
+        },
+        proposed_hash="hash-yue",
+    )
+    db_session.add(schedule)
+    db_session.flush()
+    results, _quality_run = apply_proposals(
+        db_session,
+        org.id,
+        [str(schedule.id)],
+        {},
+        user_id="admin",
+        request_id="req-yue",
+    )
+    assert results[0]["status"] == "applied"
+    stored = db_session.query(ActivitySchedule).one()
+    assert stored.languages == ["yue"]
+
+
 def _quality_settings(session, **flags: str):
     from app.db.models import ImportSettings
 

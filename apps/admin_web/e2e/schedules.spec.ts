@@ -3,7 +3,14 @@ import { test, expect } from './fixtures/test-fixtures';
 test.describe('Schedules Panel', () => {
   test('creates a weekly schedule entry', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=schedules&org=org-1');
-    await expect(adminPage.getByRole('table', { name: 'Schedules' })).toBeVisible();
+    const schedules = adminPage.getByRole('table', { name: 'Schedules' });
+    await expect(schedules).toBeVisible();
+    await expect(
+      schedules
+        .getByRole('img', { name: 'Cantonese (yue) flag' })
+        .filter({ visible: true })
+    ).not.toHaveCount(0);
+    await expect(schedules.getByText('zh-HK', { exact: true })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toHaveCount(0);
     await expect(adminPage.getByRole('cell', { name: 'v1' })).toHaveCount(0);
     await expect(adminPage.getByTestId('admin-filter-bar')).toHaveCount(0);

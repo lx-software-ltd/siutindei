@@ -42,15 +42,61 @@ const languageCodeSet = new Set<LanguageCode>(
   languageOptions.map((option) => option.code)
 );
 
+function scheduleLanguageCode(code: string): string {
+  const folded = code.trim().toLowerCase().replace(/_/g, '-');
+  if (folded === 'zh-hk') {
+    return 'yue';
+  }
+  if (languageCodeSet.has(folded as LanguageCode)) {
+    return folded;
+  }
+  return code;
+}
+
 export function toLanguageCodes(value?: string[] | null): LanguageCode[] {
   if (!value) return [];
-  return value.filter((code): code is LanguageCode =>
-    languageCodeSet.has(code as LanguageCode)
-  );
+  const codes: LanguageCode[] = [];
+  for (const raw of value) {
+    const code = scheduleLanguageCode(raw);
+    if (!languageCodeSet.has(code as LanguageCode)) continue;
+    const language = code as LanguageCode;
+    if (!codes.includes(language)) codes.push(language);
+  }
+  return codes;
 }
 
 export function getLanguageOption(code: string) {
-  return languageOptions.find((option) => option.code === code) ?? null;
+  const resolved = scheduleLanguageCode(code);
+  return languageOptions.find((option) => option.code === resolved) ?? null;
+}
+
+export type ScheduleLanguageMark =
+  | { kind: 'flag'; code: LanguageCode; label: string; flagSrc: string }
+  | { kind: 'text'; code: string };
+
+export function scheduleLanguageMarks(
+  value?: string[] | null
+): ScheduleLanguageMark[] {
+  const marks: ScheduleLanguageMark[] = [];
+  const seen = new Set<string>();
+  for (const raw of value ?? []) {
+    if (!raw) continue;
+    const option = getLanguageOption(raw);
+    const key = option?.code ?? raw;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (option) {
+      marks.push({
+        kind: 'flag',
+        code: option.code,
+        label: option.label,
+        flagSrc: option.flagSrc,
+      });
+      continue;
+    }
+    marks.push({ kind: 'text', code: raw });
+  }
+  return marks;
 }
 
 function formatTimeLabel(minutes: number): string {

@@ -115,6 +115,7 @@ def test_rows_with_evidence_on_the_row_are_kept() -> None:
     assert schedule["entries"] == [
         {"day_of_week": 3, "start_time": "16:30", "end_time": "18:00"}
     ]
+    assert schedule["languages"] == ["yue"]
 
 
 def test_quote_matches_across_spacing_case_and_url_form() -> None:

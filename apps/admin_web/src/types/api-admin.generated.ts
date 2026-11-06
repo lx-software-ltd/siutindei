@@ -8707,7 +8707,9 @@ export interface components {
              *     fr (French), de (German), es (Spanish), pt (Portuguese), it (Italian),
              *     ru (Russian), ar (Arabic), hi (Hindi), th (Thai), vi (Vietnamese),
              *     id (Indonesian), ms (Malay), tl (Tagalog), nl (Dutch), pl (Polish),
-             *     tr (Turkish), yue (Cantonese)
+             *     tr (Turkish), yue (Cantonese).
+             *     zh-HK and zh_HK are accepted and stored as yue.
+             *     Translation maps still keep zh-HK.
              */
             languages?: ("en" | "zh" | "ja" | "ko" | "fr" | "de" | "es" | "pt" | "it" | "ru" | "ar" | "hi" | "th" | "vi" | "id" | "ms" | "tl" | "nl" | "pl" | "tr" | "yue")[];
         };
@@ -8715,6 +8717,7 @@ export interface components {
             /** @enum {string} */
             schedule_type?: "weekly";
             weekly_entries?: components["schemas"]["WeeklyScheduleEntry"][];
+            /** @description Same codes as ScheduleCreate. zh-HK and zh_HK are stored as yue. */
             languages?: ("en" | "zh" | "ja" | "ko" | "fr" | "de" | "es" | "pt" | "it" | "ru" | "ar" | "hi" | "th" | "vi" | "id" | "ms" | "tl" | "nl" | "pl" | "tr" | "yue")[];
         };
         Schedule: {
