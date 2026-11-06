@@ -57,9 +57,10 @@ const FIVE_MINUTES = cdk.Duration.minutes(5);
  * Minimum API Gateway requests per period before the p95 latency alarm is
  * evaluated. Below this, a percentile is a handful of slow requests (one
  * cold authorizer, or one admin screen), so the expression returns 0.
- * Returning 0, rather than no datapoint, is required: CloudWatch skips a
- * missing metric-math value and will alarm on three older breaches that
- * were not consecutive. A quiet period has to break that streak.
+ * A period with no requests publishes no sample count. CloudWatch skips
+ * that missing value and will alarm on three older breaches that were not
+ * consecutive. FILL turns the missing count into 0, so a quiet period
+ * returns 0 and breaks the streak.
  * Per-function Duration alarms cover the low-traffic regime.
  */
 export const API_LATENCY_MIN_SAMPLES = 50;
@@ -192,10 +193,11 @@ export function addOpsAlarmRules(
   );
 
   // API Gateway p95 latency, gated on request volume. p95 of a small
-  // period is several requests, so one cold start does not page. The
-  // else branch is 0 so a below-gate period is healthy and breaks the
-  // three-period streak; omitting it makes CloudWatch skip the period
-  // and reach back to older breaches.
+  // period is several requests, so one cold start does not page. FILL
+  // makes a period with no requests count as zero samples. The else
+  // branch is 0, so a below-gate period is healthy and breaks the
+  // three-period streak. Omitting either makes CloudWatch skip the
+  // period and reach back to older breaches.
   alarms.push(
     new cloudwatch.Alarm(scope, "ApiLatencyP99Alarm", {
       alarmName: name("api-latency-p95-alarm"),
@@ -203,7 +205,8 @@ export function addOpsAlarmRules(
         "API Gateway p95 latency is elevated " +
         `(>= ${API_LATENCY_MIN_SAMPLES} requests per 5 min)`,
       metric: new cloudwatch.MathExpression({
-        expression: `IF(samples >= ${API_LATENCY_MIN_SAMPLES}, p95, 0)`,
+        expression:
+          `IF(FILL(samples, 0) >= ${API_LATENCY_MIN_SAMPLES}, p95, 0)`,
         usingMetrics: {
           p95: apiMetric("Latency", "p95"),
           samples: apiMetric("Latency", "SampleCount"),

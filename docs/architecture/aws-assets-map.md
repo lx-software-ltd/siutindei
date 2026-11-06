@@ -440,7 +440,7 @@ parameters. They were moved there by a one-off stack refactor, recorded in
 | KMS Key + Alias | `lxsoftware-siutindei-kms-ops-alerts` | Topic encryption key (rotation enabled; CloudWatch service principal granted) |
 | SNS Subscription | — | Email subscription to `OpsAlertsEmail` (conditional: only when the parameter is non-empty) |
 | CloudWatch Alarm | `lxsoftware-siutindei-api-5xx-alarm` | API Gateway 5XX ≥ 5 in 5 min |
-| CloudWatch Alarm | `lxsoftware-siutindei-api-latency-p95-alarm` | API Gateway p95 latency ≥ 3 s for 3 consecutive 5-min periods with ≥ 50 requests (metric math `IF(samples >= 50, p95, 0)`; a quieter period returns 0 and breaks the streak) |
+| CloudWatch Alarm | `lxsoftware-siutindei-api-latency-p95-alarm` | API Gateway p95 latency ≥ 3 s for 3 consecutive 5-min periods with ≥ 50 requests (metric math `IF(FILL(samples, 0) >= 50, p95, 0)`; a period with no requests counts as zero samples and breaks the streak) |
 | CloudWatch Alarm | `lxsoftware-siutindei-search-lambda-duration-p99-alarm` | Search Lambda p99 `Duration` ≥ 3 s for 15 min |
 | CloudWatch Alarm | `lxsoftware-siutindei-search-lambda-errors-alarm` | Search Lambda errors ≥ 3 in 5 min |
 | CloudWatch Alarm | `lxsoftware-siutindei-search-lambda-throttles-alarm` | Search Lambda throttles ≥ 1 |

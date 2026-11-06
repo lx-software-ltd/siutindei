@@ -39,6 +39,10 @@ authorizer and `SiutindeiAdminFunction`.
 
 - A revoked partner key stops working. The bound is 15 minutes, not 5.
 - `GET /v1/admin/cognito-users` still returns `groups` on every user.
+  Every load reads the groups again, so a role change shows up on the
+  next request.
+- A period with no API requests counts as zero samples on the latency
+  alarm, so an idle gap cannot join older breaches into one alarm.
 - Category-suggestion SQS keeps invoking the admin function's `$LATEST`,
   so a long OpenRouter job does not sit on a warm HTTP environment.
 - The ops alarm logical IDs stay put. Only the latency metric changes.

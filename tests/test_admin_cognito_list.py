@@ -39,7 +39,6 @@ def _event(**query: str) -> dict[str, Any]:
 
 @pytest.fixture(autouse=True)
 def _cognito_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    admin_cognito_groups.clear_group_membership_cache()
     monkeypatch.setenv("COGNITO_USER_POOL_ID", "pool-1")
     monkeypatch.delenv("ADMIN_GROUP", raising=False)
     monkeypatch.delenv("MANAGER_GROUP", raising=False)
@@ -123,7 +122,7 @@ def test_group_listing_follows_pagination(
     assert body["items"][0]["groups"] == ["admin"]
 
 
-def test_group_membership_is_reused_within_a_minute(
+def test_group_membership_is_fetched_on_every_list(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def responder(action: str, params: dict) -> dict:
@@ -137,24 +136,6 @@ def test_group_membership_is_reused_within_a_minute(
     admin_cognito._handle_list_cognito_users(_event())
 
     assert [action for action, _ in calls].count("list_users") == 2
-    assert [action for action, _ in calls].count("list_users_in_group") == 2
-
-
-def test_group_membership_cache_expires(monkeypatch: pytest.MonkeyPatch) -> None:
-    clock = {"now": 1_000.0}
-    monkeypatch.setattr(admin_cognito_groups.time, "monotonic", lambda: clock["now"])
-
-    def responder(action: str, params: dict) -> dict:
-        if action == "list_users":
-            return {"Users": [_user("a", "aaaaaaaa-0000-0000-0000-000000000000")]}
-        return {"Users": []}
-
-    calls = _patch_proxy(monkeypatch, responder)
-
-    admin_cognito._handle_list_cognito_users(_event())
-    clock["now"] += admin_cognito_groups.GROUP_MEMBERSHIP_CACHE_SECONDS + 1
-    admin_cognito._handle_list_cognito_users(_event())
-
     assert [action for action, _ in calls].count("list_users_in_group") == 4
 
 

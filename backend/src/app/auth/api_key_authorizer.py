@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.authorizer_helpers import get_header, policy
 from app.db.engine import get_engine
-from app.db.repositories.api_key import ApiKeyRepository
+from app.db.repositories import ApiKeyRepository
 from app.services.api_keys import hash_api_key, looks_like_api_key
 from app.utils.logging import get_logger
 

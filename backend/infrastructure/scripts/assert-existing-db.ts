@@ -161,7 +161,8 @@ function assertOpsAlarms(): void {
     AlarmName: "test-api-latency-p95-alarm",
     Metrics: Match.arrayWith([
       Match.objectLike({
-        Expression: `IF(samples >= ${API_LATENCY_MIN_SAMPLES}, p95, 0)`,
+        Expression:
+          `IF(FILL(samples, 0) >= ${API_LATENCY_MIN_SAMPLES}, p95, 0)`,
       }),
     ]),
     DatapointsToAlarm: 3,
