@@ -1,3 +1,5 @@
+import { googleMapsPinUrl } from './location-maps';
+
 /** Backend `DEFAULT_MAX_LIMIT`. Larger pages mean fewer review-queue calls. */
 export const CATALOG_MAP_PAGE_SIZE = 200;
 
@@ -29,10 +31,6 @@ export interface CatalogMapPin {
   lat: number;
   lng: number;
   mapsUrl: string;
-}
-
-export function googleMapsPinUrl(lat: number, lng: number): string {
-  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
 
 /** Workspace page for one organization. Same query import history uses. */
