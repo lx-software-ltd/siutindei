@@ -364,6 +364,11 @@ export interface paths {
          * @description Latest run, its proposals, and the organization's venues.
          *     An admin or importer JWT may call this. Apply and dismiss
          *     stay admin-only. Nothing is written to the catalog.
+         *     `current_value` is the live catalog for display: organization
+         *     fields, a saved logo flag, photo/venue/activity/price/schedule
+         *     counts, and `changed_since_crawl` when apply would refuse.
+         *     Blank fields and media URLs are omitted. The crawl snapshot
+         *     used to detect a later edit stays on the stored proposal.
          */
         get: {
             parameters: {

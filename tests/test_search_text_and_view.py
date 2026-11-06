@@ -85,3 +85,87 @@ def test_card_view_omits_heavy_fields_and_stays_under_900_bytes(
     assert "lat" in card_item["location"]
     encoded = json.dumps(card_item, default=str, separators=(",", ":")).encode()
     assert len(encoded) < 900
+
+
+def test_full_view_keeps_a_unique_description_tagged_template(
+    db_session,
+    sample_activity,
+    sample_organization,
+    sample_pricing,
+    sample_schedule,
+) -> None:
+    sample_organization.description = "Saturday art class for children in the harbour."
+    sample_organization.description_source = "template"
+    sample_organization.description_translations = {
+        "zh": "南區嘅幼兒或興趣班，適合小朋友同家庭。",
+    }
+    sample_activity.description = "Lane swimming for beginners."
+    db_session.flush()
+    row = db_session.execute(build_search_query(ActivitySearchFilters(limit=10))).one()
+    full = map_row_to_result(row, {}, view="full")
+    card = map_row_to_result(row, {}, view="card")
+    assert full.organization.description == sample_organization.description
+    assert full.organization.description_translations.get("en") == (
+        sample_organization.description
+    )
+    assert "zh" not in full.organization.description_translations
+    assert full.activity.description == "Lane swimming for beginners."
+    assert card.organization.description is None
+    assert card.activity.description is None
+
+
+def test_full_view_hides_lcsd_venue_filler(
+    db_session,
+    sample_activity,
+    sample_organization,
+    sample_pricing,
+    sample_schedule,
+) -> None:
+    sample_organization.description = (
+        "Harbour Park is a indoor family venue in Yau Tsim Mong "
+        "for children and families."
+    )
+    sample_organization.description_source = "template"
+    sample_activity.description = "Lane swimming for beginners."
+    db_session.flush()
+    row = db_session.execute(build_search_query(ActivitySearchFilters(limit=10))).one()
+    full = map_row_to_result(row, {}, view="full")
+    assert full.organization.description is None
+    assert full.activity.description is None
+
+
+def test_full_view_hides_import_boilerplate(
+    db_session,
+    sample_activity,
+    sample_organization,
+    sample_pricing,
+    sample_schedule,
+) -> None:
+    sample_organization.description = (
+        "Harbour Club is a class or early-years centre in CENTRAL "
+        "for children and families."
+    )
+    sample_organization.description_source = "template"
+    sample_activity.description = "Lane swimming for beginners."
+    db_session.flush()
+    row = db_session.execute(build_search_query(ActivitySearchFilters(limit=10))).one()
+    full = map_row_to_result(row, {}, view="full")
+    assert full.organization.description is None
+    assert full.activity.description is None
+
+
+def test_blank_template_description_still_hides_activity_copy(
+    db_session,
+    sample_activity,
+    sample_organization,
+    sample_pricing,
+    sample_schedule,
+) -> None:
+    sample_organization.description = "   "
+    sample_organization.description_source = "template"
+    sample_activity.description = "Lane swimming for beginners."
+    db_session.flush()
+    row = db_session.execute(build_search_query(ActivitySearchFilters(limit=10))).one()
+    full = map_row_to_result(row, {}, view="full")
+    assert full.organization.description is None
+    assert full.activity.description is None

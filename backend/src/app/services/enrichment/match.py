@@ -41,13 +41,158 @@ def _live_current(org: Organization, proposed: dict[str, Any]) -> dict[str, Any]
     for key in proposed:
         if key == "copyright_notice":
             continue
-        if key == "description_translations":
-            translations = org.description_translations or {}
-            current[key] = {"zh": translations.get("zh")}
+        if key in {"description_translations", "name_translations"}:
+            stored = getattr(org, key, None) or {}
+            wanted = proposed.get(key)
+            languages = list(wanted) if isinstance(wanted, dict) and wanted else ["zh"]
+            current[key] = {
+                language: stored.get(language)
+                for language in languages
+                if isinstance(stored, dict)
+            }
             continue
         if hasattr(org, key):
             current[key] = getattr(org, key)
     return current or None
+
+
+def display_current(
+    org: Organization,
+    *,
+    kind: str,
+    field: str | None,
+    proposed: dict[str, Any],
+    venues: list[Any],
+    activity_names: list[str],
+    stored_current: object = None,
+    pricing_count: int = 0,
+    schedule_count: int = 0,
+) -> dict[str, Any] | None:
+    """Live catalog for the enrichment Now line.
+
+    The stored crawl snapshot stays on the proposal. Apply still
+    compares against that snapshot.
+    """
+    if kind == "update_organization":
+        raw = _live_current(org, proposed) or {}
+    elif kind == "add_media":
+        raw = _media_current(org, proposed, field)
+    elif kind == "create_location":
+        raw = _location_current(proposed, venues)
+    elif kind == "create_activity":
+        raw = _activity_current(proposed, activity_names)
+    elif kind == "create_pricing":
+        raw = {"prices": pricing_count} if pricing_count else {}
+    elif kind == "create_schedule":
+        raw = {"schedules": schedule_count} if schedule_count else {}
+    else:
+        return None
+    kept = {key: value for key, value in raw.items() if _present(value)}
+    if kind == "update_organization" and _changed_since_crawl(
+        org, stored_current, proposed
+    ):
+        kept["changed_since_crawl"] = True
+    return kept or None
+
+
+def _media_current(
+    org: Organization, proposed: dict[str, Any], field: str | None
+) -> dict[str, Any]:
+    source = str(proposed.get("source_url") or "")
+    urls = [str(url) for url in (org.media_urls or []) if url]
+    saved = bool(source) and (source in urls or source == (org.logo_media_url or ""))
+    if proposed.get("logo") or field == "logo":
+        current: dict[str, Any] = {}
+        if org.logo_media_url:
+            current["logo"] = "saved"
+        if saved:
+            current["already_saved"] = True
+        return current
+    current = {}
+    if urls:
+        current["photos"] = len(urls)
+    if saved:
+        current["already_saved"] = True
+    return current
+
+
+def _changed_since_crawl(
+    org: Organization, stored: object, proposed: dict[str, Any]
+) -> bool:
+    """True when apply would refuse because the catalog moved."""
+    if "description_translations" in proposed or "name_translations" in proposed:
+        key = (
+            "description_translations"
+            if "description_translations" in proposed
+            else "name_translations"
+        )
+        live_map = getattr(org, key, None) or {}
+        stored_map: dict[str, Any] = {}
+        if isinstance(stored, dict):
+            raw = stored.get(key) or {}
+            if isinstance(raw, dict):
+                stored_map = raw
+        raw_wanted = proposed.get(key)
+        wanted = raw_wanted if isinstance(raw_wanted, dict) else {}
+        languages = list(wanted) or ["zh"]
+        for language in languages:
+            live = (
+                live_map.get(language) or None if isinstance(live_map, dict) else None
+            )
+            expected = stored_map.get(language) or None
+            if live != expected:
+                return True
+        return False
+    for field in proposed:
+        if field == "copyright_notice":
+            continue
+        live = getattr(org, field, None) or None
+        expected = stored.get(field) if isinstance(stored, dict) else None
+        expected = expected or None
+        if live != expected:
+            return True
+    return False
+
+
+def _location_current(proposed: dict[str, Any], venues: list[Any]) -> dict[str, Any]:
+    wanted = _folded(proposed.get("address"))
+    for venue in venues:
+        address = getattr(venue, "address", None)
+        if wanted and _folded(address) == wanted:
+            return {"address": address}
+    if venues:
+        return {"venues": len(venues)}
+    return {}
+
+
+def _activity_current(
+    proposed: dict[str, Any], activity_names: list[str]
+) -> dict[str, Any]:
+    wanted = _folded(proposed.get("name"))
+    for name in activity_names:
+        if wanted and _folded(name) == wanted:
+            return {"name": name}
+    if activity_names:
+        return {"activities": len(activity_names)}
+    return {}
+
+
+def _folded(value: object) -> str:
+    return " ".join(str(value or "").split()).casefold()
+
+
+def _present(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, dict):
+        return any(_present(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return bool(value) and any(_present(item) for item in value)
+    return True
 
 
 def _already_saved(

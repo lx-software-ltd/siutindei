@@ -25,6 +25,7 @@ from app.db.models import (
     Organization,
 )
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
+from app.services.description_boilerplate import source_attribution_message
 from app.services.name_sanitizer import NameSanitizeConfig
 from app.services.org_review_children import (
     added_since_rejected,
@@ -175,22 +176,13 @@ def collect_issues(
             "Description is missing",
         )
     note()
-    if organization.description_source == "template":
-        add(
-            "source_attribution",
-            "warning",
-            "organization",
-            org_id,
-            "Description is a template",
-        )
-    elif "Source:" in (organization.description or ""):
-        add(
-            "source_attribution",
-            "warning",
-            "organization",
-            org_id,
-            "Description still contains a source line",
-        )
+    attribution = source_attribution_message(
+        organization.description_source,
+        organization.description,
+        organization.description_translations,
+    )
+    if attribution:
+        add("source_attribution", "warning", "organization", org_id, attribution)
     note()
     note_review_gaps(organization, org_id, add, note)
     if not any(_text(getattr(organization, field)) for field in _CONTACT_FIELDS):

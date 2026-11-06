@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   ProposalTable,
   areaIdFromPath,
+  currentText,
   matchedAreaId,
+  proposedText,
   selectionAfterToggle,
 } from '@/components/admin/organization-enrichment-proposals';
 import type { EnrichmentProposal } from '@/lib/api-client-enrichment';
@@ -264,6 +266,55 @@ describe('ProposalTable media preview', () => {
     expect(
       screen.getAllByText('description: Saturday classes for children.').length
     ).toBeGreaterThan(0);
+  });
+
+  it('treats a null field as empty and shows a live photo count', () => {
+    renderTable([
+      proposal({
+        id: 'prop-email',
+        field: 'email',
+        label: 'Email',
+        current_value: { email: null },
+        proposed_value: { email: 'studio@example.com' },
+      }),
+      proposal({
+        id: 'prop-photos',
+        section: 'Media',
+        kind: 'add_media',
+        field: 'media',
+        label: 'Photo 1',
+        current_value: { photos: 2, already_saved: true },
+        proposed_value: { source_url: MEDIA_URL, alt: 'Class photo', logo: false },
+      }),
+    ]);
+
+    expect(screen.getAllByText('Now: Empty').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Now: email:')).not.toBeInTheDocument();
+    expect(screen.queryByText('Now: email: null')).not.toBeInTheDocument();
+    expect(screen.getAllByText('email: studio@example.com').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Now: 2 photos · Already saved').length).toBeGreaterThan(
+      0
+    );
+  });
+
+  it('keeps a proposed false flag and labels live catalog values', () => {
+    expect(proposedText({ free_trial_class_offered: false })).toBe(
+      'free_trial_class_offered: false'
+    );
+    expect(
+      currentText({
+        photos: 2,
+        already_saved: true,
+        logo: 'saved',
+        changed_since_crawl: true,
+      })
+    ).toBe('2 photos · Already saved · Logo saved · Changed since crawl');
+    expect(currentText({ logo_media_url: 'https://cdn.example/logo.svg' })).toBe(
+      'Logo saved'
+    );
+    expect(currentText({ activities: 1, venues: 2, prices: 1 })).toBe(
+      '1 activity · 2 venues · 1 price'
+    );
   });
 
   it('keeps a non-http source as text and does not request it', () => {

@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { SUPPORTED_LOCALES, type Locale } from '@/content/locales';
 
+import { hideImportTemplateCopy } from './description-boilerplate';
 import {
   mapActivityListing,
   type ActivityWireListing,
@@ -45,7 +46,10 @@ function loadListings(): Map<string, ActivityListing> {
   const parsed = JSON.parse(readFileSync(fixturePath(), 'utf8')) as FixtureFile;
   const listings = new Map<string, ActivityListing>();
   for (const item of parsed.items) {
-    const isTemplate = item.organization.description_source === 'template';
+    const isTemplate = hideImportTemplateCopy(
+      item.organization.description_source,
+      item.organization.description,
+    );
     const listing = mapActivityListing(
       {
         ...item,

@@ -6,14 +6,20 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.admin_auth import _get_user_sub, _is_admin, _set_session_audit_context
 from app.api.admin_request import _parse_uuid, parse_object_body
 from app.db.audit import AuditService
 from app.db.engine import get_engine
-from app.db.models import Location
+from app.db.models import (
+    Activity,
+    ActivityPricing,
+    ActivitySchedule,
+    Location,
+    Organization,
+)
 from app.db.models.org_enrichment import OrgEnrichmentProposal
 from app.exceptions import AppError, ValidationError
 from app.services.enrichment.apply import apply_proposals, dismiss_proposals
@@ -150,12 +156,45 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
                 .where(OrgEnrichmentProposal.run_id == run.id)
                 .order_by(OrgEnrichmentProposal.section, OrgEnrichmentProposal.label)
             ).all()
+            organization = session.get(Organization, org_id)
             venues = session.scalars(
                 select(Location).where(Location.org_id == org_id)
             ).all()
+            activity_names = list(
+                session.scalars(
+                    select(Activity.name).where(Activity.org_id == org_id)
+                ).all()
+            )
+            activity_ids = select(Activity.id).where(Activity.org_id == org_id)
+            pricing_count = int(
+                session.scalar(
+                    select(func.count(ActivityPricing.id)).where(
+                        ActivityPricing.activity_id.in_(activity_ids)
+                    )
+                )
+                or 0
+            )
+            schedule_count = int(
+                session.scalar(
+                    select(func.count(ActivitySchedule.id)).where(
+                        ActivitySchedule.activity_id.in_(activity_ids)
+                    )
+                )
+                or 0
+            )
             payload = {
                 "run": serialize_run(run),
-                "proposals": [serialize_proposal(row) for row in proposals],
+                "proposals": [
+                    serialize_proposal(
+                        row,
+                        organization=organization,
+                        venues=list(venues),
+                        activity_names=activity_names,
+                        pricing_count=pricing_count,
+                        schedule_count=schedule_count,
+                    )
+                    for row in proposals
+                ],
                 "venues": [
                     {"id": str(row.id), "address": row.address} for row in venues
                 ],

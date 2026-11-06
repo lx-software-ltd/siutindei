@@ -586,7 +586,8 @@ paths:
       summary: Read website enrichment for one organization
       description: |
         Full-access `crud` keys only. Same response as
-        `GET /v1/admin/organizations/{id}/enrichment`. A `read` key
+        `GET /v1/admin/organizations/{id}/enrichment`, including a
+        live `current_value` for display. A `read` key
         and an organization-scoped key receive `403`, including when
         the key's organization is the target. Nothing is written to
         the catalog.

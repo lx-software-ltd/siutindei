@@ -390,8 +390,10 @@ components:
           nullable: true
           enum: [template, official, places, enrich]
           description: |
-            When `template`, public descriptions are omitted so near-identical
-            catalog sentences do not render verbatim.
+            When `template`, public descriptions are omitted if they are blank
+            or still import filler (`for children and families` / `適合小朋友同家庭`).
+            Unique copy with a stale `template` tag is shown. Filler
+            translations are omitted even when the English text is unique.
         place_id:
           type: string
           nullable: true

@@ -93,19 +93,93 @@ export function matchedAreaId(
   return fromPath || explicit;
 }
 
-export function proposedText(value: Record<string, unknown> | null): string {
-  if (!value) {
-    return 'Empty';
+function isBlankValue(item: unknown): boolean {
+  if (typeof item === 'boolean') {
+    return false;
   }
+  if (item == null) {
+    return true;
+  }
+  if (typeof item === 'string') {
+    return item.trim() === '';
+  }
+  if (Array.isArray(item)) {
+    return item.length === 0 || item.every((entry) => isBlankValue(entry));
+  }
+  if (typeof item === 'object') {
+    const values = Object.values(item as Record<string, unknown>);
+    return values.length === 0 || values.every((entry) => isBlankValue(entry));
+  }
+  return false;
+}
+
+function countedLabel(singular: string, plural: string, value: unknown): string | null {
+  if (typeof value !== 'number') {
+    return null;
+  }
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
+function currentFieldText(key: string, item: unknown): string | null {
+  if (key === 'photos') {
+    return countedLabel('photo', 'photos', item);
+  }
+  if (key === 'venues') {
+    return countedLabel('venue', 'venues', item);
+  }
+  if (key === 'activities') {
+    return countedLabel('activity', 'activities', item);
+  }
+  if (key === 'prices') {
+    return countedLabel('price', 'prices', item);
+  }
+  if (key === 'schedules') {
+    return countedLabel('schedule', 'schedules', item);
+  }
+  if (key === 'already_saved') {
+    return item ? 'Already saved' : null;
+  }
+  if (key === 'changed_since_crawl') {
+    return item ? 'Changed since crawl' : null;
+  }
+  if (key === 'logo' || key === 'logo_media_url') {
+    return item ? 'Logo saved' : null;
+  }
+  return null;
+}
+
+function valueParts(
+  value: Record<string, unknown>,
+  format: (key: string, item: unknown) => string | null,
+): string[] {
   return Object.entries(value)
-    .filter(([key]) => key !== 'copyright_notice')
+    .filter(([key, item]) => key !== 'copyright_notice' && !isBlankValue(item))
     .map(([key, item]) => {
+      const formatted = format(key, item);
+      if (formatted) {
+        return formatted;
+      }
       if (item && typeof item === 'object') {
         return `${key}: ${JSON.stringify(item)}`;
       }
       return `${key}: ${String(item ?? '')}`;
-    })
-    .join(' · ');
+    });
+}
+
+export function proposedText(value: Record<string, unknown> | null): string {
+  if (!value) {
+    return 'Empty';
+  }
+  const parts = valueParts(value, () => null);
+  return parts.length === 0 ? 'Empty' : parts.join(' · ');
+}
+
+export function currentText(value: Record<string, unknown> | null): string {
+  if (!value) {
+    return 'Empty';
+  }
+  const parts = valueParts(value, currentFieldText);
+  return parts.length === 0 ? 'Empty' : parts.join(' · ');
 }
 
 function mediaPreviewUrl(value: Record<string, unknown> | null): string | null {
@@ -145,7 +219,7 @@ function ProposalValue({ row }: { row: EnrichmentProposal }) {
     <div className='space-y-2'>
       <MediaPreview src={preview} alt={caption || 'Proposed media'} />
       {caption ? <div>{caption}</div> : null}
-      {extra ? <div>{extra}</div> : null}
+      {extra !== 'Empty' ? <div>{extra}</div> : null}
     </div>
   );
 }
@@ -211,7 +285,7 @@ export function ProposalTable({
       </AdminDataTableHead>
       <AdminDataTableBody>
         {rows.map((row) => {
-          const current = proposedText(row.current_value);
+          const current = currentText(row.current_value);
           const pending = row.status === 'pending';
           return (
             <tr key={row.id}>
