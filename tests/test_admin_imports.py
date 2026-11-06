@@ -1473,6 +1473,73 @@ def test_upsert_schedule_reimport_is_idempotent(
     assert [entry.id for entry in schedule_again.entries] == entry_ids
 
 
+def test_reimport_matches_schedule_stored_as_zh_hk(
+    db_session,
+    sample_activity,
+    sample_location,
+) -> None:
+    from app.api.admin_resource_schedule import _create_schedule
+    from app.db.models import ActivitySchedule, ScheduleType
+    from app.db.repositories import ActivityScheduleRepository
+    from app.exceptions import ValidationError
+
+    stored = ActivitySchedule(
+        activity_id=sample_activity.id,
+        location_id=sample_location.id,
+        schedule_type=ScheduleType.WEEKLY,
+        languages=["zh-HK"],
+    )
+    db_session.add(stored)
+    db_session.flush()
+    repo = ActivityScheduleRepository(db_session)
+    found = repo.find_by_activity_location_languages(
+        sample_activity.id,
+        sample_location.id,
+        ["yue"],
+    )
+    assert found is not None
+    assert found.id == stored.id
+    with pytest.raises(ValidationError, match="already exists"):
+        _create_schedule(
+            repo,
+            {
+                "activity_id": str(sample_activity.id),
+                "location_id": str(sample_location.id),
+                "schedule_type": "weekly",
+                "languages": ["yue"],
+                "weekly_entries": [
+                    {
+                        "day_of_week_utc": 1,
+                        "start_minutes_utc": 600,
+                        "end_minutes_utc": 660,
+                    }
+                ],
+            },
+        )
+
+    schedule, _status = upsert_schedule(
+        db_session,
+        sample_activity,
+        sample_location,
+        {
+            "timezone": "UTC",
+            "languages": ["zh-HK"],
+            "weekly_entries": [
+                {
+                    "day_of_week": 1,
+                    "start_time": "10:00",
+                    "end_time": "11:00",
+                }
+            ],
+        },
+        [],
+        allow_updates=True,
+    )
+    assert schedule.id == stored.id
+    assert list(schedule.languages) == ["yue"]
+    assert db_session.query(ActivitySchedule).count() == 1
+
+
 def test_importer_skips_existing_pricing_and_schedule(
     db_session,
     sample_organization,

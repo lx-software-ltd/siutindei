@@ -8708,17 +8708,17 @@ export interface components {
              *     ru (Russian), ar (Arabic), hi (Hindi), th (Thai), vi (Vietnamese),
              *     id (Indonesian), ms (Malay), tl (Tagalog), nl (Dutch), pl (Polish),
              *     tr (Turkish), yue (Cantonese).
-             *     zh-HK and zh_HK are accepted and stored as yue.
+             *     zh-HK and zh_HK are accepted on a schedule and stored as yue.
              *     Translation maps still keep zh-HK.
              */
-            languages?: ("en" | "zh" | "ja" | "ko" | "fr" | "de" | "es" | "pt" | "it" | "ru" | "ar" | "hi" | "th" | "vi" | "id" | "ms" | "tl" | "nl" | "pl" | "tr" | "yue")[];
+            languages?: ("en" | "zh" | "ja" | "ko" | "fr" | "de" | "es" | "pt" | "it" | "ru" | "ar" | "hi" | "th" | "vi" | "id" | "ms" | "tl" | "nl" | "pl" | "tr" | "yue" | "zh-HK" | "zh_HK")[];
         };
         ScheduleUpdate: {
             /** @enum {string} */
             schedule_type?: "weekly";
             weekly_entries?: components["schemas"]["WeeklyScheduleEntry"][];
             /** @description Same codes as ScheduleCreate. zh-HK and zh_HK are stored as yue. */
-            languages?: ("en" | "zh" | "ja" | "ko" | "fr" | "de" | "es" | "pt" | "it" | "ru" | "ar" | "hi" | "th" | "vi" | "id" | "ms" | "tl" | "nl" | "pl" | "tr" | "yue")[];
+            languages?: ("en" | "zh" | "ja" | "ko" | "fr" | "de" | "es" | "pt" | "it" | "ru" | "ar" | "hi" | "th" | "vi" | "id" | "ms" | "tl" | "nl" | "pl" | "tr" | "yue" | "zh-HK" | "zh_HK")[];
         };
         Schedule: {
             /** Format: uuid */

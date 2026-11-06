@@ -1313,6 +1313,37 @@ def test_zh_hk_schedule_matches_cantonese(
     assert [item["kind"] for item in kept] == ["create_schedule"]
 
 
+def test_unknown_stored_schedule_language_does_not_raise(
+    db_session, sample_activity, sample_location
+) -> None:
+    from app.db.models import ScheduleType
+
+    db_session.add(
+        ActivitySchedule(
+            activity_id=sample_activity.id,
+            location_id=sample_location.id,
+            schedule_type=ScheduleType.WEEKLY,
+            languages=["not-a-language"],
+        )
+    )
+    db_session.flush()
+    kept = prepare_proposals(
+        db_session,
+        sample_activity.organization,
+        [
+            {
+                "kind": "create_schedule",
+                "proposed": {
+                    "activity_name": sample_activity.name,
+                    "location_address": sample_location.address,
+                    "languages": ["yue"],
+                },
+            }
+        ],
+    )
+    assert [item["kind"] for item in kept] == ["create_schedule"]
+
+
 def test_apply_stores_zh_hk_schedule_as_cantonese(
     db_session, sample_activity, sample_location
 ) -> None:

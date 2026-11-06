@@ -16,7 +16,7 @@ from app.api.admin_imports_version import (
     schedule_terminal,
 )
 from app.api.admin_resource_schedule import _create_schedule, _update_schedule
-from app.api.admin_validators import _parse_languages
+from app.api.admin_validators import schedule_languages
 from app.db.models import Activity, ActivitySchedule, Location
 from app.db.repositories import ActivityScheduleRepository
 from app.exceptions import ValidationError
@@ -34,7 +34,7 @@ def upsert_schedule(
     allow_updates: bool = True,
 ) -> tuple[ActivitySchedule, str]:
     tzinfo = parse_timezone(raw_schedule.get("timezone"), "timezone")
-    languages = _parse_languages(raw_schedule.get("languages"))
+    languages = schedule_languages(raw_schedule.get("languages"))
     repo = ActivityScheduleRepository(session)
     existing = repo.find_by_activity_location_languages(
         coerce_uuid(activity.id),

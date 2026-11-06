@@ -291,7 +291,12 @@ class TestValidateLanguages:
     def test_hong_kong_locale_is_cantonese_on_a_schedule(self) -> None:
         """zh-HK is a translation locale. Schedule lists store yue."""
         assert _validate_language_code("zh-HK") == "zh-HK"
-        assert _validate_languages(["zh-HK", "zh_HK", "yue", "en"]) == ["yue", "en"]
+        assert _validate_languages(["zh-HK", "zh_HK", "yue", "en"]) == [
+            "zh-HK",
+            "yue",
+            "en",
+        ]
+        assert schedule_languages(["zh-HK", "zh_HK", "yue", "en"]) == ["yue", "en"]
         assert schedule_languages("zh_HK, EN") == ["yue", "en"]
         assert schedule_languages(None, default=["yue"]) == ["yue"]
         assert schedule_languages([], default=["yue"]) == ["yue"]

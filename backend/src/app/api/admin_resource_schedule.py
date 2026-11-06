@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.api.admin_request import _parse_uuid
-from app.api.admin_validators import _parse_languages
+from app.api.admin_validators import schedule_languages
 from app.db.models import (
     ActivitySchedule,
     ActivityScheduleEntry,
@@ -34,7 +34,7 @@ def _create_schedule(
         activity_id=_parse_uuid(activity_id),
         location_id=_parse_uuid(location_id),
         schedule_type=ScheduleType.WEEKLY,
-        languages=_parse_languages(body.get("languages")),
+        languages=schedule_languages(body.get("languages")),
         entries=_parse_weekly_entries(body.get("weekly_entries")),
     )
     _validate_schedule(schedule)
@@ -57,7 +57,7 @@ def _update_schedule(
             )
         entity.schedule_type = ScheduleType.WEEKLY
     if "languages" in body:
-        entity.languages = _parse_languages(body["languages"])
+        entity.languages = schedule_languages(body["languages"])
     if "weekly_entries" in body:
         parsed_entries = _parse_weekly_entries(body.get("weekly_entries"))
         _sync_weekly_entries(repo.session, entity, parsed_entries)

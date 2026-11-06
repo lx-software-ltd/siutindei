@@ -10,6 +10,11 @@ test.describe('Schedules Panel', () => {
         .getByRole('img', { name: 'Cantonese (yue) flag' })
         .filter({ visible: true })
     ).not.toHaveCount(0);
+    await expect(
+      schedules
+        .getByRole('img', { name: 'English (en) flag' })
+        .filter({ visible: true })
+    ).not.toHaveCount(0);
     await expect(schedules.getByText('zh-HK', { exact: true })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Version' })).toHaveCount(0);
     await expect(adminPage.getByRole('cell', { name: 'v1' })).toHaveCount(0);

@@ -467,6 +467,23 @@ export const mockSchedules = [
     updated_at: '2024-01-06T00:00:00Z',
     version: 1,
   },
+  {
+    id: 'schedule-2',
+    activity_id: 'activity-1',
+    location_id: 'loc-2',
+    schedule_type: 'weekly',
+    weekly_entries: [
+      {
+        day_of_week_utc: 2,
+        start_minutes_utc: 180,
+        end_minutes_utc: 240,
+      },
+    ],
+    languages: ['en'],
+    created_at: '2024-01-06T00:00:00Z',
+    updated_at: '2024-01-06T00:00:00Z',
+    version: 1,
+  },
 ];
 
 export const mockAuditLogs = [

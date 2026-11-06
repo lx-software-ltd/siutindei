@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.api.admin_validators import comparable_schedule_languages
 from app.db.models import (
     ActivitySchedule,
     ActivityScheduleEntry,
@@ -163,11 +164,18 @@ class ActivityScheduleRepository(BaseRepository[ActivitySchedule]):
         location_id: UUID,
         languages: list[str],
     ) -> ActivitySchedule | None:
-        """Find a schedule by activity, location, and language set."""
-        query = (
+        """Find a schedule by activity, location, and language set.
+
+        ``zh-HK`` and ``yue`` are the same class language, so a row
+        stored before that fold still matches a current write.
+        """
+        wanted = comparable_schedule_languages(languages)
+        rows = self._session.scalars(
             select(ActivitySchedule)
             .where(ActivitySchedule.activity_id == activity_id)
             .where(ActivitySchedule.location_id == location_id)
-            .where(ActivitySchedule.languages == languages)
-        )
-        return self._session.execute(query).scalars().first()
+        ).all()
+        for row in rows:
+            if comparable_schedule_languages(row.languages or []) == wanted:
+                return row
+        return None

@@ -22,14 +22,18 @@ enrichment. Show a stored `zh-HK` with the same Hong Kong flag as
 - Changing translation maps. Names and descriptions still use `zh-HK`.
 - Remapping the public search language filter. Search still validates
   each code on its own, so a `zh-HK` filter is not a `yue` filter.
-- Adding `zh-HK` to the schedule language enum.
 
 ## Files
 
-- `backend/src/app/api/admin_validators.py` — schedule language lists
-  map `zh-HK` and `zh_HK` to `yue`. `schedule_languages` applies that
-  and an optional default. `_validate_language_code` still returns
-  `zh-HK` for translation maps.
+- `backend/src/app/api/admin_validators.py` — `schedule_languages`
+  maps `zh-HK` and `zh_HK` to `yue`. `_validate_languages` does not.
+  `comparable_schedule_languages` folds stored codes without rejecting
+  unknown ones.
+- `backend/src/app/db/repositories/schedule.py` — lookup compares
+  folded language lists, so a stored `zh-HK` row matches a `yue` write.
+- `backend/src/app/api/admin_resource_schedule.py` and
+  `backend/src/app/api/admin_imports_schedule.py` — writes go through
+  `schedule_languages`.
 - `backend/src/app/services/enrichment/extract.py` — new schedule
   proposals use `yue`.
 - `backend/src/app/services/enrichment/apply_rows.py` — apply stores
@@ -41,23 +45,27 @@ enrichment. Show a stored `zh-HK` with the same Hong Kong flag as
   — table marks and the editor treat `zh-HK` as `yue`.
 - `apps/admin_web/src/components/shared/schedules-panel.tsx` — render
   those marks.
-- `docs/api/admin.yaml` — schedule writes store `zh-HK` as `yue`.
+- `docs/api/admin.yaml` — schedule requests accept `zh-HK` and
+  `zh_HK` and store them as `yue`.
 - Tests in `tests/test_admin_security_validation.py`,
-  `tests/test_org_enrichment.py`, `tests/test_org_enrichment_depth.py`,
+  `tests/test_admin_imports.py`, `tests/test_org_enrichment.py`,
+  `tests/test_org_enrichment_depth.py`,
   `apps/admin_web/tests/components/shared/schedule-form-utils.test.ts`,
   and the schedules Playwright spec.
 
 ## Invariants this change preserves
 
 - Translation maps still accept and return `zh-HK`.
-- The schedule language enum is unchanged.
-- Uniqueness stays activity + location + language list, compared
-  after `zh-HK` is folded to `yue`.
+- Uniqueness stays activity + location + language list. Import,
+  manual create, and enrichment compare that list after `zh-HK` is
+  folded to `yue`.
+- A stored language outside the allowed list does not raise during
+  enrichment matching.
 - An unknown schedule code still renders as text.
 
 ## Done when
 
-- `pytest tests/test_admin_security_validation.py tests/test_org_enrichment.py tests/test_org_enrichment_depth.py`
+- `pytest tests/test_admin_security_validation.py tests/test_admin_imports.py tests/test_org_enrichment.py tests/test_org_enrichment_depth.py`
 - `npm test -- tests/components/shared/schedule-form-utils.test.ts`,
   `npm run lint`, and `npm run typecheck` in `apps/admin_web`
 - `npx playwright test e2e/schedules.spec.ts` in `apps/admin_web`

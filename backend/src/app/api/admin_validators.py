@@ -365,9 +365,6 @@ def _validate_languages(languages: list[str]) -> list[str]:
     for i, lang in enumerate(languages):
         if lang and str(lang).strip():
             code = _validate_language_code(str(lang).strip(), f"languages[{i}]")
-            # Hong Kong Chinese is a translation locale. Class language is Cantonese.
-            if code == "zh-HK":
-                code = "yue"
             if code not in seen:
                 validated.append(code)
                 seen.add(code)
@@ -421,15 +418,37 @@ def _parse_languages(value: Any) -> list[str]:
     return _validate_languages(languages)
 
 
-def schedule_languages(value: Any, *, default: list[str] | None = None) -> list[str]:
-    """Parse class languages.
+def fold_schedule_language(code: str) -> str:
+    """Map the Hong Kong translation locale onto Cantonese."""
+    folded = code.strip().casefold().replace("_", "-")
+    if folded == "zh-hk":
+        return "yue"
+    return code.strip()
 
-    ``zh-HK`` is stored as ``yue``. Translation maps still use
-    ``_validate_language_code``, which keeps ``zh-HK``.
-    """
-    parsed = _parse_languages(value)
-    if parsed or default is None:
-        return parsed
+
+def comparable_schedule_languages(codes: object) -> list[str]:
+    """Fold ``zh-HK`` for equality. Unknown stored codes are kept."""
+    if isinstance(codes, str):
+        items = [part.strip() for part in codes.split(",") if part.strip()]
+    elif isinstance(codes, list):
+        items = [str(item).strip() for item in codes if str(item).strip()]
+    else:
+        return []
+    folded: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        code = fold_schedule_language(item)
+        if code not in seen:
+            folded.append(code)
+            seen.add(code)
+    return folded
+
+
+def schedule_languages(value: Any, *, default: list[str] | None = None) -> list[str]:
+    """Parse class languages. ``zh-HK`` is stored as ``yue``."""
+    folded = comparable_schedule_languages(_parse_languages(value))
+    if folded or default is None:
+        return folded
     return list(default)
 
 
