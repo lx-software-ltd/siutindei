@@ -180,35 +180,6 @@ test.describe('Locations Panel', () => {
     ).toBeLessThan(32);
   });
 
-  test('drags the pin under the coordinates to set them', async ({ adminPage }) => {
-    const editor = await openHarbourHall(adminPage);
-    const map = editor.getByRole('application', { name: 'Location pin' });
-    const pin = map.getByRole('button', { name: 'Location pin' });
-    await expect(pin).toHaveAttribute('data-lat', '22.278');
-    await expect(pin).toHaveAttribute('data-lng', '114.175');
-    const latField = editor.getByLabel('Latitude');
-    const lngField = editor.getByLabel('Longitude');
-    await expect(latField).toBeDisabled();
-    await pin.click();
-    await expect(latField).toHaveValue('22.278');
-    await expect(lngField).toHaveValue('114.175');
-
-    await editor.getByLabel('Status').selectOption('open');
-    await pin.click();
-    await expect(latField).toHaveValue('22.279');
-    await expect(lngField).toHaveValue('114.176');
-    await expect(pin).toHaveAttribute('data-lat', '22.279');
-    await expect(pin).toHaveAttribute('data-lng', '114.176');
-
-    await latField.fill('22.5');
-    await expect(pin).toHaveAttribute('data-lat', '22.5');
-    await latField.fill('');
-    await expect(
-      editor.getByText('Enter latitude and longitude to place the pin.')
-    ).toBeVisible();
-    await expect(map).toHaveCount(0);
-  });
-
   test('shows an older version as open', async ({ adminPage }) => {
     const editor = await openHarbourHall(adminPage);
     const nameField = editor.getByLabel('Name');

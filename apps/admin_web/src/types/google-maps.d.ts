@@ -1,8 +1,6 @@
 declare namespace google.maps {
   class LatLng {
     constructor(lat: number, lng: number);
-    lat(): number;
-    lng(): number;
   }
 
   class LatLngBounds {
@@ -59,16 +57,13 @@ declare namespace google.maps {
   namespace marker {
     interface AdvancedMarkerOptions {
       map?: Map | null;
-      position?: LatLng | { lat: number; lng: number } | null;
+      position?: LatLng;
       title?: string;
-      gmpDraggable?: boolean;
     }
 
     class AdvancedMarkerElement {
       constructor(options?: AdvancedMarkerOptions);
       map: Map | null;
-      position: LatLng | { lat: number; lng: number } | null;
-      gmpDraggable: boolean;
       addListener(eventName: string, handler: () => void): MapsEventListener;
     }
   }

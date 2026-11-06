@@ -4,10 +4,7 @@ import {
   appleMapsPinUrl,
   buildAppleMapsUrl,
   buildGoogleMapsUrl,
-  coordinateFromPosition,
-  formatMapCoordinate,
   googleMapsPinUrl,
-  locationCoordinates,
 } from '@/lib/location-maps';
 
 const GOOGLE_PIN = 'https://www.google.com/maps/search/?api=1&query=22.278,114.175';
@@ -91,42 +88,6 @@ describe('buildGoogleMapsUrl', () => {
   it('returns null when there is no pin and no address', () => {
     expect(buildGoogleMapsUrl({})).toBeNull();
     expect(buildGoogleMapsUrl({ address: '  ', lat: null, lng: null })).toBeNull();
-  });
-});
-
-describe('formatMapCoordinate', () => {
-  it('keeps six decimal places and drops trailing zeros', () => {
-    expect(formatMapCoordinate(22.279000000000004)).toBe('22.279');
-    expect(formatMapCoordinate(22.28)).toBe('22.28');
-    expect(formatMapCoordinate(114)).toBe('114');
-  });
-});
-
-describe('coordinateFromPosition', () => {
-  it('reads a LatLng with methods or a literal', () => {
-    expect(coordinateFromPosition({ lat: () => 22.278, lng: () => 114.175 })).toEqual({
-      lat: 22.278,
-      lng: 114.175,
-    });
-    expect(coordinateFromPosition({ lat: 22.278, lng: 114.175 })).toEqual({
-      lat: 22.278,
-      lng: 114.175,
-    });
-  });
-
-  it('returns null for a missing position', () => {
-    expect(coordinateFromPosition(null)).toBeNull();
-    expect(coordinateFromPosition({ lat: 'north', lng: 114 })).toBeNull();
-  });
-});
-
-describe('locationCoordinates', () => {
-  it('reads the editor fields when both are in range', () => {
-    expect(locationCoordinates({ lat: '22.278', lng: '114.175' })).toEqual({
-      lat: 22.278,
-      lng: 114.175,
-    });
-    expect(locationCoordinates({ lat: '', lng: '114.175' })).toBeNull();
   });
 });
 

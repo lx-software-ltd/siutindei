@@ -11,13 +11,9 @@ opens Google Maps with a pin on those coordinates. The location API
 sends coordinates as JSON numbers. The link still accepts the older
 decimal strings.
 
-The location editor shows a map under Latitude and Longitude. The
-pin sits on those coordinates. Dragging the pin writes them back.
-Typing in the fields moves the pin. A closed location or an older
-version shows the pin and does not allow a drag.
-
 ## Non-goals
 
+- An embedded map in the editor.
 - Public website map links.
 - Changing how coordinates are stored.
 
@@ -27,10 +23,7 @@ version shows the pin and does not allow a drag.
 - `apps/admin_web/src/lib/location-maps.ts`
 - `apps/admin_web/tests/lib/location-maps.test.ts`
 - `apps/admin_web/src/lib/catalog-map-pins.ts`
-- `apps/admin_web/src/components/shared/location-pin-map.tsx`
 - `apps/admin_web/src/components/shared/locations-panel.tsx`
-- `apps/admin_web/src/types/google-maps.d.ts`
-- `apps/admin_web/e2e/fixtures/test-fixtures.ts`
 - `apps/admin_web/src/components/icons/action-icons.tsx`
 - `apps/admin_web/src/components/admin/data-quality/locations-panel.tsx`
 - `apps/admin_web/tests/neighbourhood-options.test.ts`

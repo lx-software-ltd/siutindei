@@ -25,7 +25,6 @@ import { normalizeKey } from '../../lib/string-utils';
 import type { Location } from '../../types/admin';
 import { AppleMapsIcon, GoogleMapsIcon } from '../icons/action-icons';
 import { ClosedLocationMark } from './closed-location-mark';
-import { LocationPinMap } from './location-pin-map';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import { adminTableText, AdminTableName } from '../ui/admin-table-value';
 import {
@@ -509,18 +508,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
           />
         </VersionField>
       </AdminFieldGrid>
-      <LocationPinMap
-        lat={editorForm.lat}
-        lng={editorForm.lng}
-        readOnly={detailsLocked}
-        onChange={(nextLat, nextLng) => {
-          panel.setFormState((prev) => ({
-            ...prev,
-            lat: nextLat,
-            lng: nextLng,
-          }));
-        }}
-      />
       </div>
       </VersionFields>
     </AdminEditorPanel>
