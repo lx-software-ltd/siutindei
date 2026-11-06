@@ -26,7 +26,10 @@ MODEL_INSTRUCTIONS = (
     "Each row has plain values, a confidence from 0 to 1, the url it came from, and "
     "one quote copied word for word from that url, 8 to 160 characters, that shows "
     "the row. A pricing quote must contain the amount. pricing_type is per_class, "
-    "per_sessions, per_hour, per_day, or free. day_of_week is 0-6 (Sunday is 0); "
+    "per_sessions, per_hour, per_day, free, per_month, or per_year. "
+    "For per_sessions, sessions_count is the number of classes in that fee "
+    "when the page states it. When the page shows $ or HK$ and no other "
+    "currency, currency is HKD. day_of_week is 0-6 (Sunday is 0); "
     "start_time and end_time are HH:MM in Asia/Hong_Kong. Write locations, "
     "activities, pricing, and schedules before organization. Keep descriptions under "
     "200 characters. region, district, and neighbourhood are the area names on the "
@@ -40,7 +43,8 @@ MODEL_INSTRUCTIONS = (
     '"category_name": "...", "category_words": "...", "age_min": 6, "age_max": 12, '
     '"confidence": 0.9, "url": "...", "quote": "..."}], '
     '"pricing": [{"activity_name": "...", "location_address": "...", '
-    '"pricing_type": "per_sessions", "amount": "2400", "currency": "HKD", '
+    '"pricing_type": "per_sessions", "sessions_count": 12, "amount": "2400", '
+    '"currency": "HKD", '
     '"confidence": 0.9, "url": "...", "quote": "..."}], '
     '"schedules": [{"activity_name": "...", "location_address": "...", '
     '"url": "...", "quote": "...", "entries": [{"day_of_week": 3, '

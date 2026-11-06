@@ -369,6 +369,10 @@ export interface paths {
          *     counts, and `changed_since_crawl` when apply would refuse.
          *     Blank fields and media URLs are omitted. The crawl snapshot
          *     used to detect a later edit stays on the stored proposal.
+         *     Each pending price or schedule includes `blockers`: the
+         *     reasons apply would refuse that row, such as a missing term
+         *     length, activity, or venue. A pending activity or venue in
+         *     the same run counts as present.
          */
         get: {
             parameters: {
@@ -497,7 +501,12 @@ export interface paths {
          *     pricing, then schedules. Each proposal is saved on its own, so
          *     one failure does not undo the others. `overrides` is keyed by
          *     proposal id and may set `area_id`, `category_id`, `age_min`,
-         *     `age_max`, or `location_id`. Each id returns its own result.
+         *     `age_max`, `location_id`, `pricing_type`, `amount`, `currency`,
+         *     or `sessions_count`. A pricing override replaces the stored
+         *     proposal field for that apply and does not rewrite the
+         *     proposal. `sessions_count` is required when the applied type
+         *     is `per_sessions`. Each id returns its own result, including
+         *     `error` when that row was refused.
          *     Nothing is applied automatically. When at least one proposal
          *     is applied, the response includes `data_quality_run_id` for
          *     the checks selected in import settings. Locations is included

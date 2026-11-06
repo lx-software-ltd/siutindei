@@ -357,3 +357,65 @@ describe('ProposalTable media preview', () => {
     expect(screen.queryByRole('img', { name: MEDIA_URL })).not.toBeInTheDocument();
   });
 });
+
+describe('pricing proposal fields', () => {
+  it('asks for the term length and hides it for another pricing type', () => {
+    const onOverride = vi.fn();
+    const row = proposal({
+      id: 'price-1',
+      section: 'Pricing',
+      kind: 'create_pricing',
+      label: 'Price · Painting',
+      proposed_value: {
+        activity_name: 'Painting',
+        pricing_type: 'per_sessions',
+        amount: '500',
+        currency: 'USD',
+        location_address: '',
+      },
+      blockers: [
+        {
+          field: 'sessions_count',
+          message: 'Add the number of classes for this term price',
+        },
+      ],
+    });
+    const { rerender } = render(
+      <ProposalTable
+        rows={[row]}
+        venues={[{ id: 'venue-1', address: '1 Test Street' }]}
+        selected={['price-1']}
+        overrides={{}}
+        applyErrors={{ 'price-1': 'This change could not be saved.' }}
+        onToggle={() => undefined}
+        onOverride={onOverride}
+      />
+    );
+    expect(
+      screen.getByText('Add the number of classes for this term price')
+    ).toBeVisible();
+    expect(screen.getByText('This change could not be saved.')).toBeVisible();
+    expect(screen.queryByLabelText('Venue')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Classes in the term'), {
+      target: { value: '8' },
+    });
+    expect(onOverride).toHaveBeenCalledWith(
+      'price-1',
+      expect.objectContaining({ sessions_count: 8 })
+    );
+    rerender(
+      <ProposalTable
+        rows={[row]}
+        venues={[{ id: 'venue-1', address: '1 Test Street' }]}
+        selected={['price-1']}
+        overrides={{ 'price-1': { pricing_type: 'per_class', sessions_count: 8 } }}
+        onToggle={() => undefined}
+        onOverride={onOverride}
+      />
+    );
+    expect(screen.queryByLabelText('Classes in the term')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Add the number of classes for this term price')
+    ).not.toBeInTheDocument();
+  });
+});

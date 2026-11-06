@@ -587,7 +587,8 @@ paths:
       description: |
         Full-access `crud` keys only. Same response as
         `GET /v1/admin/organizations/{id}/enrichment`, including a
-        live `current_value` for display. A `read` key
+        live `current_value` for display and `blockers` on a pending
+        price or schedule. A `read` key
         and an organization-scoped key receive `403`, including when
         the key's organization is the target. Nothing is written to
         the catalog.

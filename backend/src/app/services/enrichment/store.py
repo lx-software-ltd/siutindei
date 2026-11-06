@@ -24,6 +24,7 @@ from app.db.models.organization import Organization
 from app.exceptions import AppError, NotFoundError, ValidationError
 from app.services.enrichment.constants import STALE_RUN_MINUTES
 from app.services.enrichment.match import display_current
+from app.services.enrichment.row_blockers import row_blockers
 
 _DEFAULT_LIMIT = Decimal("25")
 
@@ -295,6 +296,8 @@ def serialize_proposal(
     activity_names: list[str] | None = None,
     pricing_count: int = 0,
     schedule_count: int = 0,
+    blocker_names: list[str] | None = None,
+    blocker_venues: list[Any] | None = None,
 ) -> dict[str, Any]:
     proposed = row.proposed_value if isinstance(row.proposed_value, dict) else {}
     current = row.current_value
@@ -323,6 +326,15 @@ def serialize_proposal(
         "evidence": row.evidence,
         "status": row.status,
         "copyright_notice": proposed.get("copyright_notice"),
+        "blockers": row_blockers(
+            row.kind,
+            proposed,
+            status=row.status,
+            activity_names=(
+                list(activity_names or []) if blocker_names is None else blocker_names
+            ),
+            venues=list(venues or []) if blocker_venues is None else blocker_venues,
+        ),
     }
 
 

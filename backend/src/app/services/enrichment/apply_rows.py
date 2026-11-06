@@ -30,7 +30,7 @@ from app.db.models import (
     Organization,
 )
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
-from app.db.models.enums import PricingType, ScheduleType
+from app.db.models.enums import ScheduleType
 from app.db.models.org_enrichment import OrgEnrichmentProposal
 from app.exceptions import ValidationError
 from app.services.area_assignment import get_leaf
@@ -46,6 +46,13 @@ from app.services.description_boilerplate import description_is_import_boilerpla
 from app.services.enrichment.apply_media import apply_media
 from app.services.enrichment.apply_names import apply_name, apply_name_translation
 from app.services.enrichment.refine import bare_category_name
+from app.services.enrichment.row_blockers import (
+    PRICE_ACTIVITY,
+    PRICE_VENUE,
+    SCHEDULE_ACTIVITY,
+    SCHEDULE_VENUE,
+    pricing_fields,
+)
 
 HK = ZoneInfo("Asia/Hong_Kong")
 CopyImage = Any
@@ -274,34 +281,19 @@ def _apply_pricing(
         session, org.id, str(proposed.get("activity_name") or "")
     )
     location = _resolve_venue(session, org.id, proposed, override)
-    if activity is None or location is None:
-        raise ValidationError("activity and venue are required", field="location_id")
-    pricing_type = str(proposed.get("pricing_type") or "per_class")
-    try:
-        kind = PricingType(pricing_type)
-    except ValueError as exc:
-        raise ValidationError(
-            "pricing_type is not supported", field="pricing_type"
-        ) from exc
-    try:
-        amount = Decimal(str(proposed.get("amount") or "0"))
-    except (InvalidOperation, ValueError) as exc:
-        raise ValidationError("amount must be a number", field="amount") from exc
-    if not amount.is_finite() or amount < 0:
-        raise ValidationError("amount must be a number", field="amount")
-    sessions = proposed.get("sessions_count")
-    if kind == PricingType.PER_SESSIONS and not sessions:
-        raise ValidationError("sessions_count is required", field="sessions_count")
+    if activity is None:
+        raise ValidationError(PRICE_ACTIVITY, field="activity_name")
+    if location is None:
+        raise ValidationError(PRICE_VENUE, field="location_id")
+    fields = pricing_fields(proposed, override)
     session.add(
         ActivityPricing(
             activity_id=activity.id,
             location_id=location.id,
-            pricing_type=kind,
-            amount=amount,
-            currency=str(proposed.get("currency") or "HKD"),
-            sessions_count=_whole_number(sessions, "sessions_count")
-            if sessions
-            else None,
+            pricing_type=fields["pricing_type"],
+            amount=fields["amount"],
+            currency=fields["currency"],
+            sessions_count=fields["sessions_count"],
             free_trial_class_offered=bool(proposed.get("free_trial_class_offered")),
         )
     )
@@ -317,8 +309,10 @@ def _apply_schedule(
         session, org.id, str(proposed.get("activity_name") or "")
     )
     location = _resolve_venue(session, org.id, proposed, override)
-    if activity is None or location is None:
-        raise ValidationError("activity and venue are required", field="location_id")
+    if activity is None:
+        raise ValidationError(SCHEDULE_ACTIVITY, field="activity_name")
+    if location is None:
+        raise ValidationError(SCHEDULE_VENUE, field="location_id")
     parsed = _schedule_times(proposed.get("entries"))
     schedule = ActivitySchedule(
         activity_id=activity.id,

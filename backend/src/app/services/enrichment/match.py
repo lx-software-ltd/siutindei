@@ -12,6 +12,7 @@ from app.api.admin_validators import schedule_languages
 from app.db.models import ActivityPricing, ActivitySchedule, Organization
 from app.db.models.org_enrichment import OrgEnrichmentProposal
 from app.services.enrichment.apply_rows import activity_by_name, location_by_address
+from app.services.enrichment.row_blockers import positive_sessions
 
 
 def prepare_proposals(
@@ -242,6 +243,7 @@ def _pricing_exists(
     except (InvalidOperation, ValueError):
         return False
     pricing_type = str(proposed.get("pricing_type") or "per_class")
+    wanted_sessions = positive_sessions(proposed.get("sessions_count"))
     for row in session.scalars(
         select(ActivityPricing).where(
             ActivityPricing.activity_id == activity.id,
@@ -256,6 +258,7 @@ def _pricing_exists(
             )
             == pricing_type
             and Decimal(str(row.amount)) == amount
+            and (wanted_sessions is None or row.sessions_count == wanted_sessions)
         ):
             return True
     return False

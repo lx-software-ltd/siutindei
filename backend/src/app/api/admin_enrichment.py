@@ -24,6 +24,7 @@ from app.db.models.org_enrichment import OrgEnrichmentProposal
 from app.exceptions import AppError, ValidationError
 from app.services.enrichment.apply import apply_proposals, dismiss_proposals
 from app.services.enrichment.queue import enqueue_enrichment
+from app.services.enrichment.row_blockers import blocker_context
 from app.services.enrichment.store import (
     expire_stale_runs,
     latest_run,
@@ -190,6 +191,9 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
                 )
                 or 0
             )
+            blocker_names, blocker_venues = blocker_context(
+                list(proposals), activity_names, list(venues)
+            )
             payload = {
                 "run": serialize_run(run),
                 "proposals": [
@@ -200,6 +204,8 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
                         activity_names=activity_names,
                         pricing_count=pricing_count,
                         schedule_count=schedule_count,
+                        blocker_names=blocker_names,
+                        blocker_venues=blocker_venues,
                     )
                     for row in proposals
                 ],

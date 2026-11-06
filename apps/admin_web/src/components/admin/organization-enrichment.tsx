@@ -31,6 +31,7 @@ import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { StatusBadge } from '../ui/status-badge';
 import { Textarea } from '../ui/textarea';
+import { chosenEnrichmentOverrides, firstBlockerMessage } from '../../lib/enrichment-overrides';
 import {
   ProposalTable,
   selectionAfterToggle,
@@ -409,6 +410,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
   const [notice, setNotice] = useState('');
   const [qualityRunId, setQualityRunId] = useState('');
   const [actionError, setActionError] = useState('');
+  const [applyErrors, setApplyErrors] = useState<Record<string, string>>({});
   const runId = query.data?.run?.id ?? '';
   const enrichmentKey = `${orgId}\0${runId}`;
   const [seenEnrichmentKey, setSeenEnrichmentKey] = useState(enrichmentKey);
@@ -434,6 +436,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
     setNotice('');
     setQualityRunId('');
     setActionError('');
+    setApplyErrors({});
   } else if (leafletKey !== seenLeafletIds) {
     const incoming = leafletPresetIds(
       proposals,
@@ -461,33 +464,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
   }
 
   function chosenOverrides() {
-    const body: Record<string, EnrichmentOverride> = {};
-    for (const id of selected) {
-      const draft = overrides[id];
-      if (!draft) {
-        continue;
-      }
-      const cleaned: EnrichmentOverride = {};
-      if (draft.area_id) {
-        cleaned.area_id = draft.area_id;
-      }
-      if (draft.category_id) {
-        cleaned.category_id = draft.category_id;
-      }
-      if (draft.location_id) {
-        cleaned.location_id = draft.location_id;
-      }
-      if (draft.age_min !== undefined && !Number.isNaN(draft.age_min)) {
-        cleaned.age_min = draft.age_min;
-      }
-      if (draft.age_max !== undefined && !Number.isNaN(draft.age_max)) {
-        cleaned.age_max = draft.age_max;
-      }
-      if (Object.keys(cleaned).length > 0) {
-        body[id] = cleaned;
-      }
-    }
-    return body;
+    return chosenEnrichmentOverrides(selected, overrides, proposals);
   }
 
   async function decide(action: 'apply' | 'dismiss') {
@@ -508,6 +485,13 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
         action === 'apply' ? chosenOverrides() : undefined
       );
       const failed = result.results.filter((row) => row.status === 'error');
+      const nextErrors: Record<string, string> = {};
+      for (const row of failed) {
+        if (row.error) {
+          nextErrors[row.id] = row.error;
+        }
+      }
+      setApplyErrors(nextErrors);
       setNotice(
         failed.length
           ? `${result.results.length - failed.length} updated. ${failed.length} need another look.`
@@ -575,7 +559,8 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
               title={
                 scope.detailsDirty
                   ? 'Save the Details form before applying'
-                  : 'Apply selected'
+                  : firstBlockerMessage(selected, proposals, overrides) ||
+                    'Apply selected'
               }
               onClick={() => void decide('apply')}
             >
@@ -634,10 +619,19 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
               venues={query.data?.venues ?? []}
               selected={selected}
               overrides={overrides}
+              applyErrors={applyErrors}
               onToggle={toggle}
-              onOverride={(id, patch) =>
-                setOverrides((current) => ({ ...current, [id]: patch }))
-              }
+              onOverride={(id, patch) => {
+                setOverrides((current) => ({ ...current, [id]: patch }));
+                setApplyErrors((current) => {
+                  if (!current[id]) {
+                    return current;
+                  }
+                  const next = { ...current };
+                  delete next[id];
+                  return next;
+                });
+              }}
             />
           </section>
         );

@@ -6,12 +6,13 @@ import json
 import re
 from typing import Any
 
+from app.db.models.enums import PricingType
 from app.services.enrichment.logos import media_proposals
 from app.services.enrichment.parse import quote_supported
 from app.services.enrichment.sheet import checked_value, schedule_entries, section_rows
 
 _AMOUNT_RE = re.compile(r"\d+(?:[.,]\d+)?")
-_PRICING_TYPES = {"per_class", "per_sessions", "per_hour", "per_day", "free"}
+_PRICING_TYPES = {item.value for item in PricingType}
 
 
 def proposals_from_pages(
@@ -137,6 +138,11 @@ def validate_model_sheet(
             "currency": str((row.get("currency") or {}).get("value") or "HKD")[:8]
             or "HKD",
         }
+        sessions = checked_value(row.get("sessions_count"), pages)
+        if sessions is not None and str(sessions["value"]).isdigit():
+            count = int(sessions["value"])
+            if count > 0:
+                proposed["sessions_count"] = count
         found.append(
             _record(
                 "Pricing",

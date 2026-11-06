@@ -1162,6 +1162,119 @@ test.describe('Organizations Panel', () => {
     });
   });
 
+  test('applies a leaflet term price after the class count is filled', async ({
+    adminPage,
+  }) => {
+    let applyBody: { ids?: string[]; overrides?: Record<string, unknown> } = {};
+    await adminPage.route(
+      '**/api/mock/**/admin/organizations/org-1/enrichment',
+      async (route) => {
+        if (route.request().method() !== 'GET') {
+          await route.fallback();
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            run: {
+              id: 'run-leaflet-price',
+              org_id: 'org-1',
+              status: 'ready',
+              source: 'leaflet',
+              seed_url: 'https://leaflets.example/term.jpg',
+              pages_fetched: 1,
+              bytes_fetched: 120,
+              model: null,
+              cost_usd: 0.01,
+              error: null,
+              created_at: new Date().toISOString(),
+              finished_at: new Date().toISOString(),
+            },
+            proposals: [
+              {
+                id: 'prop-price',
+                section: 'Pricing',
+                kind: 'create_pricing',
+                field: null,
+                label: 'Price · Painting Workshops',
+                current_value: null,
+                proposed_value: {
+                  activity_name: 'Painting Workshops',
+                  pricing_type: 'per_sessions',
+                  amount: '500',
+                  currency: 'USD',
+                  location_address: '',
+                },
+                confidence: 0.5,
+                unverified: true,
+                evidence: [],
+                status: 'pending',
+                blockers: [
+                  {
+                    field: 'sessions_count',
+                    message: 'Add the number of classes for this term price',
+                  },
+                ],
+              },
+            ],
+            venues: [{ id: 'venue-1', address: '1 Test Street', status: 'open' }],
+          }),
+        });
+      }
+    );
+    await adminPage.route(
+      '**/api/mock/**/admin/organizations/org-1/enrichment/apply',
+      async (route) => {
+        applyBody = route.request().postDataJSON();
+        const sessions = applyBody.overrides?.['prop-price'] as
+          | { sessions_count?: number }
+          | undefined;
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            results: [
+              sessions?.sessions_count
+                ? { id: 'prop-price', status: 'applied' }
+                : {
+                    id: 'prop-price',
+                    status: 'error',
+                    error: 'This change could not be saved.',
+                  },
+            ],
+          }),
+        });
+      }
+    );
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    const card = adminPage.getByTestId('leaflet-enrichment');
+    await expect(card.getByRole('heading', { name: 'Leaflet enrichment' })).toBeVisible();
+    await expect(
+      card.getByText('Add the number of classes for this term price')
+    ).toBeVisible();
+    await card.getByRole('checkbox', { name: 'Select Price · Painting Workshops' }).check();
+    await expect(card.getByRole('button', { name: 'Apply selected' })).toHaveAttribute(
+      'title',
+      'Add the number of classes for this term price'
+    );
+    await card.getByRole('button', { name: 'Apply selected' }).click();
+    await expect(card.getByText('This change could not be saved.')).toBeVisible();
+    await card.getByLabel('Classes in the term').fill('8');
+    await card.getByLabel('Currency').selectOption('HKD');
+    await card.getByRole('checkbox', { name: 'Select Price · Painting Workshops' }).check();
+    await expect(card.getByRole('button', { name: 'Apply selected' })).toHaveAttribute(
+      'title',
+      'Apply selected'
+    );
+    await card.getByRole('button', { name: 'Apply selected' }).click();
+    await expect(card.getByText('Selected changes were applied.')).toBeVisible();
+    expect(applyBody.overrides?.['prop-price']).toEqual({
+      sessions_count: 8,
+      currency: 'HKD',
+    });
+  });
+
   test('says the model is reading once the pages are stored', async ({
     adminPage,
   }) => {

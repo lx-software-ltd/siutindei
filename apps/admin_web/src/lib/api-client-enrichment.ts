@@ -15,6 +15,11 @@ export interface EnrichmentRun {
   finished_at: string | null;
 }
 
+export interface EnrichmentBlocker {
+  field: string;
+  message: string;
+}
+
 export interface EnrichmentProposal {
   id: string;
   section: string;
@@ -28,6 +33,7 @@ export interface EnrichmentProposal {
   evidence: Array<{ url?: string; quote?: string }>;
   status: string;
   copyright_notice?: string | null;
+  blockers?: EnrichmentBlocker[];
 }
 
 export interface EnrichmentRead {
@@ -111,6 +117,10 @@ export interface EnrichmentOverride {
   age_min?: number;
   age_max?: number;
   location_id?: string;
+  pricing_type?: string;
+  amount?: string;
+  currency?: string;
+  sessions_count?: number;
 }
 
 export interface EnrichmentSettings {
