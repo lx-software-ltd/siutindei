@@ -63,6 +63,51 @@ export function pinMoveDelay(
   return TYPED_PIN_DELAY_MS;
 }
 
+export function coordinatesChanged(
+  current: { lat: string; lng: string },
+  opened: { lat: string; lng: string }
+): boolean {
+  return current.lat.trim() !== opened.lat.trim() || current.lng.trim() !== opened.lng.trim();
+}
+
+/**
+ * Coordinates loaded for this open editor. Stays on the opened record
+ * while the fields change, and follows a save once the fields match it.
+ */
+export function nextOpenedCoordinates(
+  current: { key: string; lat: string; lng: string } | null,
+  openKey: string | null,
+  saved: { lat: string; lng: string } | null,
+  form: { lat: string; lng: string }
+): { key: string; lat: string; lng: string } | null {
+  if (!openKey) {
+    return null;
+  }
+  if (openKey === 'draft') {
+    if (current?.key === 'draft') {
+      return current;
+    }
+    if (form.lat.trim() !== '' || form.lng.trim() !== '') {
+      return current;
+    }
+    return { key: 'draft', lat: '', lng: '' };
+  }
+  if (!saved) {
+    return current;
+  }
+  if (form.lat !== saved.lat || form.lng !== saved.lng) {
+    return current;
+  }
+  if (
+    current?.key === openKey &&
+    current.lat === saved.lat &&
+    current.lng === saved.lng
+  ) {
+    return current;
+  }
+  return { key: openKey, lat: saved.lat, lng: saved.lng };
+}
+
 function coordinateBlank(value: unknown): boolean {
   if (value == null) {
     return true;

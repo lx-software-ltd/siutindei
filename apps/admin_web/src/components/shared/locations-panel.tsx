@@ -12,7 +12,9 @@ import { areaAncestry, pinOutsideDistrict } from '../../lib/location-districts';
 import {
   buildAppleMapsUrl,
   buildGoogleMapsUrl,
+  coordinatesChanged,
   locationCoordinates,
+  nextOpenedCoordinates,
 } from '../../lib/location-maps';
 import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/api-client-admin';
@@ -219,6 +221,11 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   };
 
   const [statusError, setStatusError] = useState('');
+  const [openedPin, setOpenedPin] = useState<{
+    key: string;
+    lat: string;
+    lng: string;
+  } | null>(null);
 
   const handleAreaChange = (areaId: string, _chain: GeographicAreaNode[]) => {
     markTouched('area_id');
@@ -380,6 +387,25 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
       areaAncestry(tree, editorForm.area_id)
     );
   }, [editorForm.area_id, editorForm.lat, editorForm.lng, tree]);
+  const openKey = panel.editingId ?? (panel.isDraftOpen ? 'draft' : null);
+  const openedSource = panel.editingId
+    ? panel.items.find((item) => item.id === panel.editingId)
+    : undefined;
+  const savedPin = openedSource
+    ? { lat: itemToForm(openedSource).lat, lng: itemToForm(openedSource).lng }
+    : null;
+  const resolvedPin = nextOpenedCoordinates(openedPin, openKey, savedPin, {
+    lat: panel.formState.lat,
+    lng: panel.formState.lng,
+  });
+  if (resolvedPin !== openedPin) {
+    setOpenedPin(resolvedPin);
+  }
+  const coordinatesDirty =
+    resolvedPin !== null &&
+    resolvedPin.key === openKey &&
+    !detailsLocked &&
+    coordinatesChanged(editorForm, resolvedPin);
 
   const detail = (
     <AdminEditorPanel
@@ -537,8 +563,28 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
           }));
         }}
       />
-      {outsideDistrict ? (
-        <p className='text-sm text-ink-700'>Pin is outside this district.</p>
+      {outsideDistrict || coordinatesDirty ? (
+        <div className='flex items-baseline gap-3'>
+          {outsideDistrict ? (
+            <p className='text-sm text-ink-700'>Pin is outside this district.</p>
+          ) : null}
+          {coordinatesDirty ? (
+            <button
+              type='button'
+              className='admin-focus shrink-0 text-sm text-ink-700 underline underline-offset-2 hover:text-ink-900'
+              aria-label='Reset coordinates'
+              onClick={() => {
+                panel.setFormState((prev) => ({
+                  ...prev,
+                  lat: resolvedPin?.lat ?? prev.lat,
+                  lng: resolvedPin?.lng ?? prev.lng,
+                }));
+              }}
+            >
+              Reset
+            </button>
+          ) : null}
+        </div>
       ) : null}
       </div>
       </VersionFields>

@@ -19,8 +19,10 @@ and does not allow a drag.
 
 Empty, partial, invalid, and locked coordinates each have their own
 sentence. A pin outside the selected Hong Kong district says so.
-With no cloud map id, the editor uses a standard marker so Google's
-demo watermark stays off that map.
+On that same line, Reset puts latitude and longitude back to the
+values loaded when the record was opened. Saving adopts the saved
+coordinates as that baseline. With no cloud map id, the editor uses
+a standard marker so Google's demo watermark stays off that map.
 
 ## Non-goals
 

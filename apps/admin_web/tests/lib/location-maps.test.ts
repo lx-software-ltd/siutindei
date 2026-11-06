@@ -5,10 +5,12 @@ import {
   buildAppleMapsUrl,
   buildGoogleMapsUrl,
   coordinateFromPosition,
+  coordinatesChanged,
   formatMapCoordinate,
   googleMapsPinUrl,
   locationCoordinates,
   locationPinHint,
+  nextOpenedCoordinates,
   pinMoveDelay,
   TYPED_PIN_DELAY_MS,
 } from '@/lib/location-maps';
@@ -146,6 +148,56 @@ describe('pinMoveDelay', () => {
       TYPED_PIN_DELAY_MS
     );
     expect(pinMoveDelay(null, { lat: 22.2, lng: 114.175 })).toBe(TYPED_PIN_DELAY_MS);
+  });
+});
+
+describe('nextOpenedCoordinates', () => {
+  const saved = { lat: '22.278', lng: '114.175' };
+
+  it('remembers the coordinates once the opened record is in the form', () => {
+    expect(nextOpenedCoordinates(null, 'loc-1', saved, { lat: '', lng: '' })).toBeNull();
+    const opened = nextOpenedCoordinates(null, 'loc-1', saved, saved);
+    expect(opened).toEqual({ key: 'loc-1', lat: '22.278', lng: '114.175' });
+    expect(nextOpenedCoordinates(opened, 'loc-1', saved, saved)).toBe(opened);
+  });
+
+  it('keeps the opened coordinates while the fields change', () => {
+    const opened = { key: 'loc-1', lat: '22.278', lng: '114.175' };
+    expect(
+      nextOpenedCoordinates(opened, 'loc-1', saved, { lat: '22.5', lng: '114.175' })
+    ).toBe(opened);
+    expect(coordinatesChanged({ lat: '22.5', lng: '114.175' }, opened)).toBe(true);
+    expect(coordinatesChanged(saved, opened)).toBe(false);
+  });
+
+  it('adopts coordinates after a save updates the record and the form', () => {
+    const opened = { key: 'loc-1', lat: '22.278', lng: '114.175' };
+    const savedNext = { lat: '22.5', lng: '114.176' };
+    expect(
+      nextOpenedCoordinates(opened, 'loc-1', savedNext, { lat: '22.5', lng: '114.175' })
+    ).toBe(opened);
+    expect(nextOpenedCoordinates(opened, 'loc-1', savedNext, savedNext)).toEqual({
+      key: 'loc-1',
+      lat: '22.5',
+      lng: '114.176',
+    });
+  });
+
+  it('uses empty coordinates for a new location after the form clears', () => {
+    const previous = { key: 'loc-1', lat: '22.278', lng: '114.175' };
+    expect(
+      nextOpenedCoordinates(previous, 'draft', null, { lat: '22.278', lng: '114.175' })
+    ).toBe(previous);
+    const draft = nextOpenedCoordinates(previous, 'draft', null, { lat: '', lng: '' });
+    expect(draft).toEqual({ key: 'draft', lat: '', lng: '' });
+    expect(nextOpenedCoordinates(draft, 'draft', null, { lat: '22.2', lng: '114.1' })).toBe(
+      draft
+    );
+  });
+
+  it('clears the baseline when the editor closes', () => {
+    const opened = { key: 'loc-1', lat: '22.278', lng: '114.175' };
+    expect(nextOpenedCoordinates(opened, null, saved, saved)).toBeNull();
   });
 });
 
