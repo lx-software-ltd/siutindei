@@ -36,6 +36,66 @@ export function formatMapCoordinate(value: number): string {
   return value.toFixed(6).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
 }
 
+/** How long a typed coordinate waits before the pin follows it. */
+export const TYPED_PIN_DELAY_MS = 400;
+
+export function coordinatesMatch(
+  left: { lat: number; lng: number },
+  right: { lat: number; lng: number }
+): boolean {
+  return (
+    Math.abs(left.lat - right.lat) < 1e-6 &&
+    Math.abs(left.lng - right.lng) < 1e-6
+  );
+}
+
+/**
+ * Null when the pin is already on `next`, including a drag that just
+ * landed. A typed change waits so each keystroke does not recenter.
+ */
+export function pinMoveDelay(
+  current: { lat: number; lng: number } | null,
+  next: { lat: number; lng: number }
+): number | null {
+  if (current && coordinatesMatch(current, next)) {
+    return null;
+  }
+  return TYPED_PIN_DELAY_MS;
+}
+
+function coordinateBlank(value: unknown): boolean {
+  if (value == null) {
+    return true;
+  }
+  return typeof value === 'string' && value.trim() === '';
+}
+
+/** Sentence shown when the editor cannot place a pin. Null when it can. */
+export function locationPinHint(
+  lat: unknown,
+  lng: unknown,
+  readOnly: boolean
+): string | null {
+  if (locationCoordinates({ lat, lng })) {
+    return null;
+  }
+  const latBlank = coordinateBlank(lat);
+  const lngBlank = coordinateBlank(lng);
+  if (readOnly) {
+    if (latBlank && lngBlank) {
+      return 'This location has no latitude or longitude.';
+    }
+    return 'Latitude or longitude is not a valid coordinate.';
+  }
+  if (latBlank && lngBlank) {
+    return 'Enter latitude and longitude to place the pin.';
+  }
+  if (latBlank || lngBlank) {
+    return 'Enter both latitude and longitude to place the pin.';
+  }
+  return 'Latitude must be from -90 to 90 and longitude from -180 to 180.';
+}
+
 export function coordinateFromPosition(
   position: unknown,
 ): { lat: number; lng: number } | null {

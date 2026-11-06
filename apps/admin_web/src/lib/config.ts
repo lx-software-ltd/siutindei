@@ -59,9 +59,17 @@ export function getGoogleMapsApiKey() {
   return appConfig.googleMapsApiKey.trim();
 }
 
+/**
+ * Cloud map id, or empty. The location editor uses a standard marker
+ * when this is empty so Google's demo watermark stays off that map.
+ */
+export function getConfiguredGoogleMapsMapId() {
+  return appConfig.googleMapsMapId.trim();
+}
+
 /** Advanced markers require a map id. The demo id is Google's published fallback. */
 export function getGoogleMapsMapId() {
-  return appConfig.googleMapsMapId.trim() || 'DEMO_MAP_ID';
+  return getConfiguredGoogleMapsMapId() || 'DEMO_MAP_ID';
 }
 
 export function getApiBaseUrl() {

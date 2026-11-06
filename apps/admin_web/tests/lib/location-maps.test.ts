@@ -8,6 +8,9 @@ import {
   formatMapCoordinate,
   googleMapsPinUrl,
   locationCoordinates,
+  locationPinHint,
+  pinMoveDelay,
+  TYPED_PIN_DELAY_MS,
 } from '@/lib/location-maps';
 
 const GOOGLE_PIN = 'https://www.google.com/maps/search/?api=1&query=22.278,114.175';
@@ -127,6 +130,49 @@ describe('locationCoordinates', () => {
       lng: 114.175,
     });
     expect(locationCoordinates({ lat: '', lng: '114.175' })).toBeNull();
+  });
+});
+
+describe('pinMoveDelay', () => {
+  it('leaves a pin that is already on the coordinate', () => {
+    expect(pinMoveDelay({ lat: 22.279, lng: 114.176 }, { lat: 22.279, lng: 114.176 })).toBeNull();
+    expect(
+      pinMoveDelay({ lat: 22.2790004, lng: 114.176 }, { lat: 22.279, lng: 114.176 })
+    ).toBeNull();
+  });
+
+  it('waits before following a typed coordinate', () => {
+    expect(pinMoveDelay({ lat: 22.278, lng: 114.175 }, { lat: 22.2, lng: 114.175 })).toBe(
+      TYPED_PIN_DELAY_MS
+    );
+    expect(pinMoveDelay(null, { lat: 22.2, lng: 114.175 })).toBe(TYPED_PIN_DELAY_MS);
+  });
+});
+
+describe('locationPinHint', () => {
+  it('stays quiet when the pin can be placed', () => {
+    expect(locationPinHint('22.278', '114.175', false)).toBeNull();
+  });
+
+  it('asks for both coordinates while the fields are editable', () => {
+    expect(locationPinHint('', '', false)).toBe(
+      'Enter latitude and longitude to place the pin.'
+    );
+    expect(locationPinHint('', '114.175', false)).toBe(
+      'Enter both latitude and longitude to place the pin.'
+    );
+    expect(locationPinHint('91', '114.175', false)).toBe(
+      'Latitude must be from -90 to 90 and longitude from -180 to 180.'
+    );
+  });
+
+  it('does not ask a locked editor to type', () => {
+    expect(locationPinHint('', '', true)).toBe(
+      'This location has no latitude or longitude.'
+    );
+    expect(locationPinHint('91', '114.175', true)).toBe(
+      'Latitude or longitude is not a valid coordinate.'
+    );
   });
 });
 

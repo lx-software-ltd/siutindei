@@ -71,6 +71,19 @@ async function openHarbourHall(adminPage: Page) {
   return adminPage.getByTestId('admin-editor-panel');
 }
 
+async function dragPin(pin: ReturnType<Page['locator']>) {
+  const box = await pin.boundingBox();
+  if (!box) {
+    throw new Error('location pin has no box');
+  }
+  const startX = box.x + box.width / 2;
+  const startY = box.y + box.height / 2;
+  await pin.page().mouse.move(startX, startY);
+  await pin.page().mouse.down();
+  await pin.page().mouse.move(startX + 28, startY + 18, { steps: 6 });
+  await pin.page().mouse.up();
+}
+
 test.describe('Locations Panel', () => {
   test('locks a closed location and saves the stored address', async ({
     adminPage,
@@ -186,27 +199,58 @@ test.describe('Locations Panel', () => {
     const pin = map.getByRole('button', { name: 'Location pin' });
     await expect(pin).toHaveAttribute('data-lat', '22.278');
     await expect(pin).toHaveAttribute('data-lng', '114.175');
+    await expect(map.getByText('For development purposes only')).toHaveCount(0);
+    await expect(editor.getByText('Pin is outside this district.')).toHaveCount(0);
     const latField = editor.getByLabel('Latitude');
     const lngField = editor.getByLabel('Longitude');
     await expect(latField).toBeDisabled();
+    await dragPin(pin);
     await pin.click();
     await expect(latField).toHaveValue('22.278');
     await expect(lngField).toHaveValue('114.175');
 
     await editor.getByLabel('Status').selectOption('open');
     await pin.click();
+    await expect(latField).toHaveValue('22.278');
+    await dragPin(pin);
     await expect(latField).toHaveValue('22.279');
     await expect(lngField).toHaveValue('114.176');
     await expect(pin).toHaveAttribute('data-lat', '22.279');
     await expect(pin).toHaveAttribute('data-lng', '114.176');
 
+    await latField.fill('22.2');
+    expect(await pin.getAttribute('data-lat')).toBe('22.279');
+    await expect(pin).toHaveAttribute('data-lat', '22.2');
+    await expect(editor.getByText('Pin is outside this district.')).toHaveCount(0);
+
     await latField.fill('22.5');
+    await expect(editor.getByText('Pin is outside this district.')).toBeVisible();
     await expect(pin).toHaveAttribute('data-lat', '22.5');
+    await editor.getByText('Pin is outside this district.').scrollIntoViewIfNeeded();
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/location-pin-outside-district.png',
+    });
+
+    await latField.fill('91');
+    await expect(
+      editor.getByText(
+        'Latitude must be from -90 to 90 and longitude from -180 to 180.'
+      )
+    ).toBeVisible();
+    await expect(editor.getByText('Pin is outside this district.')).toHaveCount(0);
+    await expect(map).toHaveCount(0);
     await latField.fill('');
+    await expect(
+      editor.getByText('Enter both latitude and longitude to place the pin.')
+    ).toBeVisible();
+    await lngField.fill('');
     await expect(
       editor.getByText('Enter latitude and longitude to place the pin.')
     ).toBeVisible();
     await expect(map).toHaveCount(0);
+    await adminPage.screenshot({
+      path: '/opt/cursor/artifacts/location-pin-empty-coordinates.png',
+    });
   });
 
   test('shows an older version as open', async ({ adminPage }) => {
