@@ -35,6 +35,21 @@ def leftover_chinese_boilerplate(translations: Mapping[str, str] | None) -> bool
     )
 
 
+def source_attribution_message(
+    source: str | None,
+    description: str | None,
+    translations: Mapping[str, str] | None,
+) -> str | None:
+    """Readiness copy when the description is still import filler or a source line."""
+    if source == "template" and description_is_import_boilerplate(description):
+        return "Description is a template"
+    if leftover_chinese_boilerplate(translations):
+        return "Chinese description is a template"
+    if "Source:" in (description or ""):
+        return "Description still contains a source line"
+    return None
+
+
 def omit_import_boilerplate(translations: dict[str, str]) -> dict[str, str]:
     """Drop filler sentences from a language map. Real copy stays."""
     return {
