@@ -15,6 +15,8 @@ import {
   coordinatesChanged,
   locationCoordinates,
   nextOpenedCoordinates,
+  placementChanged,
+  type LocationPlacement,
 } from '../../lib/location-maps';
 import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/api-client-admin';
@@ -112,6 +114,20 @@ const emptyForm: LocationFormState = {
   lat: '',
   lng: '',
 };
+
+function locationFormMatches(
+  form: LocationFormState,
+  saved: LocationFormState
+): boolean {
+  return (
+    form.org_id === saved.org_id &&
+    form.area_id === saved.area_id &&
+    form.name === saved.name &&
+    form.status === saved.status &&
+    form.address === saved.address &&
+    !coordinatesChanged(form, saved)
+  );
+}
 
 function itemToForm(item: Location): LocationFormState {
   return {
@@ -221,11 +237,10 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   };
 
   const [statusError, setStatusError] = useState('');
-  const [openedPin, setOpenedPin] = useState<{
-    key: string;
-    lat: string;
-    lng: string;
-  } | null>(null);
+  const [openedPin, setOpenedPin] = useState<
+    (LocationPlacement & { key: string }) | null
+  >(null);
+  const [pinJump, setPinJump] = useState(0);
 
   const handleAreaChange = (areaId: string, _chain: GeographicAreaNode[]) => {
     markTouched('area_id');
@@ -391,21 +406,47 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   const openedSource = panel.editingId
     ? panel.items.find((item) => item.id === panel.editingId)
     : undefined;
-  const savedPin = openedSource
-    ? { lat: itemToForm(openedSource).lat, lng: itemToForm(openedSource).lng }
-    : null;
-  const resolvedPin = nextOpenedCoordinates(openedPin, openKey, savedPin, {
-    lat: panel.formState.lat,
-    lng: panel.formState.lng,
-  });
+  const savedPlacement = useMemo<LocationPlacement | null>(() => {
+    if (!openedSource) {
+      return null;
+    }
+    const saved = itemToForm(openedSource);
+    return {
+      lat: saved.lat,
+      lng: saved.lng,
+      address: saved.address,
+      area_id: saved.area_id,
+    };
+  }, [openedSource]);
+  const formPlacement = useMemo<LocationPlacement>(
+    () => ({
+      lat: panel.formState.lat,
+      lng: panel.formState.lng,
+      address: panel.formState.address,
+      area_id: panel.formState.area_id,
+    }),
+    [
+      panel.formState.address,
+      panel.formState.area_id,
+      panel.formState.lat,
+      panel.formState.lng,
+    ]
+  );
+  const resolvedPin = nextOpenedCoordinates(
+    openedPin,
+    openKey,
+    savedPlacement,
+    formPlacement
+  );
   if (resolvedPin !== openedPin) {
     setOpenedPin(resolvedPin);
   }
-  const coordinatesDirty =
+  const placementDirty =
     resolvedPin !== null &&
     resolvedPin.key === openKey &&
+    openKey !== 'draft' &&
     !detailsLocked &&
-    coordinatesChanged(editorForm, resolvedPin);
+    placementChanged(editorForm, resolvedPin);
 
   const detail = (
     <AdminEditorPanel
@@ -555,6 +596,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
         lat={editorForm.lat}
         lng={editorForm.lng}
         readOnly={detailsLocked}
+        jumpToken={pinJump}
         onChange={(nextLat, nextLng) => {
           panel.setFormState((prev) => ({
             ...prev,
@@ -563,22 +605,31 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
           }));
         }}
       />
-      {outsideDistrict || coordinatesDirty ? (
+      {outsideDistrict || placementDirty ? (
         <div className='flex items-baseline gap-3'>
           {outsideDistrict ? (
             <p className='text-sm text-ink-700'>Pin is outside this district.</p>
           ) : null}
-          {coordinatesDirty ? (
+          {placementDirty ? (
             <button
               type='button'
               className='admin-focus shrink-0 text-sm text-ink-700 underline underline-offset-2 hover:text-ink-900'
-              aria-label='Reset coordinates'
               onClick={() => {
-                panel.setFormState((prev) => ({
-                  ...prev,
-                  lat: resolvedPin?.lat ?? prev.lat,
-                  lng: resolvedPin?.lng ?? prev.lng,
-                }));
+                if (!resolvedPin) {
+                  return;
+                }
+                const next = {
+                  ...panel.formState,
+                  address: resolvedPin.address,
+                  area_id: resolvedPin.area_id,
+                  lat: resolvedPin.lat,
+                  lng: resolvedPin.lng,
+                };
+                setPinJump((value) => value + 1);
+                panel.setFormState(next);
+                if (openedSource && locationFormMatches(next, itemToForm(openedSource))) {
+                  panel.clearDirty();
+                }
               }}
             >
               Reset

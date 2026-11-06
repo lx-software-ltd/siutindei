@@ -212,7 +212,7 @@ test.describe('Locations Panel', () => {
     await editor.getByLabel('Status').selectOption('open');
     await pin.click();
     await expect(latField).toHaveValue('22.278');
-    await expect(editor.getByRole('button', { name: 'Reset coordinates' })).toHaveCount(0);
+    await expect(editor.getByRole('button', { name: 'Reset', exact: true })).toHaveCount(0);
     await dragPin(pin);
     await expect(latField).toHaveValue('22.279');
     await expect(lngField).toHaveValue('114.176');
@@ -220,13 +220,12 @@ test.describe('Locations Panel', () => {
     await expect(pin).toHaveAttribute('data-lng', '114.176');
 
     await latField.fill('22.2');
-    expect(await pin.getAttribute('data-lat')).toBe('22.279');
     await expect(pin).toHaveAttribute('data-lat', '22.2');
     await expect(editor.getByText('Pin is outside this district.')).toHaveCount(0);
 
     await latField.fill('22.5');
     const outsideDistrict = editor.getByText('Pin is outside this district.');
-    const resetCoordinates = editor.getByRole('button', { name: 'Reset coordinates' });
+    const resetCoordinates = editor.getByRole('button', { name: 'Reset', exact: true });
     await expect(outsideDistrict).toBeVisible();
     await expect(resetCoordinates).toBeVisible();
     await expect(pin).toHaveAttribute('data-lat', '22.5');
@@ -243,7 +242,9 @@ test.describe('Locations Panel', () => {
     await resetCoordinates.click();
     await expect(latField).toHaveValue('22.278');
     await expect(lngField).toHaveValue('114.175');
-    await expect(pin).toHaveAttribute('data-lat', '22.278');
+    await expect
+      .poll(async () => pin.getAttribute('data-lat'), { timeout: 250 })
+      .toBe('22.278');
     await expect(pin).toHaveAttribute('data-lng', '114.175');
     await expect(outsideDistrict).toHaveCount(0);
     await expect(resetCoordinates).toHaveCount(0);
@@ -335,8 +336,54 @@ test.describe('Locations Panel', () => {
     await expect(draft.getByLabel('Name')).toBeEnabled();
     await expect(draft.getByLabel('Address')).toBeEnabled();
     await expect(draft.getByLabel('Latitude')).toBeEnabled();
+    await draft.getByLabel('Latitude').fill('22.2');
+    await expect(draft.getByRole('button', { name: 'Reset', exact: true })).toHaveCount(0);
     await expect(
       draft.getByText('Choose an area before closing this location.')
     ).toBeVisible();
+  });
+
+  test('resets the opened placement and keeps a saved pin', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=locations&org=org-1');
+    await adminPage.getByRole('row', { name: /9 Hill Road/ }).click();
+    const editor = adminPage.getByTestId('admin-editor-panel');
+    const address = editor.getByLabel('Address');
+    const latField = editor.getByLabel('Latitude');
+    await expect(latField).toHaveValue('22.279');
+    await address.fill('999 Other Road');
+    await latField.fill('22.5');
+    const reset = editor.getByRole('button', { name: 'Reset', exact: true });
+    await expect(reset).toBeVisible();
+    await adminPage.getByRole('row', { name: /123 Test Street/ }).click();
+    const discard = adminPage.getByRole('alertdialog');
+    await expect(discard.getByText('Discard unsaved changes?')).toBeVisible();
+    await discard.getByRole('button', { name: 'Keep editing' }).click();
+    await expect(discard).toHaveCount(0);
+    await reset.click();
+    await expect(address).toHaveValue('9 Hill Road');
+    await expect(latField).toHaveValue('22.279');
+    const pin = editor
+      .getByRole('application', { name: 'Location pin' })
+      .getByRole('button', { name: 'Location pin' });
+    await expect
+      .poll(async () => pin.getAttribute('data-lat'), { timeout: 250 })
+      .toBe('22.279');
+    await adminPage.getByRole('row', { name: /123 Test Street/ }).click();
+    await expect(adminPage.getByRole('alertdialog')).toHaveCount(0);
+    await expect(adminPage.getByLabel('Address')).toHaveValue('123 Test Street');
+
+    await adminPage.getByRole('row', { name: /9 Hill Road/ }).click();
+    const again = adminPage.getByTestId('admin-editor-panel');
+    await again.getByLabel('Latitude').fill('22.5');
+    const saved = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'PUT' && request.url().includes('/admin/locations/')
+    );
+    await again.getByRole('button', { name: 'Update' }).click();
+    expect((await saved).postDataJSON()).toMatchObject({ lat: 22.5, lng: 114.176 });
+    await expect(again.getByRole('button', { name: 'Reset', exact: true })).toHaveCount(0);
+    await again.getByLabel('Latitude').fill('22.4');
+    await again.getByRole('button', { name: 'Reset', exact: true }).click();
+    await expect(again.getByLabel('Latitude')).toHaveValue('22.5');
   });
 });

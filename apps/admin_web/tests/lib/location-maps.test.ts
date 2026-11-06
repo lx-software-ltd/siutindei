@@ -149,54 +149,76 @@ describe('pinMoveDelay', () => {
     );
     expect(pinMoveDelay(null, { lat: 22.2, lng: 114.175 })).toBe(TYPED_PIN_DELAY_MS);
   });
+
+  it('moves immediately when asked', () => {
+    expect(
+      pinMoveDelay({ lat: 22.278, lng: 114.175 }, { lat: 22.5, lng: 114.175 }, true)
+    ).toBe(0);
+  });
 });
 
 describe('nextOpenedCoordinates', () => {
-  const saved = { lat: '22.278', lng: '114.175' };
+  const saved = {
+    lat: '22.278',
+    lng: '114.175',
+    address: '123 Test Street',
+    area_id: 'area-1',
+  };
 
-  it('remembers the coordinates once the opened record is in the form', () => {
-    expect(nextOpenedCoordinates(null, 'loc-1', saved, { lat: '', lng: '' })).toBeNull();
+  it('remembers the placement once the opened record is in the form', () => {
+    const blank = { lat: '', lng: '', address: '', area_id: '' };
+    expect(nextOpenedCoordinates(null, 'loc-1', saved, blank)).toBeNull();
     const opened = nextOpenedCoordinates(null, 'loc-1', saved, saved);
-    expect(opened).toEqual({ key: 'loc-1', lat: '22.278', lng: '114.175' });
+    expect(opened).toEqual({ key: 'loc-1', ...saved });
     expect(nextOpenedCoordinates(opened, 'loc-1', saved, saved)).toBe(opened);
   });
 
-  it('keeps the opened coordinates while the fields change', () => {
-    const opened = { key: 'loc-1', lat: '22.278', lng: '114.175' };
+  it('keeps the opened placement while the fields change', () => {
+    const opened = { key: 'loc-1', ...saved };
     expect(
-      nextOpenedCoordinates(opened, 'loc-1', saved, { lat: '22.5', lng: '114.175' })
+      nextOpenedCoordinates(opened, 'loc-1', saved, { ...saved, lat: '22.5' })
+    ).toBe(opened);
+    expect(
+      nextOpenedCoordinates(opened, 'loc-1', saved, {
+        ...saved,
+        address: '999 Other Road',
+      })
     ).toBe(opened);
     expect(coordinatesChanged({ lat: '22.5', lng: '114.175' }, opened)).toBe(true);
+    expect(coordinatesChanged({ lat: '22.2780', lng: '114.175000' }, opened)).toBe(false);
     expect(coordinatesChanged(saved, opened)).toBe(false);
   });
 
-  it('adopts coordinates after a save updates the record and the form', () => {
-    const opened = { key: 'loc-1', lat: '22.278', lng: '114.175' };
-    const savedNext = { lat: '22.5', lng: '114.176' };
+  it('adopts placement after a save updates the record and the form', () => {
+    const opened = { key: 'loc-1', ...saved };
+    const savedNext = {
+      lat: '22.5',
+      lng: '114.176',
+      address: '123 Test Street',
+      area_id: 'area-1',
+    };
     expect(
-      nextOpenedCoordinates(opened, 'loc-1', savedNext, { lat: '22.5', lng: '114.175' })
+      nextOpenedCoordinates(opened, 'loc-1', savedNext, { ...savedNext, lng: '114.175' })
     ).toBe(opened);
     expect(nextOpenedCoordinates(opened, 'loc-1', savedNext, savedNext)).toEqual({
       key: 'loc-1',
-      lat: '22.5',
-      lng: '114.176',
+      ...savedNext,
     });
   });
 
-  it('uses empty coordinates for a new location after the form clears', () => {
-    const previous = { key: 'loc-1', lat: '22.278', lng: '114.175' };
+  it('uses an empty placement for a new location after the form clears', () => {
+    const previous = { key: 'loc-1', ...saved };
+    const blank = { lat: '', lng: '', address: '', area_id: '' };
+    expect(nextOpenedCoordinates(previous, 'draft', null, saved)).toBe(previous);
+    const draft = nextOpenedCoordinates(previous, 'draft', null, blank);
+    expect(draft).toEqual({ key: 'draft', ...blank });
     expect(
-      nextOpenedCoordinates(previous, 'draft', null, { lat: '22.278', lng: '114.175' })
-    ).toBe(previous);
-    const draft = nextOpenedCoordinates(previous, 'draft', null, { lat: '', lng: '' });
-    expect(draft).toEqual({ key: 'draft', lat: '', lng: '' });
-    expect(nextOpenedCoordinates(draft, 'draft', null, { lat: '22.2', lng: '114.1' })).toBe(
-      draft
-    );
+      nextOpenedCoordinates(draft, 'draft', null, { ...blank, lat: '22.2' })
+    ).toBe(draft);
   });
 
   it('clears the baseline when the editor closes', () => {
-    const opened = { key: 'loc-1', lat: '22.278', lng: '114.175' };
+    const opened = { key: 'loc-1', ...saved };
     expect(nextOpenedCoordinates(opened, null, saved, saved)).toBeNull();
   });
 });
