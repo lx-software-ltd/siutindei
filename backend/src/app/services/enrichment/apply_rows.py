@@ -154,6 +154,10 @@ def _apply_media(
     source = str(proposed.get("source_url") or "")
     if not source:
         raise ValidationError("image URL is missing", field="source_url")
+    stored_leaflet = _stored_leaflet_url(str(org.id), proposed)
+    if stored_leaflet:
+        _append_media(org, stored_leaflet, logo=bool(proposed.get("logo")))
+        return
     from app.services.enrichment.store import load_settings
 
     settings = load_settings(session)
@@ -170,13 +174,32 @@ def _apply_media(
         stored = copy_image(source, str(org.id))
     else:
         stored = _validate_url(source, "media_urls")
+    _append_media(org, stored, logo=bool(proposed.get("logo")))
+
+
+def _stored_leaflet_url(org_id: str, proposed: dict[str, Any]) -> str | None:
+    """A leaflet file already in this organization's bucket."""
+    import os
+
+    from app.services.enrichment.leaflet import valid_leaflet_key
+
+    key = str(proposed.get("object_key") or "")
+    if not valid_leaflet_key(org_id, key):
+        return None
+    base = os.getenv("ORGANIZATION_MEDIA_BASE_URL", "").rstrip("/")
+    if not base:
+        return None
+    return f"{base}/{key}"
+
+
+def _append_media(org: Organization, stored: str, *, logo: bool) -> None:
     urls = list(org.media_urls or [])
     if stored not in urls:
         if len(urls) >= MAX_MEDIA_URLS_COUNT:
             raise ValidationError("media_urls is full", field="media_urls")
         urls.append(stored)
         org.media_urls = urls
-    if proposed.get("logo"):
+    if logo:
         org.logo_media_url = stored
 
 

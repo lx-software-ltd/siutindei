@@ -308,15 +308,19 @@ paths:
         "403":
           description: Forbidden
     post:
-      summary: Start website enrichment for one organization
+      summary: Start website or leaflet enrichment for one organization
       description: |
-        Queues a crawl of the website in the body, or the stored
-        website when the body omits it. The typed website is not
-        saved onto the organization. Returns 202. An empty website
-        is 422, a bad URL is 400, an active run is 409, and a spent
-        monthly budget is 422. An admin or importer JWT may start a
-        run. The board keeps its own enrich duty; this route is
-        callable when that duty wants the same proposals.
+        A body with `website`, or an empty body, queues a crawl of
+        that website or the stored one. A body with `leaflet` queues
+        a leaflet read instead. The two keys together are 400. A
+        leaflet is one to four public picture or PDF URLs, or object
+        keys already stored by the leaflet upload route. Nothing is
+        written to the catalog until apply. Returns 202. An empty
+        website is 422, a bad URL is 400, an active run is 409, and
+        a spent monthly budget is 422. An admin or importer JWT may
+        start either kind of run. The board keeps its own enrich
+        duty; this route is callable when that duty wants the same
+        proposals.
       security:
         - AdminGroupAuth: []
         - ImporterGroupAuth: []
@@ -333,11 +337,13 @@ paths:
                   description: |
                     Website to crawl. Omitted or blank uses the stored
                     organization website. This value is not saved.
+                leaflet:
+                  $ref: '#/components/schemas/LeafletEnrichmentRequest'
       responses:
         "202":
           description: Run queued
         "400":
-          description: Website URL is not crawlable
+          description: Website or leaflet is not readable
         "409":
           description: A run is already active
         "422":
@@ -422,10 +428,48 @@ paths:
         "403":
           description: Forbidden
 
+  /v1/admin/organizations/{id}/enrichment/leaflet-upload:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Presign a leaflet upload
+      description: |
+        Admin only. Returns a presigned PUT for one JPEG, PNG, WebP,
+        or PDF under this organization's enrichment prefix. The
+        content type is locked on the signature. The file is not
+        attached to the organization. Start a run with the returned
+        `object_key`. An importer JWT receives 403.
+      security:
+        - AdminGroupAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeafletUploadRequest'
+      responses:
+        "200":
+          description: Upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeafletUploadResponse'
+        "400":
+          description: File name or content type is not a leaflet
+        "403":
+          description: Forbidden
+
   /v1/admin/enrichment-settings:
     get:
       summary: Read website enrichment settings
-      description: Admin only. Singleton monthly budget and crawl limits.
+      description: |
+        Admin only. Singleton monthly budget, crawl limits, and the
+        optional leaflet vision model.
       security:
         - AdminGroupAuth: []
       responses:
@@ -436,8 +480,10 @@ paths:
       description: |
         Admin only. `monthly_cost_limit_usd` is greater than 0 and at
         most 1000. `max_pages` is 1 to 20. `max_page_bytes` is 10000 to
-        2000000. `min_confidence_shown` is 0 to 1. A change is written
-        to the audit log with the admin subject.
+        2000000. `min_confidence_shown` is 0 to 1. `leaflet_model` is
+        an optional OpenRouter slug of at most 200 characters with no
+        whitespace. A blank value clears it. A change is written to
+        the audit log with the admin subject.
       security:
         - AdminGroupAuth: []
       responses:
@@ -6541,6 +6587,64 @@ components:
         next_cursor:
           type: string
           nullable: true
+
+    LeafletItem:
+      type: object
+      additionalProperties: false
+      properties:
+        url:
+          type: string
+          description: Public http or https picture or PDF URL.
+        object_key:
+          type: string
+          description: |
+            Object key returned by the leaflet upload route for this
+            organization.
+      description: Exactly one of url or object_key.
+
+    LeafletEnrichmentRequest:
+      type: object
+      additionalProperties: false
+      description: |
+        One leaflet, a list of one to four leaflets, or `{items: [...]}`.
+        Each item is a public URL or an uploaded object key.
+      properties:
+        url:
+          type: string
+        object_key:
+          type: string
+        items:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/LeafletItem'
+
+    LeafletUploadRequest:
+      type: object
+      required: [file_name, content_type]
+      additionalProperties: false
+      properties:
+        file_name:
+          type: string
+        content_type:
+          type: string
+          enum: [image/jpeg, image/png, image/webp, application/pdf]
+
+    LeafletUploadResponse:
+      type: object
+      required: [upload_url, media_url, object_key, content_type, expires_in]
+      properties:
+        upload_url:
+          type: string
+        media_url:
+          type: string
+        object_key:
+          type: string
+        content_type:
+          type: string
+        expires_in:
+          type: integer
 
     # Media upload schemas
     MediaUploadRequest:

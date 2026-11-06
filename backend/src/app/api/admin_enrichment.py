@@ -78,7 +78,11 @@ def perform_org_enrichment(
     org_id = _parse_uuid(org_id_raw or "")
     tail = organization_tail(str(event.get("path") or ""))
     action = tail[1] if len(tail) > 1 else None
-    if not tail or tail[0] != "enrichment" or action not in {None, "apply", "dismiss"}:
+    if (
+        not tail
+        or tail[0] != "enrichment"
+        or action not in {None, "apply", "dismiss", "leaflet-upload"}
+    ):
         return json_response(404, {"error": "Not found"}, event=event)
     if not allow_decide and (action is not None or method not in {"GET", "POST"}):
         return json_response(403, {"error": "Forbidden"}, event=event)
@@ -86,6 +90,8 @@ def perform_org_enrichment(
         return _read(event, org_id)
     if method == "POST" and action is None:
         return _start(event, org_id, actor)
+    if method == "POST" and action == "leaflet-upload":
+        return _leaflet_upload(event, org_id)
     if method == "POST" and action == "apply":
         return _decide(event, org_id, apply=True, actor=actor)
     if method == "POST" and action == "dismiss":
@@ -219,6 +225,11 @@ def _start(
     website = body.get("website")
     if website is not None and not isinstance(website, str):
         raise ValidationError("website must be a string", field="website")
+    has_leaflet = "leaflet" in body
+    leaflet = body.get("leaflet") if has_leaflet else None
+    if has_leaflet and leaflet is None:
+        raise ValidationError("leaflet is required", field="leaflet")
+    stage = "leaflet" if has_leaflet else "crawl"
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event, user_id=actor)
         run = start_run(
@@ -226,12 +237,13 @@ def _start(
             org_id,
             requested_by=actor,
             website=website if isinstance(website, str) else None,
+            leaflet=leaflet,
         )
         session.commit()
         run_id = run.id
         payload = serialize_run(run)
     try:
-        enqueue_enrichment(run_id, stage="crawl")
+        enqueue_enrichment(run_id, stage=stage)
     except RuntimeError as exc:
         with Session(get_engine()) as session:
             from app.db.models.org_enrichment import OrgEnrichmentRun
@@ -243,6 +255,23 @@ def _start(
                 session.commit()
         raise AppError(str(exc), status_code=503) from exc
     return json_response(202, {"run": payload}, event=event)
+
+
+def _leaflet_upload(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
+    from app.services.enrichment.leaflet import presign_leaflet
+
+    body = parse_object_body(event)
+    file_name = body.get("file_name")
+    content_type = body.get("content_type")
+    if not isinstance(file_name, str):
+        raise ValidationError("file_name is required", field="file_name")
+    if not isinstance(content_type, str):
+        raise ValidationError("content_type is required", field="content_type")
+    return json_response(
+        200,
+        presign_leaflet(org_id, file_name, content_type),
+        event=event,
+    )
 
 
 def _decide(

@@ -28,6 +28,13 @@ from app.services.enrichment.extract import (
     proposals_from_pages,
     validate_model_sheet,
 )
+from app.services.enrichment.leaflet import (
+    LeafletReadError,
+    media_from_pages,
+    read_leaflets,
+    resolved_leaflet_model,
+    transcribe_pages,
+)
 from app.services.enrichment.match import prepare_proposals
 from app.services.enrichment.prompt import (
     MODEL_INSTRUCTIONS,
@@ -47,6 +54,8 @@ PROVIDER_BUSY_ERROR = "The model provider was busy. Try again later."
 
 CrawlFn = Callable[[OrgEnrichmentRun, Any], dict[str, Any]]
 ModelFn = Callable[[str], tuple[dict[str, Any], Decimal, str]]
+PrepareFn = Callable[[OrgEnrichmentRun], dict[str, Any]]
+TranscribeFn = Callable[[list[str], str], tuple[list[str], Decimal, str]]
 
 
 @dataclass
@@ -73,9 +82,11 @@ def commit_and_queue(session: Session, step: EnrichmentStep) -> None:
             fail_enrichment_run(step.run_id, "Enrichment queue is not configured")
 
 
-def _proxy_failure_message(exc: AwsProxyError) -> str:
+def _proxy_failure_message(exc: AwsProxyError, *, leaflet: bool) -> str:
     if exc.code == "CrawlRefused" and exc.message:
         return exc.message
+    if leaflet:
+        return "The leaflet could not be read"
     return "The website could not be read"
 
 
@@ -111,6 +122,8 @@ def process_enrichment(
     stage: str,
     crawl: CrawlFn | None = None,
     complete: ModelFn | None = None,
+    prepare: PrepareFn | None = None,
+    transcribe: TranscribeFn | None = None,
 ) -> EnrichmentStep:
     """Return whether the message should be acknowledged, and any follow-up."""
     run = session.get(OrgEnrichmentRun, run_id)
@@ -126,8 +139,16 @@ def process_enrichment(
     try:
         if stage == "extract" or run.status == "extracting":
             _extract(session, run, complete=complete)
+        elif stage == "transcribe":
+            step.enqueue_stage = _transcribe(session, run, transcribe=transcribe)
+        elif stage == "leaflet" or run.source == "leaflet":
+            step.enqueue_stage = _leaflet(session, run, prepare=prepare)
         else:
             step.enqueue_stage = _crawl(session, run, crawl=crawl)
+    except LeafletReadError as exc:
+        logger.exception("Leaflet could not be read", extra={"run_id": str(run_id)})
+        _fail_open_run(session, run_id, exc.message)
+        return EnrichmentStep(acked=True)
     except AwsProxyError as exc:
         if exc.code == "TimeoutError":
             logger.exception("Enrichment run will retry", extra={"run_id": str(run_id)})
@@ -137,7 +158,11 @@ def process_enrichment(
                 return EnrichmentStep(acked=True)
             return EnrichmentStep(acked=False)
         logger.exception("Enrichment crawl failed", extra={"run_id": str(run_id)})
-        _fail_open_run(session, run_id, _proxy_failure_message(exc))
+        _fail_open_run(
+            session,
+            run_id,
+            _proxy_failure_message(exc, leaflet=run.source == "leaflet"),
+        )
         return EnrichmentStep(acked=True)
     except OpenRouterError as exc:
         logger.exception(
@@ -203,6 +228,64 @@ def _crawl(
     return "extract"
 
 
+def _leaflet(
+    session: Session,
+    run: OrgEnrichmentRun,
+    *,
+    prepare: PrepareFn | None,
+) -> str | None:
+    run.status = "running"
+    session.flush()
+    prepared = (prepare or _prepare_leaflet)(run)
+    run.pages = list(prepared.get("pages") or [])
+    run.leaflet_items = list(prepared.get("items") or run.leaflet_items or [])
+    run.pages_fetched = len(run.pages)
+    run.bytes_fetched = int(prepared.get("bytes_fetched") or 0)
+    if not run.pages:
+        run.status = "failed"
+        run.error = "The leaflet has no readable text"
+        run.finished_at = datetime.now(UTC)
+        return None
+    if any(page.get("vision_urls") for page in run.pages if isinstance(page, dict)):
+        return "transcribe"
+    run.input_hash = _hash_pages(run.pages)
+    run.status = "extracting"
+    session.flush()
+    return "extract"
+
+
+def _prepare_leaflet(run: OrgEnrichmentRun) -> dict[str, Any]:
+    return read_leaflets(run.org_id, list(run.leaflet_items or []))
+
+
+def _transcribe(
+    session: Session,
+    run: OrgEnrichmentRun,
+    *,
+    transcribe: TranscribeFn | None,
+) -> str | None:
+    settings = load_settings(session)
+    if transcribe is None:
+        _model_name, fallbacks, deny = _openrouter_settings(session)
+    else:
+        fallbacks, deny = [], True
+    pages, cost, model = transcribe_pages(
+        list(run.pages or []),
+        model_name=resolved_leaflet_model(settings.leaflet_model),
+        fallback_models=fallbacks,
+        deny_data_collection=deny,
+        complete=transcribe,
+    )
+    run.pages = pages
+    run.cost_usd = Decimal(str(run.cost_usd or 0)) + cost
+    if model:
+        run.model = model
+    run.input_hash = _hash_pages(pages)
+    run.status = "extracting"
+    session.flush()
+    return "extract"
+
+
 def _extract(
     session: Session,
     run: OrgEnrichmentRun,
@@ -233,7 +316,7 @@ def _extract(
         else:
             sheet, cost, model = complete(prompt)
         checked = validate_model_sheet(sheet, pages, snapshot)
-        run.cost_usd = cost
+        run.cost_usd = Decimal(str(run.cost_usd or 0)) + cost
         run.model = model
         # StructuredLogFormatter prints only a field named "extra".
         logger.info(
@@ -253,9 +336,8 @@ def _extract(
         )
     else:
         checked = copied
-        run.cost_usd = Decimal("0")
         run.model = "cache"
-    merged = merge_proposals(deterministic, checked)
+    merged = merge_proposals(media_from_pages(pages), deterministic, checked)
     if org is not None:
         merged = annotate(session, org, merged)
         merged = prepare_proposals(session, org, merged)

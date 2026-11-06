@@ -121,6 +121,18 @@ def _arn(method: str, *path: str) -> str:
             ),
             False,
         ),
+        (
+            _arn(
+                "POST",
+                "v1",
+                "admin",
+                "organizations",
+                "00000000-0000-0000-0000-000000000001",
+                "enrichment",
+                "leaflet-upload",
+            ),
+            False,
+        ),
         (_arn("GET", "v1", "admin", "users"), False),
         ("arn:aws:execute-api:ap-southeast-1:123:api", False),
     ],

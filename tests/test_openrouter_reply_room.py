@@ -42,6 +42,23 @@ def test_other_workloads_send_no_output_cap_or_reasoning(sent) -> None:
     assert "reasoning" not in sent[0]
 
 
+def test_image_parts_are_sent_as_user_content(sent) -> None:
+    parts = [
+        {"type": "text", "text": "Image 1."},
+        {"type": "image_url", "image_url": {"url": "https://media.example/a.jpg"}},
+    ]
+    openrouter_client.openrouter_chat_completion(
+        system_prompt="s",
+        user_content=parts,
+        timeout=5,
+        workload="org-enrichment-leaflet",
+        model="test/model",
+        fallback_models=[],
+        deny_data_collection=True,
+    )
+    assert sent[0]["messages"][1]["content"] == parts
+
+
 def test_output_cap_and_reasoning_off_are_sent_when_asked(sent) -> None:
     _call(max_tokens=12_000, reasoning_off=True)
     assert sent[0]["max_tokens"] == 12_000

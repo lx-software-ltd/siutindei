@@ -149,10 +149,19 @@ def configured_fallback_models(primary: str) -> list[str]:
     return out
 
 
+def _user_content(
+    value: str | Sequence[Mapping[str, Any]],
+) -> str | list[dict[str, Any]]:
+    """A string, or content parts copied so the payload cannot be mutated."""
+    if isinstance(value, str):
+        return value
+    return [dict(part) for part in value]
+
+
 def openrouter_chat_completion(
     *,
     system_prompt: str,
-    user_content: str,
+    user_content: str | Sequence[Mapping[str, Any]],
     timeout: int,
     workload: str,
     temperature: float = 0,
@@ -165,9 +174,11 @@ def openrouter_chat_completion(
 ) -> str:
     """POST a chat completion and return the raw response body.
 
-    ``max_tokens`` caps the reply. ``reasoning_off`` asks a thinking model
-    not to reason, because reasoning tokens share the reply budget and the
-    context window. A model whose reasoning is mandatory rejects it.
+    ``user_content`` is a string, or a list of content parts when the
+    call includes images. ``max_tokens`` caps the reply. ``reasoning_off``
+    asks a thinking model not to reason, because reasoning tokens share
+    the reply budget and the context window. A model whose reasoning is
+    mandatory rejects it.
     """
     endpoint_url = require_env("OPENROUTER_CHAT_COMPLETIONS_URL")
     chosen = (model or "").strip() or configured_model_name()
@@ -187,7 +198,7 @@ def openrouter_chat_completion(
         "temperature": temperature,
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_content},
+            {"role": "user", "content": _user_content(user_content)},
         ],
         "user": attribution_user(workload),
         "usage": {"include": True},

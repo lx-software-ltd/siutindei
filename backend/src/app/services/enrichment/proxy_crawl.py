@@ -13,7 +13,9 @@ from urllib.parse import urljoin
 from app.services.enrichment.constants import (
     COPYRIGHT_NOTICE,
     CRAWL_TIME_BUDGET_SECONDS,
+    LEAFLET_COPYRIGHT_NOTICE,
     MAX_IMAGE_BYTES,
+    MAX_PDF_BYTES,
 )
 from app.services.enrichment.fetch import FetchResult, crawl_site, fetch_public
 from app.services.enrichment.guard import CrawlError, check_fetch_url, validate_seed_url
@@ -35,6 +37,8 @@ def handle_crawl_event(event: Mapping[str, Any]) -> dict[str, Any]:
     try:
         if op == "image":
             return {"result": copy_image(event)}
+        if op == "leaflet":
+            return {"result": store_leaflet(event)}
         return {"result": crawl_requested(event)}
     except CrawlError as exc:
         return {"error": {"code": "CrawlRefused", "message": str(exc)}}
@@ -111,24 +115,105 @@ def copy_image(event: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def store_leaflet(event: Mapping[str, Any]) -> dict[str, Any]:
+    """Download one public leaflet and store it under the organization."""
+    url = str(event.get("url") or "").strip()
+    org_id = str(event.get("org_id") or "").strip()
+    check_fetch_url(url)
+    if not _uuidish(org_id):
+        raise CrawlError("org_id is not valid")
+    result = _follow_public(
+        url,
+        MAX_PDF_BYTES,
+        timeout_message="The leaflet could not be read",
+    )
+    if result.truncated:
+        raise CrawlError("The leaflet is too large")
+    from app.services.enrichment.leaflet import sniff_leaflet
+
+    sniffed = sniff_leaflet(result.body)
+    if sniffed is None:
+        raise CrawlError("leaflet must be a picture or a PDF")
+    ext, ctype = sniffed
+    limit = MAX_PDF_BYTES if ext == "pdf" else MAX_IMAGE_BYTES
+    if len(result.body) > limit:
+        raise CrawlError("The leaflet is too large")
+    digest = hashlib.sha256(result.body).hexdigest()[:16]
+    key = f"organizations/{org_id}/enrichment/leaflets/{digest}.{ext}"
+    stored = _put_media(
+        key,
+        result.body,
+        ctype,
+        source_url=url,
+        copyright_notice=LEAFLET_COPYRIGHT_NOTICE,
+    )
+    return {
+        "url": stored,
+        "key": key,
+        "content_type": ctype,
+        "bytes": len(result.body),
+    }
+
+
 def _follow_image(url: str) -> FetchResult:
+    return _follow_public(
+        url,
+        MAX_IMAGE_BYTES,
+        timeout_message="image download timed out",
+        http_message="image HTTP {status}",
+    )
+
+
+def _follow_public(
+    url: str,
+    max_bytes: int,
+    *,
+    timeout_message: str,
+    http_message: str = "leaflet HTTP {status}",
+) -> FetchResult:
     current = url
-    deadline = time.monotonic() + 15
+    deadline = time.monotonic() + 20
     for _ in range(4):
         check_fetch_url(current)
         try:
-            result = fetch_public(
-                current, MAX_IMAGE_BYTES, timeout=10, deadline=deadline
-            )
+            result = fetch_public(current, max_bytes, timeout=10, deadline=deadline)
         except TimeoutError as exc:
-            raise CrawlError("image download timed out") from exc
+            raise CrawlError(timeout_message) from exc
         if result.status in {301, 302, 303, 307, 308} and result.location:
             current = urljoin(result.url or current, result.location)
             continue
         if result.status >= 400:
-            raise CrawlError(f"image HTTP {result.status}")
+            raise CrawlError(http_message.format(status=result.status))
         return result
     raise CrawlError("too many redirects")
+
+
+def _put_media(
+    key: str,
+    body: bytes,
+    content_type: str,
+    *,
+    source_url: str,
+    copyright_notice: str,
+) -> str:
+    bucket = os.getenv("ORGANIZATION_MEDIA_BUCKET", "").strip()
+    base = os.getenv("ORGANIZATION_MEDIA_BASE_URL", "").rstrip("/")
+    if not bucket or not base:
+        raise CrawlError("media bucket is not configured")
+    from app.services.aws_clients import get_client
+
+    get_client("s3").put_object(
+        Bucket=bucket,
+        Key=key,
+        Body=body,
+        ContentType=content_type,
+        Metadata={
+            "source-url": source_url[:1024],
+            "copyright": copyright_notice,
+            "copied-at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        },
+    )
+    return f"{base}/{key}"
 
 
 def _public_page(page: dict[str, Any]) -> dict[str, Any]:
