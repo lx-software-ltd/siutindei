@@ -84,13 +84,15 @@ describe('ActivityDetailPage analytics', () => {
 
     await screen.findByRole('heading', { name: 'Kowloon art' });
 
-    expect(window.dataLayer).toContainEqual({
-      event: 'view_item',
-      item_id: 'act-1',
-      item_name: 'Kowloon art',
-      item_brand: 'Studio',
-      price: 180,
-      currency: 'HKD',
+    await waitFor(() => {
+      expect(window.dataLayer).toContainEqual({
+        event: 'view_item',
+        item_id: 'act-1',
+        item_name: 'Kowloon art',
+        item_brand: 'Studio',
+        price: 180,
+        currency: 'HKD',
+      });
     });
   });
 
