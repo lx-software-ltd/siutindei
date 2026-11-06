@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.admin_validators import schedule_languages
 from app.db.models import ActivityPricing, ActivitySchedule, Organization
 from app.db.models.org_enrichment import OrgEnrichmentProposal
 from app.services.enrichment.apply_rows import activity_by_name, location_by_address
@@ -272,7 +273,7 @@ def _schedule_exists(
     if activity is None or location is None:
         return False
     languages = tuple(
-        sorted(str(item) for item in (proposed.get("languages") or ["zh-HK"]))
+        sorted(schedule_languages(proposed.get("languages"), default=["yue"]))
     )
     for row in session.scalars(
         select(ActivitySchedule).where(
@@ -280,7 +281,7 @@ def _schedule_exists(
             ActivitySchedule.location_id == location.id,
         )
     ).all():
-        stored = tuple(sorted(str(item) for item in (row.languages or [])))
+        stored = tuple(sorted(schedule_languages(row.languages or [])))
         if stored == languages:
             return True
     return False

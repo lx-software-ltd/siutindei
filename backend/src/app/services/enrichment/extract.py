@@ -160,7 +160,7 @@ def validate_model_sheet(
                     "location_address": str(
                         (row.get("location_address") or {}).get("value") or ""
                     ),
-                    "languages": ["zh-HK"],
+                    "languages": ["yue"],
                     "entries": entries,
                 },
                 activity,

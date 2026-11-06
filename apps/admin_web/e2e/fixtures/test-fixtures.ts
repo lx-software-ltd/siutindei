@@ -462,7 +462,7 @@ export const mockSchedules = [
         end_minutes_utc: 120,
       },
     ],
-    languages: ['en'],
+    languages: ['zh-HK'],
     created_at: '2024-01-06T00:00:00Z',
     updated_at: '2024-01-06T00:00:00Z',
     version: 1,

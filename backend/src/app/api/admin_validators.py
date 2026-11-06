@@ -365,6 +365,9 @@ def _validate_languages(languages: list[str]) -> list[str]:
     for i, lang in enumerate(languages):
         if lang and str(lang).strip():
             code = _validate_language_code(str(lang).strip(), f"languages[{i}]")
+            # Hong Kong Chinese is a translation locale. Class language is Cantonese.
+            if code == "zh-HK":
+                code = "yue"
             if code not in seen:
                 validated.append(code)
                 seen.add(code)
@@ -416,6 +419,18 @@ def _parse_languages(value: Any) -> list[str]:
         )
 
     return _validate_languages(languages)
+
+
+def schedule_languages(value: Any, *, default: list[str] | None = None) -> list[str]:
+    """Parse class languages.
+
+    ``zh-HK`` is stored as ``yue``. Translation maps still use
+    ``_validate_language_code``, which keeps ``zh-HK``.
+    """
+    parsed = _parse_languages(value)
+    if parsed or default is None:
+        return parsed
+    return list(default)
 
 
 def _parse_media_urls(value: Any) -> list[str]:
