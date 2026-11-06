@@ -42,6 +42,7 @@ from app.services.category_suggestions.resolve import (
     capture_enabled,
     matching_category_id,
 )
+from app.services.description_boilerplate import description_is_import_boilerplate
 from app.services.enrichment.apply_names import apply_name, apply_name_translation
 from app.services.enrichment.refine import bare_category_name
 
@@ -98,7 +99,6 @@ def _apply_org(
         merged = dict(org.description_translations or {})
         merged.update(proposed["description_translations"])
         org.description_translations = merged
-        _note_enriched_description(org)
         return
     if "phone_country_code" in proposed or "phone_number" in proposed:
         if not _still(
@@ -123,7 +123,8 @@ def _apply_org(
     value = proposed[field]
     if field == "description":
         org.description = _validate_string_length(value, "description", 5000)
-        _note_enriched_description(org)
+        if not description_is_import_boilerplate(org.description):
+            _note_enriched_description(org)
     elif field == "email":
         org.email = _validate_email(value)
     elif field == "website":

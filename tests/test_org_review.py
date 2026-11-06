@@ -174,6 +174,38 @@ def test_cantonese_boilerplate_is_still_a_template_warning() -> None:
     assert "source_attribution" in {issue.code for issue in issues}
 
 
+def test_lcsd_venue_sentence_is_still_a_template_warning() -> None:
+    organization = Organization(
+        id=uuid4(),
+        name="Harbour Park",
+        manager_id="manager-1",
+        description=(
+            "Harbour Park is a indoor family venue in Yau Tsim Mong "
+            "for children and families."
+        ),
+        description_source="template",
+    )
+    issues, _checks = collect_issues(organization, [], [], {}, {})
+    match = next(issue for issue in issues if issue.code == "source_attribution")
+    assert match.message == "Description is a template"
+
+
+def test_leftover_chinese_boilerplate_warns() -> None:
+    organization = Organization(
+        id=uuid4(),
+        name="Harbour Club",
+        manager_id="manager-1",
+        description="Saturday art class for children in the harbour.",
+        description_source="template",
+        description_translations={
+            "zh": "南區嘅幼兒或興趣班，適合小朋友同家庭。",
+        },
+    )
+    issues, _checks = collect_issues(organization, [], [], {}, {})
+    match = next(issue for issue in issues if issue.code == "source_attribution")
+    assert match.message == "Chinese description is a template"
+
+
 def test_source_line_still_warns_after_a_real_description() -> None:
     organization = Organization(
         id=uuid4(),
@@ -405,7 +437,26 @@ def test_sql_template_warning_matches_the_description_text(
         description_source="template",
         review_status="pending_review",
     )
-    db_session.add(boiler)
+    leftover = Organization(
+        name=f"Leftover Club {uuid4().hex[:8]}",
+        manager_id="00000000-0000-0000-0000-000000000098",
+        description="Saturday art class for children in the harbour.",
+        description_source="template",
+        description_translations={
+            "zh": "南區嘅幼兒或興趣班，適合小朋友同家庭。",
+        },
+        review_status="pending_review",
+    )
+    venue = Organization(
+        name=f"Venue Club {uuid4().hex[:8]}",
+        manager_id="00000000-0000-0000-0000-000000000097",
+        description=(
+            "Venue Club is a public outdoor venue in Tai Po for children and families."
+        ),
+        description_source="template",
+        review_status="pending_review",
+    )
+    db_session.add_all([boiler, leftover, venue])
     db_session.flush()
     organizations = list(db_session.scalars(select(Organization)).all())
     snapshots = load_snapshots(db_session, organizations)
@@ -413,8 +464,12 @@ def test_sql_template_warning_matches_the_description_text(
     by_id = {str(snapshot.organization.id): snapshot for snapshot in snapshots}
     unique_codes = {issue.code for issue in by_id[str(sample_organization.id)].issues}
     boiler_codes = {issue.code for issue in by_id[str(boiler.id)].issues}
+    leftover_codes = {issue.code for issue in by_id[str(leftover.id)].issues}
+    venue_codes = {issue.code for issue in by_id[str(venue.id)].issues}
     assert "source_attribution" not in unique_codes
     assert "source_attribution" in boiler_codes
+    assert "source_attribution" in leftover_codes
+    assert "source_attribution" in venue_codes
 
 
 def test_sql_summary_matches_python_snapshots(db_session, sample_organization) -> None:

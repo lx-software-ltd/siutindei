@@ -114,6 +114,26 @@ def test_full_view_keeps_a_unique_description_tagged_template(
     assert card.activity.description is None
 
 
+def test_full_view_hides_lcsd_venue_filler(
+    db_session,
+    sample_activity,
+    sample_organization,
+    sample_pricing,
+    sample_schedule,
+) -> None:
+    sample_organization.description = (
+        "Harbour Park is a indoor family venue in Yau Tsim Mong "
+        "for children and families."
+    )
+    sample_organization.description_source = "template"
+    sample_activity.description = "Lane swimming for beginners."
+    db_session.flush()
+    row = db_session.execute(build_search_query(ActivitySearchFilters(limit=10))).one()
+    full = map_row_to_result(row, {}, view="full")
+    assert full.organization.description is None
+    assert full.activity.description is None
+
+
 def test_full_view_hides_import_boilerplate(
     db_session,
     sample_activity,

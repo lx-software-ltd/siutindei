@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import and_, case, func, literal, or_, select
+from sqlalchemy import String, and_, case, cast, func, literal, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -28,6 +28,7 @@ from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.services.description_boilerplate import (
     CANTONESE_IMPORT_BOILERPLATE,
     ENGLISH_IMPORT_BOILERPLATE,
+    ENGLISH_IMPORT_STEMS,
 )
 from app.services.org_review import (
     ACTIVITY_ADDED_SINCE_REJECTED,
@@ -149,11 +150,10 @@ def _issue_predicates() -> dict[str, ColumnElement[bool]]:
         "source_attribution": or_(
             and_(
                 Organization.description_source == "template",
-                or_(
-                    Organization.description.contains(ENGLISH_IMPORT_BOILERPLATE),
-                    Organization.description.contains(CANTONESE_IMPORT_BOILERPLATE),
-                ),
+                _text_is_boilerplate(Organization.description),
             ),
+            _json_text_is_boilerplate(Organization.description_translations, "zh"),
+            _json_text_is_boilerplate(Organization.description_translations, "zh-HK"),
             Organization.description.contains("Source:"),
         ),
         "missing_zh_name": _translation_gap(
@@ -240,6 +240,24 @@ def _issue_predicates() -> dict[str, ColumnElement[bool]]:
 
 def _count_where(predicate: ColumnElement[bool]) -> ColumnElement[Any]:
     return func.coalesce(func.sum(case((predicate, 1), else_=0)), 0)
+
+
+def _text_is_boilerplate(column: Any) -> ColumnElement[bool]:
+    """True when this text column is still an import filler sentence."""
+    return or_(
+        and_(
+            column.contains(ENGLISH_IMPORT_BOILERPLATE),
+            or_(*(column.contains(stem) for stem in ENGLISH_IMPORT_STEMS)),
+        ),
+        column.contains(CANTONESE_IMPORT_BOILERPLATE),
+    )
+
+
+def _json_text_is_boilerplate(column: Any, language: str) -> ColumnElement[bool]:
+    """True when a JSON language value is still an import filler sentence."""
+    return _text_is_boilerplate(
+        cast(func.coalesce(column.op("->>")(language), ""), String)
+    )
 
 
 def _blank(column: Any) -> ColumnElement[bool]:

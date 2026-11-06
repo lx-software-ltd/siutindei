@@ -18,6 +18,7 @@ from app.db.models.category_suggestion import (
     CategorySuggestion,
     CategorySuggestionActivity,
 )
+from app.services.description_boilerplate import hides_template_description
 
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _PHONE_RE = re.compile(r"(?:\+?\d[\d\s().-]{6,}\d)")
@@ -125,7 +126,9 @@ def _description_is_untrusted(org: Organization | None) -> bool:
     """Template copy, or a missing source, must not steer a recheck."""
     if org is None:
         return False
-    return org.description_source in (None, "template")
+    if org.description_source is None:
+        return True
+    return hides_template_description(org.description_source, org.description)
 
 
 def _source_host(org: Organization | None) -> str:

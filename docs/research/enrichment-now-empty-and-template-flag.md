@@ -23,14 +23,16 @@ address values.
 - Readiness warning:
   `backend/src/app/services/org_review.py` `collect_issues` emits
   `source_attribution` / "Description is a template" when
-  `organization.description_source == "template"`. SQL twin:
+  `description_source == "template"` and the English text is still
+  import filler (EDB class sentence or LCSD/Places venue sentence).
+  Leftover Chinese filler in `description_translations` warns as
+  "Chinese description is a template". SQL twin:
   `backend/src/app/services/org_review_sql.py` `_issue_predicates`.
-- Public search blanks org and activity descriptions when
-  `description_source == "template"`:
-  `backend/src/app/api/search.py`. Category recheck also treats
-  `template` or unset as untrusted:
-  `backend/src/app/services/category_suggestions/prompt.py`
-  `_description_is_untrusted`.
+- Public search blanks org and activity descriptions when the
+  `template` tag is still blank or filler:
+  `backend/src/app/api/search.py`. Category recheck treats a missing
+  `description_source` as untrusted, and `template` as untrusted only
+  when the text is blank or filler.
 
 ## Owners
 
@@ -109,9 +111,9 @@ treats the live English copy as a template.
 
 ## Open questions
 
-Answered for the plan: GET "Now" should be the live catalog; apply
-keeps the stored snapshot. Applying a description sets
-`description_source` to `enrich`. Existing stale rows need a
-non-migration way to clear the warning (heuristic and/or the origin
-dropdown). Leftover Chinese boilerplate after an English apply is a
-follow-up, not this warning's root cause.
+Answered: GET "Now" is the live catalog; apply keeps the stored
+snapshot and GET sets `changed_since_crawl` when they differ.
+Applying a non-filler English description sets `description_source`
+to `enrich`. Applying only a translation does not. Leftover Chinese
+filler warns separately. LCSD/Places venue filler uses the same
+closing phrases as the EDB class sentence.

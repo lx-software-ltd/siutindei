@@ -258,6 +258,8 @@ _LIVE_CURRENT_KINDS = frozenset(
         "add_media",
         "create_location",
         "create_activity",
+        "create_pricing",
+        "create_schedule",
     }
 )
 
@@ -268,6 +270,8 @@ def serialize_proposal(
     organization: Organization | None = None,
     venues: list[Any] | None = None,
     activity_names: list[str] | None = None,
+    pricing_count: int = 0,
+    schedule_count: int = 0,
 ) -> dict[str, Any]:
     proposed = row.proposed_value if isinstance(row.proposed_value, dict) else {}
     current = row.current_value
@@ -279,6 +283,9 @@ def serialize_proposal(
             proposed=proposed,
             venues=list(venues or []),
             activity_names=list(activity_names or []),
+            stored_current=row.current_value,
+            pricing_count=pricing_count,
+            schedule_count=schedule_count,
         )
     return {
         "id": str(row.id),

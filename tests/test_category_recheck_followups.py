@@ -127,6 +127,18 @@ def test_recheck_omits_an_unknown_description_and_keeps_official(
     assert item["description"] == "Generated catalogue copy"
     assert item["description_is_template"] is False
 
+    sample_organization.description_source = "template"
+    sample_organization.description = "Saturday art class for children in the harbour."
+    db_session.flush()
+    _system, user = build_scan_prompt(
+        db_session,
+        [sample_activity],
+        ignore_current_category=True,
+    )
+    item = json.loads(user)["activities"][0]
+    assert item["description"] == "Generated catalogue copy"
+    assert item["description_is_template"] is False
+
 
 def test_recheck_includes_a_recently_checked_activity(
     db_session, sample_activity, sample_organization

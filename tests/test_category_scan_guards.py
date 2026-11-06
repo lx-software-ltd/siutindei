@@ -675,6 +675,10 @@ def test_recheck_prompt_omits_the_current_category(
     db_session, sample_activity, sample_organization
 ) -> None:
     sample_organization.description_source = "template"
+    sample_organization.description = (
+        "Harbour Club is a class or early-years centre in CENTRAL "
+        "for children and families."
+    )
     sample_organization.source = "edb"
     sample_organization.source_url = "https://www.edb.gov.hk/en/page"
     parent = ActivityCategory(name="Recheck Parent", display_order=3)

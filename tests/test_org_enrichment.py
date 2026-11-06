@@ -401,8 +401,15 @@ def test_apply_description_keeps_a_curated_source(db_session, source: str) -> No
     assert org.description_source == source
 
 
-def test_apply_description_translation_marks_the_copy_as_enriched(db_session) -> None:
-    org = _org(db_session, description_source="template")
+def test_apply_description_translation_does_not_retag(db_session) -> None:
+    org = _org(
+        db_session,
+        description=(
+            "Harbour Club is a class or early-years centre in CENTRAL "
+            "for children and families."
+        ),
+        description_source="template",
+    )
     run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
     db_session.add(run)
     db_session.flush()
@@ -424,7 +431,7 @@ def test_apply_description_translation_marks_the_copy_as_enriched(db_session) ->
     )
     assert results[0]["status"] == "applied"
     assert org.description_translations["zh"] == "星期六繪畫班"
-    assert org.description_source == "enrich"
+    assert org.description_source == "template"
 
 
 def test_display_current_uses_the_live_catalog() -> None:
@@ -447,7 +454,7 @@ def test_display_current_uses_the_live_catalog() -> None:
         activity_names=["Swim"],
     )
     assert logo == {
-        "logo_media_url": "https://cdn.example/logo.svg",
+        "logo": "saved",
         "already_saved": True,
     }
     photo = display_current(
@@ -475,6 +482,7 @@ def test_display_current_uses_the_live_catalog() -> None:
         proposed={"email": "other@example.com"},
         venues=[],
         activity_names=[],
+        stored_current={"email": "studio@example.com"},
     ) == {"email": "studio@example.com"}
     assert (
         display_current(
@@ -511,6 +519,43 @@ def test_display_current_uses_the_live_catalog() -> None:
         venues=[],
         activity_names=["Swim"],
     ) == {"activities": 1}
+    assert display_current(
+        org,
+        kind="create_pricing",
+        field=None,
+        proposed={"amount": "100"},
+        venues=[],
+        activity_names=[],
+        pricing_count=3,
+    ) == {"prices": 3}
+    assert display_current(
+        org,
+        kind="create_schedule",
+        field=None,
+        proposed={"languages": ["en"]},
+        venues=[],
+        activity_names=[],
+        schedule_count=2,
+    ) == {"schedules": 2}
+    assert display_current(
+        org,
+        kind="update_organization",
+        field="email",
+        proposed={"email": "other@example.com"},
+        venues=[],
+        activity_names=[],
+        stored_current={"email": None},
+    ) == {"email": "studio@example.com", "changed_since_crawl": True}
+    org.name_translations = {"zh": "北會", "zh-HK": "北會繁"}
+    assert display_current(
+        org,
+        kind="update_organization",
+        field="name_translations",
+        proposed={"name_translations": {"zh": "新名"}},
+        venues=[],
+        activity_names=[],
+        stored_current={"name_translations": {"zh": "北會"}},
+    ) == {"name_translations": {"zh": "北會"}}
     bare = Organization(name="Bare Club", manager_id="mgr-1")
     assert (
         display_current(
@@ -555,7 +600,8 @@ def test_serialize_proposal_does_not_rewrite_the_snapshot(db_session) -> None:
         venues=[],
         activity_names=[],
     )
-    assert payload["current_value"]["logo_media_url"] == "https://cdn.example/logo.svg"
+    assert payload["current_value"]["logo"] == "saved"
+    assert "logo_media_url" not in payload["current_value"]
     assert proposal.current_value is None
 
 

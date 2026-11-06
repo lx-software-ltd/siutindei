@@ -1,16 +1,21 @@
 /** Import filler. Keep this phrase pair aligned with the API check. */
-export const ENGLISH_IMPORT_BOILERPLATE = 'is a class or early-years centre in';
+export const ENGLISH_IMPORT_BOILERPLATE = 'for children and families';
 
-export const CANTONESE_IMPORT_BOILERPLATE = '幼兒或興趣班，適合小朋友同家庭';
+export const CANTONESE_IMPORT_BOILERPLATE = '適合小朋友同家庭';
+
+export const ENGLISH_IMPORT_STEMS = ['is a ', 'is an '] as const;
 
 export function descriptionIsImportBoilerplate(
   description: string | null | undefined,
 ): boolean {
   const text = description ?? '';
-  return (
-    text.includes(ENGLISH_IMPORT_BOILERPLATE) ||
-    text.includes(CANTONESE_IMPORT_BOILERPLATE)
-  );
+  if (text.includes(CANTONESE_IMPORT_BOILERPLATE)) {
+    return true;
+  }
+  if (!text.includes(ENGLISH_IMPORT_BOILERPLATE)) {
+    return false;
+  }
+  return ENGLISH_IMPORT_STEMS.some((stem) => text.includes(stem));
 }
 
 /** Blank or filler copy on a template organization stays off the public page. */

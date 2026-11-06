@@ -87,6 +87,23 @@ describe('listing status helpers', () => {
         }),
       ),
     ).toBe(true);
+    expect(
+      isTemplateDescription(
+        buildListing({
+          descriptionSource: 'template',
+          description:
+            'Harbour Park is a indoor family venue in Yau Tsim Mong for children and families.',
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isTemplateDescription(
+        buildListing({
+          descriptionSource: 'template',
+          description: 'Saturday art class for children and families in the harbour.',
+        }),
+      ),
+    ).toBe(false);
   });
 
   it('builds a Google Maps place URL only when placeId is set', () => {
