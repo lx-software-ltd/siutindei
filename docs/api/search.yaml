@@ -430,6 +430,14 @@ components:
         lng:
           type: number
           nullable: true
+        status:
+          type: string
+          enum: [open, temporarily_closed, permanently_closed]
+          description: |
+            Venue status. `permanently_closed` locations are excluded
+            from search. `temporarily_closed` stays in the results so
+            clients can show the same badge as a temporarily closed
+            organization.
     Activity:
       type: object
       required: [id, name, name_translations]

@@ -279,6 +279,11 @@ class _ActivityCardTags extends StatelessWidget {
       children: [
         for (final lang in result.schedule.languages.take(3))
           BaseBadge(label: lang.toUpperCase()),
+        if (result.location.status == 'temporarily_closed')
+          const BaseBadge(
+            label: 'Temporarily closed',
+            variant: BadgeVariant.warning,
+          ),
         BaseBadge(
           label: _getPricingTypeLabel(result.pricing.type),
           variant: BadgeVariant.success,

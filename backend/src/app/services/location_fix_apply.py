@@ -9,7 +9,11 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.admin_resource_location import _create_location, _validate_coordinates
+from app.api.admin_resource_location import (
+    _create_location,
+    _validate_coordinates,
+    location_is_closed,
+)
 from app.db.models import Activity, ActivityLocation, GeographicArea, Location
 from app.db.models.location_fix import LocationFixProposal
 from app.db.repositories import LocationRepository
@@ -81,6 +85,11 @@ def _apply_update(
     location = session.get(Location, row.entity_id)
     if location is None:
         raise NotFoundError("locations", str(row.entity_id))
+    if location_is_closed(location.status):
+        raise ValidationError(
+            "Closed locations keep their address, area, and map pin",
+            field="status",
+        )
     proposed = dict(row.proposed_location or {})
     stored_address = str(location.address or "").strip()
     proposed_address = str(proposed.get("address") or "").strip()
@@ -136,6 +145,11 @@ def _set_manual_pin(
     location = session.get(Location, row.entity_id)
     if location is None:
         raise NotFoundError("locations", str(row.entity_id))
+    if location_is_closed(location.status):
+        raise ValidationError(
+            "Closed locations keep their address, area, and map pin",
+            field="status",
+        )
     chain = _area_chain(session, location.area_id)
     consistent, other = pin_consistency(lat_f, lng_f, chain)
     proposed = dict(row.proposed_location or {})

@@ -8,6 +8,7 @@ import {
   ageBoundsFromSnapshot,
   locationFormFromSnapshot,
   organizationFormFromSnapshot,
+  snapshotFieldText,
 } from '@/components/admin/catalog-version-snapshot';
 import {
   catalogLatestVersion,
@@ -84,6 +85,7 @@ describe('snapshot forms', () => {
       org_id: 'org-1',
       area_id: 'area-1',
       name: 'Harbour Hall',
+      status: 'temporarily_closed',
       address: '1 Name Road',
       lat: '22.1',
       lng: '114.1',
@@ -93,6 +95,7 @@ describe('snapshot forms', () => {
       fallback
     );
     expect(next.name).toBe('');
+    expect(next.status).toBe('open');
     expect(next.address).toBe('1 Name Road');
     expect(next.area_id).toBe('area-1');
   });
@@ -102,6 +105,7 @@ describe('snapshot forms', () => {
       org_id: 'org-1',
       area_id: 'area-1',
       name: 'Harbour Hall',
+      status: 'open',
       address: '1 Name Road',
       lat: '',
       lng: '',
@@ -112,6 +116,28 @@ describe('snapshot forms', () => {
     );
     expect(next.name).toBe('Studio Hall');
     expect(next.address).toBe('9 Hill Road');
+    expect(next.status).toBe('open');
+  });
+
+  it('keeps a location status the snapshot stored', () => {
+    const fallback = {
+      org_id: 'org-1',
+      area_id: 'area-1',
+      name: '',
+      status: 'open',
+      address: '',
+      lat: '',
+      lng: '',
+    };
+    const next = locationFormFromSnapshot(
+      { status: 'permanently_closed' },
+      fallback
+    );
+    expect(next.status).toBe('permanently_closed');
+    expect(snapshotFieldText('status', 'temporarily_closed')).toBe(
+      'Temporarily Closed'
+    );
+    expect(snapshotFieldText('status', 'operational')).toBe('operational');
   });
 });
 

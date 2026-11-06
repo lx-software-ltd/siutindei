@@ -7,7 +7,9 @@ import { useGeographicAreas } from '../../hooks/use-geographic-areas';
 import type {
   EnrichmentOverride,
   EnrichmentProposal,
+  EnrichmentRead,
 } from '../../lib/api-client-enrichment';
+import { locationListLabel } from '../../lib/location-label';
 import type { GeographicAreaNode } from '../../lib/api-client-user';
 import { CascadingAreaSelect } from '../ui/cascading-area-select';
 import { CascadingCategorySelect } from '../ui/cascading-category-select';
@@ -264,7 +266,7 @@ export function ProposalTable({
   onOverride,
 }: {
   rows: EnrichmentProposal[];
-  venues: Array<{ id: string; address: string }>;
+  venues: EnrichmentRead['venues'];
   selected: string[];
   overrides: Record<string, EnrichmentOverride>;
   onToggle: (id: string) => void;
@@ -347,7 +349,7 @@ function ProposalFields({
   onOverride,
 }: {
   row: EnrichmentProposal;
-  venues: Array<{ id: string; address: string }>;
+  venues: EnrichmentRead['venues'];
   override: EnrichmentOverride;
   areaTree: ReturnType<typeof useGeographicAreas>['tree'];
   categoryTree: ReturnType<typeof useActivityCategories>['tree'];
@@ -457,7 +459,7 @@ function ProposalFields({
             <option value=''>Match the address</option>
             {venues.map((venue) => (
               <option key={venue.id} value={venue.id}>
-                {venue.address}
+                {locationListLabel(venue, venues, venue.address)}
               </option>
             ))}
           </Select>

@@ -220,6 +220,7 @@ def serialize_export_location(
         "area_id": str(location.area_id),
         "lat": float(location.lat) if location.lat is not None else None,
         "lng": float(location.lng) if location.lng is not None else None,
+        "status": location.status,
     }
 
 

@@ -43,6 +43,7 @@ interface StagingFixtureItem {
     readonly address?: string | null;
     readonly lat?: string | null;
     readonly lng?: string | null;
+    readonly status?: string | null;
   };
   readonly pricing: {
     readonly pricing_type: string;
@@ -83,7 +84,10 @@ export function clearStagingFixtureCacheForTests(): void {
 
 function isVisibleListing(item: StagingFixtureItem): boolean {
   const status = item.organization.status;
-  return status !== 'closed_permanently' && status !== 'hidden';
+  if (status === 'closed_permanently' || status === 'hidden') {
+    return false;
+  }
+  return item.location.status !== 'permanently_closed';
 }
 
 function sortedPublishedItems(fixture: StagingFixture): StagingFixtureItem[] {
@@ -193,6 +197,9 @@ function matchesItem(
 
   const status = item.organization.status;
   if (status === 'closed_permanently' || status === 'hidden') {
+    return false;
+  }
+  if (item.location.status === 'permanently_closed') {
     return false;
   }
 

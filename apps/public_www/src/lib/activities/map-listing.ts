@@ -29,6 +29,7 @@ export interface ActivityWireListing {
     address?: string | null;
     lat?: number | string | null;
     lng?: number | string | null;
+    status?: string | null;
   };
   pricing: {
     pricing_type: string;
@@ -100,6 +101,7 @@ export function mapActivityListing(
       address: item.location.address ?? null,
       lat: toNumber(item.location.lat),
       lng: toNumber(item.location.lng),
+      status: item.location.status ?? 'open',
     },
     pricing: {
       pricingType: item.pricing.pricing_type,

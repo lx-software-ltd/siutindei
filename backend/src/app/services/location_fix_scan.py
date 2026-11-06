@@ -304,8 +304,13 @@ def _scan_activity(session, activity, context, run_id, queued) -> str:
             return "cleared"
         return "unchanged"
     locations = context["locations"].get(activity.org_id, [])
+    open_locations = [location for location in locations if location.status == "open"]
+    if len(locations) == 1 and open_locations:
+        return _auto_link(session, activity, open_locations[0], run_id)
     if len(locations) == 1:
-        return _auto_link(session, activity, locations[0], run_id)
+        if _clear(session, context, "activity", activity.id):
+            return "cleared"
+        return "unchanged"
     if not locations:
         return upsert_proposal(
             session,
@@ -318,8 +323,8 @@ def _scan_activity(session, activity, context, run_id, queued) -> str:
             scan_run_id=run_id,
         )
     priced = context["priced"].get(activity.id, set())
-    org_location_ids = {location.id for location in locations}
-    priced = {item for item in priced if item in org_location_ids}
+    open_ids = {location.id for location in open_locations}
+    priced = {item for item in priced if item in open_ids}
     if len(priced) == 1:
         target_id = next(iter(priced))
         return upsert_proposal(
@@ -335,7 +340,7 @@ def _scan_activity(session, activity, context, run_id, queued) -> str:
         )
     matched = [
         location
-        for location in locations
+        for location in open_locations
         if name_matches(activity.name, context["labels"].get(location.id, []))
     ]
     if len(matched) == 1:

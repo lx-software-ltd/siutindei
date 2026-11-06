@@ -6,7 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer, Numeric, Text, text
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, Numeric, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TIMESTAMP
@@ -41,6 +41,12 @@ class Location(Base):
         comment="FK to geographic_areas leaf node",
     )
     name: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    status: Mapped[str] = mapped_column(
+        Text(),
+        nullable=False,
+        default="open",
+        server_default=text("'open'"),
+    )
     address: Mapped[str | None] = mapped_column(Text(), nullable=True)
     lat: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)
     lng: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)
@@ -71,4 +77,11 @@ class Location(Base):
     activity_schedules: Mapped[list[ActivitySchedule]] = relationship(
         back_populates="location",
         cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('open', 'temporarily_closed', 'permanently_closed')",
+            name="locations_status_check",
+        ),
     )

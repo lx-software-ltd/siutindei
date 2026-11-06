@@ -136,6 +136,7 @@ def location_stmt(org_id, query, review_scope, only_org_ids=None):
         select(Location)
         .join(Organization, Organization.id == Location.org_id)
         .outerjoin(last, last.c.entity_id == Location.id)
+        .where(Location.status == "open")
         .order_by(
             last.c.scanned_at.asc().nulls_first(),
             Location.address,

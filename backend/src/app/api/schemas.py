@@ -35,6 +35,7 @@ class LocationSchema(BaseModel):
     address: str | None
     lat: Decimal | None
     lng: Decimal | None
+    status: str | None = None
 
 
 class ActivitySchema(BaseModel):

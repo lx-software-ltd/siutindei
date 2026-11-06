@@ -4589,6 +4589,12 @@ components:
           type: number
           minimum: -180
           maximum: 180
+        status:
+          type: string
+          enum: [open, temporarily_closed, permanently_closed]
+          description: |
+            Stored when this import creates the location. A later import
+            leaves the stored status alone. Omitted or blank creates `open`.
 
     AdminImportActivity:
       type: object
@@ -5963,6 +5969,13 @@ components:
             Optional venue label (max 200 characters). Blank or null
             is stored as null. Pricing and Schedules show this instead
             of the address.
+        status:
+          type: string
+          enum: [open, temporarily_closed, permanently_closed]
+          description: |
+            Whether the venue is open. Omitted, blank, or null is
+            stored as `open`. An import stores this only when it
+            creates the location.
         address:
           type: string
           maxLength: 500
@@ -5992,6 +6005,14 @@ components:
           description: |
             Optional venue label (max 200 characters). Blank is stored
             as null.
+        status:
+          type: string
+          enum: [open, temporarily_closed, permanently_closed]
+          description: |
+            Whether the venue is open. Blank or null is rejected.
+            Admins and managers may set it. While the location is
+            closed, or this request closes it, `address`, `area_id`,
+            `lat`, `lng`, and `place_id` must stay as stored.
         address:
           type: string
           maxLength: 500
@@ -6009,7 +6030,7 @@ components:
 
     Location:
       type: object
-      required: [id, org_id, area_id, created_at, updated_at]
+      required: [id, org_id, area_id, status, created_at, updated_at]
       properties:
         id:
           type: string
@@ -6025,6 +6046,11 @@ components:
           type: string
           nullable: true
           description: Optional venue label. Null when unset.
+        status:
+          type: string
+          enum: [open, temporarily_closed, permanently_closed]
+          description: |
+            Whether the venue is open. Existing rows are `open`.
         address:
           type: string
           nullable: true
@@ -8451,6 +8477,13 @@ components:
         entity_name:
           type: string
           nullable: true
+        venue_status:
+          type: string
+          nullable: true
+          enum: [open, temporarily_closed, permanently_closed]
+          description: |
+            Status of the location this row is about, or of the venue
+            it would link. Null when the row has no venue yet.
         org_id:
           type: string
           format: uuid

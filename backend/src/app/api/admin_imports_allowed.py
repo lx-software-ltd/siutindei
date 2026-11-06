@@ -46,6 +46,7 @@ ALLOWED_LOCATION_FIELDS = {
     "lat",
     "lng",
     "place_id",
+    "status",
 }
 ALLOWED_ACTIVITY_FIELDS = {
     "name",

@@ -61,6 +61,7 @@ def location_payload(location: Location) -> dict[str, Any]:
     """Location fields, with area id as text so it matches a snapshot."""
     return {
         "name": location.name,
+        "status": location.status,
         "address": location.address,
         "area_id": str(location.area_id) if location.area_id else None,
         "lat": location.lat,

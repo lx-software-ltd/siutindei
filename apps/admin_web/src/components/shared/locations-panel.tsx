@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useGeographicAreas } from '../../hooks/use-geographic-areas';
 import { useFormValidation } from '../../hooks/use-form-validation';
@@ -10,8 +10,16 @@ import { formatAdminPageName } from '../../lib/admin-page-name';
 import type { GeographicAreaNode } from '../../lib/api-client';
 import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/api-client-admin';
+import {
+  DEFAULT_LOCATION_STATUS,
+  isLocationClosed,
+  isLocationStatus,
+  LOCATION_STATUSES,
+  type LocationStatus,
+} from '../../lib/location-status';
 import { normalizeKey } from '../../lib/string-utils';
 import type { Location } from '../../types/admin';
+import { ClosedLocationMark } from './closed-location-mark';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import { adminTableText, AdminTableName } from '../ui/admin-table-value';
 import {
@@ -27,6 +35,7 @@ import {
 } from '../ui/address-autocomplete';
 import { CascadingAreaSelect } from '../ui/cascading-area-select';
 import { Input } from '../ui/input';
+import { Select } from '../ui/select';
 import {
   deleteRowActions,
   ResourceTableShell,
@@ -58,6 +67,9 @@ const MAP_ICONS = {
   appleMaps: buildMapIconUrl('apple', '000000'),
 };
 
+const CLOSED_DETAILS_HINT =
+  'Address, area, latitude, and longitude stay unchanged while this location is closed.';
+
 function MapServiceIcon({
   className,
   src,
@@ -82,6 +94,7 @@ interface LocationFormState {
   org_id: string;
   area_id: string;
   name: string;
+  status: LocationStatus;
   address: string;
   lat: string;
   lng: string;
@@ -91,6 +104,7 @@ const emptyForm: LocationFormState = {
   org_id: '',
   area_id: '',
   name: '',
+  status: DEFAULT_LOCATION_STATUS,
   address: '',
   lat: '',
   lng: '',
@@ -101,6 +115,7 @@ function itemToForm(item: Location): LocationFormState {
     org_id: item.org_id ?? '',
     area_id: item.area_id ?? '',
     name: item.name ?? '',
+    status: isLocationStatus(item.status) ? item.status : DEFAULT_LOCATION_STATUS,
     address: item.address ?? '',
     lat: item.lat !== undefined && item.lat !== null ? `${item.lat}` : '',
     lng: item.lng !== undefined && item.lng !== null ? `${item.lng}` : '',
@@ -235,12 +250,44 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     }));
   };
 
+  const [statusError, setStatusError] = useState('');
+
   const handleAreaChange = (areaId: string, _chain: GeographicAreaNode[]) => {
     markTouched('area_id');
+    setStatusError('');
     panel.setFormState((prev) => ({ ...prev, area_id: areaId }));
   };
 
+  const handleStatusChange = (status: LocationStatus) => {
+    if (isLocationClosed(status) && !panel.formState.area_id) {
+      setStatusError('Choose an area before closing this location.');
+    } else {
+      setStatusError('');
+    }
+    panel.setFormState((prev) => {
+      if (!isLocationClosed(status) || !panel.editingId) {
+        return { ...prev, status };
+      }
+      const saved = panel.items.find((item) => item.id === panel.editingId);
+      if (!saved) {
+        return { ...prev, status };
+      }
+      const restored = itemToForm(saved);
+      return {
+        ...prev,
+        status,
+        area_id: restored.area_id,
+        address: restored.address,
+        lat: restored.lat,
+        lng: restored.lng,
+      };
+    });
+  };
+
   const validate = () => {
+    if (isLocationClosed(panel.formState.status) && !panel.formState.area_id) {
+      return 'Choose an area before closing this location.';
+    }
     if (!panel.formState.org_id || !panel.formState.area_id) {
       return 'Organization and area are required.';
     }
@@ -298,6 +345,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
     org_id: form.org_id,
     area_id: form.area_id,
     name: form.name.trim() || null,
+    status: form.status,
     address: form.address.trim() || null,
     lat: parseOptionalNumber(form.lat),
     lng: parseOptionalNumber(form.lng),
@@ -367,6 +415,9 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   const editorForm = versionView.snapshot
     ? locationFormFromSnapshot(versionView.snapshot, panel.formState)
     : panel.formState;
+  const detailsLocked =
+    locked ||
+    (isLocationClosed(editorForm.status) && Boolean(editorForm.area_id));
 
   const detail = (
     <AdminEditorPanel
@@ -400,7 +451,6 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
         <VersionField
           label='Name'
           htmlFor='location-name'
-          span={2}
           versionKey='name'
         >
           <Input
@@ -417,6 +467,34 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
           />
         </VersionField>
         <VersionField
+          label='Status'
+          htmlFor='location-status'
+          versionKey='status'
+          hint={
+            isLocationClosed(editorForm.status) ? CLOSED_DETAILS_HINT : undefined
+          }
+          error={statusError || undefined}
+        >
+          <Select
+            id='location-status'
+            value={editorForm.status}
+            disabled={locked}
+            onChange={(event) => {
+              const status = event.target.value;
+              if (!isLocationStatus(status)) {
+                return;
+              }
+              handleStatusChange(status);
+            }}
+          >
+            {LOCATION_STATUSES.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </VersionField>
+        <VersionField
           label='Address'
           htmlFor='location-address'
           span={2}
@@ -426,7 +504,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
           <AddressAutocomplete
             id='location-address'
             value={editorForm.address}
-            disabled={locked}
+            disabled={detailsLocked}
             onChange={(val) => {
               markTouched('address');
               panel.setFormState((prev) => ({
@@ -448,7 +526,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             value={editorForm.area_id}
             onChange={handleAreaChange}
             disableCountry
-            disabled={locked}
+            disabled={detailsLocked}
             required
             hasError={showAreaError}
             errorMessage={showAreaError ? areaError : undefined}
@@ -460,7 +538,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             type='number'
             step='0.000001'
             value={editorForm.lat}
-            disabled={locked}
+            disabled={detailsLocked}
             onChange={(e) =>
               panel.setFormState((prev) => ({
                 ...prev,
@@ -475,7 +553,7 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             type='number'
             step='0.000001'
             value={editorForm.lng}
-            disabled={locked}
+            disabled={detailsLocked}
             onChange={(e) =>
               panel.setFormState((prev) => ({
                 ...prev,
@@ -534,6 +612,13 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
             <AdminDataTableCell>
               <span className='inline-flex items-center'>
                 <AdminTableName>{getAreaName(item.area_id)}</AdminTableName>
+                <ClosedLocationMark
+                  status={
+                    item.id === panel.editingId && !versionView.isHistorical
+                      ? editorForm.status
+                      : item.status
+                  }
+                />
                 <HistoricalRowMark
                   active={versionView.isHistorical && item.id === panel.editingId}
                   version={versionView.selectedVersion}

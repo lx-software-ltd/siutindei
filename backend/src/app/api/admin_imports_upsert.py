@@ -302,6 +302,10 @@ def upsert_location(
     resolve_location_area_fields(session, body)
     restrict_import_body(body, plan)
     if existing:
+        from app.api.admin_resource_location import omit_frozen_location_edits
+
+        body.pop("status", None)
+        omit_frozen_location_edits(existing, body, warnings)
         updated = _update_location(repo, existing, body)
         repo.update(updated)
         persist_import_change(session, dry_run=dry_run)

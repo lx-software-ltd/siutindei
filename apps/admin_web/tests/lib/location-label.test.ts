@@ -52,6 +52,21 @@ describe('locationListLabel', () => {
     expect(locationListLabel(venues[2], venues, 'loc-3')).toBe('Side Hall');
   });
 
+  it('marks a closed venue', () => {
+    const venues = [
+      { name: 'Main Hall', address: '1 Name Road', status: 'temporarily_closed' },
+      { name: 'Side Hall', address: '2 Name Road', status: 'permanently_closed' },
+      { name: 'Open Hall', address: '3 Name Road', status: 'open' },
+    ];
+    expect(locationListLabel(venues[0], venues)).toBe(
+      'Main Hall · Temporarily Closed'
+    );
+    expect(locationListLabel(venues[1], venues)).toBe(
+      'Side Hall · Permanently Closed'
+    );
+    expect(locationListLabel(venues[2], venues)).toBe('Open Hall');
+  });
+
   it('does not repeat a name that is also the address', () => {
     const shared = [
       { name: 'Main Hall', address: 'Main Hall' },

@@ -128,7 +128,10 @@ export function listingTitle(locale: Locale, listing: ActivityListing): string {
 }
 
 export function isTemporarilyClosed(listing: ActivityListing): boolean {
-  return listing.organization.status === 'closed_temporarily';
+  return (
+    listing.organization.status === 'closed_temporarily' ||
+    listing.location.status === 'temporarily_closed'
+  );
 }
 
 export function isTemplateDescription(listing: ActivityListing): boolean {

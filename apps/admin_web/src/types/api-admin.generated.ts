@@ -7698,6 +7698,12 @@ export interface components {
             area_name?: string;
             lat?: number;
             lng?: number;
+            /**
+             * @description Stored when this import creates the location. A later import
+             *     leaves the stored status alone. Omitted or blank creates `open`.
+             * @enum {string}
+             */
+            status?: "open" | "temporarily_closed" | "permanently_closed";
         };
         AdminImportActivity: {
             name: string;
@@ -8422,6 +8428,13 @@ export interface components {
              *     of the address.
              */
             name?: string | null;
+            /**
+             * @description Whether the venue is open. Omitted, blank, or null is
+             *     stored as `open`. An import stores this only when it
+             *     creates the location.
+             * @enum {string}
+             */
+            status?: "open" | "temporarily_closed" | "permanently_closed";
             /** @description Full address (optional, max 500 characters) */
             address?: string;
             /** @description Latitude (-90 to 90) */
@@ -8440,6 +8453,14 @@ export interface components {
              *     as null.
              */
             name?: string | null;
+            /**
+             * @description Whether the venue is open. Blank or null is rejected.
+             *     Admins and managers may set it. While the location is
+             *     closed, or this request closes it, `address`, `area_id`,
+             *     `lat`, `lng`, and `place_id` must stay as stored.
+             * @enum {string}
+             */
+            status?: "open" | "temporarily_closed" | "permanently_closed";
             /** @description Full address (max 500 characters) */
             address?: string;
             /** @description Latitude (-90 to 90) */
@@ -8459,6 +8480,11 @@ export interface components {
             area_id: string;
             /** @description Optional venue label. Null when unset. */
             name?: string | null;
+            /**
+             * @description Whether the venue is open. Existing rows are `open`.
+             * @enum {string}
+             */
+            status: "open" | "temporarily_closed" | "permanently_closed";
             address?: string | null;
             lat?: number | null;
             lng?: number | null;
@@ -9631,6 +9657,12 @@ export interface components {
             /** Format: uuid */
             entity_id: string;
             entity_name?: string | null;
+            /**
+             * @description Status of the location this row is about, or of the venue
+             *     it would link. Null when the row has no venue yet.
+             * @enum {string|null}
+             */
+            venue_status?: "open" | "temporarily_closed" | "permanently_closed" | null;
             /** Format: uuid */
             org_id: string;
             org_name?: string | null;

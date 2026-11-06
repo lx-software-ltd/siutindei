@@ -204,6 +204,7 @@ export interface LocationFixProposal {
   entity_type: 'organization' | 'activity' | 'location';
   entity_id: string;
   entity_name?: string | null;
+  venue_status?: string | null;
   org_id: string;
   org_name?: string | null;
   kind: 'link_existing' | 'create_location' | 'unresolved' | 'update_location';
@@ -214,7 +215,11 @@ export interface LocationFixProposal {
     area_name?: string;
     lat?: number | null;
     lng?: number | null;
-    candidates?: { location_id: string; address?: string | null }[];
+    candidates?: {
+      location_id: string;
+      address?: string | null;
+      status?: string | null;
+    }[];
     register?: {
       name?: string;
       name_zh?: string;

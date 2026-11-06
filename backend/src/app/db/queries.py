@@ -113,6 +113,7 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
             ),
         )
         .where(Organization.status.in_(("operational", "closed_temporarily")))
+        .where(Location.status.in_(("open", "temporarily_closed")))
     )
     if review_gate_enabled():
         query = query.where(Organization.review_status == "approved")

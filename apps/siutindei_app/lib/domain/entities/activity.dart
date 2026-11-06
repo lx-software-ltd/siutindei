@@ -88,6 +88,7 @@ class LocationEntity {
     this.address,
     this.latitude,
     this.longitude,
+    this.status = 'open',
   });
 
   final String id;
@@ -96,6 +97,7 @@ class LocationEntity {
   final String? address;
   final double? latitude;
   final double? longitude;
+  final String status;
 
   /// Returns true if this location has coordinates.
   bool get hasCoordinates => latitude != null && longitude != null;
@@ -106,10 +108,11 @@ class LocationEntity {
       (other is LocationEntity &&
           other.id == id &&
           other.areaId == areaId &&
-          other.address == address);
+          other.address == address &&
+          other.status == status);
 
   @override
-  int get hashCode => Object.hash(id, areaId, address);
+  int get hashCode => Object.hash(id, areaId, address, status);
 
   @override
   String toString() => 'LocationEntity(id: $id, areaId: $areaId)';

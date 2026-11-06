@@ -234,6 +234,7 @@ def _store_activities(session, scan_run_id, activity_ids, by_id) -> None:
         for location in session.scalars(
             select(Location)
             .where(Location.org_id.in_(org_ids))
+            .where(Location.status == "open")
             .order_by(Location.address, Location.id)
         ).all():
             locations.setdefault(location.org_id, []).append(location)
@@ -266,7 +267,11 @@ def _store_activities(session, scan_run_id, activity_ids, by_id) -> None:
             rationale = f"{rationale} {detail}" if rationale else detail
             proposed = {
                 "candidates": [
-                    {"location_id": str(venue.id), "address": venue.address}
+                    {
+                        "location_id": str(venue.id),
+                        "address": venue.address,
+                        "status": venue.status,
+                    }
                     for venue in chosen
                 ]
             }
@@ -349,6 +354,7 @@ def _prepare(scan_run_id, entity_type, entity_ids, message_id):
             for location in session.scalars(
                 select(Location)
                 .where(Location.org_id.in_(org_ids))
+                .where(Location.status == "open")
                 .order_by(Location.address, Location.id)
             ).all():
                 locations.setdefault(location.org_id, []).append(location)

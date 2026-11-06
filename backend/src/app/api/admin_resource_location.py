@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from decimal import Decimal, InvalidOperation
+from typing import Any, Literal, overload
 from uuid import UUID
 
 from app.api.admin_imports_catalog import parse_place_id
@@ -16,6 +17,21 @@ from app.db.models import Location
 from app.db.repositories import LocationRepository
 from app.exceptions import ValidationError
 from app.services.area_assignment import get_leaf
+
+LOCATION_STATUSES = (
+    "open",
+    "temporarily_closed",
+    "permanently_closed",
+)
+DEFAULT_LOCATION_STATUS = "open"
+CLOSED_LOCATION_STATUSES = ("temporarily_closed", "permanently_closed")
+FROZEN_LOCATION_FIELDS = ("area_id", "address", "lat", "lng", "place_id")
+_CLOSED_LOCATION_MESSAGE = "Closed locations keep their address, area, and map pin"
+
+
+def location_is_closed(status: str | None) -> bool:
+    """True when address, area, and the map pin must stay as stored."""
+    return status in CLOSED_LOCATION_STATUSES
 
 
 def _create_location(repo: LocationRepository, body: dict[str, Any]) -> Location:
@@ -32,6 +48,7 @@ def _create_location(repo: LocationRepository, body: dict[str, Any]) -> Location
     _require_leaf_area(repo._session, area_uuid)
 
     name = _validate_string_length(body.get("name"), "name", MAX_NAME_LENGTH)
+    status = _parse_location_status(body.get("status")) or DEFAULT_LOCATION_STATUS
     address = _validate_string_length(
         body.get("address"), "address", MAX_ADDRESS_LENGTH
     )
@@ -48,6 +65,7 @@ def _create_location(repo: LocationRepository, body: dict[str, Any]) -> Location
         org_id=_parse_uuid(org_id),
         area_id=area_uuid,
         name=name,
+        status=status,
         address=address,
         lat=lat,
         lng=lng,
@@ -60,7 +78,16 @@ def _update_location(
     entity: Location,
     body: dict[str, Any],
 ) -> Location:
-    """Update a location."""
+    """Update a location.
+
+    Admins and managers share this handler and may set status. A closed
+    location, including one this request closes, keeps its address, area,
+    coordinates, and place id.
+    """
+    next_status = _next_status(entity, body)
+    if location_is_closed(next_status):
+        reject_frozen_location_edits(entity, body)
+
     if "area_id" in body:
         area_uuid = _parse_uuid(body["area_id"])
         _require_leaf_area(repo._session, area_uuid)
@@ -68,6 +95,9 @@ def _update_location(
 
     if "name" in body:
         entity.name = _validate_string_length(body["name"], "name", MAX_NAME_LENGTH)
+
+    if "status" in body:
+        entity.status = next_status
 
     if "address" in body:
         address = _validate_string_length(
@@ -95,6 +125,93 @@ def _update_location(
     if "place_id" in body:
         entity.place_id = parse_place_id(body.get("place_id"))
     return entity
+
+
+def _next_status(entity: Location, body: dict[str, Any]) -> str:
+    """Status after this update. A missing key keeps the stored value."""
+    if "status" not in body:
+        return entity.status
+    return _parse_location_status(body.get("status"), required=True)
+
+
+def reject_frozen_location_edits(entity: Location, body: dict[str, Any]) -> None:
+    """Reject a change to address, area, or the map pin on a closed venue."""
+    for field in FROZEN_LOCATION_FIELDS:
+        if field not in body:
+            continue
+        if _frozen_field_matches(entity, field, body[field]):
+            continue
+        raise ValidationError(_CLOSED_LOCATION_MESSAGE, field=field)
+
+
+def omit_frozen_location_edits(
+    entity: Location,
+    body: dict[str, Any],
+    warnings: list[str] | None,
+) -> None:
+    """Drop frozen edits so a reimport of a closed venue still succeeds."""
+    if not location_is_closed(entity.status):
+        return
+    removed = False
+    for field in FROZEN_LOCATION_FIELDS:
+        if field not in body or _frozen_field_matches(entity, field, body[field]):
+            continue
+        body.pop(field)
+        removed = True
+    if removed and warnings is not None:
+        warnings.append("Closed location kept its address, area, and map pin.")
+
+
+def _frozen_field_matches(entity: Location, field: str, value: Any) -> bool:
+    current = getattr(entity, field)
+    if field in {"lat", "lng"}:
+        return _coords_equal(current, value)
+    if field == "area_id":
+        return str(current) == str(value).strip()
+    return _blank_to_none(current) == _blank_to_none(value)
+
+
+def _blank_to_none(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _coords_equal(left: Any, right: Any) -> bool:
+    if left is None and right is None:
+        return True
+    if left is None or right is None:
+        return False
+    try:
+        quantum = Decimal("0.000001")
+        return Decimal(str(left)).quantize(quantum) == Decimal(str(right)).quantize(
+            quantum
+        )
+    except (InvalidOperation, ValueError):
+        return False
+
+
+@overload
+def _parse_location_status(value: Any, *, required: Literal[True]) -> str: ...
+
+
+@overload
+def _parse_location_status(
+    value: Any, *, required: Literal[False] = False
+) -> str | None: ...
+
+
+def _parse_location_status(value: Any, *, required: bool = False) -> str | None:
+    """Validate an optional location status. Blank is open on create."""
+    if value is None or (isinstance(value, str) and value.strip() == ""):
+        if required:
+            raise ValidationError("status is required", field="status")
+        return None
+    status = str(value).strip()
+    if status not in LOCATION_STATUSES:
+        raise ValidationError("Invalid status", field="status")
+    return status
 
 
 def _require_leaf_area(session: Any, area_id: Any) -> None:
@@ -159,6 +276,7 @@ def _serialize_location(entity: Location) -> dict[str, Any]:
         "org_id": str(entity.org_id),
         "area_id": str(entity.area_id),
         "name": entity.name,
+        "status": entity.status,
         "address": entity.address,
         "lat": entity.lat,
         "lng": entity.lng,

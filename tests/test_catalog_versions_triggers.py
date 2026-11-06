@@ -308,6 +308,32 @@ def test_location_name_change_is_versioned(versions) -> None:
         assert "name" in (latest.changed_fields or [])
 
 
+def test_location_status_change_is_versioned(versions) -> None:
+    with Session(versions) as session:
+        org = _org(f"Trigger Status {uuid4()}")
+        area = GeographicArea(name=f"Status Area {uuid4()}", level="district")
+        session.add(org)
+        session.add(area)
+        session.flush()
+        location = Location(org_id=org.id, area_id=area.id, address="1 Trigger Road")
+        session.add(location)
+        session.commit()
+        location_id = location.id
+    with Session(versions) as session:
+        location = session.get(Location, location_id)
+        assert location is not None
+        assert location.status == "open"
+        location.status = "temporarily_closed"
+        session.commit()
+    with Session(versions) as session:
+        location = session.get(Location, location_id)
+        assert location is not None
+        assert location.version == 2
+        latest = _rows(session, "location", location_id)[-1]
+        assert latest.snapshot["status"] == "temporarily_closed"
+        assert "status" in (latest.changed_fields or [])
+
+
 def test_later_location_change_bumps_org_once(versions) -> None:
     with Session(versions) as session:
         org = _org(f"Trigger Later {uuid4()}")

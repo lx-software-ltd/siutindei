@@ -19,12 +19,14 @@ import {
   formatAdminTableLabel,
   formatAdminTablePercent,
 } from '@/components/ui/admin-table-value';
+import { ClosedLocationMark } from '@/components/shared/closed-location-mark';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useDataQualityQueue } from '@/hooks/use-data-quality-queue';
 import { useGeographicAreas } from '@/hooks/use-geographic-areas';
 import { useOrganizationScope } from '@/hooks/use-organization-scope';
 import { adminTabLabel, formatAdminPageName } from '@/lib/admin-page-name';
+import { isLocationClosed, locationStatusLabel } from '@/lib/location-status';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import {
   decideLocationFix,
@@ -67,6 +69,17 @@ const RECORDS = [
   ['activity', 'Activities'],
   ['location', 'Locations'],
 ] as const;
+
+function candidateLinkLabel(candidate: {
+  address?: string | null;
+  status?: string | null;
+}): string {
+  const place = candidate.address || 'venue';
+  const closed = isLocationClosed(candidate.status)
+    ? locationStatusLabel(candidate.status)
+    : null;
+  return closed ? `Link ${place} (${closed})` : `Link ${place}`;
+}
 
 interface LocationFilters {
   q: string;
@@ -289,9 +302,29 @@ export function LocationsPanel() {
         </QualityFilters>
       }
       columns={[
-        { header: 'Record', cell: (item) => item.entity_name || formatAdminTableLabel(item.entity_type) },
+        {
+          header: 'Record',
+          cell: (item) => (
+            <span className='inline-flex items-center'>
+              {item.entity_name || formatAdminTableLabel(item.entity_type)}
+              {item.entity_type === 'location' ? (
+                <ClosedLocationMark status={item.venue_status ?? ''} />
+              ) : null}
+            </span>
+          ),
+        },
         { header: 'Current', cell: (item) => adminTableText(item.current_label) },
-        { header: 'Proposed', cell: (item) => adminTableText(item.proposed_label) },
+        {
+          header: 'Proposed',
+          cell: (item) => (
+            <span className='inline-flex items-center'>
+              {adminTableText(item.proposed_label)}
+              {item.entity_type === 'location' ? null : (
+                <ClosedLocationMark status={item.venue_status ?? ''} />
+              )}
+            </span>
+          ),
+        },
         { header: 'Source', priority: 'secondary', cell: (item) => adminTableText(item.source) },
         {
           header: 'Confidence',
@@ -350,7 +383,7 @@ export function LocationsPanel() {
                     loading={queue.activeId === `${open.id}:${candidate.location_id}`}
                     loadingLabel='Saving…'
                   >
-                    Link {candidate.address || 'venue'}
+                    {candidateLinkLabel(candidate)}
                   </Button>
                 ))}
               </div>

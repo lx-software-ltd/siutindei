@@ -308,6 +308,12 @@ class ActivityDetailScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _DetailRow(label: 'Area', value: location.areaId, semantic: semantic),
+          if (location.status == 'temporarily_closed')
+            _DetailRow(
+              label: 'Status',
+              value: 'Temporarily closed',
+              semantic: semantic,
+            ),
           if (location.address != null)
             _DetailRow(
               label: 'Address',

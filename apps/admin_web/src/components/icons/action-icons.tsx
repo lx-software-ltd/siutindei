@@ -330,6 +330,23 @@ export function StarIcon({ className }: IconProps) {
   );
 }
 
+export function ClosedCircleIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      aria-hidden='true'
+    >
+      <circle cx='12' cy='12' r='9' />
+      <path d='M8 8l8 8M16 8l-8 8' />
+    </svg>
+  );
+}
+
 export function RetryIcon({ className }: IconProps) {
   return (
     <svg

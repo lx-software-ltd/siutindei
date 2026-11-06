@@ -63,6 +63,13 @@ describe('listing status helpers', () => {
     expect(
       isTemporarilyClosed(buildListing({ status: 'closed_temporarily' })),
     ).toBe(true);
+    const listing = buildListing();
+    expect(
+      isTemporarilyClosed({
+        ...listing,
+        location: { ...listing.location, status: 'temporarily_closed' },
+      }),
+    ).toBe(true);
   });
 
   it('detects template descriptions', () => {

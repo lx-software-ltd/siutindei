@@ -316,6 +316,7 @@ def map_row_to_result(
             address=location.address,
             lat=location.lat,
             lng=location.lng,
+            status=location.status,
         ),
         pricing=PricingSchema(
             pricing_type=pricing.pricing_type.value,
