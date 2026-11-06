@@ -1240,7 +1240,7 @@ test.describe('Organizations Panel', () => {
                 : {
                     id: 'prop-price',
                     status: 'error',
-                    error: 'This change could not be saved.',
+                    error: 'Add the number of classes for this term price',
                   },
             ],
           }),
@@ -1259,7 +1259,17 @@ test.describe('Organizations Panel', () => {
       'Add the number of classes for this term price'
     );
     await card.getByRole('button', { name: 'Apply selected' }).click();
-    await expect(card.getByText('This change could not be saved.')).toBeVisible();
+    await expect(
+      card.getByText('Add the number of classes for this term price')
+    ).toHaveCount(1);
+    await card.getByLabel('Classes in the term').fill('8.5');
+    await card.getByRole('checkbox', { name: 'Select Price · Painting Workshops' }).check();
+    await expect(card.getByRole('button', { name: 'Apply selected' })).toHaveAttribute(
+      'title',
+      'Add the number of classes for this term price'
+    );
+    await card.getByLabel('Classes in the term').fill('8a');
+    await expect(card.getByLabel('Classes in the term')).toHaveValue('8a');
     await card.getByLabel('Classes in the term').fill('8');
     await card.getByLabel('Currency').selectOption('HKD');
     await card.getByRole('checkbox', { name: 'Select Price · Painting Workshops' }).check();

@@ -361,7 +361,7 @@ export interface paths {
         };
         /**
          * Read website enrichment for one organization
-         * @description Latest run, its proposals, and the organization's venues.
+         * @description Latest run, its proposals, catalog activities, and venues.
          *     An admin or importer JWT may call this. Apply and dismiss
          *     stay admin-only. Nothing is written to the catalog.
          *     `current_value` is the live catalog for display: organization
@@ -370,9 +370,9 @@ export interface paths {
          *     Blank fields and media URLs are omitted. The crawl snapshot
          *     used to detect a later edit stays on the stored proposal.
          *     Each pending price or schedule includes `blockers`: the
-         *     reasons apply would refuse that row, such as a missing term
-         *     length, activity, or venue. A pending activity or venue in
-         *     the same run counts as present.
+         *     reasons apply would refuse that row on its own, such as a
+         *     missing term length, activity, or venue. `activities` lists
+         *     catalog activities a reviewer can send back as `activity_id`.
          */
         get: {
             parameters: {
@@ -387,12 +387,14 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Run, proposals, and venues */
+                /** @description Run, proposals, activities, and venues */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "application/json": components["schemas"]["EnrichmentRead"];
+                    };
                 };
                 /** @description Forbidden */
                 403: {
@@ -500,13 +502,12 @@ export interface paths {
          *     in dependency order: organization, media, locations, activities,
          *     pricing, then schedules. Each proposal is saved on its own, so
          *     one failure does not undo the others. `overrides` is keyed by
-         *     proposal id and may set `area_id`, `category_id`, `age_min`,
-         *     `age_max`, `location_id`, `pricing_type`, `amount`, `currency`,
-         *     or `sessions_count`. A pricing override replaces the stored
-         *     proposal field for that apply and does not rewrite the
-         *     proposal. `sessions_count` is required when the applied type
-         *     is `per_sessions`. Each id returns its own result, including
-         *     `error` when that row was refused.
+         *     proposal id. See `EnrichmentOverride`. A pricing override
+         *     replaces the stored proposal field for that apply and does not
+         *     rewrite the proposal. `sessions_count` is required when the
+         *     applied type is `per_sessions`. `activity_id` chooses a catalog
+         *     activity when the proposed name does not match. Each id returns
+         *     its own result, including `error` when that row was refused.
          *     Nothing is applied automatically. When at least one proposal
          *     is applied, the response includes `data_quality_run_id` for
          *     the checks selected in import settings. Locations is included
@@ -524,7 +525,11 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["EnrichmentApplyRequest"];
+                };
+            };
             responses: {
                 /** @description Per-proposal results */
                 200: {
@@ -7623,6 +7628,68 @@ export interface components {
             error: string;
             /** @description Additional details (e.g., field name) */
             detail?: string;
+        };
+        EnrichmentBlocker: {
+            field: string;
+            message: string;
+        };
+        EnrichmentActivityOption: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        EnrichmentOverride: {
+            /** Format: uuid */
+            area_id?: string;
+            /** Format: uuid */
+            category_id?: string;
+            age_min?: number;
+            age_max?: number;
+            /** Format: uuid */
+            activity_id?: string;
+            /** Format: uuid */
+            location_id?: string;
+            pricing_type?: string;
+            amount?: string;
+            currency?: string;
+            sessions_count?: number;
+        };
+        EnrichmentApplyRequest: {
+            ids: string[];
+            overrides?: {
+                [key: string]: components["schemas"]["EnrichmentOverride"];
+            };
+        };
+        EnrichmentProposal: {
+            id: string;
+            section: string;
+            kind: string;
+            field?: string | null;
+            label: string;
+            current_value?: unknown;
+            proposed_value: {
+                [key: string]: unknown;
+            };
+            confidence: number;
+            unverified?: boolean;
+            evidence: {
+                [key: string]: unknown;
+            }[];
+            status: string;
+            copyright_notice?: string | null;
+            blockers?: components["schemas"]["EnrichmentBlocker"][];
+        };
+        EnrichmentRead: {
+            run: unknown;
+            proposals: components["schemas"]["EnrichmentProposal"][];
+            activities: components["schemas"]["EnrichmentActivityOption"][];
+            venues: {
+                /** Format: uuid */
+                id: string;
+                address: string;
+                name?: string | null;
+                status?: string | null;
+            }[];
         };
         /**
          * @description Language map for translated text. The server always includes English as "en".

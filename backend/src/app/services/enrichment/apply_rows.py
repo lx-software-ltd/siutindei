@@ -277,9 +277,7 @@ def _apply_pricing(
     proposed: dict[str, Any],
     override: dict[str, Any],
 ) -> None:
-    activity = activity_by_name(
-        session, org.id, str(proposed.get("activity_name") or "")
-    )
+    activity = _resolve_activity(session, org.id, proposed, override)
     location = _resolve_venue(session, org.id, proposed, override)
     if activity is None:
         raise ValidationError(PRICE_ACTIVITY, field="activity_name")
@@ -305,9 +303,7 @@ def _apply_schedule(
     proposed: dict[str, Any],
     override: dict[str, Any],
 ) -> None:
-    activity = activity_by_name(
-        session, org.id, str(proposed.get("activity_name") or "")
-    )
+    activity = _resolve_activity(session, org.id, proposed, override)
     location = _resolve_venue(session, org.id, proposed, override)
     if activity is None:
         raise ValidationError(SCHEDULE_ACTIVITY, field="activity_name")
@@ -384,6 +380,20 @@ def _coordinate(value: object) -> Decimal | None:
     if not number.is_finite():
         return None
     return number.quantize(Decimal("0.000001"))
+
+
+def _resolve_activity(
+    session: Session,
+    org_id: Any,
+    proposed: dict[str, Any],
+    override: dict[str, Any],
+) -> Activity | None:
+    if override.get("activity_id"):
+        row = session.get(Activity, override["activity_id"])
+        if row is None or str(row.org_id) != str(org_id):
+            raise ValidationError("activity_id not found", field="activity_id")
+        return row
+    return activity_by_name(session, org_id, str(proposed.get("activity_name") or ""))
 
 
 def _resolve_venue(

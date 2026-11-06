@@ -401,7 +401,14 @@ describe('pricing proposal fields', () => {
     });
     expect(onOverride).toHaveBeenCalledWith(
       'price-1',
-      expect.objectContaining({ sessions_count: 8 })
+      expect.objectContaining({ sessions_count: '8' })
+    );
+    fireEvent.change(screen.getByLabelText('Classes in the term'), {
+      target: { value: '8a' },
+    });
+    expect(onOverride).toHaveBeenCalledWith(
+      'price-1',
+      expect.objectContaining({ sessions_count: '8a' })
     );
     rerender(
       <ProposalTable
@@ -417,5 +424,45 @@ describe('pricing proposal fields', () => {
     expect(
       screen.queryByText('Add the number of classes for this term price')
     ).not.toBeInTheDocument();
+  });
+
+  it('shows the class-count refusal once and lets the reviewer pick the activity', () => {
+    const onOverride = vi.fn();
+    const note = 'Add the number of classes for this term price';
+    const row = proposal({
+      id: 'price-1',
+      section: 'Pricing',
+      kind: 'create_pricing',
+      label: 'Price · Painting',
+      proposed_value: {
+        activity_name: 'Missing',
+        pricing_type: 'per_sessions',
+        amount: '500',
+        currency: 'USD',
+        location_address: '',
+      },
+      blockers: [{ field: 'sessions_count', message: note }],
+    });
+    render(
+      <ProposalTable
+        rows={[row]}
+        venues={[{ id: 'venue-1', address: '1 Test Street' }]}
+        activities={[{ id: 'act-1', name: 'Swimming' }]}
+        selected={['price-1']}
+        overrides={{}}
+        applyErrors={{ 'price-1': note }}
+        onToggle={() => undefined}
+        onOverride={onOverride}
+      />
+    );
+    expect(screen.getAllByText(note)).toHaveLength(1);
+    expect(screen.getByLabelText('Activity')).toBeVisible();
+    fireEvent.change(screen.getByLabelText('Activity'), {
+      target: { value: 'act-1' },
+    });
+    expect(onOverride).toHaveBeenCalledWith(
+      'price-1',
+      expect.objectContaining({ activity_id: 'act-1' })
+    );
   });
 });

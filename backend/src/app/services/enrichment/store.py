@@ -296,8 +296,6 @@ def serialize_proposal(
     activity_names: list[str] | None = None,
     pricing_count: int = 0,
     schedule_count: int = 0,
-    blocker_names: list[str] | None = None,
-    blocker_venues: list[Any] | None = None,
 ) -> dict[str, Any]:
     proposed = row.proposed_value if isinstance(row.proposed_value, dict) else {}
     current = row.current_value
@@ -330,10 +328,8 @@ def serialize_proposal(
             row.kind,
             proposed,
             status=row.status,
-            activity_names=(
-                list(activity_names or []) if blocker_names is None else blocker_names
-            ),
-            venues=list(venues or []) if blocker_venues is None else blocker_venues,
+            activity_names=list(activity_names or []),
+            venues=list(venues or []),
         ),
     }
 

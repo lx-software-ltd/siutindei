@@ -559,8 +559,13 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
               title={
                 scope.detailsDirty
                   ? 'Save the Details form before applying'
-                  : firstBlockerMessage(selected, proposals, overrides) ||
-                    'Apply selected'
+                  : firstBlockerMessage(
+                      selected,
+                      proposals,
+                      overrides,
+                      query.data?.venues,
+                      query.data?.activities
+                    ) || 'Apply selected'
               }
               onClick={() => void decide('apply')}
             >
@@ -616,7 +621,9 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
             <h4 className='text-sm font-semibold text-ink-900'>{section}</h4>
             <ProposalTable
               rows={rows}
+              proposals={proposals}
               venues={query.data?.venues ?? []}
+              activities={query.data?.activities}
               selected={selected}
               overrides={overrides}
               applyErrors={applyErrors}

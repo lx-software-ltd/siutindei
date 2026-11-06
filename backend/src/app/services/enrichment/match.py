@@ -243,7 +243,11 @@ def _pricing_exists(
     except (InvalidOperation, ValueError):
         return False
     pricing_type = str(proposed.get("pricing_type") or "per_class")
-    wanted_sessions = positive_sessions(proposed.get("sessions_count"))
+    wanted_sessions = (
+        positive_sessions(proposed.get("sessions_count"))
+        if pricing_type == "per_sessions"
+        else None
+    )
     for row in session.scalars(
         select(ActivityPricing).where(
             ActivityPricing.activity_id == activity.id,

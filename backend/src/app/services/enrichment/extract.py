@@ -9,6 +9,7 @@ from typing import Any
 from app.db.models.enums import PricingType
 from app.services.enrichment.logos import media_proposals
 from app.services.enrichment.parse import quote_supported
+from app.services.enrichment.row_blockers import positive_sessions
 from app.services.enrichment.sheet import checked_value, schedule_entries, section_rows
 
 _AMOUNT_RE = re.compile(r"\d+(?:[.,]\d+)?")
@@ -138,10 +139,12 @@ def validate_model_sheet(
             "currency": str((row.get("currency") or {}).get("value") or "HKD")[:8]
             or "HKD",
         }
-        sessions = checked_value(row.get("sessions_count"), pages)
-        if sessions is not None and str(sessions["value"]).isdigit():
-            count = int(sessions["value"])
-            if count > 0:
+        if pricing_type == PricingType.PER_SESSIONS.value:
+            sessions = checked_value(row.get("sessions_count"), pages)
+            count = (
+                positive_sessions(sessions["value"]) if sessions is not None else None
+            )
+            if count is not None:
                 proposed["sessions_count"] = count
         found.append(
             _record(

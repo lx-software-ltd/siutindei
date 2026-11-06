@@ -11,7 +11,7 @@ import type {
   EnrichmentRead,
 } from '../../lib/api-client-enrichment';
 import { adminCurrencyOptions } from '../../lib/admin-currencies';
-import { visibleBlockers } from '../../lib/enrichment-overrides';
+import { positiveSessions, visibleBlockers } from '../../lib/enrichment-overrides';
 import { locationListLabel } from '../../lib/location-label';
 import type { GeographicAreaNode } from '../../lib/api-client-user';
 import { CascadingAreaSelect } from '../ui/cascading-area-select';
@@ -266,7 +266,9 @@ function statusTone(status: string) {
 
 export function ProposalTable({
   rows,
+  proposals,
   venues,
+  activities,
   selected,
   overrides,
   applyErrors = {},
@@ -274,7 +276,9 @@ export function ProposalTable({
   onOverride,
 }: {
   rows: EnrichmentProposal[];
+  proposals?: EnrichmentProposal[];
   venues: EnrichmentRead['venues'];
+  activities?: EnrichmentRead['activities'];
   selected: string[];
   overrides: Record<string, EnrichmentOverride>;
   applyErrors?: Record<string, string>;
@@ -283,6 +287,12 @@ export function ProposalTable({
 }) {
   const areas = useGeographicAreas();
   const categories = useActivityCategories();
+  const blockerContext = {
+    proposals: proposals ?? rows,
+    selected,
+    venues,
+    activities,
+  };
   return (
     <AdminDataTable>
       <AdminDataTableHead>
@@ -325,6 +335,8 @@ export function ProposalTable({
                   <ProposalFields
                     row={row}
                     venues={venues}
+                    activities={activities}
+                    blockerContext={blockerContext}
                     override={overrides[row.id] ?? {}}
                     applyError={applyErrors[row.id] ?? ''}
                     areaTree={areas.tree}
@@ -353,6 +365,8 @@ export function ProposalTable({
 function ProposalFields({
   row,
   venues,
+  activities,
+  blockerContext,
   override,
   applyError,
   areaTree,
@@ -361,6 +375,13 @@ function ProposalFields({
 }: {
   row: EnrichmentProposal;
   venues: EnrichmentRead['venues'];
+  activities?: EnrichmentRead['activities'];
+  blockerContext: {
+    proposals: EnrichmentProposal[];
+    selected: string[];
+    venues?: EnrichmentRead['venues'];
+    activities?: EnrichmentRead['activities'];
+  };
   override: EnrichmentOverride;
   applyError: string;
   areaTree: ReturnType<typeof useGeographicAreas>['tree'];
@@ -387,7 +408,12 @@ function ProposalFields({
           value={matchedAreaId(proposed, areaTree, override.area_id)}
           onChange={(areaId) => onOverride({ ...override, area_id: areaId })}
         />
-        <BlockerNotes row={row} override={override} applyError={applyError} />
+        <BlockerNotes
+          row={row}
+          override={override}
+          applyError={applyError}
+          context={blockerContext}
+        />
       </div>
     );
   }
@@ -446,33 +472,76 @@ function ProposalFields({
             />
           </div>
         </div>
-        <BlockerNotes row={row} override={override} applyError={applyError} />
+        <BlockerNotes
+          row={row}
+          override={override}
+          applyError={applyError}
+          context={blockerContext}
+        />
       </div>
     );
   }
-  if (row.kind === 'create_pricing') {
+  if (row.kind === 'create_pricing' || row.kind === 'create_schedule') {
     return (
       <PricingFields
         row={row}
         venues={venues}
+        activities={activities}
+        blockerContext={blockerContext}
         override={override}
         applyError={applyError}
         onOverride={onOverride}
       />
     );
   }
-  if (row.kind === 'create_schedule' && venues.length === 1) {
-    return <BlockerNotes row={row} override={override} applyError={applyError} />;
-  }
-  if (row.kind === 'create_schedule') {
-    return (
-      <div className='mt-3 max-w-sm space-y-3'>
-        <VenueField row={row} venues={venues} override={override} onOverride={onOverride} />
-        <BlockerNotes row={row} override={override} applyError={applyError} />
-      </div>
-    );
-  }
-  return <BlockerNotes row={row} override={override} applyError={applyError} />;
+  return (
+    <BlockerNotes
+      row={row}
+      override={override}
+      applyError={applyError}
+      context={blockerContext}
+    />
+  );
+}
+
+function ActivityField({
+  row,
+  activities,
+  override,
+  onOverride,
+}: {
+  row: EnrichmentProposal;
+  activities: NonNullable<EnrichmentRead['activities']>;
+  override: EnrichmentOverride;
+  onOverride: (patch: EnrichmentOverride) => void;
+}) {
+  return (
+    <div>
+      <Label htmlFor={`activity-${row.id}`}>Activity</Label>
+      {activities.length === 0 ? (
+        <p className='text-xs text-ink-500'>Add an activity before this row.</p>
+      ) : (
+        <Select
+          id={`activity-${row.id}`}
+          name='activity_id'
+          value={override.activity_id ?? ''}
+          onChange={(event) =>
+            onOverride({
+              ...override,
+              activity_id: event.target.value || undefined,
+            })
+          }
+        >
+          <option value=''>Match the name</option>
+          {activities.map((activity) => (
+            <option key={activity.id} value={activity.id}>
+              {activity.name}
+            </option>
+          ))}
+        </Select>
+      )}
+    </div>
+  );
 }
 
 function VenueField({
@@ -518,32 +587,62 @@ function VenueField({
 function PricingFields({
   row,
   venues,
+  activities,
+  blockerContext,
   override,
   applyError,
   onOverride,
 }: {
   row: EnrichmentProposal;
   venues: EnrichmentRead['venues'];
+  activities?: EnrichmentRead['activities'];
+  blockerContext: {
+    proposals: EnrichmentProposal[];
+    selected: string[];
+    venues?: EnrichmentRead['venues'];
+    activities?: EnrichmentRead['activities'];
+  };
   override: EnrichmentOverride;
   applyError: string;
   onOverride: (patch: EnrichmentOverride) => void;
 }) {
   const proposed = row.proposed_value;
+  const pricing = row.kind === 'create_pricing';
   const pricingType = override.pricing_type ?? String(proposed.pricing_type || 'per_class');
   const amount = override.amount ?? String(proposed.amount ?? '');
   const currency = override.currency ?? String(proposed.currency || 'HKD');
   const sessions =
-    override.sessions_count ?? numberOrBlank(proposed.sessions_count);
+    typeof override.sessions_count === 'string'
+      ? override.sessions_count
+      : override.sessions_count !== undefined
+        ? String(override.sessions_count)
+        : proposedSessions(proposed.sessions_count);
   const knownCurrency = adminCurrencyOptions.some((option) => option.code === currency);
   const sessionsErrorId = `pricing-sessions-${row.id}`;
-  const notes = visibleBlockers(row.blockers, override, proposed);
+  const notes = visibleBlockers(row, override, blockerContext);
   const sessionsNote = notes.find((item) => item.field === 'sessions_count');
+  const showActivity =
+    Boolean(override.activity_id) || notes.some((item) => item.field === 'activity_name');
+  const showVenue =
+    Boolean(override.location_id) ||
+    notes.some((item) => item.field === 'location_id') ||
+    venues.length !== 1;
   return (
     <fieldset className='mt-3 max-w-xl space-y-3'>
-      <legend className='sr-only'>Price</legend>
-      {venues.length !== 1 ? (
+      <legend className='sr-only'>{pricing ? 'Price' : 'Schedule'}</legend>
+      {showActivity && activities ? (
+        <ActivityField
+          row={row}
+          activities={activities}
+          override={override}
+          onOverride={onOverride}
+        />
+      ) : null}
+      {showVenue ? (
         <VenueField row={row} venues={venues} override={override} onOverride={onOverride} />
       ) : null}
+      {pricing ? (
+        <>
       <div>
         <Label htmlFor={`pricing-type-${row.id}`}>Pricing type</Label>
         <Select
@@ -604,23 +703,20 @@ function PricingFields({
             spellCheck={false}
             aria-required='true'
             aria-describedby={sessionsNote ? sessionsErrorId : undefined}
-            value={sessions === undefined ? '' : String(sessions)}
+            value={sessions}
             onChange={(event) =>
-              onOverride({
-                ...override,
-                sessions_count:
-                  event.target.value.trim() === ''
-                    ? undefined
-                    : Number(event.target.value),
-              })
+              onOverride({ ...override, sessions_count: event.target.value })
             }
           />
         </div>
+      ) : null}
+        </>
       ) : null}
       <BlockerNotes
         row={row}
         override={override}
         applyError={applyError}
+        context={blockerContext}
         sessionsErrorId={sessionsNote ? sessionsErrorId : undefined}
       />
     </fieldset>
@@ -631,14 +727,21 @@ function BlockerNotes({
   row,
   override,
   applyError,
+  context,
   sessionsErrorId,
 }: {
   row: EnrichmentProposal;
   override: EnrichmentOverride;
   applyError: string;
+  context: {
+    proposals: EnrichmentProposal[];
+    selected: string[];
+    venues?: EnrichmentRead['venues'];
+    activities?: EnrichmentRead['activities'];
+  };
   sessionsErrorId?: string;
 }) {
-  const notes = visibleBlockers(row.blockers, override, row.proposed_value);
+  const notes = visibleBlockers(row, override, context);
   const extra =
     applyError && !notes.some((item) => item.message === applyError) ? applyError : '';
   if (notes.length === 0 && !extra) {
@@ -691,6 +794,11 @@ export function selectionAfterToggle(
     rows.filter((item) => isLogoProposal(item) && item.id !== id).map((item) => item.id)
   );
   return [...selected.filter((item) => !otherLogos.has(item)), id];
+}
+
+function proposedSessions(value: unknown): string {
+  const count = positiveSessions(value);
+  return count === undefined ? '' : String(count);
 }
 
 function numberOrBlank(value: unknown): number | undefined {

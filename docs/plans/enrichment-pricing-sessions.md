@@ -62,3 +62,19 @@ back to adding the price by hand.
 None. A term price stays blocked until the reviewer supplies
 `sessions_count` or changes the type. Schedule rows report missing
 activity and venue the same way prices do.
+
+## Review fixes
+
+- The activity note is a catalog activity picker (`activity_id`).
+  A pending activity clears that note only when it is selected with
+  the price.
+- The class-count box keeps the typed text. `8.5`, `8a`, and `1e1`
+  stay blocked and are not sent.
+- Read-time blockers describe applying that row alone. Selecting a
+  second venue puts the venue note back, and apply then refuses the
+  price instead of binding the original venue.
+- A class count is stored and compared only for `per_sessions`.
+  `positive_sessions` is the one whole-number check.
+- `EnrichmentRead`, `EnrichmentProposal`, and `EnrichmentOverride`
+  are schemas. `EXTRACTION_VERSION` is `4` because the validator
+  changed; the prompt hash still busts the extraction cache.

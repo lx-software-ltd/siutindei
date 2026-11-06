@@ -24,7 +24,6 @@ from app.db.models.org_enrichment import OrgEnrichmentProposal
 from app.exceptions import AppError, ValidationError
 from app.services.enrichment.apply import apply_proposals, dismiss_proposals
 from app.services.enrichment.queue import enqueue_enrichment
-from app.services.enrichment.row_blockers import blocker_context
 from app.services.enrichment.store import (
     expire_stale_runs,
     latest_run,
@@ -169,11 +168,12 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
             venues = session.scalars(
                 select(Location).where(Location.org_id == org_id)
             ).all()
-            activity_names = list(
-                session.scalars(
-                    select(Activity.name).where(Activity.org_id == org_id)
-                ).all()
-            )
+            activity_rows = session.scalars(
+                select(Activity)
+                .where(Activity.org_id == org_id)
+                .order_by(Activity.name)
+            ).all()
+            activity_names = [row.name for row in activity_rows]
             activity_ids = select(Activity.id).where(Activity.org_id == org_id)
             pricing_count = int(
                 session.scalar(
@@ -191,9 +191,6 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
                 )
                 or 0
             )
-            blocker_names, blocker_venues = blocker_context(
-                list(proposals), activity_names, list(venues)
-            )
             payload = {
                 "run": serialize_run(run),
                 "proposals": [
@@ -204,10 +201,11 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
                         activity_names=activity_names,
                         pricing_count=pricing_count,
                         schedule_count=schedule_count,
-                        blocker_names=blocker_names,
-                        blocker_venues=blocker_venues,
                     )
                     for row in proposals
+                ],
+                "activities": [
+                    {"id": str(row.id), "name": row.name} for row in activity_rows
                 ],
                 "venues": [
                     {

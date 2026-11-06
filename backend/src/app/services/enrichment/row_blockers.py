@@ -22,19 +22,39 @@ PRICING_TYPES = frozenset(item.value for item in PricingType)
 
 
 def positive_sessions(value: object) -> int | None:
-    """A class count greater than zero, or nothing."""
-    if isinstance(value, bool) or value is None or value == "":
+    """A whole class count greater than zero, or nothing.
+
+    ``12`` and ``12.0`` count. ``8.5``, ``1e1``, and ``12 classes`` do not.
+    """
+    if isinstance(value, bool) or value is None:
         return None
+    if isinstance(value, str):
+        text = value.strip()
+        if text == "" or "e" in text.lower():
+            return None
+        if text.isdigit():
+            number = int(text)
+            return number if number > 0 else None
+        try:
+            parsed = Decimal(text)
+        except InvalidOperation:
+            return None
+        return _whole_positive(parsed)
+    if isinstance(value, Decimal):
+        return _whole_positive(value)
     if isinstance(value, int):
         return value if value > 0 else None
     if isinstance(value, float):
-        if not value.is_integer() or value <= 0:
+        if not value.is_integer():
             return None
-        return int(value)
-    if isinstance(value, str) and value.strip().isdigit():
-        number = int(value.strip())
-        return number if number > 0 else None
+        return _whole_positive(Decimal(str(value)))
     return None
+
+
+def _whole_positive(number: Decimal) -> int | None:
+    if not number.is_finite() or number != number.to_integral_value() or number <= 0:
+        return None
+    return int(number)
 
 
 def pricing_fields(
@@ -96,40 +116,6 @@ def row_blockers(
     if kind == "create_pricing":
         blockers.extend(_pricing_blockers(proposed))
     return blockers
-
-
-def blocker_context(
-    proposals: list[Any],
-    activity_names: list[str],
-    venues: list[Any],
-) -> tuple[list[str], list[Any]]:
-    """Catalog names and venues plus pending rows from the same run.
-
-    Applying a price together with its activity or venue succeeds, so
-    the read-time note should not ask for a row that is still pending.
-    """
-    names = [str(name) for name in activity_names]
-    places = list(venues)
-    for row in proposals:
-        if getattr(row, "status", None) != "pending":
-            continue
-        proposed = row.proposed_value if isinstance(row.proposed_value, dict) else {}
-        if row.kind == "create_activity":
-            name = str(proposed.get("name") or "").strip()
-            if name:
-                names.append(name)
-        elif row.kind == "create_location":
-            address = str(proposed.get("address") or "").strip()
-            if address:
-                places.append(_PendingVenue(address))
-    return names, places
-
-
-class _PendingVenue:
-    id = None
-
-    def __init__(self, address: str) -> None:
-        self.address = address
 
 
 def _pricing_blockers(proposed: dict[str, Any]) -> list[dict[str, str]]:

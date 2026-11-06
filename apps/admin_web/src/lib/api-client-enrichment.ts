@@ -39,6 +39,10 @@ export interface EnrichmentProposal {
 export interface EnrichmentRead {
   run: EnrichmentRun | null;
   proposals: EnrichmentProposal[];
+  activities?: Array<{
+    id: string;
+    name: string;
+  }>;
   venues: Array<{
     id: string;
     address: string;
@@ -116,11 +120,13 @@ export interface EnrichmentOverride {
   category_id?: string;
   age_min?: number;
   age_max?: number;
+  activity_id?: string;
   location_id?: string;
   pricing_type?: string;
   amount?: string;
   currency?: string;
-  sessions_count?: number;
+  /** A whole count sent to apply, or the text still being typed. */
+  sessions_count?: number | string;
 }
 
 export interface EnrichmentSettings {
