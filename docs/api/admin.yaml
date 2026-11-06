@@ -6837,7 +6837,9 @@ components:
             type: string
           description: >-
             Memberships in the managed Cognito groups (admin, manager),
-            resolved per group rather than per user.
+            resolved per group rather than per user. The worker reuses
+            that map for 60 seconds, so a group change can take that
+            long to appear.
         created_at:
           type: string
           format: date-time

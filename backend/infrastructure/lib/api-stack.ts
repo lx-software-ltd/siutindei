@@ -1950,13 +1950,18 @@ export class ApiStack extends cdk.Stack {
     // validates hashed keys against the api_keys table via RDS Proxy.
     // No reserved concurrency: the account-wide unreserved pool is at the
     // AWS minimum (100), so reserving the default 25 fails deployment.
-    // API Gateway caches authorizer results for 5 minutes, keeping
-    // invocation volume low.
+    // 1024 MB gives the cold path a full share of a vCPU. At 256 MB the
+    // same init plus the RDS Proxy TLS handshake ran about 7 seconds,
+    // which is the whole p95 budget on its own. The search dependency
+    // profile keeps boto3 on the runtime and leaves PyJWT, pypdf,
+    // phonenumbers, pycountry, and alembic out of the zip. The handler
+    // must not import those at startup.
     const partnerApiKeyAuthorizerFunction = createPythonFunction(
       "PartnerApiKeyAuthorizerFunction",
       {
         handler: "lambda/authorizers/api_key/handler.lambda_handler",
-        memorySize: 256,
+        requirementsFile: "requirements-core.txt",
+        memorySize: 1024,
         timeout: cdk.Duration.seconds(10),
         reservedConcurrentExecutions: null,
         environment: {
@@ -1971,14 +1976,15 @@ export class ApiStack extends cdk.Stack {
     database.grantAppUserSecretRead(partnerApiKeyAuthorizerFunction);
     database.grantConnect(partnerApiKeyAuthorizerFunction, "siutindei_app");
 
-    // The 5 minute cache bounds how long a revoked key remains usable.
+    // 15 minutes bounds how long a revoked key remains usable, and how
+    // often a long partner sync pays for a cold authorizer.
     const partnerApiKeyAuthorizer = new apigateway.RequestAuthorizer(
       this,
       "PartnerApiKeyAuthorizer",
       {
         handler: partnerApiKeyAuthorizerFunction,
         identitySources: [apigateway.IdentitySource.header("x-partner-key")],
-        resultsCacheTtl: cdk.Duration.minutes(5),
+        resultsCacheTtl: cdk.Duration.minutes(15),
       }
     );
 
@@ -2491,14 +2497,24 @@ export class ApiStack extends cdk.Stack {
       }
     );
 
-    // Admin routes
+    // Admin routes. HTTP goes through the live alias so provisioned
+    // concurrency applies. Two warm environments cover the partner sync,
+    // which runs one request at a time, plus a second for the admin
+    // console. The site is not live, so this stays at the low end of the
+    // fan-out; a page that fires more than two calls at once still pays
+    // a cold start on the extras. Category-suggestion SQS stays on
+    // $LATEST so a 90s OpenRouter job does not occupy a warm environment.
+    // The slots come out of this function's reserved concurrency of 25.
     const admin = v1.addResource("admin");
+    const adminLiveAlias = adminFunction.addAlias("live", {
+      provisionedConcurrentExecutions: 2,
+    });
     const adminIntegration = new apigateway.Integration({
       type: apigateway.IntegrationType.AWS_PROXY,
       integrationHttpMethod: "POST",
-      uri: `arn:aws:apigateway:${cdk.Stack.of(this).region}:lambda:path/2015-03-31/functions/${adminFunction.functionArn}/invocations`,
+      uri: `arn:aws:apigateway:${cdk.Stack.of(this).region}:lambda:path/2015-03-31/functions/${adminLiveAlias.functionArn}/invocations`,
     });
-    adminFunction.addPermission("AdminApiInvokePermission", {
+    adminLiveAlias.addPermission("AdminApiInvokePermission", {
       principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
       sourceArn: api.arnForExecuteApi(),
     });
@@ -3168,7 +3184,7 @@ export class ApiStack extends cdk.Stack {
         },
         // Admin also consumes category-suggestion SQS (OpenRouter up to
         // 90s, function timeout 120s). A 10s p99 pages on every category
-        // check. HTTP latency stays on the API Gateway p99 alarm.
+        // check. HTTP latency stays on the API Gateway p95 alarm.
         {
           label: "Admin",
           functionName: name("SiutindeiAdminFunction"),

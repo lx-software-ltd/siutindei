@@ -1,5 +1,6 @@
-"""API layer package."""
+"""API layer package.
 
-from app.api.search import lambda_handler
-
-__all__ = ["lambda_handler"]
+Import the handler you need (`app.api.search`, `app.api.admin`). Importing
+search from this package loaded the public search stack into every admin
+and partner cold start, and nothing else imported that re-export.
+"""

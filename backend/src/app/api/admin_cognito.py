@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Mapping
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from typing import Any
 
@@ -201,6 +202,17 @@ def _add_user_to_manager_group(user_sub: str) -> None:
         )
 
 
+def _list_users_and_groups(
+    params: dict[str, Any],
+    user_pool_id: str,
+) -> tuple[dict[str, Any], dict[str, list[str]]]:
+    """Fetch one Cognito user page and the managed-group map together."""
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        users = pool.submit(_cognito, "list_users", **params)
+        groups = pool.submit(_list_group_memberships, user_pool_id)
+        return users.result(), groups.result()
+
+
 def _include_managed_organizations(event: Mapping[str, Any]) -> bool:
     """True when the caller asked for each user's managed organizations."""
     include = (_query_param(event, "include") or "").strip()
@@ -237,7 +249,10 @@ def _handle_list_cognito_users(event: Mapping[str, Any]) -> dict[str, Any]:
         params["Filter"] = email_filter
 
     try:
-        response = _cognito("list_users", **params)
+        # The user page and the group map do not depend on each other.
+        # Overlapping them keeps this screen to one proxy round trip
+        # instead of a chain of three.
+        response, memberships = _list_users_and_groups(params, user_pool_id)
     except AwsProxyError as exc:
         logger.warning(f"Cognito list_users error: {exc.code}: {exc.message}")
         if pagination_token and exc.code == "InvalidParameterException":
@@ -245,11 +260,6 @@ def _handle_list_cognito_users(event: Mapping[str, Any]) -> dict[str, Any]:
                 "Invalid pagination token", field="pagination_token"
             ) from exc
         raise ValidationError(f"Cognito error: {exc.message}") from exc
-
-    # Group membership is resolved per group, not per user: two
-    # ListUsersInGroup calls replace N AdminListGroupsForUser calls, so the
-    # proxy hop count stays constant regardless of page size.
-    memberships = _list_group_memberships(user_pool_id)
 
     users = []
     for user in response.get("Users", []):

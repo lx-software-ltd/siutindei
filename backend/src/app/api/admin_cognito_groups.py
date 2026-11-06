@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from app.services.aws_proxy import AwsProxyError
@@ -15,6 +17,12 @@ GROUP_MEMBERS_PAGE_SIZE = 60
 # Hard stop on group pagination so a runaway NextToken can never exhaust the
 # Lambda timeout; 50 pages x 60 members is far beyond any realistic pool.
 MAX_GROUP_PAGES = 50
+# The admin screen refetches this list as the operator moves between
+# pages. Group membership changes rarely, so a minute of staleness is
+# cheaper than two more proxy hops on every page.
+GROUP_MEMBERSHIP_CACHE_SECONDS = 60.0
+
+_membership_cache: dict[str, tuple[float, dict[str, list[str]]]] = {}
 
 
 def _managed_group_names() -> list[str]:
@@ -26,16 +34,40 @@ def _managed_group_names() -> list[str]:
     return list(dict.fromkeys(names))
 
 
+def clear_group_membership_cache() -> None:
+    """Drop the cached group map. Tests use this between cases."""
+    _membership_cache.clear()
+
+
 def _list_group_memberships(user_pool_id: str) -> dict[str, list[str]]:
     """Map username -> group names for the managed groups.
 
     A failure for one group degrades to "no members" for that group only,
     so the user list still renders; the failure is logged for follow-up.
+    The managed groups are fetched together, and the map is reused for
+    ``GROUP_MEMBERSHIP_CACHE_SECONDS``.
     """
+    now = time.monotonic()
+    cached = _membership_cache.get(user_pool_id)
+    if cached is not None and now - cached[0] < GROUP_MEMBERSHIP_CACHE_SECONDS:
+        return cached[1]
+
+    names = _managed_group_names()
     memberships: dict[str, list[str]] = {}
-    for group_name in _managed_group_names():
-        for username in _iter_group_members(user_pool_id, group_name):
+    if len(names) <= 1:
+        listed = [(name, _iter_group_members(user_pool_id, name)) for name in names]
+    else:
+        with ThreadPoolExecutor(max_workers=len(names)) as pool:
+            listed = list(
+                pool.map(
+                    lambda name: (name, _iter_group_members(user_pool_id, name)),
+                    names,
+                )
+            )
+    for group_name, usernames in listed:
+        for username in usernames:
             memberships.setdefault(username, []).append(group_name)
+    _membership_cache[user_pool_id] = (time.monotonic(), memberships)
     return memberships
 
 

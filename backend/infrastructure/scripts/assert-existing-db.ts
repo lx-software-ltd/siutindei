@@ -158,12 +158,14 @@ function assertOpsAlarms(): void {
   });
   // The API latency alarm is a volume-gated metric-math expression.
   template.hasResourceProperties("AWS::CloudWatch::Alarm", {
-    AlarmName: "test-api-latency-p99-alarm",
+    AlarmName: "test-api-latency-p95-alarm",
     Metrics: Match.arrayWith([
       Match.objectLike({
-        Expression: `IF(samples >= ${API_LATENCY_MIN_SAMPLES}, p99)`,
+        Expression: `IF(samples >= ${API_LATENCY_MIN_SAMPLES}, p95, 0)`,
       }),
     ]),
+    DatapointsToAlarm: 3,
+    EvaluationPeriods: 3,
   });
   template.hasResourceProperties("AWS::CloudWatch::Alarm", {
     AlarmName: "test-search-lambda-duration-p99-alarm",
@@ -248,6 +250,55 @@ function assertOpsAlarmRulesInNestedStack(): void {
         `${logicalId} must keep its OpsAlarms logical ID and reference only literals; found ${external.join(", ")}`,
       );
     }
+  }
+
+  const parentResources = Template.fromStack(stack).toJSON().Resources as Record<
+    string,
+    { Type: string; Properties?: Record<string, unknown> }
+  >;
+  // CloudFormation allows 500 resources. 492 includes the admin live
+  // alias and its published version. Fail if a later edit crosses the cap
+  // or drifts from the documented count.
+  const resourceCount = Object.keys(parentResources).length;
+  if (resourceCount > 500) {
+    throw new Error(
+      `API stack has ${resourceCount} resources; CloudFormation allows 500`,
+    );
+  }
+  if (resourceCount !== 492) {
+    throw new Error(
+      `API stack resource count changed to ${resourceCount}; update docs/architecture/aws-assets-map.md`,
+    );
+  }
+  const partnerAuthorizer = Object.values(parentResources).find(
+    (resource) =>
+      resource.Type === "AWS::ApiGateway::Authorizer" &&
+      JSON.stringify(resource.Properties?.IdentitySource ?? "").includes(
+        "x-partner-key",
+      ),
+  );
+  if (partnerAuthorizer?.Properties?.AuthorizerResultTtlInSeconds !== 900) {
+    throw new Error("Partner API-key authorizer cache must be 15 minutes");
+  }
+  const partnerFunction = Object.values(parentResources).find(
+    (resource) =>
+      resource.Type === "AWS::Lambda::Function" &&
+      resource.Properties?.Handler ===
+        "lambda/authorizers/api_key/handler.lambda_handler",
+  );
+  if (partnerFunction?.Properties?.MemorySize !== 1024) {
+    throw new Error("Partner API-key authorizer must run at 1024 MB");
+  }
+  const adminAlias = Object.values(parentResources).find(
+    (resource) =>
+      resource.Type === "AWS::Lambda::Alias" &&
+      resource.Properties?.Name === "live",
+  );
+  const provisioned = adminAlias?.Properties?.ProvisionedConcurrencyConfig as
+    | { ProvisionedConcurrentExecutions?: number }
+    | undefined;
+  if (provisioned?.ProvisionedConcurrentExecutions !== 2) {
+    throw new Error("Admin HTTP alias must keep 2 provisioned executions");
   }
 }
 

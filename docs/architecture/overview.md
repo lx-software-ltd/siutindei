@@ -189,7 +189,7 @@ pull requests for dependency updates:
 - CloudWatch logs for all Lambda functions (KMS encrypted, 90-day retention).
 - X-Ray tracing enabled for API Gateway, with active tracing on the admin
   and AWS-proxy Lambdas.
-- Operational alarms (API Gateway 5XX and volume-gated p99 latency,
+- Operational alarms (API Gateway 5XX and volume-gated p95 latency,
   search, admin, and listing-events Lambda errors, throttles, and
   per-function p99 duration, Aurora ACU utilization and connection count,
   manager-request and category-suggestion DLQs, API WAF blocks) publish

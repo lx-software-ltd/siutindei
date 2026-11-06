@@ -54,10 +54,13 @@ export interface OpsAlarmRulesProps {
 const FIVE_MINUTES = cdk.Duration.minutes(5);
 
 /**
- * Minimum API Gateway requests per period before the p99 latency alarm is
- * evaluated. Below this, p99 is just the slowest single request (a handful
- * of admin-console calls can breach it), so the period is treated as
- * missing data. Per-function Duration alarms cover the low-traffic regime.
+ * Minimum API Gateway requests per period before the p95 latency alarm is
+ * evaluated. Below this, a percentile is a handful of slow requests (one
+ * cold authorizer, or one admin screen), so the expression returns 0.
+ * Returning 0, rather than no datapoint, is required: CloudWatch skips a
+ * missing metric-math value and will alarm on three older breaches that
+ * were not consecutive. A quiet period has to break that streak.
+ * Per-function Duration alarms cover the low-traffic regime.
  */
 export const API_LATENCY_MIN_SAMPLES = 50;
 
@@ -188,25 +191,29 @@ export function addOpsAlarmRules(
     })
   );
 
-  // API Gateway p99 latency, gated on request volume. IF() yields no
-  // datapoint when the gate fails, which NOT_BREACHING then ignores.
+  // API Gateway p95 latency, gated on request volume. p95 of a small
+  // period is several requests, so one cold start does not page. The
+  // else branch is 0 so a below-gate period is healthy and breaks the
+  // three-period streak; omitting it makes CloudWatch skip the period
+  // and reach back to older breaches.
   alarms.push(
     new cloudwatch.Alarm(scope, "ApiLatencyP99Alarm", {
-      alarmName: name("api-latency-p99-alarm"),
+      alarmName: name("api-latency-p95-alarm"),
       alarmDescription:
-        "API Gateway p99 latency is elevated " +
+        "API Gateway p95 latency is elevated " +
         `(>= ${API_LATENCY_MIN_SAMPLES} requests per 5 min)`,
       metric: new cloudwatch.MathExpression({
-        expression: `IF(samples >= ${API_LATENCY_MIN_SAMPLES}, p99)`,
+        expression: `IF(samples >= ${API_LATENCY_MIN_SAMPLES}, p95, 0)`,
         usingMetrics: {
-          p99: apiMetric("Latency", "p99"),
+          p95: apiMetric("Latency", "p95"),
           samples: apiMetric("Latency", "SampleCount"),
         },
         period: FIVE_MINUTES,
-        label: "API p99 latency (volume-gated)",
+        label: "API p95 latency (volume-gated)",
       }),
       threshold: 3000,
       evaluationPeriods: 3,
+      datapointsToAlarm: 3,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     })
   );
