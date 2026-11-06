@@ -826,6 +826,126 @@ test.describe('Organizations Panel', () => {
     ).toHaveCount(0);
   });
 
+  test('enriches one organization from a leaflet url', async ({ adminPage }) => {
+    let started = false;
+    await adminPage.route(
+      '**/api/mock/**/admin/organizations/org-1/enrichment',
+      async (route) => {
+        const request = route.request();
+        if (request.method() === 'POST') {
+          const body = request.postDataJSON();
+          if (!body.leaflet) {
+            await route.fallback();
+            return;
+          }
+          expect(body.leaflet.items).toEqual([
+            { url: 'https://leaflets.example/term.pdf' },
+          ]);
+          started = true;
+          await route.fulfill({
+            status: 202,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              run: {
+                id: 'run-leaflet',
+                org_id: 'org-1',
+                status: 'queued',
+                source: 'leaflet',
+                seed_url: 'https://leaflets.example/term.pdf',
+                pages_fetched: 0,
+                bytes_fetched: 0,
+                model: null,
+                cost_usd: 0,
+                error: null,
+                created_at: new Date().toISOString(),
+                finished_at: null,
+              },
+            }),
+          });
+          return;
+        }
+        if (!started) {
+          await route.fallback();
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            run: {
+              id: 'run-leaflet',
+              org_id: 'org-1',
+              status: 'ready',
+              source: 'leaflet',
+              seed_url: 'https://leaflets.example/term.pdf',
+              pages_fetched: 1,
+              bytes_fetched: 80,
+              model: 'qwen/qwen3-vl-30b-a3b-instruct',
+              cost_usd: 0.02,
+              error: null,
+              created_at: new Date().toISOString(),
+              finished_at: new Date().toISOString(),
+            },
+            proposals: [
+              {
+                id: 'prop-leaflet-media',
+                section: 'Media',
+                kind: 'add_media',
+                field: 'media',
+                label: 'Leaflet · term.pdf',
+                current_value: null,
+                proposed_value: {
+                  source_url: 'https://media.example/term.pdf',
+                  object_key: 'organizations/org-1/enrichment/leaflets/term.pdf',
+                  leaflet: true,
+                  alt: 'Leaflet · term.pdf',
+                  logo: false,
+                  copyright_notice:
+                    'Copied from a leaflet supplied for this catalog. Copyright remains with the provider.',
+                },
+                confidence: 0.99,
+                unverified: false,
+                evidence: [],
+                status: 'pending',
+              },
+            ],
+            venues: [],
+          }),
+        });
+      }
+    );
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    const leaflet = adminPage.getByTestId('enrich-from-leaflet');
+    await expect(leaflet).toBeEnabled();
+    await leaflet.click();
+    const dialog = adminPage.getByRole('dialog');
+    await expect(
+      dialog.getByRole('heading', { name: 'Enrich from leaflet' })
+    ).toBeVisible();
+    await dialog.getByRole('button', { name: 'Read leaflet' }).click();
+    await expect(
+      dialog.getByText('Add a picture, a PDF, or a public URL.')
+    ).toBeVisible();
+    await adminPage.setViewportSize({ width: 390, height: 844 });
+    await expect(dialog.getByLabel('Leaflet URLs')).toBeVisible();
+    await dialog.getByLabel('Leaflet URLs').fill('https://leaflets.example/term.pdf');
+    await dialog.getByRole('button', { name: 'Read leaflet' }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(
+      adminPage.getByRole('heading', { name: 'Leaflet enrichment' })
+    ).toBeVisible();
+    await expect(adminPage.getByText('1 leaflet')).toBeVisible();
+    await expect(
+      adminPage.getByText(
+        'Copied from a leaflet supplied for this catalog. Copyright remains with the provider.'
+      )
+    ).toBeVisible();
+    await expect(
+      adminPage.getByRole('checkbox', { name: 'Select Leaflet · term.pdf' })
+    ).toBeChecked();
+    await adminPage.setViewportSize({ width: 1280, height: 720 });
+  });
+
   test('enables website enrichment as soon as a website is typed', async ({
     adminPage,
   }) => {
@@ -881,6 +1001,7 @@ test.describe('Organizations Panel', () => {
           max_page_bytes: 1000000,
           copy_media: true,
           min_confidence_shown: 0.5,
+          leaflet_model: null,
         };
         await route.fulfill({
           status: 200,

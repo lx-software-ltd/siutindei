@@ -4,6 +4,7 @@ export interface EnrichmentRun {
   id: string;
   org_id: string;
   status: string;
+  source?: string;
   seed_url: string;
   pages_fetched: number;
   bytes_fetched: number;
@@ -46,17 +47,47 @@ export function getOrgEnrichment(orgId: string): Promise<EnrichmentRead> {
   );
 }
 
+export type LeafletStartItem = { url: string } | { object_key: string };
+
 export function startOrgEnrichment(
   orgId: string,
-  website?: string
+  websiteOrLeaflet?: string | { leaflet: { items: LeafletStartItem[] } }
 ): Promise<{ run: EnrichmentRun }> {
-  const body = website ? { website } : {};
+  const body =
+    typeof websiteOrLeaflet === 'string'
+      ? websiteOrLeaflet
+        ? { website: websiteOrLeaflet }
+        : {}
+      : (websiteOrLeaflet ?? {});
   return request<{ run: EnrichmentRun }>(
     buildApiUrl(`v1/admin/organizations/${orgId}/enrichment`),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+    }
+  );
+}
+
+export interface LeafletUpload {
+  upload_url: string;
+  media_url: string;
+  object_key: string;
+  content_type: string;
+  expires_in: number;
+}
+
+export function createLeafletUpload(
+  orgId: string,
+  fileName: string,
+  contentType: string
+): Promise<LeafletUpload> {
+  return request<LeafletUpload>(
+    buildApiUrl(`v1/admin/organizations/${orgId}/enrichment/leaflet-upload`),
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file_name: fileName, content_type: contentType }),
     }
   );
 }
@@ -75,6 +106,7 @@ export interface EnrichmentSettings {
   max_page_bytes: number;
   copy_media: boolean;
   min_confidence_shown: number;
+  leaflet_model: string | null;
 }
 
 export function decideOrgEnrichment(

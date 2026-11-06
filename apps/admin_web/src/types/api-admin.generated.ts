@@ -401,14 +401,18 @@ export interface paths {
         };
         put?: never;
         /**
-         * Start website enrichment for one organization
-         * @description Queues a crawl of the website in the body, or the stored
-         *     website when the body omits it. The typed website is not
-         *     saved onto the organization. Returns 202. An empty website
-         *     is 422, a bad URL is 400, an active run is 409, and a spent
-         *     monthly budget is 422. An admin or importer JWT may start a
-         *     run. The board keeps its own enrich duty; this route is
-         *     callable when that duty wants the same proposals.
+         * Start website or leaflet enrichment for one organization
+         * @description A body with `website`, or an empty body, queues a crawl of
+         *     that website or the stored one. A body with `leaflet` queues
+         *     a leaflet read instead. The two keys together are 400. A
+         *     leaflet is one to four public picture or PDF URLs, or object
+         *     keys already stored by the leaflet upload route. Nothing is
+         *     written to the catalog until apply. Returns 202. An empty
+         *     website is 422, a bad URL is 400, an active run is 409, and
+         *     a spent monthly budget is 422. An admin or importer JWT may
+         *     start either kind of run. The board keeps its own enrich
+         *     duty; this route is callable when that duty wants the same
+         *     proposals.
          */
         post: {
             parameters: {
@@ -427,6 +431,7 @@ export interface paths {
                          *     organization website. This value is not saved.
                          */
                         website?: string;
+                        leaflet?: components["schemas"]["LeafletEnrichmentRequest"];
                     };
                 };
             };
@@ -438,7 +443,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Website URL is not crawlable */
+                /** @description Website or leaflet is not readable */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -597,6 +602,71 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/organizations/{id}/enrichment/leaflet-upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Presign a leaflet upload
+         * @description Admin only. Returns a presigned PUT for one JPEG, PNG, WebP,
+         *     or PDF under this organization's enrichment prefix. The
+         *     content type is locked on the signature. The file is not
+         *     attached to the organization. Start a run with the returned
+         *     `object_key`. An importer JWT receives 403.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LeafletUploadRequest"];
+                };
+            };
+            responses: {
+                /** @description Upload URL generated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LeafletUploadResponse"];
+                    };
+                };
+                /** @description File name or content type is not a leaflet */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/enrichment-settings": {
         parameters: {
             query?: never;
@@ -606,7 +676,8 @@ export interface paths {
         };
         /**
          * Read website enrichment settings
-         * @description Admin only. Singleton monthly budget and crawl limits.
+         * @description Admin only. Singleton monthly budget, crawl limits, and the
+         *     optional leaflet vision model.
          */
         get: {
             parameters: {
@@ -630,8 +701,10 @@ export interface paths {
          * Update website enrichment settings
          * @description Admin only. `monthly_cost_limit_usd` is greater than 0 and at
          *     most 1000. `max_pages` is 1 to 20. `max_page_bytes` is 10000 to
-         *     2000000. `min_confidence_shown` is 0 to 1. A change is written
-         *     to the audit log with the admin subject.
+         *     2000000. `min_confidence_shown` is 0 to 1. `leaflet_model` is
+         *     an optional OpenRouter slug of at most 200 characters with no
+         *     whitespace. A blank value clears it. A change is written to
+         *     the audit log with the admin subject.
          */
         put: {
             parameters: {
@@ -8735,6 +8808,37 @@ export interface components {
         ScheduleListResponse: {
             items: components["schemas"]["Schedule"][];
             next_cursor?: string | null;
+        };
+        /** @description Exactly one of url or object_key. */
+        LeafletItem: {
+            /** @description Public http or https picture or PDF URL. */
+            url?: string;
+            /**
+             * @description Object key returned by the leaflet upload route for this
+             *     organization.
+             */
+            object_key?: string;
+        };
+        /**
+         * @description One leaflet, a list of one to four leaflets, or `{items: [...]}`.
+         *     Each item is a public URL or an uploaded object key.
+         */
+        LeafletEnrichmentRequest: {
+            url?: string;
+            object_key?: string;
+            items?: components["schemas"]["LeafletItem"][];
+        };
+        LeafletUploadRequest: {
+            file_name: string;
+            /** @enum {string} */
+            content_type: "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+        };
+        LeafletUploadResponse: {
+            upload_url: string;
+            media_url: string;
+            object_key: string;
+            content_type: string;
+            expires_in: number;
         };
         MediaUploadRequest: {
             /** @description Original file name */
