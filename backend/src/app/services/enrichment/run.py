@@ -27,6 +27,7 @@ from app.services.enrichment.extract import (
     merge_proposals,
     proposals_from_pages,
     validate_model_sheet,
+    without_cached_leaflet_media,
 )
 from app.services.enrichment.leaflet import LeafletReadError
 from app.services.enrichment.leaflet_stage import (
@@ -93,6 +94,10 @@ def _fail_open_run(session: Session, run_id: UUID | str, error: str) -> None:
     row = session.get(OrgEnrichmentRun, run_id)
     if row is None or row.status in {"ready", "failed", "render_required"}:
         return
+    if row.source == "leaflet":
+        from app.services.enrichment.leaflet_objects import release_leaflet_run
+
+        release_leaflet_run(row)
     row.status = "failed"
     row.error = error
     row.finished_at = datetime.now(UTC)
@@ -106,6 +111,10 @@ def fail_enrichment_run(run_id: UUID | str, error: str = "enrichment failed") ->
         row = session.get(OrgEnrichmentRun, run_id)
         if row is None or row.status in {"ready", "failed", "render_required"}:
             return
+        if row.source == "leaflet":
+            from app.services.enrichment.leaflet_objects import release_leaflet_run
+
+            release_leaflet_run(row)
         row.status = "failed"
         row.error = error
         row.finished_at = datetime.now(UTC)
@@ -246,6 +255,8 @@ def _extract(
     pages = list(run.pages or [])
     deterministic = proposals_from_pages(pages, snapshot)
     copied = _copy_cached(session, run)
+    if copied is not None:
+        copied = without_cached_leaflet_media(copied) or None
     if copied is None:
         prompt = instructions_for(catalog_names(session)) + prompt_pages(pages)
         if complete is None:
@@ -292,6 +303,10 @@ def _extract(
     )
     run.status = "ready"
     run.finished_at = datetime.now(UTC)
+    if run.source == "leaflet":
+        from app.services.enrichment.leaflet_objects import release_finished_leaflet
+
+        release_finished_leaflet(run)
 
 
 def _proxy_crawl(run: OrgEnrichmentRun, settings: Any) -> dict[str, Any]:

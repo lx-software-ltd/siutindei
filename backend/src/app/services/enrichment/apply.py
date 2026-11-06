@@ -149,6 +149,7 @@ def dismiss_proposals(
         proposal.status = "dismissed"
         proposal.decided_by = user_id
         proposal.decided_at = datetime.now(UTC)
+        _delete_dismissed_leaflet(session, org_id, proposal)
         results.append({"id": raw_id, "status": "dismissed"})
     session.flush()
     return results
@@ -198,6 +199,38 @@ def _load(session: Session, org_id: UUID, raw_id: str) -> OrgEnrichmentProposal 
     if row is None or str(row.org_id) != str(org_id):
         return None
     return row
+
+
+def _delete_dismissed_leaflet(
+    session: Session, org_id: UUID, proposal: OrgEnrichmentProposal
+) -> None:
+    """Remove a pending leaflet file that was never attached."""
+    proposed = proposal.proposed_value
+    if not isinstance(proposed, dict) or not proposed.get("leaflet"):
+        return
+    key = str(proposed.get("object_key") or "")
+    if not key:
+        return
+    org = session.get(Organization, org_id)
+    urls = list(org.media_urls or []) if org is not None else []
+    if any(str(url).endswith(key) for url in urls):
+        return
+    from sqlalchemy import select
+
+    others = session.scalars(
+        select(OrgEnrichmentProposal).where(
+            OrgEnrichmentProposal.org_id == org_id,
+            OrgEnrichmentProposal.status == "pending",
+            OrgEnrichmentProposal.id != proposal.id,
+        )
+    ).all()
+    for other in others:
+        other_value = other.proposed_value
+        if isinstance(other_value, dict) and other_value.get("object_key") == key:
+            return
+    from app.services.enrichment.leaflet_objects import discard_keys
+
+    discard_keys(org_id, [key])
 
 
 def _mark_reason(session: Session) -> None:

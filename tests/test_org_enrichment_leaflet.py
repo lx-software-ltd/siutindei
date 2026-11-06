@@ -59,7 +59,7 @@ def test_transcript_parts_share_a_reply_that_will_not_split() -> None:
     assert transcript_parts('{"parts": ["fee", "time"]}', 2) == ["fee", "time"]
     assert transcript_parts("one block of text", 2) == [
         "one block of text",
-        "one block of text",
+        "",
     ]
 
 
@@ -128,21 +128,20 @@ def test_uploaded_picture_is_headed_before_the_run(monkeypatch) -> None:
 
 def test_presign_stays_under_the_organization_prefix(monkeypatch) -> None:
     class _S3:
-        def generate_presigned_url(self, operation, Params, ExpiresIn):
-            assert operation == "put_object"
-            assert Params["ContentType"] == "image/png"
-            assert Params["Key"].startswith(
-                f"organizations/{_ORG}/enrichment/leaflets/"
-            )
-            assert Params["Key"].endswith(".png")
-            return "https://upload.example"
+        def generate_presigned_post(self, **kwargs: object) -> dict[str, object]:
+            key = str(kwargs["Key"])
+            assert key.startswith(f"organizations/{_ORG}/enrichment/leaflets/incoming/")
+            assert key.endswith(".png")
+            assert ["content-length-range", 1, 5_000_000] in kwargs["Conditions"]
+            return {"url": "https://upload.example", "fields": {"key": key}}
 
     monkeypatch.setenv("ORGANIZATION_MEDIA_BUCKET", "media")
     monkeypatch.setenv("ORGANIZATION_MEDIA_BASE_URL", "https://media.example")
     monkeypatch.setattr("app.services.aws_clients.get_s3_client", lambda: _S3())
     signed = presign_leaflet(UUID(_ORG), "Flyer.PNG", "image/png")
     assert signed["upload_url"] == "https://upload.example"
-    assert signed["object_key"].endswith(".png")
+    assert signed["upload_fields"]["key"].endswith(".png")
+    assert "/incoming/" in signed["object_key"]
 
 
 def test_picture_becomes_a_vision_page_and_a_media_marker() -> None:
@@ -161,7 +160,7 @@ def test_picture_becomes_a_vision_page_and_a_media_marker() -> None:
         read_object=lambda object_key: body,
     )
     page = prepared["pages"][0]
-    assert page["vision_urls"] == [f"https://media.example/{key}"]
+    assert page["vision_keys"] == [key]
     assert page["leaflet_media"]["object_key"] == key
     assert prepared["bytes_fetched"] == len(body)
 
@@ -187,6 +186,7 @@ def test_text_pdf_skips_vision(monkeypatch) -> None:
             AssertionError(key)
         ),
     )
+    assert "vision_keys" not in prepared["pages"][0]
     assert "vision_urls" not in prepared["pages"][0]
     assert "Saturday art" in prepared["pages"][0]["text"]
     assert "leaflet_media" not in prepared["pages"][0]
@@ -213,9 +213,8 @@ def test_scanned_pdf_sends_its_largest_page_image() -> None:
     )
     assert stored
     assert stored[0][2] == "image/jpeg"
-    assert prepared["pages"][0]["vision_urls"] == [
-        f"https://media.example/{stored[0][0]}"
-    ]
+    assert "/rasters/" in prepared["pages"][0]["vision_keys"][0]
+    assert prepared["pages"][0]["vision_keys"] == [stored[0][0]]
 
 
 def test_proxy_stores_a_public_leaflet(monkeypatch) -> None:
@@ -242,10 +241,9 @@ def test_proxy_stores_a_public_leaflet(monkeypatch) -> None:
         {"op": "leaflet", "url": "https://cdn.example/a.jpg", "org_id": _ORG}
     )
     assert result["result"]["content_type"] == "image/jpeg"
-    assert str(result["result"]["key"]).startswith(
-        f"organizations/{_ORG}/enrichment/leaflets/"
-    )
+    assert "/incoming/" in str(result["result"]["key"])
     assert puts[0]["ContentType"] == "image/jpeg"
+    assert puts[0]["Tagging"] == "leaflet-pending=1"
 
 
 def test_proxy_refuses_a_file_that_is_not_a_leaflet(monkeypatch) -> None:
@@ -370,6 +368,8 @@ def test_stages_transcribe_then_extract_and_keep_the_picture_pending(
     assert org.media_urls in (None, [])
     description = next(row for row in rows if row.field == "description")
     assert description.proposed_value["description"].startswith("Saturday art")
+    assert description.unverified is True
+    assert float(description.confidence) == 0.5
 
     def copy_image(url: str, org_id: str) -> str:
         raise AssertionError(url)
@@ -441,3 +441,325 @@ def test_leaflet_proxy_failure_uses_the_leaflet_sentence(db_session) -> None:
     )
     assert step.acked is True
     assert run.error == "The leaflet could not be read"
+
+
+def test_a_picture_without_a_vision_slot_fails(monkeypatch) -> None:
+    from app.services.enrichment.leaflet import LeafletReadError
+
+    monkeypatch.setattr(
+        "app.services.enrichment.leaflet._pdf_text",
+        lambda url, body: "",
+    )
+    monkeypatch.setattr(
+        "app.services.enrichment.pdf.pdf_page_images",
+        lambda body, limit: [_jpeg() for _ in range(limit)],
+    )
+
+    pages = [
+        {
+            "kind": "object",
+            "key": f"organizations/{_ORG}/enrichment/leaflets/a.pdf",
+            "url": "https://media.example/a.pdf",
+            "name": "a.pdf",
+        },
+        {
+            "kind": "object",
+            "key": f"organizations/{_ORG}/enrichment/leaflets/b.pdf",
+            "url": "https://media.example/b.pdf",
+            "name": "b.pdf",
+        },
+        {
+            "kind": "object",
+            "key": f"organizations/{_ORG}/enrichment/leaflets/c.jpg",
+            "url": "https://media.example/c.jpg",
+            "name": "c.jpg",
+        },
+    ]
+
+    def read(key: str) -> bytes:
+        return b"%PDF-1.4" if key.endswith(".pdf") else _jpeg()
+
+    with pytest.raises(LeafletReadError, match="eight images"):
+        read_leaflets(
+            _ORG,
+            pages,
+            read_object=read,
+            put_image=lambda key, body, content_type: key,
+        )
+
+
+def test_transcription_stops_when_the_budget_is_spent(db_session) -> None:
+    from app.services.enrichment.store import load_settings
+
+    settings = load_settings(db_session)
+    settings.monthly_cost_limit_usd = Decimal("0.01")
+    org = _org(db_session)
+    db_session.add(
+        OrgEnrichmentRun(
+            org_id=org.id,
+            status="ready",
+            source="website",
+            seed_url="https://spent.example",
+            cost_usd=Decimal(1),
+        )
+    )
+    db_session.flush()
+    run = OrgEnrichmentRun(
+        org_id=org.id,
+        status="running",
+        source="leaflet",
+        seed_url="https://media.example/a.jpg",
+        pages=[{"text": "", "vision_urls": ["https://media.example/a.jpg"]}],
+    )
+    db_session.add(run)
+    db_session.flush()
+
+    def transcribe(urls: list[str], model_name: str) -> tuple[list[str], Decimal, str]:
+        raise AssertionError(urls)
+
+    step = process_enrichment(
+        db_session,
+        run.id,
+        "m-budget",
+        receive_count=1,
+        stage="transcribe",
+        transcribe=transcribe,
+    )
+    assert step.enqueue_stage is None
+    assert run.status == "failed"
+    assert run.error == "The monthly enrichment budget is spent"
+
+
+def test_cache_replaces_the_old_leaflet_picture(db_session) -> None:
+    org = _org(db_session)
+    page_url = "https://media.example/new.jpg"
+    text = "Saturday art class for children in Wan Chai."
+    old_key = f"organizations/{org.id}/enrichment/leaflets/old.jpg"
+    new_key = f"organizations/{org.id}/enrichment/leaflets/new.jpg"
+    previous = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        source="leaflet",
+        seed_url=page_url,
+        input_hash="same-leaflet-text",
+    )
+    db_session.add(previous)
+    db_session.flush()
+    db_session.add_all(
+        [
+            OrgEnrichmentProposal(
+                run_id=previous.id,
+                org_id=org.id,
+                section="Organization",
+                kind="update_organization",
+                field="description",
+                label="Description",
+                proposed_value={"description": text},
+                confidence=0.9,
+                unverified=False,
+                evidence=[{"url": page_url, "quote": "Saturday art class"}],
+                proposed_hash="desc",
+            ),
+            OrgEnrichmentProposal(
+                run_id=previous.id,
+                org_id=org.id,
+                section="Media",
+                kind="add_media",
+                field="media",
+                label="Leaflet · old.jpg",
+                proposed_value={
+                    "source_url": "https://media.example/old.jpg",
+                    "object_key": old_key,
+                    "leaflet": True,
+                },
+                confidence=0.99,
+                unverified=False,
+                evidence=[],
+                proposed_hash="old-media",
+            ),
+        ]
+    )
+    run = OrgEnrichmentRun(
+        org_id=org.id,
+        status="extracting",
+        source="leaflet",
+        seed_url=page_url,
+        input_hash="same-leaflet-text",
+        pages=[
+            {
+                "url": page_url,
+                "final_url": page_url,
+                "text": text,
+                "leaflet_media": {
+                    "source_url": page_url,
+                    "object_key": new_key,
+                    "label": "Leaflet · new.jpg",
+                },
+            }
+        ],
+    )
+    db_session.add(run)
+    db_session.flush()
+
+    def complete(prompt: str) -> tuple[dict[str, object], Decimal, str]:
+        raise AssertionError(prompt)
+
+    process_enrichment(
+        db_session,
+        run.id,
+        "m-cache",
+        receive_count=1,
+        stage="extract",
+        complete=complete,
+    )
+    from sqlalchemy import select
+
+    rows = list(
+        db_session.scalars(
+            select(OrgEnrichmentProposal).where(OrgEnrichmentProposal.run_id == run.id)
+        ).all()
+    )
+    media = [row for row in rows if row.kind == "add_media"]
+    assert [row.proposed_value["object_key"] for row in media] == [new_key]
+    assert any(row.field == "description" for row in rows)
+
+
+def test_vision_call_has_no_text_fallbacks(db_session, monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_pages(pages: list[dict[str, object]], **kwargs: object):
+        captured.update(kwargs)
+        return pages, Decimal(0), "vision"
+
+    monkeypatch.setattr(
+        "app.services.enrichment.leaflet_stage.transcribe_pages",
+        fake_pages,
+    )
+    monkeypatch.setattr(
+        "app.services.enrichment.run._openrouter_settings",
+        lambda session: ("text-model", ["text-fallback"], False),
+    )
+    org = _org(db_session)
+    run = OrgEnrichmentRun(
+        org_id=org.id,
+        status="running",
+        source="leaflet",
+        seed_url="https://media.example/a.jpg",
+        pages=[{"text": "", "vision_urls": ["https://media.example/a.jpg"]}],
+    )
+    db_session.add(run)
+    db_session.flush()
+    step = process_enrichment(
+        db_session,
+        run.id,
+        "m-fallbacks",
+        receive_count=1,
+        stage="transcribe",
+    )
+    assert step.enqueue_stage == "extract"
+    assert captured["fallback_models"] == []
+    assert captured["deny_data_collection"] is False
+
+
+def test_transcription_retries_a_rejected_reply_limit(monkeypatch) -> None:
+    import json
+
+    from app.services.enrichment.leaflet_vision import _transcribe
+    from app.services.openrouter_client import OpenRouterError
+
+    calls: list[dict[str, object]] = []
+    body = json.dumps(
+        {
+            "model": "vision-test",
+            "choices": [{"message": {"content": '{"parts": ["fee"]}'}}],
+            "usage": {"cost": 0.01},
+        }
+    )
+
+    def complete(**kwargs: object) -> str:
+        calls.append(kwargs)
+        if kwargs.get("reasoning_off"):
+            raise OpenRouterError("rejected", status=400)
+        return body
+
+    monkeypatch.setattr(
+        "app.services.openrouter_client.openrouter_chat_completion",
+        complete,
+    )
+    texts, _cost, model = _transcribe(
+        ["https://media.example/a.jpg"],
+        "vision",
+        fallback_models=[],
+        deny_data_collection=True,
+    )
+    assert texts == ["fee"]
+    assert model == "vision-test"
+    assert calls[0]["reasoning_off"] is True
+    assert "reasoning_off" not in calls[1]
+
+
+def test_leaflet_model_rejects_characters_outside_a_slug() -> None:
+    from app.services.enrichment.store import _leaflet_model
+
+    assert (
+        _leaflet_model("qwen/qwen3-vl-30b-a3b-instruct")
+        == "qwen/qwen3-vl-30b-a3b-instruct"
+    )
+    with pytest.raises(ValidationError):
+        _leaflet_model("vendor|model")
+
+
+def test_image_download_keeps_the_shorter_deadline(monkeypatch) -> None:
+    from app.services.enrichment.proxy_crawl import _follow_image, _follow_public
+
+    seen: dict[str, float] = {}
+
+    def fetch(
+        url: str, max_bytes: int, timeout: int = 10, deadline: float | None = None
+    ):
+        del url, max_bytes, timeout
+        seen["deadline"] = float(deadline or 0)
+        return FetchResult(
+            200, "https://cdn.example/a.jpg", "image/jpeg", _jpeg(), "", False
+        )
+
+    monkeypatch.setattr(
+        "app.services.enrichment.proxy_crawl.check_fetch_url",
+        lambda url, resolve=None: None,
+    )
+    monkeypatch.setattr(
+        "app.services.enrichment.proxy_crawl.time.monotonic",
+        lambda: 100.0,
+    )
+    monkeypatch.setattr("app.services.enrichment.proxy_crawl.fetch_public", fetch)
+    _follow_image("https://cdn.example/a.jpg")
+    assert seen["deadline"] == 115
+    _follow_public(
+        "https://cdn.example/a.pdf",
+        1000,
+        timeout_message="The leaflet could not be read",
+    )
+    assert seen["deadline"] == 120
+
+
+def test_raw_jpeg_bytes_are_kept_when_pillow_cannot_decode() -> None:
+    from app.services.enrichment.pdf import _largest_raw_image
+
+    class _Stream(dict):
+        def get_object(self):
+            return self
+
+        def get_data(self) -> bytes:
+            return bytes(self["data"])
+
+    jpeg = _jpeg()
+    page = {
+        "/Resources": _Stream(
+            {
+                "/XObject": _Stream(
+                    {"/Im0": _Stream({"/Subtype": "/Image", "data": jpeg})}
+                )
+            }
+        )
+    }
+    assert _largest_raw_image(page) == jpeg

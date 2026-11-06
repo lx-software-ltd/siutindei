@@ -165,10 +165,16 @@ their primary responsibilities.
   `extract`, or `leaflet` then `transcribe` then `extract`) on that
   same queue. The worker reads that key before the
   others. A leaflet run stores the picture or PDF under
-  `organizations/{id}/enrichment/leaflets/` and does not attach it
-  until apply. Text PDFs skip transcription. A scanned PDF sends its
-  largest page image to the vision model. Transcription cost is kept
-  when extract adds its own cost, including a cache hit. Applying enrichment proposals stages a data-quality run from
+  `organizations/{id}/enrichment/leaflets/incoming/` with the
+  `leaflet-pending` tag. The vision call uses a presigned GET. A
+  picture is copied to the public prefix only when its proposal is
+  applied. Rasters under `rasters/` and unused uploads are deleted.
+  Text PDFs skip transcription. A scanned PDF sends its largest page
+  image to the vision model. Transcription is skipped when the monthly
+  budget is already spent, and it does not use the text-model
+  fallbacks. Facts taken from a transcript stay unverified.
+  Transcription cost is kept when extract adds its own cost, including
+  a cache hit. A cached run does not reuse an older leaflet picture. Applying enrichment proposals stages a data-quality run from
   import settings and publishes `data_quality_run_id` after commit.
   Locations is included only when a venue or activity was saved, and
   categories only when an activity was saved. A busy check is published
@@ -334,9 +340,9 @@ their primary responsibilities.
   When `IMPORTER_GROUP` is set, also allow that group on catalog import
   routes, owner-UI organization lookup and PATCH, and
   `GET` or `POST /v1/admin/organizations/{id}/enrichment`. Apply,
-  dismiss, and `POST .../enrichment/leaflet-upload` stay admin-only.
-  An importer may start a leaflet from a public URL on the five-segment
-  enrichment path. Presign stays off that path.
+  dismiss, leaflet start, and `POST .../enrichment/leaflet-upload` stay
+  admin-only. An importer may start a website enrichment on the
+  five-segment path. A leaflet body on that path is 403.
   A dedicated importer authorizer Lambda is not used (500-resource cap).
 - VPC: **No** (runs outside VPC to fetch JWKS from Cognito)
 - Environment: `ALLOWED_GROUPS=admin`, `IMPORTER_GROUP=importer`

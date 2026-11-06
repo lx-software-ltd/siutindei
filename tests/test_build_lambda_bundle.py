@@ -201,3 +201,22 @@ def test_dependency_install_lists_al2023_and_older_wheel_tags(
         "manylinux_2_17_aarch64",
         "manylinux2014_aarch64",
     ]
+
+
+def test_docker_bundle_lists_the_same_wheel_tags() -> None:
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "backend"
+        / "infrastructure"
+        / "lib"
+        / "constructs"
+        / "python-lambda.ts"
+    ).read_text(encoding="utf-8")
+    for platform in (
+        "manylinux_2_28_aarch64",
+        "manylinux_2_27_aarch64",
+        "manylinux_2_17_aarch64",
+        "manylinux2014_aarch64",
+    ):
+        assert platform in source
+    assert "--only-binary=:all:" in source

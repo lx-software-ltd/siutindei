@@ -11,7 +11,7 @@ An admin, or a full-access partner `crud` key, starts enrichment from up to four
 
 - A headless browser, or rendering PDF pages to bitmaps.
 - Auto-apply.
-- Importer upload. Importers may still start a run from a public URL on the existing enrichment POST. The upload presign stays admin and partner only.
+- Importer leaflet runs. Importers may start a website run. A leaflet body and the upload presign stay admin and full-access partner only.
 - Replacing the website crawl.
 
 ## Decisions

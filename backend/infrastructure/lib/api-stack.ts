@@ -1266,12 +1266,19 @@ export class ApiStack extends cdk.Stack {
               // Delete old versions after 90 days to save storage costs
               noncurrentVersionExpiration: cdk.Duration.days(90),
             },
+            {
+              id: "ExpirePendingLeaflets",
+              enabled: true,
+              tagFilters: { "leaflet-pending": "1" },
+              expiration: cdk.Duration.days(1),
+            },
           ],
           cors: [
             {
               allowedMethods: [
                 s3.HttpMethods.GET,
                 s3.HttpMethods.PUT,
+                s3.HttpMethods.POST,
                 s3.HttpMethods.HEAD,
               ],
               allowedOrigins: corsAllowedOrigins,
@@ -1286,6 +1293,27 @@ export class ApiStack extends cdk.Stack {
     // Only applies when creating a new bucket (imported buckets don't have CfnBucket)
     const imagesBucketCfn = organizationImagesBucket.node
       .defaultChild as s3.CfnBucket | undefined;
+    if (organizationImagesBucket instanceof s3.Bucket) {
+      // Unsigned reads of a pending leaflet are refused. A presigned GET
+      // (query-string auth) and the admin role (header auth) still work.
+      organizationImagesBucket.addToResourcePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.DENY,
+          principals: [new iam.AnyPrincipal()],
+          actions: ["s3:GetObject"],
+          resources: [organizationImagesBucket.arnForObjects("*")],
+          conditions: {
+            StringEquals: {
+              "s3:ExistingObjectTag/leaflet-pending": "1",
+            },
+            StringNotEquals: {
+              "s3:authType": ["REST-HEADER", "REST-QUERY-STRING"],
+            },
+          },
+        })
+      );
+    }
+
     if (imagesBucketCfn) {
       imagesBucketCfn.addMetadata("checkov", {
         skip: [

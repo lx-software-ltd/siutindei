@@ -89,6 +89,8 @@ def perform_org_enrichment(
     if method == "GET" and action is None:
         return _read(event, org_id)
     if method == "POST" and action is None:
+        if not allow_decide and _body_requests_leaflet(event):
+            return json_response(403, {"error": "Forbidden"}, event=event)
         return _start(event, org_id, actor)
     if method == "POST" and action == "leaflet-upload":
         return _leaflet_upload(event, org_id)
@@ -216,6 +218,14 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
     return json_response(200, payload, event=event)
 
 
+def _body_requests_leaflet(event: Mapping[str, Any]) -> bool:
+    try:
+        body = parse_object_body(event)
+    except ValidationError:
+        return False
+    return "leaflet" in body
+
+
 def _start(
     event: Mapping[str, Any],
     org_id: UUID,
@@ -232,13 +242,20 @@ def _start(
     stage = "leaflet" if has_leaflet else "crawl"
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event, user_id=actor)
-        run = start_run(
-            session,
-            org_id,
-            requested_by=actor,
-            website=website if isinstance(website, str) else None,
-            leaflet=leaflet,
-        )
+        try:
+            run = start_run(
+                session,
+                org_id,
+                requested_by=actor,
+                website=website if isinstance(website, str) else None,
+                leaflet=leaflet,
+            )
+        except ValidationError:
+            if has_leaflet:
+                from app.services.enrichment.leaflet_objects import discard_request
+
+                discard_request(org_id, leaflet)
+            raise
         session.commit()
         run_id = run.id
         payload = serialize_run(run)

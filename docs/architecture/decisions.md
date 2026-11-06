@@ -631,7 +631,8 @@ largest image on each of up to four pages to the vision model, then
 the existing text extract, so quotes exist in the page text. The
 default vision model is `qwen/qwen3-vl-30b-a3b-instruct`, overridable
 by `org_enrichment_settings.leaflet_model`. Full-access partner keys
-use the same start and presign bodies. An importer may start a URL
-leaflet and may not presign.
+use the same start and presign bodies. An importer may not start or
+presign a leaflet. Pending files are tagged and are not a public read
+until a picture proposal is applied.
 
 Design notes: `docs/plans/leaflet-enrichment.md`.

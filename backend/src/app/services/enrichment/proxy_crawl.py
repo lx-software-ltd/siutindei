@@ -139,13 +139,16 @@ def store_leaflet(event: Mapping[str, Any]) -> dict[str, Any]:
     if len(result.body) > limit:
         raise CrawlError("The leaflet is too large")
     digest = hashlib.sha256(result.body).hexdigest()[:16]
-    key = f"organizations/{org_id}/enrichment/leaflets/{digest}.{ext}"
+    key = f"organizations/{org_id}/enrichment/leaflets/incoming/{digest}.{ext}"
+    from app.services.enrichment.leaflet_objects import PENDING_TAG
+
     stored = _put_media(
         key,
         result.body,
         ctype,
         source_url=url,
         copyright_notice=LEAFLET_COPYRIGHT_NOTICE,
+        tagging=PENDING_TAG,
     )
     return {
         "url": stored,
@@ -161,6 +164,7 @@ def _follow_image(url: str) -> FetchResult:
         MAX_IMAGE_BYTES,
         timeout_message="image download timed out",
         http_message="image HTTP {status}",
+        deadline_seconds=15,
     )
 
 
@@ -170,9 +174,10 @@ def _follow_public(
     *,
     timeout_message: str,
     http_message: str = "leaflet HTTP {status}",
+    deadline_seconds: int = 20,
 ) -> FetchResult:
     current = url
-    deadline = time.monotonic() + 20
+    deadline = time.monotonic() + deadline_seconds
     for _ in range(4):
         check_fetch_url(current)
         try:
@@ -195,6 +200,7 @@ def _put_media(
     *,
     source_url: str,
     copyright_notice: str,
+    tagging: str | None = None,
 ) -> str:
     bucket = os.getenv("ORGANIZATION_MEDIA_BUCKET", "").strip()
     base = os.getenv("ORGANIZATION_MEDIA_BASE_URL", "").rstrip("/")
@@ -202,17 +208,20 @@ def _put_media(
         raise CrawlError("media bucket is not configured")
     from app.services.aws_clients import get_client
 
-    get_client("s3").put_object(
-        Bucket=bucket,
-        Key=key,
-        Body=body,
-        ContentType=content_type,
-        Metadata={
+    put: dict[str, Any] = {
+        "Bucket": bucket,
+        "Key": key,
+        "Body": body,
+        "ContentType": content_type,
+        "Metadata": {
             "source-url": source_url[:1024],
             "copyright": copyright_notice,
             "copied-at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         },
-    )
+    }
+    if tagging:
+        put["Tagging"] = tagging
+    get_client("s3").put_object(**put)
     return f"{base}/{key}"
 
 

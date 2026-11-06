@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { adminQueryKeys } from '../../lib/admin-query-keys';
 import {
   createLeafletUpload,
+  leafletUploadBody,
   decideOrgEnrichment,
   getOrgEnrichment,
   startOrgEnrichment,
@@ -248,15 +249,24 @@ export function OrganizationLeafletButton() {
           setError('Use a JPEG, PNG, WebP, or PDF.');
           return;
         }
+        const limit =
+          contentType === 'application/pdf' ? 8_000_000 : 5_000_000;
+        if (file.size <= 0 || file.size > limit) {
+          setError(
+            file.size <= 0
+              ? 'The leaflet is empty.'
+              : 'The leaflet is too large.'
+          );
+          return;
+        }
         const signed = await createLeafletUpload(
           scope.orgId,
           file.name,
           contentType
         );
         const uploaded = await fetch(signed.upload_url, {
-          method: 'PUT',
-          headers: { 'Content-Type': contentType },
-          body: file,
+          method: 'POST',
+          body: leafletUploadBody(signed.upload_fields, file),
         });
         if (!uploaded.ok) {
           throw new Error('The leaflet could not be uploaded.');
@@ -311,22 +321,35 @@ export function OrganizationLeafletButton() {
         contentClassName='w-full max-w-lg'
         footer={
           <Button
-            type='button'
+            type='submit'
+            form='leaflet-enrich'
             variant='secondary'
             loading={busy}
             loadingLabel='Reading…'
-            onClick={() => void submit()}
           >
             Read leaflet
           </Button>
         }
       >
-        <div className='grid gap-3'>
-          {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}
+        <form
+          id='leaflet-enrich'
+          className='grid gap-3'
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+        >
+          {error ? (
+            <div id='leaflet-form-error'>
+              <StatusBanner kind='error'>{error}</StatusBanner>
+            </div>
+          ) : null}
           <div>
             <Label htmlFor='leaflet-files'>Leaflet files</Label>
             <input
               id='leaflet-files'
+              name='leaflet-files'
+              aria-describedby={error ? 'leaflet-form-error' : undefined}
               className='block w-full text-sm text-ink-900 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink-900'
               type='file'
               accept='image/jpeg,image/png,image/webp,application/pdf'
@@ -338,6 +361,7 @@ export function OrganizationLeafletButton() {
             <Label htmlFor='leaflet-urls'>Leaflet URLs</Label>
             <Textarea
               id='leaflet-urls'
+              name='leaflet-urls'
               rows={4}
               spellCheck={false}
               autoCorrect='off'
@@ -347,7 +371,7 @@ export function OrganizationLeafletButton() {
               onChange={(event) => setUrls(event.target.value)}
             />
           </div>
-        </div>
+        </form>
       </AdminDialog>
     </>
   );

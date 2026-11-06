@@ -71,10 +71,23 @@ export function startOrgEnrichment(
 
 export interface LeafletUpload {
   upload_url: string;
+  upload_fields: Record<string, string>;
   media_url: string;
   object_key: string;
   content_type: string;
   expires_in: number;
+}
+
+export function leafletUploadBody(
+  fields: Record<string, string>,
+  file: File
+): FormData {
+  const body = new FormData();
+  for (const [name, value] of Object.entries(fields)) {
+    body.append(name, value);
+  }
+  body.append('file', file);
+  return body;
 }
 
 export function createLeafletUpload(

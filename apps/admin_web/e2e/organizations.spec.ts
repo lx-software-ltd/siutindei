@@ -946,6 +946,90 @@ test.describe('Organizations Panel', () => {
     await adminPage.setViewportSize({ width: 1280, height: 720 });
   });
 
+  test('uploads a leaflet with the signed form fields', async ({ adminPage }) => {
+    let posted = false;
+    await adminPage.route('**/upload.example/**', async (route) => {
+      expect(route.request().method()).toBe('POST');
+      const raw = route.request().postData() ?? '';
+      expect(raw).toContain('name="policy"');
+      expect(raw).toContain('name="file"');
+      posted = true;
+      await route.fulfill({ status: 204, body: '' });
+    });
+    await adminPage.route(
+      '**/api/mock/**/admin/organizations/org-1/enrichment/leaflet-upload',
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            upload_url: 'https://upload.example/leaflets',
+            upload_fields: {
+              key: 'organizations/org-1/enrichment/leaflets/incoming/flyer.png',
+              policy: 'signed',
+            },
+            media_url: 'https://media.example/flyer.png',
+            object_key: 'organizations/org-1/enrichment/leaflets/incoming/flyer.png',
+            content_type: 'image/png',
+            expires_in: 900,
+          }),
+        });
+      }
+    );
+    await adminPage.route(
+      '**/api/mock/**/admin/organizations/org-1/enrichment',
+      async (route) => {
+        const request = route.request();
+        if (
+          request.method() !== 'POST' ||
+          request.url().includes('leaflet-upload')
+        ) {
+          await route.fallback();
+          return;
+        }
+        expect(route.request().postDataJSON()).toEqual({
+          leaflet: {
+            items: [
+              {
+                object_key:
+                  'organizations/org-1/enrichment/leaflets/incoming/flyer.png',
+              },
+            ],
+          },
+        });
+        await route.fulfill({
+          status: 202,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            run: {
+              id: 'run-upload',
+              org_id: 'org-1',
+              status: 'queued',
+              source: 'leaflet',
+              seed_url: 'https://media.example/flyer.png',
+              pages_fetched: 0,
+              bytes_fetched: 0,
+              model: null,
+              cost_usd: 0,
+              error: null,
+            },
+          }),
+        });
+      }
+    );
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    await adminPage.getByTestId('enrich-from-leaflet').click();
+    const dialog = adminPage.getByRole('dialog');
+    await dialog.getByLabel('Leaflet files').setInputFiles({
+      name: 'flyer.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]),
+    });
+    await dialog.getByRole('button', { name: 'Read leaflet' }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(posted).toBe(true);
+  });
+
   test('enables website enrichment as soon as a website is typed', async ({
     adminPage,
   }) => {

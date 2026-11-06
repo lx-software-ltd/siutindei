@@ -49,17 +49,9 @@ def apply_media(
 
 def _stored_leaflet_url(org_id: str, proposed: dict[str, Any]) -> str | None:
     """A leaflet file already in this organization's bucket."""
-    import os
+    from app.services.enrichment.leaflet_objects import publish_leaflet
 
-    from app.services.enrichment.leaflet import valid_leaflet_key
-
-    key = str(proposed.get("object_key") or "")
-    if not valid_leaflet_key(org_id, key):
-        return None
-    base = os.getenv("ORGANIZATION_MEDIA_BASE_URL", "").rstrip("/")
-    if not base:
-        return None
-    return f"{base}/{key}"
+    return publish_leaflet(org_id, str(proposed.get("object_key") or ""))
 
 
 def _append_media(org: Organization, stored: str, *, logo: bool) -> None:

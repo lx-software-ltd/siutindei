@@ -39,6 +39,9 @@ _NAME_RE = re.compile(r"[^A-Za-z0-9._-]")
 _MISSING_OBJECT = {"404", "NoSuchKey", "NotFound"}
 
 
+_VISION_ROOM = "Send fewer leaflets. One run can read eight images."
+
+
 class LeafletReadError(Exception):
     """The leaflet cannot be read. The run fails without a retry."""
 
@@ -69,6 +72,8 @@ def valid_leaflet_key(org_id: UUID | str, key: str) -> bool:
     if not key.startswith(prefix):
         return False
     name = key[len(prefix) :]
+    if name.startswith("incoming/"):
+        name = name[len("incoming/") :]
     if not name or "/" in name or ".." in name:
         return False
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,140}", name):
@@ -90,18 +95,16 @@ def presign_leaflet(org_id: UUID, file_name: str, content_type: str) -> dict[str
     cleaned = _NAME_RE.sub("_", str(file_name).strip()) or "leaflet"
     base, _old = os.path.splitext(cleaned)
     trimmed = base[:40].strip("_") or "leaflet"
-    key = f"{leaflet_prefix(org_id)}{uuid4().hex}-{trimmed}{ext}"
-    bucket = _bucket()
+    key = f"{leaflet_prefix(org_id)}incoming/{uuid4().hex}-{trimmed}{ext}"
+    _bucket()
     base_url = _base_url()
-    from app.services.aws_clients import get_s3_client
+    limit = MAX_PDF_BYTES if ctype == "application/pdf" else MAX_IMAGE_BYTES
+    from app.services.enrichment.leaflet_objects import presign_post
 
-    upload_url = get_s3_client().generate_presigned_url(
-        "put_object",
-        Params={"Bucket": bucket, "Key": key, "ContentType": ctype},
-        ExpiresIn=900,
-    )
+    signed = presign_post(key, ctype, limit)
     return {
-        "upload_url": upload_url,
+        "upload_url": signed["upload_url"],
+        "upload_fields": signed["upload_fields"],
         "media_url": f"{base_url}/{key}",
         "object_key": key,
         "content_type": ctype,
@@ -136,7 +139,7 @@ def normalize_leaflet_items(org_id: UUID, raw: object) -> list[dict[str, Any]]:
                 "leaflet file does not match the organization",
                 field="object_key",
             )
-        prepared.append(_object_item(key))
+        prepared.append(_object_item(org_id, key))
     return prepared
 
 
@@ -172,8 +175,6 @@ def read_leaflets(
         vision_room -= used
         pages.append(page)
         stored.append(loaded["item"])
-    if not pages:
-        raise LeafletReadError("The leaflet has no readable text")
     if not _needs_vision(pages) and not any(
         str(page.get("text") or "").strip() for page in pages
     ):
@@ -182,7 +183,7 @@ def read_leaflets(
 
 
 def _needs_vision(pages: list[dict[str, Any]]) -> bool:
-    return any(page.get("vision_urls") for page in pages)
+    return any(page.get("vision_keys") or page.get("vision_urls") for page in pages)
 
 
 def _load_one(
@@ -241,7 +242,9 @@ def _page_for(
     if ctype == "application/pdf":
         text = _pdf_text(url, body)
         images: list[str] = []
-        if len(text) < MIN_PDF_TEXT_CHARS and vision_room > 0:
+        if len(text) < MIN_PDF_TEXT_CHARS:
+            if vision_room <= 0:
+                raise LeafletReadError(_VISION_ROOM)
             images, used = _pdf_vision_urls(
                 org_id,
                 body,
@@ -250,11 +253,12 @@ def _page_for(
             )
         page["text"] = text[:MAX_PAGE_TEXT]
         if images:
-            page["vision_urls"] = images
+            page["vision_keys"] = images
         return page, used
-    if vision_room > 0:
-        page["vision_urls"] = [url]
-        used = 1
+    if vision_room <= 0:
+        raise LeafletReadError(_VISION_ROOM)
+    page["vision_keys"] = [str(item.get("key") or "")]
+    used = 1
     page["leaflet_media"] = {
         "source_url": url,
         "object_key": str(item.get("key") or ""),
@@ -287,8 +291,9 @@ def _pdf_vision_urls(
             continue
         ext, ctype = sniffed
         digest = hashlib.sha256(blob).hexdigest()[:16]
-        key = f"{leaflet_prefix(org_id)}{digest}.{ext}"
-        urls.append(put_image(key, blob, ctype))
+        key = f"{leaflet_prefix(org_id)}rasters/{digest}.{ext}"
+        put_image(key, blob, ctype)
+        urls.append(key)
     return urls, len(urls)
 
 
@@ -336,12 +341,14 @@ def _read_object(key: str) -> bytes:
 
 def _put_image(key: str, body: bytes, content_type: str) -> str:
     from app.services.aws_clients import get_s3_client
+    from app.services.enrichment.leaflet_objects import PENDING_TAG
 
     get_s3_client().put_object(
         Bucket=_bucket(),
         Key=key,
         Body=body,
         ContentType=content_type,
+        Tagging=PENDING_TAG,
     )
     return f"{_base_url()}/{key}"
 
@@ -364,7 +371,7 @@ def _url_item(url: str) -> dict[str, Any]:
     return {"kind": "url", "url": seed, "name": _name_from_url(seed)}
 
 
-def _object_item(key: str) -> dict[str, Any]:
+def _object_item(org_id: UUID | str, key: str) -> dict[str, Any]:
     head = head_leaflet(key)
     ctype = str(head.get("content_type") or "").split(";", 1)[0].strip().lower()
     expected = _EXT_TYPES.get(_extension(key))
@@ -376,6 +383,9 @@ def _object_item(key: str) -> dict[str, Any]:
     length = int(head.get("content_length") or 0)
     limit = MAX_PDF_BYTES if ctype == "application/pdf" else MAX_IMAGE_BYTES
     if length <= 0 or length > limit:
+        from app.services.enrichment.leaflet_objects import discard_keys
+
+        discard_keys(org_id, [key])
         raise ValidationError("The leaflet is too large", field="object_key")
     return {
         "kind": "object",

@@ -190,6 +190,14 @@ def find_quote(pages: list[dict[str, object]], url: str, quote: str) -> str | No
     Spacing, case, curly quotes, and the URL's www, scheme, or trailing slash
     do not matter.
     """
+    page = find_quote_page(pages, url, quote)
+    return page_url(page) if page is not None else None
+
+
+def find_quote_page(
+    pages: list[dict[str, object]], url: str, quote: str
+) -> dict[str, object] | None:
+    """The fetched page holding the quote, trying the cited page first."""
     needle = _fold(quote)
     if len(needle) < 8:
         return None
@@ -197,7 +205,7 @@ def find_quote(pages: list[dict[str, object]], url: str, quote: str) -> str | No
     ordered = sorted(pages, key=lambda page: url_key(page_url(page)) != cited)
     for page in ordered:
         if needle in _fold(page_corpus(page)):
-            return page_url(page)
+            return page
     return None
 
 

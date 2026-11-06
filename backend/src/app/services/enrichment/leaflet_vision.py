@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from collections.abc import Callable
 from decimal import Decimal
 from typing import Any
@@ -27,6 +28,26 @@ TRANSCRIBE_SYSTEM = (
 )
 
 
+def _vision_targets(pages: list[dict[str, Any]]) -> list[tuple[int, str]]:
+    """Image URLs in page order. Stored keys are signed at call time."""
+    from app.services.enrichment.leaflet_objects import presign_leaflet_get
+
+    found: list[tuple[int, str]] = []
+    for index, page in enumerate(pages):
+        keys = [
+            key for key in page.get("vision_keys") or [] if isinstance(key, str) and key
+        ]
+        if keys:
+            found.extend((index, presign_leaflet_get(key)) for key in keys)
+            continue
+        found.extend(
+            (index, url)
+            for url in page.get("vision_urls") or []
+            if isinstance(url, str) and url
+        )
+    return found
+
+
 def transcribe_pages(
     pages: list[dict[str, Any]],
     *,
@@ -38,12 +59,7 @@ def transcribe_pages(
     """Fill page text from the vision URLs. One call covers every image."""
     from app.services.enrichment.leaflet import LeafletReadError
 
-    urls = [
-        (index, url)
-        for index, page in enumerate(pages)
-        for url in page.get("vision_urls") or []
-        if isinstance(url, str) and url
-    ]
+    urls = _vision_targets(pages)
     if not urls:
         return pages, Decimal("0"), ""
     caller = complete or (
@@ -65,7 +81,10 @@ def transcribe_pages(
         combined = f"{text}\n{extra}".strip() if extra else text
         updated = dict(page)
         updated["text"] = combined[:MAX_PAGE_TEXT]
+        if page.get("vision_keys") or page.get("vision_urls"):
+            updated["transcribed"] = True
         updated.pop("vision_urls", None)
+        updated.pop("vision_keys", None)
         filled.append(updated)
     if not any(str(page.get("text") or "").strip() for page in filled):
         raise LeafletReadError("The leaflet has no readable text")
@@ -123,7 +142,9 @@ def transcript_parts(text: str, count: int) -> list[str]:
     shared = text.strip()[:MAX_PAGE_TEXT]
     if count <= 1:
         return [shared]
-    return [shared for _ in range(count)]
+    # One unsplit reply is kept once. Copying it onto every image
+    # would repeat the same text in the extract prompt.
+    return [shared, *([""] * (count - 1))]
 
 
 def _parts_from_json(text: str) -> list[str] | None:
@@ -151,6 +172,7 @@ def _transcribe(
     deny_data_collection: bool,
 ) -> tuple[list[str], Decimal, str]:
     from app.services.openrouter_client import (
+        OpenRouterError,
         extract_message_text,
         openrouter_chat_completion,
         usage_from_body,
@@ -172,18 +194,32 @@ def _transcribe(
     for index, url in enumerate(urls, start=1):
         content.append({"type": "text", "text": f"Image {index}."})
         content.append({"type": "image_url", "image_url": {"url": url}})
-    body = openrouter_chat_completion(
-        system_prompt=TRANSCRIBE_SYSTEM,
-        user_content=content,
-        timeout=90,
-        workload="org-enrichment-leaflet",
-        max_attempts=1,
-        model=model_name,
-        fallback_models=fallback_models,
-        deny_data_collection=deny_data_collection,
-        max_tokens=MAX_REPLY_TOKENS,
-        reasoning_off=True,
-    )
+    request = {
+        "system_prompt": TRANSCRIBE_SYSTEM,
+        "user_content": content,
+        "timeout": 90,
+        "workload": "org-enrichment-leaflet",
+        "max_attempts": 1,
+        "model": model_name,
+        "fallback_models": fallback_models,
+        "deny_data_collection": deny_data_collection,
+    }
+    started = time.monotonic()
+    try:
+        body = openrouter_chat_completion(
+            **request,
+            max_tokens=MAX_REPLY_TOKENS,
+            reasoning_off=True,
+        )
+    except OpenRouterError as exc:
+        # A vision model may reject the reply cap. One plain retry fits.
+        if exc.status not in {400, 404} or time.monotonic() - started > 15:
+            raise
+        logger.warning(
+            "Leaflet model refused reply settings; retrying without them",
+            extra={"extra": {"status": exc.status}},
+        )
+        body = openrouter_chat_completion(**request)
     text = extract_message_text(body)
     usage = usage_from_body(body)
     logger.info(

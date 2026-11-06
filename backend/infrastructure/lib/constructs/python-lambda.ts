@@ -100,11 +100,23 @@ export class PythonLambda extends Construct {
       'find /asset-output -type f -name "*.pyc" -delete',
       'find /asset-output -type f -name "*.pyo" -delete',
     ];
+    // Keep in step with TARGET_PLATFORMS in backend/scripts/build_lambda_bundle.py.
+    // pip matches each --platform tag literally.
+    const wheelPlatforms = [
+      "manylinux_2_28_aarch64",
+      "manylinux_2_27_aarch64",
+      "manylinux_2_17_aarch64",
+      "manylinux2014_aarch64",
+    ]
+      .map((platform) => `--platform ${platform}`)
+      .join(" ");
     const copyCommands = [
       "PYTHONDONTWRITEBYTECODE=1 python -m pip install --upgrade " +
         "pip==25.3 --no-warn-script-location",
       "PYTHONDONTWRITEBYTECODE=1 python -m pip install -r " +
-        `"${requirementsFile}" -t /asset-output --no-compile`,
+        `"${requirementsFile}" -t /asset-output --no-compile ` +
+        `${wheelPlatforms} --only-binary=:all: --implementation cp ` +
+        "--python-version 3.12",
       "cp -au lambda /asset-output/lambda",
       "cp -au src /asset-output/src",
       ...extraCopyPaths.map(

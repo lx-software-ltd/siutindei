@@ -615,11 +615,15 @@ export interface paths {
         put?: never;
         /**
          * Presign a leaflet upload
-         * @description Admin only. Returns a presigned PUT for one JPEG, PNG, WebP,
-         *     or PDF under this organization's enrichment prefix. The
-         *     content type is locked on the signature. The file is not
-         *     attached to the organization. Start a run with the returned
-         *     `object_key`. An importer JWT receives 403.
+         * @description Admin only. Returns a presigned POST for one JPEG, PNG, WebP,
+         *     or PDF under this organization's incoming leaflet prefix. The
+         *     content type is locked, and the policy rejects an empty file
+         *     or one larger than 5 MB for a picture and 8 MB for a PDF.
+         *     POST `upload_fields` to `upload_url`, then the file under the
+         *     field name `file`. The file is not public and is not attached
+         *     until a picture proposal is applied. Start a run with the
+         *     returned `object_key`. An importer JWT receives 403, including
+         *     on a leaflet start.
          */
         post: {
             parameters: {
@@ -702,8 +706,9 @@ export interface paths {
          * @description Admin only. `monthly_cost_limit_usd` is greater than 0 and at
          *     most 1000. `max_pages` is 1 to 20. `max_page_bytes` is 10000 to
          *     2000000. `min_confidence_shown` is 0 to 1. `leaflet_model` is
-         *     an optional OpenRouter slug of at most 200 characters with no
-         *     whitespace. A blank value clears it. A change is written to
+         *     an optional OpenRouter slug of at most 200 characters. Letters,
+         *     digits, and `._:@+/-` only, with no whitespace. A blank value
+         *     clears it. A change is written to
          *     the audit log with the admin subject.
          */
         put: {
@@ -8834,7 +8839,11 @@ export interface components {
             content_type: "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
         };
         LeafletUploadResponse: {
+            /** @description S3 POST target. Send upload_fields, then the file. */
             upload_url: string;
+            upload_fields: {
+                [key: string]: string;
+            };
             media_url: string;
             object_key: string;
             content_type: string;

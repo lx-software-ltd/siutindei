@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -325,6 +326,9 @@ def serialize_proposal(
     }
 
 
+_MODEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:@+/-]{0,199}$")
+
+
 def _leaflet_model(value: object) -> str | None:
     if value is None:
         return None
@@ -334,6 +338,8 @@ def _leaflet_model(value: object) -> str | None:
     if not cleaned:
         return None
     if len(cleaned) > 200 or any(char.isspace() for char in cleaned):
+        raise ValidationError("leaflet_model is out of range", field="leaflet_model")
+    if _MODEL_RE.fullmatch(cleaned) is None:
         raise ValidationError("leaflet_model is out of range", field="leaflet_model")
     return cleaned
 

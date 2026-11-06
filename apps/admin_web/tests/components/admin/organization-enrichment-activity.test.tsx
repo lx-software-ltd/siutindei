@@ -4,6 +4,7 @@ import {
   enrichmentActivityCopy,
   leafletPresetIds,
 } from '@/components/admin/organization-enrichment';
+import { leafletUploadBody } from '@/lib/api-client-enrichment';
 
 describe('enrichmentActivityCopy', () => {
   it('keeps the crawl sentence until the model stage', () => {
@@ -53,5 +54,22 @@ describe('leafletPresetIds', () => {
 
   it('leaves a picture alone after it has been offered', () => {
     expect(leafletPresetIds([picture], ['media-1'])).toEqual([]);
+  });
+});
+
+describe('leafletUploadBody', () => {
+  it('posts the signed fields and then the file', () => {
+    const file = new File([new Uint8Array([1, 2, 3])], 'flyer.png', {
+      type: 'image/png',
+    });
+    const body = leafletUploadBody(
+      { key: 'organizations/org/enrichment/leaflets/incoming/flyer.png', policy: 'abc' },
+      file
+    );
+    expect(body.get('key')).toBe(
+      'organizations/org/enrichment/leaflets/incoming/flyer.png'
+    );
+    expect(body.get('policy')).toBe('abc');
+    expect(body.get('file')).toBe(file);
   });
 });
