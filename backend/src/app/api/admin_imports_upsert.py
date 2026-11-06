@@ -45,11 +45,7 @@ from app.api.admin_imports_version import (
     stage_source_category,
 )
 from app.api.admin_resource_activity import _create_activity, _update_activity
-from app.api.admin_resource_location import (
-    _create_location,
-    _update_location,
-    omit_frozen_location_edits,
-)
+from app.api.admin_resource_location import _create_location, _update_location
 from app.api.admin_resource_organization import (
     _create_organization,
     _update_organization,
@@ -305,15 +301,11 @@ def upsert_location(
         return held
     resolve_location_area_fields(session, body)
     restrict_import_body(body, plan)
-    if existing is None:
-        raw_status = raw_location.get("status")
-        if raw_status is not None and not (
-            isinstance(raw_status, str) and raw_status.strip() == ""
-        ):
-            body["status"] = raw_status
-    else:
-        omit_frozen_location_edits(existing, body, warnings)
     if existing:
+        from app.api.admin_resource_location import omit_frozen_location_edits
+
+        body.pop("status", None)
+        omit_frozen_location_edits(existing, body, warnings)
         updated = _update_location(repo, existing, body)
         repo.update(updated)
         persist_import_change(session, dry_run=dry_run)
