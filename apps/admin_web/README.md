@@ -16,7 +16,8 @@ Required:
 Optional:
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`: Catalog neighbourhood map.
 - `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`: Advanced-marker map id. Empty uses
-  Google's `DEMO_MAP_ID`.
+  Google's `DEMO_MAP_ID` on the catalog map. The location editor uses a
+  standard marker until this is set, so that map has no demo watermark.
 - `NEXT_PUBLIC_PUBLIC_WWW_URL`: Public site base URL. Defaults to
   `https://siutindei.com`.
 

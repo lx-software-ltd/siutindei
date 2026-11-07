@@ -8,9 +8,15 @@ import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { formatAdminPageName } from '../../lib/admin-page-name';
 import type { GeographicAreaNode } from '../../lib/api-client';
+import { areaAncestry, pinOutsideDistrict } from '../../lib/location-districts';
 import {
   buildAppleMapsUrl,
   buildGoogleMapsUrl,
+  coordinatesChanged,
+  locationCoordinates,
+  nextOpenedCoordinates,
+  placementChanged,
+  type LocationPlacement,
 } from '../../lib/location-maps';
 import { parseOptionalNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/api-client-admin';
@@ -25,6 +31,7 @@ import { normalizeKey } from '../../lib/string-utils';
 import type { Location } from '../../types/admin';
 import { AppleMapsIcon, GoogleMapsIcon } from '../icons/action-icons';
 import { ClosedLocationMark } from './closed-location-mark';
+import { LocationPinMap } from './location-pin-map';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import { adminTableText, AdminTableName } from '../ui/admin-table-value';
 import {
@@ -107,6 +114,20 @@ const emptyForm: LocationFormState = {
   lat: '',
   lng: '',
 };
+
+function locationFormMatches(
+  form: LocationFormState,
+  saved: LocationFormState
+): boolean {
+  return (
+    form.org_id === saved.org_id &&
+    form.area_id === saved.area_id &&
+    form.name === saved.name &&
+    form.status === saved.status &&
+    form.address === saved.address &&
+    !coordinatesChanged(form, saved)
+  );
+}
 
 function itemToForm(item: Location): LocationFormState {
   return {
@@ -216,6 +237,10 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   };
 
   const [statusError, setStatusError] = useState('');
+  const [openedPin, setOpenedPin] = useState<
+    (LocationPlacement & { key: string }) | null
+  >(null);
+  const [pinJump, setPinJump] = useState(0);
 
   const handleAreaChange = (areaId: string, _chain: GeographicAreaNode[]) => {
     markTouched('area_id');
@@ -363,6 +388,65 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
   const detailsLocked =
     locked ||
     (isLocationClosed(editorForm.status) && Boolean(editorForm.area_id));
+  const outsideDistrict = useMemo(() => {
+    const placed = locationCoordinates({
+      lat: editorForm.lat,
+      lng: editorForm.lng,
+    });
+    if (!placed || !editorForm.area_id) {
+      return false;
+    }
+    return pinOutsideDistrict(
+      placed.lat,
+      placed.lng,
+      areaAncestry(tree, editorForm.area_id)
+    );
+  }, [editorForm.area_id, editorForm.lat, editorForm.lng, tree]);
+  const openKey = panel.editingId ?? (panel.isDraftOpen ? 'draft' : null);
+  const openedSource = panel.editingId
+    ? panel.items.find((item) => item.id === panel.editingId)
+    : undefined;
+  const savedPlacement = useMemo<LocationPlacement | null>(() => {
+    if (!openedSource) {
+      return null;
+    }
+    const saved = itemToForm(openedSource);
+    return {
+      lat: saved.lat,
+      lng: saved.lng,
+      address: saved.address,
+      area_id: saved.area_id,
+    };
+  }, [openedSource]);
+  const formPlacement = useMemo<LocationPlacement>(
+    () => ({
+      lat: panel.formState.lat,
+      lng: panel.formState.lng,
+      address: panel.formState.address,
+      area_id: panel.formState.area_id,
+    }),
+    [
+      panel.formState.address,
+      panel.formState.area_id,
+      panel.formState.lat,
+      panel.formState.lng,
+    ]
+  );
+  const resolvedPin = nextOpenedCoordinates(
+    openedPin,
+    openKey,
+    savedPlacement,
+    formPlacement
+  );
+  if (resolvedPin !== openedPin) {
+    setOpenedPin(resolvedPin);
+  }
+  const placementDirty =
+    resolvedPin !== null &&
+    resolvedPin.key === openKey &&
+    openKey !== 'draft' &&
+    !detailsLocked &&
+    placementChanged(editorForm, resolvedPin);
 
   const detail = (
     <AdminEditorPanel
@@ -508,6 +592,51 @@ export function LocationsPanel({ mode }: LocationsPanelProps) {
           />
         </VersionField>
       </AdminFieldGrid>
+      <LocationPinMap
+        lat={editorForm.lat}
+        lng={editorForm.lng}
+        readOnly={detailsLocked}
+        jumpToken={pinJump}
+        onChange={(nextLat, nextLng) => {
+          panel.setFormState((prev) => ({
+            ...prev,
+            lat: nextLat,
+            lng: nextLng,
+          }));
+        }}
+      />
+      {outsideDistrict || placementDirty ? (
+        <div className='flex items-baseline gap-3'>
+          {outsideDistrict ? (
+            <p className='text-sm text-ink-700'>Pin is outside this district.</p>
+          ) : null}
+          {placementDirty ? (
+            <button
+              type='button'
+              className='admin-focus shrink-0 text-sm text-ink-700 underline underline-offset-2 hover:text-ink-900'
+              onClick={() => {
+                if (!resolvedPin) {
+                  return;
+                }
+                const next = {
+                  ...panel.formState,
+                  address: resolvedPin.address,
+                  area_id: resolvedPin.area_id,
+                  lat: resolvedPin.lat,
+                  lng: resolvedPin.lng,
+                };
+                setPinJump((value) => value + 1);
+                panel.setFormState(next);
+                if (openedSource && locationFormMatches(next, itemToForm(openedSource))) {
+                  panel.clearDirty();
+                }
+              }}
+            >
+              Reset
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       </div>
       </VersionFields>
     </AdminEditorPanel>
