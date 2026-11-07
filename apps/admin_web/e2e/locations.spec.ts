@@ -72,16 +72,38 @@ async function openHarbourHall(adminPage: Page) {
 }
 
 async function dragPin(pin: ReturnType<Page['locator']>) {
-  const box = await pin.boundingBox();
-  if (!box) {
-    throw new Error('location pin has no box');
-  }
-  const startX = box.x + box.width / 2;
-  const startY = box.y + box.height / 2;
-  await pin.page().mouse.move(startX, startY);
-  await pin.page().mouse.down();
-  await pin.page().mouse.move(startX + 28, startY + 18, { steps: 6 });
-  await pin.page().mouse.up();
+  await pin.evaluate((el) => {
+    const rect = el.getBoundingClientRect();
+    const startX = rect.left + rect.width / 2;
+    const startY = rect.top + rect.height / 2;
+    const endX = startX + 28;
+    const endY = startY + 18;
+    const fire = (
+      target: EventTarget,
+      type: string,
+      x: number,
+      y: number,
+      kind: 'mouse' | 'pointer'
+    ) => {
+      const EventClass = kind === 'pointer' ? PointerEvent : MouseEvent;
+      target.dispatchEvent(
+        new EventClass(type, {
+          bubbles: true,
+          cancelable: true,
+          clientX: x,
+          clientY: y,
+          button: 0,
+          buttons: type.endsWith('up') ? 0 : 1,
+        })
+      );
+    };
+    fire(el, 'pointerdown', startX, startY, 'pointer');
+    fire(el, 'mousedown', startX, startY, 'mouse');
+    fire(el, 'pointermove', endX, endY, 'pointer');
+    fire(window, 'mousemove', endX, endY, 'mouse');
+    fire(el, 'pointerup', endX, endY, 'pointer');
+    fire(window, 'mouseup', endX, endY, 'mouse');
+  });
 }
 
 test.describe('Locations Panel', () => {
@@ -204,12 +226,14 @@ test.describe('Locations Panel', () => {
     const latField = editor.getByLabel('Latitude');
     const lngField = editor.getByLabel('Longitude');
     await expect(latField).toBeDisabled();
+    await expect(pin).toHaveAttribute('data-draggable', 'false');
     await dragPin(pin);
     await pin.click();
     await expect(latField).toHaveValue('22.278');
     await expect(lngField).toHaveValue('114.175');
 
     await editor.getByLabel('Status').selectOption('open');
+    await expect(pin).toHaveAttribute('data-draggable', 'true');
     await pin.click();
     await expect(latField).toHaveValue('22.278');
     await expect(editor.getByRole('button', { name: 'Reset', exact: true })).toHaveCount(0);
