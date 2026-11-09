@@ -33,7 +33,9 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: '\.md$'
+        # A unified diff encodes a blank line as a single space. Stripping
+        # that space corrupts .patch files.
+        exclude: '\.(md|patch)$'
       - id: end-of-file-fixer
         exclude: '\.md$'
       - id: check-yaml
