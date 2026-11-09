@@ -36,7 +36,6 @@ interface ActivityDetailPageProps {
   readonly locale: Locale;
   readonly activityId: string;
   readonly copy: SiteContent['activityDetail'];
-  readonly initialListing?: ActivityListing | null;
 }
 
 function buildWhatsappHref(
@@ -61,20 +60,16 @@ export function ActivityDetailPage({
   locale,
   activityId,
   copy,
-  initialListing = null,
 }: ActivityDetailPageProps) {
-  const [listing, setListing] = useState<ActivityListing | null>(initialListing);
-  const [isLoading, setIsLoading] = useState(initialListing == null);
+  const [listing, setListing] = useState<ActivityListing | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { contact, siteName } = getSiteConfig();
 
   useEffect(() => {
     let cancelled = false;
-    const hasInitial = initialListing?.activity.id === activityId;
-    if (!hasInitial) {
-      setIsLoading(true);
-      setErrorMessage(null);
-    }
+    setIsLoading(true);
+    setErrorMessage(null);
 
     fetchActivityListingById(activityId)
       .then((item) => {
@@ -82,10 +77,8 @@ export function ActivityDetailPage({
           return;
         }
         if (!item) {
-          if (!hasInitial) {
-            setErrorMessage(copy.notFoundLabel);
-            setListing(null);
-          }
+          setErrorMessage(copy.notFoundLabel);
+          setListing(null);
           return;
         }
         setListing(item);
@@ -93,7 +86,7 @@ export function ActivityDetailPage({
       })
       .catch((error: unknown) => {
         logActivityLoadError('activity detail', error);
-        if (!cancelled && !hasInitial) {
+        if (!cancelled) {
           setErrorMessage(copy.errorLabel);
           setListing(null);
         }
@@ -107,7 +100,7 @@ export function ActivityDetailPage({
     return () => {
       cancelled = true;
     };
-  }, [activityId, copy.errorLabel, copy.notFoundLabel, initialListing]);
+  }, [activityId, copy.errorLabel, copy.notFoundLabel]);
 
   const imageUrl = listing ? listingImageUrl(listing) : null;
 
@@ -149,17 +142,10 @@ export function ActivityDetailPage({
         priceCurrency: listing.pricing.currency,
       },
     };
-    const existing = document.querySelector(
-      `script[data-activity-jsonld="${listing.activity.id}"]`,
-    );
-    let created: HTMLScriptElement | null = null;
-    if (!existing) {
-      created = document.createElement('script');
-      created.type = 'application/ld+json';
-      created.dataset.activityJsonld = listing.activity.id;
-      created.textContent = JSON.stringify(structuredData);
-      document.head.appendChild(created);
-    }
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify(structuredData);
+    document.head.appendChild(script);
 
     // The static export ships one generic /activity/ page; give each
     // activity a real tab/browser title once its data loads.
@@ -167,9 +153,7 @@ export function ActivityDetailPage({
     document.title = `${activityTitle} · ${siteName}`;
 
     return () => {
-      if (created) {
-        created.remove();
-      }
+      script.remove();
       document.title = previousTitle;
     };
   }, [listing, locale, siteName]);

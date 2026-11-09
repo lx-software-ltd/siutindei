@@ -72,8 +72,7 @@ Source: [`apps/public_www`](../../apps/public_www).
 - Tailwind CSS v4 via `@tailwindcss/postcss`.
 - Vitest + Testing Library for unit/component tests.
 - Lighthouse CI configured at `apps/public_www/.lighthouserc.json`.
-- Build script: `next build` → `prune-activity-export-placeholder.mjs` →
-  `inject-static-redirects.mjs` → `inject-html-lang.mjs` →
+- Build script: `next build` → `inject-static-redirects.mjs` → `inject-html-lang.mjs` →
   `inject-structured-data.mjs` → `inject-csp-meta.mjs` →
   `validate-csp-meta.mjs`.
 
@@ -135,10 +134,8 @@ Source: [`apps/public_www`](../../apps/public_www).
   `view=card` and page with the API `cursor` (Load more); page sizes live
   in `src/lib/activities/search-limits.ts`. `search-client.ts` sorts query
   params so CloudFront cache keys are stable. In-app links open
-  `/[locale]/activity/?id=<uuid>`. Staging builds (fixture enabled) also
-  export each fixture activity at `/[locale]/activity/<uuid>/` with
-  Course JSON-LD; production exports only a placeholder, which
-  `prune-activity-export-placeholder.mjs` deletes. Optional `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` enables
+  `/[locale]/activity/?id=<uuid>`, the only activity detail page in both
+  staging and production; the export has no per-activity pages. Optional `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` enables
   Static Maps on listing cards, map markers on the search map view, and CSP
   entries for
   `maps.googleapis.com` / `maps.gstatic.com`. The search bar **area** label links
@@ -162,8 +159,7 @@ Source: [`apps/public_www`](../../apps/public_www).
 - **SEO:** `buildLocalizedMetadata` (canonical, hreflang). Sitewide
   WebSite + Organization JSON-LD is injected into the exported locale home
   pages at build time (`scripts/inject-structured-data.mjs`, the
-  `jsonld:inject` build step). On staging, fixture activities also ship
-  `Course` JSON-LD in `/[locale]/activity/<uuid>/`. The query-param shell still sets
+  `jsonld:inject` build step). The activity page sets
   `Course` JSON-LD and the document title client-side once the activity loads.
   Optional GTM / Meta Pixel via `NEXT_PUBLIC_GTM_ID` /
   `NEXT_PUBLIC_META_PIXEL_ID` and host allow-lists; CSP `script-src` /
@@ -208,7 +204,6 @@ The build is deliberately **gated** by:
   the gate. Dev `extract-zip` (GHSA-jmr9-qjv8-65gv via `@lhci/cli`) is
   overridden to `@electron-internal/extract-zip` 1.0.5. `js-yaml` Highs
   are pinned via `overrides` to 3.15.2 / 4.3.2. |
-| `prune-activity-export-placeholder.mjs` | Deletes the `__export_placeholder__` activity pages that production exports. |
 | `inject-static-redirects.mjs` | Injects locale redirect fallbacks into the exported unprefixed pages. |
 | `inject-html-lang.mjs` | Sets `<html lang>` per locale folder (`en`, `zh-HK`) for crawlers and no-JS. |
 | `inject-structured-data.mjs` | Adds sitewide WebSite + Organization JSON-LD to the locale home pages. |
