@@ -103,7 +103,10 @@ def db_session(test_engine) -> Generator:
     yield session
 
     session.close()
-    transaction.rollback()
+    # A test may already have rolled this transaction back, which drops it
+    # from the connection. Rolling it back again warns.
+    if transaction.is_active:
+        transaction.rollback()
     connection.close()
 
 
