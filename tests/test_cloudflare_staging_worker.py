@@ -65,7 +65,7 @@ def test_cli_dry_run_does_not_print_secret_names_or_values(
     printed = capsys.readouterr().out
     assert "bypass-value-must-stay-off-stdout" not in printed
     assert "STAGING_BYPASS_SECRET" not in printed
-    assert "1 secret binding(s)" in printed
+    assert "worker example-worker: 1 allowed IPs" in printed
 
 
 def test_metadata_keeps_existing_secrets_when_unset() -> None:
