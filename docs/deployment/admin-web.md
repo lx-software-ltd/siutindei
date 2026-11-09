@@ -34,7 +34,6 @@ bash scripts/deploy/deploy-admin-web.sh
 Set `CORS_ALLOWED_ORIGINS` (or CDK context `corsAllowedOrigins`) to include:
 
 - `https://admin.siutindei.com`
-- `https://siutindei.lx-software.com` (until the old host only redirects)
 - `http://localhost:3000`
 
 This is required for the admin SPA to call the admin API endpoints.

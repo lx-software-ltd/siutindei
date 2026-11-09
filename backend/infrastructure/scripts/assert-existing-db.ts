@@ -253,10 +253,11 @@ function assertOpsAlarmRulesInNestedStack(): void {
     }
   }
 
-  const parentResources = Template.fromStack(stack).toJSON().Resources as Record<
-    string,
-    { Type: string; Properties?: Record<string, unknown> }
-  >;
+  const synthesized = Template.fromStack(stack).toJSON() as {
+    Conditions?: Record<string, unknown>;
+    Resources: Record<string, { Type: string; Properties?: Record<string, unknown> }>;
+  };
+  const parentResources = synthesized.Resources;
   // CloudFormation allows 500 resources. 494 includes the admin live
   // alias and its published version and the conditional secondary API
   // custom domain and mapping. Fail if a later edit crosses the cap or
@@ -270,6 +271,62 @@ function assertOpsAlarmRulesInNestedStack(): void {
   if (resourceCount !== 494) {
     throw new Error(
       `API stack resource count changed to ${resourceCount}; update docs/architecture/aws-assets-map.md`,
+    );
+  }
+  const disableExecute = JSON.stringify(
+    synthesized.Conditions?.DisableExecuteApiEndpoint ?? null,
+  );
+  if (
+    !disableExecute.includes("UseApiSecondaryCustomDomain") ||
+    !disableExecute.includes("ApiDisableExecuteApiEndpoint")
+  ) {
+    throw new Error(
+      `DisableExecuteApiEndpoint must require the secondary domain and the parameter; found ${disableExecute}`,
+    );
+  }
+  const restApis = Object.values(synthesized.Resources).filter(
+    (resource) => resource.Type === "AWS::ApiGateway::RestApi",
+  );
+  const expectedFlag = { "Fn::If": ["DisableExecuteApiEndpoint", true, false] };
+  if (
+    restApis.length !== 1 ||
+    JSON.stringify(restApis[0].Properties?.DisableExecuteApiEndpoint) !==
+      JSON.stringify(expectedFlag)
+  ) {
+    throw new Error("RestApi DisableExecuteApiEndpoint must follow the condition");
+  }
+  const stages = Object.values(synthesized.Resources).filter(
+    (resource) => resource.Type === "AWS::ApiGateway::Stage",
+  );
+  const stageVariable = (
+    stages[0]?.Properties?.Variables as Record<string, unknown> | undefined
+  )?.executeApiEndpoint;
+  if (
+    JSON.stringify(stageVariable) !==
+    JSON.stringify({
+      "Fn::If": ["DisableExecuteApiEndpoint", "disabled", "enabled"],
+    })
+  ) {
+    throw new Error("Stage must flip a variable so disabling execute-api takes effect");
+  }
+  const sesSendPolicies = Object.values(synthesized.Resources).filter((resource) => {
+    const document = resource.Properties?.PolicyDocument as
+      | { Statement?: Array<{ Action?: unknown }> }
+      | undefined;
+    return (document?.Statement ?? []).some((statement) =>
+      JSON.stringify(statement.Action ?? "").includes("ses:SendEmail"),
+    );
+  });
+  const sesSendText = JSON.stringify(sesSendPolicies);
+  const paddedDomains = sesSendText.split("invalid.example").length - 1;
+  if (
+    sesSendPolicies.length < 3 ||
+    paddedDomains < 3 ||
+    !sesSendText.includes("SesSenderEmail") ||
+    !sesSendText.includes("AuthEmailFromAddress")
+  ) {
+    throw new Error(
+      "SES send policies must grant the address and a domain padded so an empty sender cannot fail Fn::Select",
     );
   }
   const partnerAuthorizer = Object.values(parentResources).find(

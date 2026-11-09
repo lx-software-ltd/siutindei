@@ -1,0 +1,188 @@
+diff --git a/backend/infrastructure/lib/admin-outputs.ts b/backend/infrastructure/lib/admin-outputs.ts
+index 256ecf6..14c7290 100644
+--- a/backend/infrastructure/lib/admin-outputs.ts
++++ b/backend/infrastructure/lib/admin-outputs.ts
+@@ -33,6 +33,7 @@ export function defineAdminOutputs(
+     evolvesproutsInvoiceRecipient,
+     inboundMailBucket,
+     boardMailInboundAddress,
++    boardMailNextInboundAddress,
+     boardMailIdentity,
+     hasBoardMailSending,
+     outreachSendingIdentity,
+@@ -152,10 +153,17 @@ export function defineAdminOutputs(
+   new cdk.CfnOutput(scope, "SiutindeiBoardMailInboundAddress", {
+     value: boardMailInboundAddress,
+     description:
+-      "Destination the Cloudflare Email Worker forwards every SiutindeiBoardMailDomain message to (verify it once in Cloudflare; the verification mail lands in the inbound bucket).",
++      "Live destination the Cloudflare Email Worker forwards every SiutindeiBoardMailDomain message to. Stays on InboundMailDomain until BOARD_DESTINATION moves.",
+     exportName: "lxsoftware-SiutindeiBoardMailInboundAddress",
+   });
+ 
++  new cdk.CfnOutput(scope, "SiutindeiBoardMailNextInboundAddress", {
++    value: boardMailNextInboundAddress,
++    description:
++      "Receipt address on inbound.siutindei.com. Point BOARD_DESTINATION here only after Cloudflare has verified this destination.",
++    exportName: "lxsoftware-SiutindeiBoardMailNextInboundAddress",
++  });
++
+   for (const n of [1, 2, 3] as const) {
+     const output = new cdk.CfnOutput(scope, `SiutindeiBoardMailDkimCname${n}`, {
+       value: cdk.Fn.join(" CNAME ", [
+diff --git a/backend/infrastructure/lib/inbound-mail.ts b/backend/infrastructure/lib/inbound-mail.ts
+index b200e0a..c0e09c1 100644
+--- a/backend/infrastructure/lib/inbound-mail.ts
++++ b/backend/infrastructure/lib/inbound-mail.ts
+@@ -19,6 +19,7 @@ export interface InboundMailResources {
+   readonly inboundMailBucket: s3.Bucket;
+   readonly inboundReceiptRuleSet: ses.ReceiptRuleSet;
+   readonly boardMailInboundAddress: string;
++  readonly boardMailNextInboundAddress: string;
+   readonly boardMailIdentity: ses.CfnEmailIdentity;
+   readonly hasBoardMailSending: cdk.CfnCondition;
+   readonly inboundStatementMailboxes: ReadonlyArray<{
+@@ -278,6 +279,10 @@ export function defineInboundMail(
+     "@",
+     inboundMailDomain.valueAsString,
+   ]);
++  // Independent of InboundMailDomain. The live env and stack output stay
++  // on boardMailInboundAddress until Cloudflare verifies this destination
++  // and the Email Worker BOARD_DESTINATION moves.
++  const boardMailNextInboundAddress = `${boardMailLocalPart}@inbound.siutindei.com`;
+ 
+   inboundStatementFn.addEventSource(
+     new lambdaEventSources.S3EventSource(inboundMailBucket, {
+@@ -295,6 +300,18 @@ export function defineInboundMail(
+       }),
+     ],
+   });
++  // Second copy of the same prefix. Keep the InboundMailDomain rule until
++  // BOARD_DESTINATION moves and Cloudflare has verified the new destination.
++  inboundReceiptRuleSet.addRule("InboundMailbox-siutindei-board-siutindei", {
++    recipients: [boardMailNextInboundAddress],
++    enabled: true,
++    actions: [
++      new sesActions.S3({
++        bucket: inboundMailBucket,
++        objectKeyPrefix: boardMailRawKeyPrefix,
++      }),
++    ],
++  });
+ 
+   defineSharedReceiptRules(scope, {
+     inboundReceiptRuleSet,
+@@ -307,6 +324,7 @@ export function defineInboundMail(
+     fn.addEnvironment("BOARD_MAIL_DOMAIN", boardMailDomain.valueAsString);
+     fn.addEnvironment("BOARD_MAIL_RAW_SEGMENT", boardMailRawSegment);
+     fn.addEnvironment("BOARD_MAIL_INBOUND_ADDRESS", boardMailInboundAddress);
++    fn.addEnvironment("BOARD_MAIL_EXTRA_OWN_DOMAINS", "inbound.siutindei.com");
+   }
+   // InboundStatementMailFn does not get these from buildAdminEnv. AdminApiFn
+   // already has the same parameter tokens from that single assignment.
+@@ -349,6 +367,7 @@ export function defineInboundMail(
+     inboundMailBucket,
+     inboundReceiptRuleSet,
+     boardMailInboundAddress,
++    boardMailNextInboundAddress,
+     boardMailIdentity,
+     hasBoardMailSending,
+     inboundStatementMailboxes,
+diff --git a/backend/infrastructure/test/lxsoftware-stack.test.ts b/backend/infrastructure/test/lxsoftware-stack.test.ts
+index a4eaf33..876b18c 100644
+--- a/backend/infrastructure/test/lxsoftware-stack.test.ts
++++ b/backend/infrastructure/test/lxsoftware-stack.test.ts
+@@ -1041,6 +1041,9 @@ describe("Siu Tin Dei board mail outputs", () => {
+     expect(outputs.SiutindeiBoardMailInboundAddress?.Export?.Name).toBe(
+       "lxsoftware-SiutindeiBoardMailInboundAddress"
+     );
++    expect(outputs.SiutindeiBoardMailNextInboundAddress?.Export?.Name).toBe(
++      "lxsoftware-SiutindeiBoardMailNextInboundAddress"
++    );
+     expect(outputs.BoardMailInboundAddress).toBeUndefined();
+   });
+ });
+@@ -1057,11 +1060,13 @@ describe("shared inbound SES receipt rule set", () => {
+     expect(serialized).toContain("the-morrison");
+     expect(serialized).toContain("billing");
+     expect(serialized).toContain("siutindei-board");
++    expect(serialized).toContain("siutindei-board@inbound.siutindei.com");
+     expect(serialized).toContain("inbound-raw/hillmarton/");
+     expect(serialized).toContain("inbound-raw/morrison/");
+     expect(serialized).toContain("inbound-raw/lx-software/");
+ 
+     const lambdaEnv = JSON.stringify(template.toJSON());
++    expect(lambdaEnv).toContain("BOARD_MAIL_EXTRA_OWN_DOMAINS");
+     expect(lambdaEnv).toContain("INBOUND_STATEMENT_MAILBOXES");
+     expect(lambdaEnv).toContain("lxSoftware");
+     expect(lambdaEnv).toContain("expenditure");
+diff --git a/backend/lambda/admin/board_mail.py b/backend/lambda/admin/board_mail.py
+index 58957d1..a117060 100644
+--- a/backend/lambda/admin/board_mail.py
++++ b/backend/lambda/admin/board_mail.py
+@@ -98,6 +98,11 @@ def own_domains() -> set[str]:
+     inbound = inbound_address()
+     if "@" in inbound:
+         out.add(inbound.rsplit("@", 1)[1])
++    extra = os.environ.get("BOARD_MAIL_EXTRA_OWN_DOMAINS") or ""
++    for domain in extra.split(","):
++        cleaned = domain.strip().lower()
++        if cleaned:
++            out.add(cleaned)
+     outreach = (os.environ.get("OUTREACH_SENDING_DOMAIN") or "").strip().lower()
+     if outreach:
+         out.add(outreach)
+diff --git a/backend/lambda/admin/test_board_mail.py b/backend/lambda/admin/test_board_mail.py
+index 6eb9074..b173c60 100644
+--- a/backend/lambda/admin/test_board_mail.py
++++ b/backend/lambda/admin/test_board_mail.py
+@@ -883,5 +883,23 @@ class TestMailTools(MailTestCase):
+         self.assertEqual(bad.status, "error")
+ 
+ 
++class TestOwnDomains(unittest.TestCase):
++    def test_extra_domains_do_not_replace_the_inbound_address(self) -> None:
++        with patch.dict(
++            os.environ,
++            {
++                "BOARD_MAIL_DOMAIN": "siutindei.com",
++                "BOARD_MAIL_INBOUND_ADDRESS": "siutindei-board@inbound.lx-software.com",
++                "BOARD_MAIL_EXTRA_OWN_DOMAINS": "inbound.siutindei.com",
++                "OUTREACH_SENDING_DOMAIN": "",
++            },
++            clear=False,
++        ):
++            self.assertEqual(
++                board_mail.own_domains(),
++                {"siutindei.com", "inbound.lx-software.com", "inbound.siutindei.com"},
++            )
++
++
+ if __name__ == "__main__":
+     unittest.main()
+diff --git a/scripts/cloudflare/siutindei-mail-fanout.js b/scripts/cloudflare/siutindei-mail-fanout.js
+index cd739c6..7ef30d8 100644
+--- a/scripts/cloudflare/siutindei-mail-fanout.js
++++ b/scripts/cloudflare/siutindei-mail-fanout.js
+@@ -8,14 +8,16 @@
+  * (docs/architecture/executive-board.md §6.1 Mail).
+  *
+  * Setup (Cloudflare dashboard, siutindei.com zone):
+- *   1. Email > Email Routing > Destination addresses: add the board address
+- *      from the `SiutindeiBoardMailInboundAddress` stack output
+- *      (siutindei-board@inbound.lx-software.com). Cloudflare emails a
+- *      verification link there; it lands in the SES inbound bucket under
+- *      inbound-raw/siutindei/ — open the object once and click the link.
++ *   1. Email > Email Routing > Destination addresses: the live board address
++ *      is the `SiutindeiBoardMailInboundAddress` output (local-part @
++ *      InboundMailDomain). The next one is `SiutindeiBoardMailNextInboundAddress`
++ *      (siutindei-board@inbound.siutindei.com) and does not follow
++ *      InboundMailDomain. Verify that address before using it. Cloudflare
++ *      emails a link that lands under inbound-raw/siutindei/.
+  *   2. Workers & Pages > Create > paste this file. Add two plain-text variables:
+  *        OWNER_DESTINATION  the owner's existing verified inbox
+- *        BOARD_DESTINATION  the board address from step 1
++ *        BOARD_DESTINATION  the verified board address. Keep the current
++ *        value until step 1's new destination is verified, then switch it.
+  *      Optionally SKIP_SENDERS: comma-separated addresses/domains never copied
+  *      to the board (e.g. a personal address).
+  *   3. Email Routing > Routing rules > Catch-all address: Action "Send to a

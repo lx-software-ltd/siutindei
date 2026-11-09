@@ -38,8 +38,8 @@ Stack registration: [`backend/infrastructure/bin/app.ts`](../../backend/infrastr
 Configured via `backend/infrastructure/params/production.json` and passed to
 CloudFront as alternate domain names (CNAMEs). Production uses a dedicated
 `us-east-1` ACM certificate covering `siutindei.com` and `*.siutindei.com`.
-Staging reuses the shared `lx-software.com` certificate. Hostnames must be
-listed on the certificate attached to that distribution.
+Staging uses that same certificate (`PublicWwwStagingCertificateArn`).
+Hostnames must be listed on the certificate attached to that distribution.
 
 | Environment | CloudFront alias |
 |---|---|
@@ -47,8 +47,8 @@ listed on the certificate attached to that distribution.
 | Staging | `www-staging.siutindei.com` (IP allow-list Worker; others get 302 to `https://siutindei.com`) |
 
 `www.siutindei.com` 301s to the apex at the Cloudflare edge (Worker
-`siutindei-canonical-redirects`). Do not add it as a CloudFront alias
-unless the attached certificate covers it.
+`siutindei-canonical-redirects`). Leave `www` off the CloudFront alias
+list; the Worker is the redirect.
 
 ### Resource naming
 
@@ -291,9 +291,9 @@ and is invoked by both workflows. It supports three primary modes:
 The script also enforces `robots.txt: User-agent: *\nDisallow: /` whenever
 the target environment is `staging`.
 
-CloudFront is the only edge cache on the CloudFront aliases
-(`siutindei.com` / `siutindei-www-staging`). Today those records CNAME
-directly to CloudFront (DNS-only / grey cloud). `www.siutindei.com` is a
+CloudFront is the only edge cache on the production alias `siutindei.com`.
+That record is DNS-only (grey cloud). `www-staging.siutindei.com` is
+proxied so the allow-list Worker can run. `www.siutindei.com` is a
 Cloudflare-proxied 301 to the apex.
 The planned move of the apex behind the Cloudflare proxy is described in
 [Cloudflare edge](#cloudflare-edge); it keeps CloudFront as the only cache.

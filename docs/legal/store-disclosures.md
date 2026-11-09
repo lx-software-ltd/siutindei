@@ -30,7 +30,7 @@ advertising.
 - Does your app collect or share any of the required user data types? — Yes
 - Is all of the user data collected by your app encrypted in transit? — Yes
 - Do you provide a way for users to request that their data is deleted? —
-  Yes (email `support@lx-software.com`; PDPO access/correction/deletion)
+  Yes (email `support@siutindei.com`; PDPO access/correction/deletion)
 
 Data types:
 

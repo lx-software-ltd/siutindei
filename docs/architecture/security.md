@@ -289,7 +289,6 @@ neither is set, it uses:
 - `capacitor://localhost`
 - `ionic://localhost`
 - `http://localhost` and `http://localhost:3000` (for development)
-- `https://siutindei.lx-software.com`
 - `https://admin.siutindei.com`
 - `https://api.siutindei.com`
 

@@ -84,7 +84,6 @@ _DEFAULT_CORS_ORIGINS = [
     "ionic://localhost",
     "http://localhost",
     "http://localhost:3000",
-    "https://siutindei.lx-software.com",
     "https://admin.siutindei.com",
     "https://api.siutindei.com",
 ]

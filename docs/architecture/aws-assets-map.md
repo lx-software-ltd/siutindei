@@ -321,7 +321,7 @@ For each function above, the following resources are created:
   [`public-www.md`](./public-www.md#search-api-edge-caching).
 
 **CORS Configuration:**
-- Allowed Origins: From `CORS_ALLOWED_ORIGINS` env var or context, defaults to `capacitor://localhost`, `ionic://localhost`, `http://localhost`, `http://localhost:3000`, `https://siutindei.lx-software.com`, `https://admin.siutindei.com`, `https://api.siutindei.com`
+- Allowed Origins: From `CORS_ALLOWED_ORIGINS` env var or context, defaults to `capacitor://localhost`, `ionic://localhost`, `http://localhost`, `http://localhost:3000`, `https://admin.siutindei.com`, `https://api.siutindei.com`
 - Allowed Methods: `GET`, `OPTIONS`, `POST`, `PUT`, `PATCH`, `DELETE`
 
 ### API Gateway Resources and Methods
@@ -565,8 +565,8 @@ resource silently.
 | `FeedbackStarsPerApproval` | Number | No | No | Stars awarded per approved feedback entry (default: 1) |
 | `FallbackManagerEmail` | String | No | No | Fallback manager email for migration |
 | `SupportEmail` | String | No | No | Email to receive manager request notifications |
-| `SesSenderEmail` | String | No | No | SES-verified sender email for notifications |
-| `OpsAlertsEmail` | String | No | No | Email subscribed to operational CloudWatch alarms (default: empty) |
+| `SesSenderEmail` | String | No | No | Sender for manager-request mail. IAM grants this address and its domain; an empty value cannot fail the stack |
+| `OpsAlertsEmail` | String | No | No | Email subscribed to operational CloudWatch alarms (default: empty). A new value replaces the subscription and needs a fresh confirmation |
 | `ApiCustomDomainName` | String | No | No | Custom domain for the API (default: empty) |
 | `ApiCustomDomainCertificateArn` | String | No | No | ACM certificate ARN for API custom domain |
 | `AdminBootstrapEmail` | String | No | No | Admin email for bootstrap (default: empty) |

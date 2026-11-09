@@ -28,7 +28,7 @@ def _event(
         "resource": path,
         "path": path,
         "httpMethod": "GET",
-        "headers": {"origin": "https://siutindei.lx-software.com"},
+        "headers": {"origin": "https://admin.siutindei.com"},
         "queryStringParameters": {key: values[-1] for key, values in multi.items()},
         "multiValueQueryStringParameters": multi,
         "requestContext": {"requestId": "req-1", "authorizer": authorizer or {}},
@@ -44,9 +44,7 @@ def test_public_search_is_cacheable_at_the_edge() -> None:
     assert headers["Cache-Control"] == "public, max-age=60, s-maxage=300"
     assert "Pragma" not in headers
     assert headers["X-Content-Type-Options"] == "nosniff"
-    assert headers["Access-Control-Allow-Origin"] == (
-        "https://siutindei.lx-software.com"
-    )
+    assert headers["Access-Control-Allow-Origin"] == "https://admin.siutindei.com"
     body = json.loads(response["body"])
     assert 0 < len(body["items"]) <= 2
     assert all("manager_id" not in item["organization"] for item in body["items"])
@@ -65,6 +63,21 @@ def test_siutindei_com_hosts_are_default_cors_origins(
     response = lambda_handler(event, None)
 
     assert response["headers"]["Access-Control-Allow-Origin"] == origin
+
+
+def test_retired_lx_software_host_is_not_a_cors_origin(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CORS_ALLOWED_ORIGINS", raising=False)
+    event = _event()
+    event["headers"] = {"origin": "https://siutindei.lx-software.com"}
+
+    response = lambda_handler(event, None)
+
+    assert (
+        response["headers"]["Access-Control-Allow-Origin"]
+        != "https://siutindei.lx-software.com"
+    )
 
 
 def test_card_view_response_is_cacheable() -> None:

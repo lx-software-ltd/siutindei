@@ -2,13 +2,17 @@
 
 This document outlines Cloudflare optimization strategies for the Siu Tin Dei project, using a hybrid AWS + Cloudflare architecture. Cloudflare acts as an edge layer in front of your existing AWS infrastructure.
 
-> **Status:** Proposal. None of the Terraform or Cloudflare rules below are
-> deployed. Today the API stack already has the `ApiCustomDomainName` and
-> `ApiCustomDomainCertificateArn` parameters and the `ApiCustomDomainTarget`
-> and `ApiCustomDomainUrl` outputs, and the regional API WAF
-> (`lxsoftware-siutindei-api-waf`) is always attached. Public search is
-> fronted by the public-website CloudFront distribution
-> ([`public-www.md`](public-www.md#search-api-edge-caching)).
+> **Status:** Proposal. Do not apply it to the live zone.
+> `api.siutindei.com`, `admin.siutindei.com`, and `auth.siutindei.com` stay
+> DNS-only (grey cloud). The `siutindei.com` request rules match on path
+> only, so an orange-cloud API or admin hostname would block partner,
+> mobile, and Cognito traffic. Sketches below that set `proxied = true` or
+> expect a `cf-ray` header on those hosts describe a rejected shape. The
+> live layout is
+> [`siutindei-domain-consolidation.md`](../plans/siutindei-domain-consolidation.md).
+> Public search is fronted by the public-website CloudFront distribution
+> ([`public-www.md`](public-www.md#search-api-edge-caching)). The raw
+> execute-api hostname is disabled; clients use `https://api.siutindei.com`.
 
 ## Table of Contents
 
@@ -102,28 +106,29 @@ Cloudflare acts as an edge layer, proxying traffic to your existing AWS services
 ```hcl
 # Terraform Cloudflare configuration
 resource "cloudflare_zone" "main" {
-  zone = "siutindei.lx-software.com"
+  zone = "siutindei.com"
 }
 
-# API subdomain - proxied through Cloudflare to API Gateway
+# API subdomain. Live records stay grey: orange cloud would hide the
+# client IP from the regional WAF and apply path-scoped website rules.
 resource "cloudflare_record" "api" {
   zone_id = cloudflare_zone.main.id
   name    = "api"
   value   = "your-api-gateway-id.execute-api.region.amazonaws.com"
   type    = "CNAME"
-  proxied = true  # Enable Cloudflare proxy (orange cloud)
+  proxied = false
 }
 
-# Admin web - proxied through Cloudflare to CloudFront
+# Admin web. Live records stay grey, same reason as the API record.
 resource "cloudflare_record" "admin" {
   zone_id = cloudflare_zone.main.id
   name    = "admin"
   value   = "your-cloudfront-distribution.cloudfront.net"
   type    = "CNAME"
-  proxied = true
+  proxied = false
 }
 
-# Organization images - proxied through Cloudflare to S3
+# Organization images. Not a live hostname; the live zone has no images record.
 resource "cloudflare_record" "images" {
   zone_id = cloudflare_zone.main.id
   name    = "images"
@@ -176,9 +181,9 @@ const apiCertificate = acm.Certificate.fromCertificateArn(
 
 // Add custom domain to API Gateway
 const apiDomainName = new apigateway.DomainName(this, "ApiDomainName", {
-  domainName: "api.siutindei.lx-software.com",
+  domainName: "api.siutindei.com",
   certificate: apiCertificate,
-  endpointType: apigateway.EndpointType.REGIONAL,  // Required for Cloudflare proxy
+  endpointType: apigateway.EndpointType.REGIONAL,  // Grey-cloud CNAME target; do not proxy
   securityPolicy: apigateway.SecurityPolicy.TLS_1_2,
 });
 
@@ -211,7 +216,7 @@ resource "cloudflare_ruleset" "transform_api" {
     action_parameters {
       host_header = "your-api-gateway-id.execute-api.region.amazonaws.com"
     }
-    expression  = "(http.host eq \"api.siutindei.lx-software.com\")"
+    expression  = "(http.host eq \"api.siutindei.com\")"
     description = "Set Host header for API Gateway"
     enabled     = true
   }
@@ -230,7 +235,7 @@ resource "cloudflare_ruleset" "transform_admin" {
     action_parameters {
       host_header = "your-cloudfront-distribution.cloudfront.net"
     }
-    expression  = "(http.host eq \"admin.siutindei.lx-software.com\")"
+    expression  = "(http.host eq \"admin.siutindei.com\")"
     description = "Set Host header for CloudFront"
     enabled     = true
   }
@@ -422,7 +427,7 @@ resource "cloudflare_ruleset" "cache_admin" {
         default = 31536000
       }
     }
-    expression  = "(http.host eq \"admin.siutindei.lx-software.com\") and (http.request.uri.path contains \"/_next/static/\")"
+    expression  = "(http.host eq \"admin.siutindei.com\") and (http.request.uri.path contains \"/_next/static/\")"
     description = "Cache static assets aggressively"
     enabled     = true
   }
@@ -440,7 +445,7 @@ resource "cloudflare_ruleset" "cache_admin" {
         default = 0  # Always revalidate
       }
     }
-    expression  = "(http.host eq \"admin.siutindei.lx-software.com\") and (http.request.uri.path matches \".*\\.html$\" or http.request.uri.path eq \"/\" or http.request.uri.path matches \".*/\")"
+    expression  = "(http.host eq \"admin.siutindei.com\") and (http.request.uri.path matches \".*\\.html$\" or http.request.uri.path eq \"/\" or http.request.uri.path matches \".*/\")"
     description = "Cache HTML with short TTL"
     enabled     = true
   }
@@ -529,13 +534,13 @@ export function getOptimizedImageUrl(
   ].filter(Boolean).join(',');
   
   // If the image is already on our domain, use Image Resizing
-  if (originalUrl.startsWith('https://images.siutindei.lx-software.com/')) {
-    const path = originalUrl.replace('https://images.siutindei.lx-software.com', '');
-    return `https://images.siutindei.lx-software.com/cdn-cgi/image/${params}${path}`;
+  if (originalUrl.startsWith('https://images.siutindei.com/')) {
+    const path = originalUrl.replace('https://images.siutindei.com', '');
+    return `https://images.siutindei.com/cdn-cgi/image/${params}${path}`;
   }
   
   // For external images, proxy through our domain
-  return `https://images.siutindei.lx-software.com/cdn-cgi/image/${params}/${encodeURIComponent(originalUrl)}`;
+  return `https://images.siutindei.com/cdn-cgi/image/${params}/${encodeURIComponent(originalUrl)}`;
 }
 
 // Usage examples:
@@ -566,7 +571,7 @@ resource "cloudflare_ruleset" "cache_images" {
         default = 86400  # 1 day
       }
     }
-    expression  = "(http.host eq \"images.siutindei.lx-software.com\")"
+    expression  = "(http.host eq \"images.siutindei.com\")"
     description = "Cache images aggressively"
     enabled     = true
   }
@@ -762,7 +767,7 @@ resource "cloudflare_ruleset" "security_headers" {
         value     = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
       }
     }
-    expression  = "(http.host eq \"admin.siutindei.lx-software.com\")"
+    expression  = "(http.host eq \"admin.siutindei.com\")"
     description = "Add security headers to admin web"
     enabled     = true
   }
@@ -783,7 +788,7 @@ resource "cloudflare_ruleset" "security_headers" {
         # Only for non-search endpoints
       }
     }
-    expression  = "(http.host eq \"api.siutindei.lx-software.com\") and not (http.request.uri.path eq \"/v1/activities/search\")"
+    expression  = "(http.host eq \"api.siutindei.com\") and not (http.request.uri.path eq \"/v1/activities/search\")"
     description = "Add security headers to API"
     enabled     = true
   }
@@ -870,9 +875,9 @@ export default {
     
     // Inject preconnect hints
     const hints = `
-    <link rel="preconnect" href="https://api.siutindei.lx-software.com" crossorigin>
-    <link rel="dns-prefetch" href="https://api.siutindei.lx-software.com">
-    <link rel="preconnect" href="https://images.siutindei.lx-software.com" crossorigin>
+    <link rel="preconnect" href="https://api.siutindei.com" crossorigin>
+    <link rel="dns-prefetch" href="https://api.siutindei.com">
+    <link rel="preconnect" href="https://images.siutindei.com" crossorigin>
     `;
     
     const modifiedHtml = html.replace('</head>', `${hints}</head>`);
@@ -880,8 +885,8 @@ export default {
     // Add Link header for Early Hints
     const newHeaders = new Headers(response.headers);
     newHeaders.set('Link', [
-      '<https://api.siutindei.lx-software.com>; rel=preconnect; crossorigin',
-      '<https://images.siutindei.lx-software.com>; rel=preconnect; crossorigin',
+      '<https://api.siutindei.com>; rel=preconnect; crossorigin',
+      '<https://images.siutindei.com>; rel=preconnect; crossorigin',
     ].join(', '));
     
     return new Response(modifiedHtml, {
@@ -935,7 +940,7 @@ resource "cloudflare_load_balancer_monitor" "api" {
 
 resource "cloudflare_load_balancer" "api" {
   zone_id          = cloudflare_zone.main.id
-  name             = "api.siutindei.lx-software.com"
+  name             = "api.siutindei.com"
   fallback_pool_id = cloudflare_load_balancer_pool.api_primary.id
   default_pool_ids = [cloudflare_load_balancer_pool.api_primary.id]
   
@@ -991,20 +996,20 @@ By offloading traffic to Cloudflare edge:
 
 ### Phase 1: DNS + Proxy Setup (Day 1-2)
 
+This phase is not the live design. Leave `api`, `admin`, and `auth` grey.
+
 1. **Create Cloudflare account** and add your zone
 2. **Import existing DNS records** from your current DNS provider
 3. **Configure SSL/TLS** settings (Full Strict mode)
-4. **Enable proxy (orange cloud)** for api, admin, and images subdomains
-5. **Test** that all traffic flows correctly through Cloudflare
+4. **Keep api, admin, and auth DNS-only.** Proxying them is rejected; see the status note.
+5. **Test** those hosts against API Gateway and CloudFront directly
 
 **Verification:**
 ```bash
-# Check DNS is resolving through Cloudflare
-dig api.siutindei.lx-software.com
-
-# Check Cloudflare headers in response
-curl -I https://api.siutindei.lx-software.com/health
-# Should see: cf-ray header
+# These hosts must not be Cloudflare-proxied. A cf-ray header means the
+# record was switched to orange cloud and should be turned back.
+dig api.siutindei.com
+curl -sI https://api.siutindei.com/v1/health
 ```
 
 ### Phase 2: Caching + Performance (Day 3-4)
@@ -1018,8 +1023,9 @@ curl -I https://api.siutindei.lx-software.com/health
 **Verification:**
 ```bash
 # Check cache status
-curl -I "https://api.siutindei.lx-software.com/v1/activities/search?limit=10"
-# Should see: cf-cache-status: HIT (on second request)
+curl -sI "https://siutindei.com/v1/activities/search?limit=10"
+# Live search caching is the public-website CloudFront distribution.
+# A cf-cache-status header would mean api.siutindei.com was proxied.
 ```
 
 ### Phase 3: Security Hardening (Day 5-7)

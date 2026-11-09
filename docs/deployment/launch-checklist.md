@@ -65,10 +65,11 @@ Confirm backups are actually restorable:
 - Deploy the backend stack; the `OpsAlarms` construct creates the
   `lxsoftware-siutindei-ops-alerts` SNS topic and CloudWatch alarms
   (see `docs/architecture/aws-assets-map.md` for the inventory).
-- `OpsAlertsEmail` is set to `support@lx-software.com` in
-  `backend/infrastructure/params/production.json`. After the first deploy,
-  **confirm the SNS subscription** from the confirmation email sent to that
-  address — alarms are silent until confirmed.
+- `OpsAlertsEmail` is `support@siutindei.com` in
+  `backend/infrastructure/params/production.json`. An SNS email
+  subscription starts as `PendingConfirmation`. Changing the parameter
+  replaces the subscription, and alarms stay silent until that address
+  opens the confirmation link.
 - Verify: `aws sns list-subscriptions-by-topic --topic-arn <ops-alerts-arn> --region ap-southeast-1`
   shows the email subscription with a `SubscriptionArn` (not
   `PendingConfirmation`).
@@ -78,10 +79,16 @@ Confirm backups are actually restorable:
 ## 4. Email (SES)
 
 - Confirm SES production access (out of sandbox) in `ap-southeast-1`.
-- Verified identities must include: `hello@lx-software.com`
-  (`AuthEmailFromAddress`), `no-reply@lx-software.com` (`SesSenderEmail`),
-  and `support@lx-software.com` (`SupportEmail`).
-- Verify: `aws ses get-identity-verification-attributes --identities hello@lx-software.com no-reply@lx-software.com support@lx-software.com --region ap-southeast-1`.
+- Sending uses the verified `siutindei.com` domain identity (owned by the
+  lx-software stack). Addresses: `hello@siutindei.com`
+  (`AuthEmailFromAddress`), `no-reply@siutindei.com` (`SesSenderEmail`,
+  also the manager-request sender), and `support@siutindei.com`
+  (`SupportEmail` and `OpsAlertsEmail`). Address-level identities are not
+  required. Confirm the domain:
+  `aws ses get-identity-verification-attributes --identities siutindei.com --region ap-southeast-1`
+  shows `VerificationStatus` `Success`.
+- Do not delete the `siutindei.com` SES identity from the lx-software stack.
+  Siutindei mail stops if it goes.
 - Send a test login (email OTP) end-to-end from the admin web login screen.
 
 ## 5. GitHub Environments (secrets and variables)
@@ -139,8 +146,11 @@ On the **staging** environment (public www):
 
 ## 6. DNS / certificates
 
-CloudFront aliases are Cloudflare CNAMEs with the proxy **disabled**
-(grey cloud). `www.siutindei.com` is an orange-cloud 301 to the apex.
+CloudFront aliases for the public site, admin console, API, and Cognito
+are Cloudflare CNAMEs with the proxy **disabled** (grey cloud).
+`www.siutindei.com` is an orange-cloud 301 to the apex.
+`www-staging.siutindei.com` is orange-cloud so the allow-list Worker
+can run.
 
 | Record | Target source |
 |---|---|
