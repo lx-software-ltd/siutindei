@@ -415,9 +415,13 @@ regression. See [`aws-assets-map.md`](./aws-assets-map.md) and
   1.0.5. Do not run `npm audit fix --force` (it downgrades
   `@lhci/cli` to 0.6.1).
 - Bundled `aws-cdk-lib` copies of `minimatch` are replaced at
-  `postinstall`. Keep `aws-cdk-lib` at 2.265.0+ so the bundled
+  `postinstall` with 11.0.1+ (GHSA-g3hv-75wg-m249 /
+  CVE-2026-118764). Keep `aws-cdk-lib` at 2.265.0+ so the bundled
   `brace-expansion` is 5.0.9 (GHSA-rgw5-rvv9-x895). `npm overrides`
-  cannot replace `inBundle` packages.
+  cannot replace `inBundle` packages. Dependabot cannot rewrite the
+  bundled `minimatch` 10.2.6 entry either, so
+  `/backend/infrastructure` ignores that package until
+  `aws-cdk-lib` ships 11.x (aws/aws-cdk#39595).
 
 ### Semgrep OSS
 
