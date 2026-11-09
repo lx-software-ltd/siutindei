@@ -51,7 +51,7 @@ There is **one CloudFormation stack** (`lxsoftware-siutindei-public-www`) with
 | Push to `staging` touching `apps/public_www/**`, `scripts/deploy/deploy-public-www.sh`, or the workflow | Build + deploy to **staging**, write a release marker `releases/<sha>/` to the staging bucket. |
 | `workflow_dispatch` of `Promote Public Website Release` | Promote a release id (default: latest staging marker) **or** flip production to the branded coming-soon holding page (`apps/public_www/maintenance/`). |
 | `workflow_dispatch` of `Smoke Public Website Staging` | Crawl staging sitemap and check every page returns 2xx/3xx. |
-| `workflow_dispatch` of `Lighthouse Public Website` | Run Lighthouse CI against the production build. |
+| `workflow_dispatch` of `Lighthouse Public Website` | Run Lighthouse CI against the local production build (`/en/`, `/zh-HK/`, `/en/search/` by default; `/` is rewritten to `/en/`). |
 
 A promotion is always a fresh build with production env vars, uploaded to the
 production bucket, followed by a `/*` CloudFront invalidation.

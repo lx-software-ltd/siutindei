@@ -202,6 +202,8 @@ apps/admin_web/.next/
 apps/admin_web/out/
 apps/public_www/.next/
 apps/public_www/out/
+apps/public_www/.lighthouserc.runtime.json
+apps/public_www/.lighthouseci/
 
 # Playwright
 apps/admin_web/playwright-report/
