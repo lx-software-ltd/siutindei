@@ -80,31 +80,29 @@ def test_config_prefers_secondary_api_domain_while_hosts_move() -> None:
     assert api["endpoint"] == "https://api.next.example.test"
 
 
-def test_config_falls_back_to_stage_url_and_cognito_prefix_domain() -> None:
+def test_config_rejects_the_execute_api_url() -> None:
     outputs = {
         key: value for key, value in OUTPUTS.items() if key != "ApiCustomDomainUrl"
     }
+
+    with pytest.raises(SystemExit, match="custom API domain"):
+        _module().build_config(outputs, PARAMS, "ap-southeast-1")
+
+
+def test_config_falls_back_to_the_cognito_prefix_domain() -> None:
     params = {**PARAMS, "CognitoCustomDomainName": ""}
 
-    config = _module().build_config(outputs, params, "ap-southeast-1")
+    config = _module().build_config(OUTPUTS, params, "ap-southeast-1")
 
-    api = config["api"]["plugins"]["awsAPIPlugin"]["activitiesApi"]
-    assert api["endpoint"] == (
-        "https://abc123.execute-api.ap-southeast-1.amazonaws.com/prod"
-    )
     oauth = config["auth"]["plugins"]["awsCognitoAuthPlugin"]["Auth"]["Default"][
         "OAuth"
     ]
     assert oauth["WebDomain"] == "example-prefix.auth.ap-southeast-1.amazoncognito.com"
 
 
-@pytest.mark.parametrize("missing", ["UserPoolId", "UserPoolClientId", "ApiUrl"])
+@pytest.mark.parametrize("missing", ["UserPoolId", "UserPoolClientId"])
 def test_missing_stack_output_is_an_error(missing: str) -> None:
-    outputs = {
-        key: value
-        for key, value in OUTPUTS.items()
-        if key not in {missing, "ApiCustomDomainUrl"}
-    }
+    outputs = {key: value for key, value in OUTPUTS.items() if key != missing}
     with pytest.raises(SystemExit, match=missing):
         _module().build_config(outputs, PARAMS, "ap-southeast-1")
 

@@ -648,6 +648,18 @@ export class ApiStack extends cdk.Stack {
           "(same region as the API).",
       }
     );
+    const apiDisableExecuteApiEndpoint = new cdk.CfnParameter(
+      this,
+      "ApiDisableExecuteApiEndpoint",
+      {
+        type: "String",
+        default: "false",
+        allowedValues: ["false", "true"],
+        description:
+          "When true and the secondary API custom domain is configured, " +
+          "the default execute-api hostname returns 403.",
+      }
+    );
 
     const nominatimUserAgent = new cdk.CfnParameter(
       this,
@@ -1611,15 +1623,23 @@ export class ApiStack extends cdk.Stack {
 
     // Grant SES permissions for sending access request notification emails
     // Uses condition to only grant if SES sender email is configured
-    const sesSenderIdentityArn = cdk.Stack.of(this).formatArn({
-      service: "ses",
-      resource: "identity",
-      resourceName: sesSenderEmail.valueAsString,
-    });
+    const sesIdentityArnFor = (resourceName: string) =>
+      cdk.Stack.of(this).formatArn({
+        service: "ses",
+        resource: "identity",
+        resourceName,
+      });
+    // SES authorises a domain identity when the address itself is not a
+    // verified identity. Keep the address ARN so an address-level identity
+    // still works.
+    const sesSenderIdentityArn = sesIdentityArnFor(sesSenderEmail.valueAsString);
+    const sesSenderDomainIdentityArn = sesIdentityArnFor(
+      cdk.Fn.select(1, cdk.Fn.split("@", sesSenderEmail.valueAsString))
+    );
     adminFunction.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["ses:SendEmail", "ses:SendRawEmail"],
-        resources: [sesSenderIdentityArn],
+        resources: [sesSenderIdentityArn, sesSenderDomainIdentityArn],
       })
     );
 
@@ -1702,7 +1722,7 @@ export class ApiStack extends cdk.Stack {
     managerRequestProcessor.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["ses:SendEmail", "ses:SendRawEmail"],
-        resources: [sesSenderIdentityArn],
+        resources: [sesSenderIdentityArn, sesSenderDomainIdentityArn],
       })
     );
 
@@ -1824,15 +1844,16 @@ export class ApiStack extends cdk.Stack {
       }
     );
 
-    const sesIdentityArn = cdk.Stack.of(this).formatArn({
-      service: "ses",
-      resource: "identity",
-      resourceName: authEmailFromAddress.valueAsString,
-    });
+    const authEmailIdentityArn = sesIdentityArnFor(
+      authEmailFromAddress.valueAsString
+    );
+    const authEmailDomainIdentityArn = sesIdentityArnFor(
+      cdk.Fn.select(1, cdk.Fn.split("@", authEmailFromAddress.valueAsString))
+    );
     createAuthChallengeFunction.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["ses:SendEmail", "ses:SendRawEmail"],
-        resources: [sesIdentityArn],
+        resources: [authEmailIdentityArn, authEmailDomainIdentityArn],
       })
     );
 
@@ -3128,6 +3149,37 @@ export class ApiStack extends cdk.Stack {
       apiSecondaryMapping.node.defaultChild as apigateway.CfnBasePathMapping
     ).cfnOptions.condition = useApiSecondaryCustomDomain;
 
+    // The RestApi flag only takes effect on the next stage update, so a
+    // stage variable changes with it. Gated on the secondary domain because
+    // that is the production host (ApiCustomDomainName is empty).
+    const disableExecuteApiEndpoint = new cdk.CfnCondition(
+      this,
+      "DisableExecuteApiEndpoint",
+      {
+        expression: cdk.Fn.conditionAnd(
+          useApiSecondaryCustomDomain,
+          cdk.Fn.conditionEquals(
+            apiDisableExecuteApiEndpoint.valueAsString,
+            "true"
+          )
+        ),
+      }
+    );
+    (api.node.defaultChild as apigateway.CfnRestApi).addPropertyOverride(
+      "DisableExecuteApiEndpoint",
+      cdk.Fn.conditionIf(disableExecuteApiEndpoint.logicalId, true, false)
+    );
+    (
+      api.deploymentStage.node.defaultChild as apigateway.CfnStage
+    ).addPropertyOverride(
+      "Variables.executeApiEndpoint",
+      cdk.Fn.conditionIf(
+        disableExecuteApiEndpoint.logicalId,
+        "disabled",
+        "enabled"
+      )
+    );
+
     // ---------------------------------------------------------------------
     // Outputs
     // ---------------------------------------------------------------------
@@ -3326,7 +3378,6 @@ function resolveCorsAllowedOrigins(scope: Construct): string[] {
     "ionic://localhost",
     "http://localhost",
     "http://localhost:3000",
-    "https://siutindei.lx-software.com",
     "https://admin.siutindei.com",
     "https://api.siutindei.com",
   ];

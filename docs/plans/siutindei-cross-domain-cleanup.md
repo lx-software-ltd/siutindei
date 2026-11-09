@@ -1,6 +1,6 @@
 # Plan: Remove the remaining lx-software.com coupling from siutindei
 
-**Status**: Draft
+**Status**: Implementing (approved 2026-11-09)
 **Zone**: red (`backend/infrastructure/**`, Cloudflare live config, SES).
 Each step below waits for explicit approval before it is written.
 
@@ -191,12 +191,17 @@ work.
 - C: redeploy the previous Worker source. CORS changes are a code revert.
 - E: `ApiDisableExecuteApiEndpoint=false` and deploy.
 
-## Open questions
+## Decisions (2026-11-09)
 
-- App ID: rename `com.lxsoftware.siutindei` before the first store release
-  (for example to `com.siutindei.app`, which the lx-software board fixtures
-  already assume), or keep it? After the first release it is permanent.
-- Sender split: is `no-reply@` right for manager-request notices, or should
-  they come from `hello@` so replies reach the inbox?
-- Should the support contact in the legal pages be `support@` or `hello@`
-  (the address Email Routing already has its own rule for)?
+- The app ID stays `com.lxsoftware.siutindei`.
+- Manager-request mail uses `no-reply@siutindei.com` (`SesSenderEmail`).
+- Legal pages and store disclosures use `support@siutindei.com`.
+
+## Not in this change
+
+The board copy still goes to `siutindei-board@inbound.lx-software.com`.
+`inbound.siutindei.com` gets its MX record first. The lx-software receipt
+rule and the Cloudflare destination verification have to land before
+`BOARD_DESTINATION` on `siutindei-mail-fanout` changes, or the board copy
+is dropped. Apply `docs/plans/lx-software-board-inbound-domain.patch`
+in the lx-software repo and deploy it before changing the Worker.

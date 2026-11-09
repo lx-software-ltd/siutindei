@@ -5,7 +5,7 @@ import { getLegalContent } from '@/lib/legal-copy';
 const enContent = { legal: getLegalContent('en') };
 const zhHKContent = { legal: getLegalContent('zh-HK') };
 
-const CONTACT_EMAIL = 'support@lx-software.com';
+const CONTACT_EMAIL = 'support@siutindei.com';
 
 describe('legal content', () => {
   const documents = ['privacy', 'terms'] as const;

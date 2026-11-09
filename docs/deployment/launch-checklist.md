@@ -65,7 +65,7 @@ Confirm backups are actually restorable:
 - Deploy the backend stack; the `OpsAlarms` construct creates the
   `lxsoftware-siutindei-ops-alerts` SNS topic and CloudWatch alarms
   (see `docs/architecture/aws-assets-map.md` for the inventory).
-- `OpsAlertsEmail` is set to `support@lx-software.com` in
+- `OpsAlertsEmail` is set to `support@siutindei.com` in
   `backend/infrastructure/params/production.json`. After the first deploy,
   **confirm the SNS subscription** from the confirmation email sent to that
   address — alarms are silent until confirmed.
@@ -78,10 +78,13 @@ Confirm backups are actually restorable:
 ## 4. Email (SES)
 
 - Confirm SES production access (out of sandbox) in `ap-southeast-1`.
-- Verified identities must include: `hello@lx-software.com`
-  (`AuthEmailFromAddress`), `no-reply@lx-software.com` (`SesSenderEmail`),
-  and `support@lx-software.com` (`SupportEmail`).
-- Verify: `aws ses get-identity-verification-attributes --identities hello@lx-software.com no-reply@lx-software.com support@lx-software.com --region ap-southeast-1`.
+- Sending uses the verified `siutindei.com` domain identity (owned by the
+  lx-software stack). Addresses: `hello@siutindei.com`
+  (`AuthEmailFromAddress`), `no-reply@siutindei.com` (`SesSenderEmail`,
+  also the manager-request sender), and `support@siutindei.com`
+  (`SupportEmail` and `OpsAlertsEmail`).
+- Do not delete the `siutindei.com` SES identity from the lx-software stack;
+  siutindei mail stops if it goes.
 - Send a test login (email OTP) end-to-end from the admin web login screen.
 
 ## 5. GitHub Environments (secrets and variables)

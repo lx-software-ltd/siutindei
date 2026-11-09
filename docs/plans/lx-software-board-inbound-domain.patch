@@ -1,0 +1,24 @@
+diff --git a/backend/infrastructure/lib/inbound-mail.ts b/backend/infrastructure/lib/inbound-mail.ts
+index b200e0a..7323f3d 100644
+--- a/backend/infrastructure/lib/inbound-mail.ts
++++ b/backend/infrastructure/lib/inbound-mail.ts
+@@ -295,6 +295,19 @@ export function defineInboundMail(
+       }),
+     ],
+   });
++  // Second copy of the same prefix, on inbound.siutindei.com. Keep the
++  // lx-software.com rule until the Email Worker BOARD_DESTINATION moves
++  // and Cloudflare has verified the new destination.
++  inboundReceiptRuleSet.addRule("InboundMailbox-siutindei-board-siutindei", {
++    recipients: ["siutindei-board@inbound.siutindei.com"],
++    enabled: true,
++    actions: [
++      new sesActions.S3({
++        bucket: inboundMailBucket,
++        objectKeyPrefix: boardMailRawKeyPrefix,
++      }),
++    ],
++  });
+
+   defineSharedReceiptRules(scope, {
+     inboundReceiptRuleSet,
