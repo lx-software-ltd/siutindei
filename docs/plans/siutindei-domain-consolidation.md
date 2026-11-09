@@ -689,6 +689,13 @@ Evolvesprouts (no push access from the agent): the change is a tested patch,
 deploy script with tests, the smoke bypass, and docs. The staging origin lock
 is not in it.
 
+After the merge (2026-11-09): admin and staging verified on the new hosts;
+`siutindei-www-staging.lx-software.com`, `siutindei.lx-software.com` and its
+Redirect Rule deleted (no transitional admin redirect, by decision).
+`*.siutindei.com` `ap-southeast-1` certificate `85442df8` requested, its
+validation CNAME is in the `siutindei.com` zone, and its ARN is set as
+`ApiSecondaryCustomDomainCertificateArn`.
+
 Operator steps, in order:
 
 1. GitHub: repository secret `STAGING_BYPASS_SECRET` in both repositories,

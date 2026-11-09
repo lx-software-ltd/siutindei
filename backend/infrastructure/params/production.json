@@ -45,7 +45,7 @@
   "ApiCustomDomainName": "siutindei-api.lx-software.com",
   "ApiCustomDomainCertificateArn": "arn:aws:acm:ap-southeast-1:588024549699:certificate/af726e1f-444b-47e6-906e-ce9e0925bde4",
   "ApiSecondaryCustomDomainName": "api.siutindei.com",
-  "ApiSecondaryCustomDomainCertificateArn": "",
+  "ApiSecondaryCustomDomainCertificateArn": "arn:aws:acm:ap-southeast-1:588024549699:certificate/85442df8-4dd8-49d9-89dd-9477a6de2377",
   "NominatimUserAgent": "SiuTinDeiAdminWeb/1.0 (https://admin.siutindei.com)",
   "NominatimReferer": "https://admin.siutindei.com",
   "GooglePlacesApiKey": "<FROM_GITHUB_SECRET: CDK_PARAM_GOOGLE_PLACES_API_KEY>",
