@@ -140,14 +140,12 @@ On the **staging** environment (public www):
 ## 6. DNS / certificates
 
 CloudFront aliases are Cloudflare CNAMEs with the proxy **disabled**
-(grey cloud). `www.siutindei.com` and the legacy
-`siutindei-www.lx-software.com` hostname are orange-cloud 301s to the apex.
+(grey cloud). `www.siutindei.com` is an orange-cloud 301 to the apex.
 
 | Record | Target source |
 |---|---|
 | `siutindei.com` | public-www CloudFront distribution (canonical) |
 | `www.siutindei.com` | 301 → `https://siutindei.com/$1` (Cloudflare Worker) |
-| `siutindei-www.lx-software.com` | 301 → `https://siutindei.com/$1` (Cloudflare Worker) |
 | `api.siutindei.com` | `ApiSecondaryCustomDomainTarget` stack output |
 | `auth.siutindei.com` | `CognitoCustomDomainCloudFront` stack output |
 | `admin.siutindei.com` | admin-web CloudFront distribution |

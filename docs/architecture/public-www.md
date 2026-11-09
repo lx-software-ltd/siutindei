@@ -46,10 +46,9 @@ listed on the certificate attached to that distribution.
 | Production | `siutindei.com` |
 | Staging | `www-staging.siutindei.com` (IP allow-list Worker; others get 302 to `https://siutindei.com`) |
 
-`www.siutindei.com` and the legacy `siutindei-www.lx-software.com` hostname
-301 to the apex at the Cloudflare edge (Worker
-`siutindei-canonical-redirects`). Do not add those names as CloudFront
-aliases unless the attached certificate covers them.
+`www.siutindei.com` 301s to the apex at the Cloudflare edge (Worker
+`siutindei-canonical-redirects`). Do not add it as a CloudFront alias
+unless the attached certificate covers it.
 
 ### Resource naming
 
@@ -294,8 +293,8 @@ the target environment is `staging`.
 
 CloudFront is the only edge cache on the CloudFront aliases
 (`siutindei.com` / `siutindei-www-staging`). Today those records CNAME
-directly to CloudFront (DNS-only / grey cloud). `www.siutindei.com` and
-`siutindei-www.lx-software.com` are Cloudflare-proxied 301s to the apex.
+directly to CloudFront (DNS-only / grey cloud). `www.siutindei.com` is a
+Cloudflare-proxied 301 to the apex.
 The planned move of the apex behind the Cloudflare proxy is described in
 [Cloudflare edge](#cloudflare-edge); it keeps CloudFront as the only cache.
 Standard deploys do not invalidate `/*` so they stay under CloudFront's
