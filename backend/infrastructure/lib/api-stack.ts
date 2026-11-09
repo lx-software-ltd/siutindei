@@ -596,7 +596,8 @@ export class ApiStack extends cdk.Stack {
       description:
         "Email address subscribed to operational CloudWatch alarms " +
         "(API 5XX/latency, Lambda errors/throttles, Aurora capacity). " +
-        "Leave empty to create the alarms without an email subscription.",
+        "Changing it replaces the SNS subscription, which stays silent " +
+        "until the new address confirms. Leave empty to skip the subscription.",
     });
 
     // ---------------------------------------------------------------------
@@ -646,6 +647,18 @@ export class ApiStack extends cdk.Stack {
         description:
           "Regional ACM certificate ARN for ApiSecondaryCustomDomainName " +
           "(same region as the API).",
+      }
+    );
+    const apiDisableExecuteApiEndpoint = new cdk.CfnParameter(
+      this,
+      "ApiDisableExecuteApiEndpoint",
+      {
+        type: "String",
+        default: "false",
+        allowedValues: ["false", "true"],
+        description:
+          "When true and the secondary API custom domain is configured, " +
+          "the default execute-api hostname returns 403.",
       }
     );
 
@@ -1609,17 +1622,26 @@ export class ApiStack extends cdk.Stack {
       awsProxyFunction.functionArn,
     );
 
-    // Grant SES permissions for sending access request notification emails
-    // Uses condition to only grant if SES sender email is configured
-    const sesSenderIdentityArn = cdk.Stack.of(this).formatArn({
-      service: "ses",
-      resource: "identity",
-      resourceName: sesSenderEmail.valueAsString,
-    });
+    // Grant SES permissions for sending access request notification emails.
+    // The policy is always present. An empty sender resolves to an identity
+    // that does not exist, so the grant cannot send.
+    const sesIdentityArnFor = (resourceName: string) =>
+      cdk.Stack.of(this).formatArn({
+        service: "ses",
+        resource: "identity",
+        resourceName,
+      });
+    // SES authorises a domain identity when the address itself is not a
+    // verified identity. Keep the address ARN so an address-level identity
+    // still works.
+    const sesSenderIdentityArn = sesIdentityArnFor(sesSenderEmail.valueAsString);
+    const sesSenderDomainIdentityArn = sesIdentityArnFor(
+      sesAddressDomain(sesSenderEmail.valueAsString)
+    );
     adminFunction.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["ses:SendEmail", "ses:SendRawEmail"],
-        resources: [sesSenderIdentityArn],
+        resources: [sesSenderIdentityArn, sesSenderDomainIdentityArn],
       })
     );
 
@@ -1702,7 +1724,7 @@ export class ApiStack extends cdk.Stack {
     managerRequestProcessor.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["ses:SendEmail", "ses:SendRawEmail"],
-        resources: [sesSenderIdentityArn],
+        resources: [sesSenderIdentityArn, sesSenderDomainIdentityArn],
       })
     );
 
@@ -1824,15 +1846,16 @@ export class ApiStack extends cdk.Stack {
       }
     );
 
-    const sesIdentityArn = cdk.Stack.of(this).formatArn({
-      service: "ses",
-      resource: "identity",
-      resourceName: authEmailFromAddress.valueAsString,
-    });
+    const authEmailIdentityArn = sesIdentityArnFor(
+      authEmailFromAddress.valueAsString
+    );
+    const authEmailDomainIdentityArn = sesIdentityArnFor(
+      sesAddressDomain(authEmailFromAddress.valueAsString)
+    );
     createAuthChallengeFunction.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["ses:SendEmail", "ses:SendRawEmail"],
-        resources: [sesIdentityArn],
+        resources: [authEmailIdentityArn, authEmailDomainIdentityArn],
       })
     );
 
@@ -3128,6 +3151,37 @@ export class ApiStack extends cdk.Stack {
       apiSecondaryMapping.node.defaultChild as apigateway.CfnBasePathMapping
     ).cfnOptions.condition = useApiSecondaryCustomDomain;
 
+    // The RestApi flag only takes effect on the next stage update, so a
+    // stage variable changes with it. Gated on the secondary domain because
+    // that is the production host (ApiCustomDomainName is empty).
+    const disableExecuteApiEndpoint = new cdk.CfnCondition(
+      this,
+      "DisableExecuteApiEndpoint",
+      {
+        expression: cdk.Fn.conditionAnd(
+          useApiSecondaryCustomDomain,
+          cdk.Fn.conditionEquals(
+            apiDisableExecuteApiEndpoint.valueAsString,
+            "true"
+          )
+        ),
+      }
+    );
+    (api.node.defaultChild as apigateway.CfnRestApi).addPropertyOverride(
+      "DisableExecuteApiEndpoint",
+      cdk.Fn.conditionIf(disableExecuteApiEndpoint.logicalId, true, false)
+    );
+    (
+      api.deploymentStage.node.defaultChild as apigateway.CfnStage
+    ).addPropertyOverride(
+      "Variables.executeApiEndpoint",
+      cdk.Fn.conditionIf(
+        disableExecuteApiEndpoint.logicalId,
+        "disabled",
+        "enabled"
+      )
+    );
+
     // ---------------------------------------------------------------------
     // Outputs
     // ---------------------------------------------------------------------
@@ -3319,6 +3373,16 @@ export class ApiStack extends cdk.Stack {
   }
 }
 
+// Domain half of an email parameter. Fn::Select fails the deploy when the
+// address is empty, because split of "" has no second element and
+// CloudFormation still evaluates the select. A trailing sentinel always
+// supplies that element. The sentinel is not an SES identity, so the extra
+// ARN grants nothing.
+function sesAddressDomain(address: string): string {
+  const padded = cdk.Fn.join("@", [address, "invalid.example"]);
+  return cdk.Fn.select(1, cdk.Fn.split("@", padded));
+}
+
 // CORS origins must be concrete at synth time for preflight generation.
 function resolveCorsAllowedOrigins(scope: Construct): string[] {
   const defaultOrigins = [
@@ -3326,7 +3390,6 @@ function resolveCorsAllowedOrigins(scope: Construct): string[] {
     "ionic://localhost",
     "http://localhost",
     "http://localhost:3000",
-    "https://siutindei.lx-software.com",
     "https://admin.siutindei.com",
     "https://api.siutindei.com",
   ];
