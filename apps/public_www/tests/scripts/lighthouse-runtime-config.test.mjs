@@ -16,6 +16,7 @@ const baseConfig = JSON.parse(
 
 describe('parsePagePaths', () => {
   it('uses the locale pages when the input is empty', () => {
+    expect(DEFAULT_PAGE_PATHS).toEqual(['/en/', '/zh-HK/']);
     expect(parsePagePaths('')).toEqual(DEFAULT_PAGE_PATHS);
     expect(parsePagePaths('  \n  ')).toEqual(DEFAULT_PAGE_PATHS);
   });
@@ -58,6 +59,7 @@ describe('buildRuntimeConfig', () => {
     );
     expect(config.ci.collect.url).toEqual(urls);
     expect(config.ci.collect.settings?.extraHeaders).toBeUndefined();
+    expect(config.ci.collect.settings.throttlingMethod).toBe('devtools');
   });
 
   it('adds the staging bypass header only for live staging URLs', () => {
@@ -71,6 +73,7 @@ describe('buildRuntimeConfig', () => {
     expect(config.ci.collect.settings.extraHeaders).toBe(
       JSON.stringify({ 'x-staging-bypass': 'bypass-secret' }),
     );
+    expect(config.ci.collect.settings.throttlingMethod).toBe('devtools');
   });
 
   it('refuses a staging audit without the bypass secret', () => {

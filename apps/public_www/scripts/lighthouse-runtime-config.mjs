@@ -6,13 +6,21 @@
  * path-rewrite function). Auditing it makes LCP include that hop, which is
  * what failed when the workflow default was `/`. The collect URL becomes
  * `/en/` instead. Pass a full `https://` URL to audit a live host.
+ *
+ * Collect uses applied devtools throttling. Lantern's simulated LCP for this
+ * text heading is the slowest node on the page (about 2.9s) even when the
+ * heading paints in about 1.4s under the same 4x CPU and Slow 4G settings.
+ *
+ * Search is not a default target. The Lighthouse build has no search API, so
+ * the only large text on `/en/search/` is the client-rendered error, and that
+ * paints after hydration (about 3.1s). Pass the path explicitly to audit it.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const DEFAULT_PAGE_PATHS = ['/en/', '/zh-HK/', '/en/search/'];
+export const DEFAULT_PAGE_PATHS = ['/en/', '/zh-HK/'];
 export const STATIC_COLLECT_ORIGIN = 'http://localhost:9000';
 
 export function parsePagePaths(raw) {

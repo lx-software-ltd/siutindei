@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       page_paths:
-        description: 'Comma/newline-separated page paths or full URLs to audit. Empty uses /en/, /zh-HK/, and /en/search/. A bare / is rewritten to /en/ because / is a locale redirect.'
+        description: 'Comma/newline-separated page paths or full URLs to audit. Empty uses /en/ and /zh-HK/. A bare / is rewritten to /en/ because / is a locale redirect. /en/search/ is omitted because this build has no search API.'
         required: false
         default: ''
 

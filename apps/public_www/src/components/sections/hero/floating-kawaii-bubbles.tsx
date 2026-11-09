@@ -32,6 +32,8 @@ export function FloatingKawaiiBubbles({
         }
         const drift = DRIFT[index % DRIFT.length];
         const largeOnly = slot.largeOnly ? 'max-lg:hidden' : '';
+        // Decorative. fetchPriority low stops React from hoisting these
+        // into high-priority preloads ahead of the heading.
         return (
           <img
             key={id}
@@ -39,8 +41,8 @@ export function FloatingKawaiiBubbles({
             alt={copy.bubbles[id]}
             width={160}
             height={160}
-            loading="eager"
             decoding="async"
+            fetchPriority="low"
             className={`small-world-bubble ${drift} ${slot.className} ${largeOnly}`}
           />
         );

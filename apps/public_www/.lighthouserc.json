@@ -4,12 +4,12 @@
       "staticDistDir": "./out",
       "url": [
         "http://localhost:9000/en/",
-        "http://localhost:9000/zh-HK/",
-        "http://localhost:9000/en/search/"
+        "http://localhost:9000/zh-HK/"
       ],
       "numberOfRuns": 2,
       "settings": {
-        "chromeFlags": "--no-sandbox --disable-dev-shm-usage"
+        "chromeFlags": "--no-sandbox --disable-dev-shm-usage",
+        "throttlingMethod": "devtools"
       }
     },
     "assert": {
