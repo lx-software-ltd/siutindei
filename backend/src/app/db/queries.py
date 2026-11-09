@@ -10,7 +10,7 @@ from typing import Any
 from uuid import UUID
 
 import sqlalchemy as sa
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, any_, func, or_, select
 from sqlalchemy.dialects.postgresql import distinct_on  # type: ignore[attr-defined]
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import Select
@@ -277,10 +277,7 @@ def _apply_entry_filters(filters: ActivitySearchFilters, conditions: list) -> No
 def _build_language_conditions(languages: Iterable[str]) -> list:
     """Build language conditions for session-specific languages."""
 
-    return [
-        ActivitySchedule.languages.any(language)  # type: ignore[arg-type]
-        for language in languages
-    ]
+    return [any_(ActivitySchedule.languages) == language for language in languages]
 
 
 def _order_columns(entry_subquery: sa.Subquery) -> list:

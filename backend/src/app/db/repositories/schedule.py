@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import any_, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -114,7 +114,7 @@ class ActivityScheduleRepository(BaseRepository[ActivitySchedule]):
         """
         query = (
             select(ActivitySchedule)
-            .where(ActivitySchedule.languages.any(language))  # type: ignore[arg-type]
+            .where(any_(ActivitySchedule.languages) == language)
             .order_by(ActivitySchedule.id)
             .limit(limit)
         )
