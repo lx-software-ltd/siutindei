@@ -241,7 +241,7 @@ workflow_dispatch (Promote Public Website Release)
 | [`deploy-public-www.yml`](../../.github/workflows/deploy-public-www.yml) | `push: staging`, `workflow_dispatch`, `repository_dispatch: deploy-public-www` | Build + sync to staging bucket, write release marker, then run the staging smoke checks against the deployed site. |
 | [`promote-public-www.yml`](../../.github/workflows/promote-public-www.yml) | `workflow_dispatch` | Promote a staging release to production or flip production into maintenance mode. |
 | [`smoke-public-www-staging.yml`](../../.github/workflows/smoke-public-www-staging.yml) | `workflow_dispatch` | Crawl staging sitemap and assert every page responds 2xx/3xx. |
-| [`lighthouse-public-www.yml`](../../.github/workflows/lighthouse-public-www.yml) | `workflow_dispatch` | Run Lighthouse CI on the local production build. Default pages are `/en/`, `/zh-HK/`, and `/en/search/`. A bare `/` is rewritten to `/en/` because `/` is a locale redirect. |
+| [`lighthouse-public-www.yml`](../../.github/workflows/lighthouse-public-www.yml) | `workflow_dispatch` | Run Lighthouse CI on the local production build. Default pages are `/en/` and `/zh-HK/`. A bare `/` is rewritten to `/en/` because `/` is a locale redirect. `/en/search/` is not a default: this build has no search API, so that page's only large text is the client-rendered error. |
 
 ### Promotion script
 
@@ -402,8 +402,10 @@ response without re-invoking the origin, so the per-request `x-api-key` /
 `x-device-attestation` checks (anti-abuse controls, not data protection) are
 not enforced for cached entries. This matches the intent of a *public* search
 endpoint and the prior API Gateway method-cache behavior of returning cached
-results; abuse protection at the edge is provided by the CloudFront WAF
-WebACL. A caller who copies the public attestation token and calls
+results. Abuse protection for that cached path is Cloudflare's rate
+limit and the custom rules on `/v1/activities/search`. The CloudFront
+WAF WebACL is detached from the public website distributions while the
+origin lock is on. A caller who copies the public attestation token and calls
 `api.siutindei.com` directly is denied: `X-Origin-Verify` is
 added only by CloudFront. Only the exact `/v1/activities/search` path is
 proxied, so admin endpoints (`/v1/admin/*`) are never reachable through the
@@ -415,7 +417,7 @@ production traffic at the edge.
 ## Cloudflare edge
 
 Plan: [`docs/plans/cloudflare-edge-protection.md`](../plans/cloudflare-edge-protection.md).
-Status: applied. The apex is orange-cloud. Production and staging origin
+Origin lock: on. The apex is orange-cloud. Production and staging origin
 locks are on (`PublicWwwEdgeVerifySecret` and
 `PublicWwwStagingEdgeVerifySecret`). The Worker
 `siutindei-www-staging-redirect-allowlist` sets `x-proxy-verify` on
@@ -476,14 +478,23 @@ Rules of the design:
   every viewer IP is a Cloudflare egress IP. Cloudflare's own rate limit
   and custom rules take over.
 - Rotation: set `…Previous` to the live value, put the new value in the
-  current parameter, deploy, update the Cloudflare transform rule
+  current parameter, deploy, then update the Cloudflare transform rule
   (`edge_policy.py apply --yes --section rulesets` with the new
-  `PUBLIC_WWW_EDGE_VERIFY_SECRET`), then clear `…Previous` and deploy again.
+  `PUBLIC_WWW_EDGE_VERIFY_SECRET`). Clearing the `…Previous` GitHub
+  secret and redeploying does not drop the old value:
+  `PublicWwwEdgeVerifySecretPrevious` and
+  `PublicWwwStagingEdgeVerifySecretPrevious` are not in
+  `pass_empty_params`, so an empty secret is skipped. Set those
+  parameters to empty on `lxsoftware-siutindei-public-www` in the
+  CloudFormation console, then clear the GitHub secrets so the next
+  deploy leaves them empty.
 
-Rollback is `edge_policy.py apply --yes --section dns --proxied false`
-(apex back to grey within a minute). If the origin lock is already
-enforced, redeploy the stack with the edge-verify parameters empty
-**before** the DNS rollback, otherwise direct traffic is refused for the
+Rollback of the apex is in
+[`launch-checklist.md`](../deployment/launch-checklist.md). Disable the
+origin lock in the CloudFormation console before
+`edge_policy.py apply --yes --section dns --proxied false`. A workflow
+deploy with the edge-verify secrets empty does not clear them. Greying
+the apex while the lock is still on refuses direct visitors for the
 deploy duration.
 
 Not solved by this layer: a patient scraper with residential proxies and a

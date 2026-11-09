@@ -260,7 +260,8 @@ Differences from the evolvesprouts script, each deliberate:
   uploaded by `edge_policy.py` or Wrangler; the IP list and secrets never
   enter the repository, in line with the no-PII and no-secrets rules.
   The IPs on the evolvesprouts Worker today are visible only to whoever
-  can read that script; they are not copied into this document.
+  can read that script; they are not copied into this document. The live
+  siutindei binding later diverged from this list: see Execution status.
 - A CI bypass header, so `smoke-public-www-staging.yml` and
   `lighthouse-public-www.yml` keep testing staging. The secret is a GitHub
   `staging` environment secret passed to the smoke script as a request
@@ -650,8 +651,11 @@ In `lx-software-ltd/evolvesprouts` (track E):
 
 ## Decisions (2026-11-09)
 
-- The siutindei staging allow-list is the evolvesprouts list, minus the
-  private `10.x` address. The addresses live only in the Worker bindings.
+- The siutindei staging allow-list was first the evolvesprouts list
+  minus the private `10.x` address. On the evening of 2026-11-09 the
+  live `STAGING_ALLOWED_IPS` binding was narrowed to the operator's
+  current public IP, not that four-address list. Addresses stay only in
+  the Worker binding.
 - No mobile app or partner uses the evolvesprouts execute-api URL; it is
   disabled once `api.evolvesprouts.com` carries every client.
 
@@ -664,7 +668,9 @@ Done live, with the Cloud Agent's Cloudflare token:
   `www-staging.siutindei.com/*`; proxied CNAME
   `www-staging.siutindei.com` → `d2y0sgtf8djbdr.cloudfront.net`. A
   non-listed client gets `302` to `https://siutindei.com` with path and
-  query. The allow-list lives only in the `STAGING_ALLOWED_IPS` binding.
+  query. The allow-list lives only in the `STAGING_ALLOWED_IPS` binding,
+  narrowed the same evening to the operator's current public IP rather
+  than the four-address list described in Decisions.
 - Redirect Rule on `lx-software.com`: `siutindei.lx-software.com` → `301`
   `https://admin.siutindei.com` with path and query, added next to the apex
   rule. Inert until the record is proxied.

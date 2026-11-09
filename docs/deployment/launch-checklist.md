@@ -167,10 +167,26 @@ can run and set the origin-lock header.
 The apex proxy and origin lock from
 [`docs/plans/cloudflare-edge-protection.md`](../plans/cloudflare-edge-protection.md)
 are live. Direct `d2zpx4ub70d0qj.cloudfront.net` and
-`d2y0sgtf8djbdr.cloudfront.net` return 403. Rollback of the apex is
-`edge_policy.py apply --yes --section dns --proxied false`, after
-clearing the production edge-verify secret so CloudFront still answers.
-Cloudflare SSL mode is `strict`.
+`d2y0sgtf8djbdr.cloudfront.net` return 403. Cloudflare SSL mode is
+`strict`.
+
+To roll the apex back to grey, disable the origin lock first.
+`PublicWwwEdgeVerifySecret` and `PublicWwwStagingEdgeVerifySecret` are
+not in `pass_empty_params`, so emptying
+`CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY` or
+`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` and redeploying leaves the
+previous CloudFormation value in place. Update
+`lxsoftware-siutindei-public-www` in the CloudFormation console and set
+the edge-verify parameters to empty. That removes the header check and
+re-attaches the WAF. Then clear those GitHub secrets so a later deploy
+does not put them back (an empty secret is skipped, so the console's
+empty value stays). Confirm
+`curl -sI https://d2zpx4ub70d0qj.cloudfront.net/en/ -H 'Host: siutindei.com'`
+returns 200, and the same for `d2y0sgtf8djbdr.cloudfront.net` with
+`Host: www-staging.siutindei.com`. Only then run
+`edge_policy.py apply --yes --section dns --proxied false`. Greying the
+apex while the lock is still on refuses direct visitors until the stack
+update finishes.
 
 Verify each with `curl -sI https://<domain>` (expect 200/301, valid cert).
 
@@ -180,9 +196,12 @@ Verify each with `curl -sI https://<domain>` (expect 200/301, valid cert).
   `params/production.json`. After deploy, confirm the device-attestation
   authorizer Lambda (`DeviceAttestationAuthorizer`) env var:
   `aws lambda get-function-configuration --function-name <attestation-authorizer-fn> --query 'Environment.Variables.ATTESTATION_FAIL_CLOSED' --region ap-southeast-1`.
-- Confirm the CloudFront WAF WebACL is **detached** while the origin lock
-  is on (`WafWebAclArn` in params is unused on a locked distribution).
-  Cloudflare's custom rules and rate limit cover the proxied hosts.
+- Confirm the admin web CloudFront distribution still has the shared
+  WAF WebACL attached (`webAclId` is `WafWebAclArn`; that stack requires
+  the ARN). The public website distributions do not, while their origin
+  locks are on: `WafWebAclArn` is unused on a locked distribution.
+  Cloudflare's custom rules and rate limit cover the proxied public
+  hosts.
 
 ## 8. Public website go-live
 

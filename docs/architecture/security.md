@@ -244,7 +244,10 @@ for cached entries. This is acceptable because:
   search results are public.
 - Only the exact `/v1/activities/search` path is proxied; admin endpoints
   (`/v1/admin/*`) are never reachable through the website domain.
-- Edge abuse protection is provided by the CloudFront WAF WebACL.
+- Edge abuse protection for this cached path is Cloudflare's rate limit
+  and custom rules. The CloudFront WAF WebACL is detached from the
+  public website distributions while the origin lock is on. The regional
+  API WAF still covers direct calls to the API host.
 - On a cache **miss**, the request is forwarded to the API Gateway origin with
   the auth headers intact, where the device-attestation authorizer and API key
   are enforced as normal. CloudFront also sends `X-Origin-Verify`. Direct
