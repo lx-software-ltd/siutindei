@@ -285,7 +285,9 @@ and is invoked by both workflows. It supports three primary modes:
    copies `favicon.ico`,
    `favicon.svg`, the stacked logo, and the six Small World bubble images
    referenced by the holding page so those assets survive the `--delete`
-   sync. The promote workflow passes `NEXT_PUBLIC_LX_SOFTWARE_URL` and
+   sync. The assembled `index.html` is also written to `en/index.html`
+   and `zh-HK/index.html` (`MAINTENANCE_LOCALES`), because the CloudFront
+   path-rewrite function redirects `/` to a locale root. The promote workflow passes `NEXT_PUBLIC_LX_SOFTWARE_URL` and
    `NEXT_PUBLIC_BUILD_YEAR` from GitHub Environment vars when set.
 
 The script also enforces `robots.txt: User-agent: *\nDisallow: /` whenever
