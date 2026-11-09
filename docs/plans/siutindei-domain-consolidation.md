@@ -696,6 +696,13 @@ Redirect Rule deleted (no transitional admin redirect, by decision).
 validation CNAME is in the `siutindei.com` zone, and its ARN is set as
 `ApiSecondaryCustomDomainCertificateArn`.
 
+Phase 1 done: `api.siutindei.com` is a grey CNAME to the secondary regional
+domain and answers like the old host. Search origin moved to it, then
+`ApiCustomDomainName` cleared to delete `siutindei-api.lx-software.com`
+(no published mobile build used it; Play Store upload is off). After that
+deploy, delete the `siutindei-api.lx-software.com` record and certificate
+`af726e1f`.
+
 Operator steps, in order:
 
 1. GitHub: repository secret `STAGING_BYPASS_SECRET` in both repositories,

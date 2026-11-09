@@ -187,11 +187,14 @@ jobs:
           origin_verify_param = "PublicWwwOriginVerifySecret"
           # Omitted parameters keep their previous stack value, so an empty
           # value would never reach CloudFormation. Switching the Cognito
-          # custom domain needs one deploy with these two empty.
+          # custom domain or removing the API custom domain needs a deploy
+          # with these empty.
           pass_empty_params = {
               "WafWebAclArn",
               "CognitoCustomDomainName",
               "CognitoCustomDomainCertificateArn",
+              "ApiCustomDomainName",
+              "ApiCustomDomainCertificateArn",
           }
 
           def resolve_value(raw: str) -> str:

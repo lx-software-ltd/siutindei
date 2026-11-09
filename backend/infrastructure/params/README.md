@@ -58,8 +58,8 @@ certificate SANs if a hostname is not yet covered before deploying.
 
 | Parameter | Purpose |
 |-----------|---------|
-| `ApiCustomDomainName` / `ApiCustomDomainCertificateArn` | Primary API host and its **ap-southeast-1** certificate. |
-| `ApiSecondaryCustomDomainName` / `ApiSecondaryCustomDomainCertificateArn` | Second host on the same stage while clients move (`api.siutindei.com`). Both must be set; either empty creates nothing. The certificate must be in **ap-southeast-1** and cover the host. |
+| `ApiCustomDomainName` / `ApiCustomDomainCertificateArn` | Original API host slot. Empty in production since `siutindei-api.lx-software.com` was retired; `deploy-backend.yml` passes the empty values so the domain is deleted. |
+| `ApiSecondaryCustomDomainName` / `ApiSecondaryCustomDomainCertificateArn` | Production API host `api.siutindei.com` and its **ap-southeast-1** `*.siutindei.com` certificate. Both must be set; either empty creates nothing. |
 
 When the secondary domain exists, `ApiSecondaryCustomDomainUrl` is the
 endpoint `build_amplify_config.py` hands to the mobile app. The sequence is
