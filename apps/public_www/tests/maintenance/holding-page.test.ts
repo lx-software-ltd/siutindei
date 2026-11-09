@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { SUPPORTED_LOCALES } from '@/content/locales';
+
 const APP_DIR = resolve(__dirname, '../..');
 const MAINTENANCE_DIR = resolve(APP_DIR, 'maintenance');
 const PUBLIC_DIR = resolve(APP_DIR, 'public');
@@ -148,5 +150,15 @@ describe('pre-launch holding page', () => {
       'MAINTENANCE_ASSET_CACHE_CONTROL="public, max-age=3600, must-revalidate"',
     );
     expect(deployScript).toContain('--exclude "images/*"');
+  });
+
+  it('publishes the holding page at every locale root', () => {
+    const deployScript = readFileSync(DEPLOY_SCRIPT, 'utf8');
+    const match = deployScript.match(/^MAINTENANCE_LOCALES="([^"]*)"$/m);
+    expect(match).not.toBeNull();
+    expect(match?.[1].split(' ')).toEqual([...SUPPORTED_LOCALES]);
+    expect(deployScript).toContain(
+      'cp "$maintenance_build_dir/index.html" \\\n      "$maintenance_build_dir/$locale/index.html"',
+    );
   });
 });

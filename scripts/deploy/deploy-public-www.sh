@@ -43,6 +43,7 @@ DOCUMENT_CACHE_CONTROL="public, max-age=300, must-revalidate, stale-while-revali
 NO_STORE_CACHE_CONTROL="no-store, max-age=0"
 MAINTENANCE_ASSET_CACHE_CONTROL="public, max-age=3600, must-revalidate"
 DEFAULT_LX_SOFTWARE_URL="https://www.lx-software.com"
+MAINTENANCE_LOCALES="en zh-HK"
 
 if [ "$MAINTENANCE_MODE" != "true" ] && [ "$MAINTENANCE_MODE" != "false" ]; then
   echo "Unsupported PUBLIC_WWW_MAINTENANCE_MODE: '$MAINTENANCE_MODE'"
@@ -310,6 +311,14 @@ prepare_maintenance_build_dir() {
     echo "Unreplaced maintenance placeholders remain in the build dir."
     exit 1
   fi
+  # The CloudFront path-rewrite function 302s / to /<locale>/, so the
+  # holding page must also exist at each locale root.
+  local locale
+  for locale in $MAINTENANCE_LOCALES; do
+    mkdir -p "$maintenance_build_dir/$locale"
+    cp "$maintenance_build_dir/index.html" \
+      "$maintenance_build_dir/$locale/index.html"
+  done
   echo "$maintenance_build_dir"
 }
 
