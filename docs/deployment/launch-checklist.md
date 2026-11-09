@@ -150,8 +150,10 @@ CloudFront aliases are Cloudflare CNAMEs with the proxy **disabled**
 | `siutindei-www.lx-software.com` | 301 → `https://siutindei.com/$1` (Cloudflare Worker) |
 | `siutindei-api.lx-software.com` | `ApiCustomDomainTarget` stack output |
 | `siutindei-auth.lx-software.com` | `CognitoCustomDomainCloudFront` stack output |
-| `siutindei.lx-software.com` | admin-web CloudFront distribution |
-| `siutindei-www-staging.lx-software.com` | public-www staging distribution |
+| `admin.siutindei.com` | admin-web CloudFront distribution |
+| `siutindei.lx-software.com` | 301 → `https://admin.siutindei.com` (Cloudflare Redirect Rule, once proxied) |
+| `www-staging.siutindei.com` | public-www staging distribution, proxied behind the IP allow-list Worker |
+| `siutindei-www-staging.lx-software.com` | public-www staging distribution until the stack moves to `www-staging.siutindei.com`; then deleted |
 
 Planned change (`docs/plans/cloudflare-edge-protection.md`): the apex moves
 to orange cloud so Cloudflare rate limits and request rules protect the
@@ -179,7 +181,7 @@ Verify each with `curl -sI https://<domain>` (expect 200/301, valid cert).
 1. Deploy to staging (`deploy-public-www.yml`); smoke checks run
    automatically after the deploy.
 2. Run the Lighthouse workflow with `page_paths` set to full staging URLs
-   (for example `https://siutindei-www-staging.lx-software.com/en/`); bare
+   (for example `https://www-staging.siutindei.com/en/`); bare
    paths audit a local build. Investigate any score regression before
    promoting.
 3. Verify legal pages render (`/en/privacy`, `/zh-HK/privacy`, `/en/terms`)
@@ -187,7 +189,7 @@ Verify each with `curl -sI https://<domain>` (expect 200/301, valid cert).
    configured. Set GitHub Environment `NEXT_PUBLIC_GTM_ID` (`GTM-…` only)
    and `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` (production:
    `siutindei.com,www.siutindei.com`; staging should also include
-   `siutindei-www-staging.lx-software.com`). Confirm
+   `www-staging.siutindei.com`). Confirm
    `NEXT_PUBLIC_WHATSAPP_URL` is set. Rebuild/promote after changing
    `NEXT_PUBLIC_*` — they are build-time. After consent: decline must not
    load `gtm.js`; accept loads `gtm.js?id=GTM-…`. GTM Preview should show

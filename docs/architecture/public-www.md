@@ -44,7 +44,7 @@ listed on the certificate attached to that distribution.
 | Environment | CloudFront alias |
 |---|---|
 | Production | `siutindei.com` |
-| Staging | `siutindei-www-staging.lx-software.com` |
+| Staging | `www-staging.siutindei.com` (IP allow-list Worker; others get 302 to `https://siutindei.com`) |
 
 `www.siutindei.com` and the legacy `siutindei-www.lx-software.com` hostname
 301 to the apex at the Cloudflare edge (Worker

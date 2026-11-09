@@ -4,7 +4,7 @@ The admin web is a static SPA hosted in S3 and served by CloudFront.
 
 ## Prerequisites
 
-- ACM certificate in `us-east-1` for `siutindei.lx-software.com`
+- ACM certificate in `us-east-1` for `admin.siutindei.com` (the `*.siutindei.com` certificate)
 - CloudFront alias configured with the domain above
 - Cognito callback/logout URLs updated for the admin web
 
@@ -12,7 +12,7 @@ The admin web is a static SPA hosted in S3 and served by CloudFront.
 
 Provide these parameters when deploying `lxsoftware-siutindei-admin-web`:
 
-- `AdminWebDomainName`: `siutindei.lx-software.com`
+- `AdminWebDomainName`: `admin.siutindei.com`
 - `AdminWebCertificateArn`: ACM certificate ARN (us-east-1)
 
 ## Build and deploy
@@ -33,7 +33,8 @@ bash scripts/deploy/deploy-admin-web.sh
 
 Set `CORS_ALLOWED_ORIGINS` (or CDK context `corsAllowedOrigins`) to include:
 
-- `https://siutindei.lx-software.com`
+- `https://admin.siutindei.com`
+- `https://siutindei.lx-software.com` (until the old host only redirects)
 - `http://localhost:3000`
 
 This is required for the admin SPA to call the admin API endpoints.
