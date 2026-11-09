@@ -38,6 +38,36 @@ def test_invalid_address_is_rejected() -> None:
         module.parse_allowed_ips("8.8.8.8, staging.example")
 
 
+def test_cli_dry_run_does_not_print_secret_names_or_values(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = _module()
+    monkeypatch.setenv("CLOUDFLARE_API_TOKEN", "token")
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", "account")
+    monkeypatch.setenv("STAGING_ALLOWED_IPS", "8.8.8.8")
+    monkeypatch.setenv("STAGING_BYPASS_SECRET", "bypass-value-must-stay-off-stdout")
+
+    assert (
+        module.main(
+            [
+                "--name",
+                "example-worker",
+                "--zone",
+                "example.com",
+                "--route",
+                "staging.example.com/*",
+                "--production-origin",
+                "https://example.com",
+            ]
+        )
+        == 0
+    )
+    printed = capsys.readouterr().out
+    assert "bypass-value-must-stay-off-stdout" not in printed
+    assert "STAGING_BYPASS_SECRET" not in printed
+    assert "1 secret binding(s)" in printed
+
+
 def test_metadata_keeps_existing_secrets_when_unset() -> None:
     metadata = _module().build_metadata("https://prod.example", ["8.8.8.8"], {})
 

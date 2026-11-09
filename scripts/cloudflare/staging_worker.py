@@ -196,11 +196,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         ips = parse_allowed_ips(os.environ.get("STAGING_ALLOWED_IPS", ""))
         metadata = build_metadata(args.production_origin, ips, os.environ)
-        secrets = [
-            b["name"] for b in metadata["bindings"] if b["type"] == "secret_text"
-        ]
+        secret_binding_count = sum(
+            1 for binding in metadata["bindings"] if binding["type"] == "secret_text"
+        )
         print(
-            f"worker {args.name}: {len(ips)} allowed IPs, secrets set: {secrets or 'none (kept)'}"
+            f"worker {args.name}: {len(ips)} allowed IPs, "
+            f"{secret_binding_count} secret binding(s) in this upload "
+            "(unset secrets are kept)"
         )
         if not args.yes:
             print("dry run; pass --yes to upload and attach the route")
