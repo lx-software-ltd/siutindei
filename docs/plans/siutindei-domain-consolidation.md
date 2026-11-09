@@ -703,6 +703,12 @@ domain and answers like the old host. Search origin moved to it, then
 deploy, delete the `siutindei-api.lx-software.com` record and certificate
 `af726e1f`.
 
+Phase 2 run the same day: Google and Apple updated by the user, deploy A
+cleared the custom domain (and the dead `siutindei.lx-software.com` callback
+and logout URLs), deploy B set `auth.siutindei.com` with certificate
+`74786db9`. Then the `auth.siutindei.com` record replaced
+`siutindei-auth.lx-software.com`, and `NEXT_PUBLIC_COGNITO_DOMAIN` moved.
+
 Operator steps, in order:
 
 1. GitHub: repository secret `STAGING_BYPASS_SECRET` in both repositories,
