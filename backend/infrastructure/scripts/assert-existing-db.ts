@@ -257,16 +257,17 @@ function assertOpsAlarmRulesInNestedStack(): void {
     string,
     { Type: string; Properties?: Record<string, unknown> }
   >;
-  // CloudFormation allows 500 resources. 492 includes the admin live
-  // alias and its published version. Fail if a later edit crosses the cap
-  // or drifts from the documented count.
+  // CloudFormation allows 500 resources. 494 includes the admin live
+  // alias and its published version and the conditional secondary API
+  // custom domain and mapping. Fail if a later edit crosses the cap or
+  // drifts from the documented count.
   const resourceCount = Object.keys(parentResources).length;
   if (resourceCount > 500) {
     throw new Error(
       `API stack has ${resourceCount} resources; CloudFormation allows 500`,
     );
   }
-  if (resourceCount !== 492) {
+  if (resourceCount !== 494) {
     throw new Error(
       `API stack resource count changed to ${resourceCount}; update docs/architecture/aws-assets-map.md`,
     );

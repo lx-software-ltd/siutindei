@@ -33,7 +33,7 @@ or `all stacks`). Deploy static site artifacts with
 |-----------|---------|
 | `PublicWwwDomainName` | Production CloudFront alias (e.g. `siutindei.com`). |
 | `PublicWwwCertificateArn` | ACM cert ARN in **us-east-1** that covers the production alias. |
-| `PublicWwwStagingDomainName` | Staging CloudFront alias (e.g. `siutindei-www-staging.lx-software.com`). |
+| `PublicWwwStagingDomainName` | Staging CloudFront alias (e.g. `www-staging.siutindei.com`). |
 | `PublicWwwStagingCertificateArn` | ACM cert ARN in **us-east-1** that covers the staging alias. |
 | `WafWebAclArn` | (Optional) us-east-1 WAF WebACL ARN; reuse the admin-web ACL. |
 | `SearchApiProxyOriginDomain` | API custom domain CloudFront forwards `/v1/activities/search` to. |
@@ -50,6 +50,17 @@ Before the first `cdk deploy`, ensure the ACM certificate listed in
 `PublicWwwCertificateArn`/`PublicWwwStagingCertificateArn` includes the
 public website hostnames as Subject Alternative Names. Production uses a
 dedicated `us-east-1` certificate covering `siutindei.com` and
-`*.siutindei.com`. Staging still uses the shared `lx-software.com`
-certificate for `siutindei-www-staging.lx-software.com`. Extend the
+`*.siutindei.com`. Staging uses the same certificate for
+`www-staging.siutindei.com`. Extend the
 certificate SANs if a hostname is not yet covered before deploying.
+
+## API custom domains (`ApiStack`)
+
+| Parameter | Purpose |
+|-----------|---------|
+| `ApiCustomDomainName` / `ApiCustomDomainCertificateArn` | Primary API host and its **ap-southeast-1** certificate. |
+| `ApiSecondaryCustomDomainName` / `ApiSecondaryCustomDomainCertificateArn` | Second host on the same stage while clients move (`api.siutindei.com`). Both must be set; either empty creates nothing. The certificate must be in **ap-southeast-1** and cover the host. |
+
+When the secondary domain exists, `ApiSecondaryCustomDomainUrl` is the
+endpoint `build_amplify_config.py` hands to the mobile app. The sequence is
+in `docs/plans/siutindei-domain-consolidation.md`.

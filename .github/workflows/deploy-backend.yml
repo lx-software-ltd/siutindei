@@ -185,6 +185,14 @@ jobs:
           }
           # Authorizer (API stack) and CloudFront origin header (public stack).
           origin_verify_param = "PublicWwwOriginVerifySecret"
+          # Omitted parameters keep their previous stack value, so an empty
+          # value would never reach CloudFormation. Switching the Cognito
+          # custom domain needs one deploy with these two empty.
+          pass_empty_params = {
+              "WafWebAclArn",
+              "CognitoCustomDomainName",
+              "CognitoCustomDomainCertificateArn",
+          }
 
           def resolve_value(raw: str) -> str:
               """Replace <FROM_GITHUB_SECRET: X> / <FROM_GITHUB_VAR: X> placeholders."""
@@ -203,7 +211,7 @@ jobs:
                   value_str = resolve_value(str(value))
               value_str = value_str.replace("\r\n", "\n").replace("\r", "\n")
               value_str = value_str.replace("\n", "\\n").strip()
-              if key != "WafWebAclArn" and not value_str:
+              if key not in pass_empty_params and not value_str:
                   continue
 
               targets = []

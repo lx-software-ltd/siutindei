@@ -9,10 +9,17 @@
 // Optional env:
 //   SMOKE_TIMEOUT_MS       per-request timeout in milliseconds (default 15000)
 //   SMOKE_MAX_PAGES        cap the number of URLs crawled
+//   STAGING_BYPASS_SECRET  sent as x-staging-bypass so the staging IP
+//                          allow-list Worker lets the runner through
+//
+// A response whose final URL left the base host fails: the staging gate
+// redirects unlisted clients to production, which would otherwise pass.
 
 const SMOKE_BASE_URL_ENV = 'SMOKE_BASE_URL';
 const SMOKE_TIMEOUT_MS_ENV = 'SMOKE_TIMEOUT_MS';
 const SMOKE_MAX_PAGES_ENV = 'SMOKE_MAX_PAGES';
+const STAGING_BYPASS_SECRET_ENV = 'STAGING_BYPASS_SECRET';
+const STAGING_BYPASS_HEADER = 'x-staging-bypass';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const USER_AGENT = 'siutindei-public-www-smoke-runner/1.0';
@@ -71,18 +78,32 @@ function resolveMaxPages() {
   return value;
 }
 
+function resolveBypassHeaders() {
+  const secret = (process.env[STAGING_BYPASS_SECRET_ENV] ?? '').trim();
+  return secret ? { [STAGING_BYPASS_HEADER]: secret } : {};
+}
+
 async function fetchWithTimeout(url, init, timeoutMs) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, {
+    const response = await fetch(url, {
       ...init,
       signal: controller.signal,
       headers: {
         'user-agent': USER_AGENT,
+        ...resolveBypassHeaders(),
         ...(init?.headers ?? {}),
       },
     });
+    const requestedHost = new URL(url).host;
+    const finalHost = response.url ? new URL(response.url).host : requestedHost;
+    if (finalHost !== requestedHost) {
+      throw new Error(
+        `redirected off ${requestedHost} to ${response.url}; is ${STAGING_BYPASS_SECRET_ENV} set and current?`,
+      );
+    }
+    return response;
   } finally {
     clearTimeout(timeoutId);
   }
@@ -206,7 +227,7 @@ async function main() {
       console.log(`PASS ${response.status} ${url}`);
     } catch (error) {
       failures.push({ url, status: null, detail: error.message });
-      console.log(`FAIL ERR ${url}`);
+      console.log(`FAIL ERR ${url} :: ${error.message}`);
     }
   }
 

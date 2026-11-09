@@ -50,6 +50,7 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: '1'
           SMOKE_BASE_URL: ${{ steps.resolve_staging_site_origin.outputs.staging_site_origin }}
+          STAGING_BYPASS_SECRET: ${{ secrets.STAGING_BYPASS_SECRET }}
           REQUESTED_MAX_PAGES: ${{ github.event.inputs.max_pages || '' }}
         run: |
           set -euo pipefail

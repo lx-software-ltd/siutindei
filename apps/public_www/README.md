@@ -44,7 +44,7 @@ per-page CSP `<meta http-equiv>` into every generated HTML and validates it.
 There is **one CloudFormation stack** (`lxsoftware-siutindei-public-www`) with
 **two CloudFront distributions** in it: one for production
 (`siutindei.com`) and one for staging
-(`siutindei-www-staging.lx-software.com`).
+(`www-staging.siutindei.com`).
 
 | Trigger | Action |
 |---|---|

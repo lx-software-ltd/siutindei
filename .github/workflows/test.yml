@@ -53,6 +53,30 @@ jobs:
           channel: "stable"
           cache: true
 
+      - name: Install system SQLite for Linux native assets
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-0 libsqlite3-dev
+
+      # sqlite3 3.1.7 (Amplify secure storage) downloads a GitHub release
+      # whose Linux binary hash no longer matches the package, so
+      # `flutter test` dies in the native-assets hook. 3.1.7 cannot set
+      # source per OS, so Linux CI uses the system library; iOS and
+      # Android still use the bundled build from pubspec.yaml.
+      - name: Point Linux sqlite3 hook at the OS library
+        run: |
+          python3 -c '
+          from pathlib import Path
+          path = Path("apps/siutindei_app/pubspec.yaml")
+          text = path.read_text(encoding="utf-8")
+          hook = (
+              "\nhooks:\n"
+              "  user_defines:\n"
+              "    sqlite3:\n"
+              "      source: system\n"
+          )
+          if "user_defines:" not in text:
+              path.write_text(text + hook, encoding="utf-8")
+          '
+
       - name: Run Flutter tests
         run: |
           set -e
@@ -230,3 +254,6 @@ jobs:
           else
             echo "Missing backend/infrastructure/package.json"
           fi
+
+      - name: Run edge function and Cloudflare Worker tests
+        run: node --test backend/infrastructure/test/*.test.mjs scripts/cloudflare/workers/*.test.mjs
