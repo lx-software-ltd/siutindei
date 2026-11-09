@@ -309,6 +309,26 @@ function assertOpsAlarmRulesInNestedStack(): void {
   ) {
     throw new Error("Stage must flip a variable so disabling execute-api takes effect");
   }
+  const sesSendPolicies = Object.values(synthesized.Resources).filter((resource) => {
+    const document = resource.Properties?.PolicyDocument as
+      | { Statement?: Array<{ Action?: unknown }> }
+      | undefined;
+    return (document?.Statement ?? []).some((statement) =>
+      JSON.stringify(statement.Action ?? "").includes("ses:SendEmail"),
+    );
+  });
+  const sesSendText = JSON.stringify(sesSendPolicies);
+  const paddedDomains = sesSendText.split("invalid.example").length - 1;
+  if (
+    sesSendPolicies.length < 3 ||
+    paddedDomains < 3 ||
+    !sesSendText.includes("SesSenderEmail") ||
+    !sesSendText.includes("AuthEmailFromAddress")
+  ) {
+    throw new Error(
+      "SES send policies must grant the address and a domain padded so an empty sender cannot fail Fn::Select",
+    );
+  }
   const partnerAuthorizer = Object.values(parentResources).find(
     (resource) =>
       resource.Type === "AWS::ApiGateway::Authorizer" &&

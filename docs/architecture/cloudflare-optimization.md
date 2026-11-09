@@ -2,13 +2,17 @@
 
 This document outlines Cloudflare optimization strategies for the Siu Tin Dei project, using a hybrid AWS + Cloudflare architecture. Cloudflare acts as an edge layer in front of your existing AWS infrastructure.
 
-> **Status:** Proposal. None of the Terraform or Cloudflare rules below are
-> deployed. Today the API stack already has the `ApiCustomDomainName` and
-> `ApiCustomDomainCertificateArn` parameters and the `ApiCustomDomainTarget`
-> and `ApiCustomDomainUrl` outputs, and the regional API WAF
-> (`lxsoftware-siutindei-api-waf`) is always attached. Public search is
-> fronted by the public-website CloudFront distribution
-> ([`public-www.md`](public-www.md#search-api-edge-caching)).
+> **Status:** Proposal. Do not apply it to the live zone.
+> `api.siutindei.com`, `admin.siutindei.com`, and `auth.siutindei.com` stay
+> DNS-only (grey cloud). The `siutindei.com` request rules match on path
+> only, so an orange-cloud API or admin hostname would block partner,
+> mobile, and Cognito traffic. Sketches below that set `proxied = true` or
+> expect a `cf-ray` header on those hosts describe a rejected shape. The
+> live layout is
+> [`siutindei-domain-consolidation.md`](../plans/siutindei-domain-consolidation.md).
+> Public search is fronted by the public-website CloudFront distribution
+> ([`public-www.md`](public-www.md#search-api-edge-caching)). The raw
+> execute-api hostname is disabled; clients use `https://api.siutindei.com`.
 
 ## Table of Contents
 
@@ -105,25 +109,26 @@ resource "cloudflare_zone" "main" {
   zone = "siutindei.com"
 }
 
-# API subdomain - proxied through Cloudflare to API Gateway
+# API subdomain. Live records stay grey: orange cloud would hide the
+# client IP from the regional WAF and apply path-scoped website rules.
 resource "cloudflare_record" "api" {
   zone_id = cloudflare_zone.main.id
   name    = "api"
   value   = "your-api-gateway-id.execute-api.region.amazonaws.com"
   type    = "CNAME"
-  proxied = true  # Enable Cloudflare proxy (orange cloud)
+  proxied = false
 }
 
-# Admin web - proxied through Cloudflare to CloudFront
+# Admin web. Live records stay grey, same reason as the API record.
 resource "cloudflare_record" "admin" {
   zone_id = cloudflare_zone.main.id
   name    = "admin"
   value   = "your-cloudfront-distribution.cloudfront.net"
   type    = "CNAME"
-  proxied = true
+  proxied = false
 }
 
-# Organization images - proxied through Cloudflare to S3
+# Organization images. Not a live hostname; the live zone has no images record.
 resource "cloudflare_record" "images" {
   zone_id = cloudflare_zone.main.id
   name    = "images"
@@ -178,7 +183,7 @@ const apiCertificate = acm.Certificate.fromCertificateArn(
 const apiDomainName = new apigateway.DomainName(this, "ApiDomainName", {
   domainName: "api.siutindei.com",
   certificate: apiCertificate,
-  endpointType: apigateway.EndpointType.REGIONAL,  // Required for Cloudflare proxy
+  endpointType: apigateway.EndpointType.REGIONAL,  // Grey-cloud CNAME target; do not proxy
   securityPolicy: apigateway.SecurityPolicy.TLS_1_2,
 });
 
@@ -991,20 +996,20 @@ By offloading traffic to Cloudflare edge:
 
 ### Phase 1: DNS + Proxy Setup (Day 1-2)
 
+This phase is not the live design. Leave `api`, `admin`, and `auth` grey.
+
 1. **Create Cloudflare account** and add your zone
 2. **Import existing DNS records** from your current DNS provider
 3. **Configure SSL/TLS** settings (Full Strict mode)
-4. **Enable proxy (orange cloud)** for api, admin, and images subdomains
-5. **Test** that all traffic flows correctly through Cloudflare
+4. **Keep api, admin, and auth DNS-only.** Proxying them is rejected; see the status note.
+5. **Test** those hosts against API Gateway and CloudFront directly
 
 **Verification:**
 ```bash
-# Check DNS is resolving through Cloudflare
+# These hosts must not be Cloudflare-proxied. A cf-ray header means the
+# record was switched to orange cloud and should be turned back.
 dig api.siutindei.com
-
-# Check Cloudflare headers in response
-curl -I https://api.siutindei.com/health
-# Should see: cf-ray header
+curl -sI https://api.siutindei.com/v1/health
 ```
 
 ### Phase 2: Caching + Performance (Day 3-4)
@@ -1018,8 +1023,9 @@ curl -I https://api.siutindei.com/health
 **Verification:**
 ```bash
 # Check cache status
-curl -I "https://api.siutindei.com/v1/activities/search?limit=10"
-# Should see: cf-cache-status: HIT (on second request)
+curl -sI "https://siutindei.com/v1/activities/search?limit=10"
+# Live search caching is the public-website CloudFront distribution.
+# A cf-cache-status header would mean api.siutindei.com was proxied.
 ```
 
 ### Phase 3: Security Hardening (Day 5-7)

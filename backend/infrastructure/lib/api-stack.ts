@@ -596,7 +596,8 @@ export class ApiStack extends cdk.Stack {
       description:
         "Email address subscribed to operational CloudWatch alarms " +
         "(API 5XX/latency, Lambda errors/throttles, Aurora capacity). " +
-        "Leave empty to create the alarms without an email subscription.",
+        "Changing it replaces the SNS subscription, which stays silent " +
+        "until the new address confirms. Leave empty to skip the subscription.",
     });
 
     // ---------------------------------------------------------------------
@@ -1621,8 +1622,9 @@ export class ApiStack extends cdk.Stack {
       awsProxyFunction.functionArn,
     );
 
-    // Grant SES permissions for sending access request notification emails
-    // Uses condition to only grant if SES sender email is configured
+    // Grant SES permissions for sending access request notification emails.
+    // The policy is always present. An empty sender resolves to an identity
+    // that does not exist, so the grant cannot send.
     const sesIdentityArnFor = (resourceName: string) =>
       cdk.Stack.of(this).formatArn({
         service: "ses",
@@ -1634,7 +1636,7 @@ export class ApiStack extends cdk.Stack {
     // still works.
     const sesSenderIdentityArn = sesIdentityArnFor(sesSenderEmail.valueAsString);
     const sesSenderDomainIdentityArn = sesIdentityArnFor(
-      cdk.Fn.select(1, cdk.Fn.split("@", sesSenderEmail.valueAsString))
+      sesAddressDomain(sesSenderEmail.valueAsString)
     );
     adminFunction.addToRolePolicy(
       new iam.PolicyStatement({
@@ -1848,7 +1850,7 @@ export class ApiStack extends cdk.Stack {
       authEmailFromAddress.valueAsString
     );
     const authEmailDomainIdentityArn = sesIdentityArnFor(
-      cdk.Fn.select(1, cdk.Fn.split("@", authEmailFromAddress.valueAsString))
+      sesAddressDomain(authEmailFromAddress.valueAsString)
     );
     createAuthChallengeFunction.addToRolePolicy(
       new iam.PolicyStatement({
@@ -3369,6 +3371,16 @@ export class ApiStack extends cdk.Stack {
     // Apply Checkov suppressions to CDK-internal Lambda functions
     cdk.Aspects.of(this).add(new CdkInternalLambdaCheckovSuppression());
   }
+}
+
+// Domain half of an email parameter. Fn::Select fails the deploy when the
+// address is empty, because split of "" has no second element and
+// CloudFormation still evaluates the select. A trailing sentinel always
+// supplies that element. The sentinel is not an SES identity, so the extra
+// ARN grants nothing.
+function sesAddressDomain(address: string): string {
+  const padded = cdk.Fn.join("@", [address, "invalid.example"]);
+  return cdk.Fn.select(1, cdk.Fn.split("@", padded));
 }
 
 // CORS origins must be concrete at synth time for preflight generation.

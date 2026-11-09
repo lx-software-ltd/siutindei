@@ -84,8 +84,14 @@ lx-software repo, which the agent cannot push.
 2. lx-software repo (owner merges): add a receipt rule on the active rule
    set `lxsoftware-inbound-mail` for `siutindei-board@inbound.siutindei.com`.
    It writes to the same bucket and prefix (`inbound-raw/siutindei/`).
-   Point `SiutindeiBoardMailInboundAddress` at it. Keep the old rule until
-   step 4 is done.
+   The address is a constant, not `local-part@InboundMailDomain`, so the
+   shared statement domain stays put. `BOARD_MAIL_INBOUND_ADDRESS` and the
+   `SiutindeiBoardMailInboundAddress` output keep naming the live
+   lx-software destination. `BOARD_MAIL_EXTRA_OWN_DOMAINS` adds
+   `inbound.siutindei.com` so mail that arrives on the new domain is still
+   treated as our own. A second output,
+   `SiutindeiBoardMailNextInboundAddress`, is the address for step 4.
+   Keep the old rule until step 4 is done.
 3. Cloudflare dashboard (owner): Email Routing → Destination addresses →
    add the new address. The verification mail lands in the bucket; open it
    and click the link.
@@ -200,8 +206,10 @@ work.
 ## Not in this change
 
 The board copy still goes to `siutindei-board@inbound.lx-software.com`.
-`inbound.siutindei.com` gets its MX record first. The lx-software receipt
-rule and the Cloudflare destination verification have to land before
-`BOARD_DESTINATION` on `siutindei-mail-fanout` changes, or the board copy
-is dropped. Apply `docs/plans/lx-software-board-inbound-domain.patch`
-in the lx-software repo and deploy it before changing the Worker.
+`inbound.siutindei.com` gets its MX record first. Apply
+`docs/plans/lx-software-board-inbound-domain.patch` in the lx-software
+repo and deploy it, then verify the new destination in Cloudflare Email
+Routing. Only after that verification does `BOARD_DESTINATION` on
+`siutindei-mail-fanout` change. Moving it earlier drops the board copy.
+`BOARD_MAIL_INBOUND_ADDRESS` stays on the lx-software address until that
+same cutover; the patch does not retarget it.
