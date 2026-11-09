@@ -348,7 +348,7 @@ distributions (production + staging) carry an extra cache behavior:
 | Item | Value |
 |---|---|
 | Path pattern | `/v1/activities/search` (exact path; admin/other API paths are **not** exposed) |
-| Origin | `HttpOrigin` → API Gateway custom domain from the `SearchApiProxyOriginDomain` parameter (`siutindei-api.lx-software.com`), HTTPS-only, TLS 1.2+. CloudFront adds `X-Origin-Verify` from `PublicWwwOriginVerifySecret`. That header is not forwarded from the viewer |
+| Origin | `HttpOrigin` → API Gateway custom domain from the `SearchApiProxyOriginDomain` parameter (`api.siutindei.com`), HTTPS-only, TLS 1.2+. CloudFront adds `X-Origin-Verify` from `PublicWwwOriginVerifySecret`. That header is not forwarded from the viewer |
 | Allowed methods | `GET`, `HEAD`, `OPTIONS` |
 | Allow-list function | `${env}SearchProxyAllowlistFunction` CloudFront Function (viewer-request) returns `405` for any other method |
 | Cache policy (`SearchApiCachePolicy`) | TTL min `0` / default `300s` / max `300s`; cache key = **all query strings**, **no** headers, **no** cookies (a single cached entry is shared across all callers) |
@@ -392,7 +392,7 @@ same-origin (`connect-src 'self'`). Staging fixture mode does not post.
 To route traffic through the edge cache, the website build must point
 `NEXT_PUBLIC_SEARCH_API_BASE_URL` at the website's own origin (e.g.
 `https://siutindei.com`) rather than directly at
-`siutindei-api.lx-software.com`; `src/lib/activities/search-client.ts`
+`api.siutindei.com`; `src/lib/activities/search-client.ts`
 resolves `new URL('/v1/activities/search', base)`, which then hits this
 behavior same-origin. With same-origin requests the CSP `connect-src 'self'`
 already covers the call (no API host needs to be added to CSP).
@@ -404,7 +404,7 @@ not enforced for cached entries. This matches the intent of a *public* search
 endpoint and the prior API Gateway method-cache behavior of returning cached
 results; abuse protection at the edge is provided by the CloudFront WAF
 WebACL. A caller who copies the public attestation token and calls
-`siutindei-api.lx-software.com` directly is denied: `X-Origin-Verify` is
+`api.siutindei.com` directly is denied: `X-Origin-Verify` is
 added only by CloudFront. Only the exact `/v1/activities/search` path is
 proxied, so admin endpoints (`/v1/admin/*`) are never reachable through the
 website domain.

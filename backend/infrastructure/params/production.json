@@ -36,7 +36,7 @@
   "PublicWwwCertificateArn": "arn:aws:acm:us-east-1:588024549699:certificate/74786db9-57ca-45d3-8ac7-10c7e4e49ed6",
   "PublicWwwStagingDomainName": "www-staging.siutindei.com",
   "PublicWwwStagingCertificateArn": "arn:aws:acm:us-east-1:588024549699:certificate/74786db9-57ca-45d3-8ac7-10c7e4e49ed6",
-  "SearchApiProxyOriginDomain": "siutindei-api.lx-software.com",
+  "SearchApiProxyOriginDomain": "api.siutindei.com",
   "PublicWwwEdgeVerifySecret": "<FROM_GITHUB_SECRET: CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY>",
   "PublicWwwEdgeVerifySecretPrevious": "<FROM_GITHUB_SECRET: CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS>",
   "PublicWwwStagingEdgeVerifySecret": "<FROM_GITHUB_SECRET: CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY>",
