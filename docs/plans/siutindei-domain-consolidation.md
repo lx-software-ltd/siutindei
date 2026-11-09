@@ -709,6 +709,11 @@ and logout URLs), deploy B set `auth.siutindei.com` with certificate
 `74786db9`. Then the `auth.siutindei.com` record replaced
 `siutindei-auth.lx-software.com`, and `NEXT_PUBLIC_COGNITO_DOMAIN` moved.
 
+The last siutindei hostname in the `lx-software.com` zone,
+`siutindei-www.lx-software.com`, and its Worker route on
+`siutindei-canonical-redirects` were deleted. The Worker stays, serving
+`www.siutindei.com`.
+
 Operator steps, in order:
 
 1. GitHub: repository secret `STAGING_BYPASS_SECRET` in both repositories,
