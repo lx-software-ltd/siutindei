@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import any_, select
 from sqlalchemy.orm import Session
 
 from app.db.models import FeedbackLabel, OrganizationFeedback, Ticket
@@ -51,12 +51,12 @@ class FeedbackLabelRepository(BaseRepository[FeedbackLabel]):
         """Return True if the label is used by any feedback entry."""
         ticket_query = (
             select(Ticket.id)
-            .where(Ticket.feedback_label_ids.any(label_id))  # type: ignore[arg-type]
+            .where(any_(Ticket.feedback_label_ids) == label_id)
             .limit(1)
         )
         feedback_query = (
             select(OrganizationFeedback.id)
-            .where(OrganizationFeedback.label_ids.any(label_id))  # type: ignore[arg-type]
+            .where(any_(OrganizationFeedback.label_ids) == label_id)
             .limit(1)
         )
         return (
