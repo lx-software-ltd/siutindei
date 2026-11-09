@@ -30,7 +30,7 @@ SIUTINDEI_STACK="${SIUTINDEI_STACK:-lxsoftware-siutindei}"
 SECRET_NAME="${SECRET_NAME:-lxsoftware-admin-siutindei-board-importer-credentials}"
 IMPORTER_EMAIL="${IMPORTER_EMAIL:-siutindei-board-importer@lx-software.com}"
 IMPORTER_GROUP="${IMPORTER_GROUP:-importer}"
-API_BASE="${API_BASE:-https://siutindei-api.lx-software.com/v1}"
+API_BASE="${API_BASE:-https://api.siutindei.com/v1}"
 
 COMMAND=""
 ROTATE_PASSWORD=false

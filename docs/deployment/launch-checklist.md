@@ -148,12 +148,10 @@ CloudFront aliases are Cloudflare CNAMEs with the proxy **disabled**
 | `siutindei.com` | public-www CloudFront distribution (canonical) |
 | `www.siutindei.com` | 301 → `https://siutindei.com/$1` (Cloudflare Worker) |
 | `siutindei-www.lx-software.com` | 301 → `https://siutindei.com/$1` (Cloudflare Worker) |
-| `siutindei-api.lx-software.com` | `ApiCustomDomainTarget` stack output |
+| `api.siutindei.com` | `ApiSecondaryCustomDomainTarget` stack output |
 | `siutindei-auth.lx-software.com` | `CognitoCustomDomainCloudFront` stack output |
 | `admin.siutindei.com` | admin-web CloudFront distribution |
-| `siutindei.lx-software.com` | 301 → `https://admin.siutindei.com` (Cloudflare Redirect Rule, once proxied) |
 | `www-staging.siutindei.com` | public-www staging distribution, proxied behind the IP allow-list Worker |
-| `siutindei-www-staging.lx-software.com` | public-www staging distribution until the stack moves to `www-staging.siutindei.com`; then deleted |
 
 Planned change (`docs/plans/cloudflare-edge-protection.md`): the apex moves
 to orange cloud so Cloudflare rate limits and request rules protect the

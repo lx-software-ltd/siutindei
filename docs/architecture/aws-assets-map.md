@@ -321,7 +321,7 @@ For each function above, the following resources are created:
   [`public-www.md`](./public-www.md#search-api-edge-caching).
 
 **CORS Configuration:**
-- Allowed Origins: From `CORS_ALLOWED_ORIGINS` env var or context, defaults to `capacitor://localhost`, `ionic://localhost`, `http://localhost`, `http://localhost:3000`, `https://siutindei.lx-software.com`, `https://siutindei-api.lx-software.com`, `https://admin.siutindei.com`, `https://api.siutindei.com`
+- Allowed Origins: From `CORS_ALLOWED_ORIGINS` env var or context, defaults to `capacitor://localhost`, `ionic://localhost`, `http://localhost`, `http://localhost:3000`, `https://siutindei.lx-software.com`, `https://admin.siutindei.com`, `https://api.siutindei.com`
 - Allowed Methods: `GET`, `OPTIONS`, `POST`, `PUT`, `PATCH`, `DELETE`
 
 ### API Gateway Resources and Methods

@@ -292,7 +292,6 @@ neither is set, it uses:
 - `https://siutindei.lx-software.com`
 - `https://admin.siutindei.com`
 - `https://api.siutindei.com`
-- `https://siutindei-api.lx-software.com`
 
 ### API WAF
 

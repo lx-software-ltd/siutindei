@@ -609,7 +609,7 @@ export class ApiStack extends cdk.Stack {
         type: "String",
         default: "",
         description:
-          "Optional custom domain for the API (e.g., siutindei-api.lx-software.com). " +
+          "Optional custom domain for the API (e.g., api.siutindei.com). " +
           "Leave empty to use the default API Gateway URL.",
       }
     );
@@ -3327,7 +3327,6 @@ function resolveCorsAllowedOrigins(scope: Construct): string[] {
     "http://localhost",
     "http://localhost:3000",
     "https://siutindei.lx-software.com",
-    "https://siutindei-api.lx-software.com",
     "https://admin.siutindei.com",
     "https://api.siutindei.com",
   ];

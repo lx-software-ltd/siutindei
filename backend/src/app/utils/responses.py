@@ -85,7 +85,6 @@ _DEFAULT_CORS_ORIGINS = [
     "http://localhost",
     "http://localhost:3000",
     "https://siutindei.lx-software.com",
-    "https://siutindei-api.lx-software.com",
     "https://admin.siutindei.com",
     "https://api.siutindei.com",
 ]

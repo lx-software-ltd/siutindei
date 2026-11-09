@@ -224,7 +224,7 @@ export class PublicWwwStack extends cdk.Stack {
     });
 
     // Origin domain for the public search API (API Gateway custom domain, e.g.
-    // siutindei-api.lx-software.com). CloudFront proxies + caches the public
+    // api.siutindei.com). CloudFront proxies + caches the public
     // search endpoint here instead of paying for the API Gateway stage cache.
     const searchApiOriginDomain = new cdk.CfnParameter(
       this,
@@ -233,7 +233,7 @@ export class PublicWwwStack extends cdk.Stack {
         type: "String",
         description:
           "API Gateway custom domain that serves the public search endpoint " +
-          "(e.g. siutindei-api.lx-software.com). CloudFront caches " +
+          "(e.g. api.siutindei.com). CloudFront caches " +
           "GET /v1/activities/search responses at the edge.",
         allowedPattern: "^[a-z0-9.-]+$",
         constraintDescription: "Must be a bare DNS hostname (no scheme/path).",
