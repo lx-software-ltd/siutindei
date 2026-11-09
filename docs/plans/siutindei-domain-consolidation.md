@@ -1,6 +1,6 @@
 # Plan: move admin, API, and Cognito onto siutindei.com
 
-**Status**: Draft, awaiting approval. No infrastructure has been changed.
+**Status**: Approved and in progress (2026-11-09). See "Execution status" for what is live.
 **Zone**: red (`backend/infrastructure/**`, `backend/src/app/utils/responses.py`
 indirectly through CORS, deploy workflows). Documentation and the Cloudflare
 records are green. The evolvesprouts track (see "Evolvesprouts alignment")
@@ -300,7 +300,16 @@ phases except that the staging Worker source is shared.
 API stack already has the conditional custom-domain construct
 (`UseApiCustomDomain`, `ApiCustomDomain`, `ApiBasePathMapping`, outputs
 `ApiCustomDomainTarget` and `ApiCustomDomainUrl`); it is only switched off.
-No CDK code change is needed for the domain itself.
+The change maps it under the stage name (`/prod`) instead of the root, so
+`https://<id>.execute-api.ap-southeast-1.amazonaws.com/prod/...` becomes
+`https://api.evolvesprouts.com/prod/...` by swapping the host only.
+CloudFormation conditions cannot parse a URL (`Fn::Equals` accepts only
+`Ref`, `Fn::FindInMap`, and other conditions), so a root mapping would force
+new origin-path parameters on the public website and training stacks; the
+`/prod` mapping keeps their `allowedPattern` and origin-path logic as they
+are, and share links derived from the request keep the same path. Decision
+(2026-11-09): no mobile app or partner uses the execute-api URL, and once
+clients have moved the execute-api endpoint is disabled.
 
 1. Request an `ap-southeast-1` ACM certificate for `*.evolvesprouts.com`
    and `evolvesprouts.com`. The existing `_d09dc756…` validation CNAME in
@@ -316,26 +325,29 @@ No CDK code change is needed for the domain itself.
    client IP visible to the regional API WAF and avoids Cloudflare rules
    ever matching API traffic. The record is broken today, so the change
    cannot regress anything.
-4. Move browser- and partner-facing clients to `https://api.evolvesprouts.com`
-   (no stage segment; the base path mapping is at the root):
-   GitHub variable `NEXT_PUBLIC_API_BASE_URL` for the admin web and
-   `apps/training` (`training-api-config.ts`), the Mailchimp audience
-   webhook URL (`docs/deployment/backend.md` "After any API host change"),
-   and the smoke script's `SMOKE_CRM_API_BASE_URL` /
-   `SMOKE_MEDIA_API_BASE_URL`.
-5. Keep `PublicWwwApiBaseUrl` and `PublicWwwMediaRequestApiBaseUrl` on the
-   execute-api stage URL. Their `allowedPattern` requires exactly one path
-   segment (`/prod`) because CloudFront uses it as the origin path; the
-   custom domain has none. These are server-to-server origins behind
-   CloudFront, so users never see the hostname. Today they share the
-   `NEXT_PUBLIC_API_BASE_URL` GitHub variable, so split them onto a new
-   variable (for example `PUBLIC_WWW_API_ORIGIN_BASE_URL`) before step 4,
-   otherwise the next public-www deploy fails parameter validation.
-6. Verify `curl -sI https://api.evolvesprouts.com/health` returns the same
+4. Set the GitHub variable `NEXT_PUBLIC_API_BASE_URL` to the
+   `ApiCustomDomainUrl` output, `https://api.evolvesprouts.com/prod`. It
+   feeds the admin web, `apps/training`, the public website build, the
+   smoke script, and the `PublicWwwApiBaseUrl`,
+   `PublicWwwMediaRequestApiBaseUrl`, and `TrainingMediaRequestApiBaseUrl`
+   CloudFront origins, which all keep their one-segment pattern. Redeploy
+   the backend (all stacks), admin web, public website, and training. The
+   asset-share origin in the API stack follows `ApiCustomDomainName` on its
+   own through `Fn::If`.
+5. Move the Mailchimp audience webhook, the WhatsApp webhook, and any other
+   provider callback registered against the execute-api host
+   (`docs/deployment/backend.md` "After any API host change").
+6. Verify `curl -sI https://api.evolvesprouts.com/prod/health` returns the same
    status as the execute-api URL, then one admin sign-in and one admin
    call, then a Mailchimp test webhook.
 7. CORS needs no change: evolvesprouts derives origins from the website
    and admin domain parameters, not from the API hostname.
+8. Set `ApiDisableExecuteApiEndpoint=true` and deploy. The parameter only
+   takes effect when `UseApiCustomDomain` is true, and a stage variable
+   (`executeApiEndpoint`) flips with it because API Gateway applies
+   `DisableExecuteApiEndpoint` only on the next stage update. The
+   execute-api host then answers `403`. Rollback is the parameter back to
+   `false`.
 
 **Staging Worker: same script as siutindei.** Replace the inline
 `evolvesprouts-www-staging-redirect-allowlist` with the shared source
@@ -353,7 +365,7 @@ byte-identical in both repositories, with the same `node --test`):
 - CI bypass header; `smoke-staging.mjs` sends it and fails when the final
   host after redirects is not `www-staging.evolvesprouts.com`. The
   `staging` GitHub environment gets `STAGING_BYPASS_SECRET`.
-- Origin lock: evolvesprouts has no edge-verify check today. Port the
+- Origin lock (not yet written): evolvesprouts has no edge-verify check today. Port the
   siutindei pieces (`public-www-edge-verify.js` prepended to the staging
   viewer-request functions, `PublicWwwStagingEdgeVerifySecret` /
   `…Previous` parameters, default empty means no enforcement, and the
@@ -392,7 +404,7 @@ CNAMEs, and MX records are unchanged in all three zones and omitted.
 | `www.evolvesprouts.com` | public website (canonical) | orange | unchanged |
 | `www-staging.evolvesprouts.com` | staging, shared allow-list Worker → 302 `www`, origin-locked | orange | changed (Worker, origin lock) |
 | `admin.evolvesprouts.com` | admin console (CloudFront) | grey | unchanged |
-| `api.evolvesprouts.com` | REST API (API Gateway custom domain) | grey | fixed (was `530`/1016) |
+| `api.evolvesprouts.com` | REST API (API Gateway custom domain, base path `/prod`); execute-api disabled | grey | fixed (was `530`/1016) |
 | `auth.evolvesprouts.com` | Cognito Hosted UI | grey | unchanged |
 | `media.evolvesprouts.com` | asset download (CloudFront) | grey | unchanged |
 | `training.evolvesprouts.com` | training site (CloudFront) | orange | unchanged |
@@ -516,11 +528,11 @@ moved; at least one admin-web release later):
 Track E, evolvesprouts (its own repository and deploys; can run in
 parallel with phase 1):
 
-1. E1 API: certificate, split the CloudFront origin variable off
-   `NEXT_PUBLIC_API_BASE_URL`, set `ApiCustomDomainName`, deploy the API
-   stack, repoint and grey the `api.evolvesprouts.com` record, then move
-   `NEXT_PUBLIC_API_BASE_URL` and the Mailchimp webhook to
-   `https://api.evolvesprouts.com` and redeploy admin web and training.
+1. E1 API: certificate, set `ApiCustomDomainName` and the new certificate
+   ARN in one commit, deploy the API stack, repoint and grey the
+   `api.evolvesprouts.com` record, move `NEXT_PUBLIC_API_BASE_URL` to
+   `https://api.evolvesprouts.com/prod` and redeploy every stack and app,
+   move the webhooks, then set `ApiDisableExecuteApiEndpoint=true`.
 2. E2 staging: once the shared Worker source and its test exist (written
    for siutindei phase 3), copy it in, upload it with the evolvesprouts
    bindings, ship the smoke bypass and host assertion, then the origin
@@ -539,8 +551,8 @@ parallel with phase 1):
 - `tests/test_search_handler.py` (phase 4)
 - `scripts/cloudflare/workers/www-staging-redirect-allowlist.js` (new) and
   a `node --test` for its allow-list, bypass, and redirect branches
-- `scripts/cloudflare/edge_policy.py` if the Worker upload is added as a
-  section; otherwise Wrangler with a config outside the secrets
+- `scripts/cloudflare/staging_worker.py` (Worker upload and route) and
+  `tests/test_cloudflare_staging_worker.py`
 - `apps/public_www/scripts/smoke-staging.mjs` (bypass header, host
   assertion) and `.github/workflows/smoke-public-www-staging.yml`,
   `.github/workflows/lighthouse-public-www.yml` (pass the secret)
@@ -603,8 +615,9 @@ In `lx-software-ltd/evolvesprouts` (track E):
 - Phase 4: no `lx-software.com` hostname remains in
   `params/production.json`, the CORS defaults, or the Cloudflare
   `lx-software.com` zone except the admin redirect.
-- Track E: `curl -sI https://api.evolvesprouts.com/health` returns the
-  same status as the execute-api URL (no `530`); the admin web and
+- Track E: `curl -sI https://api.evolvesprouts.com/prod/health` returns the
+  status the execute-api URL used to (no `530`), and the execute-api URL
+  returns `403`; the admin web and
   training call `api.evolvesprouts.com`; a Mailchimp test webhook lands;
   `www-staging.evolvesprouts.com` from a non-listed IP still 302s to
   `www`, with the bypass header returns 200; the direct staging
@@ -629,11 +642,76 @@ In `lx-software-ltd/evolvesprouts` (track E):
   Worker's header is rejected for the deploy duration.
 - Phase 4: re-add the retired parameters and records; nothing is
   destroyed that cannot be recreated from this plan.
-- Track E API: set `NEXT_PUBLIC_API_BASE_URL` back to the execute-api URL
-  and redeploy the clients; the custom domain can stay, since it only adds
-  a hostname. Staging: re-upload the current inline Worker (its source is
-  in the audit log), and clear the staging edge secret only after the
-  Worker no longer depends on it.
+- Track E API: set `ApiDisableExecuteApiEndpoint=false` and deploy first,
+  then set `NEXT_PUBLIC_API_BASE_URL` back to the execute-api URL and
+  redeploy the clients; the custom domain can stay, since it only adds a
+  hostname. Staging: the Worker now reads its allow-list from the
+  `STAGING_ALLOWED_IPS` binding; removing the route reopens staging.
+
+## Decisions (2026-11-09)
+
+- The siutindei staging allow-list is the evolvesprouts list, minus the
+  private `10.x` address. The addresses live only in the Worker bindings.
+- No mobile app or partner uses the evolvesprouts execute-api URL; it is
+  disabled once `api.evolvesprouts.com` carries every client.
+
+## Execution status (2026-11-09)
+
+Done live, with the Cloud Agent's Cloudflare token:
+
+- Worker `siutindei-www-staging-redirect-allowlist` uploaded from the shared
+  source with `PRODUCTION_ORIGIN=https://siutindei.com` and four allow-listed
+  IPs; route `www-staging.siutindei.com/*`; proxied CNAME
+  `www-staging.siutindei.com` → `d2y0sgtf8djbdr.cloudfront.net`. A
+  non-listed client gets `302` to `https://siutindei.com` with path and
+  query. Allow-listed clients get CloudFront `403` until the public website
+  stack carries the new alias (this branch's deploy).
+- Redirect Rule on `lx-software.com`: `siutindei.lx-software.com` → `301`
+  `https://admin.siutindei.com` with path and query, added next to the apex
+  rule. Inert until the record is proxied.
+- Worker `evolvesprouts-www-staging-redirect-allowlist` replaced with the
+  shared source, `PRODUCTION_ORIGIN=https://www.evolvesprouts.com`, the same
+  four IPs. Non-listed behaviour is unchanged (`302` with path and query).
+- Upload or rotate either Worker with `scripts/cloudflare/staging_worker.py`.
+
+In this branch (deploys on merge):
+
+- Admin alias `admin.siutindei.com`, staging alias
+  `www-staging.siutindei.com`, both on the `*.siutindei.com` certificate;
+  new Cognito callback and logout URLs next to the old ones; CORS defaults
+  and the WAF 429 origin; the secondary API domain, inert until its
+  certificate ARN is set; amplify config prefers the secondary URL; staging
+  smoke and Lighthouse send `x-staging-bypass` and fail when redirected.
+
+Evolvesprouts (no push access from the agent): the change is a tested patch,
+`evolvesprouts-api-domain-staging-gate.patch`, covering the `/prod` mapping,
+`ApiDisableExecuteApiEndpoint`, the asset-share origin, the shared Worker and
+deploy script with tests, the smoke bypass, and docs. The staging origin lock
+is not in it.
+
+Operator steps, in order:
+
+1. GitHub: repository secret `STAGING_BYPASS_SECRET` in both repositories,
+   and the same value on each Worker (`STAGING_BYPASS_SECRET=...
+   STAGING_ALLOWED_IPS=... staging_worker.py ... --yes`). Until then both
+   staging smoke runs fail, by design.
+2. Merge this branch. After the admin-web deploy, verify sign-in on
+   `https://admin.siutindei.com`, then flip `siutindei.lx-software.com` to
+   proxied so the Redirect Rule applies. After the public website deploy,
+   verify staging from an allow-listed IP and delete
+   `siutindei-www-staging.lx-software.com`.
+3. ACM `ap-southeast-1` certificates for `*.siutindei.com` and
+   `*.evolvesprouts.com` (the agent's IAM user cannot request them).
+4. Phase 1: set `ApiSecondaryCustomDomainCertificateArn`, deploy, create the
+   `api.siutindei.com` record from `ApiSecondaryCustomDomainTarget`, then
+   `SearchApiProxyOriginDomain` and `NEXT_PUBLIC_API_BASE_URL`.
+5. Phase 2: Google and Apple redirect URI
+   `https://auth.siutindei.com/oauth2/idpresponse`, then the two Cognito
+   commits (empty, then `auth.siutindei.com` with certificate `74786db9`)
+   in one window; `deploy-backend.yml` now passes the empty values through.
+6. Apply the evolvesprouts patch, then run track E in order, ending with
+   `ApiDisableExecuteApiEndpoint=true`.
+7. Phase 4 retirement.
 
 ## Open questions
 
@@ -643,11 +721,6 @@ In `lx-software-ltd/evolvesprouts` (track E):
   one-to-one match with evolvesprouts? Flipping costs a redirect of every
   indexed URL and a change to every canonical tag; the recommendation is
   to keep the apex.
-- Which IP addresses go on the siutindei staging allow-list? Same list as
-  evolvesprouts, or separate?
-- Is the mobile app or any partner configured with the evolvesprouts
-  execute-api URL? Those keep working (the execute-api endpoint stays on),
-  but should move to `api.evolvesprouts.com` on their next release.
 - Should the `siutindei.lx-software.com` redirect be permanent or removed
   after a fixed period?
 - Should the new Cloudflare records be captured as code by extending
