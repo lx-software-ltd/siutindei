@@ -1,13 +1,15 @@
 # Plan: Cloudflare edge protection for the public website
 
-**Status**: In progress. Rollout steps 1-5 and 7 applied on 2026-11-02
-(settings, four rulesets, AI-bot block, apex proxied, origin lock
-deployed). The first lock deploy took the site down: the header was named
-`x-edge-verify`, and CloudFront strips every `X-Edge-*` header before edge
-functions run, so no request could ever match. The header is now
-`x-proxy-verify`, and `public-www-edge-verify.test.mjs` fails if the name
-ever falls into CloudFront's disallowed set or drifts from the Cloudflare
-policy file.
+**Status**: Applied. Rollout steps 1-5 and 7 applied on 2026-11-02
+(settings, four rulesets, AI-bot block, apex proxied, production origin
+lock deployed). Staging origin lock applied on 2026-11-09 (Worker
+`PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET` plus
+`PublicWwwStagingEdgeVerifySecret`; Access was not used). The first lock
+deploy took the site down: the header was named `x-edge-verify`, and
+CloudFront strips every `X-Edge-*` header before edge functions run, so
+no request could ever match. The header is now `x-proxy-verify`, and
+`public-www-edge-verify.test.mjs` fails if the name ever falls into
+CloudFront's disallowed set or drifts from the Cloudflare policy file.
 **Zone**: red (touches `backend/infrastructure/**`); the Cloudflare policy
 tool, the public website, and the docs are green.
 
@@ -259,13 +261,13 @@ Each step is independently reversible. Steps 1-5 are applied; step 6
    `PublicWwwEdgeVerifySecret` set; the WAF WebACL detaches from the
    production distribution in the same deploy. Verify `curl -sI https://d2zpx4ub70d0qj.cloudfront.net/en/ -H 'Host: siutindei.com'`
    returns `403` and `https://siutindei.com/en/` still returns `200`.
-8. **Staging** (separate zone `lx-software.com`): enable Zero Trust Access
-   in the dashboard (one-time, needs a payment method on file even on the
-   free tier), create an Access application for
-   `siutindei-www-staging.lx-software.com` with an email one-time-PIN
-   policy, then proxy that record. The same policy file can be pointed at
-   the staging hostname with `--zone lx-software.com --hostname ...`
-   once the staging stack has its own edge secret.
+8. **Staging** (done 2026-11-09, not Access): Worker
+   `siutindei-www-staging-redirect-allowlist` on
+   `www-staging.siutindei.com/*` sets `x-proxy-verify` from
+   `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. The staging CloudFront
+   distribution enforces `PublicWwwStagingEdgeVerifySecret`. Direct
+   `d2y0sgtf8djbdr.cloudfront.net` returns 403. Zero Trust Access stays
+   unused (`access.api.error.not_enabled` on the account).
 9. **Turnstile** (later, separate plan): create a `siutindei` widget
    (invisible mode, pre-clearance on), render it on the home and search
    pages, send the token as `x-turnstile-token`, and verify it either in a

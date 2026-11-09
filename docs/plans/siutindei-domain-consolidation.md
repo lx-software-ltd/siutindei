@@ -660,12 +660,11 @@ In `lx-software-ltd/evolvesprouts` (track E):
 Done live, with the Cloud Agent's Cloudflare token:
 
 - Worker `siutindei-www-staging-redirect-allowlist` uploaded from the shared
-  source with `PRODUCTION_ORIGIN=https://siutindei.com` and four allow-listed
-  IPs; route `www-staging.siutindei.com/*`; proxied CNAME
+  source with `PRODUCTION_ORIGIN=https://siutindei.com`; route
+  `www-staging.siutindei.com/*`; proxied CNAME
   `www-staging.siutindei.com` → `d2y0sgtf8djbdr.cloudfront.net`. A
   non-listed client gets `302` to `https://siutindei.com` with path and
-  query. Allow-listed clients get CloudFront `403` until the public website
-  stack carries the new alias (this branch's deploy).
+  query. The allow-list lives only in the `STAGING_ALLOWED_IPS` binding.
 - Redirect Rule on `lx-software.com`: `siutindei.lx-software.com` → `301`
   `https://admin.siutindei.com` with path and query, added next to the apex
   rule. Inert until the record is proxied.
@@ -713,6 +712,19 @@ The last siutindei hostname in the `lx-software.com` zone,
 `siutindei-www.lx-software.com`, and its Worker route on
 `siutindei-canonical-redirects` were deleted. The Worker stays, serving
 `www.siutindei.com`.
+
+Staging origin lock (2026-11-09, evening Hong Kong time): Worker binding
+`PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET` set;
+`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` set; `Deploy Backend` with
+`cdk_stacks=public website` succeeded. Direct
+`https://d2y0sgtf8djbdr.cloudfront.net/en/` returns `403`
+(`FunctionGeneratedResponse`, `cache-control: no-store`), including with
+`Host: www-staging.siutindei.com` and a dummy `x-proxy-verify`. From a
+non-listed address `www-staging.siutindei.com` still `302`s to the apex
+with path and query. `Smoke Public Website Staging` succeeded with
+`x-staging-bypass`. The `STAGING_ALLOWED_IPS` binding is the operator's
+current public IP, not the original four-address list. Evolvesprouts
+staging origin lock is still unwritten.
 
 Operator steps, in order:
 

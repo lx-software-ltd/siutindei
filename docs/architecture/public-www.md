@@ -72,6 +72,8 @@ Source: [`apps/public_www`](../../apps/public_www).
 - Tailwind CSS v4 via `@tailwindcss/postcss`.
 - Vitest + Testing Library for unit/component tests.
 - Lighthouse CI configured at `apps/public_www/.lighthouserc.json`.
+  `scripts/lighthouse-runtime-config.mjs` picks collect URLs; `/` becomes
+  `/en/` so LCP does not include the locale redirect.
 - Build script: `next build` → `inject-static-redirects.mjs` → `inject-html-lang.mjs` →
   `inject-structured-data.mjs` → `inject-csp-meta.mjs` →
   `validate-csp-meta.mjs`.
@@ -239,7 +241,7 @@ workflow_dispatch (Promote Public Website Release)
 | [`deploy-public-www.yml`](../../.github/workflows/deploy-public-www.yml) | `push: staging`, `workflow_dispatch`, `repository_dispatch: deploy-public-www` | Build + sync to staging bucket, write release marker, then run the staging smoke checks against the deployed site. |
 | [`promote-public-www.yml`](../../.github/workflows/promote-public-www.yml) | `workflow_dispatch` | Promote a staging release to production or flip production into maintenance mode. |
 | [`smoke-public-www-staging.yml`](../../.github/workflows/smoke-public-www-staging.yml) | `workflow_dispatch` | Crawl staging sitemap and assert every page responds 2xx/3xx. |
-| [`lighthouse-public-www.yml`](../../.github/workflows/lighthouse-public-www.yml) | `workflow_dispatch` | Run Lighthouse CI on the production build. |
+| [`lighthouse-public-www.yml`](../../.github/workflows/lighthouse-public-www.yml) | `workflow_dispatch` | Run Lighthouse CI on the local production build. Default pages are `/en/`, `/zh-HK/`, and `/en/search/`. A bare `/` is rewritten to `/en/` because `/` is a locale redirect. |
 
 ### Promotion script
 
@@ -289,11 +291,13 @@ The script also enforces `robots.txt: User-agent: *\nDisallow: /` whenever
 the target environment is `staging`.
 
 CloudFront is the only edge cache on the production alias `siutindei.com`.
-That record is DNS-only (grey cloud). `www-staging.siutindei.com` is
-proxied so the allow-list Worker can run. `www.siutindei.com` is a
-Cloudflare-proxied 301 to the apex.
-The planned move of the apex behind the Cloudflare proxy is described in
-[Cloudflare edge](#cloudflare-edge); it keeps CloudFront as the only cache.
+The apex is orange-cloud (proxied). Cloudflare adds `x-proxy-verify` and
+the public-www rulesets; CloudFront refuses requests that arrive without
+that header. `www-staging.siutindei.com` is proxied so the allow-list
+Worker can run and inject the same header. `www.siutindei.com` is a
+Cloudflare-proxied 301 to the apex. Direct CloudFront hostnames
+(`d2zpx4ub70d0qj.cloudfront.net` production,
+`d2y0sgtf8djbdr.cloudfront.net` staging) return 403.
 Standard deploys do not invalidate `/*` so they stay under CloudFront's
 15-wildcard-in-progress
 cap. The site-scope list is aligned with evolvesprouts and adapted to
@@ -411,9 +415,14 @@ production traffic at the edge.
 ## Cloudflare edge
 
 Plan: [`docs/plans/cloudflare-edge-protection.md`](../plans/cloudflare-edge-protection.md).
-Status: designed and coded, **not applied**. The apex is still grey-cloud.
+Status: applied. The apex is orange-cloud. Production and staging origin
+locks are on (`PublicWwwEdgeVerifySecret` and
+`PublicWwwStagingEdgeVerifySecret`). The Worker
+`siutindei-www-staging-redirect-allowlist` sets `x-proxy-verify` on
+allow-listed (or bypass) requests. Direct CloudFront hostnames return
+403.
 
-Cloudflare (Free plan) becomes the public entry point for `siutindei.com`
+Cloudflare (Free plan) is the public entry point for `siutindei.com`
 so that rate limits, request-shape rules, and AI-crawler blocking run where
 the real client IP is visible, and CloudFront refuses requests that did not
 come through Cloudflare. The configuration is code:
@@ -425,7 +434,7 @@ come through Cloudflare. The configuration is code:
 | Contract test: the `limit` allow-list equals the values the site sends | `apps/public_www/tests/lib/cloudflare-edge-policy.test.ts` |
 | Origin lock on CloudFront | `backend/infrastructure/lib/functions/public-www-edge-verify.js`, parameters `PublicWww[Staging]EdgeVerifySecret[Previous]` |
 
-Request path once applied:
+Request path:
 
 ```
 browser → Cloudflare (siutindei.com, proxied)
@@ -461,11 +470,11 @@ Rules of the design:
   visitor, and its JavaScript Detections inline script is refused by a
   `<meta>` CSP without nonces.
 - The origin lock is per environment. Both edge-verify parameters empty
-  (the default) means no enforcement and the WAF stays attached; the
-  CloudFront stack is unchanged until an operator sets a secret. Setting a
-  secret also detaches the shared WAF WebACL from that distribution: its
-  rate rule counts viewer IPs, and behind Cloudflare every viewer IP is a
-  Cloudflare egress IP.
+  means no enforcement and the WAF stays attached. Production and staging
+  secrets are set; the shared WAF WebACL is detached from both
+  distributions. Its rate rule counts viewer IPs, and behind Cloudflare
+  every viewer IP is a Cloudflare egress IP. Cloudflare's own rate limit
+  and custom rules take over.
 - Rotation: set `…Previous` to the live value, put the new value in the
   current parameter, deploy, update the Cloudflare transform rule
   (`edge_policy.py apply --yes --section rulesets` with the new
