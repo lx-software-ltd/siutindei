@@ -91,22 +91,20 @@ def test_engine(test_database_url: str):
 def db_session(test_engine) -> Generator:
     """Create a test database session with automatic rollback.
 
-    Each test gets an isolated transaction that is rolled back after the test,
-    ensuring tests don't affect each other.
+    The session joins the connection through a SAVEPOINT. ``commit()`` and
+    ``rollback()`` inside a test stay inside that savepoint, and this fixture
+    rolls back the outer transaction afterwards.
     """
     from sqlalchemy.orm import Session
 
     connection = test_engine.connect()
     transaction = connection.begin()
-    session = Session(bind=connection)
+    session = Session(bind=connection, join_transaction_mode="create_savepoint")
 
     yield session
 
     session.close()
-    # A test may already have rolled this transaction back, which drops it
-    # from the connection. Rolling it back again warns.
-    if transaction.is_active:
-        transaction.rollback()
+    transaction.rollback()
     connection.close()
 
 
