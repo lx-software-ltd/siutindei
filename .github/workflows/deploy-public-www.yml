@@ -117,6 +117,7 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: '1'
           SMOKE_BASE_URL: ${{ steps.resolve_public_site_config.outputs.staging_site_origin }}
+          STAGING_BYPASS_SECRET: ${{ secrets.STAGING_BYPASS_SECRET }}
 
       - name: Publish staging release summary
         run: |

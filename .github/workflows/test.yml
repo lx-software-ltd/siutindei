@@ -230,3 +230,6 @@ jobs:
           else
             echo "Missing backend/infrastructure/package.json"
           fi
+
+      - name: Run edge function and Cloudflare Worker tests
+        run: node --test backend/infrastructure/test/*.test.mjs scripts/cloudflare/workers/*.test.mjs
