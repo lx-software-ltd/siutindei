@@ -2,7 +2,7 @@
 boto3==1.43.118
 alembic==1.20.1
 pyjwt[crypto]==2.15.1
-phonenumberslite==9.0.41
+phonenumberslite==9.0.42
 pycountry==26.2.16
 pypdf==6.21.4
 pillow==13.0.0
