@@ -52,6 +52,21 @@ def test_public_search_is_cacheable_at_the_edge() -> None:
     assert all("manager_id" not in item["organization"] for item in body["items"])
 
 
+@pytest.mark.parametrize(
+    "origin", ["https://admin.siutindei.com", "https://api.siutindei.com"]
+)
+def test_siutindei_com_hosts_are_default_cors_origins(
+    origin: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("CORS_ALLOWED_ORIGINS", raising=False)
+    event = _event()
+    event["headers"] = {"origin": origin}
+
+    response = lambda_handler(event, None)
+
+    assert response["headers"]["Access-Control-Allow-Origin"] == origin
+
+
 def test_card_view_response_is_cacheable() -> None:
     response = lambda_handler(_event(query={"limit": ["1"], "view": ["card"]}), None)
 

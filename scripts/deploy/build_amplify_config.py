@@ -44,8 +44,10 @@ def build_config(
     region: str,
 ) -> dict[str, Any]:
     """Return the Amplify Gen 1 configuration for the deployed stack."""
-    endpoint = (outputs.get("ApiCustomDomainUrl") or "").strip() or _require(
-        outputs, "ApiUrl", "stack outputs"
+    endpoint = (
+        (outputs.get("ApiSecondaryCustomDomainUrl") or "").strip()
+        or (outputs.get("ApiCustomDomainUrl") or "").strip()
+        or _require(outputs, "ApiUrl", "stack outputs")
     )
     pool_id = _require(outputs, "UserPoolId", "stack outputs")
     client_id = _require(outputs, "UserPoolClientId", "stack outputs")

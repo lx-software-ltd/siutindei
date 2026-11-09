@@ -28,7 +28,7 @@ import {
 } from "./constructs";
 
 /** Admin console origin. The only browser client of the signed-in routes. */
-const ADMIN_WEB_ORIGIN = "https://siutindei.lx-software.com";
+const ADMIN_WEB_ORIGIN = "https://admin.siutindei.com";
 
 /**
  * CDK Aspect that adds Checkov suppressions to CDK-internal Lambda functions.
@@ -623,6 +623,29 @@ export class ApiStack extends cdk.Stack {
           "ACM certificate ARN for the API custom domain. " +
           "For regional endpoints, must be in the same region as the API. " +
           "For edge-optimized endpoints, must be in us-east-1.",
+      }
+    );
+    const apiSecondaryCustomDomainName = new cdk.CfnParameter(
+      this,
+      "ApiSecondaryCustomDomainName",
+      {
+        type: "String",
+        default: "",
+        description:
+          "Optional second custom domain mapped to the same stage while " +
+          "clients move between hostnames (e.g., api.siutindei.com). " +
+          "Leave empty when only ApiCustomDomainName is in use.",
+      }
+    );
+    const apiSecondaryCustomDomainCertificateArn = new cdk.CfnParameter(
+      this,
+      "ApiSecondaryCustomDomainCertificateArn",
+      {
+        type: "String",
+        default: "",
+        description:
+          "Regional ACM certificate ARN for ApiSecondaryCustomDomainName " +
+          "(same region as the API).",
       }
     );
 
@@ -3058,6 +3081,53 @@ export class ApiStack extends cdk.Stack {
     const apiMappingCfn = apiMapping.node.defaultChild as apigateway.CfnBasePathMapping;
     apiMappingCfn.cfnOptions.condition = useApiCustomDomain;
 
+    const useApiSecondaryCustomDomain = new cdk.CfnCondition(
+      this,
+      "UseApiSecondaryCustomDomain",
+      {
+        expression: cdk.Fn.conditionAnd(
+          cdk.Fn.conditionNot(
+            cdk.Fn.conditionEquals(apiSecondaryCustomDomainName.valueAsString, "")
+          ),
+          cdk.Fn.conditionNot(
+            cdk.Fn.conditionEquals(
+              apiSecondaryCustomDomainCertificateArn.valueAsString,
+              ""
+            )
+          )
+        ),
+      }
+    );
+    const apiSecondaryDomain = new apigateway.DomainName(
+      this,
+      "ApiSecondaryCustomDomain",
+      {
+        domainName: apiSecondaryCustomDomainName.valueAsString,
+        certificate: acm.Certificate.fromCertificateArn(
+          this,
+          "ApiSecondaryCertificate",
+          apiSecondaryCustomDomainCertificateArn.valueAsString
+        ),
+        endpointType: apigateway.EndpointType.REGIONAL,
+        securityPolicy: apigateway.SecurityPolicy.TLS_1_2,
+      }
+    );
+    (
+      apiSecondaryDomain.node.defaultChild as apigateway.CfnDomainName
+    ).cfnOptions.condition = useApiSecondaryCustomDomain;
+    const apiSecondaryMapping = new apigateway.BasePathMapping(
+      this,
+      "ApiSecondaryBasePathMapping",
+      {
+        domainName: apiSecondaryDomain,
+        restApi: api,
+        stage: api.deploymentStage,
+      }
+    );
+    (
+      apiSecondaryMapping.node.defaultChild as apigateway.CfnBasePathMapping
+    ).cfnOptions.condition = useApiSecondaryCustomDomain;
+
     // ---------------------------------------------------------------------
     // Outputs
     // ---------------------------------------------------------------------
@@ -3158,6 +3228,28 @@ export class ApiStack extends cdk.Stack {
     );
     apiCustomDomainUrlOutput.condition = useApiCustomDomain;
 
+    const apiSecondaryCustomDomainTarget = new cdk.CfnOutput(
+      this,
+      "ApiSecondaryCustomDomainTarget",
+      {
+        value: apiSecondaryDomain.domainNameAliasDomainName,
+        description:
+          "CNAME target for the secondary API custom domain (Cloudflare, " +
+          "proxy disabled).",
+      }
+    );
+    apiSecondaryCustomDomainTarget.condition = useApiSecondaryCustomDomain;
+
+    const apiSecondaryCustomDomainUrlOutput = new cdk.CfnOutput(
+      this,
+      "ApiSecondaryCustomDomainUrl",
+      {
+        value: `https://${apiSecondaryCustomDomainName.valueAsString}`,
+        description: "The secondary custom domain URL for the API.",
+      }
+    );
+    apiSecondaryCustomDomainUrlOutput.condition = useApiSecondaryCustomDomain;
+
     // ---------------------------------------------------------------------
     // Per-session rate limit on signed-in routes (all served by the admin
     // Lambda). One looping browser tab must not exhaust its concurrency.
@@ -3236,6 +3328,8 @@ function resolveCorsAllowedOrigins(scope: Construct): string[] {
     "http://localhost:3000",
     "https://siutindei.lx-software.com",
     "https://siutindei-api.lx-software.com",
+    "https://admin.siutindei.com",
+    "https://api.siutindei.com",
   ];
   const contextOrigins = normalizeCorsOrigins(
     scope.node.tryGetContext("corsAllowedOrigins")

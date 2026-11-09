@@ -321,7 +321,7 @@ For each function above, the following resources are created:
   [`public-www.md`](./public-www.md#search-api-edge-caching).
 
 **CORS Configuration:**
-- Allowed Origins: From `CORS_ALLOWED_ORIGINS` env var or context, defaults to `capacitor://localhost`, `ionic://localhost`, `http://localhost`, `http://localhost:3000`, `https://siutindei.lx-software.com`, `https://siutindei-api.lx-software.com`
+- Allowed Origins: From `CORS_ALLOWED_ORIGINS` env var or context, defaults to `capacitor://localhost`, `ionic://localhost`, `http://localhost`, `http://localhost:3000`, `https://siutindei.lx-software.com`, `https://siutindei-api.lx-software.com`, `https://admin.siutindei.com`, `https://api.siutindei.com`
 - Allowed Methods: `GET`, `OPTIONS`, `POST`, `PUT`, `PATCH`, `DELETE`
 
 ### API Gateway Resources and Methods
@@ -692,8 +692,10 @@ own buckets and log groups.
 ## Estimated Resource Count
 
 CloudFormation allows 500 resources per stack, and a nested stack counts
-as one. The main stack synthesizes to 492 resources, including the admin
-`live` alias and its published version. The API Gateway alone
+as one. The main stack synthesizes to 494 resources, including the admin
+`live` alias and its published version and the conditional secondary API
+custom domain and base path mapping (`ApiSecondaryCustomDomainName`,
+present while clients move hostnames). The API Gateway alone
 accounts for 241 of them: 154 methods and 70 path resources. The 16 ops
 alarm rules live in the `OpsAlarmsStack` nested stack. New resource groups
 that don't reference the rest of the stack belong in a nested stack.

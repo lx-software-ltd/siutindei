@@ -68,6 +68,18 @@ def test_config_uses_custom_domains_and_mobile_redirects() -> None:
     }
 
 
+def test_config_prefers_secondary_api_domain_while_hosts_move() -> None:
+    outputs = {
+        **OUTPUTS,
+        "ApiSecondaryCustomDomainUrl": "https://api.next.example.test",
+    }
+
+    config = _module().build_config(outputs, PARAMS, "ap-southeast-1")
+
+    api = config["api"]["plugins"]["awsAPIPlugin"]["activitiesApi"]
+    assert api["endpoint"] == "https://api.next.example.test"
+
+
 def test_config_falls_back_to_stage_url_and_cognito_prefix_domain() -> None:
     outputs = {
         key: value for key, value in OUTPUTS.items() if key != "ApiCustomDomainUrl"
