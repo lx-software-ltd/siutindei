@@ -149,7 +149,7 @@ CloudFront aliases are Cloudflare CNAMEs with the proxy **disabled**
 | `www.siutindei.com` | 301 → `https://siutindei.com/$1` (Cloudflare Worker) |
 | `siutindei-www.lx-software.com` | 301 → `https://siutindei.com/$1` (Cloudflare Worker) |
 | `api.siutindei.com` | `ApiSecondaryCustomDomainTarget` stack output |
-| `siutindei-auth.lx-software.com` | `CognitoCustomDomainCloudFront` stack output |
+| `auth.siutindei.com` | `CognitoCustomDomainCloudFront` stack output |
 | `admin.siutindei.com` | admin-web CloudFront distribution |
 | `www-staging.siutindei.com` | public-www staging distribution, proxied behind the IP allow-list Worker |
 
