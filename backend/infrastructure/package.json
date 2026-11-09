@@ -10,7 +10,7 @@
     "cdk": "cdk",
     "synth": "cdk synth",
     "deploy": "cdk deploy",
-    "test:infra": "ts-node scripts/assert-existing-db.ts"
+    "test:infra": "node scripts/assert-patched-minimatch.js && ts-node scripts/assert-existing-db.ts"
   },
   "keywords": [],
   "author": "",
@@ -18,7 +18,7 @@
   "dependencies": {
     "aws-cdk-lib": "^2.275.0",
     "constructs": "^10.8.1",
-    "minimatch": "11.0.3"
+    "minimatch": "11.0.5"
   },
   "devDependencies": {
     "@types/node": "^25.9.9",
