@@ -1,13 +1,17 @@
 # Plan: Cloudflare edge protection for the public website
 
-**Status**: In progress. Rollout steps 1-5 and 7 applied on 2026-11-02
-(settings, four rulesets, AI-bot block, apex proxied, origin lock
-deployed). The first lock deploy took the site down: the header was named
-`x-edge-verify`, and CloudFront strips every `X-Edge-*` header before edge
-functions run, so no request could ever match. The header is now
-`x-proxy-verify`, and `public-www-edge-verify.test.mjs` fails if the name
-ever falls into CloudFront's disallowed set or drifts from the Cloudflare
-policy file.
+**Status**: Origin lock is live; the plan is not finished. Steps 1-5, 7,
+and 8 are done (settings, four rulesets, AI-bot block, and apex proxy
+on 2026-11-02; production origin lock the same day; staging origin lock
+on 2026-11-09 via Worker `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET` and
+`PublicWwwStagingEdgeVerifySecret`; Access was not used). Step 6 (a day
+of Security Analytics after the flip) has no recorded result. Step 9
+(Turnstile) is still open. The first lock
+deploy took the site down: the header was named `x-edge-verify`, and
+CloudFront strips every `X-Edge-*` header before edge functions run, so
+no request could ever match. The header is now `x-proxy-verify`, and
+`public-www-edge-verify.test.mjs` fails if the name ever falls into
+CloudFront's disallowed set or drifts from the Cloudflare policy file.
 **Zone**: red (touches `backend/infrastructure/**`); the Cloudflare policy
 tool, the public website, and the docs are green.
 
@@ -226,8 +230,9 @@ Cloudflare rule is decorative for anyone who finds it.
 
 ## Rollout order
 
-Each step is independently reversible. Steps 1-5 are applied; step 6
-(observation) is running; steps 7-9 are pending.
+Each step is independently reversible. Steps 1-5, 7, and 8 are applied.
+Step 6 (observation) has no recorded result. Step 9 (Turnstile) is
+still open.
 
 1. **Token.** Create a Cloudflare API token scoped to zone
    `siutindei.com` with Zone Settings:Edit, DNS:Edit, Zone WAF:Edit,
@@ -259,13 +264,13 @@ Each step is independently reversible. Steps 1-5 are applied; step 6
    `PublicWwwEdgeVerifySecret` set; the WAF WebACL detaches from the
    production distribution in the same deploy. Verify `curl -sI https://d2zpx4ub70d0qj.cloudfront.net/en/ -H 'Host: siutindei.com'`
    returns `403` and `https://siutindei.com/en/` still returns `200`.
-8. **Staging** (separate zone `lx-software.com`): enable Zero Trust Access
-   in the dashboard (one-time, needs a payment method on file even on the
-   free tier), create an Access application for
-   `siutindei-www-staging.lx-software.com` with an email one-time-PIN
-   policy, then proxy that record. The same policy file can be pointed at
-   the staging hostname with `--zone lx-software.com --hostname ...`
-   once the staging stack has its own edge secret.
+8. **Staging** (done 2026-11-09, not Access): Worker
+   `siutindei-www-staging-redirect-allowlist` on
+   `www-staging.siutindei.com/*` sets `x-proxy-verify` from
+   `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. The staging CloudFront
+   distribution enforces `PublicWwwStagingEdgeVerifySecret`. Direct
+   `d2y0sgtf8djbdr.cloudfront.net` returns 403. Zero Trust Access stays
+   unused (`access.api.error.not_enabled` on the account).
 9. **Turnstile** (later, separate plan): create a `siutindei` widget
    (invisible mode, pre-clearance on), render it on the home and search
    pages, send the token as `x-turnstile-token`, and verify it either in a
@@ -327,8 +332,14 @@ Each step is independently reversible. Steps 1-5 are applied; step 6
   turns the apex grey again within a minute; TLS falls back to the ACM
   certificate directly. Rulesets can be left in place; they are inert
   without proxied traffic.
-- CloudFront: redeploy with `PublicWwwEdgeVerifySecret` empty; the
-  functions stop checking the header and the WAF WebACL re-attaches. Do rollback of CloudFront **before** the DNS rollback if both are
+- CloudFront: set `PublicWwwEdgeVerifySecret` and
+  `PublicWwwStagingEdgeVerifySecret` to empty on
+  `lxsoftware-siutindei-public-www` in the CloudFormation console. The
+  functions stop checking the header and the WAF WebACL re-attaches.
+  Those parameters are not in `pass_empty_params`, so emptying the
+  GitHub secrets and redeploying does not clear them. Clear the secrets
+  after the console update so a later deploy does not restore the lock.
+  Do the CloudFront rollback **before** the DNS rollback if both are
   needed, otherwise direct traffic is refused for the deploy duration.
 
 ## What this does not solve

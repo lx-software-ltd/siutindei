@@ -121,15 +121,17 @@ On the **production** environment:
   and `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`, and deploy the API stack first.
   Then deploy the public website stack and promote. After both are serving
   the new values, clear the previous secrets and deploy the API stack again.
-- Cloudflare origin lock (only after the apex is proxied, see
-  [section 6](#6-dns--certificates)): `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY`
-  and, for staging, `CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY`
-  (`[A-Za-z0-9+/=_-]`, 32+ chars; `token_urlsafe(48)` fits). The same value
-  goes into the Cloudflare transform rule through
-  `PUBLIC_WWW_EDGE_VERIFY_SECRET` when running
-  `scripts/cloudflare/edge_policy.py apply`. Empty leaves the check off
-  and the CloudFront WAF attached. `…_PREVIOUS` variants exist for
-  rotation.
+- Cloudflare origin lock (applied): `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY`
+  and `CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY`
+  (`[A-Za-z0-9+/=_-]`, 32+ chars; `token_urlsafe(48)` fits). Production
+  uses the Cloudflare transform rule (`PUBLIC_WWW_EDGE_VERIFY_SECRET` in
+  `scripts/cloudflare/edge_policy.py apply`). Staging uses the Worker
+  binding `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET` on
+  `siutindei-www-staging-redirect-allowlist`. Empty would leave the check
+  off and re-attach the CloudFront WAF. `…_PREVIOUS` variants exist for
+  rotation. Clearing a GitHub secret does not disable the lock; the
+  deploy workflow skips empty values unless the parameter is in
+  `pass_empty_params`.
 - Variables: `APPLE_TEAM_ID`, `CDK_PARAM_FILE` pointing at
   `params/production.json`.
 
@@ -146,30 +148,45 @@ On the **staging** environment (public www):
 
 ## 6. DNS / certificates
 
-CloudFront aliases for the public site, admin console, API, and Cognito
-are Cloudflare CNAMEs with the proxy **disabled** (grey cloud).
+`api.siutindei.com`, `auth.siutindei.com`, and `admin.siutindei.com`
+are Cloudflare CNAMEs with the proxy **disabled** (grey cloud). The
+apex `siutindei.com` is orange-cloud (proxied, origin-locked).
 `www.siutindei.com` is an orange-cloud 301 to the apex.
 `www-staging.siutindei.com` is orange-cloud so the allow-list Worker
-can run.
+can run and set the origin-lock header.
 
 | Record | Target source |
 |---|---|
-| `siutindei.com` | public-www CloudFront distribution (canonical) |
+| `siutindei.com` | public-www CloudFront distribution (canonical, proxied, origin-locked) |
 | `www.siutindei.com` | 301 → `https://siutindei.com/$1` (Cloudflare Worker) |
 | `api.siutindei.com` | `ApiSecondaryCustomDomainTarget` stack output |
 | `auth.siutindei.com` | `CognitoCustomDomainCloudFront` stack output |
 | `admin.siutindei.com` | admin-web CloudFront distribution |
-| `www-staging.siutindei.com` | public-www staging distribution, proxied behind the IP allow-list Worker |
+| `www-staging.siutindei.com` | public-www staging distribution, proxied behind the IP allow-list Worker and origin-locked |
 
-Planned change (`docs/plans/cloudflare-edge-protection.md`): the apex moves
-to orange cloud so Cloudflare rate limits and request rules protect the
-search API. Order matters: `edge_policy.py apply` for settings, rulesets,
-and bot management while the apex is still grey; deploy the public
-website stack with the edge-verify parameters empty; flip DNS with
-`edge_policy.py apply --yes --section dns`; observe; then set the
-edge-verify secrets and deploy again so `d2zpx4ub70d0qj.cloudfront.net`
-returns 403 without the Cloudflare header. Cloudflare SSL mode must be
-`strict` before the flip. Rollback is the DNS step with `--proxied false`.
+The apex proxy and origin lock from
+[`docs/plans/cloudflare-edge-protection.md`](../plans/cloudflare-edge-protection.md)
+are live. Direct `d2zpx4ub70d0qj.cloudfront.net` and
+`d2y0sgtf8djbdr.cloudfront.net` return 403. Cloudflare SSL mode is
+`strict`.
+
+To roll the apex back to grey, disable the origin lock first.
+`PublicWwwEdgeVerifySecret` and `PublicWwwStagingEdgeVerifySecret` are
+not in `pass_empty_params`, so emptying
+`CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY` or
+`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` and redeploying leaves the
+previous CloudFormation value in place. Update
+`lxsoftware-siutindei-public-www` in the CloudFormation console and set
+the edge-verify parameters to empty. That removes the header check and
+re-attaches the WAF. Then clear those GitHub secrets so a later deploy
+does not put them back (an empty secret is skipped, so the console's
+empty value stays). Confirm
+`curl -sI https://d2zpx4ub70d0qj.cloudfront.net/en/ -H 'Host: siutindei.com'`
+returns 200, and the same for `d2y0sgtf8djbdr.cloudfront.net` with
+`Host: www-staging.siutindei.com`. Only then run
+`edge_policy.py apply --yes --section dns --proxied false`. Greying the
+apex while the lock is still on refuses direct visitors until the stack
+update finishes.
 
 Verify each with `curl -sI https://<domain>` (expect 200/301, valid cert).
 
@@ -179,8 +196,12 @@ Verify each with `curl -sI https://<domain>` (expect 200/301, valid cert).
   `params/production.json`. After deploy, confirm the device-attestation
   authorizer Lambda (`DeviceAttestationAuthorizer`) env var:
   `aws lambda get-function-configuration --function-name <attestation-authorizer-fn> --query 'Environment.Variables.ATTESTATION_FAIL_CLOSED' --region ap-southeast-1`.
-- Confirm the WAF WebACL is associated with the CloudFront distributions
-  (`WafWebAclArn` in params).
+- Confirm the admin web CloudFront distribution still has the shared
+  WAF WebACL attached (`webAclId` is `WafWebAclArn`; that stack requires
+  the ARN). The public website distributions do not, while their origin
+  locks are on: `WafWebAclArn` is unused on a locked distribution.
+  Cloudflare's custom rules and rate limit cover the proxied public
+  hosts.
 
 ## 8. Public website go-live
 

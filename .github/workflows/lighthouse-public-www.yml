@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       page_paths:
-        description: 'Comma/newline-separated page paths or full URLs to audit'
+        description: 'Comma/newline-separated page paths or full URLs to audit. Empty uses /en/ and /zh-HK/. A bare / is rewritten to /en/ because / is a locale redirect. /en/search/ is omitted because this build has no search API.'
         required: false
-        default: '/'
+        default: ''
 
 permissions:
   contents: read
@@ -61,51 +61,7 @@ jobs:
           STAGING_SITE_ORIGIN: ${{ steps.resolve_public_site_config.outputs.staging_site_origin }}
           STAGING_BYPASS_SECRET: ${{ secrets.STAGING_BYPASS_SECRET }}
         run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const path = require('node:path');
-
-          const baseConfigPath = path.resolve('.lighthouserc.json');
-          const runtimeConfigPath = path.resolve('.lighthouserc.runtime.json');
-          const rawInput = (process.env.LIGHTHOUSE_PAGE_PATHS ?? '').trim();
-          const defaultTargets = ['/en/', '/zh-HK/', '/en/search/'];
-          const requestedTargets = (rawInput ? rawInput.split(/[\n,]+/) : defaultTargets)
-            .map((value) => value.trim())
-            .filter(Boolean);
-
-          const normalizedUrls = requestedTargets.map((target) => {
-            if (/^https?:\/\//i.test(target)) {
-              return target;
-            }
-            const normalizedPath = target.startsWith('/') ? target : `/${target}`;
-            return `http://localhost:9000${normalizedPath}`;
-          });
-
-          const config = JSON.parse(fs.readFileSync(baseConfigPath, 'utf8'));
-          config.ci = config.ci ?? {};
-          config.ci.collect = config.ci.collect ?? {};
-          config.ci.collect.url = normalizedUrls;
-          const stagingOrigin = (process.env.STAGING_SITE_ORIGIN ?? '').trim();
-          const bypassSecret = (process.env.STAGING_BYPASS_SECRET ?? '').trim();
-          const auditsStaging =
-            stagingOrigin !== '' &&
-            normalizedUrls.some((url) => new URL(url).origin === new URL(stagingOrigin).origin);
-          if (auditsStaging) {
-            if (!bypassSecret) {
-              throw new Error('STAGING_BYPASS_SECRET is required to audit the IP-gated staging site.');
-            }
-            config.ci.collect.settings = {
-              ...(config.ci.collect.settings ?? {}),
-              extraHeaders: JSON.stringify({ 'x-staging-bypass': bypassSecret }),
-            };
-          }
-          fs.writeFileSync(runtimeConfigPath, `${JSON.stringify(config, null, 2)}\n`);
-          console.log('Lighthouse targets:');
-          for (const url of normalizedUrls) {
-            console.log(`- ${url}`);
-          }
-          NODE
-
+          node scripts/lighthouse-runtime-config.mjs
           npx lhci autorun --config=.lighthouserc.runtime.json
 
       - name: Upload Lighthouse artifacts

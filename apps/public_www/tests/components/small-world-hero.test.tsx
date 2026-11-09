@@ -95,6 +95,9 @@ describe('SmallWorldHero', () => {
         document.querySelectorAll('.small-world-bubble'),
       ).toHaveLength(6);
     });
+    for (const bubble of document.querySelectorAll('.small-world-bubble')) {
+      expect(bubble.getAttribute('fetchpriority')).toBe('low');
+    }
     expect(
       document.querySelectorAll('.max-lg\\:hidden'),
     ).toHaveLength(3);
