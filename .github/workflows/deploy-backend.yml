@@ -257,18 +257,16 @@ jobs:
             fi
           fi
 
-          QUALIFIER_ARGS=()
-          if [ -n "$CDK_BOOTSTRAP_QUALIFIER" ]; then
-            QUALIFIER_ARGS=(--qualifier "$CDK_BOOTSTRAP_QUALIFIER")
-          fi
-
+          # bin/app.ts reads CDK_BOOTSTRAP_QUALIFIER. deploy and destroy
+          # reject --qualifier (it is a bootstrap-only flag) and print
+          # "Unknown option(s): --qualifier".
           IFS=$', \n\t' read -r -a STACK_LIST <<< "$CDK_STACKS"
 
           if [ "${DESTROY_BEFORE_DEPLOY:-false}" = "true" ]; then
             if [ ${#STACK_LIST[@]} -gt 0 ]; then
-              npx cdk destroy --no-notices --force "${QUALIFIER_ARGS[@]}" "${STACK_LIST[@]}"
+              npx cdk destroy --no-notices --force "${STACK_LIST[@]}"
             else
-              npx cdk destroy --no-notices --force "${QUALIFIER_ARGS[@]}" lxsoftware-siutindei
+              npx cdk destroy --no-notices --force lxsoftware-siutindei
             fi
           fi
 
@@ -412,7 +410,7 @@ jobs:
             echo "CDK deploy attempt ${attempt} of ${MAX_CDK_DEPLOY_ATTEMPTS}"
             ATTEMPT_LOG="$(mktemp)"
             npx cdk deploy --no-notices --require-approval never \
-              "${QUALIFIER_ARGS[@]}" "${PARAM_ARGS[@]}" "${STACK_LIST[@]}" \
+              "${PARAM_ARGS[@]}" "${STACK_LIST[@]}" \
               2>&1 | tee "$ATTEMPT_LOG"
             deploy_exit=${PIPESTATUS[0]}
             if [ "$deploy_exit" -eq 0 ]; then

@@ -1,3 +1,6 @@
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import * as cdk from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
@@ -420,12 +423,119 @@ function assertLogGroupActionsUseLogGroupArn(): void {
   }
 }
 
+function assertDeployTemplateIsQuiet(): void {
+  const outdir = fs.mkdtempSync(path.join(os.tmpdir(), "cdk-deploy-warnings-"));
+  const stderr: string[] = [];
+  const write = process.stderr.write.bind(process.stderr);
+  process.stderr.write = ((chunk: string | Uint8Array, ...rest: unknown[]) => {
+    stderr.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8"));
+    return write(chunk as never, ...(rest as never[]));
+  }) as typeof process.stderr.write;
+  try {
+    const app = new cdk.App({
+      outdir,
+      context: { "aws:cdk:bundling-stacks": [] },
+    });
+    new ApiStack(app, "lxsoftware-siutindei", {
+      env: { account: "111111111111", region: "us-east-1" },
+    });
+    app.synth();
+  } finally {
+    process.stderr.write = write;
+  }
+
+  const deprecated = stderr.filter((line) => line.includes("addDependency is deprecated"));
+  if (deprecated.length > 0) {
+    throw new Error(deprecated.join(""));
+  }
+
+  const report = JSON.parse(
+    fs.readFileSync(path.join(outdir, "validation-report.json"), "utf8"),
+  ) as {
+    pluginReports: Array<{
+      violations?: Array<{ ruleName: string; description: string }>;
+      suppressedViolations?: Array<{ ruleName: string; reason?: string }>;
+    }>;
+  };
+  const violations = report.pluginReports.flatMap((plugin) => plugin.violations ?? []);
+  if (violations.length > 0) {
+    throw new Error(
+      `API stack template validation reported ${violations
+        .map((violation) => `${violation.ruleName}: ${violation.description}`)
+        .join("; ")}`,
+    );
+  }
+  const retainedGroups = report.pluginReports.flatMap(
+    (plugin) => plugin.suppressedViolations ?? [],
+  ).filter((violation) => violation.ruleName === "W3011");
+  if (retainedGroups.length !== 2) {
+    throw new Error(
+      `Expected the two named security groups to acknowledge W3011, found ${retainedGroups.length}`,
+    );
+  }
+
+  const template = JSON.parse(
+    fs.readFileSync(path.join(outdir, "lxsoftware-siutindei.template.json"), "utf8"),
+  ) as {
+    Parameters: Record<string, { Default?: string }>;
+    Resources: Record<
+      string,
+      {
+        Type: string;
+        DependsOn?: string[];
+        DeletionPolicy?: string;
+        UpdateReplacePolicy?: string;
+        Properties?: Record<string, unknown>;
+      }
+    >;
+  };
+  if (template.Parameters.OpenRouterApiKey?.Default !== "pending") {
+    throw new Error("OpenRouterApiKey default must be the non-empty placeholder");
+  }
+  const secret = Object.values(template.Resources).find(
+    (resource) =>
+      resource.Type === "AWS::SecretsManager::Secret" &&
+      resource.Properties?.Name === "lxsoftware-siutindei-openrouter-api-key",
+  );
+  const secretString = JSON.stringify(secret?.Properties?.SecretString ?? null);
+  if (!secretString.includes("OpenRouterKeyProvided") || !secretString.includes("pending")) {
+    throw new Error(`OpenRouter secret must still fall back to pending: ${secretString}`);
+  }
+  const targetGroup = Object.values(template.Resources).find(
+    (resource) => resource.Type === "AWS::RDS::DBProxyTargetGroup",
+  );
+  if (!targetGroup || "Tags" in (targetGroup.Properties ?? {})) {
+    throw new Error("DB proxy target group must not synthesize a Tags property");
+  }
+  const proxy = Object.values(template.Resources).find(
+    (resource) => resource.Type === "AWS::RDS::DBProxy",
+  );
+  const proxyTags = JSON.stringify(proxy?.Properties?.Tags ?? []);
+  if (!proxyTags.includes("Organization") || !proxyTags.includes("LX Software")) {
+    throw new Error("DB proxy must keep the stack tags");
+  }
+  for (const logicalId of ["LambdaSecurityGroup0BD9FC99", "MigrationSecurityGroupBCB362A0"]) {
+    const group = template.Resources[logicalId];
+    if (group?.UpdateReplacePolicy !== "Retain" || group.DeletionPolicy) {
+      throw new Error(
+        `${logicalId} must retain on replacement and delete with the stack`,
+      );
+    }
+  }
+  const client = template.Resources.SiutindeiUserPoolClient;
+  const dependsOn = client?.DependsOn ?? [];
+  if (!dependsOn.includes("GoogleIdentityProvider") || !dependsOn.includes("AppleIdentityProvider")) {
+    throw new Error(`User pool client dependencies changed: ${dependsOn.join(", ")}`);
+  }
+}
+
 function main(): void {
   assertExistingResources();
   assertNewResources();
   assertOpsAlarms();
   assertOpsAlarmRulesInNestedStack();
   assertLogGroupActionsUseLogGroupArn();
+  assertDeployTemplateIsQuiet();
   // eslint-disable-next-line no-console
   console.log("OK");
 }

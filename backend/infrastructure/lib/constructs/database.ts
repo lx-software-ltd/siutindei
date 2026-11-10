@@ -451,6 +451,13 @@ export class DatabaseConstruct extends Construct {
         iamAuth: true,
         dbProxyName: name("db-proxy"),
       });
+      // The L1 is taggable, but AWS::RDS::DBProxyTargetGroup rejects Tags.
+      // Stack tags stay on the proxy and the cluster.
+      const targetGroup = this.proxy.node.findChild("ProxyTargetGroup");
+      const targetGroupResource = cdk.CfnResource.isCfnResource(targetGroup)
+        ? targetGroup
+        : (targetGroup.node.defaultChild as cdk.CfnResource);
+      targetGroupResource.addPropertyDeletionOverride("Tags");
     }
   }
 
