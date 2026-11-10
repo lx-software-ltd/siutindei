@@ -1,0 +1,73 @@
+# Plan: Fix the 5–10 Nov CloudWatch failures
+
+**Status**: Done
+**Zone**: yellow
+
+## Goal
+
+Stop the enrichment crawler from crashing the out-of-VPC proxy on
+page URLs that contain a space or a non-ASCII character. Encode only
+characters urllib cannot send, and leave legal escapes, query
+separators, path parameters, and IPv6 brackets as written. Refuse a
+URL with credentials before that encoding. Reject an existing activity
+schedule as a validation error instead of raising a unique-constraint
+error or marking the proposal applied. Read a non-JSON API-key
+rotation secret as “no previous key”. Surface a refused enrichment
+image as a validation error. Any other proxy failure stays a server
+error and is logged with its code and traceback.
+
+## Non-goals
+
+- Redriving `lxsoftware-siutindei-category-suggestion-dlq`. The dismiss
+  fix is already deployed. This role cannot decrypt the queue or call
+  `sqs:StartMessageMoveTask`.
+- Rotating or deleting the live mobile API key. Redriving that Lambda
+  dead-letter message would rotate the production key. The rotation
+  secret is still unused by clients. Disabling the key CDK created
+  would break the app, so a quiet alarm does not mean clients received
+  a new key.
+- Allowing image responses that are HTTP 403 or not jpeg, png, webp,
+  or gif.
+- Evolvesprouts Eventbrite, the lxsoftware admin Lambda dead-letter
+  queue, API Gateway execution logging, and the admin authorizer’s
+  `COGNITO_USER_POOL_ID`. Those are outside this repo or in the red
+  zone.
+- A schema or seed change.
+
+## Files
+
+- `docs/plans/cloudwatch-nov-2026-fixes.md`
+- `backend/src/app/services/enrichment/fetch.py`
+- `backend/src/app/services/enrichment/apply_rows.py`
+- `backend/src/app/services/enrichment/apply_media.py`
+- `backend/lambda/api_key_rotation/handler.py`
+- `tests/test_org_enrichment.py`
+- `tests/test_api_key_rotation.py`
+
+## Invariants this change preserves
+
+- A crawl still refuses private hosts, credentials, and non-http URLs
+  before it connects. Encoding cannot strip credentials ahead of that
+  check, and it cannot turn a percent-escape into a different URL.
+- An existing schedule’s rows are not rewritten or duplicated. A
+  proposal for that schedule stays pending and reports the conflict.
+- `zh-HK` is still stored as `yue`.
+- A refused image is still not attached to the organization.
+- A JSON API-key secret with `api_key_id` is still used to retire the
+  previous key. The secret value is not logged.
+
+## Done when
+
+- `pytest tests/test_org_enrichment.py tests/test_api_key_rotation.py tests/test_admin_bootstrap_proxy.py`
+- `pre-commit run ruff-format --all-files`
+
+The rotation tests load `api_key_rotation/handler.py` under a unique
+module name so they do not bind another Lambda's cached `handler`.
+
+## Rollback
+
+Revert the commit. No migration.
+
+## Open questions
+
+None.

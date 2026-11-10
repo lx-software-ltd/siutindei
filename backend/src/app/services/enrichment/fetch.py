@@ -11,7 +11,7 @@ import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import urljoin, urlparse, urlunparse
+from urllib.parse import SplitResult, quote, urljoin, urlparse, urlsplit, urlunsplit
 from urllib.robotparser import RobotFileParser
 
 from app.services.enrichment.constants import (
@@ -41,6 +41,10 @@ _ALLOWED_TYPES = (
     "text/plain",
     "application/ld+json",
 )
+# urllib sends the path and query as ASCII. Encode only bytes that are
+# not already legal, so "%26", "%2F", and ";jsessionid" stay as written.
+_REQUEST_SAFE = "/%:@!$&'()*+,;=~"
+_QUERY_SAFE = f"{_REQUEST_SAFE}?"
 
 
 @dataclass
@@ -121,13 +125,18 @@ def fetch_public(
 
     The TCP connection uses the IP checked by public_address, so a DNS
     change between the check and the connect cannot reach a private address.
+    Spaces and non-ASCII characters are percent-encoded after the
+    credential check. urllib rejects them and that used to fail the
+    whole proxy invocation. Legal escapes stay as written.
     """
-    parsed = urlparse(url)
+    parsed = urlsplit(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise CrawlError("refusing non-http URL")
     if parsed.username or parsed.password:
         raise CrawlError("refusing URL with credentials")
-    ip = public_address(parsed.hostname)
+    url = _encoded_request_url(url)
+    parsed = urlsplit(url)
+    ip = public_address(parsed.hostname or "")
     pinned, host_header, server_name = _pinned_target(url, ip)
     request = urllib.request.Request(
         pinned,
@@ -160,6 +169,8 @@ def fetch_public(
         location = str(exc.headers.get("Location") or "") if exc.headers else ""
     except TimeoutError as exc:
         raise TimeoutError("crawl budget exceeded") from exc
+    except (http.client.InvalidURL, UnicodeEncodeError) as exc:
+        raise CrawlError("URL could not be fetched") from exc
     return FetchResult(
         status=status,
         url=final,
@@ -170,17 +181,43 @@ def fetch_public(
     )
 
 
-def _pinned_target(url: str, ip: str) -> tuple[str, str, str]:
-    parsed = urlparse(url)
+def _encoded_request_url(url: str) -> str:
+    """Return an ASCII request URL. The caller checks credentials first."""
+    parsed = urlsplit(url)
+    host, port = _host_and_port(parsed)
+    path = quote(parsed.path or "/", safe=_REQUEST_SAFE)
+    query = quote(parsed.query, safe=_QUERY_SAFE)
+    return urlunsplit((parsed.scheme, _authority(host, port), path or "/", query, ""))
+
+
+def _host_and_port(parsed: SplitResult) -> tuple[str, int | None]:
     host = parsed.hostname or ""
-    port = parsed.port
-    ip_host = f"[{ip}]" if ":" in ip else ip
-    netloc = f"{ip_host}:{port}" if port else ip_host
-    pinned = urlunparse(
-        (parsed.scheme, netloc, parsed.path or "/", "", parsed.query, "")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise CrawlError("URL could not be fetched") from exc
+    try:
+        host = host.encode("idna").decode("ascii")
+    except UnicodeError as exc:
+        raise CrawlError("refusing non-http URL") from exc
+    return host, port
+
+
+def _authority(host: str, port: int | None) -> str:
+    """Bracket an IPv6 host so the port is not read as part of the address."""
+    name = f"[{host}]" if ":" in host else host
+    if port is None:
+        return name
+    return f"{name}:{port}"
+
+
+def _pinned_target(url: str, ip: str) -> tuple[str, str, str]:
+    parsed = urlsplit(url)
+    host, port = _host_and_port(parsed)
+    pinned = urlunsplit(
+        (parsed.scheme, _authority(ip, port), parsed.path or "/", parsed.query, "")
     )
-    host_header = host if port is None else f"{host}:{port}"
-    return pinned, host_header, host
+    return pinned, _authority(host, port), host
 
 
 def _remaining(deadline: float | None, timeout: float) -> float:
@@ -301,7 +338,14 @@ def crawl_site(
         limit = MAX_PDF_BYTES if _is_pdf_path(url) else max_page_bytes
         try:
             result = _follow(url, fetch_one=bounded, max_bytes=limit)
-        except (CrawlError, urllib.error.URLError, TimeoutError, OSError):
+        except (
+            CrawlError,
+            urllib.error.URLError,
+            TimeoutError,
+            OSError,
+            http.client.InvalidURL,
+            UnicodeEncodeError,
+        ):
             continue
         last_fetch = now()
         final_url = result.url or url

@@ -19,7 +19,13 @@ from app.services.enrichment.extract import (
     proposals_from_pages,
     validate_model_sheet,
 )
-from app.services.enrichment.fetch import FetchResult, _follow, crawl_site, fetch_public
+from app.services.enrichment.fetch import (
+    FetchResult,
+    _encoded_request_url,
+    _follow,
+    crawl_site,
+    fetch_public,
+)
 from app.services.enrichment.guard import (
     CrawlError,
     host_is_blocked,
@@ -813,6 +819,158 @@ def test_fetch_connects_to_the_checked_address(monkeypatch) -> None:
     assert captured["host"] == "ok.test"
 
 
+def test_fetch_encodes_spaces_and_non_ascii_before_the_request(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.enrichment.fetch.public_address",
+        lambda host, resolve=None: "1.1.1.1",
+    )
+    captured: list[str] = []
+
+    class _Response:
+        def __init__(self) -> None:
+            self.status = 200
+            self.headers = {"Content-Type": "application/pdf"}
+            self._sent = False
+
+        def read(self, amount: int) -> bytes:
+            del amount
+            if self._sent:
+                return b""
+            self._sent = True
+            return b"%PDF-1.4"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args) -> bool:
+            del args
+            return False
+
+    class _Opener:
+        def open(self, request, timeout=None):
+            del timeout
+            captured.append(request.full_url)
+            return _Response()
+
+    monkeypatch.setattr(
+        "urllib.request.build_opener",
+        lambda *handlers: _Opener(),
+    )
+    fetch_public(
+        "https://ok.test/lohas/document/School Calendar 2026-2027.pdf",
+        100,
+    )
+    fetch_public("https://ok.test/files/校曆.pdf", 100)
+    fetch_public("https://ok.test/p;jsessionid=1?q=a%26b&x=1", 100)
+    assert "School%20Calendar%202026-2027.pdf" in captured[0]
+    assert " " not in captured[0]
+    assert "校" not in captured[1]
+    assert "%" in captured[1]
+    assert "/p;jsessionid=1?q=a%26b&x=1" in captured[2]
+
+
+def test_encoded_request_url_keeps_legal_characters() -> None:
+    from urllib.parse import urlsplit
+
+    cases = {
+        "https://ok.test/search?q=a%26b&x=1": "https://ok.test/search?q=a%26b&x=1",
+        "https://ok.test/100%25off": "https://ok.test/100%25off",
+        "https://ok.test/a%2Fb": "https://ok.test/a%2Fb",
+        "https://ok.test/p;jsessionid=1": "https://ok.test/p;jsessionid=1",
+        "https://[2001:db8::1]/x": "https://[2001:db8::1]/x",
+        "https://[2001:db8::1]:8443/x": "https://[2001:db8::1]:8443/x",
+        "https://ok.test/a b": "https://ok.test/a%20b",
+        "https://bücher.example/a": "https://xn--bcher-kva.example/a",
+    }
+    for raw, expected in cases.items():
+        encoded = _encoded_request_url(raw)
+        assert encoded == expected
+        assert urlsplit(encoded).port == urlsplit(raw).port
+    with pytest.raises(CrawlError, match="could not be fetched"):
+        _encoded_request_url("https://ok.test:nope/x")
+
+
+def test_fetch_refuses_credentials_before_encoding(monkeypatch) -> None:
+    def fail_open(*_args, **_kwargs):
+        raise AssertionError("credentials were encoded away before the check")
+
+    monkeypatch.setattr("urllib.request.build_opener", fail_open)
+    with pytest.raises(CrawlError, match="credentials"):
+        fetch_public("https://user:secret@ok.test/x", 100)
+
+
+def test_fetch_brackets_an_ipv6_host(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.enrichment.fetch.public_address",
+        lambda host, resolve=None: "2001:db8::1",
+    )
+    captured: dict[str, str] = {}
+
+    class _Response:
+        def __init__(self) -> None:
+            self.status = 200
+            self.headers = {"Content-Type": "text/plain"}
+            self._sent = False
+
+        def read(self, amount: int) -> bytes:
+            del amount
+            if self._sent:
+                return b""
+            self._sent = True
+            return b"hello"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args) -> bool:
+            del args
+            return False
+
+    class _Opener:
+        def open(self, request, timeout=None):
+            del timeout
+            captured["url"] = request.full_url
+            captured["host"] = dict(request.header_items()).get("Host")
+            return _Response()
+
+    monkeypatch.setattr("urllib.request.build_opener", lambda *handlers: _Opener())
+    result = fetch_public("https://[2001:db8::1]:8443/a%2Fb", 100)
+    assert result.url == "https://[2001:db8::1]:8443/a%2Fb"
+    assert captured["url"].startswith("https://[2001:db8::1]:8443/")
+    assert "/a%2Fb" in captured["url"]
+    assert captured["host"] == "[2001:db8::1]:8443"
+
+
+def test_crawl_skips_a_link_urllib_cannot_send(monkeypatch) -> None:
+    import http.client
+
+    monkeypatch.setattr(
+        "app.services.enrichment.guard.host_is_blocked",
+        lambda host, resolve=None: False,
+    )
+
+    def fetch_one(url: str, max_bytes: int) -> FetchResult:
+        del max_bytes
+        if " " in url:
+            raise http.client.InvalidURL("space")
+        body = (
+            "<html><body>"
+            + ("Class " * 40)
+            + "<a href='https://ok.test/School Calendar.pdf'>calendar</a>"
+            + "</body></html>"
+        ).encode()
+        return FetchResult(200, url, "text/html", body, "")
+
+    crawled = crawl_site(
+        "https://ok.test/",
+        fetch_one=fetch_one,
+        sleep=lambda _seconds: None,
+        now=lambda: 0,
+    )
+    assert crawled["status"] == "ok"
+    assert crawled["pages_fetched"] == 1
+
+
 def test_https_uses_the_real_handler_for_the_pinned_address(monkeypatch) -> None:
     import io
 
@@ -1346,6 +1504,130 @@ def test_apply_stores_zh_hk_schedule_as_cantonese(
     assert results[0]["status"] == "applied"
     stored = db_session.query(ActivitySchedule).one()
     assert stored.languages == ["yue"]
+
+
+def test_apply_rejects_an_existing_schedule(
+    db_session, sample_activity, sample_location
+) -> None:
+    from app.db.models import ActivityScheduleEntry, ScheduleType
+
+    existing = ActivitySchedule(
+        activity_id=sample_activity.id,
+        location_id=sample_location.id,
+        schedule_type=ScheduleType.WEEKLY,
+        languages=["zh-HK"],
+    )
+    db_session.add(existing)
+    db_session.flush()
+    org = sample_activity.organization
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    schedule = _proposal(
+        run,
+        section="Schedules",
+        kind="create_schedule",
+        label="Schedule",
+        proposed_value={
+            "activity_name": sample_activity.name,
+            "location_address": sample_location.address,
+            "languages": ["zh-HK"],
+            "entries": [{"day_of_week": 1, "start_time": "15:00", "end_time": "15:45"}],
+        },
+        proposed_hash="hash-existing-schedule",
+    )
+    db_session.add(schedule)
+    db_session.flush()
+    results, _quality_run = apply_proposals(
+        db_session,
+        org.id,
+        [str(schedule.id)],
+        {},
+        user_id="admin",
+        request_id="req-existing-schedule",
+    )
+    assert results[0]["status"] == "error"
+    assert results[0]["error"] == "a schedule for these languages already exists"
+    assert schedule.status == "pending"
+    assert schedule.entity_id is None
+    assert db_session.query(ActivitySchedule).count() == 1
+    assert db_session.query(ActivityScheduleEntry).count() == 0
+
+
+def test_refused_image_is_a_validation_error(db_session) -> None:
+    from app.services.aws_proxy import AwsProxyError
+
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    media = _proposal(
+        run,
+        section="Media",
+        kind="add_media",
+        label="Photo",
+        proposed_value={"source_url": "https://ok.test/photo.jpg"},
+        proposed_hash="hash-photo",
+    )
+    db_session.add(media)
+    db_session.flush()
+
+    def copy_image(url: str, org_id: str) -> str:
+        del url, org_id
+        raise AwsProxyError("CrawlRefused", "image content type is not allowed")
+
+    results, _quality_run = apply_proposals(
+        db_session,
+        org.id,
+        [str(media.id)],
+        {},
+        user_id="admin",
+        request_id="req-image",
+        copy_image=copy_image,
+    )
+    assert results[0]["status"] == "error"
+    assert results[0]["error"] == "image content type is not allowed"
+    assert media.status == "pending"
+    assert org.media_urls in (None, [])
+
+
+def test_proxy_failure_is_not_shown_to_the_reviewer(db_session) -> None:
+    from app.services.aws_proxy import AwsProxyError
+
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    media = _proposal(
+        run,
+        section="Media",
+        kind="add_media",
+        label="Photo",
+        proposed_value={"source_url": "https://ok.test/photo.jpg"},
+        proposed_hash="hash-photo-crash",
+    )
+    db_session.add(media)
+    db_session.flush()
+    leaked = "Traceback (most recent call last): File handler.py"
+
+    def copy_image(url: str, org_id: str) -> str:
+        del url, org_id
+        raise AwsProxyError("LambdaInvocationError", leaked)
+
+    results, _quality_run = apply_proposals(
+        db_session,
+        org.id,
+        [str(media.id)],
+        {},
+        user_id="admin",
+        request_id="req-image-crash",
+        copy_image=copy_image,
+    )
+    assert results[0]["status"] == "error"
+    assert results[0]["error"] == "This change could not be saved."
+    assert leaked not in results[0]["error"]
+    assert media.status == "pending"
+    assert org.media_urls in (None, [])
 
 
 def _quality_settings(session, **flags: str):
