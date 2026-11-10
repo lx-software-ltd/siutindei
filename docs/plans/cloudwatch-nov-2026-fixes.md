@@ -49,8 +49,11 @@ error instead of an unhandled exception.
 
 ## Done when
 
-- `pytest tests/test_org_enrichment.py tests/test_api_key_rotation.py`
+- `pytest tests/test_org_enrichment.py tests/test_api_key_rotation.py tests/test_admin_bootstrap_proxy.py`
 - `pre-commit run ruff-format --all-files`
+
+The rotation tests load `api_key_rotation/handler.py` under a unique
+module name so they do not bind another Lambda's cached `handler`.
 
 ## Rollback
 

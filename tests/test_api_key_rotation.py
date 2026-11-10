@@ -2,16 +2,30 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
-import sys
 from pathlib import Path
 
-ROTATION_DIR = (
-    Path(__file__).resolve().parents[1] / "backend" / "lambda" / "api_key_rotation"
+HANDLER_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "backend"
+    / "lambda"
+    / "api_key_rotation"
+    / "handler.py"
 )
-sys.path.insert(0, str(ROTATION_DIR))
 
-import handler as rotation_handler
+
+def _load_handler():
+    spec = importlib.util.spec_from_file_location(
+        "api_key_rotation_handler", HANDLER_PATH
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+rotation_handler = _load_handler()
 
 
 class _Secrets:
