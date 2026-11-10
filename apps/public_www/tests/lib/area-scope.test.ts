@@ -10,6 +10,7 @@ import {
   defaultOpenLocation,
   impliedOpenPlaceLabel,
   isAllAreasSelectable,
+  joinPlaceNames,
   namedOpenPlace,
   namedOpenPlaceInRegion,
   resolveSearchAreaScope,
@@ -151,35 +152,64 @@ describe('resolveSearchAreaScope', () => {
 
     process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'southern-stanley';
     clearSearchAreaScopeCacheForTests();
-    expect(namedOpenPlace('en')).toEqual({ kind: 'named', place: 'Stanley' });
-    expect(namedOpenPlace('zh-HK')).toEqual({ kind: 'named', place: '赤柱' });
+    expect(namedOpenPlace('en')).toEqual({ kind: 'named', names: ['Stanley'] });
+    expect(namedOpenPlace('zh-HK')).toEqual({ kind: 'named', names: ['赤柱'] });
 
     process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE =
       'southern-stanley,central-and-western-kennedy-town';
     clearSearchAreaScopeCacheForTests();
     expect(namedOpenPlace('en')).toEqual({
       kind: 'named',
-      place: 'Kennedy Town and Stanley',
+      names: ['Kennedy Town', 'Stanley'],
     });
 
     process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'kowloon,islands';
     clearSearchAreaScopeCacheForTests();
     expect(namedOpenPlace('en')).toEqual({
       kind: 'named',
-      place: 'Kowloon and Islands',
+      names: ['Kowloon', 'Islands'],
     });
     expect(namedOpenPlaceInRegion('kowloon', 'en')).toEqual({
       kind: 'unrestricted',
     });
 
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'kowloon,southern-stanley';
+    clearSearchAreaScopeCacheForTests();
+    expect(namedOpenPlace('en')).toEqual({
+      kind: 'named',
+      names: ['Stanley', 'Kowloon'],
+    });
+
     process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'yau-tsim-mong';
     clearSearchAreaScopeCacheForTests();
     expect(namedOpenPlace('en')).toEqual({ kind: 'generic' });
-    expect(namedOpenPlaceInRegion('kowloon', 'en')).toEqual({ kind: 'generic' });
+    expect(namedOpenPlaceInRegion('kowloon', 'en')).toEqual({
+      kind: 'unrestricted',
+    });
 
     process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'atlantis';
     clearSearchAreaScopeCacheForTests();
     expect(namedOpenPlace('en')).toEqual({ kind: 'none' });
+  });
+
+  it('joins place names from copy instead of the runtime list rules', () => {
+    const copy = {
+      comma: ', ',
+      pairTemplate: '{first} and {second}',
+      finalTemplate: '{list} and {last}',
+    };
+    expect(joinPlaceNames(['Stanley'], copy)).toBe('Stanley');
+    expect(joinPlaceNames(['Kennedy Town', 'Stanley'], copy)).toBe(
+      'Kennedy Town and Stanley',
+    );
+    expect(joinPlaceNames(['A', 'B', 'C'], copy)).toBe('A, B and C');
+    expect(
+      joinPlaceNames(['甲', '乙', '丙'], {
+        comma: '、',
+        pairTemplate: '{first}及{second}',
+        finalTemplate: '{list}及{last}',
+      }),
+    ).toBe('甲、乙及丙');
   });
 
   it('drops the starting choice and keeps a chosen neighbourhood', () => {

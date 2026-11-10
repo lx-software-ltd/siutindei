@@ -162,11 +162,14 @@ Source: [`apps/public_www`](../../apps/public_www).
   saved search. The bars name the open place, and the map link uses it.
   A link to a closed region is rewritten to that starting choice. When
   the scope names no neighbourhood, the wizard can still continue.
-  The home popular heading names up to three open neighbourhoods, or the
-  region names when those regions are fully open. A longer list says
-  the open areas. A region carousel appears only when the results cover
-  more than one region. When the scope matches nothing, that section
-  says no areas are open yet.
+  The home popular heading names up to three places. A fully open
+  region contributes its name; a partly open region contributes its
+  neighbourhood names. A longer list says the open areas. A search that
+  already names a place uses that place instead. A region carousel
+  appears only when the results cover more than one region, and a
+  partly open region with more than three neighbourhoods keeps the
+  region name. When the scope matches nothing, that section says no
+  areas are open yet and does not search.
   Unset shows every area. The search API enforces the same list; the website
   copy only changes the controls and, on staging fixture mode, the
   in-browser filter. A direct activity link still loads. Changing the

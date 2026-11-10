@@ -6,6 +6,8 @@ import { SearchProvider } from '@/components/shared/search/search-context';
 import { getContent } from '@/content';
 import { withChromeCopy } from '../helpers/chrome-copy';
 import { clearSearchAreaScopeCacheForTests } from '@/lib/home-wizard/area-scope';
+import { DEFAULT_SEARCH_FILTERS } from '@/lib/activities/search-params';
+import type { SearchFiltersState } from '@/lib/activities/search-params';
 import type { ActivityListing } from '@/lib/activities/types';
 
 const KOWLOON_AREA_ID = 'a1111111-1111-1111-1111-111111111102';
@@ -20,6 +22,7 @@ import { fetchActivitySearch } from '@/lib/activities/search-client';
 function buildListing(
   id = 'act-1',
   areaId = KOWLOON_AREA_ID,
+  regionAreaId: string | null = areaId,
 ): ActivityListing {
   return {
     activity: {
@@ -43,7 +46,7 @@ function buildListing(
     location: {
       id: `loc-${id}`,
       areaId,
-      regionAreaId: areaId,
+      regionAreaId,
       address: null,
       lat: null,
       lng: null,
@@ -63,11 +66,14 @@ function buildListing(
   };
 }
 
-function renderDiscovery(locale: 'en' | 'zh-HK' = 'en') {
+function renderDiscovery(
+  locale: 'en' | 'zh-HK' = 'en',
+  filters?: SearchFiltersState,
+) {
   const content = getContent(locale);
   render(
     withChromeCopy(
-      <SearchProvider>
+      <SearchProvider initialFilters={filters}>
         <DiscoveryHomeSection locale={locale} copy={content.discovery} />
       </SearchProvider>,
     ),
@@ -205,7 +211,7 @@ describe('DiscoveryHomeSection', () => {
 
     expect(
       await screen.findByRole('link', {
-        name: content.discovery.popularOpenAreasTitle,
+        name: 'Popular activities in Stanley and Kowloon',
       }),
     ).toBeInTheDocument();
     expect(
@@ -237,6 +243,83 @@ describe('DiscoveryHomeSection', () => {
     ).toBeInTheDocument();
   });
 
+  it('keeps the region name when a row has more than three neighbourhoods', async () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'yau-tsim-mong,islands';
+    clearSearchAreaScopeCacheForTests();
+    vi.stubGlobal('IntersectionObserver', undefined);
+    vi.mocked(fetchActivitySearch).mockResolvedValue({
+      items: [
+        buildListing('act-1', KOWLOON_AREA_ID),
+        buildListing('act-2', 'a1111111-1111-1111-1111-111111111104'),
+      ],
+      nextCursor: null,
+    });
+    const content = renderDiscovery();
+
+    expect(
+      await screen.findByRole('link', {
+        name: content.discovery.popularOpenAreasTitle,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('link', {
+        name: `${content.discovery.nearRegionTitle} Kowloon`,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', {
+        name: `${content.discovery.nearRegionTitle} our open areas`,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('uses the searched place in the heading', async () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'kowloon,islands';
+    clearSearchAreaScopeCacheForTests();
+    vi.stubGlobal('IntersectionObserver', undefined);
+    vi.mocked(fetchActivitySearch).mockResolvedValue({
+      items: [buildListing()],
+      nextCursor: null,
+    });
+    renderDiscovery('en', { ...DEFAULT_SEARCH_FILTERS, regionId: 'kowloon' });
+
+    expect(
+      await screen.findByRole('link', { name: 'Popular activities in Kowloon' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', {
+        name: 'Popular activities in Kowloon and Islands',
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('groups neighbourhood locations that omit the region id', async () => {
+    vi.stubGlobal('IntersectionObserver', undefined);
+    vi.mocked(fetchActivitySearch).mockResolvedValue({
+      items: [
+        buildListing('act-1', '4800fff7-4d9b-54df-b2a6-144788bd4a33', null),
+        buildListing('act-2', '8e20eb5e-f30a-5b98-b60c-6c9b4b4a81e3', null),
+        buildListing('act-3', KOWLOON_AREA_ID),
+      ],
+      nextCursor: null,
+    });
+    const content = renderDiscovery();
+
+    expect(
+      await screen.findByRole('link', {
+        name: `${content.discovery.nearRegionTitle} Hong Kong Island`,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', {
+        name: `${content.discovery.nearRegionTitle} Kowloon`,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: content.discovery.nearRegionTitle }),
+    ).not.toBeInTheDocument();
+  });
+
   it('says no areas are open when the scope matches nothing', async () => {
     process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'atlantis';
     clearSearchAreaScopeCacheForTests();
@@ -244,11 +327,13 @@ describe('DiscoveryHomeSection', () => {
       items: [],
       nextCursor: null,
     });
+    vi.mocked(fetchActivitySearch).mockClear();
     const content = renderDiscovery();
 
     expect(await screen.findByRole('status')).toHaveTextContent(
       content.discovery.noAreasOpenLabel,
     );
+    expect(fetchActivitySearch).not.toHaveBeenCalled();
     expect(
       screen.queryByRole('link', { name: content.discovery.popularTitle }),
     ).not.toBeInTheDocument();

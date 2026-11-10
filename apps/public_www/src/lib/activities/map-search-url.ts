@@ -17,9 +17,22 @@ export function regionIdForAreaId(areaId: string): string | null {
 }
 
 export function regionIdForListing(listing: ActivityListing): string | null {
-  const areaId =
-    listing.location.regionAreaId ?? listing.location.areaId;
-  return regionIdForAreaId(areaId);
+  const regionAreaId = listing.location.regionAreaId;
+  if (regionAreaId) {
+    const regionId = regionIdForAreaId(regionAreaId);
+    if (regionId) {
+      return regionId;
+    }
+  }
+  const direct = regionIdForAreaId(listing.location.areaId);
+  if (direct) {
+    return direct;
+  }
+  return (
+    homeWizardChoices.neighbourhoods.find(
+      (entry) => entry.areaId === listing.location.areaId,
+    )?.regionId ?? null
+  );
 }
 
 export function buildSearchPageHref(
