@@ -108,8 +108,9 @@ On the **production** environment:
   `python3 -c "import secrets; print(secrets.token_urlsafe(48))"` and store
   each value once. The promote workflow reads the attestation token from
   `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`; do not create a second copy.
-  Also set variable `NEXT_PUBLIC_SEARCH_API_BASE_URL` to `https://siutindei.com`
-  and secret `NEXT_PUBLIC_SEARCH_API_KEY` to the live mobile search API key.
+  Set secret `NEXT_PUBLIC_SEARCH_API_KEY` to the live mobile search API key.
+  Search calls the website origin from `NEXT_PUBLIC_SITE_ORIGIN`. Delete
+  the `NEXT_PUBLIC_SEARCH_API_BASE_URL` repository variable if it is still set.
 - The website attestation parameters default to empty. A backend deploy
   before those two secrets exist succeeds and leaves website search closed.
   Set the secrets, deploy the API stack and the public website stack, then
@@ -139,12 +140,11 @@ On the **staging** environment (public www):
 
 - `STAGING_SEARCH_DATA_ENABLED=true` only while staging should serve the
   fixture. Removing the variable keeps the fixture on, because the workflow
-  defaults it to `true`. **To exercise the live API before launch, set it to
-  `false` and first add `NEXT_PUBLIC_SEARCH_API_BASE_URL`,
-  `NEXT_PUBLIC_SEARCH_API_KEY`, and `NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN` to
-  the staging workflow's assert and build steps**, or the build-env
-  contract fails. This also drops the staging-only
-  `/[locale]/activity/<uuid>/` pages.
+  defaults it to `true`. Set it to `false` to serve Aurora through
+  `https://www-staging.siutindei.com`. The staging deploy passes
+  `NEXT_PUBLIC_SEARCH_API_KEY` and `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`.
+  Those secrets must be repository secrets, or set on the staging
+  environment as well. The build-env contract fails when either is empty.
 
 ## 6. DNS / certificates
 

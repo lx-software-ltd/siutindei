@@ -91,7 +91,7 @@ export function getSearchConfig(): SearchConfig {
   return {
     stagingSearchDataEnabled,
     stagingSearchFixtureUrl,
-    apiBaseUrl: trimEnv(process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL),
+    apiBaseUrl: siteOrigin,
     apiKey: trimEnv(process.env.NEXT_PUBLIC_SEARCH_API_KEY),
     attestationToken: trimEnv(process.env.NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN),
   };

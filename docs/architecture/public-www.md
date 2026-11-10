@@ -142,7 +142,7 @@ Source: [`apps/public_www`](../../apps/public_www).
   entries for
   `maps.googleapis.com` / `maps.gstatic.com`. The search bar **area** label links
   to the map view for the selected region. Search uses browser-side `fetch` to
-  `NEXT_PUBLIC_SEARCH_API_BASE_URL` unless
+  `NEXT_PUBLIC_SITE_ORIGIN` (`/v1/activities/search` on that host) unless
   `NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED=true`, in which case listings are
   loaded at runtime from
   `{NEXT_PUBLIC_SITE_ORIGIN}/fixtures/activity_search_staging.json` (static
@@ -153,8 +153,8 @@ Source: [`apps/public_www`](../../apps/public_www).
   `NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED=false` and uses the live search API
   / Aurora. Optional override on staging:
   `NEXT_PUBLIC_STAGING_SEARCH_FIXTURE_URL`.
-  CSP `connect-src` includes the API origin only when that URL is set at build
-  time (`scripts/inject-csp-meta.mjs`). `src/lib/site-config.ts` reads each
+  Search and listing-event calls stay on that same origin, so CSP
+  `connect-src 'self'` covers them. `src/lib/site-config.ts` reads each
   `NEXT_PUBLIC_*` via static `process.env.NEXT_PUBLIC_FOO` access so Next.js
   inlines values in the client bundle (dynamic `process.env[name]` is empty in
   the browser and breaks search).
@@ -386,16 +386,14 @@ telemetry, not a GA4 pull.
 | Auth | Same public search API key + static device-attestation token. The token is `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`. API Gateway accepts it only together with the CloudFront `X-Origin-Verify` secret |
 | Consent | Same `siutindei-analytics-consent` gate as the GTM data layer |
 
-`NEXT_PUBLIC_SEARCH_API_BASE_URL` must be the website origin so ingest is
+Search and listing-event calls use `NEXT_PUBLIC_SITE_ORIGIN`, so ingest is
 same-origin (`connect-src 'self'`). Staging fixture mode does not post.
-
-To route traffic through the edge cache, the website build must point
-`NEXT_PUBLIC_SEARCH_API_BASE_URL` at the website's own origin (e.g.
-`https://siutindei.com`) rather than directly at
-`api.siutindei.com`; `src/lib/activities/search-client.ts`
-resolves `new URL('/v1/activities/search', base)`, which then hits this
-behavior same-origin. With same-origin requests the CSP `connect-src 'self'`
-already covers the call (no API host needs to be added to CSP).
+`src/lib/activities/search-client.ts` resolves
+`new URL('/v1/activities/search', siteOrigin)`, which hits the CloudFront
+behavior on that host. Production's origin is `https://siutindei.com` and
+staging's is `https://www-staging.siutindei.com`. Calling
+`api.siutindei.com` directly would miss the `X-Origin-Verify` header
+CloudFront adds.
 
 **Security/behavioral note:** on a cache **hit** CloudFront serves the cached
 response without re-invoking the origin, so the per-request `x-api-key` /

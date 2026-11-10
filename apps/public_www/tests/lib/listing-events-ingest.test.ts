@@ -5,7 +5,7 @@ import { ingestListingEvents } from '@/lib/analytics/listing-events-ingest';
 describe('ingestListingEvents', () => {
   const envKeys = [
     'NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED',
-    'NEXT_PUBLIC_SEARCH_API_BASE_URL',
+    'NEXT_PUBLIC_SITE_ORIGIN',
     'NEXT_PUBLIC_SEARCH_API_KEY',
     'NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN',
   ] as const;
@@ -28,7 +28,7 @@ describe('ingestListingEvents', () => {
   }
 
   it('no-ops when the search API is not configured', async () => {
-    delete process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL;
+    delete process.env.NEXT_PUBLIC_SITE_ORIGIN;
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
@@ -39,7 +39,7 @@ describe('ingestListingEvents', () => {
 
   it('no-ops in staging fixture mode', async () => {
     process.env.NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED = 'true';
-    process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL = 'https://siutindei.com';
+    process.env.NEXT_PUBLIC_SITE_ORIGIN = 'https://siutindei.com';
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
@@ -50,7 +50,7 @@ describe('ingestListingEvents', () => {
 
   it('posts first-party events to /v1/listing-events', async () => {
     process.env.NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED = 'false';
-    process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL = 'https://siutindei.com';
+    process.env.NEXT_PUBLIC_SITE_ORIGIN = 'https://siutindei.com';
     process.env.NEXT_PUBLIC_SEARCH_API_KEY = 'key';
     process.env.NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN = 'token';
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });

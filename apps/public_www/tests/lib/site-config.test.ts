@@ -78,7 +78,6 @@ describe('getSearchConfig', () => {
     'NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED',
     'NEXT_PUBLIC_SITE_ORIGIN',
     'NEXT_PUBLIC_STAGING_SEARCH_FIXTURE_URL',
-    'NEXT_PUBLIC_SEARCH_API_BASE_URL',
     'NEXT_PUBLIC_SEARCH_API_KEY',
     'NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN',
   ] as const;
@@ -102,13 +101,12 @@ describe('getSearchConfig', () => {
     process.env.NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED = 'true';
     process.env.NEXT_PUBLIC_SITE_ORIGIN = 'http://localhost:3000/';
     delete process.env.NEXT_PUBLIC_STAGING_SEARCH_FIXTURE_URL;
-    delete process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL;
 
     expect(getSearchConfig()).toEqual({
       stagingSearchDataEnabled: true,
       stagingSearchFixtureUrl:
         'http://localhost:3000/fixtures/activity_search_staging.json',
-      apiBaseUrl: '',
+      apiBaseUrl: 'http://localhost:3000',
       apiKey: '',
       attestationToken: '',
     });
@@ -122,14 +120,13 @@ describe('getSearchConfig', () => {
     process.env.NEXT_PUBLIC_SITE_ORIGIN = 'https://example.com';
     process.env.NEXT_PUBLIC_STAGING_SEARCH_FIXTURE_URL =
       'https://cdn.example.com/fixture.json';
-    process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL = 'https://api.example.com';
     process.env.NEXT_PUBLIC_SEARCH_API_KEY = 'test-key';
     process.env.NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN = 'test-token';
 
     expect(getSearchConfig()).toEqual({
       stagingSearchDataEnabled: false,
       stagingSearchFixtureUrl: 'https://cdn.example.com/fixture.json',
-      apiBaseUrl: 'https://api.example.com',
+      apiBaseUrl: 'https://example.com',
       apiKey: 'test-key',
       attestationToken: 'test-token',
     });

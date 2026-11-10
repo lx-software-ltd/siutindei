@@ -43,17 +43,6 @@ function buildCspDirectives(inlineScriptHashes) {
   const scriptSources = ["'self'", ...inlineScriptHashes];
   const connectSources = ["'self'"];
 
-  const searchApiOrigin = process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL?.trim();
-  if (searchApiOrigin) {
-    try {
-      connectSources.push(new URL(searchApiOrigin).origin);
-    } catch {
-      console.warn(
-        'csp:inject — NEXT_PUBLIC_SEARCH_API_BASE_URL is not a valid URL.',
-      );
-    }
-  }
-
   if (hasGtm) {
     scriptSources.push(...GTM_SCRIPT_ORIGINS);
     connectSources.push(...GTM_CONNECT_ORIGINS);

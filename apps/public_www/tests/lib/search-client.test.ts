@@ -7,7 +7,7 @@ import {
 
 const envKeys = [
   'NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED',
-  'NEXT_PUBLIC_SEARCH_API_BASE_URL',
+  'NEXT_PUBLIC_SITE_ORIGIN',
   'NEXT_PUBLIC_SEARCH_API_KEY',
   'NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN',
 ] as const;
@@ -72,7 +72,7 @@ describe('fetchActivitySearch live API integration', () => {
 
   it('calls GET /v1/activities/search with auth headers when configured', async () => {
     process.env.NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED = 'false';
-    process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL = 'https://siutindei.com';
+    process.env.NEXT_PUBLIC_SITE_ORIGIN = 'https://siutindei.com';
     process.env.NEXT_PUBLIC_SEARCH_API_KEY = 'key';
     process.env.NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN = 'token';
 
@@ -98,7 +98,7 @@ describe('fetchActivitySearch live API integration', () => {
 
   it('throws when the live search API is not configured', async () => {
     process.env.NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED = 'false';
-    delete process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL;
+    delete process.env.NEXT_PUBLIC_SITE_ORIGIN;
 
     await expect(fetchActivitySearch({ limit: 10 })).rejects.toThrow(
       'Search API is not configured.',
