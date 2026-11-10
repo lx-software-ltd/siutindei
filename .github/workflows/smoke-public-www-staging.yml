@@ -51,6 +51,9 @@ jobs:
           NEXT_TELEMETRY_DISABLED: '1'
           SMOKE_BASE_URL: ${{ steps.resolve_staging_site_origin.outputs.staging_site_origin }}
           STAGING_BYPASS_SECRET: ${{ secrets.STAGING_BYPASS_SECRET }}
+          NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED: ${{ vars.STAGING_SEARCH_DATA_ENABLED || 'true' }}
+          NEXT_PUBLIC_SEARCH_API_KEY: ${{ vars.STAGING_SEARCH_DATA_ENABLED == 'false' && secrets.NEXT_PUBLIC_SEARCH_API_KEY || '' }}
+          NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN: ${{ vars.STAGING_SEARCH_DATA_ENABLED == 'false' && secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN || '' }}
           REQUESTED_MAX_PAGES: ${{ github.event.inputs.max_pages || '' }}
         run: |
           set -euo pipefail

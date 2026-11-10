@@ -50,9 +50,9 @@ DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/backend_test 
 
 ### P0-1. Production build ships with no Search API configuration → live search is broken
 
-**Status: RESOLVED.** `promote-public-www.yml` passes
-`NEXT_PUBLIC_SEARCH_API_BASE_URL` (production Environment var),
-`NEXT_PUBLIC_SEARCH_API_KEY`, and `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`
+**Status: RESOLVED.** Search calls `NEXT_PUBLIC_SITE_ORIGIN`.
+`promote-public-www.yml` passes
+`NEXT_PUBLIC_SEARCH_API_KEY` and `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`
 (as `NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN`) to both the env-contract check
 and the build. `assert-build-env-contract.mjs` hard-fails when they are
 missing with `NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED=false`. That token is
@@ -359,9 +359,9 @@ silently. The contract is supposed to be the guardrail.
    optional analytics IDs). Distinguish **required-everywhere** vs
    **optional/conditional**; only hard-fail on the truly required set, and warn
    on recommended ones — or split into two lists.
-2. Update `.env.example` to document **all** vars, including the currently
-   missing `NEXT_PUBLIC_SEARCH_API_BASE_URL`, `NEXT_PUBLIC_SEARCH_API_KEY`,
-   `NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN`, and `NEXT_PUBLIC_BUILD_YEAR`.
+2. Update `.env.example` to document **all** vars, including
+   `NEXT_PUBLIC_SEARCH_API_KEY`, `NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN`,
+   and `NEXT_PUBLIC_BUILD_YEAR`. Search uses `NEXT_PUBLIC_SITE_ORIGIN`.
 3. Keep the workflow `env:` blocks aligned (coordinate with P0-1).
 
 **How to verify.** Run `npm run assert:build-env-contract` with a deliberately
