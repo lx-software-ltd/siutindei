@@ -1,13 +1,17 @@
 /**
- * CI check that postinstall actually replaced aws-cdk-lib's bundled
- * minimatch with a GHSA-g3hv-75wg-m249-patched copy (11.0.1+).
+ * CI check that postinstall replaced aws-cdk-lib's bundled minimatch
+ * with a GHSA-g3hv-75wg-m249-patched copy (11.0.1+), and that
+ * package-lock.json records that version. Dependabot security updates
+ * read the lockfile entry.
  */
 
 const fs = require('fs');
 const path = require('path');
 const {
   MIN_PATCHED_VERSION,
+  lockfilePath,
   target,
+  bundledLockfileVersion,
   versionAtLeast,
 } = require('./patch-bundled-minimatch');
 
@@ -36,4 +40,16 @@ if (!versionAtLeast(version, MIN_PATCHED_VERSION)) {
 
 console.log(
   `[assert-patched-minimatch] aws-cdk-lib nested minimatch is ${version} (>= ${MIN_PATCHED_VERSION})`,
+);
+
+const lockVersion = bundledLockfileVersion(fs.readFileSync(lockfilePath, 'utf8'));
+if (!versionAtLeast(lockVersion, MIN_PATCHED_VERSION)) {
+  console.error(
+    `[assert-patched-minimatch] lockfile minimatch ${lockVersion} is below ${MIN_PATCHED_VERSION}`,
+  );
+  process.exit(1);
+}
+
+console.log(
+  `[assert-patched-minimatch] package-lock.json bundled minimatch is ${lockVersion} (>= ${MIN_PATCHED_VERSION})`,
 );

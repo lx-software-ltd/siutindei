@@ -310,13 +310,15 @@ Lambdas or NAT Gateway.
   (GHSA-rgw5-rvv9-x895). The infrastructure `postinstall` script still
   replaces the older bundled `minimatch` copy; it does not patch
   `brace-expansion`.
-- `minimatch` is ignored in `/backend/infrastructure` Dependabot
-  config. `aws-cdk-lib` 2.275.0 still bundles `minimatch` 10.2.6
-  (`inBundle`), and GHSA-g3hv-75wg-m249 is fixed only in 11.0.1+.
-  Security updates ignore the repo-wide semver-major rule, then fail
-  with `security_update_not_possible` because `aws-cdk-lib` requires
-  `^10.2.6`. Runtime is patched by `postinstall`. Revisit when
-  `aws-cdk-lib` bundles minimatch 11 (aws/aws-cdk#39595).
+- `minimatch` is not ignored in `/backend/infrastructure`.
+  `aws-cdk-lib` 2.275.0 still bundles `minimatch` 10.2.6 (`inBundle`),
+  and GHSA-g3hv-75wg-m249 is fixed only in 11.0.1+. A dependency-name
+  ignore expands to `>= 0`, applies to security updates, and fails the
+  job with `all_versions_ignored` (update 1692171577) before Dependabot
+  can see a patched install. `postinstall` copies 11.x over the bundled
+  tree and writes that version into the lockfile entry Dependabot and
+  `npm audit` read. Revisit when `aws-cdk-lib` bundles minimatch 11
+  (aws/aws-cdk#39595).
 - `extract-zip` is ignored in `/apps/public_www` Dependabot config
   (dev-only LHCI transitive). GHSA-jmr9-qjv8-65gv is mitigated via
   `npm overrides` to `@electron-internal/extract-zip` 1.0.5 until
