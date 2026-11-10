@@ -21,6 +21,7 @@
       "search": "搜尋活動",
       "anywhere": "全港",
       "allAreas": "所有地區",
+      "noAreas": "暫時未有開放地區",
       "anyAge": "任何年齡",
       "anyType": "所有類型",
       "openMapForAreaLabel": "在地圖上顯示"
@@ -35,7 +36,10 @@
       "searchLabel": "搜尋",
       "allHongKongLabel": "全港",
       "allAreasLabel": "所有地區",
-      "regionUnavailableLabel": "即將推出"
+      "regionUnavailableLabel": "即將推出",
+      "onlyRegionOpenTemplate": "而家只開放{region}",
+      "allOpenAreasInRegionTemplate": "{region}所有開放地區",
+      "noAreasOpenLabel": "暫時未有開放地區"
     },
     "languageSelector": {
       "menuAriaLabel": "選擇語言",
@@ -162,8 +166,12 @@
       "allHongKongLabel": "全港",
       "allAreasLabel": "所有地區",
       "regionUnavailableLabel": "即將推出",
+      "onlyRegionOpenTemplate": "而家只開放{region}",
+      "allOpenAreasInRegionTemplate": "{region}所有開放地區",
+      "noAreasOpenLabel": "暫時未有開放地區",
       "anywhereInRegionTemplate": "{region}任何地方",
       "backLabel": "返回",
+      "continueLabel": "繼續",
       "seeActivitiesLabel": "查看活動",
       "stepProgressTemplate": "第 {current} 步，共 {total} 步",
       "steps": {

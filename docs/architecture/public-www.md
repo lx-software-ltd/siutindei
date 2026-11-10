@@ -154,11 +154,18 @@ Source: [`apps/public_www`](../../apps/public_www).
   live search API / Aurora. `SEARCH_AREA_SCOPE` (GitHub variable, also
   inlined as `NEXT_PUBLIC_SEARCH_AREA_SCOPE`) limits which regions and
   neighbourhoods the search panel and home wizard offer. Regions with
-  nothing in the list are shown disabled. Neighbourhoods outside it are
-  omitted. Unset shows every area. The search API enforces the same list;
-  the website copy only changes the controls and, on staging fixture
-  mode, the in-browser filter. A direct activity link still loads.
-  Changing the variable needs a website build and a backend deploy.
+  nothing in the list stay focusable and are labelled coming soon.
+  Neighbourhoods outside it are omitted. When only one region is open,
+  "All areas" is greyed out, that region is the starting choice, and its
+  open neighbourhoods are shown even if there is only one. Submitting
+  that starting choice does not write it into the search URL or the
+  saved search. The bars name the open place, and the map link uses it.
+  A link to a closed region is rewritten to that starting choice. When
+  the scope names no neighbourhood, the wizard can still continue.
+  Unset shows every area. The search API enforces the same list; the website
+  copy only changes the controls and, on staging fixture mode, the
+  in-browser filter. A direct activity link still loads. Changing the
+  variable needs a website build and a backend deploy.
   Optional fixture override on staging:
   `NEXT_PUBLIC_STAGING_SEARCH_FIXTURE_URL`.
   Deployed search and listing-event calls stay on the site origin, so CSP

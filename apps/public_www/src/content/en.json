@@ -21,6 +21,7 @@
       "search": "Search activities",
       "anywhere": "All Hong Kong",
       "allAreas": "All areas",
+      "noAreas": "No areas are open yet",
       "anyAge": "Any age",
       "anyType": "All types",
       "openMapForAreaLabel": "Show activities on map for"
@@ -35,7 +36,10 @@
       "searchLabel": "Search",
       "allHongKongLabel": "All Hong Kong",
       "allAreasLabel": "All areas",
-      "regionUnavailableLabel": "Coming soon"
+      "regionUnavailableLabel": "Coming soon",
+      "onlyRegionOpenTemplate": "Only {region} is open",
+      "allOpenAreasInRegionTemplate": "All open areas in {region}",
+      "noAreasOpenLabel": "No areas are open yet"
     },
     "languageSelector": {
       "menuAriaLabel": "Select language",
@@ -162,8 +166,12 @@
       "allHongKongLabel": "All Hong Kong",
       "allAreasLabel": "All areas",
       "regionUnavailableLabel": "Coming soon",
+      "onlyRegionOpenTemplate": "Only {region} is open",
+      "allOpenAreasInRegionTemplate": "All open areas in {region}",
+      "noAreasOpenLabel": "No areas are open yet",
       "anywhereInRegionTemplate": "Anywhere in {region}",
       "backLabel": "Back",
+      "continueLabel": "Continue",
       "seeActivitiesLabel": "See activities",
       "stepProgressTemplate": "Step {current} of {total}",
       "steps": {

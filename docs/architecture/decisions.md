@@ -666,10 +666,18 @@ including exempt requests. A cursor page omits the field.
 
 The public website reads the same variable at build time. Regions with
 no selected neighbourhood stay focusable and are labelled coming soon.
-Neighbourhoods outside the list are omitted. A deep link to a closed
-area is rewritten to the open areas and the page says so until the
-query changes. Staging fixture search applies the same rule in the
-browser. The mobile app hides area chips that sit outside `area_scope`.
+Neighbourhoods outside the list are omitted. When the list sits in one
+region, "All areas" is greyed out, because it would mean that region,
+and the neighbourhood list is shown even for a single neighbourhood.
+Submitting that starting choice leaves the area out of the URL and the
+saved search, so a later wider scope still applies. A neighbourhood
+chosen among several is kept. The bars name the open place, and the
+map link uses it. When the scope names no neighbourhood, the wizard
+can still continue. A deep link to a closed area is rewritten
+to that one open region, or to every open area when more than one
+region is open, and the page says so until the query changes. Staging
+fixture search applies the same rule in the browser. The mobile app
+hides area chips that sit outside `area_scope`.
 
 Unknown slugs fail the deploy. At runtime an unknown slug is ignored,
 and a value whose every slug is unknown returns no public results.

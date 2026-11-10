@@ -9,12 +9,14 @@ import { buildMapSearchHref } from '@/lib/activities/map-search-url';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 import {
   areaIdForFilters,
-  placeLabelForFilters,
   searchAgeForGroup,
 } from '@/lib/activities/search-params';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
 import { summarizeTypes } from '@/lib/activities/search/summarize-types';
-import { getConfiguredSearchAreaScope } from '@/lib/home-wizard/area-scope';
+import {
+  searchPlaceLabel,
+  withDefaultOpenLocation,
+} from '@/lib/home-wizard/area-scope';
 
 interface SearchBarCompactProps {
   readonly locale: Locale;
@@ -25,6 +27,7 @@ interface SearchBarCompactProps {
     readonly search: string;
     readonly anywhere: string;
     readonly allAreas: string;
+    readonly noAreas: string;
     readonly anyAge: string;
     readonly anyType: string;
     readonly openMapForAreaLabel: string;
@@ -39,19 +42,21 @@ export function SearchBarCompact({ locale, labels }: SearchBarCompactProps) {
     (entry) => entry.id === filters.ageGroupId,
   );
 
-  const anywhereLabel = getConfiguredSearchAreaScope().restricted
-    ? labels.allAreas
-    : labels.anywhere;
-  const whereLabel = placeLabelForFilters(filters, locale) ?? anywhereLabel;
+  const whereLabel = searchPlaceLabel(filters, locale, {
+    anywhere: labels.anywhere,
+    allAreas: labels.allAreas,
+    noAreas: labels.noAreas,
+  });
   const ageLabel = ageGroup
     ? labelForLocale(ageGroup.labels, locale)
     : labels.anyAge;
   const typesLabel =
     summarizeTypes(locale, filters.activityTypeIds) || labels.anyType;
 
-  const hasArea = Boolean(areaIdForFilters(filters));
+  const located = withDefaultOpenLocation(filters);
+  const hasArea = Boolean(areaIdForFilters(located));
   const hasAge = Boolean(searchAgeForGroup(filters.ageGroupId));
-  const mapHref = buildMapSearchHref(locale, filters);
+  const mapHref = buildMapSearchHref(locale, located);
   const searchHref = buildSearchPageHref(locale, filters);
 
   function handleSearchNavigate() {
