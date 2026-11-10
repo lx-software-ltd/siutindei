@@ -21,6 +21,7 @@ describe('js-yaml CVE-2026-84375 / GHSA-2883-xcg3-v3hh', () => {
     ) as { overrides?: Record<string, string> };
     expect(pkg.overrides?.['js-yaml@3']).toBe('3.15.2');
     expect(pkg.overrides?.['js-yaml@4']).toBe('4.3.2');
+    expect(pkg.overrides?.['js-yaml@5']).toBe('5.5.0');
   });
 
   it('locks every js-yaml 3.x install to 3.15.2', () => {
@@ -61,18 +62,47 @@ describe('js-yaml CVE-2026-84375 / GHSA-2883-xcg3-v3hh', () => {
     }
   });
 
+  it('locks every js-yaml 5.x install to 5.5.0', () => {
+    const lock = JSON.parse(
+      readFileSync(path.join(packageRoot, 'package-lock.json'), 'utf8'),
+    ) as {
+      packages?: Record<string, { version?: string }>;
+    };
+    const packages = lock.packages ?? {};
+    let seen = false;
+    for (const [name, meta] of Object.entries(packages)) {
+      if (!name.endsWith('/js-yaml') && name !== 'node_modules/js-yaml') {
+        continue;
+      }
+      const version = meta.version ?? '';
+      if (!version.startsWith('5.')) {
+        continue;
+      }
+      seen = true;
+      expect(version).toBe('5.5.0');
+    }
+    expect(seen).toBe(true);
+  });
+
   it('rejects pathological empty merge sources within maxTotalMergeKeys', () => {
     const yaml = requireFromRoot(
       '@lhci/utils/node_modules/js-yaml',
     ) as {
-      load: (src: string) => unknown;
+      load: (src: string, options?: { schema?: unknown }) => unknown;
+      YAML11_SCHEMA?: unknown;
     };
     const n = 200;
     const src =
       `arr: &arr [${'{},'.repeat(n).slice(0, -1)}]\n` +
       `targets:\n${'  - <<: *arr\n'.repeat(n)}`;
+    // v5 loads with CORE_SCHEMA, which does not expand YAML 1.1 merge keys.
+    // YAML11_SCHEMA turns them on so the empty-merge budget is enforced.
+    const load = () =>
+      yaml.YAML11_SCHEMA
+        ? yaml.load(src, { schema: yaml.YAML11_SCHEMA })
+        : yaml.load(src);
     const start = Date.now();
-    expect(() => yaml.load(src)).toThrow();
+    expect(load).toThrow();
     expect(Date.now() - start).toBeLessThan(5000);
   });
 });

@@ -203,9 +203,9 @@ The build is deliberately **gated** by:
 | `assert-build-env-contract.mjs` | Build refuses to run if `NEXT_PUBLIC_SITE_ORIGIN` or `NEXT_PUBLIC_SITE_NAME` is missing. |
 | `audit-assets.mjs` | Flags oversized or executable assets in `public/`. |
 | `audit:deps:prod` | `npm audit --omit=dev --audit-level=high`. Production deps are
-  the gate. Dev `extract-zip` (GHSA-jmr9-qjv8-65gv via `@lhci/cli`) is
-  overridden to `@electron-internal/extract-zip` 1.0.5. `js-yaml` Highs
-  are pinned via `overrides` to 3.15.2 / 4.3.2. |
+  the gate. Dev `extract-zip` (GHSA-jmr9-qjv8-65gv) is overridden to
+  `@electron-internal/extract-zip` 1.0.5. `js-yaml` Highs are pinned
+  via `overrides` to 3.15.2 / 4.3.2 / 5.5.0. |
 | `inject-static-redirects.mjs` | Injects locale redirect fallbacks into the exported unprefixed pages. |
 | `inject-html-lang.mjs` | Sets `<html lang>` per locale folder (`en`, `zh-HK`) for crawlers and no-JS. |
 | `inject-structured-data.mjs` | Adds sitewide WebSite + Organization JSON-LD to the locale home pages. |
