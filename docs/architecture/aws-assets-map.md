@@ -577,7 +577,7 @@ resource silently.
 | `MetaGraphApiKey` | String | No | Yes | Meta Graph token for Facebook and Instagram logos. Empty skips social logos |
 | `MetaInstagramUserId` | String | No | No | Instagram professional account id for Business Discovery logos |
 | `BoardCatalogManagerId` | String | No | No | Cognito sub that importer-only tokens must use as `manager_id` (default: empty) |
-| `OrgReviewGateEnabled` | String | No | No | When `true`, public search hides organizations not yet approved (default: `false`) |
+| `OrgReviewGateEnabled` | String | No | No | When `true`, public search hides organizations not yet approved (CDK default: `false`; `params/production.json` sets `true`) |
 | `OpenRouterApiKey` | String | No | Yes | OpenRouter key stored in Secrets Manager (default: `pending`) |
 | `OpenRouterChatCompletionsUrl` | String | No | No | Chat completions URL allowed on the HTTP proxy |
 | `OpenRouterModel` | String | No | No | Default model when admin settings leave the model blank |

@@ -65,3 +65,9 @@ certificate SANs if a hostname is not yet covered before deploying.
 When the secondary domain exists, `ApiSecondaryCustomDomainUrl` is the
 endpoint `build_amplify_config.py` hands to the mobile app. The sequence is
 in `docs/plans/siutindei-domain-consolidation.md`.
+
+## Catalog review (`ApiStack`)
+
+| Parameter | Purpose |
+|-----------|---------|
+| `OrgReviewGateEnabled` | `true` hides organizations that are not `approved` from public and partner search. The CDK default is `false`. Production sets `true`. |

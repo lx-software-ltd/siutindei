@@ -184,7 +184,7 @@ export function OrganizationReadiness({ orgId }: { orgId: string }) {
     <AdminInputCard
       title='Readiness'
       titleLevel='h3'
-      description='Imported, created, and suggested organizations stay in review until you release them. Public search keeps current listings until ORG_REVIEW_GATE_ENABLED is turned on.'
+      description='Imported, created, and suggested organizations stay in review until you release them. Public search only includes organizations that have been approved.'
       status={
         <>
           {error ? <StatusBanner kind='error'>{error}</StatusBanner> : null}

@@ -27,5 +27,6 @@ organizations queue every source change.
 
 Organizations created by that import are stored as `pending_review`.
 They are not a public listing until an admin releases them from
-Catalog. Turning on `OrgReviewGateEnabled` in this
-repo's API stack is what makes public search enforce that release.
+Catalog. Production params set `OrgReviewGateEnabled` to `true` in
+this repo's API stack, which is what makes public search enforce that
+release.
