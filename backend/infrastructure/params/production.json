@@ -50,6 +50,7 @@
   "NominatimUserAgent": "SiuTinDeiAdminWeb/1.0 (https://admin.siutindei.com)",
   "NominatimReferer": "https://admin.siutindei.com",
   "GooglePlacesApiKey": "<FROM_GITHUB_SECRET: CDK_PARAM_GOOGLE_PLACES_API_KEY>",
+  "OrgReviewGateEnabled": "true",
   "OpenRouterApiKey": "<FROM_GITHUB_SECRET: CDK_PARAM_OPENROUTER_API_KEY>",
   "OpenRouterChatCompletionsUrl": "https://openrouter.ai/api/v1/chat/completions",
   "OpenRouterModel": "qwen/qwen3-30b-a3b"
