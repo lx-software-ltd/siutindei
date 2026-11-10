@@ -105,6 +105,7 @@ class ActivitySearchResponseSchema(BaseModel):
     items: list[ActivitySearchResultSchema]
     next_cursor: str | None = None
     category_match: str = "exact"
+    area_scope: list[str] | None = None
 
 
 _CARD_OMITTED_FIELDS = (

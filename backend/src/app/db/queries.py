@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import Select
 from sqlalchemy.sql.selectable import CompoundSelect
 
+from app.data.hk_neighbourhoods import resolve_search_area_scope
 from app.db.models import (
     Activity,
     ActivityCategory,
@@ -34,6 +35,9 @@ from app.db.models.category_suggestion import (
     WIZARD_GROUP_IDS,
 )
 from app.services.data_quality.list_params import ilike_pattern
+from app.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -66,6 +70,7 @@ class ActivitySearchFilters:
     limit: int = 50
     text_query: str | None = None
     view: str = "full"
+    apply_area_scope: bool = True
 
 
 def validate_filters(filters: ActivitySearchFilters) -> None:
@@ -86,6 +91,7 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
     """Build a SQLAlchemy query for search."""
 
     validate_filters(filters)
+    area_scope = applied_search_area_scope(filters)
 
     entry_subquery = _entry_order_subquery(filters)
     query = (
@@ -129,7 +135,10 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
         conditions.append(Location.area_id.in_(area_ids))
 
     if filters.category_ids:
-        category_ids = _category_descendant_ids_subquery(filters.category_ids)
+        category_ids = _category_descendant_ids_subquery(
+            filters.category_ids,
+            area_scope,
+        )
         conditions.append(Activity.category_id.in_(category_ids))
 
     if filters.activity_id is not None:
@@ -156,6 +165,12 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
 
     if filters.text_query:
         conditions.append(_text_query_condition(filters.text_query))
+
+    if area_scope is not None:
+        if area_scope:
+            conditions.append(Location.area_id.in_(tuple(area_scope)))
+        else:
+            conditions.append(sa.false())
 
     order_columns = _order_columns(entry_subquery)
     if filters.cursor is not None:
@@ -303,46 +318,78 @@ def _wizard_group_filter(category_ids: Sequence[UUID]) -> bool:
     return bool(category_ids) and all(item in WIZARD_GROUP_IDS for item in category_ids)
 
 
-def category_match_mode(session: Session, category_ids: Sequence[UUID]) -> str:
+def category_match_mode(
+    session: Session,
+    category_ids: Sequence[UUID],
+    area_ids: frozenset[UUID] | None = None,
+) -> str:
     """Return exact, or legacy_fallback while a wizard group is still empty.
 
     An empty group would otherwise hide every activity that is still on
-    Workshop, Class, Outdoor activity, Indoor fun, or Sport.
+    Workshop, Class, Outdoor activity, Indoor fun, or Sport. When
+    ``area_ids`` is set, only activities with a schedule in one of those
+    neighbourhoods count, so a group that exists only outside the public
+    area scope can still fall back.
     """
     if not _wizard_group_filter(category_ids):
         return "exact"
+    if area_ids is not None and not area_ids:
+        return "exact"
     tree = _category_tree(category_ids)
-    assigned = session.scalar(
+    assigned_query = (
         select(func.count())
         .select_from(Activity)
         .where(Activity.category_id.in_(select(tree.c.id)))
         .where(Activity.category_id.notin_(tuple(LEGACY_CATEGORY_IDS)))
     )
+    in_scope = _activity_in_area_scope(area_ids)
+    if in_scope is not None:
+        assigned_query = assigned_query.where(in_scope)
+    assigned = session.scalar(assigned_query)
     return "legacy_fallback" if not assigned else "exact"
+
+
+def _activity_in_area_scope(area_ids: frozenset[UUID] | None) -> Any | None:
+    """Match activities that have a schedule at one of these neighbourhoods."""
+    if area_ids is None:
+        return None
+    if not area_ids:
+        return sa.false()
+    return Activity.id.in_(
+        select(ActivitySchedule.activity_id)
+        .join(Location, Location.id == ActivitySchedule.location_id)
+        .where(Location.area_id.in_(tuple(area_ids)))
+    )
 
 
 def _category_descendant_ids_subquery(
     category_ids: Sequence[UUID],
+    area_ids: frozenset[UUID] | None = None,
 ) -> Select[Any] | CompoundSelect[Any]:
     """Return category ids, including descendants.
 
     A wizard-group search with no activities on that subtree also
     includes the legacy roots. The union drops out once any activity
-    sits on the group or one of its leaves.
+    sits on the group or one of its leaves. ``area_ids`` limits that
+    count to schedules in the public area scope.
     """
     tree = _category_tree(category_ids)
     descendants = select(tree.c.id)
     if not _wizard_group_filter(category_ids):
         return descendants
+    if area_ids is not None and not area_ids:
+        return descendants
     assigned = (
         select(Activity.id)
         .where(Activity.category_id.in_(select(tree.c.id)))
         .where(Activity.category_id.notin_(tuple(LEGACY_CATEGORY_IDS)))
-        .exists()
     )
+    in_scope = _activity_in_area_scope(area_ids)
+    if in_scope is not None:
+        assigned = assigned.where(in_scope)
     legacy = select(ActivityCategory.id).where(
         ActivityCategory.id.in_(tuple(LEGACY_CATEGORY_IDS)),
-        ~assigned,
+        ~assigned.exists(),
     )
     return descendants.union(legacy)
 
@@ -383,3 +430,51 @@ def review_gate_enabled() -> bool:
     """Public search hides unapproved orgs only when this flag is on."""
     raw = os.getenv("ORG_REVIEW_GATE_ENABLED", "false").strip().lower()
     return raw in {"1", "true", "yes", "on"}
+
+
+_SEARCH_AREA_SCOPE_CACHE: dict[str, frozenset[UUID] | None] = {}
+
+
+def clear_search_area_scope_cache() -> None:
+    """Drop the parsed SEARCH_AREA_SCOPE cache. Tests call this."""
+    _SEARCH_AREA_SCOPE_CACHE.clear()
+
+
+def configured_search_area_ids() -> frozenset[UUID] | None:
+    """Neighbourhood ids from SEARCH_AREA_SCOPE.
+
+    ``None`` means the variable is unset or blank and search is not
+    limited. An empty set means every token was unknown.
+    """
+    raw = os.getenv("SEARCH_AREA_SCOPE", "")
+    if raw in _SEARCH_AREA_SCOPE_CACHE:
+        return _SEARCH_AREA_SCOPE_CACHE[raw]
+    resolved, unknown = resolve_search_area_scope(raw)
+    if unknown:
+        logger.warning(
+            "SEARCH_AREA_SCOPE ignored unknown slugs",
+            extra={"unknown_slugs": ",".join(unknown)},
+        )
+    _SEARCH_AREA_SCOPE_CACHE[raw] = resolved
+    return resolved
+
+
+def search_area_scope_labels() -> list[str] | None:
+    """Sorted area ids for the search response, or None when unrestricted."""
+    configured = configured_search_area_ids()
+    if configured is None:
+        return None
+    return sorted(str(area_id) for area_id in configured)
+
+
+def applied_search_area_scope(
+    filters: ActivitySearchFilters,
+) -> frozenset[UUID] | None:
+    """Ids to enforce on this request, or None when it is not limited.
+
+    Partner calls set ``apply_area_scope`` false. A direct activity link
+    stays open even when the activity sits outside the public scope.
+    """
+    if not filters.apply_area_scope or filters.activity_id is not None:
+        return None
+    return configured_search_area_ids()

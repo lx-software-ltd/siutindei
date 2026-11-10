@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SearchPanel } from '@/components/sections/search/search-panel';
 import {
@@ -14,6 +14,7 @@ import {
   REGION_ICON_SRC,
 } from '@/lib/home-wizard/choice-icons';
 import { homeWizardChoices } from '@/lib/home-wizard/choices';
+import { clearSearchAreaScopeCacheForTests } from '@/lib/home-wizard/area-scope';
 
 const push = vi.hoisted(() => vi.fn());
 
@@ -50,6 +51,11 @@ function choiceImage(name: string): HTMLImageElement {
 }
 
 describe('SearchPanel', () => {
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE;
+    clearSearchAreaScopeCacheForTests();
+  });
+
   it('shows activity, age, and Hong Kong region icons with labels', () => {
     renderPanel();
 
@@ -141,5 +147,22 @@ describe('SearchPanel', () => {
     expect(
       screen.queryByRole('button', { name: 'Clear activity types' }),
     ).toBeNull();
+  });
+
+  it('hides neighbourhoods outside the scope', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'yau-tsim-mong';
+    clearSearchAreaScopeCacheForTests();
+    renderPanel();
+
+    expect(screen.getByRole('button', { name: 'All areas' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Islands/ })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kowloon' }));
+    const neighbourhoods = screen.getByRole('combobox');
+    const labels = [...neighbourhoods.querySelectorAll('option')].map(
+      (option) => option.textContent,
+    );
+    expect(labels).toContain('Mong Kok');
+    expect(labels).not.toContain('Kennedy Town');
   });
 });

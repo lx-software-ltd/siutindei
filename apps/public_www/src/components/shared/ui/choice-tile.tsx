@@ -7,6 +7,8 @@ interface ChoiceTileProps {
   readonly onClick: () => void;
   readonly iconShape?: 'illustration' | 'flag';
   readonly size?: ChoiceTileSize;
+  readonly disabled?: boolean;
+  readonly disabledHint?: string;
 }
 
 const TILE_SIZE_CLASS: Record<
@@ -32,12 +34,16 @@ export function ChoiceTile({
   onClick,
   iconShape = 'illustration',
   size = 'default',
+  disabled = false,
+  disabledHint,
 }: ChoiceTileProps) {
-  const selectedClassName = isSelected
-    ? 'border-accent-500 bg-brand-50 ' +
-      'shadow-[0_10px_30px_rgba(29,64,59,0.12)]'
-    : 'border-brand-100 bg-white hover:border-brand-200 ' +
-      'hover:shadow-[0_10px_30px_rgba(29,64,59,0.1)]';
+  const selectedClassName = disabled
+    ? 'cursor-not-allowed border-brand-100 bg-white opacity-40'
+    : isSelected
+      ? 'border-accent-500 bg-brand-50 ' +
+        'shadow-[0_10px_30px_rgba(29,64,59,0.12)]'
+      : 'border-brand-100 bg-white hover:border-brand-200 ' +
+        'hover:shadow-[0_10px_30px_rgba(29,64,59,0.1)]';
   const sizeClassName = TILE_SIZE_CLASS[size];
   const iconClassName =
     iconShape === 'flag'
@@ -47,8 +53,10 @@ export function ChoiceTile({
   return (
     <button
       type="button"
-      aria-pressed={isSelected}
-      onClick={onClick}
+      aria-pressed={disabled ? undefined : isSelected}
+      aria-disabled={disabled || undefined}
+      disabled={disabled}
+      onClick={disabled ? undefined : onClick}
       className={
         'choice-tile group flex flex-col items-center ' +
         `rounded-2xl border transition ${sizeClassName.container} ` +
@@ -71,6 +79,9 @@ export function ChoiceTile({
       >
         {label}
       </span>
+      {disabled && disabledHint ? (
+        <span className="text-xs font-medium text-ink-500">{disabledHint}</span>
+      ) : null}
     </button>
   );
 }

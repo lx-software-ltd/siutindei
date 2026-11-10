@@ -59,6 +59,11 @@ jobs:
       - name: Verify home wizard choices are in sync
         run: bash scripts/codegen/sync-home-wizard-choices.sh --check
 
+      - name: Validate search area scope
+        env:
+          SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
+        run: python3 scripts/deploy/validate_search_area_scope.py
+
       - name: Verify public website build env contract
         run: npm run assert:build-env-contract
         working-directory: apps/public_www
@@ -74,6 +79,7 @@ jobs:
           NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN: ${{ vars.STAGING_SEARCH_DATA_ENABLED == 'false' && secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN || '' }}
           NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
           NEXT_PUBLIC_GTM_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_GTM_ALLOWED_HOSTS }}
+          NEXT_PUBLIC_SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
 
       - name: Restore Next.js build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -104,6 +110,7 @@ jobs:
           NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
           NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
           NEXT_PUBLIC_GTM_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_GTM_ALLOWED_HOSTS }}
+          NEXT_PUBLIC_SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
 
       - name: Configure AWS credentials
         if: ${{ vars.AWS_ACCOUNT_ID != '' && vars.AWS_REGION != '' }}

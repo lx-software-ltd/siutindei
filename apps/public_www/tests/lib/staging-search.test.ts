@@ -6,6 +6,7 @@ import {
   clearStagingFixtureCacheForTests,
   fetchStagingActivitySearch,
 } from '@/lib/activities/staging-search';
+import { clearSearchAreaScopeCacheForTests } from '@/lib/home-wizard/area-scope';
 
 const fixturePath = path.resolve(
   __dirname,
@@ -45,6 +46,8 @@ describe('fetchStagingActivitySearch', () => {
 
   afterEach(() => {
     clearStagingFixtureCacheForTests();
+    delete process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE;
+    clearSearchAreaScopeCacheForTests();
   });
 
   it('returns at least 3000 listings without filters', async () => {
@@ -96,5 +99,23 @@ describe('fetchStagingActivitySearch', () => {
       expect(item.organization.mediaUrls.length).toBeLessThanOrEqual(1);
       expect(item.schedule.weeklyEntries.length).toBeLessThanOrEqual(1);
     }
+  });
+
+  it('hides fixture rows outside the scope but still opens a direct activity', async () => {
+    const first = await fetchStagingActivitySearch({ limit: 1 });
+    const activityId = first.items[0]?.activity.id ?? '';
+    expect(activityId).not.toBe('');
+
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'not-a-place';
+    clearSearchAreaScopeCacheForTests();
+
+    const hidden = await fetchStagingActivitySearch({ limit: 5 });
+    expect(hidden.items).toHaveLength(0);
+
+    const direct = await fetchStagingActivitySearch({
+      activityId,
+      limit: 1,
+    });
+    expect(direct.items[0]?.activity.id).toBe(activityId);
   });
 });

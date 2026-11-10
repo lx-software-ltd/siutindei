@@ -248,6 +248,75 @@ def _build() -> tuple[Neighbourhood, ...]:
 NEIGHBOURHOODS: tuple[Neighbourhood, ...] = _build()
 
 
+def _scope_indexes() -> tuple[
+    dict[str, Neighbourhood],
+    dict[str, tuple[Neighbourhood, ...]],
+]:
+    by_wizard: dict[str, Neighbourhood] = {}
+    by_district: dict[str, list[Neighbourhood]] = {}
+    for item in NEIGHBOURHOODS:
+        by_wizard[item.wizard_id] = item
+        by_district.setdefault(_slug(item.district), []).append(item)
+    return by_wizard, {key: tuple(value) for key, value in by_district.items()}
+
+
+_NEIGHBOURHOODS_BY_WIZARD_ID, _NEIGHBOURHOODS_BY_DISTRICT_SLUG = _scope_indexes()
+_REGION_SCOPE_IDS = frozenset(DISTRICT_REGION_ID.values())
+
+
+def neighbourhoods_for_scope_token(token: str) -> tuple[Neighbourhood, ...] | None:
+    """Neighbourhoods named by one SEARCH_AREA_SCOPE token.
+
+    A region id is checked before a district slug. ``islands`` is both
+    the Islands region id and the Islands district slug, and both name
+    the same neighbourhoods.
+    """
+
+    key = token.strip().casefold()
+    if not key:
+        return None
+    if key in _REGION_SCOPE_IDS:
+        return tuple(item for item in NEIGHBOURHOODS if item.region_id == key)
+    district = _NEIGHBOURHOODS_BY_DISTRICT_SLUG.get(key)
+    if district is not None:
+        return district
+    neighbourhood = _NEIGHBOURHOODS_BY_WIZARD_ID.get(key)
+    if neighbourhood is None:
+        return None
+    return (neighbourhood,)
+
+
+def resolve_search_area_scope(
+    raw: str,
+) -> tuple[frozenset[uuid.UUID] | None, tuple[str, ...]]:
+    """Expand a comma-separated slug list to neighbourhood ids.
+
+    A blank value is unrestricted (``None``). Unknown tokens are returned
+    separately and are not an id. When every token is unknown the id set
+    is empty, and public search returns nothing.
+    """
+
+    seen: set[str] = set()
+    tokens: list[str] = []
+    for part in raw.split(","):
+        token = part.strip().casefold()
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        tokens.append(token)
+    if not tokens:
+        return None, ()
+    found: set[uuid.UUID] = set()
+    unknown: list[str] = []
+    for token in tokens:
+        leaves = neighbourhoods_for_scope_token(token)
+        if leaves is None:
+            unknown.append(token)
+            continue
+        found.update(item.id for item in leaves)
+    return frozenset(found), tuple(unknown)
+
+
 def neighbourhoods_for(district: str) -> tuple[Neighbourhood, ...]:
     """Neighbourhoods of one district, in display order."""
     return tuple(item for item in NEIGHBOURHOODS if item.district == district)

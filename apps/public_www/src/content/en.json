@@ -20,6 +20,7 @@
       "activityTypes": "Activities",
       "search": "Search activities",
       "anywhere": "All Hong Kong",
+      "allAreas": "All areas",
       "anyAge": "Any age",
       "anyType": "All types",
       "openMapForAreaLabel": "Show activities on map for"
@@ -32,7 +33,9 @@
       "childAgeLabel": "Child age",
       "activityTypesLabel": "Activity types",
       "searchLabel": "Search",
-      "allHongKongLabel": "All Hong Kong"
+      "allHongKongLabel": "All Hong Kong",
+      "allAreasLabel": "All areas",
+      "regionUnavailableLabel": "Coming soon"
     },
     "languageSelector": {
       "menuAriaLabel": "Select language",
@@ -157,6 +160,8 @@
     "navigator": {
       "buttonLabel": "Help me find something for my kid!",
       "allHongKongLabel": "All Hong Kong",
+      "allAreasLabel": "All areas",
+      "regionUnavailableLabel": "Coming soon",
       "anywhereInRegionTemplate": "Anywhere in {region}",
       "backLabel": "Back",
       "seeActivitiesLabel": "See activities",
@@ -202,6 +207,7 @@
     "listViewLabel": "List",
     "mapViewLabel": "Map",
     "emptyLabel": "No activities match your search. Try different filters.",
+    "areaAdjustedLabel": "That area is not open yet. Showing activities in the open areas.",
     "unsortedCategoryLabel": "These listings are not sorted into the selected categories yet. They still use the previous categories.",
     "errorLabel": "Unable to load activities.",
     "loadMoreLabel": "Load more",

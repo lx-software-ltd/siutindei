@@ -119,6 +119,12 @@ jobs:
         run: npm ci
         working-directory: apps/public_www
 
+      - name: Validate search area scope
+        if: ${{ steps.resolve_release.outputs.maintenance_mode != 'true' }}
+        env:
+          SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
+        run: python3 scripts/deploy/validate_search_area_scope.py
+
       - name: Verify public website build env contract
         if: ${{ steps.resolve_release.outputs.maintenance_mode != 'true' }}
         run: npm run assert:build-env-contract
@@ -131,6 +137,7 @@ jobs:
           NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN }}
           NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
           NEXT_PUBLIC_GTM_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_GTM_ALLOWED_HOSTS }}
+          NEXT_PUBLIC_SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
 
       - name: Build public website for production
         if: ${{ steps.resolve_release.outputs.maintenance_mode != 'true' }}
@@ -152,6 +159,7 @@ jobs:
           NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
           NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
           NEXT_PUBLIC_GTM_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_GTM_ALLOWED_HOSTS }}
+          NEXT_PUBLIC_SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
 
       - name: Promote release or enable maintenance mode
         run: bash 'scripts/deploy/deploy-public-www.sh'

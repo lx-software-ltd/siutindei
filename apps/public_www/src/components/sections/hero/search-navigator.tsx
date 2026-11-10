@@ -17,9 +17,13 @@ import {
 } from '@/lib/activities/search-params';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
 import {
+  allowedNeighbourhoodsForRegion,
+  getConfiguredSearchAreaScope,
+  isRegionSelectable,
+} from '@/lib/home-wizard/area-scope';
+import {
   homeWizardChoices,
   labelForLocale,
-  neighbourhoodsForRegion,
   REGIONS_BY_ID,
 } from '@/lib/home-wizard/choices';
 import {
@@ -48,7 +52,7 @@ function neighbourhoodButtonClass(isSelected: boolean): string {
 type NavigatorStep = 'location' | 'neighbourhood' | 'age' | 'activity';
 
 function stepsFor(regionId: string | null): readonly NavigatorStep[] {
-  if (regionId) {
+  if (regionId && allowedNeighbourhoodsForRegion(regionId).length > 1) {
     return ['location', 'neighbourhood', 'age', 'activity'];
   }
   return ['location', 'age', 'activity'];
@@ -98,13 +102,14 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   }
 
   function selectLocation(regionId: string | null) {
+    const allowed = regionId ? allowedNeighbourhoodsForRegion(regionId) : [];
     setDraft((current) => ({
       ...current,
       regionId,
-      neighbourhoodId: null,
+      neighbourhoodId: allowed.length === 1 ? allowed[0].id : null,
     }));
     setHasSelectedLocation(true);
-    setStep(regionId ? 'neighbourhood' : 'age');
+    setStep(regionId && allowed.length !== 1 ? 'neighbourhood' : 'age');
   }
 
   function selectNeighbourhood(neighbourhoodId: string | null) {
@@ -167,7 +172,11 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
             <legend className="sr-only">{copy.steps.location.label}</legend>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
               <ChoiceTile
-                label={copy.allHongKongLabel}
+                label={
+                  getConfiguredSearchAreaScope().restricted
+                    ? copy.allAreasLabel
+                    : copy.allHongKongLabel
+                }
                 iconSrc={ALL_HONG_KONG_ICON_SRC}
                 iconShape="flag"
                 isSelected={hasSelectedLocation && draft.regionId === null}
@@ -179,12 +188,17 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
                 if (!region || !iconSrc) {
                   return null;
                 }
+                const selectable = isRegionSelectable(region.id);
                 return (
                   <ChoiceTile
                     key={region.id}
                     label={labelForLocale(region.labels, locale)}
                     iconSrc={iconSrc}
-                    isSelected={draft.regionId === region.id}
+                    isSelected={selectable && draft.regionId === region.id}
+                    disabled={!selectable}
+                    disabledHint={
+                      selectable ? undefined : copy.regionUnavailableLabel
+                    }
                     onClick={() => selectLocation(region.id)}
                   />
                 );
@@ -208,7 +222,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
                   region: regionLabel(draft.regionId, locale),
                 })}
               </button>
-              {neighbourhoodsForRegion(draft.regionId).map((neighbourhood) => (
+              {allowedNeighbourhoodsForRegion(draft.regionId).map((neighbourhood) => (
                 <button
                   key={neighbourhood.id}
                   type="button"

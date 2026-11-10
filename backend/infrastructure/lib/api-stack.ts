@@ -755,6 +755,17 @@ export class ApiStack extends cdk.Stack {
           "backlog has been released from the admin review queue.",
       }
     );
+    const searchAreaScope = new cdk.CfnParameter(this, "SearchAreaScope", {
+      type: "String",
+      default: "",
+      description:
+        "Comma-separated public-search area slugs. A slug is a wizard " +
+        "region id (hong_kong_island, kowloon, new_territories, islands), " +
+        "a district slug (yau-tsim-mong), or a neighbourhood slug " +
+        "(central-and-western-kennedy-town). Empty leaves public search " +
+        "unrestricted. Filled from the SEARCH_AREA_SCOPE GitHub variable. " +
+        "Partner search and a direct activity_id lookup are not limited.",
+    });
     const openRouterApiKey = new cdk.CfnParameter(this, "OpenRouterApiKey", {
       type: "String",
       // Empty fails SecretString's minimum length. This is the same placeholder.
@@ -1443,6 +1454,7 @@ export class ApiStack extends cdk.Stack {
         // Production search always uses Aurora; fixture mode is staging-www only.
         STAGING_SEARCH_DATA_ENABLED: "false",
         ORG_REVIEW_GATE_ENABLED: orgReviewGateEnabled.valueAsString,
+        SEARCH_AREA_SCOPE: searchAreaScope.valueAsString,
       },
     });
     database.grantAppUserSecretRead(searchFunction);

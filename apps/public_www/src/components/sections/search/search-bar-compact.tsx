@@ -14,6 +14,7 @@ import {
 } from '@/lib/activities/search-params';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
 import { summarizeTypes } from '@/lib/activities/search/summarize-types';
+import { getConfiguredSearchAreaScope } from '@/lib/home-wizard/area-scope';
 
 interface SearchBarCompactProps {
   readonly locale: Locale;
@@ -23,6 +24,7 @@ interface SearchBarCompactProps {
     readonly activityTypes: string;
     readonly search: string;
     readonly anywhere: string;
+    readonly allAreas: string;
     readonly anyAge: string;
     readonly anyType: string;
     readonly openMapForAreaLabel: string;
@@ -37,7 +39,10 @@ export function SearchBarCompact({ locale, labels }: SearchBarCompactProps) {
     (entry) => entry.id === filters.ageGroupId,
   );
 
-  const whereLabel = placeLabelForFilters(filters, locale) ?? labels.anywhere;
+  const anywhereLabel = getConfiguredSearchAreaScope().restricted
+    ? labels.allAreas
+    : labels.anywhere;
+  const whereLabel = placeLabelForFilters(filters, locale) ?? anywhereLabel;
   const ageLabel = ageGroup
     ? labelForLocale(ageGroup.labels, locale)
     : labels.anyAge;

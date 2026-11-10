@@ -13,11 +13,16 @@ import {
   type SearchFiltersState,
 } from '@/lib/activities/search-params';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
+import {
+  allowedNeighbourhoodsForRegion,
+  getConfiguredSearchAreaScope,
+  isRegionSelectable,
+  sanitizeSearchFilters,
+} from '@/lib/home-wizard/area-scope';
 import { REGIONS_BY_ID } from '@/lib/home-wizard/choices';
 import {
   homeWizardChoices,
   labelForLocale,
-  neighbourhoodsForRegion,
 } from '@/lib/home-wizard/choices';
 import {
   ALL_HONG_KONG_ICON_SRC,
@@ -37,6 +42,8 @@ interface SearchPanelCopy {
   readonly activityTypesLabel: string;
   readonly searchLabel: string;
   readonly allHongKongLabel: string;
+  readonly allAreasLabel: string;
+  readonly regionUnavailableLabel: string;
 }
 
 interface SearchPanelProps {
@@ -47,11 +54,17 @@ interface SearchPanelProps {
 export function SearchPanel({ locale, copy }: SearchPanelProps) {
   const router = useRouter();
   const { filters, isSearchOpen, setFilters, closeSearch } = useSearchContext();
-  const [draft, setDraft] = useState<SearchFiltersState>(filters);
+  const [draft, setDraft] = useState<SearchFiltersState>(
+    () => sanitizeSearchFilters(filters).filters,
+  );
+  const scope = getConfiguredSearchAreaScope();
+  const areaLabel = scope.restricted
+    ? copy.allAreasLabel
+    : copy.allHongKongLabel;
 
   useEffect(() => {
     if (isSearchOpen) {
-      setDraft(filters);
+      setDraft(sanitizeSearchFilters(filters).filters);
     }
   }, [filters, isSearchOpen]);
 
@@ -80,7 +93,7 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
           </legend>
           <div className="flex flex-nowrap items-stretch gap-2 overflow-x-auto md:grid md:grid-cols-5 md:gap-3 md:overflow-visible">
             <SearchChoiceButton
-              label={copy.allHongKongLabel}
+              label={areaLabel}
               iconSrc={ALL_HONG_KONG_ICON_SRC}
               iconShape="flag"
               isSelected={draft.regionId === null}
@@ -97,26 +110,35 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
               if (!iconSrc) {
                 return null;
               }
+              const selectable = isRegionSelectable(region.id);
               return (
                 <SearchChoiceButton
                   key={region.id}
                   label={labelForLocale(region.labels, locale)}
                   iconSrc={iconSrc}
-                  isSelected={draft.regionId === region.id}
-                  onClick={() =>
+                  isSelected={selectable && draft.regionId === region.id}
+                  disabled={!selectable}
+                  disabledHint={
+                    selectable ? undefined : copy.regionUnavailableLabel
+                  }
+                  onClick={() => {
+                    const allowed = allowedNeighbourhoodsForRegion(region.id);
                     updateDraft({
                       regionId: region.id,
                       neighbourhoodId:
-                        draft.regionId === region.id
-                          ? draft.neighbourhoodId
-                          : null,
-                    })
-                  }
+                        allowed.length === 1
+                          ? allowed[0].id
+                          : draft.regionId === region.id
+                            ? draft.neighbourhoodId
+                            : null,
+                    });
+                  }}
                 />
               );
             })}
           </div>
-          {draft.regionId ? (
+          {draft.regionId &&
+          allowedNeighbourhoodsForRegion(draft.regionId).length > 1 ? (
             <label className="mt-3 block text-sm font-semibold text-ink-900">
               {copy.neighbourhoodLabel}
               <select
@@ -129,11 +151,13 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
                 }
               >
                 <option value="">{copy.anywhereInRegionLabel}</option>
-                {neighbourhoodsForRegion(draft.regionId).map((neighbourhood) => (
-                  <option key={neighbourhood.id} value={neighbourhood.id}>
-                    {labelForLocale(neighbourhood.labels, locale)}
-                  </option>
-                ))}
+                {allowedNeighbourhoodsForRegion(draft.regionId).map(
+                  (neighbourhood) => (
+                    <option key={neighbourhood.id} value={neighbourhood.id}>
+                      {labelForLocale(neighbourhood.labels, locale)}
+                    </option>
+                  ),
+                )}
               </select>
             </label>
           ) : null}

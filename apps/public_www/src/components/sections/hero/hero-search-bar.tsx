@@ -7,6 +7,7 @@ import type { NavbarContent } from '@/content/types';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 import { placeLabelForFilters } from '@/lib/activities/search-params';
+import { getConfiguredSearchAreaScope } from '@/lib/home-wizard/area-scope';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
 import { summarizeTypes } from '@/lib/activities/search/summarize-types';
 import { HERO_SEARCH_SENTINEL_ATTR } from '@/lib/home-header-reveal';
@@ -30,7 +31,10 @@ export function HeroSearchBar({ locale, labels }: HeroSearchBarProps) {
     (entry) => entry.id === filters.ageGroupId,
   );
 
-  const whereLabel = placeLabelForFilters(filters, locale) ?? labels.anywhere;
+  const anywhereLabel = getConfiguredSearchAreaScope().restricted
+    ? labels.allAreas
+    : labels.anywhere;
+  const whereLabel = placeLabelForFilters(filters, locale) ?? anywhereLabel;
   const ageLabel = ageGroup
     ? labelForLocale(ageGroup.labels, locale)
     : labels.anyAge;

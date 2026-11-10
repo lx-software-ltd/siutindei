@@ -1,3 +1,5 @@
+import { sanitizeSearchFilters } from '@/lib/home-wizard/area-scope';
+
 import type { SearchFiltersState } from './search-params';
 
 const RECENT_SEARCH_KEY = 'siutindei.recentSearch';
@@ -41,7 +43,7 @@ function parseRecentSearch(raw: string | null): SearchFiltersState | null {
     return null;
   }
   try {
-    return JSON.parse(raw) as SearchFiltersState;
+    return sanitizeSearchFilters(JSON.parse(raw) as SearchFiltersState).filters;
   } catch {
     return null;
   }
@@ -56,7 +58,7 @@ export function loadRecentSearch(): SearchFiltersState | null {
     if (!raw) {
       return null;
     }
-    return JSON.parse(raw) as SearchFiltersState;
+    return sanitizeSearchFilters(JSON.parse(raw) as SearchFiltersState).filters;
   } catch {
     return null;
   }
@@ -67,7 +69,8 @@ export function saveRecentSearch(filters: SearchFiltersState): void {
     return;
   }
   try {
-    window.localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(filters));
+    const { filters: stored } = sanitizeSearchFilters(filters);
+    window.localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(stored));
     window.dispatchEvent(new Event(RECENT_SEARCH_EVENT));
   } catch {
     // Ignore quota errors.

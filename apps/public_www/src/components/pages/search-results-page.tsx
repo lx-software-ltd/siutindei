@@ -17,6 +17,7 @@ import {
   parseSearchFiltersFromQuery,
   parseSearchViewMode,
 } from '@/lib/activities/search-params';
+import { sanitizeSearchFilters } from '@/lib/home-wizard/area-scope';
 import { listingsWithCoordinates } from '@/lib/google-maps/coordinates';
 import { isGoogleMapsEnabled } from '@/lib/google-maps/config';
 import { trackSearch } from '@/lib/analytics/data-layer';
@@ -31,13 +32,14 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
   const searchParams = useSearchParams();
   const { setFilters } = useSearchContext();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showAreaNotice, setShowAreaNotice] = useState(false);
 
   const ageParam = searchParams.get('age');
   const regionParam = searchParams.get('region');
   const neighbourhoodParam = searchParams.get('neighbourhood');
   const typesParam = searchParams.get('types');
   const queryParam = searchParams.get('q');
-  const urlFilters = useMemo(() => {
+  const urlFilterState = useMemo(() => {
     const params = new URLSearchParams();
     if (ageParam) {
       params.set('age', ageParam);
@@ -54,8 +56,10 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
     if (queryParam) {
       params.set('q', queryParam);
     }
-    return parseSearchFiltersFromQuery(params);
+    return sanitizeSearchFilters(parseSearchFiltersFromQuery(params));
   }, [ageParam, neighbourhoodParam, queryParam, regionParam, typesParam]);
+  const urlFilters = urlFilterState.filters;
+  const areaAdjusted = urlFilterState.adjusted;
   const urlViewMode = useMemo(
     () => parseSearchViewMode(searchParams),
     [searchParams],
@@ -66,6 +70,26 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
   useEffect(() => {
     setFilters(urlFilters);
   }, [setFilters, urlFilters]);
+
+  const replacementHref = buildSearchPageHref(locale, urlFilters, {
+    view: urlViewMode,
+  });
+  useEffect(() => {
+    if (areaAdjusted) {
+      setShowAreaNotice(true);
+      router.replace(replacementHref);
+      return;
+    }
+    if (regionParam || neighbourhoodParam) {
+      setShowAreaNotice(false);
+    }
+  }, [
+    areaAdjusted,
+    neighbourhoodParam,
+    regionParam,
+    replacementHref,
+    router,
+  ]);
 
   const search = useActivitySearch({
     filters: urlFilters,
@@ -113,6 +137,14 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
     <div className="bg-white">
       <h1 className="sr-only">{copy.pageTitle}</h1>
       <FilterChipRow locale={locale} />
+      {showAreaNotice ? (
+        <p
+          role="status"
+          className="mx-auto max-w-7xl px-4 pt-4 text-sm text-ink-700 sm:px-6 lg:px-8"
+        >
+          {copy.areaAdjustedLabel}
+        </p>
+      ) : null}
       {categoryMatch === 'legacy_fallback' ? (
         <p className="mx-auto max-w-7xl px-4 pt-4 text-sm text-ink-700 sm:px-6 lg:px-8">
           {copy.unsortedCategoryLabel}
