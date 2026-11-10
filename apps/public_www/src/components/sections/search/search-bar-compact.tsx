@@ -13,7 +13,10 @@ import {
 } from '@/lib/activities/search-params';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
 import { summarizeTypes } from '@/lib/activities/search/summarize-types';
-import { searchPlaceLabel } from '@/lib/home-wizard/area-scope';
+import {
+  searchPlaceLabel,
+  withDefaultOpenLocation,
+} from '@/lib/home-wizard/area-scope';
 
 interface SearchBarCompactProps {
   readonly locale: Locale;
@@ -50,9 +53,10 @@ export function SearchBarCompact({ locale, labels }: SearchBarCompactProps) {
   const typesLabel =
     summarizeTypes(locale, filters.activityTypeIds) || labels.anyType;
 
-  const hasArea = Boolean(areaIdForFilters(filters));
+  const located = withDefaultOpenLocation(filters);
+  const hasArea = Boolean(areaIdForFilters(located));
   const hasAge = Boolean(searchAgeForGroup(filters.ageGroupId));
-  const mapHref = buildMapSearchHref(locale, filters);
+  const mapHref = buildMapSearchHref(locale, located);
   const searchHref = buildSearchPageHref(locale, filters);
 
   function handleSearchNavigate() {

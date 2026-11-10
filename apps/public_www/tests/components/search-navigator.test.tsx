@@ -53,6 +53,7 @@ describe('SearchNavigator', () => {
   afterEach(() => {
     delete process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE;
     clearSearchAreaScopeCacheForTests();
+    push.mockClear();
   });
 
   it('opens on the location step with large area tiles', () => {
@@ -244,5 +245,54 @@ describe('SearchNavigator', () => {
     expect(
       screen.queryByRole('button', { name: /Anywhere/ }),
     ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(
+      screen.getByRole('heading', { name: 'How old is your child?' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps every area available when more than one region is open', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'kowloon,islands';
+    clearSearchAreaScopeCacheForTests();
+    openNavigator();
+
+    expect(screen.getByRole('button', { name: 'All areas' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Kowloon' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+  });
+
+  it('can continue when the scope names no neighbourhood', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'atlantis';
+    clearSearchAreaScopeCacheForTests();
+    openNavigator();
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'No areas are open yet',
+    );
+    expect(screen.getByRole('button', { name: /All areas/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(
+      screen.getByRole('heading', { name: 'How old is your child?' }),
+    ).toBeInTheDocument();
+  });
+
+  it('does not write the starting choice into the search', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'southern-stanley';
+    clearSearchAreaScopeCacheForTests();
+    const content = openNavigator();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hong Kong Island' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: '3–6 years' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: content.smallWorld.navigator.seeActivitiesLabel }),
+    );
+    expect(push).toHaveBeenCalledWith('/en/search/?age=3-6&view=map');
   });
 });

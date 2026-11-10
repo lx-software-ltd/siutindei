@@ -15,6 +15,7 @@ import {
 } from '@/lib/home-wizard/choice-icons';
 import { homeWizardChoices } from '@/lib/home-wizard/choices';
 import { clearSearchAreaScopeCacheForTests } from '@/lib/home-wizard/area-scope';
+import { loadRecentSearch } from '@/lib/activities/recent-storage';
 
 const push = vi.hoisted(() => vi.fn());
 
@@ -54,6 +55,8 @@ describe('SearchPanel', () => {
   afterEach(() => {
     delete process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE;
     clearSearchAreaScopeCacheForTests();
+    window.localStorage.clear();
+    push.mockClear();
   });
 
   it('shows activity, age, and Hong Kong region icons with labels', () => {
@@ -172,6 +175,14 @@ describe('SearchPanel', () => {
     expect(labels[0]).toBe('All open areas in Kowloon');
     expect(labels).toContain('Mong Kok');
     expect(labels).not.toContain('Kennedy Town');
+
+    fireEvent.change(screen.getByRole('combobox'), {
+      target: { value: 'yau-tsim-mong-mong-kok' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    const href = String(push.mock.calls.at(-1)?.[0]);
+    expect(href).toContain('region=kowloon');
+    expect(href).toContain('neighbourhood=yau-tsim-mong-mong-kok');
   });
 
   it('shows the only open neighbourhood and greys out every area', () => {
@@ -196,6 +207,10 @@ describe('SearchPanel', () => {
     expect(
       screen.getByRole('button', { name: 'Hong Kong Island' }),
     ).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    expect(push).toHaveBeenCalledWith('/en/search/?age=3-6&view=map');
+    expect(loadRecentSearch()?.regionId).toBeNull();
   });
 
   it('keeps every area available when more than one region is open', () => {
@@ -227,5 +242,22 @@ describe('SearchPanel', () => {
       'aria-disabled',
       'true',
     );
+  });
+
+  it('names the only open neighbourhood in traditional chinese', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'southern-stanley';
+    clearSearchAreaScopeCacheForTests();
+    const content = getContent('zh-HK');
+    render(
+      <SearchProvider>
+        <OpenOnMount />
+        <SearchPanel locale="zh-HK" copy={content.navbar.searchPanel} />
+      </SearchProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: /所有地區/ })).toHaveTextContent(
+      '而家只開放香港島',
+    );
+    expect(screen.getByRole('combobox')).toHaveTextContent('赤柱');
   });
 });

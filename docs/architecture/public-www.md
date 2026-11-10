@@ -151,16 +151,18 @@ Source: [`apps/public_www`](../../apps/public_www).
   `STAGING_SEARCH_DATA_ENABLED`. A value on the staging GitHub Environment
   overrides the repository value. Unset defaults to `true`. Production promote
   always sets `NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED=false` and uses the
-  live search API / Aurora.   `SEARCH_AREA_SCOPE` (GitHub variable, also
+  live search API / Aurora. `SEARCH_AREA_SCOPE` (GitHub variable, also
   inlined as `NEXT_PUBLIC_SEARCH_AREA_SCOPE`) limits which regions and
   neighbourhoods the search panel and home wizard offer. Regions with
   nothing in the list stay focusable and are labelled coming soon.
   Neighbourhoods outside it are omitted. When only one region is open,
   "All areas" is greyed out, that region is the starting choice, and its
-  open neighbourhoods are shown even if there is only one. A search URL
-  that names no area is left as written; the bars name the open place.
-  A link to a closed region is rewritten to that starting choice. Unset
-  shows every area. The search API enforces the same list; the website
+  open neighbourhoods are shown even if there is only one. Submitting
+  that starting choice does not write it into the search URL or the
+  saved search. The bars name the open place, and the map link uses it.
+  A link to a closed region is rewritten to that starting choice. When
+  the scope names no neighbourhood, the wizard can still continue.
+  Unset shows every area. The search API enforces the same list; the website
   copy only changes the controls and, on staging fixture mode, the
   in-browser filter. A direct activity link still loads. Changing the
   variable needs a website build and a backend deploy.

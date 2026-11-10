@@ -669,8 +669,11 @@ no selected neighbourhood stay focusable and are labelled coming soon.
 Neighbourhoods outside the list are omitted. When the list sits in one
 region, "All areas" is greyed out, because it would mean that region,
 and the neighbourhood list is shown even for a single neighbourhood.
-Search URLs that name no area stay unchanged, so analytics still record
-the area the user asked for. A deep link to a closed area is rewritten
+Submitting that starting choice leaves the area out of the URL and the
+saved search, so a later wider scope still applies. A neighbourhood
+chosen among several is kept. The bars name the open place, and the
+map link uses it. When the scope names no neighbourhood, the wizard
+can still continue. A deep link to a closed area is rewritten
 to that one open region, or to every open area when more than one
 region is open, and the page says so until the query changes. Staging
 fixture search applies the same rule in the browser. The mobile app

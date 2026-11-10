@@ -171,6 +171,7 @@
       "noAreasOpenLabel": "暫時未有開放地區",
       "anywhereInRegionTemplate": "{region}任何地方",
       "backLabel": "返回",
+      "continueLabel": "繼續",
       "seeActivitiesLabel": "查看活動",
       "stepProgressTemplate": "第 {current} 步，共 {total} 步",
       "steps": {
