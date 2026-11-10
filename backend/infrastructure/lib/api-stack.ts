@@ -277,6 +277,13 @@ export class ApiStack extends cdk.Stack {
     if (lambdaSecurityGroupResource) {
       lambdaSecurityGroupResource.cfnOptions.updateReplacePolicy =
         cdk.CfnDeletionPolicy.RETAIN;
+      // W3011 wants DeletionPolicy to match. Stack deletion still removes
+      // the named group so a later deploy can create the same name.
+      cdk.Validations.of(lambdaSecurityGroupResource).acknowledge({
+        id: "CloudFormation-Validate::W3011",
+        reason:
+          "UpdateReplacePolicy retains the named group on replacement. DeletionPolicy stays Delete so stack deletion frees the name.",
+      });
     }
     const migrationSecurityGroupResource =
       migrationSecurityGroup.node
@@ -284,6 +291,11 @@ export class ApiStack extends cdk.Stack {
     if (migrationSecurityGroupResource) {
       migrationSecurityGroupResource.cfnOptions.updateReplacePolicy =
         cdk.CfnDeletionPolicy.RETAIN;
+      cdk.Validations.of(migrationSecurityGroupResource).acknowledge({
+        id: "CloudFormation-Validate::W3011",
+        reason:
+          "UpdateReplacePolicy retains the named group on replacement. DeletionPolicy stays Delete so stack deletion frees the name.",
+      });
     }
 
     // ---------------------------------------------------------------------
@@ -745,12 +757,13 @@ export class ApiStack extends cdk.Stack {
     );
     const openRouterApiKey = new cdk.CfnParameter(this, "OpenRouterApiKey", {
       type: "String",
-      default: "",
+      // Empty fails SecretString's minimum length. This is the same placeholder.
+      default: "pending",
       noEcho: true,
       description:
         "OpenRouter API key for lxsoftware:siutindei. Stored in " +
-        "Secrets Manager. Leave empty to store the placeholder pending " +
-        "until the key is minted.",
+        "Secrets Manager. The default and an empty value store the " +
+        "placeholder pending until the key is minted.",
     });
     const openRouterChatCompletionsUrl = new cdk.CfnParameter(
       this,
@@ -961,8 +974,8 @@ export class ApiStack extends cdk.Stack {
       }
     );
 
-    userPoolClient.addDependency(googleProvider);
-    userPoolClient.addDependency(appleProvider);
+    userPoolClient.addResourceDependency(googleProvider);
+    userPoolClient.addResourceDependency(appleProvider);
 
     // Dedicated client for the Executive Board catalog importer.
     // AdminInitiateAuth + ADMIN_USER_PASSWORD_AUTH only — no OAuth,

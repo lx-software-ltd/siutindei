@@ -1,3 +1,6 @@
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import * as cdk from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
@@ -221,10 +224,23 @@ function collectReferences(value: unknown, found: Set<string>): void {
 // pseudo parameters: a nested stack parameter or a rename would make
 // CloudFormation replace alarms whose fixed names already exist.
 function assertOpsAlarmRulesInNestedStack(): void {
-  const app = new cdk.App({ context: { "aws:cdk:bundling-stacks": [] } });
-  const stack = new ApiStack(app, "OpsAlarmRulesStack", {
-    env: { account: "111111111111", region: "us-east-1" },
+  const outdir = fs.mkdtempSync(path.join(os.tmpdir(), "cdk-api-stack-"));
+  const app = new cdk.App({
+    outdir,
+    context: { "aws:cdk:bundling-stacks": [] },
   });
+  try {
+    const stack = new ApiStack(app, "OpsAlarmRulesStack", {
+      env: { account: "111111111111", region: "us-east-1" },
+    });
+    assertOpsAlarmRules(stack);
+    assertDeployTemplateIsQuiet(outdir, stack.stackName);
+  } finally {
+    fs.rmSync(outdir, { recursive: true, force: true });
+  }
+}
+
+function assertOpsAlarmRules(stack: cdk.Stack): void {
   const nestedStack = stack.node.findChild("OpsAlarmsStack") as cdk.NestedStack;
   const nested = Template.fromStack(nestedStack).toJSON();
   const parentAlarms = Template.fromStack(stack).findResources("AWS::CloudWatch::Alarm");
@@ -417,6 +433,95 @@ function assertLogGroupActionsUseLogGroupArn(): void {
         );
       }
     }
+  }
+}
+
+function assertDeployTemplateIsQuiet(outdir: string, stackName: string): void {
+  const report = JSON.parse(
+    fs.readFileSync(path.join(outdir, "validation-report.json"), "utf8"),
+  ) as {
+    pluginReports: Array<{
+      violations?: Array<{ ruleName: string; description: string }>;
+      suppressedViolations?: Array<{ ruleName: string; reason?: string }>;
+    }>;
+  };
+  const violations = report.pluginReports.flatMap((plugin) => plugin.violations ?? []);
+  if (violations.length > 0) {
+    throw new Error(
+      `API stack template validation reported ${violations
+        .map((violation) => `${violation.ruleName}: ${violation.description}`)
+        .join("; ")}`,
+    );
+  }
+  const suppressed = report.pluginReports.flatMap(
+    (plugin) => plugin.suppressedViolations ?? [],
+  );
+  const retainedGroups = suppressed.filter((violation) => violation.ruleName === "W3011");
+  if (retainedGroups.length !== 2) {
+    throw new Error(
+      `Expected the two named security groups to acknowledge W3011, found ${retainedGroups.length}`,
+    );
+  }
+  const targetGroupTags = suppressed.filter((violation) => violation.ruleName === "F3002");
+  if (targetGroupTags.length !== 1) {
+    throw new Error(
+      `Expected the proxy target group to acknowledge F3002, found ${targetGroupTags.length}`,
+    );
+  }
+
+  const template = JSON.parse(
+    fs.readFileSync(path.join(outdir, `${stackName}.template.json`), "utf8"),
+  ) as {
+    Parameters: Record<string, { Default?: string }>;
+    Resources: Record<
+      string,
+      {
+        Type: string;
+        DependsOn?: string[];
+        DeletionPolicy?: string;
+        UpdateReplacePolicy?: string;
+        Properties?: Record<string, unknown>;
+      }
+    >;
+  };
+  if (template.Parameters.OpenRouterApiKey?.Default !== "pending") {
+    throw new Error("OpenRouterApiKey default must be the non-empty placeholder");
+  }
+  const secret = Object.values(template.Resources).find(
+    (resource) =>
+      resource.Type === "AWS::SecretsManager::Secret" &&
+      resource.Properties?.Name === "lxsoftware-siutindei-openrouter-api-key",
+  );
+  const secretString = JSON.stringify(secret?.Properties?.SecretString ?? null);
+  if (!secretString.includes("OpenRouterKeyProvided") || !secretString.includes("pending")) {
+    throw new Error(`OpenRouter secret must still fall back to pending: ${secretString}`);
+  }
+  const targetGroup = Object.values(template.Resources).find(
+    (resource) => resource.Type === "AWS::RDS::DBProxyTargetGroup",
+  );
+  const targetGroupTagsProperty = JSON.stringify(targetGroup?.Properties?.Tags ?? []);
+  if (!targetGroup || !targetGroupTagsProperty.includes("Organization")) {
+    throw new Error("DB proxy target group must keep the tags already deployed");
+  }
+  const proxy = Object.values(template.Resources).find(
+    (resource) => resource.Type === "AWS::RDS::DBProxy",
+  );
+  const proxyTags = JSON.stringify(proxy?.Properties?.Tags ?? []);
+  if (!proxyTags.includes("Organization") || !proxyTags.includes("LX Software")) {
+    throw new Error("DB proxy must keep the stack tags");
+  }
+  for (const logicalId of ["LambdaSecurityGroup0BD9FC99", "MigrationSecurityGroupBCB362A0"]) {
+    const group = template.Resources[logicalId];
+    if (group?.UpdateReplacePolicy !== "Retain" || group.DeletionPolicy) {
+      throw new Error(
+        `${logicalId} must retain on replacement and delete with the stack`,
+      );
+    }
+  }
+  const client = template.Resources.SiutindeiUserPoolClient;
+  const dependsOn = client?.DependsOn ?? [];
+  if (!dependsOn.includes("GoogleIdentityProvider") || !dependsOn.includes("AppleIdentityProvider")) {
+    throw new Error(`User pool client dependencies changed: ${dependsOn.join(", ")}`);
   }
 }
 

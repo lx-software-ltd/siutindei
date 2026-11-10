@@ -451,6 +451,13 @@ export class DatabaseConstruct extends Construct {
         iamAuth: true,
         dbProxyName: name("db-proxy"),
       });
+      // The validator rejects Tags, but this L1 emits them and the deployed
+      // group already has them. Dropping the property would update the live group.
+      cdk.Validations.of(this.proxy.node.findChild("ProxyTargetGroup")).acknowledge({
+        id: "CloudFormation-Validate::F3002",
+        reason:
+          "CDK emits Tags and the deployed target group already has them. Removing Tags would update the live group.",
+      });
     }
   }
 
