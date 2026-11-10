@@ -5,6 +5,7 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { collectInlineScriptHashesFromHtml } from './csp-inline-script-hashes.mjs';
 
@@ -36,12 +37,27 @@ const GOOGLE_MAPS_CONNECT_ORIGINS = [
 /**
  * @param {string[]} inlineScriptHashes
  */
-function buildCspDirectives(inlineScriptHashes) {
+export function buildCspDirectives(inlineScriptHashes) {
   const hasGtm = Boolean(process.env.NEXT_PUBLIC_GTM_ID?.trim());
   const hasMetaPixel = Boolean(process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim());
 
   const scriptSources = ["'self'", ...inlineScriptHashes];
   const connectSources = ["'self'"];
+  const searchOverride = process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL?.trim();
+  if (searchOverride) {
+    try {
+      const overrideOrigin = new URL(searchOverride).origin;
+      const siteOrigin = process.env.NEXT_PUBLIC_SITE_ORIGIN?.trim();
+      const site = siteOrigin ? new URL(siteOrigin).origin : '';
+      if (overrideOrigin !== site) {
+        connectSources.push(overrideOrigin);
+      }
+    } catch {
+      console.warn(
+        'csp:inject — NEXT_PUBLIC_SEARCH_API_BASE_URL is not a valid URL.',
+      );
+    }
+  }
 
   if (hasGtm) {
     scriptSources.push(...GTM_SCRIPT_ORIGINS);
@@ -134,7 +150,15 @@ async function main() {
   );
 }
 
-main().catch((error) => {
-  console.error('csp:inject failed:', error);
-  process.exit(1);
-});
+function isMain() {
+  const self = fileURLToPath(import.meta.url);
+  const invoked = process.argv[1] ? path.resolve(process.argv[1]) : '';
+  return self === invoked;
+}
+
+if (isMain()) {
+  main().catch((error) => {
+    console.error('csp:inject failed:', error);
+    process.exit(1);
+  });
+}

@@ -78,6 +78,7 @@ describe('getSearchConfig', () => {
     'NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED',
     'NEXT_PUBLIC_SITE_ORIGIN',
     'NEXT_PUBLIC_STAGING_SEARCH_FIXTURE_URL',
+    'NEXT_PUBLIC_SEARCH_API_BASE_URL',
     'NEXT_PUBLIC_SEARCH_API_KEY',
     'NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN',
   ] as const;
@@ -101,6 +102,7 @@ describe('getSearchConfig', () => {
     process.env.NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED = 'true';
     process.env.NEXT_PUBLIC_SITE_ORIGIN = 'http://localhost:3000/';
     delete process.env.NEXT_PUBLIC_STAGING_SEARCH_FIXTURE_URL;
+    delete process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL;
 
     expect(getSearchConfig()).toEqual({
       stagingSearchDataEnabled: true,
@@ -120,6 +122,7 @@ describe('getSearchConfig', () => {
     process.env.NEXT_PUBLIC_SITE_ORIGIN = 'https://example.com';
     process.env.NEXT_PUBLIC_STAGING_SEARCH_FIXTURE_URL =
       'https://cdn.example.com/fixture.json';
+    delete process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL;
     process.env.NEXT_PUBLIC_SEARCH_API_KEY = 'test-key';
     process.env.NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN = 'test-token';
 
@@ -130,5 +133,16 @@ describe('getSearchConfig', () => {
       apiKey: 'test-key',
       attestationToken: 'test-token',
     });
+  });
+
+  it('lets a local search base URL override the site origin', () => {
+    for (const key of envKeys) {
+      original[key] = process.env[key];
+    }
+    process.env.NEXT_PUBLIC_SITE_ORIGIN = 'http://localhost:3000';
+    process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL =
+      'https://www-staging.example.com';
+
+    expect(getSearchConfig().apiBaseUrl).toBe('https://www-staging.example.com');
   });
 });

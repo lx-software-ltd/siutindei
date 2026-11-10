@@ -8,6 +8,7 @@ import {
 const envKeys = [
   'NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED',
   'NEXT_PUBLIC_SITE_ORIGIN',
+  'NEXT_PUBLIC_SEARCH_API_BASE_URL',
   'NEXT_PUBLIC_SEARCH_API_KEY',
   'NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN',
 ] as const;
@@ -73,6 +74,7 @@ describe('fetchActivitySearch live API integration', () => {
   it('calls GET /v1/activities/search with auth headers when configured', async () => {
     process.env.NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED = 'false';
     process.env.NEXT_PUBLIC_SITE_ORIGIN = 'https://siutindei.com';
+    delete process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL;
     process.env.NEXT_PUBLIC_SEARCH_API_KEY = 'key';
     process.env.NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN = 'token';
 
@@ -102,6 +104,28 @@ describe('fetchActivitySearch live API integration', () => {
 
     await expect(fetchActivitySearch({ limit: 10 })).rejects.toThrow(
       'Search API is not configured.',
+    );
+  });
+
+  it('uses a local search base URL override', async () => {
+    process.env.NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED = 'false';
+    process.env.NEXT_PUBLIC_SITE_ORIGIN = 'http://localhost:3100';
+    process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL =
+      'https://www-staging.example.com';
+    process.env.NEXT_PUBLIC_SEARCH_API_KEY = 'key';
+    process.env.NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN = 'token';
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [], next_cursor: null }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await fetchActivitySearch({ limit: 1 });
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      'https://www-staging.example.com/v1/activities/search?limit=1',
     );
   });
 });
