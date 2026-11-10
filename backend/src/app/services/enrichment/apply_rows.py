@@ -85,7 +85,7 @@ def apply_one(
         _apply_pricing(session, org, proposed, override)
         return
     if proposal.kind == "create_schedule":
-        _apply_schedule(session, org, proposed, override)
+        _apply_schedule(session, org, proposal, proposed, override)
         return
     raise ValidationError("unsupported proposal", field="kind")
 
@@ -300,6 +300,7 @@ def _apply_pricing(
 def _apply_schedule(
     session: Session,
     org: Organization,
+    proposal: OrgEnrichmentProposal,
     proposed: dict[str, Any],
     override: dict[str, Any],
 ) -> None:
@@ -309,12 +310,17 @@ def _apply_schedule(
         raise ValidationError(SCHEDULE_ACTIVITY, field="activity_name")
     if location is None:
         raise ValidationError(SCHEDULE_VENUE, field="location_id")
+    languages = schedule_languages(proposed.get("languages"), default=["yue"])
+    existing = _existing_schedule(session, activity.id, location.id, languages)
+    if existing is not None:
+        proposal.entity_id = existing.id
+        return
     parsed = _schedule_times(proposed.get("entries"))
     schedule = ActivitySchedule(
         activity_id=activity.id,
         location_id=location.id,
         schedule_type=ScheduleType.WEEKLY,
-        languages=schedule_languages(proposed.get("languages"), default=["yue"]),
+        languages=languages,
     )
     session.add(schedule)
     session.flush()
@@ -327,6 +333,31 @@ def _apply_schedule(
                 end_minutes_utc=end_utc,
             )
         )
+
+
+def _existing_schedule(
+    session: Session,
+    activity_id: object,
+    location_id: object,
+    languages: list[str],
+) -> ActivitySchedule | None:
+    """The schedule already stored for this activity, venue, and languages.
+
+    ``zh-HK`` and ``yue`` compare equal, matching the unique constraint
+    after ``schedule_languages``. A second insert would raise
+    ``schedule_unique_activity_location_languages`` and drop the proposal.
+    """
+    wanted = tuple(sorted(languages))
+    for row in session.scalars(
+        select(ActivitySchedule).where(
+            ActivitySchedule.activity_id == activity_id,
+            ActivitySchedule.location_id == location_id,
+        )
+    ).all():
+        stored = tuple(sorted(schedule_languages(row.languages or [])))
+        if stored == wanted:
+            return row
+    return None
 
 
 def _schedule_times(raw: object) -> list[tuple[int, int, int]]:

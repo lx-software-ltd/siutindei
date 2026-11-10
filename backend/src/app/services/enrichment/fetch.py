@@ -11,7 +11,7 @@ import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import urljoin, urlparse, urlunparse
+from urllib.parse import quote, unquote, urljoin, urlparse, urlunparse
 from urllib.robotparser import RobotFileParser
 
 from app.services.enrichment.constants import (
@@ -121,7 +121,10 @@ def fetch_public(
 
     The TCP connection uses the IP checked by public_address, so a DNS
     change between the check and the connect cannot reach a private address.
+    Spaces and non-ASCII characters are percent-encoded first. urllib
+    rejects them and that used to fail the whole proxy invocation.
     """
+    url = _encoded_request_url(url)
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise CrawlError("refusing non-http URL")
@@ -160,6 +163,8 @@ def fetch_public(
         location = str(exc.headers.get("Location") or "") if exc.headers else ""
     except TimeoutError as exc:
         raise TimeoutError("crawl budget exceeded") from exc
+    except (http.client.InvalidURL, UnicodeEncodeError) as exc:
+        raise CrawlError("URL could not be fetched") from exc
     return FetchResult(
         status=status,
         url=final,
@@ -168,6 +173,20 @@ def fetch_public(
         location=location,
         truncated=truncated,
     )
+
+
+def _encoded_request_url(url: str) -> str:
+    """Return an ASCII request URL. The host is checked before this is used."""
+    parsed = urlparse(url)
+    host = parsed.hostname or ""
+    try:
+        host = host.encode("idna").decode("ascii")
+    except UnicodeError as exc:
+        raise CrawlError("refusing non-http URL") from exc
+    netloc = f"{host}:{parsed.port}" if parsed.port else host
+    path = quote(unquote(parsed.path or "/"), safe="/%")
+    query = quote(unquote(parsed.query), safe="&=%+")
+    return urlunparse((parsed.scheme, netloc, path or "/", "", query, ""))
 
 
 def _pinned_target(url: str, ip: str) -> tuple[str, str, str]:
@@ -301,7 +320,14 @@ def crawl_site(
         limit = MAX_PDF_BYTES if _is_pdf_path(url) else max_page_bytes
         try:
             result = _follow(url, fetch_one=bounded, max_bytes=limit)
-        except (CrawlError, urllib.error.URLError, TimeoutError, OSError):
+        except (
+            CrawlError,
+            urllib.error.URLError,
+            TimeoutError,
+            OSError,
+            http.client.InvalidURL,
+            UnicodeEncodeError,
+        ):
             continue
         last_fetch = now()
         final_url = result.url or url

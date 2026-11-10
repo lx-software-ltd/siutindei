@@ -9,6 +9,10 @@ from sqlalchemy.orm import Session
 from app.api.admin_validators import MAX_MEDIA_URLS_COUNT, _validate_url
 from app.db.models.organization import Organization
 from app.exceptions import ValidationError
+from app.services.aws_proxy import AwsProxyError
+from app.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 CopyImage = Any
 
@@ -41,7 +45,14 @@ def apply_media(
                 )
                 return str(copied.get("url") or "")
 
-        stored = copy_image(source, str(org.id))
+        try:
+            stored = copy_image(source, str(org.id))
+        except AwsProxyError as exc:
+            logger.warning("Enrichment image was not copied")
+            raise ValidationError(
+                exc.message or "image could not be copied",
+                field="source_url",
+            ) from exc
     else:
         stored = _validate_url(source, "media_urls")
     _append_media(org, stored, logo=bool(proposed.get("logo")))

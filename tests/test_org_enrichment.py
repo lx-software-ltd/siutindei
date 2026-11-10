@@ -813,6 +813,84 @@ def test_fetch_connects_to_the_checked_address(monkeypatch) -> None:
     assert captured["host"] == "ok.test"
 
 
+def test_fetch_encodes_spaces_and_non_ascii_before_the_request(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.enrichment.fetch.public_address",
+        lambda host, resolve=None: "1.1.1.1",
+    )
+    captured: list[str] = []
+
+    class _Response:
+        def __init__(self) -> None:
+            self.status = 200
+            self.headers = {"Content-Type": "application/pdf"}
+            self._sent = False
+
+        def read(self, amount: int) -> bytes:
+            del amount
+            if self._sent:
+                return b""
+            self._sent = True
+            return b"%PDF-1.4"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args) -> bool:
+            del args
+            return False
+
+    class _Opener:
+        def open(self, request, timeout=None):
+            del timeout
+            captured.append(request.full_url)
+            return _Response()
+
+    monkeypatch.setattr(
+        "urllib.request.build_opener",
+        lambda *handlers: _Opener(),
+    )
+    fetch_public(
+        "https://ok.test/lohas/document/School Calendar 2026-2027.pdf",
+        100,
+    )
+    fetch_public("https://ok.test/files/校曆.pdf", 100)
+    assert "School%20Calendar%202026-2027.pdf" in captured[0]
+    assert " " not in captured[0]
+    assert "校" not in captured[1]
+    assert "%" in captured[1]
+
+
+def test_crawl_skips_a_link_urllib_cannot_send(monkeypatch) -> None:
+    import http.client
+
+    monkeypatch.setattr(
+        "app.services.enrichment.guard.host_is_blocked",
+        lambda host, resolve=None: False,
+    )
+
+    def fetch_one(url: str, max_bytes: int) -> FetchResult:
+        del max_bytes
+        if " " in url:
+            raise http.client.InvalidURL("space")
+        body = (
+            "<html><body>"
+            + ("Class " * 40)
+            + "<a href='https://ok.test/School Calendar.pdf'>calendar</a>"
+            + "</body></html>"
+        ).encode()
+        return FetchResult(200, url, "text/html", body, "")
+
+    crawled = crawl_site(
+        "https://ok.test/",
+        fetch_one=fetch_one,
+        sleep=lambda _seconds: None,
+        now=lambda: 0,
+    )
+    assert crawled["status"] == "ok"
+    assert crawled["pages_fetched"] == 1
+
+
 def test_https_uses_the_real_handler_for_the_pinned_address(monkeypatch) -> None:
     import io
 
@@ -1346,6 +1424,88 @@ def test_apply_stores_zh_hk_schedule_as_cantonese(
     assert results[0]["status"] == "applied"
     stored = db_session.query(ActivitySchedule).one()
     assert stored.languages == ["yue"]
+
+
+def test_apply_keeps_an_existing_schedule(
+    db_session, sample_activity, sample_location
+) -> None:
+    from app.db.models import ScheduleType
+
+    existing = ActivitySchedule(
+        activity_id=sample_activity.id,
+        location_id=sample_location.id,
+        schedule_type=ScheduleType.WEEKLY,
+        languages=["zh-HK"],
+    )
+    db_session.add(existing)
+    db_session.flush()
+    org = sample_activity.organization
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    schedule = _proposal(
+        run,
+        section="Schedules",
+        kind="create_schedule",
+        label="Schedule",
+        proposed_value={
+            "activity_name": sample_activity.name,
+            "location_address": sample_location.address,
+            "languages": ["zh-HK"],
+            "entries": [{"day_of_week": 1, "start_time": "15:00", "end_time": "15:45"}],
+        },
+        proposed_hash="hash-existing-schedule",
+    )
+    db_session.add(schedule)
+    db_session.flush()
+    results, _quality_run = apply_proposals(
+        db_session,
+        org.id,
+        [str(schedule.id)],
+        {},
+        user_id="admin",
+        request_id="req-existing-schedule",
+    )
+    assert results[0]["status"] == "applied"
+    assert db_session.query(ActivitySchedule).count() == 1
+    assert schedule.entity_id == existing.id
+
+
+def test_refused_image_is_a_validation_error(db_session) -> None:
+    from app.services.aws_proxy import AwsProxyError
+
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    media = _proposal(
+        run,
+        section="Media",
+        kind="add_media",
+        label="Photo",
+        proposed_value={"source_url": "https://ok.test/photo.jpg"},
+        proposed_hash="hash-photo",
+    )
+    db_session.add(media)
+    db_session.flush()
+
+    def copy_image(url: str, org_id: str) -> str:
+        del url, org_id
+        raise AwsProxyError("CrawlRefused", "image content type is not allowed")
+
+    results, _quality_run = apply_proposals(
+        db_session,
+        org.id,
+        [str(media.id)],
+        {},
+        user_id="admin",
+        request_id="req-image",
+        copy_image=copy_image,
+    )
+    assert results[0]["status"] == "error"
+    assert results[0]["error"] == "image content type is not allowed"
+    assert media.status == "pending"
+    assert org.media_urls in (None, [])
 
 
 def _quality_settings(session, **flags: str):

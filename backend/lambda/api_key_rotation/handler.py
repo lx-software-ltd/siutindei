@@ -202,7 +202,20 @@ def _get_old_key_info_from_secret(
         response = secrets_client.get_secret_value(SecretId=secret_arn)
         secret_string = response.get("SecretString")
         if secret_string:
-            return json.loads(secret_string)
+            try:
+                parsed = json.loads(secret_string)
+            except json.JSONDecodeError:
+                logger.warning(
+                    "API key secret is not JSON; treating it as no previous key"
+                )
+                return None
+            if not isinstance(parsed, dict):
+                logger.warning(
+                    "API key secret is not a JSON object; "
+                    "treating it as no previous key"
+                )
+                return None
+            return parsed
     except ClientError as exc:
         if exc.response["Error"]["Code"] == "ResourceNotFoundException":
             return None
