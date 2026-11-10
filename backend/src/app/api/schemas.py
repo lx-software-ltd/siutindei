@@ -105,6 +105,7 @@ class ActivitySearchResponseSchema(BaseModel):
     items: list[ActivitySearchResultSchema]
     next_cursor: str | None = None
     category_match: str = "exact"
+    area_scope: list[str] | None = None
 
 
 _CARD_OMITTED_FIELDS = (
@@ -119,9 +120,17 @@ _CARD_OMITTED_FIELDS = (
 def dump_search_response(
     body: ActivitySearchResponseSchema,
     view: str = "full",
+    *,
+    include_area_scope: bool = True,
 ) -> dict:
-    """Serialize a search response. Card view drops the heavy fields."""
+    """Serialize a search response. Card view drops the heavy fields.
+
+    Cursor pages omit ``area_scope``. The first page carries the
+    neighbourhood list, and repeating it on every page adds nothing.
+    """
     payload = body.model_dump()
+    if not include_area_scope:
+        payload.pop("area_scope", None)
     if view != "card":
         return payload
     for item in payload.get("items", []):

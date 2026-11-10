@@ -78,6 +78,22 @@ their primary responsibilities.
     `false`; production params set `true`). When `true`, search returns
     only organizations with `review_status=approved` in addition to
     the listing-status filter.
+  - `SEARCH_AREA_SCOPE` (CDK `SearchAreaScope`, default empty). A
+    comma-separated list of wizard region ids (`hong_kong_island`,
+    `kowloon`, `new_territories`, `islands`), district slugs
+    (`yau-tsim-mong`), and neighbourhood slugs
+    (`central-and-western-kennedy-town`). Empty leaves public search
+    unrestricted. A set value returns only schedules whose location is
+    one of those neighbourhoods. `GET /v1/partner/activities/search`
+    is exempt. A request with `activity_id` is also exempt, so a
+    direct activity page still opens. Unknown slugs are ignored; if
+    every slug is unknown, public search returns nothing. The response
+    field `area_scope` lists the neighbourhood ids on the first page,
+    or null when the variable is unset. A cursor page omits the field.
+    CloudFront can serve the previous response for
+    up to 5 minutes. Clearing the GitHub variable requires a deploy:
+    `SearchAreaScope` is passed even when empty so CloudFormation does
+    not keep the previous value.
 
 ### Admin API
 - Function: SiutindeiAdminFunction

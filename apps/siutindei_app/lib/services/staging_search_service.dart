@@ -114,6 +114,7 @@ class StagingSearchService {
           )
           .toList(),
       nextCursor: nextCursor,
+      statesAreaScope: filters.cursor == null,
     );
   }
 

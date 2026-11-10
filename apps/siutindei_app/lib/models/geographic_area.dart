@@ -109,9 +109,17 @@ class GeographicAreaTreeIndex {
     return flattened;
   }
 
-  List<GeographicArea> chipOptions({String? selectedAreaId}) {
+  List<GeographicArea> chipOptions({
+    String? selectedAreaId,
+    Set<String>? allowedAreaIds,
+  }) {
     if (roots.isEmpty) {
       return const [];
+    }
+    if (allowedAreaIds != null &&
+        selectedAreaId != null &&
+        !intersectsAllowed(selectedAreaId, allowedAreaIds)) {
+      selectedAreaId = null;
     }
     var selected = selectedAreaId == null ? null : _byId[selectedAreaId];
     if (selected != null && !selected.active) {
@@ -131,7 +139,34 @@ class GeographicAreaTreeIndex {
           ? _sortedActive(roots)
           : _sortedActive(parent.children);
     }
-    return _flattenBundledDistrictRow(options);
+    final flattened = _flattenBundledDistrictRow(options);
+    if (allowedAreaIds == null) {
+      return flattened;
+    }
+    return flattened
+        .where((node) => _nodeIntersects(node, allowedAreaIds))
+        .toList();
+  }
+
+  /// True when [areaId] or one of its descendants is in [allowedAreaIds].
+  bool intersectsAllowed(String areaId, Set<String> allowedAreaIds) {
+    final node = _byId[areaId];
+    if (node == null) {
+      return false;
+    }
+    return _nodeIntersects(node, allowedAreaIds);
+  }
+
+  bool _nodeIntersects(GeographicArea node, Set<String> allowedAreaIds) {
+    if (allowedAreaIds.contains(node.id)) {
+      return true;
+    }
+    for (final child in node.children) {
+      if (_nodeIntersects(child, allowedAreaIds)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   String? backTarget(String? selectedAreaId) {

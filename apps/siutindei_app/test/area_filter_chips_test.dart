@@ -166,6 +166,39 @@ void main() {
       expect(find.text('All areas'), findsNothing);
     });
 
+    testWidgets('hides regions outside the allowed neighbourhoods', (
+      tester,
+    ) async {
+      String? selected = 'island';
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            geographicAreaTreeProvider.overrideWith((ref) async {
+              return _sampleTree();
+            }),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: StatefulBuilder(
+                builder: (context, setState) {
+                  return AreaFilterChips(
+                    selectedAreaId: selected,
+                    allowedAreaIds: const {'mk'},
+                    onAreaChanged: (id) => setState(() => selected = id),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hong Kong Island'), findsNothing);
+      expect(find.text('Kowloon'), findsOneWidget);
+      expect(selected, isNull);
+    });
+
     testWidgets('uses a horizontal scroll view for overflow', (tester) async {
       await pumpChips(tester);
 

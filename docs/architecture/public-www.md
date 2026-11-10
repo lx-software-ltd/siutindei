@@ -151,7 +151,15 @@ Source: [`apps/public_www`](../../apps/public_www).
   `STAGING_SEARCH_DATA_ENABLED`. A value on the staging GitHub Environment
   overrides the repository value. Unset defaults to `true`. Production promote
   always sets `NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED=false` and uses the
-  live search API / Aurora. Optional fixture override on staging:
+  live search API / Aurora. `SEARCH_AREA_SCOPE` (GitHub variable, also
+  inlined as `NEXT_PUBLIC_SEARCH_AREA_SCOPE`) limits which regions and
+  neighbourhoods the search panel and home wizard offer. Regions with
+  nothing in the list are shown disabled. Neighbourhoods outside it are
+  omitted. Unset shows every area. The search API enforces the same list;
+  the website copy only changes the controls and, on staging fixture
+  mode, the in-browser filter. A direct activity link still loads.
+  Changing the variable needs a website build and a backend deploy.
+  Optional fixture override on staging:
   `NEXT_PUBLIC_STAGING_SEARCH_FIXTURE_URL`.
   Deployed search and listing-event calls stay on the site origin, so CSP
   `connect-src 'self'` covers them. `NEXT_PUBLIC_SEARCH_API_BASE_URL` is a

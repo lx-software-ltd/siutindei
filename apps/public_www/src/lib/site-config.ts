@@ -13,6 +13,7 @@ export interface SearchConfig {
   readonly apiBaseUrl: string;
   readonly apiKey: string;
   readonly attestationToken: string;
+  readonly searchAreaScope: string;
 }
 
 export interface SiteConfig {
@@ -95,6 +96,7 @@ export function getSearchConfig(): SearchConfig {
     apiBaseUrl: explicitApiBaseUrl || siteOrigin,
     apiKey: trimEnv(process.env.NEXT_PUBLIC_SEARCH_API_KEY),
     attestationToken: trimEnv(process.env.NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN),
+    searchAreaScope: trimEnv(process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE),
   };
 }
 

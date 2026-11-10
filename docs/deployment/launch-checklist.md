@@ -137,7 +137,15 @@ On the **production** environment:
   deploy workflow skips empty values unless the parameter is in
   `pass_empty_params`.
 - Variables: `APPLE_TEAM_ID`, `CDK_PARAM_FILE` pointing at
-  `params/production.json`.
+  `params/production.json`. `SEARCH_AREA_SCOPE` is optional. Leave it
+  unset to show every Hong Kong neighbourhood. Set a comma-separated
+  list of region ids, district slugs, and neighbourhood slugs to limit
+  public search. The same variable is read by the backend deploy and
+  by the public website build, so set it at repository level or on
+  both the production and staging environments. Clearing it takes
+  effect on the next backend deploy because `SearchAreaScope` is
+  passed even when empty. A website promote or staging deploy is
+  also required before the search controls match.
 
 On the **staging** environment (public www):
 

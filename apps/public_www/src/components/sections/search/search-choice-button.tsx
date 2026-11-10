@@ -5,6 +5,8 @@ interface SearchChoiceButtonProps {
   readonly onClick: () => void;
   readonly className?: string;
   readonly iconShape?: 'illustration' | 'flag';
+  readonly disabled?: boolean;
+  readonly disabledHint?: string;
 }
 
 export function SearchChoiceButton({
@@ -14,12 +16,16 @@ export function SearchChoiceButton({
   onClick,
   className = '',
   iconShape = 'illustration',
+  disabled = false,
+  disabledHint,
 }: SearchChoiceButtonProps) {
-  const selectedClassName = isSelected
-    ? 'border-ink-900 bg-ink-900 text-white ' +
-      'md:border-accent-500 md:bg-brand-50 md:text-brand-700'
-    : 'border-ink-900/15 bg-white text-ink-700 ' +
-      'hover:border-ink-900/30 md:hover:border-brand-200';
+  const selectedClassName = disabled
+    ? 'cursor-not-allowed border-ink-900/15 bg-white text-ink-500 opacity-40'
+    : isSelected
+      ? 'border-ink-900 bg-ink-900 text-white ' +
+        'md:border-accent-500 md:bg-brand-50 md:text-brand-700'
+      : 'border-ink-900/15 bg-white text-ink-700 ' +
+        'hover:border-ink-900/30 md:hover:border-brand-200';
 
   const iconClassName =
     iconShape === 'flag'
@@ -29,8 +35,9 @@ export function SearchChoiceButton({
   return (
     <button
       type="button"
-      aria-pressed={isSelected}
-      onClick={onClick}
+      aria-pressed={disabled ? undefined : isSelected}
+      aria-disabled={disabled || undefined}
+      onClick={disabled ? undefined : onClick}
       className={
         'search-choice inline-flex shrink-0 items-center gap-2 ' +
         'rounded-full border px-4 py-2 text-sm font-medium leading-5 ' +
@@ -56,7 +63,12 @@ export function SearchChoiceButton({
           className={iconClassName}
         />
       </span>
-      <span className="md:text-center">{label}</span>
+      <span className="md:text-center">
+        {label}
+        {disabled && disabledHint ? (
+          <span className="mt-1 block text-xs font-medium">{disabledHint}</span>
+        ) : null}
+      </span>
     </button>
   );
 }

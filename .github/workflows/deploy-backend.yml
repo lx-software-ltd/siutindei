@@ -94,6 +94,11 @@ jobs:
           aws-region: ${{ steps.region.outputs.region }}
           role-session-name: GitHubActions-${{ github.run_id }}
 
+      - name: Validate search area scope
+        env:
+          SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
+        run: python3 scripts/deploy/validate_search_area_scope.py
+
       - name: Install CDK dependencies
         working-directory: backend/infrastructure
         run: npm ci
@@ -195,6 +200,9 @@ jobs:
               "CognitoCustomDomainCertificateArn",
               "ApiCustomDomainName",
               "ApiCustomDomainCertificateArn",
+              # Clearing SEARCH_AREA_SCOPE must reach CloudFormation.
+              # An omitted parameter would keep the previous neighbourhood list.
+              "SearchAreaScope",
           }
 
           def resolve_value(raw: str) -> str:
@@ -472,6 +480,7 @@ jobs:
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
           CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD: ${{ secrets.CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD }}
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
           MIGRATIONS_FORCE_RUN_ID: >-
             ${{ github.event.inputs.force_migration_run == 'true' &&
             github.run_id || '' }}

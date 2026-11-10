@@ -111,6 +111,7 @@ describe('getSearchConfig', () => {
       apiBaseUrl: 'http://localhost:3000',
       apiKey: '',
       attestationToken: '',
+      searchAreaScope: '',
     });
   });
 
@@ -132,6 +133,7 @@ describe('getSearchConfig', () => {
       apiBaseUrl: 'https://example.com',
       apiKey: 'test-key',
       attestationToken: 'test-token',
+      searchAreaScope: '',
     });
   });
 

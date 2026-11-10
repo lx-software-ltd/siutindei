@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SearchNavigator } from '@/components/sections/hero/search-navigator';
 import { SearchProvider } from '@/components/shared/search/search-context';
@@ -10,6 +10,7 @@ import {
   REGION_ICON_SRC,
 } from '@/lib/home-wizard/choice-icons';
 import { homeWizardChoices } from '@/lib/home-wizard/choices';
+import { clearSearchAreaScopeCacheForTests } from '@/lib/home-wizard/area-scope';
 
 const push = vi.hoisted(() => vi.fn());
 
@@ -49,6 +50,11 @@ function choiceImage(name: string): HTMLImageElement {
 }
 
 describe('SearchNavigator', () => {
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE;
+    clearSearchAreaScopeCacheForTests();
+  });
+
   it('opens on the location step with large area tiles', () => {
     const content = openNavigator();
 
@@ -199,6 +205,33 @@ describe('SearchNavigator', () => {
     expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '3–6 years' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('greys out regions outside the scope and skips a single neighbourhood', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE =
+      'central-and-western-kennedy-town';
+    clearSearchAreaScopeCacheForTests();
+    const content = openNavigator();
+
+    expect(screen.getByRole('button', { name: 'All areas' })).toBeEnabled();
+    const kowloon = screen.getByRole('button', { name: /Kowloon/ });
+    expect(kowloon).toHaveAttribute('aria-disabled', 'true');
+    expect(kowloon).not.toBeDisabled();
+    expect(kowloon).toHaveTextContent('Coming soon');
+    fireEvent.click(kowloon);
+    expect(
+      screen.getByRole('heading', {
+        name: content.smallWorld.navigator.steps.location.title,
+      }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hong Kong Island' }));
+    expect(
+      screen.getByRole('heading', { name: 'How old is your child?' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Kennedy Town' }),
     ).not.toBeInTheDocument();
   });
 });

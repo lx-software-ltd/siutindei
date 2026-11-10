@@ -53,5 +53,6 @@
   "OrgReviewGateEnabled": "true",
   "OpenRouterApiKey": "<FROM_GITHUB_SECRET: CDK_PARAM_OPENROUTER_API_KEY>",
   "OpenRouterChatCompletionsUrl": "https://openrouter.ai/api/v1/chat/completions",
-  "OpenRouterModel": "qwen/qwen3-30b-a3b"
+  "OpenRouterModel": "qwen/qwen3-30b-a3b",
+  "SearchAreaScope": "<FROM_GITHUB_VAR: SEARCH_AREA_SCOPE>"
 }

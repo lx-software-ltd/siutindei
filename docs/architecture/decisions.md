@@ -646,3 +646,35 @@ presign a leaflet. Pending files are tagged and are not a public read
 until a picture proposal is applied.
 
 Design notes: `docs/plans/leaflet-enrichment.md`.
+
+## 14) Public search area scope
+
+**Decision:** Public activity search can be limited to selected Hong
+Kong neighbourhoods with the GitHub variable `SEARCH_AREA_SCOPE`.
+Unset or blank means every organisation and activity is eligible, which
+is the behaviour before this variable existed. A set value is a
+comma-separated list of wizard region ids, district slugs, and
+neighbourhood slugs. It expands to neighbourhood ids, and public search
+keeps a schedule only when its location is one of those ids. An
+`area_id` query is the intersection of that area and the scope.
+
+Partner search is exempt. A request that passes `activity_id` is
+exempt, so a shared activity link still opens. The response field
+`area_scope` reports the configured neighbourhood ids on the first
+page (null when unrestricted, empty when every slug is unknown),
+including exempt requests. A cursor page omits the field.
+
+The public website reads the same variable at build time. Regions with
+no selected neighbourhood stay focusable and are labelled coming soon.
+Neighbourhoods outside the list are omitted. A deep link to a closed
+area is rewritten to the open areas and the page says so until the
+query changes. Staging fixture search applies the same rule in the
+browser. The mobile app hides area chips that sit outside `area_scope`.
+
+Unknown slugs fail the deploy. At runtime an unknown slug is ignored,
+and a value whose every slug is unknown returns no public results.
+`islands` is both the Islands region id and the Islands district slug;
+both name the same neighbourhoods. CloudFront may serve a search
+response for up to 5 minutes after a deploy. Clearing the variable
+requires a backend deploy because an omitted CloudFormation parameter
+would keep the previous list.

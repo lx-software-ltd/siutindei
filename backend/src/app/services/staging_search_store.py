@@ -20,7 +20,12 @@ from app.api.schemas import (
     ScheduleEntrySchema,
     ScheduleSchema,
 )
-from app.db.queries import ActivitySearchFilters, validate_filters
+from app.db.queries import (
+    ActivitySearchFilters,
+    applied_search_area_scope,
+    search_area_scope_labels,
+    validate_filters,
+)
 
 _FIXTURE_CACHE: dict[str, Any] | None = None
 _SORTED_PUBLISHED_ITEMS: list[dict[str, Any]] | None = None
@@ -83,6 +88,7 @@ def fetch_staging_search_response(
     return ActivitySearchResponseSchema(
         items=[_to_schema(row, filters.view) for row in trimmed],
         next_cursor=next_cursor,
+        area_scope=search_area_scope_labels(),
     )
 
 
@@ -216,6 +222,12 @@ def _matches(
     schedule = item["schedule"]
 
     if filters.activity_id is not None and UUID(activity["id"]) != filters.activity_id:
+        return False
+
+    scope = applied_search_area_scope(filters)
+    if scope is not None and str(location.get("area_id") or "") not in {
+        str(area_id) for area_id in scope
+    }:
         return False
 
     if filters.age is not None:

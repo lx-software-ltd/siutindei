@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SearchResultsPage } from '@/components/pages/search-results-page';
@@ -6,10 +6,12 @@ import { SearchProvider } from '@/components/shared/search/search-context';
 import { getContent } from '@/content';
 import { withChromeCopy } from '../helpers/chrome-copy';
 import { fetchActivitySearch } from '@/lib/activities/search-client';
+import { clearSearchAreaScopeCacheForTests } from '@/lib/home-wizard/area-scope';
 import type { ActivityListing } from '@/lib/activities/types';
 import { ANALYTICS_CONSENT_STORAGE_KEY } from '@/lib/analytics/consent';
 
 const push = vi.hoisted(() => vi.fn());
+const replace = vi.hoisted(() => vi.fn());
 const mapsEnabled = vi.hoisted(() => ({ value: true }));
 const currentSearchParams = vi.hoisted(() => ({
   value: new URLSearchParams(),
@@ -18,6 +20,7 @@ const currentSearchParams = vi.hoisted(() => ({
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push,
+    replace,
   }),
   useSearchParams: () => currentSearchParams.value,
 }));
@@ -97,6 +100,9 @@ function renderPage() {
 describe('SearchResultsPage', () => {
   beforeEach(() => {
     push.mockClear();
+    replace.mockClear();
+    delete process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE;
+    clearSearchAreaScopeCacheForTests();
     mapsEnabled.value = true;
     currentSearchParams.value = new URLSearchParams();
     window.localStorage.clear();
@@ -268,6 +274,45 @@ describe('SearchResultsPage', () => {
         category_id: 'c1111111-1111-1111-1111-111111111201',
       });
     });
+  });
+
+  it('replaces an out-of-scope area link and explains the change', async () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'kowloon';
+    clearSearchAreaScopeCacheForTests();
+    currentSearchParams.value = new URLSearchParams('region=islands');
+    vi.mocked(fetchActivitySearch).mockClear();
+    const copy = getContent('en').searchPage;
+    function Tree() {
+      return withChromeCopy(
+        <SearchProvider>
+          <SearchResultsPage locale="en" copy={copy} />
+        </SearchProvider>,
+      );
+    }
+    const { rerender } = render(<Tree />);
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      copy.areaAdjustedLabel,
+    );
+    expect(replace).toHaveBeenCalledWith('/en/search/?age=3-6&view=map');
+    await waitFor(() => {
+      expect(fetchActivitySearch).toHaveBeenCalledTimes(1);
+    });
+    const requested = vi.mocked(fetchActivitySearch).mock.calls[0]?.[0];
+    expect(requested?.areaId).toBeUndefined();
+
+    currentSearchParams.value = new URLSearchParams('age=3-6&view=map');
+    await act(async () => {
+      rerender(<Tree />);
+    });
+    expect(screen.getByRole('status')).toHaveTextContent(copy.areaAdjustedLabel);
+    expect(fetchActivitySearch).toHaveBeenCalledTimes(1);
+
+    currentSearchParams.value = new URLSearchParams('age=6-12&view=map');
+    await act(async () => {
+      rerender(<Tree />);
+    });
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('explains results that still use the previous categories', async () => {
