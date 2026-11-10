@@ -208,16 +208,19 @@ describe('SearchNavigator', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('greys out regions outside the scope and skips a single neighbourhood', () => {
+  it('greys out closed regions and shows the one open neighbourhood', () => {
     process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE =
       'central-and-western-kennedy-town';
     clearSearchAreaScopeCacheForTests();
     const content = openNavigator();
 
-    expect(screen.getByRole('button', { name: 'All areas' })).toBeEnabled();
+    const allAreas = screen.getByRole('button', { name: /All areas/ });
+    expect(allAreas).toHaveAttribute('aria-disabled', 'true');
+    expect(allAreas).not.toBeDisabled();
+    expect(allAreas).toHaveTextContent('Only Hong Kong Island is open');
+    expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
     const kowloon = screen.getByRole('button', { name: /Kowloon/ });
     expect(kowloon).toHaveAttribute('aria-disabled', 'true');
-    expect(kowloon).not.toBeDisabled();
     expect(kowloon).toHaveTextContent('Coming soon');
     fireEvent.click(kowloon);
     expect(
@@ -226,12 +229,20 @@ describe('SearchNavigator', () => {
       }),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Hong Kong Island' }));
+    const island = screen.getByRole('button', { name: 'Hong Kong Island' });
+    expect(island).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(island);
     expect(
-      screen.getByRole('heading', { name: 'How old is your child?' }),
+      screen.getByRole('heading', {
+        name: content.smallWorld.navigator.steps.neighbourhood.title,
+      }),
     ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kennedy Town' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     expect(
-      screen.queryByRole('button', { name: 'Kennedy Town' }),
+      screen.queryByRole('button', { name: /Anywhere/ }),
     ).not.toBeInTheDocument();
   });
 });

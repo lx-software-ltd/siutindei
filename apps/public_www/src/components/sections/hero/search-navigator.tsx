@@ -19,7 +19,11 @@ import { buildSearchPageHref } from '@/lib/activities/map-search-url';
 import {
   allowedNeighbourhoodsForRegion,
   getConfiguredSearchAreaScope,
+  isAllAreasSelectable,
   isRegionSelectable,
+  openRegions,
+  showsNeighbourhoodChoices,
+  withDefaultOpenLocation,
 } from '@/lib/home-wizard/area-scope';
 import {
   homeWizardChoices,
@@ -52,7 +56,7 @@ function neighbourhoodButtonClass(isSelected: boolean): string {
 type NavigatorStep = 'location' | 'neighbourhood' | 'age' | 'activity';
 
 function stepsFor(regionId: string | null): readonly NavigatorStep[] {
-  if (regionId && allowedNeighbourhoodsForRegion(regionId).length > 1) {
+  if (showsNeighbourhoodChoices(regionId)) {
     return ['location', 'neighbourhood', 'age', 'activity'];
   }
   return ['location', 'age', 'activity'];
@@ -86,9 +90,10 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   );
 
   const resetNavigator = useCallback(() => {
+    const next = withDefaultOpenLocation(EMPTY_NAVIGATOR_FILTERS);
     setStep('location');
-    setHasSelectedLocation(false);
-    setDraft(EMPTY_NAVIGATOR_FILTERS);
+    setHasSelectedLocation(next.regionId !== null);
+    setDraft(next);
   }, []);
 
   const closeNavigator = useCallback(() => {
@@ -109,7 +114,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
       neighbourhoodId: allowed.length === 1 ? allowed[0].id : null,
     }));
     setHasSelectedLocation(true);
-    setStep(regionId && allowed.length !== 1 ? 'neighbourhood' : 'age');
+    setStep(showsNeighbourhoodChoices(regionId) ? 'neighbourhood' : 'age');
   }
 
   function selectNeighbourhood(neighbourhoodId: string | null) {
@@ -179,7 +184,24 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
                 }
                 iconSrc={ALL_HONG_KONG_ICON_SRC}
                 iconShape="flag"
-                isSelected={hasSelectedLocation && draft.regionId === null}
+                isSelected={
+                  isAllAreasSelectable() &&
+                  hasSelectedLocation &&
+                  draft.regionId === null
+                }
+                disabled={!isAllAreasSelectable()}
+                disabledHint={
+                  isAllAreasSelectable()
+                    ? undefined
+                    : openRegions().length === 0
+                      ? copy.noAreasOpenLabel
+                      : formatContentTemplate(copy.onlyRegionOpenTemplate, {
+                          region: regionLabel(
+                            openRegions()[0]?.id ?? null,
+                            locale,
+                          ),
+                        })
+                }
                 onClick={() => selectLocation(null)}
               />
               {REGION_ROW_ORDER.map((regionId) => {
@@ -212,16 +234,23 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
               {copy.steps.neighbourhood.label}
             </legend>
             <div className="flex max-h-80 flex-wrap gap-2 overflow-y-auto">
-              <button
-                type="button"
-                className={neighbourhoodButtonClass(draft.neighbourhoodId == null)}
-                aria-pressed={draft.neighbourhoodId == null}
-                onClick={() => selectNeighbourhood(null)}
-              >
-                {formatContentTemplate(copy.anywhereInRegionTemplate, {
-                  region: regionLabel(draft.regionId, locale),
-                })}
-              </button>
+              {allowedNeighbourhoodsForRegion(draft.regionId).length > 1 ? (
+                <button
+                  type="button"
+                  className={neighbourhoodButtonClass(
+                    draft.neighbourhoodId == null,
+                  )}
+                  aria-pressed={draft.neighbourhoodId == null}
+                  onClick={() => selectNeighbourhood(null)}
+                >
+                  {formatContentTemplate(
+                    getConfiguredSearchAreaScope().restricted
+                      ? copy.allOpenAreasInRegionTemplate
+                      : copy.anywhereInRegionTemplate,
+                    { region: regionLabel(draft.regionId, locale) },
+                  )}
+                </button>
+              ) : null}
               {allowedNeighbourhoodsForRegion(draft.regionId).map((neighbourhood) => (
                 <button
                   key={neighbourhood.id}
@@ -237,6 +266,11 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
               ))}
             </div>
           </fieldset>
+        ) : null}
+        {step === 'location' && openRegions().length === 0 ? (
+          <p role="status" className="mt-3 text-sm text-ink-700">
+            {copy.noAreasOpenLabel}
+          </p>
         ) : null}
         {step === 'age' ? (
           <fieldset>

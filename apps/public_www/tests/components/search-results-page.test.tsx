@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SearchResultsPage } from '@/components/pages/search-results-page';
 import { SearchProvider } from '@/components/shared/search/search-context';
 import { getContent } from '@/content';
+import { homeWizardChoices } from '@/lib/home-wizard/choices';
 import { withChromeCopy } from '../helpers/chrome-copy';
 import { fetchActivitySearch } from '@/lib/activities/search-client';
 import { clearSearchAreaScopeCacheForTests } from '@/lib/home-wizard/area-scope';
@@ -294,25 +295,49 @@ describe('SearchResultsPage', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(
       copy.areaAdjustedLabel,
     );
-    expect(replace).toHaveBeenCalledWith('/en/search/?age=3-6&view=map');
+    expect(replace).toHaveBeenCalledWith(
+      '/en/search/?age=3-6&region=kowloon&view=map',
+    );
     await waitFor(() => {
       expect(fetchActivitySearch).toHaveBeenCalledTimes(1);
     });
+    const kowloon = homeWizardChoices.regions.find(
+      (region) => region.id === 'kowloon',
+    );
     const requested = vi.mocked(fetchActivitySearch).mock.calls[0]?.[0];
-    expect(requested?.areaId).toBeUndefined();
+    expect(requested?.areaId).toBe(kowloon?.areaId);
 
-    currentSearchParams.value = new URLSearchParams('age=3-6&view=map');
+    currentSearchParams.value = new URLSearchParams(
+      'age=3-6&region=kowloon&view=map',
+    );
     await act(async () => {
       rerender(<Tree />);
     });
     expect(screen.getByRole('status')).toHaveTextContent(copy.areaAdjustedLabel);
     expect(fetchActivitySearch).toHaveBeenCalledTimes(1);
 
-    currentSearchParams.value = new URLSearchParams('age=6-12&view=map');
+    currentSearchParams.value = new URLSearchParams(
+      'age=6-12&region=kowloon&view=map',
+    );
     await act(async () => {
       rerender(<Tree />);
     });
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('does not rewrite a search that names no area', async () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'southern-stanley';
+    clearSearchAreaScopeCacheForTests();
+    currentSearchParams.value = new URLSearchParams('age=3-6');
+    vi.mocked(fetchActivitySearch).mockClear();
+    const copy = renderPage();
+
+    await waitFor(() => {
+      expect(fetchActivitySearch).toHaveBeenCalled();
+    });
+    expect(replace).not.toHaveBeenCalled();
+    expect(screen.queryByText(copy.areaAdjustedLabel)).not.toBeInTheDocument();
+    expect(vi.mocked(fetchActivitySearch).mock.calls[0]?.[0]?.areaId).toBeUndefined();
   });
 
   it('explains results that still use the previous categories', async () => {
