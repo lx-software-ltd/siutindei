@@ -1,9 +1,14 @@
-import type { SearchFiltersState } from '@/lib/activities/search-params';
+import {
+  placeLabelForFilters,
+  type SearchFiltersState,
+} from '@/lib/activities/search-params';
 import { getSearchConfig } from '@/lib/site-config';
 
 import {
   homeWizardChoices,
+  labelForLocale,
   neighbourhoodsForRegion,
+  REGIONS_BY_ID,
   type WizardNeighbourhoodOption,
 } from './choices';
 
@@ -125,6 +130,115 @@ export function allowedNeighbourhoodsForRegion(
   return matches.filter((entry) => scope.areaIds.has(entry.areaId));
 }
 
+export interface OpenRegion {
+  readonly id: string;
+  readonly neighbourhoods: readonly WizardNeighbourhoodOption[];
+}
+
+export function openRegions(): readonly OpenRegion[] {
+  return homeWizardChoices.regions.flatMap((region) => {
+    const neighbourhoods = allowedNeighbourhoodsForRegion(region.id);
+    if (neighbourhoods.length === 0) {
+      return [];
+    }
+    return [{ id: region.id, neighbourhoods }];
+  });
+}
+
+/** "All areas" means the same thing as the only open region, so it is not a choice. */
+export function isAllAreasSelectable(): boolean {
+  const scope = getConfiguredSearchAreaScope();
+  if (!scope.restricted) {
+    return true;
+  }
+  return openRegions().length >= 2;
+}
+
+export function defaultOpenLocation(): {
+  readonly regionId: string | null;
+  readonly neighbourhoodId: string | null;
+} {
+  const regions = openRegions();
+  if (!getConfiguredSearchAreaScope().restricted || regions.length !== 1) {
+    return { regionId: null, neighbourhoodId: null };
+  }
+  const region = regions[0];
+  return {
+    regionId: region.id,
+    neighbourhoodId:
+      region.neighbourhoods.length === 1 ? region.neighbourhoods[0].id : null,
+  };
+}
+
+/** Panel and wizard drafts show the only open place. Search URLs stay as written. */
+export function withDefaultOpenLocation(
+  filters: SearchFiltersState,
+): SearchFiltersState {
+  const scope = getConfiguredSearchAreaScope();
+  if (!scope.restricted) {
+    return filters;
+  }
+  if (!filters.regionId) {
+    const fallback = defaultOpenLocation();
+    if (!fallback.regionId) {
+      return filters;
+    }
+    return { ...filters, ...fallback };
+  }
+  const allowed = allowedNeighbourhoodsForRegion(filters.regionId);
+  if (allowed.length === 1 && filters.neighbourhoodId !== allowed[0].id) {
+    return { ...filters, neighbourhoodId: allowed[0].id };
+  }
+  return filters;
+}
+
+export function showsNeighbourhoodChoices(regionId: string | null): boolean {
+  const allowed = allowedNeighbourhoodsForRegion(regionId);
+  if (allowed.length > 1) {
+    return true;
+  }
+  return allowed.length === 1 && getConfiguredSearchAreaScope().restricted;
+}
+
+export function impliedOpenPlaceLabel(locale: string): string | null {
+  const regions = openRegions();
+  if (!getConfiguredSearchAreaScope().restricted || regions.length !== 1) {
+    return null;
+  }
+  const region = regions[0];
+  if (region.neighbourhoods.length === 1) {
+    return labelForLocale(region.neighbourhoods[0].labels, locale);
+  }
+  const regionOption = REGIONS_BY_ID.get(region.id);
+  return regionOption ? labelForLocale(regionOption.labels, locale) : null;
+}
+
+export function searchPlaceLabel(
+  filters: SearchFiltersState,
+  locale: string,
+  labels: {
+    readonly anywhere: string;
+    readonly allAreas: string;
+    readonly noAreas: string;
+  },
+): string {
+  const selected = placeLabelForFilters(filters, locale);
+  if (selected) {
+    return selected;
+  }
+  const implied = impliedOpenPlaceLabel(locale);
+  if (implied) {
+    return implied;
+  }
+  if (!getConfiguredSearchAreaScope().restricted) {
+    return labels.anywhere;
+  }
+  if (openRegions().length === 0) {
+    return labels.noAreas;
+  }
+  return labels.allAreas;
+}
+
 export function sanitizeSearchFilters(filters: SearchFiltersState): {
   readonly filters: SearchFiltersState;
   readonly adjusted: boolean;
@@ -137,8 +251,9 @@ export function sanitizeSearchFilters(filters: SearchFiltersState): {
   let neighbourhoodId = filters.neighbourhoodId;
   let adjusted = false;
   if (regionId && !isRegionSelectable(regionId)) {
-    regionId = null;
-    neighbourhoodId = null;
+    const fallback = defaultOpenLocation();
+    regionId = fallback.regionId;
+    neighbourhoodId = fallback.neighbourhoodId;
     adjusted = true;
   }
   if (neighbourhoodId) {

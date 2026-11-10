@@ -154,17 +154,78 @@ describe('SearchPanel', () => {
     clearSearchAreaScopeCacheForTests();
     renderPanel();
 
-    expect(screen.getByRole('button', { name: 'All areas' })).toBeEnabled();
+    const allAreas = screen.getByRole('button', { name: /All areas/ });
+    expect(allAreas).toHaveAttribute('aria-disabled', 'true');
+    expect(allAreas).toHaveTextContent('Only Kowloon is open');
+    expect(screen.getByRole('button', { name: 'Kowloon' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     const islands = screen.getByRole('button', { name: /Islands/ });
     expect(islands).toHaveAttribute('aria-disabled', 'true');
     expect(islands).not.toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Kowloon' }));
     const neighbourhoods = screen.getByRole('combobox');
     const labels = [...neighbourhoods.querySelectorAll('option')].map(
       (option) => option.textContent,
     );
+    expect(labels[0]).toBe('All open areas in Kowloon');
     expect(labels).toContain('Mong Kok');
     expect(labels).not.toContain('Kennedy Town');
+  });
+
+  it('shows the only open neighbourhood and greys out every area', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'southern-stanley';
+    clearSearchAreaScopeCacheForTests();
+    renderPanel();
+
+    const allAreas = screen.getByRole('button', { name: /All areas/ });
+    expect(allAreas).toHaveAttribute('aria-disabled', 'true');
+    expect(allAreas).not.toBeDisabled();
+    expect(allAreas).toHaveTextContent('Only Hong Kong Island is open');
+    expect(
+      screen.getByRole('button', { name: 'Hong Kong Island' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    const labels = [
+      ...screen.getByRole('combobox').querySelectorAll('option'),
+    ].map((option) => option.textContent);
+    expect(labels).toEqual(['Stanley']);
+
+    fireEvent.click(allAreas);
+    expect(
+      screen.getByRole('button', { name: 'Hong Kong Island' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('keeps every area available when more than one region is open', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'kowloon,islands';
+    clearSearchAreaScopeCacheForTests();
+    renderPanel();
+
+    expect(screen.getByRole('button', { name: 'All areas' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Kowloon' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('explains when the scope names no neighbourhood', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'atlantis';
+    clearSearchAreaScopeCacheForTests();
+    renderPanel();
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'No areas are open yet',
+    );
+    expect(screen.getByRole('button', { name: /All areas/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: /Kowloon/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
 });
