@@ -88,8 +88,9 @@ their primary responsibilities.
     is exempt. A request with `activity_id` is also exempt, so a
     direct activity page still opens. Unknown slugs are ignored; if
     every slug is unknown, public search returns nothing. The response
-    field `area_scope` lists the neighbourhood ids, or null when the
-    variable is unset. CloudFront can serve the previous response for
+    field `area_scope` lists the neighbourhood ids on the first page,
+    or null when the variable is unset. A cursor page omits the field.
+    CloudFront can serve the previous response for
     up to 5 minutes. Clearing the GitHub variable requires a deploy:
     `SearchAreaScope` is passed even when empty so CloudFormation does
     not keep the previous value.

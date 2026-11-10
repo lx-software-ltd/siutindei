@@ -34,10 +34,33 @@ class ActivitySearchResultEntity {
 
 /// Domain entity representing a paginated search response.
 class SearchResultsEntity {
-  const SearchResultsEntity({required this.items, this.nextCursor});
+  const SearchResultsEntity({
+    required this.items,
+    this.nextCursor,
+    this.areaScope,
+    this.areaScopeStated = false,
+  });
 
   final List<ActivitySearchResultEntity> items;
   final String? nextCursor;
+
+  /// Neighbourhood ids public search is limited to.
+  ///
+  /// Null with [areaScopeStated] means unrestricted. An empty list means
+  /// the deployment names no neighbourhood. A later page leaves
+  /// [areaScopeStated] false so the first page's list is kept.
+  final List<String>? areaScope;
+  final bool areaScopeStated;
+
+  /// Appends [next] and keeps this page's area scope when [next] omits it.
+  SearchResultsEntity mergedWith(SearchResultsEntity next) {
+    return SearchResultsEntity(
+      items: [...items, ...next.items],
+      nextCursor: next.nextCursor,
+      areaScope: next.areaScopeStated ? next.areaScope : areaScope,
+      areaScopeStated: areaScopeStated || next.areaScopeStated,
+    );
+  }
 
   /// Returns true if there are more results to load.
   bool get hasMore => nextCursor != null;

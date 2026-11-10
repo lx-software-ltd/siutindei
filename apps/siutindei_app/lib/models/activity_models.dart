@@ -151,14 +151,24 @@ class ActivitySearchResponse {
     required this.items,
     required this.nextCursor,
     this.categoryMatch = 'exact',
+    this.areaScope,
+    this.statesAreaScope = false,
   });
 
   final List<ActivitySearchResult> items;
   final String? nextCursor;
   final String categoryMatch;
 
+  /// Neighbourhood ids from `area_scope`, when the response states it.
+  final List<String>? areaScope;
+
+  /// False when a cursor page omits `area_scope`.
+  final bool statesAreaScope;
+
   factory ActivitySearchResponse.fromJson(Map<String, dynamic> json) {
     final itemsJson = json['items'] as List<dynamic>? ?? [];
+    final statesAreaScope = json.containsKey('area_scope');
+    final rawScope = json['area_scope'];
     return ActivitySearchResponse(
       items: itemsJson
           .map(
@@ -168,6 +178,10 @@ class ActivitySearchResponse {
           .toList(),
       nextCursor: json['next_cursor'] as String?,
       categoryMatch: json['category_match'] as String? ?? 'exact',
+      statesAreaScope: statesAreaScope,
+      areaScope: rawScope is List
+          ? [for (final item in rawScope) item as String]
+          : null,
     );
   }
 }

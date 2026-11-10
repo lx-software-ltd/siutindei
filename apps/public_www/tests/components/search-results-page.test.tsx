@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SearchResultsPage } from '@/components/pages/search-results-page';
@@ -280,14 +280,39 @@ describe('SearchResultsPage', () => {
     process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'kowloon';
     clearSearchAreaScopeCacheForTests();
     currentSearchParams.value = new URLSearchParams('region=islands');
-    const copy = renderPage();
+    vi.mocked(fetchActivitySearch).mockClear();
+    const copy = getContent('en').searchPage;
+    function Tree() {
+      return withChromeCopy(
+        <SearchProvider>
+          <SearchResultsPage locale="en" copy={copy} />
+        </SearchProvider>,
+      );
+    }
+    const { rerender } = render(<Tree />);
 
     expect(await screen.findByRole('status')).toHaveTextContent(
       copy.areaAdjustedLabel,
     );
     expect(replace).toHaveBeenCalledWith('/en/search/?age=3-6&view=map');
+    await waitFor(() => {
+      expect(fetchActivitySearch).toHaveBeenCalledTimes(1);
+    });
     const requested = vi.mocked(fetchActivitySearch).mock.calls[0]?.[0];
     expect(requested?.areaId).toBeUndefined();
+
+    currentSearchParams.value = new URLSearchParams('age=3-6&view=map');
+    await act(async () => {
+      rerender(<Tree />);
+    });
+    expect(screen.getByRole('status')).toHaveTextContent(copy.areaAdjustedLabel);
+    expect(fetchActivitySearch).toHaveBeenCalledTimes(1);
+
+    currentSearchParams.value = new URLSearchParams('age=6-12&view=map');
+    await act(async () => {
+      rerender(<Tree />);
+    });
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('explains results that still use the previous categories', async () => {

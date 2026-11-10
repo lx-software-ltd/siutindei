@@ -116,6 +116,7 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
             event,
             view=filters.view,
             edge_cacheable=partner is None,
+            include_area_scope=filters.cursor is None,
         )
     except (ValidationError, CursorError) as exc:
         logger.warning(f"Validation error: {exc.message}")
@@ -429,10 +430,15 @@ def _create_response(
     event: Mapping[str, Any] | None = None,
     view: str = "full",
     edge_cacheable: bool = False,
+    include_area_scope: bool = True,
 ) -> dict[str, Any]:
     """Create a JSON API Gateway response for Pydantic models."""
 
-    payload = dump_search_response(body, view)
+    payload = dump_search_response(
+        body,
+        view,
+        include_area_scope=include_area_scope,
+    )
     separators = (",", ":") if view == "card" else (", ", ": ")
 
     headers = {

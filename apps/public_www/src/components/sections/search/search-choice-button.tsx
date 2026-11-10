@@ -37,7 +37,6 @@ export function SearchChoiceButton({
       type="button"
       aria-pressed={disabled ? undefined : isSelected}
       aria-disabled={disabled || undefined}
-      disabled={disabled}
       onClick={disabled ? undefined : onClick}
       className={
         'search-choice inline-flex shrink-0 items-center gap-2 ' +

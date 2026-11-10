@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import type { Locale } from '@/content/locales';
@@ -74,22 +74,22 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
   const replacementHref = buildSearchPageHref(locale, urlFilters, {
     view: urlViewMode,
   });
+  const announcedHref = useRef<string | null>(null);
   useEffect(() => {
     if (areaAdjusted) {
       setShowAreaNotice(true);
+      announcedHref.current = replacementHref;
       router.replace(replacementHref);
       return;
     }
-    if (regionParam || neighbourhoodParam) {
+    if (
+      announcedHref.current !== null &&
+      replacementHref !== announcedHref.current
+    ) {
       setShowAreaNotice(false);
+      announcedHref.current = null;
     }
-  }, [
-    areaAdjusted,
-    neighbourhoodParam,
-    regionParam,
-    replacementHref,
-    router,
-  ]);
+  }, [areaAdjusted, replacementHref, router]);
 
   const search = useActivitySearch({
     filters: urlFilters,

@@ -318,6 +318,11 @@ class _QuickFilters extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final spacing = ref.watch(semanticTokensProvider.select((s) => s.spacing));
     final filters = ref.watch(activitiesFiltersProvider);
+    final areaScope = ref.watch(
+      activitiesViewModelProvider.select(
+        (state) => state.results.areaScope,
+      ),
+    );
 
     return Padding(
       padding: EdgeInsets.only(bottom: spacing.sm),
@@ -342,6 +347,7 @@ class _QuickFilters extends ConsumerWidget {
           SizedBox(height: spacing.sm),
           AreaFilterChips(
             selectedAreaId: filters.areaId,
+            allowedAreaIds: areaScope?.toSet(),
             onAreaChanged: onAreaChanged,
           ),
           SizedBox(height: spacing.sm),

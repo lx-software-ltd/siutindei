@@ -83,22 +83,32 @@ def test_unknown_slug_is_ignored_until_every_token_is_unknown(
     assert configured_search_area_ids() == frozenset()
 
 
-def test_search_sql_intersects_the_requested_area_with_the_scope(
+def test_search_sql_names_the_scope_neighbourhood(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("SEARCH_AREA_SCOPE", "kowloon")
-    clear_search_area_scope_cache()
-    query = build_search_query(
-        ActivitySearchFilters(area_id=UUID("a1111111-1111-1111-1111-111111111102"))
+    monkeypatch.setenv(
+        "SEARCH_AREA_SCOPE",
+        "central-and-western-kennedy-town",
     )
-    compiled = str(query).lower()
-    assert "geographic_areas" in compiled
-    assert "locations.area_id in" in compiled
+    clear_search_area_scope_cache()
+    kennedy = str(next(iter(_ids_for("central-and-western-kennedy-town"))))
 
-    blocked = str(
-        build_search_query(ActivitySearchFilters(category_ids=[WIZARD_GROUP]))
-    ).lower()
-    assert blocked.count("locations.area_id") >= 2
+    def bound_text(filters: ActivitySearchFilters) -> str:
+        compiled = build_search_query(filters).compile()
+        return " ".join(str(value).lower() for value in compiled.params.values())
+
+    assert kennedy in bound_text(ActivitySearchFilters())
+    monkeypatch.delenv("SEARCH_AREA_SCOPE")
+    clear_search_area_scope_cache()
+    assert kennedy not in bound_text(ActivitySearchFilters())
+
+    monkeypatch.setenv(
+        "SEARCH_AREA_SCOPE",
+        "central-and-western-kennedy-town",
+    )
+    clear_search_area_scope_cache()
+    wizard = bound_text(ActivitySearchFilters(category_ids=[WIZARD_GROUP]))
+    assert wizard.count(kennedy) >= 2
 
 
 def test_activity_lookup_and_partner_flag_skip_the_scope(
@@ -206,3 +216,135 @@ def test_public_search_hides_other_areas_and_partner_search_does_not(
     }
     direct = json.loads(lambda_handler(direct_event, None)["body"])
     assert direct["items"][0]["activity"]["id"] == activity_id
+
+
+def test_cursor_page_omits_area_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.api.search import lambda_handler
+
+    monkeypatch.setenv("STAGING_SEARCH_DATA_ENABLED", "true")
+    monkeypatch.delenv("SEARCH_AREA_SCOPE", raising=False)
+    clear_search_area_scope_cache()
+
+    def event(params: dict[str, str]) -> dict:
+        return {
+            "path": "/v1/activities/search",
+            "headers": {},
+            "queryStringParameters": params,
+            "multiValueQueryStringParameters": {
+                key: [value] for key, value in params.items()
+            },
+            "requestContext": {"requestId": "req-scope", "authorizer": {}},
+        }
+
+    first = json.loads(lambda_handler(event({"limit": "1"}), None)["body"])
+    assert "area_scope" in first
+    assert first["area_scope"] is None
+    assert first["next_cursor"]
+    continued = json.loads(
+        lambda_handler(
+            event({"limit": "1", "cursor": first["next_cursor"]}),
+            None,
+        )["body"]
+    )
+    assert "area_scope" not in continued
+    assert continued["items"]
+
+
+def test_database_drops_schedules_outside_the_scope(
+    db_session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from decimal import Decimal
+
+    from app.db.models import (
+        Activity,
+        ActivityCategory,
+        ActivityPricing,
+        ActivitySchedule,
+        ActivityScheduleEntry,
+        GeographicArea,
+        Location,
+        Organization,
+        PricingType,
+        ScheduleType,
+    )
+    from psycopg.types.range import Range
+
+    def publish(name: str, area_id: UUID) -> None:
+        org = Organization(
+            name=name,
+            description="scope test",
+            manager_id="00000000-0000-0000-0000-000000000001",
+        )
+        category = ActivityCategory(name=f"{name} category", display_order=0)
+        db_session.add_all([org, category])
+        db_session.flush()
+        area = db_session.get(GeographicArea, area_id)
+        if area is None:
+            area = GeographicArea(
+                id=area_id,
+                name=name,
+                level="neighbourhood",
+                active=True,
+            )
+            db_session.add(area)
+            db_session.flush()
+        location = Location(org_id=org.id, area_id=area.id, address="1 Test Street")
+        activity = Activity(
+            org_id=org.id,
+            category_id=category.id,
+            name=name,
+            description="class",
+            age_range=Range(3, 6, bounds="[]"),
+        )
+        db_session.add_all([location, activity])
+        db_session.flush()
+        db_session.add(
+            ActivityPricing(
+                activity_id=activity.id,
+                location_id=location.id,
+                pricing_type=PricingType.PER_CLASS,
+                amount=Decimal("100.00"),
+                currency="HKD",
+            )
+        )
+        db_session.add(
+            ActivitySchedule(
+                activity_id=activity.id,
+                location_id=location.id,
+                schedule_type=ScheduleType.WEEKLY,
+                languages=["en"],
+                entries=[
+                    ActivityScheduleEntry(
+                        day_of_week_utc=1,
+                        start_minutes_utc=600,
+                        end_minutes_utc=660,
+                    )
+                ],
+            )
+        )
+        db_session.flush()
+
+    kennedy = next(
+        iter(neighbourhoods_for_scope_token("central-and-western-kennedy-town"))
+    )
+    mongkok = next(iter(neighbourhoods_for_scope_token("yau-tsim-mong-mong-kok")))
+    publish("Kennedy class", kennedy.id)
+    publish("Mong Kok class", mongkok.id)
+
+    def names() -> set[str]:
+        rows = db_session.execute(
+            build_search_query(ActivitySearchFilters(limit=50))
+        ).all()
+        return {row._mapping[Activity].name for row in rows}
+
+    monkeypatch.setenv("SEARCH_AREA_SCOPE", "yau-tsim-mong")
+    clear_search_area_scope_cache()
+    scoped = names()
+    assert "Mong Kok class" in scoped
+    assert "Kennedy class" not in scoped
+
+    monkeypatch.delenv("SEARCH_AREA_SCOPE")
+    clear_search_area_scope_cache()
+    opened = names()
+    assert {"Mong Kok class", "Kennedy class"} <= opened

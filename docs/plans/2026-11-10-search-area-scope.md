@@ -10,7 +10,6 @@ Hong Kong regions, districts, or neighbourhoods. Unset shows everything.
 
 ## Non-goals
 
-- Mobile area-chip changes. The API field `area_scope` is in place for that.
 - Admin catalog badges for organisations outside the public scope.
 - Changing which neighbourhood a location is stored on.
 
@@ -19,6 +18,7 @@ Hong Kong regions, districts, or neighbourhoods. Unset shows everything.
 - Search query, handler, staging fixture store, and OpenAPI.
 - CDK parameter `SearchAreaScope`, production params, deploy and promote workflows.
 - Public website search panel, home wizard, staging filter, and deep-link notice.
+- Mobile area chips read `area_scope` from the first search page.
 
 ## Invariants this change preserves
 
@@ -30,7 +30,8 @@ Hong Kong regions, districts, or neighbourhoods. Unset shows everything.
 ## Done when
 
 `pytest tests/test_search_area_scope.py tests/test_search_category_filter.py tests/test_search_handler.py`
-and `npm test` plus `npm run lint` in `apps/public_www`.
+with `TEST_DATABASE_URL` set, `npm test` plus `npm run lint` in
+`apps/public_www`, and the area-chip tests in `apps/siutindei_app`.
 
 ## Rollback
 
@@ -39,6 +40,8 @@ The parameter is passed when empty, so the previous list does not stick.
 
 ## Open questions
 
-None. Regions with nothing selected are disabled. Neighbourhoods outside
-the list are hidden. Direct activity links stay open. Partner search is
-exempt. Mobile controls wait for a later change.
+None. Regions with nothing selected are disabled and stay focusable.
+Neighbourhoods outside the list are hidden. Direct activity links stay
+open. Partner search is exempt. The mobile chips hide areas outside
+`area_scope`. A cursor page omits that field so the id list is not
+repeated.

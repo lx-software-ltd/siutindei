@@ -345,9 +345,11 @@ components:
             format: uuid
           description: |
             Neighbourhood ids the deployment limits public search to.
-            Null when `SEARCH_AREA_SCOPE` is unset, which leaves search
-            unrestricted. An empty array means the variable is set but
-            names no neighbourhood, so public search returns nothing.
+            Present on the first page only. Null when `SEARCH_AREA_SCOPE`
+            is unset, which leaves search unrestricted. An empty array
+            means the variable is set but names no neighbourhood, so
+            public search returns nothing. A request that passes `cursor`
+            omits this field; clients keep the list from the first page.
             The list is informational on `activity_id` lookups and on
             partner search: those requests are not filtered by it.
     ActivitySearchResult:

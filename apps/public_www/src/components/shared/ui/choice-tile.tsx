@@ -55,7 +55,6 @@ export function ChoiceTile({
       type="button"
       aria-pressed={disabled ? undefined : isSelected}
       aria-disabled={disabled || undefined}
-      disabled={disabled}
       onClick={disabled ? undefined : onClick}
       className={
         'choice-tile group flex flex-col items-center ' +

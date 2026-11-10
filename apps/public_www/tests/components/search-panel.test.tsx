@@ -155,7 +155,9 @@ describe('SearchPanel', () => {
     renderPanel();
 
     expect(screen.getByRole('button', { name: 'All areas' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /Islands/ })).toBeDisabled();
+    const islands = screen.getByRole('button', { name: /Islands/ });
+    expect(islands).toHaveAttribute('aria-disabled', 'true');
+    expect(islands).not.toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Kowloon' }));
     const neighbourhoods = screen.getByRole('combobox');

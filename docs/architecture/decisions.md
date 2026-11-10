@@ -660,17 +660,16 @@ keeps a schedule only when its location is one of those ids. An
 
 Partner search is exempt. A request that passes `activity_id` is
 exempt, so a shared activity link still opens. The response field
-`area_scope` reports the configured neighbourhood ids (null when
-unrestricted, empty when every slug is unknown) on every search
-response, including the exempt ones.
+`area_scope` reports the configured neighbourhood ids on the first
+page (null when unrestricted, empty when every slug is unknown),
+including exempt requests. A cursor page omits the field.
 
 The public website reads the same variable at build time. Regions with
-no selected neighbourhood are disabled and labelled coming soon.
+no selected neighbourhood stay focusable and are labelled coming soon.
 Neighbourhoods outside the list are omitted. A deep link to a closed
-area is rewritten to the open areas and the page says so. Staging
-fixture search applies the same rule in the browser. The mobile app
-keeps its current area chips until a later change reads `area_scope`;
-its results are already filtered by the API.
+area is rewritten to the open areas and the page says so until the
+query changes. Staging fixture search applies the same rule in the
+browser. The mobile app hides area chips that sit outside `area_scope`.
 
 Unknown slugs fail the deploy. At runtime an unknown slug is ignored,
 and a value whose every slug is unknown returns no public results.

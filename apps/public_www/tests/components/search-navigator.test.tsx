@@ -212,12 +212,19 @@ describe('SearchNavigator', () => {
     process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE =
       'central-and-western-kennedy-town';
     clearSearchAreaScopeCacheForTests();
-    openNavigator();
+    const content = openNavigator();
 
     expect(screen.getByRole('button', { name: 'All areas' })).toBeEnabled();
     const kowloon = screen.getByRole('button', { name: /Kowloon/ });
-    expect(kowloon).toBeDisabled();
+    expect(kowloon).toHaveAttribute('aria-disabled', 'true');
+    expect(kowloon).not.toBeDisabled();
     expect(kowloon).toHaveTextContent('Coming soon');
+    fireEvent.click(kowloon);
+    expect(
+      screen.getByRole('heading', {
+        name: content.smallWorld.navigator.steps.location.title,
+      }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Hong Kong Island' }));
     expect(
