@@ -430,7 +430,8 @@ import raises, so the same object key can be retried.
 Every organization already in the database is backfilled to
 `pending_review`. Public search keeps returning those rows until the
 CDK parameter `OrgReviewGateEnabled` (`ORG_REVIEW_GATE_ENABLED`) is
-`true`. `v_catalog_health` counts approved organizations only, because
+`true`. Production params set that to `true`. `v_catalog_health`
+counts approved organizations only, because
 a SQL view cannot read the Lambda flag. CloudFront caches public
 search for up to 5 minutes, so a release can lag by that long.
 
