@@ -434,11 +434,7 @@ def _create_response(
 ) -> dict[str, Any]:
     """Create a JSON API Gateway response for Pydantic models."""
 
-    payload = dump_search_response(
-        body,
-        view,
-        include_area_scope=include_area_scope,
-    )
+    payload = dump_search_response(body, view, include_area_scope=include_area_scope)
     separators = (",", ":") if view == "card" else (", ", ": ")
 
     headers = {
