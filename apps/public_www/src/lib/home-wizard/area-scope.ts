@@ -2,6 +2,7 @@ import {
   placeLabelForFilters,
   type SearchFiltersState,
 } from '@/lib/activities/search-params';
+import type { Locale } from '@/content/locales';
 import { getSearchConfig } from '@/lib/site-config';
 
 import {
@@ -230,7 +231,7 @@ export function impliedOpenPlaceLabel(locale: string): string | null {
 
 export function searchPlaceLabel(
   filters: SearchFiltersState,
-  locale: string,
+  locale: Locale,
   labels: {
     readonly anywhere: string;
     readonly allAreas: string;

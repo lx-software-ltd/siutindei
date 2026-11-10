@@ -9,7 +9,7 @@ Run the narrowest command that exercises the edit, then the area lint.
 
 - Python: `pytest tests/<relevant_test>.py` and, before commit, `pre-commit run ruff-format --all-files`.
 - Admin web: `npm run lint` and `npm run typecheck` in `apps/admin_web`. Dev server is `npm run dev` on port 3000.
-- Public website: `npm run lint` and `npm test` in `apps/public_www`. Dev server port is 3100.
+- Public website: `npm run lint`, `npm run typecheck`, and `npm test` in `apps/public_www`. Dev server port is 3100.
 - CDK: `npm run build` and `npm run test:infra` in `backend/infrastructure` when a stack changed. It has no `lint` script.
 - Agent rules: `python3 scripts/validate_agent_rules.py`.
 
