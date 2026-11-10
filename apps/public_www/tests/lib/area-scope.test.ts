@@ -13,6 +13,7 @@ import {
   resolveSearchAreaScope,
   sanitizeSearchFilters,
   showsNeighbourhoodChoices,
+  withoutImpliedOpenLocation,
 } from '@/lib/home-wizard/area-scope';
 import { DEFAULT_SEARCH_FILTERS } from '@/lib/activities/search-params';
 import {
@@ -141,6 +142,35 @@ describe('resolveSearchAreaScope', () => {
     clearSearchAreaScopeCacheForTests();
     expect(isAllAreasSelectable()).toBe(true);
     expect(showsNeighbourhoodChoices('islands')).toBe(true);
+  });
+
+  it('drops the starting choice and keeps a chosen neighbourhood', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'southern-stanley';
+    clearSearchAreaScopeCacheForTests();
+    expect(
+      withoutImpliedOpenLocation({
+        ...DEFAULT_SEARCH_FILTERS,
+        regionId: 'hong_kong_island',
+        neighbourhoodId: 'southern-stanley',
+      }),
+    ).toMatchObject({ regionId: null, neighbourhoodId: null });
+
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'yau-tsim-mong';
+    clearSearchAreaScopeCacheForTests();
+    expect(
+      withoutImpliedOpenLocation({
+        ...DEFAULT_SEARCH_FILTERS,
+        regionId: 'kowloon',
+        neighbourhoodId: null,
+      }).regionId,
+    ).toBeNull();
+    expect(
+      withoutImpliedOpenLocation({
+        ...DEFAULT_SEARCH_FILTERS,
+        regionId: 'kowloon',
+        neighbourhoodId: 'yau-tsim-mong-mong-kok',
+      }).neighbourhoodId,
+    ).toBe('yau-tsim-mong-mong-kok');
   });
 
   it('expands the same slugs as the backend', () => {

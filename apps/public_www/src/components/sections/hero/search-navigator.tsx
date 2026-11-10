@@ -24,6 +24,7 @@ import {
   openRegions,
   showsNeighbourhoodChoices,
   withDefaultOpenLocation,
+  withoutImpliedOpenLocation,
 } from '@/lib/home-wizard/area-scope';
 import {
   homeWizardChoices,
@@ -140,11 +141,18 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   }
 
   function handleSeeActivities() {
-    setFilters(draft);
-    saveRecentSearch(draft);
+    const submitted = withoutImpliedOpenLocation(draft);
+    setFilters(submitted);
+    saveRecentSearch(submitted);
     closeNavigator();
-    router.push(buildSearchPageHref(locale, draft));
+    router.push(buildSearchPageHref(locale, submitted));
   }
+
+  const areasSelectable = isAllAreasSelectable();
+  const regionsOpen = openRegions();
+  const neighbourhoodChoices = allowedNeighbourhoodsForRegion(draft.regionId);
+  const onlyNeighbourhood =
+    neighbourhoodChoices.length === 1 ? neighbourhoodChoices[0] : undefined;
 
   return (
     <>
@@ -185,19 +193,19 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
                 iconSrc={ALL_HONG_KONG_ICON_SRC}
                 iconShape="flag"
                 isSelected={
-                  isAllAreasSelectable() &&
+                  areasSelectable &&
                   hasSelectedLocation &&
                   draft.regionId === null
                 }
-                disabled={!isAllAreasSelectable()}
+                disabled={!areasSelectable}
                 disabledHint={
-                  isAllAreasSelectable()
+                  areasSelectable
                     ? undefined
-                    : openRegions().length === 0
+                    : regionsOpen.length === 0
                       ? copy.noAreasOpenLabel
                       : formatContentTemplate(copy.onlyRegionOpenTemplate, {
                           region: regionLabel(
-                            openRegions()[0]?.id ?? null,
+                            regionsOpen[0]?.id ?? null,
                             locale,
                           ),
                         })
@@ -234,7 +242,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
               {copy.steps.neighbourhood.label}
             </legend>
             <div className="flex max-h-80 flex-wrap gap-2 overflow-y-auto">
-              {allowedNeighbourhoodsForRegion(draft.regionId).length > 1 ? (
+              {neighbourhoodChoices.length > 1 ? (
                 <button
                   type="button"
                   className={neighbourhoodButtonClass(
@@ -251,7 +259,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
                   )}
                 </button>
               ) : null}
-              {allowedNeighbourhoodsForRegion(draft.regionId).map((neighbourhood) => (
+              {neighbourhoodChoices.map((neighbourhood) => (
                 <button
                   key={neighbourhood.id}
                   type="button"
@@ -267,7 +275,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
             </div>
           </fieldset>
         ) : null}
-        {step === 'location' && openRegions().length === 0 ? (
+        {step === 'location' && regionsOpen.length === 0 ? (
           <p role="status" className="mt-3 text-sm text-ink-700">
             {copy.noAreasOpenLabel}
           </p>
@@ -320,6 +328,24 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
               onClick={goBack}
             >
               {copy.backLabel}
+            </Button>
+          ) : null}
+          {step === 'location' && regionsOpen.length === 0 ? (
+            <Button
+              type="button"
+              className="w-full sm:flex-1"
+              onClick={() => selectLocation(null)}
+            >
+              {copy.continueLabel}
+            </Button>
+          ) : null}
+          {step === 'neighbourhood' && onlyNeighbourhood ? (
+            <Button
+              type="button"
+              className="w-full sm:flex-1"
+              onClick={() => selectNeighbourhood(onlyNeighbourhood.id)}
+            >
+              {copy.continueLabel}
             </Button>
           ) : null}
           {step === 'activity' ? (

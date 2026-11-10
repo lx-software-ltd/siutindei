@@ -23,6 +23,7 @@ import {
   sanitizeSearchFilters,
   showsNeighbourhoodChoices,
   withDefaultOpenLocation,
+  withoutImpliedOpenLocation,
 } from '@/lib/home-wizard/area-scope';
 import { REGIONS_BY_ID } from '@/lib/home-wizard/choices';
 import {
@@ -142,10 +143,11 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setFilters(draft);
-    saveRecentSearch(draft);
+    const submitted = withoutImpliedOpenLocation(draft);
+    setFilters(submitted);
+    saveRecentSearch(submitted);
     closeSearch();
-    router.push(buildSearchPageHref(locale, draft));
+    router.push(buildSearchPageHref(locale, submitted));
   }
 
   return (

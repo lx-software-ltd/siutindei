@@ -192,6 +192,21 @@ export function withDefaultOpenLocation(
   return filters;
 }
 
+/** The starting choice is not stored, so a wider scope later still applies. */
+export function withoutImpliedOpenLocation(
+  filters: SearchFiltersState,
+): SearchFiltersState {
+  const fallback = defaultOpenLocation();
+  if (
+    fallback.regionId &&
+    filters.regionId === fallback.regionId &&
+    filters.neighbourhoodId === fallback.neighbourhoodId
+  ) {
+    return { ...filters, regionId: null, neighbourhoodId: null };
+  }
+  return filters;
+}
+
 export function showsNeighbourhoodChoices(regionId: string | null): boolean {
   const allowed = allowedNeighbourhoodsForRegion(regionId);
   if (allowed.length > 1) {

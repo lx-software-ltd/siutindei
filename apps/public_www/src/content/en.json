@@ -171,6 +171,7 @@
       "noAreasOpenLabel": "No areas are open yet",
       "anywhereInRegionTemplate": "Anywhere in {region}",
       "backLabel": "Back",
+      "continueLabel": "Continue",
       "seeActivitiesLabel": "See activities",
       "stepProgressTemplate": "Step {current} of {total}",
       "steps": {
