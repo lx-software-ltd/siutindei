@@ -216,6 +216,90 @@ export function showsNeighbourhoodChoices(regionId: string | null): boolean {
   return allowed.length === 1 && getConfiguredSearchAreaScope().restricted;
 }
 
+const NAMED_PLACE_LIMIT = 3;
+
+export type NamedOpenPlace =
+  | { readonly kind: 'unrestricted' }
+  | { readonly kind: 'none' }
+  | { readonly kind: 'named'; readonly place: string }
+  | { readonly kind: 'generic' };
+
+export function formatPlaceList(
+  names: readonly string[],
+  locale: Locale,
+): string {
+  return new Intl.ListFormat(locale, {
+    style: 'long',
+    type: 'conjunction',
+  }).format(names);
+}
+
+function regionIsFullyOpen(regionId: string): boolean {
+  const allowed = allowedNeighbourhoodsForRegion(regionId);
+  return (
+    allowed.length > 0 &&
+    allowed.length === neighbourhoodsForRegion(regionId).length
+  );
+}
+
+function namedFromNeighbourhoods(
+  neighbourhoods: readonly WizardNeighbourhoodOption[],
+  locale: Locale,
+): NamedOpenPlace {
+  if (neighbourhoods.length === 0) {
+    return { kind: 'none' };
+  }
+  if (neighbourhoods.length <= NAMED_PLACE_LIMIT) {
+    return {
+      kind: 'named',
+      place: formatPlaceList(
+        neighbourhoods.map((entry) => labelForLocale(entry.labels, locale)),
+        locale,
+      ),
+    };
+  }
+  return { kind: 'generic' };
+}
+
+/** Name for the home popular heading. Null-like kinds keep the existing copy. */
+export function namedOpenPlace(locale: Locale): NamedOpenPlace {
+  const scope = getConfiguredSearchAreaScope();
+  if (!scope.restricted) {
+    return { kind: 'unrestricted' };
+  }
+  const regions = openRegions();
+  if (regions.length === 0) {
+    return { kind: 'none' };
+  }
+  if (regions.every((region) => regionIsFullyOpen(region.id))) {
+    const names = regions.flatMap((region) => {
+      const option = REGIONS_BY_ID.get(region.id);
+      return option ? [labelForLocale(option.labels, locale)] : [];
+    });
+    return names.length > 0
+      ? { kind: 'named', place: formatPlaceList(names, locale) }
+      : { kind: 'generic' };
+  }
+  return namedFromNeighbourhoods(
+    regions.flatMap((region) => region.neighbourhoods),
+    locale,
+  );
+}
+
+/** Name used after "Activities in" for one region carousel. */
+export function namedOpenPlaceInRegion(
+  regionId: string,
+  locale: Locale,
+): NamedOpenPlace {
+  if (!getConfiguredSearchAreaScope().restricted || regionIsFullyOpen(regionId)) {
+    return { kind: 'unrestricted' };
+  }
+  return namedFromNeighbourhoods(
+    allowedNeighbourhoodsForRegion(regionId),
+    locale,
+  );
+}
+
 export function impliedOpenPlaceLabel(locale: string): string | null {
   const regions = openRegions();
   if (!getConfiguredSearchAreaScope().restricted || regions.length !== 1) {

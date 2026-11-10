@@ -12,6 +12,7 @@ import {
 
 import type { Locale } from '@/content/locales';
 import type { SiteContent } from '@/content/types';
+import { formatContentTemplate } from '@/content/content-field-utils';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { ListingCarouselSection } from '@/components/sections/listings/listing-carousel-section';
 import { buildSearchHref, regionIdForAreaId } from '@/lib/activities/map-search-url';
@@ -33,6 +34,7 @@ import {
 } from '@/lib/activities/recent-storage';
 import type { ActivityListing } from '@/lib/activities/types';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
+import { namedOpenPlace, namedOpenPlaceInRegion } from '@/lib/home-wizard/area-scope';
 
 interface DiscoveryHomeSectionProps {
   readonly locale: Locale;
@@ -169,9 +171,17 @@ function RegionCarousel({
   const region = homeWizardChoices.regions.find(
     (entry) => entry.areaId === regionKey,
   );
-  const title = region
-    ? `${copy.nearRegionTitle} ${labelForLocale(region.labels, locale)}`
-    : copy.nearRegionTitle;
+  const regionName = region ? labelForLocale(region.labels, locale) : '';
+  const named = region
+    ? namedOpenPlaceInRegion(region.id, locale)
+    : { kind: 'unrestricted' as const };
+  const place =
+    named.kind === 'named'
+      ? named.place
+      : named.kind === 'generic'
+        ? copy.openAreasPlaceLabel
+        : regionName;
+  const title = place ? `${copy.nearRegionTitle} ${place}` : copy.nearRegionTitle;
   const listings = search.items.length > 0 ? search.items : seed;
   return (
     <DeferredCarousel active={false} onVisible={show}>
@@ -235,13 +245,32 @@ export function DiscoveryHomeSection({ locale, copy }: DiscoveryHomeSectionProps
   }
 
   const regionEntries = [...regionGroups.entries()];
+  const openPlace = namedOpenPlace(locale);
+  if (openPlace.kind === 'none') {
+    return (
+      <p
+        role="status"
+        className="mx-auto max-w-3xl px-4 py-12 text-center text-ink-700"
+      >
+        {copy.noAreasOpenLabel}
+      </p>
+    );
+  }
+  const popularTitle =
+    openPlace.kind === 'named'
+      ? formatContentTemplate(copy.popularInPlaceTemplate, {
+          place: openPlace.place,
+        })
+      : openPlace.kind === 'generic'
+        ? copy.popularOpenAreasTitle
+        : copy.popularTitle;
 
   return (
     <div className="bg-white">
       <DeferredCarousel active>
         <ListingCarouselSection
           locale={locale}
-          title={copy.popularTitle}
+          title={popularTitle}
           searchHref={buildSearchHref(locale, filters)}
           seeAllLabel={copy.carousel.seeAllLabel}
           listings={popularListings}
@@ -273,18 +302,20 @@ export function DiscoveryHomeSection({ locale, copy }: DiscoveryHomeSectionProps
           cardLabels={cardLabels}
         />
       ) : null}
-      {regionEntries.map(([regionKey, seed], index) => (
-        <RegionCarousel
-          key={regionKey}
-          locale={locale}
-          copy={copy}
-          filters={filters}
-          regionKey={regionKey}
-          seed={seed}
-          cardLabels={cardLabels}
-          sectionIndex={index + 3}
-        />
-      ))}
+      {regionEntries.length > 1
+        ? regionEntries.map(([regionKey, seed], index) => (
+            <RegionCarousel
+              key={regionKey}
+              locale={locale}
+              copy={copy}
+              filters={filters}
+              regionKey={regionKey}
+              seed={seed}
+              cardLabels={cardLabels}
+              sectionIndex={index + 3}
+            />
+          ))
+        : null}
     </div>
   );
 }

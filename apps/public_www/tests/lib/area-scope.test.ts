@@ -10,6 +10,8 @@ import {
   defaultOpenLocation,
   impliedOpenPlaceLabel,
   isAllAreasSelectable,
+  namedOpenPlace,
+  namedOpenPlaceInRegion,
   resolveSearchAreaScope,
   sanitizeSearchFilters,
   showsNeighbourhoodChoices,
@@ -142,6 +144,42 @@ describe('resolveSearchAreaScope', () => {
     clearSearchAreaScopeCacheForTests();
     expect(isAllAreasSelectable()).toBe(true);
     expect(showsNeighbourhoodChoices('islands')).toBe(true);
+  });
+
+  it('names the open place for the home heading', () => {
+    expect(namedOpenPlace('en')).toEqual({ kind: 'unrestricted' });
+
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'southern-stanley';
+    clearSearchAreaScopeCacheForTests();
+    expect(namedOpenPlace('en')).toEqual({ kind: 'named', place: 'Stanley' });
+    expect(namedOpenPlace('zh-HK')).toEqual({ kind: 'named', place: '赤柱' });
+
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE =
+      'southern-stanley,central-and-western-kennedy-town';
+    clearSearchAreaScopeCacheForTests();
+    expect(namedOpenPlace('en')).toEqual({
+      kind: 'named',
+      place: 'Kennedy Town and Stanley',
+    });
+
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'kowloon,islands';
+    clearSearchAreaScopeCacheForTests();
+    expect(namedOpenPlace('en')).toEqual({
+      kind: 'named',
+      place: 'Kowloon and Islands',
+    });
+    expect(namedOpenPlaceInRegion('kowloon', 'en')).toEqual({
+      kind: 'unrestricted',
+    });
+
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'yau-tsim-mong';
+    clearSearchAreaScopeCacheForTests();
+    expect(namedOpenPlace('en')).toEqual({ kind: 'generic' });
+    expect(namedOpenPlaceInRegion('kowloon', 'en')).toEqual({ kind: 'generic' });
+
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'atlantis';
+    clearSearchAreaScopeCacheForTests();
+    expect(namedOpenPlace('en')).toEqual({ kind: 'none' });
   });
 
   it('drops the starting choice and keeps a chosen neighbourhood', () => {
