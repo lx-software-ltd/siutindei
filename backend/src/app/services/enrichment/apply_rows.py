@@ -85,7 +85,7 @@ def apply_one(
         _apply_pricing(session, org, proposed, override)
         return
     if proposal.kind == "create_schedule":
-        _apply_schedule(session, org, proposal, proposed, override)
+        _apply_schedule(session, org, proposed, override)
         return
     raise ValidationError("unsupported proposal", field="kind")
 
@@ -300,7 +300,6 @@ def _apply_pricing(
 def _apply_schedule(
     session: Session,
     org: Organization,
-    proposal: OrgEnrichmentProposal,
     proposed: dict[str, Any],
     override: dict[str, Any],
 ) -> None:
@@ -311,10 +310,11 @@ def _apply_schedule(
     if location is None:
         raise ValidationError(SCHEDULE_VENUE, field="location_id")
     languages = schedule_languages(proposed.get("languages"), default=["yue"])
-    existing = _existing_schedule(session, activity.id, location.id, languages)
-    if existing is not None:
-        proposal.entity_id = existing.id
-        return
+    if _existing_schedule(session, activity.id, location.id, languages) is not None:
+        raise ValidationError(
+            "a schedule for these languages already exists",
+            field="languages",
+        )
     parsed = _schedule_times(proposed.get("entries"))
     schedule = ActivitySchedule(
         activity_id=activity.id,
@@ -344,8 +344,8 @@ def _existing_schedule(
     """The schedule already stored for this activity, venue, and languages.
 
     ``zh-HK`` and ``yue`` compare equal, matching the unique constraint
-    after ``schedule_languages``. A second insert would raise
-    ``schedule_unique_activity_location_languages`` and drop the proposal.
+    after ``schedule_languages``. The caller rejects a second insert
+    instead of dropping the proposed times.
     """
     wanted = tuple(sorted(languages))
     for row in session.scalars(

@@ -11,7 +11,7 @@ import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import quote, unquote, urljoin, urlparse, urlunparse
+from urllib.parse import SplitResult, quote, urljoin, urlparse, urlsplit, urlunsplit
 from urllib.robotparser import RobotFileParser
 
 from app.services.enrichment.constants import (
@@ -41,6 +41,10 @@ _ALLOWED_TYPES = (
     "text/plain",
     "application/ld+json",
 )
+# urllib sends the path and query as ASCII. Encode only bytes that are
+# not already legal, so "%26", "%2F", and ";jsessionid" stay as written.
+_REQUEST_SAFE = "/%:@!$&'()*+,;=~"
+_QUERY_SAFE = f"{_REQUEST_SAFE}?"
 
 
 @dataclass
@@ -121,16 +125,18 @@ def fetch_public(
 
     The TCP connection uses the IP checked by public_address, so a DNS
     change between the check and the connect cannot reach a private address.
-    Spaces and non-ASCII characters are percent-encoded first. urllib
-    rejects them and that used to fail the whole proxy invocation.
+    Spaces and non-ASCII characters are percent-encoded after the
+    credential check. urllib rejects them and that used to fail the
+    whole proxy invocation. Legal escapes stay as written.
     """
-    url = _encoded_request_url(url)
-    parsed = urlparse(url)
+    parsed = urlsplit(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise CrawlError("refusing non-http URL")
     if parsed.username or parsed.password:
         raise CrawlError("refusing URL with credentials")
-    ip = public_address(parsed.hostname)
+    url = _encoded_request_url(url)
+    parsed = urlsplit(url)
+    ip = public_address(parsed.hostname or "")
     pinned, host_header, server_name = _pinned_target(url, ip)
     request = urllib.request.Request(
         pinned,
@@ -176,30 +182,42 @@ def fetch_public(
 
 
 def _encoded_request_url(url: str) -> str:
-    """Return an ASCII request URL. The host is checked before this is used."""
-    parsed = urlparse(url)
+    """Return an ASCII request URL. The caller checks credentials first."""
+    parsed = urlsplit(url)
+    host, port = _host_and_port(parsed)
+    path = quote(parsed.path or "/", safe=_REQUEST_SAFE)
+    query = quote(parsed.query, safe=_QUERY_SAFE)
+    return urlunsplit((parsed.scheme, _authority(host, port), path or "/", query, ""))
+
+
+def _host_and_port(parsed: SplitResult) -> tuple[str, int | None]:
     host = parsed.hostname or ""
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise CrawlError("URL could not be fetched") from exc
     try:
         host = host.encode("idna").decode("ascii")
     except UnicodeError as exc:
         raise CrawlError("refusing non-http URL") from exc
-    netloc = f"{host}:{parsed.port}" if parsed.port else host
-    path = quote(unquote(parsed.path or "/"), safe="/%")
-    query = quote(unquote(parsed.query), safe="&=%+")
-    return urlunparse((parsed.scheme, netloc, path or "/", "", query, ""))
+    return host, port
+
+
+def _authority(host: str, port: int | None) -> str:
+    """Bracket an IPv6 host so the port is not read as part of the address."""
+    name = f"[{host}]" if ":" in host else host
+    if port is None:
+        return name
+    return f"{name}:{port}"
 
 
 def _pinned_target(url: str, ip: str) -> tuple[str, str, str]:
-    parsed = urlparse(url)
-    host = parsed.hostname or ""
-    port = parsed.port
-    ip_host = f"[{ip}]" if ":" in ip else ip
-    netloc = f"{ip_host}:{port}" if port else ip_host
-    pinned = urlunparse(
-        (parsed.scheme, netloc, parsed.path or "/", "", parsed.query, "")
+    parsed = urlsplit(url)
+    host, port = _host_and_port(parsed)
+    pinned = urlunsplit(
+        (parsed.scheme, _authority(ip, port), parsed.path or "/", parsed.query, "")
     )
-    host_header = host if port is None else f"{host}:{port}"
-    return pinned, host_header, host
+    return pinned, _authority(host, port), host
 
 
 def _remaining(deadline: float | None, timeout: float) -> float:

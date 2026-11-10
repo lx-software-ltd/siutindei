@@ -9,9 +9,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.admin_validators import schedule_languages
-from app.db.models import ActivityPricing, ActivitySchedule, Organization
+from app.db.models import ActivityPricing, Organization
 from app.db.models.org_enrichment import OrgEnrichmentProposal
-from app.services.enrichment.apply_rows import activity_by_name, location_by_address
+from app.services.enrichment.apply_rows import (
+    _existing_schedule,
+    activity_by_name,
+    location_by_address,
+)
 from app.services.enrichment.row_blockers import positive_sessions
 
 
@@ -279,19 +283,8 @@ def _schedule_exists(
     )
     if activity is None or location is None:
         return False
-    languages = tuple(
-        sorted(schedule_languages(proposed.get("languages"), default=["yue"]))
-    )
-    for row in session.scalars(
-        select(ActivitySchedule).where(
-            ActivitySchedule.activity_id == activity.id,
-            ActivitySchedule.location_id == location.id,
-        )
-    ).all():
-        stored = tuple(sorted(schedule_languages(row.languages or [])))
-        if stored == languages:
-            return True
-    return False
+    languages = schedule_languages(proposed.get("languages"), default=["yue"])
+    return _existing_schedule(session, activity.id, location.id, languages) is not None
 
 
 def _applied_media_sources(session: Session, org_id: object) -> set[str]:

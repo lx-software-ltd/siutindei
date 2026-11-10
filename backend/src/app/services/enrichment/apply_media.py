@@ -48,7 +48,12 @@ def apply_media(
         try:
             stored = copy_image(source, str(org.id))
         except AwsProxyError as exc:
-            logger.warning("Enrichment image was not copied")
+            if exc.code != "CrawlRefused":
+                logger.exception(
+                    "Enrichment image was not copied",
+                    extra={"code": exc.code},
+                )
+                raise
             raise ValidationError(
                 exc.message or "image could not be copied",
                 field="source_url",
