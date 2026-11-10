@@ -224,10 +224,23 @@ function collectReferences(value: unknown, found: Set<string>): void {
 // pseudo parameters: a nested stack parameter or a rename would make
 // CloudFormation replace alarms whose fixed names already exist.
 function assertOpsAlarmRulesInNestedStack(): void {
-  const app = new cdk.App({ context: { "aws:cdk:bundling-stacks": [] } });
-  const stack = new ApiStack(app, "OpsAlarmRulesStack", {
-    env: { account: "111111111111", region: "us-east-1" },
+  const outdir = fs.mkdtempSync(path.join(os.tmpdir(), "cdk-api-stack-"));
+  const app = new cdk.App({
+    outdir,
+    context: { "aws:cdk:bundling-stacks": [] },
   });
+  try {
+    const stack = new ApiStack(app, "OpsAlarmRulesStack", {
+      env: { account: "111111111111", region: "us-east-1" },
+    });
+    assertOpsAlarmRules(stack);
+    assertDeployTemplateIsQuiet(outdir, stack.stackName);
+  } finally {
+    fs.rmSync(outdir, { recursive: true, force: true });
+  }
+}
+
+function assertOpsAlarmRules(stack: cdk.Stack): void {
   const nestedStack = stack.node.findChild("OpsAlarmsStack") as cdk.NestedStack;
   const nested = Template.fromStack(nestedStack).toJSON();
   const parentAlarms = Template.fromStack(stack).findResources("AWS::CloudWatch::Alarm");
@@ -423,32 +436,7 @@ function assertLogGroupActionsUseLogGroupArn(): void {
   }
 }
 
-function assertDeployTemplateIsQuiet(): void {
-  const outdir = fs.mkdtempSync(path.join(os.tmpdir(), "cdk-deploy-warnings-"));
-  const stderr: string[] = [];
-  const write = process.stderr.write.bind(process.stderr);
-  process.stderr.write = ((chunk: string | Uint8Array, ...rest: unknown[]) => {
-    stderr.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8"));
-    return write(chunk as never, ...(rest as never[]));
-  }) as typeof process.stderr.write;
-  try {
-    const app = new cdk.App({
-      outdir,
-      context: { "aws:cdk:bundling-stacks": [] },
-    });
-    new ApiStack(app, "lxsoftware-siutindei", {
-      env: { account: "111111111111", region: "us-east-1" },
-    });
-    app.synth();
-  } finally {
-    process.stderr.write = write;
-  }
-
-  const deprecated = stderr.filter((line) => line.includes("addDependency is deprecated"));
-  if (deprecated.length > 0) {
-    throw new Error(deprecated.join(""));
-  }
-
+function assertDeployTemplateIsQuiet(outdir: string, stackName: string): void {
   const report = JSON.parse(
     fs.readFileSync(path.join(outdir, "validation-report.json"), "utf8"),
   ) as {
@@ -465,17 +453,24 @@ function assertDeployTemplateIsQuiet(): void {
         .join("; ")}`,
     );
   }
-  const retainedGroups = report.pluginReports.flatMap(
+  const suppressed = report.pluginReports.flatMap(
     (plugin) => plugin.suppressedViolations ?? [],
-  ).filter((violation) => violation.ruleName === "W3011");
+  );
+  const retainedGroups = suppressed.filter((violation) => violation.ruleName === "W3011");
   if (retainedGroups.length !== 2) {
     throw new Error(
       `Expected the two named security groups to acknowledge W3011, found ${retainedGroups.length}`,
     );
   }
+  const targetGroupTags = suppressed.filter((violation) => violation.ruleName === "F3002");
+  if (targetGroupTags.length !== 1) {
+    throw new Error(
+      `Expected the proxy target group to acknowledge F3002, found ${targetGroupTags.length}`,
+    );
+  }
 
   const template = JSON.parse(
-    fs.readFileSync(path.join(outdir, "lxsoftware-siutindei.template.json"), "utf8"),
+    fs.readFileSync(path.join(outdir, `${stackName}.template.json`), "utf8"),
   ) as {
     Parameters: Record<string, { Default?: string }>;
     Resources: Record<
@@ -504,8 +499,9 @@ function assertDeployTemplateIsQuiet(): void {
   const targetGroup = Object.values(template.Resources).find(
     (resource) => resource.Type === "AWS::RDS::DBProxyTargetGroup",
   );
-  if (!targetGroup || "Tags" in (targetGroup.Properties ?? {})) {
-    throw new Error("DB proxy target group must not synthesize a Tags property");
+  const targetGroupTagsProperty = JSON.stringify(targetGroup?.Properties?.Tags ?? []);
+  if (!targetGroup || !targetGroupTagsProperty.includes("Organization")) {
+    throw new Error("DB proxy target group must keep the tags already deployed");
   }
   const proxy = Object.values(template.Resources).find(
     (resource) => resource.Type === "AWS::RDS::DBProxy",
@@ -535,7 +531,6 @@ function main(): void {
   assertOpsAlarms();
   assertOpsAlarmRulesInNestedStack();
   assertLogGroupActionsUseLogGroupArn();
-  assertDeployTemplateIsQuiet();
   // eslint-disable-next-line no-console
   console.log("OK");
 }

@@ -10,7 +10,7 @@
     "cdk": "cdk",
     "synth": "cdk synth",
     "deploy": "cdk deploy",
-    "test:infra": "node scripts/assert-patched-minimatch.js && ts-node scripts/assert-existing-db.ts"
+    "test:infra": "node scripts/assert-patched-minimatch.js && JSII_DEPRECATED=fail ts-node scripts/assert-existing-db.ts"
   },
   "keywords": [],
   "author": "",

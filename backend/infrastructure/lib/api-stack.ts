@@ -757,9 +757,7 @@ export class ApiStack extends cdk.Stack {
     );
     const openRouterApiKey = new cdk.CfnParameter(this, "OpenRouterApiKey", {
       type: "String",
-      // A default of "" fails Secrets Manager's SecretString min length
-      // during template validation, even though the condition below stores
-      // "pending" when the value is empty. "pending" is that same placeholder.
+      // Empty fails SecretString's minimum length. This is the same placeholder.
       default: "pending",
       noEcho: true,
       description:

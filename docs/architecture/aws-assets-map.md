@@ -660,7 +660,7 @@ tables, etc.).
 
 Tags are **not guaranteed** on the following:
 
-- Resource types that do not support tagging. The RDS proxy target group is one of these: stack tags stay on the proxy and the cluster, and the target group's `Tags` property is removed before synthesis.
+- Resource types that do not support tagging. The RDS proxy target group is one of these. CDK still emits `Tags`, and that property stays so a deploy does not update the live group. The validator finding is acknowledged on that resource.
 - Imported or existing resources (for example, an existing VPC, DB
   cluster, security groups, or the API access log group).
 - Resources created outside the stack lifecycle, such as Lambda log

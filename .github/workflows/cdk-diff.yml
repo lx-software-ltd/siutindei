@@ -290,11 +290,8 @@ jobs:
             mapfile -d '' -t PARAM_ARGS < "$PARAM_ARGS_FILE"
           fi
 
-          QUALIFIER_ARGS=()
-          if [ -n "$CDK_BOOTSTRAP_QUALIFIER" ]; then
-            QUALIFIER_ARGS=(--qualifier "$CDK_BOOTSTRAP_QUALIFIER")
-          fi
-
+          # bin/app.ts reads CDK_BOOTSTRAP_QUALIFIER. This command rejects
+          # the bootstrap-only qualifier flag.
           IFS=$', \n\t' read -r -a STACK_LIST <<< "$CDK_STACKS"
           STACK_ARGS=()
           for stack in "${STACK_LIST[@]}"; do
@@ -306,9 +303,9 @@ jobs:
           done
 
           if [ ${#STACK_ARGS[@]} -gt 0 ]; then
-            npx cdk diff --no-color "${QUALIFIER_ARGS[@]}" "${PARAM_ARGS[@]}" "${STACK_ARGS[@]}"
+            npx cdk diff --no-color "${PARAM_ARGS[@]}" "${STACK_ARGS[@]}"
           else
-            npx cdk diff --no-color "${QUALIFIER_ARGS[@]}" "${PARAM_ARGS[@]}"
+            npx cdk diff --no-color "${PARAM_ARGS[@]}"
           fi
         env:
           CDK_STACKS: ${{ inputs.stacks }}
