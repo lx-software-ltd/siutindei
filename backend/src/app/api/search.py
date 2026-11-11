@@ -19,10 +19,14 @@ from sqlalchemy.orm import Session
 
 from app.api.partner_auth import PartnerContext, get_partner_context
 from app.api.schemas import ActivitySearchResponseSchema, dump_search_response
+from app.api.search_feedback import load_ratings, load_reviews
+from app.api.search_page import count_search_activities, map_row_to_result
 from app.api.search_page import load_search_rows as _load_search_rows
-from app.api.search_page import map_row_to_result
 from app.api.search_page import parse_cursor as _parse_cursor
-from app.api.search_validation import validate_search_query_params
+from app.api.search_validation import (
+    validate_search_query_params,
+    validate_search_refinements,
+)
 from app.db.engine import get_engine
 from app.db.models import GeographicArea, PricingType, ScheduleType
 from app.db.queries import (
@@ -131,7 +135,6 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
     price_max = parse_decimal(first_param(params, "price_max"))
     languages = parse_languages(params.get("language", []))
     limit = parse_int(first_param(params, "limit")) or 50
-
     validated = validate_search_query_params(
         age=age,
         day_of_week_utc=day_of_week_utc,
@@ -145,11 +148,28 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
         view=first_param(params, "view"),
         include_incomplete=first_param(params, "include_incomplete"),
     )
+    refinements = validate_search_refinements(
+        days_of_week_hkt=[
+            parse_int(value) for value in params.get("day_of_week_hkt", []) if value
+        ],
+        free_trial=first_param(params, "free_trial"),
+        class_price_max=parse_decimal(first_param(params, "class_price_max")),
+        sort=first_param(params, "sort"),
+        include_total=first_param(params, "include_total"),
+    )
+    cursor = _parse_cursor(first_param(params, "cursor"))
+    if (
+        cursor is not None
+        and cursor.phase == "complete"
+        and cursor.sort != refinements.sort
+    ):
+        raise CursorError("Cursor does not match sort")
 
     return ActivitySearchFilters(
         age=age,
         area_id=area_id,
         activity_id=activity_id,
+        org_ids=tuple(parse_uuid_list(params.get("organization_id", []))),
         category_ids=parse_uuid_list(params.get("category_id", [])),
         pricing_type=parse_enum(first_param(params, "pricing_type"), PricingType),
         price_min=price_min,
@@ -162,11 +182,16 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
         start_minutes_utc=start_minutes_utc,
         end_minutes_utc=end_minutes_utc,
         languages=validated.languages,
-        cursor=_parse_cursor(first_param(params, "cursor")),
+        cursor=cursor,
         limit=limit,
         text_query=validated.text_query,
         view=validated.view,
         include_incomplete=validated.include_incomplete,
+        days_of_week_hkt=refinements.days_of_week_hkt,
+        free_trial=refinements.free_trial,
+        class_price_max=refinements.class_price_max,
+        sort=refinements.sort,
+        include_total=refinements.include_total,
     )
 
 
@@ -205,11 +230,25 @@ def fetch_search_response(
             )
             for row in rows
         ]
+        ratings = load_ratings(session, (item.organization.id for item in items))
+        reviews_by_org: dict[str, list] = {}
+        if filters.activity_id is not None and filters.view != "card":
+            for org_id in {item.organization.id for item in items}:
+                reviews_by_org[org_id] = load_reviews(session, org_id)
+        for item in items:
+            item.organization.rating = ratings.get(item.organization.id)
+            item.organization.reviews = reviews_by_org.get(item.organization.id, [])
+        total = (
+            count_search_activities(session, filters)
+            if filters.include_total and filters.cursor is None
+            else None
+        )
     return ActivitySearchResponseSchema(
         items=items,
         next_cursor=next_cursor,
         category_match=match_mode,
         area_scope=search_area_scope_labels(),
+        total=total,
     )
 
 

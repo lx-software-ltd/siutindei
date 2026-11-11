@@ -14,15 +14,21 @@ from app.api.schemas import (
     ActivitySchema,
     ActivitySearchResponseSchema,
     ActivitySearchResultSchema,
+    FeedbackRatingSchema,
+    FeedbackReviewSchema,
     LocationSchema,
+    OrganizationContactSchema,
     OrganizationSchema,
     PricingSchema,
     ScheduleEntrySchema,
     ScheduleSchema,
 )
 from app.db.queries import (
+    UNPRICED_SORT_KEY,
     ActivitySearchFilters,
     applied_search_area_scope,
+    class_price_value,
+    hong_kong_day,
     search_area_scope_labels,
     validate_filters,
 )
@@ -55,17 +61,27 @@ def fetch_staging_search_response(
         for item in _sorted_published_items()
         if _matches(item, filters, area_descendants, category_descendants)
     ]
+    if filters.sort == "price":
+        matched.sort(key=_price_sort_key)
+    row_key = _price_sort_key if filters.sort == "price" else _sort_key
 
     requested_limit = filters.limit
     start_index = 0
     if filters.cursor is not None:
-        cursor_key = (
+        time_key = (
             filters.cursor.day_of_week_utc,
             filters.cursor.start_minutes_utc,
             str(filters.cursor.schedule_id),
         )
+        cursor_key: tuple[Any, ...] = time_key
+        if filters.sort == "price":
+            price_key = filters.cursor.price_key
+            cursor_key = (
+                price_key if price_key is not None else UNPRICED_SORT_KEY,
+                *time_key,
+            )
         for index, row in enumerate(matched):
-            if _sort_key(row) > cursor_key:
+            if row_key(row) > cursor_key:
                 start_index = index
                 break
         else:
@@ -83,13 +99,35 @@ def fetch_staging_search_response(
             sort_meta["day_of_week_utc"],
             sort_meta["start_minutes_utc"],
             UUID(sort_meta["schedule_id"]),
+            sort=filters.sort,
+            price_key=_price_sort_key(last)[0] if filters.sort == "price" else None,
         )
 
+    total = None
+    if filters.include_total and filters.cursor is None:
+        total = len({row["activity"]["id"] for row in matched})
+    detail = filters.activity_id is not None
     return ActivitySearchResponseSchema(
-        items=[_to_schema(row, filters.view) for row in trimmed],
+        items=[_to_schema(row, filters.view, detail=detail) for row in trimmed],
         next_cursor=next_cursor,
         area_scope=search_area_scope_labels(),
+        total=total,
     )
+
+
+def _class_price(row: dict[str, Any]) -> Decimal | None:
+    pricing = row.get("pricing") or {}
+    raw_amount = pricing.get("amount")
+    return class_price_value(
+        pricing.get("pricing_type"),
+        None if raw_amount is None else Decimal(str(raw_amount)),
+        pricing.get("sessions_count"),
+    )
+
+
+def _price_sort_key(row: dict[str, Any]) -> tuple[Any, ...]:
+    price = _class_price(row)
+    return (price if price is not None else UNPRICED_SORT_KEY, *_sort_key(row))
 
 
 def _load_fixture() -> dict[str, Any]:
@@ -224,6 +262,17 @@ def _matches(
     if filters.activity_id is not None and UUID(activity["id"]) != filters.activity_id:
         return False
 
+    if filters.org_ids and UUID(item["organization"]["id"]) not in set(filters.org_ids):
+        return False
+
+    if filters.free_trial and not pricing.get("free_trial_class_offered"):
+        return False
+
+    if filters.class_price_max is not None:
+        class_price = _class_price(item)
+        if class_price is None or class_price > filters.class_price_max:
+            return False
+
     scope = applied_search_area_scope(filters)
     if scope is not None and str(location.get("area_id") or "") not in {
         str(area_id) for area_id in scope
@@ -315,6 +364,7 @@ def _entries_match(
         filters.day_of_week_utc is None
         and filters.start_minutes_utc is None
         and filters.end_minutes_utc is None
+        and not filters.days_of_week_hkt
     ):
         return True
 
@@ -322,6 +372,15 @@ def _entries_match(
         if (
             filters.day_of_week_utc is not None
             and entry.get("day_of_week_utc") != filters.day_of_week_utc
+        ):
+            continue
+
+        if filters.days_of_week_hkt and (
+            hong_kong_day(
+                int(entry.get("day_of_week_utc", 0)),
+                int(entry.get("start_minutes_utc", 0)),
+            )
+            not in filters.days_of_week_hkt
         ):
             continue
 
@@ -359,6 +418,8 @@ def _entries_match(
 def _to_schema(
     row: dict[str, Any],
     view: str = "full",
+    *,
+    detail: bool = False,
 ) -> ActivitySearchResultSchema:
     activity = row["activity"]
     organization = row["organization"]
@@ -395,11 +456,35 @@ def _to_schema(
             ),
             media_urls=media_urls,
             logo_media_url=organization.get("logo_media_url"),
+            status=organization.get("status"),
+            description_source=organization.get("description_source"),
+            place_id=organization.get("place_id") if detail else None,
+            parent_verified=bool(organization.get("parent_verified", False)),
+            updated_at=organization.get("updated_at"),
+            contact=(
+                None
+                if card or not organization.get("contact")
+                else OrganizationContactSchema(**organization["contact"])
+            ),
+            rating=(
+                FeedbackRatingSchema(**organization["rating"])
+                if organization.get("rating")
+                else None
+            ),
+            reviews=(
+                [
+                    FeedbackReviewSchema(**review)
+                    for review in organization.get("reviews") or []
+                ]
+                if detail and not card
+                else []
+            ),
         ),
         location=LocationSchema(
             id=location["id"],
             area_id=location["area_id"],
             region_area_id=location.get("region_area_id"),
+            name=location.get("name"),
             address=location.get("address"),
             lat=location.get("lat"),
             lng=location.get("lng"),
@@ -444,15 +529,20 @@ def _encode_cursor(
     day_of_week_utc: int,
     start_minutes_utc: int,
     schedule_id: UUID,
+    *,
+    sort: str = "time",
+    price_key: Decimal | None = None,
 ) -> str:
     import base64
 
-    payload = json.dumps(
-        {
-            "schedule_id": str(schedule_id),
-            "day_of_week_utc": day_of_week_utc,
-            "start_minutes_utc": start_minutes_utc,
-        }
-    ).encode("utf-8")
+    body: dict[str, Any] = {
+        "schedule_id": str(schedule_id),
+        "day_of_week_utc": day_of_week_utc,
+        "start_minutes_utc": start_minutes_utc,
+    }
+    if sort != "time":
+        body["sort"] = sort
+        body["price_key"] = None if price_key is None else str(price_key)
+    payload = json.dumps(body).encode("utf-8")
     encoded = base64.urlsafe_b64encode(payload).decode("utf-8")
     return encoded.rstrip("=")

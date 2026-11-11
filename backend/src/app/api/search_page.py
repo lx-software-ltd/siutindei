@@ -6,22 +6,28 @@ import base64
 import json
 from collections.abc import Mapping
 from dataclasses import replace
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import distinct, func, select, union
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.schemas import (
     ActivitySchema,
     ActivitySearchResultSchema,
     LocationSchema,
+    OrganizationContactSchema,
     OrganizationSchema,
     PricingSchema,
     ScheduleEntrySchema,
     ScheduleSchema,
 )
 from app.db.age_bounds import inclusive_age_bounds
-from app.db.incomplete_search import build_incomplete_search_query
+from app.db.incomplete_search import (
+    build_incomplete_search_query,
+    incomplete_activity_ids_query,
+)
 from app.db.models import (
     Activity,
     ActivityPricing,
@@ -68,6 +74,8 @@ def load_search_rows(
             last_row._mapping["order_day_of_week"],
             last_row._mapping["order_start_minutes"],
             schedule.id,
+            sort=filters.sort,
+            price_key=last_row._mapping["order_price"],
         )
     if not filters.include_incomplete:
         return complete_rows, None
@@ -79,6 +87,23 @@ def load_search_rows(
         return complete_rows, encode_incomplete_cursor(None)
     extra, extra_cursor = _incomplete_page(session, filters, remaining, loaded=loaded)
     return [*complete_rows, *extra], extra_cursor
+
+
+def count_search_activities(session: Session, filters: ActivitySearchFilters) -> int:
+    """Distinct activities matching the filters across every page."""
+
+    unpaged = replace(filters, cursor=None, limit=1)
+    complete_ids = (
+        build_search_query(unpaged)
+        .with_only_columns(Activity.id.label("activity_id"))
+        .order_by(None)
+        .limit(None)
+    )
+    if filters.include_incomplete:
+        matched = union(complete_ids, incomplete_activity_ids_query(unpaged)).subquery()
+    else:
+        matched = complete_ids.subquery()
+    return int(session.scalar(select(func.count(distinct(matched.c.activity_id)))) or 0)
 
 
 def _incomplete_page(
@@ -179,11 +204,15 @@ def map_row_to_result(
             status=organization.status,
             description_source=organization.description_source,
             place_id=organization.place_id if include_place_id else None,
+            parent_verified=bool(organization.parent_verified),
+            updated_at=organization.updated_at,
+            contact=None if card else _contact(organization),
         ),
         location=LocationSchema(
             id=str(location.id),
             area_id=str(location.area_id),
             region_area_id=region_cache.get(str(location.area_id)),
+            name=location.name,
             address=location.address,
             lat=location.lat,
             lng=location.lng,
@@ -211,6 +240,22 @@ def map_row_to_result(
                 languages=schedule.languages or [],
             )
         ),
+    )
+
+
+def _contact(organization: Organization) -> OrganizationContactSchema:
+    return OrganizationContactSchema(
+        website=organization.website,
+        email=organization.email,
+        phone_country_code=organization.phone_country_code,
+        phone_number=organization.phone_number,
+        whatsapp=organization.whatsapp,
+        facebook=organization.facebook,
+        instagram=organization.instagram,
+        tiktok=organization.tiktok,
+        twitter=organization.twitter,
+        xiaohongshu=organization.xiaohongshu,
+        wechat=organization.wechat,
     )
 
 
@@ -260,12 +305,16 @@ def parse_cursor(value: str | None) -> ActivitySearchCursor | None:
             )
         if phase != "complete":
             raise CursorError("Malformed cursor payload")
+        sort = str(payload.get("sort") or "time")
+        raw_price = payload.get("price_key")
         return ActivitySearchCursor(
             day_of_week_utc=payload["day_of_week_utc"],
             start_minutes_utc=payload["start_minutes_utc"],
             schedule_id=UUID(payload["schedule_id"]),
+            sort=sort,
+            price_key=Decimal(str(raw_price)) if raw_price is not None else None,
         )
-    except (ValueError, KeyError, TypeError) as exc:
+    except (ValueError, KeyError, TypeError, InvalidOperation) as exc:
         raise CursorError("Malformed cursor payload") from exc
 
 
@@ -282,16 +331,21 @@ def encode_complete_cursor(
     day_of_week_utc: int,
     start_minutes_utc: int,
     schedule_id: UUID,
+    *,
+    sort: str = "time",
+    price_key: Decimal | None = None,
 ) -> str:
-    """Encode a cursor that continues the schedule-ordered rows."""
-    return _encode_cursor_payload(
-        {
-            "phase": "complete",
-            "schedule_id": str(schedule_id),
-            "day_of_week_utc": day_of_week_utc,
-            "start_minutes_utc": start_minutes_utc,
-        }
-    )
+    """Encode a cursor that continues the complete rows in ``sort`` order."""
+    payload: dict[str, Any] = {
+        "phase": "complete",
+        "schedule_id": str(schedule_id),
+        "day_of_week_utc": day_of_week_utc,
+        "start_minutes_utc": start_minutes_utc,
+    }
+    if sort != "time":
+        payload["sort"] = sort
+        payload["price_key"] = None if price_key is None else str(price_key)
+    return _encode_cursor_payload(payload)
 
 
 def encode_incomplete_cursor(

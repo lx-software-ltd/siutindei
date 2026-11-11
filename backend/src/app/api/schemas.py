@@ -2,9 +2,53 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class OrganizationContactSchema(BaseModel):
+    """Public contact details and social links of an organization."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    website: str | None = None
+    email: str | None = None
+    phone_country_code: str | None = None
+    phone_number: str | None = None
+    whatsapp: str | None = None
+    facebook: str | None = None
+    instagram: str | None = None
+    tiktok: str | None = None
+    twitter: str | None = None
+    xiaohongshu: str | None = None
+    wechat: str | None = None
+
+
+class FeedbackRatingSchema(BaseModel):
+    """Count and mean of approved feedback stars for an organization."""
+
+    count: int
+    average_stars: Decimal
+
+
+class FeedbackLabelSchema(BaseModel):
+    """A label a parent attached to feedback."""
+
+    id: str
+    name: str
+    name_translations: dict[str, str] = Field(default_factory=dict)
+
+
+class FeedbackReviewSchema(BaseModel):
+    """One approved feedback entry, without the submitter."""
+
+    id: str
+    stars: int
+    description: str | None = None
+    labels: list[FeedbackLabelSchema] = Field(default_factory=list)
+    created_at: datetime
 
 
 class OrganizationSchema(BaseModel):
@@ -22,6 +66,11 @@ class OrganizationSchema(BaseModel):
     status: str | None = None
     description_source: str | None = None
     place_id: str | None = None
+    parent_verified: bool = False
+    updated_at: datetime | None = None
+    contact: OrganizationContactSchema | None = None
+    rating: FeedbackRatingSchema | None = None
+    reviews: list[FeedbackReviewSchema] = Field(default_factory=list)
 
 
 class LocationSchema(BaseModel):
@@ -32,6 +81,7 @@ class LocationSchema(BaseModel):
     id: str
     area_id: str
     region_area_id: str | None
+    name: str | None = None
     address: str | None
     lat: Decimal | None
     lng: Decimal | None
@@ -106,6 +156,7 @@ class ActivitySearchResponseSchema(BaseModel):
     next_cursor: str | None = None
     category_match: str = "exact"
     area_scope: list[str] | None = None
+    total: int | None = None
 
 
 _CARD_OMITTED_FIELDS = (
@@ -114,6 +165,15 @@ _CARD_OMITTED_FIELDS = (
     ("organization", "description"),
     ("organization", "description_translations"),
     ("organization", "place_id"),
+    ("organization", "contact"),
+    ("organization", "reviews"),
+    ("organization", "updated_at"),
+)
+# Card rows keep these only when they carry a value.
+_CARD_OMITTED_WHEN_EMPTY = (
+    ("organization", "parent_verified"),
+    ("organization", "rating"),
+    ("location", "name"),
 )
 
 
@@ -131,6 +191,8 @@ def dump_search_response(
     payload = body.model_dump()
     if not include_area_scope:
         payload.pop("area_scope", None)
+    if payload.get("total") is None:
+        payload.pop("total", None)
     if view != "card":
         return payload
     for item in payload.get("items", []):
@@ -152,6 +214,10 @@ def _apply_card_view(item: dict) -> None:
     for section, field in _CARD_OMITTED_FIELDS:
         section_payload = item.get(section)
         if isinstance(section_payload, dict):
+            section_payload.pop(field, None)
+    for section, field in _CARD_OMITTED_WHEN_EMPTY:
+        section_payload = item.get(section)
+        if isinstance(section_payload, dict) and not section_payload.get(field):
             section_payload.pop(field, None)
     for section_name in ("activity", "organization"):
         section_payload = item.get(section_name)
