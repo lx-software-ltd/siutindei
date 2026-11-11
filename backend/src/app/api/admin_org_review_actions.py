@@ -284,15 +284,9 @@ def handle_bulk(event: Mapping[str, Any]) -> dict[str, Any]:
         )
         session.commit()
     ok_count = sum(1 for item in results if item["status"] == "ok")
-    logger.info(
-        "Bulk organization review",
-        extra={
-            "action": action,
-            "count": len(org_ids),
-            "ok": ok_count,
-            "forced": force,
-        },
-    )
+    logged = {"action": action, "count": len(org_ids), "ok": ok_count}
+    logged["forced"] = force
+    logger.info("Bulk organization review", extra=logged)
     return json_response(
         200,
         {"results": results},
