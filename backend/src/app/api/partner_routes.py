@@ -31,6 +31,7 @@ from app.api.partner_name_fixes import (
     handle_partner_name_fixes,
     partner_get_organizations,
 )
+from app.api.partner_org_approve import handle_partner_org_approve
 from app.api.partner_org_enrichment import (
     handle_partner_enrichment_settings,
     handle_partner_org_enrichment,
@@ -185,6 +186,15 @@ def _partner_org_merge(
     return handle_partner_org_merge(event, partner)
 
 
+def _partner_org_approve(
+    event: Mapping[str, Any],
+    method: str,
+    resource_id: str | None,
+    partner: PartnerContext,
+) -> dict[str, Any]:
+    return handle_partner_org_approve(event, method, resource_id, partner)
+
+
 def _partner_org_reject(
     event: Mapping[str, Any],
     method: str,
@@ -238,6 +248,16 @@ _PARTNER_ROUTES = (
         methods=frozenset({"POST"}),
         has_id=False,
         full_access=True,
+    ),
+    PartnerRoute(
+        "organizations",
+        _partner_org_approve,
+        methods=frozenset({"POST"}),
+        has_id=True,
+        full_access=True,
+        crud_only=True,
+        tail="approve",
+        overlay=True,
     ),
     PartnerRoute(
         "organizations",

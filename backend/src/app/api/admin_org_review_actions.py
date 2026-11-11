@@ -153,6 +153,76 @@ def apply_organization_rejection(
         )
 
 
+def apply_organization_approval(
+    event: Mapping[str, Any],
+    resource_id: str,
+    *,
+    reviewer: str,
+) -> dict[str, Any]:
+    """Approve one organization. Same fields as an admin approve decision."""
+    body = parse_object_body(event)
+    _validated_approve_body(body)
+    org_id = _parse_uuid(resource_id, "id")
+    with Session(get_engine()) as session:
+        _set_session_audit_context(session, event, user_id=reviewer)
+        organization = session.get(Organization, org_id)
+        if organization is None:
+            raise NotFoundError("organizations", resource_id)
+        try:
+            _apply_decision(
+                session,
+                organization,
+                "approve",
+                force=False,
+                notes=body.get("notes") if "notes" in body else None,
+                status=body.get("status"),
+                reviewer_sub=reviewer,
+                notes_provided="notes" in body,
+                reason=None,
+            )
+        except ReviewBlockedError as exc:
+            return json_response(
+                400,
+                {
+                    "error": exc.message,
+                    "issues": [issue.to_dict() for issue in exc.issues],
+                },
+                event=event,
+            )
+        session.commit()
+        session.refresh(organization)
+        logger.info(
+            "Organization approved",
+            extra={"org_id": str(organization.id)},
+        )
+        return json_response(
+            200,
+            _serialize_organization(organization),
+            event=event,
+        )
+
+
+def _validated_approve_body(body: Mapping[str, Any]) -> None:
+    """Check the approve body before any organization lookup."""
+    action = body.get("action")
+    if action not in (None, "", "approve"):
+        raise ValidationError(
+            "Only approve is available on this route",
+            field="action",
+        )
+    if "force" in body:
+        raise ValidationError(
+            "force is not available on this route",
+            field="force",
+        )
+    _decision_reason(body.get("reason"), "approve")
+    if "notes" in body:
+        _parse_notes(body.get("notes"))
+    status = body.get("status")
+    if status not in (None, ""):
+        parse_org_status(status)
+
+
 def _validated_reject_body(body: Mapping[str, Any]) -> str:
     """Check the reject body before any organization lookup."""
     _reject_other_actions(body)
