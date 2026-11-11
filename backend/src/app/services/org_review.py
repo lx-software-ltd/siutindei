@@ -1,6 +1,6 @@
 """Completeness checks for the organization review queue.
 
-Blockers stop a release unless the admin passes force. Warnings are
+Blockers stop a release unless force is passed. Warnings are
 shown and do not block. The same rules drive the queue, the detail
 view, and approve/bulk actions.
 """

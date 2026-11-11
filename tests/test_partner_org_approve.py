@@ -272,9 +272,9 @@ def test_approve_refuses_blockers_other_actions_and_unknown_organizations(
         assert reject["statusCode"] == 400
         assert "Only approve" in json.loads(reject["body"])["error"]
 
-        forced = _post(org_id, {"force": True})
-        assert forced["statusCode"] == 400
-        assert "force" in json.loads(forced["body"])["error"]
+        not_forced = _post(org_id, {"force": False})
+        assert not_forced["statusCode"] == 400
+        assert "must be fixed" in json.loads(not_forced["body"])["error"]
 
         reason = _post(org_id, {"reason": "other"})
         assert reason["statusCode"] == 400
@@ -295,6 +295,9 @@ def test_approve_refuses_blockers_other_actions_and_unknown_organizations(
         notes = _post(unknown, {"notes": 5})
         assert notes["statusCode"] == 400
         assert "notes must be a string" in json.loads(notes["body"])["error"]
+        forced = _post(unknown, {"force": "yes"})
+        assert forced["statusCode"] == 400
+        assert "force must be a boolean" in json.loads(forced["body"])["error"]
         absent = _post(unknown, {})
         assert absent["statusCode"] == 404
 
@@ -325,6 +328,36 @@ def test_approve_refuses_blockers_other_actions_and_unknown_organizations(
             org_id,
         )
         assert listed["statusCode"] == 404
+    finally:
+        _delete(test_engine, org_id)
+
+
+def test_force_approves_an_organization_with_blockers(monkeypatch, test_engine) -> None:
+    _patch_engine(monkeypatch, test_engine)
+    token = uuid4().hex[:8]
+    org_id = _insert(test_engine, f"West Club {token}")
+    try:
+        approved = _post(
+            org_id,
+            {
+                "force": True,
+                "notes": "Release anyway",
+                "status": "operational",
+            },
+        )
+        assert approved["statusCode"] == 200
+        body = json.loads(approved["body"])
+        assert body["review_status"] == "approved"
+        assert body["review_reason"] is None
+        assert body["review_notes"] == "Release anyway"
+        assert body["status"] == "operational"
+        assert body["status_source"] == "owner"
+        assert body["reviewed_at"]
+        with Session(test_engine) as session:
+            row = session.get(Organization, org_id)
+            assert row is not None
+            assert row.review_status == "approved"
+            assert row.review_notes == "Release anyway"
     finally:
         _delete(test_engine, org_id)
 

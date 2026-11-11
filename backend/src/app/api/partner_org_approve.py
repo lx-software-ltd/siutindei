@@ -24,7 +24,7 @@ def handle_partner_org_approve(
 ) -> dict[str, Any]:
     """Approve one organization.
 
-    Same notes and listing status as an admin approve decision.
+    Same notes, listing status, and force as an admin approve decision.
     A full-access ``crud`` key is the partner equivalent of an admin.
     The actor is the authorizer subject when it is present, and
     ``api-key:<id>`` when the authorizer omits ``userSub``.
