@@ -88,7 +88,7 @@ export function HeroSearchBar({ locale, labels }: HeroSearchBarProps) {
         aria-label={labels.search}
         onClick={handleSearchNavigate}
       >
-        <span aria-hidden="true" className="text-xl">
+        <span aria-hidden="true" className="text-[2.5rem] leading-none">
           ⌕
         </span>
         <span className="hidden text-sm font-semibold md:inline">
