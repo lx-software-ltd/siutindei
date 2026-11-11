@@ -138,6 +138,10 @@
   "smallWorld": {
     "title": "每個孩子，都值得擁有自己的小天地",
     "subtitle": "小天地為香港家庭精選可信的課程、工作坊及戶外體驗，每一項活動上架前都經本地家長審核。",
+    "subtitleStruckPlace": "香港",
+    "scopePlaceComma": "、",
+    "scopePlacePairTemplate": "{first}及{second}",
+    "scopePlaceFinalTemplate": "{list}及{last}",
     "sceneAriaLabel": "頁面上漂浮的可愛香港插畫",
     "bubbles": {
       "junk": "中式帆船",

@@ -176,6 +176,101 @@ body {
   }
 }
 
+/* Open-area plates and the arrow that points at them. */
+.hero-scope-signs {
+  position: absolute;
+  z-index: 20;
+  top: 12px;
+  right: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.hero-scope-sign {
+  display: block;
+  height: auto;
+  width: auto;
+  max-height: 52px;
+  max-width: calc(50vw - 6rem);
+  filter: drop-shadow(0 3px 5px rgba(46, 29, 18, 0.3));
+}
+
+.hero-scope-sign--tilt-a {
+  transform: rotate(4deg);
+}
+
+.hero-scope-sign--tilt-b {
+  margin-right: 8px;
+  transform: rotate(-3.5deg);
+}
+
+.hero-scope-sign--tilt-c {
+  transform: rotate(2deg);
+}
+
+.hero-scope-signs__arrow {
+  display: block;
+  width: 46px;
+  height: auto;
+  margin-top: -8px;
+  margin-right: 10px;
+}
+
+.hero-scope-arrow {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hero-scope-strike {
+  white-space: nowrap;
+  text-decoration-line: line-through;
+  text-decoration-thickness: 0.14em;
+  text-decoration-color: #2e1d12;
+  text-decoration-skip-ink: none;
+}
+
+@media (max-width: 767px) {
+  .hero-scope-sign--tilt-b {
+    margin-right: 0;
+  }
+
+  .hero-scope-arrow {
+    display: none;
+  }
+}
+
+/* The third plate clears the heading only once the column is narrow
+   relative to the screen. Below that it would cover the title. */
+@media (max-width: 1099px) {
+  .hero-scope-sign--extra {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .hero-scope-signs {
+    top: 22px;
+    right: 32px;
+    gap: 10px;
+  }
+
+  .hero-scope-sign {
+    max-height: 84px;
+    max-width: 250px;
+  }
+
+  .hero-scope-signs__arrow {
+    display: none;
+  }
+}
+
 @keyframes bubble-drift-c {
   0%,
   100% {

@@ -1,8 +1,11 @@
 import type { Locale } from '@/content/locales';
 import type { SiteContent } from '@/content/types';
+import { HeroScopeArrow } from '@/components/sections/hero/hero-scope-arrow';
+import { HeroScopeSigns } from '@/components/sections/hero/hero-scope-signs';
 import { HeroSearchBar } from '@/components/sections/hero/hero-search-bar';
 import { FloatingKawaiiBubbles } from '@/components/sections/hero/floating-kawaii-bubbles';
 import { SearchNavigator } from '@/components/sections/hero/search-navigator';
+import { joinPlaceNames, type HeroScopeSign } from '@/lib/home-wizard/area-scope';
 import type { BubbleId } from '@/lib/small-world/kawaii-bubbles';
 
 interface SmallWorldHeroProps {
@@ -10,6 +13,51 @@ interface SmallWorldHeroProps {
   readonly copy: SiteContent['smallWorld'];
   readonly searchBarLabels: SiteContent['navbar']['searchBar'];
   readonly bubbleIds: readonly BubbleId[];
+  readonly scopeSigns?: readonly HeroScopeSign[];
+}
+
+const NO_SCOPE_SIGNS: readonly HeroScopeSign[] = [];
+
+function placeName(sign: HeroScopeSign, locale: Locale): string {
+  return locale === 'zh-HK' ? sign.zhHK : sign.en;
+}
+
+function ScopeSubtitle({
+  copy,
+  signs,
+  locale,
+}: {
+  readonly copy: SiteContent['smallWorld'];
+  readonly signs: readonly HeroScopeSign[];
+  readonly locale: Locale;
+}) {
+  const struck = copy.subtitleStruckPlace;
+  const index = copy.subtitle.indexOf(struck);
+  if (signs.length === 0 || struck === '' || index < 0) {
+    return (
+      <p className="mx-auto mt-4 max-w-xl text-balance text-base text-ink-700 md:text-lg">
+        {copy.subtitle}
+      </p>
+    );
+  }
+  const spoken = joinPlaceNames(
+    signs.map((sign) => placeName(sign, locale)),
+    {
+      comma: copy.scopePlaceComma,
+      pairTemplate: copy.scopePlacePairTemplate,
+      finalTemplate: copy.scopePlaceFinalTemplate,
+    },
+  );
+  return (
+    <p className="mx-auto mt-4 max-w-xl text-balance text-base text-ink-700 md:text-lg">
+      {copy.subtitle.slice(0, index)}
+      <span className="sr-only">{spoken}</span>
+      <span className="hero-scope-strike" data-scope-strike="" aria-hidden="true">
+        {struck}
+      </span>
+      {copy.subtitle.slice(index + struck.length)}
+    </p>
+  );
 }
 
 /**
@@ -21,11 +69,22 @@ export function SmallWorldHero({
   copy,
   searchBarLabels,
   bubbleIds,
+  scopeSigns = NO_SCOPE_SIGNS,
 }: SmallWorldHeroProps) {
   return (
     <section className="small-world-hero" aria-label={copy.sceneAriaLabel}>
       <div className="small-world-hero__stars" aria-hidden="true" />
-      <FloatingKawaiiBubbles copy={copy} ids={bubbleIds} />
+      <FloatingKawaiiBubbles
+        copy={copy}
+        ids={bubbleIds}
+        hideCorner={scopeSigns.length > 0}
+      />
+      {scopeSigns.length > 0 ? (
+        <>
+          <HeroScopeSigns signs={scopeSigns} />
+          <HeroScopeArrow />
+        </>
+      ) : null}
       <div className="relative z-10 mx-auto max-w-3xl px-4 pb-16 pt-8 text-center sm:px-6 md:pb-24 md:pt-12">
         <img
           src="/images/brand/siutindei-logo-stacked.svg"
@@ -38,9 +97,7 @@ export function SmallWorldHero({
         <h1 className="brand-title mt-4 text-balance text-3xl font-bold leading-tight text-ink-900 sm:text-4xl md:text-[52px]">
           {copy.title}
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-balance text-base text-ink-700 md:text-lg">
-          {copy.subtitle}
-        </p>
+        <ScopeSubtitle copy={copy} signs={scopeSigns} locale={locale} />
         <div className="mt-8">
           <HeroSearchBar locale={locale} labels={searchBarLabels} />
         </div>

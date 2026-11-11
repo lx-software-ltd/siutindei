@@ -385,3 +385,92 @@ export function stagingScopeAreaIds(): ReadonlySet<string> | null {
   }
   return scope.areaIds;
 }
+
+export interface HeroScopeSign {
+  readonly id: string;
+  readonly en: string;
+  readonly zhHK: string;
+}
+
+/** The hero shows at most this many plates. A phone hides the third. */
+const HERO_SCOPE_SIGN_LIMIT = 3;
+
+export function heroScopeSignSrc(id: string): string {
+  return `/images/scope-signs/${id}.webp`;
+}
+
+function signFromNeighbourhood(
+  entry: WizardNeighbourhoodOption,
+): HeroScopeSign {
+  return {
+    id: entry.id,
+    en: entry.labels.en,
+    zhHK: entry.labels['zh-HK'],
+  };
+}
+
+function signsForToken(token: string): readonly HeroScopeSign[] | null {
+  const key = scopeToken(token);
+  if (key === '') {
+    return null;
+  }
+  const region = homeWizardChoices.regions.find((entry) => entry.id === key);
+  if (region) {
+    return [
+      {
+        id: region.id,
+        en: region.labels.en,
+        zhHK: region.labels['zh-HK'],
+      },
+    ];
+  }
+  const district = homeWizardChoices.neighbourhoods.filter(
+    (entry) => slug(entry.district) === key,
+  );
+  if (district.length > 0) {
+    return district.map(signFromNeighbourhood);
+  }
+  const neighbourhood = homeWizardChoices.neighbourhoods.find(
+    (entry) => entry.id === key,
+  );
+  return neighbourhood ? [signFromNeighbourhood(neighbourhood)] : null;
+}
+
+/**
+ * Plates for the hero, in the order the variable is written.
+ * Blank, unknown, and whole-of-Hong-Kong scopes return none.
+ */
+export function heroScopeSignsFor(
+  raw: string | undefined,
+): readonly HeroScopeSign[] {
+  const scope = resolveSearchAreaScope(raw);
+  if (!scope.restricted || scope.areaIds.size === 0) {
+    return [];
+  }
+  if (scope.areaIds.size === homeWizardChoices.neighbourhoods.length) {
+    return [];
+  }
+  const seen = new Set<string>();
+  const signs: HeroScopeSign[] = [];
+  for (const part of (raw ?? '').split(',')) {
+    const batch = signsForToken(part);
+    if (!batch) {
+      continue;
+    }
+    for (const sign of batch) {
+      if (seen.has(sign.id)) {
+        continue;
+      }
+      seen.add(sign.id);
+      signs.push(sign);
+      if (signs.length === HERO_SCOPE_SIGN_LIMIT) {
+        return signs;
+      }
+    }
+  }
+  return signs;
+}
+
+export function configuredHeroScopeSigns(): readonly HeroScopeSign[] {
+  return heroScopeSignsFor(getSearchConfig().searchAreaScope);
+}
