@@ -2,7 +2,6 @@
   <ellipse cx="32" cy="76" rx="10" ry="3" fill="#2E1D12" opacity="0.2"/>
   <path d="M32 76 C32 76 8 50 8 30 A24 24 0 0 1 56 30 C56 50 32 76 32 76 Z" fill="#F5C51B" stroke="#2E1D12" stroke-width="2.5"/>
   <g transform="translate(0.8 -1.2) scale(0.65)"><!-- Ground shadow -->
-  
   <!-- Bottom book (earth teal) -->
   <g stroke="#2E1D12" stroke-width="4" stroke-linejoin="round">
     <polygon points="17,48 55,70 55,79 17,57" fill="#A6DCD3" />

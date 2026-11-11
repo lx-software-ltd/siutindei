@@ -30,13 +30,15 @@ def icon_body(svg: str) -> str:
 
 
 def pin(fill: str, inner: str) -> str:
-    return (
+    svg = (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80" fill="none">\n'
         '  <ellipse cx="32" cy="76" rx="10" ry="3" fill="#2E1D12" opacity="0.2"/>\n'
         f'  <path d="{PIN_PATH}" fill="{fill}" stroke="{INK}" stroke-width="2.5"/>\n'
         f"  {inner}\n"
         "</svg>\n"
     )
+    lines = (line.rstrip() for line in svg.splitlines())
+    return "\n".join(line for line in lines if line) + "\n"
 
 
 def main() -> None:
