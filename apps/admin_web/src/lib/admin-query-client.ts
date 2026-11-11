@@ -29,6 +29,12 @@ let client: QueryClient | null = null;
  * cache works the same inside and outside `QueryClientProvider` (tests render
  * hooks and components without a wrapper).
  */
+export function refreshApiKeyActorNames() {
+  void getAdminQueryClient().invalidateQueries({
+    queryKey: adminQueryKeys.apiKeyActorNames(),
+  });
+}
+
 export function refreshCatalogHistory() {
   void getAdminQueryClient().invalidateQueries({
     queryKey: adminQueryKeys.catalogVersions(),

@@ -239,6 +239,16 @@ For full endpoint details (parameters, request/response schemas), see the
 OpenAPI spec: [`docs/api/admin.yaml`](../api/admin.yaml) — search for
 `/v1/admin/audit-logs`.
 
+The Audit logs screen shows `system` when `user_id` is empty, because
+that row may be a migration or any write that recorded no actor. A
+Cognito sub shows that user's email and the same sign-in icon as the
+Users screen. `api-key:<key id>` shows the key's name with a key icon.
+`category-scan:<run id>` shows `category check`. Any other
+`<name>:<id>` actor shows the name with the run id hidden. An id that
+does not resolve shows an em dash with that actor's icon. The stored
+id is not printed. A failed key-name lookup shows an error and leaves
+the key icon in place.
+
 **Note:** Sensitive fields (password, secret, token, api_key) are
 automatically redacted from `old_values` and `new_values` in API responses.
 

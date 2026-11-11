@@ -12,7 +12,10 @@ import {
   listApiKeys,
   revokeApiKey,
 } from '@/lib/api-client-api-keys';
-import { getAdminQueryClient } from '@/lib/admin-query-client';
+import {
+  getAdminQueryClient,
+  refreshApiKeyActorNames,
+} from '@/lib/admin-query-client';
 import { formatAdminPageName } from '@/lib/admin-page-name';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { formatDateTime } from '@/lib/date-utils';
@@ -132,6 +135,7 @@ export function ApiKeysPanel() {
         expires_at: expiresAt,
       });
       setCreatedKey(created.api_key);
+      refreshApiKeyActorNames();
       setFormState(emptyForm);
       shell.clearDirty();
       list.setItems((prev) => [
@@ -161,6 +165,7 @@ export function ApiKeysPanel() {
     setRevokingId(apiKey.id);
     try {
       const revoked = await revokeApiKey(apiKey.id);
+      refreshApiKeyActorNames();
       list.setItems((prev) =>
         prev.map((key) => (key.id === revoked.id ? revoked : key))
       );

@@ -8,6 +8,7 @@ export const adminQueryKeys = {
   tickets: () => ['admin', 'tickets'] as const,
   auditLogs: () => ['admin', 'audit-logs'] as const,
   apiKeys: () => ['admin', 'api-keys'] as const,
+  apiKeyActorNames: () => ['admin', 'api-keys', 'actor-names'] as const,
   categorySuggestions: () => ['admin', 'category-suggestions'] as const,
   categoryReviews: () => ['admin', 'category-reviews'] as const,
   orgReview: () => ['admin', 'org-review'] as const,
