@@ -12,7 +12,12 @@ vi.mock('@/lib/activities/search-client', () => ({
 import { fetchActivitySearch } from '@/lib/activities/search-client';
 
 function listing(id: string): ActivityListing {
-  return { activity: { id } } as ActivityListing;
+  return {
+    activity: { id },
+    location: { id: `loc-${id}` },
+    pricing: null,
+    schedule: null,
+  } as ActivityListing;
 }
 
 describe('useActivitySearch', () => {

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80" fill="none">
+  <ellipse cx="32" cy="76" rx="10" ry="3" fill="#2E1D12" opacity="0.2"/>
+  <path d="M32 76 C32 76 8 50 8 30 A24 24 0 0 1 56 30 C56 50 32 76 32 76 Z" fill="#F5C51B" stroke="#2E1D12" stroke-width="2.5"/>
+  <g transform="translate(0.8 -1.2) scale(0.65)"><!-- Grass tile -->
+  <g stroke="#2E1D12" stroke-width="4" stroke-linejoin="round">
+    <polygon points="13.4,62 48,82 48,89 13.4,69" fill="#8BC152" />
+    <polygon points="48,82 82.6,62 82.6,69 48,89" fill="#5E9636" />
+    <polygon points="48,42 82.6,62 48,82 13.4,62" fill="#A5D273" />
+  </g>
+  <!-- Trunk -->
+  <g stroke="#2E1D12" stroke-width="3.5" stroke-linejoin="round">
+    <polygon points="41.1,46 48,50 48,64 41.1,60" fill="#7E3F1E" />
+    <polygon points="48,50 54.9,46 54.9,60 48,64" fill="#5F2E14" />
+  </g>
+  <!-- Foliage -->
+  <circle cx="36" cy="38" r="11" fill="#5E9636" stroke="#2E1D12" stroke-width="4" />
+  <circle cx="60" cy="38" r="11" fill="#5E9636" stroke="#2E1D12" stroke-width="4" />
+  <circle cx="48" cy="27" r="15" fill="#8BC152" stroke="#2E1D12" stroke-width="4" />
+  <circle cx="43" cy="22" r="4.5" fill="#A5D273" />
+  <!-- Sun spark (logo yellow) -->
+  <path
+    d="M83 12 L85 17 L90 19 L85 21 L83 26 L81 21 L76 19 L81 17 Z"
+    fill="#F5C51B"
+    stroke="#2E1D12"
+    stroke-width="2.5"
+    stroke-linejoin="round"
+  />
+  <!-- Pebbles -->
+  <ellipse cx="30" cy="70" rx="4" ry="2.4" fill="#C5EAE3" stroke="#2E1D12" stroke-width="2" />
+  <ellipse cx="64" cy="72" rx="3.4" ry="2" fill="#F2A0BF" stroke="#2E1D12" stroke-width="2" /></g>
+</svg>

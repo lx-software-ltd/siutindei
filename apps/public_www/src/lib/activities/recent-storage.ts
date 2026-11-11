@@ -108,3 +108,26 @@ export function rememberViewedActivity(activityId: string): void {
     // Ignore quota errors.
   }
 }
+
+const LAST_SEARCH_HREF_KEY = 'siutindei.lastSearchHref';
+
+/** The search page a visitor last saw in this tab, for "Back to results". */
+export function rememberSearchHref(href: string): void {
+  try {
+    window.sessionStorage.setItem(LAST_SEARCH_HREF_KEY, href);
+  } catch {
+    // Ignore storage that is unavailable.
+  }
+}
+
+export function loadLastSearchHref(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    const href = window.sessionStorage.getItem(LAST_SEARCH_HREF_KEY);
+    return href && href.startsWith('/') && !href.startsWith('//') ? href : null;
+  } catch {
+    return null;
+  }
+}

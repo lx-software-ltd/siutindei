@@ -209,7 +209,7 @@ describe('SearchPanel', () => {
     ).toHaveAttribute('aria-pressed', 'true');
 
     fireEvent.click(screen.getByRole('button', { name: 'Search' }));
-    expect(push).toHaveBeenCalledWith('/en/search/?age=3-6&view=map');
+    expect(push).toHaveBeenCalledWith('/en/search/?view=map');
     expect(loadRecentSearch()?.regionId).toBeNull();
   });
 

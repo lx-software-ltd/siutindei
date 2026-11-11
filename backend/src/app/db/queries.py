@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
 import sqlalchemy as sa
-from sqlalchemy import and_, any_, func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.dialects.postgresql import distinct_on  # type: ignore[attr-defined]
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import Select
@@ -34,7 +34,15 @@ from app.db.models.category_suggestion import (
     PENDING_CATEGORY_ID,
     WIZARD_GROUP_IDS,
 )
-from app.services.data_quality.list_params import ilike_pattern
+from app.db.search_conditions import (
+    SEARCH_SORTS,
+    UNPRICED_SORT_KEY,
+    apply_entry_filters,
+    build_language_conditions,
+    price_conditions,
+    price_sort_key,
+    text_query_condition,
+)
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -56,6 +64,8 @@ class ActivitySearchCursor:
     activity_id: UUID | None = None
     org_name: str | None = None
     activity_name: str | None = None
+    sort: str = "time"
+    price_key: Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -81,6 +91,11 @@ class ActivitySearchFilters:
     view: str = "full"
     apply_area_scope: bool = True
     include_incomplete: bool = False
+    days_of_week_hkt: Sequence[int] = ()
+    free_trial: bool = False
+    class_price_max: Decimal | None = None
+    sort: str = "time"
+    include_total: bool = False
 
 
 def validate_filters(filters: ActivitySearchFilters) -> None:
@@ -95,6 +110,9 @@ def validate_filters(filters: ActivitySearchFilters) -> None:
 
     if filters.limit <= 0 or filters.limit > 200:
         raise ValueError("limit must be between 1 and 200.")
+
+    if filters.sort not in SEARCH_SORTS:
+        raise ValueError("sort must be time or price.")
 
 
 def build_search_query(filters: ActivitySearchFilters) -> Select:
@@ -113,6 +131,7 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
             ActivitySchedule,
             entry_subquery.c.day_of_week_utc.label("order_day_of_week"),
             entry_subquery.c.start_minutes_utc.label("order_start_minutes"),
+            price_sort_key().label("order_price"),
         )
         .join(Organization, Organization.id == Activity.org_id)
         .join(ActivitySchedule, ActivitySchedule.activity_id == Activity.id)
@@ -157,24 +176,17 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
     if filters.org_ids:
         conditions.append(Activity.org_id.in_(filters.org_ids))
 
-    if filters.pricing_type is not None:
-        conditions.append(ActivityPricing.pricing_type == filters.pricing_type)
-
-    if filters.price_min is not None:
-        conditions.append(ActivityPricing.amount >= filters.price_min)
-
-    if filters.price_max is not None:
-        conditions.append(ActivityPricing.amount <= filters.price_max)
+    conditions.extend(price_conditions(filters))
 
     if filters.schedule_type is not None:
         conditions.append(ActivitySchedule.schedule_type == filters.schedule_type)
 
     if filters.languages:
-        language_conditions = _build_language_conditions(filters.languages)
+        language_conditions = build_language_conditions(filters.languages)
         conditions.append(or_(*language_conditions))
 
     if filters.text_query:
-        conditions.append(_text_query_condition(filters.text_query))
+        conditions.append(text_query_condition(filters.text_query))
 
     if area_scope is not None:
         if area_scope:
@@ -182,9 +194,9 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
         else:
             conditions.append(sa.false())
 
-    order_columns = _order_columns(entry_subquery)
+    order_columns = _order_columns(entry_subquery, filters.sort)
     if filters.cursor is not None:
-        cursor_values = _cursor_values(filters.cursor)
+        cursor_values = _cursor_values(filters.cursor, filters.sort)
         conditions.append(sa.tuple_(*order_columns) > sa.tuple_(*cursor_values))
 
     if conditions:
@@ -216,111 +228,37 @@ def _entry_order_subquery(filters: ActivitySearchFilters) -> sa.Subquery:
         )
     )
     conditions: list = []
-    _apply_entry_filters(filters, conditions)
+    apply_entry_filters(filters, conditions)
     if conditions:
         entry_query = entry_query.where(and_(*conditions))
     return entry_query.subquery()
 
 
-def _text_query_condition(text_query: str) -> Any:
-    """Case-insensitive match on names and name translation values."""
-    pattern = ilike_pattern(text_query)
-    return or_(
-        Activity.name.ilike(pattern, escape="\\"),
-        Organization.name.ilike(pattern, escape="\\"),
-        _translation_values_ilike(Activity.name_translations, pattern),
-        _translation_values_ilike(Organization.name_translations, pattern),
-    )
-
-
-def _translation_values_ilike(column: Any, pattern: str) -> Any:
-    """True when any jsonb object of name translations matches the pattern.
-
-    ``jsonb_each_text`` errors on null, scalars, and arrays. The match is
-    evaluated only when the column is an object.
-    """
-    translations = sa.func.jsonb_each_text(column).table_valued("key", "value")
-    matches = sa.exists(
-        sa.select(sa.literal(1))
-        .select_from(translations)
-        .where(translations.c.value.ilike(pattern, escape="\\"))
-    )
-    return sa.case(
-        (sa.func.jsonb_typeof(column) == "object", matches),
-        else_=sa.false(),
-    )
-
-
-def _apply_entry_filters(filters: ActivitySearchFilters, conditions: list) -> None:
-    """Apply entry-level schedule filters."""
-    if filters.day_of_week_utc is not None:
-        conditions.append(
-            ActivityScheduleEntry.day_of_week_utc == filters.day_of_week_utc
-        )
-
-    if filters.start_minutes_utc is not None and filters.end_minutes_utc is not None:
-        normal_overlap = and_(
-            ActivityScheduleEntry.start_minutes_utc < filters.end_minutes_utc,
-            ActivityScheduleEntry.end_minutes_utc > filters.start_minutes_utc,
-        )
-        wrap_overlap = or_(
-            filters.end_minutes_utc > ActivityScheduleEntry.start_minutes_utc,
-            filters.start_minutes_utc < ActivityScheduleEntry.end_minutes_utc,
-        )
-        conditions.append(
-            or_(
-                and_(
-                    ActivityScheduleEntry.start_minutes_utc
-                    < ActivityScheduleEntry.end_minutes_utc,
-                    normal_overlap,
-                ),
-                and_(
-                    ActivityScheduleEntry.start_minutes_utc
-                    > ActivityScheduleEntry.end_minutes_utc,
-                    wrap_overlap,
-                ),
-            )
-        )
-    elif filters.start_minutes_utc is not None:
-        conditions.append(
-            or_(
-                ActivityScheduleEntry.start_minutes_utc
-                > ActivityScheduleEntry.end_minutes_utc,
-                ActivityScheduleEntry.end_minutes_utc >= filters.start_minutes_utc,
-            )
-        )
-    elif filters.end_minutes_utc is not None:
-        conditions.append(
-            or_(
-                ActivityScheduleEntry.start_minutes_utc
-                > ActivityScheduleEntry.end_minutes_utc,
-                ActivityScheduleEntry.start_minutes_utc <= filters.end_minutes_utc,
-            )
-        )
-
-
-def _build_language_conditions(languages: Iterable[str]) -> list:
-    """Build language conditions for session-specific languages."""
-
-    return [any_(ActivitySchedule.languages) == language for language in languages]
-
-
-def _order_columns(entry_subquery: sa.Subquery) -> list:
+def _order_columns(entry_subquery: sa.Subquery, sort: str = "time") -> list:
     """Return ordering columns for pagination."""
-    return [
+    columns = [
         entry_subquery.c.day_of_week_utc,
         entry_subquery.c.start_minutes_utc,
         ActivitySchedule.id,
     ]
+    if sort == "price":
+        return [price_sort_key(), *columns]
+    return columns
 
 
-def _cursor_values(cursor: ActivitySearchCursor) -> list:
+def _cursor_values(cursor: ActivitySearchCursor, sort: str = "time") -> list:
     """Return ordering values for the cursor comparison."""
-    return [
+    values: list = [
         cursor.day_of_week_utc,
         cursor.start_minutes_utc,
         cursor.schedule_id,
     ]
+    if sort == "price":
+        price_key = (
+            cursor.price_key if cursor.price_key is not None else UNPRICED_SORT_KEY
+        )
+        return [price_key, *values]
+    return values
 
 
 def _wizard_group_filter(category_ids: Sequence[UUID]) -> bool:

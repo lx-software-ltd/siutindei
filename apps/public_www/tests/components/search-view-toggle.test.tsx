@@ -3,53 +3,43 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { SearchViewToggle } from '@/components/sections/search/search-view-toggle';
 
+function renderToggle(isMapView: boolean) {
+  const onShowList = vi.fn();
+  const onShowMap = vi.fn();
+  render(
+    <SearchViewToggle
+      isMapView={isMapView}
+      groupLabel="Results"
+      listLabel="List"
+      mapLabel="Map"
+      onShowList={onShowList}
+      onShowMap={onShowMap}
+    />,
+  );
+  return { onShowList, onShowMap };
+}
+
 describe('SearchViewToggle', () => {
-  it('shows the map icon while the list is visible', async () => {
-    const onShowList = vi.fn();
-    const onShowMap = vi.fn();
+  it('marks the list as current and switches to the map', () => {
+    const { onShowList, onShowMap } = renderToggle(false);
 
-    render(
-      <SearchViewToggle
-        isMapView={false}
-        listLabel="List"
-        mapLabel="Map"
-        onShowList={onShowList}
-        onShowMap={onShowMap}
-      />,
-    );
+    expect(screen.getByRole('group', { name: 'Results' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
+    const map = screen.getByRole('button', { name: 'Map' });
+    expect(map).toHaveAttribute('aria-pressed', 'false');
+    expect(map.querySelector('img')).toHaveAttribute('src', '/images/ui/map.svg');
 
-    const toggle = await screen.findByRole('button', { name: 'Map' });
-    expect(toggle.querySelector('img')).toHaveAttribute(
-      'src',
-      '/images/ui/map.svg',
-    );
-
-    fireEvent.click(toggle);
+    fireEvent.click(map);
     expect(onShowMap).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     expect(onShowList).not.toHaveBeenCalled();
   });
 
-  it('shows the list icon while the map is visible', async () => {
-    const onShowList = vi.fn();
-    const onShowMap = vi.fn();
+  it('marks the map as current and switches to the list', () => {
+    const { onShowList, onShowMap } = renderToggle(true);
 
-    render(
-      <SearchViewToggle
-        isMapView={true}
-        listLabel="List"
-        mapLabel="Map"
-        onShowList={onShowList}
-        onShowMap={onShowMap}
-      />,
-    );
-
-    const toggle = await screen.findByRole('button', { name: 'List' });
-    expect(toggle.querySelector('img')).toHaveAttribute(
-      'src',
-      '/images/ui/list.svg',
-    );
-
-    fireEvent.click(toggle);
+    expect(screen.getByRole('button', { name: 'Map' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'List' }));
     expect(onShowList).toHaveBeenCalledOnce();
     expect(onShowMap).not.toHaveBeenCalled();
   });

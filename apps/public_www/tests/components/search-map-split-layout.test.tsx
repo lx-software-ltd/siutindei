@@ -1,7 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { SearchMapSplitLayout } from '@/components/sections/search/search-map-split-layout';
+import {
+  SearchMapSplitLayout,
+  type SearchMapLoadMore,
+} from '@/components/sections/search/search-map-split-layout';
 import { getContent } from '@/content';
 import type { ActivityListing } from '@/lib/activities/types';
 
@@ -87,51 +90,47 @@ function renderLayout(
     isLoading: boolean;
     listings: readonly ActivityListing[];
     onSelect: (activityId: string) => void;
+    loadMore: SearchMapLoadMore;
   }> = {},
 ) {
   const copy = getContent('en').searchPage;
   const onSelect = props.onSelect ?? vi.fn();
-  render(
+  const { container } = render(
     <SearchMapSplitLayout
       locale="en"
       copy={copy}
       listings={props.listings ?? listings}
-      selectedId={props.selectedId ?? 'act-1'}
+      selectedId={props.selectedId === undefined ? 'act-1' : props.selectedId}
       onSelect={onSelect}
       isLoading={props.isLoading ?? false}
+      loadMore={props.loadMore}
     />,
   );
-  return { copy, onSelect };
+  return { copy, onSelect, container };
 }
 
 describe('SearchMapSplitLayout', () => {
-  it('hides the result list on mobile and shows a summary card for the selected pin', () => {
-    const { copy } = renderLayout();
+  it('shows the list, the phone card row, and a capped summary card for the selected pin', () => {
+    const { copy, container } = renderLayout();
 
-    const list = document.querySelector('.search-map-split-layout__list');
-    expect(list).not.toBeNull();
-    expect(list).toHaveClass('hidden', 'lg:block');
+    const list = screen.getByRole('region', { name: copy.resultsLabel });
+    expect(list).toHaveClass('search-map-split-layout__list');
+    expect(document.querySelector('.search-map-split-layout__sheet')).not.toBeNull();
 
     const card = document.querySelector('.search-map-split-layout__card');
-    expect(card).not.toBeNull();
-    expect(card).toHaveClass('lg:hidden');
+    expect(card).toHaveClass('md:block', 'lg:hidden', 'short:hidden');
 
-    const summaryLink = screen.getByRole('link', { name: /Kowloon art/ });
+    const summaryLink = within(card as HTMLElement).getByRole('link', { name: /Kowloon art/ });
     expect(summaryLink).toHaveAttribute('href', '/en/activity?id=act-1');
-    expect(summaryLink).toHaveTextContent('Kowloon');
     expect(summaryLink).toHaveTextContent('HK$180 / class');
+    expect(summaryLink).toHaveTextContent(copy.viewLabel);
 
-    const enlarge = screen.getByRole('button', {
-      name: copy.enlargeMapLabel,
-    });
+    const enlarge = screen.getByRole('button', { name: copy.enlargeMapLabel });
     expect(enlarge).toHaveClass('hidden', 'lg:inline-flex');
-    expect(enlarge.querySelector('img')).toHaveAttribute(
-      'src',
-      '/images/ui/enlarge-map.svg',
-    );
+    expect(container.querySelector('[data-hide-whatsapp-fab]')).not.toBeNull();
   });
 
-  it('selects a pin on the map so the summary card can open that activity', () => {
+  it('selects a pin on the map so the cards can open that activity', () => {
     const onSelect = vi.fn();
     const { copy } = renderLayout({ onSelect });
 
@@ -139,53 +138,57 @@ describe('SearchMapSplitLayout', () => {
     expect(onSelect).toHaveBeenCalledWith('act-2');
   });
 
-  it('enlarges to the mobile map card and reduces back to the split list', () => {
-    const { copy } = renderLayout();
+  it('selects from the list and links each row to its activity', () => {
+    const onSelect = vi.fn();
+    const { copy } = renderLayout({ onSelect });
 
-    fireEvent.click(
-      screen.getByRole('button', { name: copy.enlargeMapLabel }),
-    );
-
+    const list = screen.getByRole('region', { name: copy.resultsLabel });
+    fireEvent.click(within(list).getByRole('button', { name: /Harbour music/ }));
+    expect(onSelect).toHaveBeenCalledWith('act-2');
     expect(
-      document.querySelector('.search-map-split-layout__list'),
-    ).toBeNull();
+      within(list).getByRole('link', { name: `${copy.viewLabel}: Harbour music` }),
+    ).toHaveAttribute('href', '/en/activity?id=act-2');
     expect(
-      document.querySelector('.search-map-split-layout--expanded'),
-    ).not.toBeNull();
-    expect(
-      document.querySelector('.search-map-split-layout__card'),
-    ).not.toHaveClass('lg:hidden');
-    expect(
-      screen.queryByRole('button', { name: /Kowloon art/ }),
-    ).not.toBeInTheDocument();
-
-    const reduce = screen.getByRole('button', { name: copy.reduceMapLabel });
-    expect(reduce.querySelector('img')).toHaveAttribute(
-      'src',
-      '/images/ui/reduce-map.svg',
-    );
-
-    fireEvent.click(reduce);
-    expect(
-      document.querySelector('.search-map-split-layout__list'),
-    ).not.toBeNull();
-    expect(
-      screen.getByRole('button', { name: copy.enlargeMapLabel }),
-    ).toBeInTheDocument();
+      within(list).getByRole('button', { name: /Kowloon art/ }).closest('article'),
+    ).toHaveAttribute('aria-current', 'true');
   });
 
-  it('keeps the summary card off the map while results are loading', () => {
+  it('loads more results from inside the list and the card row', () => {
+    const onLoadMore = vi.fn();
+    const { copy } = renderLayout({
+      loadMore: { hasMore: true, isLoadingMore: false, errorMessage: null, onLoadMore },
+    });
+
+    const buttons = screen.getAllByRole('button', { name: copy.loadMoreLabel });
+    expect(buttons).toHaveLength(2);
+    fireEvent.click(buttons[0]);
+    fireEvent.click(buttons[1]);
+    expect(onLoadMore).toHaveBeenCalledTimes(2);
+  });
+
+  it('enlarges the map and reduces back to the split list', () => {
+    const { copy } = renderLayout();
+
+    fireEvent.click(screen.getByRole('button', { name: copy.enlargeMapLabel }));
+
+    expect(document.querySelector('.search-map-split-layout--expanded')).not.toBeNull();
+    expect(document.querySelector('.search-map-split-layout__card')).not.toHaveClass('lg:hidden');
+
+    const reduce = screen.getByRole('button', { name: copy.reduceMapLabel });
+    expect(reduce.querySelector('img')).toHaveAttribute('src', '/images/ui/reduce-map.svg');
+
+    fireEvent.click(reduce);
+    expect(document.querySelector('.search-map-split-layout--expanded')).toBeNull();
+    expect(screen.getByRole('button', { name: copy.enlargeMapLabel })).toBeInTheDocument();
+  });
+
+  it('keeps the cards off the map while results are loading', () => {
     const { copy } = renderLayout({ isLoading: true, selectedId: null });
 
-    expect(screen.getAllByText(copy.loadingMapLabel).length).toBeGreaterThan(
-      0,
-    );
-    expect(
-      document.querySelector('.search-map-split-layout__card'),
-    ).toBeNull();
-    expect(
-      screen.getByRole('button', { name: copy.mapAriaLabel }),
-    ).toBeInTheDocument();
+    expect(screen.getAllByText(copy.loadingMapLabel).length).toBeGreaterThan(0);
+    expect(document.querySelector('.search-map-split-layout__card')).toBeNull();
+    expect(document.querySelector('.search-map-split-layout__sheet')).toBeNull();
+    expect(screen.getByRole('button', { name: copy.mapAriaLabel })).toBeInTheDocument();
   });
 
   it('mounts the map canvas on the first load before listings arrive', () => {
@@ -195,11 +198,7 @@ describe('SearchMapSplitLayout', () => {
       selectedId: null,
     });
 
-    expect(
-      screen.getByRole('button', { name: copy.mapAriaLabel }),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText(copy.loadingMapLabel).length).toBeGreaterThan(
-      0,
-    );
+    expect(screen.getByRole('button', { name: copy.mapAriaLabel })).toBeInTheDocument();
+    expect(screen.getAllByText(copy.loadingMapLabel).length).toBeGreaterThan(0);
   });
 });

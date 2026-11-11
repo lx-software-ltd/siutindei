@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Locale } from '@/content/locales';
+import { groupListings } from '@/lib/activities/group-listings';
 import { fetchActivitySearch } from '@/lib/activities/search-client';
 import {
   filtersToApiParams,
@@ -16,10 +17,14 @@ export interface UseActivitySearchOptions {
   readonly pageSize: number;
   readonly enabled?: boolean;
   readonly view?: 'card' | 'full';
+  /** Ask the first page for the number of matching activities. */
+  readonly includeTotal?: boolean;
 }
 
 export interface UseActivitySearchResult {
+  /** One entry per activity; rows of the same activity are grouped. */
   readonly items: readonly ActivityListing[];
+  readonly total: number | null;
   readonly isLoading: boolean;
   readonly isLoadingMore: boolean;
   readonly errorMessage: string | null;
@@ -39,8 +44,10 @@ export function useActivitySearch({
   pageSize,
   enabled = true,
   view = 'card',
+  includeTotal = false,
 }: UseActivitySearchOptions): UseActivitySearchResult {
-  const [items, setItems] = useState<readonly ActivityListing[]>([]);
+  const [rows, setRows] = useState<readonly ActivityListing[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(enabled);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -73,6 +80,7 @@ export function useActivitySearch({
         ...apiParams,
         limit: pageSize,
         view,
+        ...(includeTotal ? { includeTotal: true } : {}),
       },
       { signal: controller.signal },
     )
@@ -80,7 +88,8 @@ export function useActivitySearch({
         if (requestGeneration !== generation.current) {
           return;
         }
-        setItems(response.items);
+        setRows(response.items);
+        setTotal(response.total ?? null);
         setNextCursor(response.nextCursor);
         setCategoryMatch(response.categoryMatch ?? 'exact');
       })
@@ -88,7 +97,8 @@ export function useActivitySearch({
         if (isAbortError(error) || requestGeneration !== generation.current) {
           return;
         }
-        setItems([]);
+        setRows([]);
+        setTotal(null);
         setNextCursor(null);
         setCategoryMatch('exact');
         setErrorMessage('error');
@@ -105,7 +115,7 @@ export function useActivitySearch({
     // request only through copy, not the API, but a locale change should refetch
     // when q matching is locale-sensitive on the server.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, filtersKey, locale, pageSize, view]);
+  }, [enabled, filtersKey, includeTotal, locale, pageSize, view]);
 
   const loadMore = useCallback(() => {
     if (!enabled || isLoading || isLoadingMore || !nextCursor) {
@@ -131,7 +141,7 @@ export function useActivitySearch({
         if (requestGeneration !== generation.current) {
           return;
         }
-        setItems((current) => [...current, ...response.items]);
+        setRows((current) => [...current, ...response.items]);
         setNextCursor(response.nextCursor);
         setCategoryMatch(response.categoryMatch ?? 'exact');
       })
@@ -148,8 +158,11 @@ export function useActivitySearch({
       });
   }, [enabled, filters, isLoading, isLoadingMore, nextCursor, pageSize, view]);
 
+  const items = useMemo(() => groupListings(rows), [rows]);
+
   return {
     items,
+    total,
     isLoading: enabled ? isLoading : false,
     isLoadingMore,
     errorMessage,

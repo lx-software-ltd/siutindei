@@ -8406,6 +8406,8 @@ export interface components {
             xiaohongshu?: string;
             /** @description WeChat handle or URL */
             wechat?: string;
+            /** @description Admin only. Shows the Parent-Verified badge on the public website. Manager writes ignore it. */
+            parent_verified?: boolean;
             /**
              * @description List of media URLs (optional, max 20 URLs).
              *     Each URL must use http or https scheme and be max 2,048 characters.
@@ -8480,6 +8482,8 @@ export interface components {
             xiaohongshu?: string;
             /** @description WeChat handle or URL */
             wechat?: string;
+            /** @description Admin only. Shows the Parent-Verified badge on the public website. Manager writes ignore it. */
+            parent_verified?: boolean;
             media_urls?: string[];
             /**
              * Format: uri
@@ -8548,6 +8552,8 @@ export interface components {
             xiaohongshu?: string | null;
             /** @description WeChat handle or URL */
             wechat?: string | null;
+            /** @description Admin-set. Shows the Parent-Verified badge on the public website. */
+            parent_verified?: boolean;
             media_urls: string[];
             /**
              * Format: uri

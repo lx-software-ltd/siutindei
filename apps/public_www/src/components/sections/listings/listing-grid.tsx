@@ -4,21 +4,22 @@ import type { Locale } from '@/content/locales';
 import type { ActivityListing } from '@/lib/activities/types';
 import { shouldDeferListingCardRender } from '@/lib/listing-image';
 
-import { ListingCard } from './listing-card';
+import { ListingCard, type ListingCardLabels } from './listing-card';
 import { ListingCardSkeleton } from './listing-card-skeleton';
 
 interface ListingGridProps {
   readonly locale: Locale;
   readonly listings: readonly ActivityListing[];
   readonly isLoading: boolean;
-  readonly labels: {
-    readonly parentVerified: string;
-    readonly freeTrial: string;
-    readonly imageFallback: string;
-    readonly empty: string;
-    readonly mapAlt: string;
-  };
+  readonly labels: ListingCardLabels & { readonly empty: string };
 }
+
+/**
+ * Row cards on phones, then 3 columns from iPad portrait and landscape
+ * phones, and 4 on wide screens.
+ */
+const GRID_CLASS_NAME =
+  'listing-grid grid gap-4 sm:grid-cols-3 sm:gap-6 xl:grid-cols-4';
 
 export function ListingGrid({
   locale,
@@ -28,9 +29,9 @@ export function ListingGrid({
 }: ListingGridProps) {
   if (isLoading) {
     return (
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className={GRID_CLASS_NAME}>
         {Array.from({ length: 8 }).map((_, index) => (
-          <ListingCardSkeleton key={`grid-skeleton-${index}`} />
+          <ListingCardSkeleton key={`grid-skeleton-${index}`} layout="grid" />
         ))}
       </div>
     );
@@ -45,19 +46,15 @@ export function ListingGrid({
   }
 
   return (
-    <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className={GRID_CLASS_NAME}>
       {listings.map((listing, cardIndex) => (
         <ListingCard
           key={listing.activity.id}
           locale={locale}
           listing={listing}
           layout="grid"
-          parentVerifiedLabel={labels.parentVerified}
-          freeTrialLabel={labels.freeTrial}
-          imageAltFallback={labels.imageFallback}
-          mapAltLabel={labels.mapAlt}
+          labels={labels}
           deferRendering={shouldDeferListingCardRender(cardIndex)}
-          showMiniMap={cardIndex < 6}
         />
       ))}
     </div>

@@ -5,7 +5,7 @@ from __future__ import annotations
 from app.api.schemas import ActivitySearchResponseSchema
 from app.api.schemas import dump_search_response
 from app.db.queries import ActivitySearchFilters
-from app.services.staging_search_store import _matches
+from app.services.staging_search_matching import matches
 from app.services.staging_search_store import _to_schema
 
 
@@ -67,14 +67,14 @@ def _row() -> dict:
 
 
 def test_staging_matches_when_q_and_view_are_absent() -> None:
-    assert _matches(_row(), ActivitySearchFilters(), {}, None)
+    assert matches(_row(), ActivitySearchFilters(), {}, None)
 
 
 def test_staging_q_matches_names_not_descriptions() -> None:
     row = _row()
-    assert _matches(row, ActivitySearchFilters(text_query="游泳"), {}, None)
-    assert _matches(row, ActivitySearchFilters(text_query="harbour"), {}, None)
-    assert not _matches(row, ActivitySearchFilters(text_query="heated"), {}, None)
+    assert matches(row, ActivitySearchFilters(text_query="游泳"), {}, None)
+    assert matches(row, ActivitySearchFilters(text_query="harbour"), {}, None)
+    assert not matches(row, ActivitySearchFilters(text_query="heated"), {}, None)
 
 
 def test_staging_card_trims_and_full_keeps_entry_order() -> None:

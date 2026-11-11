@@ -11,9 +11,15 @@ import {
 } from '@/lib/google-maps/coordinates';
 import { loadGoogleMapsScript } from '@/lib/google-maps/load-script';
 import { getGoogleMapsConfig } from '@/lib/google-maps/config';
+import {
+  groupMarkers,
+  markerIconSrc,
+  nextIdInGroup,
+  type MarkerGroup,
+} from '@/lib/google-maps/marker-groups';
 import { listingTitle } from '@/lib/activities/listing-utils';
-import { iconSrcForActivityCategory } from '@/lib/home-wizard/choice-icons';
 import type { ActivityListing } from '@/lib/activities/types';
+import { formatTemplate } from '@/lib/format-template';
 
 interface ActivityGoogleMapProps {
   readonly locale: Locale;
@@ -22,10 +28,15 @@ interface ActivityGoogleMapProps {
   readonly onSelect: (activityId: string) => void;
   readonly className?: string;
   readonly ariaLabel: string;
+  /** Title of a pin shared by several activities, with `{count}`. */
+  readonly groupLabel?: string;
 }
 
-const MARKER_SIZE = 36;
-const SELECTED_MARKER_SIZE = 48;
+const MARKER_WIDTH = 32;
+const SELECTED_MARKER_WIDTH = 44;
+const MARKER_ASPECT = 80 / 64;
+const SELECTED_Z_INDEX = 1000;
+const INK = '#2E1D12';
 
 function hasSize(element: HTMLElement): boolean {
   return element.clientWidth > 0 && element.clientHeight > 0;
@@ -60,24 +71,54 @@ async function whenContainerHasSize(element: HTMLElement): Promise<void> {
   });
 }
 
-function markerIconUrl(categoryId: string | null): string {
-  const src = iconSrcForActivityCategory(categoryId);
+function absoluteUrl(src: string): string {
   if (typeof window === 'undefined') {
     return src;
   }
   return new URL(src, window.location.origin).href;
 }
 
-function markerIcon(
-  categoryId: string | null,
-  isSelected: boolean,
-): google.maps.Icon {
-  const size = isSelected ? SELECTED_MARKER_SIZE : MARKER_SIZE;
+interface MarkerAppearance {
+  readonly icon: google.maps.Icon;
+  readonly label: google.maps.MarkerLabel | null;
+  readonly zIndex: number;
+}
+
+function markerAppearance(group: MarkerGroup, selectedId: string | null): MarkerAppearance {
+  const isSelected = selectedId !== null && group.ids.includes(selectedId);
+  const width = isSelected ? SELECTED_MARKER_WIDTH : MARKER_WIDTH;
+  const height = Math.round(width * MARKER_ASPECT);
   return {
-    url: markerIconUrl(categoryId),
-    scaledSize: new google.maps.Size(size, size),
-    anchor: new google.maps.Point(size / 2, size),
+    icon: {
+      url: absoluteUrl(markerIconSrc(group, isSelected)),
+      scaledSize: new google.maps.Size(width, height),
+      anchor: new google.maps.Point(width / 2, height),
+      labelOrigin: new google.maps.Point(width / 2, Math.round(height * 0.38)),
+    },
+    label:
+      group.ids.length > 1
+        ? {
+            text: String(group.ids.length),
+            color: INK,
+            fontSize: isSelected ? '15px' : '13px',
+            fontWeight: '700',
+          }
+        : null,
+    zIndex: isSelected ? SELECTED_Z_INDEX : group.ids.length,
   };
+}
+
+function markerTitle(
+  group: MarkerGroup,
+  listings: readonly ActivityListing[],
+  locale: Locale,
+  groupLabel: string,
+): string {
+  if (group.ids.length > 1) {
+    return formatTemplate(groupLabel, { count: group.ids.length });
+  }
+  const listing = listings.find((entry) => entry.activity.id === group.ids[0]);
+  return listing ? listingTitle(locale, listing) : '';
 }
 
 function coordinatesFor(
@@ -88,56 +129,62 @@ function coordinatesFor(
     .filter((value): value is NonNullable<typeof value> => value !== null);
 }
 
+interface PlacedMarker {
+  readonly marker: google.maps.Marker;
+  group: MarkerGroup;
+}
+
+function applyAppearance(placed: PlacedMarker, selectedId: string | null): void {
+  const appearance = markerAppearance(placed.group, selectedId);
+  placed.marker.setIcon(appearance.icon);
+  placed.marker.setLabel(appearance.label);
+  placed.marker.setZIndex(appearance.zIndex);
+}
+
 function syncMarkers(options: {
   readonly map: google.maps.Map;
   readonly listings: readonly ActivityListing[];
   readonly locale: Locale;
-  readonly selectedId: string | null;
+  readonly groupLabel: string;
+  readonly selectedId: () => string | null;
   readonly onSelect: (activityId: string) => void;
-  readonly markers: Map<string, google.maps.Marker>;
+  readonly markers: Map<string, PlacedMarker>;
 }): void {
-  const { map, listings, locale, selectedId, onSelect, markers } = options;
-  const mappableListings = listingsWithCoordinates(listings);
+  const { map, listings, locale, groupLabel, selectedId, onSelect, markers } = options;
   const coordinates = coordinatesFor(listings);
   const bounds = new google.maps.LatLngBounds();
   const seen = new Set<string>();
 
-  for (const listing of mappableListings) {
-    const coordinate = listingCoordinate(listing);
-    if (!coordinate) {
-      continue;
-    }
-    const position = new google.maps.LatLng(coordinate.lat, coordinate.lng);
+  for (const group of groupMarkers(listings)) {
+    const position = new google.maps.LatLng(group.lat, group.lng);
     bounds.extend(position);
-    seen.add(listing.activity.id);
-    const icon = markerIcon(
-      listing.activity.categoryId,
-      listing.activity.id === selectedId,
-    );
-    const title = listingTitle(locale, listing);
-    const existing = markers.get(listing.activity.id);
+    seen.add(group.key);
+    const title = markerTitle(group, listings, locale, groupLabel);
+    const existing = markers.get(group.key);
     if (existing) {
-      existing.setPosition(position);
-      existing.setIcon(icon);
-      existing.setTitle(title);
+      existing.group = group;
+      existing.marker.setPosition(position);
+      existing.marker.setTitle(title);
+      applyAppearance(existing, selectedId());
       continue;
     }
-    const marker = new google.maps.Marker({
-      map,
-      position,
-      title,
-      icon,
+    const appearance = markerAppearance(group, selectedId());
+    const placed: PlacedMarker = {
+      marker: new google.maps.Marker({ map, position, title, icon: appearance.icon }),
+      group,
+    };
+    placed.marker.setLabel(appearance.label);
+    placed.marker.setZIndex(appearance.zIndex);
+    placed.marker.addListener('click', () => {
+      onSelect(nextIdInGroup(placed.group, selectedId()));
     });
-    marker.addListener('click', () => {
-      onSelect(listing.activity.id);
-    });
-    markers.set(listing.activity.id, marker);
+    markers.set(group.key, placed);
   }
 
-  for (const [activityId, marker] of markers) {
-    if (!seen.has(activityId)) {
-      marker.setMap(null);
-      markers.delete(activityId);
+  for (const [key, placed] of markers) {
+    if (!seen.has(key)) {
+      placed.marker.setMap(null);
+      markers.delete(key);
     }
   }
 
@@ -158,11 +205,13 @@ export function ActivityGoogleMap({
   onSelect,
   className = '',
   ariaLabel,
+  groupLabel = '{count}',
 }: ActivityGoogleMapProps) {
   const containerId = useId().replace(/:/g, '');
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<Map<string, google.maps.Marker>>(new Map());
+  const markersRef = useRef<Map<string, PlacedMarker>>(new Map());
+  const groupLabelRef = useRef(groupLabel);
   const listingsRef = useRef(listings);
   const localeRef = useRef(locale);
   const selectedIdRef = useRef(selectedId);
@@ -180,6 +229,9 @@ export function ActivityGoogleMap({
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
+  useEffect(() => {
+    groupLabelRef.current = groupLabel;
+  }, [groupLabel]);
 
   const listingIds = listings.map((listing) => listing.activity.id).join(',');
 
@@ -230,7 +282,8 @@ export function ActivityGoogleMap({
           map,
           listings: listingsRef.current,
           locale: localeRef.current,
-          selectedId: selectedIdRef.current,
+          groupLabel: groupLabelRef.current,
+          selectedId: () => selectedIdRef.current,
           onSelect: (activityId) => onSelectRef.current(activityId),
           markers: markersRef.current,
         });
@@ -265,11 +318,12 @@ export function ActivityGoogleMap({
       map,
       listings,
       locale,
-      selectedId: selectedIdRef.current,
-      onSelect,
+      groupLabel,
+      selectedId: () => selectedIdRef.current,
+      onSelect: (activityId) => onSelectRef.current(activityId),
       markers: markersRef.current,
     });
-  }, [listingIds, listings, locale, onSelect]);
+  }, [groupLabel, listingIds, listings, locale]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -283,14 +337,8 @@ export function ActivityGoogleMap({
       return;
     }
 
-    for (const [activityId, marker] of markersRef.current) {
-      const entry = listings.find((item) => item.activity.id === activityId);
-      marker.setIcon(
-        markerIcon(
-          entry?.activity.categoryId ?? null,
-          activityId === selectedId,
-        ),
-      );
+    for (const placed of markersRef.current.values()) {
+      applyAppearance(placed, selectedId);
     }
 
     map.panTo(new google.maps.LatLng(coordinate.lat, coordinate.lng));

@@ -14,7 +14,10 @@ from app.api.schemas import (
     ActivitySchema,
     ActivitySearchResponseSchema,
     ActivitySearchResultSchema,
+    FeedbackRatingSchema,
+    FeedbackReviewSchema,
     LocationSchema,
+    OrganizationContactSchema,
     OrganizationSchema,
     PricingSchema,
     ScheduleEntrySchema,
@@ -22,10 +25,13 @@ from app.api.schemas import (
 )
 from app.db.queries import (
     ActivitySearchFilters,
-    applied_search_area_scope,
     search_area_scope_labels,
     validate_filters,
 )
+from app.db.search_conditions import (
+    UNPRICED_SORT_KEY,
+)
+from app.services.staging_search_matching import matches, row_class_price
 
 _FIXTURE_CACHE: dict[str, Any] | None = None
 _SORTED_PUBLISHED_ITEMS: list[dict[str, Any]] | None = None
@@ -53,19 +59,29 @@ def fetch_staging_search_response(
     matched = [
         item
         for item in _sorted_published_items()
-        if _matches(item, filters, area_descendants, category_descendants)
+        if matches(item, filters, area_descendants, category_descendants)
     ]
+    if filters.sort == "price":
+        matched.sort(key=_price_sort_key)
+    row_key = _price_sort_key if filters.sort == "price" else _sort_key
 
     requested_limit = filters.limit
     start_index = 0
     if filters.cursor is not None:
-        cursor_key = (
+        time_key = (
             filters.cursor.day_of_week_utc,
             filters.cursor.start_minutes_utc,
             str(filters.cursor.schedule_id),
         )
+        cursor_key: tuple[Any, ...] = time_key
+        if filters.sort == "price":
+            price_key = filters.cursor.price_key
+            cursor_key = (
+                price_key if price_key is not None else UNPRICED_SORT_KEY,
+                *time_key,
+            )
         for index, row in enumerate(matched):
-            if _sort_key(row) > cursor_key:
+            if row_key(row) > cursor_key:
                 start_index = index
                 break
         else:
@@ -83,13 +99,25 @@ def fetch_staging_search_response(
             sort_meta["day_of_week_utc"],
             sort_meta["start_minutes_utc"],
             UUID(sort_meta["schedule_id"]),
+            sort=filters.sort,
+            price_key=_price_sort_key(last)[0] if filters.sort == "price" else None,
         )
 
+    total = None
+    if filters.include_total and filters.cursor is None:
+        total = len({row["activity"]["id"] for row in matched})
+    detail = filters.activity_id is not None
     return ActivitySearchResponseSchema(
-        items=[_to_schema(row, filters.view) for row in trimmed],
+        items=[_to_schema(row, filters.view, detail=detail) for row in trimmed],
         next_cursor=next_cursor,
         area_scope=search_area_scope_labels(),
+        total=total,
     )
+
+
+def _price_sort_key(row: dict[str, Any]) -> tuple[Any, ...]:
+    price = row_class_price(row)
+    return (price if price is not None else UNPRICED_SORT_KEY, *_sort_key(row))
 
 
 def _load_fixture() -> dict[str, Any]:
@@ -210,155 +238,11 @@ def _sort_key(row: dict[str, Any]) -> tuple[int, int, str]:
     )
 
 
-def _matches(
-    item: dict[str, Any],
-    filters: ActivitySearchFilters,
-    area_descendants: dict[str, list[str]],
-    category_descendants: dict[str, list[str]] | None,
-) -> bool:
-    activity = item["activity"]
-    location = item["location"]
-    pricing = item["pricing"]
-    schedule = item["schedule"]
-
-    if filters.activity_id is not None and UUID(activity["id"]) != filters.activity_id:
-        return False
-
-    scope = applied_search_area_scope(filters)
-    if scope is not None and str(location.get("area_id") or "") not in {
-        str(area_id) for area_id in scope
-    }:
-        return False
-
-    if filters.age is not None:
-        age_min = activity.get("age_min")
-        age_max = activity.get("age_max")
-        if age_min is None or age_max is None:
-            return False
-        if not (age_min <= filters.age <= age_max):
-            return False
-
-    if filters.area_id is not None:
-        allowed = area_descendants.get(str(filters.area_id), [str(filters.area_id)])
-        if location.get("area_id") not in allowed:
-            return False
-
-    if filters.category_ids:
-        if category_descendants:
-            category_ids_allowed: set[str] = set()
-            for value in filters.category_ids:
-                key = str(value)
-                category_ids_allowed.update(category_descendants.get(key, [key]))
-            if activity.get("category_id") not in category_ids_allowed:
-                return False
-        elif activity.get("category_id") not in {
-            str(value) for value in filters.category_ids
-        }:
-            return False
-
-    if (
-        filters.pricing_type is not None
-        and pricing.get("pricing_type") != filters.pricing_type.value
-    ):
-        return False
-
-    if (
-        filters.price_min is not None
-        and Decimal(str(pricing.get("amount", 0))) < filters.price_min
-    ):
-        return False
-
-    if (
-        filters.price_max is not None
-        and Decimal(str(pricing.get("amount", 0))) > filters.price_max
-    ):
-        return False
-
-    if (
-        filters.schedule_type is not None
-        and schedule.get("schedule_type") != filters.schedule_type.value
-    ):
-        return False
-
-    if filters.languages:
-        langs = schedule.get("languages") or []
-        if not any(language in langs for language in filters.languages):
-            return False
-
-    entries = schedule.get("weekly_entries") or []
-    if not _entries_match(entries, filters):
-        return False
-
-    return not (filters.text_query and not _text_matches(item, filters.text_query))
-
-
-def _text_matches(item: dict[str, Any], text_query: str) -> bool:
-    """Case-insensitive match on names and name translation values."""
-    needle = text_query.casefold()
-    activity = item.get("activity") or {}
-    organization = item.get("organization") or {}
-    values = [activity.get("name") or "", organization.get("name") or ""]
-    for translations in (
-        activity.get("name_translations") or {},
-        organization.get("name_translations") or {},
-    ):
-        if isinstance(translations, dict):
-            values.extend(translations.values())
-    return any(needle in str(value).casefold() for value in values)
-
-
-def _entries_match(
-    entries: list[dict[str, Any]],
-    filters: ActivitySearchFilters,
-) -> bool:
-    if (
-        filters.day_of_week_utc is None
-        and filters.start_minutes_utc is None
-        and filters.end_minutes_utc is None
-    ):
-        return True
-
-    for entry in entries:
-        if (
-            filters.day_of_week_utc is not None
-            and entry.get("day_of_week_utc") != filters.day_of_week_utc
-        ):
-            continue
-
-        start = entry.get("start_minutes_utc")
-        end = entry.get("end_minutes_utc")
-        if start is None or end is None:
-            continue
-
-        if (
-            filters.start_minutes_utc is not None
-            and filters.end_minutes_utc is not None
-        ):
-            if start < end:
-                if start < filters.end_minutes_utc and end > filters.start_minutes_utc:
-                    return True
-            elif filters.end_minutes_utc > start or filters.start_minutes_utc < end:
-                return True
-            continue
-
-        if filters.start_minutes_utc is not None:
-            if start > end or end >= filters.start_minutes_utc:
-                return True
-            continue
-
-        if filters.end_minutes_utc is not None:
-            if start > end or start <= filters.end_minutes_utc:
-                return True
-            continue
-
-        return True
-
-    return False
-
-
 def _to_schema(
     row: dict[str, Any],
     view: str = "full",
+    *,
+    detail: bool = False,
 ) -> ActivitySearchResultSchema:
     activity = row["activity"]
     organization = row["organization"]
@@ -395,11 +279,35 @@ def _to_schema(
             ),
             media_urls=media_urls,
             logo_media_url=organization.get("logo_media_url"),
+            status=organization.get("status"),
+            description_source=organization.get("description_source"),
+            place_id=organization.get("place_id") if detail else None,
+            parent_verified=bool(organization.get("parent_verified", False)),
+            updated_at=organization.get("updated_at"),
+            contact=(
+                None
+                if card or not organization.get("contact")
+                else OrganizationContactSchema(**organization["contact"])
+            ),
+            rating=(
+                FeedbackRatingSchema(**organization["rating"])
+                if organization.get("rating")
+                else None
+            ),
+            reviews=(
+                [
+                    FeedbackReviewSchema(**review)
+                    for review in organization.get("reviews") or []
+                ]
+                if detail and not card
+                else []
+            ),
         ),
         location=LocationSchema(
             id=location["id"],
             area_id=location["area_id"],
             region_area_id=location.get("region_area_id"),
+            name=location.get("name"),
             address=location.get("address"),
             lat=location.get("lat"),
             lng=location.get("lng"),
@@ -444,15 +352,20 @@ def _encode_cursor(
     day_of_week_utc: int,
     start_minutes_utc: int,
     schedule_id: UUID,
+    *,
+    sort: str = "time",
+    price_key: Decimal | None = None,
 ) -> str:
     import base64
 
-    payload = json.dumps(
-        {
-            "schedule_id": str(schedule_id),
-            "day_of_week_utc": day_of_week_utc,
-            "start_minutes_utc": start_minutes_utc,
-        }
-    ).encode("utf-8")
+    body: dict[str, Any] = {
+        "schedule_id": str(schedule_id),
+        "day_of_week_utc": day_of_week_utc,
+        "start_minutes_utc": start_minutes_utc,
+    }
+    if sort != "time":
+        body["sort"] = sort
+        body["price_key"] = None if price_key is None else str(price_key)
+    payload = json.dumps(body).encode("utf-8")
     encoded = base64.urlsafe_b64encode(payload).decode("utf-8")
     return encoded.rstrip("=")

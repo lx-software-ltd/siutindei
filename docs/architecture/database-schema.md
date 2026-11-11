@@ -65,6 +65,9 @@ Columns:
   ignore this field.
 - `description_source` (text, optional) — `template`, `official`,
   `places`, or `enrich`
+- `parent_verified` (boolean, default `false`) — set only by an admin
+  in the organization editor. Public search sends it so the website can
+  show a Parent-Verified badge. Manager writes and imports ignore it.
 - `review_status` (text, default `pending_review`) — `pending_review`,
   `approved`, or `rejected`. Public search applies this only when
   `ORG_REVIEW_GATE_ENABLED=true`. `v_catalog_health` always counts

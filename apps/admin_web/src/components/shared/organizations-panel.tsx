@@ -429,6 +429,7 @@ export function OrganizationsPanel({
       payload.source_url = form.source_url.trim() || null;
       payload.source_note = form.source_note.trim() || null;
       payload.description_source = form.description_source || null;
+      payload.parent_verified = form.parent_verified;
     }
     return payload;
   };
@@ -730,6 +731,26 @@ export function OrganizationsPanel({
                   <option value='closed_permanently'>Closed permanently</option>
                   <option value='hidden'>Hidden</option>
                 </Select>
+              </VersionField>
+              <VersionField
+                versionKey='parent_verified'
+                hint='Shows the Parent-Verified badge on the public website.'
+              >
+                <label className='flex items-center gap-2 text-sm text-ink-700'>
+                  <input
+                    type='checkbox'
+                    id='org-parent-verified'
+                    disabled={locked}
+                    checked={editorForm.parent_verified}
+                    onChange={(event) =>
+                      panel.setFormState((prev) => ({
+                        ...prev,
+                        parent_verified: event.target.checked,
+                      }))
+                    }
+                  />
+                  Parent-Verified
+                </label>
               </VersionField>
               </>
             )}

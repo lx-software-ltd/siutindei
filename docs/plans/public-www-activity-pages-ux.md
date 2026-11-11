@@ -1,8 +1,9 @@
 # Plan: Show activity information clearly on the public website
 
-**Status**: Draft
+**Status**: Implemented on `cursor/activity-pages-impl-27c0`
 **Zone**: green (phases 0 to 3, `apps/public_www/**`), yellow (phase 4,
-search API and `docs/api/search.yaml`)
+search API and `docs/api/search.yaml`), red (the `parent_verified`
+migration, approved in the request that answered the open questions)
 
 Findings and measurements are in
 `docs/research/public-www-activity-pages-ux.md`.
@@ -21,8 +22,6 @@ order, so a parent can compare activities without opening each one.
 - Server rendering or per-activity static pages. The site stays a
   static export with one `/activity/` page.
 - Booking, payment, or accounts.
-- Publishing organisation contact details or parent feedback. Both
-  wait on a product decision (see Open questions).
 - Changes to the Flutter app.
 
 ## Target design
@@ -275,18 +274,32 @@ Only what phases 1 to 3 cannot do with today's response.
 
 ## Rollback
 
-Each phase is a separate pull request and reverts on its own. Phase 4
-is additive, so the website can be reverted without a backend revert.
+Each phase is its own commit and reverts on its own. Phase 4 is
+additive, so the website can be reverted without a backend revert. The
+`parent_verified` column reverts with `alembic downgrade` of 0064; with
+the website reverted first, nothing reads it.
 
-## Open questions
+## Decisions
 
-1. Are organisation website, social links, and contact details meant
-   to be public? If yes, they join phase 4 and the Organiser section.
-2. Is approved parent feedback meant to be public? If yes, it needs
-   its own plan: a rating summary on the card and a reviews section.
-3. What backs "Parent-Verified"? This plan removes it from cards
-   unless there is a per-listing signal.
-4. Should search default to all ages instead of "3-6 years"? This plan
-   keeps the default and makes it visible.
-5. Do production records carry `zh`, `zh-HK`, or both? Phase 0 reads
-   both in that order for `zh-HK`.
+The product owner answered the open questions before implementation.
+
+1. Organisation website, social links, and contact details are public.
+   The search response carries them in `organization.contact` on the
+   full view, and the Organiser section links them.
+2. Approved parent feedback is public. The full view carries
+   `organization.rating` and the latest approved `organization.reviews`;
+   the title block links the rating to the Reviews section.
+3. "Parent-Verified" is an admin-only flag, `organizations.parent_verified`
+   (migration 0064). Only admins can set it, in organisation settings.
+   Managers and imports cannot. The badge shows only when it is true.
+4. Search defaults to all ages. The results summary says "All ages"
+   when no age is chosen.
+5. Phase 0 reads `zh-HK`, then `zh`, then the base text on `zh-HK`, and
+   `en`, then the base text on `en`. Production data was not checked.
+
+## Deferred
+
+- Hover highlight between the map list and the pins.
+- Contact, rating, and reviews in the staging fixture generator
+  (`scripts/codegen/generate_activity_search_staging.py`). The staging
+  site shows those sections only once the fixture carries them.

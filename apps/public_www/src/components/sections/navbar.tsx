@@ -37,7 +37,7 @@ export function Navbar({ locale, content }: NavbarProps) {
       ]
         .filter(Boolean)
         .join(' ')
-    : `sticky top-0 ${SHARED_HEADER_CHROME}`;
+    : `sticky top-0 short:static ${SHARED_HEADER_CHROME}`;
 
   return (
     <>

@@ -9,6 +9,7 @@ from app.api.admin_validators import _validate_language_code
 from app.exceptions import ValidationError
 
 _VIEWS = frozenset({"card", "full"})
+_SORTS = frozenset({"time", "price"})
 _MIN_QUERY_LENGTH = 2
 _MAX_QUERY_LENGTH = 100
 
@@ -20,6 +21,16 @@ class SearchQueryValidation(NamedTuple):
     text_query: str | None
     view: str
     include_incomplete: bool
+
+
+class SearchRefinements(NamedTuple):
+    """Validated optional refinements: Hong Kong days, trial, price, sort."""
+
+    days_of_week_hkt: tuple[int, ...]
+    free_trial: bool
+    class_price_max: Decimal | None
+    sort: str
+    include_total: bool
 
 
 def validate_search_query_params(
@@ -94,7 +105,38 @@ def validate_search_query_params(
         languages=validated_languages,
         text_query=_validate_text_query(q),
         view=_validate_view(view),
-        include_incomplete=_validate_include_incomplete(include_incomplete),
+        include_incomplete=_validate_flag(include_incomplete, "include_incomplete"),
+    )
+
+
+def validate_search_refinements(
+    *,
+    days_of_week_hkt: list[int | None],
+    free_trial: str | None,
+    class_price_max: Decimal | None,
+    sort: str | None,
+    include_total: str | None,
+) -> SearchRefinements:
+    """Validate the optional refinement parameters."""
+
+    if class_price_max is not None and class_price_max < 0:
+        raise ValidationError("class_price_max must be >= 0", field="class_price_max")
+
+    hk_days: set[int] = set()
+    for day in days_of_week_hkt:
+        if day is None or not 0 <= day <= 6:
+            raise ValidationError(
+                "day_of_week_hkt must be between 0 and 6",
+                field="day_of_week_hkt",
+            )
+        hk_days.add(day)
+
+    return SearchRefinements(
+        days_of_week_hkt=tuple(sorted(hk_days)),
+        free_trial=_validate_flag(free_trial, "free_trial"),
+        class_price_max=class_price_max,
+        sort=_validate_sort(sort),
+        include_total=_validate_flag(include_total, "include_total"),
     )
 
 
@@ -111,7 +153,7 @@ def _validate_text_query(q: str | None) -> str | None:
     return text
 
 
-def _validate_include_incomplete(value: str | None) -> bool:
+def _validate_flag(value: str | None, field: str) -> bool:
     if value is None or value.strip() == "":
         return False
     normalized = value.strip().lower()
@@ -119,10 +161,15 @@ def _validate_include_incomplete(value: str | None) -> bool:
         return True
     if normalized in {"0", "false", "no"}:
         return False
-    raise ValidationError(
-        "include_incomplete must be a boolean",
-        field="include_incomplete",
-    )
+    raise ValidationError(f"{field} must be a boolean", field=field)
+
+
+def _validate_sort(sort: str | None) -> str:
+    if sort is None or sort.strip() == "":
+        return "time"
+    if sort not in _SORTS:
+        raise ValidationError("sort must be time or price", field="sort")
+    return sort
 
 
 def _validate_view(view: str | None) -> str:

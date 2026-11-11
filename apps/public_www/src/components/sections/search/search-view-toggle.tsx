@@ -1,10 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
-
 interface SearchViewToggleProps {
   readonly isMapView: boolean;
+  readonly groupLabel: string;
   readonly listLabel: string;
   readonly mapLabel: string;
   readonly onShowList: () => void;
@@ -14,45 +12,62 @@ interface SearchViewToggleProps {
 const LIST_ICON_SRC = '/images/ui/list.svg';
 const MAP_ICON_SRC = '/images/ui/map.svg';
 
+function segmentClassName(isActive: boolean): string {
+  return (
+    'inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold transition sm:px-4 ' +
+    (isActive ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-brand-50')
+  );
+}
+
+/** List and Map as one segmented control, so the current view is always visible. */
 export function SearchViewToggle({
   isMapView,
+  groupLabel,
   listLabel,
   mapLabel,
   onShowList,
   onShowMap,
 }: SearchViewToggleProps) {
-  const [isMounted, setIsMounted] = useState(false);
-  const nextIsMap = !isMapView;
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) {
-    return null;
-  }
-
-  return createPortal(
-    <button
-      type="button"
-      aria-label={nextIsMap ? mapLabel : listLabel}
-      onClick={nextIsMap ? onShowMap : onShowList}
-      className={
-        'search-view-toggle fixed bottom-4 left-4 z-40 inline-flex h-12 ' +
-        'w-12 items-center justify-center rounded-full border ' +
-        'border-ink-900/15 bg-white shadow-lg transition hover:bg-brand-50'
-      }
+  return (
+    <div
+      role="group"
+      aria-label={groupLabel}
+      className="search-view-toggle inline-flex shrink-0 rounded-full border border-ink-900/15 bg-white p-0.5"
     >
-      <img
-        src={nextIsMap ? MAP_ICON_SRC : LIST_ICON_SRC}
-        alt=""
-        width={20}
-        height={20}
-        decoding="async"
-        aria-hidden="true"
-        className="h-5 w-5"
-      />
-    </button>,
-    document.body,
+      <button
+        type="button"
+        aria-pressed={!isMapView}
+        onClick={isMapView ? onShowList : undefined}
+        className={segmentClassName(!isMapView)}
+      >
+        <img
+          src={LIST_ICON_SRC}
+          alt=""
+          width={16}
+          height={16}
+          decoding="async"
+          aria-hidden="true"
+          className={`h-4 w-4 ${isMapView ? '' : 'invert'}`}
+        />
+        <span className="max-sm:sr-only">{listLabel}</span>
+      </button>
+      <button
+        type="button"
+        aria-pressed={isMapView}
+        onClick={isMapView ? undefined : onShowMap}
+        className={segmentClassName(isMapView)}
+      >
+        <img
+          src={MAP_ICON_SRC}
+          alt=""
+          width={16}
+          height={16}
+          decoding="async"
+          aria-hidden="true"
+          className={`h-4 w-4 ${isMapView ? 'invert' : ''}`}
+        />
+        <span className="max-sm:sr-only">{mapLabel}</span>
+      </button>
+    </div>
   );
 }

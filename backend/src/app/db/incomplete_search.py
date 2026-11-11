@@ -22,14 +22,26 @@ from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.db.queries import (
     ActivitySearchCursor,
     ActivitySearchFilters,
-    _apply_entry_filters,
-    _build_language_conditions,
     _category_descendant_ids_subquery,
-    _text_query_condition,
     applied_search_area_scope,
     area_descendant_ids_subquery,
     validate_filters,
 )
+from app.db.search_conditions import (
+    apply_entry_filters,
+    build_language_conditions,
+    needs_entry_filters,
+    needs_price_filters,
+    price_conditions,
+    text_query_condition,
+)
+
+
+def incomplete_activity_ids_query(filters: ActivitySearchFilters) -> Select:
+    """Ids of every approved incomplete activity that matches, unpaged."""
+
+    picked = _picked_incomplete_subquery(filters)
+    return select(picked.c.activity_id)
 
 
 def build_incomplete_search_query(
@@ -46,89 +58,7 @@ def build_incomplete_search_query(
     null when that piece is missing at the chosen venue.
     """
 
-    validate_filters(filters)
-    area_scope = applied_search_area_scope(filters)
-    chosen = _chosen_venue_subquery(filters, area_scope)
-    query = (
-        select(
-            Activity.id.label("activity_id"),
-            Organization.id.label("organization_id"),
-            Location.id.label("location_id"),
-            ActivitySchedule.id.label("schedule_id"),
-            ActivityPricing.id.label("pricing_id"),
-            func.lower(Organization.name).label("org_sort"),
-            func.lower(Activity.name).label("activity_sort"),
-        )
-        .select_from(Activity)
-        .join(Organization, Organization.id == Activity.org_id)
-        .join(chosen, chosen.c.activity_id == Activity.id)
-        .join(Location, Location.id == chosen.c.location_id)
-        .outerjoin(ActivitySchedule, _schedule_at_venue(filters))
-        .outerjoin(ActivityPricing, _price_at_venue(filters))
-        .where(Organization.review_status == "approved")
-        .where(Organization.status.in_(("operational", "closed_temporarily")))
-        .where(Location.status.in_(("open", "temporarily_closed")))
-        .where(Activity.category_id != PENDING_CATEGORY_ID)
-        .where(~_complete_listing_exists())
-    )
-    needs_entries = (
-        filters.day_of_week_utc is not None
-        or filters.start_minutes_utc is not None
-        or filters.end_minutes_utc is not None
-    )
-    if needs_entries:
-        query = query.join(
-            ActivityScheduleEntry,
-            ActivityScheduleEntry.schedule_id == ActivitySchedule.id,
-        )
-
-    conditions: list = []
-    if filters.age is not None:
-        conditions.append(Activity.age_range.contains(filters.age))
-    if filters.area_id is not None:
-        conditions.append(
-            Location.area_id.in_(area_descendant_ids_subquery(filters.area_id))
-        )
-    if filters.category_ids:
-        conditions.append(
-            Activity.category_id.in_(
-                _category_descendant_ids_subquery(filters.category_ids, area_scope)
-            )
-        )
-    if filters.activity_id is not None:
-        conditions.append(Activity.id == filters.activity_id)
-    if filters.org_ids:
-        conditions.append(Activity.org_id.in_(filters.org_ids))
-    if filters.pricing_type is not None:
-        conditions.append(ActivityPricing.pricing_type == filters.pricing_type)
-    if filters.price_min is not None:
-        conditions.append(ActivityPricing.amount >= filters.price_min)
-    if filters.price_max is not None:
-        conditions.append(ActivityPricing.amount <= filters.price_max)
-    if filters.schedule_type is not None:
-        conditions.append(ActivitySchedule.schedule_type == filters.schedule_type)
-    if filters.languages:
-        conditions.append(or_(*_build_language_conditions(filters.languages)))
-    if filters.text_query:
-        conditions.append(_text_query_condition(filters.text_query))
-    if needs_entries:
-        _apply_entry_filters(filters, conditions)
-    if area_scope is not None:
-        if area_scope:
-            conditions.append(Location.area_id.in_(tuple(area_scope)))
-        else:
-            conditions.append(sa.false())
-    if conditions:
-        query = query.where(and_(*conditions))
-    picked = (
-        query.ext(distinct_on(Activity.id))  # type: ignore[attr-defined]
-        .order_by(
-            Activity.id,
-            ActivitySchedule.id.nulls_last(),
-            ActivityPricing.id.nulls_last(),
-        )
-        .subquery("one_incomplete")
-    )
+    picked = _picked_incomplete_subquery(filters)
     paged = select(picked)
     if (
         after is not None
@@ -161,6 +91,85 @@ def build_incomplete_search_query(
     )
 
 
+def _picked_incomplete_subquery(filters: ActivitySearchFilters) -> sa.Subquery:
+    """One row per matching incomplete activity at its chosen venue."""
+
+    validate_filters(filters)
+    area_scope = applied_search_area_scope(filters)
+    chosen = _chosen_venue_subquery(filters, area_scope)
+    query = (
+        select(
+            Activity.id.label("activity_id"),
+            Organization.id.label("organization_id"),
+            Location.id.label("location_id"),
+            ActivitySchedule.id.label("schedule_id"),
+            ActivityPricing.id.label("pricing_id"),
+            func.lower(Organization.name).label("org_sort"),
+            func.lower(Activity.name).label("activity_sort"),
+        )
+        .select_from(Activity)
+        .join(Organization, Organization.id == Activity.org_id)
+        .join(chosen, chosen.c.activity_id == Activity.id)
+        .join(Location, Location.id == chosen.c.location_id)
+        .outerjoin(ActivitySchedule, _schedule_at_venue(filters))
+        .outerjoin(ActivityPricing, _price_at_venue(filters))
+        .where(Organization.review_status == "approved")
+        .where(Organization.status.in_(("operational", "closed_temporarily")))
+        .where(Location.status.in_(("open", "temporarily_closed")))
+        .where(Activity.category_id != PENDING_CATEGORY_ID)
+        .where(~_complete_listing_exists())
+    )
+    needs_entries = needs_entry_filters(filters)
+    if needs_entries:
+        query = query.join(
+            ActivityScheduleEntry,
+            ActivityScheduleEntry.schedule_id == ActivitySchedule.id,
+        )
+
+    conditions: list = []
+    if filters.age is not None:
+        conditions.append(Activity.age_range.contains(filters.age))
+    if filters.area_id is not None:
+        conditions.append(
+            Location.area_id.in_(area_descendant_ids_subquery(filters.area_id))
+        )
+    if filters.category_ids:
+        conditions.append(
+            Activity.category_id.in_(
+                _category_descendant_ids_subquery(filters.category_ids, area_scope)
+            )
+        )
+    if filters.activity_id is not None:
+        conditions.append(Activity.id == filters.activity_id)
+    if filters.org_ids:
+        conditions.append(Activity.org_id.in_(filters.org_ids))
+    conditions.extend(price_conditions(filters))
+    if filters.schedule_type is not None:
+        conditions.append(ActivitySchedule.schedule_type == filters.schedule_type)
+    if filters.languages:
+        conditions.append(or_(*build_language_conditions(filters.languages)))
+    if filters.text_query:
+        conditions.append(text_query_condition(filters.text_query))
+    if needs_entries:
+        apply_entry_filters(filters, conditions)
+    if area_scope is not None:
+        if area_scope:
+            conditions.append(Location.area_id.in_(tuple(area_scope)))
+        else:
+            conditions.append(sa.false())
+    if conditions:
+        query = query.where(and_(*conditions))
+    return (
+        query.ext(distinct_on(Activity.id))  # type: ignore[attr-defined]
+        .order_by(
+            Activity.id,
+            ActivitySchedule.id.nulls_last(),
+            ActivityPricing.id.nulls_last(),
+        )
+        .subquery("one_incomplete")
+    )
+
+
 def _price_at_venue(filters: ActivitySearchFilters):
     """Price row at the chosen venue, limited to an active price filter."""
 
@@ -168,12 +177,9 @@ def _price_at_venue(filters: ActivitySearchFilters):
         ActivityPricing.activity_id == Activity.id,
         ActivityPricing.location_id == Location.id,
     )
-    if filters.pricing_type is not None:
-        match = and_(match, ActivityPricing.pricing_type == filters.pricing_type)
-    if filters.price_min is not None:
-        match = and_(match, ActivityPricing.amount >= filters.price_min)
-    if filters.price_max is not None:
-        match = and_(match, ActivityPricing.amount <= filters.price_max)
+    conditions = price_conditions(filters)
+    if conditions:
+        match = and_(match, *conditions)
     return match
 
 
@@ -187,7 +193,7 @@ def _schedule_at_venue(filters: ActivitySearchFilters):
     if filters.schedule_type is not None:
         match = and_(match, ActivitySchedule.schedule_type == filters.schedule_type)
     if filters.languages:
-        match = and_(match, or_(*_build_language_conditions(filters.languages)))
+        match = and_(match, or_(*build_language_conditions(filters.languages)))
     return match
 
 
@@ -272,13 +278,8 @@ def _limit_ranked_venues(ranked, filters, area_scope, venues):
     if filters.org_ids:
         ranked = ranked.where(Activity.org_id.in_(tuple(filters.org_ids)))
     if filters.text_query:
-        ranked = ranked.where(_text_query_condition(filters.text_query))
-    needs_price = (
-        filters.pricing_type is not None
-        or filters.price_min is not None
-        or filters.price_max is not None
-    )
-    if needs_price:
+        ranked = ranked.where(text_query_condition(filters.text_query))
+    if needs_price_filters(filters):
         ranked = ranked.join(
             ActivityPricing,
             and_(
@@ -286,17 +287,10 @@ def _limit_ranked_venues(ranked, filters, area_scope, venues):
                 ActivityPricing.location_id == venues.c.location_id,
             ),
         )
-        if filters.pricing_type is not None:
-            ranked = ranked.where(ActivityPricing.pricing_type == filters.pricing_type)
-        if filters.price_min is not None:
-            ranked = ranked.where(ActivityPricing.amount >= filters.price_min)
-        if filters.price_max is not None:
-            ranked = ranked.where(ActivityPricing.amount <= filters.price_max)
-    needs_entries = (
-        filters.day_of_week_utc is not None
-        or filters.start_minutes_utc is not None
-        or filters.end_minutes_utc is not None
-    )
+        conditions = price_conditions(filters)
+        if conditions:
+            ranked = ranked.where(and_(*conditions))
+    needs_entries = needs_entry_filters(filters)
     needs_schedule = (
         filters.schedule_type is not None or bool(filters.languages) or needs_entries
     )
@@ -313,14 +307,14 @@ def _limit_ranked_venues(ranked, filters, area_scope, venues):
                 ActivitySchedule.schedule_type == filters.schedule_type
             )
         if filters.languages:
-            ranked = ranked.where(or_(*_build_language_conditions(filters.languages)))
+            ranked = ranked.where(or_(*build_language_conditions(filters.languages)))
         if needs_entries:
             ranked = ranked.join(
                 ActivityScheduleEntry,
                 ActivityScheduleEntry.schedule_id == ActivitySchedule.id,
             )
             entry_conditions: list = []
-            _apply_entry_filters(filters, entry_conditions)
+            apply_entry_filters(filters, entry_conditions)
             if entry_conditions:
                 ranked = ranked.where(and_(*entry_conditions))
     return ranked

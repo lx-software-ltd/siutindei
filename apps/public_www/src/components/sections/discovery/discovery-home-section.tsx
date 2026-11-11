@@ -1,5 +1,6 @@
 'use client';
 
+import type { ListingCarouselLabels } from '@/components/sections/listings/listing-carousel-section';
 import {
   useCallback,
   useEffect,
@@ -54,12 +55,7 @@ interface DiscoveryHomeSectionProps {
   readonly copy: SiteContent['discovery'];
 }
 
-interface CardLabels {
-  readonly parentVerified: string;
-  readonly freeTrial: string;
-  readonly imageFallback: string;
-  readonly mapAlt: string;
-}
+type CardLabels = ListingCarouselLabels;
 
 function placeListCopy(copy: SiteContent['discovery']): PlaceListCopy {
   return {
@@ -268,6 +264,10 @@ export function DiscoveryHomeSection({ locale, copy }: DiscoveryHomeSectionProps
     freeTrial: copy.freeTrialLabel,
     imageFallback: copy.imageFallbackLabel,
     mapAlt: copy.mapAltLabel,
+    locationsCount: copy.locationsCountLabel,
+    detailsOnRequest: copy.detailsOnRequestLabel,
+    previous: copy.previousLabel,
+    next: copy.nextLabel,
   };
 
   if (primary.errorMessage) {

@@ -44,7 +44,7 @@ def test_wizard_group_search_sql_unions_legacy_roots() -> None:
 
 
 def test_staging_match_uses_category_descendants_when_present() -> None:
-    from app.services.staging_search_store import _matches
+    from app.services.staging_search_matching import matches
 
     parent = uuid4()
     child = uuid4()
@@ -60,13 +60,13 @@ def test_staging_match_uses_category_descendants_when_present() -> None:
         "schedule": {"schedule_type": "weekly", "languages": []},
     }
     filters = ActivitySearchFilters(category_ids=[parent])
-    assert _matches(
+    assert matches(
         item,
         filters,
         {},
         {str(parent): [str(parent), str(child)]},
     )
-    assert not _matches(item, filters, {}, None)
+    assert not matches(item, filters, {}, None)
 
 
 def test_build_search_query_applies_area_tree_filter() -> None:
