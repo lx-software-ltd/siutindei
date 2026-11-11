@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+import { E2E_SEARCH_AREA_SCOPE } from './e2e/catalog-scope';
+
 /**
  * Playwright configuration for Admin Web E2E tests.
  * @see https://playwright.dev/docs/test-configuration
@@ -52,8 +54,7 @@ export default defineConfig({
       NEXT_PUBLIC_COGNITO_CLIENT_ID: 'mock-client-id-12345',
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: 'us-east-1_TestPool01',
       NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: 'test-maps-key',
-      // Catalog opens on this scope. southern-stanley is the Stanley neighbourhood.
-      SEARCH_AREA_SCOPE: 'southern-stanley',
+      SEARCH_AREA_SCOPE: E2E_SEARCH_AREA_SCOPE,
     },
   },
 });

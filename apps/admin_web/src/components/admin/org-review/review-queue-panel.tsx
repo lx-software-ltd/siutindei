@@ -253,15 +253,16 @@ function CatalogPanelLoading() {
 export function CatalogPanel() {
   const areas = useGeographicAreas();
   const [jobParam] = useQueryState('job');
+  const defaultAreaId = useMemo(() => {
+    if (areas.isLoading || jobParam) {
+      return '';
+    }
+    return areaIdForCatalogDefault(areas.tree);
+  }, [areas.isLoading, areas.tree, jobParam]);
   if (areas.isLoading) {
     return <CatalogPanelLoading />;
   }
-  return (
-    <CatalogPanelReady
-      areas={areas}
-      defaultAreaId={jobParam ? '' : areaIdForCatalogDefault(areas.tree)}
-    />
-  );
+  return <CatalogPanelReady areas={areas} defaultAreaId={defaultAreaId} />;
 }
 
 function CatalogPanelReady({

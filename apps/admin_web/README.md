@@ -22,7 +22,9 @@ Optional:
   `https://siutindei.com`.
 - `SEARCH_AREA_SCOPE`: Catalog's starting area. Same GitHub variable
   as public search. One region id, district slug, or neighbourhood
-  slug. Empty shows every neighbourhood.
+  slug. Empty shows every neighbourhood. When this is non-empty it
+  wins over `NEXT_PUBLIC_SEARCH_AREA_SCOPE`. A change is picked up
+  on the next admin web deploy.
 
 ## Development
 

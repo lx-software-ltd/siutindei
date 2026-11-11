@@ -1,11 +1,11 @@
 # Plan: Catalog default follows SEARCH_AREA_SCOPE
 
 **Status**: Done
-**Zone**: yellow
+**Zone**: red
 
-The admin web build also passes that GitHub variable through
-`.github/workflows/deploy-admin-web.yml`, which is a red-zone path.
-The edit is the one build environment line the static export needs.
+Catalog itself is yellow (`apps/admin_web`). The stricter zone applies
+because `.github/workflows/deploy-admin-web.yml` passes
+`SEARCH_AREA_SCOPE` into the static build. That is one environment line.
 
 ## Goal
 

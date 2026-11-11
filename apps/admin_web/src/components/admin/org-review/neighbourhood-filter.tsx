@@ -8,7 +8,7 @@ import { Input } from '../../ui/input';
 interface NeighbourhoodFilterProps {
   id: string;
   value: string;
-  /** Shown when `value` is a region or district, which is not a neighbourhood option. */
+  /** Name of `value` when it is a region or district, so it can appear in the list. */
   valueName?: string;
   options: readonly NeighbourhoodFilterOption[];
   onChange: (areaId: string) => void;
@@ -26,19 +26,25 @@ export function NeighbourhoodFilter({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
-  const selected = options.find((option) => option.id === value) ?? null;
+  const listed = useMemo(() => {
+    if (!value || !valueName || options.some((option) => option.id === value)) {
+      return options;
+    }
+    return [{ id: value, name: valueName, group: '' }, ...options];
+  }, [options, value, valueName]);
+  const selected = listed.find((option) => option.id === value) ?? null;
 
   const matches = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) {
-      return options;
+      return listed;
     }
-    return options.filter((option) => {
+    return listed.filter((option) => {
       const name = option.name.toLowerCase();
       const group = option.group.toLowerCase();
       return name.includes(needle) || group.includes(needle);
     });
-  }, [options, query]);
+  }, [listed, query]);
 
   const choices = useMemo(
     () => [{ id: '', name: 'All neighbourhoods', group: '' }, ...matches],

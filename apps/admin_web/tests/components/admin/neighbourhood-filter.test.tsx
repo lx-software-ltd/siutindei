@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { NeighbourhoodFilter } from '@/components/admin/org-review/neighbourhood-filter';
@@ -22,7 +22,7 @@ describe('NeighbourhoodFilter', () => {
     expect(screen.getByLabelText('Neighbourhood')).toHaveValue('Stanley');
   });
 
-  it('shows the area name when the default is a district or region', () => {
+  it('lists a district or region default and shows it as selected', () => {
     render(
       <NeighbourhoodFilter
         id='review-neighbourhood-filter'
@@ -32,6 +32,12 @@ describe('NeighbourhoodFilter', () => {
         onChange={vi.fn()}
       />
     );
-    expect(screen.getByLabelText('Neighbourhood')).toHaveValue('Southern');
+    const input = screen.getByLabelText('Neighbourhood');
+    expect(input).toHaveValue('Southern');
+    fireEvent.focus(input);
+    expect(screen.getByRole('option', { name: 'Southern' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
   });
 });
