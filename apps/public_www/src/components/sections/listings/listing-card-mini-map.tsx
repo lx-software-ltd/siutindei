@@ -19,9 +19,9 @@ interface ListingCardMiniMapProps {
 }
 
 const VISIBLE_CLASS_NAME =
-  'listing-card-mini-map pointer-events-none absolute inset-x-0 bottom-0 h-[38%] overflow-hidden rounded-b-xl border-t border-white/80';
+  'listing-card-mini-map pointer-events-none mt-2 h-16 overflow-hidden rounded-lg border border-brand-100';
 const PENDING_CLASS_NAME =
-  'pointer-events-none absolute inset-0 overflow-hidden opacity-0';
+  'pointer-events-none h-px overflow-hidden opacity-0';
 
 export function ListingCardMiniMap({
   locale,

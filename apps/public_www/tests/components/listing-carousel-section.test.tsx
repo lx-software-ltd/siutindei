@@ -20,6 +20,10 @@ describe('ListingCarouselSection', () => {
             freeTrial: 'Free trial',
             imageFallback: 'Photo coming soon',
             mapAlt: 'Map location',
+            locationsCount: '{count} locations',
+            detailsOnRequest: 'Details on request',
+            previous: 'Previous',
+            next: 'Next',
           }}
         />
       </SearchProvider>,
@@ -45,6 +49,8 @@ describe('ListingCarouselSection', () => {
       'src',
       '/images/ui/chevron-right.svg',
     );
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button').map((button) => button.getAttribute('aria-label')),
+    ).toEqual(['Previous', 'Next']);
   });
 });
