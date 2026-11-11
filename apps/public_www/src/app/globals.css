@@ -176,6 +176,82 @@ body {
   }
 }
 
+/* Open-area street-name plates in the top-right corner. */
+.hero-scope-signs {
+  position: absolute;
+  z-index: 20;
+  top: 12px;
+  right: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.hero-scope-sign {
+  display: block;
+  height: auto;
+  width: auto;
+  max-height: 52px;
+  /* Height is the limit. A long name stays readable instead of shrinking
+     to fit half the screen, and 8rem keeps the plate clear of the
+     picture on the left. */
+  max-width: min(260px, calc(100vw - 8rem));
+  filter: drop-shadow(0 3px 5px rgba(46, 29, 18, 0.3));
+}
+
+.hero-scope-sign--tilt-a {
+  transform: rotate(4deg);
+}
+
+.hero-scope-sign--tilt-b {
+  margin-right: 8px;
+  transform: rotate(-3.5deg);
+}
+
+.hero-scope-sign--tilt-c {
+  transform: rotate(2deg);
+}
+
+@media (max-width: 767px) {
+  .hero-scope-sign--tilt-b {
+    margin-right: 0;
+  }
+
+  /* The plates paint above the title block, so the title starts below
+     them. Two plates is the most a phone shows. */
+  .small-world-hero__copy[data-scope-signs='1'] {
+    padding-top: 5rem;
+  }
+
+  .small-world-hero__copy[data-scope-signs='2'],
+  .small-world-hero__copy[data-scope-signs='3'] {
+    padding-top: 9rem;
+  }
+}
+
+/* The third plate clears the heading only once the column is narrow
+   relative to the screen. Below that it would cover the title. */
+@media (max-width: 1099px) {
+  .hero-scope-sign--extra {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .hero-scope-signs {
+    top: 22px;
+    right: 32px;
+    gap: 10px;
+  }
+
+  .hero-scope-sign {
+    max-height: 84px;
+    max-width: 250px;
+  }
+}
+
 @keyframes bubble-drift-c {
   0%,
   100% {

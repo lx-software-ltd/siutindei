@@ -1,6 +1,7 @@
 import type { SiteContent } from '@/content/types';
 import {
   BUBBLE_SLOTS,
+  TOP_RIGHT_BUBBLE_SLOT,
   type BubbleId,
   bubbleSrc,
 } from '@/lib/small-world/kawaii-bubbles';
@@ -14,11 +15,13 @@ const DRIFT = [
 interface FloatingKawaiiBubblesProps {
   readonly copy: SiteContent['smallWorld'];
   readonly ids: readonly BubbleId[];
+  readonly hideCorner?: boolean;
 }
 
 export function FloatingKawaiiBubbles({
   copy,
   ids,
+  hideCorner = false,
 }: FloatingKawaiiBubblesProps) {
   return (
     <div
@@ -27,7 +30,7 @@ export function FloatingKawaiiBubbles({
     >
       {ids.map((id, index) => {
         const slot = BUBBLE_SLOTS[index];
-        if (!slot) {
+        if (!slot || (hideCorner && index === TOP_RIGHT_BUBBLE_SLOT)) {
           return null;
         }
         const drift = DRIFT[index % DRIFT.length];
