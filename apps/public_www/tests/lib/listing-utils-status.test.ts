@@ -5,6 +5,7 @@ import {
   googleMapsPlaceUrl,
   isTemplateDescription,
   isTemporarilyClosed,
+  listingScheduleLabel,
 } from '@/lib/activities/listing-utils';
 import type { ActivityListing } from '@/lib/activities/types';
 
@@ -123,6 +124,9 @@ describe('listing status helpers', () => {
   it('formats monthly tuition and a yearly levy', () => {
     const monthly = buildListing();
     const yearly = buildListing();
+    if (!monthly.pricing || !yearly.pricing) {
+      throw new Error('expected a price');
+    }
     const monthListing = {
       ...monthly,
       pricing: { ...monthly.pricing, pricingType: 'per_month', amount: 3800 },
@@ -135,5 +139,16 @@ describe('listing status helpers', () => {
     expect(formatListingPrice('zh-HK', monthListing)).toBe('HK$3,800 / 月');
     expect(formatListingPrice('en', yearListing)).toBe('HK$35,000 / year');
     expect(formatListingPrice('zh-HK', yearListing)).toBe('HK$35,000 / 年');
+  });
+
+  it('labels a listing that has no price or schedule', () => {
+    const listing = buildListing();
+    const incomplete = { ...listing, pricing: null, schedule: null };
+    expect(formatListingPrice('en', incomplete)).toBe('Price on request');
+    expect(formatListingPrice('zh-HK', incomplete)).toBe('價格待定');
+    expect(listingScheduleLabel('en', incomplete)).toBe(
+      'Schedule to be confirmed',
+    );
+    expect(listingScheduleLabel('zh-HK', incomplete)).toBe('時間待定');
   });
 });

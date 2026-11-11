@@ -447,7 +447,11 @@ row sets `?org=` and shows the same readiness checklist on the
 Organization screen. Imports keeps upload, export, and history; history
 "View orgs" opens Catalog with `?job=` for the organizations that
 import created or updated. Approve refuses while
-blockers remain unless `force` is set. Blockers are a missing
+blockers remain unless `force` is set. Public search still requires a
+schedule, an entry, and a price unless the caller sends
+`include_incomplete=true`. That flag also returns activities of an
+approved organization that are missing a price, a schedule, or both.
+Callers that omit it keep the previous results. Blockers are a missing
 description, no location, no activity, a location without coordinates,
 an activity without pricing or a schedule, and an activity still on
 Pending categorisation.

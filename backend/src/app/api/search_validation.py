@@ -19,6 +19,7 @@ class SearchQueryValidation(NamedTuple):
     languages: list[str]
     text_query: str | None
     view: str
+    include_incomplete: bool
 
 
 def validate_search_query_params(
@@ -33,6 +34,7 @@ def validate_search_query_params(
     limit: int,
     q: str | None = None,
     view: str | None = None,
+    include_incomplete: str | None = None,
 ) -> SearchQueryValidation:
     """Validate search filters against the OpenAPI contract."""
 
@@ -92,6 +94,7 @@ def validate_search_query_params(
         languages=validated_languages,
         text_query=_validate_text_query(q),
         view=_validate_view(view),
+        include_incomplete=_validate_include_incomplete(include_incomplete),
     )
 
 
@@ -106,6 +109,20 @@ def _validate_text_query(q: str | None) -> str | None:
     if len(text) > _MAX_QUERY_LENGTH:
         raise ValidationError("q must be at most 100 characters", field="q")
     return text
+
+
+def _validate_include_incomplete(value: str | None) -> bool:
+    if value is None or value.strip() == "":
+        return False
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes"}:
+        return True
+    if normalized in {"0", "false", "no"}:
+        return False
+    raise ValidationError(
+        "include_incomplete must be a boolean",
+        field="include_incomplete",
+    )
 
 
 def _validate_view(view: str | None) -> str:

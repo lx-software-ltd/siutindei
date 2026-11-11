@@ -22,8 +22,8 @@ export interface AnalyticsItemFields {
   readonly item_id: string;
   readonly item_name: string;
   readonly item_brand: string;
-  readonly price: number;
-  readonly currency: string;
+  readonly price?: number;
+  readonly currency?: string;
 }
 
 export interface AnalyticsSearchFields {
@@ -77,8 +77,12 @@ export function itemFieldsFromListing(
     item_id: listing.activity.id,
     item_name: listingTitle(locale, listing),
     item_brand: listingOrgName(locale, listing),
-    price: listing.pricing.amount,
-    currency: listing.pricing.currency.toUpperCase(),
+    ...(listing.pricing
+      ? {
+          price: listing.pricing.amount,
+          currency: listing.pricing.currency.toUpperCase(),
+        }
+      : {}),
   };
 }
 

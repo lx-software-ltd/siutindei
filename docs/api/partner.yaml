@@ -184,6 +184,16 @@ paths:
             type: array
             items:
               type: string
+        - name: include_incomplete
+          in: query
+          required: false
+          description: |
+            When `true`, also return activities of an approved
+            organization that are missing a price, a schedule, or both.
+            Same behaviour as public search.
+          schema:
+            type: boolean
+            default: false
         - name: limit
           in: query
           required: false

@@ -68,7 +68,7 @@ describe('fetchStagingActivitySearch', () => {
       );
       expect(item.activity.ageMin).toBeLessThanOrEqual(4);
       expect(item.activity.ageMax).toBeGreaterThanOrEqual(4);
-      expect(item.schedule.languages).toEqual(['en']);
+      expect(item.schedule?.languages).toEqual(['en']);
     }
   });
 
@@ -97,7 +97,7 @@ describe('fetchStagingActivitySearch', () => {
       expect(item.activity.description).toBeNull();
       expect(item.organization.placeId).toBeNull();
       expect(item.organization.mediaUrls.length).toBeLessThanOrEqual(1);
-      expect(item.schedule.weeklyEntries.length).toBeLessThanOrEqual(1);
+      expect(item.schedule?.weeklyEntries.length ?? 0).toBeLessThanOrEqual(1);
     }
   });
 

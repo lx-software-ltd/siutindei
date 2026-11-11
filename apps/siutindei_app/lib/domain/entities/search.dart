@@ -15,8 +15,8 @@ class ActivitySearchResultEntity {
   final ActivityEntity activity;
   final OrganizationEntity organization;
   final LocationEntity location;
-  final PricingEntity pricing;
-  final ScheduleEntity schedule;
+  final PricingEntity? pricing;
+  final ScheduleEntity? schedule;
 
   /// Unique identifier for this search result (uses activity ID).
   String get id => activity.id;

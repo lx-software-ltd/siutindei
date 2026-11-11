@@ -74,6 +74,7 @@ def handle_decision(
     """POST /v1/admin/org-review/{id}/decision."""
     body = _require_object(_parse_body(event))
     action = _require_action(body.get("action"), _DECISIONS)
+    force = _parse_force(body.get("force"))
     org_id = _parse_uuid(resource_id, "id")
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event)
@@ -85,7 +86,7 @@ def handle_decision(
                 session,
                 organization,
                 action,
-                force=_parse_force(body.get("force")),
+                force=force,
                 notes=body.get("notes") if "notes" in body else None,
                 status=body.get("status"),
                 reviewer_sub=_reviewer_sub(event),
@@ -105,7 +106,11 @@ def handle_decision(
         session.refresh(organization)
         logger.info(
             "Organization review decision",
-            extra={"action": action, "org_id": str(organization.id)},
+            extra={
+                "action": action,
+                "org_id": str(organization.id),
+                "forced": force,
+            },
         )
         return json_response(
             200,
@@ -285,7 +290,12 @@ def handle_bulk(event: Mapping[str, Any]) -> dict[str, Any]:
     ok_count = sum(1 for item in results if item["status"] == "ok")
     logger.info(
         "Bulk organization review",
-        extra={"action": action, "count": len(org_ids), "ok": ok_count},
+        extra={
+            "action": action,
+            "count": len(org_ids),
+            "ok": ok_count,
+            "forced": force,
+        },
     )
     return json_response(
         200,

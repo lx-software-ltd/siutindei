@@ -47,6 +47,7 @@ from app.db.queries import (
     ActivitySearchCursor,
     ActivitySearchFilters,
     applied_search_area_scope,
+    build_incomplete_search_query,
     build_search_query,
     category_match_mode,
     search_area_scope_labels,
@@ -168,6 +169,7 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
         limit=limit,
         q=first_param(params, "q"),
         view=first_param(params, "view"),
+        include_incomplete=first_param(params, "include_incomplete"),
     )
 
     return ActivitySearchFilters(
@@ -190,6 +192,7 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
         limit=limit,
         text_query=validated.text_query,
         view=validated.view,
+        include_incomplete=validated.include_incomplete,
     )
 
 
@@ -210,46 +213,115 @@ def fetch_search_response(
         return fetch_staging_search_response(filters)
 
     engine = get_engine()
-    requested_limit = filters.limit
-    query_filters = replace(filters, limit=requested_limit + 1)
-    query = build_search_query(query_filters).options(
-        selectinload(ActivitySchedule.entries)
-    )
-
     with Session(engine) as session:
-        rows = session.execute(query).all()
+        rows, next_cursor = _load_search_rows(session, filters)
         region_cache = _load_region_area_cache(session)
         match_mode = category_match_mode(
             session,
             filters.category_ids,
             applied_search_area_scope(filters),
         )
-
-    has_more = len(rows) > requested_limit
-    trimmed_rows = rows[:requested_limit]
-    include_place_id = filters.activity_id is not None
-    items = [
-        map_row_to_result(
-            row,
-            region_cache,
-            include_place_id=include_place_id,
-            view=filters.view,
-        )
-        for row in trimmed_rows
-    ]
-    next_cursor = None
-    if has_more and trimmed_rows:
-        last_row = trimmed_rows[-1]
-        schedule = last_row._mapping[ActivitySchedule]
-        order_day = last_row._mapping["order_day_of_week"]
-        order_start = last_row._mapping["order_start_minutes"]
-        next_cursor = _encode_cursor(order_day, order_start, schedule.id)
+        include_place_id = filters.activity_id is not None
+        items = [
+            map_row_to_result(
+                row,
+                region_cache,
+                include_place_id=include_place_id,
+                view=filters.view,
+            )
+            for row in rows
+        ]
     return ActivitySearchResponseSchema(
         items=items,
         next_cursor=next_cursor,
         category_match=match_mode,
         area_scope=search_area_scope_labels(),
     )
+
+
+def _load_search_rows(
+    session: Session,
+    filters: ActivitySearchFilters,
+) -> tuple[list[Any], str | None]:
+    """Complete rows first, then approved rows missing a price or schedule."""
+
+    requested = filters.limit
+    phase = filters.cursor.phase if filters.cursor is not None else "complete"
+    loaded = selectinload(ActivitySchedule.entries)
+    if phase == "incomplete":
+        return _incomplete_page(
+            session,
+            filters,
+            requested,
+            after_activity_id=(
+                filters.cursor.activity_id if filters.cursor is not None else None
+            ),
+            loaded=loaded,
+        )
+
+    complete_filters = replace(filters, limit=requested + 1)
+    complete_rows = list(
+        session.execute(build_search_query(complete_filters).options(loaded)).all()
+    )
+    if len(complete_rows) > requested:
+        page = complete_rows[:requested]
+        last_row = page[-1]
+        schedule = last_row._mapping[ActivitySchedule]
+        return page, _encode_complete_cursor(
+            last_row._mapping["order_day_of_week"],
+            last_row._mapping["order_start_minutes"],
+            schedule.id,
+        )
+    if not filters.include_incomplete:
+        return complete_rows, None
+    remaining = requested - len(complete_rows)
+    if remaining == 0:
+        probe, _probe_cursor = _incomplete_page(
+            session,
+            filters,
+            1,
+            after_activity_id=None,
+            loaded=loaded,
+        )
+        if not probe:
+            return complete_rows, None
+        return complete_rows, _encode_incomplete_cursor(None)
+    extra, extra_cursor = _incomplete_page(
+        session,
+        filters,
+        remaining,
+        after_activity_id=None,
+        loaded=loaded,
+    )
+    return [*complete_rows, *extra], extra_cursor
+
+
+def _incomplete_page(
+    session: Session,
+    filters: ActivitySearchFilters,
+    limit: int,
+    *,
+    after_activity_id: UUID | None,
+    loaded: Any,
+) -> tuple[list[Any], str | None]:
+    """One page of approved activities that lack a price or a schedule."""
+
+    if limit <= 0:
+        return [], None
+    query_filters = replace(filters, limit=limit + 1)
+    rows = list(
+        session.execute(
+            build_incomplete_search_query(
+                query_filters,
+                after_activity_id=after_activity_id,
+            ).options(loaded)
+        ).all()
+    )
+    if len(rows) <= limit:
+        return rows, None
+    page = rows[:limit]
+    activity = page[-1]._mapping[Activity]
+    return page, _encode_incomplete_cursor(activity.id)
 
 
 def map_row_to_result(
@@ -264,8 +336,8 @@ def map_row_to_result(
     activity: Activity = mapping[Activity]
     organization: Organization = mapping[Organization]
     location: Location = mapping[Location]
-    pricing: ActivityPricing = mapping[ActivityPricing]
-    schedule: ActivitySchedule = mapping[ActivitySchedule]
+    pricing: ActivityPricing | None = mapping[ActivityPricing]
+    schedule: ActivitySchedule | None = mapping[ActivitySchedule]
 
     age_min, age_max = inclusive_age_bounds(activity.age_range)
     card = view == "card"
@@ -332,19 +404,27 @@ def map_row_to_result(
             lng=location.lng,
             status=location.status,
         ),
-        pricing=PricingSchema(
-            pricing_type=pricing.pricing_type.value,
-            amount=pricing.amount,
-            currency=pricing.currency,
-            sessions_count=pricing.sessions_count,
-            free_trial_class_offered=pricing.free_trial_class_offered,
+        pricing=(
+            None
+            if pricing is None
+            else PricingSchema(
+                pricing_type=pricing.pricing_type.value,
+                amount=pricing.amount,
+                currency=pricing.currency,
+                sessions_count=pricing.sessions_count,
+                free_trial_class_offered=pricing.free_trial_class_offered,
+            )
         ),
-        schedule=ScheduleSchema(
-            schedule_type=schedule.schedule_type.value,
-            weekly_entries=_serialize_weekly_entries(
-                schedule, limit=1 if card else None
-            ),
-            languages=schedule.languages or [],
+        schedule=(
+            None
+            if schedule is None
+            else ScheduleSchema(
+                schedule_type=schedule.schedule_type.value,
+                weekly_entries=_serialize_weekly_entries(
+                    schedule, limit=1 if card else None
+                ),
+                languages=schedule.languages or [],
+            )
         ),
     )
 
@@ -465,6 +545,18 @@ def _parse_cursor(value: str | None) -> ActivitySearchCursor | None:
         return None
     try:
         payload = _decode_cursor(value)
+        phase = str(payload.get("phase") or "complete")
+        if phase == "incomplete":
+            raw_activity = payload.get("activity_id")
+            return ActivitySearchCursor(
+                day_of_week_utc=0,
+                start_minutes_utc=0,
+                schedule_id=UUID(int=0),
+                phase="incomplete",
+                activity_id=UUID(str(raw_activity)) if raw_activity else None,
+            )
+        if phase != "complete":
+            raise CursorError("Malformed cursor payload")
         return ActivitySearchCursor(
             day_of_week_utc=payload["day_of_week_utc"],
             start_minutes_utc=payload["start_minutes_utc"],
@@ -479,15 +571,41 @@ def _encode_cursor(
     start_minutes_utc: int,
     schedule_id: UUID,
 ) -> str:
-    """Encode a pagination cursor."""
-    payload = json.dumps(
+    """Encode a schedule cursor. Kept for callers of the previous helper."""
+    return _encode_complete_cursor(day_of_week_utc, start_minutes_utc, schedule_id)
+
+
+def _encode_complete_cursor(
+    day_of_week_utc: int,
+    start_minutes_utc: int,
+    schedule_id: UUID,
+) -> str:
+    """Encode a cursor that continues the schedule-ordered rows."""
+    return _encode_cursor_payload(
         {
+            "phase": "complete",
             "schedule_id": str(schedule_id),
             "day_of_week_utc": day_of_week_utc,
             "start_minutes_utc": start_minutes_utc,
         }
-    ).encode("utf-8")
-    encoded = base64.urlsafe_b64encode(payload).decode("utf-8")
+    )
+
+
+def _encode_incomplete_cursor(activity_id: UUID | None) -> str:
+    """Encode a cursor that continues the approved incomplete rows."""
+    return _encode_cursor_payload(
+        {
+            "phase": "incomplete",
+            "activity_id": None if activity_id is None else str(activity_id),
+        }
+    )
+
+
+def _encode_cursor_payload(payload: Mapping[str, Any]) -> str:
+    """Encode a pagination cursor."""
+    encoded = base64.urlsafe_b64encode(json.dumps(payload).encode("utf-8")).decode(
+        "utf-8"
+    )
     return encoded.rstrip("=")
 
 

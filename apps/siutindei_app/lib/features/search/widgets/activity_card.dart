@@ -277,17 +277,19 @@ class _ActivityCardTags extends StatelessWidget {
       spacing: 6,
       runSpacing: 6,
       children: [
-        for (final lang in result.schedule.languages.take(3))
-          BaseBadge(label: lang.toUpperCase()),
+        if (result.schedule != null)
+          for (final lang in result.schedule!.languages.take(3))
+            BaseBadge(label: lang.toUpperCase()),
         if (result.location.status == 'temporarily_closed')
           const BaseBadge(
             label: 'Temporarily closed',
             variant: BadgeVariant.warning,
           ),
-        BaseBadge(
-          label: _getPricingTypeLabel(result.pricing.type),
-          variant: BadgeVariant.success,
-        ),
+        if (result.pricing != null)
+          BaseBadge(
+            label: _getPricingTypeLabel(result.pricing!.type),
+            variant: BadgeVariant.success,
+          ),
       ],
     );
   }
@@ -335,7 +337,7 @@ class _AgeTag extends StatelessWidget {
 class _ScheduleInfo extends StatelessWidget {
   const _ScheduleInfo({required this.schedule, required this.tokens});
 
-  final ScheduleEntity schedule;
+  final ScheduleEntity? schedule;
   final ActivityCardTokens tokens;
 
   @override
@@ -360,24 +362,28 @@ class _ScheduleInfo extends StatelessWidget {
   }
 
   String _formatSchedule() {
+    final current = schedule;
+    if (current == null) {
+      return 'Schedule to be confirmed';
+    }
     final parts = <String>[];
 
     // Day of week or month
-    final dayName = schedule.dayOfWeekName;
+    final dayName = current.dayOfWeekName;
     if (dayName != null) {
       parts.add(dayName.substring(0, 3)); // Short name
-    } else if (schedule.dayOfMonth != null) {
-      parts.add('Day ${schedule.dayOfMonth}');
+    } else if (current.dayOfMonth != null) {
+      parts.add('Day ${current.dayOfMonth}');
     }
 
     // Time
-    final timeStr = schedule.formattedTime;
+    final timeStr = current.formattedTime;
     if (timeStr != null) {
       parts.add(timeStr);
     }
 
     if (parts.isEmpty) {
-      return switch (schedule.type) {
+      return switch (current.type) {
         ScheduleType.dateSpecific => 'One-time event',
         _ => 'See details',
       };
@@ -391,7 +397,7 @@ class _ScheduleInfo extends StatelessWidget {
 class _PriceTag extends StatelessWidget {
   const _PriceTag({required this.pricing, required this.tokens});
 
-  final PricingEntity pricing;
+  final PricingEntity? pricing;
   final PriceTagTokens tokens;
 
   @override
@@ -410,7 +416,7 @@ class _PriceTag extends StatelessWidget {
           vertical: tokens.paddingVertical,
         ),
         child: Text(
-          pricing.formattedPrice,
+          pricing?.formattedPrice ?? 'Price on request',
           style: TextStyle(
             fontSize: tokens.fontSize,
             fontWeight: tokens.fontWeight,

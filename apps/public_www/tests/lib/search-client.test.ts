@@ -41,6 +41,7 @@ describe('buildActivitySearchRequest', () => {
     expect(parsed.searchParams.get('activity_id')).toBe('act-1');
     expect(parsed.searchParams.get('cursor')).toBe('cursor-token');
     expect(parsed.searchParams.get('limit')).toBe('10');
+    expect(parsed.searchParams.get('include_incomplete')).toBe('true');
     expect(parsed.searchParams.getAll('category_id')).toEqual([
       'c1111111-1111-1111-1111-111111111101',
     ]);
@@ -91,7 +92,9 @@ describe('fetchActivitySearch live API integration', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('https://siutindei.com/v1/activities/search?limit=10');
+    expect(url).toBe(
+      'https://siutindei.com/v1/activities/search?include_incomplete=true&limit=10',
+    );
     expect(init.headers).toMatchObject({
       'x-api-key': 'key',
       'x-device-attestation': 'token',
@@ -125,7 +128,7 @@ describe('fetchActivitySearch live API integration', () => {
 
     const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe(
-      'https://www-staging.example.com/v1/activities/search?limit=1',
+      'https://www-staging.example.com/v1/activities/search?include_incomplete=true&limit=1',
     );
   });
 });
