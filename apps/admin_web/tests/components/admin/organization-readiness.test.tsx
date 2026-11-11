@@ -74,6 +74,11 @@ describe('OrganizationReadiness', () => {
     expect(
       await screen.findByRole('heading', { name: 'Readiness' })
     ).toBeVisible();
+    expect(
+      screen.getByText(
+        /Public search only includes organizations that have been approved/
+      )
+    ).toBeVisible();
     expect(screen.getByTestId('admin-editor-panel')).toBeInTheDocument();
     expect(screen.getByTestId('admin-input-card-bar')).toContainElement(
       screen.getByRole('button', { name: 'Approve' })

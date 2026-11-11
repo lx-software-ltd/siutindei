@@ -107,6 +107,40 @@ void main() {
     );
   });
 
+  test('chipOptions hides areas outside the allowed neighbourhoods', () {
+    final index = GeographicAreaTreeIndex.fromRoots([
+      _node(
+        id: 'country',
+        name: 'Hong Kong',
+        children: [
+          _node(
+            id: 'kowloon',
+            parentId: 'country',
+            name: 'Kowloon',
+            children: [
+              _node(id: 'mk', parentId: 'kowloon', name: 'Mong Kok'),
+              _node(id: 'kt', parentId: 'kowloon', name: 'Kennedy Town'),
+            ],
+          ),
+          _node(id: 'island', parentId: 'country', name: 'Island'),
+        ],
+      ),
+    ]);
+    const allowed = {'mk'};
+    expect(
+      index.chipOptions(allowedAreaIds: allowed).map((area) => area.name),
+      ['Kowloon'],
+    );
+    expect(
+      index
+          .chipOptions(selectedAreaId: 'kowloon', allowedAreaIds: allowed)
+          .map((area) => area.name),
+      ['Mong Kok'],
+    );
+    expect(index.intersectsAllowed('island', allowed), isFalse);
+    expect(index.intersectsAllowed('kowloon', allowed), isTrue);
+  });
+
   test('backTarget clears single-country first level selection', () {
     final index = GeographicAreaTreeIndex.fromRoots([
       _node(

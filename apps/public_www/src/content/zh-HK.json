@@ -20,6 +20,8 @@
       "activityTypes": "活動類型",
       "search": "搜尋活動",
       "anywhere": "全港",
+      "allAreas": "所有地區",
+      "noAreas": "暫時未有開放地區",
       "anyAge": "任何年齡",
       "anyType": "所有類型",
       "openMapForAreaLabel": "在地圖上顯示"
@@ -32,7 +34,12 @@
       "childAgeLabel": "子女年齡",
       "activityTypesLabel": "活動類型",
       "searchLabel": "搜尋",
-      "allHongKongLabel": "全港"
+      "allHongKongLabel": "全港",
+      "allAreasLabel": "所有地區",
+      "regionUnavailableLabel": "即將推出",
+      "onlyRegionOpenTemplate": "而家只開放{region}",
+      "allOpenAreasInRegionTemplate": "{region}所有開放地區",
+      "noAreasOpenLabel": "暫時未有開放地區"
     },
     "languageSelector": {
       "menuAriaLabel": "選擇語言",
@@ -157,8 +164,14 @@
     "navigator": {
       "buttonLabel": "幫我為小朋友搵活動！",
       "allHongKongLabel": "全港",
+      "allAreasLabel": "所有地區",
+      "regionUnavailableLabel": "即將推出",
+      "onlyRegionOpenTemplate": "而家只開放{region}",
+      "allOpenAreasInRegionTemplate": "{region}所有開放地區",
+      "noAreasOpenLabel": "暫時未有開放地區",
       "anywhereInRegionTemplate": "{region}任何地方",
       "backLabel": "返回",
+      "continueLabel": "繼續",
       "seeActivitiesLabel": "查看活動",
       "stepProgressTemplate": "第 {current} 步，共 {total} 步",
       "steps": {
@@ -186,6 +199,12 @@
     "continueSearchingTitle": "繼續搜尋",
     "recentlyViewedTitle": "最近瀏覽",
     "popularTitle": "香港熱門活動",
+    "popularInPlaceTemplate": "{place}熱門活動",
+    "popularOpenAreasTitle": "開放地區熱門活動",
+    "placeListComma": "、",
+    "placePairTemplate": "{first}及{second}",
+    "placeFinalTemplate": "{list}及{last}",
+    "noAreasOpenLabel": "暫時未有開放地區",
     "nearRegionTitle": "活動 —",
     "parentVerifiedLabel": "家長認證",
     "freeTrialLabel": "免費試堂",
@@ -202,6 +221,7 @@
     "listViewLabel": "列表",
     "mapViewLabel": "地圖",
     "emptyLabel": "沒有符合的活動，請嘗試其他篩選。",
+    "areaAdjustedLabel": "所選地區尚未開放，已改為顯示已開放地區的活動。",
     "unsortedCategoryLabel": "這些活動尚未分類到所選類別，目前仍沿用先前的分類。",
     "errorLabel": "無法載入活動。",
     "loadMoreLabel": "載入更多",

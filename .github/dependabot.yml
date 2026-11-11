@@ -55,15 +55,11 @@ updates:
       # Ignore major version updates - review manually
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
-      # aws-cdk-lib 2.275.0 bundles minimatch 10.2.6 (inBundle).
-      # GHSA-g3hv-75wg-m249 / CVE-2026-118764 is fixed only in 11.0.1+,
-      # and security updates ignore the semver-major rule above.
-      # Dependabot then fails with security_update_not_possible:
-      # aws-cdk-lib requires ^10.2.6 and cannot rewrite the tarball
-      # (jobs 1688359195 and 1688361605). Runtime is patched by
-      # postinstall. Revisit when aws-cdk-lib bundles minimatch 11
-      # (aws/aws-cdk#39595).
-      - dependency-name: "minimatch"
+      # Do not ignore minimatch here. aws-cdk-lib still bundles 10.2.6,
+      # but postinstall records the patched 11.x version in the lockfile.
+      # A dependency-name ignore expands to >= 0 and applies to security
+      # updates, which then fail the job with all_versions_ignored
+      # (update 1692171577) before Dependabot notices the patched version.
 
   # NPM - public marketing site
   - package-ecosystem: "npm"

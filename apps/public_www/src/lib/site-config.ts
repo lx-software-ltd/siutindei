@@ -13,6 +13,7 @@ export interface SearchConfig {
   readonly apiBaseUrl: string;
   readonly apiKey: string;
   readonly attestationToken: string;
+  readonly searchAreaScope: string;
 }
 
 export interface SiteConfig {
@@ -87,13 +88,15 @@ export function getSearchConfig(): SearchConfig {
     || (stagingSearchDataEnabled && siteOrigin
       ? `${siteOrigin}/fixtures/activity_search_staging.json`
       : '');
+  const explicitApiBaseUrl = trimEnv(process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL);
 
   return {
     stagingSearchDataEnabled,
     stagingSearchFixtureUrl,
-    apiBaseUrl: trimEnv(process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL),
+    apiBaseUrl: explicitApiBaseUrl || siteOrigin,
     apiKey: trimEnv(process.env.NEXT_PUBLIC_SEARCH_API_KEY),
     attestationToken: trimEnv(process.env.NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN),
+    searchAreaScope: trimEnv(process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE),
   };
 }
 

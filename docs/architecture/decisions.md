@@ -310,13 +310,15 @@ Lambdas or NAT Gateway.
   (GHSA-rgw5-rvv9-x895). The infrastructure `postinstall` script still
   replaces the older bundled `minimatch` copy; it does not patch
   `brace-expansion`.
-- `minimatch` is ignored in `/backend/infrastructure` Dependabot
-  config. `aws-cdk-lib` 2.275.0 still bundles `minimatch` 10.2.6
-  (`inBundle`), and GHSA-g3hv-75wg-m249 is fixed only in 11.0.1+.
-  Security updates ignore the repo-wide semver-major rule, then fail
-  with `security_update_not_possible` because `aws-cdk-lib` requires
-  `^10.2.6`. Runtime is patched by `postinstall`. Revisit when
-  `aws-cdk-lib` bundles minimatch 11 (aws/aws-cdk#39595).
+- `minimatch` is not ignored in `/backend/infrastructure`.
+  `aws-cdk-lib` 2.275.0 still bundles `minimatch` 10.2.6 (`inBundle`),
+  and GHSA-g3hv-75wg-m249 is fixed only in 11.0.1+. A dependency-name
+  ignore expands to `>= 0`, applies to security updates, and fails the
+  job with `all_versions_ignored` (update 1692171577) before Dependabot
+  can see a patched install. `postinstall` copies 11.x over the bundled
+  tree and writes that version into the lockfile entry Dependabot and
+  `npm audit` read. Revisit when `aws-cdk-lib` bundles minimatch 11
+  (aws/aws-cdk#39595).
 - `extract-zip` is ignored in `/apps/public_www` Dependabot config
   (dev-only LHCI transitive). GHSA-jmr9-qjv8-65gv is mitigated via
   `npm overrides` to `@electron-internal/extract-zip` 1.0.5 until
@@ -428,7 +430,8 @@ import raises, so the same object key can be retried.
 Every organization already in the database is backfilled to
 `pending_review`. Public search keeps returning those rows until the
 CDK parameter `OrgReviewGateEnabled` (`ORG_REVIEW_GATE_ENABLED`) is
-`true`. `v_catalog_health` counts approved organizations only, because
+`true`. Production params set that to `true`. `v_catalog_health`
+counts approved organizations only, because
 a SQL view cannot read the Lambda flag. CloudFront caches public
 search for up to 5 minutes, so a release can lag by that long.
 
@@ -643,3 +646,43 @@ presign a leaflet. Pending files are tagged and are not a public read
 until a picture proposal is applied.
 
 Design notes: `docs/plans/leaflet-enrichment.md`.
+
+## 14) Public search area scope
+
+**Decision:** Public activity search can be limited to selected Hong
+Kong neighbourhoods with the GitHub variable `SEARCH_AREA_SCOPE`.
+Unset or blank means every organisation and activity is eligible, which
+is the behaviour before this variable existed. A set value is a
+comma-separated list of wizard region ids, district slugs, and
+neighbourhood slugs. It expands to neighbourhood ids, and public search
+keeps a schedule only when its location is one of those ids. An
+`area_id` query is the intersection of that area and the scope.
+
+Partner search is exempt. A request that passes `activity_id` is
+exempt, so a shared activity link still opens. The response field
+`area_scope` reports the configured neighbourhood ids on the first
+page (null when unrestricted, empty when every slug is unknown),
+including exempt requests. A cursor page omits the field.
+
+The public website reads the same variable at build time. Regions with
+no selected neighbourhood stay focusable and are labelled coming soon.
+Neighbourhoods outside the list are omitted. When the list sits in one
+region, "All areas" is greyed out, because it would mean that region,
+and the neighbourhood list is shown even for a single neighbourhood.
+Submitting that starting choice leaves the area out of the URL and the
+saved search, so a later wider scope still applies. A neighbourhood
+chosen among several is kept. The bars name the open place, and the
+map link uses it. When the scope names no neighbourhood, the wizard
+can still continue. A deep link to a closed area is rewritten
+to that one open region, or to every open area when more than one
+region is open, and the page says so until the query changes. Staging
+fixture search applies the same rule in the browser. The mobile app
+hides area chips that sit outside `area_scope`.
+
+Unknown slugs fail the deploy. At runtime an unknown slug is ignored,
+and a value whose every slug is unknown returns no public results.
+`islands` is both the Islands region id and the Islands district slug;
+both name the same neighbourhoods. CloudFront may serve a search
+response for up to 5 minutes after a deploy. Clearing the variable
+requires a backend deploy because an omitted CloudFormation parameter
+would keep the previous list.

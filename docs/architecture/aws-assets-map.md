@@ -577,8 +577,9 @@ resource silently.
 | `MetaGraphApiKey` | String | No | Yes | Meta Graph token for Facebook and Instagram logos. Empty skips social logos |
 | `MetaInstagramUserId` | String | No | No | Instagram professional account id for Business Discovery logos |
 | `BoardCatalogManagerId` | String | No | No | Cognito sub that importer-only tokens must use as `manager_id` (default: empty) |
-| `OrgReviewGateEnabled` | String | No | No | When `true`, public search hides organizations not yet approved (default: `false`) |
-| `OpenRouterApiKey` | String | No | Yes | OpenRouter key stored in Secrets Manager (default: empty) |
+| `OrgReviewGateEnabled` | String | No | No | When `true`, public search hides organizations not yet approved (CDK default: `false`; `params/production.json` sets `true`) |
+| `SearchAreaScope` | String | No | No | Comma-separated region, district, and neighbourhood slugs. Empty leaves public search unrestricted (GitHub variable `SEARCH_AREA_SCOPE`) |
+| `OpenRouterApiKey` | String | No | Yes | OpenRouter key stored in Secrets Manager (default: `pending`) |
 | `OpenRouterChatCompletionsUrl` | String | No | No | Chat completions URL allowed on the HTTP proxy |
 | `OpenRouterModel` | String | No | No | Default model when admin settings leave the model blank |
 
@@ -660,7 +661,7 @@ tables, etc.).
 
 Tags are **not guaranteed** on the following:
 
-- Resource types that do not support tagging.
+- Resource types that do not support tagging. The RDS proxy target group is one of these. CDK still emits `Tags`, and that property stays so a deploy does not update the live group. The validator finding is acknowledged on that resource.
 - Imported or existing resources (for example, an existing VPC, DB
   cluster, security groups, or the API access log group).
 - Resources created outside the stack lifecycle, such as Lambda log

@@ -12,19 +12,24 @@ import {
 
 import type { Locale } from '@/content/locales';
 import type { SiteContent } from '@/content/types';
+import { formatContentTemplate } from '@/content/content-field-utils';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { ListingCarouselSection } from '@/components/sections/listings/listing-carousel-section';
-import { buildSearchHref, regionIdForAreaId } from '@/lib/activities/map-search-url';
+import {
+  buildSearchHref,
+  regionIdForAreaId,
+  regionIdForListing,
+} from '@/lib/activities/map-search-url';
 import {
   DISCOVERY_HOME_SEARCH_LIMIT,
   DISCOVERY_RECENT_SEARCH_LIMIT,
 } from '@/lib/activities/search-limits';
 import { useActivitySearch } from '@/lib/activities/search/use-activity-search';
-import type { SearchFiltersState } from '@/lib/activities/search-params';
 import {
-  groupListingsByRegion,
-  sortListingsForDiscovery,
-} from '@/lib/activities/listing-utils';
+  placeLabelForFilters,
+  type SearchFiltersState,
+} from '@/lib/activities/search-params';
+import { sortListingsForDiscovery } from '@/lib/activities/listing-utils';
 import {
   getRecentSearchServerSnapshot,
   getRecentSearchSnapshot,
@@ -32,7 +37,17 @@ import {
   subscribeRecentSearch,
 } from '@/lib/activities/recent-storage';
 import type { ActivityListing } from '@/lib/activities/types';
-import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
+import {
+  homeWizardChoices,
+  labelForLocale,
+  REGIONS_BY_ID,
+} from '@/lib/home-wizard/choices';
+import {
+  joinPlaceNames,
+  namedOpenPlace,
+  namedOpenPlaceInRegion,
+  type PlaceListCopy,
+} from '@/lib/home-wizard/area-scope';
 
 interface DiscoveryHomeSectionProps {
   readonly locale: Locale;
@@ -44,6 +59,14 @@ interface CardLabels {
   readonly freeTrial: string;
   readonly imageFallback: string;
   readonly mapAlt: string;
+}
+
+function placeListCopy(copy: SiteContent['discovery']): PlaceListCopy {
+  return {
+    comma: copy.placeListComma,
+    pairTemplate: copy.placePairTemplate,
+    finalTemplate: copy.placeFinalTemplate,
+  };
 }
 
 function DeferredCarousel({
@@ -169,9 +192,15 @@ function RegionCarousel({
   const region = homeWizardChoices.regions.find(
     (entry) => entry.areaId === regionKey,
   );
-  const title = region
-    ? `${copy.nearRegionTitle} ${labelForLocale(region.labels, locale)}`
-    : copy.nearRegionTitle;
+  const regionName = region ? labelForLocale(region.labels, locale) : '';
+  const named = region
+    ? namedOpenPlaceInRegion(region.id, locale)
+    : { kind: 'unrestricted' as const };
+  const place =
+    named.kind === 'named'
+      ? joinPlaceNames(named.names, placeListCopy(copy))
+      : regionName;
+  const title = place ? `${copy.nearRegionTitle} ${place}` : copy.nearRegionTitle;
   const listings = search.items.length > 0 ? search.items : seed;
   return (
     <DeferredCarousel active={false} onVisible={show}>
@@ -191,6 +220,7 @@ function RegionCarousel({
 
 export function DiscoveryHomeSection({ locale, copy }: DiscoveryHomeSectionProps) {
   const { filters } = useSearchContext();
+  const openPlace = namedOpenPlace(locale);
   const recentSearchFilters = useSyncExternalStore(
     subscribeRecentSearch,
     getRecentSearchSnapshot,
@@ -201,6 +231,7 @@ export function DiscoveryHomeSection({ locale, copy }: DiscoveryHomeSectionProps
     locale,
     pageSize: DISCOVERY_HOME_SEARCH_LIMIT,
     view: 'card',
+    enabled: openPlace.kind !== 'none',
   });
 
   const listings = useMemo(
@@ -217,7 +248,20 @@ export function DiscoveryHomeSection({ locale, copy }: DiscoveryHomeSectionProps
     [listings, viewedIds],
   );
   const popularListings = useMemo(() => listings.slice(0, 12), [listings]);
-  const regionGroups = useMemo(() => groupListingsByRegion(listings), [listings]);
+  const regionGroups = useMemo(() => {
+    const groups = new Map<string, ActivityListing[]>();
+    for (const listing of listings) {
+      const regionId = regionIdForListing(listing);
+      const areaId = regionId ? REGIONS_BY_ID.get(regionId)?.areaId : null;
+      if (!areaId) {
+        continue;
+      }
+      const bucket = groups.get(areaId) ?? [];
+      bucket.push(listing);
+      groups.set(areaId, bucket);
+    }
+    return groups;
+  }, [listings]);
 
   const cardLabels = {
     parentVerified: copy.parentVerifiedLabel,
@@ -235,13 +279,33 @@ export function DiscoveryHomeSection({ locale, copy }: DiscoveryHomeSectionProps
   }
 
   const regionEntries = [...regionGroups.entries()];
+  if (openPlace.kind === 'none') {
+    return (
+      <p
+        role="status"
+        className="mx-auto max-w-3xl px-4 py-12 text-center text-ink-700"
+      >
+        {copy.noAreasOpenLabel}
+      </p>
+    );
+  }
+  const selectedPlace = placeLabelForFilters(filters, locale);
+  const popularTitle = selectedPlace
+    ? formatContentTemplate(copy.popularInPlaceTemplate, { place: selectedPlace })
+    : openPlace.kind === 'named'
+      ? formatContentTemplate(copy.popularInPlaceTemplate, {
+          place: joinPlaceNames(openPlace.names, placeListCopy(copy)),
+        })
+      : openPlace.kind === 'generic'
+        ? copy.popularOpenAreasTitle
+        : copy.popularTitle;
 
   return (
     <div className="bg-white">
       <DeferredCarousel active>
         <ListingCarouselSection
           locale={locale}
-          title={copy.popularTitle}
+          title={popularTitle}
           searchHref={buildSearchHref(locale, filters)}
           seeAllLabel={copy.carousel.seeAllLabel}
           listings={popularListings}
@@ -273,18 +337,20 @@ export function DiscoveryHomeSection({ locale, copy }: DiscoveryHomeSectionProps
           cardLabels={cardLabels}
         />
       ) : null}
-      {regionEntries.map(([regionKey, seed], index) => (
-        <RegionCarousel
-          key={regionKey}
-          locale={locale}
-          copy={copy}
-          filters={filters}
-          regionKey={regionKey}
-          seed={seed}
-          cardLabels={cardLabels}
-          sectionIndex={index + 3}
-        />
-      ))}
+      {regionEntries.length > 1
+        ? regionEntries.map(([regionKey, seed], index) => (
+            <RegionCarousel
+              key={regionKey}
+              locale={locale}
+              copy={copy}
+              filters={filters}
+              regionKey={regionKey}
+              seed={seed}
+              cardLabels={cardLabels}
+              sectionIndex={index + 3}
+            />
+          ))
+        : null}
     </div>
   );
 }

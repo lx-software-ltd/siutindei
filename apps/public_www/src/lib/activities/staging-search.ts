@@ -1,3 +1,4 @@
+import { stagingScopeAreaIds } from '@/lib/home-wizard/area-scope';
 import { getSearchConfig, getSiteConfig } from '@/lib/site-config';
 
 import { hideImportTemplateCopy } from './description-boilerplate';
@@ -162,6 +163,11 @@ function matchesItem(
   areaDescendants: Record<string, string[]>,
 ): boolean {
   if (params.activityId && item.activity.id !== params.activityId) {
+    return false;
+  }
+
+  const scope = params.activityId ? null : stagingScopeAreaIds();
+  if (scope && !scope.has(item.location.area_id)) {
     return false;
   }
 

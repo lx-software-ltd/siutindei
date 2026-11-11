@@ -108,8 +108,12 @@ On the **production** environment:
   `python3 -c "import secrets; print(secrets.token_urlsafe(48))"` and store
   each value once. The promote workflow reads the attestation token from
   `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`; do not create a second copy.
-  Also set variable `NEXT_PUBLIC_SEARCH_API_BASE_URL` to `https://siutindei.com`
-  and secret `NEXT_PUBLIC_SEARCH_API_KEY` to the live mobile search API key.
+  Set secret `NEXT_PUBLIC_SEARCH_API_KEY` to the live mobile search API key.
+  Search calls the website origin from `NEXT_PUBLIC_SITE_ORIGIN`. Delete
+  the `NEXT_PUBLIC_SEARCH_API_BASE_URL` repository variable once that
+  behavior is on `main`. Promote checks out `main` and no longer reads the
+  variable. Leave it in place while `main` still passes it into the build.
+  A local `.env` may still set it to call a different origin.
 - The website attestation parameters default to empty. A backend deploy
   before those two secrets exist succeeds and leaves website search closed.
   Set the secrets, deploy the API stack and the public website stack, then
@@ -133,18 +137,28 @@ On the **production** environment:
   deploy workflow skips empty values unless the parameter is in
   `pass_empty_params`.
 - Variables: `APPLE_TEAM_ID`, `CDK_PARAM_FILE` pointing at
-  `params/production.json`.
+  `params/production.json`. `SEARCH_AREA_SCOPE` is optional. Leave it
+  unset to show every Hong Kong neighbourhood. Set a comma-separated
+  list of region ids, district slugs, and neighbourhood slugs to limit
+  public search. The same variable is read by the backend deploy and
+  by the public website build, so set it at repository level or on
+  both the production and staging environments. Clearing it takes
+  effect on the next backend deploy because `SearchAreaScope` is
+  passed even when empty. A website promote or staging deploy is
+  also required before the search controls match.
 
 On the **staging** environment (public www):
 
 - `STAGING_SEARCH_DATA_ENABLED=true` only while staging should serve the
   fixture. Removing the variable keeps the fixture on, because the workflow
-  defaults it to `true`. **To exercise the live API before launch, set it to
-  `false` and first add `NEXT_PUBLIC_SEARCH_API_BASE_URL`,
-  `NEXT_PUBLIC_SEARCH_API_KEY`, and `NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN` to
-  the staging workflow's assert and build steps**, or the build-env
-  contract fails. This also drops the staging-only
-  `/[locale]/activity/<uuid>/` pages.
+  defaults it to `true`. It may live as a repository variable; a value on
+  the staging environment overrides it. Set it to `false` to serve Aurora
+  through `https://www-staging.siutindei.com`. Only then does the staging
+  deploy pass `NEXT_PUBLIC_SEARCH_API_KEY` and
+  `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN` into the build and the smoke
+  probe. A fixture build leaves both empty so they are not inlined.
+  Those secrets must be repository secrets, or set on the staging
+  environment as well. The build-env contract fails when either is empty.
 
 ## 6. DNS / certificates
 

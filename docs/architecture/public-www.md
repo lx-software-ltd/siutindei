@@ -142,19 +142,45 @@ Source: [`apps/public_www`](../../apps/public_www).
   entries for
   `maps.googleapis.com` / `maps.gstatic.com`. The search bar **area** label links
   to the map view for the selected region. Search uses browser-side `fetch` to
-  `NEXT_PUBLIC_SEARCH_API_BASE_URL` unless
+  `NEXT_PUBLIC_SITE_ORIGIN` (`/v1/activities/search` on that host) unless
   `NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED=true`, in which case listings are
   loaded at runtime from
   `{NEXT_PUBLIC_SITE_ORIGIN}/fixtures/activity_search_staging.json` (static
   file copied from `shared/fixtures/` during the staging deploy build; canonical
-  source is Git LFS). Controlled only on the **staging** public website build
-  via GitHub Environment variable `STAGING_SEARCH_DATA_ENABLED` (defaults to
-  `true` when unset). Production promote always sets
-  `NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED=false` and uses the live search API
-  / Aurora. Optional override on staging:
+  source is Git LFS). Controlled by the repository variable
+  `STAGING_SEARCH_DATA_ENABLED`. A value on the staging GitHub Environment
+  overrides the repository value. Unset defaults to `true`. Production promote
+  always sets `NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED=false` and uses the
+  live search API / Aurora. `SEARCH_AREA_SCOPE` (GitHub variable, also
+  inlined as `NEXT_PUBLIC_SEARCH_AREA_SCOPE`) limits which regions and
+  neighbourhoods the search panel and home wizard offer. Regions with
+  nothing in the list stay focusable and are labelled coming soon.
+  Neighbourhoods outside it are omitted. When only one region is open,
+  "All areas" is greyed out, that region is the starting choice, and its
+  open neighbourhoods are shown even if there is only one. Submitting
+  that starting choice does not write it into the search URL or the
+  saved search. The bars name the open place, and the map link uses it.
+  A link to a closed region is rewritten to that starting choice. When
+  the scope names no neighbourhood, the wizard can still continue.
+  The home popular heading names up to three places. A fully open
+  region contributes its name; a partly open region contributes its
+  neighbourhood names. A longer list says the open areas. A search that
+  already names a place uses that place instead. A region carousel
+  appears only when the results cover more than one region, and a
+  partly open region with more than three neighbourhoods keeps the
+  region name. When the scope matches nothing, that section says no
+  areas are open yet and does not search.
+  Unset shows every area. The search API enforces the same list; the website
+  copy only changes the controls and, on staging fixture mode, the
+  in-browser filter. A direct activity link still loads. Changing the
+  variable needs a website build and a backend deploy.
+  Optional fixture override on staging:
   `NEXT_PUBLIC_STAGING_SEARCH_FIXTURE_URL`.
-  CSP `connect-src` includes the API origin only when that URL is set at build
-  time (`scripts/inject-csp-meta.mjs`). `src/lib/site-config.ts` reads each
+  Deployed search and listing-event calls stay on the site origin, so CSP
+  `connect-src 'self'` covers them. `NEXT_PUBLIC_SEARCH_API_BASE_URL` is a
+  local override only. Deploy workflows do not set it. When that override
+  is a different origin, the CSP injector adds it to `connect-src`.
+  `src/lib/site-config.ts` reads each
   `NEXT_PUBLIC_*` via static `process.env.NEXT_PUBLIC_FOO` access so Next.js
   inlines values in the client bundle (dynamic `process.env[name]` is empty in
   the browser and breaks search).
@@ -203,9 +229,9 @@ The build is deliberately **gated** by:
 | `assert-build-env-contract.mjs` | Build refuses to run if `NEXT_PUBLIC_SITE_ORIGIN` or `NEXT_PUBLIC_SITE_NAME` is missing. |
 | `audit-assets.mjs` | Flags oversized or executable assets in `public/`. |
 | `audit:deps:prod` | `npm audit --omit=dev --audit-level=high`. Production deps are
-  the gate. Dev `extract-zip` (GHSA-jmr9-qjv8-65gv via `@lhci/cli`) is
-  overridden to `@electron-internal/extract-zip` 1.0.5. `js-yaml` Highs
-  are pinned via `overrides` to 3.15.2 / 4.3.2. |
+  the gate. Dev `extract-zip` (GHSA-jmr9-qjv8-65gv) is overridden to
+  `@electron-internal/extract-zip` 1.0.5. `js-yaml` Highs are pinned
+  via `overrides` to 3.15.2 / 4.3.2 / 5.5.0. |
 | `inject-static-redirects.mjs` | Injects locale redirect fallbacks into the exported unprefixed pages. |
 | `inject-html-lang.mjs` | Sets `<html lang>` per locale folder (`en`, `zh-HK`) for crawlers and no-JS. |
 | `inject-structured-data.mjs` | Adds sitewide WebSite + Organization JSON-LD to the locale home pages. |
@@ -386,16 +412,16 @@ telemetry, not a GA4 pull.
 | Auth | Same public search API key + static device-attestation token. The token is `CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN`. API Gateway accepts it only together with the CloudFront `X-Origin-Verify` secret |
 | Consent | Same `siutindei-analytics-consent` gate as the GTM data layer |
 
-`NEXT_PUBLIC_SEARCH_API_BASE_URL` must be the website origin so ingest is
-same-origin (`connect-src 'self'`). Staging fixture mode does not post.
-
-To route traffic through the edge cache, the website build must point
-`NEXT_PUBLIC_SEARCH_API_BASE_URL` at the website's own origin (e.g.
-`https://siutindei.com`) rather than directly at
-`api.siutindei.com`; `src/lib/activities/search-client.ts`
-resolves `new URL('/v1/activities/search', base)`, which then hits this
-behavior same-origin. With same-origin requests the CSP `connect-src 'self'`
-already covers the call (no API host needs to be added to CSP).
+Search and listing-event calls use `NEXT_PUBLIC_SITE_ORIGIN`, so ingest is
+same-origin (`connect-src 'self'`). A local
+`NEXT_PUBLIC_SEARCH_API_BASE_URL` overrides that origin and is not set in
+deployed builds. Staging fixture mode does not post.
+`src/lib/activities/search-client.ts` resolves
+`new URL('/v1/activities/search', siteOrigin)`, which hits the CloudFront
+behavior on that host. Production's origin is `https://siutindei.com` and
+staging's is `https://www-staging.siutindei.com`. Calling
+`api.siutindei.com` directly would miss the `X-Origin-Verify` header
+CloudFront adds.
 
 **Security/behavioral note:** on a cache **hit** CloudFront serves the cached
 response without re-invoking the origin, so the per-request `x-api-key` /

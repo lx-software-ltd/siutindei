@@ -94,6 +94,11 @@ jobs:
           aws-region: ${{ steps.region.outputs.region }}
           role-session-name: GitHubActions-${{ github.run_id }}
 
+      - name: Validate search area scope
+        env:
+          SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
+        run: python3 scripts/deploy/validate_search_area_scope.py
+
       - name: Install CDK dependencies
         working-directory: backend/infrastructure
         run: npm ci
@@ -195,6 +200,9 @@ jobs:
               "CognitoCustomDomainCertificateArn",
               "ApiCustomDomainName",
               "ApiCustomDomainCertificateArn",
+              # Clearing SEARCH_AREA_SCOPE must reach CloudFormation.
+              # An omitted parameter would keep the previous neighbourhood list.
+              "SearchAreaScope",
           }
 
           def resolve_value(raw: str) -> str:
@@ -257,18 +265,16 @@ jobs:
             fi
           fi
 
-          QUALIFIER_ARGS=()
-          if [ -n "$CDK_BOOTSTRAP_QUALIFIER" ]; then
-            QUALIFIER_ARGS=(--qualifier "$CDK_BOOTSTRAP_QUALIFIER")
-          fi
-
+          # bin/app.ts reads CDK_BOOTSTRAP_QUALIFIER. deploy and destroy
+          # reject --qualifier (it is a bootstrap-only flag) and print
+          # "Unknown option(s): --qualifier".
           IFS=$', \n\t' read -r -a STACK_LIST <<< "$CDK_STACKS"
 
           if [ "${DESTROY_BEFORE_DEPLOY:-false}" = "true" ]; then
             if [ ${#STACK_LIST[@]} -gt 0 ]; then
-              npx cdk destroy --no-notices --force "${QUALIFIER_ARGS[@]}" "${STACK_LIST[@]}"
+              npx cdk destroy --no-notices --force "${STACK_LIST[@]}"
             else
-              npx cdk destroy --no-notices --force "${QUALIFIER_ARGS[@]}" lxsoftware-siutindei
+              npx cdk destroy --no-notices --force lxsoftware-siutindei
             fi
           fi
 
@@ -412,7 +418,7 @@ jobs:
             echo "CDK deploy attempt ${attempt} of ${MAX_CDK_DEPLOY_ATTEMPTS}"
             ATTEMPT_LOG="$(mktemp)"
             npx cdk deploy --no-notices --require-approval never \
-              "${QUALIFIER_ARGS[@]}" "${PARAM_ARGS[@]}" "${STACK_LIST[@]}" \
+              "${PARAM_ARGS[@]}" "${STACK_LIST[@]}" \
               2>&1 | tee "$ATTEMPT_LOG"
             deploy_exit=${PIPESTATUS[0]}
             if [ "$deploy_exit" -eq 0 ]; then
@@ -474,6 +480,7 @@ jobs:
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
           CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD: ${{ secrets.CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD }}
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
           MIGRATIONS_FORCE_RUN_ID: >-
             ${{ github.event.inputs.force_migration_run == 'true' &&
             github.run_id || '' }}

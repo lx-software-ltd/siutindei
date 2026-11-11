@@ -17,9 +17,18 @@ import {
 } from '@/lib/activities/search-params';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
 import {
+  allowedNeighbourhoodsForRegion,
+  getConfiguredSearchAreaScope,
+  isAllAreasSelectable,
+  isRegionSelectable,
+  openRegions,
+  showsNeighbourhoodChoices,
+  withDefaultOpenLocation,
+  withoutImpliedOpenLocation,
+} from '@/lib/home-wizard/area-scope';
+import {
   homeWizardChoices,
   labelForLocale,
-  neighbourhoodsForRegion,
   REGIONS_BY_ID,
 } from '@/lib/home-wizard/choices';
 import {
@@ -48,7 +57,7 @@ function neighbourhoodButtonClass(isSelected: boolean): string {
 type NavigatorStep = 'location' | 'neighbourhood' | 'age' | 'activity';
 
 function stepsFor(regionId: string | null): readonly NavigatorStep[] {
-  if (regionId) {
+  if (showsNeighbourhoodChoices(regionId)) {
     return ['location', 'neighbourhood', 'age', 'activity'];
   }
   return ['location', 'age', 'activity'];
@@ -82,9 +91,10 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   );
 
   const resetNavigator = useCallback(() => {
+    const next = withDefaultOpenLocation(EMPTY_NAVIGATOR_FILTERS);
     setStep('location');
-    setHasSelectedLocation(false);
-    setDraft(EMPTY_NAVIGATOR_FILTERS);
+    setHasSelectedLocation(next.regionId !== null);
+    setDraft(next);
   }, []);
 
   const closeNavigator = useCallback(() => {
@@ -98,13 +108,14 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   }
 
   function selectLocation(regionId: string | null) {
+    const allowed = regionId ? allowedNeighbourhoodsForRegion(regionId) : [];
     setDraft((current) => ({
       ...current,
       regionId,
-      neighbourhoodId: null,
+      neighbourhoodId: allowed.length === 1 ? allowed[0].id : null,
     }));
     setHasSelectedLocation(true);
-    setStep(regionId ? 'neighbourhood' : 'age');
+    setStep(showsNeighbourhoodChoices(regionId) ? 'neighbourhood' : 'age');
   }
 
   function selectNeighbourhood(neighbourhoodId: string | null) {
@@ -130,11 +141,18 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   }
 
   function handleSeeActivities() {
-    setFilters(draft);
-    saveRecentSearch(draft);
+    const submitted = withoutImpliedOpenLocation(draft);
+    setFilters(submitted);
+    saveRecentSearch(submitted);
     closeNavigator();
-    router.push(buildSearchPageHref(locale, draft));
+    router.push(buildSearchPageHref(locale, submitted));
   }
+
+  const areasSelectable = isAllAreasSelectable();
+  const regionsOpen = openRegions();
+  const neighbourhoodChoices = allowedNeighbourhoodsForRegion(draft.regionId);
+  const onlyNeighbourhood =
+    neighbourhoodChoices.length === 1 ? neighbourhoodChoices[0] : undefined;
 
   return (
     <>
@@ -167,10 +185,31 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
             <legend className="sr-only">{copy.steps.location.label}</legend>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
               <ChoiceTile
-                label={copy.allHongKongLabel}
+                label={
+                  getConfiguredSearchAreaScope().restricted
+                    ? copy.allAreasLabel
+                    : copy.allHongKongLabel
+                }
                 iconSrc={ALL_HONG_KONG_ICON_SRC}
                 iconShape="flag"
-                isSelected={hasSelectedLocation && draft.regionId === null}
+                isSelected={
+                  areasSelectable &&
+                  hasSelectedLocation &&
+                  draft.regionId === null
+                }
+                disabled={!areasSelectable}
+                disabledHint={
+                  areasSelectable
+                    ? undefined
+                    : regionsOpen.length === 0
+                      ? copy.noAreasOpenLabel
+                      : formatContentTemplate(copy.onlyRegionOpenTemplate, {
+                          region: regionLabel(
+                            regionsOpen[0]?.id ?? null,
+                            locale,
+                          ),
+                        })
+                }
                 onClick={() => selectLocation(null)}
               />
               {REGION_ROW_ORDER.map((regionId) => {
@@ -179,12 +218,17 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
                 if (!region || !iconSrc) {
                   return null;
                 }
+                const selectable = isRegionSelectable(region.id);
                 return (
                   <ChoiceTile
                     key={region.id}
                     label={labelForLocale(region.labels, locale)}
                     iconSrc={iconSrc}
-                    isSelected={draft.regionId === region.id}
+                    isSelected={selectable && draft.regionId === region.id}
+                    disabled={!selectable}
+                    disabledHint={
+                      selectable ? undefined : copy.regionUnavailableLabel
+                    }
                     onClick={() => selectLocation(region.id)}
                   />
                 );
@@ -198,17 +242,24 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
               {copy.steps.neighbourhood.label}
             </legend>
             <div className="flex max-h-80 flex-wrap gap-2 overflow-y-auto">
-              <button
-                type="button"
-                className={neighbourhoodButtonClass(draft.neighbourhoodId == null)}
-                aria-pressed={draft.neighbourhoodId == null}
-                onClick={() => selectNeighbourhood(null)}
-              >
-                {formatContentTemplate(copy.anywhereInRegionTemplate, {
-                  region: regionLabel(draft.regionId, locale),
-                })}
-              </button>
-              {neighbourhoodsForRegion(draft.regionId).map((neighbourhood) => (
+              {neighbourhoodChoices.length > 1 ? (
+                <button
+                  type="button"
+                  className={neighbourhoodButtonClass(
+                    draft.neighbourhoodId == null,
+                  )}
+                  aria-pressed={draft.neighbourhoodId == null}
+                  onClick={() => selectNeighbourhood(null)}
+                >
+                  {formatContentTemplate(
+                    getConfiguredSearchAreaScope().restricted
+                      ? copy.allOpenAreasInRegionTemplate
+                      : copy.anywhereInRegionTemplate,
+                    { region: regionLabel(draft.regionId, locale) },
+                  )}
+                </button>
+              ) : null}
+              {neighbourhoodChoices.map((neighbourhood) => (
                 <button
                   key={neighbourhood.id}
                   type="button"
@@ -223,6 +274,11 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
               ))}
             </div>
           </fieldset>
+        ) : null}
+        {step === 'location' && regionsOpen.length === 0 ? (
+          <p role="status" className="mt-3 text-sm text-ink-700">
+            {copy.noAreasOpenLabel}
+          </p>
         ) : null}
         {step === 'age' ? (
           <fieldset>
@@ -272,6 +328,24 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
               onClick={goBack}
             >
               {copy.backLabel}
+            </Button>
+          ) : null}
+          {step === 'location' && regionsOpen.length === 0 ? (
+            <Button
+              type="button"
+              className="w-full sm:flex-1"
+              onClick={() => selectLocation(null)}
+            >
+              {copy.continueLabel}
+            </Button>
+          ) : null}
+          {step === 'neighbourhood' && onlyNeighbourhood ? (
+            <Button
+              type="button"
+              className="w-full sm:flex-1"
+              onClick={() => selectNeighbourhood(onlyNeighbourhood.id)}
+            >
+              {copy.continueLabel}
             </Button>
           ) : null}
           {step === 'activity' ? (

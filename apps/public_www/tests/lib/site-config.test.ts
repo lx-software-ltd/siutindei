@@ -108,9 +108,10 @@ describe('getSearchConfig', () => {
       stagingSearchDataEnabled: true,
       stagingSearchFixtureUrl:
         'http://localhost:3000/fixtures/activity_search_staging.json',
-      apiBaseUrl: '',
+      apiBaseUrl: 'http://localhost:3000',
       apiKey: '',
       attestationToken: '',
+      searchAreaScope: '',
     });
   });
 
@@ -122,16 +123,28 @@ describe('getSearchConfig', () => {
     process.env.NEXT_PUBLIC_SITE_ORIGIN = 'https://example.com';
     process.env.NEXT_PUBLIC_STAGING_SEARCH_FIXTURE_URL =
       'https://cdn.example.com/fixture.json';
-    process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL = 'https://api.example.com';
+    delete process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL;
     process.env.NEXT_PUBLIC_SEARCH_API_KEY = 'test-key';
     process.env.NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN = 'test-token';
 
     expect(getSearchConfig()).toEqual({
       stagingSearchDataEnabled: false,
       stagingSearchFixtureUrl: 'https://cdn.example.com/fixture.json',
-      apiBaseUrl: 'https://api.example.com',
+      apiBaseUrl: 'https://example.com',
       apiKey: 'test-key',
       attestationToken: 'test-token',
+      searchAreaScope: '',
     });
+  });
+
+  it('lets a local search base URL override the site origin', () => {
+    for (const key of envKeys) {
+      original[key] = process.env[key];
+    }
+    process.env.NEXT_PUBLIC_SITE_ORIGIN = 'http://localhost:3000';
+    process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL =
+      'https://www-staging.example.com';
+
+    expect(getSearchConfig().apiBaseUrl).toBe('https://www-staging.example.com');
   });
 });

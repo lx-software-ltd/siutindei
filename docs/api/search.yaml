@@ -58,7 +58,11 @@ paths:
         - name: activity_id
           in: query
           required: false
-          description: Return results for a single activity UUID (at most one row).
+          description: |
+            Return results for a single activity UUID (at most one row).
+            A direct lookup is not limited by `SEARCH_AREA_SCOPE`, so an
+            activity page still opens when that activity sits outside the
+            public area list.
           schema:
             type: string
             format: uuid
@@ -331,7 +335,23 @@ components:
             group that still has no activities on its leaves, so the
             results also include activities on the legacy roots. The
             match becomes `exact` once any activity sits on that group
-            or one of its leaves.
+            or one of its leaves. When `SEARCH_AREA_SCOPE` is set, only
+            activities with a schedule in that scope count.
+        area_scope:
+          type: array
+          nullable: true
+          items:
+            type: string
+            format: uuid
+          description: |
+            Neighbourhood ids the deployment limits public search to.
+            Present on the first page only. Null when `SEARCH_AREA_SCOPE`
+            is unset, which leaves search unrestricted. An empty array
+            means the variable is set but names no neighbourhood, so
+            public search returns nothing. A request that passes `cursor`
+            omits this field; clients keep the list from the first page.
+            The list is informational on `activity_id` lookups and on
+            partner search: those requests are not filtered by it.
     ActivitySearchResult:
       type: object
       required: [activity, organization, location, pricing, schedule]

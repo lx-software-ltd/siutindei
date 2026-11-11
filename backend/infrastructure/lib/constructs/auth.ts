@@ -196,7 +196,7 @@ export class AuthConstruct extends Construct {
 
     // Add dependencies on identity providers
     for (const provider of providers) {
-      this.userPoolClient.addDependency(provider);
+      this.userPoolClient.addResourceDependency(provider);
     }
 
     const groupNames = props.userGroups ?? [this.adminGroupName];

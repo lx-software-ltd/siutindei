@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { Locale } from '@/content/locales';
+import { formatContentTemplate } from '@/content/content-field-utils';
 import { Button } from '@/components/shared/ui/button';
 import { Modal } from '@/components/shared/ui/modal';
 import { useSearchContext } from '@/components/shared/search/search-context';
@@ -13,11 +14,21 @@ import {
   type SearchFiltersState,
 } from '@/lib/activities/search-params';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
+import {
+  allowedNeighbourhoodsForRegion,
+  getConfiguredSearchAreaScope,
+  isAllAreasSelectable,
+  isRegionSelectable,
+  openRegions,
+  sanitizeSearchFilters,
+  showsNeighbourhoodChoices,
+  withDefaultOpenLocation,
+  withoutImpliedOpenLocation,
+} from '@/lib/home-wizard/area-scope';
 import { REGIONS_BY_ID } from '@/lib/home-wizard/choices';
 import {
   homeWizardChoices,
   labelForLocale,
-  neighbourhoodsForRegion,
 } from '@/lib/home-wizard/choices';
 import {
   ALL_HONG_KONG_ICON_SRC,
@@ -37,6 +48,56 @@ interface SearchPanelCopy {
   readonly activityTypesLabel: string;
   readonly searchLabel: string;
   readonly allHongKongLabel: string;
+  readonly allAreasLabel: string;
+  readonly regionUnavailableLabel: string;
+  readonly onlyRegionOpenTemplate: string;
+  readonly allOpenAreasInRegionTemplate: string;
+  readonly noAreasOpenLabel: string;
+}
+
+function NeighbourhoodSelect({
+  locale,
+  regionId,
+  neighbourhoodId,
+  restricted,
+  anywhereLabel,
+  allOpenAreasTemplate,
+  legend,
+  onChange,
+}: {
+  readonly locale: Locale;
+  readonly regionId: string;
+  readonly neighbourhoodId: string | null;
+  readonly restricted: boolean;
+  readonly anywhereLabel: string;
+  readonly allOpenAreasTemplate: string;
+  readonly legend: string;
+  readonly onChange: (neighbourhoodId: string | null) => void;
+}) {
+  const allowed = allowedNeighbourhoodsForRegion(regionId);
+  const region = REGIONS_BY_ID.get(regionId);
+  const anywhere = restricted
+    ? formatContentTemplate(allOpenAreasTemplate, {
+        region: region ? labelForLocale(region.labels, locale) : '',
+      })
+    : anywhereLabel;
+  return (
+    <label className="mt-3 block text-sm font-semibold text-ink-900">
+      {legend}
+      <select
+        className="mt-2 w-full rounded-xl border border-brand-100 bg-white px-3 py-2 text-sm font-medium text-ink-900"
+        value={neighbourhoodId ?? ''}
+        onChange={(event) => onChange(event.target.value || null)}
+      >
+        {allowed.length > 1 ? <option value="">{anywhere}</option> : null}
+        {allowed.map((neighbourhood) => (
+          <option key={neighbourhood.id} value={neighbourhood.id}>
+            {labelForLocale(neighbourhood.labels, locale)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }
 
 interface SearchPanelProps {
@@ -47,11 +108,28 @@ interface SearchPanelProps {
 export function SearchPanel({ locale, copy }: SearchPanelProps) {
   const router = useRouter();
   const { filters, isSearchOpen, setFilters, closeSearch } = useSearchContext();
-  const [draft, setDraft] = useState<SearchFiltersState>(filters);
+  const [draft, setDraft] = useState<SearchFiltersState>(() =>
+    withDefaultOpenLocation(sanitizeSearchFilters(filters).filters),
+  );
+  const scope = getConfiguredSearchAreaScope();
+  const areaLabel = scope.restricted
+    ? copy.allAreasLabel
+    : copy.allHongKongLabel;
+  const allAreasSelectable = isAllAreasSelectable();
+  const regions = openRegions();
+  const onlyRegion =
+    regions.length === 1 ? REGIONS_BY_ID.get(regions[0].id) : undefined;
+  const allAreasHint = allAreasSelectable
+    ? undefined
+    : regions.length === 0
+      ? copy.noAreasOpenLabel
+      : formatContentTemplate(copy.onlyRegionOpenTemplate, {
+          region: onlyRegion ? labelForLocale(onlyRegion.labels, locale) : '',
+        });
 
   useEffect(() => {
     if (isSearchOpen) {
-      setDraft(filters);
+      setDraft(withDefaultOpenLocation(sanitizeSearchFilters(filters).filters));
     }
   }, [filters, isSearchOpen]);
 
@@ -65,10 +143,11 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setFilters(draft);
-    saveRecentSearch(draft);
+    const submitted = withoutImpliedOpenLocation(draft);
+    setFilters(submitted);
+    saveRecentSearch(submitted);
     closeSearch();
-    router.push(buildSearchPageHref(locale, draft));
+    router.push(buildSearchPageHref(locale, submitted));
   }
 
   return (
@@ -80,10 +159,12 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
           </legend>
           <div className="flex flex-nowrap items-stretch gap-2 overflow-x-auto md:grid md:grid-cols-5 md:gap-3 md:overflow-visible">
             <SearchChoiceButton
-              label={copy.allHongKongLabel}
+              label={areaLabel}
               iconSrc={ALL_HONG_KONG_ICON_SRC}
               iconShape="flag"
-              isSelected={draft.regionId === null}
+              isSelected={allAreasSelectable && draft.regionId === null}
+              disabled={!allAreasSelectable}
+              disabledHint={allAreasHint}
               onClick={() =>
                 updateDraft({ regionId: null, neighbourhoodId: null })
               }
@@ -97,45 +178,49 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
               if (!iconSrc) {
                 return null;
               }
+              const selectable = isRegionSelectable(region.id);
               return (
                 <SearchChoiceButton
                   key={region.id}
                   label={labelForLocale(region.labels, locale)}
                   iconSrc={iconSrc}
-                  isSelected={draft.regionId === region.id}
-                  onClick={() =>
+                  isSelected={selectable && draft.regionId === region.id}
+                  disabled={!selectable}
+                  disabledHint={
+                    selectable ? undefined : copy.regionUnavailableLabel
+                  }
+                  onClick={() => {
+                    const allowed = allowedNeighbourhoodsForRegion(region.id);
                     updateDraft({
                       regionId: region.id,
                       neighbourhoodId:
-                        draft.regionId === region.id
-                          ? draft.neighbourhoodId
-                          : null,
-                    })
-                  }
+                        allowed.length === 1
+                          ? allowed[0].id
+                          : draft.regionId === region.id
+                            ? draft.neighbourhoodId
+                            : null,
+                    });
+                  }}
                 />
               );
             })}
           </div>
-          {draft.regionId ? (
-            <label className="mt-3 block text-sm font-semibold text-ink-900">
-              {copy.neighbourhoodLabel}
-              <select
-                className="mt-2 w-full rounded-xl border border-brand-100 bg-white px-3 py-2 text-sm font-medium text-ink-900"
-                value={draft.neighbourhoodId ?? ''}
-                onChange={(event) =>
-                  updateDraft({
-                    neighbourhoodId: event.target.value || null,
-                  })
-                }
-              >
-                <option value="">{copy.anywhereInRegionLabel}</option>
-                {neighbourhoodsForRegion(draft.regionId).map((neighbourhood) => (
-                  <option key={neighbourhood.id} value={neighbourhood.id}>
-                    {labelForLocale(neighbourhood.labels, locale)}
-                  </option>
-                ))}
-              </select>
-            </label>
+          {draft.regionId && showsNeighbourhoodChoices(draft.regionId) ? (
+            <NeighbourhoodSelect
+              locale={locale}
+              regionId={draft.regionId}
+              neighbourhoodId={draft.neighbourhoodId}
+              restricted={scope.restricted}
+              anywhereLabel={copy.anywhereInRegionLabel}
+              allOpenAreasTemplate={copy.allOpenAreasInRegionTemplate}
+              legend={copy.neighbourhoodLabel}
+              onChange={(neighbourhoodId) => updateDraft({ neighbourhoodId })}
+            />
+          ) : null}
+          {regions.length === 0 ? (
+            <p role="status" className="mt-3 text-sm text-ink-700">
+              {copy.noAreasOpenLabel}
+            </p>
           ) : null}
         </fieldset>
         <fieldset>

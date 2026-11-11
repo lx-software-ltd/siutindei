@@ -1,6 +1,7 @@
-// Pages-only smoke test for the public website. Crawls /sitemap.xml and
+// Pages smoke test for the public website. Crawls /sitemap.xml and
 // makes sure every URL it lists responds with 2xx/3xx. Falls back to a fixed
-// list when the sitemap is unavailable.
+// list when the sitemap is unavailable. When staging search is live, also
+// requests /v1/activities/search?limit=1 with the website credentials.
 //
 // Required env:
 //   SMOKE_BASE_URL         absolute origin to test (https in production-like
@@ -11,9 +12,18 @@
 //   SMOKE_MAX_PAGES        cap the number of URLs crawled
 //   STAGING_BYPASS_SECRET  sent as x-staging-bypass so the staging IP
 //                          allow-list Worker lets the runner through
+//   NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED
+//                          false/0/no probes GET /v1/activities/search.
+//                          Anything else, including unset, skips that probe.
+//   NEXT_PUBLIC_SEARCH_API_KEY
+//   NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN
+//                          required for the live search probe
 //
 // A response whose final URL left the base host fails: the staging gate
 // redirects unlisted clients to production, which would otherwise pass.
+
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const SMOKE_BASE_URL_ENV = 'SMOKE_BASE_URL';
 const SMOKE_TIMEOUT_MS_ENV = 'SMOKE_TIMEOUT_MS';
@@ -76,6 +86,31 @@ function resolveMaxPages() {
     throw new Error(`${SMOKE_MAX_PAGES_ENV} must be a positive integer.`);
   }
   return value;
+}
+
+export function shouldProbeLiveSearch(raw) {
+  const value = String(raw ?? '').trim().toLowerCase();
+  return value === 'false' || value === '0' || value === 'no';
+}
+
+export function buildLiveSearchProbe(baseUrl, env) {
+  const key = String(env.NEXT_PUBLIC_SEARCH_API_KEY ?? '').trim();
+  const token = String(env.NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN ?? '').trim();
+  if (!key || !token) {
+    throw new Error(
+      'Live search probe requires NEXT_PUBLIC_SEARCH_API_KEY and NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN.',
+    );
+  }
+  const url = new URL('/v1/activities/search', baseUrl);
+  url.searchParams.set('limit', '1');
+  return {
+    url: url.toString(),
+    headers: {
+      accept: 'application/json',
+      'x-api-key': key,
+      'x-device-attestation': token,
+    },
+  };
 }
 
 function resolveBypassHeaders() {
@@ -206,6 +241,7 @@ async function main() {
   }
 
   let passed = 0;
+  let checks = pages.length;
   const failures = [];
   for (const url of pages) {
     try {
@@ -231,13 +267,59 @@ async function main() {
     }
   }
 
-  console.log(`\nResult: ${passed}/${pages.length} passed.`);
+  if (shouldProbeLiveSearch(process.env.NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED)) {
+    checks += 1;
+    try {
+      const probe = buildLiveSearchProbe(baseUrl, process.env);
+      const response = await fetchWithTimeout(
+        probe.url,
+        { method: 'GET', headers: probe.headers, redirect: 'follow' },
+        timeoutMs,
+      );
+      const body = await response.text();
+      let itemCount = null;
+      try {
+        const payload = JSON.parse(body);
+        if (Array.isArray(payload.items)) {
+          itemCount = payload.items.length;
+        }
+      } catch {
+        itemCount = null;
+      }
+      if (!response.ok || itemCount === null) {
+        failures.push({ url: probe.url, status: response.status });
+        console.log(`FAIL ${response.status} ${probe.url}`);
+      } else {
+        passed += 1;
+        console.log(`PASS ${response.status} ${probe.url} (${itemCount} item(s))`);
+      }
+    } catch (error) {
+      failures.push({
+        url: new URL('/v1/activities/search', baseUrl).toString(),
+        status: null,
+        detail: error.message,
+      });
+      console.log(`FAIL ERR live search probe :: ${error.message}`);
+    }
+  } else {
+    console.log('Live search probe skipped (fixture mode).');
+  }
+
+  console.log(`\nResult: ${passed}/${checks} passed.`);
   if (failures.length > 0) {
     process.exit(1);
   }
 }
 
-main().catch((error) => {
-  console.error(`Smoke run crashed: ${error.message ?? error}`);
-  process.exit(1);
-});
+function isMain() {
+  const self = fileURLToPath(import.meta.url);
+  const invoked = process.argv[1] ? path.resolve(process.argv[1]) : '';
+  return self === invoked;
+}
+
+if (isMain()) {
+  main().catch((error) => {
+    console.error(`Smoke run crashed: ${error.message ?? error}`);
+    process.exit(1);
+  });
+}

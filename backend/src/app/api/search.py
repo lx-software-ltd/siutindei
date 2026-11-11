@@ -46,8 +46,10 @@ from app.db.models import (
 from app.db.queries import (
     ActivitySearchCursor,
     ActivitySearchFilters,
+    applied_search_area_scope,
     build_search_query,
     category_match_mode,
+    search_area_scope_labels,
 )
 from app.exceptions import CursorError, ValidationError
 from app.services.description_boilerplate import (
@@ -90,9 +92,15 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
 
     try:
         filters = parse_filters(event)
-        if partner is not None and partner.org_id is not None:
-            # Org-scoped keys only see their own organization's activities.
-            filters = replace(filters, org_ids=(UUID(partner.org_id),))
+        if partner is not None:
+            # Partner keys are a B2B integration and are not limited to the
+            # public neighbourhood scope. Org-scoped keys still see only
+            # their own organization's activities.
+            filters = replace(
+                filters,
+                apply_area_scope=False,
+                org_ids=(UUID(partner.org_id),) if partner.org_id else (),
+            )
         logger.debug("Search filters parsed", extra={"filters": str(filters)})
         response = fetch_search_response(filters)
         logger.info(
@@ -108,6 +116,7 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
             event,
             view=filters.view,
             edge_cacheable=partner is None,
+            include_area_scope=filters.cursor is None,
         )
     except (ValidationError, CursorError) as exc:
         logger.warning(f"Validation error: {exc.message}")
@@ -210,7 +219,11 @@ def fetch_search_response(
     with Session(engine) as session:
         rows = session.execute(query).all()
         region_cache = _load_region_area_cache(session)
-        match_mode = category_match_mode(session, filters.category_ids)
+        match_mode = category_match_mode(
+            session,
+            filters.category_ids,
+            applied_search_area_scope(filters),
+        )
 
     has_more = len(rows) > requested_limit
     trimmed_rows = rows[:requested_limit]
@@ -235,6 +248,7 @@ def fetch_search_response(
         items=items,
         next_cursor=next_cursor,
         category_match=match_mode,
+        area_scope=search_area_scope_labels(),
     )
 
 
@@ -416,10 +430,11 @@ def _create_response(
     event: Mapping[str, Any] | None = None,
     view: str = "full",
     edge_cacheable: bool = False,
+    include_area_scope: bool = True,
 ) -> dict[str, Any]:
     """Create a JSON API Gateway response for Pydantic models."""
 
-    payload = dump_search_response(body, view)
+    payload = dump_search_response(body, view, include_area_scope=include_area_scope)
     separators = (",", ":") if view == "card" else (", ", ": ")
 
     headers = {

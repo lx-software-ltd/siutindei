@@ -26,7 +26,7 @@ This document outlines security best practices and requirements for the Siu Tin 
 
 ### DO
 
-- Use AWS Secrets Manager for database credentials and the OpenRouter API key (`OpenRouterApiKey`, noEcho, secret `openrouter-api-key`). An empty parameter stores the placeholder `pending` so the stack can deploy before the key exists.
+- Use AWS Secrets Manager for database credentials and the OpenRouter API key (`OpenRouterApiKey`, noEcho, secret `openrouter-api-key`). The parameter default is `pending`, and an empty value stores that same placeholder so the stack can deploy before the key exists.
 - The Google Places API key (`GooglePlacesApiKey`, noEcho) is a CloudFormation parameter passed through as the admin Lambda environment variable `GOOGLE_PLACES_API_KEY`. It is not stored in Secrets Manager. Pin lookup sends it as the `X-Goog-Api-Key` header, never in the URL, because the HTTP proxy logs URLs. An empty value disables Google lookup. Restrict the key to Places API (New). `lambda:GetFunctionConfiguration` can read the variable, so the key stays limited to that API.
 - Category suggestion and category-check prompts redact emails and phone numbers before they leave the VPC. `provider.data_collection` stays `deny` unless an admin turns that setting off.
 - Use GitHub Secrets for CI/CD sensitive values
@@ -412,19 +412,25 @@ regression. See [`aws-assets-map.md`](./aws-assets-map.md) and
   (`/backend/infrastructure`, `/apps/public_www`, `/apps/admin_web`).
 - Public-www production Highs are gated by `npm run audit:deps:prod`
   (`npm audit --omit=dev --audit-level=high`).
-- `extract-zip` (GHSA-jmr9-qjv8-65gv) is a dev-only transitive of
-  `@lhci/cli` / Lighthouse 12. Upstream npm has no release past 2.0.1;
-  `/apps/public_www` overrides it to `@electron-internal/extract-zip`
-  1.0.5. Do not run `npm audit fix --force` (it downgrades
-  `@lhci/cli` to 0.6.1).
+- `extract-zip` (GHSA-jmr9-qjv8-65gv) stays overridden in
+  `/apps/public_www` to `@electron-internal/extract-zip` 1.0.5.
+  Upstream npm has no release past 2.0.1. `@lhci/cli` 0.16 /
+  Lighthouse 13 no longer depends on it. Do not run
+  `npm audit fix --force` (it downgrades `@lhci/cli` to 0.6.1).
+- `js-yaml` 3.x and 4.x are pinned to 3.15.2 and 4.3.2
+  (CVE-2026-84375). `@lhci/cli` 0.16 nests js-yaml 5, where merge
+  keys are off unless `YAML11_SCHEMA` is selected. That line is
+  pinned to 5.5.0, which includes the 5.4.1 empty-merge budget.
 - Bundled `aws-cdk-lib` copies of `minimatch` are replaced at
   `postinstall` with 11.0.1+ (GHSA-g3hv-75wg-m249 /
-  CVE-2026-118764). Keep `aws-cdk-lib` at 2.265.0+ so the bundled
-  `brace-expansion` is 5.0.9 (GHSA-rgw5-rvv9-x895). `npm overrides`
-  cannot replace `inBundle` packages. Dependabot cannot rewrite the
-  bundled `minimatch` 10.2.6 entry either, so
-  `/backend/infrastructure` ignores that package until
-  `aws-cdk-lib` ships 11.x (aws/aws-cdk#39595).
+  CVE-2026-118764). The same script writes that version onto the
+  `inBundle` lockfile entry, which is what Dependabot and `npm audit`
+  read. Do not ignore `minimatch` in Dependabot: an ignore of every
+  version fails the security job with `all_versions_ignored`. Keep
+  `aws-cdk-lib` at 2.265.0+ so the bundled `brace-expansion` is 5.0.9
+  (GHSA-rgw5-rvv9-x895). `npm overrides` cannot replace `inBundle`
+  packages. Drop the patch when `aws-cdk-lib` ships minimatch 11
+  (aws/aws-cdk#39595).
 
 ### Semgrep OSS
 

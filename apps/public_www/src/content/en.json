@@ -20,6 +20,8 @@
       "activityTypes": "Activities",
       "search": "Search activities",
       "anywhere": "All Hong Kong",
+      "allAreas": "All areas",
+      "noAreas": "No areas are open yet",
       "anyAge": "Any age",
       "anyType": "All types",
       "openMapForAreaLabel": "Show activities on map for"
@@ -32,7 +34,12 @@
       "childAgeLabel": "Child age",
       "activityTypesLabel": "Activity types",
       "searchLabel": "Search",
-      "allHongKongLabel": "All Hong Kong"
+      "allHongKongLabel": "All Hong Kong",
+      "allAreasLabel": "All areas",
+      "regionUnavailableLabel": "Coming soon",
+      "onlyRegionOpenTemplate": "Only {region} is open",
+      "allOpenAreasInRegionTemplate": "All open areas in {region}",
+      "noAreasOpenLabel": "No areas are open yet"
     },
     "languageSelector": {
       "menuAriaLabel": "Select language",
@@ -157,8 +164,14 @@
     "navigator": {
       "buttonLabel": "Help me find something for my kid!",
       "allHongKongLabel": "All Hong Kong",
+      "allAreasLabel": "All areas",
+      "regionUnavailableLabel": "Coming soon",
+      "onlyRegionOpenTemplate": "Only {region} is open",
+      "allOpenAreasInRegionTemplate": "All open areas in {region}",
+      "noAreasOpenLabel": "No areas are open yet",
       "anywhereInRegionTemplate": "Anywhere in {region}",
       "backLabel": "Back",
+      "continueLabel": "Continue",
       "seeActivitiesLabel": "See activities",
       "stepProgressTemplate": "Step {current} of {total}",
       "steps": {
@@ -186,6 +199,12 @@
     "continueSearchingTitle": "Continue searching",
     "recentlyViewedTitle": "Recently viewed",
     "popularTitle": "Popular activities in Hong Kong",
+    "popularInPlaceTemplate": "Popular activities in {place}",
+    "popularOpenAreasTitle": "Popular activities in our open areas",
+    "placeListComma": ", ",
+    "placePairTemplate": "{first} and {second}",
+    "placeFinalTemplate": "{list} and {last}",
+    "noAreasOpenLabel": "No areas are open yet",
     "nearRegionTitle": "Activities in",
     "parentVerifiedLabel": "Parent-Verified",
     "freeTrialLabel": "Free trial",
@@ -202,6 +221,7 @@
     "listViewLabel": "List",
     "mapViewLabel": "Map",
     "emptyLabel": "No activities match your search. Try different filters.",
+    "areaAdjustedLabel": "That area is not open yet. Showing activities in the open areas.",
     "unsortedCategoryLabel": "These listings are not sorted into the selected categories yet. They still use the previous categories.",
     "errorLabel": "Unable to load activities.",
     "loadMoreLabel": "Load more",

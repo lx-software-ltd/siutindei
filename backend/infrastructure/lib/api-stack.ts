@@ -277,6 +277,13 @@ export class ApiStack extends cdk.Stack {
     if (lambdaSecurityGroupResource) {
       lambdaSecurityGroupResource.cfnOptions.updateReplacePolicy =
         cdk.CfnDeletionPolicy.RETAIN;
+      // W3011 wants DeletionPolicy to match. Stack deletion still removes
+      // the named group so a later deploy can create the same name.
+      cdk.Validations.of(lambdaSecurityGroupResource).acknowledge({
+        id: "CloudFormation-Validate::W3011",
+        reason:
+          "UpdateReplacePolicy retains the named group on replacement. DeletionPolicy stays Delete so stack deletion frees the name.",
+      });
     }
     const migrationSecurityGroupResource =
       migrationSecurityGroup.node
@@ -284,6 +291,11 @@ export class ApiStack extends cdk.Stack {
     if (migrationSecurityGroupResource) {
       migrationSecurityGroupResource.cfnOptions.updateReplacePolicy =
         cdk.CfnDeletionPolicy.RETAIN;
+      cdk.Validations.of(migrationSecurityGroupResource).acknowledge({
+        id: "CloudFormation-Validate::W3011",
+        reason:
+          "UpdateReplacePolicy retains the named group on replacement. DeletionPolicy stays Delete so stack deletion frees the name.",
+      });
     }
 
     // ---------------------------------------------------------------------
@@ -743,14 +755,26 @@ export class ApiStack extends cdk.Stack {
           "backlog has been released from the admin review queue.",
       }
     );
-    const openRouterApiKey = new cdk.CfnParameter(this, "OpenRouterApiKey", {
+    const searchAreaScope = new cdk.CfnParameter(this, "SearchAreaScope", {
       type: "String",
       default: "",
+      description:
+        "Comma-separated public-search area slugs. A slug is a wizard " +
+        "region id (hong_kong_island, kowloon, new_territories, islands), " +
+        "a district slug (yau-tsim-mong), or a neighbourhood slug " +
+        "(central-and-western-kennedy-town). Empty leaves public search " +
+        "unrestricted. Filled from the SEARCH_AREA_SCOPE GitHub variable. " +
+        "Partner search and a direct activity_id lookup are not limited.",
+    });
+    const openRouterApiKey = new cdk.CfnParameter(this, "OpenRouterApiKey", {
+      type: "String",
+      // Empty fails SecretString's minimum length. This is the same placeholder.
+      default: "pending",
       noEcho: true,
       description:
         "OpenRouter API key for lxsoftware:siutindei. Stored in " +
-        "Secrets Manager. Leave empty to store the placeholder pending " +
-        "until the key is minted.",
+        "Secrets Manager. The default and an empty value store the " +
+        "placeholder pending until the key is minted.",
     });
     const openRouterChatCompletionsUrl = new cdk.CfnParameter(
       this,
@@ -961,8 +985,8 @@ export class ApiStack extends cdk.Stack {
       }
     );
 
-    userPoolClient.addDependency(googleProvider);
-    userPoolClient.addDependency(appleProvider);
+    userPoolClient.addResourceDependency(googleProvider);
+    userPoolClient.addResourceDependency(appleProvider);
 
     // Dedicated client for the Executive Board catalog importer.
     // AdminInitiateAuth + ADMIN_USER_PASSWORD_AUTH only — no OAuth,
@@ -1430,6 +1454,7 @@ export class ApiStack extends cdk.Stack {
         // Production search always uses Aurora; fixture mode is staging-www only.
         STAGING_SEARCH_DATA_ENABLED: "false",
         ORG_REVIEW_GATE_ENABLED: orgReviewGateEnabled.valueAsString,
+        SEARCH_AREA_SCOPE: searchAreaScope.valueAsString,
       },
     });
     database.grantAppUserSecretRead(searchFunction);

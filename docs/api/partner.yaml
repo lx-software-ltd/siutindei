@@ -83,6 +83,9 @@ paths:
         instead of the mobile API key + device attestation.
         Results are paginated and ordered by schedule time. Org-scoped
         keys only receive activities of their organization.
+        `SEARCH_AREA_SCOPE` does not filter this endpoint. The first
+        page still reports the public neighbourhood list in `area_scope`.
+        A `cursor` page omits that field.
       parameters:
         - name: age
           in: query

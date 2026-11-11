@@ -93,6 +93,8 @@ class ActivityMapper {
     return SearchResultsEntity(
       items: response.items.map(searchResultToEntity).toList(),
       nextCursor: response.nextCursor,
+      areaScope: response.statesAreaScope ? response.areaScope : null,
+      areaScopeStated: response.statesAreaScope,
     );
   }
 }

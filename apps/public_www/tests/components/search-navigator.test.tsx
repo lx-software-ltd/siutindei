@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SearchNavigator } from '@/components/sections/hero/search-navigator';
 import { SearchProvider } from '@/components/shared/search/search-context';
@@ -10,6 +10,7 @@ import {
   REGION_ICON_SRC,
 } from '@/lib/home-wizard/choice-icons';
 import { homeWizardChoices } from '@/lib/home-wizard/choices';
+import { clearSearchAreaScopeCacheForTests } from '@/lib/home-wizard/area-scope';
 
 const push = vi.hoisted(() => vi.fn());
 
@@ -49,6 +50,12 @@ function choiceImage(name: string): HTMLImageElement {
 }
 
 describe('SearchNavigator', () => {
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE;
+    clearSearchAreaScopeCacheForTests();
+    push.mockClear();
+  });
+
   it('opens on the location step with large area tiles', () => {
     const content = openNavigator();
 
@@ -200,5 +207,92 @@ describe('SearchNavigator', () => {
     expect(
       screen.queryByRole('button', { name: '3–6 years' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('greys out closed regions and shows the one open neighbourhood', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE =
+      'central-and-western-kennedy-town';
+    clearSearchAreaScopeCacheForTests();
+    const content = openNavigator();
+
+    const allAreas = screen.getByRole('button', { name: /All areas/ });
+    expect(allAreas).toHaveAttribute('aria-disabled', 'true');
+    expect(allAreas).not.toBeDisabled();
+    expect(allAreas).toHaveTextContent('Only Hong Kong Island is open');
+    expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
+    const kowloon = screen.getByRole('button', { name: /Kowloon/ });
+    expect(kowloon).toHaveAttribute('aria-disabled', 'true');
+    expect(kowloon).toHaveTextContent('Coming soon');
+    fireEvent.click(kowloon);
+    expect(
+      screen.getByRole('heading', {
+        name: content.smallWorld.navigator.steps.location.title,
+      }),
+    ).toBeInTheDocument();
+
+    const island = screen.getByRole('button', { name: 'Hong Kong Island' });
+    expect(island).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(island);
+    expect(
+      screen.getByRole('heading', {
+        name: content.smallWorld.navigator.steps.neighbourhood.title,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kennedy Town' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(
+      screen.queryByRole('button', { name: /Anywhere/ }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(
+      screen.getByRole('heading', { name: 'How old is your child?' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps every area available when more than one region is open', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'kowloon,islands';
+    clearSearchAreaScopeCacheForTests();
+    openNavigator();
+
+    expect(screen.getByRole('button', { name: 'All areas' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Kowloon' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+  });
+
+  it('can continue when the scope names no neighbourhood', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'atlantis';
+    clearSearchAreaScopeCacheForTests();
+    openNavigator();
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'No areas are open yet',
+    );
+    expect(screen.getByRole('button', { name: /All areas/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(
+      screen.getByRole('heading', { name: 'How old is your child?' }),
+    ).toBeInTheDocument();
+  });
+
+  it('does not write the starting choice into the search', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'southern-stanley';
+    clearSearchAreaScopeCacheForTests();
+    const content = openNavigator();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hong Kong Island' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: '3–6 years' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: content.smallWorld.navigator.seeActivitiesLabel }),
+    );
+    expect(push).toHaveBeenCalledWith('/en/search/?age=3-6&view=map');
   });
 });

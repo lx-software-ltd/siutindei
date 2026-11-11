@@ -118,6 +118,7 @@ jobs:
                 (cd "$dir" && npm install)
               fi
               (cd "$dir" && npm run lint --if-present)
+              (cd "$dir" && npm run typecheck --if-present)
             else
               echo "Skipping missing $dir"
             fi
