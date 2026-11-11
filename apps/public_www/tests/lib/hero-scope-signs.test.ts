@@ -70,8 +70,5 @@ describe('heroScopeSignsFor', () => {
       const file = resolve(PUBLIC_DIR, `images/scope-signs/${id}.webp`);
       expect(statSync(file).size, id).toBeGreaterThan(500);
     }
-    expect(
-      statSync(resolve(PUBLIC_DIR, 'images/ui/scope-arrow.svg')).size,
-    ).toBeGreaterThan(50);
   });
 });

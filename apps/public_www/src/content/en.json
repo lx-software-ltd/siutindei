@@ -138,10 +138,6 @@
   "smallWorld": {
     "title": "Every child deserves their own small world",
     "subtitle": "Siu Tin Dei curates trusted classes, workshops, and outdoor adventures across Hong Kong — each one checked by local parents before it appears here.",
-    "subtitleStruckPlace": "Hong Kong",
-    "scopePlaceComma": ", ",
-    "scopePlacePairTemplate": "{first} and {second}",
-    "scopePlaceFinalTemplate": "{list} and {last}",
     "sceneAriaLabel": "Kawaii Hong Kong pictures floating around the page",
     "bubbles": {
       "junk": "A Chinese junk boat",

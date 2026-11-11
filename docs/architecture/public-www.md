@@ -163,16 +163,13 @@ Source: [`apps/public_www`](../../apps/public_www).
   A link to a closed region is rewritten to that starting choice. When
   the scope names no neighbourhood, the wizard can still continue.
   The home popular heading names up to three places. On that same
-  homepage, a scope that names some but not all neighbourhoods strikes
-  through the words Hong Kong in the hero subtitle. Up to three
-  street-name plates sit in the top-right corner, in the order the
+  homepage, a scope that names some but not all neighbourhoods shows
+  street-name plates in the top-right corner, in the order the
   variable is written: a neighbourhood token is one plate, a region
   token is that region's plate, and a district token expands to its
-  neighbourhoods. A phone shows the first two plates with a short arrow
-  beside them. A wider screen draws an arrow from the struck words to
-  the lowest plate and leaves out the top-right floating picture. The
-  third plate waits until the screen is wide enough that it clears the
-  heading. A fully open
+  neighbourhoods. Up to three plates appear. The third waits until the
+  screen is wide enough that it clears the heading, and the top-right
+  floating picture is left out so the plates have the corner. A fully open
   region contributes its name; a partly open region contributes its
   neighbourhood names. A longer list says the open areas. A search that
   already names a place uses that place instead. A region carousel

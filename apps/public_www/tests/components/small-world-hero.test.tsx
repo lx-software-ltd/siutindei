@@ -102,10 +102,9 @@ describe('SmallWorldHero', () => {
       document.querySelectorAll('.max-lg\\:hidden'),
     ).toHaveLength(3);
     expect(document.querySelector('.hero-scope-sign')).not.toBeInTheDocument();
-    expect(document.querySelector('.hero-scope-strike')).not.toBeInTheDocument();
   });
 
-  it('strikes Hong Kong and points at the open plates', () => {
+  it('shows the open plates without marking the subtitle', () => {
     const content = getContent('en');
     const signs = [
       { id: 'southern-stanley', en: 'Stanley', zhHK: '赤柱' },
@@ -125,12 +124,12 @@ describe('SmallWorldHero', () => {
       </SearchProvider>,
     );
 
-    const strike = document.querySelector('.hero-scope-strike');
-    expect(strike).toHaveTextContent('Hong Kong');
-    expect(strike).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByText(content.smallWorld.subtitle)).toBeInTheDocument();
+    expect(document.querySelector('.hero-scope-strike')).not.toBeInTheDocument();
     expect(
-      document.querySelector('.small-world-hero h1 + p .sr-only'),
-    ).toHaveTextContent('Stanley, Repulse Bay and Shek O');
+      document.querySelector('img[src="/images/ui/scope-arrow.svg"]'),
+    ).not.toBeInTheDocument();
+    expect(document.querySelector('canvas')).not.toBeInTheDocument();
     const plates = document.querySelectorAll('.hero-scope-sign');
     expect(plates).toHaveLength(3);
     expect(plates[0]).toHaveAttribute(
@@ -138,15 +137,10 @@ describe('SmallWorldHero', () => {
       '/images/scope-signs/southern-stanley.webp',
     );
     expect(plates[2]).toHaveClass('hero-scope-sign--extra');
-    expect(plates[2]).toHaveAttribute('data-scope-sign-target', '');
-    expect(
-      document.querySelector('img[src="/images/ui/scope-arrow.svg"]'),
-    ).toBeInTheDocument();
-    expect(document.querySelector('.hero-scope-arrow')).toBeInTheDocument();
     expect(document.querySelectorAll('.small-world-bubble')).toHaveLength(5);
   });
 
-  it('reads the open places in Chinese', () => {
+  it('keeps the Chinese subtitle whole when plates are showing', () => {
     const content = getContent('zh-HK');
 
     render(
@@ -164,9 +158,7 @@ describe('SmallWorldHero', () => {
       </SearchProvider>,
     );
 
-    expect(document.querySelector('.hero-scope-strike')).toHaveTextContent('香港');
-    expect(
-      document.querySelector('.small-world-hero h1 + p .sr-only'),
-    ).toHaveTextContent('赤柱及淺水灣');
+    expect(screen.getByText(content.smallWorld.subtitle)).toBeInTheDocument();
+    expect(document.querySelector('.hero-scope-sign')).toBeInTheDocument();
   });
 });

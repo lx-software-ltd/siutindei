@@ -176,7 +176,7 @@ body {
   }
 }
 
-/* Open-area plates and the arrow that points at them. */
+/* Open-area street-name plates in the top-right corner. */
 .hero-scope-signs {
   position: absolute;
   z-index: 20;
@@ -211,38 +211,9 @@ body {
   transform: rotate(2deg);
 }
 
-.hero-scope-signs__arrow {
-  display: block;
-  width: 46px;
-  height: auto;
-  margin-top: -8px;
-  margin-right: 10px;
-}
-
-.hero-scope-arrow {
-  position: absolute;
-  inset: 0;
-  z-index: 15;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.hero-scope-strike {
-  white-space: nowrap;
-  text-decoration-line: line-through;
-  text-decoration-thickness: 0.14em;
-  text-decoration-color: #2e1d12;
-  text-decoration-skip-ink: none;
-}
-
 @media (max-width: 767px) {
   .hero-scope-sign--tilt-b {
     margin-right: 0;
-  }
-
-  .hero-scope-arrow {
-    display: none;
   }
 }
 
@@ -264,10 +235,6 @@ body {
   .hero-scope-sign {
     max-height: 84px;
     max-width: 250px;
-  }
-
-  .hero-scope-signs__arrow {
-    display: none;
   }
 }
 

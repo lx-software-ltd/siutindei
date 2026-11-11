@@ -13,12 +13,11 @@ interface HeroScopeSignsProps {
   readonly signs: readonly HeroScopeSign[];
 }
 
-/** Street-name plates for the open places, plus the phone arrow. */
+/** Street-name plates for the open places. */
 export function HeroScopeSigns({ signs }: HeroScopeSignsProps) {
   if (signs.length === 0) {
     return null;
   }
-  const last = signs.length - 1;
   return (
     <div className="hero-scope-signs" aria-hidden="true">
       {signs.map((sign, index) => {
@@ -30,16 +29,10 @@ export function HeroScopeSigns({ signs }: HeroScopeSignsProps) {
             src={heroScopeSignSrc(sign.id)}
             alt=""
             decoding="async"
-            data-scope-sign-target={index === last ? '' : undefined}
             className={['hero-scope-sign', tilt, extra].filter(Boolean).join(' ')}
           />
         );
       })}
-      <img
-        src="/images/ui/scope-arrow.svg"
-        alt=""
-        className="hero-scope-signs__arrow"
-      />
     </div>
   );
 }

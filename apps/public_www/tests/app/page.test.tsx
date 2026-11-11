@@ -95,8 +95,8 @@ describe('DiscoveryHomePage', () => {
         'img[src="/images/scope-signs/southern-stanley.webp"]',
       ),
     ).toBeInTheDocument();
-    expect(document.querySelector('.hero-scope-strike')).toHaveTextContent(
-      'Hong Kong',
-    );
+    expect(screen.getByText(content.smallWorld.subtitle)).toBeInTheDocument();
+    expect(document.querySelector('.hero-scope-strike')).not.toBeInTheDocument();
+    expect(document.querySelector('.hero-scope-arrow')).not.toBeInTheDocument();
   });
 });
