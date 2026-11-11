@@ -8,6 +8,8 @@ import { Input } from '../../ui/input';
 interface NeighbourhoodFilterProps {
   id: string;
   value: string;
+  /** Shown when `value` is a region or district, which is not a neighbourhood option. */
+  valueName?: string;
   options: readonly NeighbourhoodFilterOption[];
   onChange: (areaId: string) => void;
 }
@@ -15,6 +17,7 @@ interface NeighbourhoodFilterProps {
 export function NeighbourhoodFilter({
   id,
   value,
+  valueName = '',
   options,
   onChange,
 }: NeighbourhoodFilterProps) {
@@ -57,7 +60,13 @@ export function NeighbourhoodFilter({
     };
   }, [open]);
 
-  const inputValue = open ? query : (selected?.name ?? '');
+  let closedLabel = '';
+  if (selected) {
+    closedLabel = selected.name;
+  } else if (value) {
+    closedLabel = valueName;
+  }
+  const inputValue = open ? query : closedLabel;
 
   function choose(areaId: string) {
     onChange(areaId);

@@ -52,6 +52,8 @@ export default defineConfig({
       NEXT_PUBLIC_COGNITO_CLIENT_ID: 'mock-client-id-12345',
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: 'us-east-1_TestPool01',
       NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: 'test-maps-key',
+      // Catalog opens on this scope. southern-stanley is the Stanley neighbourhood.
+      SEARCH_AREA_SCOPE: 'southern-stanley',
     },
   },
 });

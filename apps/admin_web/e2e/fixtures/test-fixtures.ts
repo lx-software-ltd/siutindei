@@ -1,7 +1,5 @@
 import { expect, test as base, Page, Route } from '@playwright/test';
 
-import { DEFAULT_CATALOG_NEIGHBOURHOOD_NAME } from '../../src/lib/catalog-defaults';
-
 /**
  * Mock user data for testing different auth states
  */
@@ -652,16 +650,13 @@ export const mockAreaTree = [
   },
 ];
 
-export { DEFAULT_CATALOG_NEIGHBOURHOOD_NAME };
-
-/** Clear Catalog's default neighbourhood so list assertions see every org. */
+/** Clear Catalog's default area so list assertions see every org. */
 export async function showAllCatalogNeighbourhoods(page: Page): Promise<void> {
   const input = page.getByLabel('Neighbourhood');
-  if (!DEFAULT_CATALOG_NEIGHBOURHOOD_NAME) {
-    await expect(input).toHaveValue('');
+  await expect(input).toBeVisible();
+  if ((await input.inputValue()) === '') {
     return;
   }
-  await expect(input).toHaveValue(DEFAULT_CATALOG_NEIGHBOURHOOD_NAME);
   await input.click();
   await page.getByRole('option', { name: 'All neighbourhoods' }).click();
   await expect(input).toHaveValue('');

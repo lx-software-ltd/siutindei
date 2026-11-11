@@ -4,12 +4,11 @@ import {
   mockOrganizations,
   mockCognitoUsers,
   showAllCatalogNeighbourhoods,
-  DEFAULT_CATALOG_NEIGHBOURHOOD_NAME,
   MOCK_STANLEY_AREA_ID,
 } from './fixtures/test-fixtures';
 
-test.describe('Catalog default neighbourhood', () => {
-  test('opens Catalog on the configured neighbourhood', async ({
+test.describe('Catalog default area', () => {
+  test('opens Catalog on the SEARCH_AREA_SCOPE neighbourhood', async ({
     adminPage,
   }) => {
     const listRequests: string[] = [];
@@ -23,9 +22,7 @@ test.describe('Catalog default neighbourhood', () => {
       }
     });
     await adminPage.goto('/admin/dashboard?section=catalog');
-    await expect(adminPage.getByLabel('Neighbourhood')).toHaveValue(
-      DEFAULT_CATALOG_NEIGHBOURHOOD_NAME
-    );
+    await expect(adminPage.getByLabel('Neighbourhood')).toHaveValue('Stanley');
     await expect(adminPage.getByText('Stanley Beach Club')).toBeVisible();
     await expect(adminPage.getByText('Test Organization 1')).toHaveCount(0);
     await expect(adminPage.getByText('Test Organization 2')).toHaveCount(0);
