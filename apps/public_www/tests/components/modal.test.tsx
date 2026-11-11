@@ -39,9 +39,11 @@ describe('Modal', () => {
     );
 
     const dialog = screen.getByRole('dialog');
-    expect(dialog).toHaveClass('max-h-full');
+    expect(dialog).toHaveClass('max-h-full', 'min-w-0', 'w-full');
+    expect(dialog.className).toContain('max-w-[min(100%,42rem)]');
+    expect(dialog.className).toContain('[contain:inline-size]');
     expect(dialog.className).not.toMatch(/max-h-\[\d+d?vh\]/);
-    expect(dialog.parentElement).toHaveClass('fixed', 'inset-0');
+    expect(dialog.parentElement).toHaveClass('fixed', 'inset-0', 'overflow-x-hidden');
     expect(
       screen.getByRole('heading', { name: 'Search activities' }).parentElement,
     ).toHaveClass('shrink-0');

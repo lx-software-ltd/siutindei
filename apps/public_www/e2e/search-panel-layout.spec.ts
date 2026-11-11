@@ -12,8 +12,13 @@ const VIEWPORTS = [
 ] as const;
 
 const LOCALES = [
-  { locale: 'en', title: 'Search activities', search: 'Search' },
-  { locale: 'zh-HK', title: '搜尋活動', search: '搜尋' },
+  {
+    locale: 'en',
+    title: 'Search activities',
+    search: 'Search',
+    region: 'Hong Kong Island',
+  },
+  { locale: 'zh-HK', title: '搜尋活動', search: '搜尋', region: '香港島' },
 ] as const;
 
 interface PanelBoxes {
@@ -79,7 +84,7 @@ async function measurePanel(page: Page, searchLabel: string): Promise<PanelBoxes
 }
 
 for (const viewport of VIEWPORTS) {
-  for (const { locale, title, search } of LOCALES) {
+  for (const { locale, title, search, region } of LOCALES) {
     test(`search panel fits ${viewport.name} (${locale})`, async ({ page }) => {
       await page.setViewportSize({
         width: viewport.width,
@@ -92,6 +97,9 @@ for (const viewport of VIEWPORTS) {
         .first()
         .click();
       await expect(page.getByRole('dialog', { name: title })).toBeVisible();
+      // The neighbourhood menu is the wide control. Measure with it open.
+      await page.getByRole('button', { name: region, exact: true }).click();
+      await expect(page.getByRole('combobox')).toBeVisible();
 
       const boxes = await measurePanel(page, search);
 

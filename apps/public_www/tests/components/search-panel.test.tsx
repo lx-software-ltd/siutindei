@@ -131,7 +131,7 @@ describe('SearchPanel', () => {
     const row = screen.getByRole('button', {
       name: 'Hong Kong Island',
     }).parentElement;
-    expect(row).toHaveClass('flex-wrap', 'md:grid', 'md:grid-cols-5');
+    expect(row).toHaveClass('flex-wrap', 'min-w-0', 'max-w-full', 'md:grid', 'md:grid-cols-5');
     expect(row).not.toHaveClass('flex-nowrap');
     for (const fieldset of document.querySelectorAll('fieldset')) {
       expect(fieldset).toHaveClass('min-w-0');
@@ -174,6 +174,25 @@ describe('SearchPanel', () => {
     expect(
       screen.queryByRole('button', { name: 'Clear activity types' }),
     ).toBeNull();
+  });
+
+  it('locks the neighbourhood menu to the sheet width', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'hong_kong_island';
+    clearSearchAreaScopeCacheForTests();
+    renderPanel();
+
+    const neighbourhoods = screen.getByRole('combobox');
+    expect(neighbourhoods).toHaveClass('min-w-0', 'max-w-full', 'w-full');
+    expect(neighbourhoods.className).toContain('[field-sizing:fixed]');
+    expect(neighbourhoods.parentElement).toHaveClass(
+      'grid',
+      'min-w-0',
+      'w-full',
+      'grid-cols-[minmax(0,1fr)]',
+    );
+    expect(
+      neighbourhoods.querySelector('option')?.textContent,
+    ).toBe('All open areas in Hong Kong Island');
   });
 
   it('hides neighbourhoods outside the scope', () => {
