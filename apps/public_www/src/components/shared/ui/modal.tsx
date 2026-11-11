@@ -86,7 +86,7 @@ export function Modal({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center pt-10 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-x-hidden pt-10 sm:items-center sm:p-4">
       <button
         type="button"
         className="absolute inset-0 bg-ink-900/40"
@@ -98,7 +98,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl"
+        className="relative z-10 flex max-h-full w-full min-w-0 max-w-[min(100%,42rem)] flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl [contain:inline-size] sm:rounded-2xl"
       >
         <div className="flex shrink-0 items-center justify-between border-b border-brand-100 px-4 py-3 short:py-1">
           <h2 id={titleId} className="text-base font-semibold text-ink-900">
@@ -113,10 +113,10 @@ export function Modal({
             ×
           </button>
         </div>
-        <div className="flex min-h-0 flex-col short:block short:overflow-x-hidden short:overflow-y-auto short:overscroll-contain">
+        <div className="flex min-h-0 w-full min-w-0 flex-col short:block short:overflow-x-hidden short:overflow-y-auto short:overscroll-contain">
           <div
             data-modal-body
-            className="min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 short:overflow-visible"
+            className="min-h-0 w-full min-w-0 max-w-full overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 short:overflow-visible"
           >
             {children}
           </div>
