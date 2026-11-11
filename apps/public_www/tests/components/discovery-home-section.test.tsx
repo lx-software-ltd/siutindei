@@ -100,19 +100,19 @@ describe('DiscoveryHomeSection', () => {
     await waitFor(() => {
       expect(
         screen.getByRole('link', { name: content.discovery.popularTitle }),
-        ).toHaveAttribute('href', '/en/search?age=3-6&view=map');
+        ).toHaveAttribute('href', '/en/search?view=map');
     });
 
     const regionTitle = `${content.discovery.nearRegionTitle} Kowloon`;
     expect(await screen.findByRole('link', { name: regionTitle })).toHaveAttribute(
       'href',
-      '/en/search?age=3-6&region=kowloon&view=map',
+      '/en/search?region=kowloon&view=map',
     );
     expect(
       screen.getByRole('link', {
         name: `${content.discovery.carousel.seeAllLabel}: ${regionTitle}`,
       }),
-    ).toHaveAttribute('href', '/en/search?age=3-6&region=kowloon&view=map');
+    ).toHaveAttribute('href', '/en/search?region=kowloon&view=map');
   });
 
   it('hides the region carousel when every result is in one region', async () => {
@@ -145,7 +145,7 @@ describe('DiscoveryHomeSection', () => {
       await screen.findByRole('link', {
         name: 'Popular activities in Stanley',
       }),
-    ).toHaveAttribute('href', '/en/search?age=3-6&view=map');
+    ).toHaveAttribute('href', '/en/search?view=map');
     expect(
       screen.queryByRole('link', {
         name: `${content.discovery.nearRegionTitle} Hong Kong Island`,

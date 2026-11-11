@@ -296,7 +296,7 @@ describe('SearchResultsPage', () => {
       copy.areaAdjustedLabel,
     );
     expect(replace).toHaveBeenCalledWith(
-      '/en/search/?age=3-6&region=kowloon&view=map',
+      '/en/search/?region=kowloon&view=map',
     );
     await waitFor(() => {
       expect(fetchActivitySearch).toHaveBeenCalledTimes(1);
@@ -308,7 +308,7 @@ describe('SearchResultsPage', () => {
     expect(requested?.areaId).toBe(kowloon?.areaId);
 
     currentSearchParams.value = new URLSearchParams(
-      'age=3-6&region=kowloon&view=map',
+      'region=kowloon&view=map',
     );
     await act(async () => {
       rerender(<Tree />);

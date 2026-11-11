@@ -3,6 +3,8 @@ import { getSearchConfig, getSiteConfig } from '@/lib/site-config';
 
 import { hideImportTemplateCopy } from './description-boilerplate';
 import { mapActivityListing } from './map-listing';
+import { classPriceEquivalent } from './price-format';
+import { toHongKongSession } from './schedule-format';
 import type {
   ActivityListing,
   ActivitySearchParams,
@@ -36,6 +38,8 @@ interface StagingFixtureItem {
     readonly status?: string | null;
     readonly description_source?: string | null;
     readonly place_id?: string | null;
+    readonly parent_verified?: boolean | null;
+    readonly description_translations?: Record<string, string>;
   };
   readonly location: {
     readonly id: string;
@@ -52,7 +56,7 @@ interface StagingFixtureItem {
     readonly currency: string;
     readonly sessions_count?: number | null;
     readonly free_trial_class_offered: boolean;
-  };
+  } | null;
   readonly schedule: {
     readonly schedule_type: string;
     readonly weekly_entries: Array<{
@@ -61,7 +65,7 @@ interface StagingFixtureItem {
       readonly end_minutes_utc: number;
     }>;
     readonly languages: string[];
-  };
+  } | null;
   readonly _sort: StagingSortMeta;
 }
 
@@ -196,6 +200,18 @@ function matchesItem(
     }
   }
 
+  if (
+    params.organizationIds &&
+    params.organizationIds.length > 0 &&
+    !params.organizationIds.includes(item.organization.id)
+  ) {
+    return false;
+  }
+
+  if (!matchesRefinements(item, params)) {
+    return false;
+  }
+
   const query = params.q?.trim().toLowerCase() ?? '';
   if (query.length >= 2 && !matchesText(item, query)) {
     return false;
@@ -210,6 +226,59 @@ function matchesItem(
   }
 
   return true;
+}
+
+function matchesRefinements(
+  item: StagingFixtureItem,
+  params: ActivitySearchParams,
+): boolean {
+  const pricing = item.pricing;
+  if (params.pricingType && pricing?.pricing_type !== params.pricingType) {
+    return false;
+  }
+  if (params.freeTrial && !pricing?.free_trial_class_offered) {
+    return false;
+  }
+  if (params.classPriceMax !== undefined) {
+    const perClass = classPriceOf(item);
+    if (perClass === null || perClass > params.classPriceMax) {
+      return false;
+    }
+  }
+  if (params.languages && params.languages.length > 0) {
+    const languages = item.schedule?.languages ?? [];
+    if (!params.languages.some((language) => languages.includes(language))) {
+      return false;
+    }
+  }
+  if (params.daysOfWeekHkt && params.daysOfWeekHkt.length > 0) {
+    const days = (item.schedule?.weekly_entries ?? []).map(
+      (entry) =>
+        toHongKongSession({
+          dayOfWeekUtc: entry.day_of_week_utc,
+          startMinutesUtc: entry.start_minutes_utc,
+          endMinutesUtc: entry.end_minutes_utc,
+        }).day,
+    );
+    if (!params.daysOfWeekHkt.some((day) => days.includes(day))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function classPriceOf(item: StagingFixtureItem): number | null {
+  const pricing = item.pricing;
+  if (!pricing) {
+    return null;
+  }
+  return classPriceEquivalent({
+    pricingType: pricing.pricing_type,
+    amount: Number(pricing.amount),
+    currency: pricing.currency,
+    sessionsCount: pricing.sessions_count ?? null,
+    freeTrialClassOffered: pricing.free_trial_class_offered,
+  });
 }
 
 function matchesText(item: StagingFixtureItem, query: string): boolean {
@@ -249,15 +318,33 @@ function listingFromFixture(
   );
 }
 
-function decodeCursor(cursor: string): StagingSortMeta | null {
+function decodeCursorPayload(cursor: string): Record<string, unknown> | null {
   try {
     const padding = '='.repeat((4 - (cursor.length % 4)) % 4);
     const raw = atob(cursor.replace(/-/g, '+').replace(/_/g, '/') + padding);
-    const payload = JSON.parse(raw) as {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function encodeCursorPayload(payload: Record<string, unknown>): string {
+  return btoa(JSON.stringify(payload))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function decodeCursor(cursor: string): StagingSortMeta | null {
+  try {
+    const payload = decodeCursorPayload(cursor) as {
       schedule_id?: string;
       day_of_week_utc?: number;
       start_minutes_utc?: number;
-    };
+    } | null;
+    if (!payload) {
+      return null;
+    }
     if (
       payload.schedule_id == null
       || payload.day_of_week_utc == null
@@ -294,6 +381,13 @@ export async function fetchStagingActivitySearch(
   const matched = sortedPublishedItems(fixture).filter((item) =>
     matchesItem(item, params, areaDescendants),
   );
+  const total = params.includeTotal && !params.cursor
+    ? new Set(matched.map((item) => item.activity.id)).size
+    : null;
+
+  if (params.sort === 'price') {
+    return pageByPrice(matched, params, limit, total);
+  }
 
   let startIndex = 0;
   if (params.cursor) {
@@ -321,5 +415,38 @@ export async function fetchStagingActivitySearch(
       listingFromFixture(item, params.view === 'card' ? 'card' : 'full'),
     ),
     nextCursor: hasMore && last ? encodeCursor(last._sort) : null,
+    total,
+  };
+}
+
+function pageByPrice(
+  matched: readonly StagingFixtureItem[],
+  params: ActivitySearchParams,
+  limit: number,
+  total: number | null,
+): ActivitySearchResponse {
+  const ordered = matched
+    .map((item, index) => ({ item, index, price: classPriceOf(item) }))
+    .sort(
+      (left, right) =>
+        (left.price ?? Number.POSITIVE_INFINITY) -
+          (right.price ?? Number.POSITIVE_INFINITY) || left.index - right.index,
+    )
+    .map((entry) => entry.item);
+  const payload = params.cursor ? decodeCursorPayload(params.cursor) : null;
+  const offset =
+    payload && payload.sort === 'price' && typeof payload.offset === 'number'
+      ? payload.offset
+      : 0;
+  const page = ordered.slice(offset, offset + limit);
+  const hasMore = ordered.length > offset + limit;
+  return {
+    items: page.map((item) =>
+      listingFromFixture(item, params.view === 'card' ? 'card' : 'full'),
+    ),
+    nextCursor: hasMore
+      ? encodeCursorPayload({ sort: 'price', offset: offset + limit })
+      : null,
+    total,
   };
 }

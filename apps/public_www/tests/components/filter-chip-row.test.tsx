@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FilterChipRow } from '@/components/sections/search/filter-chip-row';
 import { SearchProvider } from '@/components/shared/search/search-context';
-import { DEFAULT_SEARCH_FILTERS } from '@/lib/activities/search-params';
 import { iconSrcForActivity } from '@/lib/home-wizard/choice-icons';
 import { homeWizardChoices } from '@/lib/home-wizard/choices';
 
@@ -70,22 +69,22 @@ describe('FilterChipRow', () => {
     fireEvent.click(screen.getByRole('button', { name: workshop.labels.en }));
 
     expect(replace).toHaveBeenCalledWith(
-      `/en/search/?age=${DEFAULT_SEARCH_FILTERS.ageGroupId}&types=${workshop.id}&view=map`,
+      `/en/search/?types=${workshop.id}&view=map`,
     );
 
     fireEvent.click(screen.getByRole('button', { name: classType.labels.en }));
     expect(replace).toHaveBeenLastCalledWith(
-      `/en/search/?age=${DEFAULT_SEARCH_FILTERS.ageGroupId}&types=${workshop.id}%2C${classType.id}&view=map`,
+      `/en/search/?types=${workshop.id}%2C${classType.id}&view=map`,
     );
 
     fireEvent.click(screen.getByRole('button', { name: workshop.labels.en }));
     expect(replace).toHaveBeenLastCalledWith(
-      `/en/search/?age=${DEFAULT_SEARCH_FILTERS.ageGroupId}&types=${classType.id}&view=map`,
+      `/en/search/?types=${classType.id}&view=map`,
     );
 
     fireEvent.click(screen.getByRole('button', { name: classType.labels.en }));
     expect(replace).toHaveBeenLastCalledWith(
-      `/en/search/?age=${DEFAULT_SEARCH_FILTERS.ageGroupId}&view=map`,
+      `/en/search/?view=map`,
     );
   });
 
@@ -97,7 +96,7 @@ describe('FilterChipRow', () => {
     fireEvent.click(screen.getByRole('button', { name: workshop.labels.en }));
 
     expect(replace).toHaveBeenCalledWith(
-      `/en/search/?age=${DEFAULT_SEARCH_FILTERS.ageGroupId}&types=${workshop.id}&view=list`,
+      `/en/search/?types=${workshop.id}&view=list`,
     );
   });
 });

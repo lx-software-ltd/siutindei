@@ -42,13 +42,13 @@ describe('search bars with one open region', () => {
       screen.getByRole('link', { name: 'Show activities on map for: Stanley' }),
     ).toHaveAttribute(
       'href',
-      '/en/search?age=3-6&region=hong_kong_island&neighbourhood=southern-stanley&view=map',
+      '/en/search?region=hong_kong_island&neighbourhood=southern-stanley&view=map',
     );
 
     const summaries = screen
       .getAllByRole('button', { name: 'Search activities' })
       .map((button) => button.textContent ?? '');
-    expect(summaries.some((text) => text.includes('Stanley') && text.includes('3–6'))).toBe(
+    expect(summaries.some((text) => text.includes('Stanley') && text.includes('Any age'))).toBe(
       true,
     );
 
@@ -68,6 +68,6 @@ describe('search bars with one open region', () => {
     expect(compactSearch?.className).toContain('w-10');
     expect(compactSearch?.className).toContain('text-[2.25rem]');
     fireEvent.click(searchButtons[0]);
-    expect(push).toHaveBeenCalledWith('/en/search/?age=3-6&view=map');
+    expect(push).toHaveBeenCalledWith('/en/search/?view=map');
   });
 });

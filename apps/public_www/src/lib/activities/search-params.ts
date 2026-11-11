@@ -1,7 +1,11 @@
 import type { Locale } from '@/content/locales';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 
+import type { ActivitySearchParams, ActivitySearchSort } from './types';
+
 export type SearchViewMode = 'list' | 'map';
+
+export type SearchDayChoice = 'weekend' | 'weekdays' | `${number}`;
 
 export interface SearchFiltersState {
   readonly ageGroupId: string | null;
@@ -9,10 +13,24 @@ export interface SearchFiltersState {
   readonly neighbourhoodId: string | null;
   readonly activityTypeIds: readonly string[];
   readonly textQuery: string;
+  /** Only free activities (`pricing_type=free`). */
+  readonly free?: boolean;
+  readonly freeTrial?: boolean;
+  /** `weekend`, `weekdays`, or one Hong Kong day, `0` for Sunday. */
+  readonly day?: SearchDayChoice | null;
+  readonly language?: string | null;
+  /** Highest price of one class in HKD. */
+  readonly classPriceMax?: number | null;
+  readonly sort?: ActivitySearchSort;
 }
 
+export const SEARCH_LANGUAGE_CODES = ['yue', 'en', 'zh'] as const;
+export const SEARCH_PRICE_BANDS = [150, 250, 400] as const;
+const WEEKDAYS = [1, 2, 3, 4, 5] as const;
+const WEEKEND = [0, 6] as const;
+
 export const DEFAULT_SEARCH_FILTERS: SearchFiltersState = {
-  ageGroupId: homeWizardChoices.ageGroups[1]?.id ?? null,
+  ageGroupId: null,
   regionId: null,
   neighbourhoodId: null,
   activityTypeIds: [],
@@ -101,10 +119,62 @@ export function categoryIdsForTypes(
   return ids;
 }
 
+export function daysForChoice(
+  day: SearchDayChoice | null | undefined,
+): readonly number[] {
+  if (!day) {
+    return [];
+  }
+  if (day === 'weekend') {
+    return WEEKEND;
+  }
+  if (day === 'weekdays') {
+    return WEEKDAYS;
+  }
+  const value = Number(day);
+  return Number.isInteger(value) && value >= 0 && value <= 6 ? [value] : [];
+}
+
+function parseDayChoice(value: string | null): SearchDayChoice | null {
+  if (value === 'weekend' || value === 'weekdays') {
+    return value;
+  }
+  if (value !== null && /^[0-6]$/.test(value)) {
+    return value as SearchDayChoice;
+  }
+  return null;
+}
+
+function parseLanguage(value: string | null): string | null {
+  return value && (SEARCH_LANGUAGE_CODES as readonly string[]).includes(value)
+    ? value
+    : null;
+}
+
+function parsePriceBand(value: string | null): number | null {
+  const parsed = value ? Number(value) : Number.NaN;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function isOn(value: string | null): boolean {
+  return value === '1' || value === 'true';
+}
+
+/** Number of refinements set beyond place, age, type, and text. */
+export function activeRefinementCount(filters: SearchFiltersState): number {
+  return [
+    filters.free,
+    filters.freeTrial,
+    filters.day,
+    filters.language,
+    filters.classPriceMax !== null && filters.classPriceMax !== undefined,
+  ].filter(Boolean).length;
+}
+
 export function parseSearchFiltersFromQuery(
   searchParams: URLSearchParams,
 ): SearchFiltersState {
-  const ageGroupId = searchParams.get('age') ?? DEFAULT_SEARCH_FILTERS.ageGroupId;
+  const ageGroupId = searchParams.get('age') || DEFAULT_SEARCH_FILTERS.ageGroupId;
   const regionId = searchParams.get('region') || null;
   const neighbourhoodId = searchParams.get('neighbourhood') || null;
   const typesParam = searchParams.get('types');
@@ -113,13 +183,27 @@ export function parseSearchFiltersFromQuery(
     : [];
   const textQuery = searchParams.get('q') ?? '';
 
+  const sort = searchParams.get('sort') === 'price' ? 'price' : undefined;
   return {
     ageGroupId,
     regionId,
     neighbourhoodId,
     activityTypeIds,
     textQuery,
+    ...(isOn(searchParams.get('free')) ? { free: true } : {}),
+    ...(isOn(searchParams.get('trial')) ? { freeTrial: true } : {}),
+    ...withValue('day', parseDayChoice(searchParams.get('day'))),
+    ...withValue('language', parseLanguage(searchParams.get('lang'))),
+    ...withValue('classPriceMax', parsePriceBand(searchParams.get('price'))),
+    ...(sort ? { sort } : {}),
   };
+}
+
+function withValue<Key extends string, Value>(
+  key: Key,
+  value: Value | null,
+): { [K in Key]?: Value } {
+  return value === null ? {} : ({ [key]: value } as { [K in Key]?: Value });
 }
 
 export function parseSearchViewMode(
@@ -148,22 +232,58 @@ export function buildSearchQueryString(
   if (filters.textQuery.trim()) {
     params.set('q', filters.textQuery.trim());
   }
+  if (filters.free) {
+    params.set('free', '1');
+  }
+  if (filters.freeTrial) {
+    params.set('trial', '1');
+  }
+  if (filters.day) {
+    params.set('day', filters.day);
+  }
+  if (filters.language) {
+    params.set('lang', filters.language);
+  }
+  if (filters.classPriceMax !== null && filters.classPriceMax !== undefined) {
+    params.set('price', String(filters.classPriceMax));
+  }
+  if (filters.sort === 'price') {
+    params.set('sort', 'price');
+  }
   const view = options?.view ?? 'map';
   params.set('view', view);
   return params.toString();
 }
 
-export function filtersToApiParams(filters: SearchFiltersState): {
-  readonly age?: number;
-  readonly areaId?: string;
-  readonly categoryIds: readonly string[];
-  readonly q?: string;
-} {
+export function filtersToApiParams(
+  filters: SearchFiltersState,
+): Pick<
+  ActivitySearchParams,
+  | 'age'
+  | 'areaId'
+  | 'categoryIds'
+  | 'q'
+  | 'pricingType'
+  | 'freeTrial'
+  | 'daysOfWeekHkt'
+  | 'languages'
+  | 'classPriceMax'
+  | 'sort'
+> & { readonly categoryIds: readonly string[] } {
   const textQuery = filters.textQuery.trim();
+  const days = daysForChoice(filters.day);
   return {
     age: searchAgeForGroup(filters.ageGroupId),
     areaId: areaIdForFilters(filters),
     categoryIds: categoryIdsForTypes(filters.activityTypeIds),
     ...(textQuery.length >= 2 ? { q: textQuery } : {}),
+    ...(filters.free ? { pricingType: 'free' } : {}),
+    ...(filters.freeTrial ? { freeTrial: true } : {}),
+    ...(days.length > 0 ? { daysOfWeekHkt: days } : {}),
+    ...(filters.language ? { languages: [filters.language] } : {}),
+    ...(filters.classPriceMax !== null && filters.classPriceMax !== undefined
+      ? { classPriceMax: filters.classPriceMax }
+      : {}),
+    ...(filters.sort === 'price' ? { sort: 'price' as const } : {}),
   };
 }
