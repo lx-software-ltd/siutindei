@@ -83,7 +83,7 @@ export function getSiteHost(): string {
   return cachedSiteHost;
 }
 
-const DEFAULT_SOCIAL_IMAGE = '/images/seo/siutindei-og-default.jpg';
+const DEFAULT_SOCIAL_IMAGE = '/images/seo/siutindei-og-2026-11.jpg';
 const DEFAULT_SOCIAL_IMAGE_WIDTH = 1200;
 const DEFAULT_SOCIAL_IMAGE_HEIGHT = 630;
 

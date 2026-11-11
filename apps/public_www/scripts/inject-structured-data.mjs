@@ -11,7 +11,7 @@ const OUT_DIR = process.env.PUBLIC_WWW_OUT_DIR
   : path.resolve('out');
 const CONTENT_DIR = path.resolve('src/content');
 const SUPPORTED_LOCALES = ['en', 'zh-HK'];
-const DEFAULT_SOCIAL_IMAGE = '/images/seo/siutindei-og-default.jpg';
+const DEFAULT_SOCIAL_IMAGE = '/images/seo/siutindei-og-2026-11.jpg';
 const JSON_LD_MARKER = '<!-- jsonld-structured-data -->';
 
 function requireEnv(name) {
