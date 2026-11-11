@@ -21,10 +21,12 @@ approve decision. Release blockers still refuse the release when
 
 - `backend/src/app/api/admin_org_review_actions.py`
 - `backend/src/app/api/partner_org_approve.py`
+- `backend/src/app/services/org_review.py`
 - `tests/test_partner_org_approve.py`
 - `docs/api/partner.yaml`
 - `docs/architecture/decisions.md`
 - `docs/architecture/data-quality.md`
+- `docs/architecture/security.md`
 
 ## Invariants this change preserves
 

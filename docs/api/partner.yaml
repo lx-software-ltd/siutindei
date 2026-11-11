@@ -603,7 +603,8 @@ paths:
         `POST /v1/admin/org-review/{id}/decision`. `reason` is required
         and is one of `not_relevant`, `duplicate`, `poor_data`, or
         `other`. An approved organization can be rejected, and `status`
-        can hide it. Reopen and `force` stay on the admin console.
+        can hide it. Reject does not accept `force`. Reopen stays on
+        the admin console.
         Approve is `POST /v1/partner/organizations/{id}/approve`.
         A later reject replaces the stored reason. Anything
         after `/reject` is `404`. Invalid `notes` or `status` is `400`

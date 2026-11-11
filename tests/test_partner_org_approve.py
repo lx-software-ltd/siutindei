@@ -332,19 +332,30 @@ def test_approve_refuses_blockers_other_actions_and_unknown_organizations(
         _delete(test_engine, org_id)
 
 
-def test_force_approves_an_organization_with_blockers(monkeypatch, test_engine) -> None:
+def test_force_approves_an_organization_with_blockers(
+    monkeypatch, test_engine, caplog
+) -> None:
     _patch_engine(monkeypatch, test_engine)
     token = uuid4().hex[:8]
     org_id = _insert(test_engine, f"West Club {token}")
     try:
-        approved = _post(
-            org_id,
-            {
-                "force": True,
-                "notes": "Release anyway",
-                "status": "operational",
-            },
+        event = _partner_event(
+            "POST",
+            f"/v1/partner/organizations/{org_id}/approve",
+            "crud",
+            "",
         )
+        event["requestContext"]["authorizer"]["userSub"] = "forwarded-actor"
+        with caplog.at_level("INFO"):
+            approved = _post(
+                org_id,
+                {
+                    "force": True,
+                    "notes": "Release anyway",
+                    "status": "operational",
+                },
+                event=event,
+            )
         assert approved["statusCode"] == 200
         body = json.loads(approved["body"])
         assert body["review_status"] == "approved"
@@ -352,12 +363,23 @@ def test_force_approves_an_organization_with_blockers(monkeypatch, test_engine) 
         assert body["review_notes"] == "Release anyway"
         assert body["status"] == "operational"
         assert body["status_source"] == "owner"
+        assert body["reviewed_by"] == "forwarded-actor"
         assert body["reviewed_at"]
+        assert _actors(test_engine, org_id) == ["forwarded-actor"]
+        forced = [
+            record
+            for record in caplog.records
+            if record.message == "Organization approved"
+        ]
+        assert forced
+        assert forced[-1].forced is True
+        assert forced[-1].blocker_count > 0
         with Session(test_engine) as session:
             row = session.get(Organization, org_id)
             assert row is not None
             assert row.review_status == "approved"
             assert row.review_notes == "Release anyway"
+            assert row.reviewed_by == "forwarded-actor"
     finally:
         _delete(test_engine, org_id)
 

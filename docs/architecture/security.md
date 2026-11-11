@@ -177,7 +177,8 @@ in the `x-partner-key` header:
   review status and can read pending name-cleanup proposals and
   category-check reviews. A full-access `crud` key is the partner
   equivalent of an admin: it can decide category-check reviews, merge
-  organizations, approve or reject an organization, read and run website enrichment (including apply,
+  organizations, approve or reject an organization (approve accepts
+  `force`, which releases the organization while blockers remain), read and run website enrichment (including apply,
   dismiss, and enrichment settings), and manage activity categories.
   A full-access `read` key can list and fetch categories. A `read` key
   is rejected on organization approval, organization rejection, category writes, and those

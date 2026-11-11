@@ -189,17 +189,28 @@ def apply_organization_approval(
                 },
                 event=event,
             )
+        blocker_count = _bypassed_blocker_count(session, organization) if force else 0
         session.commit()
         session.refresh(organization)
         logger.info(
             "Organization approved",
-            extra={"org_id": str(organization.id)},
+            extra={
+                "org_id": str(organization.id),
+                "forced": force,
+                "blocker_count": blocker_count,
+            },
         )
         return json_response(
             200,
             _serialize_organization(organization),
             event=event,
         )
+
+
+def _bypassed_blocker_count(session: Session, organization: Organization) -> int:
+    """Release blockers a forced approval is about to ignore."""
+    snapshot = snapshot_for_org(session, organization)
+    return sum(1 for issue in snapshot.issues if issue.severity == "blocker")
 
 
 def _only_this_action(body: Mapping[str, Any], action_name: str) -> None:
