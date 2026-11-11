@@ -556,8 +556,12 @@ paths:
         Same notes and listing status as an approve decision on
         `POST /v1/admin/org-review/{id}/decision`. Release blockers
         return `400` with `issues` and leave the organization unchanged.
-        `force` and `reason` stay on the admin console. Approve clears
-        a stored reject reason. Anything after `/approve` is `404`.
+        `force` and `reason` stay on the admin decision route. Approve
+        clears a stored reject reason. Approving an organization that
+        is already approved returns `200` and leaves it approved.
+        `status` `hidden` approves the review and hides the listing.
+        Public search can take up to 5 minutes to show the release.
+        Anything after `/approve` is `404`.
         Invalid `notes`, `status`, or `action` is `400` before the
         organization is looked up. The actor stored in `reviewed_by` is
         the authorizer `userSub` when it is present, and
@@ -598,8 +602,9 @@ paths:
         `POST /v1/admin/org-review/{id}/decision`. `reason` is required
         and is one of `not_relevant`, `duplicate`, `poor_data`, or
         `other`. An approved organization can be rejected, and `status`
-        can hide it. Approve, reopen, and `force` stay on the admin
-        console. A later reject replaces the stored reason. Anything
+        can hide it. Reopen and `force` stay on the admin console.
+        Approve is `POST /v1/partner/organizations/{id}/approve`.
+        A later reject replaces the stored reason. Anything
         after `/reject` is `404`. Invalid `notes` or `status` is `400`
         before the organization is looked up. The actor stored in
         `reviewed_by` is the authorizer `userSub` when it is present,

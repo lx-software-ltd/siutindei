@@ -202,12 +202,12 @@ def apply_organization_approval(
         )
 
 
-def _validated_approve_body(body: Mapping[str, Any]) -> None:
-    """Check the approve body before any organization lookup."""
+def _only_this_action(body: Mapping[str, Any], action_name: str) -> None:
+    """Refuse a different action, and refuse force, before any lookup."""
     action = body.get("action")
-    if action not in (None, "", "approve"):
+    if action not in (None, "", action_name):
         raise ValidationError(
-            "Only approve is available on this route",
+            f"Only {action_name} is available on this route",
             field="action",
         )
     if "force" in body:
@@ -215,6 +215,11 @@ def _validated_approve_body(body: Mapping[str, Any]) -> None:
             "force is not available on this route",
             field="force",
         )
+
+
+def _validated_approve_body(body: Mapping[str, Any]) -> None:
+    """Check the approve body before any organization lookup."""
+    _only_this_action(body, "approve")
     _decision_reason(body.get("reason"), "approve")
     if "notes" in body:
         _parse_notes(body.get("notes"))
@@ -238,18 +243,8 @@ def _validated_reject_body(body: Mapping[str, Any]) -> str:
 
 
 def _reject_other_actions(body: Mapping[str, Any]) -> None:
-    """This route rejects. Approve, reopen, and force stay on admin."""
-    action = body.get("action")
-    if action not in (None, "", "reject"):
-        raise ValidationError(
-            "Only reject is available on this route",
-            field="action",
-        )
-    if "force" in body:
-        raise ValidationError(
-            "force is not available on this route",
-            field="force",
-        )
+    """This route rejects. Reopen and force stay on the admin decision."""
+    _only_this_action(body, "reject")
 
 
 def handle_bulk(event: Mapping[str, Any]) -> dict[str, Any]:

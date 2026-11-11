@@ -3,15 +3,26 @@
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 from uuid import uuid4
 
 from app.api.admin import _handle_partner_routes
 from app.api.partner_auth import get_partner_context
 from app.api.partner_org_approve import handle_partner_org_approve
-from app.db.models import AuditLog, Organization
+from app.db.models import (
+    Activity,
+    ActivityCategory,
+    ActivityPricing,
+    ActivitySchedule,
+    AuditLog,
+    GeographicArea,
+    Location,
+    Organization,
+)
+from app.db.models.enums import PricingType, ScheduleType
 from app.exceptions import AuthorizationError
-from app.services.org_review import OrgReviewSnapshot
 from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.orm import Session
 
 from tests.test_partner_routes import _partner_event
@@ -23,31 +34,70 @@ def _patch_engine(monkeypatch, engine) -> None:
     monkeypatch.setattr("app.api.admin_org_review_actions.get_engine", lambda: engine)
 
 
-def _clear_blockers(monkeypatch) -> None:
-    def _snapshot(session, organization):
-        del session
-        return OrgReviewSnapshot(
-            organization=organization,
-            locations=[],
-            activities=[],
-            pricing_counts={},
-            schedule_counts={},
-            issues=[],
-            check_count=1,
-        )
-
-    monkeypatch.setattr(
-        "app.api.admin_org_review_actions.snapshot_for_org",
-        _snapshot,
-    )
-
-
 def _insert(engine, name: str) -> str:
     with Session(engine) as session:
         org = Organization(name=name, manager_id=_MANAGER)
         session.add(org)
         session.commit()
         return str(org.id)
+
+
+def _insert_ready(
+    engine,
+    name: str,
+    *,
+    review_status: str = "pending_review",
+    review_reason: str | None = None,
+) -> tuple[str, str, str]:
+    """Organization with the details an approval requires."""
+    with Session(engine) as session:
+        area = GeographicArea(name=f"Area {name}", level="district", active=True)
+        category = ActivityCategory(name=f"Category {name}", display_order=0)
+        org = Organization(
+            name=name,
+            manager_id=_MANAGER,
+            description="A complete club description",
+            review_status=review_status,
+            review_reason=review_reason,
+        )
+        session.add_all([area, category, org])
+        session.flush()
+        location = Location(
+            org_id=org.id,
+            area_id=area.id,
+            address="1 Test Street",
+            lat=Decimal("22.100000"),
+            lng=Decimal("114.100000"),
+        )
+        session.add(location)
+        session.flush()
+        activity = Activity(
+            org_id=org.id,
+            category_id=category.id,
+            name=f"Class {name}",
+            description="A class",
+            age_range=Range(5, 12, bounds="[]"),
+        )
+        session.add(activity)
+        session.flush()
+        session.add(
+            ActivityPricing(
+                activity_id=activity.id,
+                location_id=location.id,
+                pricing_type=PricingType.PER_CLASS,
+                amount=Decimal("10.00"),
+            )
+        )
+        session.add(
+            ActivitySchedule(
+                activity_id=activity.id,
+                location_id=location.id,
+                schedule_type=ScheduleType.WEEKLY,
+                languages=["en"],
+            )
+        )
+        session.commit()
+        return str(org.id), str(area.id), str(category.id)
 
 
 def _delete(engine, org_id: str) -> None:
@@ -63,6 +113,33 @@ def _delete(engine, org_id: str) -> None:
             )
         )
         session.commit()
+
+
+def _delete_ready(engine, org_id: str, area_id: str, category_id: str) -> None:
+    _delete(engine, org_id)
+    with Session(engine) as session:
+        area = session.get(GeographicArea, area_id)
+        category = session.get(ActivityCategory, category_id)
+        if area is not None:
+            session.delete(area)
+        if category is not None:
+            session.delete(category)
+        session.commit()
+
+
+def _actors(engine, org_id: str) -> list:
+    with Session(engine) as session:
+        return list(
+            session.scalars(
+                select(AuditLog.user_id)
+                .where(
+                    AuditLog.table_name == "organizations",
+                    AuditLog.record_id == org_id,
+                    AuditLog.action == "UPDATE",
+                )
+                .order_by(AuditLog.timestamp)
+            ).all()
+        )
 
 
 def _post(
@@ -112,17 +189,14 @@ def test_handler_rejects_a_read_key_before_opening_the_database() -> None:
 
 def test_full_access_approves_an_organization(monkeypatch, test_engine) -> None:
     _patch_engine(monkeypatch, test_engine)
-    _clear_blockers(monkeypatch)
     token = uuid4().hex[:8]
-    org_id = _insert(test_engine, f"North Club {token}")
+    org_id, area_id, category_id = _insert_ready(
+        test_engine,
+        f"North Club {token}",
+        review_status="rejected",
+        review_reason="duplicate",
+    )
     try:
-        with Session(test_engine) as session:
-            row = session.get(Organization, org_id)
-            assert row is not None
-            row.review_status = "rejected"
-            row.review_reason = "duplicate"
-            session.commit()
-
         event = _partner_event(
             "POST",
             f"/v1/partner/organizations/{org_id}/approve",
@@ -132,7 +206,11 @@ def test_full_access_approves_an_organization(monkeypatch, test_engine) -> None:
         event["requestContext"]["authorizer"]["userSub"] = "forwarded-actor"
         approved = _post(
             org_id,
-            {"notes": "Ready to list", "status": "operational"},
+            {
+                "action": "approve",
+                "notes": "Ready to list",
+                "status": "operational",
+            },
             event=event,
         )
         assert approved["statusCode"] == 200
@@ -144,20 +222,37 @@ def test_full_access_approves_an_organization(monkeypatch, test_engine) -> None:
         assert body["status_source"] == "owner"
         assert body["reviewed_by"] == "forwarded-actor"
         assert body["reviewed_at"]
+        assert _actors(test_engine, org_id) == ["forwarded-actor"]
 
-        with Session(test_engine) as session:
-            actors = session.scalars(
-                select(AuditLog.user_id)
-                .where(
-                    AuditLog.table_name == "organizations",
-                    AuditLog.record_id == org_id,
-                    AuditLog.action == "UPDATE",
-                )
-                .order_by(AuditLog.timestamp)
-            ).all()
-        assert actors[-1] == "forwarded-actor"
+        again = _post(org_id, {"action": "approve"}, event=event)
+        assert again["statusCode"] == 200
+        again_body = json.loads(again["body"])
+        assert again_body["review_status"] == "approved"
+        assert again_body["review_reason"] is None
+        assert _actors(test_engine, org_id) == [
+            "forwarded-actor",
+            "forwarded-actor",
+        ]
     finally:
-        _delete(test_engine, org_id)
+        _delete_ready(test_engine, org_id, area_id, category_id)
+
+
+def test_approve_can_hide_the_listing(monkeypatch, test_engine) -> None:
+    _patch_engine(monkeypatch, test_engine)
+    token = uuid4().hex[:8]
+    org_id, area_id, category_id = _insert_ready(
+        test_engine,
+        f"Hidden Club {token}",
+    )
+    try:
+        hidden = _post(org_id, {"status": "hidden"})
+        assert hidden["statusCode"] == 200
+        body = json.loads(hidden["body"])
+        assert body["review_status"] == "approved"
+        assert body["status"] == "hidden"
+        assert body["status_source"] == "owner"
+    finally:
+        _delete_ready(test_engine, org_id, area_id, category_id)
 
 
 def test_approve_refuses_blockers_other_actions_and_unknown_organizations(
@@ -236,9 +331,11 @@ def test_approve_refuses_blockers_other_actions_and_unknown_organizations(
 
 def test_omitted_user_sub_records_the_key(monkeypatch, test_engine) -> None:
     _patch_engine(monkeypatch, test_engine)
-    _clear_blockers(monkeypatch)
     token = uuid4().hex[:8]
-    org_id = _insert(test_engine, f"East Club {token}")
+    org_id, area_id, category_id = _insert_ready(
+        test_engine,
+        f"East Club {token}",
+    )
     try:
         event = _partner_event(
             "POST",
@@ -251,5 +348,6 @@ def test_omitted_user_sub_records_the_key(monkeypatch, test_engine) -> None:
         approved = _post(org_id, {}, event=event)
         assert approved["statusCode"] == 200
         assert json.loads(approved["body"])["reviewed_by"] == f"api-key:{key_id}"
+        assert _actors(test_engine, org_id) == [f"api-key:{key_id}"]
     finally:
-        _delete(test_engine, org_id)
+        _delete_ready(test_engine, org_id, area_id, category_id)

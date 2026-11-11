@@ -31,6 +31,7 @@ release. The actor is the authorizer `userSub`, or `api-key:<id>` when
 - `docs/architecture/security.md`
 - `docs/architecture/aws-assets-map.md`
 - `docs/architecture/data-quality.md`
+- `docs/architecture/decisions.md`
 
 ## Invariants this change preserves
 
