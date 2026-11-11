@@ -4,14 +4,16 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  ACTIVITY_DETAIL_PAGE_LIMIT,
   DISCOVERY_HOME_SEARCH_LIMIT,
   DISCOVERY_RECENT_SEARCH_LIMIT,
+  RELATED_ACTIVITIES_LIMIT,
   SEARCH_RESULTS_PAGE_LIMIT,
 } from '@/lib/activities/search-limits';
 import { ROBOTS_DISALLOWED_PATHS } from '@/lib/routes';
 
-/** `fetchActivityListingById` asks for a single listing. */
-const DETAIL_LOOKUP_LIMIT = 1;
+/** `scripts/smoke-staging.mjs` probes the search API with one listing. */
+const SMOKE_CHECK_LIMIT = 1;
 /** Discovery carousels after the first page render 12 at a time. */
 const DISCOVERY_CAROUSEL_LIMIT = 12;
 const SEARCH_PATH = '/v1/activities/search';
@@ -52,11 +54,13 @@ describe('Cloudflare edge policy contract', () => {
     expect(rule?.action).toBe('block');
 
     const siteLimits = new Set([
-      DETAIL_LOOKUP_LIMIT,
+      SMOKE_CHECK_LIMIT,
       DISCOVERY_CAROUSEL_LIMIT,
       DISCOVERY_RECENT_SEARCH_LIMIT,
       DISCOVERY_HOME_SEARCH_LIMIT,
       SEARCH_RESULTS_PAGE_LIMIT,
+      ACTIVITY_DETAIL_PAGE_LIMIT,
+      RELATED_ACTIVITIES_LIMIT,
     ]);
     expect(new Set(allowedLimits(rule?.expression ?? ''))).toEqual(siteLimits);
   });
