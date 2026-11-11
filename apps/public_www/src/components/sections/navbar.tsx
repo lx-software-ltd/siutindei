@@ -72,12 +72,6 @@ export function Navbar({ locale, content }: NavbarProps) {
               <SearchBarCompact locale={locale} labels={content.searchBar} />
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Link
-                href={content.hostLink.href}
-                className="link-unadorned hidden rounded-full border border-ink-900/15 px-3 py-2 text-sm font-semibold text-ink-900 hover:bg-brand-50 lg:inline-flex"
-              >
-                {content.hostLink.label}
-              </Link>
               <NavbarLanguageSwitcher locale={locale} content={content} />
             </div>
           </div>

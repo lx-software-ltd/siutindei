@@ -10,10 +10,6 @@
       { "label": "主頁", "href": "/" },
       { "label": "關於我們", "href": "/about" }
     ],
-    "hostLink": {
-      "label": "刊登活動",
-      "href": "#contact"
-    },
     "searchBar": {
       "where": "地區",
       "childAge": "子女年齡",

@@ -102,4 +102,16 @@ describe('Navbar', () => {
     );
     expect(screen.getByRole('banner')).not.toHaveAttribute('inert');
   });
+
+  it('does not render a list-your-activity link', () => {
+    pathname.mockReturnValue('/en/search/');
+    renderNavbar();
+
+    expect(
+      screen.queryByRole('link', { name: 'List your activity' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: '刊登活動' }),
+    ).not.toBeInTheDocument();
+  });
 });

@@ -10,10 +10,6 @@
       { "label": "Home", "href": "/" },
       { "label": "About", "href": "/about" }
     ],
-    "hostLink": {
-      "label": "List your activity",
-      "href": "#contact"
-    },
     "searchBar": {
       "where": "Area",
       "childAge": "Child age",
