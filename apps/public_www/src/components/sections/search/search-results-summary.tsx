@@ -17,6 +17,8 @@ interface SearchResultsSummaryProps {
   readonly isLoading: boolean;
   readonly onApply: (next: SearchFiltersState) => void;
   readonly viewToggle?: ReactNode;
+  /** Phones keep the map tall by leaving sorting to the list view. */
+  readonly isMapView?: boolean;
 }
 
 export function resultCountText(
@@ -36,6 +38,7 @@ export function SearchResultsSummary({
   isLoading,
   onApply,
   viewToggle,
+  isMapView = false,
 }: SearchResultsSummaryProps) {
   const chips = activeFilters(locale, filters, copy);
   const removable = chips.filter((chip) => chip.without !== null);
@@ -86,6 +89,7 @@ export function SearchResultsSummary({
       </ul>
       <div className="ml-auto flex items-center gap-2">
         <ChipSelect
+          className={isMapView ? 'max-md:hidden' : ''}
           label={copy.sortLabel}
           value={filters.sort === 'price' ? 'price' : 'time'}
           emptyValue="time"

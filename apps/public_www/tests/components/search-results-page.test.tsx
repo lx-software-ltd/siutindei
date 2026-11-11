@@ -145,7 +145,7 @@ describe('SearchResultsPage', () => {
   it('opens the map by default with a List and Map switch', async () => {
     const copy = renderPage();
 
-    const group = await screen.findByRole('group', { name: copy.resultsLabel });
+    const group = await screen.findByRole('group', { name: copy.viewToggleLabel });
     expect(group).toHaveClass('search-view-toggle');
     expect(screen.getByRole('button', { name: copy.mapViewLabel })).toHaveAttribute(
       'aria-pressed',
@@ -264,13 +264,16 @@ describe('SearchResultsPage', () => {
     });
     renderPage();
 
-    const summaryLink = await screen.findByRole('link', {
-      name: /Kowloon art/,
+    const card = await waitFor(() => {
+      const element = document.querySelector<HTMLElement>('.search-map-split-layout__card');
+      expect(element).not.toBeNull();
+      return element as HTMLElement;
     });
-    expect(summaryLink).toHaveAttribute('href', '/en/activity?id=act-1');
-    expect(
-      document.querySelector('.search-map-split-layout__list'),
-    ).toHaveClass('hidden', 'lg:block');
+    expect(within(card).getByRole('link', { name: /Kowloon art/ })).toHaveAttribute(
+      'href',
+      '/en/activity?id=act-1',
+    );
+    expect(document.querySelector('.search-map-split-layout__list')).not.toBeNull();
   });
 
   it('hides the view toggle when maps are disabled', async () => {

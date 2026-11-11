@@ -35,6 +35,14 @@ declare namespace google.maps {
     url?: string;
     scaledSize?: Size;
     anchor?: Point;
+    labelOrigin?: Point;
+  }
+
+  interface MarkerLabel {
+    text: string;
+    color?: string;
+    fontSize?: string;
+    fontWeight?: string;
   }
 
   interface MarkerOptions {
@@ -50,6 +58,8 @@ declare namespace google.maps {
     setIcon(icon: Icon | string): void;
     setPosition(position: LatLng): void;
     setTitle(title: string): void;
+    setLabel(label: MarkerLabel | string | null): void;
+    setZIndex(zIndex: number): void;
     addListener(eventName: string, handler: () => void): void;
   }
 

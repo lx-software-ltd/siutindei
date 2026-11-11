@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ActivityGoogleMap } from '@/components/shared/maps/activity-google-map';
 import type { ActivityListing } from '@/lib/activities/types';
-import { iconSrcForActivity } from '@/lib/home-wizard/choice-icons';
 
 const markerOptions: google.maps.MarkerOptions[] = [];
+const markerLabels: (google.maps.MarkerLabel | string | null)[] = [];
+const markerClicks: (() => void)[] = [];
 const mapConstructors: unknown[] = [];
 
 vi.mock('@/lib/google-maps/config', () => ({
@@ -16,10 +17,10 @@ vi.mock('@/lib/google-maps/load-script', () => ({
   loadGoogleMapsScript: vi.fn().mockResolvedValue(undefined),
 }));
 
-function buildListing(): ActivityListing {
+function buildListing(id = 'act-1'): ActivityListing {
   return {
     activity: {
-      id: 'act-1',
+      id,
       name: 'Kowloon art',
       description: null,
       nameTranslations: {},
@@ -61,6 +62,8 @@ function buildListing(): ActivityListing {
 
 function installGoogleMaps(): void {
   markerOptions.length = 0;
+  markerLabels.length = 0;
+  markerClicks.length = 0;
   mapConstructors.length = 0;
   window.google = {
     maps: {
@@ -104,7 +107,13 @@ function installGoogleMaps(): void {
         setIcon(): void {}
         setPosition(): void {}
         setTitle(): void {}
-        addListener(): void {}
+        setLabel(label: google.maps.MarkerLabel | string | null): void {
+          markerLabels.push(label);
+        }
+        setZIndex(): void {}
+        addListener(_event: string, handler: () => void): void {
+          markerClicks.push(handler);
+        }
       },
       event: {
         trigger(): void {},
@@ -131,7 +140,7 @@ describe('ActivityGoogleMap', () => {
     Reflect.deleteProperty(window, 'google');
   });
 
-  it('uses the activity-type icon instead of the default Google pin', async () => {
+  it('uses a backed activity-type pin, highlighted when selected', async () => {
     render(
       <ActivityGoogleMap
         locale="en"
@@ -148,8 +157,35 @@ describe('ActivityGoogleMap', () => {
 
     const icon = markerOptions[0]?.icon;
     expect(icon).toMatchObject({
-      url: expect.stringContaining(iconSrcForActivity('workshop')),
+      url: expect.stringContaining('/images/markers/early-years-selected.svg'),
     });
+    expect(markerLabels).toEqual([null]);
+  });
+
+  it('shares one counted pin between activities at the same place', async () => {
+    const onSelect = vi.fn();
+    render(
+      <ActivityGoogleMap
+        locale="en"
+        listings={[buildListing('act-1'), buildListing('act-2')]}
+        selectedId="act-1"
+        onSelect={onSelect}
+        ariaLabel="Activity map"
+        groupLabel="{count} activities here"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(markerOptions).toHaveLength(1);
+    });
+    expect(markerOptions[0]).toMatchObject({
+      title: '2 activities here',
+      icon: { url: expect.stringContaining('/images/markers/group-selected.svg') },
+    });
+    expect(markerLabels[0]).toMatchObject({ text: '2' });
+
+    markerClicks[0]();
+    expect(onSelect).toHaveBeenCalledWith('act-2');
   });
 
   it('creates the map on first mount before listings arrive', async () => {

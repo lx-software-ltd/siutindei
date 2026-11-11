@@ -261,6 +261,7 @@
     "locationsCountLabel": "{count} 個地點",
     "detailsOnRequestLabel": "詳情請查詢",
     "resultsLabel": "搜尋結果",
+    "viewToggleLabel": "顯示方式",
     "previousLabel": "上一個",
     "nextLabel": "下一個",
     "mapPinGroupLabel": "此處有 {count} 個活動"

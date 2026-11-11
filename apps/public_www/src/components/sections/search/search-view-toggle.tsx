@@ -14,7 +14,7 @@ const MAP_ICON_SRC = '/images/ui/map.svg';
 
 function segmentClassName(isActive: boolean): string {
   return (
-    'inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold transition ' +
+    'inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold transition sm:px-4 ' +
     (isActive ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-brand-50')
   );
 }
@@ -49,7 +49,7 @@ export function SearchViewToggle({
           aria-hidden="true"
           className={`h-4 w-4 ${isMapView ? '' : 'invert'}`}
         />
-        {listLabel}
+        <span className="max-sm:sr-only">{listLabel}</span>
       </button>
       <button
         type="button"
@@ -66,7 +66,7 @@ export function SearchViewToggle({
           aria-hidden="true"
           className={`h-4 w-4 ${isMapView ? 'invert' : ''}`}
         />
-        {mapLabel}
+        <span className="max-sm:sr-only">{mapLabel}</span>
       </button>
     </div>
   );

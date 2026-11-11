@@ -92,12 +92,110 @@ body {
   background-color: var(--color-brand-50);
 }
 
+/*
+ * Search map layout. Phones: map with a swipeable card row. iPad portrait:
+ * map above a two-column list. iPad landscape and wider: list beside the map.
+ * Landscape phones: list beside the map, with the page header scrolled away.
+ */
+.search-map-split-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+.search-map-split-layout__map {
+  height: calc(100dvh - 17rem);
+  min-height: 22rem;
+}
+
 .search-map-split-layout__map .activity-google-map {
   min-height: 100%;
 }
 
+.search-map-split-layout__list {
+  display: none;
+}
+
+.search-map-split-layout__list-items {
+  display: grid;
+}
+
+@media (min-width: 768px) {
+  .search-map-split-layout__map {
+    height: 50dvh;
+    min-height: 20rem;
+  }
+
+  .search-map-split-layout__list {
+    display: block;
+    order: 2;
+  }
+
+  .search-map-split-layout__list-items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .search-map-split-layout__sheet {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .search-map-split-layout:not(.search-map-split-layout--expanded) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .search-map-split-layout__list,
+  .search-map-split-layout__map {
+    height: calc(100dvh - 14rem);
+    min-height: 28rem;
+  }
+
+  .search-map-split-layout__list {
+    order: 0;
+    overflow-y: auto;
+    border-right-width: 1px;
+  }
+
+  .search-map-split-layout__list-items {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .search-map-split-layout:not(.search-map-split-layout--expanded) {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  }
+
+  .search-map-split-layout__list,
+  .search-map-split-layout__map {
+    height: calc(100dvh - 1rem);
+    min-height: 0;
+  }
+
+  .search-map-split-layout__list {
+    display: block;
+    order: 0;
+    overflow-y: auto;
+    border-right-width: 1px;
+  }
+
+  .search-map-split-layout__list-items {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .search-map-split-layout__sheet {
+    display: none;
+  }
+}
+
+.search-map-split-layout--expanded .search-map-split-layout__list {
+  display: none;
+}
+
 .search-map-split-layout--expanded .search-map-split-layout__map {
-  min-height: 100%;
+  height: calc(100dvh - 12rem);
 }
 
 .listing-card-mini-map {

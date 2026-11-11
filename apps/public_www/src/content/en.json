@@ -261,6 +261,7 @@
     "locationsCountLabel": "{count} locations",
     "detailsOnRequestLabel": "Details on request",
     "resultsLabel": "Results",
+    "viewToggleLabel": "Show results as",
     "previousLabel": "Previous",
     "nextLabel": "Next",
     "mapPinGroupLabel": "{count} activities here"

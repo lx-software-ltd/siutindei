@@ -134,11 +134,12 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
         total={search.total}
         isLoading={isLoading}
         onApply={applyFilters}
+        isMapView={showMapSplit}
         viewToggle={
           mapsEnabled ? (
             <SearchViewToggle
               isMapView={showMapSplit}
-              groupLabel={copy.resultsLabel}
+              groupLabel={copy.viewToggleLabel}
               listLabel={copy.listViewLabel}
               mapLabel={copy.mapViewLabel}
               onShowList={navigateToListView}
@@ -174,6 +175,12 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
             selectedId={selectedId}
             onSelect={setSelectedId}
             isLoading={isLoading}
+            loadMore={{
+              hasMore: search.hasMore,
+              isLoadingMore: search.isLoadingMore,
+              errorMessage: loadMoreError,
+              onLoadMore: search.loadMore,
+            }}
           />
         ) : (
           <div className="mx-auto max-w-7xl px-4 pb-16 pt-4 sm:px-6 lg:px-8">
@@ -193,7 +200,7 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
             />
           </div>
         )}
-        {search.hasMore ? (
+        {search.hasMore && !showMapSplit ? (
           <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 py-8">
             {loadMoreError ? (
               <p className="text-center text-red-700">{loadMoreError}</p>
@@ -202,7 +209,7 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
               type="button"
               onClick={search.loadMore}
               disabled={search.isLoadingMore}
-              className="rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-ink-900 hover:bg-brand-600 disabled:opacity-60"
+              className="min-h-11 rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-ink-900 hover:bg-brand-600 disabled:opacity-60"
             >
               {copy.loadMoreLabel}
             </button>
