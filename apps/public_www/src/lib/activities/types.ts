@@ -59,8 +59,8 @@ export interface ActivityListing {
   readonly activity: SearchActivity;
   readonly organization: SearchOrganization;
   readonly location: SearchLocation;
-  readonly pricing: SearchPricing;
-  readonly schedule: SearchSchedule;
+  readonly pricing: SearchPricing | null;
+  readonly schedule: SearchSchedule | null;
 }
 
 export interface ActivitySearchResponse {

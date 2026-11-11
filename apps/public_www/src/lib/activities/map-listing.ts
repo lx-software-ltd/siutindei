@@ -31,14 +31,14 @@ export interface ActivityWireListing {
     lng?: number | string | null;
     status?: string | null;
   };
-  pricing: {
+  pricing?: {
     pricing_type: string;
     amount: number | string;
     currency: string;
     sessions_count?: number | null;
     free_trial_class_offered: boolean;
-  };
-  schedule: {
+  } | null;
+  schedule?: {
     schedule_type: string;
     weekly_entries?: Array<{
       day_of_week_utc: number;
@@ -46,7 +46,7 @@ export interface ActivityWireListing {
       end_minutes_utc: number;
     }>;
     languages?: string[];
-  };
+  } | null;
 }
 
 function mapTranslationMap(
@@ -69,7 +69,7 @@ export function mapActivityListing(
 ): ActivityListing {
   const card = view === 'card';
   const mediaUrls = item.organization.media_urls ?? [];
-  const weeklyEntries = item.schedule.weekly_entries ?? [];
+  const weeklyEntries = item.schedule?.weekly_entries ?? [];
   return {
     activity: {
       id: item.activity.id,
@@ -103,23 +103,27 @@ export function mapActivityListing(
       lng: toNumber(item.location.lng),
       status: item.location.status ?? 'open',
     },
-    pricing: {
-      pricingType: item.pricing.pricing_type,
-      amount: toNumber(item.pricing.amount) ?? 0,
-      currency: item.pricing.currency,
-      sessionsCount: item.pricing.sessions_count ?? null,
-      freeTrialClassOffered: item.pricing.free_trial_class_offered,
-    },
-    schedule: {
-      scheduleType: item.schedule.schedule_type,
-      weeklyEntries: (card ? weeklyEntries.slice(0, 1) : weeklyEntries).map(
-        (entry) => ({
-          dayOfWeekUtc: entry.day_of_week_utc,
-          startMinutesUtc: entry.start_minutes_utc,
-          endMinutesUtc: entry.end_minutes_utc,
-        }),
-      ),
-      languages: item.schedule.languages ?? [],
-    },
+    pricing: item.pricing
+      ? {
+          pricingType: item.pricing.pricing_type,
+          amount: toNumber(item.pricing.amount) ?? 0,
+          currency: item.pricing.currency,
+          sessionsCount: item.pricing.sessions_count ?? null,
+          freeTrialClassOffered: item.pricing.free_trial_class_offered,
+        }
+      : null,
+    schedule: item.schedule
+      ? {
+          scheduleType: item.schedule.schedule_type,
+          weeklyEntries: (card ? weeklyEntries.slice(0, 1) : weeklyEntries).map(
+            (entry) => ({
+              dayOfWeekUtc: entry.day_of_week_utc,
+              startMinutesUtc: entry.start_minutes_utc,
+              endMinutesUtc: entry.end_minutes_utc,
+            }),
+          ),
+          languages: item.schedule.languages ?? [],
+        }
+      : null,
   };
 }

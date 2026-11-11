@@ -223,6 +223,21 @@ class ActivityDetailScreen extends ConsumerWidget {
     ComponentTokens tokens,
   ) {
     final schedule = result.schedule;
+    final hasSlot =
+        schedule != null &&
+        (schedule.dayOfWeekName != null ||
+            schedule.formattedTime != null ||
+            schedule.dayOfMonth != null);
+    if (schedule == null || !hasSlot) {
+      return SectionCard(
+        title: 'Schedule',
+        icon: Icons.schedule,
+        child: Text(
+          'Schedule to be confirmed',
+          style: semantic.text.bodyMedium,
+        ),
+      );
+    }
 
     return SectionCard(
       title: 'Schedule',
@@ -262,6 +277,13 @@ class ActivityDetailScreen extends ConsumerWidget {
   Widget _buildPricingSection(SemanticTokens semantic, ComponentTokens tokens) {
     final priceTokens = tokens.priceTag;
     final pricing = result.pricing;
+    if (pricing == null) {
+      return SectionCard(
+        title: 'Pricing',
+        icon: Icons.payments_outlined,
+        child: Text('Price on request', style: semantic.text.bodyMedium),
+      );
+    }
 
     return SectionCard(
       title: 'Pricing',
@@ -355,7 +377,8 @@ class ActivityDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildLanguagesSection(SemanticTokens semantic) {
-    if (result.schedule.languages.isEmpty) return const SizedBox.shrink();
+    final languages = result.schedule?.languages ?? const <String>[];
+    if (languages.isEmpty) return const SizedBox.shrink();
 
     return SectionCard(
       title: 'Languages',
@@ -363,7 +386,7 @@ class ActivityDetailScreen extends ConsumerWidget {
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
-        children: result.schedule.languages.map((lang) {
+        children: languages.map((lang) {
           return BaseBadge(label: AppConstants.getLanguageName(lang));
         }).toList(),
       ),
@@ -392,7 +415,7 @@ class ActivityDetailScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  pricing.formattedPrice,
+                  pricing?.formattedPrice ?? 'Price on request',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

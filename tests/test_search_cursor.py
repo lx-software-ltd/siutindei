@@ -12,10 +12,10 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "backend" / "src"))
 
-from app.api.search import _decode_cursor  # noqa: E402
-from app.api.search import _encode_cursor  # noqa: E402
-from app.api.search import _parse_cursor  # noqa: E402
-from app.exceptions import CursorError  # noqa: E402
+from app.api.search_page import decode_cursor as _decode_cursor
+from app.api.search_page import encode_cursor as _encode_cursor
+from app.api.search_page import parse_cursor as _parse_cursor
+from app.exceptions import CursorError
 
 
 def test_encode_decode_cursor_roundtrip() -> None:

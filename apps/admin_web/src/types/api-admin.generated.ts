@@ -1659,7 +1659,9 @@ export interface paths {
         /**
          * Approve, reject, or reopen one organization
          * @description Approve returns 400 with `issues` when blockers remain unless
-         *     `force` is true. Reject requires `reason`. Approve and reopen
+         *     `force` is true. A forced approval can appear in public search
+         *     without a price or schedule when the caller sends
+         *     `include_incomplete=true`. Reject requires `reason`. Approve and reopen
          *     clear a stored reason and return 400 when `reason` is sent.
          */
         post: {

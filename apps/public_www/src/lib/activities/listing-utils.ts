@@ -72,11 +72,32 @@ export function formatScheduleSnippet(
   return `${day} ${formatMinutesAsTime(first.startMinutesUtc)}`;
 }
 
+export function missingPriceLabel(locale: Locale): string {
+  return locale === 'zh-HK' ? '價格待定' : 'Price on request';
+}
+
+export function missingScheduleLabel(locale: Locale): string {
+  return locale === 'zh-HK' ? '時間待定' : 'Schedule to be confirmed';
+}
+
+export function listingScheduleLabel(
+  locale: Locale,
+  listing: ActivityListing,
+): string | null {
+  const snippet = listing.schedule
+    ? formatScheduleSnippet(locale, listing.schedule.weeklyEntries)
+    : null;
+  return snippet ?? missingScheduleLabel(locale);
+}
+
 export function formatListingPrice(
   locale: Locale,
   listing: ActivityListing,
 ): string {
   const { pricing } = listing;
+  if (!pricing) {
+    return missingPriceLabel(locale);
+  }
   if (pricing.pricingType === 'free') {
     return locale === 'zh-HK' ? '免費' : 'Free';
   }
@@ -196,10 +217,14 @@ export function sortListingsForDiscovery(
     if (leftHasImage !== rightHasImage) {
       return rightHasImage - leftHasImage;
     }
-    if (left.pricing.freeTrialClassOffered !== right.pricing.freeTrialClassOffered) {
-      return left.pricing.freeTrialClassOffered ? -1 : 1;
+    const leftTrial = left.pricing?.freeTrialClassOffered ?? false;
+    const rightTrial = right.pricing?.freeTrialClassOffered ?? false;
+    if (leftTrial !== rightTrial) {
+      return leftTrial ? -1 : 1;
     }
-    return left.pricing.amount - right.pricing.amount;
+    const leftAmount = left.pricing?.amount ?? Number.POSITIVE_INFINITY;
+    const rightAmount = right.pricing?.amount ?? Number.POSITIVE_INFINITY;
+    return leftAmount - rightAmount;
   });
 }
 

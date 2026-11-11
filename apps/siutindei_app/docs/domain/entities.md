@@ -249,6 +249,11 @@ class ActivitySearchResultEntity {
 }
 ```
 
+Search requests send `include_incomplete=true`. `pricing` and `schedule`
+are null when that piece is missing. A schedule with no day or time is
+shown as "Schedule to be confirmed", and a missing price as "Price on
+request". Those placeholders are English, like the rest of the app chrome.
+
 ### SearchResultsEntity
 
 Represents a paginated search response.

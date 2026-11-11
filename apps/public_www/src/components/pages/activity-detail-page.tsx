@@ -10,12 +10,12 @@ import { logActivityLoadError } from '@/lib/activities/load-error';
 import { fetchActivityListingById } from '@/lib/activities/search-client';
 import {
   formatListingPrice,
-  formatScheduleSnippet,
   googleMapsPlaceUrl,
   isTemplateDescription,
   isTemporarilyClosed,
   listingImageUrl,
   listingOrgName,
+  listingScheduleLabel,
   listingTitle,
   pickTranslation,
   regionLabelForListing,
@@ -136,11 +136,15 @@ export function ActivityDetailPage({
         '@type': 'Organization',
         name: organizationName,
       },
-      offers: {
-        '@type': 'Offer',
-        price: listing.pricing.amount,
-        priceCurrency: listing.pricing.currency,
-      },
+      ...(listing.pricing
+        ? {
+            offers: {
+              '@type': 'Offer',
+              price: listing.pricing.amount,
+              priceCurrency: listing.pricing.currency,
+            },
+          }
+        : {}),
     };
     const script = document.createElement('script');
     script.type = 'application/ld+json';
@@ -194,7 +198,7 @@ export function ActivityDetailPage({
       );
   const orgName = listingOrgName(locale, listing);
   const region = regionLabelForListing(locale, listing);
-  const schedule = formatScheduleSnippet(locale, listing.schedule.weeklyEntries);
+  const schedule = listingScheduleLabel(locale, listing);
   const price = formatListingPrice(locale, listing);
   const mapsHref = googleMapsPlaceUrl(listing.organization.placeId);
 
@@ -235,7 +239,7 @@ export function ActivityDetailPage({
             {region ? <li>{region}</li> : null}
             {listing.location.address ? <li>{listing.location.address}</li> : null}
             {schedule ? <li>{schedule}</li> : null}
-            {listing.pricing.freeTrialClassOffered ? (
+            {listing.pricing?.freeTrialClassOffered ? (
               <li>{copy.freeTrialLabel}</li>
             ) : null}
           </ul>

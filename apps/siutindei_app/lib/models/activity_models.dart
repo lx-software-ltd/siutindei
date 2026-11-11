@@ -136,6 +136,7 @@ class ActivitySearchFilters {
     }
     setParam('cursor', cursor);
     setParam('limit', limit);
+    params['include_incomplete'] = 'true';
     return params;
   }
 
@@ -198,8 +199,8 @@ class ActivitySearchResult {
   final Activity activity;
   final Organization organization;
   final Location location;
-  final Pricing pricing;
-  final Schedule schedule;
+  final Pricing? pricing;
+  final Schedule? schedule;
 
   factory ActivitySearchResult.fromJson(Map<String, dynamic> json) {
     return ActivitySearchResult(
@@ -208,8 +209,12 @@ class ActivitySearchResult {
         json['organization'] as Map<String, dynamic>,
       ),
       location: Location.fromJson(json['location'] as Map<String, dynamic>),
-      pricing: Pricing.fromJson(json['pricing'] as Map<String, dynamic>),
-      schedule: Schedule.fromJson(json['schedule'] as Map<String, dynamic>),
+      pricing: json['pricing'] == null
+          ? null
+          : Pricing.fromJson(json['pricing'] as Map<String, dynamic>),
+      schedule: json['schedule'] == null
+          ? null
+          : Schedule.fromJson(json['schedule'] as Map<String, dynamic>),
     );
   }
 }

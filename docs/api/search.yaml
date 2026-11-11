@@ -189,6 +189,23 @@ paths:
             type: string
             enum: [card, full]
             default: full
+        - name: include_incomplete
+          in: query
+          required: false
+          description: |
+            When `true`, also return activities of an approved
+            organization that are missing a price, a schedule, or both.
+            Those rows come after the complete rows, ordered by
+            organization name, then activity name. The venue is one
+            that matches the area, price, and schedule filters: a
+            schedule venue, then a priced venue, then a linked venue.
+            `pricing` and `schedule` are null when that piece is
+            missing at the chosen venue. Omitted or `false` keeps
+            today's results, and an incomplete-page cursor is ignored.
+            Older clients should omit it.
+          schema:
+            type: boolean
+            default: false
         - name: limit
           in: query
           required: false
@@ -363,9 +380,19 @@ components:
         location:
           $ref: "#/components/schemas/Location"
         pricing:
-          $ref: "#/components/schemas/Pricing"
+          nullable: true
+          description: |
+            Null when `include_incomplete=true` and the activity has no
+            price at the chosen venue.
+          allOf:
+            - $ref: "#/components/schemas/Pricing"
         schedule:
-          $ref: "#/components/schemas/Schedule"
+          nullable: true
+          description: |
+            Null when `include_incomplete=true` and the activity has no
+            schedule at the chosen venue.
+          allOf:
+            - $ref: "#/components/schemas/Schedule"
     Organization:
       type: object
       required:

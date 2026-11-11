@@ -8,8 +8,8 @@ import type { ActivityListing } from '@/lib/activities/types';
 import { regionIdForListing } from '@/lib/activities/map-search-url';
 import {
   formatListingPrice,
-  formatScheduleSnippet,
   listingImageUrl,
+  listingScheduleLabel,
   isTemporarilyClosed,
   listingOrgName,
   listingTitle,
@@ -62,7 +62,7 @@ export function ListingCard({
   const orgName = listingOrgName(locale, listing);
   const region = regionLabelForListing(locale, listing);
   const regionId = regionIdForListing(listing);
-  const schedule = formatScheduleSnippet(locale, listing.schedule.weeklyEntries);
+  const schedule = listingScheduleLabel(locale, listing);
   const price = formatListingPrice(locale, listing);
   return (
     <article
@@ -99,7 +99,7 @@ export function ListingCard({
               />
               {parentVerifiedLabel}
             </span>
-            {listing.pricing.freeTrialClassOffered ? (
+            {listing.pricing?.freeTrialClassOffered ? (
               <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-ink-900 shadow-sm">
                 {freeTrialLabel}
               </span>

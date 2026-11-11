@@ -60,6 +60,6 @@ def test_pagination_cursor() -> None:
 
 
 def _decode(cursor: str):
-    from app.api.search import _parse_cursor
+    from app.api.search_page import parse_cursor as _parse_cursor
 
     return _parse_cursor(cursor)

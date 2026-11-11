@@ -93,8 +93,8 @@ class ActivitySearchResultSchema(BaseModel):
     activity: ActivitySchema
     organization: OrganizationSchema
     location: LocationSchema
-    pricing: PricingSchema
-    schedule: ScheduleSchema
+    pricing: PricingSchema | None
+    schedule: ScheduleSchema | None
 
 
 class ActivitySearchResponseSchema(BaseModel):

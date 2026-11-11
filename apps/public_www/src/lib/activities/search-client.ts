@@ -45,6 +45,7 @@ export function buildActivitySearchRequest(
   if (params.view) {
     url.searchParams.set('view', params.view);
   }
+  url.searchParams.set('include_incomplete', 'true');
   for (const categoryId of params.categoryIds ?? []) {
     url.searchParams.append('category_id', categoryId);
   }

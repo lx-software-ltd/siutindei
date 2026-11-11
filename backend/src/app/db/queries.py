@@ -42,11 +42,20 @@ logger = get_logger(__name__)
 
 @dataclass(frozen=True)
 class ActivitySearchCursor:
-    """Cursor for activity search pagination."""
+    """Cursor for activity search pagination.
+
+    ``phase`` is ``complete`` for a schedule row and ``incomplete`` for
+    an approved activity that is missing a price, a schedule, or both.
+    Older cursors omit ``phase`` and stay on the complete rows.
+    """
 
     day_of_week_utc: int
     start_minutes_utc: int
     schedule_id: UUID
+    phase: str = "complete"
+    activity_id: UUID | None = None
+    org_name: str | None = None
+    activity_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -71,6 +80,7 @@ class ActivitySearchFilters:
     text_query: str | None = None
     view: str = "full"
     apply_area_scope: bool = True
+    include_incomplete: bool = False
 
 
 def validate_filters(filters: ActivitySearchFilters) -> None:
