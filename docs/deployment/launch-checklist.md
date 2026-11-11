@@ -145,7 +145,9 @@ On the **production** environment:
   both the production and staging environments. Clearing it takes
   effect on the next backend deploy because `SearchAreaScope` is
   passed even when empty. A website promote or staging deploy is
-  also required before the search controls match.
+  also required before the search controls match. The admin web build
+  reads the same variable for the Catalog filter, so redeploy admin
+  web after changing it.
 
 On the **staging** environment (public www):
 

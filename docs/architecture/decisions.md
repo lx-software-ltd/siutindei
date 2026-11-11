@@ -679,6 +679,13 @@ exempt, so a shared activity link still opens. The response field
 page (null when unrestricted, empty when every slug is unknown),
 including exempt requests. A cursor page omits the field.
 
+Admin Catalog reads the same variable when the admin web is built.
+When the value names one region, one district, or one neighbourhood,
+Catalog opens on that area, and the organisation list includes
+locations under it. Several areas that do not sit inside one of those
+tokens leave the filter on all neighbourhoods. Clearing the variable
+takes effect on the next admin web deploy.
+
 The public website reads the same variable at build time. Regions with
 no selected neighbourhood stay focusable and are labelled coming soon.
 Neighbourhoods outside the list are omitted. When the list sits in one

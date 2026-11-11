@@ -55,6 +55,18 @@ describe('search bars with one open region', () => {
     const searchButtons = screen
       .getAllByRole('button', { name: 'Search activities' })
       .filter((button) => button.textContent?.includes('⌕'));
+    const heroSearch = searchButtons.find((button) =>
+      button.className.includes('h-12'),
+    );
+    const compactSearch = searchButtons.find((button) =>
+      button.className.includes('h-10'),
+    );
+    expect(heroSearch?.querySelector('span')?.className).toContain(
+      'text-[2.5rem]',
+    );
+    expect(compactSearch?.className).toContain('h-10');
+    expect(compactSearch?.className).toContain('w-10');
+    expect(compactSearch?.className).toContain('text-[2.25rem]');
     fireEvent.click(searchButtons[0]);
     expect(push).toHaveBeenCalledWith('/en/search/?age=3-6&view=map');
   });

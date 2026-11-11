@@ -1,5 +1,9 @@
 # Plan: Catalog default neighbourhood Stanley
 
+The English name constant in this plan was removed. Catalog now
+follows `SEARCH_AREA_SCOPE`. See
+`docs/plans/2026-11-11-catalog-search-area-scope.md`.
+
 **Status**: Done
 **Zone**: yellow
 

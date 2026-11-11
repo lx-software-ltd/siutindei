@@ -17,6 +17,11 @@ Provide these parameters when deploying `lxsoftware-siutindei-admin-web`:
 
 ## Build and deploy
 
+Catalog opens on `SEARCH_AREA_SCOPE`, the same GitHub variable as
+public search. `next.config.js` inlines it. An empty value opens
+Catalog on every neighbourhood. Set the variable in the environment
+before the build.
+
 ```
 cd apps/admin_web
 npm ci

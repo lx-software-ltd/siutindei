@@ -1,6 +1,11 @@
 import { expect, test as base, Page, Route } from '@playwright/test';
 
-import { DEFAULT_CATALOG_NEIGHBOURHOOD_NAME } from '../../src/lib/catalog-defaults';
+import type { GeographicAreaNode } from '../../src/lib/api-client-user';
+import {
+  areaIdForCatalogDefault,
+  areaNameInTree,
+} from '../../src/lib/catalog-defaults';
+import { E2E_SEARCH_AREA_SCOPE } from '../catalog-scope';
 
 /**
  * Mock user data for testing different auth states
@@ -652,16 +657,20 @@ export const mockAreaTree = [
   },
 ];
 
-export { DEFAULT_CATALOG_NEIGHBOURHOOD_NAME };
+/** Name Catalog shows for `E2E_SEARCH_AREA_SCOPE` against the areas mock. */
+export function catalogScopeDefaultName(): string {
+  const tree = mockAreaTree as unknown as GeographicAreaNode[];
+  return areaNameInTree(tree, areaIdForCatalogDefault(tree, E2E_SEARCH_AREA_SCOPE));
+}
 
-/** Clear Catalog's default neighbourhood so list assertions see every org. */
+/** Clear Catalog's default area so list assertions see every org. */
 export async function showAllCatalogNeighbourhoods(page: Page): Promise<void> {
   const input = page.getByLabel('Neighbourhood');
-  if (!DEFAULT_CATALOG_NEIGHBOURHOOD_NAME) {
-    await expect(input).toHaveValue('');
+  const expected = catalogScopeDefaultName();
+  await expect(input).toHaveValue(expected);
+  if (!expected) {
     return;
   }
-  await expect(input).toHaveValue(DEFAULT_CATALOG_NEIGHBOURHOOD_NAME);
   await input.click();
   await page.getByRole('option', { name: 'All neighbourhoods' }).click();
   await expect(input).toHaveValue('');
