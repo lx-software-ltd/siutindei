@@ -35,6 +35,7 @@ export interface OrganizationFormState {
   source_url: string;
   source_note: string;
   description_source: string;
+  parent_verified: boolean;
 }
 
 export const emptyForm: OrganizationFormState = {
@@ -60,6 +61,7 @@ export const emptyForm: OrganizationFormState = {
   source_url: '',
   source_note: '',
   description_source: '',
+  parent_verified: false,
 };
 
 export function itemToForm(item: Organization): OrganizationFormState {
@@ -86,6 +88,7 @@ export function itemToForm(item: Organization): OrganizationFormState {
     source_url: item.source_url ?? '',
     source_note: item.source_note ?? '',
     description_source: item.description_source ?? '',
+    parent_verified: item.parent_verified ?? false,
   };
 }
 

@@ -75,6 +75,9 @@ export function organizationFormFromSnapshot(
   fallback: OrganizationFormState
 ): OrganizationFormState {
   const next = applyText(fallback, snapshot, ORGANIZATION_TEXT_KEYS);
+  if (typeof snapshot.parent_verified === 'boolean') {
+    next.parent_verified = snapshot.parent_verified;
+  }
   if ('name_translations' in snapshot) {
     next.name_translations = extractTranslations(
       snapshotRecord(snapshot.name_translations) as Record<string, string> | null

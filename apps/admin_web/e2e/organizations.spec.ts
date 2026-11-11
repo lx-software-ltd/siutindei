@@ -573,6 +573,22 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText(/Review state is changed/)).toHaveCount(0);
   });
 
+  test('saves the admin-only Parent-Verified flag', async ({ adminPage }) => {
+    await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
+    await adminPage.getByRole('row', { name: /Test Organization 1/ }).first().click();
+    const checkbox = adminPage.getByLabel('Parent-Verified');
+    await expect(checkbox).not.toBeChecked();
+    await checkbox.check();
+    await adminPage.getByLabel('Phone number').fill('91234567');
+    const request = adminPage.waitForRequest(
+      (req) =>
+        /\/admin\/organizations\/org-1$/.test(new URL(req.url()).pathname) &&
+        ['PUT', 'PATCH'].includes(req.method())
+    );
+    await adminPage.getByRole('button', { name: 'Update' }).click();
+    expect((await request).postDataJSON().parent_verified).toBe(true);
+  });
+
   test('should leave the organization workspace from the catalog', async ({
     adminPage,
   }) => {
