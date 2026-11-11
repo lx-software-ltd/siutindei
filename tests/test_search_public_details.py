@@ -70,7 +70,7 @@ def _seed(engine) -> dict[str, str]:
                 org_id=owner.id,
                 area_id=area.id,
                 name=name,
-                address=f"1 Example Road {token}",
+                address=f"{uuid4().hex[:4]} Example Road {token}",
                 lat=Decimal("22.280000"),
                 lng=Decimal("114.150000"),
             )
