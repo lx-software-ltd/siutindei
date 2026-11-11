@@ -99,7 +99,7 @@ describe('SearchPanel', () => {
     }
   });
 
-  it('lists areas in one row from All Hong Kong to the islands', () => {
+  it('lists areas in order from All Hong Kong to the islands', () => {
     renderPanel();
 
     const areaLabels = [
@@ -123,6 +123,30 @@ describe('SearchPanel', () => {
         slot?.classList.contains('h-12'),
       ),
     ).toBe(true);
+  });
+
+  it('wraps the area choices on phones so none run off the screen', () => {
+    renderPanel();
+
+    const row = screen.getByRole('button', {
+      name: 'Hong Kong Island',
+    }).parentElement;
+    expect(row).toHaveClass('flex-wrap', 'md:grid', 'md:grid-cols-5');
+    expect(row).not.toHaveClass('flex-nowrap');
+    for (const fieldset of document.querySelectorAll('fieldset')) {
+      expect(fieldset).toHaveClass('min-w-0');
+    }
+  });
+
+  it('keeps Search in the pinned footer and still submits the form', () => {
+    renderPanel();
+
+    const search = screen.getByRole('button', { name: 'Search' });
+    expect(search.closest('[data-modal-footer]')).not.toBeNull();
+    expect(search.closest('[data-modal-body]')).toBeNull();
+
+    fireEvent.click(search);
+    expect(push).toHaveBeenCalledTimes(1);
   });
 
   it('toggles an activity type when its choice is pressed', () => {
