@@ -106,11 +106,7 @@ def handle_decision(
         session.refresh(organization)
         logger.info(
             "Organization review decision",
-            extra={
-                "action": action,
-                "org_id": str(organization.id),
-                "forced": force,
-            },
+            extra={"action": action, "org_id": str(organization.id), "forced": force},
         )
         return json_response(
             200,

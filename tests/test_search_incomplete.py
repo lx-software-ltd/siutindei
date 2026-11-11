@@ -6,7 +6,8 @@ import json
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from app.api.search import _parse_cursor, fetch_search_response
+from app.api.search import fetch_search_response
+from app.api.search_page import parse_cursor as _parse_cursor
 from app.db.models import (
     Activity,
     ActivityCategory,

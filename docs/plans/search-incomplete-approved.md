@@ -24,8 +24,10 @@ today's results, so older app builds do not receive null `pricing` or
 
 ## Files
 
-- `backend/src/app/db/queries.py`
+- `backend/src/app/db/queries.py` (filter and cursor fields only)
+- `backend/src/app/db/incomplete_search.py`
 - `backend/src/app/api/search.py`
+- `backend/src/app/api/search_page.py`
 - `backend/src/app/api/search_validation.py`
 - `backend/src/app/api/schemas.py`
 - `backend/src/app/api/admin_org_review_actions.py`
