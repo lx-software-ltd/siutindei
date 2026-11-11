@@ -31,14 +31,54 @@ describe('Modal', () => {
     );
   });
 
-  it('caps its height to the visible viewport so the header stays on screen in iOS Safari', () => {
+  it('is sized by its fixed container, not by viewport units, so the header stays on screen in iOS Safari', () => {
     render(
       <Modal isOpen title="Search activities" onClose={vi.fn()}>
         <button type="button">Field</button>
       </Modal>,
     );
 
-    expect(screen.getByRole('dialog')).toHaveClass('max-h-[92dvh]');
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveClass('max-h-full');
+    expect(dialog.className).not.toMatch(/max-h-\[\d+d?vh\]/);
+    expect(dialog.parentElement).toHaveClass('fixed', 'inset-0');
+    expect(
+      screen.getByRole('heading', { name: 'Search activities' }).parentElement,
+    ).toHaveClass('shrink-0');
+  });
+
+  it('keeps the body from scrolling sideways', () => {
+    render(
+      <Modal isOpen title="Search activities" onClose={vi.fn()}>
+        <button type="button">Field</button>
+      </Modal>,
+    );
+
+    expect(document.querySelector('[data-modal-body]')).toHaveClass(
+      'overflow-x-hidden',
+      'overflow-y-auto',
+    );
+  });
+
+  it('renders footer actions outside the scrolling body', () => {
+    render(
+      <Modal
+        isOpen
+        title="Search activities"
+        onClose={vi.fn()}
+        footer={<button type="button">Search</button>}
+      >
+        <button type="button">Field</button>
+      </Modal>,
+    );
+
+    const action = screen.getByRole('button', { name: 'Search' });
+    expect(action.closest('[data-modal-body]')).toBeNull();
+    expect(action.closest('[data-modal-footer]')).toHaveClass('shrink-0');
+    expect(screen.getByRole('dialog').contains(action)).toBe(true);
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Field' }),
+    );
   });
 
   it('stays clickable when opened from inside main content', () => {
