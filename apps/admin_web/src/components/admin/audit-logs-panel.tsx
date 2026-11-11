@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { AuditHighlightedJson } from '@/components/admin/audit-highlighted-json';
-import { KeyIcon } from '@/components/icons/action-icons';
+import { GitHubIcon, KeyIcon, PersonIcon } from '@/components/icons/action-icons';
 import { useExpandedRecord } from '@/hooks/use-expanded-record';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { type AuditLogsFilters } from '@/lib/api-client';
@@ -120,21 +120,26 @@ async function loadApiKeyNames(): Promise<Record<string, string>> {
   }
 }
 
+const actorMarks = {
+  migration: { label: 'GitHub', Icon: GitHubIcon },
+  user: { label: 'User', Icon: PersonIcon },
+  key: { label: 'API key', Icon: KeyIcon },
+} as const;
+
 function AuditActorValue({ actor }: { actor: AuditActor }) {
   const text = adminTableText(actor.text);
-  if (actor.kind !== 'key') {
-    return text;
-  }
+  const mark = actorMarks[actor.kind];
+  const Icon = mark.Icon;
   return (
     <span className='inline-flex min-w-0 items-center gap-1.5'>
       <span className='min-w-0 break-words'>{text}</span>
       <span
         role='img'
-        title='API key'
-        aria-label='API key'
+        title={mark.label}
+        aria-label={mark.label}
         className='inline-flex shrink-0 items-center text-ink-500'
       >
-        <KeyIcon className='h-4 w-4' />
+        <Icon className='h-4 w-4' />
       </span>
     </span>
   );

@@ -7,8 +7,9 @@
 
 When an audit row's actor is a partner API key (`user_id` stored as
 `api-key:<id>`), the Audit logs table and its expanded detail show
-that key's name, with a key icon after the name. A Cognito actor still
-shows the email. An empty `user_id` still shows `migration`.
+that key's name, with a key icon after the name. A Cognito actor shows
+the email with a person icon. An empty `user_id` shows `migration`
+with a GitHub icon.
 
 ## Non-goals
 
@@ -35,8 +36,9 @@ shows the email. An empty `user_id` still shows `migration`.
 - The table does not print the raw `api-key:<id>` or a Cognito sub.
 - An unknown user id is still an em dash. An unknown key id is an em
   dash with the key icon, so the actor kind stays visible.
-- Rows still expand in place. The icon sits after the name, the same
-  place as the Users provider icon, and uses `role="img"`.
+- Rows still expand in place. Each actor icon sits after the text,
+  the same place as the Users provider icon, and uses `role="img"`.
+  The labels are `GitHub`, `User`, and `API key`.
 
 ## Done when
 

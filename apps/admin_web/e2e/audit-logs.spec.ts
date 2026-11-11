@@ -14,10 +14,12 @@ test.describe('Audit Logs Panel', () => {
     await expect(adminPage.locator('label', { hasText: /^Time range$/ })).toHaveCount(0);
     await expect(adminPage.locator('label', { hasText: /^Actor$/ })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Actor' })).toBeVisible();
-    await expect(
-      adminPage.getByRole('cell', { name: 'admin@example.com', exact: true })
-    ).toBeVisible();
-    await expect(adminPage.getByRole('cell', { name: 'migration', exact: true })).toBeVisible();
+    const userRow = adminPage.getByTestId('admin-row-audit-1');
+    await expect(userRow.getByRole('cell', { name: 'admin@example.com' })).toBeVisible();
+    await expect(userRow.getByRole('img', { name: 'User' })).toBeVisible();
+    const migrationRow = adminPage.getByTestId('admin-row-audit-2');
+    await expect(migrationRow.getByRole('cell', { name: 'migration' })).toBeVisible();
+    await expect(migrationRow.getByRole('img', { name: 'GitHub' })).toBeVisible();
     const keyRow = adminPage.getByTestId('admin-row-audit-3');
     await expect(keyRow.getByRole('cell', { name: 'Partner read key' })).toBeVisible();
     await expect(keyRow.getByRole('img', { name: 'API key' })).toBeVisible();
@@ -76,6 +78,9 @@ test.describe('Audit Logs Panel', () => {
 
     await adminPage.getByRole('row').nth(1).click();
     await expect(adminPage.getByText('Record ID', { exact: true })).toBeVisible();
+    await expect(
+      adminPage.getByTestId('admin-row-audit-1-detail').getByRole('img', { name: 'User' })
+    ).toBeVisible();
     await expect(adminPage.getByLabel('Old values JSON')).toBeVisible();
     await expect(
       adminPage.getByLabel('Old values JSON').locator('[data-audit-changed="true"]').first()
@@ -94,6 +99,9 @@ test.describe('Audit Logs Panel', () => {
       .locator('xpath=..')
       .locator('dd');
     await expect(requestIdValue).toHaveText('—');
+    await expect(
+      adminPage.getByTestId('admin-row-audit-2-detail').getByRole('img', { name: 'GitHub' })
+    ).toBeVisible();
 
     await keyRow.click();
     const keyDetail = adminPage.getByTestId('admin-row-audit-3-detail');
