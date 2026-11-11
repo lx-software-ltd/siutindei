@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useId, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { Locale } from '@/content/locales';
@@ -107,6 +107,7 @@ interface SearchPanelProps {
 
 export function SearchPanel({ locale, copy }: SearchPanelProps) {
   const router = useRouter();
+  const formId = useId();
   const { filters, isSearchOpen, setFilters, closeSearch } = useSearchContext();
   const [draft, setDraft] = useState<SearchFiltersState>(() =>
     withDefaultOpenLocation(sanitizeSearchFilters(filters).filters),
@@ -151,13 +152,22 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
   }
 
   return (
-    <Modal isOpen={isSearchOpen} title={copy.title} onClose={closeSearch}>
-      <form className="space-y-6" onSubmit={handleSubmit}>
-        <fieldset>
+    <Modal
+      isOpen={isSearchOpen}
+      title={copy.title}
+      onClose={closeSearch}
+      footer={
+        <Button type="submit" form={formId} className="w-full">
+          {copy.searchLabel}
+        </Button>
+      }
+    >
+      <form id={formId} className="space-y-6" onSubmit={handleSubmit}>
+        <fieldset className="min-w-0">
           <legend className="mb-2 text-sm font-semibold text-ink-900">
             {copy.whereLabel}
           </legend>
-          <div className="flex flex-nowrap items-stretch gap-2 overflow-x-auto md:grid md:grid-cols-5 md:gap-3 md:overflow-visible">
+          <div className="flex flex-wrap items-stretch gap-2 md:grid md:grid-cols-5 md:gap-3">
             <SearchChoiceButton
               label={areaLabel}
               iconSrc={ALL_HONG_KONG_ICON_SRC}
@@ -223,7 +233,7 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
             </p>
           ) : null}
         </fieldset>
-        <fieldset>
+        <fieldset className="min-w-0">
           <legend className="mb-2 text-sm font-semibold text-ink-900">
             {copy.childAgeLabel}
           </legend>
@@ -245,7 +255,7 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
             })}
           </div>
         </fieldset>
-        <fieldset>
+        <fieldset className="min-w-0">
           <legend className="mb-2 text-sm font-semibold text-ink-900">
             {copy.activityTypesLabel}
           </legend>
@@ -261,9 +271,6 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
             ))}
           </div>
         </fieldset>
-        <Button type="submit" className="w-full">
-          {copy.searchLabel}
-        </Button>
       </form>
     </Modal>
   );
