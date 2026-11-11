@@ -23,7 +23,8 @@ from app.db.models import (
     OrganizationFeedback,
 )
 from app.db.models.enums import PricingType, ScheduleType
-from app.db.queries import ActivitySearchFilters, hong_kong_day
+from app.db.queries import ActivitySearchFilters
+from app.db.search_conditions import hong_kong_day
 from app.exceptions import CursorError, ValidationError
 from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.orm import Session

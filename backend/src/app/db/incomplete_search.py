@@ -22,16 +22,18 @@ from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.db.queries import (
     ActivitySearchCursor,
     ActivitySearchFilters,
-    _apply_entry_filters,
-    _build_language_conditions,
     _category_descendant_ids_subquery,
-    _text_query_condition,
     applied_search_area_scope,
     area_descendant_ids_subquery,
+    validate_filters,
+)
+from app.db.search_conditions import (
+    apply_entry_filters,
+    build_language_conditions,
     needs_entry_filters,
     needs_price_filters,
     price_conditions,
-    validate_filters,
+    text_query_condition,
 )
 
 
@@ -145,11 +147,11 @@ def _picked_incomplete_subquery(filters: ActivitySearchFilters) -> sa.Subquery:
     if filters.schedule_type is not None:
         conditions.append(ActivitySchedule.schedule_type == filters.schedule_type)
     if filters.languages:
-        conditions.append(or_(*_build_language_conditions(filters.languages)))
+        conditions.append(or_(*build_language_conditions(filters.languages)))
     if filters.text_query:
-        conditions.append(_text_query_condition(filters.text_query))
+        conditions.append(text_query_condition(filters.text_query))
     if needs_entries:
-        _apply_entry_filters(filters, conditions)
+        apply_entry_filters(filters, conditions)
     if area_scope is not None:
         if area_scope:
             conditions.append(Location.area_id.in_(tuple(area_scope)))
@@ -191,7 +193,7 @@ def _schedule_at_venue(filters: ActivitySearchFilters):
     if filters.schedule_type is not None:
         match = and_(match, ActivitySchedule.schedule_type == filters.schedule_type)
     if filters.languages:
-        match = and_(match, or_(*_build_language_conditions(filters.languages)))
+        match = and_(match, or_(*build_language_conditions(filters.languages)))
     return match
 
 
@@ -276,7 +278,7 @@ def _limit_ranked_venues(ranked, filters, area_scope, venues):
     if filters.org_ids:
         ranked = ranked.where(Activity.org_id.in_(tuple(filters.org_ids)))
     if filters.text_query:
-        ranked = ranked.where(_text_query_condition(filters.text_query))
+        ranked = ranked.where(text_query_condition(filters.text_query))
     if needs_price_filters(filters):
         ranked = ranked.join(
             ActivityPricing,
@@ -305,14 +307,14 @@ def _limit_ranked_venues(ranked, filters, area_scope, venues):
                 ActivitySchedule.schedule_type == filters.schedule_type
             )
         if filters.languages:
-            ranked = ranked.where(or_(*_build_language_conditions(filters.languages)))
+            ranked = ranked.where(or_(*build_language_conditions(filters.languages)))
         if needs_entries:
             ranked = ranked.join(
                 ActivityScheduleEntry,
                 ActivityScheduleEntry.schedule_id == ActivitySchedule.id,
             )
             entry_conditions: list = []
-            _apply_entry_filters(filters, entry_conditions)
+            apply_entry_filters(filters, entry_conditions)
             if entry_conditions:
                 ranked = ranked.where(and_(*entry_conditions))
     return ranked
