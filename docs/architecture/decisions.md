@@ -435,7 +435,12 @@ counts approved organizations only, because
 a SQL view cannot read the Lambda flag. CloudFront caches public
 search for up to 5 minutes, so a release can lag by that long.
 
-Catalog is the release tool. It lists every organization with stage,
+Catalog is the admin release tool. A full-access `crud` partner
+key can release one organization at
+`POST /v1/partner/organizations/{id}/approve`. The same blockers
+apply, and `force` stays on the admin decision. Public search can
+take up to 5 minutes to show that release. Catalog lists every
+organization with stage,
 source, missing detail, and import job, and bulk actions approve,
 reject, reopen, or set a whitelist of organization fields. Opening a
 row sets `?org=` and shows the same readiness checklist on the

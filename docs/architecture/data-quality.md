@@ -19,7 +19,8 @@ reviews at `GET /v1/partner/category-reviews` and sees
 `crud` key is the partner equivalent of an admin: it can decide category
 reviews, decide venue proposals, set `location_ids` on activity create
 and update, merge organizations at
-`POST /v1/partner/organization-merges`, reject one organization at
+`POST /v1/partner/organization-merges`, approve one organization at
+`POST /v1/partner/organizations/{id}/approve`, reject one organization at
 `POST /v1/partner/organizations/{id}/reject`, and list or delete empty leftover
 categories. An org-scoped key can read
 its own venue rows and receives `403` on those writes. See

@@ -123,6 +123,7 @@ their primary responsibilities.
   `GET /v1/partner/category-reviews`; a full-access `crud` key can
   also `POST` review decisions and bulk apply/dismiss,
   `POST /v1/partner/organization-merges`, `POST
+  /v1/partner/organizations/{id}/approve`, `POST
   /v1/partner/organizations/{id}/reject`, `GET` and `POST`
   `/v1/partner/organizations/{id}/enrichment` (apply, dismiss, and
   leaflet upload included), `GET` and `PUT /v1/partner/enrichment-settings`, and
@@ -158,11 +159,12 @@ their primary responsibilities.
 - Category suggestions and category checks: admin-only routes under
   `/v1/admin/category-suggestions` (see `docs/api/admin.yaml`),
   including `/scan` and `/reviews`. Full-access partner keys can
-  decide reviews, merge organizations, reject an organization, run
+  decide reviews, merge organizations, approve or reject an organization, run
   website enrichment, and
   create, update, or delete activity categories. Those routes are
   `/v1/partner/category-reviews`,
   `/v1/partner/organization-merges`,
+  `/v1/partner/organizations/{id}/approve`,
   `/v1/partner/organizations/{id}/reject`,
   `/v1/partner/organizations/{id}/enrichment`,
   `/v1/partner/enrichment-settings`, and
@@ -273,6 +275,7 @@ their primary responsibilities.
   `/v1/admin/translation-fixes` (admin group only). These families share one `/v1/admin/{proxy+}` method so the
   stack stays within the CloudFormation 500-resource cap. Partner
   venue reads and writes, `POST /v1/partner/organization-merges`,
+  `POST /v1/partner/organizations/{id}/approve`,
   `POST /v1/partner/organizations/{id}/reject`,
   website enrichment, and enrichment settings use the existing
   `/v1/partner/{proxy+}`.
