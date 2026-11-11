@@ -142,7 +142,7 @@ def build_incomplete_search_query(
             > sa.tuple_(
                 func.lower(after.org_name),
                 func.lower(after.activity_name),
-                after.activity_id,
+                sa.literal(after.activity_id),
             )
         )
     paged = paged.order_by(
