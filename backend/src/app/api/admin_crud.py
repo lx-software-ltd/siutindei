@@ -69,11 +69,11 @@ class ResourceConfig:
     manager_update_handler: Callable[..., Any] | None = None
 
 
-_ADMIN_ONLY_WRITE_FIELDS = ("source_url", "source_note")
+_ADMIN_ONLY_WRITE_FIELDS = ("source_url", "source_note", "parent_verified")
 
 
 def _drop_admin_only_write_fields(body: dict[str, Any]) -> None:
-    """Managers cannot write listing provenance fields."""
+    """Managers cannot write listing provenance or the parent-verified flag."""
     for key in _ADMIN_ONLY_WRITE_FIELDS:
         body.pop(key, None)
 

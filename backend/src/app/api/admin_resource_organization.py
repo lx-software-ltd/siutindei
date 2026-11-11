@@ -89,6 +89,13 @@ def _parse_website(value: Any) -> str | None:
     return _validate_string_length(value, "website", MAX_WEBSITE_LENGTH)
 
 
+def _parse_parent_verified(value: Any) -> bool:
+    """Parse the admin-only parent-verified flag."""
+    if isinstance(value, bool):
+        return value
+    raise ValidationError("parent_verified must be a boolean", field="parent_verified")
+
+
 def _ensure_unique_organization_name(
     repo: OrganizationRepository,
     name: str,
@@ -109,6 +116,7 @@ def _update_organization_for_manager(
     body: dict[str, Any],
 ) -> Organization:
     """Update an organization for a manager (limited fields)."""
+    body.pop("parent_verified", None)
     body.pop("source_url", None)
     body.pop("source_note", None)
     if "name" in body:
@@ -241,6 +249,7 @@ def _create_organization(
         ),
         description_source=parse_description_source(body.get("description_source")),
         review_status="pending_review",
+        parent_verified=_parse_parent_verified(body.get("parent_verified", False)),
         **contact_fields,
     )
     from app.services.data_quality.names import record_imported_name
@@ -281,6 +290,8 @@ def _update_organization(
         )
     if "manager_id" in body:
         entity.manager_id = _validate_manager_id(body["manager_id"], required=True)  # type: ignore[assignment]
+    if "parent_verified" in body:
+        entity.parent_verified = _parse_parent_verified(body["parent_verified"])
     updated_media_urls: list[str] | None = None
     if "media_urls" in body:
         updated_media_urls = _parse_media_urls(body["media_urls"])
@@ -393,6 +404,7 @@ def _serialize_organization(entity: Organization) -> dict[str, Any]:
         "source_url": entity.source_url,
         "source_note": entity.source_note,
         "description_source": entity.description_source,
+        "parent_verified": bool(entity.parent_verified),
         "review_status": entity.review_status,
         "reviewed_at": entity.reviewed_at,
         "reviewed_by": entity.reviewed_by,

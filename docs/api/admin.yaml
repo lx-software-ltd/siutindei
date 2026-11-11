@@ -5809,6 +5809,9 @@ components:
           type: string
           maxLength: 2048
           description: WeChat handle or URL
+        parent_verified:
+          type: boolean
+          description: Admin only. Shows the Parent-Verified badge on the public website. Manager writes ignore it.
         media_urls:
           type: array
           maxItems: 20
@@ -5964,6 +5967,9 @@ components:
           type: string
           maxLength: 2048
           description: WeChat handle or URL
+        parent_verified:
+          type: boolean
+          description: Admin only. Shows the Parent-Verified badge on the public website. Manager writes ignore it.
         media_urls:
           type: array
           maxItems: 20
@@ -6117,6 +6123,9 @@ components:
           type: string
           nullable: true
           description: WeChat handle or URL
+        parent_verified:
+          type: boolean
+          description: Admin-set. Shows the Parent-Verified badge on the public website.
         media_urls:
           type: array
           items:
