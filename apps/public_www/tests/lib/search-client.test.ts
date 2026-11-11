@@ -53,6 +53,47 @@ describe('buildActivitySearchRequest', () => {
   });
 });
 
+describe('buildActivitySearchRequest refinements', () => {
+  const config = { apiBaseUrl: 'https://siutindei.com', apiKey: 'api-key', attestationToken: '' };
+
+  it('sends organiser, day, price, sort, and total parameters', () => {
+    const { url } = buildActivitySearchRequest(
+      {
+        organizationIds: ['org-1', 'org-2'],
+        pricingType: 'free',
+        languages: ['yue'],
+        daysOfWeekHkt: [0, 6],
+        freeTrial: true,
+        classPriceMax: 250,
+        sort: 'price',
+        includeTotal: true,
+      },
+      config,
+    );
+
+    const parsed = new URL(url).searchParams;
+    expect(parsed.getAll('organization_id')).toEqual(['org-1', 'org-2']);
+    expect(parsed.get('pricing_type')).toBe('free');
+    expect(parsed.getAll('language')).toEqual(['yue']);
+    expect(parsed.getAll('day_of_week_hkt')).toEqual(['0', '6']);
+    expect(parsed.get('free_trial')).toBe('true');
+    expect(parsed.get('class_price_max')).toBe('250');
+    expect(parsed.get('sort')).toBe('price');
+    expect(parsed.get('include_total')).toBe('true');
+  });
+
+  it('asks for the total only on the first page and omits the default sort', () => {
+    const { url } = buildActivitySearchRequest(
+      { cursor: 'next', includeTotal: true, sort: 'time' },
+      config,
+    );
+
+    const parsed = new URL(url).searchParams;
+    expect(parsed.has('include_total')).toBe(false);
+    expect(parsed.has('sort')).toBe(false);
+  });
+});
+
 describe('fetchActivitySearch live API integration', () => {
   const original: Record<string, string | undefined> = {};
 

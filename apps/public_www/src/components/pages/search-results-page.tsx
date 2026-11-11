@@ -7,11 +7,14 @@ import type { Locale } from '@/content/locales';
 import type { SiteContent } from '@/content/types';
 import { FilterChipRow } from '@/components/sections/search/filter-chip-row';
 import { SearchMapSplitLayout } from '@/components/sections/search/search-map-split-layout';
+import { SearchResultsSummary } from '@/components/sections/search/search-results-summary';
 import { SearchViewToggle } from '@/components/sections/search/search-view-toggle';
+import { useApplySearchFilters } from '@/components/sections/search/use-apply-search-filters';
 import { ListingGrid } from '@/components/sections/listings/listing-grid';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { SEARCH_RESULTS_PAGE_LIMIT } from '@/lib/activities/search-limits';
 import { buildMapSearchHref, buildSearchPageHref } from '@/lib/activities/map-search-url';
+import { rememberSearchHref } from '@/lib/activities/recent-storage';
 import { useActivitySearch } from '@/lib/activities/search/use-activity-search';
 import {
   parseSearchFiltersFromQuery,
@@ -31,33 +34,15 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setFilters } = useSearchContext();
+  const applyFilters = useApplySearchFilters(locale);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAreaNotice, setShowAreaNotice] = useState(false);
 
-  const ageParam = searchParams.get('age');
-  const regionParam = searchParams.get('region');
-  const neighbourhoodParam = searchParams.get('neighbourhood');
-  const typesParam = searchParams.get('types');
-  const queryParam = searchParams.get('q');
-  const urlFilterState = useMemo(() => {
-    const params = new URLSearchParams();
-    if (ageParam) {
-      params.set('age', ageParam);
-    }
-    if (regionParam) {
-      params.set('region', regionParam);
-    }
-    if (neighbourhoodParam) {
-      params.set('neighbourhood', neighbourhoodParam);
-    }
-    if (typesParam) {
-      params.set('types', typesParam);
-    }
-    if (queryParam) {
-      params.set('q', queryParam);
-    }
-    return sanitizeSearchFilters(parseSearchFiltersFromQuery(params));
-  }, [ageParam, neighbourhoodParam, queryParam, regionParam, typesParam]);
+  const searchKey = searchParams.toString();
+  const urlFilterState = useMemo(
+    () => sanitizeSearchFilters(parseSearchFiltersFromQuery(new URLSearchParams(searchKey))),
+    [searchKey],
+  );
   const urlFilters = urlFilterState.filters;
   const areaAdjusted = urlFilterState.adjusted;
   const urlViewMode = useMemo(
@@ -74,6 +59,10 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
   const replacementHref = buildSearchPageHref(locale, urlFilters, {
     view: urlViewMode,
   });
+  useEffect(() => {
+    rememberSearchHref(replacementHref);
+  }, [replacementHref]);
+
   const announcedHref = useRef<string | null>(null);
   useEffect(() => {
     if (areaAdjusted) {
@@ -96,6 +85,7 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
     locale,
     pageSize: SEARCH_RESULTS_PAGE_LIMIT,
     view: 'card',
+    includeTotal: true,
   });
   const listings = search.items;
   const isLoading = search.isLoading;
@@ -136,7 +126,27 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
   return (
     <div className="bg-white">
       <h1 className="sr-only">{copy.pageTitle}</h1>
-      <FilterChipRow locale={locale} />
+      <FilterChipRow locale={locale} copy={copy} />
+      <SearchResultsSummary
+        locale={locale}
+        copy={copy}
+        filters={urlFilters}
+        total={search.total}
+        isLoading={isLoading}
+        onApply={applyFilters}
+        viewToggle={
+          mapsEnabled ? (
+            <SearchViewToggle
+              isMapView={showMapSplit}
+              groupLabel={copy.resultsLabel}
+              listLabel={copy.listViewLabel}
+              mapLabel={copy.mapViewLabel}
+              onShowList={navigateToListView}
+              onShowMap={navigateToMapView}
+            />
+          ) : null
+        }
+      />
       {showAreaNotice ? (
         <p
           role="status"
@@ -166,7 +176,7 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
             isLoading={isLoading}
           />
         ) : (
-          <div className="mx-auto max-w-7xl px-4 pb-24 pt-8 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl px-4 pb-16 pt-4 sm:px-6 lg:px-8">
             <ListingGrid
               locale={locale}
               listings={listings}
@@ -197,15 +207,6 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
               {copy.loadMoreLabel}
             </button>
           </div>
-        ) : null}
-        {mapsEnabled ? (
-          <SearchViewToggle
-            isMapView={showMapSplit}
-            listLabel={copy.listViewLabel}
-            mapLabel={copy.mapViewLabel}
-            onShowList={navigateToListView}
-            onShowMap={navigateToMapView}
-          />
         ) : null}
       </div>
     </div>

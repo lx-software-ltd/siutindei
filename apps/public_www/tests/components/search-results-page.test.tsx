@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SearchResultsPage } from '@/components/pages/search-results-page';
@@ -119,7 +119,7 @@ describe('SearchResultsPage', () => {
     delete window.dataLayer;
   });
 
-  it('hides the name search field and activity count', async () => {
+  it('hides the name search field and the count until the total arrives', async () => {
     const copy = renderPage();
 
     await waitFor(() => {
@@ -142,37 +142,87 @@ describe('SearchResultsPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('opens the map by default and overlays a list toggle', async () => {
+  it('opens the map by default with a List and Map switch', async () => {
     const copy = renderPage();
 
-    const toggle = await screen.findByRole('button', {
-      name: copy.listViewLabel,
-    });
-    expect(toggle.querySelector('img')).toHaveAttribute(
-      'src',
-      '/images/ui/list.svg',
+    const group = await screen.findByRole('group', { name: copy.resultsLabel });
+    expect(group).toHaveClass('search-view-toggle');
+    expect(screen.getByRole('button', { name: copy.mapViewLabel })).toHaveAttribute(
+      'aria-pressed',
+      'true',
     );
-    expect(toggle).toHaveClass('search-view-toggle', 'fixed', 'rounded-full', 'bg-white');
-    expect(toggle.parentElement).toBe(document.body);
 
-    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole('button', { name: copy.listViewLabel }));
     expect(push).toHaveBeenCalledWith(expect.stringContaining('view=list'));
   });
 
-  it('overlays a map toggle on the list when view=list', async () => {
+  it('switches from the list to the map when view=list', async () => {
     currentSearchParams.value = new URLSearchParams('view=list');
     const copy = renderPage();
 
-    const toggle = await screen.findByRole('button', {
-      name: copy.mapViewLabel,
-    });
-    expect(toggle.querySelector('img')).toHaveAttribute(
-      'src',
-      '/images/ui/map.svg',
-    );
+    const map = await screen.findByRole('button', { name: copy.mapViewLabel });
+    expect(map).toHaveAttribute('aria-pressed', 'false');
 
-    fireEvent.click(toggle);
+    fireEvent.click(map);
     expect(push).toHaveBeenCalledWith(expect.stringContaining('view=map'));
+  });
+
+  it('shows the total, active filters, and removes one filter', async () => {
+    currentSearchParams.value = new URLSearchParams('view=list&age=3-6&free=1&day=weekend');
+    vi.mocked(fetchActivitySearch).mockResolvedValue({
+      items: [buildListing()],
+      nextCursor: null,
+      total: 12,
+    });
+    const copy = renderPage();
+
+    expect(await screen.findByText('12 activities')).toBeInTheDocument();
+    expect(fetchActivitySearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        includeTotal: true,
+        pricingType: 'free',
+        daysOfWeekHkt: [0, 6],
+      }),
+      expect.anything(),
+    );
+    const filters = screen.getByRole('list', { name: copy.activeFiltersLabel });
+    fireEvent.click(
+      within(filters).getByRole('button', { name: 'Remove filter: Weekend' }),
+    );
+    expect(replace).toHaveBeenLastCalledWith('/en/search/?age=3-6&free=1&view=list');
+
+    fireEvent.click(within(filters).getByRole('button', { name: copy.clearFiltersLabel }));
+    expect(replace).toHaveBeenLastCalledWith('/en/search/?view=list');
+  });
+
+  it('labels a search without an age as all ages', async () => {
+    currentSearchParams.value = new URLSearchParams('view=list');
+    const copy = renderPage();
+
+    const filters = await screen.findByRole('list', { name: copy.activeFiltersLabel });
+    expect(within(filters).getByText(copy.allAgesLabel)).toBeInTheDocument();
+    expect(within(filters).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('sorts by lowest price', async () => {
+    currentSearchParams.value = new URLSearchParams('view=list');
+    const copy = renderPage();
+
+    fireEvent.change(await screen.findByRole('combobox', { name: copy.sortLabel }), {
+      target: { value: 'price' },
+    });
+    expect(replace).toHaveBeenLastCalledWith('/en/search/?sort=price&view=list');
+  });
+
+  it('remembers the search for the activity page back link', async () => {
+    currentSearchParams.value = new URLSearchParams('view=list&age=3-6');
+    renderPage();
+
+    await waitFor(() => {
+      expect(window.sessionStorage.getItem('siutindei.lastSearchHref')).toBe(
+        '/en/search/?age=3-6&view=list',
+      );
+    });
   });
 
   it('does not refetch when only the view query changes', async () => {
@@ -292,9 +342,7 @@ describe('SearchResultsPage', () => {
     }
     const { rerender } = render(<Tree />);
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      copy.areaAdjustedLabel,
-    );
+    expect(await screen.findByText(copy.areaAdjustedLabel)).toHaveAttribute('role', 'status');
     expect(replace).toHaveBeenCalledWith(
       '/en/search/?region=kowloon&view=map',
     );
@@ -313,7 +361,7 @@ describe('SearchResultsPage', () => {
     await act(async () => {
       rerender(<Tree />);
     });
-    expect(screen.getByRole('status')).toHaveTextContent(copy.areaAdjustedLabel);
+    expect(screen.getByText(copy.areaAdjustedLabel)).toBeInTheDocument();
     expect(fetchActivitySearch).toHaveBeenCalledTimes(1);
 
     currentSearchParams.value = new URLSearchParams(
@@ -322,7 +370,7 @@ describe('SearchResultsPage', () => {
     await act(async () => {
       rerender(<Tree />);
     });
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByText(copy.areaAdjustedLabel)).not.toBeInTheDocument();
   });
 
   it('does not rewrite a search that names no area', async () => {
