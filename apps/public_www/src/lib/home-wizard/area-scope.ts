@@ -2,6 +2,7 @@ import {
   placeLabelForFilters,
   type SearchFiltersState,
 } from '@/lib/activities/search-params';
+import { formatContentTemplate } from '@/content/content-field-utils';
 import type { Locale } from '@/content/locales';
 import { getSearchConfig } from '@/lib/site-config';
 
@@ -214,6 +215,95 @@ export function showsNeighbourhoodChoices(regionId: string | null): boolean {
     return true;
   }
   return allowed.length === 1 && getConfiguredSearchAreaScope().restricted;
+}
+
+const NAMED_PLACE_LIMIT = 3;
+
+export type NamedOpenPlace =
+  | { readonly kind: 'unrestricted' }
+  | { readonly kind: 'none' }
+  | { readonly kind: 'named'; readonly names: readonly string[] }
+  | { readonly kind: 'generic' };
+
+export interface PlaceListCopy {
+  readonly comma: string;
+  readonly pairTemplate: string;
+  readonly finalTemplate: string;
+}
+
+export function joinPlaceNames(
+  names: readonly string[],
+  copy: PlaceListCopy,
+): string {
+  if (names.length <= 1) {
+    return names[0] ?? '';
+  }
+  if (names.length === 2) {
+    return formatContentTemplate(copy.pairTemplate, {
+      first: names[0],
+      second: names[1],
+    });
+  }
+  return formatContentTemplate(copy.finalTemplate, {
+    list: names.slice(0, -1).join(copy.comma),
+    last: names[names.length - 1] ?? '',
+  });
+}
+
+function regionIsFullyOpen(regionId: string): boolean {
+  const allowed = allowedNeighbourhoodsForRegion(regionId);
+  return (
+    allowed.length > 0 &&
+    allowed.length === neighbourhoodsForRegion(regionId).length
+  );
+}
+
+function labelsForRegion(region: OpenRegion, locale: Locale): readonly string[] {
+  if (regionIsFullyOpen(region.id)) {
+    const option = REGIONS_BY_ID.get(region.id);
+    return option ? [labelForLocale(option.labels, locale)] : [];
+  }
+  return region.neighbourhoods.map((entry) => labelForLocale(entry.labels, locale));
+}
+
+/** Names for the home popular heading. `none` means the scope matches nothing. */
+export function namedOpenPlace(locale: Locale): NamedOpenPlace {
+  const scope = getConfiguredSearchAreaScope();
+  if (!scope.restricted) {
+    return { kind: 'unrestricted' };
+  }
+  const regions = openRegions();
+  if (regions.length === 0) {
+    return { kind: 'none' };
+  }
+  const names = regions.flatMap((region) => labelsForRegion(region, locale));
+  if (names.length === 0) {
+    return { kind: 'none' };
+  }
+  if (names.length <= NAMED_PLACE_LIMIT) {
+    return { kind: 'named', names };
+  }
+  return { kind: 'generic' };
+}
+
+/**
+ * Names after "Activities in" for one region row.
+ * More than three neighbourhoods keep the region name.
+ */
+export function namedOpenPlaceInRegion(
+  regionId: string,
+  locale: Locale,
+): NamedOpenPlace {
+  if (!getConfiguredSearchAreaScope().restricted || regionIsFullyOpen(regionId)) {
+    return { kind: 'unrestricted' };
+  }
+  const names = allowedNeighbourhoodsForRegion(regionId).map((entry) =>
+    labelForLocale(entry.labels, locale),
+  );
+  if (names.length === 0 || names.length > NAMED_PLACE_LIMIT) {
+    return { kind: 'unrestricted' };
+  }
+  return { kind: 'named', names };
 }
 
 export function impliedOpenPlaceLabel(locale: string): string | null {
