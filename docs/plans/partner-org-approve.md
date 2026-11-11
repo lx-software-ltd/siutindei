@@ -3,6 +3,9 @@
 **Status**: Done
 **Zone**: yellow
 
+`force` on this route is covered by
+`docs/plans/partner-org-force-approve.md`.
+
 ## Goal
 
 Let a full-access `crud` partner key approve one organization at
