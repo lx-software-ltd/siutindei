@@ -87,7 +87,7 @@ export function Modal({ isOpen, title, onClose, children }: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl"
+        className="relative z-10 flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl"
       >
         <div className="flex items-center justify-between border-b border-brand-100 px-4 py-3">
           <h2 id={titleId} className="text-base font-semibold text-ink-900">

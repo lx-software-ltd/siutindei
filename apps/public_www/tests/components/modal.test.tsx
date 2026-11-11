@@ -31,6 +31,16 @@ describe('Modal', () => {
     );
   });
 
+  it('caps its height to the visible viewport so the header stays on screen in iOS Safari', () => {
+    render(
+      <Modal isOpen title="Search activities" onClose={vi.fn()}>
+        <button type="button">Field</button>
+      </Modal>,
+    );
+
+    expect(screen.getByRole('dialog')).toHaveClass('max-h-[92dvh]');
+  });
+
   it('stays clickable when opened from inside main content', () => {
     const onClose = vi.fn();
     render(
