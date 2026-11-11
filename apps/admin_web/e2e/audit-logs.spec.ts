@@ -16,15 +16,19 @@ test.describe('Audit Logs Panel', () => {
     await expect(adminPage.getByRole('columnheader', { name: 'Actor' })).toBeVisible();
     const userRow = adminPage.getByTestId('admin-row-audit-1');
     await expect(userRow.getByRole('cell', { name: 'admin@example.com' })).toBeVisible();
-    await expect(userRow.getByRole('img', { name: 'User' })).toBeVisible();
-    const migrationRow = adminPage.getByTestId('admin-row-audit-2');
-    await expect(migrationRow.getByRole('cell', { name: 'migration' })).toBeVisible();
-    await expect(migrationRow.getByRole('img', { name: 'GitHub' })).toBeVisible();
+    await expect(userRow.getByRole('img', { name: 'Email' })).toBeVisible();
+    const systemRow = adminPage.getByTestId('admin-row-audit-2');
+    await expect(systemRow.getByRole('cell', { name: 'system' })).toBeVisible();
+    await expect(systemRow.getByRole('img', { name: 'GitHub' })).toHaveCount(0);
+    const jobRow = adminPage.getByTestId('admin-row-audit-4');
+    await expect(jobRow.getByRole('cell', { name: 'category check' })).toBeVisible();
+    await expect(jobRow.getByRole('img', { name: 'User' })).toHaveCount(0);
     const keyRow = adminPage.getByTestId('admin-row-audit-3');
     await expect(keyRow.getByRole('cell', { name: 'Partner read key' })).toBeVisible();
     await expect(keyRow.getByRole('img', { name: 'API key' })).toBeVisible();
     await expect(adminPage.getByText('admin-user-id-123')).toHaveCount(0);
     await expect(adminPage.getByText('api-key:api-key-1')).toHaveCount(0);
+    await expect(adminPage.getByText('category-scan:run-1')).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Timestamp' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: /Timestamp GMT/ })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'User Email' })).toHaveCount(0);
@@ -79,7 +83,7 @@ test.describe('Audit Logs Panel', () => {
     await adminPage.getByRole('row').nth(1).click();
     await expect(adminPage.getByText('Record ID', { exact: true })).toBeVisible();
     await expect(
-      adminPage.getByTestId('admin-row-audit-1-detail').getByRole('img', { name: 'User' })
+      adminPage.getByTestId('admin-row-audit-1-detail').getByRole('img', { name: 'Email' })
     ).toBeVisible();
     await expect(adminPage.getByLabel('Old values JSON')).toBeVisible();
     await expect(
@@ -99,9 +103,10 @@ test.describe('Audit Logs Panel', () => {
       .locator('xpath=..')
       .locator('dd');
     await expect(requestIdValue).toHaveText('—');
+    await expect(adminPage.getByTestId('admin-row-audit-2-detail')).toContainText('system');
     await expect(
       adminPage.getByTestId('admin-row-audit-2-detail').getByRole('img', { name: 'GitHub' })
-    ).toBeVisible();
+    ).toHaveCount(0);
 
     await keyRow.click();
     const keyDetail = adminPage.getByTestId('admin-row-audit-3-detail');
@@ -111,5 +116,10 @@ test.describe('Audit Logs Panel', () => {
       .locator('dd');
     await expect(actorValue).toContainText('Partner read key');
     await expect(keyDetail.getByRole('img', { name: 'API key' })).toBeVisible();
+
+    await jobRow.click();
+    const jobDetail = adminPage.getByTestId('admin-row-audit-4-detail');
+    await expect(jobDetail).toContainText('category check');
+    await expect(jobDetail.getByText('category-scan:run-1')).toHaveCount(0);
   });
 });

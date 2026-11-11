@@ -515,6 +515,21 @@ export const mockAuditLogs = [
     ip_address: null,
     user_agent: null,
   },
+  {
+    id: 'audit-4',
+    table_name: 'tickets',
+    record_id: 'ticket-1',
+    action: 'DELETE',
+    source: 'category-scan',
+    user_id: 'category-scan:run-1',
+    request_id: 'req-scan',
+    changed_fields: ['category_id'],
+    old_values: { category_id: 'old' },
+    new_values: { category_id: 'new' },
+    timestamp: '2024-01-07T13:00:00Z',
+    ip_address: null,
+    user_agent: null,
+  },
 ];
 
 export const MOCK_STANLEY_AREA_ID = '8e20eb5e-f30a-5b98-b60c-6c9b4b4a81e3';
