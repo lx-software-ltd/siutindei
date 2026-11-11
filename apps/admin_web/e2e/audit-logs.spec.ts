@@ -18,7 +18,11 @@ test.describe('Audit Logs Panel', () => {
       adminPage.getByRole('cell', { name: 'admin@example.com', exact: true })
     ).toBeVisible();
     await expect(adminPage.getByRole('cell', { name: 'migration', exact: true })).toBeVisible();
+    const keyRow = adminPage.getByTestId('admin-row-audit-3');
+    await expect(keyRow.getByRole('cell', { name: 'Partner read key' })).toBeVisible();
+    await expect(keyRow.getByRole('img', { name: 'API key' })).toBeVisible();
     await expect(adminPage.getByText('admin-user-id-123')).toHaveCount(0);
+    await expect(adminPage.getByText('api-key:api-key-1')).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'Timestamp' })).toBeVisible();
     await expect(adminPage.getByRole('columnheader', { name: /Timestamp GMT/ })).toHaveCount(0);
     await expect(adminPage.getByRole('columnheader', { name: 'User Email' })).toHaveCount(0);
@@ -42,7 +46,9 @@ test.describe('Audit Logs Panel', () => {
       'api_keys',
       'category_suggestion_settings',
       'category_suggestions',
+      'cognito_user',
       'feedback_labels',
+      'import_settings',
       'locations',
       'organization_duplicate_dismissals',
       'organization_feedback',
@@ -88,5 +94,14 @@ test.describe('Audit Logs Panel', () => {
       .locator('xpath=..')
       .locator('dd');
     await expect(requestIdValue).toHaveText('—');
+
+    await keyRow.click();
+    const keyDetail = adminPage.getByTestId('admin-row-audit-3-detail');
+    const actorValue = keyDetail
+      .locator('dt', { hasText: /^Actor$/ })
+      .locator('xpath=..')
+      .locator('dd');
+    await expect(actorValue).toContainText('Partner read key');
+    await expect(keyDetail.getByRole('img', { name: 'API key' })).toBeVisible();
   });
 });

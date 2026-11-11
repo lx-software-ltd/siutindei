@@ -1,16 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { AuditHighlightedJson } from '@/components/admin/audit-highlighted-json';
+import { KeyIcon } from '@/components/icons/action-icons';
 import { useExpandedRecord } from '@/hooks/use-expanded-record';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { type AuditLogsFilters } from '@/lib/api-client';
+import { listApiKeys } from '@/lib/api-client-api-keys';
 import { listAuditLogs } from '@/lib/api-client-audit';
 import { listCognitoUsers } from '@/lib/api-client-cognito';
 import { formatAdminPageName } from '@/lib/admin-page-name';
+import { getAdminQueryClient } from '@/lib/admin-query-client';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
-import { formatAuditActor } from '@/lib/audit-actor';
+import { formatAuditActor, type AuditActor } from '@/lib/audit-actor';
 import { AUDITABLE_TABLES } from '@/lib/audit-tables';
 import { formatDateTime } from '@/lib/date-utils';
 import type { AuditLog } from '@/types/admin';
@@ -89,6 +93,51 @@ function auditJsonRecord(
     return null;
   }
   return value;
+}
+
+async function loadApiKeyNames(): Promise<Record<string, string>> {
+  const nameById: Record<string, string> = {};
+  let cursor: string | undefined;
+  const seen = new Set<string>();
+  try {
+    for (;;) {
+      const response = await listApiKeys(cursor, 200);
+      for (const key of response.items) {
+        const name = key.name.trim();
+        if (name) {
+          nameById[key.id] = name;
+        }
+      }
+      const next = response.next_cursor ?? undefined;
+      if (!next || seen.has(next)) {
+        return nameById;
+      }
+      seen.add(next);
+      cursor = next;
+    }
+  } catch {
+    return nameById;
+  }
+}
+
+function AuditActorValue({ actor }: { actor: AuditActor }) {
+  const text = adminTableText(actor.text);
+  if (actor.kind !== 'key') {
+    return text;
+  }
+  return (
+    <span className='inline-flex min-w-0 items-center gap-1.5'>
+      <span className='min-w-0 break-words'>{text}</span>
+      <span
+        role='img'
+        title='API key'
+        aria-label='API key'
+        className='inline-flex shrink-0 items-center text-ink-500'
+      >
+        <KeyIcon className='h-4 w-4' />
+      </span>
+    </span>
+  );
 }
 
 function ActionBadge({ action }: { action: AuditLog['action'] }) {
@@ -183,9 +232,18 @@ export function AuditLogsPanel() {
     void loadCognitoUsers();
   }, [loadCognitoUsers]);
 
+  const keyNames = useQuery(
+    {
+      queryKey: [...adminQueryKeys.apiKeys(), 'actor-names'],
+      queryFn: loadApiKeyNames,
+    },
+    getAdminQueryClient()
+  );
+
   const getActor = useCallback(
-    (userId: string | null | undefined) => formatAuditActor(userId, userEmailById),
-    [userEmailById]
+    (userId: string | null | undefined) =>
+      formatAuditActor(userId, userEmailById, keyNames.data ?? {}),
+    [keyNames.data, userEmailById]
   );
 
   const selected = list.items.find((item) => item.id === expanded.expandedId) ?? null;
@@ -281,8 +339,8 @@ export function AuditLogsPanel() {
             <AdminDataTableCellMeta until='secondary'>
               <ActionBadge action={item.action} />
             </AdminDataTableCellMeta>
-            <AdminDataTableCellMeta until='secondary' label='Actor' empty={actor === '—'}>
-              {adminTableText(actor)}
+            <AdminDataTableCellMeta until='secondary' label='Actor' empty={actor.text === '—'}>
+              <AuditActorValue actor={actor} />
             </AdminDataTableCellMeta>
             <AdminDataTableCellMeta until='tertiary' label='Timestamp' empty={!item.timestamp}>
               <AdminTableTime value={item.timestamp} />
@@ -292,7 +350,7 @@ export function AuditLogsPanel() {
             <ActionBadge action={item.action} />
           </AdminDataTableCell>
           <AdminDataTableCell priority='secondary'>
-            {adminTableText(actor)}
+            <AuditActorValue actor={actor} />
           </AdminDataTableCell>
           <AdminDataTableCell priority='tertiary'>
             <AdminTableTime value={item.timestamp} />
@@ -305,7 +363,7 @@ export function AuditLogsPanel() {
   );
 }
 
-function AuditLogDetail({ log, actor }: { log: AuditLog; actor: string }) {
+function AuditLogDetail({ log, actor }: { log: AuditLog; actor: AuditActor }) {
   const oldValues = auditJsonRecord(log.old_values);
   const newValues = auditJsonRecord(log.new_values);
 
@@ -318,7 +376,9 @@ function AuditLogDetail({ log, actor }: { log: AuditLog; actor: string }) {
         <AdminReadOnlyValue label='Record ID' mono>{log.record_id}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Action'>{formatAuditAction(log.action)}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Source'>{log.source?.trim() || '—'}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Actor'>{actor}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Actor'>
+          <AuditActorValue actor={actor} />
+        </AdminReadOnlyValue>
         <AdminReadOnlyValue label='Request ID' mono>{log.request_id || '—'}</AdminReadOnlyValue>
         {log.changed_fields && log.changed_fields.length > 0 ? (
           <AdminReadOnlyValue label='Changed Fields' span='full'>{log.changed_fields.join(', ')}</AdminReadOnlyValue>

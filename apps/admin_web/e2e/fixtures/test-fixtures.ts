@@ -500,6 +500,21 @@ export const mockAuditLogs = [
     ip_address: null,
     user_agent: null,
   },
+  {
+    id: 'audit-3',
+    table_name: 'locations',
+    record_id: 'loc-1',
+    action: 'DELETE',
+    source: 'partner',
+    user_id: 'api-key:api-key-1',
+    request_id: 'req-key',
+    changed_fields: ['name'],
+    old_values: { name: 'Old place' },
+    new_values: { name: 'New place' },
+    timestamp: '2024-01-07T12:00:00Z',
+    ip_address: null,
+    user_agent: null,
+  },
 ];
 
 export const MOCK_STANLEY_AREA_ID = '8e20eb5e-f30a-5b98-b60c-6c9b4b4a81e3';

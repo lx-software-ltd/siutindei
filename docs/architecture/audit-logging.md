@@ -239,6 +239,11 @@ For full endpoint details (parameters, request/response schemas), see the
 OpenAPI spec: [`docs/api/admin.yaml`](../api/admin.yaml) — search for
 `/v1/admin/audit-logs`.
 
+The Audit logs screen shows `migration` when `user_id` is empty, the
+Cognito email when the id is a user, and the API key's name with a key
+icon when the id is `api-key:<key id>`. An id that does not resolve
+shows an em dash. The stored id is not printed.
+
 **Note:** Sensitive fields (password, secret, token, api_key) are
 automatically redacted from `old_values` and `new_values` in API responses.
 

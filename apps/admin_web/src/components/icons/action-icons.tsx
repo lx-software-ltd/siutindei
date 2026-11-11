@@ -203,6 +203,18 @@ export function SpinnerIcon({ className }: IconProps) {
   );
 }
 
+export function KeyIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox='0 0 24 24' fill='currentColor' aria-hidden>
+      <path
+        fillRule='evenodd'
+        d='M15.75 1.5a6.75 6.75 0 0 0-6.651 7.906c.067.39-.032.794-.27 1.096L3.75 16.5v2.25A2.25 2.25 0 0 0 6 21h2.25v-2.25h2.25v-2.25h1.06l1.998-1.998c.302-.238.706-.337 1.096-.27A6.75 6.75 0 1 0 15.75 1.5Zm0 4.5a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5Z'
+        clipRule='evenodd'
+      />
+    </svg>
+  );
+}
+
 export function EmailIcon({ className }: IconProps) {
   return (
     <svg
