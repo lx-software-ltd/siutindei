@@ -8,9 +8,9 @@ import { Carousel } from '@/components/shared/ui/carousel';
 import { groupListings } from '@/lib/activities/group-listings';
 import { logActivityLoadError } from '@/lib/activities/load-error';
 import { fetchActivitySearch } from '@/lib/activities/search-client';
+import { RELATED_ACTIVITIES_LIMIT } from '@/lib/activities/search-limits';
 import type { ActivityListing, ActivitySearchParams } from '@/lib/activities/types';
 
-const RELATED_ROWS = 24;
 const RELATED_SHOWN = 8;
 
 interface ActivityRelatedProps {
@@ -49,7 +49,7 @@ export function ActivityRelated({
     const controller = new AbortController();
     const excluded = new Set(excludeKey.split(','));
     fetchActivitySearch(
-      { ...params, limit: RELATED_ROWS, view: 'card' },
+      { ...params, limit: RELATED_ACTIVITIES_LIMIT, view: 'card' },
       { signal: controller.signal },
     )
       .then((response) => {

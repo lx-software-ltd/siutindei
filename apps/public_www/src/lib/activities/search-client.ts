@@ -3,6 +3,7 @@ import { getSearchConfig } from '@/lib/site-config';
 
 import { groupListings } from './group-listings';
 import { mapActivityListing, type ActivityWireListing } from './map-listing';
+import { ACTIVITY_DETAIL_PAGE_LIMIT } from './search-limits';
 import type {
   ActivityListing,
   ActivitySearchParams,
@@ -143,7 +144,6 @@ export async function fetchActivitySearch(
   };
 }
 
-const DETAIL_ROWS_PER_PAGE = 50;
 const DETAIL_MAX_PAGES = 4;
 
 /** Every venue, price, and schedule row of one activity, grouped. */
@@ -156,7 +156,7 @@ export async function fetchActivityListingById(
     const response = await fetchActivitySearch(
       {
         activityId,
-        limit: DETAIL_ROWS_PER_PAGE,
+        limit: ACTIVITY_DETAIL_PAGE_LIMIT,
         ...(cursor ? { cursor } : {}),
       },
       { highPriority: page === 0 },
