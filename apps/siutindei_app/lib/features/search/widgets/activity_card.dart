@@ -383,10 +383,7 @@ class _ScheduleInfo extends StatelessWidget {
     }
 
     if (parts.isEmpty) {
-      return switch (current.type) {
-        ScheduleType.dateSpecific => 'One-time event',
-        _ => 'See details',
-      };
+      return 'Schedule to be confirmed';
     }
 
     return parts.join(' • ');

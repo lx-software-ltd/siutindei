@@ -52,15 +52,9 @@ def load_search_rows(
     phase = filters.cursor.phase if filters.cursor is not None else "complete"
     loaded = selectinload(ActivitySchedule.entries)
     if phase == "incomplete":
-        return _incomplete_page(
-            session,
-            filters,
-            requested,
-            after_activity_id=(
-                filters.cursor.activity_id if filters.cursor is not None else None
-            ),
-            loaded=loaded,
-        )
+        if not filters.include_incomplete:
+            return [], None
+        return _incomplete_page(session, filters, requested, loaded=loaded)
 
     complete_filters = replace(filters, limit=requested + 1)
     complete_rows = list(
@@ -79,23 +73,11 @@ def load_search_rows(
         return complete_rows, None
     remaining = requested - len(complete_rows)
     if remaining == 0:
-        probe, _probe_cursor = _incomplete_page(
-            session,
-            filters,
-            1,
-            after_activity_id=None,
-            loaded=loaded,
-        )
+        probe, _probe_cursor = _incomplete_page(session, filters, 1, loaded=loaded)
         if not probe:
             return complete_rows, None
         return complete_rows, encode_incomplete_cursor(None)
-    extra, extra_cursor = _incomplete_page(
-        session,
-        filters,
-        remaining,
-        after_activity_id=None,
-        loaded=loaded,
-    )
+    extra, extra_cursor = _incomplete_page(session, filters, remaining, loaded=loaded)
     return [*complete_rows, *extra], extra_cursor
 
 
@@ -104,7 +86,6 @@ def _incomplete_page(
     filters: ActivitySearchFilters,
     limit: int,
     *,
-    after_activity_id: UUID | None,
     loaded: Any,
 ) -> tuple[list[Any], str | None]:
     """One page of approved activities that lack a price or a schedule."""
@@ -116,7 +97,7 @@ def _incomplete_page(
         session.execute(
             build_incomplete_search_query(
                 query_filters,
-                after_activity_id=after_activity_id,
+                after=filters.cursor,
             ).options(loaded)
         ).all()
     )
@@ -124,7 +105,8 @@ def _incomplete_page(
         return rows, None
     page = rows[:limit]
     activity = page[-1]._mapping[Activity]
-    return page, encode_incomplete_cursor(activity.id)
+    organization = page[-1]._mapping[Organization]
+    return page, encode_incomplete_cursor(activity.id, organization.name, activity.name)
 
 
 def map_row_to_result(
@@ -273,6 +255,8 @@ def parse_cursor(value: str | None) -> ActivitySearchCursor | None:
                 schedule_id=UUID(int=0),
                 phase="incomplete",
                 activity_id=UUID(str(raw_activity)) if raw_activity else None,
+                org_name=_cursor_text(payload.get("org_name")),
+                activity_name=_cursor_text(payload.get("activity_name")),
             )
         if phase != "complete":
             raise CursorError("Malformed cursor payload")
@@ -310,14 +294,26 @@ def encode_complete_cursor(
     )
 
 
-def encode_incomplete_cursor(activity_id: UUID | None) -> str:
+def encode_incomplete_cursor(
+    activity_id: UUID | None,
+    org_name: str | None = None,
+    activity_name: str | None = None,
+) -> str:
     """Encode a cursor that continues the approved incomplete rows."""
-    return _encode_cursor_payload(
-        {
-            "phase": "incomplete",
-            "activity_id": None if activity_id is None else str(activity_id),
-        }
-    )
+    payload: dict[str, Any] = {
+        "phase": "incomplete",
+        "activity_id": None if activity_id is None else str(activity_id),
+    }
+    if activity_id is not None:
+        payload["org_name"] = org_name or ""
+        payload["activity_name"] = activity_name or ""
+    return _encode_cursor_payload(payload)
+
+
+def _cursor_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value)
 
 
 def _encode_cursor_payload(payload: Mapping[str, Any]) -> str:

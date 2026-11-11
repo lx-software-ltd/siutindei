@@ -44,15 +44,29 @@ today's results, so older app builds do not receive null `pricing` or
 ## Invariants this change preserves
 
 - A request without `include_incomplete` returns the same rows as today.
+  An incomplete-phase cursor is ignored unless the flag is set.
 - An incomplete row is returned only for `review_status = approved`,
   even when the review gate is off.
 - Pending categorisation, closed organizations, and closed venues stay
   out.
 - Price, schedule, day, time, and language filters exclude an
   incomplete row that cannot satisfy them.
-- One incomplete activity contributes one row. The venue is the
-  schedule's venue, then a priced venue, then a linked venue.
-- Complete rows stay first. Incomplete rows follow, paged by activity id.
+- One incomplete activity contributes one row. The venue is chosen
+  among venues that match the area, price, schedule, day, and language
+  filters: a schedule venue, then a priced venue, then a linked venue.
+- Complete rows stay first. Incomplete rows follow, ordered by
+  organization name, activity name, then activity id.
+- A schedule with no day or time is shown as unconfirmed. The app
+  chrome stays English, including those placeholders.
+
+## Review follow-up
+
+The venue rank used to run before the area and price filters, so a
+Stanley search could miss an activity whose other venue ranked first.
+The rank now sees only venues that satisfy those filters, and only
+venues of approved organizations. API Gateway's search parameter list
+is unchanged: stage caching is off, and `backend/infrastructure/**`
+is red.
 
 ## Done when
 

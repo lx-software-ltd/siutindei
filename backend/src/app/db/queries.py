@@ -54,6 +54,8 @@ class ActivitySearchCursor:
     schedule_id: UUID
     phase: str = "complete"
     activity_id: UUID | None = None
+    org_name: str | None = None
+    activity_name: str | None = None
 
 
 @dataclass(frozen=True)

@@ -223,7 +223,12 @@ class ActivityDetailScreen extends ConsumerWidget {
     ComponentTokens tokens,
   ) {
     final schedule = result.schedule;
-    if (schedule == null) {
+    final hasSlot =
+        schedule != null &&
+        (schedule.dayOfWeekName != null ||
+            schedule.formattedTime != null ||
+            schedule.dayOfMonth != null);
+    if (schedule == null || !hasSlot) {
       return SectionCard(
         title: 'Schedule',
         icon: Icons.schedule,
