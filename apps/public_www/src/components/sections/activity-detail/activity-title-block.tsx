@@ -63,9 +63,9 @@ export function ActivityTitleBlock({
 }: ActivityTitleBlockProps) {
   const hasBadges = isTemporarilyClosed || hasFreeTrial || isParentVerified;
   return (
-    <header className="space-y-3">
+    <header className="space-y-3 short:space-y-2">
       {categoryLabel ? (
-        <p className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink-700">
+        <p className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink-700 short:hidden">
           {categoryIconSrc ? (
             <img src={categoryIconSrc} alt="" width={18} height={18} aria-hidden="true" className="h-[18px] w-[18px] object-contain" />
           ) : null}

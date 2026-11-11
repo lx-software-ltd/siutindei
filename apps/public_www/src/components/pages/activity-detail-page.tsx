@@ -378,41 +378,48 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
         items={breadcrumbItems(locale, listing, copy)}
         copy={copy}
       />
-      <div className="mt-2 grid gap-5 short:grid-cols-2 short:items-start short:gap-6">
-        <ActivityGallery
-          title={title}
-          imageUrls={imageUrls}
-          isLogo={listingImageIsLogo(listing)}
-          fallbackIconSrc={iconSrcForActivityCategory(listing.activity.categoryId)}
-          copy={copy}
-        />
-        <ActivityTitleBlock
-          title={title}
-          categoryLabel={categoryLabelForListing(locale, listing)}
-          categoryIconSrc={
-            categoryTypeIdForListing(listing)
-              ? iconSrcForActivityCategory(listing.activity.categoryId)
-              : null
-          }
-          organiserName={orgName}
-          organiserLogoUrl={listing.organization.logoMediaUrl}
-          isTemporarilyClosed={isTemporarilyClosed(atVenue)}
-          hasFreeTrial={hasFreeTrial}
-          isParentVerified={listing.organization.parentVerified === true}
-          rating={listing.organization.rating ?? null}
-          copy={copy}
-          actions={
-            <div className="flex flex-wrap gap-2 lg:hidden">
-              <span className="hidden short:contents">
-                <EnquiryLink enquiry={enquiry} />
-              </span>
-              <ShareButton title={title} label={copy.shareLabel} copiedLabel={copy.linkCopiedLabel} />
-            </div>
-          }
-        />
-      </div>
-      <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="min-w-0 max-w-3xl space-y-6">
+      <div className="mt-2 grid gap-x-8 gap-y-6 short:grid-cols-2 short:items-start short:gap-x-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 short:col-start-1 short:row-start-1 lg:col-span-2">
+          <ActivityGallery
+            title={title}
+            imageUrls={imageUrls}
+            isLogo={listingImageIsLogo(listing)}
+            fallbackIconSrc={iconSrcForActivityCategory(listing.activity.categoryId)}
+            copy={copy}
+          />
+        </div>
+        <div className="min-w-0 short:col-start-2 short:row-start-1 lg:col-start-1 lg:row-start-2">
+          <ActivityTitleBlock
+            title={title}
+            categoryLabel={categoryLabelForListing(locale, listing)}
+            categoryIconSrc={
+              categoryTypeIdForListing(listing)
+                ? iconSrcForActivityCategory(listing.activity.categoryId)
+                : null
+            }
+            organiserName={orgName}
+            organiserLogoUrl={listing.organization.logoMediaUrl}
+            isTemporarilyClosed={isTemporarilyClosed(atVenue)}
+            hasFreeTrial={hasFreeTrial}
+            isParentVerified={listing.organization.parentVerified === true}
+            rating={listing.organization.rating ?? null}
+            copy={copy}
+            actions={
+              <div className="flex flex-wrap items-center gap-2 lg:hidden">
+                {price ? (
+                  <p className="hidden w-full text-lg font-semibold text-ink-900 short:block">
+                    {price}
+                  </p>
+                ) : null}
+                <span className="hidden short:contents">
+                  <EnquiryLink enquiry={enquiry} />
+                </span>
+                <ShareButton title={title} label={copy.shareLabel} copiedLabel={copy.linkCopiedLabel} />
+              </div>
+            }
+          />
+        </div>
+        <div className="min-w-0 max-w-3xl space-y-6 short:col-span-2 lg:col-start-1 lg:row-start-3">
           <ActivityKeyFacts facts={facts} copy={copy} enquiryHref={enquiry.href} />
           <ActivityAbout description={description} isTemplate={isTemplate} copy={copy} />
           <ActivitySchedule locale={locale} entries={entries} languages={languages} copy={copy} />
@@ -441,7 +448,7 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
             copy={copy}
           />
         </div>
-        <div className="hidden lg:block">
+        <div className="hidden lg:col-start-2 lg:row-span-2 lg:row-start-2 lg:block short:hidden">
           <ActivitySummaryCard
             price={price}
             priceDetail={priceDetail}

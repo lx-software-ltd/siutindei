@@ -78,13 +78,13 @@ export function ActivitySummaryCard({
         <p className="text-2xl font-bold text-ink-900">{price ?? copy.askForPriceLabel}</p>
         {priceDetail ? <p className="text-sm text-ink-500">{priceDetail}</p> : null}
       </div>
+      <EnquiryLink enquiry={enquiry} className="w-full" />
       <ActivityKeyFacts
         facts={facts.filter((fact) => fact.id !== 'price')}
         copy={copy}
         enquiryHref={enquiry.href}
         compact
       />
-      <EnquiryLink enquiry={enquiry} className="w-full" />
       <div className="grid grid-cols-2 gap-2">
         {directionsHref ? (
           <a
