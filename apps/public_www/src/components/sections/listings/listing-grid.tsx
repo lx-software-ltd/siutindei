@@ -19,7 +19,7 @@ interface ListingGridProps {
  * phones, and 4 on wide screens.
  */
 const GRID_CLASS_NAME =
-  'listing-grid grid gap-4 sm:grid-cols-3 sm:gap-6 xl:grid-cols-4';
+  'listing-grid grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6 xl:grid-cols-4';
 
 export function ListingGrid({
   locale,
