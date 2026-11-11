@@ -85,12 +85,12 @@ export function ActivityOrganiser({
       {links.length > 0 ? (
         <div className="mt-4">
           <h3 className="text-sm font-semibold text-ink-900">{copy.contactHeading}</h3>
-          <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+          <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {links.map((link) => {
               const label = kindLabels[link.kind];
               const body = (
                 <>
-                  <DetailIcon name={ICON_FOR_KIND[link.kind]} className="h-[18px] w-[18px]" />
+                  <DetailIcon name={ICON_FOR_KIND[link.kind]} className="h-[18px] w-[18px] shrink-0" />
                   <span className="min-w-0">
                     <span className="block text-xs text-ink-500">{label}</span>
                     <span className="block truncate text-sm font-medium text-ink-900">
@@ -100,9 +100,9 @@ export function ActivityOrganiser({
                 </>
               );
               const className =
-                'flex min-h-11 items-center gap-3 rounded-lg border border-brand-100 px-3 py-2';
+                'flex min-h-11 w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg border border-brand-100 px-3 py-2';
               return (
-                <li key={`${link.kind}-${link.text}`}>
+                <li key={`${link.kind}-${link.text}`} className="min-w-0">
                   {link.href ? (
                     <a
                       href={link.href}

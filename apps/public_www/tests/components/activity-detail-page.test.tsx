@@ -143,10 +143,10 @@ describe('ActivityDetailPage', () => {
       expect(screen.getByRole('heading', { level: 2, name: heading })).toBeInTheDocument();
     }
     expect(screen.getByText('Bring an apron.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /^Website/ })).toHaveAttribute(
-      'href',
-      'https://studio.example.com/',
-    );
+    const website = screen.getByRole('link', { name: /^Website/ });
+    expect(website).toHaveAttribute('href', 'https://studio.example.com/');
+    expect(website).toHaveClass('min-w-0', 'overflow-hidden');
+    expect(website.closest('li')).toHaveClass('min-w-0');
     expect(screen.getByRole('link', { name: /examplestudio/ })).toHaveAttribute(
       'href',
       'https://www.instagram.com/examplestudio',
