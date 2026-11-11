@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Landscape phones: too short for a sticky header or a bottom bar. */
+@custom-variant short (@media (max-height: 500px) and (orientation: landscape));
+
 @theme {
   /* "Small World" palette sampled from the Siu Tin Dei logo:
      golden yellow base, earth-teal and leaf-green support colors,
@@ -98,11 +101,12 @@ body {
 }
 
 .listing-card-mini-map {
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.85) 35%
-  );
+  background-color: var(--color-brand-50);
+}
+
+/* Pages with their own enquiry bar or a full-screen map hide the floating WhatsApp button. */
+body:has([data-hide-whatsapp-fab]) .whatsapp-fab {
+  display: none;
 }
 
 /* ---------------------------------------------------------------- */
