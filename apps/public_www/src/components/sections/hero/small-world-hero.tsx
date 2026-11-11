@@ -37,7 +37,12 @@ export function SmallWorldHero({
         hideCorner={scopeSigns.length > 0}
       />
       {scopeSigns.length > 0 ? <HeroScopeSigns signs={scopeSigns} /> : null}
-      <div className="relative z-10 mx-auto max-w-3xl px-4 pb-16 pt-8 text-center sm:px-6 md:pb-24 md:pt-12">
+      <div
+        className="small-world-hero__copy relative z-10 mx-auto max-w-3xl px-4 pb-16 pt-8 text-center sm:px-6 md:pb-24 md:pt-12"
+        data-scope-signs={
+          scopeSigns.length > 0 ? scopeSigns.length : undefined
+        }
+      >
         <img
           src="/images/brand/siutindei-logo-stacked.svg"
           alt=""

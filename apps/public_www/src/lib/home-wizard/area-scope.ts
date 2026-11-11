@@ -392,7 +392,7 @@ export interface HeroScopeSign {
   readonly zhHK: string;
 }
 
-/** The hero shows at most this many plates. A phone hides the third. */
+/** The hero shows at most this many plates. Screens under 1100px hide the third. */
 const HERO_SCOPE_SIGN_LIMIT = 3;
 
 export function heroScopeSignSrc(id: string): string {

@@ -194,7 +194,10 @@ body {
   height: auto;
   width: auto;
   max-height: 52px;
-  max-width: calc(50vw - 6rem);
+  /* Height is the limit. A long name stays readable instead of shrinking
+     to fit half the screen, and 8rem keeps the plate clear of the
+     picture on the left. */
+  max-width: min(260px, calc(100vw - 8rem));
   filter: drop-shadow(0 3px 5px rgba(46, 29, 18, 0.3));
 }
 
@@ -214,6 +217,17 @@ body {
 @media (max-width: 767px) {
   .hero-scope-sign--tilt-b {
     margin-right: 0;
+  }
+
+  /* The plates paint above the title block, so the title starts below
+     them. Two plates is the most a phone shows. */
+  .small-world-hero__copy[data-scope-signs='1'] {
+    padding-top: 5rem;
+  }
+
+  .small-world-hero__copy[data-scope-signs='2'],
+  .small-world-hero__copy[data-scope-signs='3'] {
+    padding-top: 9rem;
   }
 }
 

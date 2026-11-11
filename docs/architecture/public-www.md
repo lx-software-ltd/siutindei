@@ -169,7 +169,9 @@ Source: [`apps/public_www`](../../apps/public_www).
   token is that region's plate, and a district token expands to its
   neighbourhoods. Up to three plates appear. The third waits until the
   screen is wide enough that it clears the heading, and the top-right
-  floating picture is left out so the plates have the corner. A fully open
+  floating picture is left out so the plates have the corner. On a
+  phone the plates stay tall enough to read and the title block starts
+  below them. A fully open
   region contributes its name; a partly open region contributes its
   neighbourhood names. A longer list says the open areas. A search that
   already names a place uses that place instead. A region carousel

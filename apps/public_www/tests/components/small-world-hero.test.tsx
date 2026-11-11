@@ -102,6 +102,9 @@ describe('SmallWorldHero', () => {
       document.querySelectorAll('.max-lg\\:hidden'),
     ).toHaveLength(3);
     expect(document.querySelector('.hero-scope-sign')).not.toBeInTheDocument();
+    expect(document.querySelector('.small-world-hero__copy')).not.toHaveAttribute(
+      'data-scope-signs',
+    );
   });
 
   it('shows the open plates without marking the subtitle', () => {
@@ -125,11 +128,10 @@ describe('SmallWorldHero', () => {
     );
 
     expect(screen.getByText(content.smallWorld.subtitle)).toBeInTheDocument();
-    expect(document.querySelector('.hero-scope-strike')).not.toBeInTheDocument();
-    expect(
-      document.querySelector('img[src="/images/ui/scope-arrow.svg"]'),
-    ).not.toBeInTheDocument();
-    expect(document.querySelector('canvas')).not.toBeInTheDocument();
+    expect(document.querySelector('.small-world-hero__copy')).toHaveAttribute(
+      'data-scope-signs',
+      '3',
+    );
     const plates = document.querySelectorAll('.hero-scope-sign');
     expect(plates).toHaveLength(3);
     expect(plates[0]).toHaveAttribute(
@@ -159,6 +161,10 @@ describe('SmallWorldHero', () => {
     );
 
     expect(screen.getByText(content.smallWorld.subtitle)).toBeInTheDocument();
+    expect(document.querySelector('.small-world-hero__copy')).toHaveAttribute(
+      'data-scope-signs',
+      '2',
+    );
     expect(document.querySelector('.hero-scope-sign')).toBeInTheDocument();
   });
 });

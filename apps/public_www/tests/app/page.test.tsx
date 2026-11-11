@@ -96,7 +96,9 @@ describe('DiscoveryHomePage', () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(content.smallWorld.subtitle)).toBeInTheDocument();
-    expect(document.querySelector('.hero-scope-strike')).not.toBeInTheDocument();
-    expect(document.querySelector('.hero-scope-arrow')).not.toBeInTheDocument();
+    expect(document.querySelector('.small-world-hero__copy')).toHaveAttribute(
+      'data-scope-signs',
+      '1',
+    );
   });
 });
