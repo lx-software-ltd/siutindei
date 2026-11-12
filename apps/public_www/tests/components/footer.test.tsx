@@ -76,10 +76,10 @@ describe('Footer', () => {
     }
   });
 
-  it('keeps the copyright clear of the floating WhatsApp button on phones', () => {
+  it('uses compact vertical padding on phones', () => {
     renderFooter();
 
     const copyright = screen.getByText(/All rights reserved/);
-    expect(copyright.parentElement).toHaveClass('pb-20', 'pt-6', 'sm:py-12');
+    expect(copyright.parentElement).toHaveClass('py-6', 'sm:py-12');
   });
 });

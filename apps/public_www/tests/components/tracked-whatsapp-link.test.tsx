@@ -38,7 +38,7 @@ describe('TrackedWhatsappLink', () => {
     render(
       <TrackedWhatsappLink
         href="https://wa.me/85200000000"
-        leadType="whatsapp_fab"
+        leadType="whatsapp_footer"
       >
         Chat
       </TrackedWhatsappLink>,

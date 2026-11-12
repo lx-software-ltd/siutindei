@@ -282,7 +282,7 @@ export function SearchMapSplitLayout({
     : 'search-map-split-layout__card absolute bottom-4 left-4 z-20 hidden w-[min(24rem,calc(100%-2rem))] md:block lg:hidden short:hidden';
 
   return (
-    <div className={layoutClassName} data-hide-whatsapp-fab>
+    <div className={layoutClassName}>
       <section
         aria-label={copy.resultsLabel}
         className="search-map-split-layout__list border-brand-100 px-4 py-4 sm:px-6 lg:px-4"

@@ -239,25 +239,6 @@ body {
   height: calc(100dvh - 13rem);
 }
 
-/* Pages with their own enquiry bar or a full-screen map hide the floating WhatsApp button. */
-body:has([data-hide-whatsapp-fab]) .whatsapp-fab {
-  display: none;
-}
-
-/* Over the results list the button shrinks to its icon so it covers less of a card. */
-body:has(.search-page) .whatsapp-fab {
-  padding-inline: 0;
-}
-
-body:has(.search-page) .whatsapp-fab__label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 /* ---------------------------------------------------------------- */
 /* Small World hero: evening-harbour backdrop with a faint starfield */
 /* ---------------------------------------------------------------- */
@@ -372,15 +353,41 @@ body:has(.search-page) .whatsapp-fab__label {
     margin-right: 0;
   }
 
-  /* The plates paint above the title block, so the title starts below
-     them. Two plates is the most a phone shows. */
-  .small-world-hero__copy[data-scope-signs='1'] {
-    padding-top: 5rem;
+  /* The plate shares the logo's row. The logo is 10rem wide (w-40)
+     and 515/602 tall, starting under the copy's 2rem top padding.
+     The plate's width is the space to the right of that logo, so a
+     long name shrinks instead of covering the picture. */
+  .hero-scope-signs {
+    top: calc(2rem + (10rem * 515 / 602) / 2);
+    right: 0.5rem;
+    transform: translateY(-50%);
   }
 
-  .small-world-hero__copy[data-scope-signs='2'],
-  .small-world-hero__copy[data-scope-signs='3'] {
-    padding-top: 9rem;
+  .hero-scope-sign {
+    max-width: calc((100vw - 10rem) / 2 - 1rem);
+  }
+
+  /* Two pictures sit on the left of the logo. The lower one used to
+     land under the find button. */
+  .small-world-bubble--upper {
+    top: 1rem;
+    left: 0.5rem;
+    width: min(5rem, calc((100vw - 10rem) / 2 - 1rem));
+  }
+
+  .small-world-bubble--lower {
+    top: calc(1rem + min(5rem, (100vw - 10rem) / 2 - 1rem) + 0.85rem);
+    bottom: auto;
+    left: 0.65rem;
+    width: min(3.5rem, calc((100vw - 10rem) / 2 - 1.25rem));
+  }
+}
+
+/* Tablets: the lower picture is 6rem wide and the find button is a
+   centered 32rem pill. Sit the picture one rem to the button's left. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .small-world-bubble--lower {
+    left: calc(50% - 23rem);
   }
 }
 
@@ -412,6 +419,48 @@ body:has(.search-page) .whatsapp-fab__label {
   }
   50% {
     transform: translateY(-10px) rotate(2.5deg);
+  }
+}
+
+/* Missing activity: the bao lifts the steamer lid, looks both ways, and
+   ducks back in. The still pose, also used for reduced motion, is the peek.
+   The 17.3% drop is the 38 units between the lifted lid and the rim in the
+   220-unit artwork. */
+.hide-and-seek__lid {
+  transform-origin: 50% 44%;
+  transform: translateY(0) rotate(-5deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hide-and-seek__lid {
+    animation: hide-and-seek-peek 6s ease-in-out infinite;
+  }
+}
+
+@keyframes hide-and-seek-peek {
+  0%,
+  10% {
+    transform: translateY(17.3%) rotate(0deg);
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  20%,
+  44% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  54%,
+  78% {
+    transform: translateY(0) rotate(4deg);
+    animation-timing-function: ease-in;
+  }
+  83% {
+    transform: translateY(17.3%) rotate(0deg);
+  }
+  86% {
+    transform: translateY(16.3%) rotate(1.5deg);
+  }
+  89%,
+  100% {
+    transform: translateY(17.3%) rotate(0deg);
   }
 }
 

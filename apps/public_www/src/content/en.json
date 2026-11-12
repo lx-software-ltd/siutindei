@@ -103,7 +103,6 @@
     "shell": {
       "skipToMainContentLabel": "Skip to main content",
       "environmentBadgeLabel": "Staging",
-      "whatsappFabLabel": "Chat on WhatsApp",
       "noscript": {
         "title": "JavaScript is disabled",
         "description": "Core navigation still works. Enable JavaScript for the full experience.",
@@ -270,8 +269,8 @@
   },
   "activityDetail": {
     "loadingLabel": "Loading activity...",
-    "notFoundLabel": "Activity not found.",
-    "errorLabel": "Unable to load this activity.",
+    "notFoundLabel": "This activity is winning at hide-and-seek",
+    "errorLabel": "This activity won't come out of the steamer",
     "freeTrialLabel": "Free trial available",
     "temporarilyClosedLabel": "Temporarily closed",
     "detailsComingSoonLabel": "Details coming soon",
@@ -334,7 +333,8 @@
     "shareLabel": "Share",
     "linkCopiedLabel": "Link copied",
     "parentVerifiedLabel": "Parent-Verified",
-    "notFoundHint": "It may have ended, or the link may be out of date.",
+    "notFoundHint": "We counted to ten and looked everywhere, even inside the steamer. It may have ended, or the link may be out of date.",
+    "errorHint": "Something went wrong while loading it. Please try again in a moment.",
     "browseActivitiesLabel": "Browse activities",
     "goHomeLabel": "Go to the home page",
     "mapAltLabel": "Map location",
