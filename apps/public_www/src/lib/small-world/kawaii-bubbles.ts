@@ -31,7 +31,7 @@ export interface BubbleSlot {
 export const BUBBLE_SLOTS: readonly BubbleSlot[] = [
   {
     className:
-      'left-[3%] top-[10%] w-20 md:left-[5%] md:w-28',
+      'small-world-bubble--upper left-[3%] top-[10%] w-20 md:left-[5%] md:w-28',
     largeOnly: false,
   },
   {
@@ -41,7 +41,7 @@ export const BUBBLE_SLOTS: readonly BubbleSlot[] = [
   },
   {
     className:
-      'bottom-[8%] left-[8%] w-16 md:left-[12%] md:w-24',
+      'small-world-bubble--lower bottom-[8%] left-[8%] w-16 md:left-[12%] md:w-24',
     largeOnly: false,
   },
   {

@@ -101,6 +101,8 @@ describe('SmallWorldHero', () => {
     expect(
       document.querySelectorAll('.max-lg\\:hidden'),
     ).toHaveLength(3);
+    expect(document.querySelector('.small-world-bubble--upper')).toBeInTheDocument();
+    expect(document.querySelector('.small-world-bubble--lower')).toBeInTheDocument();
     expect(document.querySelector('.hero-scope-sign')).not.toBeInTheDocument();
     expect(document.querySelector('.small-world-hero__copy')).not.toHaveAttribute(
       'data-scope-signs',
