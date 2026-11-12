@@ -47,13 +47,7 @@ async function measurePanel(page: Page, searchLabel: string): Promise<PanelBoxes
       throw new Error('search panel parts missing');
     }
     const descendants = [...dialog.querySelectorAll('*')];
-    // Activity types page inside a clipped carousel. Cards waiting off to
-    // the side are not spilling out of the panel.
-    const carousel = dialog.querySelector('[data-choice-carousel]');
     const elementsPastEdge = descendants.filter((element) => {
-      if (carousel?.contains(element) && element !== carousel) {
-        return false;
-      }
       const rect = element.getBoundingClientRect();
       return (
         rect.width > 0 &&
@@ -61,9 +55,6 @@ async function measurePanel(page: Page, searchLabel: string): Promise<PanelBoxes
       );
     }).length;
     const scrollers = descendants.filter((element) => {
-      if (element === carousel) {
-        return false;
-      }
       const style = getComputedStyle(element);
       return style.overflowX !== 'visible' || style.overflowY !== 'visible';
     });

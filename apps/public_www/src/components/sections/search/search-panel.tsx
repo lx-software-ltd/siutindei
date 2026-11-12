@@ -37,7 +37,6 @@ import {
   iconSrcForAge,
   iconSrcForRegion,
 } from '@/lib/home-wizard/choice-icons';
-import { ChoiceCarousel } from './choice-carousel';
 import { SearchChoiceButton } from './search-choice-button';
 
 interface SearchPanelCopy {
@@ -47,8 +46,7 @@ interface SearchPanelCopy {
   readonly anywhereInRegionLabel: string;
   readonly childAgeLabel: string;
   readonly activityTypesLabel: string;
-  readonly activityTypesPreviousLabel: string;
-  readonly activityTypesNextLabel: string;
+  readonly activityTypesHint: string;
   readonly searchLabel: string;
   readonly allHongKongLabel: string;
   readonly allAreasLabel: string;
@@ -263,23 +261,23 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
         <fieldset className="min-w-0">
           <legend className="mb-2 text-sm font-semibold text-ink-900">
             {copy.activityTypesLabel}
+            <span className="font-medium text-ink-500">
+              {' · '}
+              {copy.activityTypesHint}
+            </span>
           </legend>
-          <ChoiceCarousel
-            ariaLabel={copy.activityTypesLabel}
-            previousLabel={copy.activityTypesPreviousLabel}
-            nextLabel={copy.activityTypesNextLabel}
-          >
+          <div className="flex w-full min-w-0 max-w-full flex-wrap gap-2 md:grid md:grid-cols-4">
             {homeWizardChoices.activityTypes.map((type) => (
               <SearchChoiceButton
                 key={type.id}
                 label={labelForLocale(type.labels, locale)}
                 iconSrc={iconSrcForActivity(type.id)}
                 isSelected={draft.activityTypeIds.includes(type.id)}
-                layout="carousel"
+                layout="chip"
                 onClick={() => toggleType(type.id)}
               />
             ))}
-          </ChoiceCarousel>
+          </div>
         </fieldset>
       </form>
     </Modal>

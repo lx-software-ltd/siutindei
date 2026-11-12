@@ -149,47 +149,26 @@ describe('SearchPanel', () => {
     expect(push).toHaveBeenCalledTimes(1);
   });
 
-  it('pages activity types in a carousel of larger two-line cards', () => {
+  it('shows activity types as a compact four-column chip grid', () => {
     renderPanel();
 
-    const track = screen.getByRole('region', { name: 'Activity types' });
-    expect(track).toHaveClass(
-      'listing-carousel__track',
-      'flex-wrap',
-      'md:flex-nowrap',
-      'md:overflow-x-auto',
-    );
-    expect(track).not.toHaveClass('overflow-x-scroll');
-
+    expect(screen.getByText(/pick any/)).toBeInTheDocument();
     const workshop = screen.getByRole('button', {
       name: 'Early years and schools',
     });
-    expect(workshop).toHaveClass(
-      'md:w-[calc((100%-1.5rem)/3)]',
-      'md:snap-start',
-    );
-    expect(workshop).not.toHaveClass('md:flex-1');
+    const row = workshop.parentElement;
+    expect(row).toHaveClass('flex-wrap', 'md:grid', 'md:grid-cols-4');
+    expect(row).not.toHaveClass('overflow-x-auto');
+    expect(workshop).toHaveClass('md:h-[50px]', 'md:flex-row', 'md:rounded-xl');
+    expect(workshop).not.toHaveClass('md:flex-col');
+    expect(workshop.querySelector('img')).toHaveClass('h-[30px]', 'w-[30px]');
     expect(workshop.querySelector('span:last-child')).toHaveClass(
       'md:line-clamp-2',
+      'md:text-[13px]',
     );
-
-    const previous = screen.getByRole('button', {
-      name: 'Previous activity types',
-    });
-    const next = screen.getByRole('button', { name: 'Next activity types' });
-    expect(previous).toBeDisabled();
-    expect(next).toBeEnabled();
-
-    Object.defineProperty(track, 'clientWidth', { configurable: true, value: 330 });
-    Object.defineProperty(track, 'scrollWidth', { configurable: true, value: 770 });
-    const card = track.firstElementChild;
-    expect(card).not.toBeNull();
-    Object.defineProperty(card, 'offsetWidth', { configurable: true, value: 100 });
-    const scrollTo = vi.fn();
-    track.scrollTo = scrollTo;
-
-    fireEvent.click(next);
-    expect(scrollTo).toHaveBeenCalledWith({ left: 300, behavior: 'smooth' });
+    expect(
+      screen.queryByRole('button', { name: 'Next activity types' }),
+    ).toBeNull();
   });
 
   it('toggles an activity type when its choice is pressed', () => {
