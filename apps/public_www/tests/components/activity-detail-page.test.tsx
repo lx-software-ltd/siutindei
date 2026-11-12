@@ -26,15 +26,15 @@ const copy = getContent('en').activityDetail;
 const CONTACT: OrganizationContact = {
   website: 'https://studio.example.com',
   email: 'hello@studio.example.com',
-  phoneCountryCode: null,
-  phoneNumber: null,
+  phoneCountryCode: 'HK',
+  phoneNumber: '28131872',
   whatsapp: null,
   facebook: null,
   instagram: 'examplestudio',
   tiktok: null,
   twitter: null,
   xiaohongshu: null,
-  wechat: null,
+  wechat: 'beach-chat',
 };
 
 function fullListing(): ActivityListing {
@@ -147,10 +147,22 @@ describe('ActivityDetailPage', () => {
     expect(website).toHaveAttribute('href', 'https://studio.example.com/');
     expect(website).toHaveClass('min-w-0', 'overflow-hidden');
     expect(website.closest('li')).toHaveClass('min-w-0');
-    expect(screen.getByRole('link', { name: /examplestudio/ })).toHaveAttribute(
-      'href',
-      'https://www.instagram.com/examplestudio',
+    expect(within(website).getByText('studio.example.com')).toHaveClass(
+      'underline',
+      'underline-offset-2',
     );
+    const phone = screen.getByRole('link', { name: /^Phone/ });
+    expect(phone).toHaveAttribute('href', 'tel:+85228131872');
+    expect(within(phone).getByText('+852 2813 1872')).toHaveClass(
+      'underline',
+      'underline-offset-2',
+    );
+    const instagram = screen.getByRole('link', { name: /examplestudio/ });
+    expect(instagram).toHaveAttribute('href', 'https://www.instagram.com/examplestudio');
+    expect(within(instagram).getByText('@examplestudio')).toHaveClass('underline');
+    const wechat = screen.getByText('beach-chat');
+    expect(wechat.closest('a')).toBeNull();
+    expect(wechat).not.toHaveClass('underline');
     expect(screen.getByText(copy.parentVerifiedLabel)).toBeInTheDocument();
     expect(screen.getAllByText(/4\.5/).length).toBeGreaterThan(0);
     expect(container.querySelector('[data-hide-whatsapp-fab]')).not.toBeNull();
