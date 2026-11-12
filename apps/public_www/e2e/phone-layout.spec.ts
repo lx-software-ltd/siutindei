@@ -135,6 +135,38 @@ test.describe('phone layout', () => {
     });
   }
 
+  test('search panel labels stay inside their choices in a wider system font', async ({
+    page,
+  }) => {
+    await page.setViewportSize(SMALL_PHONE);
+    await page.goto('/en/search/?view=list');
+    await expect(page.locator('article.listing-card').first()).toBeVisible({
+      timeout: 30_000,
+    });
+    // The site uses the system font. Wider letters stand in for a wider face.
+    await page.addStyleTag({ content: '* { letter-spacing: 0.06em !important; }' });
+    await page.getByRole('banner').getByRole('button', { name: 'Search activities' }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'Search activities' });
+    await expect(dialog).toBeVisible();
+
+    const spills = await dialog.locator('.search-choice').evaluateAll((choices) =>
+      choices
+        .filter((choice) => {
+          const frame = choice.getBoundingClientRect();
+          return [...choice.querySelectorAll('span')].some((part) => {
+            const rect = part.getBoundingClientRect();
+            return (
+              part.scrollWidth > part.clientWidth ||
+              rect.left < frame.left - 0.5 ||
+              rect.right > frame.right + 0.5
+            );
+          });
+        })
+        .map((choice) => choice.textContent),
+    );
+    expect(spills).toEqual([]);
+  });
+
   test('wizard keeps its actions in view with the browser toolbars showing', async ({
     page,
   }) => {

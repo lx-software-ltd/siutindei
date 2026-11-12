@@ -38,10 +38,13 @@ const AREA_FRAME =
   `min-h-11 justify-start gap-2 rounded-xl px-2.5 py-1 text-left ${TILE_FROM_MD}`;
 
 const CHIP_FRAME =
-  'h-11 w-full justify-start gap-2 overflow-hidden rounded-xl px-2.5 ' +
-  'text-left md:h-[50px]';
+  'h-11 w-full justify-start gap-1.5 overflow-hidden rounded-xl px-2 ' +
+  'text-left md:h-[50px] md:gap-2 md:px-2.5';
 
-const TILE_LABEL = 'min-w-0 text-[13px] leading-4 md:text-sm md:leading-5';
+// System fonts differ in width, so a long word breaks instead of spilling out.
+const LABEL_WRAP = 'min-w-0 [overflow-wrap:anywhere]';
+
+const TILE_LABEL = `${LABEL_WRAP} text-[13px] leading-4 md:text-sm md:leading-5`;
 
 function tileIcon(layout: ChoiceLayout, iconShape: IconShape) {
   const slot = layout === 'area' ? 'h-8 w-8' : 'h-9 w-9';
@@ -69,7 +72,7 @@ function choicePresentation(
       iconSlot: 'h-[30px] w-[30px]',
       icon: 'h-[30px] w-[30px] object-contain',
       iconPx: 30,
-      label: 'min-w-0 line-clamp-2 text-balance text-[13px] leading-4',
+      label: `${LABEL_WRAP} line-clamp-2 text-balance text-[13px] leading-4`,
     };
   }
   return {
