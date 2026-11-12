@@ -168,20 +168,22 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
       ) : null}
       <div className="relative">
         {errorMessage ? null : showMapSplit ? (
-          <SearchMapSplitLayout
-            locale={locale}
-            copy={copy}
-            listings={listings}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            isLoading={isLoading}
-            loadMore={{
-              hasMore: search.hasMore,
-              isLoadingMore: search.isLoadingMore,
-              errorMessage: loadMoreError,
-              onLoadMore: search.loadMore,
-            }}
-          />
+          <div className="lg:mx-auto lg:max-w-7xl lg:px-8 lg:pt-4">
+            <SearchMapSplitLayout
+              locale={locale}
+              copy={copy}
+              listings={listings}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              isLoading={isLoading}
+              loadMore={{
+                hasMore: search.hasMore,
+                isLoadingMore: search.isLoadingMore,
+                errorMessage: loadMoreError,
+                onLoadMore: search.loadMore,
+              }}
+            />
+          </div>
         ) : (
           <div className="mx-auto max-w-7xl px-4 pb-16 pt-4 sm:px-6 lg:px-8">
             <ListingGrid

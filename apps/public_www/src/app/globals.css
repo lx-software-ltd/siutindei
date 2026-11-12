@@ -94,8 +94,10 @@ body {
 
 /*
  * Search map layout. Phones: map with a swipeable card row. iPad portrait:
- * map above a two-column list. iPad landscape and wider: list beside the map.
- * Landscape phones: list beside the map, with the page header scrolled away.
+ * map above a two-column list. Desktops (1024px and up): a one-third list
+ * beside a two-thirds map. The page keeps that split inside the same
+ * max width as the list view. Landscape phones: list beside the map, with
+ * the page header scrolled away.
  */
 .search-map-split-layout {
   display: flex;
@@ -142,12 +144,14 @@ body {
 @media (min-width: 1024px) {
   .search-map-split-layout:not(.search-map-split-layout--expanded) {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   }
 
   .search-map-split-layout__list,
   .search-map-split-layout__map {
-    height: calc(100dvh - 14rem);
+    /* 15rem includes the 1rem gap above the split, so the panes still end
+       at the bottom of the viewport. */
+    height: calc(100dvh - 15rem);
     min-height: 28rem;
   }
 
@@ -195,7 +199,7 @@ body {
 }
 
 .search-map-split-layout--expanded .search-map-split-layout__map {
-  height: calc(100dvh - 12rem);
+  height: calc(100dvh - 13rem);
 }
 
 .listing-card-mini-map {

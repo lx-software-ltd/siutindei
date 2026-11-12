@@ -274,6 +274,12 @@ describe('SearchResultsPage', () => {
       '/en/activity?id=act-1',
     );
     expect(document.querySelector('.search-map-split-layout__list')).not.toBeNull();
+    expect(document.querySelector('.search-map-split-layout')?.parentElement).toHaveClass(
+      'lg:mx-auto',
+      'lg:max-w-7xl',
+      'lg:px-8',
+      'lg:pt-4',
+    );
   });
 
   it('hides the view toggle when maps are disabled', async () => {
