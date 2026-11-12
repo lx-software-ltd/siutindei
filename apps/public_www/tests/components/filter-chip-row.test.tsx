@@ -48,6 +48,38 @@ describe('FilterChipRow', () => {
     }
   });
 
+  it('carries sorting for phones, and the view switch only when the page passes one', () => {
+    renderChipRow();
+
+    const group = screen.getByRole('group', { name: copy.filtersLabel });
+    expect(group).toHaveClass('overflow-x-auto', 'min-w-0', 'flex-1');
+    expect(
+      screen.getByRole('combobox', { name: copy.sortLabel }).parentElement,
+    ).toHaveClass('md:hidden');
+    expect(group.parentElement).toHaveClass('search-toolbar');
+    expect(group.parentElement?.children).toHaveLength(1);
+  });
+
+  it('keeps the view switch beside the filters instead of scrolling it away', () => {
+    render(
+      <SearchProvider>
+        <FilterChipRow
+          locale="en"
+          copy={copy}
+          isMapView
+          viewToggle={<button type="button">Switch</button>}
+        />
+      </SearchProvider>,
+    );
+
+    const group = screen.getByRole('group', { name: copy.filtersLabel });
+    const toggle = screen.getByRole('button', { name: 'Switch' });
+    expect(group).not.toContainElement(toggle);
+    expect(toggle.parentElement).toHaveClass('shrink-0', 'md:hidden');
+    expect(toggle.parentElement?.parentElement).toBe(group.parentElement);
+    expect(screen.queryByRole('combobox', { name: copy.sortLabel })).toBeNull();
+  });
+
   it('keeps list view in the query string when a filter changes', () => {
     currentSearchParams.value = new URLSearchParams('view=list');
     renderChipRow();

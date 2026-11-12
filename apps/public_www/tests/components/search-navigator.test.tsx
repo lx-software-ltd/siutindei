@@ -71,7 +71,8 @@ describe('SearchNavigator', () => {
     );
     expect(choiceImage('All Hong Kong')).toHaveClass(
       'choice-tile__icon',
-      'h-20',
+      'h-14',
+      'sm:h-24',
     );
     expect(choiceImage('Kowloon')).toHaveAttribute(
       'src',
@@ -108,8 +109,12 @@ describe('SearchNavigator', () => {
     );
     expect(choiceImage('3–6 years')).toHaveClass(
       'choice-tile__icon',
-      'h-16',
+      'h-14',
+      'sm:h-[4.8rem]',
     );
+    expect(
+      screen.getByRole('button', { name: '3–6 years' }).parentElement,
+    ).toHaveClass('grid-cols-3');
 
     fireEvent.click(screen.getByRole('button', { name: '3–6 years' }));
     expect(
@@ -144,6 +149,42 @@ describe('SearchNavigator', () => {
     expect(push).toHaveBeenCalledWith(
       '/en/search/?age=3-6&region=kowloon&types=early-years&view=map',
     );
+  });
+
+  it('pins Back and See activities under the choices in one row', () => {
+    const content = openNavigator();
+    const navigator = content.smallWorld.navigator;
+
+    // The first step advances on a tap, so it has no bar to pin.
+    expect(document.querySelector('[data-modal-footer]')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kowloon' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anywhere in Kowloon' }));
+    const backOnAge = screen.getByRole('button', { name: navigator.backLabel });
+    expect(backOnAge.closest('[data-modal-footer]')).not.toBeNull();
+    expect(backOnAge).toHaveClass('w-full');
+
+    fireEvent.click(screen.getByRole('button', { name: '3–6 years' }));
+    const back = screen.getByRole('button', { name: navigator.backLabel });
+    const see = screen.getByRole('button', { name: navigator.seeActivitiesLabel });
+    for (const action of [back, see]) {
+      expect(action.closest('[data-modal-footer]')).not.toBeNull();
+      expect(action.closest('[data-modal-body]')).toBeNull();
+    }
+    expect(back.parentElement).toBe(see.parentElement);
+    expect(back.parentElement).toHaveClass('flex', 'items-center');
+    expect(back).toHaveClass('shrink-0');
+    expect(see).toHaveClass('flex-1');
+  });
+
+  it('lets the sheet scroll the neighbourhoods on phones instead of a box inside it', () => {
+    openNavigator();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kowloon' }));
+    const choice = screen.getByRole('button', { name: 'Mong Kok' });
+    expect(choice).toHaveClass('min-h-11');
+    expect(choice.parentElement).toHaveClass('sm:max-h-80', 'sm:overflow-y-auto');
+    expect(choice.parentElement).not.toHaveClass('max-h-80', 'overflow-y-auto');
   });
 
   it('puts the chosen neighbourhood on the search URL', () => {

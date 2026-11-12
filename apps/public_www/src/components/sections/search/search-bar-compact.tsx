@@ -7,10 +7,6 @@ import type { Locale } from '@/content/locales';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { buildMapSearchHref } from '@/lib/activities/map-search-url';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
-import {
-  areaIdForFilters,
-  searchAgeForGroup,
-} from '@/lib/activities/search-params';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
 import { summarizeTypes } from '@/lib/activities/search/summarize-types';
 import {
@@ -54,8 +50,6 @@ export function SearchBarCompact({ locale, labels }: SearchBarCompactProps) {
     summarizeTypes(locale, filters.activityTypeIds) || labels.anyType;
 
   const located = withDefaultOpenLocation(filters);
-  const hasArea = Boolean(areaIdForFilters(located));
-  const hasAge = Boolean(searchAgeForGroup(filters.ageGroupId));
   const mapHref = buildMapSearchHref(locale, located);
   const searchHref = buildSearchPageHref(locale, filters);
 
@@ -105,20 +99,19 @@ export function SearchBarCompact({ locale, labels }: SearchBarCompactProps) {
           </span>
         </button>
       </span>
+      {/* Phones: the place leads and the age and types sit under it, so the bar fits beside the logo. */}
       <button
         type="button"
-        className="min-w-0 flex-1 truncate px-2 py-2 text-left text-sm text-ink-700 md:hidden"
+        className="min-w-0 flex-1 py-0.5 pr-2 text-left md:hidden"
         onClick={openSearch}
         aria-label={labels.search}
       >
-        {[whereLabel, ageLabel, typesLabel]
-          .filter((value, index) => {
-            if (index === 0) {
-              return hasArea || !hasAge;
-            }
-            return true;
-          })
-          .join(' · ')}
+        <span className="block truncate text-sm font-semibold leading-5 text-ink-900">
+          {whereLabel}
+        </span>
+        <span className="block truncate text-xs leading-4 text-ink-700">
+          {`${ageLabel} · ${typesLabel}`}
+        </span>
       </button>
       <button
         type="button"

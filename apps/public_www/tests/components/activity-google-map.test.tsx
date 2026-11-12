@@ -8,6 +8,8 @@ const markerOptions: google.maps.MarkerOptions[] = [];
 const markerLabels: (google.maps.MarkerLabel | string | null)[] = [];
 const markerClicks: (() => void)[] = [];
 const mapConstructors: unknown[] = [];
+const mapOptions: google.maps.MapOptions[] = [];
+const mapOptionUpdates: google.maps.MapOptions[] = [];
 
 vi.mock('@/lib/google-maps/config', () => ({
   getGoogleMapsConfig: () => ({ apiKey: 'test-key' }),
@@ -65,6 +67,8 @@ function installGoogleMaps(): void {
   markerLabels.length = 0;
   markerClicks.length = 0;
   mapConstructors.length = 0;
+  mapOptions.length = 0;
+  mapOptionUpdates.length = 0;
   window.google = {
     maps: {
       LatLng: class {
@@ -89,8 +93,14 @@ function installGoogleMaps(): void {
         ) {}
       },
       Map: class {
-        constructor() {
+        constructor(_element: HTMLElement, options?: google.maps.MapOptions) {
           mapConstructors.push(this);
+          if (options) {
+            mapOptions.push(options);
+          }
+        }
+        setOptions(options: google.maps.MapOptions): void {
+          mapOptionUpdates.push(options);
         }
         fitBounds(): void {}
         panTo(): void {}
@@ -138,6 +148,7 @@ describe('ActivityGoogleMap', () => {
 
   afterEach(() => {
     Reflect.deleteProperty(window, 'google');
+    vi.unstubAllGlobals();
   });
 
   it('uses a backed activity-type pin, highlighted when selected', async () => {
@@ -217,5 +228,63 @@ describe('ActivityGoogleMap', () => {
       expect(markerOptions).toHaveLength(1);
     });
     expect(mapConstructors).toHaveLength(1);
+  });
+
+  it('leaves the gestures to Google Maps unless a one-finger layout is named', async () => {
+    render(
+      <ActivityGoogleMap
+        locale="en"
+        listings={[buildListing()]}
+        selectedId="act-1"
+        onSelect={() => undefined}
+        ariaLabel="Activity map"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mapOptions).toHaveLength(1);
+    });
+    expect(mapOptions[0]?.gestureHandling).toBe('auto');
+  });
+
+  it('pans with one finger while the named layout matches, and follows a rotation', async () => {
+    const PHONE = '(max-width: 767px)';
+    let matches = true;
+    const listeners: (() => void)[] = [];
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        media: query,
+        get matches() {
+          return query === PHONE && matches;
+        },
+        addEventListener: (_event: string, listener: () => void) => {
+          listeners.push(listener);
+        },
+        removeEventListener: () => undefined,
+      })),
+    );
+
+    render(
+      <ActivityGoogleMap
+        locale="en"
+        listings={[buildListing()]}
+        selectedId="act-1"
+        onSelect={() => undefined}
+        ariaLabel="Activity map"
+        oneFingerPanQuery={PHONE}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mapOptions).toHaveLength(1);
+    });
+    expect(mapOptions[0]?.gestureHandling).toBe('greedy');
+
+    matches = false;
+    for (const listener of listeners) {
+      listener();
+    }
+    expect(mapOptionUpdates).toEqual([{ gestureHandling: 'auto' }]);
   });
 });

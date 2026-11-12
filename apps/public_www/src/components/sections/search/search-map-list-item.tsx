@@ -35,6 +35,10 @@ interface SearchMapSelectItemProps extends SearchMapListItemBase {
 
 interface SearchMapSummaryItemProps extends SearchMapListItemBase {
   readonly kind: 'summary';
+  /** Marks the card whose pin is selected on the map. */
+  readonly isSelected?: boolean;
+  /** Phones swap the View pill for a chevron, so the title keeps the width. */
+  readonly compact?: boolean;
 }
 
 export type SearchMapListItemProps = SearchMapSelectItemProps | SearchMapSummaryItemProps;
@@ -98,13 +102,15 @@ function SummaryBody({ locale, listing, labels }: SearchMapListItemBase) {
   );
 }
 
+const CHEVRON_RIGHT_SRC = '/images/ui/chevron-right.svg';
+
 const VIEW_CLASS_NAME =
   'link-unadorned inline-flex min-h-11 shrink-0 items-center self-center rounded-full ' +
   'border border-ink-900/15 bg-white px-4 text-sm font-semibold text-ink-900 hover:bg-brand-50';
 
 export function SearchMapListItem(props: SearchMapListItemProps) {
   const href = `${localizePath('/activity', props.locale)}?id=${props.listing.activity.id}`;
-  const isSelected = props.kind === 'select' && props.isSelected;
+  const isSelected = props.isSelected === true;
   const title = listingTitle(props.locale, props.listing);
 
   const articleClassName = `search-map-list-item flex gap-3 rounded-xl border p-3 transition ${
@@ -113,13 +119,28 @@ export function SearchMapListItem(props: SearchMapListItemProps) {
 
   if (props.kind === 'summary') {
     return (
-      <article className={`${articleClassName} shadow-lg`}>
+      <article
+        className={`${articleClassName} shadow-lg`}
+        aria-current={isSelected ? 'true' : undefined}
+      >
         <Link
           href={href}
           className="link-unadorned flex min-w-0 flex-1 items-center gap-3 text-left"
         >
           <SummaryBody locale={props.locale} listing={props.listing} labels={props.labels} />
-          <span className={VIEW_CLASS_NAME}>{props.labels.view}</span>
+          {props.compact ? (
+            <img
+              src={CHEVRON_RIGHT_SRC}
+              alt=""
+              width={12}
+              height={12}
+              decoding="async"
+              aria-hidden="true"
+              className="h-3 w-3 shrink-0 opacity-60"
+            />
+          ) : (
+            <span className={VIEW_CLASS_NAME}>{props.labels.view}</span>
+          )}
         </Link>
       </article>
     );

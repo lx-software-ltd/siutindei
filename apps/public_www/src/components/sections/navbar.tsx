@@ -47,9 +47,11 @@ export function Navbar({ locale, content }: NavbarProps) {
         inert={isHomeHidden}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex min-h-16 items-center gap-3 py-3">
+          {/* Phones: one row of mark, search, and language, so the page keeps the screen. */}
+          <div className="site-header__bar flex items-center gap-2 md:gap-3">
             <Link
               href={localizeHref(ROUTES.home, locale)}
+              aria-label={content.brand}
               className="link-unadorned brand-title flex shrink-0 items-center gap-2 text-base font-bold text-brand-700 sm:text-lg"
             >
               <img
@@ -65,25 +67,19 @@ export function Navbar({ locale, content }: NavbarProps) {
                 alt={content.brand}
                 width={180}
                 height={30}
-                className="h-6 w-auto sm:h-7"
+                className="hidden h-7 w-auto sm:block"
               />
             </Link>
-            <div className="hidden flex-1 justify-center md:flex">
+            <div className="flex min-w-0 flex-1 justify-center">
               <SearchBarCompact locale={locale} labels={content.searchBar} />
             </div>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <NavbarLanguageSwitcher locale={locale} content={content} />
             </div>
-          </div>
-          <div className="pb-3 md:hidden">
-            <SearchBarCompact locale={locale} labels={content.searchBar} />
           </div>
         </div>
       </header>
       <SearchPanel locale={locale} copy={content.searchPanel} />
-      {isHome ? null : (
-        <div className="border-b border-brand-100 bg-white md:hidden" />
-      )}
     </>
   );
 }

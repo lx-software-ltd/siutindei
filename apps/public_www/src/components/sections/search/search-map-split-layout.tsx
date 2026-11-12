@@ -11,6 +11,10 @@ import type { ActivityListing } from '@/lib/activities/types';
 
 import { SearchMapListItem, type SearchMapListItemLabels } from './search-map-list-item';
 
+/** The phone layout in globals.css where the map fills a page that does not scroll. */
+const PHONE_MAP_QUERY =
+  '(max-width: 767px) and (min-height: 501px), (max-width: 767px) and (orientation: portrait)';
+
 const ENLARGE_ICON_SRC = '/images/ui/enlarge-map.svg';
 const REDUCE_ICON_SRC = '/images/ui/reduce-map.svg';
 
@@ -78,6 +82,7 @@ function MapPaneBody({
           className="h-full w-full"
           ariaLabel={copy.mapAriaLabel}
           groupLabel={copy.mapPinGroupLabel}
+          oneFingerPanQuery={PHONE_MAP_QUERY}
         />
       ) : null}
     </div>
@@ -110,7 +115,27 @@ function LoadMoreButton({
   );
 }
 
-/** Phones: a swipeable row of cards over the map that follows the selected pin. */
+const CARD_SETTLE_MS = 120;
+
+function centredCardId(track: HTMLElement): string | null {
+  const centre = track.scrollLeft + track.clientWidth / 2;
+  let nearestId: string | null = null;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  for (const card of track.querySelectorAll<HTMLElement>('[data-activity-id]')) {
+    const distance = Math.abs(card.offsetLeft + card.clientWidth / 2 - centre);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestId = card.dataset.activityId ?? null;
+    }
+  }
+  return nearestId;
+}
+
+/**
+ * Phones: a swipeable row of cards over the map. A tapped pin brings its
+ * card to the centre, a swipe selects the pin of the card it lands on, and
+ * a tap on a card opens the activity.
+ */
 function MapCardSheet({
   locale,
   listings,
@@ -131,6 +156,13 @@ function MapCardSheet({
   readonly ariaLabel: string;
 }) {
   const trackRef = useRef<HTMLUListElement>(null);
+  const selectedIdRef = useRef(selectedId);
+  const onSelectRef = useRef(onSelect);
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+    onSelectRef.current = onSelect;
+  }, [onSelect, selectedId]);
 
   useEffect(() => {
     const track = trackRef.current;
@@ -141,33 +173,64 @@ function MapCardSheet({
     if (!card || typeof track.scrollTo !== 'function') {
       return;
     }
+    // A swipe that selected this card already left it centred.
+    if (centredCardId(track) === selectedId) {
+      return;
+    }
     track.scrollTo({
       left: card.offsetLeft - (track.clientWidth - card.clientWidth) / 2,
       behavior: 'smooth',
     });
   }, [selectedId]);
 
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) {
+      return;
+    }
+    let settleTimer: number | undefined;
+    // Waiting for the scroll to rest keeps a pin-driven scroll from
+    // selecting the cards it passes.
+    function handleScroll() {
+      window.clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(() => {
+        if (!track || track.clientWidth === 0) {
+          return;
+        }
+        const id = centredCardId(track);
+        if (id && id !== selectedIdRef.current) {
+          onSelectRef.current(id);
+        }
+      }, CARD_SETTLE_MS);
+    }
+    track.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.clearTimeout(settleTimer);
+      track.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   return (
     <div className="search-map-split-layout__sheet absolute inset-x-0 bottom-3 z-20">
       <ul
         ref={trackRef}
         aria-label={ariaLabel}
-        className="listing-carousel__track flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1"
+        className="listing-carousel__track flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-1"
       >
         {listings.map((listing) => (
           <li
             key={listing.activity.id}
             data-activity-id={listing.activity.id}
-            className="w-[85%] max-w-sm shrink-0 snap-center"
+            className="w-[86%] max-w-sm shrink-0 snap-center"
           >
             <SearchMapListItem
-              kind="select"
+              kind="summary"
+              compact
               locale={locale}
               listing={listing}
               isSelected={selectedId === listing.activity.id}
               labels={labels}
-              onSelect={() => onSelect(listing.activity.id)}
-              className="h-full shadow-lg"
+              className="h-full"
             />
           </li>
         ))}

@@ -1,10 +1,13 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 import type { Locale } from '@/content/locales';
 import type { SiteContent } from '@/content/types';
 import { Chip } from '@/components/shared/ui/chip';
 import { ChipSelect } from '@/components/shared/ui/chip-select';
 import { useSearchContext } from '@/components/shared/search/search-context';
+import { SearchSortSelect } from '@/components/sections/search/search-sort-select';
 import { useApplySearchFilters } from '@/components/sections/search/use-apply-search-filters';
 import { dayChoiceLabel, priceBandLabel } from '@/lib/activities/active-filters';
 import { languageLabel } from '@/lib/activities/listing-facts';
@@ -17,6 +20,10 @@ import {
 interface FilterChipRowProps {
   readonly locale: Locale;
   readonly copy: SiteContent['searchPage'];
+  /** The list and map switch. Phones pin it to the end of this row. */
+  readonly viewToggle?: ReactNode;
+  /** Phones sort from this row. The map view has nothing to sort on screen. */
+  readonly isMapView?: boolean;
 }
 
 const DAY_CHOICES: readonly SearchDayChoice[] = [
@@ -31,16 +38,21 @@ const DAY_CHOICES: readonly SearchDayChoice[] = [
   '0',
 ];
 
-export function FilterChipRow({ locale, copy }: FilterChipRowProps) {
+export function FilterChipRow({
+  locale,
+  copy,
+  viewToggle,
+  isMapView = false,
+}: FilterChipRowProps) {
   const { filters } = useSearchContext();
   const applyFilters = useApplySearchFilters(locale);
 
   return (
-    <div className="border-b border-brand-100 bg-white">
+    <div className="search-toolbar flex shrink-0 items-center border-b border-brand-100 bg-white">
       <div
         role="group"
         aria-label={copy.filtersLabel}
-        className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto px-4 py-3 [justify-content:safe_center] sm:px-6 lg:px-8"
+        className="mx-auto flex min-w-0 max-w-7xl flex-1 items-center gap-2 overflow-x-auto px-4 py-1.5 [justify-content:safe_center] max-md:[scrollbar-width:none] sm:px-6 md:py-3 lg:px-8"
       >
         <Chip
           isSelected={filters.free === true}
@@ -97,7 +109,21 @@ export function FilterChipRow({ locale, copy }: FilterChipRowProps) {
             applyFilters({ ...filters, classPriceMax: value ? Number(value) : null })
           }
         />
+        {isMapView ? null : (
+          <SearchSortSelect
+            copy={copy}
+            filters={filters}
+            onApply={applyFilters}
+            namesItself
+            className="md:hidden"
+          />
+        )}
       </div>
+      {viewToggle ? (
+        <div className="shrink-0 border-l border-brand-100 py-1.5 pl-2 pr-4 sm:pr-6 md:hidden">
+          {viewToggle}
+        </div>
+      ) : null}
     </div>
   );
 }
