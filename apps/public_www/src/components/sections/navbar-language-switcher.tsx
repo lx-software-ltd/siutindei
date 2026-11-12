@@ -35,16 +35,16 @@ export function NavbarLanguageSwitcher({
         }
 
         const isCurrent = option.locale === locale;
+        // Phones show only the language to switch to.
+        const stateClassName = isCurrent
+          ? 'hidden bg-brand-50 ring-2 ring-brand-500 ring-offset-2 sm:inline-flex'
+          : 'inline-flex hover:bg-brand-50';
 
         return (
           <Link
             key={option.locale}
             href={localizeHref(currentPath, option.locale)}
-            className={`link-unadorned inline-flex h-11 w-11 items-center justify-center rounded-full ${
-              isCurrent
-                ? 'bg-brand-50 ring-2 ring-brand-500 ring-offset-2'
-                : 'hover:bg-brand-50'
-            }`}
+            className={`link-unadorned h-11 w-11 items-center justify-center rounded-full ${stateClassName}`}
             aria-label={option.label}
             aria-current={isCurrent ? 'page' : undefined}
             title={option.label}

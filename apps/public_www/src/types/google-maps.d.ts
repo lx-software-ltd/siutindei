@@ -21,6 +21,7 @@ declare namespace google.maps {
     mapTypeControl?: boolean;
     streetViewControl?: boolean;
     fullscreenControl?: boolean;
+    gestureHandling?: 'auto' | 'cooperative' | 'greedy' | 'none';
   }
 
   class Map {
@@ -29,6 +30,7 @@ declare namespace google.maps {
     panTo(latLng: LatLng): void;
     setCenter(latLng: LatLng): void;
     setZoom(zoom: number): void;
+    setOptions(options: MapOptions): void;
   }
 
   interface Icon {

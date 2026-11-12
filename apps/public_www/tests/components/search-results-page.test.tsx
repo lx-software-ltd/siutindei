@@ -86,6 +86,20 @@ function buildListing(): ActivityListing {
   };
 }
 
+/** The filter row, which carries the view switch and sorting on phones. */
+function phoneToolbar(): HTMLElement {
+  const toolbar = document.querySelector<HTMLElement>('.search-toolbar');
+  expect(toolbar).not.toBeNull();
+  return toolbar as HTMLElement;
+}
+
+/** The row under the filters, which carries them from iPad portrait up. */
+function wideSummary(): HTMLElement {
+  const summary = document.querySelector<HTMLElement>('.search-results-summary');
+  expect(summary).not.toBeNull();
+  return summary as HTMLElement;
+}
+
 function renderPage() {
   const copy = getContent('en').searchPage;
   render(
@@ -145,25 +159,74 @@ describe('SearchResultsPage', () => {
   it('opens the map by default with a List and Map switch', async () => {
     const copy = renderPage();
 
-    const group = await screen.findByRole('group', { name: copy.viewToggleLabel });
-    expect(group).toHaveClass('search-view-toggle');
-    expect(screen.getByRole('button', { name: copy.mapViewLabel })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    const groups = await screen.findAllByRole('group', { name: copy.viewToggleLabel });
+    expect(groups).toHaveLength(2);
+    for (const group of groups) {
+      expect(group).toHaveClass('search-view-toggle');
+      expect(
+        within(group).getByRole('button', { name: copy.mapViewLabel }),
+      ).toHaveAttribute('aria-pressed', 'true');
+    }
 
-    fireEvent.click(screen.getByRole('button', { name: copy.listViewLabel }));
+    fireEvent.click(
+      within(wideSummary()).getByRole('button', { name: copy.listViewLabel }),
+    );
     expect(push).toHaveBeenCalledWith(expect.stringContaining('view=list'));
+  });
+
+  it('moves the view switch into the filter row on phones', async () => {
+    const copy = renderPage();
+    await screen.findAllByRole('group', { name: copy.viewToggleLabel });
+
+    const phoneSwitch = within(phoneToolbar()).getByRole('group', {
+      name: copy.viewToggleLabel,
+    });
+    expect(phoneSwitch.parentElement).toHaveClass('md:hidden', 'shrink-0');
+    const wideSwitch = within(wideSummary()).getByRole('group', {
+      name: copy.viewToggleLabel,
+    });
+    expect(wideSwitch.parentElement).toHaveClass('max-md:hidden');
+
+    fireEvent.click(
+      within(phoneSwitch).getByRole('button', { name: copy.listViewLabel }),
+    );
+    expect(push).toHaveBeenCalledWith(expect.stringContaining('view=list'));
+  });
+
+  it('gives phones the whole screen for the map', async () => {
+    const copy = renderPage();
+    await screen.findByRole('application', { name: copy.mapAriaLabel });
+
+    const page = document.querySelector('.search-page');
+    expect(page).toHaveClass('search-page--map');
+    expect(
+      document.querySelector('.search-map-split-layout')?.closest('.search-page__results'),
+    ).not.toBeNull();
+    // Sorting does not change which pins show, so the map view leaves it out.
+    expect(
+      within(phoneToolbar()).queryByRole('combobox', { name: copy.sortLabel }),
+    ).toBeNull();
+  });
+
+  it('lets the list page scroll', async () => {
+    currentSearchParams.value = new URLSearchParams('view=list');
+    const copy = renderPage();
+    await screen.findAllByRole('group', { name: copy.viewToggleLabel });
+
+    expect(document.querySelector('.search-page')).not.toHaveClass('search-page--map');
   });
 
   it('switches from the list to the map when view=list', async () => {
     currentSearchParams.value = new URLSearchParams('view=list');
     const copy = renderPage();
 
-    const map = await screen.findByRole('button', { name: copy.mapViewLabel });
-    expect(map).toHaveAttribute('aria-pressed', 'false');
+    const maps = await screen.findAllByRole('button', { name: copy.mapViewLabel });
+    expect(maps).toHaveLength(2);
+    for (const map of maps) {
+      expect(map).toHaveAttribute('aria-pressed', 'false');
+    }
 
-    fireEvent.click(map);
+    fireEvent.click(maps[0]);
     expect(push).toHaveBeenCalledWith(expect.stringContaining('view=map'));
   });
 
@@ -176,7 +239,10 @@ describe('SearchResultsPage', () => {
     });
     const copy = renderPage();
 
-    expect(await screen.findByText('12 activities')).toBeInTheDocument();
+    const count = await screen.findByText('12 activities');
+    expect(count).toHaveAttribute('role', 'status');
+    // Phones read the count out and keep the space for results.
+    expect(count).toHaveClass('max-md:sr-only');
     expect(fetchActivitySearch).toHaveBeenCalledWith(
       expect.objectContaining({
         includeTotal: true,
@@ -195,6 +261,33 @@ describe('SearchResultsPage', () => {
     expect(replace).toHaveBeenLastCalledWith('/en/search/?view=list');
   });
 
+  it('shows phones only the name search among the applied filters', async () => {
+    currentSearchParams.value = new URLSearchParams('view=list&q=pottery&age=3-6&free=1');
+    const copy = renderPage();
+
+    const filters = await screen.findByRole('list', { name: copy.activeFiltersLabel });
+    const hiddenOnPhones = (name: string) =>
+      within(filters)
+        .getByRole('button', { name })
+        .closest('li')
+        ?.classList.contains('max-md:hidden');
+
+    const query = within(filters).getByRole('button', { name: /pottery/ });
+    expect(query.closest('li')).not.toHaveClass('max-md:hidden');
+    expect(hiddenOnPhones('Remove filter: Free')).toBe(true);
+    expect(hiddenOnPhones(copy.clearFiltersLabel)).toBe(true);
+    expect(wideSummary()).toHaveClass('pt-2');
+  });
+
+  it('leaves no gap under the filter row on phones without a name search', async () => {
+    currentSearchParams.value = new URLSearchParams('view=list&age=3-6');
+    const copy = renderPage();
+    await screen.findByRole('list', { name: copy.activeFiltersLabel });
+
+    expect(wideSummary()).not.toHaveClass('pt-2');
+    expect(wideSummary()).toHaveClass('md:pt-3');
+  });
+
   it('labels a search without an age as all ages', async () => {
     currentSearchParams.value = new URLSearchParams('view=list');
     const copy = renderPage();
@@ -208,9 +301,31 @@ describe('SearchResultsPage', () => {
     currentSearchParams.value = new URLSearchParams('view=list');
     const copy = renderPage();
 
-    fireEvent.change(await screen.findByRole('combobox', { name: copy.sortLabel }), {
+    const sorts = await screen.findAllByRole('combobox', { name: copy.sortLabel });
+    expect(sorts).toHaveLength(2);
+    fireEvent.change(within(wideSummary()).getByRole('combobox', { name: copy.sortLabel }), {
       target: { value: 'price' },
     });
+    expect(replace).toHaveBeenLastCalledWith('/en/search/?sort=price&view=list');
+  });
+
+  it('sorts from the filter row on phones, where each choice names itself', async () => {
+    currentSearchParams.value = new URLSearchParams('view=list');
+    const copy = renderPage();
+    await screen.findAllByRole('combobox', { name: copy.sortLabel });
+
+    const sort = within(phoneToolbar()).getByRole('combobox', { name: copy.sortLabel });
+    expect([...sort.querySelectorAll('option')].map((option) => option.textContent)).toEqual([
+      'Sort: Day and time',
+      'Sort: Lowest price',
+    ]);
+    const wide = within(wideSummary()).getByRole('combobox', { name: copy.sortLabel });
+    expect([...wide.querySelectorAll('option')].map((option) => option.textContent)).toEqual([
+      copy.sortTimeLabel,
+      copy.sortPriceLabel,
+    ]);
+
+    fireEvent.change(sort, { target: { value: 'price' } });
     expect(replace).toHaveBeenLastCalledWith('/en/search/?sort=price&view=list');
   });
 
@@ -249,8 +364,8 @@ describe('SearchResultsPage', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: copy.mapViewLabel }),
-      ).toBeInTheDocument();
+        screen.getAllByRole('button', { name: copy.mapViewLabel }).length,
+      ).toBeGreaterThan(0);
     });
     expect(vi.mocked(fetchActivitySearch).mock.calls.length).toBe(
       callsAfterFirstLoad,

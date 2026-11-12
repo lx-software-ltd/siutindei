@@ -30,6 +30,12 @@ interface ActivityGoogleMapProps {
   readonly ariaLabel: string;
   /** Title of a pin shared by several activities, with `{count}`. */
   readonly groupLabel?: string;
+  /**
+   * A media query for layouts where the map fills a page that does not
+   * scroll. One finger moves the map there. Elsewhere Google Maps decides,
+   * and asks for two fingers when the page can scroll.
+   */
+  readonly oneFingerPanQuery?: string;
 }
 
 const MARKER_WIDTH = 32;
@@ -69,6 +75,13 @@ async function whenContainerHasSize(element: HTMLElement): Promise<void> {
       resolve();
     }, 400);
   });
+}
+
+function gestureHandlingFor(query: string | undefined): 'auto' | 'greedy' {
+  if (!query || typeof window.matchMedia !== 'function') {
+    return 'auto';
+  }
+  return window.matchMedia(query).matches ? 'greedy' : 'auto';
 }
 
 function absoluteUrl(src: string): string {
@@ -206,6 +219,7 @@ export function ActivityGoogleMap({
   className = '',
   ariaLabel,
   groupLabel = '{count}',
+  oneFingerPanQuery,
 }: ActivityGoogleMapProps) {
   const containerId = useId().replace(/:/g, '');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -216,6 +230,7 @@ export function ActivityGoogleMap({
   const localeRef = useRef(locale);
   const selectedIdRef = useRef(selectedId);
   const onSelectRef = useRef(onSelect);
+  const oneFingerPanQueryRef = useRef(oneFingerPanQuery);
 
   useEffect(() => {
     listingsRef.current = listings;
@@ -274,6 +289,7 @@ export function ActivityGoogleMap({
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: false,
+            gestureHandling: gestureHandlingFor(oneFingerPanQueryRef.current),
           });
         mapRef.current = map;
         google.maps.event.trigger(map, 'resize');
@@ -308,6 +324,23 @@ export function ActivityGoogleMap({
       resizeObserver?.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (!oneFingerPanQuery || typeof window.matchMedia !== 'function') {
+      return;
+    }
+    const media = window.matchMedia(oneFingerPanQuery);
+    // A rotated phone moves between the full-screen map and the split.
+    function applyGestureHandling() {
+      mapRef.current?.setOptions({
+        gestureHandling: media.matches ? 'greedy' : 'auto',
+      });
+    }
+    media.addEventListener('change', applyGestureHandling);
+    return () => {
+      media.removeEventListener('change', applyGestureHandling);
+    };
+  }, [oneFingerPanQuery]);
 
   useEffect(() => {
     const map = mapRef.current;

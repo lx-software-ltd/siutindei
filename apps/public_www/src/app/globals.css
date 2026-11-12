@@ -93,11 +93,12 @@ body {
 }
 
 /*
- * Search map layout. Phones: map with a swipeable card row. iPad portrait:
- * map above a two-column list. Desktops (1024px and up): a one-third list
- * beside a two-thirds map. The page keeps that split inside the same
- * max width as the list view. Landscape phones: list beside the map, with
- * the page header scrolled away.
+ * Search map layout. Phones: the map fills the screen under the header and
+ * the filter row, with a swipeable card row over it, and the page does not
+ * scroll. iPad portrait: map above a two-column list. Desktops (1024px and
+ * up): a one-third list beside a two-thirds map. The page keeps that split
+ * inside the same max width as the list view. Landscape phones: list beside
+ * the map, with the page header scrolled away.
  */
 .search-map-split-layout {
   display: flex;
@@ -107,6 +108,42 @@ body {
 .search-map-split-layout__map {
   height: calc(100dvh - 17rem);
   min-height: 22rem;
+}
+
+/* Phones, except landscape ones too short for a map above cards. */
+@media (max-width: 767px) and (min-height: 501px),
+  (max-width: 767px) and (orientation: portrait) {
+  .search-page--map {
+    display: flex;
+    flex-direction: column;
+    /* The 1px is the header's bottom border. Browsers without dvh keep vh. */
+    height: calc(100vh - var(--phone-header-height) - 1px);
+    height: calc(100dvh - var(--phone-header-height) - 1px);
+    min-height: 24rem;
+  }
+
+  .search-page--map .search-page__results {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .search-page--map .search-page__map-frame,
+  .search-page--map .search-map-split-layout,
+  .search-page--map .search-map-split-layout__map {
+    height: 100%;
+    min-height: 0;
+  }
+
+  /* A map that fills the screen leaves nothing to scroll to, so a drag
+     always moves the map. The footer stays on the list view. */
+  .page-shell:has(.search-page--map),
+  main:has(.search-page--map) {
+    min-height: 0;
+  }
+
+  body:has(.search-page--map) footer {
+    display: none;
+  }
 }
 
 .search-map-split-layout__map .activity-google-map {
@@ -409,6 +446,24 @@ button:focus-visible {
 
 body.navbar-mobile-menu-scroll-lock {
   overflow: hidden;
+}
+
+/* Phones: the header is one row of a fixed height, which the phone map
+   view subtracts from the screen. Wider screens size it from its content. */
+:root {
+  --phone-header-height: 4.125rem;
+}
+
+.site-header__bar {
+  height: var(--phone-header-height);
+}
+
+@media (min-width: 768px) {
+  .site-header__bar {
+    height: auto;
+    min-height: 4rem;
+    padding-block: 0.75rem;
+  }
 }
 
 /* Home header: hidden until the hero search box leaves the viewport. */

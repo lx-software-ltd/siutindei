@@ -14,7 +14,7 @@ const MAP_ICON_SRC = '/images/ui/map.svg';
 
 function segmentClassName(isActive: boolean): string {
   return (
-    'inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold transition sm:px-4 ' +
+    'inline-flex min-h-10 min-w-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold transition sm:px-4 md:min-h-11 ' +
     (isActive ? 'bg-ink-900 text-white' : 'text-ink-700 hover:bg-brand-50')
   );
 }

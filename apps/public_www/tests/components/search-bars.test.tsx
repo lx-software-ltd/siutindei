@@ -52,6 +52,13 @@ describe('search bars with one open region', () => {
       true,
     );
 
+    // The header bar on phones leads with the place and tucks the rest under it.
+    const phoneSummary = document.querySelector('.search-bar-compact button.md\\:hidden');
+    expect(
+      [...(phoneSummary?.querySelectorAll('span') ?? [])].map((line) => line.textContent),
+    ).toEqual(['Stanley', 'Any age · All types']);
+    expect(phoneSummary?.querySelector('span')).toHaveClass('truncate', 'font-semibold');
+
     const searchButtons = screen
       .getAllByRole('button', { name: 'Search activities' })
       .filter((button) => button.textContent?.includes('⌕'));

@@ -246,6 +246,7 @@
     "sortLabel": "排序",
     "sortTimeLabel": "日子及時間",
     "sortPriceLabel": "最低價錢",
+    "sortChoiceTemplate": "排序：{choice}",
     "freeFilterLabel": "免費",
     "freeTrialFilterLabel": "免費試堂",
     "dayFilterLabel": "日子",

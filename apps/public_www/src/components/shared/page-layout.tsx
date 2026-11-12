@@ -27,7 +27,7 @@ export function PageLayout({
 }: PageLayoutProps) {
   return (
     <SearchProvider>
-      <div className="flex min-h-screen flex-col">
+      <div className="page-shell flex min-h-screen flex-col">
         <Navbar locale={locale} content={navbarContent} />
         <main
           id={mainId}

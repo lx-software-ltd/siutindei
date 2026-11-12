@@ -246,6 +246,7 @@
     "sortLabel": "Sort by",
     "sortTimeLabel": "Day and time",
     "sortPriceLabel": "Lowest price",
+    "sortChoiceTemplate": "Sort: {choice}",
     "freeFilterLabel": "Free",
     "freeTrialFilterLabel": "Free trial",
     "dayFilterLabel": "Day",
