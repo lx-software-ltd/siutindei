@@ -341,10 +341,9 @@
     "listingFreeTrialLabel": "免費試堂"
   },
   "hostCta": {
-    "title": "與 Siu Tin Dei 合作",
-    "description": "刊登您的兒童活動計劃，接觸香港家庭。",
-    "buttonLabel": "聯絡我們",
-    "href": "#contact"
+    "title": "小店，來這裡發聲",
+    "description": "如果你經營小型工作室，或者自己的課堂，可以自己管理頁面。用你的方式，告訴家庭你真正在做什麼。",
+    "buttonLabel": "WhatsApp 聯絡我"
   },
   "pages": {
     "home": {
@@ -403,21 +402,6 @@
     "subtitle": "香港精選兒童活動。"
   },
   "features": {
-    "title": "為何選擇 Siu Tin Dei",
-    "description": "為香港家長搜尋合適活動的起點。",
-    "items": [
-      {
-        "title": "嚴選計劃",
-        "description": "每項活動均經安全、價值及教學質素審核。"
-      },
-      {
-        "title": "立足香港",
-        "description": "地區、語言、時間表及收費切合本地需要。"
-      },
-      {
-        "title": "收費透明",
-        "description": "每堂、每期或每日收費清晰列明。"
-      }
-    ]
+    "title": "為何選擇 Siu Tin Dei"
   }
 }

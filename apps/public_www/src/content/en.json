@@ -341,10 +341,9 @@
     "listingFreeTrialLabel": "Free trial"
   },
   "hostCta": {
-    "title": "Partner with Siu Tin Dei",
-    "description": "List your children's activity programme and reach Hong Kong families.",
-    "buttonLabel": "Get in touch",
-    "href": "#contact"
+    "title": "Small businesses, come have a voice",
+    "description": "If you run a little studio or your own class, you can manage your own page. Tell families what you actually do, in your own words.",
+    "buttonLabel": "Message me on WhatsApp"
   },
   "pages": {
     "home": {
@@ -403,21 +402,6 @@
     "subtitle": "Curated children's activities in Hong Kong."
   },
   "features": {
-    "title": "Why Siu Tin Dei",
-    "description": "A focused starting point for parents searching for the right activities for their kids.",
-    "items": [
-      {
-        "title": "Vetted programs",
-        "description": "Every activity is reviewed for safety, value, and pedagogical quality."
-      },
-      {
-        "title": "Hong Kong focused",
-        "description": "Districts, languages, schedules, and pricing that match the city's reality."
-      },
-      {
-        "title": "Transparent booking",
-        "description": "Clear pricing per session, per class, or per day — no surprises at checkout."
-      }
-    ]
+    "title": "Why Siu Tin Dei"
   }
 }

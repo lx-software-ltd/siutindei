@@ -16,7 +16,8 @@ import type { Locale } from '@/content/locales';
 export type LeadType =
   | 'whatsapp_activity'
   | 'whatsapp_fab'
-  | 'whatsapp_footer';
+  | 'whatsapp_footer'
+  | 'whatsapp_partner';
 
 export interface AnalyticsItemFields {
   readonly item_id: string;
