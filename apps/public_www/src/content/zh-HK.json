@@ -47,9 +47,13 @@
     }
   },
   "footer": {
-    "tagline": "LX Software 產品。香港特別行政區。",
     "copyrightTemplate": "© {year} LX Software（於香港註冊的獨資企業）。版權所有。",
     "contactHeading": "聯絡我們",
+    "contactIconLabels": {
+      "email": "電郵",
+      "whatsapp": "WhatsApp",
+      "instagram": "Instagram"
+    },
     "columns": [
       {
         "title": "探索",

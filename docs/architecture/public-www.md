@@ -88,7 +88,7 @@ Source: [`apps/public_www`](../../apps/public_www).
   (`Navbar` header + `<main>` + `Footer`). Below `sm` a floating WhatsApp
   button sits over the page; it shrinks to its icon over the search
   results, and the activity page and the phone map hide it. Wider screens
-  use the footer link.
+  use the footer icon.
 - **Phones (below `md`):** the screen is kept for content.
   - The header is one row: the logo mark, the search bar as a two-line
     summary (place, then age and types), and the flag of the language to
@@ -102,8 +102,9 @@ Source: [`apps/public_www`](../../apps/public_www).
     Map switch. The result count is read out to screen readers but not
     shown, and of the applied filters only a name search (`q`) keeps its
     chip, because the search bar and the filter row already show the rest.
-  - The footer sets a small logo beside the tagline, puts contact on one
-    line, and sets the two link columns side by side.
+  - The footer sets a small logo, shows the configured email, WhatsApp,
+    and Instagram contacts as icons, and sets the two link columns side
+    by side.
 - **Body:** Marketing pages (for example About) still use `pages.<pageKey>.body`
   with the 12-column CSS grid (`rows` → `cells` with `component`, `colStart`,
   `colSpan`, optional `props`) in `src/components/sections/grid/page-body-grid.tsx`.
