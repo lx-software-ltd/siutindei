@@ -28,8 +28,7 @@ export function Footer({ locale, content }: FooterProps) {
       className="border-t border-brand-100 bg-brand-50 text-ink-700"
       data-section-id="footer"
     >
-      {/* Phones: the bottom padding keeps the copyright clear of the WhatsApp button. */}
-      <div className="mx-auto max-w-7xl px-4 pb-20 pt-6 sm:px-6 sm:py-12 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-12 lg:px-8">
         <div className="grid grid-cols-2 gap-x-6 gap-y-5 md:gap-10 lg:grid-cols-[max-content_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
           <div className="col-span-2 flex items-center gap-4 md:col-span-1 md:block">
             <img

@@ -69,7 +69,7 @@ describe('dataLayer helpers', () => {
   it('does not push when analytics consent is missing', () => {
     pushDataLayerEvent({
       event: 'generate_lead',
-      lead_type: 'whatsapp_fab',
+      lead_type: 'whatsapp_footer',
     });
 
     expect(window.dataLayer).toEqual([]);
@@ -86,10 +86,10 @@ describe('dataLayer helpers', () => {
   it('pushes generate_lead after consent is granted', () => {
     window.localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, 'granted');
 
-    trackGenerateLead('whatsapp_fab');
+    trackGenerateLead('whatsapp_footer');
 
     expect(window.dataLayer).toEqual([
-      { event: 'generate_lead', lead_type: 'whatsapp_fab' },
+      { event: 'generate_lead', lead_type: 'whatsapp_footer' },
     ]);
   });
 

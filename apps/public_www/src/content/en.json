@@ -103,7 +103,6 @@
     "shell": {
       "skipToMainContentLabel": "Skip to main content",
       "environmentBadgeLabel": "Staging",
-      "whatsappFabLabel": "Chat on WhatsApp",
       "noscript": {
         "title": "JavaScript is disabled",
         "description": "Core navigation still works. Enable JavaScript for the full experience.",

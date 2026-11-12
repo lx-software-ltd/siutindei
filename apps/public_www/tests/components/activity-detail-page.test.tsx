@@ -127,7 +127,7 @@ describe('ActivityDetailPage', () => {
 
   it('shows key facts, sections, contact, rating, and the Parent-Verified badge', async () => {
     vi.mocked(fetchActivityListingById).mockResolvedValue(fullListing());
-    const { container } = renderPage();
+    renderPage();
 
     await screen.findByRole('heading', { level: 1, name: 'Kowloon art' });
     const [facts] = screen.getAllByLabelText(copy.keyFactsLabel);
@@ -168,7 +168,6 @@ describe('ActivityDetailPage', () => {
     expect(wechat).not.toHaveClass('underline');
     expect(screen.getByText(copy.parentVerifiedLabel)).toBeInTheDocument();
     expect(screen.getAllByText(/4\.5/).length).toBeGreaterThan(0);
-    expect(container.querySelector('[data-hide-whatsapp-fab]')).not.toBeNull();
   });
 
   it('asks the organiser for missing facts and hides the badge without the flag', async () => {
