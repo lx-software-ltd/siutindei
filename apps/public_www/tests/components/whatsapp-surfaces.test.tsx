@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { Footer } from '@/components/sections/footer';
-import { WhatsappFab } from '@/components/shared/whatsapp-fab';
 import { getContent } from '@/content';
 import { ANALYTICS_CONSENT_STORAGE_KEY } from '@/lib/analytics/consent';
 
@@ -35,21 +34,6 @@ describe('WhatsApp analytics surfaces', () => {
 
     expect(window.dataLayer).toEqual([
       { event: 'generate_lead', lead_type: 'whatsapp_footer' },
-    ]);
-  });
-
-  it('pushes whatsapp_fab from the mobile FAB', () => {
-    render(<WhatsappFab label="Chat on WhatsApp" />);
-
-    const fab = screen.getByRole('link', { name: 'Chat on WhatsApp' });
-    expect(fab).toHaveClass('whatsapp-fab', 'min-h-12', 'min-w-12', 'sm:hidden');
-    // The search results page hides the label and keeps the icon.
-    expect(fab.querySelector('img')).toHaveAttribute('src', '/images/icons/chat.svg');
-    expect(fab.querySelector('.whatsapp-fab__label')).toHaveTextContent('Chat on WhatsApp');
-    fireEvent.click(fab);
-
-    expect(window.dataLayer).toEqual([
-      { event: 'generate_lead', lead_type: 'whatsapp_fab' },
     ]);
   });
 });

@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 
 import type { Locale } from '@/content/locales';
 import type { SiteContent } from '@/content/types';
+import { ActivityDetailEmpty } from '@/components/sections/activity-detail/activity-detail-states';
 import { ActivityDetailPage } from './activity-detail-page';
 
 interface ActivityDetailRouteProps {
@@ -16,11 +17,7 @@ export function ActivityDetailRoute({ locale, copy }: ActivityDetailRouteProps) 
   const activityId = searchParams.get('id');
 
   if (!activityId) {
-    return (
-      <p className="mx-auto max-w-4xl px-4 py-16 text-center text-ink-700">
-        {copy.notFoundLabel}
-      </p>
-    );
+    return <ActivityDetailEmpty locale={locale} reason="notFound" copy={copy} />;
   }
 
   return (

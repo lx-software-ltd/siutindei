@@ -11,6 +11,7 @@ import {
 } from '@/components/sections/activity-detail/activity-breadcrumb';
 import {
   ActivityDetailEmpty,
+  type ActivityDetailEmptyReason,
   ActivityDetailSkeleton,
 } from '@/components/sections/activity-detail/activity-detail-states';
 import {
@@ -202,7 +203,7 @@ function cardLabels(copy: Copy): ListingCardLabels {
 export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailPageProps) {
   const [listing, setListing] = useState<ActivityListing | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [emptyReason, setEmptyReason] = useState<ActivityDetailEmptyReason | null>(null);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   const [backHref, setBackHref] = useState<string | null>(null);
   const [organiserActivityIds, setOrganiserActivityIds] = useState<readonly string[]>([]);
@@ -215,7 +216,7 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
-    setErrorMessage(null);
+    setEmptyReason(null);
     setSelectedVenueId(null);
     setOrganiserActivityIds([]);
 
@@ -225,7 +226,7 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
           return;
         }
         if (!item) {
-          setErrorMessage(copy.notFoundLabel);
+          setEmptyReason('notFound');
           setListing(null);
           return;
         }
@@ -235,7 +236,7 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
       .catch((error: unknown) => {
         logActivityLoadError('activity detail', error);
         if (!cancelled) {
-          setErrorMessage(copy.errorLabel);
+          setEmptyReason('error');
           setListing(null);
         }
       })
@@ -248,7 +249,7 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
     return () => {
       cancelled = true;
     };
-  }, [activityId, copy.errorLabel, copy.notFoundLabel]);
+  }, [activityId]);
 
   const imageUrls = useMemo(() => (listing ? listingImageUrls(listing) : []), [listing]);
   const firstImageUrl = imageUrls[0] ?? null;
@@ -287,22 +288,13 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
     trackViewItem(locale, listing);
   }, [listing, locale]);
 
-  const searchHref = buildSearchPageHref(locale, DEFAULT_SEARCH_FILTERS, { view: 'list' });
-  const homeHref = localizePath(ROUTES.home, locale);
-
   if (isLoading) {
     return <ActivityDetailSkeleton copy={copy} />;
   }
 
-  if (!listing || errorMessage) {
+  if (!listing || emptyReason) {
     return (
-      <ActivityDetailEmpty
-        message={errorMessage ?? copy.notFoundLabel}
-        isError={errorMessage === copy.errorLabel}
-        searchHref={searchHref}
-        homeHref={homeHref}
-        copy={copy}
-      />
+      <ActivityDetailEmpty locale={locale} reason={emptyReason ?? 'notFound'} copy={copy} />
     );
   }
 
@@ -369,8 +361,7 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
 
   return (
     <article
-      data-hide-whatsapp-fab
-      className="activity-detail mx-auto max-w-6xl px-4 pb-28 pt-2 sm:px-6 lg:px-8 lg:pb-16 short:pb-10"
+      className="activity-detail mx-auto max-w-6xl px-4 pb-14 pt-2 sm:px-6 lg:px-8 lg:pb-8 short:pb-5"
     >
       <ActivityBreadcrumb
         backHref={backHref}

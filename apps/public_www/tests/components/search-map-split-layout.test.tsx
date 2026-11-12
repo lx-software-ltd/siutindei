@@ -137,7 +137,7 @@ describe('SearchMapSplitLayout', () => {
   });
 
   it('shows the list, the phone card row, and a capped summary card for the selected pin', () => {
-    const { copy, container } = renderLayout();
+    const { copy } = renderLayout();
 
     const list = screen.getByRole('region', { name: copy.resultsLabel });
     expect(list).toHaveClass('search-map-split-layout__list');
@@ -153,7 +153,6 @@ describe('SearchMapSplitLayout', () => {
 
     const enlarge = screen.getByRole('button', { name: copy.enlargeMapLabel });
     expect(enlarge).toHaveClass('hidden', 'lg:inline-flex');
-    expect(container.querySelector('[data-hide-whatsapp-fab]')).not.toBeNull();
   });
 
   it('opens the activity from a phone card and marks the one whose pin is selected', () => {

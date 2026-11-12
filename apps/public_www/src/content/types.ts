@@ -11,7 +11,8 @@ export type NavbarContent = SiteContent['navbar'];
 export type FooterContent = SiteContent['footer'];
 export type HeroContent = SiteContent['hero'];
 export type FeaturesContent = SiteContent['features'];
-export type PageBodyConfig = SiteContent['pages'][keyof SiteContent['pages']]['body'];
+export type AboutPageContent = SiteContent['pages']['about'];
+export type PageBodyConfig = SiteContent['pages']['home']['body'];
 export type PageBodyGridConfig = PageBodyConfig;
 export type PageKey = keyof SiteContent['pages'];
 
