@@ -353,15 +353,41 @@ body {
     margin-right: 0;
   }
 
-  /* The plates paint above the title block, so the title starts below
-     them. Two plates is the most a phone shows. */
-  .small-world-hero__copy[data-scope-signs='1'] {
-    padding-top: 5rem;
+  /* The plate shares the logo's row. The logo is 10rem wide (w-40)
+     and 515/602 tall, starting under the copy's 2rem top padding.
+     The plate's width is the space to the right of that logo, so a
+     long name shrinks instead of covering the picture. */
+  .hero-scope-signs {
+    top: calc(2rem + (10rem * 515 / 602) / 2);
+    right: 0.5rem;
+    transform: translateY(-50%);
   }
 
-  .small-world-hero__copy[data-scope-signs='2'],
-  .small-world-hero__copy[data-scope-signs='3'] {
-    padding-top: 9rem;
+  .hero-scope-sign {
+    max-width: calc((100vw - 10rem) / 2 - 1rem);
+  }
+
+  /* Two pictures sit on the left of the logo. The lower one used to
+     land under the find button. */
+  .small-world-bubble--upper {
+    top: 1rem;
+    left: 0.5rem;
+    width: min(5rem, calc((100vw - 10rem) / 2 - 1rem));
+  }
+
+  .small-world-bubble--lower {
+    top: calc(1rem + min(5rem, (100vw - 10rem) / 2 - 1rem) + 0.85rem);
+    bottom: auto;
+    left: 0.65rem;
+    width: min(3.5rem, calc((100vw - 10rem) / 2 - 1.25rem));
+  }
+}
+
+/* Tablets: the lower picture is 6rem wide and the find button is a
+   centered 32rem pill. Sit the picture one rem to the button's left. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .small-world-bubble--lower {
+    left: calc(50% - 23rem);
   }
 }
 

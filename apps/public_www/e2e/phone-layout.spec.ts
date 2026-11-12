@@ -212,4 +212,58 @@ test.describe('phone layout', () => {
 
     await expectNoSidewaysScroll(page);
   });
+
+  for (const viewport of [PHONE, SMALL_PHONE]) {
+    test(`hero pictures stay visible beside the logo at ${viewport.width}px`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.setViewportSize(viewport);
+      await page.goto('/en/');
+      await expect(page.locator('.small-world-hero')).toBeVisible();
+
+      const logo = await boxOf(
+        page.locator('.small-world-hero img[src="/images/brand/siutindei-logo-stacked.svg"]'),
+      );
+      const button = await boxOf(page.locator('.small-world-hero__copy > button'));
+      const title = await boxOf(page.locator('.small-world-hero h1'));
+      const search = await boxOf(page.locator('.small-world-hero [role="search"]'));
+      const upper = await boxOf(page.locator('.small-world-bubble--upper'));
+      const lower = await boxOf(page.locator('.small-world-bubble--lower'));
+
+      function overlaps(a: Box, b: Box): boolean {
+        return (
+          a.x < b.x + b.width &&
+          a.x + a.width > b.x &&
+          a.y < b.y + b.height &&
+          a.y + a.height > b.y
+        );
+      }
+
+      for (const picture of [upper, lower]) {
+        expect(picture.y).toBeGreaterThanOrEqual(0);
+        expect(picture.x).toBeGreaterThanOrEqual(0);
+        expect(picture.x + picture.width).toBeLessThanOrEqual(viewport.width + 1);
+        expect(overlaps(picture, button)).toBe(false);
+        expect(overlaps(picture, title)).toBe(false);
+        expect(overlaps(picture, search)).toBe(false);
+        expect(overlaps(picture, logo)).toBe(false);
+      }
+      expect(lower.y).toBeGreaterThan(upper.y);
+
+      const signs = page.locator('.hero-scope-signs');
+      if ((await signs.count()) > 0) {
+        const sign = await boxOf(signs);
+        const signMid = sign.y + sign.height / 2;
+        const logoMid = logo.y + logo.height / 2;
+        expect(Math.abs(signMid - logoMid)).toBeLessThanOrEqual(8);
+        expect(overlaps(sign, logo)).toBe(false);
+        expect(overlaps(sign, title)).toBe(false);
+        expect(overlaps(sign, upper)).toBe(false);
+        expect(overlaps(sign, lower)).toBe(false);
+      }
+
+      await expectNoSidewaysScroll(page);
+    });
+  }
 });
