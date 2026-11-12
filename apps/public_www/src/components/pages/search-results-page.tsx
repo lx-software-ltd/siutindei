@@ -194,7 +194,6 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
                 parentVerified: copy.parentVerifiedLabel,
                 freeTrial: copy.freeTrialLabel,
                 imageFallback: copy.imageFallbackLabel,
-                mapAlt: copy.mapAltLabel,
                 locationsCount: copy.locationsCountLabel,
                 detailsOnRequest: copy.detailsOnRequestLabel,
                 empty: copy.emptyLabel,

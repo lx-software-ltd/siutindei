@@ -133,7 +133,7 @@ Source: [`apps/public_www`](../../apps/public_www).
   params so CloudFront cache keys are stable. In-app links open
   `/[locale]/activity/?id=<uuid>`, the only activity detail page in both
   staging and production; the export has no per-activity pages. Optional `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` enables
-  Static Maps on listing cards, map markers on the search map view, and CSP
+  the activity-detail static map, map markers on the search map view, and CSP
   entries for
   `maps.googleapis.com` / `maps.gstatic.com`. The search bar **area** label links
   to the map view for the selected region. Search uses browser-side `fetch` to

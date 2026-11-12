@@ -7,7 +7,6 @@ import type { Locale } from '@/content/locales';
 import { useChromeCopy } from '@/components/shared/chrome-copy';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { RegionMapLink } from '@/components/shared/search/region-map-link';
-import { ListingCardMiniMap } from '@/components/sections/listings/listing-card-mini-map';
 import { listingVariants, listingVenues } from '@/lib/activities/group-listings';
 import {
   categoryLabelForListing,
@@ -34,7 +33,6 @@ export interface ListingCardLabels {
   readonly parentVerified: string;
   readonly freeTrial: string;
   readonly imageFallback: string;
-  readonly mapAlt: string;
   readonly locationsCount: string;
   readonly detailsOnRequest: string;
 }
@@ -48,7 +46,6 @@ interface ListingCardProps {
   readonly imageLoading?: 'lazy' | 'eager';
   readonly imageFetchPriority?: 'high' | 'low';
   readonly deferRendering?: boolean;
-  readonly showMiniMap?: boolean;
 }
 
 export function listingMetaLine(
@@ -75,7 +72,6 @@ export function ListingCard({
   imageLoading = 'lazy',
   imageFetchPriority,
   deferRendering = false,
-  showMiniMap = false,
 }: ListingCardProps) {
   const { filters } = useSearchContext();
   const closedLabel = useChromeCopy(locale).temporarilyClosedLabel;
@@ -217,9 +213,6 @@ export function ListingCard({
         ) : null}
         {!price && !schedule ? (
           <p className="text-sm text-ink-500">{labels.detailsOnRequest}</p>
-        ) : null}
-        {showMiniMap ? (
-          <ListingCardMiniMap locale={locale} listing={listing} mapAltLabel={labels.mapAlt} />
         ) : null}
       </div>
     </article>
