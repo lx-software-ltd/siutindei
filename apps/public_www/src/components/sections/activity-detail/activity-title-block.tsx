@@ -72,7 +72,7 @@ export function ActivityTitleBlock({
           {categoryLabel}
         </p>
       ) : null}
-      <h1 className="text-3xl font-bold leading-tight text-ink-900 sm:text-4xl short:text-xl">
+      <h1 className="text-2xl font-bold leading-tight text-ink-900 sm:text-4xl short:text-xl">
         {title}
       </h1>
       <p className="flex items-center gap-2 text-base font-medium text-ink-700 short:text-sm">
