@@ -1,4 +1,4 @@
-import { MarketingPage } from '@/components/pages/marketing-page';
+import { AboutPage } from '@/components/sections/about-page';
 import {
   generateLocaleStaticParams,
   type LocaleRouteProps,
@@ -30,13 +30,13 @@ export async function generateMetadata({ params }: LocaleRouteProps) {
 }
 
 export default async function AboutRoutePage({ params }: LocaleRouteProps) {
-  const { locale, content } = await resolveLocalePageContext(params);
+  const { content } = await resolveLocalePageContext(params);
+  const { contact } = getSiteConfig();
 
   return (
-    <MarketingPage
-      locale={locale}
-      content={content}
-      body={content.pages.about.body}
+    <AboutPage
+      content={content.pages.about}
+      contactEmail={contact.email}
     />
   );
 }

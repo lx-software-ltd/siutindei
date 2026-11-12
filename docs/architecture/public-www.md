@@ -104,9 +104,12 @@ Source: [`apps/public_www`](../../apps/public_www).
     chip, because the search bar and the filter row already show the rest.
   - The footer sets a small logo beside the tagline, puts contact on one
     line, and sets the two link columns side by side.
-- **Body:** Marketing pages (for example About) still use `pages.<pageKey>.body`
-  with the 12-column CSS grid (`rows` → `cells` with `component`, `colStart`,
-  `colSpan`, optional `props`) in `src/components/sections/grid/page-body-grid.tsx`.
+- **Body:** About uses the article layout shared with privacy and terms
+  (`ArticlePage`: title, intro, on-this-page links, anchored sections) from
+  `pages.about` in the locale JSON. A 12-column CSS grid remains in
+  `src/components/sections/grid/page-body-grid.tsx` for a page that defines
+  `pages.<pageKey>.body` (`rows` → `cells` with `component`, `colStart`,
+  `colSpan`, optional `props`).
   The home route renders `DiscoveryHomePage` (Airbnb-style discovery: the
   immersive "Small World" hero, a 3-step search navigator in the hero, and
   horizontal listing carousels fed by `/v1/activities/search`).
