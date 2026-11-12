@@ -386,14 +386,6 @@ body:has([data-hide-whatsapp-fab]) .whatsapp-fab {
   }
 }
 
-/* Sparkle cursor overlay: sits above everything, never captures input. */
-.sparkle-cursor-canvas {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  pointer-events: none;
-}
-
 a {
   color: inherit;
   text-decoration: none;
