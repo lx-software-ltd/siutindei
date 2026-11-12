@@ -119,23 +119,57 @@ describe('SearchPanel', () => {
       .map((element) => element.querySelector('.search-choice-icon'));
     expect(areaIconSlots.every((slot) => slot !== null)).toBe(true);
     expect(
-      areaIconSlots.every((slot) =>
-        slot?.classList.contains('h-12'),
+      areaIconSlots.every(
+        (slot) =>
+          slot?.classList.contains('h-8') && slot.classList.contains('md:h-12'),
       ),
     ).toBe(true);
   });
 
-  it('wraps the area choices on phones so none run off the screen', () => {
+  it('lays the areas out as two columns of rows on phones under All Hong Kong', () => {
     renderPanel();
 
-    const row = screen.getByRole('button', {
-      name: 'Hong Kong Island',
-    }).parentElement;
-    expect(row).toHaveClass('flex-wrap', 'min-w-0', 'max-w-full', 'md:grid', 'md:grid-cols-5');
-    expect(row).not.toHaveClass('flex-nowrap');
+    const island = screen.getByRole('button', { name: 'Hong Kong Island' });
+    const row = island.parentElement;
+    expect(row).toHaveClass(
+      'grid',
+      'grid-cols-2',
+      'min-w-0',
+      'max-w-full',
+      'md:grid-cols-5',
+    );
+    expect(island).toHaveClass('min-h-11', 'min-w-0', 'justify-start', 'md:flex-col');
+    expect(island).not.toHaveClass('rounded-full');
+    expect(screen.getByRole('button', { name: 'All Hong Kong' })).toHaveClass(
+      'col-span-full',
+      'md:col-span-1',
+    );
     for (const fieldset of document.querySelectorAll('fieldset')) {
       expect(fieldset).toHaveClass('min-w-0');
     }
+  });
+
+  it('shows the ages as three icon tiles in one row', () => {
+    renderPanel();
+
+    const age = screen.getByRole('button', {
+      name: homeWizardChoices.ageGroups[0].labels.en,
+    });
+    expect(age.parentElement).toHaveClass('grid', 'grid-cols-3');
+    expect(age).toHaveClass('flex-col', 'min-w-0');
+    expect(age.querySelector('.search-choice-icon')).toHaveClass('h-9', 'md:h-12');
+  });
+
+  it('marks the chosen area without the solid dark fill', () => {
+    renderPanel();
+
+    const island = screen.getByRole('button', { name: 'Hong Kong Island' });
+    fireEvent.click(island);
+
+    expect(island).toHaveAttribute('aria-pressed', 'true');
+    expect(island).toHaveClass('border-ink-900', 'bg-brand-100', 'text-ink-900');
+    expect(island).not.toHaveClass('bg-ink-900', 'text-white');
+    expect(screen.getByRole('button', { name: 'Kowloon' })).toHaveClass('bg-white');
   });
 
   it('keeps Search in the pinned footer and still submits the form', () => {
@@ -149,7 +183,7 @@ describe('SearchPanel', () => {
     expect(push).toHaveBeenCalledTimes(1);
   });
 
-  it('shows activity types as a compact four-column chip grid', () => {
+  it('shows activity types as icon chips, two across on phones and four from iPad up', () => {
     renderPanel();
 
     expect(screen.getByText(/pick any/)).toBeInTheDocument();
@@ -157,14 +191,15 @@ describe('SearchPanel', () => {
       name: 'Early years and schools',
     });
     const row = workshop.parentElement;
-    expect(row).toHaveClass('flex-wrap', 'md:grid', 'md:grid-cols-4');
+    expect(row).toHaveClass('grid', 'grid-cols-2', 'md:grid-cols-4');
     expect(row).not.toHaveClass('overflow-x-auto');
-    expect(workshop).toHaveClass('md:h-[50px]', 'md:flex-row', 'md:rounded-xl');
-    expect(workshop).not.toHaveClass('md:flex-col');
+    expect(workshop).toHaveClass('h-11', 'md:h-[50px]', 'rounded-xl', 'w-full');
+    expect(workshop).not.toHaveClass('flex-col', 'md:flex-col');
+    expect(workshop.querySelector('.search-choice-icon')).not.toHaveClass('hidden');
     expect(workshop.querySelector('img')).toHaveClass('h-[30px]', 'w-[30px]');
     expect(workshop.querySelector('span:last-child')).toHaveClass(
-      'md:line-clamp-2',
-      'md:text-[13px]',
+      'line-clamp-2',
+      'text-[13px]',
     );
     expect(
       screen.queryByRole('button', { name: 'Next activity types' }),
@@ -232,6 +267,10 @@ describe('SearchPanel', () => {
     const islands = screen.getByRole('button', { name: /Islands/ });
     expect(islands).toHaveAttribute('aria-disabled', 'true');
     expect(islands).not.toBeDisabled();
+    // Phones fade the icon alone so the hint stays readable.
+    expect(islands).toHaveClass('md:opacity-40', 'max-md:border-dashed');
+    expect(islands).not.toHaveClass('opacity-40');
+    expect(islands.querySelector('.search-choice-icon')).toHaveClass('max-md:opacity-40');
 
     const neighbourhoods = screen.getByRole('combobox');
     const labels = [...neighbourhoods.querySelectorAll('option')].map(

@@ -1,4 +1,9 @@
-type ChoiceLayout = 'fill' | 'chip';
+/**
+ * `fill` is a tile with the icon over the label. `chip` is a row with the
+ * icon beside the label. `area` is a row on phones, where a tile per area
+ * would not fit one line, and a tile from iPad portrait up.
+ */
+type ChoiceLayout = 'fill' | 'chip' | 'area';
 type IconShape = 'illustration' | 'flag';
 
 interface SearchChoiceButtonProps {
@@ -21,54 +26,71 @@ interface ChoicePresentation {
   readonly label: string;
 }
 
+const TILE_FROM_MD =
+  'md:min-h-0 md:w-full md:flex-1 md:flex-col md:justify-start md:gap-2 ' +
+  'md:self-stretch md:rounded-2xl md:px-2 md:py-3 md:text-center';
+
 const FILL_FRAME =
-  'md:min-w-0 md:w-full md:flex-1 md:flex-col md:items-center ' +
-  'md:justify-start md:gap-2 md:self-stretch md:rounded-2xl md:px-2 md:py-3';
+  'flex-col justify-start gap-1 rounded-xl px-1 py-2 text-center ' +
+  TILE_FROM_MD;
+
+const AREA_FRAME =
+  `min-h-11 justify-start gap-2 rounded-xl px-2.5 py-1 text-left ${TILE_FROM_MD}`;
 
 const CHIP_FRAME =
-  'md:h-[50px] md:w-full md:min-w-0 md:flex-row md:justify-start ' +
-  'md:gap-2 md:overflow-hidden md:rounded-xl md:px-2.5 md:py-0';
+  'h-11 w-full justify-start gap-2 overflow-hidden rounded-xl px-2.5 ' +
+  'text-left md:h-[50px]';
+
+const TILE_LABEL = 'min-w-0 text-[13px] leading-4 md:text-sm md:leading-5';
+
+function tileIcon(layout: ChoiceLayout, iconShape: IconShape) {
+  const slot = layout === 'area' ? 'h-8 w-8' : 'h-9 w-9';
+  if (iconShape === 'flag') {
+    return {
+      iconSlot: `${slot} md:h-12 md:w-12`,
+      icon: 'h-7 w-7 rounded-full object-cover ring-1 ring-ink-900/15 md:h-10 md:w-10',
+      iconPx: 40,
+    };
+  }
+  return {
+    iconSlot: `${slot} md:h-12 md:w-12`,
+    icon: `${slot} object-contain md:h-12 md:w-12`,
+    iconPx: 48,
+  };
+}
 
 function choicePresentation(
   layout: ChoiceLayout,
   iconShape: IconShape,
 ): ChoicePresentation {
-  if (iconShape === 'flag') {
-    return {
-      frame: FILL_FRAME,
-      iconSlot: 'h-12 w-12',
-      icon: 'h-10 w-10 rounded-full object-cover ring-1 ring-ink-900/15',
-      iconPx: 40,
-      label: 'md:text-center',
-    };
-  }
   if (layout === 'chip') {
     return {
       frame: CHIP_FRAME,
-      iconSlot: 'md:h-[30px] md:w-[30px]',
+      iconSlot: 'h-[30px] w-[30px]',
       icon: 'h-[30px] w-[30px] object-contain',
       iconPx: 30,
-      label:
-        'min-w-0 text-left md:line-clamp-2 md:text-balance md:text-[13px] md:leading-4',
+      label: 'min-w-0 line-clamp-2 text-balance text-[13px] leading-4',
     };
   }
   return {
-    frame: FILL_FRAME,
-    iconSlot: 'h-12 w-12',
-    icon: 'h-12 w-12 object-contain',
-    iconPx: 48,
-    label: 'md:text-center',
+    frame: layout === 'area' ? AREA_FRAME : FILL_FRAME,
+    ...tileIcon(layout, iconShape),
+    label: TILE_LABEL,
   };
 }
 
 function selectionClassName(disabled: boolean, isSelected: boolean): string {
   if (disabled) {
-    return 'cursor-not-allowed border-ink-900/15 bg-white text-ink-500 opacity-40';
+    // Phones keep the hint readable and fade only the icon.
+    return (
+      'cursor-not-allowed border-ink-900/15 bg-white text-ink-500 ' +
+      'max-md:border-dashed md:opacity-40'
+    );
   }
   if (isSelected) {
     return (
-      'border-ink-900 bg-ink-900 text-white ' +
-      'md:border-accent-500 md:bg-brand-50 md:text-brand-700'
+      'border-ink-900 bg-brand-100 font-semibold text-ink-900 ' +
+      'md:border-accent-500 md:bg-brand-50 md:font-medium md:text-brand-700'
     );
   }
   return (
@@ -97,15 +119,14 @@ export function SearchChoiceButton({
       aria-disabled={disabled || undefined}
       onClick={disabled ? undefined : onClick}
       className={
-        'search-choice inline-flex shrink-0 items-center gap-2 ' +
-        'rounded-full border px-4 py-2 text-sm font-medium leading-5 ' +
-        `transition ${presentation.frame} ${selectionClassName(disabled, isSelected)} ${className}`
+        'search-choice inline-flex min-w-0 items-center border text-sm font-medium ' +
+        `leading-5 transition ${presentation.frame} ${selectionClassName(disabled, isSelected)} ${className}`
       }
     >
       <span
         className={
-          'search-choice-icon hidden shrink-0 items-center justify-center md:flex ' +
-          presentation.iconSlot
+          'search-choice-icon flex shrink-0 items-center justify-center ' +
+          `${presentation.iconSlot} ${disabled ? 'max-md:opacity-40' : ''}`
         }
       >
         <img
@@ -121,7 +142,9 @@ export function SearchChoiceButton({
       <span className={presentation.label}>
         {label}
         {disabled && disabledHint ? (
-          <span className="mt-1 block text-xs font-medium">{disabledHint}</span>
+          <span className="block text-[11px] font-medium leading-4 md:mt-1 md:text-xs">
+            {disabledHint}
+          </span>
         ) : null}
       </span>
     </button>
