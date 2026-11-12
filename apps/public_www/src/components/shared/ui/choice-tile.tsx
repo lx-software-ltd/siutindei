@@ -16,13 +16,14 @@ const TILE_SIZE_CLASS: Record<
   { container: string; icon: string; iconPx: number }
 > = {
   default: {
-    container: 'gap-3 px-4 pb-5 pt-6',
-    icon: 'h-20 w-20 sm:h-24 sm:w-24',
+    container: 'gap-2 px-2 pb-3 pt-4 sm:gap-3 sm:px-4 sm:pb-5 sm:pt-6',
+    icon: 'h-14 w-14 sm:h-24 sm:w-24',
     iconPx: 96,
   },
   compact: {
-    container: 'gap-[0.6rem] px-4 pb-4 pt-[1.2rem]',
-    icon: 'h-16 w-16 sm:h-[4.8rem] sm:w-[4.8rem]',
+    container:
+      'gap-2 px-2 pb-3 pt-4 sm:gap-[0.6rem] sm:px-4 sm:pb-4 sm:pt-[1.2rem]',
+    icon: 'h-14 w-14 sm:h-[4.8rem] sm:w-[4.8rem]',
     iconPx: 77,
   },
 };
