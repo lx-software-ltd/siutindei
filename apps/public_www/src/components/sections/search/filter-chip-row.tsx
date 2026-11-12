@@ -6,14 +6,11 @@ import { Chip } from '@/components/shared/ui/chip';
 import { ChipSelect } from '@/components/shared/ui/chip-select';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { useApplySearchFilters } from '@/components/sections/search/use-apply-search-filters';
-import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
-import { iconSrcForActivity } from '@/lib/home-wizard/choice-icons';
 import { dayChoiceLabel, priceBandLabel } from '@/lib/activities/active-filters';
 import { languageLabel } from '@/lib/activities/listing-facts';
 import {
   SEARCH_LANGUAGE_CODES,
   SEARCH_PRICE_BANDS,
-  toggleActivityTypeId,
   type SearchDayChoice,
 } from '@/lib/activities/search-params';
 
@@ -43,7 +40,7 @@ export function FilterChipRow({ locale, copy }: FilterChipRowProps) {
       <div
         role="group"
         aria-label={copy.filtersLabel}
-        className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto px-4 py-3 sm:px-6 lg:px-8"
+        className="mx-auto flex max-w-7xl items-center gap-2 overflow-x-auto px-4 py-3 [justify-content:safe_center] sm:px-6 lg:px-8"
       >
         <Chip
           isSelected={filters.free === true}
@@ -100,25 +97,6 @@ export function FilterChipRow({ locale, copy }: FilterChipRowProps) {
             applyFilters({ ...filters, classPriceMax: value ? Number(value) : null })
           }
         />
-        <span aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-ink-900/15" />
-        {homeWizardChoices.activityTypes.map((type) => (
-          <Chip
-            key={type.id}
-            isSelected={filters.activityTypeIds.includes(type.id)}
-            onClick={() => applyFilters(toggleActivityTypeId(filters, type.id))}
-          >
-            <img
-              src={iconSrcForActivity(type.id)}
-              alt=""
-              width={20}
-              height={20}
-              decoding="async"
-              aria-hidden="true"
-              className="h-5 w-5 object-contain"
-            />
-            {labelForLocale(type.labels, locale)}
-          </Chip>
-        ))}
       </div>
     </div>
   );
