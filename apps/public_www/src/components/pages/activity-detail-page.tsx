@@ -362,7 +362,7 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
   return (
     <article
       data-hide-whatsapp-fab
-      className="activity-detail mx-auto max-w-6xl px-4 pb-28 pt-2 sm:px-6 lg:px-8 lg:pb-16 short:pb-10"
+      className="activity-detail mx-auto max-w-6xl px-4 pb-14 pt-2 sm:px-6 lg:px-8 lg:pb-8 short:pb-5"
     >
       <ActivityBreadcrumb
         backHref={backHref}
