@@ -15,12 +15,40 @@ interface FooterProps {
 /** Phones stack the links tightly, so each one pads out its own tap area. */
 const FOOTER_LINK_CLASS = 'inline-block py-1.5 md:inline md:py-0';
 
+/** Icon buttons keep a 44px target on every width. */
+const CONTACT_ICON_CLASS =
+  'link-unadorned inline-flex h-11 w-11 items-center justify-center transition-transform hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0';
+
+function contactIconName(label: string, detail: string): string {
+  return detail ? `${label} ${detail}` : label;
+}
+
+function ContactIcon({
+  src,
+  label,
+}: {
+  readonly src: string;
+  readonly label: string;
+}) {
+  return (
+    <img
+      src={src}
+      alt={label}
+      width={36}
+      height={36}
+      decoding="async"
+      className="h-9 w-9 shrink-0"
+    />
+  );
+}
+
 export function Footer({ locale, content }: FooterProps) {
   const { siteName, contact } = getSiteConfig();
   const year = getCopyrightYear();
   const copyright = formatContentTemplate(content.copyrightTemplate, {
     year: String(year),
   });
+  const iconLabels = content.contactIconLabels;
 
   return (
     <footer
@@ -30,7 +58,7 @@ export function Footer({ locale, content }: FooterProps) {
     >
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-12 lg:px-8">
         <div className="grid grid-cols-2 gap-x-6 gap-y-5 md:gap-10 lg:grid-cols-[max-content_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="col-span-2 flex items-center gap-4 md:col-span-1 md:block">
+          <div className="col-span-2 md:col-span-1">
             <img
               src="/images/brand/siutindei-logo-stacked.svg"
               alt={siteName}
@@ -38,49 +66,53 @@ export function Footer({ locale, content }: FooterProps) {
               height={150}
               className="h-auto w-20 shrink-0 md:w-40"
             />
-            <p className="text-sm md:mt-2">{content.tagline}</p>
           </div>
           <div className="col-span-2 min-w-0 text-sm md:col-span-1">
             <p className="font-semibold text-ink-900">
               {content.contactHeading}
             </p>
-            <div className="mt-1 flex flex-wrap gap-x-6 md:mt-2 md:block md:space-y-1">
+            {/* The negative margin lines the first tile up with the heading. */}
+            <div className="-ml-1 mt-1 flex flex-wrap gap-1 md:mt-2">
               {contact.email ? (
-                <p>
-                  <a
-                    href={`mailto:${contact.email}`}
-                    className={`${FOOTER_LINK_CLASS} underline-offset-2 hover:underline`}
-                  >
-                    {contact.email}
-                  </a>
-                </p>
+                <a
+                  href={`mailto:${contact.email}`}
+                  className={CONTACT_ICON_CLASS}
+                >
+                  <ContactIcon
+                    src="/images/contact/email.svg"
+                    label={contactIconName(iconLabels.email, contact.email)}
+                  />
+                </a>
               ) : null}
               {contact.whatsappUrl ? (
-                <p>
-                  <TrackedWhatsappLink
-                    href={contact.whatsappUrl}
-                    leadType="whatsapp_footer"
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className={`${FOOTER_LINK_CLASS} underline-offset-2 hover:underline`}
-                  >
-                    {contact.whatsappDisplay
-                      ? `WhatsApp ${contact.whatsappDisplay}`
-                      : 'WhatsApp'}
-                  </TrackedWhatsappLink>
-                </p>
+                <TrackedWhatsappLink
+                  href={contact.whatsappUrl}
+                  leadType="whatsapp_footer"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className={CONTACT_ICON_CLASS}
+                >
+                  <ContactIcon
+                    src="/images/contact/whatsapp.svg"
+                    label={contactIconName(
+                      iconLabels.whatsapp,
+                      contact.whatsappDisplay,
+                    )}
+                  />
+                </TrackedWhatsappLink>
               ) : null}
               {contact.instagramUrl ? (
-                <p>
-                  <a
-                    href={contact.instagramUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className={`${FOOTER_LINK_CLASS} underline-offset-2 hover:underline`}
-                  >
-                    Instagram
-                  </a>
-                </p>
+                <a
+                  href={contact.instagramUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className={CONTACT_ICON_CLASS}
+                >
+                  <ContactIcon
+                    src="/images/contact/instagram.svg"
+                    label={iconLabels.instagram}
+                  />
+                </a>
               ) : null}
             </div>
           </div>

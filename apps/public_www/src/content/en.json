@@ -47,9 +47,13 @@
     }
   },
   "footer": {
-    "tagline": "An LX Software product. Hong Kong, SAR.",
     "copyrightTemplate": "© {year} LX Software (a sole proprietorship registered in Hong Kong). All rights reserved.",
     "contactHeading": "Contact",
+    "contactIconLabels": {
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "instagram": "Instagram"
+    },
     "columns": [
       {
         "title": "Explore",
