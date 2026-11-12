@@ -75,7 +75,7 @@ test.describe('activity detail layout', () => {
         innerWidth: window.innerWidth,
       }));
       expect(widths.scrollWidth).toBeLessThanOrEqual(widths.innerWidth + 1);
-      await expect(page.locator('.whatsapp-fab')).toBeHidden();
+      await expect(page.locator('.whatsapp-fab')).toHaveCount(0);
     });
   }
 });

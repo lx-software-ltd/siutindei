@@ -84,12 +84,7 @@ test.describe('phone layout', () => {
         page.locator('.search-toolbar').getByRole('combobox', { name: 'Sort by' }),
       ).toBeVisible();
 
-      // Over the results the WhatsApp button is its icon alone.
-      const fab = page.locator('.whatsapp-fab');
-      if ((await fab.count()) > 0) {
-        expect((await boxOf(fab)).width).toBeLessThanOrEqual(56);
-        await expect(fab).toHaveAccessibleName('Chat on WhatsApp');
-      }
+      await expect(page.locator('.whatsapp-fab')).toHaveCount(0);
 
       await expectNoSidewaysScroll(page);
     });
@@ -213,13 +208,7 @@ test.describe('phone layout', () => {
       expect(link.height).toBeGreaterThanOrEqual(30);
     }
 
-    // At the end of the page the floating button sits under the copyright.
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    const fab = page.locator('.whatsapp-fab');
-    if ((await fab.count()) > 0) {
-      const copyright = await boxOf(footer.getByText(/All rights reserved/));
-      expect(copyright.y + copyright.height).toBeLessThanOrEqual((await boxOf(fab)).y);
-    }
+    await expect(page.locator('.whatsapp-fab')).toHaveCount(0);
 
     await expectNoSidewaysScroll(page);
   });

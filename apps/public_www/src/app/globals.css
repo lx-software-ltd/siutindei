@@ -239,25 +239,6 @@ body {
   height: calc(100dvh - 13rem);
 }
 
-/* Pages with their own enquiry bar or a full-screen map hide the floating WhatsApp button. */
-body:has([data-hide-whatsapp-fab]) .whatsapp-fab {
-  display: none;
-}
-
-/* Over the results list the button shrinks to its icon so it covers less of a card. */
-body:has(.search-page) .whatsapp-fab {
-  padding-inline: 0;
-}
-
-body:has(.search-page) .whatsapp-fab__label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 /* ---------------------------------------------------------------- */
 /* Small World hero: evening-harbour backdrop with a faint starfield */
 /* ---------------------------------------------------------------- */
