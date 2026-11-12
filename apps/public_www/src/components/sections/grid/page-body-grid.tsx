@@ -84,7 +84,7 @@ function renderGridCell(
         />
       );
     case 'features':
-      return <FeaturesSection content={content.features} />;
+      return <FeaturesSection content={content} />;
     case 'richText':
       return (
         <RichTextSection

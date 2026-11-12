@@ -15,6 +15,7 @@ export {
   type Locale,
 } from './locales';
 export type {
+  AboutPageContent,
   FeaturesContent,
   FooterContent,
   HeroContent,

@@ -80,7 +80,7 @@
     },
     "about": {
       "title": "About Siu Tin Dei",
-      "description": "Learn how Siu Tin Dei helps Hong Kong families find trusted children's activities."
+      "description": "I moved to Chung Hom Kok, couldn't find activities, and started Siu Tin Dei in Stanley for families in the same situation."
     },
     "search": {
       "title": "Search children's activities | Siu Tin Dei",
@@ -341,10 +341,9 @@
     "listingFreeTrialLabel": "Free trial"
   },
   "hostCta": {
-    "title": "Partner with Siu Tin Dei",
-    "description": "List your children's activity programme and reach Hong Kong families.",
-    "buttonLabel": "Get in touch",
-    "href": "#contact"
+    "title": "Small businesses, come have a voice",
+    "description": "If you run a little studio or your own class, you can manage your own page. Tell families what you actually do, in your own words.",
+    "buttonLabel": "Message me on WhatsApp"
   },
   "pages": {
     "home": {
@@ -353,42 +352,49 @@
       }
     },
     "about": {
-      "body": {
-        "rows": [
-          {
-            "cells": [
-              {
-                "component": "hero",
-                "colStart": 1,
-                "colSpan": 12,
-                "props": {
-                  "eyebrow": "About us",
-                  "primaryCtaLabel": "Explore activities",
-                  "primaryCtaHref": "/",
-                  "secondaryCtaLabel": "Contact",
-                  "secondaryCtaHref": "#contact"
-                }
-              }
-            ]
-          },
-          {
-            "cells": [
-              {
-                "component": "richText",
-                "colStart": 2,
-                "colSpan": 10,
-                "props": {
-                  "title": "Built for Hong Kong families",
-                  "paragraphs": [
-                    "Siu Tin Dei helps parents discover vetted children's activities across Hong Kong — with transparent schedules, pricing, and locations.",
-                    "We are starting with a focused catalogue and will expand as partner programmes join the platform."
-                  ]
-                }
-              }
-            ]
-          }
-        ]
-      }
+      "onThisPageLabel": "On this page",
+      "title": "Built for Hong Kong families",
+      "intro": [
+        "I moved to Chung Hom Kok and couldn't find any activities there.",
+        "Other families nearby were in the same situation, so I started Siu Tin Dei."
+      ],
+      "sections": [
+        {
+          "id": "stanley",
+          "heading": "Starting in Stanley",
+          "paragraphs": [
+            "So I started in Stanley. It's close to home, and it's a place families already go. I wanted this for my own family, and for other families trying to find activities from the same spot."
+          ]
+        },
+        {
+          "id": "southern",
+          "heading": "Southern District first",
+          "paragraphs": [
+            "Next is the rest of Southern District: Repulse Bay, Ap Lei Chau, and the neighbourhoods around them. After that, the whole of Hong Kong."
+          ]
+        },
+        {
+          "id": "small-businesses",
+          "heading": "A voice for small businesses",
+          "paragraphs": [
+            "I couldn't find a reliable search directory that was accurate, complete, and covered small businesses. The small places get missed, or the details are wrong. I want to give those businesses a voice."
+          ]
+        },
+        {
+          "id": "your-page",
+          "heading": "You can manage your own page",
+          "paragraphs": [
+            "If you run a small business, you can manage your own page. You know what you offer. The page should say it your way."
+          ]
+        },
+        {
+          "id": "write-to-me",
+          "heading": "Write to me",
+          "paragraphs": [
+            "If something is wrong, if you want to control your page, or if you have a suggestion, write to me."
+          ]
+        }
+      ]
     }
   },
   "hero": {
@@ -396,21 +402,6 @@
     "subtitle": "Curated children's activities in Hong Kong."
   },
   "features": {
-    "title": "Why Siu Tin Dei",
-    "description": "A focused starting point for parents searching for the right activities for their kids.",
-    "items": [
-      {
-        "title": "Vetted programs",
-        "description": "Every activity is reviewed for safety, value, and pedagogical quality."
-      },
-      {
-        "title": "Hong Kong focused",
-        "description": "Districts, languages, schedules, and pricing that match the city's reality."
-      },
-      {
-        "title": "Transparent booking",
-        "description": "Clear pricing per session, per class, or per day — no surprises at checkout."
-      }
-    ]
+    "title": "Why Siu Tin Dei"
   }
 }

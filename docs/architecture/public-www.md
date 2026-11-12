@@ -104,9 +104,12 @@ Source: [`apps/public_www`](../../apps/public_www).
     chip, because the search bar and the filter row already show the rest.
   - The footer sets a small logo beside the tagline, puts contact on one
     line, and sets the two link columns side by side.
-- **Body:** Marketing pages (for example About) still use `pages.<pageKey>.body`
-  with the 12-column CSS grid (`rows` → `cells` with `component`, `colStart`,
-  `colSpan`, optional `props`) in `src/components/sections/grid/page-body-grid.tsx`.
+- **Body:** About uses the article layout shared with privacy and terms
+  (`ArticlePage`: title, intro, on-this-page links, anchored sections) from
+  `pages.about` in the locale JSON. A 12-column CSS grid remains in
+  `src/components/sections/grid/page-body-grid.tsx` for a page that defines
+  `pages.<pageKey>.body` (`rows` → `cells` with `component`, `colStart`,
+  `colSpan`, optional `props`).
   The home route renders `DiscoveryHomePage` (Airbnb-style discovery: the
   immersive "Small World" hero, a 3-step search navigator in the hero, and
   horizontal listing carousels fed by `/v1/activities/search`).
@@ -242,11 +245,12 @@ Source: [`apps/public_www`](../../apps/public_www).
   | Event | When | Params |
   |---|---|---|
   | `view_item` | Activity detail listing loaded | `item_id`, `item_name`, `item_brand` (org), `price`, `currency` |
-  | `generate_lead` | WhatsApp click | `lead_type`: `whatsapp_activity` / `whatsapp_footer`; item fields on the activity CTA |
+  | `generate_lead` | WhatsApp click | `lead_type`: `whatsapp_activity` / `whatsapp_footer` / `whatsapp_partner`; item fields on the activity CTA |
   | `search` | Search results fetch succeeds | `search_term` / `area_id` / `age` / `category_id` when set |
 
   Wire-up: `activity-detail-page.tsx`, `footer.tsx`,
-  and the search-results success path. GTM fires GA4 (and Ads, once an
+  the home partner button in `discovery-home-page.tsx`, and the
+  search-results success path. GTM fires GA4 (and Ads, once an
   Ads conversion ID/label exists in the container) from these events.
 
 The build is deliberately **gated** by:

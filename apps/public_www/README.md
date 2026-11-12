@@ -79,18 +79,19 @@ Optional `NEXT_PUBLIC_*` variables documented in `.env.example` are read by
 - No inline `<svg>` markup in components — use SVGs from `public/images/`.
 - No `dangerouslySetInnerHTML`, no `eval`/`new Function`.
 - **i18n:** `src/content/<locale>.json` (e.g. `en.json`, `zh-HK.json`) is the
-  source of truth for copy, navigation, SEO strings, and per-page body grids.
-  Legal pages read `src/content/legal/<locale>.json`. Routes live under
-  `src/app/[locale]/...`; CloudFront redirects unprefixed routes to the
-  visitor's locale.
+  source of truth for copy, navigation, and SEO strings. The about page is
+  an article in that file. Legal pages read `src/content/legal/<locale>.json`.
+  Routes live under `src/app/[locale]/...`; CloudFront redirects unprefixed
+  routes to the visitor's locale.
 - **Page template:** `[locale]/layout.tsx` wraps every locale route with
-  `PageLayout` (shared `Navbar` header + `main` + `Footer`). Marketing
-  routes (About) render `PageBodyGrid` via `MarketingPage`; home, search,
-  activity, and legal routes use their own page components. Mobile nav uses a drawer;
-  WhatsApp FAB shows on small screens, footer link on `sm+`.
-- **12-column body grid:** Each page defines `pages.<key>.body.rows[]` with
-  cells (`component`, `colStart`, `colSpan`, optional `props`). Register new
-  body components in `page-body-grid.tsx`.
+  `PageLayout` (shared `Navbar` header + `main` + `Footer`). About uses
+  `AboutPage`, the same article layout as privacy and terms (title, intro,
+  on-this-page links, sections). Home, search, and activity use their own
+  page components. Mobile nav uses a drawer; WhatsApp FAB shows on small
+  screens, footer link on `sm+`.
+- **12-column body grid:** A page that opts in defines `pages.<key>.body.rows[]`
+  with cells (`component`, `colStart`, `colSpan`, optional `props`). Register
+  new body components in `page-body-grid.tsx`.
 - **SEO / analytics:** `buildLocalizedMetadata` (canonical + hreflang),
   optional `NEXT_PUBLIC_GTM_ID` and `NEXT_PUBLIC_META_PIXEL_ID` with host
   allow-lists (same pattern as
