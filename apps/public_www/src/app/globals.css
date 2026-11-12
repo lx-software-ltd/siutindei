@@ -310,17 +310,20 @@ body {
   }
 }
 
-/* Open-area street-name plates in the top-right corner. */
+/* The plate sits just to the right of the logo and shares its height.
+   The logo is 10rem wide (w-40) and 515/602 tall, under 2rem of padding.
+   Wider screens use the 12rem logo (w-48) under 3rem of padding. */
 .hero-scope-signs {
   position: absolute;
   z-index: 20;
-  top: 12px;
-  right: 14px;
+  top: calc(2rem + (10rem * 515 / 602) / 2);
+  left: calc(50% + 5rem + 0.75rem);
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 6px;
   pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .hero-scope-sign {
@@ -328,10 +331,9 @@ body {
   height: auto;
   width: auto;
   max-height: 52px;
-  /* Height is the limit. A long name stays readable instead of shrinking
-     to fit half the screen, and 8rem keeps the plate clear of the
-     picture on the left. */
-  max-width: min(260px, calc(100vw - 8rem));
+  /* Height is the limit. The width is whatever is left of the screen
+     after the logo, so a long name shrinks instead of covering it. */
+  max-width: calc(50vw - 5rem - 1.5rem);
   filter: drop-shadow(0 3px 5px rgba(46, 29, 18, 0.3));
 }
 
@@ -351,20 +353,6 @@ body {
 @media (max-width: 767px) {
   .hero-scope-sign--tilt-b {
     margin-right: 0;
-  }
-
-  /* The plate shares the logo's row. The logo is 10rem wide (w-40)
-     and 515/602 tall, starting under the copy's 2rem top padding.
-     The plate's width is the space to the right of that logo, so a
-     long name shrinks instead of covering the picture. */
-  .hero-scope-signs {
-    top: calc(2rem + (10rem * 515 / 602) / 2);
-    right: 0.5rem;
-    transform: translateY(-50%);
-  }
-
-  .hero-scope-sign {
-    max-width: calc((100vw - 10rem) / 2 - 1rem);
   }
 
   /* Two pictures sit on the left of the logo. The lower one used to
@@ -401,14 +389,14 @@ body {
 
 @media (min-width: 768px) {
   .hero-scope-signs {
-    top: 22px;
-    right: 32px;
+    top: calc(3rem + (12rem * 515 / 602) / 2);
+    left: calc(50% + 6rem + 1rem);
     gap: 10px;
   }
 
   .hero-scope-sign {
     max-height: 84px;
-    max-width: 250px;
+    max-width: min(16rem, calc(50vw - 6rem - 2rem));
   }
 }
 

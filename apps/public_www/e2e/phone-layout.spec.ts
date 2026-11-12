@@ -266,4 +266,37 @@ test.describe('phone layout', () => {
       await expectNoSidewaysScroll(page);
     });
   }
+
+  for (const width of [768, 1280]) {
+    test(`area plate stays level with the logo at ${width}px`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/en/');
+      await expect(page.locator('.small-world-hero')).toBeVisible();
+
+      const signs = page.locator('.hero-scope-signs');
+      test.skip((await signs.count()) === 0, 'this build has no area plate');
+
+      const logo = await boxOf(
+        page.locator('.small-world-hero img[src="/images/brand/siutindei-logo-stacked.svg"]'),
+      );
+      const sign = await boxOf(signs);
+      const title = await boxOf(page.locator('.small-world-hero h1'));
+      const signMid = sign.y + sign.height / 2;
+      const logoMid = logo.y + logo.height / 2;
+      expect(Math.abs(signMid - logoMid)).toBeLessThanOrEqual(8);
+      expect(sign.x).toBeGreaterThan(logo.x + logo.width - 1);
+      expect(sign.x + sign.width).toBeLessThanOrEqual(width + 1);
+
+      const overlaps =
+        sign.x < logo.x + logo.width &&
+        sign.x + sign.width > logo.x &&
+        sign.y < logo.y + logo.height &&
+        sign.y + sign.height > logo.y;
+      expect(overlaps).toBe(false);
+      expect(sign.y + sign.height).toBeLessThanOrEqual(title.y + 1);
+
+      await expectNoSidewaysScroll(page);
+    });
+  }
 });
