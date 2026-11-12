@@ -11,7 +11,10 @@ import { formatAdminPageName } from '../../../lib/admin-page-name';
 import { adminQueryKeys } from '../../../lib/admin-query-keys';
 import { getAdminQueryClient } from '../../../lib/admin-query-client';
 import { formatDateTime } from '../../../lib/date-utils';
-import { areaIdForCatalogDefault } from '../../../lib/catalog-defaults';
+import {
+  areaIdForCatalogDefault,
+  areaNameInTree,
+} from '../../../lib/catalog-defaults';
 import {
   CATALOG_MAP_ORG_CAP,
   CATALOG_MAP_PAGE_CAP,
@@ -250,15 +253,16 @@ function CatalogPanelLoading() {
 export function CatalogPanel() {
   const areas = useGeographicAreas();
   const [jobParam] = useQueryState('job');
+  const defaultAreaId = useMemo(() => {
+    if (areas.isLoading || jobParam) {
+      return '';
+    }
+    return areaIdForCatalogDefault(areas.tree);
+  }, [areas.isLoading, areas.tree, jobParam]);
   if (areas.isLoading) {
     return <CatalogPanelLoading />;
   }
-  return (
-    <CatalogPanelReady
-      areas={areas}
-      defaultAreaId={jobParam ? '' : areaIdForCatalogDefault(areas.tree)}
-    />
-  );
+  return <CatalogPanelReady areas={areas} defaultAreaId={defaultAreaId} />;
 }
 
 function CatalogPanelReady({
@@ -371,6 +375,10 @@ function CatalogPanelReady({
   const neighbourhoodOptions = useMemo(
     () => neighbourhoodFilterOptions(areas.tree),
     [areas.tree]
+  );
+  const selectedAreaName = useMemo(
+    () => areaNameInTree(areas.tree, filters.area_id),
+    [areas.tree, filters.area_id]
   );
 
   const refreshSummary = useCallback(async () => {
@@ -647,6 +655,7 @@ function CatalogPanelReady({
               <NeighbourhoodFilter
                 id='review-neighbourhood-filter'
                 value={filters.area_id}
+                valueName={selectedAreaName}
                 options={neighbourhoodOptions}
                 onChange={(areaId) => setFilter('area_id', areaId)}
               />

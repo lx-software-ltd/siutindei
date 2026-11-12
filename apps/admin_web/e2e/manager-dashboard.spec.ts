@@ -119,6 +119,12 @@ test.describe('Manager Organizations Panel', () => {
     await expect(managerPage.getByRole('button', { name: 'Update' })).toBeVisible();
   });
 
+  test('hides the admin-only Parent-Verified flag', async ({ managerPage }) => {
+    await managerPage.goto('/admin/dashboard');
+    await expect(managerPage.getByRole('button', { name: 'Update' })).toBeVisible();
+    await expect(managerPage.getByLabel('Parent-Verified')).toHaveCount(0);
+  });
+
   test('should show edit form by default for manager', async ({ managerPage }) => {
     await managerPage.goto('/admin/dashboard');
 

@@ -4,12 +4,12 @@ import {
   mockOrganizations,
   mockCognitoUsers,
   showAllCatalogNeighbourhoods,
-  DEFAULT_CATALOG_NEIGHBOURHOOD_NAME,
+  catalogScopeDefaultName,
   MOCK_STANLEY_AREA_ID,
 } from './fixtures/test-fixtures';
 
-test.describe('Catalog default neighbourhood', () => {
-  test('opens Catalog on the configured neighbourhood', async ({
+test.describe('Catalog default area', () => {
+  test('opens Catalog on the SEARCH_AREA_SCOPE neighbourhood', async ({
     adminPage,
   }) => {
     const listRequests: string[] = [];
@@ -24,7 +24,7 @@ test.describe('Catalog default neighbourhood', () => {
     });
     await adminPage.goto('/admin/dashboard?section=catalog');
     await expect(adminPage.getByLabel('Neighbourhood')).toHaveValue(
-      DEFAULT_CATALOG_NEIGHBOURHOOD_NAME
+      catalogScopeDefaultName()
     );
     await expect(adminPage.getByText('Stanley Beach Club')).toBeVisible();
     await expect(adminPage.getByText('Test Organization 1')).toHaveCount(0);
@@ -571,6 +571,22 @@ test.describe('Organizations Panel', () => {
     );
     await expect(adminPage.getByLabel('Listing status')).toBeVisible();
     await expect(adminPage.getByText(/Review state is changed/)).toHaveCount(0);
+  });
+
+  test('saves the admin-only Parent-Verified flag', async ({ adminPage }) => {
+    await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
+    await adminPage.getByRole('row', { name: /Test Organization 1/ }).first().click();
+    const checkbox = adminPage.getByLabel('Parent-Verified');
+    await expect(checkbox).not.toBeChecked();
+    await checkbox.check();
+    await adminPage.getByLabel('Phone number').fill('91234567');
+    const request = adminPage.waitForRequest(
+      (req) =>
+        /\/admin\/organizations\/org-1$/.test(new URL(req.url()).pathname) &&
+        ['PUT', 'PATCH'].includes(req.method())
+    );
+    await adminPage.getByRole('button', { name: 'Update' }).click();
+    expect((await request).postDataJSON().parent_verified).toBe(true);
   });
 
   test('should leave the organization workspace from the catalog', async ({

@@ -101,5 +101,70 @@ describe('SmallWorldHero', () => {
     expect(
       document.querySelectorAll('.max-lg\\:hidden'),
     ).toHaveLength(3);
+    expect(document.querySelector('.hero-scope-sign')).not.toBeInTheDocument();
+    expect(document.querySelector('.small-world-hero__copy')).not.toHaveAttribute(
+      'data-scope-signs',
+    );
+  });
+
+  it('shows the open plates without marking the subtitle', () => {
+    const content = getContent('en');
+    const signs = [
+      { id: 'southern-stanley', en: 'Stanley', zhHK: '赤柱' },
+      { id: 'southern-repulse-bay', en: 'Repulse Bay', zhHK: '淺水灣' },
+      { id: 'southern-shek-o', en: 'Shek O', zhHK: '石澳' },
+    ];
+
+    render(
+      <SearchProvider>
+        <SmallWorldHero
+          locale="en"
+          bubbleIds={bubbleIds}
+          copy={content.smallWorld}
+          searchBarLabels={content.navbar.searchBar}
+          scopeSigns={signs}
+        />
+      </SearchProvider>,
+    );
+
+    expect(screen.getByText(content.smallWorld.subtitle)).toBeInTheDocument();
+    expect(document.querySelector('.small-world-hero__copy')).toHaveAttribute(
+      'data-scope-signs',
+      '3',
+    );
+    const plates = document.querySelectorAll('.hero-scope-sign');
+    expect(plates).toHaveLength(3);
+    expect(plates[0]).toHaveAttribute(
+      'src',
+      '/images/scope-signs/southern-stanley.webp',
+    );
+    expect(plates[2]).toHaveClass('hero-scope-sign--extra');
+    expect(document.querySelectorAll('.small-world-bubble')).toHaveLength(5);
+  });
+
+  it('keeps the Chinese subtitle whole when plates are showing', () => {
+    const content = getContent('zh-HK');
+
+    render(
+      <SearchProvider>
+        <SmallWorldHero
+          locale="zh-HK"
+          bubbleIds={bubbleIds}
+          copy={content.smallWorld}
+          searchBarLabels={content.navbar.searchBar}
+          scopeSigns={[
+            { id: 'southern-stanley', en: 'Stanley', zhHK: '赤柱' },
+            { id: 'southern-repulse-bay', en: 'Repulse Bay', zhHK: '淺水灣' },
+          ]}
+        />
+      </SearchProvider>,
+    );
+
+    expect(screen.getByText(content.smallWorld.subtitle)).toBeInTheDocument();
+    expect(document.querySelector('.small-world-hero__copy')).toHaveAttribute(
+      'data-scope-signs',
+      '2',
+    );
+    expect(document.querySelector('.hero-scope-sign')).toBeInTheDocument();
   });
 });

@@ -41,7 +41,9 @@ describe('WhatsApp analytics surfaces', () => {
   it('pushes whatsapp_fab from the mobile FAB', () => {
     render(<WhatsappFab label="Chat on WhatsApp" />);
 
-    fireEvent.click(screen.getByRole('link', { name: 'Chat on WhatsApp' }));
+    const fab = screen.getByRole('link', { name: 'Chat on WhatsApp' });
+    expect(fab).toHaveClass('whatsapp-fab');
+    fireEvent.click(fab);
 
     expect(window.dataLayer).toEqual([
       { event: 'generate_lead', lead_type: 'whatsapp_fab' },

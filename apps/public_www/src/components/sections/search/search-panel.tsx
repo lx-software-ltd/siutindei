@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useId, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { Locale } from '@/content/locales';
@@ -81,11 +81,13 @@ function NeighbourhoodSelect({
         region: region ? labelForLocale(region.labels, locale) : '',
       })
     : anywhereLabel;
+  // The longest option is a select's minimum width, which stretches the
+  // sheet past the phone. The column locks the control to the sheet.
   return (
-    <label className="mt-3 block text-sm font-semibold text-ink-900">
+    <label className="mt-3 grid w-full min-w-0 grid-cols-[minmax(0,1fr)] text-sm font-semibold text-ink-900">
       {legend}
       <select
-        className="mt-2 w-full rounded-xl border border-brand-100 bg-white px-3 py-2 text-sm font-medium text-ink-900"
+        className="mt-2 w-full min-w-0 max-w-full rounded-xl border border-brand-100 bg-white px-3 py-2 text-sm font-medium text-ink-900 [field-sizing:fixed]"
         value={neighbourhoodId ?? ''}
         onChange={(event) => onChange(event.target.value || null)}
       >
@@ -107,6 +109,7 @@ interface SearchPanelProps {
 
 export function SearchPanel({ locale, copy }: SearchPanelProps) {
   const router = useRouter();
+  const formId = useId();
   const { filters, isSearchOpen, setFilters, closeSearch } = useSearchContext();
   const [draft, setDraft] = useState<SearchFiltersState>(() =>
     withDefaultOpenLocation(sanitizeSearchFilters(filters).filters),
@@ -151,13 +154,22 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
   }
 
   return (
-    <Modal isOpen={isSearchOpen} title={copy.title} onClose={closeSearch}>
-      <form className="space-y-6" onSubmit={handleSubmit}>
-        <fieldset>
+    <Modal
+      isOpen={isSearchOpen}
+      title={copy.title}
+      onClose={closeSearch}
+      footer={
+        <Button type="submit" form={formId} className="w-full">
+          {copy.searchLabel}
+        </Button>
+      }
+    >
+      <form id={formId} className="w-full min-w-0 space-y-6" onSubmit={handleSubmit}>
+        <fieldset className="min-w-0">
           <legend className="mb-2 text-sm font-semibold text-ink-900">
             {copy.whereLabel}
           </legend>
-          <div className="flex flex-nowrap items-stretch gap-2 overflow-x-auto md:grid md:grid-cols-5 md:gap-3 md:overflow-visible">
+          <div className="flex w-full min-w-0 max-w-full flex-wrap items-stretch gap-2 md:grid md:grid-cols-5 md:gap-3">
             <SearchChoiceButton
               label={areaLabel}
               iconSrc={ALL_HONG_KONG_ICON_SRC}
@@ -223,11 +235,11 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
             </p>
           ) : null}
         </fieldset>
-        <fieldset>
+        <fieldset className="min-w-0">
           <legend className="mb-2 text-sm font-semibold text-ink-900">
             {copy.childAgeLabel}
           </legend>
-          <div className="flex flex-wrap gap-2 md:gap-3">
+          <div className="flex w-full min-w-0 max-w-full flex-wrap gap-2 md:gap-3">
             {homeWizardChoices.ageGroups.map((group) => {
               const iconSrc = iconSrcForAge(group.id);
               if (!iconSrc) {
@@ -245,11 +257,11 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
             })}
           </div>
         </fieldset>
-        <fieldset>
+        <fieldset className="min-w-0">
           <legend className="mb-2 text-sm font-semibold text-ink-900">
             {copy.activityTypesLabel}
           </legend>
-          <div className="flex flex-wrap gap-2 md:gap-3">
+          <div className="flex w-full min-w-0 max-w-full flex-wrap gap-2 md:gap-3">
             {homeWizardChoices.activityTypes.map((type) => (
               <SearchChoiceButton
                 key={type.id}
@@ -261,9 +273,6 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
             ))}
           </div>
         </fieldset>
-        <Button type="submit" className="w-full">
-          {copy.searchLabel}
-        </Button>
       </form>
     </Modal>
   );

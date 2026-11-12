@@ -1,8 +1,10 @@
 import type { Locale } from '@/content/locales';
 import type { SiteContent } from '@/content/types';
+import { HeroScopeSigns } from '@/components/sections/hero/hero-scope-signs';
 import { HeroSearchBar } from '@/components/sections/hero/hero-search-bar';
 import { FloatingKawaiiBubbles } from '@/components/sections/hero/floating-kawaii-bubbles';
 import { SearchNavigator } from '@/components/sections/hero/search-navigator';
+import type { HeroScopeSign } from '@/lib/home-wizard/area-scope';
 import type { BubbleId } from '@/lib/small-world/kawaii-bubbles';
 
 interface SmallWorldHeroProps {
@@ -10,7 +12,10 @@ interface SmallWorldHeroProps {
   readonly copy: SiteContent['smallWorld'];
   readonly searchBarLabels: SiteContent['navbar']['searchBar'];
   readonly bubbleIds: readonly BubbleId[];
+  readonly scopeSigns?: readonly HeroScopeSign[];
 }
+
+const NO_SCOPE_SIGNS: readonly HeroScopeSign[] = [];
 
 /**
  * The immersive "Small World" hero: random kawaii Hong Kong pictures
@@ -21,12 +26,23 @@ export function SmallWorldHero({
   copy,
   searchBarLabels,
   bubbleIds,
+  scopeSigns = NO_SCOPE_SIGNS,
 }: SmallWorldHeroProps) {
   return (
     <section className="small-world-hero" aria-label={copy.sceneAriaLabel}>
       <div className="small-world-hero__stars" aria-hidden="true" />
-      <FloatingKawaiiBubbles copy={copy} ids={bubbleIds} />
-      <div className="relative z-10 mx-auto max-w-3xl px-4 pb-16 pt-8 text-center sm:px-6 md:pb-24 md:pt-12">
+      <FloatingKawaiiBubbles
+        copy={copy}
+        ids={bubbleIds}
+        hideCorner={scopeSigns.length > 0}
+      />
+      {scopeSigns.length > 0 ? <HeroScopeSigns signs={scopeSigns} /> : null}
+      <div
+        className="small-world-hero__copy relative z-10 mx-auto max-w-3xl px-4 pb-16 pt-8 text-center sm:px-6 md:pb-24 md:pt-12"
+        data-scope-signs={
+          scopeSigns.length > 0 ? scopeSigns.length : undefined
+        }
+      >
         <img
           src="/images/brand/siutindei-logo-stacked.svg"
           alt=""

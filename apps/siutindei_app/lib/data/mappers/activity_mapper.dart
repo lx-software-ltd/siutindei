@@ -81,8 +81,10 @@ class ActivityMapper {
       activity: toEntity(model.activity),
       organization: organizationToEntity(model.organization),
       location: locationToEntity(model.location),
-      pricing: pricingToEntity(model.pricing),
-      schedule: scheduleToEntity(model.schedule),
+      pricing: model.pricing == null ? null : pricingToEntity(model.pricing!),
+      schedule: model.schedule == null
+          ? null
+          : scheduleToEntity(model.schedule!),
     );
   }
 

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80" fill="none">
+  <ellipse cx="32" cy="76" rx="10" ry="3" fill="#2E1D12" opacity="0.2"/>
+  <path d="M32 76 C32 76 8 50 8 30 A24 24 0 0 1 56 30 C56 50 32 76 32 76 Z" fill="#F5C51B" stroke="#2E1D12" stroke-width="2.5"/>
+  <g transform="translate(0.8 -1.2) scale(0.65)"><!-- Ground shadow -->
+  <!-- Large building block (logo yellow) -->
+  <g stroke="#2E1D12" stroke-width="4" stroke-linejoin="round">
+    <polygon points="48,33 77.4,50 48,67 18.6,50" fill="#FFDE64" />
+    <polygon points="18.6,50 48,67 48,88 18.6,71" fill="#F5C51B" />
+    <polygon points="48,67 77.4,50 77.4,71 48,88" fill="#DFAE10" />
+  </g>
+  <circle cx="63" cy="65" r="6" fill="#FFF7E6" stroke="#2E1D12" stroke-width="3" />
+  <circle cx="33" cy="63" r="6" fill="#FFF7E6" stroke="#2E1D12" stroke-width="3" />
+  <!-- Small block stacked on top (earth teal) -->
+  <g stroke="#2E1D12" stroke-width="4" stroke-linejoin="round">
+    <polygon points="48,23 67,34 48,45 29,34" fill="#C5EAE3" />
+    <polygon points="29,34 48,45 48,60 29,49" fill="#A6DCD3" />
+    <polygon points="48,45 67,34 67,49 48,60" fill="#7CC4B9" />
+  </g>
+  <path
+    d="M48 27 L49.8 31 L54 31.5 L51 34.2 L51.8 38.3 L48 36.3 L44.2 38.3 L45 34.2 L42 31.5 L46.2 31 Z"
+    fill="#2E1D12"
+  /></g>
+</svg>

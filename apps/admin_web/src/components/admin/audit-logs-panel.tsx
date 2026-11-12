@@ -1,16 +1,26 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { AuditHighlightedJson } from '@/components/admin/audit-highlighted-json';
+import { IdentityProviderBadge } from '@/components/admin/cognito-users/badges';
+import { GearIcon, JobIcon, KeyIcon, PersonIcon } from '@/components/icons/action-icons';
+import { StatusBanner } from '@/components/status-banner';
 import { useExpandedRecord } from '@/hooks/use-expanded-record';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { type AuditLogsFilters } from '@/lib/api-client';
+import { listApiKeys } from '@/lib/api-client-api-keys';
 import { listAuditLogs } from '@/lib/api-client-audit';
 import { listCognitoUsers } from '@/lib/api-client-cognito';
 import { formatAdminPageName } from '@/lib/admin-page-name';
+import { getAdminQueryClient } from '@/lib/admin-query-client';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
-import { formatAuditActor } from '@/lib/audit-actor';
+import {
+  formatAuditActor,
+  type AuditActor,
+  type AuditActorUser,
+} from '@/lib/audit-actor';
 import { AUDITABLE_TABLES } from '@/lib/audit-tables';
 import { formatDateTime } from '@/lib/date-utils';
 import type { AuditLog } from '@/types/admin';
@@ -91,6 +101,96 @@ function auditJsonRecord(
   return value;
 }
 
+export async function loadApiKeyNames(): Promise<Record<string, string>> {
+  const nameById: Record<string, string> = {};
+  let cursor: string | undefined;
+  const seen = new Set<string>();
+  for (;;) {
+    const response = await listApiKeys(cursor, 200);
+    for (const key of response.items) {
+      const name = key.name.trim();
+      if (name) {
+        nameById[key.id] = name;
+      }
+    }
+    const next = response.next_cursor ?? undefined;
+    if (!next || seen.has(next)) {
+      return nameById;
+    }
+    seen.add(next);
+    cursor = next;
+  }
+}
+
+function ActorMark({ label, children }: { label?: string; children: ReactNode }) {
+  if (!label) {
+    return (
+      <span className='inline-flex shrink-0 items-center text-ink-500'>{children}</span>
+    );
+  }
+  return (
+    <span
+      role='img'
+      title={label}
+      aria-label={label}
+      className='inline-flex shrink-0 items-center text-ink-500'
+    >
+      {children}
+    </span>
+  );
+}
+
+export function AuditActorValue({ actor }: { actor: AuditActor }) {
+  const text = adminTableText(actor.text);
+  let mark: ReactNode;
+  if (actor.kind === 'system') {
+    mark = (
+      <ActorMark>
+        <GearIcon className='h-4 w-4' />
+      </ActorMark>
+    );
+  } else if (actor.kind === 'job') {
+    mark = (
+      <ActorMark>
+        <JobIcon className='h-4 w-4' />
+      </ActorMark>
+    );
+  } else if (actor.kind === 'key') {
+    mark = (
+      <ActorMark label='API key'>
+        <KeyIcon className='h-4 w-4' />
+      </ActorMark>
+    );
+  } else if (actor.username) {
+    mark = <IdentityProviderBadge username={actor.username} />;
+  } else {
+    mark = (
+      <ActorMark label='User'>
+        <PersonIcon className='h-4 w-4' />
+      </ActorMark>
+    );
+  }
+  return (
+    <span className='inline-flex min-w-0 items-center gap-1.5' data-actor-kind={actor.kind}>
+      <span className='min-w-0 break-words'>{text}</span>
+      {mark}
+    </span>
+  );
+}
+
+/** Phone caption. An unknown name keeps the column name and the actor icon. */
+export function AuditActorCaption({ actor }: { actor: AuditActor }) {
+  if (actor.text !== '—') {
+    return <AuditActorValue actor={actor} />;
+  }
+  return (
+    <span className='inline-flex min-w-0 items-center gap-1.5'>
+      <span>Actor</span>
+      <AuditActorValue actor={actor} />
+    </span>
+  );
+}
+
 function ActionBadge({ action }: { action: AuditLog['action'] }) {
   const normalized = action.toUpperCase();
   const tone = normalized === 'INSERT' ? 'green' : normalized === 'DELETE' ? 'red' : 'blue';
@@ -100,15 +200,15 @@ function ActionBadge({ action }: { action: AuditLog['action'] }) {
 
 export function AuditLogsPanel() {
   const expanded = useExpandedRecord({ paramName: 'audit-log' });
-  const [userEmailById, setUserEmailById] = useState<Record<string, string>>({});
-  const userLookupPromise = useRef<Promise<Record<string, string>> | null>(null);
-  const userLookupRef = useRef<Record<string, string>>({});
+  const [usersById, setUsersById] = useState<Record<string, AuditActorUser>>({});
+  const userLookupPromise = useRef<Promise<Record<string, AuditActorUser>> | null>(null);
+  const userLookupRef = useRef<Record<string, AuditActorUser>>({});
   const isMountedRef = useRef(true);
 
   const loadCognitoUsers = useCallback(async () => {
     if (Object.keys(userLookupRef.current).length > 0) {
       if (isMountedRef.current) {
-        setUserEmailById(userLookupRef.current);
+        setUsersById(userLookupRef.current);
       }
       return userLookupRef.current;
     }
@@ -118,25 +218,29 @@ export function AuditLogsPanel() {
 
     userLookupPromise.current = (async () => {
       try {
-        const emailById: Record<string, string> = {};
+        const directory: Record<string, AuditActorUser> = {};
         let paginationToken: string | undefined;
 
         do {
           const response = await listCognitoUsers(paginationToken, 60);
           for (const user of response.items) {
-            if (!user.email) {
+            const email = user.email?.trim();
+            if (!email) {
               continue;
             }
-            emailById[user.sub] = user.email;
+            directory[user.sub] = {
+              email,
+              username: user.username,
+            };
           }
           paginationToken = response.pagination_token ?? undefined;
         } while (paginationToken);
 
-        userLookupRef.current = emailById;
+        userLookupRef.current = directory;
         if (isMountedRef.current) {
-          setUserEmailById(emailById);
+          setUsersById(directory);
         }
-        return emailById;
+        return directory;
       } catch {
         return {};
       } finally {
@@ -183,9 +287,18 @@ export function AuditLogsPanel() {
     void loadCognitoUsers();
   }, [loadCognitoUsers]);
 
+  const keyNames = useQuery(
+    {
+      queryKey: adminQueryKeys.apiKeyActorNames(),
+      queryFn: loadApiKeyNames,
+    },
+    getAdminQueryClient()
+  );
+
   const getActor = useCallback(
-    (userId: string | null | undefined) => formatAuditActor(userId, userEmailById),
-    [userEmailById]
+    (userId: string | null | undefined) =>
+      formatAuditActor(userId, usersById, keyNames.data ?? {}),
+    [keyNames.data, usersById]
   );
 
   const selected = list.items.find((item) => item.id === expanded.expandedId) ?? null;
@@ -197,6 +310,9 @@ export function AuditLogsPanel() {
   return (
     <div className='space-y-4'>
     <h2 className='sr-only'>{PAGE_NAME}</h2>
+    {keyNames.isError ? (
+      <StatusBanner kind='error'>Could not load API key names.</StatusBanner>
+    ) : null}
     <ResourceTableShell
       ariaLabel={PAGE_NAME}
       rows={list.items}
@@ -281,8 +397,8 @@ export function AuditLogsPanel() {
             <AdminDataTableCellMeta until='secondary'>
               <ActionBadge action={item.action} />
             </AdminDataTableCellMeta>
-            <AdminDataTableCellMeta until='secondary' label='Actor' empty={actor === '—'}>
-              {adminTableText(actor)}
+            <AdminDataTableCellMeta until='secondary' label='Actor' empty={false}>
+              <AuditActorCaption actor={actor} />
             </AdminDataTableCellMeta>
             <AdminDataTableCellMeta until='tertiary' label='Timestamp' empty={!item.timestamp}>
               <AdminTableTime value={item.timestamp} />
@@ -292,7 +408,7 @@ export function AuditLogsPanel() {
             <ActionBadge action={item.action} />
           </AdminDataTableCell>
           <AdminDataTableCell priority='secondary'>
-            {adminTableText(actor)}
+            <AuditActorValue actor={actor} />
           </AdminDataTableCell>
           <AdminDataTableCell priority='tertiary'>
             <AdminTableTime value={item.timestamp} />
@@ -305,7 +421,7 @@ export function AuditLogsPanel() {
   );
 }
 
-function AuditLogDetail({ log, actor }: { log: AuditLog; actor: string }) {
+function AuditLogDetail({ log, actor }: { log: AuditLog; actor: AuditActor }) {
   const oldValues = auditJsonRecord(log.old_values);
   const newValues = auditJsonRecord(log.new_values);
 
@@ -318,7 +434,9 @@ function AuditLogDetail({ log, actor }: { log: AuditLog; actor: string }) {
         <AdminReadOnlyValue label='Record ID' mono>{log.record_id}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Action'>{formatAuditAction(log.action)}</AdminReadOnlyValue>
         <AdminReadOnlyValue label='Source'>{log.source?.trim() || '—'}</AdminReadOnlyValue>
-        <AdminReadOnlyValue label='Actor'>{actor}</AdminReadOnlyValue>
+        <AdminReadOnlyValue label='Actor'>
+          <AuditActorValue actor={actor} />
+        </AdminReadOnlyValue>
         <AdminReadOnlyValue label='Request ID' mono>{log.request_id || '—'}</AdminReadOnlyValue>
         {log.changed_fields && log.changed_fields.length > 0 ? (
           <AdminReadOnlyValue label='Changed Fields' span='full'>{log.changed_fields.join(', ')}</AdminReadOnlyValue>

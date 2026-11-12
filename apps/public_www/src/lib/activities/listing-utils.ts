@@ -2,47 +2,44 @@ import type { Locale } from '@/content/locales';
 import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 
 import { descriptionIsImportBoilerplate } from './description-boilerplate';
+import { formatListingPriceSummary } from './price-format';
+import { formatScheduleSummary } from './schedule-format';
 import type {
   ActivityListing,
   TranslationMap,
   WeeklyScheduleEntry,
 } from './types';
 
-const DAY_LABELS_EN = [
-  'Sun',
-  'Mon',
-  'Tue',
-  'Wed',
-  'Thu',
-  'Fri',
-  'Sat',
-] as const;
-
-const DAY_LABELS_ZH = [
-  '週日',
-  '週一',
-  '週二',
-  '週三',
-  '週四',
-  '週五',
-  '週六',
-] as const;
-
+/**
+ * `zh-HK` reads `zh-HK`, then `zh`, then the base value. `en` reads `en`,
+ * then the base value. English pages never show a `zh` translation.
+ */
 export function pickTranslation(
   locale: Locale,
   fallback: string,
   translations: TranslationMap,
 ): string {
-  if (locale === 'zh-HK' && translations['zh-HK']) {
-    return translations['zh-HK'];
+  if (locale === 'zh-HK') {
+    return translations['zh-HK'] || translations.zh || fallback;
   }
-  if (translations.zh) {
-    return translations.zh;
+  return translations.en || fallback;
+}
+
+/** Every photo of the organisation, then the logo when there is no photo. */
+export function listingImageUrls(listing: ActivityListing): readonly string[] {
+  const photos = listing.organization.mediaUrls.filter(Boolean);
+  if (photos.length > 0) {
+    return photos;
   }
-  if (translations.en) {
-    return translations.en;
-  }
-  return fallback;
+  return listing.organization.logoMediaUrl ? [listing.organization.logoMediaUrl] : [];
+}
+
+/** True when the only picture is the logo, which is shown contained. */
+export function listingImageIsLogo(listing: ActivityListing): boolean {
+  return (
+    listing.organization.mediaUrls.filter(Boolean).length === 0 &&
+    Boolean(listing.organization.logoMediaUrl)
+  );
 }
 
 export function listingImageUrl(listing: ActivityListing): string | null {
@@ -53,53 +50,36 @@ export function listingImageUrl(listing: ActivityListing): string | null {
   return listing.organization.logoMediaUrl;
 }
 
-function formatMinutesAsTime(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-}
-
 export function formatScheduleSnippet(
   locale: Locale,
   entries: readonly WeeklyScheduleEntry[],
 ): string | null {
-  if (entries.length === 0) {
-    return null;
-  }
-  const first = entries[0];
-  const dayLabels = locale === 'zh-HK' ? DAY_LABELS_ZH : DAY_LABELS_EN;
-  const day = dayLabels[first.dayOfWeekUtc] ?? DAY_LABELS_EN[0];
-  return `${day} ${formatMinutesAsTime(first.startMinutesUtc)}`;
+  return formatScheduleSummary(locale, entries);
+}
+
+export function missingPriceLabel(locale: Locale): string {
+  return locale === 'zh-HK' ? '價格待定' : 'Price on request';
+}
+
+export function missingScheduleLabel(locale: Locale): string {
+  return locale === 'zh-HK' ? '時間待定' : 'Schedule to be confirmed';
+}
+
+export function listingScheduleLabel(
+  locale: Locale,
+  listing: ActivityListing,
+): string | null {
+  const snippet = listing.schedule
+    ? formatScheduleSnippet(locale, listing.schedule.weeklyEntries)
+    : null;
+  return snippet ?? missingScheduleLabel(locale);
 }
 
 export function formatListingPrice(
   locale: Locale,
   listing: ActivityListing,
 ): string {
-  const { pricing } = listing;
-  if (pricing.pricingType === 'free') {
-    return locale === 'zh-HK' ? '免費' : 'Free';
-  }
-
-  const amount = new Intl.NumberFormat(locale === 'zh-HK' ? 'zh-HK' : 'en-HK', {
-    style: 'currency',
-    currency: pricing.currency.toUpperCase(),
-    maximumFractionDigits: 0,
-  }).format(pricing.amount);
-
-  const suffixMap: Record<string, { en: string; zh: string }> = {
-    per_class: { en: ' / class', zh: ' / 堂' },
-    per_sessions: { en: ' / term', zh: ' / 期' },
-    per_hour: { en: ' / hr', zh: ' / 小時' },
-    per_day: { en: ' / day', zh: ' / 天' },
-    per_month: { en: ' / month', zh: ' / 月' },
-    per_year: { en: ' / year', zh: ' / 年' },
-  };
-  const suffix = suffixMap[pricing.pricingType];
-  if (!suffix) {
-    return amount;
-  }
-  return `${amount}${locale === 'zh-HK' ? suffix.zh : suffix.en}`;
+  return formatListingPriceSummary(locale, listing) ?? missingPriceLabel(locale);
 }
 
 export function regionLabelForListing(
@@ -196,10 +176,14 @@ export function sortListingsForDiscovery(
     if (leftHasImage !== rightHasImage) {
       return rightHasImage - leftHasImage;
     }
-    if (left.pricing.freeTrialClassOffered !== right.pricing.freeTrialClassOffered) {
-      return left.pricing.freeTrialClassOffered ? -1 : 1;
+    const leftTrial = left.pricing?.freeTrialClassOffered ?? false;
+    const rightTrial = right.pricing?.freeTrialClassOffered ?? false;
+    if (leftTrial !== rightTrial) {
+      return leftTrial ? -1 : 1;
     }
-    return left.pricing.amount - right.pricing.amount;
+    const leftAmount = left.pricing?.amount ?? Number.POSITIVE_INFINITY;
+    const rightAmount = right.pricing?.amount ?? Number.POSITIVE_INFINITY;
+    return leftAmount - rightAmount;
   });
 }
 

@@ -122,7 +122,7 @@ export function SearchBarCompact({ locale, labels }: SearchBarCompactProps) {
       </button>
       <button
         type="button"
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-500 text-lg text-ink-900 ring-2 ring-inset ring-ink-900/20 transition hover:bg-accent-600"
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-500 text-[2.25rem] leading-none text-ink-900 ring-2 ring-inset ring-ink-900/20 transition hover:bg-accent-600"
         aria-label={labels.search}
         onClick={handleSearchNavigate}
       >

@@ -41,8 +41,9 @@ info:
       /v1/partner/category-reviews/bulk`), decide venue proposals
       (`POST /v1/partner/location-fixes/{id}` and `POST
       /v1/partner/location-fixes/bulk`), merge organizations
-      (`POST /v1/partner/organization-merges`), reject an organization
-      (`POST /v1/partner/organizations/{id}/reject`), read and run website
+      (`POST /v1/partner/organization-merges`), approve or reject an
+      organization (`POST /v1/partner/organizations/{id}/approve` and
+      `POST /v1/partner/organizations/{id}/reject`), read and run website
       enrichment (`GET` / `POST
       /v1/partner/organizations/{id}/enrichment`, including apply and
       dismiss), read and update enrichment settings (`GET` / `PUT
@@ -183,6 +184,16 @@ paths:
             type: array
             items:
               type: string
+        - name: include_incomplete
+          in: query
+          required: false
+          description: |
+            When `true`, also return activities of an approved
+            organization that are missing a price, a schedule, or both.
+            Same behaviour as public search.
+          schema:
+            type: boolean
+            default: false
         - name: limit
           in: query
           required: false
@@ -541,6 +552,52 @@ paths:
         "404":
           description: Organization not found
 
+  /v1/partner/organizations/{id}/approve:
+    parameters:
+      - $ref: "#/components/parameters/ResourceId"
+    post:
+      summary: Approve one organization
+      description: |
+        Full-access `crud` keys only. A full-access `crud` key is the
+        partner equivalent of an admin. Organization-scoped keys and
+        `read` keys receive `403`, including when the key's organization
+        is the target.
+
+        Same notes, listing status, and `force` as an approve decision
+        on `POST /v1/admin/org-review/{id}/decision`. Release blockers
+        return `400` with `issues` and leave the organization unchanged
+        unless `force` is `true`. `reason` stays on the reject route.
+        Approve clears a stored reject reason. Approving an organization
+        that is already approved returns `200` and leaves it approved.
+        `status` `hidden` approves the review and hides the listing.
+        Public search can take up to 5 minutes to show the release.
+        Anything after `/approve` is `404`.
+        Invalid `notes`, `status`, `action`, or `force` is `400` before
+        the organization is looked up. The actor stored in
+        `reviewed_by` is the authorizer `userSub` when it is present,
+        and `api-key:<key id>` when `userSub` is omitted.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartnerOrgApproveRequest"
+      responses:
+        "200":
+          description: Organization approved
+          content:
+            application/json:
+              schema:
+                $ref: "./admin.yaml#/components/schemas/Organization"
+        "400":
+          description: |
+            Invalid notes, status, action, or force, or release
+            blockers remain
+        "403":
+          description: Read-only key or organization-scoped key
+        "404":
+          description: Organization not found
+
   /v1/partner/organizations/{id}/reject:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
@@ -556,8 +613,10 @@ paths:
         `POST /v1/admin/org-review/{id}/decision`. `reason` is required
         and is one of `not_relevant`, `duplicate`, `poor_data`, or
         `other`. An approved organization can be rejected, and `status`
-        can hide it. Approve, reopen, and `force` stay on the admin
-        console. A later reject replaces the stored reason. Anything
+        can hide it. Reject does not accept `force`. Reopen stays on
+        the admin console.
+        Approve is `POST /v1/partner/organizations/{id}/approve`.
+        A later reject replaces the stored reason. Anything
         after `/reject` is `404`. Invalid `notes` or `status` is `400`
         before the organization is looked up. The actor stored in
         `reviewed_by` is the authorizer `userSub` when it is present,
@@ -1418,6 +1477,24 @@ components:
         type: string
         format: uuid
   schemas:
+    PartnerOrgApproveRequest:
+      type: object
+      properties:
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [operational, closed_temporarily, closed_permanently, hidden]
+        force:
+          type: boolean
+          description: |
+            Approve even when release blockers remain. Omitted or
+            `false` returns `400` with `issues` while blockers remain.
+        action:
+          type: string
+          enum: [approve]
+          description: Optional. Any other action is `400`.
     PartnerOrgRejectRequest:
       type: object
       required: [reason]

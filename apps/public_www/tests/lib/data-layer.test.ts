@@ -137,9 +137,7 @@ describe('dataLayer helpers', () => {
   });
 
   it('maps available search filters and omits empty ones', () => {
-    expect(searchFieldsFromFilters(DEFAULT_SEARCH_FILTERS)).toEqual({
-      age: 4,
-    });
+    expect(searchFieldsFromFilters(DEFAULT_SEARCH_FILTERS)).toEqual({});
     expect(
       searchFieldsFromFilters({
         ageGroupId: '3-6',

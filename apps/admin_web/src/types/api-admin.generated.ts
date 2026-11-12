@@ -1659,7 +1659,9 @@ export interface paths {
         /**
          * Approve, reject, or reopen one organization
          * @description Approve returns 400 with `issues` when blockers remain unless
-         *     `force` is true. Reject requires `reason`. Approve and reopen
+         *     `force` is true. A forced approval can appear in public search
+         *     without a price or schedule when the caller sends
+         *     `include_incomplete=true`. Reject requires `reason`. Approve and reopen
          *     clear a stored reason and return 400 when `reason` is sent.
          */
         post: {
@@ -8404,6 +8406,8 @@ export interface components {
             xiaohongshu?: string;
             /** @description WeChat handle or URL */
             wechat?: string;
+            /** @description Admin only. Shows the Parent-Verified badge on the public website. Manager writes ignore it. */
+            parent_verified?: boolean;
             /**
              * @description List of media URLs (optional, max 20 URLs).
              *     Each URL must use http or https scheme and be max 2,048 characters.
@@ -8478,6 +8482,8 @@ export interface components {
             xiaohongshu?: string;
             /** @description WeChat handle or URL */
             wechat?: string;
+            /** @description Admin only. Shows the Parent-Verified badge on the public website. Manager writes ignore it. */
+            parent_verified?: boolean;
             media_urls?: string[];
             /**
              * Format: uri
@@ -8546,6 +8552,8 @@ export interface components {
             xiaohongshu?: string | null;
             /** @description WeChat handle or URL */
             wechat?: string | null;
+            /** @description Admin-set. Shows the Parent-Verified badge on the public website. */
+            parent_verified?: boolean;
             media_urls: string[];
             /**
              * Format: uri

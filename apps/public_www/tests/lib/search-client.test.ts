@@ -41,6 +41,7 @@ describe('buildActivitySearchRequest', () => {
     expect(parsed.searchParams.get('activity_id')).toBe('act-1');
     expect(parsed.searchParams.get('cursor')).toBe('cursor-token');
     expect(parsed.searchParams.get('limit')).toBe('10');
+    expect(parsed.searchParams.get('include_incomplete')).toBe('true');
     expect(parsed.searchParams.getAll('category_id')).toEqual([
       'c1111111-1111-1111-1111-111111111101',
     ]);
@@ -49,6 +50,47 @@ describe('buildActivitySearchRequest', () => {
       'x-api-key': 'api-key',
       'x-device-attestation': 'attest',
     });
+  });
+});
+
+describe('buildActivitySearchRequest refinements', () => {
+  const config = { apiBaseUrl: 'https://siutindei.com', apiKey: 'api-key', attestationToken: '' };
+
+  it('sends organiser, day, price, sort, and total parameters', () => {
+    const { url } = buildActivitySearchRequest(
+      {
+        organizationIds: ['org-1', 'org-2'],
+        pricingType: 'free',
+        languages: ['yue'],
+        daysOfWeekHkt: [0, 6],
+        freeTrial: true,
+        classPriceMax: 250,
+        sort: 'price',
+        includeTotal: true,
+      },
+      config,
+    );
+
+    const parsed = new URL(url).searchParams;
+    expect(parsed.getAll('organization_id')).toEqual(['org-1', 'org-2']);
+    expect(parsed.get('pricing_type')).toBe('free');
+    expect(parsed.getAll('language')).toEqual(['yue']);
+    expect(parsed.getAll('day_of_week_hkt')).toEqual(['0', '6']);
+    expect(parsed.get('free_trial')).toBe('true');
+    expect(parsed.get('class_price_max')).toBe('250');
+    expect(parsed.get('sort')).toBe('price');
+    expect(parsed.get('include_total')).toBe('true');
+  });
+
+  it('asks for the total only on the first page and omits the default sort', () => {
+    const { url } = buildActivitySearchRequest(
+      { cursor: 'next', includeTotal: true, sort: 'time' },
+      config,
+    );
+
+    const parsed = new URL(url).searchParams;
+    expect(parsed.has('include_total')).toBe(false);
+    expect(parsed.has('sort')).toBe(false);
   });
 });
 
@@ -91,7 +133,9 @@ describe('fetchActivitySearch live API integration', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('https://siutindei.com/v1/activities/search?limit=10');
+    expect(url).toBe(
+      'https://siutindei.com/v1/activities/search?include_incomplete=true&limit=10',
+    );
     expect(init.headers).toMatchObject({
       'x-api-key': 'key',
       'x-device-attestation': 'token',
@@ -125,7 +169,7 @@ describe('fetchActivitySearch live API integration', () => {
 
     const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe(
-      'https://www-staging.example.com/v1/activities/search?limit=1',
+      'https://www-staging.example.com/v1/activities/search?include_incomplete=true&limit=1',
     );
   });
 });

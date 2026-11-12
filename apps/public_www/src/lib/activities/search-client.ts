@@ -1,7 +1,9 @@
 import { fetchStagingActivitySearch } from '@/lib/activities/staging-search';
 import { getSearchConfig } from '@/lib/site-config';
 
+import { groupListings } from './group-listings';
 import { mapActivityListing, type ActivityWireListing } from './map-listing';
+import { ACTIVITY_DETAIL_PAGE_LIMIT } from './search-limits';
 import type {
   ActivityListing,
   ActivitySearchParams,
@@ -45,8 +47,33 @@ export function buildActivitySearchRequest(
   if (params.view) {
     url.searchParams.set('view', params.view);
   }
+  url.searchParams.set('include_incomplete', 'true');
   for (const categoryId of params.categoryIds ?? []) {
     url.searchParams.append('category_id', categoryId);
+  }
+  for (const organizationId of params.organizationIds ?? []) {
+    url.searchParams.append('organization_id', organizationId);
+  }
+  if (params.pricingType) {
+    url.searchParams.set('pricing_type', params.pricingType);
+  }
+  for (const language of params.languages ?? []) {
+    url.searchParams.append('language', language);
+  }
+  for (const day of params.daysOfWeekHkt ?? []) {
+    url.searchParams.append('day_of_week_hkt', String(day));
+  }
+  if (params.freeTrial) {
+    url.searchParams.set('free_trial', 'true');
+  }
+  if (params.classPriceMax !== undefined) {
+    url.searchParams.set('class_price_max', String(params.classPriceMax));
+  }
+  if (params.sort && params.sort !== 'time') {
+    url.searchParams.set('sort', params.sort);
+  }
+  if (params.includeTotal && !params.cursor) {
+    url.searchParams.set('include_total', 'true');
   }
   const sortedEntries = [...url.searchParams.entries()].sort((left, right) => {
     if (left[0] === right[0]) {
@@ -102,6 +129,7 @@ export async function fetchActivitySearch(
     items?: unknown[];
     next_cursor?: string | null;
     category_match?: 'exact' | 'legacy_fallback';
+    total?: number | null;
   };
 
   const items = (payload.items ?? []).map((item) =>
@@ -112,18 +140,32 @@ export async function fetchActivitySearch(
     items,
     nextCursor: payload.next_cursor ?? null,
     categoryMatch: payload.category_match ?? 'exact',
+    total: payload.total ?? null,
   };
 }
 
+const DETAIL_MAX_PAGES = 4;
+
+/** Every venue, price, and schedule row of one activity, grouped. */
 export async function fetchActivityListingById(
   activityId: string,
 ): Promise<ActivityListing | null> {
-  const response = await fetchActivitySearch(
-    {
-      activityId,
-      limit: 1,
-    },
-    { highPriority: true },
-  );
-  return response.items[0] ?? null;
+  const rows: ActivityListing[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < DETAIL_MAX_PAGES; page += 1) {
+    const response = await fetchActivitySearch(
+      {
+        activityId,
+        limit: ACTIVITY_DETAIL_PAGE_LIMIT,
+        ...(cursor ? { cursor } : {}),
+      },
+      { highPriority: page === 0 },
+    );
+    rows.push(...response.items);
+    if (!response.nextCursor) {
+      break;
+    }
+    cursor = response.nextCursor;
+  }
+  return groupListings(rows)[0] ?? null;
 }

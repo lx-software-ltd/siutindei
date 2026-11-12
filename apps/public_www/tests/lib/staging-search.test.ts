@@ -6,6 +6,7 @@ import {
   clearStagingFixtureCacheForTests,
   fetchStagingActivitySearch,
 } from '@/lib/activities/staging-search';
+import { classPriceEquivalent } from '@/lib/activities/price-format';
 import { clearSearchAreaScopeCacheForTests } from '@/lib/home-wizard/area-scope';
 
 const fixturePath = path.resolve(
@@ -68,8 +69,48 @@ describe('fetchStagingActivitySearch', () => {
       );
       expect(item.activity.ageMin).toBeLessThanOrEqual(4);
       expect(item.activity.ageMax).toBeGreaterThanOrEqual(4);
-      expect(item.schedule.languages).toEqual(['en']);
+      expect(item.schedule?.languages).toEqual(['en']);
     }
+  });
+
+  it('applies organiser, free trial, day, price, sort, and total like the API', async () => {
+    const all = await fetchStagingActivitySearch({ limit: 50, includeTotal: true });
+    expect(all.total).toBeGreaterThanOrEqual(3000);
+
+    const organizationId = all.items[0].organization.id;
+    const byOrganiser = await fetchStagingActivitySearch({
+      organizationIds: [organizationId],
+      limit: 50,
+    });
+    expect(byOrganiser.items.length).toBeGreaterThan(0);
+    expect(byOrganiser.items.every((item) => item.organization.id === organizationId)).toBe(true);
+
+    const trial = await fetchStagingActivitySearch({ freeTrial: true, limit: 20 });
+    expect(trial.items.every((item) => item.pricing?.freeTrialClassOffered)).toBe(true);
+
+    const weekend = await fetchStagingActivitySearch({ daysOfWeekHkt: [0, 6], limit: 20 });
+    for (const item of weekend.items) {
+      const days = (item.schedule?.weeklyEntries ?? []).map((entry) => {
+        const minutes = entry.dayOfWeekUtc * 1440 + entry.startMinutesUtc + 480;
+        return Math.floor(minutes / 1440) % 7;
+      });
+      expect(days.some((day) => day === 0 || day === 6)).toBe(true);
+    }
+
+    const cheapest = await fetchStagingActivitySearch({
+      sort: 'price',
+      classPriceMax: 300,
+      limit: 20,
+      includeTotal: true,
+    });
+    const prices = cheapest.items.map((item) =>
+      item.pricing ? classPriceEquivalent(item.pricing) : null,
+    );
+    expect(cheapest.items.length).toBeGreaterThan(0);
+    expect(prices.every((price) => price !== null && price <= 300)).toBe(true);
+    expect([...prices].sort((a, b) => (a ?? 0) - (b ?? 0))).toEqual(prices);
+    expect(cheapest.total).toBeGreaterThanOrEqual(cheapest.items.length);
+    expect(cheapest.nextCursor === null || cheapest.items.length === 20).toBe(true);
   });
 
   it('filters names with q and omits detail fields in card view', async () => {
@@ -97,7 +138,7 @@ describe('fetchStagingActivitySearch', () => {
       expect(item.activity.description).toBeNull();
       expect(item.organization.placeId).toBeNull();
       expect(item.organization.mediaUrls.length).toBeLessThanOrEqual(1);
-      expect(item.schedule.weeklyEntries.length).toBeLessThanOrEqual(1);
+      expect(item.schedule?.weeklyEntries.length ?? 0).toBeLessThanOrEqual(1);
     }
   });
 

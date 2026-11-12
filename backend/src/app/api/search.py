@@ -6,7 +6,6 @@ using shared utilities and centralized database management.
 
 from __future__ import annotations
 
-import base64
 import json
 import os
 import time
@@ -16,46 +15,27 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
 from app.api.partner_auth import PartnerContext, get_partner_context
-from app.api.schemas import (
-    ActivitySchema,
-    ActivitySearchResponseSchema,
-    ActivitySearchResultSchema,
-    LocationSchema,
-    OrganizationSchema,
-    PricingSchema,
-    ScheduleEntrySchema,
-    ScheduleSchema,
-    dump_search_response,
+from app.api.schemas import ActivitySearchResponseSchema, dump_search_response
+from app.api.search_feedback import load_ratings, load_reviews
+from app.api.search_page import count_search_activities, map_row_to_result
+from app.api.search_page import load_search_rows as _load_search_rows
+from app.api.search_page import parse_cursor as _parse_cursor
+from app.api.search_validation import (
+    validate_search_query_params,
+    validate_search_refinements,
 )
-from app.api.search_validation import validate_search_query_params
-from app.db.age_bounds import inclusive_age_bounds
 from app.db.engine import get_engine
-from app.db.models import (
-    Activity,
-    ActivityPricing,
-    ActivitySchedule,
-    GeographicArea,
-    Location,
-    Organization,
-    PricingType,
-    ScheduleType,
-)
+from app.db.models import GeographicArea, PricingType, ScheduleType
 from app.db.queries import (
-    ActivitySearchCursor,
     ActivitySearchFilters,
     applied_search_area_scope,
-    build_search_query,
     category_match_mode,
     search_area_scope_labels,
 )
 from app.exceptions import CursorError, ValidationError
-from app.services.description_boilerplate import (
-    hides_template_description,
-    omit_import_boilerplate,
-)
 from app.utils import json_response, parse_decimal, parse_enum, parse_int
 from app.utils.logging import configure_logging, get_logger, set_request_context
 from app.utils.parsers import (
@@ -65,7 +45,6 @@ from app.utils.parsers import (
     parse_uuid_list,
 )
 from app.utils.responses import get_cors_headers, get_security_headers
-from app.utils.translations import build_translation_map
 
 # Configure logging on module load
 configure_logging()
@@ -156,7 +135,6 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
     price_max = parse_decimal(first_param(params, "price_max"))
     languages = parse_languages(params.get("language", []))
     limit = parse_int(first_param(params, "limit")) or 50
-
     validated = validate_search_query_params(
         age=age,
         day_of_week_utc=day_of_week_utc,
@@ -168,12 +146,30 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
         limit=limit,
         q=first_param(params, "q"),
         view=first_param(params, "view"),
+        include_incomplete=first_param(params, "include_incomplete"),
     )
+    refinements = validate_search_refinements(
+        days_of_week_hkt=[
+            parse_int(value) for value in params.get("day_of_week_hkt", []) if value
+        ],
+        free_trial=first_param(params, "free_trial"),
+        class_price_max=parse_decimal(first_param(params, "class_price_max")),
+        sort=first_param(params, "sort"),
+        include_total=first_param(params, "include_total"),
+    )
+    cursor = _parse_cursor(first_param(params, "cursor"))
+    if (
+        cursor is not None
+        and cursor.phase == "complete"
+        and cursor.sort != refinements.sort
+    ):
+        raise CursorError("Cursor does not match sort")
 
     return ActivitySearchFilters(
         age=age,
         area_id=area_id,
         activity_id=activity_id,
+        org_ids=tuple(parse_uuid_list(params.get("organization_id", []))),
         category_ids=parse_uuid_list(params.get("category_id", [])),
         pricing_type=parse_enum(first_param(params, "pricing_type"), PricingType),
         price_min=price_min,
@@ -186,10 +182,16 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
         start_minutes_utc=start_minutes_utc,
         end_minutes_utc=end_minutes_utc,
         languages=validated.languages,
-        cursor=_parse_cursor(first_param(params, "cursor")),
+        cursor=cursor,
         limit=limit,
         text_query=validated.text_query,
         view=validated.view,
+        include_incomplete=validated.include_incomplete,
+        days_of_week_hkt=refinements.days_of_week_hkt,
+        free_trial=refinements.free_trial,
+        class_price_max=refinements.class_price_max,
+        sort=refinements.sort,
+        include_total=refinements.include_total,
     )
 
 
@@ -210,168 +212,44 @@ def fetch_search_response(
         return fetch_staging_search_response(filters)
 
     engine = get_engine()
-    requested_limit = filters.limit
-    query_filters = replace(filters, limit=requested_limit + 1)
-    query = build_search_query(query_filters).options(
-        selectinload(ActivitySchedule.entries)
-    )
-
     with Session(engine) as session:
-        rows = session.execute(query).all()
+        rows, next_cursor = _load_search_rows(session, filters)
         region_cache = _load_region_area_cache(session)
         match_mode = category_match_mode(
             session,
             filters.category_ids,
             applied_search_area_scope(filters),
         )
-
-    has_more = len(rows) > requested_limit
-    trimmed_rows = rows[:requested_limit]
-    include_place_id = filters.activity_id is not None
-    items = [
-        map_row_to_result(
-            row,
-            region_cache,
-            include_place_id=include_place_id,
-            view=filters.view,
+        include_place_id = filters.activity_id is not None
+        items = [
+            map_row_to_result(
+                row,
+                region_cache,
+                include_place_id=include_place_id,
+                view=filters.view,
+            )
+            for row in rows
+        ]
+        ratings = load_ratings(session, (item.organization.id for item in items))
+        reviews_by_org: dict[str, list] = {}
+        if filters.activity_id is not None and filters.view != "card":
+            for org_id in {item.organization.id for item in items}:
+                reviews_by_org[org_id] = load_reviews(session, org_id)
+        for item in items:
+            item.organization.rating = ratings.get(item.organization.id)
+            item.organization.reviews = reviews_by_org.get(item.organization.id, [])
+        total = (
+            count_search_activities(session, filters)
+            if filters.include_total and filters.cursor is None
+            else None
         )
-        for row in trimmed_rows
-    ]
-    next_cursor = None
-    if has_more and trimmed_rows:
-        last_row = trimmed_rows[-1]
-        schedule = last_row._mapping[ActivitySchedule]
-        order_day = last_row._mapping["order_day_of_week"]
-        order_start = last_row._mapping["order_start_minutes"]
-        next_cursor = _encode_cursor(order_day, order_start, schedule.id)
     return ActivitySearchResponseSchema(
         items=items,
         next_cursor=next_cursor,
         category_match=match_mode,
         area_scope=search_area_scope_labels(),
+        total=total,
     )
-
-
-def map_row_to_result(
-    row: Any,
-    region_cache: dict[str, str | None],
-    include_place_id: bool = False,
-    view: str = "full",
-) -> ActivitySearchResultSchema:
-    """Map a SQLAlchemy row to a search result schema."""
-
-    mapping = row._mapping
-    activity: Activity = mapping[Activity]
-    organization: Organization = mapping[Organization]
-    location: Location = mapping[Location]
-    pricing: ActivityPricing = mapping[ActivityPricing]
-    schedule: ActivitySchedule = mapping[ActivitySchedule]
-
-    age_min, age_max = inclusive_age_bounds(activity.age_range)
-    card = view == "card"
-    is_template = hides_template_description(
-        organization.description_source, organization.description
-    )
-    org_description = None if is_template or card else organization.description
-    org_desc_translations = (
-        {}
-        if is_template or card
-        else omit_import_boilerplate(
-            build_translation_map(
-                organization.description, organization.description_translations
-            )
-        )
-    )
-    activity_description = None if is_template or card else activity.description
-    activity_desc_translations = (
-        {}
-        if is_template or card
-        else omit_import_boilerplate(
-            build_translation_map(
-                activity.description, activity.description_translations
-            )
-        )
-    )
-    media_urls = list(organization.media_urls or [])
-    if card:
-        media_urls = media_urls[:1]
-
-    return ActivitySearchResultSchema(
-        activity=ActivitySchema(
-            id=str(activity.id),
-            name=activity.name,
-            description=activity_description,
-            name_translations=build_translation_map(
-                activity.name, activity.name_translations
-            ),
-            description_translations=activity_desc_translations,
-            age_min=age_min,
-            age_max=age_max,
-            category_id=str(activity.category_id),
-        ),
-        organization=OrganizationSchema(
-            id=str(organization.id),
-            name=organization.name,
-            description=org_description,
-            name_translations=build_translation_map(
-                organization.name, organization.name_translations
-            ),
-            description_translations=org_desc_translations,
-            media_urls=media_urls,
-            logo_media_url=organization.logo_media_url,
-            status=organization.status,
-            description_source=organization.description_source,
-            place_id=organization.place_id if include_place_id else None,
-        ),
-        location=LocationSchema(
-            id=str(location.id),
-            area_id=str(location.area_id),
-            region_area_id=region_cache.get(str(location.area_id)),
-            address=location.address,
-            lat=location.lat,
-            lng=location.lng,
-            status=location.status,
-        ),
-        pricing=PricingSchema(
-            pricing_type=pricing.pricing_type.value,
-            amount=pricing.amount,
-            currency=pricing.currency,
-            sessions_count=pricing.sessions_count,
-            free_trial_class_offered=pricing.free_trial_class_offered,
-        ),
-        schedule=ScheduleSchema(
-            schedule_type=schedule.schedule_type.value,
-            weekly_entries=_serialize_weekly_entries(
-                schedule, limit=1 if card else None
-            ),
-            languages=schedule.languages or [],
-        ),
-    )
-
-
-def _serialize_weekly_entries(
-    schedule: ActivitySchedule,
-    limit: int | None = None,
-) -> list[ScheduleEntrySchema]:
-    """Serialize schedule entries for search responses."""
-    entries = sorted(
-        schedule.entries or [],
-        key=lambda entry: (
-            entry.day_of_week_utc,
-            entry.start_minutes_utc,
-            entry.end_minutes_utc,
-        ),
-    )
-    if limit is not None:
-        entries = entries[:limit]
-    return [
-        ScheduleEntrySchema(
-            day_of_week_utc=entry.day_of_week_utc,
-            start_minutes_utc=entry.start_minutes_utc,
-            end_minutes_utc=entry.end_minutes_utc,
-        )
-        for entry in entries
-    ]
 
 
 def clear_region_area_cache() -> None:
@@ -453,47 +331,3 @@ def _create_response(
         "headers": headers,
         "body": json.dumps(payload, default=str, separators=separators),
     }
-
-
-# --- Cursor encoding/decoding ---
-
-
-def _parse_cursor(value: str | None) -> ActivitySearchCursor | None:
-    """Parse a pagination cursor."""
-
-    if value is None or value == "":
-        return None
-    try:
-        payload = _decode_cursor(value)
-        return ActivitySearchCursor(
-            day_of_week_utc=payload["day_of_week_utc"],
-            start_minutes_utc=payload["start_minutes_utc"],
-            schedule_id=UUID(payload["schedule_id"]),
-        )
-    except (ValueError, KeyError, TypeError) as exc:
-        raise CursorError("Malformed cursor payload") from exc
-
-
-def _encode_cursor(
-    day_of_week_utc: int,
-    start_minutes_utc: int,
-    schedule_id: UUID,
-) -> str:
-    """Encode a pagination cursor."""
-    payload = json.dumps(
-        {
-            "schedule_id": str(schedule_id),
-            "day_of_week_utc": day_of_week_utc,
-            "start_minutes_utc": start_minutes_utc,
-        }
-    ).encode("utf-8")
-    encoded = base64.urlsafe_b64encode(payload).decode("utf-8")
-    return encoded.rstrip("=")
-
-
-def _decode_cursor(cursor: str) -> dict[str, Any]:
-    """Decode a pagination cursor."""
-
-    padding = "=" * (-len(cursor) % 4)
-    raw = base64.urlsafe_b64decode(cursor + padding)
-    return json.loads(raw)

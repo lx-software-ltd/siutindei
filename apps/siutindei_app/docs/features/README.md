@@ -134,6 +134,10 @@ Main screen for activity search with:
 - `_QuickFilters` - Horizontal filter chip rows
 - `_ResultsList` - Paginated activity list
 
+Search requests send `include_incomplete=true`. A missing price shows
+"Price on request", and a missing day or time shows "Schedule to be
+confirmed". The app chrome is English, so those placeholders are too.
+
 ### ActivityCard
 
 Displays activity search results:

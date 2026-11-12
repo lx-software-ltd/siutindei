@@ -43,11 +43,11 @@ function emitIntersection(isIntersecting: boolean) {
   observerCallback?.([{ isIntersecting }]);
 }
 
-function renderNavbar() {
-  const content = getContent('en');
+function renderNavbar(locale: 'en' | 'zh-HK' = 'en') {
+  const content = getContent(locale);
   return render(
     <SearchProvider>
-      <Navbar locale="en" content={content.navbar} />
+      <Navbar locale={locale} content={content.navbar} />
     </SearchProvider>,
   );
 }
@@ -101,5 +101,24 @@ describe('Navbar', () => {
       'site-header--home-reveal',
     );
     expect(screen.getByRole('banner')).not.toHaveAttribute('inert');
+  });
+
+  it('does not render a list-your-activity link in English', () => {
+    pathname.mockReturnValue('/en/search/');
+    renderNavbar('en');
+
+    expect(
+      screen.queryByRole('link', { name: 'List your activity' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not render a list-your-activity link in Traditional Chinese', () => {
+    pathname.mockReturnValue('/zh-HK/search/');
+    renderNavbar('zh-HK');
+
+    expect(screen.getAllByText('地區').length).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole('link', { name: '刊登活動' }),
+    ).not.toBeInTheDocument();
   });
 });

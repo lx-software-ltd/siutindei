@@ -26,8 +26,8 @@ export function Footer({ locale, content }: FooterProps) {
       data-section-id="footer"
     >
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
-          <div className="lg:col-span-2">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[max-content_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <div>
             <img
               src="/images/brand/siutindei-logo-stacked.svg"
               alt={siteName}
@@ -36,51 +36,51 @@ export function Footer({ locale, content }: FooterProps) {
               className="h-auto w-40"
             />
             <p className="mt-2 text-sm">{content.tagline}</p>
-            <div className="mt-4 text-sm">
-              <p className="font-semibold text-ink-900">
-                {content.contactHeading}
+          </div>
+          <div className="min-w-0 text-sm">
+            <p className="font-semibold text-ink-900">
+              {content.contactHeading}
+            </p>
+            {contact.email ? (
+              <p className="mt-2">
+                <a
+                  href={`mailto:${contact.email}`}
+                  className="underline-offset-2 hover:underline"
+                >
+                  {contact.email}
+                </a>
               </p>
-              {contact.email ? (
-                <p className="mt-2">
-                  <a
-                    href={`mailto:${contact.email}`}
-                    className="underline-offset-2 hover:underline"
-                  >
-                    {contact.email}
-                  </a>
-                </p>
-              ) : null}
-              {contact.whatsappUrl ? (
-                <p className="mt-1">
-                  <TrackedWhatsappLink
-                    href={contact.whatsappUrl}
-                    leadType="whatsapp_footer"
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="underline-offset-2 hover:underline"
-                  >
-                    {contact.whatsappDisplay
-                      ? `WhatsApp ${contact.whatsappDisplay}`
-                      : 'WhatsApp'}
-                  </TrackedWhatsappLink>
-                </p>
-              ) : null}
-              {contact.instagramUrl ? (
-                <p className="mt-1">
-                  <a
-                    href={contact.instagramUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="underline-offset-2 hover:underline"
-                  >
-                    Instagram
-                  </a>
-                </p>
-              ) : null}
-            </div>
+            ) : null}
+            {contact.whatsappUrl ? (
+              <p className="mt-1">
+                <TrackedWhatsappLink
+                  href={contact.whatsappUrl}
+                  leadType="whatsapp_footer"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="underline-offset-2 hover:underline"
+                >
+                  {contact.whatsappDisplay
+                    ? `WhatsApp ${contact.whatsappDisplay}`
+                    : 'WhatsApp'}
+                </TrackedWhatsappLink>
+              </p>
+            ) : null}
+            {contact.instagramUrl ? (
+              <p className="mt-1">
+                <a
+                  href={contact.instagramUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="underline-offset-2 hover:underline"
+                >
+                  Instagram
+                </a>
+              </p>
+            ) : null}
           </div>
           {content.columns.map((column) => (
-            <div key={column.title}>
+            <div key={column.title} className="min-w-0">
               <p className="text-sm font-semibold text-ink-900">
                 {column.title}
               </p>

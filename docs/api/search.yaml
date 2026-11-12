@@ -182,13 +182,103 @@ paths:
           description: |
             Response shape. `full` is the default and matches the existing
             payload. `card` omits descriptions, description translations,
-            and place_id, keeps only the first media URL
+            place_id, contact, reviews, and updated_at, keeps only the first media URL
             and the first weekly entry, and drops `name_translations.en`
             when it equals `name`.
           schema:
             type: string
             enum: [card, full]
             default: full
+        - name: include_incomplete
+          in: query
+          required: false
+          description: |
+            When `true`, also return activities of an approved
+            organization that are missing a price, a schedule, or both.
+            Those rows come after the complete rows, ordered by
+            organization name, then activity name. The venue is one
+            that matches the area, price, and schedule filters: a
+            schedule venue, then a priced venue, then a linked venue.
+            `pricing` and `schedule` are null when that piece is
+            missing at the chosen venue. Omitted or `false` keeps
+            today's results, and an incomplete-page cursor is ignored.
+            Older clients should omit it.
+          schema:
+            type: boolean
+            default: false
+        - name: organization_id
+          in: query
+          required: false
+          description: |
+            Only activities of these organizations. Repeat the parameter
+            for more than one. Used for "more from this organiser".
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              format: uuid
+        - name: day_of_week_hkt
+          in: query
+          required: false
+          description: |
+            Only sessions that start on these days in Hong Kong time
+            (UTC+8): 0=Sunday through 6=Saturday. Repeat the parameter
+            for more than one, for example `0` and `6` for the weekend.
+            A session stored as Friday 23:00 UTC starts on Saturday in
+            Hong Kong and matches `6`.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: integer
+              minimum: 0
+              maximum: 6
+        - name: free_trial
+          in: query
+          required: false
+          description: When `true`, only prices that offer a free trial class.
+          schema:
+            type: boolean
+            default: false
+        - name: class_price_max
+          in: query
+          required: false
+          description: |
+            Highest price of one class (>= 0). Free is 0, `per_class` and
+            `per_hour` are the amount, and `per_sessions` with a
+            `sessions_count` is the amount divided by the count. Other
+            prices have no per-class equivalent and are excluded.
+          schema:
+            type: number
+            format: decimal
+            minimum: 0
+        - name: sort
+          in: query
+          required: false
+          description: |
+            `time` (default) orders by the first session day and time in
+            UTC. `price` orders by the per-class price described under
+            `class_price_max`, cheapest first, with rows that have no
+            per-class price after every priced row, then by time. A
+            cursor only continues the sort it was issued for; another
+            sort returns 400. Incomplete rows always come last.
+          schema:
+            type: string
+            enum: [time, price]
+            default: time
+        - name: include_total
+          in: query
+          required: false
+          description: |
+            When `true`, the first page carries `total`: the number of
+            distinct activities that match across every page. Pages
+            fetched with `cursor` omit it.
+          schema:
+            type: boolean
+            default: false
         - name: limit
           in: query
           required: false
@@ -352,6 +442,12 @@ components:
             omits this field; clients keep the list from the first page.
             The list is informational on `activity_id` lookups and on
             partner search: those requests are not filtered by it.
+        total:
+          type: integer
+          minimum: 0
+          description: |
+            Distinct matching activities across every page. Present only
+            on the first page of a request with `include_total=true`.
     ActivitySearchResult:
       type: object
       required: [activity, organization, location, pricing, schedule]
@@ -363,9 +459,19 @@ components:
         location:
           $ref: "#/components/schemas/Location"
         pricing:
-          $ref: "#/components/schemas/Pricing"
+          nullable: true
+          description: |
+            Null when `include_incomplete=true` and the activity has no
+            price at the chosen venue.
+          allOf:
+            - $ref: "#/components/schemas/Pricing"
         schedule:
-          $ref: "#/components/schemas/Schedule"
+          nullable: true
+          description: |
+            Null when `include_incomplete=true` and the activity has no
+            schedule at the chosen venue.
+          allOf:
+            - $ref: "#/components/schemas/Schedule"
     Organization:
       type: object
       required:
@@ -421,6 +527,119 @@ components:
             Google Places id. Set only when searching by `activity_id`
             (listing detail) so the app can deep-link to Google Maps. Other
             full-view results send `null`; `view=card` omits the field.
+        parent_verified:
+          type: boolean
+          default: false
+          description: |
+            Set by an admin. Clients show a Parent-Verified badge when
+            true. `view=card` omits the field when false.
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last change to the organization. `view=card` omits it.
+        contact:
+          nullable: true
+          description: Public contact details. `view=card` omits it.
+          allOf:
+            - $ref: "#/components/schemas/OrganizationContact"
+        rating:
+          nullable: true
+          description: |
+            Approved parent feedback for the organization. Null when it
+            has none. `view=card` omits the field when null.
+          allOf:
+            - $ref: "#/components/schemas/FeedbackRating"
+        reviews:
+          type: array
+          description: |
+            Up to 20 newest approved feedback entries, filled only when
+            searching by `activity_id`. Other full-view results send an
+            empty list; `view=card` omits the field. Submitter details
+            are never included.
+          items:
+            $ref: "#/components/schemas/FeedbackReview"
+    OrganizationContact:
+      type: object
+      description: |
+        Social fields hold a handle or a URL, as entered in the admin
+        console. Clients turn a handle into a profile link.
+      properties:
+        website:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        phone_country_code:
+          type: string
+          nullable: true
+          description: ISO 3166-1 alpha-2 country of `phone_number`.
+        phone_number:
+          type: string
+          nullable: true
+          description: National number digits, without the country code.
+        whatsapp:
+          type: string
+          nullable: true
+        facebook:
+          type: string
+          nullable: true
+        instagram:
+          type: string
+          nullable: true
+        tiktok:
+          type: string
+          nullable: true
+        twitter:
+          type: string
+          nullable: true
+        xiaohongshu:
+          type: string
+          nullable: true
+        wechat:
+          type: string
+          nullable: true
+    FeedbackRating:
+      type: object
+      required: [count, average_stars]
+      properties:
+        count:
+          type: integer
+          minimum: 1
+        average_stars:
+          type: number
+          description: Mean of 0-5 stars, one decimal place.
+    FeedbackReview:
+      type: object
+      required: [id, stars, labels, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        stars:
+          type: integer
+          minimum: 0
+          maximum: 5
+        description:
+          type: string
+          nullable: true
+        labels:
+          type: array
+          items:
+            type: object
+            required: [id, name]
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              name_translations:
+                $ref: "#/components/schemas/TranslationMap"
+        created_at:
+          type: string
+          format: date-time
     Location:
       type: object
       required: [id, area_id]
@@ -441,6 +660,12 @@ components:
           description: |
             Macro-region ancestor UUID (for example Hong Kong Island) when the
             location district belongs to a region node.
+        name:
+          type: string
+          nullable: true
+          description: |
+            Venue label, such as a studio or campus name. `view=card` omits
+            the field when null.
         address:
           type: string
           nullable: true

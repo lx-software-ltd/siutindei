@@ -435,14 +435,29 @@ counts approved organizations only, because
 a SQL view cannot read the Lambda flag. CloudFront caches public
 search for up to 5 minutes, so a release can lag by that long.
 
-Catalog is the release tool. It lists every organization with stage,
+Catalog is the admin release tool. A full-access `crud` partner
+key can release one organization at
+`POST /v1/partner/organizations/{id}/approve`. The same blockers
+apply, and `force` is accepted on that route as on an admin
+approve decision. Public search can
+take up to 5 minutes to show that release. Catalog lists every
+organization with stage,
 source, missing detail, and import job, and bulk actions approve,
 reject, reopen, or set a whitelist of organization fields. Opening a
 row sets `?org=` and shows the same readiness checklist on the
 Organization screen. Imports keeps upload, export, and history; history
 "View orgs" opens Catalog with `?job=` for the organizations that
 import created or updated. Approve refuses while
-blockers remain unless `force` is set. Blockers are a missing
+blockers remain unless `force` is set. Public search still requires a
+schedule, an entry, and a price unless the caller sends
+`include_incomplete=true`. That flag also returns activities of an
+approved organization that are missing a price, a schedule, or both.
+The venue is one that matches the request's area and price filters,
+preferring a schedule venue, then a priced venue, then a linked
+venue. Those rows follow the complete rows and are ordered by
+organization name, then activity name. Callers that omit the flag
+keep the previous results, including when they send an
+incomplete-page cursor. Blockers are a missing
 description, no location, no activity, a location without coordinates,
 an activity without pricing or a schedule, and an activity still on
 Pending categorisation.
@@ -663,6 +678,13 @@ exempt, so a shared activity link still opens. The response field
 `area_scope` reports the configured neighbourhood ids on the first
 page (null when unrestricted, empty when every slug is unknown),
 including exempt requests. A cursor page omits the field.
+
+Admin Catalog reads the same variable when the admin web is built.
+When the value names one region, one district, or one neighbourhood,
+Catalog opens on that area, and the organisation list includes
+locations under it. Several areas that do not sit inside one of those
+tokens leave the filter on all neighbourhoods. Clearing the variable
+takes effect on the next admin web deploy.
 
 The public website reads the same variable at build time. Regions with
 no selected neighbourhood stay focusable and are labelled coming soon.

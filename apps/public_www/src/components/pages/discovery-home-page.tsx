@@ -3,6 +3,7 @@ import type { SiteContent } from '@/content/types';
 import { DiscoveryHomeSection } from '@/components/sections/discovery/discovery-home-section';
 import { SmallWorldHero } from '@/components/sections/hero/small-world-hero';
 import { FeaturesSection } from '@/components/sections/grid/features-section';
+import { configuredHeroScopeSigns } from '@/lib/home-wizard/area-scope';
 import {
   BUBBLE_BUILD_SEED,
   pickBubbleIdsForSeed,
@@ -23,6 +24,7 @@ export function DiscoveryHomePage({ locale, content }: DiscoveryHomePageProps) {
         copy={content.smallWorld}
         searchBarLabels={content.navbar.searchBar}
         bubbleIds={bubbleIds}
+        scopeSigns={configuredHeroScopeSigns()}
       />
       <DiscoveryHomeSection locale={locale} copy={content.discovery} />
       <section className="border-t border-brand-100 bg-brand-50 py-10">

@@ -14,7 +14,7 @@ describe('buildMapSearchHref', () => {
       regionId: 'kowloon',
     });
 
-    expect(href).toBe('/en/search/?age=3-6&region=kowloon&view=map');
+    expect(href).toBe('/en/search/?region=kowloon&view=map');
   });
 });
 
@@ -25,7 +25,7 @@ describe('buildSearchHref', () => {
       regionId: 'kowloon',
     });
 
-    expect(href).toBe('/en/search/?age=3-6&region=kowloon&view=map');
+    expect(href).toBe('/en/search/?region=kowloon&view=map');
   });
 });
 

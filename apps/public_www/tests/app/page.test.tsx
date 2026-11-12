@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DiscoveryHomePage } from '@/components/pages/discovery-home-page';
 import { PageLayout } from '@/components/shared/page-layout';
@@ -18,6 +18,10 @@ vi.mock('@/lib/activities/search-client', () => ({
 }));
 
 describe('DiscoveryHomePage', () => {
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE;
+  });
+
   it('renders discovery chrome with search and carousel headings', () => {
     const content = getContent('en');
 
@@ -69,5 +73,32 @@ describe('DiscoveryHomePage', () => {
       screen.getByRole('link', { name: content.hostCta.buttonLabel }),
     ).toHaveClass('bg-brand-500', 'text-ink-900');
     expect(screen.getByRole('heading', { level: 2, name: content.features.title })).toBeInTheDocument();
+    expect(document.querySelector('.hero-scope-sign')).not.toBeInTheDocument();
+  });
+
+  it('shows the Stanley plate when the scope names Stanley', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'southern-stanley';
+    const content = getContent('en');
+
+    render(
+      <PageLayout
+        locale="en"
+        navbarContent={content.navbar}
+        footerContent={content.footer}
+      >
+        <DiscoveryHomePage locale="en" content={content} />
+      </PageLayout>,
+    );
+
+    expect(
+      document.querySelector(
+        'img[src="/images/scope-signs/southern-stanley.webp"]',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(content.smallWorld.subtitle)).toBeInTheDocument();
+    expect(document.querySelector('.small-world-hero__copy')).toHaveAttribute(
+      'data-scope-signs',
+      '1',
+    );
   });
 });

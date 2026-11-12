@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  activeRefinementCount,
   buildSearchQueryString,
   categoryIdsForTypes,
+  daysForChoice,
+  filtersToApiParams,
   parseSearchFiltersFromQuery,
   parseSearchViewMode,
   toggleActivityTypeId,
@@ -77,5 +80,46 @@ describe('search-params', () => {
 
     const removed = toggleActivityTypeId(addedAgain, 'early-years');
     expect(removed.activityTypeIds).toEqual(['learning']);
+  });
+
+  it('round-trips refinements and maps them to API parameters', () => {
+    const query = buildSearchQueryString(
+      {
+        ageGroupId: null,
+        regionId: null,
+        neighbourhoodId: null,
+        activityTypeIds: [],
+        textQuery: '',
+        free: true,
+        freeTrial: true,
+        day: 'weekdays',
+        language: 'yue',
+        classPriceMax: 250,
+        sort: 'price',
+      },
+      { view: 'list' },
+    );
+    expect(query).toBe('free=1&trial=1&day=weekdays&lang=yue&price=250&sort=price&view=list');
+
+    const parsed = parseSearchFiltersFromQuery(new URLSearchParams(query));
+    expect(activeRefinementCount(parsed)).toBe(5);
+    expect(filtersToApiParams(parsed)).toMatchObject({
+      pricingType: 'free',
+      freeTrial: true,
+      daysOfWeekHkt: [1, 2, 3, 4, 5],
+      languages: ['yue'],
+      classPriceMax: 250,
+      sort: 'price',
+    });
+  });
+
+  it('ignores unknown refinement values', () => {
+    const parsed = parseSearchFiltersFromQuery(
+      new URLSearchParams('day=9&lang=fr&price=abc&sort=name&free=no'),
+    );
+    expect(activeRefinementCount(parsed)).toBe(0);
+    expect(parsed.sort).toBeUndefined();
+    expect(daysForChoice('weekend')).toEqual([0, 6]);
+    expect(daysForChoice('3')).toEqual([3]);
   });
 });

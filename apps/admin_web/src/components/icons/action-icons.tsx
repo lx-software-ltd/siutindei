@@ -203,6 +203,63 @@ export function SpinnerIcon({ className }: IconProps) {
   );
 }
 
+export function GearIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      aria-hidden
+    >
+      <circle cx='12' cy='12' r='3' />
+      <path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z' />
+    </svg>
+  );
+}
+
+export function JobIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      aria-hidden
+    >
+      <rect x='6' y='3' width='12' height='18' rx='2' />
+      <path d='M9 7h6' />
+      <path d='m9 12 2 2 4-4' />
+    </svg>
+  );
+}
+
+export function PersonIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox='0 0 24 24' fill='currentColor' aria-hidden>
+      <path d='M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2.25c-3.6 0-8.25 1.8-8.25 5.4V21h16.5v-1.35c0-3.6-4.65-5.4-8.25-5.4Z' />
+    </svg>
+  );
+}
+
+export function KeyIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox='0 0 24 24' fill='currentColor' aria-hidden>
+      <path
+        fillRule='evenodd'
+        d='M15.75 1.5a6.75 6.75 0 0 0-6.651 7.906c.067.39-.032.794-.27 1.096L3.75 16.5v2.25A2.25 2.25 0 0 0 6 21h2.25v-2.25h2.25v-2.25h1.06l1.998-1.998c.302-.238.706-.337 1.096-.27A6.75 6.75 0 1 0 15.75 1.5Zm0 4.5a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5Z'
+        clipRule='evenodd'
+      />
+    </svg>
+  );
+}
+
 export function EmailIcon({ className }: IconProps) {
   return (
     <svg

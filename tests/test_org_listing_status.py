@@ -418,3 +418,30 @@ def test_post_organization_with_id_is_405() -> None:
         "00000000-0000-0000-0000-000000000001",
     )
     assert response["statusCode"] == 405
+
+
+def test_parent_verified_is_admin_only(db_session, sample_organization) -> None:
+    repo = OrganizationRepository(db_session)
+    assert _serialize_organization(sample_organization)["parent_verified"] is False
+
+    body = {"name": "Studio", "parent_verified": True}
+    _drop_admin_only_write_fields(body)
+    assert body == {"name": "Studio"}
+
+    _update_organization_for_manager(
+        repo, sample_organization, {"parent_verified": True}
+    )
+    assert sample_organization.parent_verified is False
+
+    _update_organization(repo, sample_organization, {"parent_verified": True})
+    db_session.flush()
+    db_session.refresh(sample_organization)
+    assert sample_organization.parent_verified is True
+    assert _serialize_organization(sample_organization)["parent_verified"] is True
+
+    try:
+        _update_organization(repo, sample_organization, {"parent_verified": "yes"})
+    except ValidationError as exc:
+        assert exc.field == "parent_verified"
+    else:
+        raise AssertionError("a string flag must be rejected")

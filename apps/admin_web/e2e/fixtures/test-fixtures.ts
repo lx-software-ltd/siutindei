@@ -1,6 +1,11 @@
 import { expect, test as base, Page, Route } from '@playwright/test';
 
-import { DEFAULT_CATALOG_NEIGHBOURHOOD_NAME } from '../../src/lib/catalog-defaults';
+import type { GeographicAreaNode } from '../../src/lib/api-client-user';
+import {
+  areaIdForCatalogDefault,
+  areaNameInTree,
+} from '../../src/lib/catalog-defaults';
+import { E2E_SEARCH_AREA_SCOPE } from '../catalog-scope';
 
 /**
  * Mock user data for testing different auth states
@@ -500,6 +505,36 @@ export const mockAuditLogs = [
     ip_address: null,
     user_agent: null,
   },
+  {
+    id: 'audit-3',
+    table_name: 'locations',
+    record_id: 'loc-1',
+    action: 'DELETE',
+    source: 'partner',
+    user_id: 'api-key:api-key-1',
+    request_id: 'req-key',
+    changed_fields: ['name'],
+    old_values: { name: 'Old place' },
+    new_values: { name: 'New place' },
+    timestamp: '2024-01-07T12:00:00Z',
+    ip_address: null,
+    user_agent: null,
+  },
+  {
+    id: 'audit-4',
+    table_name: 'tickets',
+    record_id: 'ticket-1',
+    action: 'DELETE',
+    source: 'category-scan',
+    user_id: 'category-scan:run-1',
+    request_id: 'req-scan',
+    changed_fields: ['category_id'],
+    old_values: { category_id: 'old' },
+    new_values: { category_id: 'new' },
+    timestamp: '2024-01-07T13:00:00Z',
+    ip_address: null,
+    user_agent: null,
+  },
 ];
 
 export const MOCK_STANLEY_AREA_ID = '8e20eb5e-f30a-5b98-b60c-6c9b4b4a81e3';
@@ -622,16 +657,20 @@ export const mockAreaTree = [
   },
 ];
 
-export { DEFAULT_CATALOG_NEIGHBOURHOOD_NAME };
+/** Name Catalog shows for `E2E_SEARCH_AREA_SCOPE` against the areas mock. */
+export function catalogScopeDefaultName(): string {
+  const tree = mockAreaTree as unknown as GeographicAreaNode[];
+  return areaNameInTree(tree, areaIdForCatalogDefault(tree, E2E_SEARCH_AREA_SCOPE));
+}
 
-/** Clear Catalog's default neighbourhood so list assertions see every org. */
+/** Clear Catalog's default area so list assertions see every org. */
 export async function showAllCatalogNeighbourhoods(page: Page): Promise<void> {
   const input = page.getByLabel('Neighbourhood');
-  if (!DEFAULT_CATALOG_NEIGHBOURHOOD_NAME) {
-    await expect(input).toHaveValue('');
+  const expected = catalogScopeDefaultName();
+  await expect(input).toHaveValue(expected);
+  if (!expected) {
     return;
   }
-  await expect(input).toHaveValue(DEFAULT_CATALOG_NEIGHBOURHOOD_NAME);
   await input.click();
   await page.getByRole('option', { name: 'All neighbourhoods' }).click();
   await expect(input).toHaveValue('');

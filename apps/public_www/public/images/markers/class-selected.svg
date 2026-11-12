@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80" fill="none">
+  <ellipse cx="32" cy="76" rx="10" ry="3" fill="#2E1D12" opacity="0.2"/>
+  <path d="M32 76 C32 76 8 50 8 30 A24 24 0 0 1 56 30 C56 50 32 76 32 76 Z" fill="#F5C51B" stroke="#2E1D12" stroke-width="2.5"/>
+  <g transform="translate(0.8 -1.2) scale(0.65)"><!-- Ground shadow -->
+  <!-- Bottom book (earth teal) -->
+  <g stroke="#2E1D12" stroke-width="4" stroke-linejoin="round">
+    <polygon points="17,48 55,70 55,79 17,57" fill="#A6DCD3" />
+    <polygon points="55,70 79,56 79,65 55,79" fill="#7CC4B9" />
+    <polygon points="41,34 79,56 55,70 17,48" fill="#C5EAE3" />
+  </g>
+  <polygon points="43.5,36.5 75,54.5 55,66 23.5,48" fill="#FFF7E6" />
+  <!-- Top book (logo yellow) -->
+  <g stroke="#2E1D12" stroke-width="4" stroke-linejoin="round">
+    <polygon points="21.1,36.5 54.1,55.5 54.1,63.5 21.1,44.5" fill="#F5C51B" />
+    <polygon points="54.1,55.5 74.9,43.5 74.9,51.5 54.1,63.5" fill="#DFAE10" />
+    <polygon points="41.9,24.5 74.9,43.5 54.1,55.5 21.1,36.5" fill="#FFDE64" />
+  </g>
+  <!-- Bookmark ribbon -->
+  <polygon
+    points="59,32.5 65.5,36.3 65.5,45.5 62.2,42.9 59,45.5"
+    fill="#F2A0BF"
+    stroke="#2E1D12"
+    stroke-width="3"
+    stroke-linejoin="round"
+  />
+  <!-- Pencil resting on top (leaf green) -->
+  <g stroke="#2E1D12" stroke-width="3.5" stroke-linejoin="round">
+    <polygon points="32.9,15.8 63.1,33.2 60.9,36.6 30.7,19.2" fill="#8BC152" />
+    <polygon points="63.1,33.2 71,40 60.9,36.6" fill="#FFF7E6" />
+    <polygon points="32.9,15.8 30.7,19.2 25.6,16.3 27.8,12.9" fill="#F2A0BF" />
+  </g>
+  <polygon points="68.2,37.6 71,40 66.4,38.5" fill="#2E1D12" /></g>
+</svg>

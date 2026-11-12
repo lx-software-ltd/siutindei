@@ -74,6 +74,7 @@ def handle_decision(
     """POST /v1/admin/org-review/{id}/decision."""
     body = _require_object(_parse_body(event))
     action = _require_action(body.get("action"), _DECISIONS)
+    force = _parse_force(body.get("force"))
     org_id = _parse_uuid(resource_id, "id")
     with Session(get_engine()) as session:
         _set_session_audit_context(session, event)
@@ -85,7 +86,7 @@ def handle_decision(
                 session,
                 organization,
                 action,
-                force=_parse_force(body.get("force")),
+                force=force,
                 notes=body.get("notes") if "notes" in body else None,
                 status=body.get("status"),
                 reviewer_sub=_reviewer_sub(event),
@@ -105,7 +106,7 @@ def handle_decision(
         session.refresh(organization)
         logger.info(
             "Organization review decision",
-            extra={"action": action, "org_id": str(organization.id)},
+            extra={"action": action, "org_id": str(organization.id), "forced": force},
         )
         return json_response(
             200,
@@ -153,6 +154,79 @@ def apply_organization_rejection(
         )
 
 
+def apply_organization_approval(
+    event: Mapping[str, Any],
+    resource_id: str,
+    *,
+    reviewer: str,
+) -> dict[str, Any]:
+    """Approve one organization. Same fields as an admin approve decision."""
+    body = parse_object_body(event)
+    force = _validated_approve_body(body)
+    org_id = _parse_uuid(resource_id, "id")
+    with Session(get_engine()) as session:
+        _set_session_audit_context(session, event, user_id=reviewer)
+        organization = session.get(Organization, org_id)
+        if organization is None:
+            raise NotFoundError("organizations", resource_id)
+        try:
+            _apply_decision(
+                session,
+                organization,
+                "approve",
+                force=force,
+                notes=body.get("notes") if "notes" in body else None,
+                status=body.get("status"),
+                reviewer_sub=reviewer,
+                notes_provided="notes" in body,
+                reason=None,
+            )
+        except ReviewBlockedError as exc:
+            return json_response(
+                400,
+                {
+                    "error": exc.message,
+                    "issues": [issue.to_dict() for issue in exc.issues],
+                },
+                event=event,
+            )
+        issues = () if not force else snapshot_for_org(session, organization).issues
+        n = sum(issue.severity == "blocker" for issue in issues)
+        session.commit()
+        session.refresh(organization)
+        logger.info(
+            "Organization approved",
+            extra={"org_id": str(organization.id), "forced": force, "blocker_count": n},
+        )
+        return json_response(
+            200,
+            _serialize_organization(organization),
+            event=event,
+        )
+
+
+def _only_this_action(body: Mapping[str, Any], action_name: str) -> None:
+    """Refuse a different action before any lookup."""
+    action = body.get("action")
+    if action not in (None, "", action_name):
+        raise ValidationError(
+            f"Only {action_name} is available on this route",
+            field="action",
+        )
+
+
+def _validated_approve_body(body: Mapping[str, Any]) -> bool:
+    """Check the approve body before any organization lookup."""
+    _only_this_action(body, "approve")
+    _decision_reason(body.get("reason"), "approve")
+    if "notes" in body:
+        _parse_notes(body.get("notes"))
+    status = body.get("status")
+    if status not in (None, ""):
+        parse_org_status(status)
+    return _parse_force(body.get("force"))
+
+
 def _validated_reject_body(body: Mapping[str, Any]) -> str:
     """Check the reject body before any organization lookup."""
     _reject_other_actions(body)
@@ -168,13 +242,8 @@ def _validated_reject_body(body: Mapping[str, Any]) -> str:
 
 
 def _reject_other_actions(body: Mapping[str, Any]) -> None:
-    """This route rejects. Approve, reopen, and force stay on admin."""
-    action = body.get("action")
-    if action not in (None, "", "reject"):
-        raise ValidationError(
-            "Only reject is available on this route",
-            field="action",
-        )
+    """This route rejects. Reopen and force stay on the admin decision."""
+    _only_this_action(body, "reject")
     if "force" in body:
         raise ValidationError(
             "force is not available on this route",
@@ -218,10 +287,9 @@ def handle_bulk(event: Mapping[str, Any]) -> dict[str, Any]:
         )
         session.commit()
     ok_count = sum(1 for item in results if item["status"] == "ok")
-    logger.info(
-        "Bulk organization review",
-        extra={"action": action, "count": len(org_ids), "ok": ok_count},
-    )
+    logged = {"action": action, "count": len(org_ids), "ok": ok_count}
+    logged["forced"] = force
+    logger.info("Bulk organization review", extra=logged)
     return json_response(
         200,
         {"results": results},

@@ -99,7 +99,7 @@ describe('SearchPanel', () => {
     }
   });
 
-  it('lists areas in one row from All Hong Kong to the islands', () => {
+  it('lists areas in order from All Hong Kong to the islands', () => {
     renderPanel();
 
     const areaLabels = [
@@ -123,6 +123,30 @@ describe('SearchPanel', () => {
         slot?.classList.contains('h-12'),
       ),
     ).toBe(true);
+  });
+
+  it('wraps the area choices on phones so none run off the screen', () => {
+    renderPanel();
+
+    const row = screen.getByRole('button', {
+      name: 'Hong Kong Island',
+    }).parentElement;
+    expect(row).toHaveClass('flex-wrap', 'min-w-0', 'max-w-full', 'md:grid', 'md:grid-cols-5');
+    expect(row).not.toHaveClass('flex-nowrap');
+    for (const fieldset of document.querySelectorAll('fieldset')) {
+      expect(fieldset).toHaveClass('min-w-0');
+    }
+  });
+
+  it('keeps Search in the pinned footer and still submits the form', () => {
+    renderPanel();
+
+    const search = screen.getByRole('button', { name: 'Search' });
+    expect(search.closest('[data-modal-footer]')).not.toBeNull();
+    expect(search.closest('[data-modal-body]')).toBeNull();
+
+    fireEvent.click(search);
+    expect(push).toHaveBeenCalledTimes(1);
   });
 
   it('toggles an activity type when its choice is pressed', () => {
@@ -150,6 +174,25 @@ describe('SearchPanel', () => {
     expect(
       screen.queryByRole('button', { name: 'Clear activity types' }),
     ).toBeNull();
+  });
+
+  it('locks the neighbourhood menu to the sheet width', () => {
+    process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'hong_kong_island';
+    clearSearchAreaScopeCacheForTests();
+    renderPanel();
+
+    const neighbourhoods = screen.getByRole('combobox');
+    expect(neighbourhoods).toHaveClass('min-w-0', 'max-w-full', 'w-full');
+    expect(neighbourhoods.className).toContain('[field-sizing:fixed]');
+    expect(neighbourhoods.parentElement).toHaveClass(
+      'grid',
+      'min-w-0',
+      'w-full',
+      'grid-cols-[minmax(0,1fr)]',
+    );
+    expect(
+      neighbourhoods.querySelector('option')?.textContent,
+    ).toBe('All open areas in Hong Kong Island');
   });
 
   it('hides neighbourhoods outside the scope', () => {
@@ -209,7 +252,7 @@ describe('SearchPanel', () => {
     ).toHaveAttribute('aria-pressed', 'true');
 
     fireEvent.click(screen.getByRole('button', { name: 'Search' }));
-    expect(push).toHaveBeenCalledWith('/en/search/?age=3-6&view=map');
+    expect(push).toHaveBeenCalledWith('/en/search/?view=map');
     expect(loadRecentSearch()?.regionId).toBeNull();
   });
 

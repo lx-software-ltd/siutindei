@@ -51,6 +51,8 @@ jobs:
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: "stable"
+          # pubspec.lock was resolved with this SDK. Floating stable rewrites it.
+          flutter-version: "3.47.9"
           cache: true
 
       - name: Install system SQLite for Linux native assets
@@ -154,7 +156,14 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+        # The runner image already ships Chromium's libraries, so --with-deps
+        # only adds fonts from apt. When the apt mirrors cannot be reached,
+        # install the browser alone instead of failing before any test runs.
+        run: |
+          if ! timeout 180 npx playwright install chromium --with-deps; then
+            echo "::warning::Could not install Chromium's apt packages; continuing with the browser only."
+            npx playwright install chromium
+          fi
 
       - name: Run Playwright tests
         run: npm run test:e2e

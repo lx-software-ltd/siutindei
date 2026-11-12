@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, ForeignKey, Integer, Text, text
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, Text, text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TIMESTAMP
@@ -105,6 +105,13 @@ class Organization(Base):
     )
     source_url: Mapped[str | None] = mapped_column(Text(), nullable=True)
     source_note: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    parent_verified: Mapped[bool] = mapped_column(
+        Boolean(),
+        nullable=False,
+        default=False,
+        server_default=text("false"),
+        comment="Admin-only: parents have verified this organization",
+    )
     review_status: Mapped[str] = mapped_column(
         Text(),
         nullable=False,

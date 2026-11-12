@@ -61,6 +61,9 @@ export const BUBBLE_SLOTS: readonly BubbleSlot[] = [
   },
 ];
 
+/** Freed for the scope plates, which sit in that corner. */
+export const TOP_RIGHT_BUBBLE_SLOT = 1;
+
 export const LARGE_BUBBLE_COUNT = 6;
 export const SMALL_BUBBLE_COUNT = 3;
 
