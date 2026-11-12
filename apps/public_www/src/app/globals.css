@@ -202,10 +202,6 @@ body {
   height: calc(100dvh - 13rem);
 }
 
-.listing-card-mini-map {
-  background-color: var(--color-brand-50);
-}
-
 /* Pages with their own enquiry bar or a full-screen map hide the floating WhatsApp button. */
 body:has([data-hide-whatsapp-fab]) .whatsapp-fab {
   display: none;

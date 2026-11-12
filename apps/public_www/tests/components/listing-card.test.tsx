@@ -12,7 +12,6 @@ const labels: ListingCardLabels = {
   parentVerified: 'Parent-Verified',
   freeTrial: 'Free trial',
   imageFallback: 'Photo coming soon',
-  mapAlt: 'Map location',
   locationsCount: '{count} locations',
   detailsOnRequest: 'Details on request',
 };

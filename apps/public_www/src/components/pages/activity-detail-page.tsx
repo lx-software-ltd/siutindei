@@ -194,7 +194,6 @@ function cardLabels(copy: Copy): ListingCardLabels {
     parentVerified: copy.parentVerifiedLabel,
     freeTrial: copy.listingFreeTrialLabel,
     imageFallback: copy.imageFallbackLabel,
-    mapAlt: copy.mapAltLabel,
     locationsCount: copy.locationsCountLabel,
     detailsOnRequest: copy.askForPriceLabel,
   };
