@@ -50,3 +50,29 @@ test('legal pages render', async ({ page }) => {
     await expect(page.locator('h1').first()).toBeVisible();
   }
 });
+
+test('a missing activity shows the hide-and-seek steamer and a way back', async ({
+  page,
+}) => {
+  const errors = collectPageErrors(page);
+  await page.goto('/en/activity/?id=no-such-activity');
+
+  await expect(
+    page.getByRole('heading', { level: 1, name: /hide-and-seek/ }),
+  ).toBeVisible({ timeout: 30_000 });
+  const layers = page.locator('.hide-and-seek img');
+  await expect(layers).toHaveCount(2);
+  await expect
+    .poll(() =>
+      layers.evaluateAll((images) =>
+        images.every(
+          (image) => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0,
+        ),
+      ),
+    )
+    .toBe(true);
+
+  await page.getByRole('link', { name: 'Browse activities' }).click();
+  await expect(page).toHaveURL(/\/en\/search\/?\?view=list/);
+  expect(errors).toEqual([]);
+});

@@ -415,6 +415,48 @@ body:has(.search-page) .whatsapp-fab__label {
   }
 }
 
+/* Missing activity: the bao lifts the steamer lid, looks both ways, and
+   ducks back in. The still pose, also used for reduced motion, is the peek.
+   The 17.3% drop is the 38 units between the lifted lid and the rim in the
+   220-unit artwork. */
+.hide-and-seek__lid {
+  transform-origin: 50% 44%;
+  transform: translateY(0) rotate(-5deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hide-and-seek__lid {
+    animation: hide-and-seek-peek 6s ease-in-out infinite;
+  }
+}
+
+@keyframes hide-and-seek-peek {
+  0%,
+  10% {
+    transform: translateY(17.3%) rotate(0deg);
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  20%,
+  44% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  54%,
+  78% {
+    transform: translateY(0) rotate(4deg);
+    animation-timing-function: ease-in;
+  }
+  83% {
+    transform: translateY(17.3%) rotate(0deg);
+  }
+  86% {
+    transform: translateY(16.3%) rotate(1.5deg);
+  }
+  89%,
+  100% {
+    transform: translateY(17.3%) rotate(0deg);
+  }
+}
+
 /* -------------------------------------------------------- */
 /* Choice tiles: large icons that lift, tilt, and settle     */
 /* with a playful-but-premium spring on hover.               */
