@@ -42,7 +42,10 @@ describe('WhatsApp analytics surfaces', () => {
     render(<WhatsappFab label="Chat on WhatsApp" />);
 
     const fab = screen.getByRole('link', { name: 'Chat on WhatsApp' });
-    expect(fab).toHaveClass('whatsapp-fab');
+    expect(fab).toHaveClass('whatsapp-fab', 'min-h-12', 'min-w-12', 'sm:hidden');
+    // The search results page hides the label and keeps the icon.
+    expect(fab.querySelector('img')).toHaveAttribute('src', '/images/icons/chat.svg');
+    expect(fab.querySelector('.whatsapp-fab__label')).toHaveTextContent('Chat on WhatsApp');
     fireEvent.click(fab);
 
     expect(window.dataLayer).toEqual([

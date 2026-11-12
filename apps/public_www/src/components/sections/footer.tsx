@@ -12,6 +12,9 @@ interface FooterProps {
   readonly content: FooterContent;
 }
 
+/** Phones stack the links tightly, so each one pads out its own tap area. */
+const FOOTER_LINK_CLASS = 'inline-block py-1.5 md:inline md:py-0';
+
 export function Footer({ locale, content }: FooterProps) {
   const { siteName, contact } = getSiteConfig();
   const year = getCopyrightYear();
@@ -25,71 +28,74 @@ export function Footer({ locale, content }: FooterProps) {
       className="border-t border-brand-100 bg-brand-50 text-ink-700"
       data-section-id="footer"
     >
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[max-content_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
-          <div>
+      {/* Phones: the bottom padding keeps the copyright clear of the WhatsApp button. */}
+      <div className="mx-auto max-w-7xl px-4 pb-20 pt-6 sm:px-6 sm:py-12 lg:px-8">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-5 md:gap-10 lg:grid-cols-[max-content_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="col-span-2 flex items-center gap-4 md:col-span-1 md:block">
             <img
               src="/images/brand/siutindei-logo-stacked.svg"
               alt={siteName}
               width={175}
               height={150}
-              className="h-auto w-40"
+              className="h-auto w-20 shrink-0 md:w-40"
             />
-            <p className="mt-2 text-sm">{content.tagline}</p>
+            <p className="text-sm md:mt-2">{content.tagline}</p>
           </div>
-          <div className="min-w-0 text-sm">
+          <div className="col-span-2 min-w-0 text-sm md:col-span-1">
             <p className="font-semibold text-ink-900">
               {content.contactHeading}
             </p>
-            {contact.email ? (
-              <p className="mt-2">
-                <a
-                  href={`mailto:${contact.email}`}
-                  className="underline-offset-2 hover:underline"
-                >
-                  {contact.email}
-                </a>
-              </p>
-            ) : null}
-            {contact.whatsappUrl ? (
-              <p className="mt-1">
-                <TrackedWhatsappLink
-                  href={contact.whatsappUrl}
-                  leadType="whatsapp_footer"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="underline-offset-2 hover:underline"
-                >
-                  {contact.whatsappDisplay
-                    ? `WhatsApp ${contact.whatsappDisplay}`
-                    : 'WhatsApp'}
-                </TrackedWhatsappLink>
-              </p>
-            ) : null}
-            {contact.instagramUrl ? (
-              <p className="mt-1">
-                <a
-                  href={contact.instagramUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="underline-offset-2 hover:underline"
-                >
-                  Instagram
-                </a>
-              </p>
-            ) : null}
+            <div className="mt-1 flex flex-wrap gap-x-6 md:mt-2 md:block md:space-y-1">
+              {contact.email ? (
+                <p>
+                  <a
+                    href={`mailto:${contact.email}`}
+                    className={`${FOOTER_LINK_CLASS} underline-offset-2 hover:underline`}
+                  >
+                    {contact.email}
+                  </a>
+                </p>
+              ) : null}
+              {contact.whatsappUrl ? (
+                <p>
+                  <TrackedWhatsappLink
+                    href={contact.whatsappUrl}
+                    leadType="whatsapp_footer"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className={`${FOOTER_LINK_CLASS} underline-offset-2 hover:underline`}
+                  >
+                    {contact.whatsappDisplay
+                      ? `WhatsApp ${contact.whatsappDisplay}`
+                      : 'WhatsApp'}
+                  </TrackedWhatsappLink>
+                </p>
+              ) : null}
+              {contact.instagramUrl ? (
+                <p>
+                  <a
+                    href={contact.instagramUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className={`${FOOTER_LINK_CLASS} underline-offset-2 hover:underline`}
+                  >
+                    Instagram
+                  </a>
+                </p>
+              ) : null}
+            </div>
           </div>
           {content.columns.map((column) => (
             <div key={column.title} className="min-w-0">
               <p className="text-sm font-semibold text-ink-900">
                 {column.title}
               </p>
-              <ul className="mt-3 space-y-2 text-sm">
+              <ul className="mt-1 text-sm md:mt-3 md:space-y-2">
                 {column.links.map((link) => (
                   <li key={link.href}>
                     <Link
                       href={localizeHref(link.href, locale)}
-                      className="hover:text-brand-600 hover:underline"
+                      className={`${FOOTER_LINK_CLASS} hover:text-brand-600 hover:underline`}
                     >
                       {link.label}
                     </Link>
@@ -99,7 +105,7 @@ export function Footer({ locale, content }: FooterProps) {
             </div>
           ))}
         </div>
-        <p className="mt-10 border-t border-brand-200 pt-6 text-xs">
+        <p className="mt-5 border-t border-brand-200 pt-4 text-xs md:mt-10 md:pt-6">
           {copyright}
         </p>
       </div>
