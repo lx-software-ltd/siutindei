@@ -29,6 +29,8 @@
       "anywhereInRegionLabel": "Anywhere in this area",
       "childAgeLabel": "Child age",
       "activityTypesLabel": "Activity types",
+      "activityTypesPreviousLabel": "Previous activity types",
+      "activityTypesNextLabel": "Next activity types",
       "searchLabel": "Search",
       "allHongKongLabel": "All Hong Kong",
       "allAreasLabel": "All areas",

@@ -149,6 +149,49 @@ describe('SearchPanel', () => {
     expect(push).toHaveBeenCalledTimes(1);
   });
 
+  it('pages activity types in a carousel of larger two-line cards', () => {
+    renderPanel();
+
+    const track = screen.getByRole('region', { name: 'Activity types' });
+    expect(track).toHaveClass(
+      'listing-carousel__track',
+      'flex-wrap',
+      'md:flex-nowrap',
+      'md:overflow-x-auto',
+    );
+    expect(track).not.toHaveClass('overflow-x-scroll');
+
+    const workshop = screen.getByRole('button', {
+      name: 'Early years and schools',
+    });
+    expect(workshop).toHaveClass(
+      'md:w-[calc((100%-1.5rem)/3)]',
+      'md:snap-start',
+    );
+    expect(workshop).not.toHaveClass('md:flex-1');
+    expect(workshop.querySelector('span:last-child')).toHaveClass(
+      'md:line-clamp-2',
+    );
+
+    const previous = screen.getByRole('button', {
+      name: 'Previous activity types',
+    });
+    const next = screen.getByRole('button', { name: 'Next activity types' });
+    expect(previous).toBeDisabled();
+    expect(next).toBeEnabled();
+
+    Object.defineProperty(track, 'clientWidth', { configurable: true, value: 330 });
+    Object.defineProperty(track, 'scrollWidth', { configurable: true, value: 770 });
+    const card = track.firstElementChild;
+    expect(card).not.toBeNull();
+    Object.defineProperty(card, 'offsetWidth', { configurable: true, value: 100 });
+    const scrollTo = vi.fn();
+    track.scrollTo = scrollTo;
+
+    fireEvent.click(next);
+    expect(scrollTo).toHaveBeenCalledWith({ left: 300, behavior: 'smooth' });
+  });
+
   it('toggles an activity type when its choice is pressed', () => {
     renderPanel();
 

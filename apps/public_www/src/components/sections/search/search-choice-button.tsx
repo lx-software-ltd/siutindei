@@ -7,6 +7,7 @@ interface SearchChoiceButtonProps {
   readonly iconShape?: 'illustration' | 'flag';
   readonly disabled?: boolean;
   readonly disabledHint?: string;
+  readonly layout?: 'fill' | 'carousel';
 }
 
 export function SearchChoiceButton({
@@ -18,6 +19,7 @@ export function SearchChoiceButton({
   iconShape = 'illustration',
   disabled = false,
   disabledHint,
+  layout = 'fill',
 }: SearchChoiceButtonProps) {
   const selectedClassName = disabled
     ? 'cursor-not-allowed border-ink-900/15 bg-white text-ink-500 opacity-40'
@@ -41,9 +43,13 @@ export function SearchChoiceButton({
       className={
         'search-choice inline-flex shrink-0 items-center gap-2 ' +
         'rounded-full border px-4 py-2 text-sm font-medium leading-5 ' +
-        'transition md:min-w-0 md:w-full md:flex-1 md:flex-col ' +
-        'md:items-center md:justify-start md:gap-2 md:self-stretch ' +
-        'md:rounded-2xl md:px-2 md:py-3 ' +
+        'transition md:flex-col md:items-center md:justify-start md:gap-2 ' +
+        'md:self-stretch md:rounded-2xl md:px-2 md:py-3 ' +
+        (layout === 'carousel'
+          ? 'md:w-[calc((100%-1.5rem)/3)] md:max-w-[calc((100%-1.5rem)/3)] ' +
+            'md:min-w-0 md:basis-[calc((100%-1.5rem)/3)] md:grow-0 ' +
+            'md:shrink-0 md:snap-start '
+          : 'md:min-w-0 md:w-full md:flex-1 ') +
         `${selectedClassName} ${className}`
       }
     >
@@ -63,7 +69,13 @@ export function SearchChoiceButton({
           className={iconClassName}
         />
       </span>
-      <span className="md:text-center">
+      <span
+        className={
+          layout === 'carousel'
+            ? 'md:line-clamp-2 md:w-full md:min-w-0 md:text-balance md:text-center'
+            : 'md:text-center'
+        }
+      >
         {label}
         {disabled && disabledHint ? (
           <span className="mt-1 block text-xs font-medium">{disabledHint}</span>
