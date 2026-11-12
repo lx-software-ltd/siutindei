@@ -113,12 +113,7 @@ Source: [`apps/public_www`](../../apps/public_www).
   the Hong Kong icon sheet (`public/images/small-world/bubble-*.webp`,
   `BUBBLE_BUILD_SEED` in `src/lib/small-world/kawaii-bubbles.ts`). They
   are rendered in the static HTML; 3 are hidden below `lg`. Motion is a
-  CSS drift only. There is no WebGL / three.js
-  upgrade. A
-  canvas-based sparkle cursor trail
-  (`src/components/shared/sparkle-cursor.tsx`) is mounted from the locale
-  layout for fine-pointer devices. No CSP changes are required: everything
-  is same-origin static JS and `<canvas>` rendering.
+  CSS drift only. There is no WebGL / three.js upgrade.
 - **Search & detail:**   `/[locale]/search/` opens the Google Maps split view
   when maps are enabled (explicit `?view=map`, or no `view` param). `?view=list`
   is the results grid. Search, See all, and discovery carousel links land on

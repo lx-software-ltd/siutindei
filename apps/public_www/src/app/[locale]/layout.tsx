@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 
 import { PageLayout } from '@/components/shared/page-layout';
-import { SparkleCursor } from '@/components/shared/sparkle-cursor';
 import { WhatsappFab } from '@/components/shared/whatsapp-fab';
 import {
   generateLocaleStaticParams,
@@ -64,7 +63,6 @@ export default async function LocaleLayout({
       {publicSiteConfig.whatsappUrl ? (
         <WhatsappFab label={content.common.shell.whatsappFabLabel} />
       ) : null}
-      <SparkleCursor />
     </div>
   );
 }
