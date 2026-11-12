@@ -17,7 +17,7 @@ const FOOTER_LINK_CLASS = 'inline-block py-1.5 md:inline md:py-0';
 
 /** Icon buttons keep a 44px target on every width. */
 const CONTACT_ICON_CLASS =
-  'link-unadorned inline-flex h-11 w-11 items-center justify-center rounded-full hover:bg-brand-100';
+  'link-unadorned inline-flex h-11 w-11 items-center justify-center transition-transform hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0';
 
 function contactIconName(label: string, detail: string): string {
   return detail ? `${label} ${detail}` : label;
@@ -34,10 +34,10 @@ function ContactIcon({
     <img
       src={src}
       alt={label}
-      width={24}
-      height={24}
+      width={36}
+      height={36}
       decoding="async"
-      className="h-6 w-6 shrink-0"
+      className="h-9 w-9 shrink-0"
     />
   );
 }
@@ -72,14 +72,15 @@ export function Footer({ locale, content }: FooterProps) {
             <p className="font-semibold text-ink-900">
               {content.contactHeading}
             </p>
-            <div className="mt-1 flex flex-wrap gap-1 md:mt-2">
+            {/* The negative margin lines the first tile up with the heading. */}
+            <div className="-ml-1 mt-1 flex flex-wrap gap-1 md:mt-2">
               {contact.email ? (
                 <a
                   href={`mailto:${contact.email}`}
                   className={CONTACT_ICON_CLASS}
                 >
                   <ContactIcon
-                    src="/images/icons/mail.svg"
+                    src="/images/contact/email.svg"
                     label={contactIconName(iconLabels.email, contact.email)}
                   />
                 </a>
@@ -93,7 +94,7 @@ export function Footer({ locale, content }: FooterProps) {
                   className={CONTACT_ICON_CLASS}
                 >
                   <ContactIcon
-                    src="/images/icons/whatsapp.svg"
+                    src="/images/contact/whatsapp.svg"
                     label={contactIconName(
                       iconLabels.whatsapp,
                       contact.whatsappDisplay,
@@ -109,7 +110,7 @@ export function Footer({ locale, content }: FooterProps) {
                   className={CONTACT_ICON_CLASS}
                 >
                   <ContactIcon
-                    src="/images/icons/instagram.svg"
+                    src="/images/contact/instagram.svg"
                     label={iconLabels.instagram}
                   />
                 </a>

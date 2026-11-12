@@ -103,8 +103,8 @@ Source: [`apps/public_www`](../../apps/public_www).
     shown, and of the applied filters only a name search (`q`) keeps its
     chip, because the search bar and the filter row already show the rest.
   - The footer sets a small logo, shows the configured email, WhatsApp,
-    and Instagram contacts as icons, and sets the two link columns side
-    by side.
+    and Instagram contacts as coloured tiles from
+    `public/images/contact/`, and sets the two link columns side by side.
 - **Body:** Marketing pages (for example About) still use `pages.<pageKey>.body`
   with the 12-column CSS grid (`rows` → `cells` with `component`, `colStart`,
   `colSpan`, optional `props`) in `src/components/sections/grid/page-body-grid.tsx`.

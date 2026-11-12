@@ -72,9 +72,12 @@ describe('Footer', () => {
     expect(instagram).toHaveAttribute('href', INSTAGRAM_URL);
     expect(instagram).toHaveAttribute('target', '_blank');
 
-    expect(email.querySelector('img')).toHaveAttribute('src', '/images/icons/mail.svg');
-    expect(whatsapp.querySelector('img')).toHaveAttribute('src', '/images/icons/whatsapp.svg');
-    expect(instagram.querySelector('img')).toHaveAttribute('src', '/images/icons/instagram.svg');
+    expect(email.querySelector('img')).toHaveAttribute('src', '/images/contact/email.svg');
+    expect(whatsapp.querySelector('img')).toHaveAttribute('src', '/images/contact/whatsapp.svg');
+    expect(instagram.querySelector('img')).toHaveAttribute('src', '/images/contact/instagram.svg');
+    for (const link of [email, whatsapp, instagram]) {
+      expect(link.querySelector('img')).toHaveClass('h-9', 'w-9');
+    }
 
     expect(screen.queryByText('hello@example.com')).not.toBeInTheDocument();
     expect(screen.queryByText(/\+852/)).not.toBeInTheDocument();
