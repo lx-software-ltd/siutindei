@@ -225,7 +225,44 @@ describe('ActivityDetailPage', () => {
     vi.mocked(fetchActivityListingById).mockResolvedValue(null);
     renderPage();
 
-    expect(await screen.findByText(copy.notFoundLabel)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: copy.notFoundLabel }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(copy.notFoundHint)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: copy.browseActivitiesLabel })).toHaveAttribute(
+      'href',
+      '/en/search?view=list',
+    );
+    expect(screen.getByRole('link', { name: copy.goHomeLabel })).toHaveAttribute('href', '/en');
+  });
+
+  it('draws the hide-and-seek steamer without announcing it', async () => {
+    vi.mocked(fetchActivityListingById).mockResolvedValue(null);
+    const { container } = renderPage();
+
+    await screen.findByRole('heading', { level: 1, name: copy.notFoundLabel });
+    const scene = container.querySelector('.hide-and-seek');
+    expect(scene).toHaveAttribute('aria-hidden', 'true');
+    expect(
+      [...(scene?.querySelectorAll('img') ?? [])].map((image) => image.getAttribute('src')),
+    ).toEqual([
+      '/images/small-world/hide-and-seek-steamer.svg',
+      '/images/small-world/hide-and-seek-lid.svg',
+    ]);
+    expect(scene?.querySelector('.hide-and-seek__lid')).not.toBeNull();
+  });
+
+  it('says the activity failed to load, as an alert, when the request fails', async () => {
+    vi.mocked(fetchActivityListingById).mockRejectedValue(new Error('network down'));
+    renderPage();
+
+    const alert = await screen.findByRole('alert');
+    expect(
+      within(alert).getByRole('heading', { level: 1, name: copy.errorLabel }),
+    ).toBeInTheDocument();
+    expect(within(alert).getByText(copy.errorHint)).toBeInTheDocument();
+    expect(screen.queryByText(copy.notFoundHint)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: copy.browseActivitiesLabel })).toBeInTheDocument();
   });
 
