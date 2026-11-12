@@ -149,6 +149,28 @@ describe('SearchPanel', () => {
     expect(push).toHaveBeenCalledTimes(1);
   });
 
+  it('shows activity types as a compact four-column chip grid', () => {
+    renderPanel();
+
+    expect(screen.getByText(/pick any/)).toBeInTheDocument();
+    const workshop = screen.getByRole('button', {
+      name: 'Early years and schools',
+    });
+    const row = workshop.parentElement;
+    expect(row).toHaveClass('flex-wrap', 'md:grid', 'md:grid-cols-4');
+    expect(row).not.toHaveClass('overflow-x-auto');
+    expect(workshop).toHaveClass('md:h-[50px]', 'md:flex-row', 'md:rounded-xl');
+    expect(workshop).not.toHaveClass('md:flex-col');
+    expect(workshop.querySelector('img')).toHaveClass('h-[30px]', 'w-[30px]');
+    expect(workshop.querySelector('span:last-child')).toHaveClass(
+      'md:line-clamp-2',
+      'md:text-[13px]',
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Next activity types' }),
+    ).toBeNull();
+  });
+
   it('toggles an activity type when its choice is pressed', () => {
     renderPanel();
 
