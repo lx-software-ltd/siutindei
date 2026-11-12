@@ -464,7 +464,7 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
         <ActivityRelated
           locale={locale}
           id="more-from-organiser"
-          title={copy.moreFromOrganiserHeading}
+          title={formatTemplate(copy.moreFromOrganiserHeading, { name: orgName })}
           params={{ organizationIds: [listing.organization.id] }}
           excludeIds={[listing.activity.id]}
           onLoaded={setOrganiserActivityIds}

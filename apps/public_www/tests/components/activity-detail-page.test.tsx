@@ -12,6 +12,7 @@ import {
 } from '@/lib/activities/search-client';
 import type { ActivityListing, OrganizationContact } from '@/lib/activities/types';
 import { ANALYTICS_CONSENT_STORAGE_KEY } from '@/lib/analytics/consent';
+import { formatTemplate } from '@/lib/format-template';
 
 import { withChromeCopy } from '../helpers/chrome-copy';
 import { buildListing, buildLocation } from '../helpers/listing-fixture';
@@ -143,6 +144,8 @@ describe('ActivityDetailPage', () => {
       expect(screen.getByRole('heading', { level: 2, name: heading })).toBeInTheDocument();
     }
     expect(screen.getByText('Bring an apron.')).toBeInTheDocument();
+    expect(screen.queryByText('Times are Hong Kong time.')).not.toBeInTheDocument();
+    expect(screen.queryByText('以上為香港時間。')).not.toBeInTheDocument();
     const website = screen.getByRole('link', { name: /^Website/ });
     expect(website).toHaveAttribute('href', 'https://studio.example.com/');
     expect(website).toHaveClass('min-w-0', 'overflow-hidden');
@@ -225,7 +228,10 @@ describe('ActivityDetailPage', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('heading', { level: 2, name: copy.moreFromOrganiserHeading }),
+      await screen.findByRole('heading', {
+        level: 2,
+        name: formatTemplate(copy.moreFromOrganiserHeading, { name: 'Studio' }),
+      }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Clay club' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: copy.similarHeading })).not.toBeInTheDocument();
