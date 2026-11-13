@@ -69,12 +69,17 @@ function buildListing(
 function renderDiscovery(
   locale: 'en' | 'zh-HK' = 'en',
   filters?: SearchFiltersState,
+  hasStaticCatalogue = false,
 ) {
   const content = getContent(locale);
   render(
     withChromeCopy(
       <SearchProvider initialFilters={filters}>
-        <DiscoveryHomeSection locale={locale} copy={content.discovery} />
+        <DiscoveryHomeSection
+          locale={locale}
+          copy={content.discovery}
+          hasStaticCatalogue={hasStaticCatalogue}
+        />
       </SearchProvider>,
     ),
   );
@@ -318,6 +323,28 @@ describe('DiscoveryHomeSection', () => {
     expect(
       screen.queryByRole('link', { name: content.discovery.nearRegionTitle }),
     ).not.toBeInTheDocument();
+  });
+
+  it('shows the search error when the page has no static catalogue', async () => {
+    vi.mocked(fetchActivitySearch).mockRejectedValue(new Error('offline'));
+    const content = renderDiscovery();
+
+    expect(await screen.findByText(content.discovery.errorLabel)).toBeInTheDocument();
+  });
+
+  it('stays silent on a search error when the page links to the static catalogue', async () => {
+    vi.mocked(fetchActivitySearch).mockRejectedValue(new Error('offline'));
+    const content = renderDiscovery('en', undefined, true);
+
+    await waitFor(() => {
+      expect(fetchActivitySearch).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('link', { name: content.discovery.popularTitle }),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.queryByText(content.discovery.errorLabel)).not.toBeInTheDocument();
   });
 
   it('says no areas are open when the scope matches nothing', async () => {

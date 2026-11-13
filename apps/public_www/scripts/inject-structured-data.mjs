@@ -48,7 +48,7 @@ function buildStructuredData({
   locale,
   description,
   email = '',
-  instagramUrl = '',
+  socialProfileUrls = [],
 }) {
   const localeHomeUrl = `${siteOrigin}/${locale}/`;
   const organization = {
@@ -60,7 +60,7 @@ function buildStructuredData({
     url: siteOrigin,
     logo: `${siteOrigin}${LOGO_IMAGE}`,
     areaServed: { '@type': 'Place', name: 'Hong Kong' },
-    ...(instagramUrl ? { sameAs: [instagramUrl] } : {}),
+    ...(socialProfileUrls.length > 0 ? { sameAs: socialProfileUrls } : {}),
     ...(email
       ? {
           contactPoint: {
@@ -129,7 +129,9 @@ async function main() {
       locale,
       description,
       email: optionalEnv('NEXT_PUBLIC_EMAIL'),
-      instagramUrl: optionalEnv('NEXT_PUBLIC_INSTAGRAM_URL'),
+      socialProfileUrls: ['NEXT_PUBLIC_INSTAGRAM_URL', 'NEXT_PUBLIC_FACEBOOK_URL']
+        .map(optionalEnv)
+        .filter(Boolean),
     });
     if (await injectIntoFile(filePath, structuredData)) {
       updatedCount += 1;

@@ -368,6 +368,15 @@
     "pricesLabel": "每堂收費",
     "agesRangeTemplate": "{min} 至 {max} 歲",
     "priceRangeTemplate": "{min} 至 {max}",
+    "questionsHeading": "家長常問",
+    "agesQuestion": "這些活動適合幾多歲的小朋友？",
+    "agesAnswerTemplate": "{ages}。每個活動頁都列出各自的適合年齡。",
+    "daysQuestion": "活動在星期幾進行？",
+    "daysAnswerTemplate": "{days}。每個活動頁都列出每週時間。",
+    "pricesQuestion": "收費多少？",
+    "pricesAnswerTemplate": "每堂{prices}（只計算主辦機構有公布收費的活動）。",
+    "joinQuestion": "怎樣參加？",
+    "joinAnswer": "打開活動頁，按頁上的資料聯絡主辦機構。",
     "searchLinkLabel": "用搜尋按年齡、日子及收費篩選",
     "homeFeaturedHeading": "活動頁面",
     "homeAllLinkTemplate": "查看全部 {count} 個活動",
@@ -391,6 +400,37 @@
         "我搬到舂坎角，找不到任何活動。",
         "附近其他家庭應該也一樣，所以我做了 Siu Tin Dei。"
       ],
+      "summary": {
+        "id": "what-is-siu-tin-dei",
+        "heading": "小天地 Siu Tin Dei 是什麼",
+        "paragraphs": [
+          "小天地 Siu Tin Dei 是一個整理香港兒童課程、興趣班及工作坊的網站。每個活動頁都列出適合年齡、每週時間、收費及主辦機構的聯絡方法。",
+          "現時收錄{placeFull}的活動，之後會逐區加入新地區。",
+          "小天地 Siu Tin Dei 由於香港註冊的 LX Software 營運。"
+        ]
+      },
+      "questions": {
+        "id": "questions",
+        "heading": "家長常問",
+        "items": [
+          {
+            "question": "怎樣參加活動？",
+            "answer": "打開活動頁，按頁上的資料聯絡主辦機構。活動頁列出適合年齡、每週時間及收費。"
+          },
+          {
+            "question": "小天地 Siu Tin Dei 覆蓋哪些地區？",
+            "answer": "現時收錄{placeFull}的活動，之後會逐區加入新地區。"
+          },
+          {
+            "question": "我開班教學，可以自己管理頁面嗎？",
+            "answer": "可以。與我聯絡，就可以自己管理頁面，用你的方式介紹你提供的活動。"
+          },
+          {
+            "question": "誰營運小天地 Siu Tin Dei？",
+            "answer": "於香港註冊的 LX Software。私隱政策及使用條款說明網站如何處理你的資料。"
+          }
+        ]
+      },
       "sections": [
         {
           "id": "stanley",

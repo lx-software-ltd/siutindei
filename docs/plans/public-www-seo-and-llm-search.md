@@ -1,6 +1,6 @@
 # Plan: SEO and LLM-search visibility for the public website
 
-**Status**: Approved, in progress
+**Status**: Approved, done pending launch checks
 **Zone**: mixed. Workstreams A, C, and F are green
 (`apps/public_www/**`, `docs/**`). Workstream B is green in the app
 and red wherever it touches `scripts/deploy/**`,
@@ -23,11 +23,12 @@ red slices listed under "Files".
    blocked.
 4. Landing pages use a new top-level route, `/<locale>/activities/`.
 
-Still open: rebuild cadence (question 5) and `sameAs` profiles
-(question 6). Until question 5 is answered the snapshot is read at
-each production promotion; activities newer than the last promotion
-use the `?id=` page. `sameAs` uses `NEXT_PUBLIC_INSTAGRAM_URL` when it
-is set.
+5. Rebuild cadence: every 24 hours. The snapshot stays hourly; a
+   scheduled refresh rebuilds the live commit at 04:00 HKT and skips
+   when no activity changed. Activities added in between use the `?id=`
+   page until the next refresh.
+6. `sameAs`: the Instagram and Facebook profiles
+   (`NEXT_PUBLIC_INSTAGRAM_URL`, `NEXT_PUBLIC_FACEBOOK_URL`).
 
 ### Snapshot design
 
@@ -63,11 +64,15 @@ tests and checklist steps of F.
   (Stanley), so a page per area would repeat the hub.
 - Landing-page introductions are templates over catalogue facts, not
   text written by a person. Replace them when someone writes them.
-- `AboutPage` JSON-LD, workstream C (about-page answer text and
-  questions), the build-output test, the Playwright test, the
-  Lighthouse URLs, `llms.txt`, and IndexNow are not done. The about
-  page is written in the owner's voice, so new text there needs the
-  owner.
+- Follow-up change: `AboutPage` JSON-LD, workstream C, the
+  build-output check (`seo:validate`), the Playwright test with search
+  data aborted, Lighthouse URLs for the hub, a type page, and an
+  activity page, `llms.txt`, the daily refresh, and IndexNow. The about
+  questions state only facts the site already shows (coverage, how to
+  join, organiser pages, LX Software); review the wording with the
+  owner. When search fails and the page links to the static catalogue,
+  the home carousels now render nothing instead of an error, so
+  crawlers that skip `/v1/**` see no error state.
 - Workstream D keeps `ai_bots_protection: block` next to the new
   `ai_training`, `ai_search`, and `ai_user` fields. Dropping it from
   the policy file would not change the zone, because the tool only

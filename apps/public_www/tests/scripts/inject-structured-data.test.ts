@@ -27,6 +27,7 @@ function runInject(outDir: string, extraEnv: Record<string, string> = {}): void 
       ...process.env,
       NEXT_PUBLIC_EMAIL: '',
       NEXT_PUBLIC_INSTAGRAM_URL: '',
+      NEXT_PUBLIC_FACEBOOK_URL: '',
       PUBLIC_WWW_OUT_DIR: outDir,
       NEXT_PUBLIC_SITE_ORIGIN: 'https://example.com',
       NEXT_PUBLIC_SITE_NAME: 'Siu Tin Dei',
@@ -100,13 +101,14 @@ describe('inject-structured-data', () => {
     runInject(outDir, {
       NEXT_PUBLIC_EMAIL: 'hello@example.com',
       NEXT_PUBLIC_INSTAGRAM_URL: 'https://www.instagram.com/example',
+      NEXT_PUBLIC_FACEBOOK_URL: 'https://www.facebook.com/example',
     });
 
     const html = readFileSync(join(outDir, 'en', 'index.html'), 'utf8');
     const graph = extractJsonLd(html)['@graph'] as JsonLdNode[];
     const organization = graph.find((n) => n['@type'] === 'Organization');
     expect(organization).toMatchObject({
-      sameAs: ['https://www.instagram.com/example'],
+      sameAs: ['https://www.instagram.com/example', 'https://www.facebook.com/example'],
       contactPoint: { '@type': 'ContactPoint', email: 'hello@example.com' },
     });
   });

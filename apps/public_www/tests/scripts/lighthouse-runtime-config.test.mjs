@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_PAGE_PATHS,
+  FIXTURE_ACTIVITY_ID,
   STATIC_COLLECT_ORIGIN,
   buildRuntimeConfig,
   collectUrl,
@@ -16,7 +17,13 @@ const baseConfig = JSON.parse(
 
 describe('parsePagePaths', () => {
   it('uses the locale pages when the input is empty', () => {
-    expect(DEFAULT_PAGE_PATHS).toEqual(['/en/', '/zh-HK/']);
+    expect(DEFAULT_PAGE_PATHS).toEqual([
+      '/en/',
+      '/zh-HK/',
+      '/en/activities/',
+      '/en/activities/arts/',
+      `/en/activity/${FIXTURE_ACTIVITY_ID}/`,
+    ]);
     expect(parsePagePaths('')).toEqual(DEFAULT_PAGE_PATHS);
     expect(parsePagePaths('  \n  ')).toEqual(DEFAULT_PAGE_PATHS);
   });
