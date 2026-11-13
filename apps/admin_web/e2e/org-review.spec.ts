@@ -33,6 +33,28 @@ test.describe('Organization review queue', () => {
     await expect(release).toHaveAttribute('aria-pressed', 'false');
   });
 
+  test('shows whether the default neighbourhood is ready to open', async ({
+    adminPage,
+  }) => {
+    const summaryRequest = adminPage.waitForRequest(
+      (request) =>
+        request.url().includes('/org-review/summary') &&
+        new URL(request.url()).searchParams.has('area_id')
+    );
+    await adminPage.goto('/admin/dashboard?section=imports&tab=review');
+    await summaryRequest;
+
+    const card = adminPage.getByTestId('area-readiness-card');
+    await expect(card.getByRole('heading', { name: 'Ready to open?' })).toBeVisible();
+    await expect(card.getByText('Not yet')).toBeVisible();
+    await expect(card.getByText('7 of 10 (70%); needs 80%')).toBeVisible();
+    await expect(card.getByText('3 of 6 (50%); needs 50%')).toBeVisible();
+    await expect(card.getByText('Classes 8 · Camps 2 · Places 5 · Nurseries 0 · Eat 0')).toBeVisible();
+
+    await showAllCatalogNeighbourhoods(adminPage);
+    await expect(card).toHaveCount(0);
+  });
+
   test('lists import history', async ({ adminPage }) => {
     await adminPage.goto('/admin/dashboard?section=imports&tab=history');
     await expect(

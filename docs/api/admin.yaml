@@ -1082,7 +1082,17 @@ paths:
       summary: Review queue counts
       description: |
         Aggregated in SQL. `by_issue` counts organizations once per issue
-        code, including warnings.
+        code, including warnings. With `area_id`, the response adds a
+        `readiness` block for that area and its descendants; the other
+        counts stay catalogue-wide.
+      parameters:
+        - name: area_id
+          in: query
+          required: false
+          description: Active area to check against the opening gate.
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: Counts by review state, source, and issue
@@ -1090,6 +1100,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrgReviewSummary'
+        "400":
+          description: area_id is not a UUID, or not an active area
 
   /v1/admin/org-review/{id}:
     parameters:
@@ -5677,6 +5689,67 @@ components:
             type: integer
         with_blockers:
           type: integer
+        readiness:
+          $ref: '#/components/schemas/AreaReadiness'
+
+    AreaReadiness:
+      type: object
+      description: |
+        Whether an area can open. It is ready when at least
+        `thresholds.complete_share` of its classes and camps are complete
+        and at least `thresholds.verified_share` of its organisers are
+        parent-verified. Rejected organisers and listings in hidden
+        categories are left out. A share is null when there is nothing
+        to count, and then the area is not ready.
+      required:
+        - area_id
+        - listings_by_kind
+        - classes_and_camps
+        - complete_classes_and_camps
+        - organisers
+        - verified_organisers
+        - complete_share
+        - verified_share
+        - thresholds
+        - ready
+      properties:
+        area_id:
+          type: string
+          format: uuid
+        listings_by_kind:
+          type: object
+          description: Listings per kind. Every kind is present, including zeros.
+          additionalProperties:
+            type: integer
+        classes_and_camps:
+          type: integer
+        complete_classes_and_camps:
+          type: integer
+          description: |
+            Classes and camps with a price and a weekly time. A class also
+            needs an age range that is not a catch-all.
+        organisers:
+          type: integer
+        verified_organisers:
+          type: integer
+        complete_share:
+          type: number
+          nullable: true
+        verified_share:
+          type: number
+          nullable: true
+        thresholds:
+          type: object
+          required:
+            - complete_share
+            - verified_share
+          properties:
+            complete_share:
+              type: number
+            verified_share:
+              type: number
+        ready:
+          type: boolean
 
     OrgReviewDecisionRequest:
       type: object

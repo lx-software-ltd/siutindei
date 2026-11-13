@@ -2405,6 +2405,22 @@ export async function setupApiMocks(
           by_status_source: { importer: 1 },
           by_issue: { no_locations: 1, activity_added_since_rejected: 1 },
           with_blockers: 1,
+          ...(new URL(url).searchParams.get('area_id')
+            ? {
+                readiness: {
+                  area_id: new URL(url).searchParams.get('area_id'),
+                  listings_by_kind: { class: 8, camp: 2, place: 5, preschool: 0, eat: 0 },
+                  classes_and_camps: 10,
+                  complete_classes_and_camps: 7,
+                  organisers: 6,
+                  verified_organisers: 3,
+                  complete_share: 0.7,
+                  verified_share: 0.5,
+                  thresholds: { complete_share: 0.8, verified_share: 0.5 },
+                  ready: false,
+                },
+              }
+            : {}),
         }),
       });
       return;
