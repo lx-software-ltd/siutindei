@@ -6,6 +6,8 @@ from datetime import date
 from zoneinfo import ZoneInfo
 
 import pytest
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import Range
 
 from app.api.admin_resource_schedule import (
     _create_schedule,
@@ -14,10 +16,19 @@ from app.api.admin_resource_schedule import (
 )
 from app.api.admin_imports_export import serialize_export_schedule
 from app.api.admin_imports_schedule import upsert_schedule
+from app.db.models import (
+    Activity,
+    ActivitySchedule,
+    ActivityScheduleEntry,
+    Location,
+    Organization,
+    ScheduleType,
+)
 from app.db.repositories import ActivityScheduleRepository
 from app.exceptions import ValidationError
 from app.services.catalog_version_payload import schedule_payload
 from app.services.catalog_version_shape import build_shape
+from app.services.org_merge import merge_organizations
 from app.services.schedule_dates import hong_kong_weekdays_between
 
 HK_MONDAY_9AM = {"day_of_week_utc": 1, "start_minutes_utc": 60, "end_minutes_utc": 420}
@@ -287,3 +298,60 @@ def test_version_payload_and_shape_carry_dates(
     assert build_shape("schedule", {"starts_on": date(2026, 7, 20)})[
         "starts_on"
     ] == ("2026-07-20")
+
+
+def test_org_merge_keeps_each_dated_session(
+    db_session, sample_geographic_area, sample_activity_category
+) -> None:
+    survivor = Organization(name="Harbour Camps", manager_id="m", description="d")
+    source = Organization(name="Harbour Camps Limited", manager_id="m", description="d")
+    db_session.add_all([survivor, source])
+    db_session.flush()
+    venue = Location(
+        org_id=survivor.id, area_id=sample_geographic_area.id, address="1 Pier Road"
+    )
+    db_session.add(venue)
+    db_session.flush()
+
+    def camp(org: Organization, *starts: date) -> Activity:
+        activity = Activity(
+            org_id=org.id,
+            category_id=sample_activity_category.id,
+            name="Harbour Camp",
+            description="Camp",
+            kind="camp",
+            age_range=Range(5, 10, bounds="[]"),
+        )
+        db_session.add(activity)
+        db_session.flush()
+        for start in starts:
+            schedule = ActivitySchedule(
+                activity_id=activity.id,
+                location_id=venue.id,
+                schedule_type=ScheduleType.WEEKLY,
+                languages=["en"],
+                starts_on=start,
+                ends_on=start,
+            )
+            schedule.entries = [
+                ActivityScheduleEntry(
+                    day_of_week_utc=1, start_minutes_utc=60, end_minutes_utc=240
+                )
+            ]
+            db_session.add(schedule)
+        db_session.flush()
+        return activity
+
+    kept = camp(survivor, date(2026, 7, 20))
+    camp(source, date(2026, 7, 20), date(2026, 8, 3))
+
+    merge_organizations(db_session, survivor.id, [source.id])
+
+    starts = sorted(
+        db_session.scalars(
+            select(ActivitySchedule.starts_on).where(
+                ActivitySchedule.activity_id == kept.id
+            )
+        )
+    )
+    assert starts == [date(2026, 7, 20), date(2026, 8, 3)]

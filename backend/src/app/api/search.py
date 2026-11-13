@@ -28,6 +28,7 @@ from app.api.search_page import (
 from app.api.search_page import load_search_rows as _load_search_rows
 from app.api.search_page import parse_cursor as _parse_cursor
 from app.api.search_validation import (
+    validate_date_window,
     validate_listing_filters,
     validate_search_query_params,
     validate_search_refinements,
@@ -169,6 +170,9 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
         age_max=parse_int(first_param(params, "age_max")),
         verified=first_param(params, "verified"),
     )
+    date_from, date_to = validate_date_window(
+        first_param(params, "date_from"), first_param(params, "date_to")
+    )
     cursor = _parse_cursor(first_param(params, "cursor"))
     if (
         cursor is not None
@@ -208,6 +212,8 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
         age_min=listing.age_min,
         age_max=listing.age_max,
         verified_only=listing.verified,
+        date_from=date_from,
+        date_to=date_to,
     )
 
 

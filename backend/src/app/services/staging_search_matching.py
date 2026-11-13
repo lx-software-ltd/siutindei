@@ -6,8 +6,13 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from app.db.queries import ActivitySearchFilters, applied_search_area_scope
+from app.db.queries import (
+    ActivitySearchFilters,
+    applied_search_area_scope,
+    search_today,
+)
 from app.db.search_conditions import class_price_value, hong_kong_day
+from app.services.schedule_dates import parse_schedule_date, schedule_dates_match
 
 
 def row_class_price(row: dict[str, Any]) -> Decimal | None:
@@ -101,11 +106,24 @@ def matches(
         if not any(language in langs for language in filters.languages):
             return False
 
+    if not _dates_match(schedule, filters):
+        return False
+
     entries = schedule.get("weekly_entries") or []
     if not _entries_match(entries, filters):
         return False
 
     return not (filters.text_query and not _text_matches(item, filters.text_query))
+
+
+def _dates_match(schedule: dict[str, Any], filters: ActivitySearchFilters) -> bool:
+    return schedule_dates_match(
+        parse_schedule_date(schedule.get("starts_on"), "starts_on"),
+        parse_schedule_date(schedule.get("ends_on"), "ends_on"),
+        search_today(filters),
+        filters.date_from,
+        filters.date_to,
+    )
 
 
 def _listing_matches(item: dict[str, Any], filters: ActivitySearchFilters) -> bool:

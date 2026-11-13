@@ -186,7 +186,7 @@ def _retarget_schedules(session, old_id, new_id, kind: str) -> None:
 def _schedule_key(schedule: ActivitySchedule, kind: str) -> tuple:
     other = schedule.activity_id if kind == "location" else schedule.location_id
     languages = tuple(schedule.languages or [])
-    return (str(other), languages)
+    return (str(other), languages, schedule.starts_on)
 
 
 def _retarget_name_fixes(session, source_id, target_id) -> None:

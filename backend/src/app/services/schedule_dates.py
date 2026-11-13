@@ -11,6 +11,9 @@ from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from sqlalchemy import or_
+
+from app.db.models import ActivitySchedule
 from app.db.search_conditions import hong_kong_day
 from app.exceptions import ValidationError
 
@@ -88,3 +91,40 @@ def validate_schedule_dates(
 def format_schedule_date(value: date | None) -> str | None:
     """ISO date string, or None."""
     return value.isoformat() if value is not None else None
+
+
+def schedule_search_conditions(
+    today: date,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    schedule: Any = ActivitySchedule,
+) -> list:
+    """A session that has ended is absent; a date window keeps overlaps.
+
+    An undated schedule runs every week, so it matches any window.
+    """
+    conditions: list = [or_(schedule.ends_on.is_(None), schedule.ends_on >= today)]
+    if date_from is not None:
+        conditions.append(
+            or_(schedule.ends_on.is_(None), schedule.ends_on >= date_from)
+        )
+    if date_to is not None:
+        conditions.append(
+            or_(schedule.starts_on.is_(None), schedule.starts_on <= date_to)
+        )
+    return conditions
+
+
+def schedule_dates_match(
+    starts_on: date | None,
+    ends_on: date | None,
+    today: date,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> bool:
+    """Python twin of ``schedule_search_conditions`` for the staging fixture."""
+    if ends_on is not None and ends_on < today:
+        return False
+    if date_from is not None and ends_on is not None and ends_on < date_from:
+        return False
+    return not (date_to is not None and starts_on is not None and starts_on > date_to)

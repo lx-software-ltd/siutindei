@@ -5,14 +5,17 @@ from __future__ import annotations
 import importlib.util
 import json
 from collections import Counter
+from datetime import date, timedelta
 from pathlib import Path
 from uuid import UUID
 
 import pytest
 from app.db.models.category_suggestion import FIXED_ROOT_KINDS, WIZARD_GROUP_IDS
 from app.db.queries import ActivitySearchFilters
+from app.db.search_conditions import hong_kong_day
 from app.services import staging_search_store
 from app.services.listing_kinds import FACT_KEYS, KINDS
+from app.services.schedule_dates import hong_kong_weekdays_between
 
 _SCRIPT = (
     Path(__file__).resolve().parents[1]
@@ -100,6 +103,49 @@ def test_staging_store_serves_the_generated_fixture(
             assert item.activity.kind == "place"
             assert item.activity.category_root_id == str(places_root)
             assert item.organization.parent_verified is True
+    finally:
+        staging_search_store._FIXTURE_CACHE = None
+        staging_search_store._SORTED_PUBLISHED_ITEMS = None
+
+
+def test_camp_rows_carry_one_dated_session(payload, tmp_path, monkeypatch) -> None:
+    camps = [item for item in payload["items"] if item["activity"]["kind"] == "camp"]
+    assert camps
+    for item in camps:
+        schedule = item["schedule"]
+        starts_on = date.fromisoformat(schedule["starts_on"])
+        ends_on = date.fromisoformat(schedule["ends_on"])
+        weekdays = hong_kong_weekdays_between(starts_on, ends_on)
+        for entry in schedule["weekly_entries"]:
+            assert (
+                hong_kong_day(entry["day_of_week_utc"], entry["start_minutes_utc"])
+                in weekdays
+            )
+    for item in payload["items"]:
+        if item["activity"]["kind"] != "camp":
+            assert "starts_on" not in item["schedule"]
+
+    path = tmp_path / "fixture.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setenv("STAGING_SEARCH_DATA_ENABLED", "true")
+    monkeypatch.setenv("STAGING_SEARCH_DATA_PATH", str(path))
+    staging_search_store._FIXTURE_CACHE = None
+    staging_search_store._SORTED_PUBLISHED_ITEMS = None
+    session_start = date.fromisoformat(camps[0]["schedule"]["starts_on"])
+    try:
+        during = staging_search_store.fetch_staging_search_response(
+            ActivitySearchFilters(
+                kinds=("camp",), date_from=session_start, date_to=session_start
+            )
+        )
+        assert during.items
+        assert during.items[0].schedule.starts_on == camps[0]["schedule"]["starts_on"]
+        after = staging_search_store.fetch_staging_search_response(
+            ActivitySearchFilters(
+                kinds=("camp",), today=session_start + timedelta(days=30)
+            )
+        )
+        assert after.items == []
     finally:
         staging_search_store._FIXTURE_CACHE = None
         staging_search_store._SORTED_PUBLISHED_ITEMS = None

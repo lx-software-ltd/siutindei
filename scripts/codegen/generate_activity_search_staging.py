@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import sys
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -118,6 +118,7 @@ FACTS_BY_KIND: dict[str, dict[str, bool]] = {
 # so items do not change between runs.
 VERIFIED_EVERY = 3
 VERIFIED_AT = "2026-11-01T02:00:00+00:00"
+CAMP_SESSION_DAYS = 7
 
 DISTRICTS: list[tuple[str, str]] = [
     ("Central and Western", HK_ISLAND_REGION),
@@ -198,6 +199,30 @@ def _build_category_descendants() -> dict[str, list[str]]:
 def _listing_label(category: StagingCategory, kind: str) -> str:
     word = KIND_WORDS[kind]
     return f"{category.label} {word}" if word else category.label
+
+
+def _camp_session() -> tuple[str, str]:
+    """A week next July, so every weekday occurs and the session has not ended."""
+    starts_on = date(datetime.now(tz=UTC).year + 1, 7, 6)
+    ends_on = starts_on + timedelta(days=CAMP_SESSION_DAYS - 1)
+    return starts_on.isoformat(), ends_on.isoformat()
+
+
+def _schedule(kind: str, day: int, start: int, end: int) -> dict[str, Any]:
+    schedule: dict[str, Any] = {
+        "schedule_type": "weekly",
+        "weekly_entries": [
+            {
+                "day_of_week_utc": day,
+                "start_minutes_utc": start,
+                "end_minutes_utc": end,
+            }
+        ],
+        "languages": ["en"],
+    }
+    if kind == "camp":
+        schedule["starts_on"], schedule["ends_on"] = _camp_session()
+    return schedule
 
 
 def _build_item(
@@ -292,17 +317,7 @@ def _build_item(
             "sessions_count": sessions_count,
             "free_trial_class_offered": pricing_type == "per_class",
         },
-        "schedule": {
-            "schedule_type": "weekly",
-            "weekly_entries": [
-                {
-                    "day_of_week_utc": day,
-                    "start_minutes_utc": start,
-                    "end_minutes_utc": end,
-                }
-            ],
-            "languages": ["en"],
-        },
+        "schedule": _schedule(kind, day, start, end),
         "_sort": {
             "day_of_week_utc": day,
             "start_minutes_utc": start,

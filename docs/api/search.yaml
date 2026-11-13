@@ -96,6 +96,27 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: date_from
+          in: query
+          required: false
+          description: |
+            First day of the wanted dates, `YYYY-MM-DD` on the Hong Kong
+            calendar. Keeps dated sessions that end on or after it.
+            Weekly schedules with no dates always match. Sessions whose
+            last day is before today in Hong Kong are never returned.
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          required: false
+          description: |
+            Last day of the wanted dates, `YYYY-MM-DD` on the Hong Kong
+            calendar, on or after `date_from`. Keeps dated sessions that
+            start on or before it.
+          schema:
+            type: string
+            format: date
         - name: area_id
           in: query
           required: false
@@ -861,6 +882,19 @@ components:
           type: array
           items:
             type: string
+        starts_on:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            First day of a dated session such as a camp week, Hong Kong
+            calendar. Null for a weekly schedule. `view=card` omits it
+            when null.
+        ends_on:
+          type: string
+          format: date
+          nullable: true
+          description: Last day of a dated session. Null for a weekly schedule.
     TranslationMap:
       type: object
       additionalProperties:

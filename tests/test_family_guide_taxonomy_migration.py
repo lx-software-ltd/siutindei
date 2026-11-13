@@ -22,6 +22,12 @@ def _cat(suffix: str) -> UUID:
     return UUID(_PREFIX + suffix)
 
 
+def _latest_head() -> str | None:
+    from alembic.script import ScriptDirectory
+
+    return ScriptDirectory.from_config(_config()).get_current_head()
+
+
 def _config():
     from alembic.config import Config
 
@@ -299,7 +305,8 @@ def test_round_trip_keeps_every_activity_on_a_valid_category(test_engine) -> Non
         pytest.skip("migration SQL is PostgreSQL")
     with Session(test_engine) as session:
         current = session.scalar(text("SELECT version_num FROM alembic_version"))
-    if current != _HEAD:
+    latest = _latest_head()
+    if current != latest:
         pytest.skip(f"database is at {current}")
 
     os.environ["DATABASE_URL"] = test_engine.url.render_as_string(hide_password=False)
@@ -348,5 +355,6 @@ def test_round_trip_keeps_every_activity_on_a_valid_category(test_engine) -> Non
         _cleanup(test_engine, ids)
         with Session(test_engine) as session:
             assert (
-                session.scalar(text("SELECT version_num FROM alembic_version")) == _HEAD
+                session.scalar(text("SELECT version_num FROM alembic_version"))
+                == latest
             )

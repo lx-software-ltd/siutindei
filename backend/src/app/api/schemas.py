@@ -139,6 +139,8 @@ class ScheduleSchema(BaseModel):
     schedule_type: str
     weekly_entries: list[ScheduleEntrySchema]
     languages: list[str]
+    starts_on: str | None = None
+    ends_on: str | None = None
 
 
 class ActivitySearchResultSchema(BaseModel):
@@ -188,6 +190,8 @@ _CARD_OMITTED_WHEN_EMPTY = (
     ("organization", "parent_verified_at"),
     ("organization", "rating"),
     ("location", "name"),
+    ("schedule", "starts_on"),
+    ("schedule", "ends_on"),
 )
 
 

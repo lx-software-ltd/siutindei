@@ -207,10 +207,13 @@ def _normalize_item(item: dict[str, Any]) -> dict[str, Any]:
             entry["end_minutes_utc"],
         ),
     )[0]
+    languages_key = ",".join(schedule.get("languages") or [])
+    if schedule.get("starts_on"):
+        languages_key = f"{languages_key}@{schedule['starts_on']}"
     schedule_id = _uuid_from_parts(
         item["activity"]["id"],
         item["location"]["id"],
-        ",".join(schedule.get("languages") or []),
+        languages_key,
     )
     normalized = dict(item)
     normalized["_sort"] = {
@@ -339,6 +342,8 @@ def _to_schema(
                 for entry in entries
             ],
             languages=schedule.get("languages") or [],
+            starts_on=schedule.get("starts_on"),
+            ends_on=schedule.get("ends_on"),
         ),
     )
 

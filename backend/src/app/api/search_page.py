@@ -46,6 +46,7 @@ from app.services.description_boilerplate import (
     hides_template_description,
     omit_import_boilerplate,
 )
+from app.services.schedule_dates import format_schedule_date
 from app.utils.translations import build_translation_map
 
 
@@ -293,6 +294,8 @@ def map_row_to_result(
                     schedule, limit=1 if card else None
                 ),
                 languages=schedule.languages or [],
+                starts_on=format_schedule_date(schedule.starts_on),
+                ends_on=format_schedule_date(schedule.ends_on),
             )
         ),
     )

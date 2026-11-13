@@ -27,6 +27,8 @@ from app.db.queries import (
     _category_descendant_ids_subquery,
     applied_search_area_scope,
     area_descendant_ids_subquery,
+    schedule_date_conditions,
+    search_today,
     validate_filters,
 )
 from app.db.search_conditions import (
@@ -121,7 +123,7 @@ def _picked_incomplete_subquery(filters: ActivitySearchFilters) -> sa.Subquery:
         .where(Location.status.in_(("open", "temporarily_closed")))
         .where(Activity.category_id != PENDING_CATEGORY_ID)
         .where(public_category_clause(Activity.category_id))
-        .where(~_complete_listing_exists())
+        .where(~_complete_listing_exists(filters))
     )
     needs_entries = needs_entry_filters(filters)
     if needs_entries:
@@ -148,6 +150,13 @@ def _picked_incomplete_subquery(filters: ActivitySearchFilters) -> sa.Subquery:
     conditions.extend(price_conditions(filters))
     if filters.schedule_type is not None:
         conditions.append(ActivitySchedule.schedule_type == filters.schedule_type)
+    if filters.date_from is not None or filters.date_to is not None:
+        conditions.append(
+            or_(
+                ActivitySchedule.id.is_(None),
+                and_(*schedule_date_conditions(filters)),
+            )
+        )
     if filters.languages:
         conditions.append(or_(*build_language_conditions(filters.languages)))
     if filters.text_query:
@@ -186,11 +195,15 @@ def _price_at_venue(filters: ActivitySearchFilters):
 
 
 def _schedule_at_venue(filters: ActivitySearchFilters):
-    """Schedule at the chosen venue, limited to an active schedule filter."""
+    """Schedule at the chosen venue, limited to an active schedule filter.
+
+    A session that has ended is no schedule at all.
+    """
 
     match = and_(
         ActivitySchedule.activity_id == Activity.id,
         ActivitySchedule.location_id == Location.id,
+        _session_not_ended(filters),
     )
     if filters.schedule_type is not None:
         match = and_(match, ActivitySchedule.schedule_type == filters.schedule_type)
@@ -305,6 +318,7 @@ def _limit_ranked_venues(ranked, filters, area_scope, venues):
             and_(
                 ActivitySchedule.activity_id == venues.c.activity_id,
                 ActivitySchedule.location_id == venues.c.location_id,
+                _session_not_ended(filters),
             ),
         )
         if filters.schedule_type is not None:
@@ -335,7 +349,12 @@ def _entry_match_or_open_place(filters: ActivitySearchFilters) -> Any:
     )
 
 
-def _complete_listing_exists() -> sa.Exists:
+def _session_not_ended(filters: ActivitySearchFilters, schedule: Any = None) -> Any:
+    target = ActivitySchedule if schedule is None else schedule
+    return or_(target.ends_on.is_(None), target.ends_on >= search_today(filters))
+
+
+def _complete_listing_exists(filters: ActivitySearchFilters) -> sa.Exists:
     """True when the activity already has a searchable schedule and price."""
 
     schedule = sa.orm.aliased(ActivitySchedule)
@@ -354,6 +373,7 @@ def _complete_listing_exists() -> sa.Exists:
             ),
         )
         .where(schedule.activity_id == Activity.id)
+        .where(_session_not_ended(filters, schedule))
         .where(venue.status.in_(("open", "temporarily_closed")))
         .exists()
     )

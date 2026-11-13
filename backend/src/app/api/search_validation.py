@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 from typing import NamedTuple
 
 from app.api.admin_validators import _validate_language_code
 from app.exceptions import ValidationError
 from app.services.listing_kinds import KINDS
+from app.services.schedule_dates import parse_schedule_date
 
 _VIEWS = frozenset({"card", "full"})
 _SORTS = frozenset({"time", "price"})
@@ -186,6 +188,20 @@ def validate_listing_filters(
         age_max=age_max,
         verified=_validate_flag(verified, "verified"),
     )
+
+
+def validate_date_window(
+    date_from: str | None, date_to: str | None
+) -> tuple[date | None, date | None]:
+    """Parse ``date_from`` and ``date_to``, Hong Kong calendar days."""
+    start = parse_schedule_date(date_from, "date_from")
+    end = parse_schedule_date(date_to, "date_to")
+    if start is not None and end is not None and start > end:
+        raise ValidationError(
+            "date_from must be on or before date_to",
+            field="date_from",
+        )
+    return start, end
 
 
 def _validate_kinds(values: list[str]) -> tuple[str, ...]:
