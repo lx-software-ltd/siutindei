@@ -53,6 +53,9 @@ Warnings, with their thresholds as named constants:
 - `verification_stale`: a parent check more than 365 days old, or one
   with no date. It prompts the owner to check again. The public badge
   and the listing stay.
+- `camp_without_dates`: a listed camp that has a schedule but no dated
+  session ending today or later. Search drops ended sessions, so the
+  camp shows as "dates on request" until the next dates are added.
 
 ## Area readiness
 
@@ -62,7 +65,9 @@ for that area and the areas under it
 kind, classes and camps that are complete, and organisers that are
 parent-verified. Rejected organisers and listings in hidden categories
 are left out. A class is complete with a price, a weekly time, and an
-age range that is not a catch-all; a camp needs a price and a time.
+age range that is not a catch-all; a camp needs a price and a dated
+session that has not ended. A session that has ended does not count
+as a time for either.
 The area is ready when at least 80% of its classes and camps are
 complete and at least 50% of its organisers are verified
 (`READY_COMPLETE_SHARE`, `READY_VERIFIED_SHARE`). Catalog shows the

@@ -24,7 +24,8 @@ from app.db.models import (
     Organization,
 )
 from app.db.queries import area_descendant_ids_subquery
-from app.services.org_review_kinds import CATCH_ALL_AGE_MAX
+from app.services.org_review_kinds import CATCH_ALL_AGE_MAX, upcoming_session_clause
+from app.services.schedule_dates import hong_kong_today
 
 READY_COMPLETE_SHARE = 0.8
 READY_VERIFIED_SHARE = 0.5
@@ -108,7 +109,12 @@ def area_readiness(session: Session, area_id: UUID) -> dict[str, Any]:
 
 
 def _is_complete() -> Any:
-    """A price and a weekly time; a class also needs a real age range."""
+    """A price and a time that has not ended.
+
+    A class also needs a real age range. A camp needs a dated session
+    that has not ended.
+    """
+    today = hong_kong_today()
     has_price = (
         select(ActivityPricing.id)
         .where(ActivityPricing.activity_id == Activity.id)
@@ -119,7 +125,18 @@ def _is_complete() -> Any:
         .join(
             ActivitySchedule, ActivitySchedule.id == ActivityScheduleEntry.schedule_id
         )
-        .where(ActivitySchedule.activity_id == Activity.id)
+        .where(
+            ActivitySchedule.activity_id == Activity.id,
+            or_(ActivitySchedule.ends_on.is_(None), ActivitySchedule.ends_on >= today),
+        )
+        .exists()
+    )
+    has_session = (
+        select(ActivitySchedule.id)
+        .where(
+            ActivitySchedule.activity_id == Activity.id,
+            upcoming_session_clause(today),
+        )
         .exists()
     )
     lower = func.lower(Activity.age_range)
@@ -128,7 +145,12 @@ def _is_complete() -> Any:
         or_(lower.is_(None), lower <= 0),
         or_(upper.is_(None), upper > CATCH_ALL_AGE_MAX),
     )
-    return and_(has_price, has_time, or_(Activity.kind != "class", ~catch_all))
+    return and_(
+        has_price,
+        has_time,
+        or_(Activity.kind != "class", ~catch_all),
+        or_(Activity.kind != "camp", has_session),
+    )
 
 
 def _share(part: int, whole: int) -> float | None:

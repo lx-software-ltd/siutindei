@@ -137,6 +137,7 @@ const ISSUE_OPTIONS = [
   ['hours_as_class_times', 'Times look like opening hours'],
   ['class_price_outlier', 'Class price looks like a term fee'],
   ['verification_stale', 'Parent check over a year old'],
+  ['camp_without_dates', 'Camp without upcoming dates'],
 ];
 
 function catalogReviewStatusLabel(status: string): string | undefined {

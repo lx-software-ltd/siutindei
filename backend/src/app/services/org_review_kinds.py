@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -26,6 +26,7 @@ from app.db.models import (
     Organization,
 )
 from app.db.models.enums import PricingType
+from app.services.schedule_dates import hong_kong_today
 
 PRICE_BLOCKER_KINDS = ("class", "camp")
 PRICE_WARNING_KINDS = ("preschool",)
@@ -40,6 +41,8 @@ VERIFICATION_STALE_DAYS = 365
 
 HOURS_AS_CLASS_TIMES = "hours_as_class_times"
 CLASS_PRICE_OUTLIER = "class_price_outlier"
+CAMP_WITHOUT_DATES = "camp_without_dates"
+UPCOMING_SESSION = "upcoming_session"
 _MINUTES_PER_DAY = 24 * 60
 
 Add = Callable[[str, str, str, str, str], None]
@@ -118,6 +121,14 @@ def load_activity_signals(
     for activity_id, activity_entries in entries.items():
         if looks_like_opening_hours(activity_entries):
             signals[activity_id].add(HOURS_AS_CLASS_TIMES)
+    upcoming = session.scalars(
+        select(ActivitySchedule.activity_id).where(
+            ActivitySchedule.activity_id.in_(activity_ids),
+            upcoming_session_clause(hong_kong_today()),
+        )
+    ).all()
+    for activity_id in upcoming:
+        signals[str(activity_id)].add(UPCOMING_SESSION)
     prices = session.scalars(
         select(ActivityPricing).where(ActivityPricing.activity_id.in_(activity_ids))
     ).all()
@@ -158,6 +169,16 @@ def note_activity_kind_issues(
                 "activity",
                 activity_id,
                 "Activity has no schedule",
+            )
+    if listed and kind == "camp":
+        note()
+        if schedule_count > 0 and UPCOMING_SESSION not in signals:
+            add(
+                CAMP_WITHOUT_DATES,
+                "warning",
+                "activity",
+                activity_id,
+                "Camp has no upcoming session dates; add the next dates",
             )
     if kind in AGE_CHECKED_KINDS:
         note()
@@ -251,6 +272,14 @@ def kind_issue_predicates(
         .exists()
     )
     stale_before = func.now() - literal(timedelta(days=VERIFICATION_STALE_DAYS))
+    no_upcoming_session = (
+        ~select(ActivitySchedule.id)
+        .where(
+            ActivitySchedule.activity_id == Activity.id,
+            upcoming_session_clause(hong_kong_today()),
+        )
+        .exists()
+    )
     return {
         "missing_pricing": _activity_where(
             is_listed,
@@ -270,6 +299,9 @@ def kind_issue_predicates(
             Activity.kind == "class", long_days >= OPENING_HOURS_MIN_DAYS
         ),
         CLASS_PRICE_OUTLIER: _activity_where(outlier_price),
+        CAMP_WITHOUT_DATES: _activity_where(
+            is_listed, Activity.kind == "camp", ~no_schedule, no_upcoming_session
+        ),
         "verification_stale": and_(
             Organization.parent_verified.is_(True),
             or_(
@@ -278,6 +310,13 @@ def kind_issue_predicates(
             ),
         ),
     }
+
+
+def upcoming_session_clause(today: date) -> ColumnElement[bool]:
+    """A dated session whose last day is today or later."""
+    return and_(
+        ActivitySchedule.starts_on.is_not(None), ActivitySchedule.ends_on >= today
+    )
 
 
 def missing_pricing_blocker(

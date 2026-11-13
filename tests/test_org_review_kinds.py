@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from contextlib import nullcontext
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
@@ -44,7 +44,12 @@ KIND_CODES = (
     "hours_as_class_times",
     "class_price_outlier",
     "verification_stale",
+    "camp_without_dates",
 )
+
+_TODAY = datetime.now(UTC).date()
+_ENDED = (_TODAY - timedelta(days=30), _TODAY - timedelta(days=26))
+_UPCOMING = (_TODAY + timedelta(days=30), _TODAY + timedelta(days=36))
 
 
 def _area(session, level: str = "neighbourhood", parent=None) -> GeographicArea:
@@ -99,6 +104,7 @@ def _activity(
     ages: tuple[int, int] = (3, 6),
     price: tuple[PricingType, str] | None = (PricingType.PER_CLASS, "180"),
     entries: list[tuple[int, int, int]] | None = None,
+    dates: tuple[date, date] | None = None,
 ) -> Activity:
     activity = Activity(
         org_id=organization.id,
@@ -130,6 +136,8 @@ def _activity(
                 location_id=location.id,
                 schedule_type=ScheduleType.WEEKLY,
                 languages=["en"],
+                starts_on=dates[0] if dates else None,
+                ends_on=dates[1] if dates else None,
                 entries=[
                     ActivityScheduleEntry(
                         day_of_week_utc=day,
@@ -365,6 +373,44 @@ def test_old_or_undated_parent_checks_are_flagged_for_the_owner(db_session) -> N
     _assert_sql_matches_python(db_session, [old, undated, fresh, unverified])
 
 
+def test_camps_without_upcoming_dates_are_flagged(db_session) -> None:
+    area, category = _area(db_session), _category(db_session)
+    organization, location = _org(db_session, area)
+    undated = _activity(db_session, organization, location, category, kind="camp")
+    ended = _activity(
+        db_session, organization, location, category, kind="camp", dates=_ENDED
+    )
+    upcoming = _activity(
+        db_session, organization, location, category, kind="camp", dates=_UPCOMING
+    )
+    unscheduled = _activity(
+        db_session, organization, location, category, kind="camp", entries=[]
+    )
+    weekly_class = _activity(db_session, organization, location, category)
+
+    issues = _issues(db_session, organization)
+    assert issues[("camp_without_dates", str(undated.id))] == "warning"
+    assert issues[("camp_without_dates", str(ended.id))] == "warning"
+    for quiet in (upcoming, unscheduled, weekly_class):
+        assert ("camp_without_dates", str(quiet.id)) not in issues
+    assert issues[("missing_schedule", str(unscheduled.id))] == "blocker"
+    _assert_sql_matches_python(db_session, [organization])
+
+
+def test_a_camp_whose_sessions_ended_is_not_complete(db_session) -> None:
+    area, category = _area(db_session), _category(db_session)
+    organization, location = _org(db_session, area)
+    _activity(db_session, organization, location, category, kind="camp", dates=_ENDED)
+    _activity(db_session, organization, location, category, kind="camp")
+    _activity(
+        db_session, organization, location, category, kind="camp", dates=_UPCOMING
+    )
+
+    readiness = area_readiness(db_session, area.id)
+    assert readiness["classes_and_camps"] == 3
+    assert readiness["complete_classes_and_camps"] == 1
+
+
 def _ready_area(db_session):
     district = _area(db_session, level="district")
     neighbourhood = _area(db_session, parent=district)
@@ -379,7 +425,9 @@ def _ready_area(db_session):
     plain, plain_location = _org(db_session, neighbourhood)
     for _ in range(3):
         _activity(db_session, verified, verified_location, category)
-    camp = _activity(db_session, plain, plain_location, category, kind="camp")
+    camp = _activity(
+        db_session, plain, plain_location, category, kind="camp", dates=_UPCOMING
+    )
     _activity(db_session, plain, plain_location, category, ages=(0, 99))
     _activity(db_session, plain, plain_location, category, kind="place", price=None)
     rejected, rejected_location = _org(
