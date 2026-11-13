@@ -1,6 +1,6 @@
 # Plan: SEO and LLM-search visibility for the public website
 
-**Status**: Draft
+**Status**: Approved, in progress
 **Zone**: mixed. Workstreams A, C, and F are green
 (`apps/public_www/**`, `docs/**`). Workstream B is green in the app
 and red wherever it touches `scripts/deploy/**`,
@@ -10,6 +10,44 @@ backend gains a catalogue export. Workstream D edits
 treats as green. Red slices need explicit approval before any write.
 
 The evidence is in `docs/research/public-www-seo-and-llm-search.md`.
+
+## Decisions
+
+The owner answered the open questions on 13 Nov 2026 and approved the
+red slices listed under "Files".
+
+1. Snapshot source: option 1. A backend job writes the snapshot to a
+   private S3 object.
+2. Activity pages make the public catalogue readable in HTML.
+3. Search and user-action crawlers are allowed; training crawlers stay
+   blocked.
+4. Landing pages use a new top-level route, `/<locale>/activities/`.
+
+Still open: rebuild cadence (question 5) and `sameAs` profiles
+(question 6). Until question 5 is answered the snapshot is read at
+each production promotion; activities newer than the last promotion
+use the `?id=` page. `sameAs` uses `NEXT_PUBLIC_INSTAGRAM_URL` when it
+is set.
+
+### Snapshot design
+
+- `CatalogueSnapshotFunction` runs every hour from EventBridge. It
+  pages through the public search query (`view=full`,
+  `include_incomplete=true`, the configured `SEARCH_AREA_SCOPE`) with
+  the read-only `siutindei_app` role and writes
+  `public-www/catalogue-snapshot.json` to a private, versioned bucket.
+  The body is the concatenated `items` of every page plus
+  `area_scope`, so it has exactly the fields the public search API
+  returns. The object is rewritten only when its content hash changes.
+- The function, bucket, and schedule sit in a nested stack, because the
+  API stack is at 494 of CloudFormation's 500 resources. The parent
+  exports the bucket name as `PublicWwwCatalogueSnapshotBucketName`.
+- The promote workflow downloads the object before `next build` and
+  sets `PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH` and
+  `PUBLIC_WWW_CATALOGUE_SNAPSHOT_REQUIRED=true`, so a production build
+  fails without it. The staging workflow derives the snapshot from the
+  staging fixture while the fixture is on, capped to keep the deploy
+  short, and downloads the object when the fixture is off.
 
 ## Goal
 
