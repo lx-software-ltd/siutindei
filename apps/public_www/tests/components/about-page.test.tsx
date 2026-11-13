@@ -44,6 +44,7 @@ describe('AboutPage', () => {
 
     const email = screen.getByRole('link', { name: 'hello@example.com' });
     expect(email).toHaveAttribute('href', 'mailto:hello@example.com');
+    expect(email).toHaveClass('link-underlined');
     expect(email.closest('section')?.id).toBe('write-to-me');
   });
 
@@ -52,7 +53,7 @@ describe('AboutPage', () => {
 
     expect(screen.queryByRole('link', { name: /@/ })).not.toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 2, name: 'Write to me' }),
+      screen.getByRole('heading', { level: 2, name: 'Get in touch' }),
     ).toBeInTheDocument();
   });
 

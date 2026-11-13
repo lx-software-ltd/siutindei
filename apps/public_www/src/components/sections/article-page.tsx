@@ -43,7 +43,7 @@ function ArticleSectionBlock({ section }: { readonly section: ArticleSection }) 
         <p key={link.href} className="mt-3 leading-7">
           <a
             href={link.href}
-            className="text-brand-700 underline-offset-2 hover:underline"
+            className="link-underlined"
           >
             {link.label}
           </a>
