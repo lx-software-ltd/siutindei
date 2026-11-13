@@ -20,6 +20,7 @@ from app.db.repositories import ActivityCategoryRepository
 from app.db.repositories.category_suggestion import CategorySuggestionRepository
 from app.exceptions import ValidationError
 from app.services.activity_categories import create_activity_category
+from app.services.listing_kinds import move_to_category
 
 _DECIDABLE = {"pending", "rejected"}
 _ACTIONS = {"approve", "map", "reject"}
@@ -189,8 +190,7 @@ def _reassign_pending(
     ).all()
     for activity in activities:
         if str(activity.category_id) == str(PENDING_CATEGORY_ID):
-            # Activity.category_id is annotated str; the column is a UUID.
-            activity.category_id = target_id  # type: ignore[assignment]
+            move_to_category(session, activity, target_id)
 
 
 def _notes(value: Any) -> str | None:

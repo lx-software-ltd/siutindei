@@ -2,7 +2,8 @@
 
 ``summarize_catalog`` must return the same counts as
 ``summarize_snapshots`` in ``org_review.py``. Blocker predicates mirror
-``collect_issues``. Warning issue codes are counted here for the summary
+``collect_issues``; an activity in a hidden category raises no
+pricing or schedule blocker. Warning issue codes are counted here for the summary
 and still filtered in Python when paging the queue.
 """
 
@@ -14,6 +15,7 @@ from sqlalchemy import String, and_, case, cast, func, literal, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.db.category_visibility import public_category_clause
 from app.db.models import (
     Activity,
     ActivityLocation,
@@ -32,6 +34,7 @@ from app.services.description_boilerplate import (
 )
 from app.services.org_review import (
     ACTIVITY_ADDED_SINCE_REJECTED,
+    NO_LISTABLE,
     REVIEW_REASONS,
     REVIEW_STATUSES,
 )
@@ -180,6 +183,10 @@ def _issue_predicates() -> dict[str, ColumnElement[bool]]:
         "no_place_id": _blank(Organization.place_id),
         "no_locations": ~_location_exists(),
         "no_activities": ~_activity_exists(),
+        NO_LISTABLE: and_(
+            _activity_exists(),
+            ~_child_exists(Activity, public_category_clause(Activity.category_id)),
+        ),
         "missing_coordinates": _child_exists(
             Location,
             or_(Location.lat.is_(None), Location.lng.is_(None)),
@@ -334,4 +341,7 @@ def _activity_missing_location() -> Any:
 
 def _activity_missing(child: Any) -> Any:
     missing_child = ~select(child.id).where(child.activity_id == Activity.id).exists()
-    return _child_exists(Activity, missing_child)
+    return _child_exists(
+        Activity,
+        and_(missing_child, public_category_clause(Activity.category_id)),
+    )

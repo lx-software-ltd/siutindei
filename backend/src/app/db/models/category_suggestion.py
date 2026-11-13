@@ -35,11 +35,42 @@ LEGACY_CATEGORY_IDS = frozenset(
         UUIDType("99999999-9999-9999-9999-999999999999"),
     }
 )
-# Home-wizard groups inserted by 0040. Public search falls back to the
-# legacy roots while a group still has no activities on its leaves.
+# Topics inserted by 0066. Public search falls back to the legacy roots
+# while a topic still has no activities on it or its leaves.
 WIZARD_GROUP_IDS = frozenset(
-    UUIDType(f"c1111111-1111-1111-1111-11111111120{index}") for index in range(1, 8)
+    UUIDType(f"c1111111-1111-1111-1111-11111111130{index}") for index in range(1, 10)
 )
+PLACES_CATEGORY_ID = UUIDType("c1111111-1111-1111-1111-111111111401")
+NURSERIES_CATEGORY_ID = UUIDType("c1111111-1111-1111-1111-111111111402")
+EAT_CATEGORY_ID = UUIDType("c1111111-1111-1111-1111-111111111403")
+SCHOOLS_CATEGORY_ID = UUIDType("c1111111-1111-1111-1111-111111111404")
+MEMBERS_CLUBS_CATEGORY_ID = UUIDType("c1111111-1111-1111-1111-111111111405")
+# Fixed roots cannot be renamed, re-parented, deleted, or shown in the
+# wizard. Their children can be edited.
+FIXED_ROOT_IDS = frozenset(
+    {
+        PLACES_CATEGORY_ID,
+        NURSERIES_CATEGORY_ID,
+        EAT_CATEGORY_ID,
+        SCHOOLS_CATEGORY_ID,
+        MEMBERS_CLUBS_CATEGORY_ID,
+    }
+)
+SYSTEM_CATEGORY_IDS = frozenset({PENDING_CATEGORY_ID, *FIXED_ROOT_IDS})
+SYSTEM_CATEGORY_ROLES = {
+    PENDING_CATEGORY_ID: "pending",
+    PLACES_CATEGORY_ID: "places",
+    NURSERIES_CATEGORY_ID: "nurseries",
+    EAT_CATEGORY_ID: "eat",
+    SCHOOLS_CATEGORY_ID: "schools",
+    MEMBERS_CLUBS_CATEGORY_ID: "members_clubs",
+}
+# A category under one of these roots has this listing kind.
+FIXED_ROOT_KINDS = {
+    PLACES_CATEGORY_ID: "place",
+    NURSERIES_CATEGORY_ID: "preschool",
+    EAT_CATEGORY_ID: "eat",
+}
 SETTINGS_SINGLETON_ID = UUIDType("c2222222-2222-2222-2222-222222222201")
 PENDING_CATEGORY_NAME = "Pending categorisation"
 DEFAULT_OPENROUTER_MODEL = "qwen/qwen3-30b-a3b"

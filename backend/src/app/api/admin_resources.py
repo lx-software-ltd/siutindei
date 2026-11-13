@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.api.admin_crud import ResourceConfig
 from app.api.admin_resource_activity import (
+    _after_activity_write,
     _create_activity,
     _serialize_activity,
     _update_activity,
@@ -141,6 +142,7 @@ _RESOURCE_CONFIG = {
         create_handler=_create_activity,
         update_handler=_update_activity,
         manager_update_handler=_update_activity_for_manager,
+        after_write=_after_activity_write,
     ),
     "pricing": ResourceConfig(
         name="pricing",

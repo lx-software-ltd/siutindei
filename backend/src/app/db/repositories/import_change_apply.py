@@ -57,6 +57,7 @@ def _write_activity(session: Session, row: ImportChangeProposal, entity: Any) ->
     from app.api.admin_resource_activity import _update_activity
     from app.db.age_bounds import inclusive_age_bounds
     from app.db.repositories import ActivityRepository
+    from app.services.org_review_decision import reject_if_only_hidden
 
     body = {row.field: row.proposed_value}
     if row.field in {"age_min", "age_max"}:
@@ -66,6 +67,8 @@ def _write_activity(session: Session, row: ImportChangeProposal, entity: Any) ->
     _resolve_accepted_category(session, row, body)
     repo = ActivityRepository(session)
     repo.update(_update_activity(repo, entity, body))
+    if "category_id" in body:
+        reject_if_only_hidden(session, entity.org_id)
 
 
 def _resolve_accepted_category(

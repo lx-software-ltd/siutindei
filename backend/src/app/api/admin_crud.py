@@ -67,6 +67,8 @@ class ResourceConfig:
     update_handler: Callable[..., Any]
     # Optional: different update handler for manager routes (e.g., to restrict fields)
     manager_update_handler: Callable[..., Any] | None = None
+    # Runs after a create or update is flushed, before commit.
+    after_write: Callable[[Session, Any], None] | None = None
 
 
 _ADMIN_ONLY_WRITE_FIELDS = (
@@ -233,6 +235,8 @@ def _crud_post(
     else:
         entity = config.create_handler(repo, body)
     repo.create(entity)
+    if config.after_write is not None:
+        config.after_write(session, entity)
     session.commit()
     session.refresh(entity)
     logger.info(f"Created {config.name}: {entity.id}")
@@ -277,6 +281,8 @@ def _crud_put(
 
     updated = update_handler(repo, entity, body)
     repo.update(updated)
+    if config.after_write is not None:
+        config.after_write(session, updated)
     session.commit()
     session.refresh(updated)
     logger.info(f"Updated {config.name}: {resource_id}")

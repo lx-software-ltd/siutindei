@@ -26,7 +26,7 @@ from app.db.queries import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-WIZARD_GROUP = UUID("c1111111-1111-1111-1111-111111111201")
+WIZARD_GROUP = UUID("c1111111-1111-1111-1111-111111111301")
 
 
 @pytest.fixture(autouse=True)

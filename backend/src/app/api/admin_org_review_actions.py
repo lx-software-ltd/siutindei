@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -27,6 +26,7 @@ from app.services.org_review import (
     ReviewIssue,
     snapshot_for_org,
 )
+from app.services.org_review_decision import set_review_decision
 from app.utils import json_response
 from app.utils.logging import get_logger
 
@@ -372,18 +372,9 @@ def _apply_decision(
         blockers = [issue for issue in snapshot.issues if issue.severity == "blocker"]
         if blockers and not force:
             raise ReviewBlockedError(blockers)
-        organization.review_status = "approved"
-        organization.review_reason = None
-    elif action == "reject":
-        if reason is None:
-            raise ValidationError("reason is required", field="reason")
-        organization.review_status = "rejected"
-        organization.review_reason = reason
-    else:
-        organization.review_status = "pending_review"
-        organization.review_reason = None
-    organization.reviewed_at = datetime.now(UTC)
-    organization.reviewed_by = reviewer_sub
+    elif action == "reject" and reason is None:
+        raise ValidationError("reason is required", field="reason")
+    set_review_decision(organization, action, reviewer=reviewer_sub, reason=reason)
     if notes_provided:
         organization.review_notes = _parse_notes(notes)
     if status not in (None, ""):

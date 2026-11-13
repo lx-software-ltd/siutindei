@@ -18,6 +18,7 @@ from app.db.models.category_suggestion import (
     PENDING_CATEGORY_ID,
 )
 from app.services.category_suggestions.settings import get_settings
+from app.services.listing_kinds import move_to_category
 
 _OVERRIDE = ("dismissed", "reverted")
 
@@ -243,7 +244,7 @@ def _apply_reassign(
     if can_auto:
         _audit_scan(session, run.id)
         previous = _uuid(activity.category_id)
-        activity.category_id = target.id
+        move_to_category(session, activity, target.id)
         status = "auto_applied"
         counts["auto_applied"] += 1
     else:

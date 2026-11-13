@@ -8,11 +8,18 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from uuid import UUID
 
+from sqlalchemy.orm import Session
+
+from app.db.models import Activity, ActivityCategory
+from app.db.models.category_suggestion import FIXED_ROOT_KINDS, WIZARD_GROUP_IDS
 from app.exceptions import ValidationError
+from app.services.org_review_decision import reject_if_only_hidden
 
 KINDS = ("class", "camp", "place", "preschool", "eat")
 DEFAULT_KIND = "class"
+TOPIC_KINDS = ("class", "camp")
 
 _CLASS_FACTS = ("drop_in", "parent_stays", "sen_friendly")
 FACT_KEYS: dict[str, tuple[str, ...]] = {
@@ -85,6 +92,70 @@ def facts_for_kind(kind: str, facts: dict[str, bool] | None) -> dict[str, bool]:
     return {
         key: value for key, value in sorted((facts or {}).items()) if key in allowed
     }
+
+
+def kind_for_category(
+    session: Session,
+    category_id: UUID | str | None,
+    current_kind: str,
+) -> str:
+    """The kind a category decides, else ``current_kind``.
+
+    Under Places to play, Nurseries and kindergartens, or Eat with kids
+    the root decides. Under a topic only ``class`` and ``camp`` fit, so
+    any other kind becomes ``class``. Elsewhere the kind is kept.
+    """
+    root = _root_id(session, category_id)
+    if root in FIXED_ROOT_KINDS:
+        return FIXED_ROOT_KINDS[root]
+    if root in WIZARD_GROUP_IDS and current_kind not in TOPIC_KINDS:
+        return DEFAULT_KIND
+    return current_kind
+
+
+def assign_category(
+    session: Session,
+    activity: Activity,
+    category_id: UUID | str,
+) -> None:
+    """Move an activity to a category. Kind follows; facts it loses go."""
+    activity.category_id = category_id  # type: ignore[assignment]
+    kind = kind_for_category(session, category_id, activity.kind or DEFAULT_KIND)
+    if kind != activity.kind:
+        activity.kind = kind
+        activity.facts = facts_for_kind(kind, activity.facts)
+
+
+def move_to_category(
+    session: Session,
+    activity: Activity,
+    category_id: UUID | str,
+) -> None:
+    """Assign a category, then reject the organization if all it has is hidden."""
+    assign_category(session, activity, category_id)
+    reject_if_only_hidden(session, activity.org_id)
+
+
+def _root_id(session: Session, category_id: UUID | str | None) -> UUID | None:
+    seen: set[UUID] = set()
+    current = _as_uuid(category_id)
+    while current is not None and current not in seen:
+        seen.add(current)
+        row = session.get(ActivityCategory, current)
+        if row is None:
+            return None
+        if row.parent_id is None:
+            return current
+        current = _as_uuid(row.parent_id)
+    return None
+
+
+def _as_uuid(value: Any) -> UUID | None:
+    if value is None:
+        return None
+    if isinstance(value, UUID):
+        return value
+    return UUID(str(value))
 
 
 def guess_kind(name: str | None) -> str:

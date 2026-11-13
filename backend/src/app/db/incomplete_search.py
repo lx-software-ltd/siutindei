@@ -9,6 +9,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.dialects.postgresql import distinct_on  # type: ignore[attr-defined]
 from sqlalchemy.sql import Select
 
+from app.db.category_visibility import public_category_clause
 from app.db.models import (
     Activity,
     ActivityLocation,
@@ -117,6 +118,7 @@ def _picked_incomplete_subquery(filters: ActivitySearchFilters) -> sa.Subquery:
         .where(Organization.status.in_(("operational", "closed_temporarily")))
         .where(Location.status.in_(("open", "temporarily_closed")))
         .where(Activity.category_id != PENDING_CATEGORY_ID)
+        .where(public_category_clause(Activity.category_id))
         .where(~_complete_listing_exists())
     )
     needs_entries = needs_entry_filters(filters)
@@ -242,6 +244,7 @@ def _chosen_venue_subquery(
         .where(Organization.review_status == "approved")
         .where(Organization.status.in_(("operational", "closed_temporarily")))
         .where(Activity.category_id != PENDING_CATEGORY_ID)
+        .where(public_category_clause(Activity.category_id))
     )
     ranked = _limit_ranked_venues(ranked, filters, area_scope, venues).subquery(
         "ranked_venue"

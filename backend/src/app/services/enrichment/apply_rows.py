@@ -53,6 +53,7 @@ from app.services.enrichment.row_blockers import (
     SCHEDULE_VENUE,
     pricing_fields,
 )
+from app.services.listing_kinds import move_to_category
 
 HK = ZoneInfo("Asia/Hong_Kong")
 CopyImage = Any
@@ -246,6 +247,7 @@ def _apply_activity(
         ensure_pending_category(session)
     session.add(activity)
     session.flush()
+    move_to_category(session, activity, category_id)
     proposal.entity_id = activity.id
     wording = str(
         proposed.get("category_words") or proposed.get("category_name") or ""

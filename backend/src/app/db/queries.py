@@ -17,6 +17,7 @@ from sqlalchemy.sql import Select
 from sqlalchemy.sql.selectable import CompoundSelect
 
 from app.data.hk_neighbourhoods import resolve_search_area_scope
+from app.db.category_visibility import public_category_clause
 from app.db.models import (
     Activity,
     ActivityCategory,
@@ -153,6 +154,7 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
     if review_gate_enabled():
         query = query.where(Organization.review_status == "approved")
     query = query.where(Activity.category_id != PENDING_CATEGORY_ID)
+    query = query.where(public_category_clause(Activity.category_id))
 
     conditions: list = []
 
