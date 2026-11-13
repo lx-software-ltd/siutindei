@@ -119,6 +119,7 @@ const ISSUE_OPTIONS = [
   ['no_locations', 'No locations'],
   ['activity_no_location', 'Activity has no location'],
   ['no_activities', 'No activities'],
+  ['no_listable_activities', 'Only hidden activities'],
   ['missing_coordinates', 'Missing map pin'],
   ['missing_pricing', 'Missing price'],
   ['missing_schedule', 'Missing schedule'],

@@ -8,12 +8,15 @@ import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { formatAdminPageName } from '../../lib/admin-page-name';
 import {
+  categoryKindRule,
   DEFAULT_LISTING_KIND,
   FACT_KEYS,
   FACT_LABELS,
   factsForKind,
   isListingKind,
+  kindForCategoryRule,
   LISTING_KIND_OPTIONS,
+  listingKindLabel,
   setFact,
   type ListingFacts,
   type ListingKind,
@@ -148,19 +151,25 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     noun: 'activity',
   });
 
-  const categoryPathById = useMemo(() => {
-    const map = new Map<string, string>();
-    function walk(nodes: typeof categoryTree, prefix = '') {
+  const { categoryPathById, categoryRootById } = useMemo(() => {
+    const paths = new Map<string, string>();
+    const roots = new Map<string, (typeof categoryTree)[number]>();
+    function walk(
+      nodes: typeof categoryTree,
+      root?: (typeof categoryTree)[number],
+      prefix = ''
+    ) {
       for (const node of nodes) {
         const path = prefix ? `${prefix} / ${node.name}` : node.name;
-        map.set(node.id, path);
+        paths.set(node.id, path);
+        roots.set(node.id, root ?? node);
         if (node.children) {
-          walk(node.children, path);
+          walk(node.children, root ?? node, path);
         }
       }
     }
     walk(categoryTree);
-    return map;
+    return { categoryPathById: paths, categoryRootById: roots };
   }, [categoryTree]);
 
   const getCategoryPath = (categoryId?: string) =>
@@ -370,6 +379,20 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
   const editorForm = versionView.snapshot
     ? activityFormFromSnapshot(versionView.snapshot, panel.formState)
     : panel.formState;
+  const kindRule = categoryKindRule(categoryRootById.get(editorForm.category_id));
+  const kindOptions = LISTING_KIND_OPTIONS.filter((option) => {
+    if (option.value === editorForm.kind || !kindRule) {
+      return true;
+    }
+    return 'fixed' in kindRule
+      ? option.value === kindRule.fixed
+      : kindRule.allowed.includes(option.value);
+  });
+  const kindHint = !kindRule
+    ? 'Decides what the public card and page show.'
+    : 'fixed' in kindRule
+      ? `Set by the category: ${listingKindLabel(kindRule.fixed)}.`
+      : 'A topic category takes classes and clubs, or camps and workshops.';
 
   const detail = (
     <AdminEditorPanel
@@ -423,12 +446,18 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
           <CascadingCategorySelect
             tree={categoryTree}
             value={editorForm.category_id}
-            onChange={(categoryId, _chain) => {
+            onChange={(categoryId, chain) => {
               markTouched('category_id');
-              panel.setFormState((prev) => ({
-                ...prev,
-                category_id: categoryId,
-              }));
+              const rule = categoryKindRule(chain[0]);
+              panel.setFormState((prev) => {
+                const kind = kindForCategoryRule(rule, prev.kind);
+                return {
+                  ...prev,
+                  category_id: categoryId,
+                  kind,
+                  facts: factsForKind(kind, prev.facts),
+                };
+              });
             }}
             disabled={locked}
             required
@@ -502,12 +531,12 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
               label='Listing kind'
               htmlFor='activity-kind'
               versionKey='kind'
-              hint='Decides what the public card and page show.'
+              hint={kindHint}
             >
               <Select
                 id='activity-kind'
                 value={editorForm.kind}
-                disabled={locked}
+                disabled={locked || Boolean(kindRule && 'fixed' in kindRule)}
                 onChange={(event) => {
                   const kind = event.target.value;
                   if (!isListingKind(kind)) {
@@ -520,7 +549,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
                   }));
                 }}
               >
-                {LISTING_KIND_OPTIONS.map((option) => (
+                {kindOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>

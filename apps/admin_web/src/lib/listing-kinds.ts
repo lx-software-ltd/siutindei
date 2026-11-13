@@ -111,3 +111,53 @@ export function factsSummary(value: unknown): string {
     .map(([key, seen]) => `${FACT_LABELS[key] ?? key}: ${seen ? 'yes' : 'no'}`);
   return parts.length > 0 ? parts.join(', ') : 'Not checked';
 }
+
+/** Mirrors `FIXED_ROOT_KINDS` in `backend/src/app/db/models/category_suggestion.py`. */
+const ROOT_ROLE_KINDS: Record<string, ListingKind> = {
+  places: 'place',
+  nurseries: 'preschool',
+  eat: 'eat',
+};
+
+/** Mirrors `TOPIC_KINDS` in `backend/src/app/services/listing_kinds.py`. */
+export const TOPIC_KINDS: ListingKind[] = ['class', 'camp'];
+
+export interface CategoryKindRoot {
+  system_role?: string | null;
+  show_in_wizard?: boolean;
+}
+
+export type CategoryKindRule =
+  | { fixed: ListingKind }
+  | { allowed: ListingKind[] }
+  | null;
+
+/** What a category's root says about the kind, as the backend applies it. */
+export function categoryKindRule(
+  root: CategoryKindRoot | null | undefined
+): CategoryKindRule {
+  if (!root) {
+    return null;
+  }
+  const fixed = root.system_role ? ROOT_ROLE_KINDS[root.system_role] : undefined;
+  if (fixed) {
+    return { fixed };
+  }
+  if (root.show_in_wizard) {
+    return { allowed: TOPIC_KINDS };
+  }
+  return null;
+}
+
+export function kindForCategoryRule(
+  rule: CategoryKindRule,
+  current: ListingKind
+): ListingKind {
+  if (!rule) {
+    return current;
+  }
+  if ('fixed' in rule) {
+    return rule.fixed;
+  }
+  return rule.allowed.includes(current) ? current : DEFAULT_LISTING_KIND;
+}

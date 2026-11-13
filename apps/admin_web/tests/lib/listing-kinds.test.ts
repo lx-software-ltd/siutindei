@@ -15,7 +15,9 @@ import {
 import {
   FACT_KEYS,
   LISTING_KIND_OPTIONS,
+  categoryKindRule,
   factsForKind,
+  kindForCategoryRule,
   factsSummary,
   isListingKind,
   listingKindLabel,
@@ -162,5 +164,29 @@ describe('version snapshots', () => {
       snapshotFieldText('parent_verified_at', '2026-02-01T00:00:00+08:00')
     ).toBe('2026-02-01');
     expect(snapshotFieldText('parent_verified_at', null)).toBe('—');
+  });
+});
+
+describe('kind from category', () => {
+  it('follows a fixed root and limits a topic to classes and camps', () => {
+    expect(categoryKindRule({ system_role: 'places' })).toEqual({ fixed: 'place' });
+    expect(categoryKindRule({ system_role: 'nurseries' })).toEqual({
+      fixed: 'preschool',
+    });
+    expect(categoryKindRule({ system_role: 'eat' })).toEqual({ fixed: 'eat' });
+    expect(categoryKindRule({ system_role: 'schools' })).toBeNull();
+    expect(categoryKindRule({ show_in_wizard: true })).toEqual({
+      allowed: ['class', 'camp'],
+    });
+    expect(categoryKindRule({})).toBeNull();
+    expect(categoryKindRule(undefined)).toBeNull();
+  });
+
+  it('keeps an allowed kind and replaces one the category does not take', () => {
+    const topic = categoryKindRule({ show_in_wizard: true });
+    expect(kindForCategoryRule(topic, 'camp')).toBe('camp');
+    expect(kindForCategoryRule(topic, 'place')).toBe('class');
+    expect(kindForCategoryRule({ fixed: 'place' }, 'camp')).toBe('place');
+    expect(kindForCategoryRule(null, 'eat')).toBe('eat');
   });
 });

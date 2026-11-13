@@ -6,6 +6,10 @@ import { useId, useMemo, useState } from 'react';
 
 import type { ActivityCategoryNode } from '../../lib/api-client';
 import { createResource } from '../../lib/api-client';
+import {
+  categoryOptionLabel,
+  isPendingCategory,
+} from '../../lib/activity-category-path';
 import { publishActivityCategory } from '../../lib/activity-category-tree';
 import {
   buildTranslationsPayload,
@@ -49,7 +53,10 @@ interface CreatedCategory {
   name: string;
   name_translations?: Record<string, string>;
   display_order?: number;
+  show_in_wizard?: boolean;
+  hidden_from_public?: boolean;
   is_system?: boolean;
+  system_role?: ActivityCategoryNode['system_role'];
 }
 
 /**
@@ -132,7 +139,7 @@ export function CascadingCategorySelect({
       }
       const children = parent.children ?? [];
       const canStartHere =
-        allowNewSubcategory && !parent.is_system && depth === 1;
+        allowNewSubcategory && !isPendingCategory(parent) && depth === 1;
       if (children.length === 0 && !canStartHere) {
         break;
       }
@@ -240,7 +247,10 @@ export function CascadingCategorySelect({
         name: created.name,
         name_translations: created.name_translations ?? { en: created.name },
         display_order: created.display_order ?? displayOrder,
+        show_in_wizard: Boolean(created.show_in_wizard),
+        hidden_from_public: Boolean(created.hidden_from_public),
         is_system: Boolean(created.is_system),
+        system_role: created.system_role ?? null,
         children: [],
       };
       publishActivityCategory(node);
@@ -280,7 +290,7 @@ export function CascadingCategorySelect({
               ? nodesById.get(selections[level.index - 1] ?? '')
               : undefined;
           const showAdd = Boolean(
-            allowNewSubcategory && parent && !parent.is_system
+            allowNewSubcategory && parent && !isPendingCategory(parent)
           );
           const selectId = `${fieldId}-level-${level.index}`;
           const addingHere = addingLevel === level.index;
@@ -310,7 +320,7 @@ export function CascadingCategorySelect({
                 </option>
                 {level.options.map((opt) => (
                   <option key={opt.id} value={opt.id}>
-                    {opt.is_system ? `${opt.name} (pending)` : opt.name}
+                    {categoryOptionLabel(opt.name, opt)}
                   </option>
                 ))}
                 {showAdd ? (
