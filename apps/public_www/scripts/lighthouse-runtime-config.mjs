@@ -11,6 +11,9 @@
  * text heading is the slowest node on the page (about 2.9s) even when the
  * heading paints in about 1.4s under the same 4x CPU and Slow 4G settings.
  *
+ * The workflow builds from the committed catalogue fixture, so the activities
+ * hub, a type page, and an activity page are default targets too.
+ *
  * Search is not a default target. The Lighthouse build has no search API, so
  * the only large text on `/en/search/` is the client-rendered error, and that
  * paints after hydration (about 3.1s). Pass the path explicitly to audit it.
@@ -20,7 +23,16 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const DEFAULT_PAGE_PATHS = ['/en/', '/zh-HK/'];
+/** An activity in `tests/fixtures/catalogue-snapshot.json`, which the workflow builds from. */
+export const FIXTURE_ACTIVITY_ID = '81622378-60bf-506b-b132-9b71f0fa4913';
+
+export const DEFAULT_PAGE_PATHS = [
+  '/en/',
+  '/zh-HK/',
+  '/en/activities/',
+  '/en/activities/arts/',
+  `/en/activity/${FIXTURE_ACTIVITY_ID}/`,
+];
 export const STATIC_COLLECT_ORIGIN = 'http://localhost:9000';
 
 export function parsePagePaths(raw) {
