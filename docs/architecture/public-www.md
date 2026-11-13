@@ -219,8 +219,21 @@ Source: [`apps/public_www`](../../apps/public_www).
   `zh_HK` Open Graph locales). Sitewide WebSite + Organization JSON-LD is
   injected into the exported locale home pages at build time
   (`scripts/inject-structured-data.mjs`, the `jsonld:inject` build step);
-  `sameAs` and `contactPoint` appear only when `NEXT_PUBLIC_INSTAGRAM_URL`
-  and `NEXT_PUBLIC_EMAIL` are set.
+  `sameAs` lists `NEXT_PUBLIC_INSTAGRAM_URL` and `NEXT_PUBLIC_FACEBOOK_URL`
+  when they are set, and `contactPoint` appears when `NEXT_PUBLIC_EMAIL` is
+  set. The about page adds `AboutPage` and `BreadcrumbList` JSON-LD, a
+  "What is Siu Tin Dei" block, and questions parents ask. The hub and type
+  pages answer age, day, price, and joining questions from the catalogue.
+- **`/llms.txt`:** a static route (`src/lib/llms-txt.ts`) with the site
+  summary, the about and legal pages, and, when the build has a
+  catalogue, the hub, each type page, and up to 200 activity pages.
+- **Build-output check:** `scripts/validate-seo-output.mjs` (the last
+  build step, `seo:validate`) fails the build when an indexable page has
+  no single H1, title, description, or self canonical, when an activity
+  page has no `Course` JSON-LD, when a home page has no activity links
+  although the build has a catalogue, or when `sitemap.xml` lists a page
+  that is missing or `noindex`. Redirect stubs and `noindex` pages are
+  skipped.
 - **Catalogue pages:** `src/lib/activities/catalogue-snapshot.ts` reads the
   build-time catalogue: the snapshot `CatalogueSnapshotFunction` writes
   (`PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH`, downloaded by
@@ -308,6 +321,7 @@ deploy-public-www.yml  ── npm ci → assert env → audit → build (with SH
 workflow_dispatch (Promote Public Website Release)
         ├── promotion_mode=latest_staging  → reads marker, fresh prod build, upload + /* invalidation (default)
         ├── promotion_mode=release_id      → operator supplies sha, same fresh prod build and upload
+        ├── promotion_mode=refresh_production → rebuild the live commit with the latest catalogue (daily schedule)
         └── promotion_mode=maintenance_on  → upload apps/public_www/maintenance/ to production
 ```
 
@@ -317,9 +331,41 @@ workflow_dispatch (Promote Public Website Release)
 |---|---|---|
 | [`deploy-backend.yml`](../../.github/workflows/deploy-backend.yml) | `workflow_dispatch` (`public website` or `all stacks`), `push: backend/**` | CDK deploy of `lxsoftware-siutindei-public-www` (S3 + CloudFront for production and staging). |
 | [`deploy-public-www.yml`](../../.github/workflows/deploy-public-www.yml) | `push: staging`, `workflow_dispatch`, `repository_dispatch: deploy-public-www` | Build + sync to staging bucket, write release marker, then run the staging smoke checks against the deployed site. |
-| [`promote-public-www.yml`](../../.github/workflows/promote-public-www.yml) | `workflow_dispatch` | Promote a staging release to production or flip production into maintenance mode. |
+| [`promote-public-www.yml`](../../.github/workflows/promote-public-www.yml) | `workflow_dispatch`, `repository_dispatch`, `schedule` (daily 04:00 HKT) | Promote a staging release to production, flip production into maintenance mode, or, on the schedule, refresh the live release with the latest catalogue snapshot. |
 | [`smoke-public-www-staging.yml`](../../.github/workflows/smoke-public-www-staging.yml) | `workflow_dispatch` | Crawl staging sitemap and assert every page responds 2xx/3xx. |
-| [`lighthouse-public-www.yml`](../../.github/workflows/lighthouse-public-www.yml) | `workflow_dispatch` | Run Lighthouse CI on the local production build. Default pages are `/en/` and `/zh-HK/`. A bare `/` is rewritten to `/en/` because `/` is a locale redirect. `/en/search/` is not a default: this build has no search API, so that page's only large text is the client-rendered error. |
+| [`lighthouse-public-www.yml`](../../.github/workflows/lighthouse-public-www.yml) | `workflow_dispatch` | Run Lighthouse CI on a local build from the committed catalogue fixture (`apps/public_www/tests/fixtures/catalogue-snapshot.json`). Default pages are `/en/`, `/zh-HK/`, `/en/activities/`, `/en/activities/arts/`, and one fixture activity page. A bare `/` is rewritten to `/en/` because `/` is a locale redirect. `/en/search/` is not a default: this build has no search API, so that page's only large text is the client-rendered error. |
+
+### Daily catalogue refresh
+
+The hourly catalogue snapshot only reaches production when the site is
+rebuilt. `promote-public-www.yml` runs `refresh_production` every day at
+20:00 UTC (04:00 HKT):
+
+1. After every production promotion or refresh, the workflow writes three
+   markers to the staging bucket: `releases/production-release-id.txt`,
+   `releases/production-build-sha.txt` (the commit that was built), and
+   `releases/production-catalogue-digests.json` (one sha256 per activity,
+   from `scripts/deploy/catalogue_snapshot_digests.py`; `generated_at` is
+   ignored).
+2. The refresh checks out the recorded commit, so it never ships code
+   that was not promoted, downloads the snapshot, and compares digests.
+   When nothing changed it stops before `npm ci`. It skips with a notice
+   until a promotion has written the markers.
+3. Otherwise it builds and deploys through the normal promotion path.
+
+Activities added between refreshes use the `?id=` page until the next
+rebuild. The `production` GitHub Environment must not require reviewers,
+or each scheduled run waits for approval.
+
+### IndexNow
+
+When `INDEXNOW_KEY` (a GitHub Environment variable, 8 to 128 letters,
+digits, or hyphens; public by design) is set, production builds write
+`/<key>.txt` and, after the deploy, `scripts/deploy/indexnow.py ping`
+posts URLs to `api.indexnow.org` (Bing, Yandex, Naver, Seznam). A
+promotion sends every sitemap URL; a refresh sends the added, changed,
+and removed activity pages plus the home and activities pages. Failures
+are warnings and never fail the deploy.
 
 ### Promotion script
 
