@@ -1,8 +1,9 @@
 # Plan: a family guide built on kinds and topics
 
-**Status**: Draft. The owner answered the seven scoping questions and
-five follow-up questions on 13 Nov 2026 (see "Decisions"). No red
-slice is approved yet. Nothing is implemented.
+**Status**: Approved. The owner answered the seven scoping questions and
+five follow-up questions on 13 Nov 2026 (see "Decisions"), and
+approved the four red slices the same day with one change
+(decision 13).
 **Zone**: mixed. Workstreams A and F are green (`apps/public_www/**`,
 `docs/**`). Workstreams D and H are yellow. Workstream I is yellow
 in the backend and green in the public site. Workstreams B, C, E, and
@@ -67,11 +68,21 @@ The owner's answers to the follow-up questions, also 13 Nov 2026.
     than 12 months raises a warning for the owner in the admin
     console. The public badge and its date do not change or drop.
 11. **Members-only clubs: confirmed.** The club's own entry is hidden
-    under "Not listed". A programme the club opens to non-members
+    in a hidden category. A programme the club opens to non-members
     stays listed.
 12. **The Flutter app: out of this plan.** The owner is not planning
     the app in the short term. See "Non-goals" for the one thing that
     still touches the app's folder.
+13. **Schools and members-only clubs keep their own categories.** There
+    is no "Not listed" root. Primary, secondary, and international
+    schools keep their categories under a "Schools" root, and
+    members-only clubs get a "Members-only clubs" root. Both roots are
+    hidden from public search with a per-category flag,
+    `hidden_from_public`. An organisation whose activities all sit in
+    hidden categories is rejected with the existing reason
+    `not_relevant`. The rejection records why; the hidden flag does
+    the hiding, because the review gate (`ORG_REVIEW_GATE_ENABLED`) is
+    off by default.
 
 Also agreed, from the "push back" list the owner accepted:
 
@@ -112,7 +123,9 @@ On money, public copy says the site is free and stops there
 3. Camps and workshops can carry dates. Places show opening hours and
    facilities instead of class times and a class price.
 4. Schools above kindergarten and members-only clubs leave the public
-   catalogue without being deleted.
+   catalogue without being deleted. They stay in categories named for
+   what they are, and their organisations are rejected as not
+   relevant (decision 13).
 5. The site says only what is true: which listings a parent checked
    and when, and which areas are covered.
 6. The owner can see, per area, whether the listings are good enough
@@ -202,7 +215,8 @@ categorisation is: no rename, re-parent, delete, or wizard flag.
 | `…1401` | Places to play | 遊樂好去處 | kind `place` |
 | `…1402` | Nurseries and kindergartens | 幼兒中心及幼稚園 | kind `preschool` |
 | `…1403` | Eat with kids | 親子餐廳 | kind `eat` |
-| `…1404` | Not listed | 不收錄 | hidden from public search |
+| `…1404` | Schools | 學校 | hidden from public search |
+| `…1405` | Members-only clubs | 會員制會所 | hidden from public search |
 
 Leaves under the fixed roots:
 
@@ -216,14 +230,19 @@ Leaves under the fixed roots:
 | `…1416` | Places to play | Museum and heritage | 博物館及古蹟 |
 | `…1421` | Nurseries and kindergartens | Nursery and childcare | 幼兒中心及託兒 |
 | `…1422` | Nurseries and kindergartens | Kindergarten | 幼稚園 |
-| `…1441` | Not listed | Primary school | 小學 |
-| `…1442` | Not listed | Secondary school | 中學 |
-| `…1443` | Not listed | International and prep school | 國際及預備學校 |
-| `…1444` | Not listed | Members-only club | 會員制會所 |
-| `…1445` | Not listed | Not for children | 非兒童活動 |
+| `…1213` | Schools | Primary school (existing row, re-parented) | 小學 |
+| `…1214` | Schools | Secondary school (existing row, re-parented) | 中學 |
+| `…1215` | Schools | International and prep schools (existing row, re-parented) | 國際及預備學校 |
 
 Every id is `c1111111-1111-1111-1111-11111111NNNN` with the suffix
-shown. "Eat with kids" has no leaves. Faith-based groups, scouts, and
+shown. "Eat with kids" and "Members-only clubs" have no leaves.
+
+Hidden categories. `activity_categories.hidden_from_public` is a new
+boolean, default false, set true on `…1404` and `…1405`. Public search
+leaves out an activity whose category or any ancestor is hidden. An
+admin can set it on any category except Pending, which public search
+already leaves out. An activity in a hidden category raises no review
+blocker. Faith-based groups, scouts, and
 community-centre programmes sit under `community`. The Chinese names
 need a native check before they ship (see "Open questions").
 
@@ -243,9 +262,9 @@ this table, then deletes the old rows. The recheck then refines.
 | `…1207` | Community and support (group) | `…1309` |
 | `…1211` | Kindergarten and nursery | `…1422` |
 | `…1212` | Day crèche and childcare | `…1421` |
-| `…1213` | Primary school | `…1441` |
-| `…1214` | Secondary school | `…1442` |
-| `…1215` | International and prep schools | `…1443` |
+| `…1213` | Primary school | kept, moved under `…1404` |
+| `…1214` | Secondary school | kept, moved under `…1404` |
+| `…1215` | International and prep schools | kept, moved under `…1404` |
 | `…1221` | Tutoring centre | `…1308` |
 | `…1222` | Language classes | `…1306` |
 | `…1223` | STEM and coding | `…1307` |
@@ -309,7 +328,7 @@ H touches different files from E and F and can run beside them.
 | Workstream | Path | Change |
 | --- | --- | --- |
 | B | `backend/db/alembic/versions/0065_activity_kind_facts.py` | Add `activities.kind`, `activities.facts`, `organizations.parent_verified_at`. Backfill `kind` |
-| C | `backend/db/alembic/versions/0066_family_guide_taxonomy.py` | Insert topics and fixed roots, move references, delete the old groups and leaves, add import aliases |
+| C | `backend/db/alembic/versions/0066_family_guide_taxonomy.py` | Add `activity_categories.hidden_from_public`, insert topics and fixed roots, re-parent the three school leaves, move references, delete the other old groups and leaves, reject school-only organisations, add import aliases |
 | E | `shared/home_wizard/home_wizard_choices.json` | Version 3: `kinds`, nine topics, five age groups |
 | G | `backend/db/alembic/versions/0067_schedule_dates.py` | Add `activity_schedule.starts_on` and `ends_on`, replace the schedule unique constraint |
 
@@ -459,12 +478,16 @@ Red migration, yellow backend, then a recheck the owner runs.
 
 ### C1. Migration `0066_family_guide_taxonomy` (red)
 
-Data only. No column changes. In one transaction:
+One column and data. In one transaction:
 
-1. Insert the nine topics, the four fixed roots, and their leaves from
+1. Add `activity_categories.hidden_from_public BOOLEAN NOT NULL
+   DEFAULT false`.
+2. Insert the nine topics, the five fixed roots, and their leaves from
    "Topics and fixed roots", with the same helper shape and
-   translation keys as `0040_recheck_taxonomy.py`.
-2. For every pair in "Old rows to new rows", move the references:
+   translation keys as `0040_recheck_taxonomy.py`. Set
+   `hidden_from_public` on Schools and Members-only clubs. Re-parent
+   `…1213`, `…1214`, and `…1215` under Schools.
+3. For every other pair in "Old rows to new rows", move the references:
    `activities.category_id`;
    `category_suggestions.suggested_parent_id`, `maps_to_category_id`,
    `created_category_id`, and `merged_into_category_id`;
@@ -472,12 +495,16 @@ Data only. No column changes. In one transaction:
    `proposed_category_id`, and `previous_category_id`. Those review
    and suggestion columns are `ON DELETE SET NULL`, so skipping this
    step silently erases import aliases and review history.
-3. Set `kind` from the new position: `place` under `…1401`,
+4. Set `kind` from the new position: `place` under `…1401`,
    `preschool` under `…1402`, `eat` under `…1403`. An activity under a
    topic whose kind is `place`, `preschool`, or `eat` becomes `class`.
-4. Clear `show_in_wizard` on the seven old groups, then delete the 26
-   old leaves and the seven old groups.
-5. Add an import alias for each old name that no longer exists as a
+5. Clear `show_in_wizard` on the seven old groups, then delete the 23
+   other old leaves and the seven old groups.
+6. Reject every organisation that is not already rejected, has at
+   least one activity, and has all its activities in hidden
+   categories: `review_status = 'rejected'`, `review_reason =
+   'not_relevant'`, `reviewed_by = 'migration:0066'`.
+7. Add an import alias for each old name that no longer exists as a
    category name, so a file that still sends "Tutoring centre"
    resolves. An alias is a `category_suggestions` row whose
    fingerprint is the normalised old name and whose
@@ -485,9 +512,11 @@ Data only. No column changes. In one transaction:
    in `backend/src/app/services/category_suggestions/resolve.py`.
    Skip a name that already has a suggestion row.
 
-Downgrade re-creates the `0040` rows and moves references back. It is
-lossy where several old leaves merged into one new row: they all
-return to the first old leaf in the table. Say so in the docstring.
+Downgrade re-creates the `0040` rows and moves references back, moves
+the school leaves back under their old group, and drops the column.
+It is lossy where several old leaves merged into one new row: they all
+return to the first old leaf in the table. It does not undo the
+rejections. Say both in the docstring.
 Seed assessment: the seed only inserts the legacy root Sport, so no
 seed change.
 
@@ -502,8 +531,9 @@ Tests first: extend `tests/test_search_category_filter.py`,
 `tests/test_activity_category_names.py`, and `tests/test_admin_imports.py`.
 
 - `backend/src/app/db/models/category_suggestion.py`: set
-  `WIZARD_GROUP_IDS` to the nine topic ids. Add constants for the four
-  fixed roots and a `SYSTEM_CATEGORY_IDS` set (Pending plus the four).
+  `WIZARD_GROUP_IDS` to the nine topic ids. Add constants for the five
+  fixed roots and a `SYSTEM_CATEGORY_IDS` set (Pending plus the five).
+  Add `hidden_from_public` to the `ActivityCategory` model.
   The legacy fallback in `backend/src/app/db/queries.py` keeps working
   with the nine ids. A topic that starts empty (Baby and toddler,
   Swimming and water sports) falls back to the legacy roots until the
@@ -515,15 +545,25 @@ Tests first: extend `tests/test_search_category_filter.py`,
   `backend/src/app/db/repositories/activity_category.py` (delete), and
   `backend/src/app/api/partner_activity_categories.py`. Children of a
   fixed root can still be added, renamed, and deleted.
-- Public search hides "Not listed": in `build_search_query`
+- Public search hides hidden categories: in `build_search_query`
   (`backend/src/app/db/queries.py`) and in
   `backend/src/app/db/incomplete_search.py`, exclude an activity whose
-  category is `…1404` or a child of it, next to the Pending exclusion.
-  `count_search_activities` in `backend/src/app/api/search_page.py`
-  must agree.
+  category or any ancestor has `hidden_from_public`, next to the
+  Pending exclusion. `count_search_activities` in
+  `backend/src/app/api/search_page.py` must agree. Partner search
+  follows the same rule as public search.
+- The admin category resource and the partner category routes return
+  `hidden_from_public`; only an admin can change it, and not on
+  Pending. Update `docs/api/admin.yaml` and `docs/api/partner.yaml`.
 - Kind follows the category. Add `kind_for_category(session,
   category_id, current_kind)` to `listing_kinds.py` and call it
-  wherever a category is assigned: the admin activity resource, import
+  wherever a category is assigned. In the same places, call
+  `reject_if_only_hidden(session, organization_id)`: when the
+  organisation has activities, all of them in hidden categories, and
+  it is not already rejected, set it rejected with `not_relevant` and
+  `reviewed_by = 'system:category'`. Moving an activity back out of a
+  hidden category does not undo a rejection. The places are: the
+  admin activity resource, import
   upsert, the category-review apply path
   (`backend/src/app/services/category_suggestions/scan_apply.py`,
   `decisions.py`, `reviews.py`), and enrichment apply
@@ -531,13 +571,14 @@ Tests first: extend `tests/test_search_category_filter.py`,
 - Category model prompts
   (`backend/src/app/services/category_suggestions/prompt.py`): add to
   the recheck note that schools above kindergarten go to the matching
-  "Not listed" leaf, members-only clubs to "Members-only club", a
+  school leaf, members-only clubs to "Members-only clubs", a
   programme a club opens to non-members goes to its topic, a venue
   anyone can walk into goes under "Places to play", and a class
   taught at a venue goes to its topic. Keep the redaction as is.
-- Organisation review: an activity under "Not listed" raises no
-  blocker. An organisation whose activities are all "Not listed" gets
-  the warning `no_listable_activities`. Change both
+- Organisation review: an activity in a hidden category raises no
+  blocker. An organisation whose activities are all hidden gets the
+  warning `no_listable_activities`, for one that an admin approved
+  again by hand. Change both
   `backend/src/app/services/org_review.py` and the SQL mirror in
   `backend/src/app/services/org_review_sql.py`.
 - Docs: `docs/architecture/category-suggestions.md` and
@@ -547,8 +588,9 @@ Tests first: extend `tests/test_search_category_filter.py`,
 
 `apps/admin_web/src/components/shared/activity-categories-panel.tsx`
 and `apps/admin_web/src/components/ui/cascading-category-select.tsx`:
-show the fixed roots as system rows, and show the kind a category
-implies when one is picked for an activity.
+show the fixed roots as system rows, a "Hidden from public" toggle
+and marker on each category, and the kind a category implies when one
+is picked for an activity.
 
 ### C4. Owner steps after deploy
 
@@ -557,11 +599,11 @@ Not code. The plan is not done without them.
 1. Run a category check with `ignore_current_category` over all
    organisations (Data quality, Categories). Review what does not
    auto-apply.
-2. Reject school and members-only organisations as "not relevant" in
-   Catalog. Keep an organisation that also runs a camp, playgroup,
-   or class open to everyone, including a club that takes
-   non-members for it; only its school or club entry moves to "Not
-   listed" (decision 11).
+2. Check the organisations the migration and the recheck rejected as
+   not relevant. Keep an organisation that also runs a camp,
+   playgroup, or class open to everyone, including a club that takes
+   non-members for it: it is not rejected, and only its school or
+   club entry sits in a hidden category (decisions 11 and 13).
 3. For Stanley, open each class and camp and fix the kind, the ages,
    the real class times, and the price. Workstream H lists them.
 
@@ -971,7 +1013,7 @@ own files in full.
 
 - Search responses only gain fields. A request that sends none of the
   new parameters returns the same listings as before, minus those
-  under "Not listed".
+  in a hidden category.
 - Pending categorisation keeps its id and its guards, and public
   search still excludes it.
 - The area scope and the review gate behave as today. Partner calls
