@@ -268,6 +268,11 @@ def _to_schema(
             age_min=activity.get("age_min"),
             age_max=activity.get("age_max"),
             category_id=activity.get("category_id"),
+            kind=activity.get("kind") or "class",
+            facts={} if card else dict(activity.get("facts") or {}),
+            category_root_id=activity.get("category_root_id"),
+            category_name=activity.get("category_name"),
+            category_name_translations=activity.get("category_name_translations") or {},
         ),
         organization=OrganizationSchema(
             id=organization["id"],
@@ -283,6 +288,7 @@ def _to_schema(
             description_source=organization.get("description_source"),
             place_id=organization.get("place_id") if detail else None,
             parent_verified=bool(organization.get("parent_verified", False)),
+            parent_verified_at=organization.get("parent_verified_at"),
             updated_at=organization.get("updated_at"),
             contact=(
                 None

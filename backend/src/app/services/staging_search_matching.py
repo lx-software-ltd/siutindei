@@ -51,13 +51,8 @@ def matches(
     }:
         return False
 
-    if filters.age is not None:
-        age_min = activity.get("age_min")
-        age_max = activity.get("age_max")
-        if age_min is None or age_max is None:
-            return False
-        if not (age_min <= filters.age <= age_max):
-            return False
+    if not _listing_matches(item, filters):
+        return False
 
     if filters.area_id is not None:
         allowed = area_descendants.get(str(filters.area_id), [str(filters.area_id)])
@@ -111,6 +106,27 @@ def matches(
         return False
 
     return not (filters.text_query and not _text_matches(item, filters.text_query))
+
+
+def _listing_matches(item: dict[str, Any], filters: ActivitySearchFilters) -> bool:
+    """Python twin of ``listing_conditions``. A row without ``kind`` is a class."""
+    activity = item["activity"]
+    if filters.kinds and (activity.get("kind") or "class") not in filters.kinds:
+        return False
+    if filters.verified_only and not item["organization"].get("parent_verified"):
+        return False
+    wants_range = filters.age_min is not None or filters.age_max is not None
+    if filters.age is None and not wants_range:
+        return True
+    age_min = activity.get("age_min")
+    age_max = activity.get("age_max")
+    if age_min is None or age_max is None:
+        return False
+    if filters.age is not None and not age_min <= filters.age <= age_max:
+        return False
+    if filters.age_min is not None and age_max < filters.age_min:
+        return False
+    return not (filters.age_max is not None and age_min > filters.age_max)
 
 
 def _text_matches(item: dict[str, Any], text_query: str) -> bool:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import base64
 import json
 from collections.abc import Mapping
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
@@ -30,6 +30,7 @@ from app.db.incomplete_search import (
 )
 from app.db.models import (
     Activity,
+    ActivityCategory,
     ActivityPricing,
     ActivitySchedule,
     Location,
@@ -134,11 +135,56 @@ def _incomplete_page(
     return page, encode_incomplete_cursor(activity.id, organization.name, activity.name)
 
 
+@dataclass(frozen=True)
+class SearchCategory:
+    """A category's name and the root at the top of its path."""
+
+    root_id: str
+    name: str
+    name_translations: dict[str, str]
+
+
+def load_search_categories(session: Session) -> dict[str, SearchCategory]:
+    """Every category keyed by id. One query; the table is small."""
+
+    rows = session.execute(
+        select(
+            ActivityCategory.id,
+            ActivityCategory.parent_id,
+            ActivityCategory.name,
+            ActivityCategory.name_translations,
+        )
+    ).all()
+    parents = {str(row.id): _optional_id(row.parent_id) for row in rows}
+
+    def root_of(category_id: str) -> str:
+        seen: set[str] = set()
+        current = category_id
+        while (parent := parents.get(current)) and current not in seen:
+            seen.add(current)
+            current = parent
+        return current
+
+    return {
+        str(row.id): SearchCategory(
+            root_id=root_of(str(row.id)),
+            name=row.name,
+            name_translations=build_translation_map(row.name, row.name_translations),
+        )
+        for row in rows
+    }
+
+
+def _optional_id(value: Any) -> str | None:
+    return None if value is None else str(value)
+
+
 def map_row_to_result(
     row: Any,
     region_cache: dict[str, str | None],
     include_place_id: bool = False,
     view: str = "full",
+    categories: Mapping[str, SearchCategory] | None = None,
 ) -> ActivitySearchResultSchema:
     """Map a SQLAlchemy row to a search result schema."""
 
@@ -148,6 +194,7 @@ def map_row_to_result(
     location: Location = mapping[Location]
     pricing: ActivityPricing | None = mapping[ActivityPricing]
     schedule: ActivitySchedule | None = mapping[ActivitySchedule]
+    category = (categories or {}).get(str(activity.category_id))
 
     age_min, age_max = inclusive_age_bounds(activity.age_range)
     card = view == "card"
@@ -190,6 +237,13 @@ def map_row_to_result(
             age_min=age_min,
             age_max=age_max,
             category_id=str(activity.category_id),
+            kind=activity.kind or "class",
+            facts={} if card else dict(activity.facts or {}),
+            category_root_id=None if category is None else category.root_id,
+            category_name=None if category is None else category.name,
+            category_name_translations=(
+                {} if category is None else dict(category.name_translations)
+            ),
         ),
         organization=OrganizationSchema(
             id=str(organization.id),
@@ -205,6 +259,7 @@ def map_row_to_result(
             description_source=organization.description_source,
             place_id=organization.place_id if include_place_id else None,
             parent_verified=bool(organization.parent_verified),
+            parent_verified_at=organization.parent_verified_at,
             updated_at=organization.updated_at,
             contact=None if card else _contact(organization),
         ),

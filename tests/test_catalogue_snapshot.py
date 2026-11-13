@@ -178,6 +178,19 @@ def test_snapshot_items_match_the_public_search_response(seeded) -> None:
     assert first["organization"]["place_id"] is None
 
 
+def test_snapshot_items_carry_kind_and_category_fields(seeded) -> None:
+    snapshot = catalogue_snapshot.build_catalogue_snapshot()
+
+    assert snapshot["schema_version"] == 1
+    for item in snapshot["items"]:
+        activity = item["activity"]
+        assert activity["kind"] == "class"
+        assert activity["facts"] == {}
+        assert activity["category_root_id"] == str(seeded["category_id"])
+        assert activity["category_name"].startswith("Category ")
+        assert item["organization"]["parent_verified_at"] is None
+
+
 def test_snapshot_stops_at_the_page_limit(seeded) -> None:
     with pytest.raises(catalogue_snapshot.CatalogueSnapshotError):
         catalogue_snapshot.build_catalogue_snapshot(page_size=1, max_pages=2)

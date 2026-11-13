@@ -20,10 +20,15 @@ from sqlalchemy.orm import Session
 from app.api.partner_auth import PartnerContext, get_partner_context
 from app.api.schemas import ActivitySearchResponseSchema, dump_search_response
 from app.api.search_feedback import load_ratings, load_reviews
-from app.api.search_page import count_search_activities, map_row_to_result
+from app.api.search_page import (
+    count_search_activities,
+    load_search_categories,
+    map_row_to_result,
+)
 from app.api.search_page import load_search_rows as _load_search_rows
 from app.api.search_page import parse_cursor as _parse_cursor
 from app.api.search_validation import (
+    validate_listing_filters,
     validate_search_query_params,
     validate_search_refinements,
 )
@@ -157,6 +162,13 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
         sort=first_param(params, "sort"),
         include_total=first_param(params, "include_total"),
     )
+    listing = validate_listing_filters(
+        kinds=params.get("kind", []),
+        age=age,
+        age_min=parse_int(first_param(params, "age_min")),
+        age_max=parse_int(first_param(params, "age_max")),
+        verified=first_param(params, "verified"),
+    )
     cursor = _parse_cursor(first_param(params, "cursor"))
     if (
         cursor is not None
@@ -192,6 +204,10 @@ def parse_filters(event: Mapping[str, Any]) -> ActivitySearchFilters:
         class_price_max=refinements.class_price_max,
         sort=refinements.sort,
         include_total=refinements.include_total,
+        kinds=listing.kinds,
+        age_min=listing.age_min,
+        age_max=listing.age_max,
+        verified_only=listing.verified,
     )
 
 
@@ -221,12 +237,14 @@ def fetch_search_response(
             applied_search_area_scope(filters),
         )
         include_place_id = filters.activity_id is not None
+        categories = load_search_categories(session) if rows else {}
         items = [
             map_row_to_result(
                 row,
                 region_cache,
                 include_place_id=include_place_id,
                 view=filters.view,
+                categories=categories,
             )
             for row in rows
         ]

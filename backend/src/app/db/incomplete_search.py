@@ -31,6 +31,7 @@ from app.db.queries import (
 from app.db.search_conditions import (
     apply_entry_filters,
     build_language_conditions,
+    listing_conditions,
     needs_entry_filters,
     needs_price_filters,
     price_conditions,
@@ -128,9 +129,7 @@ def _picked_incomplete_subquery(filters: ActivitySearchFilters) -> sa.Subquery:
             ActivityScheduleEntry.schedule_id == ActivitySchedule.id,
         )
 
-    conditions: list = []
-    if filters.age is not None:
-        conditions.append(Activity.age_range.contains(filters.age))
+    conditions: list = listing_conditions(filters)
     if filters.area_id is not None:
         conditions.append(
             Location.area_id.in_(area_descendant_ids_subquery(filters.area_id))
@@ -268,8 +267,8 @@ def _limit_ranked_venues(ranked, filters, area_scope, venues):
             ranked = ranked.where(Location.area_id.in_(tuple(area_scope)))
         else:
             ranked = ranked.where(sa.false())
-    if filters.age is not None:
-        ranked = ranked.where(Activity.age_range.contains(filters.age))
+    for condition in listing_conditions(filters):
+        ranked = ranked.where(condition)
     if filters.category_ids:
         ranked = ranked.where(
             Activity.category_id.in_(

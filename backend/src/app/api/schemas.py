@@ -67,6 +67,7 @@ class OrganizationSchema(BaseModel):
     description_source: str | None = None
     place_id: str | None = None
     parent_verified: bool = False
+    parent_verified_at: datetime | None = None
     updated_at: datetime | None = None
     contact: OrganizationContactSchema | None = None
     rating: FeedbackRatingSchema | None = None
@@ -101,6 +102,11 @@ class ActivitySchema(BaseModel):
     age_min: int | None
     age_max: int | None
     category_id: str | None
+    kind: str = "class"
+    facts: dict[str, bool] = Field(default_factory=dict)
+    category_root_id: str | None = None
+    category_name: str | None = None
+    category_name_translations: dict[str, str] = Field(default_factory=dict)
 
 
 class PricingSchema(BaseModel):
@@ -162,6 +168,7 @@ class ActivitySearchResponseSchema(BaseModel):
 _CARD_OMITTED_FIELDS = (
     ("activity", "description"),
     ("activity", "description_translations"),
+    ("activity", "facts"),
     ("organization", "description"),
     ("organization", "description_translations"),
     ("organization", "place_id"),
@@ -169,9 +176,16 @@ _CARD_OMITTED_FIELDS = (
     ("organization", "reviews"),
     ("organization", "updated_at"),
 )
+# Card rows leave out ``kind`` when it is this; clients read a missing kind
+# as a class.
+_CARD_DEFAULT_KIND = "class"
 # Card rows keep these only when they carry a value.
 _CARD_OMITTED_WHEN_EMPTY = (
+    ("activity", "category_root_id"),
+    ("activity", "category_name"),
+    ("activity", "category_name_translations"),
     ("organization", "parent_verified"),
+    ("organization", "parent_verified_at"),
     ("organization", "rating"),
     ("location", "name"),
 )
@@ -200,14 +214,15 @@ def dump_search_response(
     return payload
 
 
-def _drop_duplicate_english_name(section: dict) -> None:
-    translations = section.get("name_translations")
+def _drop_duplicate_english_name(section: dict, name_key: str = "name") -> None:
+    translations_key = f"{name_key}_translations"
+    translations = section.get(translations_key)
     if not isinstance(translations, dict):
         return
-    if translations.get("en") == section.get("name"):
+    if translations.get("en") == section.get(name_key):
         trimmed = dict(translations)
         trimmed.pop("en", None)
-        section["name_translations"] = trimmed
+        section[translations_key] = trimmed
 
 
 def _apply_card_view(item: dict) -> None:
@@ -215,6 +230,11 @@ def _apply_card_view(item: dict) -> None:
         section_payload = item.get(section)
         if isinstance(section_payload, dict):
             section_payload.pop(field, None)
+    activity = item.get("activity")
+    if isinstance(activity, dict):
+        _drop_duplicate_english_name(activity, "category_name")
+        if activity.get("kind") == _CARD_DEFAULT_KIND:
+            activity.pop("kind")
     for section, field in _CARD_OMITTED_WHEN_EMPTY:
         section_payload = item.get(section)
         if isinstance(section_payload, dict) and not section_payload.get(field):

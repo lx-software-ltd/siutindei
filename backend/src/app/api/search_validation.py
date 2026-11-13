@@ -7,6 +7,7 @@ from typing import NamedTuple
 
 from app.api.admin_validators import _validate_language_code
 from app.exceptions import ValidationError
+from app.services.listing_kinds import KINDS
 
 _VIEWS = frozenset({"card", "full"})
 _SORTS = frozenset({"time", "price"})
@@ -31,6 +32,15 @@ class SearchRefinements(NamedTuple):
     class_price_max: Decimal | None
     sort: str
     include_total: bool
+
+
+class ListingFilters(NamedTuple):
+    """Validated kind, age range, and parent-verified filters."""
+
+    kinds: tuple[str, ...]
+    age_min: int | None
+    age_max: int | None
+    verified: bool
 
 
 def validate_search_query_params(
@@ -138,6 +148,61 @@ def validate_search_refinements(
         sort=_validate_sort(sort),
         include_total=_validate_flag(include_total, "include_total"),
     )
+
+
+def validate_listing_filters(
+    *,
+    kinds: list[str],
+    age: int | None,
+    age_min: int | None,
+    age_max: int | None,
+    verified: str | None,
+) -> ListingFilters:
+    """Validate ``kind``, ``age_min``, ``age_max``, and ``verified``.
+
+    ``kind`` values are comma-separated and may repeat. ``age`` is one
+    age; ``age_min`` and ``age_max`` are a range, so the two forms cannot
+    be mixed.
+    """
+
+    if age is not None and (age_min is not None or age_max is not None):
+        raise ValidationError(
+            "age cannot be combined with age_min or age_max",
+            field="age",
+        )
+    if age_min is not None and age_min < 0:
+        raise ValidationError("age_min must be >= 0", field="age_min")
+    if age_max is not None and age_max < 0:
+        raise ValidationError("age_max must be >= 0", field="age_max")
+    if age_min is not None and age_max is not None and age_min > age_max:
+        raise ValidationError(
+            "age_min must be less than or equal to age_max",
+            field="age_min",
+        )
+
+    return ListingFilters(
+        kinds=_validate_kinds(kinds),
+        age_min=age_min,
+        age_max=age_max,
+        verified=_validate_flag(verified, "verified"),
+    )
+
+
+def _validate_kinds(values: list[str]) -> tuple[str, ...]:
+    """Requested kinds in ``KINDS`` order, so equal requests compare equal."""
+    requested: set[str] = set()
+    for value in values:
+        for part in value.split(","):
+            kind = part.strip()
+            if not kind:
+                continue
+            if kind not in KINDS:
+                raise ValidationError(
+                    "kind must be one of: " + ", ".join(KINDS),
+                    field="kind",
+                )
+            requested.add(kind)
+    return tuple(kind for kind in KINDS if kind in requested)
 
 
 def _validate_text_query(q: str | None) -> str | None:

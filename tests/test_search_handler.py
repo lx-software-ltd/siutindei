@@ -112,3 +112,48 @@ def test_partner_search_without_key_context_is_forbidden() -> None:
 
     assert response["statusCode"] == 403
     assert response["headers"]["Cache-Control"].startswith("no-store")
+
+
+def test_search_returns_kind_on_every_item() -> None:
+    response = lambda_handler(_event(query={"limit": ["3"]}), None)
+
+    assert response["statusCode"] == 200
+    items = json.loads(response["body"])["items"]
+    assert items
+    assert all(item["activity"]["kind"] for item in items)
+
+
+def test_search_filters_by_kind_and_age_range() -> None:
+    response = lambda_handler(
+        _event(
+            query={
+                "kind": ["class,camp"],
+                "age_min": ["6"],
+                "age_max": ["11"],
+                "verified": ["false"],
+                "limit": ["5"],
+            }
+        ),
+        None,
+    )
+
+    assert response["statusCode"] == 200
+    for item in json.loads(response["body"])["items"]:
+        activity = item["activity"]
+        assert activity["kind"] in {"class", "camp"}
+        assert activity["age_min"] <= 11 and activity["age_max"] >= 6
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        {"kind": ["party"]},
+        {"age": ["4"], "age_min": ["3"]},
+        {"age_min": ["9"], "age_max": ["3"]},
+        {"verified": ["sometimes"]},
+    ],
+)
+def test_invalid_listing_filters_are_rejected(query) -> None:
+    response = lambda_handler(_event(query=query), None)
+
+    assert response["statusCode"] == 400
