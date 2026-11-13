@@ -9,7 +9,7 @@ const zhAbout = getContent('zh-HK').pages.about;
 
 describe('AboutPage', () => {
   it('opens on the family story, with a section list like the privacy policy', () => {
-    render(<AboutPage content={enAbout} contactEmail="hello@example.com" />);
+    render(<AboutPage content={enAbout} contactEmail="hello@example.com" placeFull="Stanley, Hong Kong" />);
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Built for Hong Kong families' }),
@@ -49,7 +49,7 @@ describe('AboutPage', () => {
   });
 
   it('omits the email link when no contact address is configured', () => {
-    render(<AboutPage content={enAbout} contactEmail="  " />);
+    render(<AboutPage content={enAbout} contactEmail="  " placeFull="Stanley, Hong Kong" />);
 
     expect(screen.queryByRole('link', { name: /@/ })).not.toBeInTheDocument();
     expect(
@@ -65,7 +65,7 @@ describe('AboutPage', () => {
       enAbout.sections.length,
     );
 
-    render(<AboutPage content={zhAbout} contactEmail="hello@example.com" />);
+    render(<AboutPage content={zhAbout} contactEmail="hello@example.com" placeFull="香港赤柱" />);
 
     expect(
       screen.getByRole('heading', { level: 1, name: '為香港家庭而設' }),
@@ -79,5 +79,22 @@ describe('AboutPage', () => {
     expect(
       screen.getByRole('link', { name: 'hello@example.com' }).closest('section')?.id,
     ).toBe('write-to-me');
+  });
+
+  it('answers what the site is and what parents ask, naming the covered area', () => {
+    render(<AboutPage content={enAbout} contactEmail="" placeFull="Stanley, Hong Kong" />);
+
+    const summary = screen.getByRole('heading', { level: 2, name: 'What is Siu Tin Dei' });
+    expect(summary.closest('section')?.id).toBe('what-is-siu-tin-dei');
+    expect(summary.closest('section')?.textContent).toContain('It lists activities in Stanley, Hong Kong today');
+    for (const item of enAbout.questions.items) {
+      expect(screen.getByRole('heading', { level: 3, name: item.question })).toBeInTheDocument();
+    }
+    expect(document.body.textContent).not.toContain('{placeFull}');
+  });
+
+  it('asks the same questions in Chinese', () => {
+    expect(zhAbout.questions.items).toHaveLength(enAbout.questions.items.length);
+    expect(zhAbout.summary.id).toBe(enAbout.summary.id);
   });
 });

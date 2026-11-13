@@ -3,12 +3,18 @@ export interface ArticleLink {
   readonly label: string;
 }
 
+export interface ArticleQuestion {
+  readonly question: string;
+  readonly answer: string;
+}
+
 export interface ArticleSection {
   readonly id: string;
   readonly heading: string;
   readonly paragraphs: readonly string[];
   readonly bullets?: readonly string[];
   readonly links?: readonly ArticleLink[];
+  readonly questions?: readonly ArticleQuestion[];
 }
 
 interface ArticlePageProps {
@@ -23,6 +29,7 @@ interface ArticlePageProps {
 function ArticleSectionBlock({ section }: { readonly section: ArticleSection }) {
   const bullets = section.bullets ?? [];
   const links = section.links ?? [];
+  const questions = section.questions ?? [];
 
   return (
     <section id={section.id} className="scroll-mt-24">
@@ -39,6 +46,12 @@ function ArticleSectionBlock({ section }: { readonly section: ArticleSection }) 
           ))}
         </ul>
       ) : null}
+      {questions.map((item) => (
+        <div key={item.question} className="mt-5">
+          <h3 className="font-semibold text-ink-900">{item.question}</h3>
+          <p className="mt-1 leading-7 text-ink-700">{item.answer}</p>
+        </div>
+      ))}
       {links.map((link) => (
         <p key={link.href} className="mt-3 leading-7">
           <a

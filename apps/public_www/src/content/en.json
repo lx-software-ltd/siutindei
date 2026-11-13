@@ -368,6 +368,15 @@
     "pricesLabel": "Price per class",
     "agesRangeTemplate": "{min} to {max} years",
     "priceRangeTemplate": "{min} to {max}",
+    "questionsHeading": "Questions parents ask",
+    "agesQuestion": "What ages are these activities for?",
+    "agesAnswerTemplate": "{ages}. Each activity page gives its own age range.",
+    "daysQuestion": "Which days do they run?",
+    "daysAnswerTemplate": "{days}. Each activity page lists its weekly times.",
+    "pricesQuestion": "How much do they cost?",
+    "pricesAnswerTemplate": "{prices} per class, where the organiser publishes a price.",
+    "joinQuestion": "How do I join?",
+    "joinAnswer": "Open the activity's page and contact the organiser with the details shown there.",
     "searchLinkLabel": "Filter by age, day, and price in search",
     "homeFeaturedHeading": "Activity pages",
     "homeAllLinkTemplate": "See all {count} activities",
@@ -391,6 +400,37 @@
         "I moved to Chung Hom Kok and couldn't find any activities there.",
         "Other families nearby were in the same situation, so I started Siu Tin Dei."
       ],
+      "summary": {
+        "id": "what-is-siu-tin-dei",
+        "heading": "What is Siu Tin Dei",
+        "paragraphs": [
+          "Siu Tin Dei (小天地) is a website that lists children's classes, clubs, and workshops in Hong Kong. Each activity page shows the ages, the weekly times, the price, and how to contact the organiser.",
+          "It lists activities in {placeFull} today, and adds new areas one district at a time.",
+          "Siu Tin Dei is run by LX Software, a business registered in Hong Kong."
+        ]
+      },
+      "questions": {
+        "id": "questions",
+        "heading": "Questions parents ask",
+        "items": [
+          {
+            "question": "How do I join an activity?",
+            "answer": "Open the activity's page and contact the organiser with the details shown there. The page lists the ages, the weekly times, and the price."
+          },
+          {
+            "question": "Which areas does Siu Tin Dei cover?",
+            "answer": "Activities in {placeFull} today. New areas are added one district at a time."
+          },
+          {
+            "question": "I run a class. Can I manage my own page?",
+            "answer": "Yes. Get in touch and you can manage your own page and describe what you offer in your own words."
+          },
+          {
+            "question": "Who runs Siu Tin Dei?",
+            "answer": "LX Software, a business registered in Hong Kong. The privacy policy and terms of use explain how the site handles your data."
+          }
+        ]
+      },
       "sections": [
         {
           "id": "stanley",

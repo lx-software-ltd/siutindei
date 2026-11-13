@@ -49,6 +49,21 @@ export function ActivitiesLandingPage({
     { id: 'days', label: copy.daysLabel, value: facts.days },
     { id: 'prices', label: copy.pricesLabel, value: facts.prices },
   ].filter((row): row is { id: string; label: string; value: string } => Boolean(row.value));
+  const questions = [
+    facts.ages
+      ? { question: copy.agesQuestion, answer: formatContentTemplate(copy.agesAnswerTemplate, { ages: facts.ages }) }
+      : null,
+    facts.days
+      ? { question: copy.daysQuestion, answer: formatContentTemplate(copy.daysAnswerTemplate, { days: facts.days }) }
+      : null,
+    facts.prices
+      ? {
+          question: copy.pricesQuestion,
+          answer: formatContentTemplate(copy.pricesAnswerTemplate, { prices: facts.prices }),
+        }
+      : null,
+    listings.length > 0 ? { question: copy.joinQuestion, answer: copy.joinAnswer } : null,
+  ].filter((item): item is { question: string; answer: string } => item !== null);
 
   return (
     <article className="mx-auto max-w-6xl px-4 pb-14 pt-2 sm:px-6 lg:px-8">
@@ -117,6 +132,20 @@ export function ActivitiesLandingPage({
           />
         </StaticActivityPages>
       </section>
+
+      {questions.length > 0 ? (
+        <section aria-labelledby="activities-questions" className="mt-10 max-w-3xl">
+          <h2 id="activities-questions" className="text-lg font-semibold text-ink-900">
+            {copy.questionsHeading}
+          </h2>
+          {questions.map((item) => (
+            <div key={item.question} className="mt-4">
+              <h3 className="font-semibold text-ink-900">{item.question}</h3>
+              <p className="mt-1 text-ink-700">{item.answer}</p>
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       <p className="mt-8">
         <Link href={searchHref} className="font-semibold text-ink-900 underline underline-offset-4">
