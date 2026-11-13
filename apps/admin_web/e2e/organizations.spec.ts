@@ -589,6 +589,23 @@ test.describe('Organizations Panel', () => {
     expect((await request).postDataJSON().parent_verified).toBe(true);
   });
 
+  test('records the checked date with Checked today', async ({ adminPage }) => {
+    await expect(adminPage.getByText('Test Organization 1')).toBeVisible();
+    await adminPage.getByRole('row', { name: /Test Organization 1/ }).first().click();
+    await adminPage.getByRole('button', { name: 'Checked today' }).click();
+    await expect(adminPage.getByLabel('Parent-Verified')).toBeChecked();
+    await expect(adminPage.getByLabel('Checked on')).not.toHaveValue('');
+    const request = adminPage.waitForRequest(
+      (req) =>
+        /\/admin\/organizations\/org-1$/.test(new URL(req.url()).pathname) &&
+        ['PUT', 'PATCH'].includes(req.method())
+    );
+    await adminPage.getByRole('button', { name: 'Update' }).click();
+    const body = (await request).postDataJSON();
+    expect(body.parent_verified).toBe(true);
+    expect(body.parent_verified_at).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00\+08:00$/);
+  });
+
   test('should leave the organization workspace from the catalog', async ({
     adminPage,
   }) => {

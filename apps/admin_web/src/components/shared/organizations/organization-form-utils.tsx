@@ -36,6 +36,7 @@ export interface OrganizationFormState {
   source_note: string;
   description_source: string;
   parent_verified: boolean;
+  parent_verified_at: string;
 }
 
 export const emptyForm: OrganizationFormState = {
@@ -62,6 +63,7 @@ export const emptyForm: OrganizationFormState = {
   source_note: '',
   description_source: '',
   parent_verified: false,
+  parent_verified_at: '',
 };
 
 export function itemToForm(item: Organization): OrganizationFormState {
@@ -89,7 +91,40 @@ export function itemToForm(item: Organization): OrganizationFormState {
     source_note: item.source_note ?? '',
     description_source: item.description_source ?? '',
     parent_verified: item.parent_verified ?? false,
+    parent_verified_at: checkedDateInput(item.parent_verified_at),
   };
+}
+
+const HONG_KONG_DATE = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Hong_Kong',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function hongKongDate(date: Date): string {
+  const parts = Object.fromEntries(
+    HONG_KONG_DATE.formatToParts(date).map((part) => [part.type, part.value])
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+/** `YYYY-MM-DD` in Hong Kong for a stored checked time, or '' when none. */
+export function checkedDateInput(value: string | null | undefined): string {
+  if (!value) {
+    return '';
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : hongKongDate(date);
+}
+
+export function todayCheckedDate(now: Date = new Date()): string {
+  return hongKongDate(now);
+}
+
+/** Midnight in Hong Kong, so a date picked today is never in the future. */
+export function checkedDatePayload(date: string): string {
+  return `${date}T00:00:00+08:00`;
 }
 
 export const ORG_SOURCE_OPTIONS = [

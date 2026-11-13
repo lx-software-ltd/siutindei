@@ -3,8 +3,20 @@ import {
   isLocationStatus,
   locationStatusLabel,
 } from '../../lib/location-status';
+import {
+  DEFAULT_LISTING_KIND,
+  factsForKind,
+  factsSummary,
+  isListingKind,
+  listingKindLabel,
+  type ListingFacts,
+  type ListingKind,
+} from '../../lib/listing-kinds';
 import { extractTranslations } from '../../lib/translations';
-import type { OrganizationFormState } from '../shared/organizations/organization-form-utils';
+import {
+  checkedDateInput,
+  type OrganizationFormState,
+} from '../shared/organizations/organization-form-utils';
 import type { PricingFormState } from '../shared/pricing/pricing-types';
 import {
   fromUtcWeekly,
@@ -77,6 +89,12 @@ export function organizationFormFromSnapshot(
   const next = applyText(fallback, snapshot, ORGANIZATION_TEXT_KEYS);
   if (typeof snapshot.parent_verified === 'boolean') {
     next.parent_verified = snapshot.parent_verified;
+    // Rows saved before the checked-date column had no date.
+    next.parent_verified_at = checkedDateInput(
+      typeof snapshot.parent_verified_at === 'string'
+        ? snapshot.parent_verified_at
+        : null
+    );
   }
   if ('name_translations' in snapshot) {
     next.name_translations = extractTranslations(
@@ -160,6 +178,8 @@ export interface ActivitySnapshotForm {
   source_note: string;
   category_id: string;
   org_id: string;
+  kind: ListingKind;
+  facts: ListingFacts;
 }
 
 export function activityFormFromSnapshot<T extends ActivitySnapshotForm>(
@@ -184,6 +204,9 @@ export function activityFormFromSnapshot<T extends ActivitySnapshotForm>(
       snapshotRecord(snapshot.description_translations) as Record<string, string> | null
     );
   }
+  // Versions saved before kinds were classes with no checked facts.
+  next.kind = isListingKind(snapshot.kind) ? snapshot.kind : DEFAULT_LISTING_KIND;
+  next.facts = factsForKind(next.kind, snapshot.facts);
   if ('age_range' in snapshot) {
     const bounds = ageBoundsFromSnapshot(snapshot.age_range);
     if (bounds) {
@@ -330,6 +353,15 @@ export function snapshotFieldText(key: string, value: unknown): string {
     if (label) {
       return label;
     }
+  }
+  if (key === 'kind') {
+    return listingKindLabel(value ?? DEFAULT_LISTING_KIND) ?? textFrom(value);
+  }
+  if (key === 'facts') {
+    return factsSummary(value);
+  }
+  if (key === 'parent_verified_at') {
+    return typeof value === 'string' ? checkedDateInput(value) || '—' : '—';
   }
   if (key === 'age_range') {
     const bounds = ageBoundsFromSnapshot(value);
