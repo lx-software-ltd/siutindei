@@ -17,7 +17,12 @@
   },
   "bot_management": {
     "fight_mode": false,
-    "ai_bots_protection": "block"
+    "ai_bots_protection": "block",
+    "ai_training": "block",
+    "ai_search": "disabled",
+    "ai_user": "disabled",
+    "is_robots_txt_managed": false,
+    "bot_preference_sync_enabled": false
   },
   "rulesets": {
     "http_ratelimit": {
