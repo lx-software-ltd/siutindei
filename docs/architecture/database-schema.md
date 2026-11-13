@@ -68,6 +68,13 @@ Columns:
 - `parent_verified` (boolean, default `false`) — set only by an admin
   in the organization editor. Public search sends it so the website can
   show a Parent-Verified badge. Manager writes and imports ignore it.
+- `parent_verified_at` (timestamptz, optional) — when a parent last
+  checked the organization. Turning `parent_verified` on stamps the
+  server time unless the admin sends an earlier date; sending a date
+  again records a re-check; turning the flag off clears it. Null for
+  organizations verified before migration `0065_activity_kind_facts`,
+  because the real date is not known. Admin-write only, like
+  `parent_verified`.
 - `review_status` (text, default `pending_review`) — `pending_review`,
   `approved`, or `rejected`. Public search applies this only when
   `ORG_REVIEW_GATE_ENABLED=true`. `v_catalog_health` always counts
@@ -101,6 +108,8 @@ Relationships:
 Constraints:
 - UNIQUE (case-insensitive) on `lower(trim(name))`
 - Partial UNIQUE on `place_id` where `place_id IS NOT NULL`
+- CHECK `organizations_parent_verified_at_check`: `parent_verified_at`
+  is null unless `parent_verified` is true
 - B-tree index on `name_key`
 - GIN index `organizations_name_trgm_idx` on `lower(name)` using
   `gin_trgm_ops` (`pg_trgm`)
@@ -131,6 +140,9 @@ Migration `0054_org_review_reason` adds nullable `review_reason`.
 Seed inserts omit it. The two local organizations are `approved`, so
 the check that a reason exists only on a rejected row holds. No seed
 rows change.
+Migration `0065_activity_kind_facts` adds nullable
+`parent_verified_at`. The seed organizations are not verified, so its
+check holds. No seed rows change.
 
 ## Table: organization_merges
 
@@ -683,6 +695,16 @@ Columns:
   import file. Kept when the activity is assigned to an existing
   category. Manager routes ignore this field.
 - `age_range` (int4range, required)
+- `kind` (text, default `class`) — listing kind: `class`, `camp`,
+  `place`, `preschool`, or `eat`. It decides what the card and page
+  show. Admin-write only; manager routes ignore it. An import that
+  sends no kind for a new activity gets `camp` when the name reads like
+  a camp or workshop, else `class`.
+- `facts` (jsonb, default `{}`) — parent-checked facts as booleans:
+  `true` means a parent saw it, `false` that a parent saw it is
+  missing, and an absent key that nobody checked. The allowed keys
+  depend on `kind` (`app.services.listing_kinds.FACT_KEYS`); changing
+  the kind drops keys the new kind does not allow. Admin-write only.
 - `created_at` (timestamptz, default `now()`)
 - `updated_at` (timestamptz, default `now()`)
 - `version` (integer, default 1)
@@ -691,9 +713,21 @@ Indexes:
 - `activities_age_gist` on `age_range` (GiST)
 - `activities_org_idx` on `org_id`
 - `activities_category_idx` on `category_id`
+- `activities_kind_idx` on `kind`
 
 Constraints:
 - UNIQUE (case-insensitive) on (`org_id`, `lower(trim(name))`)
+- CHECK `activities_kind_check`: `kind` is one of the five kinds
+- CHECK `activities_facts_object_check`: `jsonb_typeof(facts) = 'object'`
+
+Migration `0065_activity_kind_facts` backfills `kind` from the `0040`
+leaves: `place` for the Play and outdoors and Culture groups, the three
+sports venue leaves, and their play and culture leaves; `preschool` for
+Kindergarten and nursery and Day crèche and childcare. Of the rest, a
+name matching `camp`, `workshop`, or `holiday course`, or containing
+夏令營, 冬令營, 日營, 工作坊, or 暑期班, becomes `camp`. The backfill
+writes no catalog version. Seed assessment: both columns have defaults
+the checks accept, and seed inserts omit them. No seed rows change.
 
 ## Table: activity_locations
 
