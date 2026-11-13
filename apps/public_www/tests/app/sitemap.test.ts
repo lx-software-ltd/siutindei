@@ -6,6 +6,7 @@ import {
   catalogueListings,
   clearCatalogueCacheForTests,
 } from '@/lib/activities/catalogue-snapshot';
+import { SNAPSHOT_FIXTURE } from '../helpers/catalogue-fixture';
 
 function urls(): string[] {
   return sitemap().map((entry) => entry.url);
@@ -16,6 +17,7 @@ describe('sitemap', () => {
     vi.stubEnv('NEXT_PUBLIC_SITE_ORIGIN', 'https://example.com');
     vi.stubEnv('NEXT_PUBLIC_SEARCH_AREA_SCOPE', '');
     vi.stubEnv('PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH', '');
+    vi.stubEnv('NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED', 'false');
     clearCatalogueCacheForTests();
   });
 
@@ -40,8 +42,8 @@ describe('sitemap', () => {
   });
 
   it('adds the hub, landing, and activity pages with hreflang alternates', () => {
-    vi.stubEnv('NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED', 'true');
-    const listing = catalogueListings()[0];
+    vi.stubEnv('PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH', SNAPSHOT_FIXTURE);
+        const listing = catalogueListings()[0];
     const category = catalogueCategories()[0];
     const entries = sitemap();
 

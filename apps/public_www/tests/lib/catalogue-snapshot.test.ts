@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -27,9 +27,12 @@ interface FixtureRow {
 
 const fixtureRows = (
   JSON.parse(
-    readFileSync(join(process.cwd(), 'public/fixtures/activity_search_staging.json'), 'utf8'),
+    readFileSync(join(process.cwd(), 'tests/fixtures/catalogue-snapshot.json'), 'utf8'),
   ) as { items: FixtureRow[] }
 ).items;
+const stagingFixtureSynced = existsSync(
+  join(process.cwd(), 'public/fixtures/activity_search_staging.json'),
+);
 
 function categoryRows(categoryId: string, count: number): FixtureRow[] {
   const seen = new Set<string>();
@@ -138,7 +141,7 @@ describe('catalogue snapshot', () => {
     expect(() => catalogueListings()).toThrow(/Unsupported catalogue snapshot schema 2/);
   });
 
-  it('caps the staging fixture sample when no snapshot is set', () => {
+  it.skipIf(!stagingFixtureSynced)('caps the staging fixture sample when no snapshot is set', () => {
     vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, '');
     vi.stubEnv('NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED', 'true');
 

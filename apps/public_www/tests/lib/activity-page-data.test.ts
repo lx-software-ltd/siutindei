@@ -14,6 +14,7 @@ import {
   clearCatalogueCacheForTests,
 } from '@/lib/activities/catalogue-snapshot';
 import type { ActivityListing } from '@/lib/activities/types';
+import { SNAPSHOT_FIXTURE } from '../helpers/catalogue-fixture';
 
 const copy = { homeLabel: 'Home', searchLabel: 'Activities' };
 
@@ -22,8 +23,7 @@ let listing: ActivityListing;
 describe('activity page data', () => {
   beforeAll(() => {
     vi.stubEnv('NEXT_PUBLIC_SEARCH_AREA_SCOPE', '');
-    vi.stubEnv('NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED', 'true');
-    vi.stubEnv('PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH', '');
+        vi.stubEnv('PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH', SNAPSHOT_FIXTURE);
     clearCatalogueCacheForTests();
     listing = catalogueListings()[0];
   });

@@ -7,6 +7,7 @@ import { getContent } from '@/content';
 import { HOME_ACTIVITY_LINK_LIMIT } from '@/components/sections/discovery/home-catalogue-links';
 import { clearCatalogueCacheForTests } from '@/lib/activities/catalogue-snapshot';
 import { ANALYTICS_CONSENT_STORAGE_KEY } from '@/lib/analytics/consent';
+import { SNAPSHOT_FIXTURE } from '../helpers/catalogue-fixture';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/',
@@ -112,8 +113,7 @@ describe('DiscoveryHomePage', () => {
   });
 
   it('links to the pre-rendered activity pages without the search API', () => {
-    vi.stubEnv('NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED', 'true');
-    vi.stubEnv('PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH', '');
+        vi.stubEnv('PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH', SNAPSHOT_FIXTURE);
     clearCatalogueCacheForTests();
     const content = getContent('en');
 
