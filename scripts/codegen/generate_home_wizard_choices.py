@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build home wizard choices from categories flagged show_in_wizard.
 
-Age groups and regions are copied from the existing file. ``--write``
+Kinds, age groups, and regions are copied from the existing file. ``--write``
 reads ``show_in_wizard`` rows from ``DATABASE_URL`` and rewrites the
 canonical JSON and the public-site copy.
 """
@@ -59,6 +59,7 @@ def build_home_wizard_choices(
         version += 1
     return {
         "version": version,
+        "kinds": existing.get("kinds") or [],
         "activityTypes": types,
         "ageGroups": existing.get("ageGroups") or [],
         "regions": existing.get("regions") or [],
