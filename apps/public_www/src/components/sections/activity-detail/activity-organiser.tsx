@@ -94,7 +94,11 @@ export function ActivityOrganiser({
                   <span className="min-w-0">
                     <span className="block text-xs text-ink-500">{label}</span>
                     <span className="block truncate text-sm font-medium text-ink-900">
-                      {link.text}
+                      {link.href ? (
+                        <span className="underline underline-offset-2">{link.text}</span>
+                      ) : (
+                        link.text
+                      )}
                     </span>
                   </span>
                 </>

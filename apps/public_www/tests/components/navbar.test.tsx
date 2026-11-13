@@ -103,6 +103,30 @@ describe('Navbar', () => {
     expect(screen.getByRole('banner')).not.toHaveAttribute('inert');
   });
 
+  it('fits the mark, the search bar, and the language switch in one row', () => {
+    pathname.mockReturnValue('/en/search/');
+    renderNavbar();
+
+    const banner = screen.getByRole('banner');
+    const bar = banner.querySelector('.site-header__bar');
+    expect(bar).toHaveClass('flex', 'items-center');
+    expect(banner.querySelectorAll('[role="search"]')).toHaveLength(1);
+    expect(bar?.querySelector('[role="search"]')).not.toBeNull();
+    expect(bar?.querySelector('nav')).not.toBeNull();
+
+    const home = screen.getByRole('link', { name: 'Siu Tin Dei' });
+    expect(home.getAttribute('href')).toMatch(/^\/en\/?$/);
+    expect(bar).toContainElement(home);
+    // Phones drop the wordmark so the search bar gets its width.
+    expect(home.querySelector('img[src$="siutindei-wordmark.svg"]')).toHaveClass(
+      'hidden',
+      'sm:block',
+    );
+    expect(home.querySelector('img[src$="siutindei-logo-mark.svg"]')).not.toHaveClass(
+      'hidden',
+    );
+  });
+
   it('does not render a list-your-activity link in English', () => {
     pathname.mockReturnValue('/en/search/');
     renderNavbar('en');

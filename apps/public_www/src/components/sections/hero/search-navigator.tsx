@@ -49,7 +49,7 @@ function neighbourhoodButtonClass(isSelected: boolean): string {
     ? 'border-accent-500 bg-brand-50'
     : 'border-brand-100 bg-white hover:border-brand-200';
   return (
-    'rounded-full border px-4 py-2 text-sm font-semibold text-ink-900 ' +
+    'min-h-11 rounded-full border px-4 py-2 text-sm font-semibold text-ink-900 ' +
     selected
   );
 }
@@ -154,6 +154,44 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   const onlyNeighbourhood =
     neighbourhoodChoices.length === 1 ? neighbourhoodChoices[0] : undefined;
 
+  const forwardAction =
+    step === 'location' && regionsOpen.length === 0 ? (
+      <Button
+        type="button"
+        className="min-w-0 flex-1"
+        onClick={() => selectLocation(null)}
+      >
+        {copy.continueLabel}
+      </Button>
+    ) : step === 'neighbourhood' && onlyNeighbourhood ? (
+      <Button
+        type="button"
+        className="min-w-0 flex-1"
+        onClick={() => selectNeighbourhood(onlyNeighbourhood.id)}
+      >
+        {copy.continueLabel}
+      </Button>
+    ) : step === 'activity' ? (
+      <Button
+        type="button"
+        className="min-w-0 flex-1"
+        onClick={handleSeeActivities}
+      >
+        {copy.seeActivitiesLabel}
+      </Button>
+    ) : null;
+  const backAction =
+    step !== 'location' ? (
+      <Button
+        type="button"
+        variant="secondary"
+        className={forwardAction ? 'shrink-0' : 'w-full sm:w-auto'}
+        onClick={goBack}
+      >
+        {copy.backLabel}
+      </Button>
+    ) : null;
+
   return (
     <>
       <button
@@ -173,8 +211,16 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
         isOpen={isOpen}
         title={copy.steps[step].title}
         onClose={closeNavigator}
+        footer={
+          backAction || forwardAction ? (
+            <div className="flex items-center gap-3">
+              {backAction}
+              {forwardAction}
+            </div>
+          ) : undefined
+        }
       >
-        <p className="mb-4 text-sm text-ink-500">
+        <p className="mb-3 text-sm text-ink-500 sm:mb-4">
           {formatContentTemplate(copy.stepProgressTemplate, {
             current: stepIndex(step, hasSelectedLocation ? draft.regionId : null),
             total: stepsFor(hasSelectedLocation ? draft.regionId : null).length,
@@ -183,7 +229,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
         {step === 'location' ? (
           <fieldset>
             <legend className="sr-only">{copy.steps.location.label}</legend>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4">
               <ChoiceTile
                 label={
                   getConfiguredSearchAreaScope().restricted
@@ -241,7 +287,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
             <legend className="sr-only">
               {copy.steps.neighbourhood.label}
             </legend>
-            <div className="flex max-h-80 flex-wrap gap-2 overflow-y-auto">
+            <div className="flex flex-wrap gap-2 sm:max-h-80 sm:overflow-y-auto">
               {neighbourhoodChoices.length > 1 ? (
                 <button
                   type="button"
@@ -283,7 +329,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
         {step === 'age' ? (
           <fieldset>
             <legend className="sr-only">{copy.steps.age.label}</legend>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
               {homeWizardChoices.ageGroups.map((group) => {
                 const iconSrc = iconSrcForAge(group.id);
                 if (!iconSrc) {
@@ -306,7 +352,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
         {step === 'activity' ? (
           <fieldset>
             <legend className="sr-only">{copy.steps.activity.label}</legend>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
               {homeWizardChoices.activityTypes.map((type) => (
                 <ChoiceTile
                   key={type.id}
@@ -319,45 +365,6 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
             </div>
           </fieldset>
         ) : null}
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-          {step !== 'location' ? (
-            <Button
-              type="button"
-              variant="secondary"
-              className="sm:w-auto"
-              onClick={goBack}
-            >
-              {copy.backLabel}
-            </Button>
-          ) : null}
-          {step === 'location' && regionsOpen.length === 0 ? (
-            <Button
-              type="button"
-              className="w-full sm:flex-1"
-              onClick={() => selectLocation(null)}
-            >
-              {copy.continueLabel}
-            </Button>
-          ) : null}
-          {step === 'neighbourhood' && onlyNeighbourhood ? (
-            <Button
-              type="button"
-              className="w-full sm:flex-1"
-              onClick={() => selectNeighbourhood(onlyNeighbourhood.id)}
-            >
-              {copy.continueLabel}
-            </Button>
-          ) : null}
-          {step === 'activity' ? (
-            <Button
-              type="button"
-              className="w-full sm:flex-1"
-              onClick={handleSeeActivities}
-            >
-              {copy.seeActivitiesLabel}
-            </Button>
-          ) : null}
-        </div>
       </Modal>
     </>
   );

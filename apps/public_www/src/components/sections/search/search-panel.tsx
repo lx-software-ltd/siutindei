@@ -46,6 +46,7 @@ interface SearchPanelCopy {
   readonly anywhereInRegionLabel: string;
   readonly childAgeLabel: string;
   readonly activityTypesLabel: string;
+  readonly activityTypesHint: string;
   readonly searchLabel: string;
   readonly allHongKongLabel: string;
   readonly allAreasLabel: string;
@@ -164,16 +165,22 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
         </Button>
       }
     >
-      <form id={formId} className="w-full min-w-0 space-y-6" onSubmit={handleSubmit}>
+      <form
+        id={formId}
+        className="w-full min-w-0 space-y-4 md:space-y-6"
+        onSubmit={handleSubmit}
+      >
         <fieldset className="min-w-0">
           <legend className="mb-2 text-sm font-semibold text-ink-900">
             {copy.whereLabel}
           </legend>
-          <div className="flex w-full min-w-0 max-w-full flex-wrap items-stretch gap-2 md:grid md:grid-cols-5 md:gap-3">
+          <div className="grid w-full min-w-0 max-w-full grid-cols-2 items-stretch gap-2 md:grid-cols-5 md:gap-3">
             <SearchChoiceButton
               label={areaLabel}
               iconSrc={ALL_HONG_KONG_ICON_SRC}
               iconShape="flag"
+              layout="area"
+              className="col-span-full max-md:justify-center md:col-span-1"
               isSelected={allAreasSelectable && draft.regionId === null}
               disabled={!allAreasSelectable}
               disabledHint={allAreasHint}
@@ -196,6 +203,7 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
                   key={region.id}
                   label={labelForLocale(region.labels, locale)}
                   iconSrc={iconSrc}
+                  layout="area"
                   isSelected={selectable && draft.regionId === region.id}
                   disabled={!selectable}
                   disabledHint={
@@ -239,7 +247,7 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
           <legend className="mb-2 text-sm font-semibold text-ink-900">
             {copy.childAgeLabel}
           </legend>
-          <div className="flex w-full min-w-0 max-w-full flex-wrap gap-2 md:gap-3">
+          <div className="grid w-full min-w-0 max-w-full grid-cols-3 gap-2 md:gap-3">
             {homeWizardChoices.ageGroups.map((group) => {
               const iconSrc = iconSrcForAge(group.id);
               if (!iconSrc) {
@@ -260,14 +268,19 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
         <fieldset className="min-w-0">
           <legend className="mb-2 text-sm font-semibold text-ink-900">
             {copy.activityTypesLabel}
+            <span className="font-medium text-ink-500">
+              {' · '}
+              {copy.activityTypesHint}
+            </span>
           </legend>
-          <div className="flex w-full min-w-0 max-w-full flex-wrap gap-2 md:gap-3">
+          <div className="grid w-full min-w-0 max-w-full grid-cols-2 gap-2 md:grid-cols-4">
             {homeWizardChoices.activityTypes.map((type) => (
               <SearchChoiceButton
                 key={type.id}
                 label={labelForLocale(type.labels, locale)}
                 iconSrc={iconSrcForActivity(type.id)}
                 isSelected={draft.activityTypeIds.includes(type.id)}
+                layout="chip"
                 onClick={() => toggleType(type.id)}
               />
             ))}

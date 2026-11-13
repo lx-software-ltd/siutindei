@@ -263,7 +263,6 @@ export function DiscoveryHomeSection({ locale, copy }: DiscoveryHomeSectionProps
     parentVerified: copy.parentVerifiedLabel,
     freeTrial: copy.freeTrialLabel,
     imageFallback: copy.imageFallbackLabel,
-    mapAlt: copy.mapAltLabel,
     locationsCount: copy.locationsCountLabel,
     detailsOnRequest: copy.detailsOnRequestLabel,
     previous: copy.previousLabel,

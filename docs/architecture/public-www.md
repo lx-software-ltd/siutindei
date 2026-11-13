@@ -85,11 +85,32 @@ Source: [`apps/public_www`](../../apps/public_www).
   visitor's locale; the exported unprefixed pages keep an `/en/`
   meta-refresh fallback for local static hosting.
 - **Template:** `[locale]/layout.tsx` wraps routes with `PageLayout`
-  (`Navbar` header + `<main>` + `Footer`). Mobile drawer nav; WhatsApp FAB
-  on small screens, footer link on larger breakpoints.
-- **Body:** Marketing pages (for example About) still use `pages.<pageKey>.body`
-  with the 12-column CSS grid (`rows` → `cells` with `component`, `colStart`,
-  `colSpan`, optional `props`) in `src/components/sections/grid/page-body-grid.tsx`.
+  (`Navbar` header + `<main>` + `Footer`). Below `sm` a floating WhatsApp
+  button sits over the page; it shrinks to its icon over the search
+  results, and the activity page and the phone map hide it. Wider screens
+  use the footer icon.
+- **Phones (below `md`):** the screen is kept for content.
+  - The header is one row: the logo mark, the search bar as a two-line
+    summary (place, then age and types), and the flag of the language to
+    switch to. `--phone-header-height` in `globals.css` holds its height.
+  - The search panel shows areas as a full-width "All Hong Kong" row over
+    two columns of icon rows, ages as three icon tiles, and activity types
+    as two columns of icon chips. Search stays pinned under them.
+  - The home wizard uses smaller tiles so a step fits one screen, and pins
+    Back, Continue, and See activities under the choices.
+  - On the search page the filter row also carries sorting and the List /
+    Map switch. The result count is read out to screen readers but not
+    shown, and of the applied filters only a name search (`q`) keeps its
+    chip, because the search bar and the filter row already show the rest.
+  - The footer sets a small logo, shows the configured email, WhatsApp,
+    and Instagram contacts as coloured tiles from
+    `public/images/contact/`, and sets the two link columns side by side.
+- **Body:** About uses the article layout shared with privacy and terms
+  (`ArticlePage`: title, intro, on-this-page links, anchored sections) from
+  `pages.about` in the locale JSON. A 12-column CSS grid remains in
+  `src/components/sections/grid/page-body-grid.tsx` for a page that defines
+  `pages.<pageKey>.body` (`rows` → `cells` with `component`, `colStart`,
+  `colSpan`, optional `props`).
   The home route renders `DiscoveryHomePage` (Airbnb-style discovery: the
   immersive "Small World" hero, a 3-step search navigator in the hero, and
   horizontal listing carousels fed by `/v1/activities/search`).
@@ -99,8 +120,8 @@ Source: [`apps/public_www`](../../apps/public_www).
   the logo artwork), the cropped source logo assets (mark, wordmark,
   stacked lockup) and badge SVGs in `public/images/brand/`, a favicon
   copied from the logo mark (`public/favicon.svg` plus a 16×16 and 32×32
-  `public/favicon.ico`). The navbar pairs the mark with the wordmark and
-  stays sticky on inner pages. On the home route it stays off-screen
+  `public/favicon.ico`). The navbar pairs the mark with the wordmark
+  (the mark alone below `sm`) and stays sticky on inner pages. On the home route it stays off-screen
   until the hero search box scrolls out of view, then slides down. The
   hero and footer use the stacked lockup. Category icons
   are the kawaii outline-style isometric SVGs in
@@ -113,12 +134,7 @@ Source: [`apps/public_www`](../../apps/public_www).
   the Hong Kong icon sheet (`public/images/small-world/bubble-*.webp`,
   `BUBBLE_BUILD_SEED` in `src/lib/small-world/kawaii-bubbles.ts`). They
   are rendered in the static HTML; 3 are hidden below `lg`. Motion is a
-  CSS drift only. There is no WebGL / three.js
-  upgrade. A
-  canvas-based sparkle cursor trail
-  (`src/components/shared/sparkle-cursor.tsx`) is mounted from the locale
-  layout for fine-pointer devices. No CSP changes are required: everything
-  is same-origin static JS and `<canvas>` rendering.
+  CSS drift only. There is no WebGL / three.js upgrade.
 - **Search & detail:**   `/[locale]/search/` opens the Google Maps split view
   when maps are enabled (explicit `?view=map`, or no `view` param). `?view=list`
   is the results grid. Search, See all, and discovery carousel links land on
@@ -130,7 +146,13 @@ Source: [`apps/public_www`](../../apps/public_www).
   indoor). Below the `lg` breakpoint the map is full-width with pins for
   the filtered results and a selected-activity summary card at the bottom.
   Tapping a pin selects that activity; tapping the card opens the activity
-  detail page. From `lg` (iPad landscape and computer) the default is a 50/50
+  detail page. On phones the map fills the screen under the header and the
+  filter row: the page does not scroll, the footer is hidden, and one
+  finger pans the map (`gestureHandling: 'greedy'`, since Google Maps asks
+  for two fingers only on a page that scrolls). A row of cards sits over
+  the map. A tapped pin brings its card to the centre, and swiping to a
+  card selects its pin. Landscape phones too short for that
+  (`short:`) keep the scrolling layout. From `lg` (iPad landscape and computer) the default is a 50/50
   list + map split, with enlarge/reduce controls to switch into the mobile
   map+card layout and back. Search and the home carousels request
   `view=card` and page with the API `cursor` (Load more); page sizes live
@@ -138,7 +160,7 @@ Source: [`apps/public_www`](../../apps/public_www).
   params so CloudFront cache keys are stable. In-app links open
   `/[locale]/activity/?id=<uuid>`, the only activity detail page in both
   staging and production; the export has no per-activity pages. Optional `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` enables
-  Static Maps on listing cards, map markers on the search map view, and CSP
+  the activity-detail static map, map markers on the search map view, and CSP
   entries for
   `maps.googleapis.com` / `maps.gstatic.com`. The search bar **area** label links
   to the map view for the selected region. Search uses browser-side `fetch` to
@@ -224,11 +246,12 @@ Source: [`apps/public_www`](../../apps/public_www).
   | Event | When | Params |
   |---|---|---|
   | `view_item` | Activity detail listing loaded | `item_id`, `item_name`, `item_brand` (org), `price`, `currency` |
-  | `generate_lead` | WhatsApp click | `lead_type`: `whatsapp_activity` / `whatsapp_fab` / `whatsapp_footer`; item fields on the activity CTA |
+  | `generate_lead` | WhatsApp click | `lead_type`: `whatsapp_activity` / `whatsapp_footer` / `whatsapp_partner`; item fields on the activity CTA |
   | `search` | Search results fetch succeeds | `search_term` / `area_id` / `age` / `category_id` when set |
 
-  Wire-up: `activity-detail-page.tsx`, `whatsapp-fab.tsx`, `footer.tsx`,
-  and the search-results success path. GTM fires GA4 (and Ads, once an
+  Wire-up: `activity-detail-page.tsx`, `footer.tsx`,
+  the home partner button in `discovery-home-page.tsx`, and the
+  search-results success path. GTM fires GA4 (and Ads, once an
   Ads conversion ID/label exists in the container) from these events.
 
 The build is deliberately **gated** by:

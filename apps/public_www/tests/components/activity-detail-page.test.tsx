@@ -12,6 +12,7 @@ import {
 } from '@/lib/activities/search-client';
 import type { ActivityListing, OrganizationContact } from '@/lib/activities/types';
 import { ANALYTICS_CONSENT_STORAGE_KEY } from '@/lib/analytics/consent';
+import { formatTemplate } from '@/lib/format-template';
 
 import { withChromeCopy } from '../helpers/chrome-copy';
 import { buildListing, buildLocation } from '../helpers/listing-fixture';
@@ -26,15 +27,15 @@ const copy = getContent('en').activityDetail;
 const CONTACT: OrganizationContact = {
   website: 'https://studio.example.com',
   email: 'hello@studio.example.com',
-  phoneCountryCode: null,
-  phoneNumber: null,
+  phoneCountryCode: 'HK',
+  phoneNumber: '28131872',
   whatsapp: null,
   facebook: null,
   instagram: 'examplestudio',
   tiktok: null,
   twitter: null,
   xiaohongshu: null,
-  wechat: null,
+  wechat: 'beach-chat',
 };
 
 function fullListing(): ActivityListing {
@@ -126,7 +127,7 @@ describe('ActivityDetailPage', () => {
 
   it('shows key facts, sections, contact, rating, and the Parent-Verified badge', async () => {
     vi.mocked(fetchActivityListingById).mockResolvedValue(fullListing());
-    const { container } = renderPage();
+    renderPage();
 
     await screen.findByRole('heading', { level: 1, name: 'Kowloon art' });
     const [facts] = screen.getAllByLabelText(copy.keyFactsLabel);
@@ -143,17 +144,30 @@ describe('ActivityDetailPage', () => {
       expect(screen.getByRole('heading', { level: 2, name: heading })).toBeInTheDocument();
     }
     expect(screen.getByText('Bring an apron.')).toBeInTheDocument();
+    expect(screen.queryByText('Times are Hong Kong time.')).not.toBeInTheDocument();
+    expect(screen.queryByText('以上為香港時間。')).not.toBeInTheDocument();
     const website = screen.getByRole('link', { name: /^Website/ });
     expect(website).toHaveAttribute('href', 'https://studio.example.com/');
     expect(website).toHaveClass('min-w-0', 'overflow-hidden');
     expect(website.closest('li')).toHaveClass('min-w-0');
-    expect(screen.getByRole('link', { name: /examplestudio/ })).toHaveAttribute(
-      'href',
-      'https://www.instagram.com/examplestudio',
+    expect(within(website).getByText('studio.example.com')).toHaveClass(
+      'underline',
+      'underline-offset-2',
     );
+    const phone = screen.getByRole('link', { name: /^Phone/ });
+    expect(phone).toHaveAttribute('href', 'tel:+85228131872');
+    expect(within(phone).getByText('+852 2813 1872')).toHaveClass(
+      'underline',
+      'underline-offset-2',
+    );
+    const instagram = screen.getByRole('link', { name: /examplestudio/ });
+    expect(instagram).toHaveAttribute('href', 'https://www.instagram.com/examplestudio');
+    expect(within(instagram).getByText('@examplestudio')).toHaveClass('underline');
+    const wechat = screen.getByText('beach-chat');
+    expect(wechat.closest('a')).toBeNull();
+    expect(wechat).not.toHaveClass('underline');
     expect(screen.getByText(copy.parentVerifiedLabel)).toBeInTheDocument();
     expect(screen.getAllByText(/4\.5/).length).toBeGreaterThan(0);
-    expect(container.querySelector('[data-hide-whatsapp-fab]')).not.toBeNull();
   });
 
   it('asks the organiser for missing facts and hides the badge without the flag', async () => {
@@ -211,7 +225,44 @@ describe('ActivityDetailPage', () => {
     vi.mocked(fetchActivityListingById).mockResolvedValue(null);
     renderPage();
 
-    expect(await screen.findByText(copy.notFoundLabel)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: copy.notFoundLabel }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(copy.notFoundHint)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: copy.browseActivitiesLabel })).toHaveAttribute(
+      'href',
+      '/en/search?view=list',
+    );
+    expect(screen.getByRole('link', { name: copy.goHomeLabel })).toHaveAttribute('href', '/en');
+  });
+
+  it('draws the hide-and-seek steamer without announcing it', async () => {
+    vi.mocked(fetchActivityListingById).mockResolvedValue(null);
+    const { container } = renderPage();
+
+    await screen.findByRole('heading', { level: 1, name: copy.notFoundLabel });
+    const scene = container.querySelector('.hide-and-seek');
+    expect(scene).toHaveAttribute('aria-hidden', 'true');
+    expect(
+      [...(scene?.querySelectorAll('img') ?? [])].map((image) => image.getAttribute('src')),
+    ).toEqual([
+      '/images/small-world/hide-and-seek-steamer.svg',
+      '/images/small-world/hide-and-seek-lid.svg',
+    ]);
+    expect(scene?.querySelector('.hide-and-seek__lid')).not.toBeNull();
+  });
+
+  it('says the activity failed to load, as an alert, when the request fails', async () => {
+    vi.mocked(fetchActivityListingById).mockRejectedValue(new Error('network down'));
+    renderPage();
+
+    const alert = await screen.findByRole('alert');
+    expect(
+      within(alert).getByRole('heading', { level: 1, name: copy.errorLabel }),
+    ).toBeInTheDocument();
+    expect(within(alert).getByText(copy.errorHint)).toBeInTheDocument();
+    expect(screen.queryByText(copy.notFoundHint)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: copy.browseActivitiesLabel })).toBeInTheDocument();
   });
 
@@ -225,7 +276,10 @@ describe('ActivityDetailPage', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('heading', { level: 2, name: copy.moreFromOrganiserHeading }),
+      await screen.findByRole('heading', {
+        level: 2,
+        name: formatTemplate(copy.moreFromOrganiserHeading, { name: 'Studio' }),
+      }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Clay club' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: copy.similarHeading })).not.toBeInTheDocument();

@@ -3,7 +3,9 @@ import type { SiteContent } from '@/content/types';
 import { DiscoveryHomeSection } from '@/components/sections/discovery/discovery-home-section';
 import { SmallWorldHero } from '@/components/sections/hero/small-world-hero';
 import { FeaturesSection } from '@/components/sections/grid/features-section';
+import { TrackedWhatsappLink } from '@/components/shared/tracked-whatsapp-link';
 import { configuredHeroScopeSigns } from '@/lib/home-wizard/area-scope';
+import { getSiteConfig } from '@/lib/site-config';
 import {
   BUBBLE_BUILD_SEED,
   pickBubbleIdsForSeed,
@@ -16,6 +18,7 @@ interface DiscoveryHomePageProps {
 
 export function DiscoveryHomePage({ locale, content }: DiscoveryHomePageProps) {
   const bubbleIds = pickBubbleIdsForSeed(BUBBLE_BUILD_SEED);
+  const { contact } = getSiteConfig();
   return (
     <>
       <p className="sr-only">{content.discovery.pageTitle}</p>
@@ -33,15 +36,20 @@ export function DiscoveryHomePage({ locale, content }: DiscoveryHomePageProps) {
             {content.hostCta.title}
           </h2>
           <p className="mt-3 text-ink-700">{content.hostCta.description}</p>
-          <a
-            href={content.hostCta.href}
-            className="link-unadorned mt-6 inline-flex min-h-11 items-center rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-ink-900 hover:bg-brand-600"
-          >
-            {content.hostCta.buttonLabel}
-          </a>
+          {contact.whatsappUrl ? (
+            <TrackedWhatsappLink
+              href={contact.whatsappUrl}
+              leadType="whatsapp_partner"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="link-unadorned mt-6 inline-flex min-h-11 items-center rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-ink-900 hover:bg-brand-600"
+            >
+              {content.hostCta.buttonLabel}
+            </TrackedWhatsappLink>
+          ) : null}
         </div>
       </section>
-      <FeaturesSection content={content.features} />
+      <FeaturesSection content={content} />
     </>
   );
 }

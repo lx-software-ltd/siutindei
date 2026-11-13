@@ -123,10 +123,29 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
     router.push(buildMapSearchHref(locale, urlFilters));
   }
 
+  const viewToggle = mapsEnabled ? (
+    <SearchViewToggle
+      isMapView={showMapSplit}
+      groupLabel={copy.viewToggleLabel}
+      listLabel={copy.listViewLabel}
+      mapLabel={copy.mapViewLabel}
+      onShowList={navigateToListView}
+      onShowMap={navigateToMapView}
+    />
+  ) : null;
+  const showsMap = showMapSplit && !errorMessage;
+  const noticeClassName =
+    'mx-auto w-full max-w-7xl px-4 pt-3 text-sm text-ink-700 sm:px-6 md:pt-4 lg:px-8';
+
   return (
-    <div className="bg-white">
+    <div className={showsMap ? 'search-page search-page--map bg-white' : 'search-page bg-white'}>
       <h1 className="sr-only">{copy.pageTitle}</h1>
-      <FilterChipRow locale={locale} copy={copy} />
+      <FilterChipRow
+        locale={locale}
+        copy={copy}
+        viewToggle={viewToggle}
+        isMapView={showMapSplit}
+      />
       <SearchResultsSummary
         locale={locale}
         copy={copy}
@@ -134,56 +153,41 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
         total={search.total}
         isLoading={isLoading}
         onApply={applyFilters}
-        isMapView={showMapSplit}
-        viewToggle={
-          mapsEnabled ? (
-            <SearchViewToggle
-              isMapView={showMapSplit}
-              groupLabel={copy.viewToggleLabel}
-              listLabel={copy.listViewLabel}
-              mapLabel={copy.mapViewLabel}
-              onShowList={navigateToListView}
-              onShowMap={navigateToMapView}
-            />
-          ) : null
-        }
+        viewToggle={viewToggle}
       />
       {showAreaNotice ? (
-        <p
-          role="status"
-          className="mx-auto max-w-7xl px-4 pt-4 text-sm text-ink-700 sm:px-6 lg:px-8"
-        >
+        <p role="status" className={`${noticeClassName} max-md:pb-2`}>
           {copy.areaAdjustedLabel}
         </p>
       ) : null}
       {categoryMatch === 'legacy_fallback' ? (
-        <p className="mx-auto max-w-7xl px-4 pt-4 text-sm text-ink-700 sm:px-6 lg:px-8">
-          {copy.unsortedCategoryLabel}
-        </p>
+        <p className={`${noticeClassName} max-md:pb-2`}>{copy.unsortedCategoryLabel}</p>
       ) : null}
       {errorMessage ? (
         <p className="mx-auto max-w-7xl px-4 py-6 text-center text-red-700">
           {errorMessage}
         </p>
       ) : null}
-      <div className="relative">
+      <div className="search-page__results relative">
         {errorMessage ? null : showMapSplit ? (
-          <SearchMapSplitLayout
-            locale={locale}
-            copy={copy}
-            listings={listings}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            isLoading={isLoading}
-            loadMore={{
-              hasMore: search.hasMore,
-              isLoadingMore: search.isLoadingMore,
-              errorMessage: loadMoreError,
-              onLoadMore: search.loadMore,
-            }}
-          />
+          <div className="search-page__map-frame lg:mx-auto lg:max-w-7xl lg:px-8 lg:pt-4">
+            <SearchMapSplitLayout
+              locale={locale}
+              copy={copy}
+              listings={listings}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              isLoading={isLoading}
+              loadMore={{
+                hasMore: search.hasMore,
+                isLoadingMore: search.isLoadingMore,
+                errorMessage: loadMoreError,
+                onLoadMore: search.loadMore,
+              }}
+            />
+          </div>
         ) : (
-          <div className="mx-auto max-w-7xl px-4 pb-16 pt-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl px-4 pb-10 pt-3 sm:px-6 md:pb-16 md:pt-4 lg:px-8">
             <ListingGrid
               locale={locale}
               listings={listings}
@@ -192,7 +196,6 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
                 parentVerified: copy.parentVerifiedLabel,
                 freeTrial: copy.freeTrialLabel,
                 imageFallback: copy.imageFallbackLabel,
-                mapAlt: copy.mapAltLabel,
                 locationsCount: copy.locationsCountLabel,
                 detailsOnRequest: copy.detailsOnRequestLabel,
                 empty: copy.emptyLabel,

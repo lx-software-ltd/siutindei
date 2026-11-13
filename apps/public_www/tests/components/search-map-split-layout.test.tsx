@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   SearchMapSplitLayout,
@@ -18,13 +18,16 @@ vi.mock('@/components/shared/maps/activity-google-map', () => ({
   ActivityGoogleMap: ({
     ariaLabel,
     onSelect,
+    oneFingerPanQuery,
   }: {
     ariaLabel: string;
     onSelect: (activityId: string) => void;
+    oneFingerPanQuery?: string;
   }) => (
     <button
       type="button"
       aria-label={ariaLabel}
+      data-one-finger-pan-query={oneFingerPanQuery}
       onClick={() => onSelect('act-2')}
     >
       Map pins
@@ -109,9 +112,32 @@ function renderLayout(
   return { copy, onSelect, container };
 }
 
+const CARD_WIDTH = 300;
+const CARD_PITCH = 308;
+const TRACK_WIDTH = 390;
+
+/** jsdom lays nothing out, so the card row gets the geometry of a phone. */
+function layOutCardRow(scrollLeft: number): HTMLElement {
+  const track = document.querySelector<HTMLElement>('.search-map-split-layout__sheet ul');
+  if (!track) {
+    throw new Error('card row missing');
+  }
+  Object.defineProperty(track, 'clientWidth', { configurable: true, value: TRACK_WIDTH });
+  Object.defineProperty(track, 'scrollLeft', { configurable: true, value: scrollLeft });
+  track.querySelectorAll<HTMLElement>('[data-activity-id]').forEach((card, index) => {
+    Object.defineProperty(card, 'offsetLeft', { configurable: true, value: 16 + index * CARD_PITCH });
+    Object.defineProperty(card, 'clientWidth', { configurable: true, value: CARD_WIDTH });
+  });
+  return track;
+}
+
 describe('SearchMapSplitLayout', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('shows the list, the phone card row, and a capped summary card for the selected pin', () => {
-    const { copy, container } = renderLayout();
+    const { copy } = renderLayout();
 
     const list = screen.getByRole('region', { name: copy.resultsLabel });
     expect(list).toHaveClass('search-map-split-layout__list');
@@ -127,7 +153,87 @@ describe('SearchMapSplitLayout', () => {
 
     const enlarge = screen.getByRole('button', { name: copy.enlargeMapLabel });
     expect(enlarge).toHaveClass('hidden', 'lg:inline-flex');
-    expect(container.querySelector('[data-hide-whatsapp-fab]')).not.toBeNull();
+  });
+
+  it('opens the activity from a phone card and marks the one whose pin is selected', () => {
+    const { copy } = renderLayout();
+
+    const sheet = document.querySelector<HTMLElement>('.search-map-split-layout__sheet');
+    expect(sheet).not.toBeNull();
+    const cards = within(sheet as HTMLElement);
+
+    const selected = cards.getByRole('link', { name: /Kowloon art/ });
+    expect(selected).toHaveAttribute('href', '/en/activity?id=act-1');
+    expect(selected.closest('article')).toHaveAttribute('aria-current', 'true');
+    const other = cards.getByRole('link', { name: /Harbour music/ });
+    expect(other).toHaveAttribute('href', '/en/activity?id=act-2');
+    expect(other.closest('article')).not.toHaveAttribute('aria-current');
+
+    // The whole card is the link, so it needs no select button or View pill.
+    expect(cards.queryByRole('button')).toBeNull();
+    expect(selected).not.toHaveTextContent(copy.viewLabel);
+    expect(selected.querySelector('img[src="/images/ui/chevron-right.svg"]')).not.toBeNull();
+  });
+
+  it('selects the pin of the card a swipe comes to rest on', () => {
+    vi.useFakeTimers();
+    const onSelect = vi.fn();
+    renderLayout({ onSelect });
+
+    const track = layOutCardRow(CARD_PITCH);
+    fireEvent.scroll(track);
+    act(() => {
+      vi.advanceTimersByTime(60);
+    });
+    // Still moving: a second scroll event restarts the wait.
+    fireEvent.scroll(track);
+    act(() => {
+      vi.advanceTimersByTime(60);
+    });
+    expect(onSelect).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(120);
+    });
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith('act-2');
+  });
+
+  it('keeps the selection when the row rests on the selected card', () => {
+    vi.useFakeTimers();
+    const onSelect = vi.fn();
+    renderLayout({ onSelect });
+
+    fireEvent.scroll(layOutCardRow(0));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('ignores the card row while a wider layout hides it', () => {
+    vi.useFakeTimers();
+    const onSelect = vi.fn();
+    renderLayout({ onSelect });
+
+    const track = layOutCardRow(CARD_PITCH);
+    Object.defineProperty(track, 'clientWidth', { configurable: true, value: 0 });
+    fireEvent.scroll(track);
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('asks the map for one-finger panning in the phone map layout', () => {
+    const { copy } = renderLayout();
+
+    const query = screen
+      .getByRole('button', { name: copy.mapAriaLabel })
+      .getAttribute('data-one-finger-pan-query');
+    expect(query).toContain('(max-width: 767px)');
+    expect(query).toContain('(min-height: 501px)');
+    expect(query).toContain('(orientation: portrait)');
   });
 
   it('selects a pin on the map so the cards can open that activity', () => {

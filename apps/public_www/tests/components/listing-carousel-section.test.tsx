@@ -4,6 +4,19 @@ import { describe, expect, it } from 'vitest';
 import { ListingCarouselSection } from '@/components/sections/listings/listing-carousel-section';
 import { SearchProvider } from '@/components/shared/search/search-context';
 
+import { withChromeCopy } from '../helpers/chrome-copy';
+import { buildListing } from '../helpers/listing-fixture';
+
+const labels = {
+  parentVerified: 'Parent-Verified',
+  freeTrial: 'Free trial',
+  imageFallback: 'Photo coming soon',
+  locationsCount: '{count} locations',
+  detailsOnRequest: 'Details on request',
+  previous: 'Previous',
+  next: 'Next',
+};
+
 describe('ListingCarouselSection', () => {
   it('links the title and right-circle arrow to the search href', () => {
     render(
@@ -15,16 +28,7 @@ describe('ListingCarouselSection', () => {
           seeAllLabel="See all"
           listings={[]}
           isLoading={false}
-          labels={{
-            parentVerified: 'Parent-Verified',
-            freeTrial: 'Free trial',
-            imageFallback: 'Photo coming soon',
-            mapAlt: 'Map location',
-            locationsCount: '{count} locations',
-            detailsOnRequest: 'Details on request',
-            previous: 'Previous',
-            next: 'Next',
-          }}
+          labels={labels}
         />
       </SearchProvider>,
     );
@@ -52,5 +56,28 @@ describe('ListingCarouselSection', () => {
     expect(
       screen.getAllByRole('button').map((button) => button.getAttribute('aria-label')),
     ).toEqual(['Previous', 'Next']);
+  });
+
+  it('does not render a map under homepage carousel cards', () => {
+    const { container } = render(
+      withChromeCopy(
+        <SearchProvider>
+          <ListingCarouselSection
+            locale="en"
+            title="Popular activities in Stanley"
+            searchHref="/en/search/?region=stanley"
+            seeAllLabel="See all"
+            listings={[buildListing()]}
+            isLoading={false}
+            isPrimaryCarousel
+            labels={labels}
+          />
+        </SearchProvider>,
+      ),
+    );
+
+    expect(screen.getByRole('link', { name: 'Kowloon art' })).toBeInTheDocument();
+    expect(container.querySelector('.listing-card-mini-map')).toBeNull();
+    expect(container.querySelector('img[src*="staticmap"]')).toBeNull();
   });
 });

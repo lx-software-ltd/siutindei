@@ -96,7 +96,6 @@ export function ListingCarouselSection({
                       labels={labels}
                       imageLoading={imageProps.imageLoading}
                       imageFetchPriority={imageProps.imageFetchPriority}
-                      showMiniMap={isPrimaryCarousel && cardIndex < 6}
                     />
                   );
                 })}

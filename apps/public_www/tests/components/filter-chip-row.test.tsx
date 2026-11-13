@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FilterChipRow } from '@/components/sections/search/filter-chip-row';
 import { SearchProvider } from '@/components/shared/search/search-context';
 import { getContent } from '@/content';
-import { iconSrcForActivity } from '@/lib/home-wizard/choice-icons';
 import { homeWizardChoices } from '@/lib/home-wizard/choices';
 
 const replace = vi.hoisted(() => vi.fn());
@@ -35,72 +34,59 @@ describe('FilterChipRow', () => {
     currentSearchParams.value = new URLSearchParams();
   });
 
-  it('places each activity icon to the left of its label', () => {
+  it('centers the refinement filters and leaves activity types off the bar', () => {
     renderChipRow();
 
+    const group = screen.getByRole('group', { name: copy.filtersLabel });
+    expect(group).toHaveClass('[justify-content:safe_center]');
+    expect(group.querySelector('.w-px')).toBeNull();
+
     for (const type of homeWizardChoices.activityTypes) {
-      const chip = screen.getByRole('button', { name: type.labels.en });
-      const icon = chip.querySelector('img');
-      expect(icon).not.toBeNull();
-      expect(icon).toHaveAttribute('src', iconSrcForActivity(type.id));
-      expect(icon).toHaveAttribute('width', '20');
-      expect(icon).toHaveAttribute('height', '20');
-      expect(chip.firstElementChild).toBe(icon);
+      expect(
+        screen.queryByRole('button', { name: type.labels.en }),
+      ).not.toBeInTheDocument();
     }
   });
 
-  it('toggles an activity type when its chip is pressed', () => {
+  it('carries sorting for phones, and the view switch only when the page passes one', () => {
     renderChipRow();
 
-    const firstType = homeWizardChoices.activityTypes[0];
-    const chip = screen.getByRole('button', { name: firstType.labels.en });
-
-    expect(chip.className).not.toContain('bg-accent-500');
-
-    fireEvent.click(chip);
-    expect(chip.className).toContain('bg-accent-500');
-
-    fireEvent.click(chip);
-    expect(chip.className).not.toContain('bg-accent-500');
+    const group = screen.getByRole('group', { name: copy.filtersLabel });
+    expect(group).toHaveClass('overflow-x-auto', 'min-w-0', 'flex-1');
+    expect(
+      screen.getByRole('combobox', { name: copy.sortLabel }).parentElement,
+    ).toHaveClass('md:hidden');
+    expect(group.parentElement).toHaveClass('search-toolbar');
+    expect(group.parentElement?.children).toHaveLength(1);
   });
 
-  it('writes the selected type into the search URL', () => {
-    renderChipRow();
-
-    const workshop = homeWizardChoices.activityTypes[0];
-    const classType = homeWizardChoices.activityTypes[1];
-    fireEvent.click(screen.getByRole('button', { name: workshop.labels.en }));
-
-    expect(replace).toHaveBeenCalledWith(
-      `/en/search/?types=${workshop.id}&view=map`,
+  it('keeps the view switch beside the filters instead of scrolling it away', () => {
+    render(
+      <SearchProvider>
+        <FilterChipRow
+          locale="en"
+          copy={copy}
+          isMapView
+          viewToggle={<button type="button">Switch</button>}
+        />
+      </SearchProvider>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: classType.labels.en }));
-    expect(replace).toHaveBeenLastCalledWith(
-      `/en/search/?types=${workshop.id}%2C${classType.id}&view=map`,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: workshop.labels.en }));
-    expect(replace).toHaveBeenLastCalledWith(
-      `/en/search/?types=${classType.id}&view=map`,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: classType.labels.en }));
-    expect(replace).toHaveBeenLastCalledWith(
-      `/en/search/?view=map`,
-    );
+    const group = screen.getByRole('group', { name: copy.filtersLabel });
+    const toggle = screen.getByRole('button', { name: 'Switch' });
+    expect(group).not.toContainElement(toggle);
+    expect(toggle.parentElement).toHaveClass('shrink-0', 'md:hidden');
+    expect(toggle.parentElement?.parentElement).toBe(group.parentElement);
+    expect(screen.queryByRole('combobox', { name: copy.sortLabel })).toBeNull();
   });
 
-  it('keeps list view in the query string when toggling a type', () => {
+  it('keeps list view in the query string when a filter changes', () => {
     currentSearchParams.value = new URLSearchParams('view=list');
     renderChipRow();
 
-    const workshop = homeWizardChoices.activityTypes[0];
-    fireEvent.click(screen.getByRole('button', { name: workshop.labels.en }));
+    fireEvent.click(screen.getByRole('button', { name: copy.freeFilterLabel }));
 
-    expect(replace).toHaveBeenCalledWith(
-      `/en/search/?types=${workshop.id}&view=list`,
-    );
+    expect(replace).toHaveBeenCalledWith('/en/search/?free=1&view=list');
   });
 
   it('toggles the free and free trial refinements', () => {

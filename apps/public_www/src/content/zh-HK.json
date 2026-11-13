@@ -29,6 +29,7 @@
       "anywhereInRegionLabel": "呢個地區任何地方",
       "childAgeLabel": "子女年齡",
       "activityTypesLabel": "活動類型",
+      "activityTypesHint": "可揀多項",
       "searchLabel": "搜尋",
       "allHongKongLabel": "全港",
       "allAreasLabel": "所有地區",
@@ -46,9 +47,13 @@
     }
   },
   "footer": {
-    "tagline": "LX Software 產品。香港特別行政區。",
     "copyrightTemplate": "© {year} LX Software（於香港註冊的獨資企業）。版權所有。",
     "contactHeading": "聯絡我們",
+    "contactIconLabels": {
+      "email": "電郵",
+      "whatsapp": "WhatsApp",
+      "instagram": "Instagram"
+    },
     "columns": [
       {
         "title": "探索",
@@ -79,7 +84,7 @@
     },
     "about": {
       "title": "關於 Siu Tin Dei",
-      "description": "了解 Siu Tin Dei 如何協助香港家庭找到可信賴的兒童活動。"
+      "description": "搬到舂坎角之後找不到活動，所以由赤柱開始做 Siu Tin Dei，幫處境相同的家庭找活動。"
     },
     "search": {
       "title": "搜尋兒童活動 | Siu Tin Dei",
@@ -102,7 +107,6 @@
     "shell": {
       "skipToMainContentLabel": "跳至主要內容",
       "environmentBadgeLabel": "測試環境",
-      "whatsappFabLabel": "WhatsApp 聯絡",
       "noscript": {
         "title": "已停用 JavaScript",
         "description": "基本導覽仍可使用。請啟用 JavaScript 以獲得完整體驗。",
@@ -245,6 +249,7 @@
     "sortLabel": "排序",
     "sortTimeLabel": "日子及時間",
     "sortPriceLabel": "最低價錢",
+    "sortChoiceTemplate": "排序：{choice}",
     "freeFilterLabel": "免費",
     "freeTrialFilterLabel": "免費試堂",
     "dayFilterLabel": "日子",
@@ -268,8 +273,8 @@
   },
   "activityDetail": {
     "loadingLabel": "載入活動中...",
-    "notFoundLabel": "找不到活動。",
-    "errorLabel": "無法載入此活動。",
+    "notFoundLabel": "這個活動躲得太好了",
+    "errorLabel": "這個活動躲在蒸籠裏不肯出來",
     "freeTrialLabel": "提供免費試堂",
     "temporarilyClosedLabel": "暫時休息",
     "detailsComingSoonLabel": "詳情稍後公布",
@@ -301,7 +306,6 @@
     "readMoreLabel": "閱讀更多",
     "readLessLabel": "收起",
     "scheduleHeading": "上課時間",
-    "scheduleTimeZoneNote": "以上為香港時間。",
     "scheduleMissingLabel": "主辦機構尚未公佈上課時間。",
     "taughtInLabel": "授課語言：{languages}",
     "priceHeading": "價錢",
@@ -328,22 +332,22 @@
     "ratingSummaryLabel": "{count} 個評價，平均 {average} 分（滿分 5 分）",
     "ratingSingleLabel": "1 個評價，{average} 分（滿分 5 分）",
     "starsLabel": "{stars} 分（滿分 5 分）",
-    "moreFromOrganiserHeading": "同一主辦機構的活動",
+    "moreFromOrganiserHeading": "更多來自 {name}",
     "similarHeading": "附近的同類活動",
     "shareLabel": "分享",
     "linkCopiedLabel": "已複製連結",
     "parentVerifiedLabel": "家長認證",
-    "notFoundHint": "活動可能已結束，或連結已過期。",
+    "notFoundHint": "我們數到十，連蒸籠裏都找過了。活動可能已結束，或連結已過期。",
+    "errorHint": "載入活動時出了問題，請稍後再試。",
     "browseActivitiesLabel": "瀏覽活動",
     "goHomeLabel": "返回主頁",
     "mapAltLabel": "地圖位置",
     "listingFreeTrialLabel": "免費試堂"
   },
   "hostCta": {
-    "title": "與 Siu Tin Dei 合作",
-    "description": "刊登您的兒童活動計劃，接觸香港家庭。",
-    "buttonLabel": "聯絡我們",
-    "href": "#contact"
+    "title": "小店，來這裡發聲",
+    "description": "如果你經營小型工作室，或者自己的課堂，可以自己管理頁面。用你的方式，告訴家庭你真正在做什麼。",
+    "buttonLabel": "WhatsApp 聯絡我"
   },
   "pages": {
     "home": {
@@ -352,42 +356,49 @@
       }
     },
     "about": {
-      "body": {
-        "rows": [
-          {
-            "cells": [
-              {
-                "component": "hero",
-                "colStart": 1,
-                "colSpan": 12,
-                "props": {
-                  "eyebrow": "關於我們",
-                  "primaryCtaLabel": "探索活動",
-                  "primaryCtaHref": "/",
-                  "secondaryCtaLabel": "聯絡我們",
-                  "secondaryCtaHref": "#contact"
-                }
-              }
-            ]
-          },
-          {
-            "cells": [
-              {
-                "component": "richText",
-                "colStart": 2,
-                "colSpan": 10,
-                "props": {
-                  "title": "為香港家庭而設",
-                  "paragraphs": [
-                    "Siu Tin Dei 協助家長發掘香港優質兒童活動 — 時間表、收費及地點一目了然。",
-                    "我們現正建立精選目錄，並會隨合作機構加入而擴展。"
-                  ]
-                }
-              }
-            ]
-          }
-        ]
-      }
+      "onThisPageLabel": "本頁內容",
+      "title": "為香港家庭而設",
+      "intro": [
+        "我搬到舂坎角，找不到任何活動。",
+        "附近其他家庭應該也一樣，所以我做了 Siu Tin Dei。"
+      ],
+      "sections": [
+        {
+          "id": "stanley",
+          "heading": "由赤柱開始",
+          "paragraphs": [
+            "所以我由赤柱開始。那裡離家不遠，很多家庭本來就會去。我想幫自己一家找活動，也想幫處境相同的家庭。"
+          ]
+        },
+        {
+          "id": "southern",
+          "heading": "先做南區",
+          "paragraphs": [
+            "下一步是南區其他地方：淺水灣、鴨脷洲，還有附近一帶。之後再覆蓋全香港。"
+          ]
+        },
+        {
+          "id": "small-businesses",
+          "heading": "讓小店有聲音",
+          "paragraphs": [
+            "我找不到一個可靠的搜尋目錄，可以同時做到準確、完整，又收錄小店。小店常常被漏掉，就算有，資料也常常不對。我想讓這些小店有自己的聲音。"
+          ]
+        },
+        {
+          "id": "your-page",
+          "heading": "你可以管理自己的頁面",
+          "paragraphs": [
+            "如果你經營小店，可以自己管理頁面。你提供什麼，你最清楚。頁面上的說法，用你的方式就好。"
+          ]
+        },
+        {
+          "id": "write-to-me",
+          "heading": "寫信給我",
+          "paragraphs": [
+            "如果有什麼不對，如果你想自己管理頁面，或者你有建議，寫信給我。"
+          ]
+        }
+      ]
     }
   },
   "hero": {
@@ -395,21 +406,6 @@
     "subtitle": "香港精選兒童活動。"
   },
   "features": {
-    "title": "為何選擇 Siu Tin Dei",
-    "description": "為香港家長搜尋合適活動的起點。",
-    "items": [
-      {
-        "title": "嚴選計劃",
-        "description": "每項活動均經安全、價值及教學質素審核。"
-      },
-      {
-        "title": "立足香港",
-        "description": "地區、語言、時間表及收費切合本地需要。"
-      },
-      {
-        "title": "收費透明",
-        "description": "每堂、每期或每日收費清晰列明。"
-      }
-    ]
+    "title": "為何選擇 Siu Tin Dei"
   }
 }

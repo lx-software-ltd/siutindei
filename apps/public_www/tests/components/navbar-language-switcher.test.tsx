@@ -38,4 +38,20 @@ describe('NavbarLanguageSwitcher', () => {
     expect(englishFlag).toHaveClass('rounded-full');
     expect(chineseFlag).toHaveClass('rounded-full');
   });
+
+  it('shows phones only the language to switch to', () => {
+    const content = getContent('en');
+
+    render(
+      <NavbarLanguageSwitcher locale="en" content={content.navbar} />,
+    );
+
+    const current = screen.getByRole('link', { name: 'English' });
+    expect(current).toHaveClass('hidden', 'sm:inline-flex');
+    expect(current).not.toHaveClass('inline-flex');
+
+    const other = screen.getByRole('link', { name: '繁體中文' });
+    expect(other).toHaveClass('inline-flex', 'h-11', 'w-11');
+    expect(other).not.toHaveClass('hidden');
+  });
 });

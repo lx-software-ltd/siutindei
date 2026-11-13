@@ -285,14 +285,9 @@ a:focus-visible {
   margin: 0;
 }
 
-.site-footer__tagline,
 .site-footer__copyright {
   font-size: 0.75rem;
   line-height: 1.5;
-}
-
-.site-footer__copyright {
-  margin-top: 4px;
 }
 
 .site-footer a {

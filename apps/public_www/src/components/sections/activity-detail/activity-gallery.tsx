@@ -28,9 +28,9 @@ function FallbackTile({
 }) {
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-3 bg-brand-50 text-sm text-ink-500 ${className}`}
+      className={`flex flex-col items-center justify-center gap-2 bg-brand-50 text-sm text-ink-500 sm:gap-3 ${className}`}
     >
-      <img src={iconSrc} alt="" width={96} height={96} aria-hidden="true" className="h-20 w-20 object-contain opacity-80" />
+      <img src={iconSrc} alt="" width={96} height={96} aria-hidden="true" className="h-14 w-14 object-contain opacity-80 sm:h-20 sm:w-20" />
       <span>{label}</span>
     </div>
   );
@@ -62,11 +62,12 @@ export function ActivityGallery({
   }
 
   if (photos.length === 0) {
+    // With no photo to show, phones keep the tile short so the facts start higher.
     return (
       <FallbackTile
         iconSrc={fallbackIconSrc}
         label={copy.imageFallbackLabel}
-        className="activity-gallery__frame aspect-[4/3] w-full rounded-2xl md:aspect-[16/7]"
+        className="activity-gallery__frame aspect-[5/2] w-full rounded-2xl sm:aspect-[4/3] md:aspect-[16/7]"
       />
     );
   }

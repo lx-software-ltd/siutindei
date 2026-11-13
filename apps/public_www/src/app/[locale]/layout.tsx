@@ -1,8 +1,6 @@
 import type { ReactNode } from 'react';
 
 import { PageLayout } from '@/components/shared/page-layout';
-import { SparkleCursor } from '@/components/shared/sparkle-cursor';
-import { WhatsappFab } from '@/components/shared/whatsapp-fab';
 import {
   generateLocaleStaticParams,
   type LocaleRouteParams,
@@ -10,7 +8,6 @@ import {
 } from '@/lib/locale-page';
 import { localizePath } from '@/lib/locale-routing';
 import { ROUTES } from '@/lib/routes';
-import { resolvePublicSiteConfig } from '@/lib/site-config';
 
 interface LocaleLayoutProps {
   readonly children: ReactNode;
@@ -27,7 +24,6 @@ export default async function LocaleLayout({
 }: LocaleLayoutProps) {
   const { locale, content } = await resolveLocalePageContext(params);
   const direction = content.meta.direction === 'rtl' ? 'rtl' : 'ltr';
-  const publicSiteConfig = resolvePublicSiteConfig();
   const noscriptCopy = content.common.shell.noscript;
   const localizedHomeHref = localizePath(ROUTES.home, locale);
   const localizedContactHref = `${localizePath(ROUTES.home, locale)}#contact`;
@@ -61,10 +57,6 @@ export default async function LocaleLayout({
       >
         {children}
       </PageLayout>
-      {publicSiteConfig.whatsappUrl ? (
-        <WhatsappFab label={content.common.shell.whatsappFabLabel} />
-      ) : null}
-      <SparkleCursor />
     </div>
   );
 }
