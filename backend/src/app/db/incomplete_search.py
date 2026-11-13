@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -124,7 +125,7 @@ def _picked_incomplete_subquery(filters: ActivitySearchFilters) -> sa.Subquery:
     )
     needs_entries = needs_entry_filters(filters)
     if needs_entries:
-        query = query.join(
+        query = query.outerjoin(
             ActivityScheduleEntry,
             ActivityScheduleEntry.schedule_id == ActivitySchedule.id,
         )
@@ -152,7 +153,7 @@ def _picked_incomplete_subquery(filters: ActivitySearchFilters) -> sa.Subquery:
     if filters.text_query:
         conditions.append(text_query_condition(filters.text_query))
     if needs_entries:
-        apply_entry_filters(filters, conditions)
+        conditions.append(_entry_match_or_open_place(filters))
     if area_scope is not None:
         if area_scope:
             conditions.append(Location.area_id.in_(tuple(area_scope)))
@@ -296,8 +297,10 @@ def _limit_ranked_venues(ranked, filters, area_scope, venues):
     needs_schedule = (
         filters.schedule_type is not None or bool(filters.languages) or needs_entries
     )
+    schedule_required = filters.schedule_type is not None or bool(filters.languages)
     if needs_schedule:
-        ranked = ranked.join(
+        join = ranked.join if schedule_required else ranked.outerjoin
+        ranked = join(
             ActivitySchedule,
             and_(
                 ActivitySchedule.activity_id == venues.c.activity_id,
@@ -311,15 +314,25 @@ def _limit_ranked_venues(ranked, filters, area_scope, venues):
         if filters.languages:
             ranked = ranked.where(or_(*build_language_conditions(filters.languages)))
         if needs_entries:
-            ranked = ranked.join(
+            ranked = ranked.outerjoin(
                 ActivityScheduleEntry,
                 ActivityScheduleEntry.schedule_id == ActivitySchedule.id,
-            )
-            entry_conditions: list = []
-            apply_entry_filters(filters, entry_conditions)
-            if entry_conditions:
-                ranked = ranked.where(and_(*entry_conditions))
+            ).where(_entry_match_or_open_place(filters))
     return ranked
+
+
+def _entry_match_or_open_place(filters: ActivitySearchFilters) -> Any:
+    """An entry matches the day or time filters, or the row is a place with no hours.
+
+    A place's entries are opening hours. With none stored, a parent can
+    still go, so a day filter keeps it. The entry join must be outer.
+    """
+    entry_conditions: list = []
+    apply_entry_filters(filters, entry_conditions)
+    return or_(
+        and_(ActivityScheduleEntry.id.is_not(None), *entry_conditions),
+        and_(Activity.kind == "place", ActivityScheduleEntry.id.is_(None)),
+    )
 
 
 def _complete_listing_exists() -> sa.Exists:
