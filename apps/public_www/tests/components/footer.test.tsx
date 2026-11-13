@@ -73,6 +73,7 @@ describe('Footer', () => {
     expect(link).toHaveAttribute('href', 'https://www.lx-software.com');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noreferrer noopener');
+    expect(link).toHaveClass('link-underlined');
     expect(screen.getByText(/All rights reserved/)).toHaveTextContent(
       /© \d{4} LX Software\. All rights reserved\./,
     );
@@ -83,6 +84,7 @@ describe('Footer', () => {
 
     const link = screen.getByRole('link', { name: 'LX Software' });
     expect(link).toHaveAttribute('href', 'https://www.lx-software.com');
+    expect(link).toHaveClass('link-underlined');
     expect(screen.getByText(/版權所有/)).toHaveTextContent(
       /© \d{4} LX Software。版權所有。/,
     );

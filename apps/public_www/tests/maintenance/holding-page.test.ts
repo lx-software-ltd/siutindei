@@ -74,6 +74,11 @@ describe('pre-launch holding page', () => {
       expect(html).not.toContain('__MAINTENANCE_FOOTER__');
       expect(html).not.toMatch(/<\/a>\s+\./);
       expect(html).toMatch(/<\/a>\./);
+      expect(html).toContain('LX Software</a>. All rights reserved.');
+      expect(html).toContain('class="link-underlined"');
+      expect(html).not.toContain(
+        'a sole proprietorship registered in Hong Kong',
+      );
       expect(html).not.toMatch(/mailto:(?!__NEXT_PUBLIC_EMAIL__)/);
       expect(html).not.toContain('https://lx-software.com');
       expect(html).not.toContain('siutindei.com');
@@ -102,26 +107,51 @@ describe('pre-launch holding page', () => {
     }
   });
 
+  it('uses the public contact icons at double size on the front page', () => {
+    const html = assembleHoldingPage('index.html');
+    expect(html).not.toContain('class="btn');
+    expect(html).not.toContain('>Email us<');
+    expect(html).toContain('class="contact-icons"');
+    for (const name of ['email', 'whatsapp', 'instagram', 'facebook']) {
+      const relative = `images/contact/${name}.svg`;
+      expect(html).toContain(`src="/${relative}"`);
+      expect(html).toContain('width="72"');
+      expect(html).toContain('height="72"');
+      const maintenanceCopy = readFileSync(resolve(MAINTENANCE_DIR, relative));
+      const publicCopy = readFileSync(resolve(PUBLIC_DIR, relative));
+      expect(Buffer.compare(maintenanceCopy, publicCopy)).toBe(0);
+    }
+  });
+
   it('uses launching-soon copy on the front page', () => {
     const html = readMaintenance('index.html');
     expect(html).toContain('Coming soon');
     expect(html).toContain('Every child deserves their own small world');
     expect(html).toContain('Siu Tin Dei is launching soon');
-    expect(assembleHoldingPage('index.html')).toContain(
-      'LX Software (a sole proprietorship registered in Hong Kong)',
+    const holdingPage = assembleHoldingPage('index.html');
+    expect(holdingPage).toContain(
+      'LX Software</a>. All rights reserved.',
     );
-    expect(assembleHoldingPage('index.html')).not.toContain(
-      'LX Software Limited',
+    expect(holdingPage).toContain('class="link-underlined"');
+    expect(holdingPage).toContain('href="__NEXT_PUBLIC_LX_SOFTWARE_URL__"');
+    expect(holdingPage).not.toContain(
+      'a sole proprietorship registered in Hong Kong',
     );
+    expect(holdingPage).not.toContain('LX Software Limited');
   });
 
   it('keeps brand tokens, reduced-motion, and dynamic viewport height', () => {
     const css = readMaintenance('styles.css');
     expect(css).toContain('--color-brand-500: #f5c51b');
+    expect(css).toContain('--color-brand-700: #6b4e0e');
+    expect(css).toContain('.site-footer a.link-underlined');
+    expect(css).toContain('text-decoration: underline');
     expect(css).toContain('--color-ink-900: #2e1d12');
     expect(css).toContain('prefers-reduced-motion');
     expect(css).toContain('100dvh');
-    expect(css).toContain('.card a[href^="mailto:"]:not(.btn)');
+    expect(css).toContain('.card a[href^="mailto:"]:not(.btn):not(.contact-icon)');
+    expect(css).toContain('width: 72px');
+    expect(css).toContain('height: 72px');
     expect(css).toContain('white-space: nowrap');
     expect(css).toContain('hyphens: none');
   });
