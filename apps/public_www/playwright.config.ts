@@ -36,6 +36,7 @@ export default defineConfig({
       NEXT_PUBLIC_SITE_ORIGIN: BASE_URL,
       NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED: 'true',
       NEXT_PUBLIC_INSTAGRAM_URL: 'https://www.instagram.com/studio_example',
+      NEXT_PUBLIC_FACEBOOK_URL: 'https://www.facebook.com/studio_example',
     },
   },
 });

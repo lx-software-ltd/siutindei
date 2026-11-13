@@ -158,6 +158,7 @@ jobs:
           NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL || steps.resolve_public_site_config.outputs.contact_email }}
           NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
           NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
+          NEXT_PUBLIC_FACEBOOK_URL: ${{ vars.NEXT_PUBLIC_FACEBOOK_URL }}
           NEXT_PUBLIC_BUILD_YEAR: ${{ vars.NEXT_PUBLIC_BUILD_YEAR }}
           NEXT_PUBLIC_STAGING_BADGE_ENABLED: 'false'
           NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED: 'false'
@@ -181,6 +182,7 @@ jobs:
           NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL || steps.resolve_public_site_config.outputs.contact_email }}
           NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
           NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
+          NEXT_PUBLIC_FACEBOOK_URL: ${{ vars.NEXT_PUBLIC_FACEBOOK_URL }}
           NEXT_PUBLIC_LX_SOFTWARE_URL: ${{ vars.NEXT_PUBLIC_LX_SOFTWARE_URL }}
           NEXT_PUBLIC_BUILD_YEAR: ${{ vars.NEXT_PUBLIC_BUILD_YEAR }}
 

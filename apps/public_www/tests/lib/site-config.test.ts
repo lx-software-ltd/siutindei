@@ -32,6 +32,8 @@ describe('public contacts', () => {
   const envKeys = [
     'NEXT_PUBLIC_EMAIL',
     'NEXT_PUBLIC_WHATSAPP_URL',
+    'NEXT_PUBLIC_INSTAGRAM_URL',
+    'NEXT_PUBLIC_FACEBOOK_URL',
   ] as const;
   const original: Record<string, string | undefined> = {};
 
@@ -55,7 +57,26 @@ describe('public contacts', () => {
       email: 'hello@siutindei.com',
       whatsappUrl: 'https://wa.me/85294460861',
       whatsappDisplay: '+852 9446 0861',
+      instagramUrl: '',
+      facebookUrl: '',
     });
+  });
+
+  it('reads optional Instagram and Facebook profile URLs', () => {
+    for (const key of envKeys) {
+      original[key] = process.env[key];
+    }
+    process.env.NEXT_PUBLIC_INSTAGRAM_URL =
+      ' https://www.instagram.com/studio_example ';
+    process.env.NEXT_PUBLIC_FACEBOOK_URL =
+      ' https://www.facebook.com/studio_example ';
+
+    expect(getSiteConfig().contact.instagramUrl).toBe(
+      'https://www.instagram.com/studio_example',
+    );
+    expect(getSiteConfig().contact.facebookUrl).toBe(
+      'https://www.facebook.com/studio_example',
+    );
   });
 
   it('lets NEXT_PUBLIC_EMAIL and NEXT_PUBLIC_WHATSAPP_URL override', () => {

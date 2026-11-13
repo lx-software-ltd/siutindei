@@ -7,6 +7,7 @@ interface FooterBoxes {
   readonly email: Box;
   readonly whatsapp: Box;
   readonly instagram: Box;
+  readonly facebook: Box;
   readonly copyright: Box;
   readonly scrollWidth: number;
   readonly innerWidth: number;
@@ -59,6 +60,7 @@ async function measureFooter(
       const email = linkBox(emailLabel);
       const whatsapp = linkBox('WhatsApp');
       const instagram = linkBox('Instagram');
+      const facebook = linkBox('Facebook');
       if (
         !logo
         || !exploreNode
@@ -67,6 +69,7 @@ async function measureFooter(
         || !email
         || !whatsapp
         || !instagram
+        || !facebook
       ) {
         throw new Error('footer columns missing');
       }
@@ -85,6 +88,7 @@ async function measureFooter(
         email: box(email.getBoundingClientRect()),
         whatsapp: box(whatsapp.getBoundingClientRect()),
         instagram: box(instagram.getBoundingClientRect()),
+        facebook: box(facebook.getBoundingClientRect()),
         copyright: box(range.getBoundingClientRect()),
         scrollWidth: document.documentElement.scrollWidth,
         innerWidth: window.innerWidth,
@@ -101,8 +105,10 @@ async function measureFooter(
 function expectIconsInARow(boxes: FooterBoxes): void {
   expect(Math.abs(boxes.whatsapp.top - boxes.email.top)).toBeLessThan(2);
   expect(Math.abs(boxes.instagram.top - boxes.email.top)).toBeLessThan(2);
+  expect(Math.abs(boxes.facebook.top - boxes.email.top)).toBeLessThan(2);
   expect(boxes.whatsapp.left).toBeGreaterThan(boxes.email.left);
   expect(boxes.instagram.left).toBeGreaterThan(boxes.whatsapp.left);
+  expect(boxes.facebook.left).toBeGreaterThan(boxes.instagram.left);
 }
 
 function expectCopyrightCentered(boxes: FooterBoxes): void {
@@ -121,7 +127,7 @@ test.describe('footer columns', () => {
     expect(boxes.scrollWidth).toBeLessThanOrEqual(boxes.innerWidth + 1);
     expect(boxes.email.left).toBeGreaterThan(boxes.logo.right);
     expect(Math.abs(midY(boxes.email) - midY(boxes.logo))).toBeLessThan(8);
-    expect(Math.abs(boxes.innerWidth - boxes.instagram.right - 16)).toBeLessThan(4);
+    expect(Math.abs(boxes.innerWidth - boxes.facebook.right - 16)).toBeLessThan(4);
     expectIconsInARow(boxes);
     expect(boxes.explore.top).toBeGreaterThan(boxes.logo.top + boxes.logo.height - 1);
     expect(Math.abs(boxes.support.top - boxes.explore.top)).toBeLessThan(2);
@@ -157,10 +163,10 @@ test.describe('footer columns', () => {
       expect(Math.abs(midX({
         top: boxes.email.top,
         left: boxes.email.left,
-        right: boxes.instagram.right,
+        right: boxes.facebook.right,
         height: boxes.email.height,
       }) - boxes.innerWidth / 2)).toBeLessThan(16);
-      expect(boxes.explore.left).toBeGreaterThan(boxes.instagram.right);
+      expect(boxes.explore.left).toBeGreaterThan(boxes.facebook.right);
       expect(boxes.support.left).toBeGreaterThan(boxes.explore.left);
       expect(boxes.support.right).toBeGreaterThan(boxes.innerWidth - padding - 160);
       expect(boxes.innerWidth - boxes.support.right).toBeLessThan(padding + 8);
@@ -185,10 +191,10 @@ test.describe('footer columns', () => {
     expect(Math.abs(midX({
       top: boxes.email.top,
       left: boxes.email.left,
-      right: boxes.instagram.right,
+      right: boxes.facebook.right,
       height: boxes.email.height,
     }) - boxes.innerWidth / 2)).toBeLessThan(16);
-    expect(boxes.explore.left).toBeGreaterThan(boxes.instagram.right);
+    expect(boxes.explore.left).toBeGreaterThan(boxes.facebook.right);
     expect(boxes.innerWidth - boxes.support.right).toBeLessThan(40);
     expectCopyrightCentered(boxes);
     await expect(page.locator('footer p', { hasText: /^聯絡我們$/ })).toHaveCount(0);

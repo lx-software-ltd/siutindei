@@ -103,7 +103,7 @@ Source: [`apps/public_www`](../../apps/public_www).
     shown, and of the applied filters only a name search (`q`) keeps its
     chip, because the search bar and the filter row already show the rest.
   - The footer sets a small logo, shows the configured email, WhatsApp,
-    and Instagram contacts as coloured tiles from
+    Instagram, and Facebook contacts as coloured tiles from
     `public/images/contact/`, and sets the two link columns side by side.
 - **Body:** About uses the article layout shared with privacy and terms
   (`ArticlePage`: title, intro, on-this-page links, anchored sections) from
@@ -349,12 +349,13 @@ and is invoked by both workflows. It supports three primary modes:
    `__MAINTENANCE_BUBBLES__` and `__MAINTENANCE_FOOTER__` from
    `maintenance/partials/`, then substitutes `__NEXT_PUBLIC_EMAIL__`,
    `__NEXT_PUBLIC_WHATSAPP_URL__`, `__NEXT_PUBLIC_INSTAGRAM_URL__`,
-   `__NEXT_PUBLIC_LX_SOFTWARE_URL__`, and `__NEXT_PUBLIC_BUILD_YEAR__`.
+   `__NEXT_PUBLIC_FACEBOOK_URL__`, `__NEXT_PUBLIC_LX_SOFTWARE_URL__`,
+   and `__NEXT_PUBLIC_BUILD_YEAR__`.
    Email and WhatsApp use the same public contacts as the full site:
    `NEXT_PUBLIC_EMAIL` and `NEXT_PUBLIC_WHATSAPP_URL` when set, otherwise
    `contactEmail` and `whatsappUrl` in
    `apps/public_www/build-env.defaults.json` (`hello@siutindei.com`,
-   `https://wa.me/85294460861`). An unset Instagram URL becomes `#`;
+   `https://wa.me/85294460861`). An unset Instagram or Facebook URL becomes `#`;
    an unset LX Software URL defaults to `https://www.lx-software.com`;
    an unset build year defaults to the current calendar year. It also
    copies `favicon.ico`,

@@ -5,16 +5,19 @@ import { Footer } from '@/components/sections/footer';
 import { getContent } from '@/content';
 
 const INSTAGRAM_URL = 'https://www.instagram.com/studio_example';
+const FACEBOOK_URL = 'https://www.facebook.com/studio_example';
 
 describe('Footer', () => {
   const originalWhatsapp = process.env.NEXT_PUBLIC_WHATSAPP_URL;
   const originalEmail = process.env.NEXT_PUBLIC_EMAIL;
   const originalInstagram = process.env.NEXT_PUBLIC_INSTAGRAM_URL;
+  const originalFacebook = process.env.NEXT_PUBLIC_FACEBOOK_URL;
 
   beforeEach(() => {
     process.env.NEXT_PUBLIC_WHATSAPP_URL = 'https://wa.me/85200000000';
     process.env.NEXT_PUBLIC_EMAIL = 'hello@example.com';
     process.env.NEXT_PUBLIC_INSTAGRAM_URL = INSTAGRAM_URL;
+    process.env.NEXT_PUBLIC_FACEBOOK_URL = FACEBOOK_URL;
   });
 
   afterEach(() => {
@@ -32,6 +35,11 @@ describe('Footer', () => {
       delete process.env.NEXT_PUBLIC_INSTAGRAM_URL;
     } else {
       process.env.NEXT_PUBLIC_INSTAGRAM_URL = originalInstagram;
+    }
+    if (originalFacebook === undefined) {
+      delete process.env.NEXT_PUBLIC_FACEBOOK_URL;
+    } else {
+      process.env.NEXT_PUBLIC_FACEBOOK_URL = originalFacebook;
     }
   });
 
@@ -64,22 +72,26 @@ describe('Footer', () => {
     expect(screen.getByText(/版權所有/)).toBeInTheDocument();
   });
 
-  it('turns email, WhatsApp, and Instagram into icons', () => {
+  it('turns email, WhatsApp, Instagram, and Facebook into icons', () => {
     renderFooter();
 
     const email = screen.getByRole('link', { name: 'Email hello@example.com' });
     const whatsapp = screen.getByRole('link', { name: /WhatsApp/ });
     const instagram = screen.getByRole('link', { name: 'Instagram' });
+    const facebook = screen.getByRole('link', { name: 'Facebook' });
 
     expect(email).toHaveAttribute('href', 'mailto:hello@example.com');
     expect(whatsapp).toHaveAttribute('href', 'https://wa.me/85200000000');
     expect(instagram).toHaveAttribute('href', INSTAGRAM_URL);
     expect(instagram).toHaveAttribute('target', '_blank');
+    expect(facebook).toHaveAttribute('href', FACEBOOK_URL);
+    expect(facebook).toHaveAttribute('target', '_blank');
 
     expect(email.querySelector('img')).toHaveAttribute('src', '/images/contact/email.svg');
     expect(whatsapp.querySelector('img')).toHaveAttribute('src', '/images/contact/whatsapp.svg');
     expect(instagram.querySelector('img')).toHaveAttribute('src', '/images/contact/instagram.svg');
-    for (const link of [email, whatsapp, instagram]) {
+    expect(facebook.querySelector('img')).toHaveAttribute('src', '/images/contact/facebook.svg');
+    for (const link of [email, whatsapp, instagram, facebook]) {
       expect(link.querySelector('img')).toHaveClass('h-9', 'w-9');
     }
 
@@ -97,7 +109,8 @@ describe('Footer', () => {
     );
     expect(email.closest('div')).toBe(whatsapp.closest('div'));
     expect(icons).toContainElement(instagram);
-    for (const link of [email, whatsapp, instagram]) {
+    expect(icons).toContainElement(facebook);
+    for (const link of [email, whatsapp, instagram, facebook]) {
       expect(link).toHaveClass('inline-flex', 'h-11', 'w-11');
     }
 
@@ -118,7 +131,16 @@ describe('Footer', () => {
     renderFooter();
 
     expect(screen.queryByRole('link', { name: 'Instagram' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Facebook' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Email hello@example.com' })).toBeInTheDocument();
+  });
+
+  it('omits Facebook when no profile is configured', () => {
+    delete process.env.NEXT_PUBLIC_FACEBOOK_URL;
+    renderFooter();
+
+    expect(screen.queryByRole('link', { name: 'Facebook' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Instagram' })).toBeInTheDocument();
   });
 
   it('puts the link columns side by side and centers the copyright', () => {
@@ -154,6 +176,7 @@ describe('Footer', () => {
       screen.getByRole('link', { name: 'Email hello@example.com' }),
       screen.getByRole('link', { name: /WhatsApp/ }),
       screen.getByRole('link', { name: 'Instagram' }),
+      screen.getByRole('link', { name: 'Facebook' }),
     ];
     for (const link of iconLinks) {
       expect(link).toHaveClass('h-11', 'w-11');

@@ -5,6 +5,7 @@ interface SiteContact {
   readonly whatsappUrl: string;
   readonly whatsappDisplay: string;
   readonly instagramUrl: string;
+  readonly facebookUrl: string;
 }
 
 export interface SearchConfig {
@@ -30,6 +31,7 @@ export interface PublicSiteConfig {
   readonly whatsappDisplay?: string;
   readonly contactEmail?: string;
   readonly instagramUrl?: string;
+  readonly facebookUrl?: string;
 }
 
 function trimEnv(value: string | undefined): string {
@@ -67,6 +69,7 @@ export function getSiteConfig(): SiteConfig {
       ),
       whatsappDisplay: buildDefaults.whatsappDisplay,
       instagramUrl: trimEnv(process.env.NEXT_PUBLIC_INSTAGRAM_URL),
+      facebookUrl: trimEnv(process.env.NEXT_PUBLIC_FACEBOOK_URL),
     },
     search: getSearchConfig(),
   };
@@ -131,7 +134,7 @@ export function getMetaPixelAllowedHosts(): string {
 }
 
 export function resolvePublicSiteConfig(): PublicSiteConfig {
-  const { email, whatsappUrl, whatsappDisplay, instagramUrl } =
+  const { email, whatsappUrl, whatsappDisplay, instagramUrl, facebookUrl } =
     getSiteConfig().contact;
 
   return {
@@ -139,5 +142,6 @@ export function resolvePublicSiteConfig(): PublicSiteConfig {
     ...(whatsappDisplay ? { whatsappDisplay } : {}),
     ...(email ? { contactEmail: email } : {}),
     ...(instagramUrl ? { instagramUrl } : {}),
+    ...(facebookUrl ? { facebookUrl } : {}),
   };
 }

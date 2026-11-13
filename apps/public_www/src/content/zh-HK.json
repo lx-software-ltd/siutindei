@@ -51,7 +51,8 @@
     "contactIconLabels": {
       "email": "電郵",
       "whatsapp": "WhatsApp",
-      "instagram": "Instagram"
+      "instagram": "Instagram",
+      "facebook": "Facebook"
     },
     "columns": [
       {
