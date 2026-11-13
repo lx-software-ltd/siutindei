@@ -57,16 +57,16 @@ export function Footer({ locale, content }: FooterProps) {
       data-section-id="footer"
     >
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-12 lg:px-8">
-        {/* Phones keep the icons on the left. Wider screens center them and pin the columns right. */}
-        <div className="flex flex-col gap-5 md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center md:gap-x-10">
+        {/* Phones put the icons on the logo's row, flush right. Wider screens center them. */}
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-5 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:gap-x-10">
           <img
             src="/images/brand/siutindei-logo-stacked.svg"
             alt={siteName}
             width={175}
             height={150}
-            className="h-auto w-20 shrink-0 justify-self-start md:col-start-1 md:row-start-1 md:w-40"
+            className="col-start-1 row-start-1 h-auto w-20 shrink-0 justify-self-start md:w-40"
           />
-          <div className="flex flex-wrap justify-start gap-1 md:col-start-2 md:row-start-1 md:justify-center">
+          <div className="col-start-2 row-start-1 flex flex-wrap justify-end gap-1 md:justify-center">
             {contact.email ? (
               <a
                 href={`mailto:${contact.email}`}
@@ -109,7 +109,7 @@ export function Footer({ locale, content }: FooterProps) {
               </a>
             ) : null}
           </div>
-          <div className="grid grid-cols-2 gap-x-6 md:col-start-3 md:row-start-1 md:w-max md:justify-self-end md:gap-x-10">
+          <div className="col-span-2 row-start-2 grid grid-cols-2 gap-x-6 md:col-span-1 md:col-start-3 md:row-start-1 md:w-max md:justify-self-end md:gap-x-10">
             {content.columns.map((column) => (
               <div key={column.title} className="min-w-0">
                 <p className="text-sm font-semibold text-ink-900">

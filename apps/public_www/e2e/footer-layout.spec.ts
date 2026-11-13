@@ -23,6 +23,10 @@ function midX(box: Box): number {
   return box.left + (box.right - box.left) / 2;
 }
 
+function midY(box: Box): number {
+  return box.top + box.height / 2;
+}
+
 async function measureFooter(
   page: Page,
   exploreHeading: string,
@@ -106,7 +110,7 @@ function expectCopyrightCentered(boxes: FooterBoxes): void {
 }
 
 test.describe('footer columns', () => {
-  test('keeps contact icons on the left on a phone', async ({ page }) => {
+  test('keeps contact icons on the right of the logo row on a phone', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/en/about/');
     await expect(page.getByText('An LX Software product. Hong Kong, SAR.')).toHaveCount(0);
@@ -115,10 +119,11 @@ test.describe('footer columns', () => {
     const boxes = await measureFooter(page, 'Explore', 'Support', 'Email');
 
     expect(boxes.scrollWidth).toBeLessThanOrEqual(boxes.innerWidth + 1);
-    expect(Math.abs(boxes.email.left - boxes.logo.left)).toBeLessThan(4);
-    expect(boxes.email.top).toBeGreaterThan(boxes.logo.top + boxes.logo.height - 1);
+    expect(boxes.email.left).toBeGreaterThan(boxes.logo.right);
+    expect(Math.abs(midY(boxes.email) - midY(boxes.logo))).toBeLessThan(8);
+    expect(Math.abs(boxes.innerWidth - boxes.instagram.right - 16)).toBeLessThan(4);
     expectIconsInARow(boxes);
-    expect(boxes.explore.top).toBeGreaterThan(boxes.email.top + boxes.email.height - 1);
+    expect(boxes.explore.top).toBeGreaterThan(boxes.logo.top + boxes.logo.height - 1);
     expect(Math.abs(boxes.support.top - boxes.explore.top)).toBeLessThan(2);
     expect(boxes.support.left).toBeGreaterThan(boxes.explore.left);
     expectCopyrightCentered(boxes);

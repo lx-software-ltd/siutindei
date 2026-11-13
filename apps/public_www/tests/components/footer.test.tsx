@@ -46,13 +46,8 @@ describe('Footer', () => {
 
     const logo = screen.getByRole('contentinfo').querySelector('img');
     expect(logo).toHaveAttribute('src', '/images/brand/siutindei-logo-stacked.svg');
-    expect(logo).toHaveClass('w-20', 'justify-self-start', 'md:w-40', 'md:col-start-1');
-    expect(logo?.parentElement).toHaveClass(
-      'flex',
-      'flex-col',
-      'md:grid',
-      'md:items-center',
-    );
+    expect(logo).toHaveClass('w-20', 'justify-self-start', 'md:w-40', 'col-start-1', 'row-start-1');
+    expect(logo?.parentElement).toHaveClass('grid', 'items-center');
     expect(screen.queryByText(/LX Software product/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Hong Kong, SAR/)).not.toBeInTheDocument();
     expect(screen.getByText(/All rights reserved/)).toBeInTheDocument();
@@ -88,7 +83,14 @@ describe('Footer', () => {
     expect(screen.queryByText(/\+852/)).not.toBeInTheDocument();
 
     const icons = email.parentElement;
-    expect(icons).toHaveClass('flex', 'flex-wrap', 'justify-start', 'md:col-start-2', 'md:justify-center');
+    expect(icons).toHaveClass(
+      'flex',
+      'flex-wrap',
+      'justify-end',
+      'col-start-2',
+      'row-start-1',
+      'md:justify-center',
+    );
     expect(email.closest('div')).toBe(whatsapp.closest('div'));
     expect(icons).toContainElement(instagram);
     for (const link of [email, whatsapp, instagram]) {
@@ -121,7 +123,14 @@ describe('Footer', () => {
     const logo = screen.getByRole('contentinfo').querySelector('img');
     const columns = screen.getByText(content.columns[0].title, { selector: 'p' }).parentElement
       ?.parentElement;
-    expect(columns).toHaveClass('grid', 'grid-cols-2', 'md:col-start-3', 'md:justify-self-end');
+    expect(columns).toHaveClass(
+      'grid',
+      'grid-cols-2',
+      'col-span-2',
+      'row-start-2',
+      'md:col-start-3',
+      'md:justify-self-end',
+    );
     expect(columns?.parentElement).toBe(logo?.parentElement);
     expect(screen.queryByText('Contact', { selector: 'p' })).not.toBeInTheDocument();
 
