@@ -253,8 +253,8 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
   }
   const alarms = Object.entries(nested.Resources as Record<string, Record<string, unknown>>)
     .filter(([, resource]) => resource.Type === "AWS::CloudWatch::Alarm");
-  if (alarms.length !== 16) {
-    throw new Error(`Expected 16 ops alarm rules in OpsAlarmsStack, found ${alarms.length}`);
+  if (alarms.length !== 19) {
+    throw new Error(`Expected 19 ops alarm rules in OpsAlarmsStack, found ${alarms.length}`);
   }
   for (const [logicalId, resource] of alarms) {
     const found = new Set<string>();
@@ -274,7 +274,7 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
     Resources: Record<string, { Type: string; Properties?: Record<string, unknown> }>;
   };
   const parentResources = synthesized.Resources;
-  // CloudFormation allows 500 resources. 494 includes the admin live
+  // CloudFormation allows 500 resources. 495 includes the admin live
   // alias and its published version and the conditional secondary API
   // custom domain and mapping. Fail if a later edit crosses the cap or
   // drifts from the documented count.
@@ -284,7 +284,7 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
       `API stack has ${resourceCount} resources; CloudFormation allows 500`,
     );
   }
-  if (resourceCount !== 494) {
+  if (resourceCount !== 495) {
     throw new Error(
       `API stack resource count changed to ${resourceCount}; update docs/architecture/aws-assets-map.md`,
     );
