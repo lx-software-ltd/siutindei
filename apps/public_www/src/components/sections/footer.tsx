@@ -57,8 +57,8 @@ export function Footer({ locale, content }: FooterProps) {
       data-section-id="footer"
     >
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-12 lg:px-8">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-5 md:gap-10 lg:grid-cols-[max-content_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="col-span-2 md:col-span-1">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-5 md:gap-10 lg:grid-cols-[max-content_minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="col-span-2 flex min-w-0 items-center gap-4 lg:col-span-1">
             <img
               src="/images/brand/siutindei-logo-stacked.svg"
               alt={siteName}
@@ -66,13 +66,7 @@ export function Footer({ locale, content }: FooterProps) {
               height={150}
               className="h-auto w-20 shrink-0 md:w-40"
             />
-          </div>
-          <div className="col-span-2 min-w-0 text-sm md:col-span-1">
-            <p className="font-semibold text-ink-900">
-              {content.contactHeading}
-            </p>
-            {/* The negative margin lines the first tile up with the heading. */}
-            <div className="-ml-1 mt-1 flex flex-wrap gap-1 md:mt-2">
+            <div className="flex flex-wrap gap-1">
               {contact.email ? (
                 <a
                   href={`mailto:${contact.email}`}

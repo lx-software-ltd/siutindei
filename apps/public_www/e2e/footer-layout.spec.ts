@@ -2,7 +2,6 @@ import { expect, test, type Page } from '@playwright/test';
 
 interface FooterBoxes {
   readonly logo: Box;
-  readonly contact: Box;
   readonly explore: Box;
   readonly email: Box;
   readonly whatsapp: Box;
@@ -18,23 +17,23 @@ interface Box {
   readonly height: number;
 }
 
+function midY(box: Box): number {
+  return box.top + box.height / 2;
+}
+
 async function measureFooter(
   page: Page,
-  contactHeading: string,
   exploreHeading: string,
   emailName: string,
 ): Promise<FooterBoxes> {
   return page.evaluate(
-    ({ contactText, exploreText, emailLabel }) => {
+    ({ exploreText, emailLabel }) => {
       const footer = document.querySelector('footer');
       if (!footer) {
         throw new Error('footer missing');
       }
       const logo = footer.querySelector('img');
       const paragraphs = [...footer.querySelectorAll('p')];
-      const contactNode = paragraphs.find(
-        (node) => node.textContent?.trim() === contactText,
-      );
       const exploreNode = paragraphs.find(
         (node) => node.textContent?.trim() === exploreText,
       );
@@ -48,7 +47,7 @@ async function measureFooter(
       const email = linkBox(emailLabel);
       const whatsapp = linkBox('WhatsApp');
       const instagram = linkBox('Instagram');
-      if (!logo || !contactNode || !exploreNode || !email || !whatsapp || !instagram) {
+      if (!logo || !exploreNode || !email || !whatsapp || !instagram) {
         throw new Error('footer columns missing');
       }
       const box = (element: Element) => {
@@ -62,7 +61,6 @@ async function measureFooter(
       };
       return {
         logo: box(logo),
-        contact: box(contactNode),
         explore: box(exploreNode),
         email: box(email),
         whatsapp: box(whatsapp),
@@ -72,7 +70,6 @@ async function measureFooter(
       };
     },
     {
-      contactText: contactHeading,
       exploreText: exploreHeading,
       emailLabel: emailName,
     },
@@ -80,23 +77,22 @@ async function measureFooter(
 }
 
 test.describe('footer columns', () => {
-  test('keeps contact under the logo on a phone', async ({ page }) => {
+  test('keeps contact icons in line with the logo on a phone', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/en/about/');
     await expect(page.getByText('An LX Software product. Hong Kong, SAR.')).toHaveCount(0);
+    await expect(page.locator('footer p', { hasText: /^Contact$/ })).toHaveCount(0);
 
-    const boxes = await measureFooter(page, 'Contact', 'Explore', 'Email');
+    const boxes = await measureFooter(page, 'Explore', 'Email');
 
     expect(boxes.scrollWidth).toBeLessThanOrEqual(boxes.innerWidth + 1);
-    expect(boxes.contact.top).toBeGreaterThan(
-      boxes.logo.top + boxes.logo.height - 1,
-    );
-    expect(Math.abs(boxes.contact.left - boxes.logo.left)).toBeLessThan(8);
-    expect(boxes.email.top).toBeGreaterThan(boxes.contact.top);
+    expect(boxes.email.left).toBeGreaterThan(boxes.logo.right - 1);
+    expect(Math.abs(midY(boxes.email) - midY(boxes.logo))).toBeLessThan(4);
     expect(Math.abs(boxes.whatsapp.top - boxes.email.top)).toBeLessThan(2);
     expect(Math.abs(boxes.instagram.top - boxes.email.top)).toBeLessThan(2);
     expect(boxes.whatsapp.left).toBeGreaterThan(boxes.email.left);
     expect(boxes.instagram.left).toBeGreaterThan(boxes.whatsapp.left);
+    expect(boxes.explore.top).toBeGreaterThan(boxes.logo.top + boxes.logo.height - 1);
   });
 
   for (const viewport of [
@@ -116,16 +112,16 @@ test.describe('footer columns', () => {
         page.getByRole('banner').getByRole('link', { name: 'List your activity' }),
       ).toHaveCount(0);
 
-      const boxes = await measureFooter(page, 'Contact', 'Explore', 'Email');
+      const boxes = await measureFooter(page, 'Explore', 'Email');
 
       expect(boxes.scrollWidth).toBeLessThanOrEqual(boxes.innerWidth + 1);
-      expect(boxes.contact.left).toBeGreaterThanOrEqual(boxes.logo.right - 1);
-      expect(Math.abs(boxes.contact.top - boxes.logo.top)).toBeLessThan(8);
+      expect(boxes.email.left).toBeGreaterThan(boxes.logo.right - 1);
+      expect(Math.abs(midY(boxes.email) - midY(boxes.logo))).toBeLessThan(4);
       expect(Math.abs(boxes.whatsapp.top - boxes.email.top)).toBeLessThan(2);
       expect(boxes.whatsapp.left).toBeGreaterThan(boxes.email.left);
       if (viewport.width >= 1024) {
         expect(boxes.instagram.right).toBeLessThanOrEqual(boxes.explore.left + 1);
-        expect(Math.abs(boxes.explore.top - boxes.contact.top)).toBeLessThan(8);
+        expect(Math.abs(boxes.explore.top - boxes.logo.top)).toBeLessThan(8);
       }
     });
   }
@@ -140,12 +136,13 @@ test.describe('footer columns', () => {
     ).toHaveCount(0);
     await expect(page.getByText('LX Software 產品。香港特別行政區。')).toHaveCount(0);
 
-    const boxes = await measureFooter(page, '聯絡我們', '探索', '電郵');
+    const boxes = await measureFooter(page, '探索', '電郵');
 
     expect(boxes.scrollWidth).toBeLessThanOrEqual(boxes.innerWidth + 1);
-    expect(boxes.contact.left).toBeGreaterThanOrEqual(boxes.logo.right - 1);
-    expect(Math.abs(boxes.contact.top - boxes.logo.top)).toBeLessThan(8);
+    expect(boxes.email.left).toBeGreaterThan(boxes.logo.right - 1);
+    expect(Math.abs(midY(boxes.email) - midY(boxes.logo))).toBeLessThan(4);
     expect(boxes.instagram.right).toBeLessThanOrEqual(boxes.explore.left + 1);
-    expect(Math.abs(boxes.explore.top - boxes.contact.top)).toBeLessThan(8);
+    expect(Math.abs(boxes.explore.top - boxes.logo.top)).toBeLessThan(8);
+    await expect(page.locator('footer p', { hasText: /^聯絡我們$/ })).toHaveCount(0);
   });
 });

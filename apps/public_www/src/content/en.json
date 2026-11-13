@@ -48,7 +48,6 @@
   },
   "footer": {
     "copyrightTemplate": "© {year} LX Software (a sole proprietorship registered in Hong Kong). All rights reserved.",
-    "contactHeading": "Contact",
     "contactIconLabels": {
       "email": "Email",
       "whatsapp": "WhatsApp",

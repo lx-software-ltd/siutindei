@@ -47,7 +47,12 @@ describe('Footer', () => {
     const logo = screen.getByRole('contentinfo').querySelector('img');
     expect(logo).toHaveAttribute('src', '/images/brand/siutindei-logo-stacked.svg');
     expect(logo).toHaveClass('w-20', 'md:w-40');
-    expect(logo?.parentElement).toHaveClass('col-span-2', 'md:col-span-1');
+    expect(logo?.parentElement).toHaveClass(
+      'col-span-2',
+      'flex',
+      'items-center',
+      'lg:col-span-1',
+    );
     expect(screen.queryByText(/LX Software product/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Hong Kong, SAR/)).not.toBeInTheDocument();
     expect(screen.getByText(/All rights reserved/)).toBeInTheDocument();
@@ -61,7 +66,7 @@ describe('Footer', () => {
   });
 
   it('turns email, WhatsApp, and Instagram into icons', () => {
-    const content = renderFooter();
+    renderFooter();
 
     const email = screen.getByRole('link', { name: 'Email hello@example.com' });
     const whatsapp = screen.getByRole('link', { name: /WhatsApp/ });
@@ -90,14 +95,16 @@ describe('Footer', () => {
       expect(link).toHaveClass('inline-flex', 'h-11', 'w-11');
     }
 
-    const contact = screen.getByText(content.contactHeading, { selector: 'p' }).parentElement;
-    expect(contact).toContainElement(icons);
+    const brand = screen.getByRole('contentinfo').querySelector('img')?.parentElement;
+    expect(brand).toContainElement(icons);
+    expect(screen.queryByText('Contact', { selector: 'p' })).not.toBeInTheDocument();
   });
 
   it('uses the Chinese email label on the icon', () => {
     renderFooter('zh-HK');
 
     expect(screen.getByRole('link', { name: '電郵 hello@example.com' })).toBeInTheDocument();
+    expect(screen.queryByText('聯絡我們', { selector: 'p' })).not.toBeInTheDocument();
   });
 
   it('omits Instagram when no profile is configured', () => {
@@ -108,17 +115,18 @@ describe('Footer', () => {
     expect(screen.getByRole('link', { name: 'Email hello@example.com' })).toBeInTheDocument();
   });
 
-  it('puts the link columns side by side under a full-width contact row on phones', () => {
+  it('puts the link columns side by side under a full-width brand row on phones', () => {
     const content = renderFooter();
 
-    const contact = screen.getByText(content.contactHeading, { selector: 'p' }).parentElement;
-    expect(contact).toHaveClass('col-span-2', 'md:col-span-1');
-    expect(contact?.parentElement).toHaveClass('grid', 'grid-cols-2');
+    const brand = screen.getByRole('contentinfo').querySelector('img')?.parentElement;
+    expect(brand).toHaveClass('col-span-2', 'lg:col-span-1');
+    expect(brand?.parentElement).toHaveClass('grid', 'grid-cols-2');
+    expect(screen.queryByText('Contact', { selector: 'p' })).not.toBeInTheDocument();
 
     for (const column of content.columns) {
       const heading = screen.getByText(column.title, { selector: 'p' });
       expect(heading.parentElement).not.toHaveClass('col-span-2');
-      expect(heading.parentElement?.parentElement).toBe(contact?.parentElement);
+      expect(heading.parentElement?.parentElement).toBe(brand?.parentElement);
     }
   });
 
