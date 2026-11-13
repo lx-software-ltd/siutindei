@@ -46,8 +46,8 @@ describe('Footer', () => {
 
     const logo = screen.getByRole('contentinfo').querySelector('img');
     expect(logo).toHaveAttribute('src', '/images/brand/siutindei-logo-stacked.svg');
-    expect(logo).toHaveClass('w-20', 'md:w-40');
-    expect(logo?.parentElement).toHaveClass('col-span-2', 'md:col-span-1');
+    expect(logo).toHaveClass('w-20', 'justify-self-start', 'md:w-40', 'col-start-1', 'row-start-1');
+    expect(logo?.parentElement).toHaveClass('grid', 'items-center');
     expect(screen.queryByText(/LX Software product/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Hong Kong, SAR/)).not.toBeInTheDocument();
     expect(screen.getByText(/All rights reserved/)).toBeInTheDocument();
@@ -61,7 +61,7 @@ describe('Footer', () => {
   });
 
   it('turns email, WhatsApp, and Instagram into icons', () => {
-    const content = renderFooter();
+    renderFooter();
 
     const email = screen.getByRole('link', { name: 'Email hello@example.com' });
     const whatsapp = screen.getByRole('link', { name: /WhatsApp/ });
@@ -83,21 +83,30 @@ describe('Footer', () => {
     expect(screen.queryByText(/\+852/)).not.toBeInTheDocument();
 
     const icons = email.parentElement;
-    expect(icons).toHaveClass('flex', 'flex-wrap');
+    expect(icons).toHaveClass(
+      'flex',
+      'flex-wrap',
+      'justify-end',
+      'col-start-2',
+      'row-start-1',
+      'md:justify-center',
+    );
     expect(email.closest('div')).toBe(whatsapp.closest('div'));
     expect(icons).toContainElement(instagram);
     for (const link of [email, whatsapp, instagram]) {
       expect(link).toHaveClass('inline-flex', 'h-11', 'w-11');
     }
 
-    const contact = screen.getByText(content.contactHeading, { selector: 'p' }).parentElement;
-    expect(contact).toContainElement(icons);
+    const logo = screen.getByRole('contentinfo').querySelector('img');
+    expect(icons?.parentElement).toBe(logo?.parentElement);
+    expect(screen.queryByText('Contact', { selector: 'p' })).not.toBeInTheDocument();
   });
 
   it('uses the Chinese email label on the icon', () => {
     renderFooter('zh-HK');
 
     expect(screen.getByRole('link', { name: '電郵 hello@example.com' })).toBeInTheDocument();
+    expect(screen.queryByText('聯絡我們', { selector: 'p' })).not.toBeInTheDocument();
   });
 
   it('omits Instagram when no profile is configured', () => {
@@ -108,18 +117,30 @@ describe('Footer', () => {
     expect(screen.getByRole('link', { name: 'Email hello@example.com' })).toBeInTheDocument();
   });
 
-  it('puts the link columns side by side under a full-width contact row on phones', () => {
+  it('puts the link columns side by side and centers the copyright', () => {
     const content = renderFooter();
 
-    const contact = screen.getByText(content.contactHeading, { selector: 'p' }).parentElement;
-    expect(contact).toHaveClass('col-span-2', 'md:col-span-1');
-    expect(contact?.parentElement).toHaveClass('grid', 'grid-cols-2');
+    const logo = screen.getByRole('contentinfo').querySelector('img');
+    const columns = screen.getByText(content.columns[0].title, { selector: 'p' }).parentElement
+      ?.parentElement;
+    expect(columns).toHaveClass(
+      'grid',
+      'grid-cols-2',
+      'col-span-2',
+      'row-start-2',
+      'md:col-start-3',
+      'md:justify-self-end',
+    );
+    expect(columns?.parentElement).toBe(logo?.parentElement);
+    expect(screen.queryByText('Contact', { selector: 'p' })).not.toBeInTheDocument();
 
     for (const column of content.columns) {
       const heading = screen.getByText(column.title, { selector: 'p' });
       expect(heading.parentElement).not.toHaveClass('col-span-2');
-      expect(heading.parentElement?.parentElement).toBe(contact?.parentElement);
+      expect(heading.parentElement?.parentElement).toBe(columns);
     }
+
+    expect(screen.getByText(/All rights reserved/)).toHaveClass('text-center');
   });
 
   it('gives each link its own tap area on phones', () => {
