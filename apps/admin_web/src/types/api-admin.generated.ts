@@ -7705,6 +7705,14 @@ export interface components {
          *     with dates, a place to play, a nursery or kindergarten, or a
          *     place to eat with children. Admin-write only; manager routes and
          *     org-scoped partner keys ignore it. Defaults to `class`.
+         *     The category decides it where it can: under Places to play it
+         *     is `place`, under Nurseries and kindergartens `preschool`, and
+         *     under Eat with kids `eat`. Under a topic (a home-wizard root) a
+         *     `place`, `preschool`, or `eat` becomes `class`. Facts the
+         *     resulting kind does not allow are dropped. When every activity
+         *     of an organization sits in a category hidden from public, the
+         *     organization is rejected as `not_relevant` with
+         *     `reviewed_by = system:category`, unless it is already rejected.
          * @enum {string}
          */
         ListingKind: "class" | "camp" | "place" | "preschool" | "eat";
@@ -9346,14 +9354,24 @@ export interface components {
             name: string;
             name_translations: components["schemas"]["TranslationMap"];
             display_order: number;
-            /** @description When true, the home wizard lists this category. Pending categorisation cannot be shown. Search expands the category to its descendants. */
+            /** @description When true, the home wizard lists this category. Pending categorisation and the fixed roots cannot be shown. Search expands the category to its descendants. */
             show_in_wizard?: boolean;
+            /** @description When true, public and partner search skip activities in this category and every category under it. Schools and Members-only clubs start hidden. Pending categorisation cannot change it. */
+            hidden_from_public?: boolean;
             /**
              * @description True for Pending categorisation
-             *     (`c1111111-1111-1111-1111-111111111199`). That row cannot
-             *     be renamed, re-parented, deleted, or used as a parent.
+             *     (`c1111111-1111-1111-1111-111111111199`) and the five fixed
+             *     roots (`…1401` to `…1405`). These rows cannot be renamed,
+             *     re-parented, or deleted, and cannot appear in the home
+             *     wizard. Pending cannot be a parent; the fixed roots can, and
+             *     their children are ordinary categories.
              */
             is_system?: boolean;
+            /**
+             * @description Which system row this is, or null for an ordinary category. `places`, `nurseries`, and `eat` decide the kind of an activity under them.
+             * @enum {string|null}
+             */
+            system_role?: "pending" | "places" | "nurseries" | "eat" | "schools" | "members_clubs" | null;
             /** @description Nested child categories (tree responses) */
             children?: components["schemas"]["ActivityCategory"][];
         };
@@ -9371,6 +9389,8 @@ export interface components {
             display_order?: number;
             /** @description Include this category in the home wizard. */
             show_in_wizard?: boolean;
+            /** @description Hide this category and everything under it from public search. Not allowed on Pending categorisation. */
+            hidden_from_public?: boolean;
         };
         ActivityCategoryUpdate: {
             /** @description Category name */
@@ -9386,6 +9406,8 @@ export interface components {
             display_order?: number;
             /** @description Include this category in the home wizard. */
             show_in_wizard?: boolean;
+            /** @description Hide this category and everything under it from public search. Not allowed on Pending categorisation. */
+            hidden_from_public?: boolean;
         };
         ActivityCategoryListResponse: {
             items: components["schemas"]["ActivityCategory"][];

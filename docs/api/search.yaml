@@ -72,7 +72,10 @@ paths:
           description: |
             Filter by activity category UUID. Multiple values allowed; results
             match any listed category or one of its descendants. Pending
-            categorisation is excluded.
+            categorisation is excluded, and so is any category hidden from
+            public (Schools, Members-only clubs, and whatever an admin
+            hides), with everything under it, whether or not a category is
+            given.
           style: form
           explode: true
           schema:

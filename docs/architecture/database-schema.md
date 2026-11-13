@@ -534,14 +534,17 @@ Columns:
 - `name_translations` (jsonb, default `{}`) — non-English name translations
 - `display_order` (integer, default 0)
 - `show_in_wizard` (boolean, default false) — home wizard activity type.
-  Pending categorisation cannot set this. Delete is refused while it
-  is true. Migration `0040_recheck_taxonomy` flags seven groups
-  (early years, learning, arts, sports, play, culture, community) and
-  clears the flag on Workshop, Class, Outdoor activity, and Indoor fun.
-  Those four roots, plus Sport, stay in the table until activities
-  move onto the new leaves. `scripts/codegen/generate_home_wizard_choices.py --write`
+  Pending categorisation and the fixed roots cannot set this. Delete is
+  refused while it is true. Migration `0066_family_guide_taxonomy`
+  flags the nine topics (`…1301` to `…1309`) and deletes the seven
+  `0040` groups. Workshop, Class, Outdoor activity, Indoor fun, and
+  Sport stay as legacy roots. `scripts/codegen/generate_home_wizard_choices.py --write`
   copies flagged rows into the static wizard JSON. `--from-json` reads
   an admin category export when the database is not reachable.
+- `hidden_from_public` (boolean, not null, default false) — public and
+  partner search skip activities in this category or any category
+  under it. Added by `0066_family_guide_taxonomy`, true on Schools and
+  Members-only clubs. Pending categorisation cannot set it.
 
 Constraints:
 - UNIQUE(`parent_id`, `name`)
@@ -559,6 +562,15 @@ The system row Pending categorisation
 `display_order` 9999) holds activities whose imported category name
 is not resolved yet. It cannot be renamed, re-parented, deleted, or
 used as a parent. Public search excludes it.
+
+The five fixed roots from `0066_family_guide_taxonomy` are Places to
+play (`c1111111-1111-1111-1111-111111111401`), Nurseries and
+kindergartens (`…1402`), Eat with kids (`…1403`), Schools (`…1404`),
+and Members-only clubs (`…1405`). They cannot be renamed, re-parented,
+deleted, or put in the home wizard. Their children are ordinary rows.
+The first three decide the `kind` of an activity under them. Schools
+holds Primary school (`…1213`), Secondary school (`…1214`), and
+International and prep schools (`…1215`).
 
 ## Table: category_suggestion_settings
 

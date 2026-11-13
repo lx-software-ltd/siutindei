@@ -832,9 +832,10 @@ paths:
       summary: Create an activity category
       description: |
         Full-access `crud` keys only. Same body and validation as
-        `POST /v1/admin/activity-categories`, except `show_in_wizard`.
-        Home-wizard membership stays on the admin console, so that
-        field is `400`. A `read` key and an organization-scoped key
+        `POST /v1/admin/activity-categories`, except `show_in_wizard`
+        and `hidden_from_public`. Home-wizard membership and public
+        visibility stay on the admin console, so those fields are
+        `400`. A `read` key and an organization-scoped key
         receive `403`.
       requestBody:
         required: true
@@ -876,9 +877,10 @@ paths:
       description: |
         Full-access `crud` keys only. Same body and validation as
         `PUT /v1/admin/activity-categories/{id}`, except
-        `show_in_wizard`, which stays on the admin console. Pending
-        categorisation cannot be renamed or re-parented. `PATCH` is
-        the same operation.
+        `show_in_wizard` and `hidden_from_public`, which stay on the
+        admin console. Pending categorisation and the five fixed roots
+        cannot be renamed or re-parented; their children can. `PATCH`
+        is the same operation.
       requestBody:
         required: true
         content:
@@ -901,8 +903,8 @@ paths:
     patch:
       summary: Update an activity category
       description: |
-        Same operation as `PUT` on this path. `show_in_wizard` stays
-        on the admin console.
+        Same operation as `PUT` on this path. `show_in_wizard` and
+        `hidden_from_public` stay on the admin console.
       requestBody:
         required: true
         content:
@@ -926,8 +928,8 @@ paths:
       summary: Delete an empty activity category
       description: |
         Full-access `crud` keys only. Refused when the category is
-        Pending categorisation, appears in the home wizard, has
-        children, or is assigned to an activity.
+        Pending categorisation or a fixed root, appears in the home
+        wizard, has children, or is assigned to an activity.
       responses:
         "204":
           description: Deleted
