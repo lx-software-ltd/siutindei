@@ -2,6 +2,14 @@ export interface TranslationMap {
   readonly [locale: string]: string;
 }
 
+/** What a listing is, which decides what its card and page show. */
+export type ListingKind = 'class' | 'camp' | 'place' | 'preschool' | 'eat';
+
+/** Parent-checked facts: true seen, false seen missing, absent unchecked. */
+export interface ListingFacts {
+  readonly [key: string]: boolean;
+}
+
 export interface SearchActivity {
   readonly id: string;
   readonly name: string;
@@ -11,6 +19,12 @@ export interface SearchActivity {
   readonly ageMin: number | null;
   readonly ageMax: number | null;
   readonly categoryId: string | null;
+  readonly kind: ListingKind;
+  readonly facts: ListingFacts;
+  /** The root at the top of the category path; a wizard topic for most classes. */
+  readonly categoryRootId: string | null;
+  readonly categoryName: string | null;
+  readonly categoryNameTranslations: TranslationMap;
 }
 
 export interface OrganizationContact {
@@ -58,6 +72,7 @@ export interface SearchOrganization {
   readonly descriptionSource?: string | null;
   readonly placeId?: string | null;
   readonly parentVerified?: boolean;
+  readonly parentVerifiedAt?: string | null;
   readonly updatedAt?: string | null;
   readonly contact?: OrganizationContact | null;
   readonly rating?: FeedbackRating | null;

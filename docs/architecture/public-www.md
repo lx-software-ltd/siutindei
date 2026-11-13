@@ -222,15 +222,21 @@ Source: [`apps/public_www`](../../apps/public_www).
   `sameAs` lists `NEXT_PUBLIC_INSTAGRAM_URL` and `NEXT_PUBLIC_FACEBOOK_URL`
   when they are set, and `contactPoint` appears when `NEXT_PUBLIC_EMAIL` is
   set. The about page adds `AboutPage` and `BreadcrumbList` JSON-LD, a
-  "What is Siu Tin Dei" block, and questions parents ask. The hub and type
-  pages answer age, day, price, and joining questions from the catalogue.
+  "What is Siu Tin Dei" block, and questions parents ask. The hub and
+  landing pages answer age, day, price, and joining questions from the
+  classes in the catalogue; catch-all age ranges and other kinds stay out
+  of those answers. Each landing page also states its coverage: how many
+  listings, how many a local parent checked, and the month of the last
+  update.
 - **`/llms.txt`:** a static route (`src/lib/llms-txt.ts`) with the site
   summary, the about and legal pages, and, when the build has a
-  catalogue, the hub, each type page, and up to 200 activity pages.
+  catalogue, the hub, each kind and topic page, and up to 200 activity
+  pages.
 - **Build-output check:** `scripts/validate-seo-output.mjs` (the last
   build step, `seo:validate`) fails the build when an indexable page has
   no single H1, title, description, or self canonical, when an activity
-  page has no `Course` JSON-LD, when a home page has no activity links
+  page has no listing JSON-LD (`Course`, or `TouristAttraction`,
+  `Restaurant`, or `Preschool` for those kinds), when a home page has no activity links
   although the build has a catalogue, or when `sitemap.xml` lists a page
   that is missing or `noindex`. Redirect stubs and `noindex` pages are
   skipped.
@@ -240,10 +246,25 @@ Source: [`apps/public_www`](../../apps/public_www).
   `scripts/deploy/fetch-public-www-catalogue-snapshot.sh`), or on staging
   with the fixture on, the first 60 fixture activities. Each activity gets
   `/<locale>/activity/<id>/` with its own title, description, share image,
-  and `Course` + `BreadcrumbList` JSON-LD in the HTML.
-  `/<locale>/activities/` (hub) and `/<locale>/activities/<type>/` (types
-  with at least three activities) list them as cards. The home page links
-  to the hub, each type, and twelve activities. `/activity-pages.json`
+  and listing + `BreadcrumbList` JSON-LD in the HTML.
+  `/<locale>/activities/` (hub) groups listings by kind (classes, camps,
+  places). `/<locale>/activities/<slug>/` is either a kind page
+  (`classes`, `camps`, `places`, `nurseries`; `src/lib/activities/kind-pages.ts`)
+  or a wizard topic page, which lists only classes and camps whose category
+  or root category is that topic. Either needs at least three listings.
+  The home page links to the hub, each landing page, and twelve
+  activities.
+- **Listing kinds:** every listing has a `kind` (a missing one reads as
+  `class`). Cards and activity pages follow it
+  (`listingCardRules` in `listing-card.tsx`): classes show weekly times,
+  a free trial, and a per-class price; camps show neither weekly times
+  nor a free trial; places and restaurants show "Open …" hours, no ages,
+  and the facts a parent checked (`checkedFacts` in
+  `src/lib/activities/listing-facts.ts`) under "Good to know". A
+  parent-verified organiser shows the month of the check next to the
+  badge. Topic icons and labels resolve through `categoryRootId`, so a
+  leaf category files under its root topic; other kinds use their own
+  category name and the kind icon. `/activity-pages.json`
   lists the pre-rendered ids; cards link to the static page when the id is
   listed and to `/<locale>/activity/?id=` otherwise, and that page
   forwards to the static page when one exists. `/activity/` and `/search/`

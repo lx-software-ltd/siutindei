@@ -21,6 +21,7 @@ import {
   type EnquiryProps,
 } from '@/components/sections/activity-detail/activity-enquiry';
 import { ActivityGallery } from '@/components/sections/activity-detail/activity-gallery';
+import { ActivityGoodToKnow } from '@/components/sections/activity-detail/activity-good-to-know';
 import {
   ActivityKeyFacts,
   type KeyFact,
@@ -51,8 +52,9 @@ import {
 import { listingVenues } from '@/lib/activities/group-listings';
 import {
   categoryLabelForListing,
-  categoryTypeIdForListing,
+  checkedFacts,
   directionsUrl,
+  formatMonthYear,
   listingAgeLabel,
   listingLanguagesLabel,
   placeLabelForLocation,
@@ -78,7 +80,7 @@ import type { ActivityListing } from '@/lib/activities/types';
 import { itemFieldsFromListing, trackViewItem } from '@/lib/analytics/data-layer';
 import { formatTemplate } from '@/lib/format-template';
 import { homeWizardChoices } from '@/lib/home-wizard/choices';
-import { iconSrcForActivityCategory } from '@/lib/home-wizard/choice-icons';
+import { iconSrcForListing } from '@/lib/home-wizard/choice-icons';
 import { localizePath } from '@/lib/locale-routing';
 import { ROUTES } from '@/lib/routes';
 import { getSiteConfig } from '@/lib/site-config';
@@ -241,10 +243,22 @@ export function ActivityDetailPage({
       );
   const pricings = venuePricings(variants);
   const hasFreeTrial = venueFreeTrial(variants);
-  const languages = venueLanguages(variants);
   const entries = venueWeeklyEntries(variants);
   const price = formatListingPriceSummary(locale, atVenue);
-  const priceDetail = pricings[0] ? formatClassEquivalent(locale, pricings[0]) : null;
+  const kind = listing.activity.kind;
+  const opensForVisits = kind === 'place' || kind === 'eat';
+  const languages = opensForVisits ? [] : venueLanguages(variants);
+  const priceDetail = pricings[0]
+    ? formatClassEquivalent(locale, pricings[0], kind)
+    : null;
+  const scheduleCopy = opensForVisits
+    ? {
+        ...copy,
+        scheduleHeading: copy.openingHoursHeading,
+        scheduleMissingLabel: copy.openingHoursMissingLabel,
+      }
+    : copy;
+  const categoryLabel = categoryLabelForListing(locale, listing);
   const venue = atVenue.location;
   const where =
     venue.name ??
@@ -252,8 +266,14 @@ export function ActivityDetailPage({
       ? formatTemplate(copy.locationsCountLabel, { count: venues.length })
       : placeLabelForLocation(locale, venue));
   const facts: readonly KeyFact[] = [
-    { id: 'ages', icon: 'age', value: listingAgeLabel(locale, listing) },
-    { id: 'when', icon: 'calendar', value: formatScheduleSummary(locale, entries) },
+    ...(opensForVisits
+      ? []
+      : [{ id: 'ages', icon: 'age', value: listingAgeLabel(locale, listing) } as const]),
+    {
+      id: opensForVisits ? 'hours' : 'when',
+      icon: 'calendar',
+      value: formatScheduleSummary(locale, entries),
+    },
     {
       id: 'where',
       icon: 'pin',
@@ -294,24 +314,21 @@ export function ActivityDetailPage({
             title={title}
             imageUrls={imageUrls}
             isLogo={listingImageIsLogo(listing)}
-            fallbackIconSrc={iconSrcForActivityCategory(listing.activity.categoryId)}
+            fallbackIconSrc={iconSrcForListing(listing.activity)}
             copy={copy}
           />
         </div>
         <div className="min-w-0 short:col-start-2 short:row-start-1 lg:col-start-1 lg:row-start-2">
           <ActivityTitleBlock
             title={title}
-            categoryLabel={categoryLabelForListing(locale, listing)}
-            categoryIconSrc={
-              categoryTypeIdForListing(listing)
-                ? iconSrcForActivityCategory(listing.activity.categoryId)
-                : null
-            }
+            categoryLabel={categoryLabel}
+            categoryIconSrc={categoryLabel ? iconSrcForListing(listing.activity) : null}
             organiserName={orgName}
             organiserLogoUrl={listing.organization.logoMediaUrl}
             isTemporarilyClosed={isTemporarilyClosed(atVenue)}
             hasFreeTrial={hasFreeTrial}
             isParentVerified={listing.organization.parentVerified === true}
+            checkedDate={formatMonthYear(locale, listing.organization.parentVerifiedAt)}
             rating={listing.organization.rating ?? null}
             copy={copy}
             actions={
@@ -332,8 +349,20 @@ export function ActivityDetailPage({
         <div className="min-w-0 max-w-3xl space-y-6 short:col-span-2 lg:col-start-1 lg:row-start-3">
           <ActivityKeyFacts facts={facts} copy={copy} enquiryHref={enquiry.href} />
           <ActivityAbout description={description} isTemplate={isTemplate} copy={copy} />
-          <ActivitySchedule locale={locale} entries={entries} languages={languages} copy={copy} />
-          <ActivityPrice locale={locale} pricings={pricings} hasFreeTrial={hasFreeTrial} copy={copy} />
+          <ActivityGoodToKnow facts={checkedFacts(listing)} copy={copy} />
+          <ActivitySchedule
+            locale={locale}
+            entries={entries}
+            languages={languages}
+            copy={scheduleCopy}
+          />
+          <ActivityPrice
+            locale={locale}
+            pricings={pricings}
+            kind={kind}
+            hasFreeTrial={hasFreeTrial}
+            copy={copy}
+          />
           <ActivityLocation
             locale={locale}
             venues={venues}

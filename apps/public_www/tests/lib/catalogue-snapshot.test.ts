@@ -14,13 +14,16 @@ import {
   catalogueCategories,
   catalogueCategoryParams,
   catalogueListing,
+  catalogueKindPages,
   catalogueListings,
+  catalogueTopicPages,
   clearCatalogueCacheForTests,
+  landingTypeIdForListing,
   latestUpdate,
 } from '@/lib/activities/catalogue-snapshot';
 
 interface FixtureRow {
-  activity: { id: string; category_id: string };
+  activity: { id: string; category_id: string; category_root_id?: string; kind?: string };
   organization: { status?: string; updated_at?: string };
   [key: string]: unknown;
 }
@@ -98,12 +101,48 @@ describe('catalogue snapshot', () => {
     ];
     vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, writeSnapshot(rows));
 
-    const categories = catalogueCategories();
-    expect(categories.map((category) => category.categoryId)).toEqual([firstCategory]);
-    expect(catalogueCategoryParams()).toEqual([
-      { locale: 'en', category: categories[0].typeId },
-      { locale: 'zh-HK', category: categories[0].typeId },
+    const topics = catalogueTopicPages();
+    expect(topics.map((category) => category.categoryId)).toEqual([firstCategory]);
+    expect(catalogueKindPages().map((category) => category.typeId)).toEqual(['classes']);
+    expect(catalogueCategories().map((category) => category.typeId)).toEqual([
+      'classes',
+      topics[0].typeId,
     ]);
+    expect(catalogueCategoryParams()).toEqual([
+      { locale: 'en', category: 'classes' },
+      { locale: 'en', category: topics[0].typeId },
+      { locale: 'zh-HK', category: 'classes' },
+      { locale: 'zh-HK', category: topics[0].typeId },
+    ]);
+  });
+
+  it('files a leaf under its root topic and keeps places off topic pages', () => {
+    const classes = categoryRows(firstCategory, LANDING_PAGE_MIN_ACTIVITIES);
+    const places = categoryRows(secondCategory, LANDING_PAGE_MIN_ACTIVITIES);
+    for (const row of classes) {
+      row.activity.category_root_id = firstCategory;
+      row.activity.category_id = 'c1111111-1111-1111-1111-111111119999';
+    }
+    for (const row of places) {
+      row.activity.kind = 'place';
+    }
+    const rows = [...classes, ...places];
+    vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, writeSnapshot(rows));
+
+    const [topic] = catalogueTopicPages();
+    expect(topic.categoryId).toBe(firstCategory);
+    expect(topic.listings.map((listing) => listing.activity.kind)).toEqual(
+      classes.map(() => 'class'),
+    );
+    expect(catalogueKindPages().map((page) => [page.typeId, page.listings.length])).toEqual([
+      ['classes', LANDING_PAGE_MIN_ACTIVITIES],
+      ['places', LANDING_PAGE_MIN_ACTIVITIES],
+    ]);
+
+    const place = catalogueListings().find((listing) => listing.activity.kind === 'place');
+    const leafClass = catalogueListings().find((listing) => listing.activity.kind === 'class');
+    expect(place && landingTypeIdForListing(place)).toBe('places');
+    expect(leafClass && landingTypeIdForListing(leafClass)).toBe(topic.typeId);
   });
 
   it('drops hidden and permanently closed organisations', () => {

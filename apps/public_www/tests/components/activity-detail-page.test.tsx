@@ -189,6 +189,42 @@ describe('ActivityDetailPage', () => {
     expect(screen.queryByRole('heading', { name: copy.reviewsHeading })).not.toBeInTheDocument();
   });
 
+  it('shows a place with opening hours, what a parent saw, and when they checked', async () => {
+    vi.mocked(fetchActivityListingById).mockResolvedValue(
+      buildListing({
+        activity: {
+          kind: 'place',
+          categoryName: 'Playground',
+          facts: { toilets: true, shade: false },
+        },
+        organization: { parentVerified: true, parentVerifiedAt: '2026-10-15T00:00:00Z' },
+      }),
+    );
+    renderPage();
+
+    await screen.findByRole('heading', { level: 1, name: 'Kowloon art' });
+    const [facts] = screen.getAllByLabelText(copy.keyFactsLabel);
+    expect(within(facts).getByText(copy.openingHoursLabel)).toBeInTheDocument();
+    expect(within(facts).queryByText(copy.agesLabel)).not.toBeInTheDocument();
+    expect(within(facts).queryByText(copy.languageLabel)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Taught in/)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: copy.openingHoursHeading })).toBeInTheDocument();
+
+    const goodToKnow = screen.getByRole('heading', { level: 2, name: copy.goodToKnowHeading });
+    const section = goodToKnow.closest('section') as HTMLElement;
+    expect(within(section).getByText(copy.factLabels.toilets.present)).toBeInTheDocument();
+    expect(within(section).getByText(copy.factLabels.shade.absent)).toBeInTheDocument();
+    expect(screen.getByText(/Checked October 2026/)).toBeInTheDocument();
+  });
+
+  it('leaves out the good-to-know section when nothing was checked', async () => {
+    renderPage();
+
+    await screen.findByRole('heading', { level: 1, name: 'Kowloon art' });
+    expect(screen.queryByRole('heading', { name: copy.goodToKnowHeading })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Checked /)).not.toBeInTheDocument();
+  });
+
   it('lets visitors switch between venues', async () => {
     const first = buildListing({ location: { id: 'loc-1', address: '1 Example Road' } });
     vi.mocked(fetchActivityListingById).mockResolvedValue({

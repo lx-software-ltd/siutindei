@@ -4,13 +4,13 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import type { Locale } from '@/content/locales';
-import { listingMetaLine } from '@/components/sections/listings/listing-card';
+import { listingCardRules, listingMetaLine } from '@/components/sections/listings/listing-card';
 import { useActivityHref } from '@/components/shared/static-activity-pages';
 import type { ActivityListing } from '@/lib/activities/types';
 import { listingAgeLabel } from '@/lib/activities/listing-facts';
 import { listingImageUrl, listingTitle } from '@/lib/activities/listing-utils';
 import { formatListingPriceSummary } from '@/lib/activities/price-format';
-import { iconSrcForActivityCategory } from '@/lib/home-wizard/choice-icons';
+import { iconSrcForListing } from '@/lib/home-wizard/choice-icons';
 import { LISTING_IMAGE_HEIGHT, LISTING_IMAGE_WIDTH } from '@/lib/listing-image';
 
 export interface SearchMapListItemLabels {
@@ -63,7 +63,7 @@ function Thumbnail({ listing, title }: { readonly listing: ActivityListing; read
       ) : (
         <span className="flex h-full items-center justify-center">
           <img
-            src={iconSrcForActivityCategory(listing.activity.categoryId)}
+            src={iconSrcForListing(listing.activity)}
             alt=""
             width={40}
             height={40}
@@ -94,9 +94,11 @@ function SummaryBody({ locale, listing, labels }: SearchMapListItemBase) {
         ) : null}
         <h3 className="line-clamp-2 text-sm font-semibold text-ink-900">{title}</h3>
         {meta ? <p className="mt-0.5 line-clamp-1 text-xs text-ink-700">{meta}</p> : null}
-        <p className="mt-0.5 text-sm font-semibold text-ink-900">
-          {price ?? <span className="font-normal text-ink-500">{labels.detailsOnRequest}</span>}
-        </p>
+        {price || listingCardRules(listing).detailsOnRequest ? (
+          <p className="mt-0.5 text-sm font-semibold text-ink-900">
+            {price ?? <span className="font-normal text-ink-500">{labels.detailsOnRequest}</span>}
+          </p>
+        ) : null}
       </div>
     </>
   );

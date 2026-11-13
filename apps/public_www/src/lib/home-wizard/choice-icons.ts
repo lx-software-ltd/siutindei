@@ -1,3 +1,5 @@
+import type { SearchActivity } from '@/lib/activities/types';
+
 import { homeWizardChoices } from './choices';
 
 // Map markers swap /images/categories/ for /images/markers/, so every
@@ -21,6 +23,7 @@ export const KIND_ICON_SRC: Record<string, string> = {
   camp: '/images/categories/workshop.svg',
   place: '/images/categories/outdoor.svg',
   eat: '/images/categories/indoor.svg',
+  preschool: '/images/categories/early-years.svg',
 };
 
 export const WEEKEND_ICON_SRC = '/images/categories/play.svg';
@@ -65,10 +68,14 @@ export function activityTypeIdForCategory(
   return match?.id ?? '';
 }
 
-export function iconSrcForActivityCategory(
-  categoryId: string | null,
+/** The topic's icon, else the kind's, for a card, page, or map pin. */
+export function iconSrcForListing(
+  activity: Pick<SearchActivity, 'kind' | 'categoryId' | 'categoryRootId'>,
 ): string {
-  return iconSrcForActivity(activityTypeIdForCategory(categoryId));
+  const typeId =
+    activityTypeIdForCategory(activity.categoryRootId) ||
+    activityTypeIdForCategory(activity.categoryId);
+  return typeId ? iconSrcForActivity(typeId) : iconSrcForKind(activity.kind);
 }
 
 export function iconSrcForKind(kindId: string): string {

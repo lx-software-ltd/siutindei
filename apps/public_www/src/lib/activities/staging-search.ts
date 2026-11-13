@@ -2,7 +2,7 @@ import { stagingScopeAreaIds } from '@/lib/home-wizard/area-scope';
 import { getSearchConfig, getSiteConfig } from '@/lib/site-config';
 
 import { hideImportTemplateCopy } from './description-boilerplate';
-import { mapActivityListing } from './map-listing';
+import { mapActivityListing, parseListingKind } from './map-listing';
 import { classPriceEquivalent } from './price-format';
 import { toHongKongSession } from './schedule-format';
 import type {
@@ -295,13 +295,16 @@ function classPriceOf(item: StagingFixtureItem): number | null {
   if (!pricing) {
     return null;
   }
-  return classPriceEquivalent({
-    pricingType: pricing.pricing_type,
-    amount: Number(pricing.amount),
-    currency: pricing.currency,
-    sessionsCount: pricing.sessions_count ?? null,
-    freeTrialClassOffered: pricing.free_trial_class_offered,
-  });
+  return classPriceEquivalent(
+    {
+      pricingType: pricing.pricing_type,
+      amount: Number(pricing.amount),
+      currency: pricing.currency,
+      sessionsCount: pricing.sessions_count ?? null,
+      freeTrialClassOffered: pricing.free_trial_class_offered,
+    },
+    parseListingKind(item.activity.kind),
+  );
 }
 
 function matchesText(item: StagingFixtureItem, query: string): boolean {

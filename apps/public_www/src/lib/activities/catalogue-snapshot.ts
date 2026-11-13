@@ -3,13 +3,15 @@ import path from 'node:path';
 
 import { SUPPORTED_LOCALES, type Locale } from '@/content/locales';
 import { stagingScopeAreaIds } from '@/lib/home-wizard/area-scope';
-import { homeWizardChoices } from '@/lib/home-wizard/choices';
+import { homeWizardChoices, type WizardLabels } from '@/lib/home-wizard/choices';
 import { getSearchConfig } from '@/lib/site-config';
 
 import { hideImportTemplateCopy } from './description-boilerplate';
 import { groupListings } from './group-listings';
+import { KIND_PAGES, kindPageForKind } from './kind-pages';
+import { TOPIC_KINDS, topicForListing } from './listing-facts';
 import { mapActivityListing, type ActivityWireListing } from './map-listing';
-import type { ActivityListing } from './types';
+import type { ActivityListing, ListingKind } from './types';
 
 /**
  * Build-time catalogue for the pre-rendered activity and landing pages.
@@ -48,10 +50,16 @@ interface CatalogueFile {
   readonly items?: readonly CatalogueRow[];
 }
 
+/** A landing page: a kind (`classes`, `places`, ...) or a wizard topic. */
 export interface CatalogueCategory {
+  /** The `/activities/{typeId}` segment: a kind page slug or a wizard topic id. */
   readonly typeId: string;
-  readonly categoryId: string;
-  readonly labels: (typeof homeWizardChoices.activityTypes)[number]['labels'];
+  readonly pageKind: 'kind' | 'topic';
+  /** The kind a kind page lists. */
+  readonly listingKind: ListingKind | null;
+  /** The wizard topic's category, for a topic page. */
+  readonly categoryId: string | null;
+  readonly labels: WizardLabels;
   readonly listings: readonly ActivityListing[];
 }
 
@@ -178,17 +186,43 @@ export function catalogueActivityParams(): Array<{ locale: Locale; id: string }>
   return SUPPORTED_LOCALES.flatMap((locale) => exported.map((id) => ({ locale, id })));
 }
 
-/** Activity types with enough activities for a landing page, in wizard order. */
-export function catalogueCategories(): readonly CatalogueCategory[] {
+function hasEnoughListings(category: CatalogueCategory): boolean {
+  return category.listings.length >= LANDING_PAGE_MIN_ACTIVITIES;
+}
+
+/** Kinds with enough listings for a page, in hub order. */
+export function catalogueKindPages(): readonly CatalogueCategory[] {
   const listings = catalogueListings();
+  return KIND_PAGES.map((page) => ({
+    typeId: page.slug,
+    pageKind: 'kind' as const,
+    listingKind: page.kind,
+    categoryId: null,
+    labels: page.labels,
+    listings: listings.filter((listing) => listing.activity.kind === page.kind),
+  })).filter(hasEnoughListings);
+}
+
+/** Wizard topics with enough classes and camps for a page, in wizard order. */
+export function catalogueTopicPages(): readonly CatalogueCategory[] {
+  const listings = catalogueListings().filter((listing) =>
+    TOPIC_KINDS.has(listing.activity.kind),
+  );
   return homeWizardChoices.activityTypes
     .map((type) => ({
       typeId: type.id,
+      pageKind: 'topic' as const,
+      listingKind: null,
       categoryId: type.categoryId,
       labels: type.labels,
-      listings: listings.filter((listing) => listing.activity.categoryId === type.categoryId),
+      listings: listings.filter((listing) => topicForListing(listing)?.id === type.id),
     }))
-    .filter((category) => category.listings.length >= LANDING_PAGE_MIN_ACTIVITIES);
+    .filter(hasEnoughListings);
+}
+
+/** Every landing page: kinds first, then topics. */
+export function catalogueCategories(): readonly CatalogueCategory[] {
+  return [...catalogueKindPages(), ...catalogueTopicPages()];
 }
 
 export function catalogueCategory(typeId: string): CatalogueCategory | null {
@@ -203,12 +237,15 @@ export function catalogueCategoryParams(): Array<{ locale: Locale; category: str
   );
 }
 
-/** The landing page an activity's breadcrumb points at, if it has one. */
+/** The landing page an activity's breadcrumb points at: its topic, else its kind. */
 export function landingTypeIdForListing(listing: ActivityListing): string | null {
-  return (
-    catalogueCategories().find((category) => category.categoryId === listing.activity.categoryId)
-      ?.typeId ?? null
-  );
+  const pages = new Set(catalogueCategories().map((category) => category.typeId));
+  const topic = TOPIC_KINDS.has(listing.activity.kind) ? topicForListing(listing) : null;
+  if (topic && pages.has(topic.id)) {
+    return topic.id;
+  }
+  const kindPage = kindPageForKind(listing.activity.kind);
+  return kindPage && pages.has(kindPage.slug) ? kindPage.slug : null;
 }
 
 /** The fields a card shows, so list pages do not ship every description. */

@@ -14,6 +14,8 @@ interface ActivityTitleBlockProps {
   readonly isTemporarilyClosed: boolean;
   readonly hasFreeTrial: boolean;
   readonly isParentVerified: boolean;
+  /** "November 2026" when the check has a date; the badge stands alone without one. */
+  readonly checkedDate?: string | null;
   readonly rating: FeedbackRating | null;
   readonly copy: ActivityDetailCopy;
   readonly actions?: ReactNode;
@@ -57,6 +59,7 @@ export function ActivityTitleBlock({
   isTemporarilyClosed,
   hasFreeTrial,
   isParentVerified,
+  checkedDate = null,
   rating,
   copy,
   actions,
@@ -112,6 +115,12 @@ export function ActivityTitleBlock({
                 aria-hidden="true"
               />
               {copy.parentVerifiedLabel}
+              {checkedDate ? (
+                <span className="font-medium">
+                  {' · '}
+                  {formatTemplate(copy.parentCheckedTemplate, { date: checkedDate })}
+                </span>
+              ) : null}
             </Badge>
           ) : null}
         </p>

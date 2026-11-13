@@ -17,6 +17,16 @@ export interface LandingCategoryLink {
   readonly count: number;
 }
 
+/** A group of cards: one per kind on the hub, a single one on a landing page. */
+export interface LandingSection {
+  readonly id: string;
+  readonly heading: string;
+  readonly listings: readonly ActivityListing[];
+  /** The kind's own page, when the hub section has one. */
+  readonly moreHref?: string | null;
+  readonly moreLabel?: string | null;
+}
+
 interface ActivitiesLandingPageProps {
   readonly locale: Locale;
   readonly content: SiteContent;
@@ -24,9 +34,10 @@ interface ActivitiesLandingPageProps {
   readonly intro: string;
   readonly breadcrumbs: readonly ActivityBreadcrumbItem[];
   readonly facts: LandingFacts;
+  readonly coverage: string | null;
   readonly categoriesHeading: string;
   readonly categories: readonly LandingCategoryLink[];
-  readonly listings: readonly ActivityListing[];
+  readonly sections: readonly LandingSection[];
   readonly searchHref: string;
 }
 
@@ -37,11 +48,13 @@ export function ActivitiesLandingPage({
   intro,
   breadcrumbs,
   facts,
+  coverage,
   categoriesHeading,
   categories,
-  listings,
+  sections,
   searchHref,
 }: ActivitiesLandingPageProps) {
+  const hasListings = sections.some((section) => section.listings.length > 0);
   const copy = content.activitiesPage;
   const discovery = content.discovery;
   const factRows = [
@@ -62,7 +75,7 @@ export function ActivitiesLandingPage({
           answer: formatContentTemplate(copy.pricesAnswerTemplate, { prices: facts.prices }),
         }
       : null,
-    listings.length > 0 ? { question: copy.joinQuestion, answer: copy.joinAnswer } : null,
+    hasListings ? { question: copy.joinQuestion, answer: copy.joinAnswer } : null,
   ].filter((item): item is { question: string; answer: string } => item !== null);
 
   return (
@@ -71,6 +84,11 @@ export function ActivitiesLandingPage({
       <header className="mt-2 max-w-3xl">
         <h1 className="text-3xl font-bold text-ink-900 sm:text-4xl">{heading}</h1>
         <p className="mt-3 text-base text-ink-700">{intro}</p>
+        {coverage ? (
+          <p data-coverage className="mt-2 text-sm text-ink-500">
+            {coverage}
+          </p>
+        ) : null}
       </header>
 
       {factRows.length > 0 ? (
@@ -112,26 +130,45 @@ export function ActivitiesLandingPage({
         </nav>
       ) : null}
 
-      <section aria-labelledby="activities-list" className="mt-8">
-        <h2 id="activities-list" className="mb-4 text-lg font-semibold text-ink-900">
-          {copy.allActivitiesHeading}
-        </h2>
-        <StaticActivityPages ids={listings.map((listing) => listing.activity.id)}>
-          <ListingGrid
-            locale={locale}
-            listings={listings}
-            isLoading={false}
-            labels={{
-              parentVerified: discovery.parentVerifiedLabel,
-              freeTrial: discovery.freeTrialLabel,
-              imageFallback: discovery.imageFallbackLabel,
-              locationsCount: discovery.locationsCountLabel,
-              detailsOnRequest: discovery.detailsOnRequestLabel,
-              empty: copy.emptyLabel,
-            }}
-          />
-        </StaticActivityPages>
-      </section>
+      {sections.map((section) => (
+        <section
+          key={section.id}
+          aria-labelledby={`activities-list-${section.id}`}
+          className="mt-8"
+        >
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <h2
+              id={`activities-list-${section.id}`}
+              className="text-lg font-semibold text-ink-900"
+            >
+              {section.heading}
+            </h2>
+            {section.moreHref && section.moreLabel ? (
+              <Link
+                href={section.moreHref}
+                className="text-sm font-semibold text-ink-900 underline underline-offset-4"
+              >
+                {section.moreLabel}
+              </Link>
+            ) : null}
+          </div>
+          <StaticActivityPages ids={section.listings.map((listing) => listing.activity.id)}>
+            <ListingGrid
+              locale={locale}
+              listings={section.listings}
+              isLoading={false}
+              labels={{
+                parentVerified: discovery.parentVerifiedLabel,
+                freeTrial: discovery.freeTrialLabel,
+                imageFallback: discovery.imageFallbackLabel,
+                locationsCount: discovery.locationsCountLabel,
+                detailsOnRequest: discovery.detailsOnRequestLabel,
+                empty: copy.emptyLabel,
+              }}
+            />
+          </StaticActivityPages>
+        </section>
+      ))}
 
       {questions.length > 0 ? (
         <section aria-labelledby="activities-questions" className="mt-10 max-w-3xl">

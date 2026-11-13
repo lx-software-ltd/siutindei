@@ -12,7 +12,7 @@ import {
   REGION_ROW_ORDER,
   activityTypeIdForCategory,
   iconSrcForActivity,
-  iconSrcForActivityCategory,
+  iconSrcForListing,
   iconSrcForAge,
   iconSrcForKind,
   iconSrcForRegion,
@@ -32,13 +32,18 @@ describe('choice icons', () => {
   it('maps listing category ids to activity-type icons', () => {
     for (const type of homeWizardChoices.activityTypes) {
       expect(activityTypeIdForCategory(type.categoryId)).toBe(type.id);
-      expect(iconSrcForActivityCategory(type.categoryId)).toBe(
-        iconSrcForActivity(type.id),
-      );
+      expect(
+        iconSrcForListing({ kind: 'class', categoryId: 'leaf', categoryRootId: type.categoryId }),
+      ).toBe(iconSrcForActivity(type.id));
     }
     expect(activityTypeIdForCategory(null)).toBe('');
     expect(activityTypeIdForCategory('unknown')).toBe('');
-    expect(iconSrcForActivityCategory(null)).toBe(DEFAULT_ACTIVITY_ICON_SRC);
+    expect(iconSrcForListing({ kind: 'class', categoryId: null, categoryRootId: null })).toBe(
+      DEFAULT_ACTIVITY_ICON_SRC,
+    );
+    expect(iconSrcForListing({ kind: 'place', categoryId: 'park', categoryRootId: 'places' })).toBe(
+      KIND_ICON_SRC.place,
+    );
   });
 
   it('maps every age group to the original age PNGs', () => {

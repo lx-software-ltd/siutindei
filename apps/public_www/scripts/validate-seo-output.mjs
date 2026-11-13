@@ -1,7 +1,8 @@
 // Reads the static export without a browser and fails the build when an
 // indexable page loses what search engines and AI search read from the
 // HTML: one H1, a title, a description, and a canonical pointing at itself.
-// Activity pages also need their Course JSON-LD, the home pages need links
+// Activity pages also need their listing JSON-LD (a Course, or a venue for
+// places, restaurants, and preschools), the home pages need links
 // into the catalogue, and every sitemap URL must be an indexable page.
 
 import { promises as fs } from 'node:fs';
@@ -10,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const ACTIVITY_PAGE = /^\/(en|zh-HK)\/activity\/[^/]+\/$/;
 const HOME_PAGE = /^\/(en|zh-HK)\/$/;
+const LISTING_JSON_LD_TYPES = ['Course', 'TouristAttraction', 'Restaurant', 'Preschool'];
 
 async function htmlFiles(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -89,8 +91,11 @@ export function pageProblems(urlPath, html, { siteOrigin, hasCatalogue }) {
   if (jsonLdTypes(html).includes('invalid')) {
     problems.push('has JSON-LD that does not parse');
   }
-  if (ACTIVITY_PAGE.test(urlPath) && !jsonLdTypes(html).includes('Course')) {
-    problems.push('is an activity page without Course JSON-LD');
+  if (
+    ACTIVITY_PAGE.test(urlPath) &&
+    !jsonLdTypes(html).some((type) => LISTING_JSON_LD_TYPES.includes(type))
+  ) {
+    problems.push('is an activity page without listing JSON-LD');
   }
   if (hasCatalogue && HOME_PAGE.test(urlPath)) {
     const locale = HOME_PAGE.exec(urlPath)[1];
