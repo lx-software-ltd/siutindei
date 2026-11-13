@@ -254,6 +254,15 @@ Source: [`apps/public_www`](../../apps/public_www).
   or root category is that topic. Either needs at least three listings.
   The home page links to the hub, each landing page, and twelve
   activities.
+- **Session dates:** a schedule may carry `startsOn` and `endsOn` (a
+  dated session, usually a camp week; `src/lib/activities/schedule-dates.ts`).
+  Search and the build drop sessions that ended before today in Hong
+  Kong, so a page built before a session ends still shows it until the
+  next build. A card shows the next session ("21–25 Jul · 09:00–15:00"),
+  the activity page lists the upcoming sessions under "Dates", and the
+  camps page sorts by the next start. The weekend preset also sends
+  `date_from` and `date_to` for the coming Saturday and Sunday; undated
+  schedules match any window.
 - **Listing kinds:** every listing has a `kind` (a missing one reads as
   `class`). Cards and activity pages follow it
   (`listingCardRules` in `listing-card.tsx`): classes show weekly times,

@@ -124,6 +124,18 @@ describe('search-params', () => {
     });
   });
 
+  it('limits dated sessions to the coming weekend only for the weekend preset', () => {
+    const weekend = { ...EMPTY, day: 'weekend' as const };
+    expect(filtersToApiParams(weekend, '2026-11-13')).toMatchObject({
+      daysOfWeekHkt: [0, 6],
+      dateFrom: '2026-11-14',
+      dateTo: '2026-11-15',
+    });
+    const classesOnWeekends = filtersToApiParams(withKind(weekend, 'class'), '2026-11-13');
+    expect(classesOnWeekends).not.toHaveProperty('dateFrom');
+    expect(filtersToApiParams(EMPTY, '2026-11-13')).not.toHaveProperty('dateTo');
+  });
+
   it('round-trips a kind and searches the default kinds without one', () => {
     const parsed = parseSearchFiltersFromQuery(
       new URLSearchParams(buildSearchQueryString(withKind(EMPTY, 'camp'))),

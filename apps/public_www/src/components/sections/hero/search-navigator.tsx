@@ -12,6 +12,7 @@ import { useSearchContext } from '@/components/shared/search/search-context';
 import { formatContentTemplate } from '@/content/content-field-utils';
 import { saveRecentSearch } from '@/lib/activities/recent-storage';
 import {
+  isWeekendPreset,
   kindHasTopics,
   toggleActivityTypeId,
   withKind,
@@ -61,10 +62,6 @@ function neighbourhoodButtonClass(isSelected: boolean): string {
 
 type NavigatorStep = 'location' | 'neighbourhood' | 'kind' | 'age' | 'activity';
 
-/** The weekend preset is not a kind: the default kinds on a Saturday or Sunday. */
-function isWeekendPreset(filters: SearchFiltersState): boolean {
-  return !filters.kind && filters.day === 'weekend';
-}
 
 function showsTopicStep(filters: SearchFiltersState): boolean {
   return Boolean(filters.kind) && kindHasTopics(filters.kind);

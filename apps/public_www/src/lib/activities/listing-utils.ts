@@ -3,6 +3,7 @@ import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
 
 import { descriptionIsImportBoilerplate } from './description-boilerplate';
 import { formatListingPriceSummary } from './price-format';
+import { nextSessionLabel } from './schedule-dates';
 import { formatScheduleSummary } from './schedule-format';
 import type {
   ActivityListing,
@@ -68,7 +69,12 @@ export function missingScheduleLabel(locale: Locale): string {
 export function listingScheduleLabel(
   locale: Locale,
   listing: ActivityListing,
+  today?: string,
 ): string | null {
+  const dated = nextSessionLabel(locale, listing, today);
+  if (dated) {
+    return dated;
+  }
   const snippet = listing.schedule
     ? formatScheduleSnippet(locale, listing.schedule.weeklyEntries)
     : null;

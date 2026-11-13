@@ -108,6 +108,10 @@ export interface SearchSchedule {
   readonly scheduleType: string;
   readonly weeklyEntries: readonly WeeklyScheduleEntry[];
   readonly languages: readonly string[];
+  /** First day of a dated session, `YYYY-MM-DD` in Hong Kong. Null when weekly. */
+  readonly startsOn?: string | null;
+  /** Last day of a dated session. Null when weekly. */
+  readonly endsOn?: string | null;
 }
 
 /** One search row of an activity: a venue with its price and schedule. */
@@ -148,6 +152,10 @@ export interface ActivitySearchParams {
   readonly pricingType?: string;
   readonly languages?: readonly string[];
   readonly daysOfWeekHkt?: readonly number[];
+  /** `YYYY-MM-DD`: keep dated sessions that end on or after this day. */
+  readonly dateFrom?: string;
+  /** `YYYY-MM-DD`: keep dated sessions that start on or before this day. */
+  readonly dateTo?: string;
   readonly freeTrial?: boolean;
   readonly classPriceMax?: number;
   readonly sort?: ActivitySearchSort;

@@ -72,6 +72,12 @@ export function buildActivitySearchRequest(
   for (const day of params.daysOfWeekHkt ?? []) {
     url.searchParams.append('day_of_week_hkt', String(day));
   }
+  if (params.dateFrom) {
+    url.searchParams.set('date_from', params.dateFrom);
+  }
+  if (params.dateTo) {
+    url.searchParams.set('date_to', params.dateTo);
+  }
   if (params.freeTrial) {
     url.searchParams.set('free_trial', 'true');
   }

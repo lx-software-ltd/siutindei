@@ -24,6 +24,7 @@ import {
 } from '@/lib/activities/listing-utils';
 import { regionIdForListing } from '@/lib/activities/map-search-url';
 import { formatListingPriceSummary } from '@/lib/activities/price-format';
+import { nextSessionLabel } from '@/lib/activities/schedule-dates';
 import type { ActivityListing } from '@/lib/activities/types';
 import { iconSrcForListing } from '@/lib/home-wizard/choice-icons';
 import { formatTemplate } from '@/lib/format-template';
@@ -83,6 +84,10 @@ export function listingMetaLine(
     venues.length > 1
       ? formatTemplate(locationsCountLabel, { count: venues.length })
       : shortPlaceLabel(locale, listing.location);
+  const nextSession = nextSessionLabel(locale, listing);
+  if (nextSession) {
+    return { place, schedule: nextSession };
+  }
   const rule = listingCardRules(listing).schedule;
   const entries = rule
     ? listingVariants(listing).flatMap((variant) => variant.schedule?.weeklyEntries ?? [])

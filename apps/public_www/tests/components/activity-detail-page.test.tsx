@@ -15,7 +15,7 @@ import { ANALYTICS_CONSENT_STORAGE_KEY } from '@/lib/analytics/consent';
 import { formatTemplate } from '@/lib/format-template';
 
 import { withChromeCopy } from '../helpers/chrome-copy';
-import { buildListing, buildLocation } from '../helpers/listing-fixture';
+import { buildListing, buildLocation, buildSchedule } from '../helpers/listing-fixture';
 
 vi.mock('@/lib/activities/search-client', () => ({
   fetchActivityListingById: vi.fn(),
@@ -215,6 +215,41 @@ describe('ActivityDetailPage', () => {
     expect(within(section).getByText(copy.factLabels.toilets.present)).toBeInTheDocument();
     expect(within(section).getByText(copy.factLabels.shade.absent)).toBeInTheDocument();
     expect(screen.getByText(/Checked October 2026/)).toBeInTheDocument();
+  });
+
+  it('lists a camp\'s upcoming sessions and shows the next one as a key fact', async () => {
+    const weekdays = [1, 2, 3, 4, 5].map((day) => ({
+      dayOfWeekUtc: day,
+      startMinutesUtc: 60,
+      endMinutesUtc: 420,
+    }));
+    const session = (startsOn: string, endsOn: string) => ({
+      location: buildLocation(),
+      pricing: null,
+      schedule: buildSchedule({ weeklyEntries: weekdays, startsOn, endsOn }),
+    });
+    vi.mocked(fetchActivityListingById).mockResolvedValue({
+      ...buildListing({ activity: { kind: 'camp' } }),
+      variants: [
+        session('2099-07-27', '2099-07-31'),
+        session('2020-07-20', '2020-07-24'),
+        session('2099-07-20', '2099-07-24'),
+      ],
+    });
+    renderPage();
+
+    await screen.findByRole('heading', { level: 1, name: 'Kowloon art' });
+    const [facts] = screen.getAllByLabelText(copy.keyFactsLabel);
+    expect(within(facts).getByText('20–24 Jul · 09:00–15:00')).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { level: 2, name: copy.datesHeading });
+    const section = heading.closest('section') as HTMLElement;
+    expect(within(section).getAllByRole('listitem').map((row) => row.firstChild?.textContent)).toEqual([
+      '20–24 Jul',
+      '27–31 Jul',
+    ]);
+    expect(
+      screen.queryByRole('heading', { level: 2, name: copy.scheduleHeading }),
+    ).not.toBeInTheDocument();
   });
 
   it('leaves out the good-to-know section when nothing was checked', async () => {

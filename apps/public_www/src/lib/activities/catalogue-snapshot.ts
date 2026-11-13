@@ -11,6 +11,7 @@ import { groupListings } from './group-listings';
 import { KIND_PAGES, kindPageForKind } from './kind-pages';
 import { TOPIC_KINDS, topicForListing } from './listing-facts';
 import { mapActivityListing, type ActivityWireListing } from './map-listing';
+import { compareByNextSession, hongKongToday } from './schedule-dates';
 import type { ActivityListing, ListingKind } from './types';
 
 /**
@@ -114,6 +115,12 @@ function isPublished(row: CatalogueRow): boolean {
   return row.location.status !== 'permanently_closed';
 }
 
+/** A page built before a session ends keeps it until the next build. */
+function sessionEndedBefore(row: CatalogueRow, today: string): boolean {
+  const endsOn = row.schedule?.ends_on;
+  return Boolean(endsOn && endsOn < today);
+}
+
 function toListing(row: CatalogueRow): ActivityListing {
   const isTemplate = hideImportTemplateCopy(
     row.organization.description_source,
@@ -155,9 +162,11 @@ export function catalogueListings(): readonly ActivityListing[] {
   }
   const { rows, limit } = loadRows();
   const scope = stagingScopeAreaIds();
+  const today = hongKongToday();
   const listings = groupListings(
     rows
       .filter(isPublished)
+      .filter((row) => !sessionEndedBefore(row, today))
       .filter((row) => !scope || scope.has(row.location.area_id))
       .map(toListing),
   );
@@ -190,7 +199,19 @@ function hasEnoughListings(category: CatalogueCategory): boolean {
   return category.listings.length >= LANDING_PAGE_MIN_ACTIVITIES;
 }
 
-/** Kinds with enough listings for a page, in hub order. */
+function kindPageListings(
+  listings: readonly ActivityListing[],
+  kind: ListingKind,
+): readonly ActivityListing[] {
+  const matching = listings.filter((listing) => listing.activity.kind === kind);
+  if (kind !== 'camp') {
+    return matching;
+  }
+  const today = hongKongToday();
+  return [...matching].sort((left, right) => compareByNextSession(left, right, today));
+}
+
+/** Kinds with enough listings for a page, in hub order. Camps start soonest first. */
 export function catalogueKindPages(): readonly CatalogueCategory[] {
   const listings = catalogueListings();
   return KIND_PAGES.map((page) => ({
@@ -199,7 +220,7 @@ export function catalogueKindPages(): readonly CatalogueCategory[] {
     listingKind: page.kind,
     categoryId: null,
     labels: page.labels,
-    listings: listings.filter((listing) => listing.activity.kind === page.kind),
+    listings: kindPageListings(listings, page.kind),
   })).filter(hasEnoughListings);
 }
 

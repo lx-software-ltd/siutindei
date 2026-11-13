@@ -6,6 +6,7 @@ import {
   labelForLocale,
 } from '@/lib/home-wizard/choices';
 
+import { comingWeekend, hongKongToday } from './schedule-dates';
 import type { ActivitySearchParams, ActivitySearchSort } from './types';
 
 export type SearchViewMode = 'list' | 'map';
@@ -318,8 +319,15 @@ export function buildSearchQueryString(
   return params.toString();
 }
 
+/** The weekend preset is not a kind: the default kinds on a Saturday or Sunday. */
+export function isWeekendPreset(filters: SearchFiltersState): boolean {
+  return !filters.kind && filters.day === 'weekend';
+}
+
+/** The weekend preset also limits dated sessions to the coming weekend. */
 export function filtersToApiParams(
   filters: SearchFiltersState,
+  today: string = hongKongToday(),
 ): Pick<
   ActivitySearchParams,
   | 'kinds'
@@ -331,11 +339,14 @@ export function filtersToApiParams(
   | 'pricingType'
   | 'freeTrial'
   | 'daysOfWeekHkt'
+  | 'dateFrom'
+  | 'dateTo'
   | 'languages'
   | 'classPriceMax'
   | 'sort'
 > & { readonly categoryIds: readonly string[] } {
   const textQuery = filters.textQuery.trim();
+  const weekend = isWeekendPreset(filters) ? comingWeekend(today) : null;
   const days = daysForChoice(filters.day);
   const classFilters = kindHasClassFilters(filters.kind);
   return {
@@ -349,6 +360,7 @@ export function filtersToApiParams(
     ...(filters.free ? { pricingType: 'free' } : {}),
     ...(classFilters && filters.freeTrial ? { freeTrial: true } : {}),
     ...(days.length > 0 ? { daysOfWeekHkt: days } : {}),
+    ...(weekend ?? {}),
     ...(filters.language ? { languages: [filters.language] } : {}),
     ...(classFilters &&
     filters.classPriceMax !== null &&

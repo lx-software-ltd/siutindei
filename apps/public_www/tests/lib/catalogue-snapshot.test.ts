@@ -116,6 +116,31 @@ describe('catalogue snapshot', () => {
     ]);
   });
 
+  it('drops ended sessions and lists camps by their next start', () => {
+    const camps = categoryRows(firstCategory, LANDING_PAGE_MIN_ACTIVITIES + 1);
+    const sessions: ReadonlyArray<[string, string]> = [
+      ['2099-08-03', '2099-08-07'],
+      ['2099-07-06', '2099-07-10'],
+      ['2099-07-20', '2099-07-24'],
+      ['2020-07-20', '2020-07-24'],
+    ];
+    camps.forEach((row, index) => {
+      row.activity.kind = 'camp';
+      const [startsOn, endsOn] = sessions[index];
+      row.schedule = { ...(row.schedule as object), starts_on: startsOn, ends_on: endsOn };
+    });
+    vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, writeSnapshot(camps));
+
+    expect(catalogueListing(camps[3].activity.id)).toBeNull();
+    const [page] = catalogueKindPages();
+    expect(page.typeId).toBe('camps');
+    expect(page.listings.map((listing) => listing.activity.id)).toEqual([
+      camps[1].activity.id,
+      camps[2].activity.id,
+      camps[0].activity.id,
+    ]);
+  });
+
   it('files a leaf under its root topic and keeps places off topic pages', () => {
     const classes = categoryRows(firstCategory, LANDING_PAGE_MIN_ACTIVITIES);
     const places = categoryRows(secondCategory, LANDING_PAGE_MIN_ACTIVITIES);

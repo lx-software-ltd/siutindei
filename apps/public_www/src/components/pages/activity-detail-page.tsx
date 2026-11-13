@@ -31,6 +31,7 @@ import { ActivityOrganiser } from '@/components/sections/activity-detail/activit
 import { ActivityPrice } from '@/components/sections/activity-detail/activity-price';
 import { ActivityRelated } from '@/components/sections/activity-detail/activity-related';
 import { ActivityReviews } from '@/components/sections/activity-detail/activity-reviews';
+import { ActivityDates } from '@/components/sections/activity-detail/activity-dates';
 import { ActivitySchedule } from '@/components/sections/activity-detail/activity-schedule';
 import { ActivityTitleBlock } from '@/components/sections/activity-detail/activity-title-block';
 import type { ListingCardLabels } from '@/components/sections/listings/listing-card';
@@ -73,6 +74,7 @@ import {
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
 import { formatClassEquivalent, formatListingPriceSummary } from '@/lib/activities/price-format';
 import { loadLastSearchHref, rememberViewedActivity } from '@/lib/activities/recent-storage';
+import { formatDatedSession, upcomingSessions } from '@/lib/activities/schedule-dates';
 import { formatScheduleSummary } from '@/lib/activities/schedule-format';
 import { fetchActivityListingById } from '@/lib/activities/search-client';
 import { DEFAULT_SEARCH_FILTERS } from '@/lib/activities/search-params';
@@ -244,6 +246,8 @@ export function ActivityDetailPage({
   const pricings = venuePricings(variants);
   const hasFreeTrial = venueFreeTrial(variants);
   const entries = venueWeeklyEntries(variants);
+  const sessions = upcomingSessions(variants);
+  const nextSession = sessions[0]?.schedule;
   const price = formatListingPriceSummary(locale, atVenue);
   const kind = listing.activity.kind;
   const opensForVisits = kind === 'place' || kind === 'eat';
@@ -272,7 +276,9 @@ export function ActivityDetailPage({
     {
       id: opensForVisits ? 'hours' : 'when',
       icon: 'calendar',
-      value: formatScheduleSummary(locale, entries),
+      value: nextSession
+        ? formatDatedSession(locale, nextSession)
+        : formatScheduleSummary(locale, entries),
     },
     {
       id: 'where',
@@ -350,12 +356,21 @@ export function ActivityDetailPage({
           <ActivityKeyFacts facts={facts} copy={copy} enquiryHref={enquiry.href} />
           <ActivityAbout description={description} isTemplate={isTemplate} copy={copy} />
           <ActivityGoodToKnow facts={checkedFacts(listing)} copy={copy} />
-          <ActivitySchedule
-            locale={locale}
-            entries={entries}
-            languages={languages}
-            copy={scheduleCopy}
-          />
+          {sessions.length > 0 ? (
+            <ActivityDates
+              locale={locale}
+              sessions={sessions}
+              languages={languages}
+              copy={copy}
+            />
+          ) : (
+            <ActivitySchedule
+              locale={locale}
+              entries={entries}
+              languages={languages}
+              copy={scheduleCopy}
+            />
+          )}
           <ActivityPrice
             locale={locale}
             pricings={pricings}

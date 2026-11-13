@@ -93,6 +93,8 @@ export interface ActivityWireListing {
       end_minutes_utc: number;
     }>;
     languages?: string[];
+    starts_on?: string | null;
+    ends_on?: string | null;
   } | null;
 }
 
@@ -256,6 +258,8 @@ export function mapActivityListing(
             }),
           ),
           languages: item.schedule.languages ?? [],
+          startsOn: item.schedule.starts_on ?? null,
+          endsOn: item.schedule.ends_on ?? null,
         }
       : null,
   };

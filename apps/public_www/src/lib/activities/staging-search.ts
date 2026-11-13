@@ -4,6 +4,7 @@ import { getSearchConfig, getSiteConfig } from '@/lib/site-config';
 import { hideImportTemplateCopy } from './description-boilerplate';
 import { mapActivityListing, parseListingKind } from './map-listing';
 import { classPriceEquivalent } from './price-format';
+import { hongKongToday } from './schedule-dates';
 import { toHongKongSession } from './schedule-format';
 import type {
   ActivityListing,
@@ -67,6 +68,8 @@ interface StagingFixtureItem {
       readonly end_minutes_utc: number;
     }>;
     readonly languages: string[];
+    readonly starts_on?: string | null;
+    readonly ends_on?: string | null;
   } | null;
   readonly _sort: StagingSortMeta;
 }
@@ -274,6 +277,9 @@ function matchesRefinements(
       return false;
     }
   }
+  if (!datesMatch(item, params)) {
+    return false;
+  }
   if (params.daysOfWeekHkt && params.daysOfWeekHkt.length > 0) {
     const days = (item.schedule?.weekly_entries ?? []).map(
       (entry) =>
@@ -288,6 +294,19 @@ function matchesRefinements(
     }
   }
   return true;
+}
+
+/** Twin of the API date rule: ended sessions drop out, a window keeps overlaps. */
+function datesMatch(item: StagingFixtureItem, params: ActivitySearchParams): boolean {
+  const startsOn = item.schedule?.starts_on ?? null;
+  const endsOn = item.schedule?.ends_on ?? null;
+  if (endsOn && endsOn < hongKongToday()) {
+    return false;
+  }
+  if (params.dateFrom && endsOn && endsOn < params.dateFrom) {
+    return false;
+  }
+  return !(params.dateTo && startsOn && startsOn > params.dateTo);
 }
 
 function classPriceOf(item: StagingFixtureItem): number | null {

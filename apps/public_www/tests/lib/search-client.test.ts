@@ -63,6 +63,8 @@ describe('buildActivitySearchRequest refinements', () => {
         pricingType: 'free',
         languages: ['yue'],
         daysOfWeekHkt: [0, 6],
+        dateFrom: '2026-11-14',
+        dateTo: '2026-11-15',
         freeTrial: true,
         classPriceMax: 250,
         sort: 'price',
@@ -76,6 +78,8 @@ describe('buildActivitySearchRequest refinements', () => {
     expect(parsed.get('pricing_type')).toBe('free');
     expect(parsed.getAll('language')).toEqual(['yue']);
     expect(parsed.getAll('day_of_week_hkt')).toEqual(['0', '6']);
+    expect(parsed.get('date_from')).toBe('2026-11-14');
+    expect(parsed.get('date_to')).toBe('2026-11-15');
     expect(parsed.get('free_trial')).toBe('true');
     expect(parsed.get('class_price_max')).toBe('250');
     expect(parsed.get('sort')).toBe('price');
