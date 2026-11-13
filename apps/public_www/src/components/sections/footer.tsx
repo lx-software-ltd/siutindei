@@ -5,7 +5,12 @@ import type { FooterContent } from '@/content/types';
 import { formatContentTemplate } from '@/content/content-field-utils';
 import { TrackedWhatsappLink } from '@/components/shared/tracked-whatsapp-link';
 import { localizeHref } from '@/lib/locale-routing';
-import { getCopyrightYear, getSiteConfig } from '@/lib/site-config';
+import {
+  getCopyrightYear,
+  getSiteConfig,
+  LX_SOFTWARE_NAME,
+  LX_SOFTWARE_URL,
+} from '@/lib/site-config';
 
 interface FooterProps {
   readonly locale: Locale;
@@ -21,6 +26,23 @@ const CONTACT_ICON_CLASS =
 
 function contactIconName(label: string, detail: string): string {
   return detail ? `${label} ${detail}` : label;
+}
+
+function CopyrightNotice({ text }: { readonly text: string }) {
+  const brandAt = text.indexOf(LX_SOFTWARE_NAME);
+  if (brandAt < 0) {
+    return text;
+  }
+
+  return (
+    <>
+      {text.slice(0, brandAt)}
+      <a href={LX_SOFTWARE_URL} target="_blank" rel="noreferrer noopener">
+        {LX_SOFTWARE_NAME}
+      </a>
+      {text.slice(brandAt + LX_SOFTWARE_NAME.length)}
+    </>
+  );
 }
 
 function ContactIcon({
@@ -145,7 +167,7 @@ export function Footer({ locale, content }: FooterProps) {
           </div>
         </div>
         <p className="mt-5 border-t border-brand-200 pt-4 text-center text-xs md:mt-10 md:pt-6">
-          {copyright}
+          <CopyrightNotice text={copyright} />
         </p>
       </div>
     </footer>

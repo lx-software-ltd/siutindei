@@ -1,5 +1,9 @@
 import buildDefaults from '../../build-env.defaults.json';
 
+/** Company named in the public footer, and the site that name links to. */
+export const LX_SOFTWARE_NAME = 'LX Software';
+export const LX_SOFTWARE_URL = 'https://www.lx-software.com';
+
 interface SiteContact {
   readonly email: string;
   readonly whatsappUrl: string;
