@@ -595,6 +595,7 @@ test.describe('Organizations Panel', () => {
     await adminPage.getByRole('button', { name: 'Checked today' }).click();
     await expect(adminPage.getByLabel('Parent-Verified')).toBeChecked();
     await expect(adminPage.getByLabel('Checked on')).not.toHaveValue('');
+    await adminPage.getByLabel('Phone number').fill('91234567');
     const request = adminPage.waitForRequest(
       (req) =>
         /\/admin\/organizations\/org-1$/.test(new URL(req.url()).pathname) &&
