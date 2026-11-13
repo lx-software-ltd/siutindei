@@ -283,5 +283,5 @@ Use these instead of building new ones.
 - Does any partner integration depend on the seven group ids? The
   partner category routes are in
   `backend/src/app/api/partner_activity_categories.py`.
-- Is the Flutter app in anyone's hands yet? That decides how much of
-  the wizard and card work it needs now.
+- Answered on 13 Nov 2026: the owner is not planning the Flutter app
+  in the short term, so the plan leaves the app's code alone.

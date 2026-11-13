@@ -1,9 +1,10 @@
 # Plan: a family guide built on kinds and topics
 
-**Status**: Draft. The owner answered the seven scoping questions on
-13 Nov 2026 (see "Decisions"). No red slice is approved yet.
+**Status**: Draft. The owner answered the seven scoping questions and
+five follow-up questions on 13 Nov 2026 (see "Decisions"). No red
+slice is approved yet. Nothing is implemented.
 **Zone**: mixed. Workstreams A and F are green (`apps/public_www/**`,
-`docs/**`). Workstreams D, H, and J are yellow. Workstream I is yellow
+`docs/**`). Workstreams D and H are yellow. Workstream I is yellow
 in the backend and green in the public site. Workstreams B, C, E, and
 G each have a red slice (`backend/db/**` or `shared/**`) and are
 yellow or green around it. Each red slice needs the owner's explicit
@@ -42,7 +43,7 @@ The owner's answers, 13 Nov 2026.
 3. **Money: later.** Once traffic is proven, providers may pay to be
    listed or bumped. Nothing is sold now. See "Non-goals" for the rule
    this plan records so that it stays possible later without breaking
-   trust.
+   trust. The site itself says only that it is free (decision 9).
 4. **Verification: the owner checks listings personally.**
 5. **Ages: 0 to 18.**
 6. **Nurseries and kindergartens: the owner asked for a
@@ -53,6 +54,25 @@ The owner's answers, 13 Nov 2026.
    hidden.
 7. **Faith-based children's groups: in.**
 
+The owner's answers to the follow-up questions, also 13 Nov 2026.
+
+8. **The gate for opening an area: confirmed.** An area is ready when
+   at least 80% of its classes and camps are complete and at least
+   50% of its organisers are parent-verified. Workstream H builds it.
+9. **The site says it is free, and nothing more about money.** The
+   about page says Siu Tin Dei is free. No public copy mentions paid
+   placement, sponsorship, or paying for a position, now or as a
+   future possibility. Workstream A applies this.
+10. **An old check is flagged, and the badge stays.** A check older
+    than 12 months raises a warning for the owner in the admin
+    console. The public badge and its date do not change or drop.
+11. **Members-only clubs: confirmed.** The club's own entry is hidden
+    under "Not listed". A programme the club opens to non-members
+    stays listed.
+12. **The Flutter app: out of this plan.** The owner is not planning
+    the app in the short term. See "Non-goals" for the one thing that
+    still touches the app's folder.
+
 Also agreed, from the "push back" list the owner accepted:
 
 - Cut schools and members-only clubs. Keep playgroups and
@@ -62,7 +82,8 @@ Also agreed, from the "push back" list the owner accepted:
 - More categories is not the fix. Checking is the scarce resource. A
   new area opens only when the open ones show real times and prices.
 - The parent-checked badge and any future paid placement stay
-  separate.
+  separate. This is a rule for whoever builds on the site. It is not
+  public copy (decision 9).
 
 ## Mission and position
 
@@ -72,12 +93,15 @@ Use these words as the source for copy. Workstream A applies them.
   family can do near home, one neighbourhood at a time.
 - **Promise.** Every option we can find, the free and the tiny
   included. A parent checks listings in person and the checked ones
-  say so, with the date. Money never moves a listing up.
+  say so, with the date. It is free to use and free to be listed.
 - **Audience.** Parents of children aged 0 to 18 who live in the
   neighbourhood: planning the week and the term, or stuck for
   something to do this weekend.
 - **Not.** A booking site, a school finder, a restaurant directory, a
   review site, or a city-wide list that is thin everywhere.
+
+On money, public copy says the site is free and stops there
+(decision 9).
 
 ## Goal
 
@@ -101,7 +125,17 @@ Use these words as the source for copy. Workstream A applies them.
   comes: a paid placement is labelled, sits in its own slot, and never
   changes the parent-checked badge, the kind, the topic, or the
   default order. Workstream A writes that rule into
-  `docs/architecture/decisions.md`.
+  `docs/architecture/decisions.md`. It is a rule for builders. The
+  site does not mention it (decision 9).
+- The Flutter app (`apps/siutindei_app/**`). No Dart change, no new
+  screen, and no parity work. The one exception is the copied asset
+  `apps/siutindei_app/assets/home_wizard/home_wizard_choices.json`:
+  the sync script writes it and CI's sync check compares it, so
+  workstream E refreshes it. The app's parser reads keys by name and
+  keeps working, because the new file keeps `searchAge` and only adds
+  keys.
+- Dropping or expiring the public badge after a period of time
+  (decision 10).
 - Opening a new area. `SEARCH_AREA_SCOPE` stays on Stanley until the
   gate in workstream H says otherwise.
 - A restaurant directory, food ratings, or menus.
@@ -267,7 +301,6 @@ payloads have them stripped, the way `parent_verified` is stripped in
 | 7 | H. Checks and the area gate | yellow | B, C | Nothing. The owner sees what to fix |
 | 8 | G. Dates for camps and workshops | red + yellow + green | B, D, F | Camps with dates |
 | 9 | I. Eat with kids pilot | yellow + green | B, D, F | A food layer on the Stanley map |
-| 10 | J. Flutter parity | yellow | D, E | The same in the app |
 
 H touches different files from E and F and can run beside them.
 
@@ -307,12 +340,14 @@ first. It needs nothing else.
    - "How listings are checked": most listings start from public
      sources, a parent then checks them one organiser at a time, and
      the checked ones carry the badge.
-   - "How Siu Tin Dei is paid for": listing is free and nobody pays to
-     be listed, ranked, or badged. The owner confirms this wording
-     before it ships (see "Open questions").
+   - "Free for families and organisers": Siu Tin Dei is free to use
+     and free to be listed on. Say that and stop. No sentence about
+     paid placement, sponsorship, or paying for a position, as a
+     present fact or a future one (decision 9).
 5. **Record the mission and the paid-placement rule** in
    `docs/architecture/decisions.md` under a new heading, using
-   "Mission and position" and the rule under "Non-goals".
+   "Mission and position" and the rule under "Non-goals". That file
+   is for builders. None of it goes into the locale files.
 
 Proposed copy. Edit freely. Keep both languages in step.
 
@@ -322,11 +357,15 @@ Proposed copy. Edit freely. Keep both languages in step.
 | `smallWorld.subtitle` | Siu Tin Dei lists every class, camp, and place to play we can find near you, the free and the tiny included. A local parent checks them one by one, and the checked ones carry a badge. | 小天地整理你家附近找得到的每一個課程、營會及遊樂好去處，免費的、小型的都不遺漏。本地家長逐一查證，查證過的會有標記。 |
 | `seo.activities.descriptionTemplate` | Classes, camps, and places to play for children in {placeFull}, with ages, times, prices, and organiser contacts. Listings a local parent has checked carry a badge. | 小天地 Siu Tin Dei 整理{placeFull}的兒童課程、營會及遊樂好去處，列出適合年齡、時間、收費及主辦機構聯絡方法。經本地家長查證的活動會有標記。 |
 | new `activityDetail.parentVerifiedExplainer` | A Siu Tin Dei parent visited or spoke to this organiser and confirmed the details. | 小天地的家長曾到訪或聯絡這間機構，並確認了資料。 |
+| new `pages.about.sections` entry, heading | Free for families and organisers | 家長和機構都免費 |
+| new `pages.about.sections` entry, paragraph | Siu Tin Dei is free to use, and listing a class, camp, or place to play is free. | 小天地免費使用，刊登課程、營會或遊樂好去處亦不收費。 |
 
 Tests first: add a content test under `apps/public_www/tests` that
 fails while either locale file contains "checked by local parents
-before" or "上架前都經本地家長審核", and that asserts both locales
-define the same keys for the strings above.
+before" or "上架前都經本地家長審核", that fails if either locale
+file contains "paid placement", "sponsor", "贊助", or "付費" (none
+is present today), and that asserts both locales define the same
+keys for the strings above.
 
 Done when: `npm run lint`, `npm run typecheck`, and `npm test` pass in
 `apps/public_www`, and the home, about, and hub pages read correctly
@@ -493,7 +532,8 @@ Tests first: extend `tests/test_search_category_filter.py`,
   (`backend/src/app/services/category_suggestions/prompt.py`): add to
   the recheck note that schools above kindergarten go to the matching
   "Not listed" leaf, members-only clubs to "Members-only club", a
-  venue anyone can walk into goes under "Places to play", and a class
+  programme a club opens to non-members goes to its topic, a venue
+  anyone can walk into goes under "Places to play", and a class
   taught at a venue goes to its topic. Keep the redaction as is.
 - Organisation review: an activity under "Not listed" raises no
   blocker. An organisation whose activities are all "Not listed" gets
@@ -518,8 +558,10 @@ Not code. The plan is not done without them.
    organisations (Data quality, Categories). Review what does not
    auto-apply.
 2. Reject school and members-only organisations as "not relevant" in
-   Catalog. Keep an organisation that also runs a camp or playgroup
-   open to everyone; only its school entry moves to "Not listed".
+   Catalog. Keep an organisation that also runs a camp, playgroup,
+   or class open to everyone, including a club that takes
+   non-members for it; only its school or club entry moves to "Not
+   listed" (decision 11).
 3. For Stanley, open each class and camp and fix the kind, the ages,
    the real class times, and the price. Workstream H lists them.
 
@@ -586,7 +628,8 @@ parameter returns the same items as before plus the new fields.
 ## Workstream E: wizard and age groups
 
 Red for `shared/home_wizard/home_wizard_choices.json`, green for the
-public site, yellow for the generator and the Flutter asset.
+public site, yellow for the generator and the copied Flutter asset.
+No Dart file changes (decision 12).
 
 ### E1. Choices file, version 3 (red)
 
@@ -621,7 +664,12 @@ Kind labels:
 - `scripts/codegen/generate_home_wizard_choices.py`: copy `kinds`
   through like `ageGroups`. Extend `tests/test_home_wizard_choices.py`.
 - Run `bash scripts/codegen/sync-home-wizard-choices.sh`, then
-  `--check`.
+  `--check`. The script also copies the file into
+  `apps/siutindei_app/assets/home_wizard/`. Commit that copy, or the
+  check fails in CI. Leave the app's code and tests alone:
+  `HomeWizardChoices.fromJson` ignores keys it does not read, and its
+  test parses its own inline JSON. If `flutter test` fails in CI
+  after the copy, stop and say so instead of changing the app.
 
 ### E2. Public site (green)
 
@@ -763,7 +811,9 @@ asserting that the Python rules in
    - `class_price_outlier`: a `per_class` or `per_hour` amount above
      HK$1,500. That is usually a term fee.
    - `verification_stale`: `parent_verified_at` older than 365 days,
-     or verified with no date.
+     or verified with no date. It is a prompt for the owner to check
+     again. It never hides the public badge or the listing
+     (decision 10).
    - `camp_without_dates`: added by workstream G.
 3. **Area readiness.** `/v1/admin/org-review/summary` takes no
    parameter today (`_handle_summary` in
@@ -773,10 +823,11 @@ asserting that the Python rules in
    `readiness` block: listings per kind, classes and camps that are
    complete (the "Complete when" column in "Kinds"), organisers that
    are parent-verified, and the two shares. Without it the response is
-   unchanged. Proposed gate, to be confirmed by the owner: an area is
-   ready when at least 80% of its classes and camps are complete and
-   at least 50% of its organisers are verified. Update
-   `docs/api/admin.yaml`.
+   unchanged. The gate, confirmed by the owner (decision 8): an area
+   is ready when at least 80% of its classes and camps are complete
+   and at least 50% of its organisers are verified. Keep the two
+   numbers as named constants and return a `ready` boolean beside the
+   shares. Update `docs/api/admin.yaml`.
 4. **Admin web.** A "Ready to open?" card on Catalog
    (`apps/admin_web/src/components/admin/org-review/review-queue-panel.tsx`)
    showing the shares for the chosen neighbourhood, and the new issue
@@ -893,26 +944,6 @@ Yellow backend, green public site. No schema change. Stanley only.
 Done when: tests pass; an unverified eat listing is absent from
 search; a verified one shows its facts on the map and its page.
 
-## Workstream J: Flutter parity
-
-Yellow (`apps/siutindei_app/**`). The minimum ships inside E: the
-synced asset and a parser that ignores keys it does not know
-(`lib/features/home_wizard/models/home_wizard_choices.dart`,
-`test/home_wizard_choices_test.dart`).
-
-The rest, when the owner says the app matters now:
-
-- `lib/models/activity_models.dart`,
-  `lib/data/mappers/activity_mapper.dart`, and
-  `lib/domain/entities/`: `kind`, `facts`, category fields, dates,
-  `parent_verified_at`, and the new search parameters.
-- `lib/features/home_wizard/`: the "what are you looking for" step and
-  the five age groups.
-- `lib/features/search/widgets/activity_card.dart` and
-  `lib/features/activity_detail/`: the per-kind lines from workstream F.
-
-Done when: `flutter analyze` and `flutter test` pass.
-
 ## Files
 
 By zone, for a quick review of blast radius. Each workstream lists its
@@ -929,7 +960,9 @@ own files in full.
   `backend/src/app/services/listing_kinds.py` (new),
   `category_suggestions/**`, `enrichment/**`, `org_review*.py`,
   `catalog_version_*.py`, `staging_search_*.py`,
-  `apps/admin_web/src/**`, `apps/siutindei_app/**`, `docs/api/*.yaml`.
+  `apps/admin_web/src/**`, `docs/api/*.yaml`, and the copied asset
+  `apps/siutindei_app/assets/home_wizard/home_wizard_choices.json`.
+  Nothing else under `apps/siutindei_app/**` changes.
   `scripts/codegen/**` is not named in `docs/architecture/zones.md`;
   treat it as yellow, because its output lands in `shared/**`.
 - **Green**: `apps/public_www/**`, `docs/architecture/**`, tests.
@@ -984,7 +1017,7 @@ plan:
 ## Rollback
 
 - **A, E2, F**: revert the commits and redeploy the public site.
-- **D, H, I, J and the yellow parts of B, C, G**: revert and redeploy
+- **D, H, I and the yellow parts of B, C, G**: revert and redeploy
   the backend and the admin console. New response fields disappear;
   the public site treats a listing with no `kind` as a class.
 - **B1 and G1**: `alembic downgrade` drops the new columns. Kinds,
@@ -1000,27 +1033,17 @@ The hooks ask before `alembic downgrade`. That is expected.
 
 ## Open questions
 
-For the owner. Only question 2 touches workstream A. If it is still
-open, ship A without the "How Siu Tin Dei is paid for" section.
+The owner answered the questions on the gate, the money sentence, the
+age of a check, members-only clubs, and the Flutter app. They are
+decisions 8 to 12. What is left blocks no workstream from starting.
 
-1. **Gate thresholds.** Is "80% of classes and camps complete, 50% of
-   organisers verified" the right bar for opening the next area?
-2. **The money sentence.** May the about page say today that nobody
-   pays to be listed, ranked, or badged, and that paid placements will
-   be labelled when they come?
-3. **How long a check lasts.** This plan flags a check older than 12
-   months for the owner and keeps the badge. Should the public badge
-   drop after that instead?
-4. **Chinese names and copy.** The topic names, kind labels, and copy
-   in this plan need a native read before they ship.
-5. **Members-only clubs.** This plan hides the club's own entry and
-   keeps any programme it opens to non-members. Confirm.
-6. **Flutter.** Is the app in anyone's hands? If not, workstream J
-   waits.
-7. **Legacy roots.** How many production activities still sit on
+1. **Chinese names and copy.** The topic names, kind labels, and copy
+   in this plan need a native read before they ship. This applies to
+   each workstream that ships Chinese text: A, C, E, and F.
+2. **Legacy roots.** How many production activities still sit on
    Workshop, Class, Outdoor activity, Indoor fun, or Sport? When the
    answer is none, a follow-up removes the fallback in
    `backend/src/app/db/queries.py` and the `category_match` handling
    in the clients.
-8. **Partners.** Does any partner integration store the seven old
+3. **Partners.** Does any partner integration store the seven old
    group ids? If so, tell them before C1 runs.
