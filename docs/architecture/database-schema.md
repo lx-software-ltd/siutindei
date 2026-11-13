@@ -789,7 +789,9 @@ Indexes:
 
 ## Table: activity_schedule
 
-Purpose: Weekly schedule definitions for an activity at a location.
+Purpose: Weekly schedule definitions for an activity at a location. A
+schedule with dates is one session of a camp or workshop: its entries
+give the daily hours on the weekdays it runs between the two dates.
 
 Columns:
 - `id` (UUID, PK, default `gen_random_uuid()`)
@@ -798,13 +800,22 @@ Columns:
 - `schedule_type` (enum `schedule_type`, required)
 - `languages` (text[], default empty array)
 - `version` (integer, default 1)
+- `starts_on` (date, nullable) — first day of a dated session, Hong Kong
+  calendar
+- `ends_on` (date, nullable) — last day of a dated session, Hong Kong
+  calendar
 
 Constraints:
 - `schedule_type_weekly_only`: schedule_type must be `weekly`
-- `schedule_unique_activity_location_languages`: unique on (`activity_id`,
-  `location_id`, `languages`)
+- `schedule_dates_check`: both dates null, or both set with
+  `ends_on >= starts_on`
 
 Indexes:
+- `schedule_unique_activity_location_languages_start`: unique on
+  (`activity_id`, `location_id`, `languages`, `starts_on`) with
+  `NULLS NOT DISTINCT`, so an undated schedule stays one per activity,
+  venue, and language set, and a camp has one session per start date
+- `activity_schedule_ends_on_idx` on `ends_on` where it is set
 - `activity_schedule_languages_gin` on `languages` (GIN)
 
 ## Table: activity_schedule_entries

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import date
 from uuid import UUID
 
 from sqlalchemy import any_, func, select
@@ -162,12 +163,18 @@ class ActivityScheduleRepository(BaseRepository[ActivitySchedule]):
         activity_id: UUID,
         location_id: UUID,
         languages: list[str],
+        *,
+        starts_on: date | None = None,
     ) -> ActivitySchedule | None:
-        """Find a schedule by activity, location, and language set."""
+        """Find a schedule by activity, location, language set, and start date.
+
+        A None ``starts_on`` matches the undated schedule.
+        """
         query = (
             select(ActivitySchedule)
             .where(ActivitySchedule.activity_id == activity_id)
             .where(ActivitySchedule.location_id == location_id)
             .where(ActivitySchedule.languages == languages)
+            .where(ActivitySchedule.starts_on.is_not_distinct_from(starts_on))
         )
         return self._session.execute(query).scalars().first()

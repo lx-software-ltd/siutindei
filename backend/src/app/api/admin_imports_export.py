@@ -294,12 +294,16 @@ def serialize_export_schedule(
         warnings,
     )
     entries = [entry_from_utc(entry, tzinfo) for entry in schedule.entries or []]
-    return {
+    exported: dict[str, Any] = {
         "location_name": location_name,
         "timezone": tzinfo.key,
         "languages": schedule.languages,
         "weekly_entries": entries,
     }
+    if schedule.starts_on is not None and schedule.ends_on is not None:
+        exported["starts_on"] = schedule.starts_on.isoformat()
+        exported["ends_on"] = schedule.ends_on.isoformat()
+    return exported
 
 
 def resolve_location_name(

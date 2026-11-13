@@ -8,6 +8,7 @@ one place.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -63,7 +64,13 @@ PRICING_SHAPE_KEYS = (
     "sessions_count",
     "free_trial_class_offered",
 )
-SCHEDULE_SHAPE_KEYS = ("location_address", "languages", "entries")
+SCHEDULE_SHAPE_KEYS = (
+    "location_address",
+    "languages",
+    "entries",
+    "starts_on",
+    "ends_on",
+)
 
 
 def build_shape(entity_type: str, data: Mapping[str, Any]) -> dict[str, Any]:
@@ -186,11 +193,13 @@ def pricing_shape(data: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def schedule_shape(data: Mapping[str, Any]) -> dict[str, Any]:
-    """Schedule identity is the venue, languages, and UTC slots."""
+    """Schedule identity is the venue, languages, UTC slots, and dates."""
     return {
         "location_address": _norm_name(data.get("location_address")),
         "languages": _strings(data.get("languages")),
         "entries": _entries(data),
+        "starts_on": _date_text(data.get("starts_on")),
+        "ends_on": _date_text(data.get("ends_on")),
     }
 
 
@@ -318,3 +327,10 @@ def _quantize(value: Any, places: int) -> str | None:
         return None
     quant = Decimal("1").scaleb(-places)
     return format(number.quantize(quant), "f")
+
+
+def _date_text(value: Any) -> str | None:
+    if isinstance(value, date):
+        return value.isoformat()
+    text = _text(value)
+    return text[:10] if text else None

@@ -4954,6 +4954,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AdminImportScheduleEntry'
+        starts_on:
+          type: string
+          format: date
+          description: |
+            First day of a dated session (Hong Kong calendar), with ends_on.
+            A camp lists one schedule per session. Rows match on venue,
+            languages, and starts_on.
+        ends_on:
+          type: string
+          format: date
+          description: Last day of a dated session, on or after starts_on.
 
     AdminImportScheduleEntry:
       type: object
@@ -6856,6 +6867,21 @@ components:
             tr (Turkish), yue (Cantonese).
             zh-HK and zh_HK are accepted and stored as yue.
             Translation maps still keep zh-HK.
+        starts_on:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            First day of a dated session (Hong Kong calendar). Set it with
+            ends_on for a camp or workshop; leave both empty for a weekly
+            class. Each entry's Hong Kong weekday must occur between the
+            two dates. Several sessions can share an activity, venue, and
+            languages when their start dates differ.
+        ends_on:
+          type: string
+          format: date
+          nullable: true
+          description: Last day of a dated session, on or after starts_on.
 
     ScheduleUpdate:
       type: object
@@ -6876,6 +6902,15 @@ components:
           items:
             type: string
             enum: [en, zh, ja, ko, fr, de, es, pt, it, ru, ar, hi, th, vi, id, ms, tl, nl, pl, tr, yue]
+        starts_on:
+          type: string
+          format: date
+          nullable: true
+          description: Same rules as ScheduleCreate. Send null on both to clear.
+        ends_on:
+          type: string
+          format: date
+          nullable: true
 
     Schedule:
       type: object
@@ -6900,6 +6935,14 @@ components:
           type: array
           items:
             type: string
+        starts_on:
+          type: string
+          format: date
+          nullable: true
+        ends_on:
+          type: string
+          format: date
+          nullable: true
         version:
           type: integer
 

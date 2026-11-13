@@ -80,4 +80,6 @@ ALLOWED_SCHEDULE_FIELDS = {
     "timezone",
     "languages",
     "weekly_entries",
+    "starts_on",
+    "ends_on",
 }
