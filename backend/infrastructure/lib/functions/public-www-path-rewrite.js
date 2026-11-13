@@ -5,6 +5,7 @@ var UNPREFIXED = {
   '/privacy': true,
   '/terms': true,
   '/activity': true,
+  '/activities': true,
 };
 
 function barePath(uri) {

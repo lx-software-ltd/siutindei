@@ -111,6 +111,25 @@ test('uses zh-HK when the accept-language header asks for chinese', () => {
   assert.equal(response.headers.location.value, '/zh-HK/about/');
 });
 
+test('redirects the unprefixed activities hub to a locale', () => {
+  const response = run('/activities/', {
+    headers: { 'accept-language': { value: 'zh-HK,zh;q=0.9' } },
+  });
+  assert.equal(response.statusCode, 302);
+  assert.equal(response.headers.location.value, '/zh-HK/activities/');
+});
+
+test('serves an activity page and a landing page from their index files', () => {
+  assert.equal(
+    run('/en/activity/3f6c1f9e-0000-4000-8000-000000000001/').uri,
+    '/en/activity/3f6c1f9e-0000-4000-8000-000000000001/index.html',
+  );
+  assert.equal(
+    run('/zh-HK/activities/sports').uri,
+    '/zh-HK/activities/sports/index.html',
+  );
+});
+
 test('rewrites a locale path to index.html', () => {
   const response = run('/en/search/');
   assert.equal(response.uri, '/en/search/index.html');
