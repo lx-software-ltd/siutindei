@@ -108,6 +108,19 @@ export function Footer({ locale, content }: FooterProps) {
                 />
               </a>
             ) : null}
+            {contact.facebookUrl ? (
+              <a
+                href={contact.facebookUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                className={CONTACT_ICON_CLASS}
+              >
+                <ContactIcon
+                  src="/images/contact/facebook.svg"
+                  label={iconLabels.facebook}
+                />
+              </a>
+            ) : null}
           </div>
           <div className="col-span-2 row-start-2 grid grid-cols-2 gap-x-6 md:col-span-1 md:col-start-3 md:row-start-1 md:w-max md:justify-self-end md:gap-x-10">
             {content.columns.map((column) => (

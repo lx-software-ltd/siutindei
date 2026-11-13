@@ -99,6 +99,7 @@ jobs:
           NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL || steps.resolve_public_site_config.outputs.contact_email }}
           NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
           NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
+          NEXT_PUBLIC_FACEBOOK_URL: ${{ vars.NEXT_PUBLIC_FACEBOOK_URL }}
           NEXT_PUBLIC_STAGING_BADGE_ENABLED: 'true'
           # Repository variable. A staging Environment value overrides it.
           # Unset keeps the fixture. Production promote ignores this flag.

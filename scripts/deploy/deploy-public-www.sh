@@ -173,6 +173,9 @@ validate_maintenance_contact_settings() {
     "NEXT_PUBLIC_INSTAGRAM_URL" \
     "${NEXT_PUBLIC_INSTAGRAM_URL:-}"
   validate_http_url_when_set \
+    "NEXT_PUBLIC_FACEBOOK_URL" \
+    "${NEXT_PUBLIC_FACEBOOK_URL:-}"
+  validate_http_url_when_set \
     "NEXT_PUBLIC_LX_SOFTWARE_URL" \
     "${NEXT_PUBLIC_LX_SOFTWARE_URL:-}"
   if [ -n "${NEXT_PUBLIC_BUILD_YEAR:-}" ] && \
@@ -249,11 +252,13 @@ inject_maintenance_contact_values() {
     exit 1
   fi
   local escaped_email escaped_whatsapp_url escaped_instagram_url
+  local escaped_facebook_url
   local escaped_lx_software_url escaped_build_year
   escaped_email="$(escape_sed_replacement "$(resolve_maintenance_email)")"
   escaped_whatsapp_url="$(escape_sed_replacement \
     "$(resolve_maintenance_whatsapp_url)")"
   escaped_instagram_url="$(escape_sed_replacement "${NEXT_PUBLIC_INSTAGRAM_URL:-#}")"
+  escaped_facebook_url="$(escape_sed_replacement "${NEXT_PUBLIC_FACEBOOK_URL:-#}")"
   escaped_lx_software_url="$(escape_sed_replacement \
     "${NEXT_PUBLIC_LX_SOFTWARE_URL:-$DEFAULT_LX_SOFTWARE_URL}")"
   escaped_build_year="$(escape_sed_replacement "$(resolve_maintenance_build_year)")"
@@ -261,6 +266,7 @@ inject_maintenance_contact_values() {
     -e "s|__NEXT_PUBLIC_EMAIL__|$escaped_email|g" \
     -e "s|__NEXT_PUBLIC_WHATSAPP_URL__|$escaped_whatsapp_url|g" \
     -e "s|__NEXT_PUBLIC_INSTAGRAM_URL__|$escaped_instagram_url|g" \
+    -e "s|__NEXT_PUBLIC_FACEBOOK_URL__|$escaped_facebook_url|g" \
     -e "s|__NEXT_PUBLIC_LX_SOFTWARE_URL__|$escaped_lx_software_url|g" \
     -e "s|__NEXT_PUBLIC_BUILD_YEAR__|$escaped_build_year|g" \
     "$html_path"
