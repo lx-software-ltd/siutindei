@@ -1568,11 +1568,16 @@ export interface paths {
         /**
          * Review queue counts
          * @description Aggregated in SQL. `by_issue` counts organizations once per issue
-         *     code, including warnings.
+         *     code, including warnings. With `area_id`, the response adds a
+         *     `readiness` block for that area and its descendants; the other
+         *     counts stay catalogue-wide.
          */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Active area to check against the opening gate. */
+                    area_id?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -1587,6 +1592,13 @@ export interface paths {
                     content: {
                         "application/json": components["schemas"]["OrgReviewSummary"];
                     };
+                };
+                /** @description area_id is not a UUID, or not an active area */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
             };
         };
@@ -7951,6 +7963,18 @@ export interface components {
             timezone: string;
             languages?: string[];
             weekly_entries: components["schemas"]["AdminImportScheduleEntry"][];
+            /**
+             * Format: date
+             * @description First day of a dated session (Hong Kong calendar), with ends_on.
+             *     A camp lists one schedule per session. Rows match on venue,
+             *     languages, and starts_on.
+             */
+            starts_on?: string;
+            /**
+             * Format: date
+             * @description Last day of a dated session, on or after starts_on.
+             */
+            ends_on?: string;
         };
         AdminImportScheduleEntry: {
             /** @description Local day of week (0=Sunday). */
@@ -8350,6 +8374,39 @@ export interface components {
                 [key: string]: number;
             };
             with_blockers: number;
+            readiness?: components["schemas"]["AreaReadiness"];
+        };
+        /**
+         * @description Whether an area can open. It is ready when at least
+         *     `thresholds.complete_share` of its classes and camps are complete
+         *     and at least `thresholds.verified_share` of its organisers are
+         *     parent-verified. Rejected organisers and listings in hidden
+         *     categories are left out. A share is null when there is nothing
+         *     to count, and then the area is not ready.
+         */
+        AreaReadiness: {
+            /** Format: uuid */
+            area_id: string;
+            /** @description Listings per kind. Every kind is present, including zeros. */
+            listings_by_kind: {
+                [key: string]: number;
+            };
+            classes_and_camps: number;
+            /**
+             * @description Classes and camps with a price and a time that has not ended. A
+             *     class also needs an age range that is not a catch-all. A camp
+             *     needs a dated session that has not ended.
+             */
+            complete_classes_and_camps: number;
+            organisers: number;
+            verified_organisers: number;
+            complete_share: number | null;
+            verified_share: number | null;
+            thresholds: {
+                complete_share: number;
+                verified_share: number;
+            };
+            ready: boolean;
         };
         OrgReviewDecisionRequest: {
             /** @enum {string} */
@@ -8945,6 +9002,20 @@ export interface components {
              *     Translation maps still keep zh-HK.
              */
             languages?: ("en" | "zh" | "ja" | "ko" | "fr" | "de" | "es" | "pt" | "it" | "ru" | "ar" | "hi" | "th" | "vi" | "id" | "ms" | "tl" | "nl" | "pl" | "tr" | "yue")[];
+            /**
+             * Format: date
+             * @description First day of a dated session (Hong Kong calendar). Set it with
+             *     ends_on for a camp or workshop; leave both empty for a weekly
+             *     class. Each entry's Hong Kong weekday must occur between the
+             *     two dates. Several sessions can share an activity, venue, and
+             *     languages when their start dates differ.
+             */
+            starts_on?: string | null;
+            /**
+             * Format: date
+             * @description Last day of a dated session, on or after starts_on.
+             */
+            ends_on?: string | null;
         };
         ScheduleUpdate: {
             /** @enum {string} */
@@ -8952,6 +9023,13 @@ export interface components {
             weekly_entries?: components["schemas"]["WeeklyScheduleEntry"][];
             /** @description Same codes as ScheduleCreate. zh-HK and zh_HK are stored as yue. */
             languages?: ("en" | "zh" | "ja" | "ko" | "fr" | "de" | "es" | "pt" | "it" | "ru" | "ar" | "hi" | "th" | "vi" | "id" | "ms" | "tl" | "nl" | "pl" | "tr" | "yue")[];
+            /**
+             * Format: date
+             * @description Same rules as ScheduleCreate. Send null on both to clear.
+             */
+            starts_on?: string | null;
+            /** Format: date */
+            ends_on?: string | null;
         };
         Schedule: {
             /** Format: uuid */
@@ -8963,6 +9041,10 @@ export interface components {
             schedule_type: string;
             weekly_entries: components["schemas"]["WeeklyScheduleEntry"][];
             languages: string[];
+            /** Format: date */
+            starts_on?: string | null;
+            /** Format: date */
+            ends_on?: string | null;
             version?: number;
         };
         ScheduleListResponse: {

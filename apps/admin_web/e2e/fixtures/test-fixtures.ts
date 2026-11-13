@@ -2039,22 +2039,28 @@ export async function setupApiMocks(
   });
 
   // Mock schedules list
+  const createdSchedules: Record<string, unknown>[] = [];
   await page.route('**/api/mock/**/admin/schedules*', async (route) => {
     const method = route.request().method();
     if (method === 'GET') {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ items: mockSchedules, next_cursor: null }),
+        body: JSON.stringify({
+          items: [...createdSchedules, ...mockSchedules],
+          next_cursor: null,
+        }),
       });
     } else if (method === 'POST') {
       const body = route.request().postDataJSON();
       const created = {
-        id: 'schedule-new-' + Date.now(),
+        id: `schedule-new-${createdSchedules.length + 1}`,
         ...body,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        version: 1,
       };
+      createdSchedules.unshift(created);
       await route.fulfill({
         status: 201,
         contentType: 'application/json',

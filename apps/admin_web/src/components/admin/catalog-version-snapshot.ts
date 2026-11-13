@@ -289,7 +289,12 @@ export function scheduleFormFromSnapshot(
   snapshot: Record<string, unknown>,
   fallback: ScheduleFormState
 ): ScheduleFormState {
-  const next = applyText(fallback, snapshot, ['activity_id', 'location_id']);
+  const next = applyText(fallback, snapshot, [
+    'activity_id',
+    'location_id',
+    'starts_on',
+    'ends_on',
+  ]);
   if ('languages' in snapshot && Array.isArray(snapshot.languages)) {
     next.languages = toLanguageCodes(
       snapshot.languages.filter((code): code is string => typeof code === 'string')

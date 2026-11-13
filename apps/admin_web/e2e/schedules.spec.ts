@@ -52,4 +52,63 @@ test.describe('Schedules Panel', () => {
     await expect(adminPage.getByRole('table')).toContainText('01:00-02:00');
     await expect(adminPage.getByRole('table')).toContainText('Monday');
   });
+
+  test('adds two dated sessions to one camp', async ({ adminPage }) => {
+    const posted: Record<string, unknown>[] = [];
+    adminPage.on('request', (request) => {
+      if (request.method() === 'POST' && request.url().includes('/admin/schedules')) {
+        posted.push(request.postDataJSON());
+      }
+    });
+    await adminPage.goto('/admin/dashboard?section=schedules&org=org-1');
+    const schedules = adminPage.getByRole('table', { name: 'Schedules' });
+    await expect(schedules).toBeVisible();
+
+    const addSession = async (firstDay: string, lastDay: string) => {
+      await adminPage.getByRole('button', { name: 'New schedule' }).click();
+      await adminPage.locator('#schedule-location').selectOption('loc-1');
+      await adminPage.locator('#schedule-activity').selectOption('activity-1');
+      await adminPage.getByLabel('First day').fill(firstDay);
+      await adminPage.getByLabel('Last day').fill(lastDay);
+      for (const day of ['Mon', 'Tue']) {
+        await adminPage.getByRole('button', { name: day, exact: true }).click();
+      }
+      await adminPage.getByRole('button', { name: /Toggle English/i }).click();
+      await adminPage.getByRole('button', { name: 'Create' }).click();
+    };
+
+    await addSession('2026-07-20', '2026-07-24');
+    await expect(schedules).toContainText('20 Jul 2026 – 24 Jul 2026');
+    await addSession('2026-08-03', '2026-08-07');
+    await expect(schedules).toContainText('3 Aug 2026 – 7 Aug 2026');
+    await expect(schedules).toContainText('20 Jul 2026 – 24 Jul 2026');
+
+    expect(posted).toHaveLength(2);
+    expect(posted[0]).toMatchObject({
+      activity_id: 'activity-1',
+      location_id: 'loc-1',
+      starts_on: '2026-07-20',
+      ends_on: '2026-07-24',
+    });
+    expect(posted[1]).toMatchObject({
+      starts_on: '2026-08-03',
+      ends_on: '2026-08-07',
+    });
+  });
+
+  test('rejects a day outside the session dates', async ({ adminPage }) => {
+    await adminPage.goto('/admin/dashboard?section=schedules&org=org-1');
+    await adminPage.getByRole('button', { name: 'New schedule' }).click();
+    await adminPage.locator('#schedule-location').selectOption('loc-1');
+    await adminPage.locator('#schedule-activity').selectOption('activity-1');
+    await adminPage.getByLabel('First day').fill('2026-07-20');
+    await adminPage.getByLabel('Last day').fill('2026-07-20');
+    await adminPage.getByRole('button', { name: 'Sun', exact: true }).click();
+    await adminPage.getByRole('button', { name: /Toggle English/i }).click();
+    await adminPage.getByRole('button', { name: 'Create' }).click();
+
+    await expect(
+      adminPage.getByText('Every day must fall between the first and last day.').first()
+    ).toBeVisible();
+  });
 });

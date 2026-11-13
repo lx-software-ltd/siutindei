@@ -18,6 +18,7 @@ import { OrganizationWorkspaceTitle } from '../admin/organization-workspace-titl
 import { HistoricalRowMark, useCatalogVersion, VersionField } from '../admin/version-history';
 import { WorkspaceScopeGate } from '../admin/workspace-empty';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { AdminCreateButton } from '../ui/admin-create-button';
 import { ADMIN_TABLE_EMPTY, AdminTableName } from '../ui/admin-table-value';
 import {
@@ -37,11 +38,14 @@ import { CatalogInlineEditor } from './catalog-inline-editor';
 import {
   dayOfWeekOptions,
   emptyForm,
+  formatSessionDates,
   formatTimeLabelForMinutes,
   fromUtcWeekly,
   getTimeOptions,
   itemToForm,
   scheduleLanguageMarks,
+  daysOutsideSessionError,
+  sessionDatesError,
   toUtcWeekly,
   type ScheduleFormState,
   type WeeklyEntryForm,
@@ -138,7 +142,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
-    ['location_id', 'activity_id', 'days', 'languages'],
+    ['location_id', 'activity_id', 'days', 'languages', 'dates'],
     formKey
   );
   const errorInputClassName = formErrorClassName;
@@ -165,6 +169,12 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     if (formState.languages.length === 0) {
       return 'Select at least one language.';
     }
+    if (datesError) {
+      return datesError;
+    }
+    if (daysOutsideDatesError) {
+      return daysOutsideDatesError;
+    }
     return null;
   };
 
@@ -174,6 +184,8 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     formState.weekly_entries.length > 0 ? '' : 'Select at least one day.';
   const languagesError =
     formState.languages.length > 0 ? '' : 'Select at least one language.';
+  const datesError = sessionDatesError(formState.starts_on, formState.ends_on);
+  const daysOutsideDatesError = datesError ? '' : daysOutsideSessionError(formState);
 
   const entryErrors = useMemo(() => {
     const errors: Record<
@@ -248,6 +260,8 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
       schedule_type: 'weekly',
       weekly_entries: weeklyEntries,
       languages: resolved.languages,
+      starts_on: resolved.starts_on || null,
+      ends_on: resolved.ends_on || null,
     };
   };
 
@@ -417,8 +431,12 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
       if (localEntries.length === 0) {
         return ADMIN_TABLE_EMPTY;
       }
+      const sessionDates = formatSessionDates(item.starts_on, item.ends_on);
       return (
         <div className='space-y-1'>
+          {sessionDates ? (
+            <div className='font-medium text-ink-900'>{sessionDates}</div>
+          ) : null}
           {localEntries.map((entry) => (
             <div
               key={`${entry.dayOfWeek}-${entry.startMinutes}-${entry.endMinutes}`}
@@ -470,7 +488,7 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
   const weeklyEntriesLabel = useCallback(
     (item: ActivitySchedule) => {
       const localEntries = getLocalEntries(item);
-      return localEntries
+      const times = localEntries
         .map((entry) => {
           const label = getDayLabel(entry.dayOfWeek);
           const start = formatTimeLabelForMinutes(entry.startMinutes);
@@ -478,6 +496,8 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
           return `${label} ${start}-${end}`;
         })
         .join(', ');
+      const sessionDates = formatSessionDates(item.starts_on, item.ends_on);
+      return sessionDates && times ? `${sessionDates} · ${times}` : times;
     },
     [getDayLabel, getLocalEntries]
   );
@@ -495,6 +515,15 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
     'languages',
     Boolean(languagesError)
   );
+  const visibleDatesError = datesError || daysOutsideDatesError;
+  const showDatesError = validation.shouldShowError(
+    'dates',
+    Boolean(visibleDatesError)
+  );
+  const setSessionDate = (field: 'starts_on' | 'ends_on', value: string) => {
+    markTouched('dates');
+    panel.setFormState((prev) => ({ ...prev, [field]: value }));
+  };
   const detail = (
     <CatalogInlineEditor
       idPrefix='schedule'
@@ -525,6 +554,53 @@ export function SchedulesPanel({ mode }: SchedulesPanelProps) {
         panel.setFormState((prev) => ({ ...prev, activity_id: value }));
       }}
     >
+        <div className='sm:col-span-2'>
+          <VersionField
+            label='Session dates'
+            labelId='schedule-dates-label'
+            versionKey='starts_on'
+            error={showDatesError ? visibleDatesError : undefined}
+          >
+            <p id='schedule-dates-help' className='text-xs text-ink-500'>
+              Leave empty for a weekly class. For a camp or workshop, set the
+              first and last day, and add a schedule for each session.
+            </p>
+            <div
+              role='group'
+              aria-labelledby='schedule-dates-label'
+              aria-describedby='schedule-dates-help'
+              className='mt-2 grid gap-3 sm:grid-cols-2'
+            >
+              <AdminField label='First day' htmlFor='schedule-starts-on'>
+                <Input
+                  id='schedule-starts-on'
+                  type='date'
+                  value={editorForm.starts_on}
+                  disabled={locked}
+                  onChange={(event) =>
+                    setSessionDate('starts_on', event.target.value)
+                  }
+                  className={showDatesError ? errorInputClassName : ''}
+                  aria-invalid={showDatesError || undefined}
+                />
+              </AdminField>
+              <AdminField label='Last day' htmlFor='schedule-ends-on'>
+                <Input
+                  id='schedule-ends-on'
+                  type='date'
+                  value={editorForm.ends_on}
+                  min={editorForm.starts_on || undefined}
+                  disabled={locked}
+                  onChange={(event) =>
+                    setSessionDate('ends_on', event.target.value)
+                  }
+                  className={showDatesError ? errorInputClassName : ''}
+                  aria-invalid={showDatesError || undefined}
+                />
+              </AdminField>
+            </div>
+          </VersionField>
+        </div>
         <div className='sm:col-span-2'>
           <AdminDisclosure
             id='schedule-weekly'

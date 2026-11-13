@@ -5737,8 +5737,9 @@ components:
         complete_classes_and_camps:
           type: integer
           description: |
-            Classes and camps with a price and a weekly time. A class also
-            needs an age range that is not a catch-all.
+            Classes and camps with a price and a time that has not ended. A
+            class also needs an age range that is not a catch-all. A camp
+            needs a dated session that has not ended.
         organisers:
           type: integer
         verified_organisers:
