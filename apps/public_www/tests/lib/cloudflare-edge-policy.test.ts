@@ -10,7 +10,11 @@ import {
   RELATED_ACTIVITIES_LIMIT,
   SEARCH_RESULTS_PAGE_LIMIT,
 } from '@/lib/activities/search-limits';
-import { ROBOTS_DISALLOWED_PATHS } from '@/lib/routes';
+import {
+  AI_SEARCH_USER_AGENTS,
+  AI_TRAINING_USER_AGENTS,
+  ROBOTS_DISALLOWED_PATHS,
+} from '@/lib/routes';
 
 /** `scripts/smoke-staging.mjs` probes the search API with one listing. */
 const SMOKE_CHECK_LIMIT = 1;
@@ -26,6 +30,7 @@ interface EdgeRule {
 
 interface EdgePolicy {
   readonly hostname: string;
+  readonly bot_management: Record<string, string | boolean>;
   readonly rulesets: Record<string, { readonly rules: readonly EdgeRule[] }>;
 }
 
@@ -83,6 +88,18 @@ describe('Cloudflare edge policy contract', () => {
     );
     expect(apiPrefix).toBe('/v1/');
     expect(ROBOTS_DISALLOWED_PATHS).toContain('/cdn-cgi/');
+  });
+
+  it('admits AI search and user fetchers and blocks training crawlers, as robots.txt says', () => {
+    expect(policy.bot_management).toMatchObject({
+      ai_training: 'block',
+      ai_search: 'disabled',
+      ai_user: 'disabled',
+      is_robots_txt_managed: false,
+      bot_preference_sync_enabled: false,
+    });
+    expect(AI_SEARCH_USER_AGENTS).toContain('OAI-SearchBot');
+    expect(AI_TRAINING_USER_AGENTS).toContain('GPTBot');
   });
 
   it('never stores the edge secret in the repository', () => {

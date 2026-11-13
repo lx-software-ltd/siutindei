@@ -13,6 +13,7 @@ interface SmallWorldHeroProps {
   readonly searchBarLabels: SiteContent['navbar']['searchBar'];
   readonly bubbleIds: readonly BubbleId[];
   readonly scopeSigns?: readonly HeroScopeSign[];
+  readonly kicker?: string;
 }
 
 const NO_SCOPE_SIGNS: readonly HeroScopeSign[] = [];
@@ -27,6 +28,7 @@ export function SmallWorldHero({
   searchBarLabels,
   bubbleIds,
   scopeSigns = NO_SCOPE_SIGNS,
+  kicker,
 }: SmallWorldHeroProps) {
   return (
     <section className="small-world-hero" aria-label={copy.sceneAriaLabel}>
@@ -51,6 +53,11 @@ export function SmallWorldHero({
           aria-hidden="true"
           className="mx-auto h-auto w-40 md:w-48"
         />
+        {kicker ? (
+          <p className="mt-4 text-sm font-semibold uppercase tracking-wide text-ink-700">
+            {kicker}
+          </p>
+        ) : null}
         <h1 className="brand-title mt-4 text-balance text-3xl font-bold leading-tight text-ink-900 sm:text-4xl md:text-[52px]">
           {copy.title}
         </h1>

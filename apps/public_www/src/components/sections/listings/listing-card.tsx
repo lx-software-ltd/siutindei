@@ -7,6 +7,7 @@ import type { Locale } from '@/content/locales';
 import { useChromeCopy } from '@/components/shared/chrome-copy';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { RegionMapLink } from '@/components/shared/search/region-map-link';
+import { useActivityHref } from '@/components/shared/static-activity-pages';
 import { listingVariants, listingVenues } from '@/lib/activities/group-listings';
 import {
   categoryLabelForListing,
@@ -27,7 +28,6 @@ import type { ActivityListing } from '@/lib/activities/types';
 import { iconSrcForActivityCategory } from '@/lib/home-wizard/choice-icons';
 import { formatTemplate } from '@/lib/format-template';
 import { LISTING_IMAGE_HEIGHT, LISTING_IMAGE_WIDTH } from '@/lib/listing-image';
-import { localizePath } from '@/lib/locale-routing';
 
 export interface ListingCardLabels {
   readonly parentVerified: string;
@@ -77,7 +77,7 @@ export function ListingCard({
   const closedLabel = useChromeCopy(locale).temporarilyClosedLabel;
   const [imageFailed, setImageFailed] = useState(false);
   const isGrid = layout === 'grid';
-  const href = `${localizePath('/activity', locale)}?id=${listing.activity.id}`;
+  const href = useActivityHref(locale, listing.activity.id);
   const imageUrl = imageFailed ? null : listingImageUrl(listing);
   const isLogo = listingImageIsLogo(listing);
   const title = listingTitle(locale, listing);
@@ -108,7 +108,7 @@ export function ListingCard({
         {imageUrl ? (
           <img
             src={imageUrl}
-            alt=""
+            alt={isLogo ? orgName : title}
             width={LISTING_IMAGE_WIDTH}
             height={LISTING_IMAGE_HEIGHT}
             loading={imageLoading}

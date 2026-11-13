@@ -246,6 +246,17 @@ Verify each with `curl -sI https://<domain>` (expect 200/301, valid cert).
    closed.
 5. Post-promote: spot-check production search, an activity detail page, and
    both locales.
+6. SEO: confirm the promote log shows "Download catalogue snapshot"
+   succeeded, then check that `https://siutindei.com/sitemap.xml` lists
+   `/en/activities/` and activity pages, and that `curl -s` of one
+   activity page (no JavaScript) shows its name in `<h1>` and a
+   `Course` JSON-LD block. Submit the sitemap in Google Search Console
+   and Bing Webmaster Tools, and run Google's Rich Results Test on one
+   activity page.
+7. Crawlers: `https://siutindei.com/robots.txt` names the AI search and
+   training groups, and after `scripts/cloudflare/edge_policy.py apply
+   --section bot --yes`, `edge_policy.py plan --section bot` reports
+   `bot/bot_management` as `noop`.
 
 ## 9. Mobile beta (after web go-live)
 

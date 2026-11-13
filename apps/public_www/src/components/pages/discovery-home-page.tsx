@@ -1,6 +1,7 @@
 import type { Locale } from '@/content/locales';
 import type { SiteContent } from '@/content/types';
 import { DiscoveryHomeSection } from '@/components/sections/discovery/discovery-home-section';
+import { HomeCatalogueLinks } from '@/components/sections/discovery/home-catalogue-links';
 import { SmallWorldHero } from '@/components/sections/hero/small-world-hero';
 import { FeaturesSection } from '@/components/sections/grid/features-section';
 import { TrackedWhatsappLink } from '@/components/shared/tracked-whatsapp-link';
@@ -21,15 +22,16 @@ export function DiscoveryHomePage({ locale, content }: DiscoveryHomePageProps) {
   const { contact } = getSiteConfig();
   return (
     <>
-      <p className="sr-only">{content.discovery.pageTitle}</p>
       <SmallWorldHero
         locale={locale}
         copy={content.smallWorld}
         searchBarLabels={content.navbar.searchBar}
         bubbleIds={bubbleIds}
         scopeSigns={configuredHeroScopeSigns()}
+        kicker={content.discovery.pageTitle}
       />
       <DiscoveryHomeSection locale={locale} copy={content.discovery} />
+      <HomeCatalogueLinks locale={locale} content={content} />
       <section className="border-t border-brand-100 bg-brand-50 py-10">
         <div className="mx-auto max-w-5xl px-4 text-center sm:px-6">
           <h2 className="text-2xl font-bold text-ink-900">

@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 
 import { ActivityDetailRoute } from '@/components/pages/activity-detail-route';
+import { catalogueCategories } from '@/lib/activities/catalogue-snapshot';
 import {
   generateLocaleStaticParams,
   type LocaleRouteProps,
@@ -28,6 +29,8 @@ export async function generateMetadata({ params }: LocaleRouteProps) {
       url: content.seo.defaultSocialImage,
       alt: content.seo.defaultSocialImageAlt,
     },
+    // One shell for every `?id=`; the activities have their own pages.
+    robots: { index: false, follow: true },
   });
 }
 
@@ -36,7 +39,11 @@ export default async function ActivityRoutePage({ params }: LocaleRouteProps) {
 
   return (
     <Suspense fallback={null}>
-      <ActivityDetailRoute locale={locale} copy={content.activityDetail} />
+      <ActivityDetailRoute
+        locale={locale}
+        copy={content.activityDetail}
+        landingTypeIds={catalogueCategories().map((category) => category.typeId)}
+      />
     </Suspense>
   );
 }

@@ -1,0 +1,242 @@
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+
+import { SUPPORTED_LOCALES, type Locale } from '@/content/locales';
+import { stagingScopeAreaIds } from '@/lib/home-wizard/area-scope';
+import { homeWizardChoices } from '@/lib/home-wizard/choices';
+import { getSearchConfig } from '@/lib/site-config';
+
+import { hideImportTemplateCopy } from './description-boilerplate';
+import { groupListings } from './group-listings';
+import { mapActivityListing, type ActivityWireListing } from './map-listing';
+import type { ActivityListing } from './types';
+
+/**
+ * Build-time catalogue for the pre-rendered activity and landing pages.
+ *
+ * Production reads the snapshot that `CatalogueSnapshotFunction` writes
+ * (`PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH`). Staging with the fixture on
+ * takes a capped sample of the fixture, so its deploy stays short (#828).
+ * Without either the catalogue is empty and only placeholder pages are
+ * exported, which the build then deletes.
+ */
+
+export const CATALOGUE_SNAPSHOT_PATH_ENV = 'PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH';
+export const CATALOGUE_SNAPSHOT_REQUIRED_ENV = 'PUBLIC_WWW_CATALOGUE_SNAPSHOT_REQUIRED';
+export const STAGING_CATALOGUE_ACTIVITY_LIMIT = 60;
+export const LANDING_PAGE_MIN_ACTIVITIES = 3;
+
+/**
+ * Next.js `output: 'export'` rejects an empty `generateStaticParams()`.
+ * This id is not a listing; `scripts/prune-export-placeholders.mjs`
+ * deletes its pages after export.
+ */
+export const EXPORT_PLACEHOLDER_ID = '__export_placeholder__';
+
+const SNAPSHOT_SCHEMA_VERSION = 1;
+
+interface CatalogueRow extends ActivityWireListing {
+  readonly _sort?: {
+    readonly day_of_week_utc: number;
+    readonly start_minutes_utc: number;
+    readonly schedule_id: string;
+  };
+}
+
+interface CatalogueFile {
+  readonly schema_version?: number;
+  readonly items?: readonly CatalogueRow[];
+}
+
+export interface CatalogueCategory {
+  readonly typeId: string;
+  readonly categoryId: string;
+  readonly labels: (typeof homeWizardChoices.activityTypes)[number]['labels'];
+  readonly listings: readonly ActivityListing[];
+}
+
+let cachedListings: readonly ActivityListing[] | null = null;
+
+export function clearCatalogueCacheForTests(): void {
+  cachedListings = null;
+}
+
+function snapshotRequired(): boolean {
+  const raw = (process.env[CATALOGUE_SNAPSHOT_REQUIRED_ENV] ?? '').trim().toLowerCase();
+  return raw === 'true' || raw === '1' || raw === 'yes';
+}
+
+function stagingFixturePath(): string {
+  return path.resolve(process.cwd(), 'public/fixtures/activity_search_staging.json');
+}
+
+function readJson(filePath: string): CatalogueFile {
+  return JSON.parse(readFileSync(filePath, 'utf8')) as CatalogueFile;
+}
+
+function readSnapshotRows(filePath: string): readonly CatalogueRow[] {
+  const parsed = readJson(filePath);
+  if (parsed.schema_version !== SNAPSHOT_SCHEMA_VERSION) {
+    throw new Error(
+      `Unsupported catalogue snapshot schema ${String(parsed.schema_version)} in ${filePath}`,
+    );
+  }
+  return parsed.items ?? [];
+}
+
+function fixtureSortKey(row: CatalogueRow): [number, number, string] {
+  return [
+    row._sort?.day_of_week_utc ?? 0,
+    row._sort?.start_minutes_utc ?? 0,
+    row._sort?.schedule_id ?? '',
+  ];
+}
+
+function compareFixtureRows(left: CatalogueRow, right: CatalogueRow): number {
+  const [leftDay, leftStart, leftId] = fixtureSortKey(left);
+  const [rightDay, rightStart, rightId] = fixtureSortKey(right);
+  return leftDay - rightDay || leftStart - rightStart || leftId.localeCompare(rightId);
+}
+
+function isPublished(row: CatalogueRow): boolean {
+  const status = row.organization.status;
+  if (status === 'closed_permanently' || status === 'hidden') {
+    return false;
+  }
+  return row.location.status !== 'permanently_closed';
+}
+
+function toListing(row: CatalogueRow): ActivityListing {
+  const isTemplate = hideImportTemplateCopy(
+    row.organization.description_source,
+    row.organization.description,
+  );
+  return mapActivityListing(
+    {
+      ...row,
+      activity: {
+        ...row.activity,
+        description: isTemplate ? null : row.activity.description,
+        description_translations: isTemplate ? {} : row.activity.description_translations,
+      },
+      organization: {
+        ...row.organization,
+        description: isTemplate ? null : row.organization.description,
+      },
+    },
+    'full',
+  );
+}
+
+function loadRows(): { rows: readonly CatalogueRow[]; limit: number | null } {
+  const snapshotPath = (process.env[CATALOGUE_SNAPSHOT_PATH_ENV] ?? '').trim();
+  if (snapshotPath) {
+    return { rows: readSnapshotRows(snapshotPath), limit: null };
+  }
+  if (getSearchConfig().stagingSearchDataEnabled && existsSync(stagingFixturePath())) {
+    const rows = [...(readJson(stagingFixturePath()).items ?? [])].sort(compareFixtureRows);
+    return { rows, limit: STAGING_CATALOGUE_ACTIVITY_LIMIT };
+  }
+  return { rows: [], limit: null };
+}
+
+/** Every activity of the catalogue in the public area scope, grouped. */
+export function catalogueListings(): readonly ActivityListing[] {
+  if (cachedListings) {
+    return cachedListings;
+  }
+  const { rows, limit } = loadRows();
+  const scope = stagingScopeAreaIds();
+  const listings = groupListings(
+    rows
+      .filter(isPublished)
+      .filter((row) => !scope || scope.has(row.location.area_id))
+      .map(toListing),
+  );
+  const capped = limit === null ? listings : listings.slice(0, limit);
+  if (capped.length === 0 && snapshotRequired()) {
+    throw new Error(
+      `${CATALOGUE_SNAPSHOT_REQUIRED_ENV} is set but the catalogue is empty. ` +
+        `Set ${CATALOGUE_SNAPSHOT_PATH_ENV} to the downloaded snapshot.`,
+    );
+  }
+  cachedListings = capped;
+  return capped;
+}
+
+export function catalogueListing(activityId: string): ActivityListing | null {
+  return catalogueListings().find((listing) => listing.activity.id === activityId) ?? null;
+}
+
+export function catalogueActivityIds(): readonly string[] {
+  return catalogueListings().map((listing) => listing.activity.id);
+}
+
+export function catalogueActivityParams(): Array<{ locale: Locale; id: string }> {
+  const ids = catalogueActivityIds();
+  const exported = ids.length > 0 ? ids : [EXPORT_PLACEHOLDER_ID];
+  return SUPPORTED_LOCALES.flatMap((locale) => exported.map((id) => ({ locale, id })));
+}
+
+/** Activity types with enough activities for a landing page, in wizard order. */
+export function catalogueCategories(): readonly CatalogueCategory[] {
+  const listings = catalogueListings();
+  return homeWizardChoices.activityTypes
+    .map((type) => ({
+      typeId: type.id,
+      categoryId: type.categoryId,
+      labels: type.labels,
+      listings: listings.filter((listing) => listing.activity.categoryId === type.categoryId),
+    }))
+    .filter((category) => category.listings.length >= LANDING_PAGE_MIN_ACTIVITIES);
+}
+
+export function catalogueCategory(typeId: string): CatalogueCategory | null {
+  return catalogueCategories().find((category) => category.typeId === typeId) ?? null;
+}
+
+export function catalogueCategoryParams(): Array<{ locale: Locale; category: string }> {
+  const typeIds = catalogueCategories().map((category) => category.typeId);
+  const exported = typeIds.length > 0 ? typeIds : [EXPORT_PLACEHOLDER_ID];
+  return SUPPORTED_LOCALES.flatMap((locale) =>
+    exported.map((category) => ({ locale, category })),
+  );
+}
+
+/** The landing page an activity's breadcrumb points at, if it has one. */
+export function landingTypeIdForListing(listing: ActivityListing): string | null {
+  return (
+    catalogueCategories().find((category) => category.categoryId === listing.activity.categoryId)
+      ?.typeId ?? null
+  );
+}
+
+/** The fields a card shows, so list pages do not ship every description. */
+export function cardListing(listing: ActivityListing): ActivityListing {
+  return {
+    ...listing,
+    activity: { ...listing.activity, description: null, descriptionTranslations: {} },
+    organization: {
+      ...listing.organization,
+      description: null,
+      descriptionTranslations: {},
+      mediaUrls: listing.organization.mediaUrls.slice(0, 1),
+      placeId: null,
+      contact: null,
+      reviews: [],
+    },
+  };
+}
+
+/** The newest `updated_at` among the listings, for the sitemap. */
+export function latestUpdate(listings: readonly ActivityListing[]): Date | null {
+  let latest: number | null = null;
+  for (const listing of listings) {
+    const value = listing.organization.updatedAt;
+    const time = value ? Date.parse(value) : Number.NaN;
+    if (Number.isFinite(time) && (latest === null || time > latest)) {
+      latest = time;
+    }
+  }
+  return latest === null ? null : new Date(latest);
+}

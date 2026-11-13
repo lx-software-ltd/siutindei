@@ -20,14 +20,17 @@ function makeOutDir(): string {
   return outDir;
 }
 
-function runInject(outDir: string): void {
+function runInject(outDir: string, extraEnv: Record<string, string> = {}): void {
   execSync(`node "${scriptPath}"`, {
     cwd: appRoot,
     env: {
       ...process.env,
+      NEXT_PUBLIC_EMAIL: '',
+      NEXT_PUBLIC_INSTAGRAM_URL: '',
       PUBLIC_WWW_OUT_DIR: outDir,
       NEXT_PUBLIC_SITE_ORIGIN: 'https://example.com',
       NEXT_PUBLIC_SITE_NAME: 'Siu Tin Dei',
+      ...extraEnv,
     },
     stdio: 'pipe',
   });
@@ -63,9 +66,14 @@ describe('inject-structured-data', () => {
 
       expect(organization).toMatchObject({
         name: 'Siu Tin Dei',
+        alternateName: ['小天地', '小天地 Siu Tin Dei'],
         legalName: 'LX Software',
         url: 'https://example.com',
+        logo: 'https://example.com/images/brand/siutindei-logo-mark.svg',
+        areaServed: { '@type': 'Place', name: 'Hong Kong' },
       });
+      expect(organization).not.toHaveProperty('sameAs');
+      expect(organization).not.toHaveProperty('contactPoint');
       expect(webSite).toMatchObject({
         name: 'Siu Tin Dei',
         url: `https://example.com/${locale}/`,
@@ -84,5 +92,22 @@ describe('inject-structured-data', () => {
     const html = readFileSync(join(outDir, 'en', 'index.html'), 'utf8');
     const occurrences = html.match(/application\/ld\+json/g) ?? [];
     expect(occurrences).toHaveLength(1);
+  });
+
+  it('adds sameAs and contactPoint only from configured contact values', () => {
+    const outDir = makeOutDir();
+
+    runInject(outDir, {
+      NEXT_PUBLIC_EMAIL: 'hello@example.com',
+      NEXT_PUBLIC_INSTAGRAM_URL: 'https://www.instagram.com/example',
+    });
+
+    const html = readFileSync(join(outDir, 'en', 'index.html'), 'utf8');
+    const graph = extractJsonLd(html)['@graph'] as JsonLdNode[];
+    const organization = graph.find((n) => n['@type'] === 'Organization');
+    expect(organization).toMatchObject({
+      sameAs: ['https://www.instagram.com/example'],
+      contactPoint: { '@type': 'ContactPoint', email: 'hello@example.com' },
+    });
   });
 });

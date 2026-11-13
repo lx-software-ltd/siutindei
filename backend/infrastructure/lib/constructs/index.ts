@@ -21,6 +21,11 @@ export {
   STANDARD_LOG_RETENTION,
 } from "./python-lambda";
 export {
+  CATALOGUE_SNAPSHOT_KEY,
+  CatalogueSnapshotStack,
+  CatalogueSnapshotStackProps,
+} from "./catalogue-snapshot";
+export {
   ApiRateLimitConstruct,
   ApiRateLimitConstructProps,
 } from "./api-rate-limit";

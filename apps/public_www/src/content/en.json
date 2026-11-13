@@ -58,6 +58,7 @@
         "title": "Explore",
         "links": [
           { "label": "Home", "href": "/" },
+          { "label": "All activities", "href": "/activities" },
           { "label": "Search activities", "href": "/search" },
           { "label": "About", "href": "/about" }
         ]
@@ -79,26 +80,34 @@
     "defaultSocialImageAlt": "Siu Tin Dei children's activities in Hong Kong",
     "home": {
       "title": "Siu Tin Dei | Children's activities in Hong Kong",
-      "description": "Discover curated children's activities in Hong Kong with Siu Tin Dei."
+      "description": "Siu Tin Dei lists children's classes, clubs, and workshops in Hong Kong, starting with Stanley. Compare ages, times, and prices, then contact the organiser."
     },
     "about": {
-      "title": "About Siu Tin Dei",
+      "title": "About",
       "description": "I moved to Chung Hom Kok, couldn't find activities, and started Siu Tin Dei in Stanley for families in the same situation."
     },
     "search": {
-      "title": "Search children's activities | Siu Tin Dei",
+      "title": "Search children's activities",
       "description": "Browse children's activities in Hong Kong by area, age, and activity type."
     },
+    "activities": {
+      "titleTemplate": "Children's activities in {place}",
+      "descriptionTemplate": "Classes, clubs, and workshops for children in {placeFull}, with ages, weekly times, prices, and organiser contacts. Checked by local parents."
+    },
+    "activityCategory": {
+      "titleTemplate": "{category} for children in {place}",
+      "descriptionTemplate": "{count} {categoryLower} activities for children in {placeFull}. Compare ages, weekly times, and prices, and contact the organiser."
+    },
     "activityDetail": {
-      "title": "Activity details | Siu Tin Dei",
+      "title": "Activity details",
       "description": "View schedules, pricing, and contact the provider on Siu Tin Dei."
     },
     "privacy": {
-      "title": "Privacy Policy | Siu Tin Dei",
+      "title": "Privacy Policy",
       "description": "How LX Software (a sole proprietorship registered in Hong Kong) collects, uses, and protects personal data on Siu Tin Dei."
     },
     "terms": {
-      "title": "Terms of Use | Siu Tin Dei",
+      "title": "Terms of Use",
       "description": "The terms that govern use of the Siu Tin Dei website and mobile app."
     }
   },
@@ -342,6 +351,26 @@
     "goHomeLabel": "Go to the home page",
     "mapAltLabel": "Map location",
     "listingFreeTrialLabel": "Free trial"
+  },
+  "activitiesPage": {
+    "hubHeadingTemplate": "Children's activities in {place}",
+    "hubIntro": "Siu Tin Dei lists classes, clubs, and workshops for children in {place}. Each activity page shows the ages, the weekly times, the price, and how to contact the organiser.",
+    "categoryHeadingTemplate": "{category} for children in {place}",
+    "categoryIntroTemplate": "Siu Tin Dei lists {count} {categoryLower} activities for children in {place}. Compare the ages, weekly times, and prices, then contact the organiser.",
+    "browseByTypeHeading": "Browse by activity type",
+    "otherTypesHeading": "Other activity types",
+    "allActivitiesHeading": "All activities",
+    "activityCountTemplate": "{count} activities",
+    "atAGlanceHeading": "At a glance",
+    "agesLabel": "Ages",
+    "daysLabel": "Days",
+    "pricesLabel": "Price per class",
+    "agesRangeTemplate": "{min} to {max} years",
+    "priceRangeTemplate": "{min} to {max}",
+    "searchLinkLabel": "Filter by age, day, and price in search",
+    "homeFeaturedHeading": "Activity pages",
+    "homeAllLinkTemplate": "See all {count} activities",
+    "emptyLabel": "No activities are listed here yet. Try the search instead."
   },
   "hostCta": {
     "title": "Small businesses, come have a voice",

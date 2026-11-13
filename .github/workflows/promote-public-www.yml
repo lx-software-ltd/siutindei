@@ -125,6 +125,13 @@ jobs:
           SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
         run: python3 scripts/deploy/validate_search_area_scope.py
 
+      - name: Download catalogue snapshot
+        id: catalogue_snapshot
+        if: ${{ steps.resolve_release.outputs.maintenance_mode != 'true' }}
+        env:
+          SNAPSHOT_OUTPUT_PATH: ${{ runner.temp }}/catalogue-snapshot.json
+        run: bash scripts/deploy/fetch-public-www-catalogue-snapshot.sh
+
       - name: Verify public website build env contract
         if: ${{ steps.resolve_release.outputs.maintenance_mode != 'true' }}
         run: npm run assert:build-env-contract
@@ -160,6 +167,8 @@ jobs:
           NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
           NEXT_PUBLIC_GTM_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_GTM_ALLOWED_HOSTS }}
           NEXT_PUBLIC_SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
+          PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH: ${{ steps.catalogue_snapshot.outputs.path }}
+          PUBLIC_WWW_CATALOGUE_SNAPSHOT_REQUIRED: 'true'
 
       - name: Promote release or enable maintenance mode
         run: bash 'scripts/deploy/deploy-public-www.sh'

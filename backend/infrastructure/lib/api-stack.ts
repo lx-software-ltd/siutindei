@@ -21,6 +21,7 @@ import * as path from "path";
 import {
   addOpsAlarmRules,
   ApiRateLimitConstruct,
+  CatalogueSnapshotStack,
   DatabaseConstruct,
   OpsAlarmsConstruct,
   PythonLambdaFactory,
@@ -1516,6 +1517,30 @@ export class ApiStack extends cdk.Stack {
       new cdk.aws_events_targets.LambdaFunction(listingEventsRollupFunction, {
         retryAttempts: 2,
       })
+    );
+
+    const catalogueSnapshot = new CatalogueSnapshotStack(
+      this,
+      "CatalogueSnapshotStack",
+      {
+        resourcePrefix,
+        vpc,
+        lambdaSecurityGroup,
+        environmentEncryptionKey: sharedLambdaEnvKey,
+        logEncryptionKey: sharedLambdaLogKey,
+        database,
+        accessLogsBucket: adminImportExportLogBucket,
+        searchEnvironment: {
+          DATABASE_SECRET_ARN: database.appUserSecret.secretArn,
+          DATABASE_NAME: "siutindei",
+          DATABASE_USERNAME: "siutindei_app",
+          DATABASE_PROXY_ENDPOINT: database.proxy.endpoint,
+          DATABASE_IAM_AUTH: "true",
+          STAGING_SEARCH_DATA_ENABLED: "false",
+          ORG_REVIEW_GATE_ENABLED: orgReviewGateEnabled.valueAsString,
+          SEARCH_AREA_SCOPE: searchAreaScope.valueAsString,
+        },
+      }
     );
 
     // Admin function
@@ -3214,6 +3239,11 @@ export class ApiStack extends cdk.Stack {
       value: api.url,
     });
 
+    new cdk.CfnOutput(this, "PublicWwwCatalogueSnapshotBucketName", {
+      value: catalogueSnapshot.bucket.bucketName,
+      description: "Private bucket holding the public website catalogue snapshot",
+    });
+
     new cdk.CfnOutput(this, "DatabaseSecretArn", {
       value: database.secret?.secretArn ?? "",
     });
@@ -3380,6 +3410,11 @@ export class ApiStack extends cdk.Stack {
           label: "ListingEventsRollup",
           functionName: name("ListingEventsRollupFunction"),
           durationP99ThresholdMs: 15000,
+        },
+        {
+          label: "CatalogueSnapshot",
+          functionName: name("CatalogueSnapshotFunction"),
+          durationP99ThresholdMs: 120000,
         },
         // Admin also consumes category-suggestion SQS (OpenRouter up to
         // 90s, function timeout 120s). A 10s p99 pages on every category

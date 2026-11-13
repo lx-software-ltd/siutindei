@@ -45,6 +45,7 @@ Created once per account/region when `cdk bootstrap` runs. Not part of the main 
 | S3 Bucket | `OrganizationImagesLogBucket` | `lxsoftware-siutindei-org-media-logs-{account}-{region}` | Access logs for org media bucket |
 | S3 Bucket | `AdminImportExportBucket` | `lxsoftware-siutindei-org-imprt-{account}-{region}` | Admin import/export JSON storage |
 | S3 Bucket | `AdminImportExportLogBucket` | `lxsoftware-siutindei-org-imprt-logs-{account}-{region}` | Access logs for admin import/export bucket |
+| S3 Bucket | `CatalogueSnapshotStack/Bucket` | `lxsoftware-siutindei-www-catalog-{account}-{region}` | Private, versioned. Holds `public-www/catalogue-snapshot.json` for the public website build. Access logs go to the admin import/export log bucket |
 
 ---
 
@@ -251,6 +252,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 | `ApiKeyRotationFunction` | `lambda/api_key_rotation/handler.lambda_handler` | 256 MB | 60s | Yes | Scheduled API key rotation |
 | `ListingEventsIngestFunction` | `lambda/listing_events_ingest/handler.lambda_handler` | 256 MB | 10s | Yes | Public listing-event ingest |
 | `ListingEventsRollupFunction` | `lambda/listing_events_rollup/handler.lambda_handler` | 256 MB | 60s | Yes | Nightly listing_events_daily rollup |
+| `CatalogueSnapshotFunction` | `lambda/catalogue_snapshot/handler.lambda_handler` | 1024 MB | 300s | Yes | Hourly public website catalogue snapshot (in `CatalogueSnapshotStack`) |
 | `ManagerRequestProcessor` | `lambda/manager_request_processor/handler.lambda_handler` | 512 MB | 10s | Yes | SQS-triggered request processor |
 
 ### Lambda Resources Per Function
@@ -282,6 +284,7 @@ For each function above, the following resources are created:
 | Function | Additional Permissions |
 |----------|------------------------|
 | `SiutindeiSearchFunction` | Read DB secret, connect to RDS Proxy as `siutindei_app` |
+| `CatalogueSnapshotFunction` | Read app DB secret, connect to RDS Proxy as `siutindei_app`, `s3:GetObject` and `s3:PutObject` on `public-www/catalogue-snapshot.json` in the catalogue snapshot bucket |
 | `PartnerApiKeyAuthorizerFunction` | Read app DB secret, connect to RDS Proxy as `siutindei_app` |
 | `SiutindeiAdminFunction` | Read DB secret, connect to RDS Proxy as `siutindei_admin`, invoke `AwsApiProxyFunction`, read the OpenRouter secret, send to and consume the category suggestion queue, SNS publish to manager request topic, SES send email, S3 read/write for org media and admin import/export |
 | `AwsApiProxyFunction` | Cognito admin operations (`ListUsers`, `AdminGetUser`, `AdminDeleteUser`, `AdminCreateUser`, `AdminSetUserPassword`, `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `ListUsersInGroup`, `AdminUserGlobalSignOut`, `AdminUpdateUserAttributes`); `s3:PutObject` on `organizations/*/enrichment/*` |
@@ -428,7 +431,7 @@ in the main stack.
 ## Operational Alarms (OpsAlarms construct)
 
 The topic, key, and subscription come from `OpsAlarmsConstruct` in the main
-stack. The 16 API, Lambda, and Aurora alarms come from `addOpsAlarmRules`
+stack. The 19 API, Lambda, and Aurora alarms come from `addOpsAlarmRules`
 (`lib/constructs/ops-alarms.ts`) in the `OpsAlarmsStack` nested stack. They
 use literal names and a literal topic ARN, so the nested stack takes no
 parameters. They were moved there by a one-off stack refactor, recorded in
@@ -598,6 +601,7 @@ resource silently.
 | `OrganizationImagesBucketName` | S3 bucket name | Organization media bucket |
 | `OrganizationImagesBaseUrl` | S3 bucket URL | Public URL for organization images |
 | `AdminImportExportBucketName` | S3 bucket name | Admin import/export JSON bucket |
+| `PublicWwwCatalogueSnapshotBucketName` | S3 bucket name | Private bucket the public website build reads the catalogue snapshot from |
 | `ManagerRequestTopicArn` | SNS topic ARN | Manager request events topic |
 | `ManagerRequestQueueUrl` | SQS queue URL | Manager request processing queue |
 | `ManagerRequestDLQUrl` | SQS DLQ URL | Failed manager request messages |
@@ -693,12 +697,14 @@ own buckets and log groups.
 ## Estimated Resource Count
 
 CloudFormation allows 500 resources per stack, and a nested stack counts
-as one. The main stack synthesizes to 494 resources, including the admin
+as one. The main stack synthesizes to 495 resources, including the admin
 `live` alias and its published version and the conditional secondary API
 custom domain and base path mapping (`ApiSecondaryCustomDomainName`,
 present while clients move hostnames). The API Gateway alone
-accounts for 241 of them: 154 methods and 70 path resources. The 16 ops
-alarm rules live in the `OpsAlarmsStack` nested stack. New resource groups
+accounts for 241 of them: 154 methods and 70 path resources. The 19 ops
+alarm rules live in the `OpsAlarmsStack` nested stack. The catalogue
+snapshot bucket, function, and schedule live in the
+`CatalogueSnapshotStack` nested stack. New resource groups
 that don't reference the rest of the stack belong in a nested stack.
 
 ---

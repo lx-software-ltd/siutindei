@@ -17,6 +17,7 @@ const REDIRECT_HTML_FILES = {
   'privacy/index.html': '/en/privacy/',
   'terms/index.html': '/en/terms/',
   'activity/index.html': '/en/activity/',
+  'activities/index.html': '/en/activities/',
 };
 
 const META_REFRESH_TEMPLATE = (target) =>

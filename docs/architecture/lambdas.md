@@ -54,6 +54,20 @@ their primary responsibilities.
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - Manual backfill: invoke with `{"day": "YYYY-MM-DD"}`
 
+### Catalogue snapshot
+- Function: CatalogueSnapshotFunction (nested stack
+  `CatalogueSnapshotStack`, because the API stack is at its resource cap)
+- Handler: backend/lambda/catalogue_snapshot/handler.py
+- Trigger: EventBridge `rate(1 hour)`; invoke with `{}` to refresh now
+- Purpose: write every page of the public search response for
+  `SEARCH_AREA_SCOPE` (`view=full`, `include_incomplete=true`) to
+  `public-www/catalogue-snapshot.json` in the private
+  `PublicWwwCatalogueSnapshotBucketName` bucket. The object is rewritten
+  only when its content hash changes. The production public website
+  build reads it to pre-render activity and landing pages.
+- DB access: RDS Proxy with IAM auth (`siutindei_app`), read only
+- Packaging: `requirements-core.txt`, the same profile as search
+
 ### Activity search
 - Function: SiutindeiSearchFunction
 - Handler: backend/lambda/search/handler.py
