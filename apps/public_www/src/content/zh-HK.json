@@ -47,7 +47,7 @@
     }
   },
   "footer": {
-    "copyrightTemplate": "© {year} LX Software（於香港註冊的獨資企業）。版權所有。",
+    "copyrightTemplate": "© {year} LX Software。版權所有。",
     "contactIconLabels": {
       "email": "電郵",
       "whatsapp": "WhatsApp",

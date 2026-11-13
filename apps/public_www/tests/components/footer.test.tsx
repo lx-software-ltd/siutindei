@@ -50,6 +50,9 @@ describe('Footer', () => {
     expect(logo?.parentElement).toHaveClass('grid', 'items-center');
     expect(screen.queryByText(/LX Software product/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Hong Kong, SAR/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/a sole proprietorship registered in Hong Kong/),
+    ).not.toBeInTheDocument();
     expect(screen.getByText(/All rights reserved/)).toBeInTheDocument();
   });
 
@@ -57,6 +60,7 @@ describe('Footer', () => {
     renderFooter('zh-HK');
 
     expect(screen.queryByText(/香港特別行政區/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/於香港註冊的獨資企業/)).not.toBeInTheDocument();
     expect(screen.getByText(/版權所有/)).toBeInTheDocument();
   });
 
