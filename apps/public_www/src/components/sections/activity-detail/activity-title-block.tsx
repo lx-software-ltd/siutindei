@@ -116,6 +116,9 @@ export function ActivityTitleBlock({
           ) : null}
         </p>
       ) : null}
+      {isParentVerified ? (
+        <p className="text-sm text-ink-700 short:hidden">{copy.parentVerifiedExplainer}</p>
+      ) : null}
       {actions}
     </header>
   );

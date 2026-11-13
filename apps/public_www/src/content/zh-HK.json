@@ -76,7 +76,7 @@
   },
   "seo": {
     "fallbackTitle": "小天地 Siu Tin Dei | 香港兒童活動",
-    "fallbackDescription": "透過小天地 Siu Tin Dei 發掘香港精選兒童活動。",
+    "fallbackDescription": "透過小天地 Siu Tin Dei 尋找住家附近的兒童課程、營會及遊樂好去處，由赤柱開始。",
     "defaultSocialImage": "/images/seo/siutindei-og-2026-11.jpg",
     "defaultSocialImageAlt": "小天地 Siu Tin Dei 香港兒童活動",
     "home": {
@@ -89,11 +89,11 @@
     },
     "search": {
       "title": "搜尋兒童活動",
-      "description": "按地區、年齡及活動類型瀏覽香港兒童活動。"
+      "description": "按地區、年齡及活動類型瀏覽兒童活動，由赤柱開始。"
     },
     "activities": {
       "titleTemplate": "{place}兒童活動",
-      "descriptionTemplate": "小天地 Siu Tin Dei 整理{placeFull}的兒童課程、興趣班及工作坊，列出適合年齡、每週時間、收費及主辦機構聯絡方法，每項活動上架前都經本地家長審核。"
+      "descriptionTemplate": "小天地 Siu Tin Dei 整理{placeFull}的兒童課程、營會及遊樂好去處，列出適合年齡、時間、收費及主辦機構聯絡方法。經本地家長查證的活動會有標記。"
     },
     "activityCategory": {
       "titleTemplate": "{place}兒童{category}活動",
@@ -146,7 +146,7 @@
   },
   "smallWorld": {
     "title": "每個孩子，都值得擁有自己的小天地",
-    "subtitle": "小天地為香港家庭精選可信的課程、工作坊及戶外體驗，每一項活動上架前都經本地家長審核。",
+    "subtitle": "小天地整理你家附近找得到的每一個課程、營會及遊樂好去處，免費的、小型的都不遺漏，由赤柱開始。本地家長逐一查證，查證過的會有標記。",
     "sceneAriaLabel": "頁面上漂浮的可愛香港插畫",
     "bubbles": {
       "junk": "中式帆船",
@@ -204,7 +204,7 @@
     }
   },
   "discovery": {
-    "pageTitle": "探索香港兒童活動",
+    "pageTitle": "探索赤柱兒童活動",
     "continueSearchingTitle": "繼續搜尋",
     "recentlyViewedTitle": "最近瀏覽",
     "popularTitle": "香港熱門活動",
@@ -346,6 +346,7 @@
     "shareLabel": "分享",
     "linkCopiedLabel": "已複製連結",
     "parentVerifiedLabel": "家長認證",
+    "parentVerifiedExplainer": "小天地的家長曾到訪或聯絡這間機構，並確認了資料。",
     "notFoundHint": "我們數到十，連蒸籠裏都找過了。活動可能已結束，或連結已過期。",
     "errorHint": "載入活動時出了問題，請稍後再試。",
     "browseActivitiesLabel": "瀏覽活動",
@@ -404,7 +405,7 @@
         "id": "what-is-siu-tin-dei",
         "heading": "小天地 Siu Tin Dei 是什麼",
         "paragraphs": [
-          "小天地 Siu Tin Dei 是一個整理香港兒童課程、興趣班及工作坊的網站。每個活動頁都列出適合年齡、每週時間、收費及主辦機構的聯絡方法。",
+          "小天地 Siu Tin Dei 是一個整理香港兒童課程、營會及遊樂好去處的網站。每個活動頁都列出適合年齡、時間、收費及主辦機構的聯絡方法。",
           "現時收錄{placeFull}的活動，之後會逐區加入新地區。",
           "小天地 Siu Tin Dei 由於香港註冊的 LX Software 營運。"
         ]
@@ -461,6 +462,20 @@
           ]
         },
         {
+          "id": "how-listings-are-checked",
+          "heading": "活動資料如何查證",
+          "paragraphs": [
+            "大部分資料先來自公開來源，例如主辦機構自己的網站及專頁，以及公開名單。之後我會逐間機構查證，親身到訪或直接聯絡主辦機構。查證過的活動會有「家長認證」標記；未有標記的，即是尚未查證。"
+          ]
+        },
+        {
+          "id": "free",
+          "heading": "家長和機構都免費",
+          "paragraphs": [
+            "小天地免費使用，刊登課程、營會或遊樂好去處亦不收費。"
+          ]
+        },
+        {
           "id": "write-to-me",
           "heading": "與我聯絡",
           "paragraphs": [
@@ -472,7 +487,7 @@
   },
   "hero": {
     "title": "Siu Tin Dei",
-    "subtitle": "香港精選兒童活動。"
+    "subtitle": "住家附近的兒童活動，由赤柱開始。"
   },
   "features": {
     "title": "為何選擇 Siu Tin Dei"

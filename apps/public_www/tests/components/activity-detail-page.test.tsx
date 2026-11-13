@@ -167,6 +167,7 @@ describe('ActivityDetailPage', () => {
     expect(wechat.closest('a')).toBeNull();
     expect(wechat).not.toHaveClass('underline');
     expect(screen.getByText(copy.parentVerifiedLabel)).toBeInTheDocument();
+    expect(screen.getByText(copy.parentVerifiedExplainer)).toBeInTheDocument();
     expect(screen.getAllByText(/4\.5/).length).toBeGreaterThan(0);
   });
 
@@ -184,6 +185,7 @@ describe('ActivityDetailPage', () => {
     );
     expect(within(facts).getByRole('link', { name: copy.askForTimesLabel })).toBeInTheDocument();
     expect(screen.queryByText(copy.parentVerifiedLabel)).not.toBeInTheDocument();
+    expect(screen.queryByText(copy.parentVerifiedExplainer)).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: copy.reviewsHeading })).not.toBeInTheDocument();
   });
 

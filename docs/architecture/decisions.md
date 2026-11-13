@@ -708,3 +708,31 @@ both name the same neighbourhoods. CloudFront may serve a search
 response for up to 5 minutes after a deploy. Clearing the variable
 requires a backend deploy because an omitted CloudFormation parameter
 would keep the previous list.
+
+## 15) Mission, public copy, and paid placement
+
+**Decision:** Siu Tin Dei is the complete, parent-checked guide to
+everything a family can do near home, one neighbourhood at a time. It
+lists every class, camp, and place to play it can find, the free and
+the tiny included, for children aged 0 to 18. It is not a booking
+site, a school finder, a restaurant directory, or a review site.
+
+Public copy says only what the data supports:
+
+- Only listings whose organisation carries `parent_verified` are
+  called checked. No copy says that every listing is checked.
+- Copy that names Hong Kong also names the open area while
+  `SEARCH_AREA_SCOPE` limits search, for example "starting in
+  Stanley".
+- On money, the site says it is free to use and free to be listed on,
+  and nothing more. No public copy mentions paid placement,
+  sponsorship, or paying for a position, now or as a future plan.
+  `apps/public_www/tests/lib/honest-copy.test.ts` enforces the three
+  rules above in both locale files.
+
+**Rule for builders, not public copy:** if paid listings or bumping
+are ever added, a paid placement is labelled, sits in its own slot,
+and never changes the Parent-Verified badge, a listing's kind or
+topic, or the default order of results.
+
+Design notes: `docs/plans/family-guide-kinds-and-topics.md`.
