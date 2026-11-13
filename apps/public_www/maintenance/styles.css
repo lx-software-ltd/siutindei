@@ -215,16 +215,39 @@ a:focus-visible {
   color: var(--color-ink-700);
 }
 
-.card a:not(.btn) {
+.card a:not(.btn):not(.contact-icon) {
   color: var(--color-ink-900);
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 0.15em;
 }
 
-.card a[href^="mailto:"]:not(.btn) {
+.card a[href^="mailto:"]:not(.btn):not(.contact-icon) {
   white-space: nowrap;
   hyphens: none;
+}
+
+.contact-icons {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0 0;
+  padding: 0;
+}
+
+.contact-icons a,
+.contact-icons a:hover {
+  display: inline-flex;
+  text-decoration: none;
+}
+
+.contact-icons img {
+  display: block;
+  width: 72px;
+  height: 72px;
 }
 
 .actions {
@@ -357,6 +380,14 @@ a:focus-visible {
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .contact-icons a {
+    transition: transform 150ms ease;
+  }
+
+  .contact-icons a:hover {
+    transform: translateY(-2px);
+  }
+
   .bubble--drift-a {
     animation: bubble-drift-a 9s ease-in-out infinite;
   }
