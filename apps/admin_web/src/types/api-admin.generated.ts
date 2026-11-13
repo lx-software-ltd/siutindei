@@ -7700,6 +7700,30 @@ export interface components {
         TranslationMap: {
             [key: string]: string;
         };
+        /**
+         * @description What the listing is: a weekly class or club, a camp or workshop
+         *     with dates, a place to play, a nursery or kindergarten, or a
+         *     place to eat with children. Admin-write only; manager routes and
+         *     org-scoped partner keys ignore it. Defaults to `class`.
+         * @enum {string}
+         */
+        ListingKind: "class" | "camp" | "place" | "preschool" | "eat";
+        /**
+         * @description Parent-checked facts. `true` means a parent saw it, `false` that
+         *     a parent saw it is missing; leave a key out when nobody checked.
+         *     Allowed keys per kind: `class` drop_in, parent_stays,
+         *     sen_friendly; `camp` the same plus lunch_included; `place`
+         *     toilets, changing_table, shade, fenced, stroller_access,
+         *     water_play, lifeguard, parking, food_nearby; `eat` high_chairs,
+         *     kids_menu, changing_table, stroller_access, room_to_run,
+         *     outdoor_seating; `preschool` none. Another key or a non-boolean
+         *     value is a validation error. Changing `kind` without sending
+         *     `facts` drops the keys the new kind does not allow. Admin-write
+         *     only; manager routes and org-scoped partner keys ignore it.
+         */
+        ListingFacts: {
+            [key: string]: boolean;
+        };
         AdminImportFile: {
             /**
              * Format: uuid
@@ -7892,6 +7916,14 @@ export interface components {
             vetting_note?: string;
             age_min: number;
             age_max: number;
+            /**
+             * @description When a new activity omits it, `camp` if the name reads like
+             *     a camp or workshop (camp, workshop, holiday course, 夏令營,
+             *     冬令營, 日營, 工作坊, 暑期班), else `class`. An existing
+             *     activity keeps its kind unless the file sends one.
+             */
+            kind?: components["schemas"]["ListingKind"];
+            facts?: components["schemas"]["ListingFacts"];
             pricing?: components["schemas"]["AdminImportPricing"][];
             schedules?: components["schemas"]["AdminImportSchedule"][];
         };
@@ -8409,6 +8441,15 @@ export interface components {
             /** @description Admin only. Shows the Parent-Verified badge on the public website. Manager writes ignore it. */
             parent_verified?: boolean;
             /**
+             * Format: date-time
+             * @description Admin only. When a parent last checked the organization. May
+             *     not be in the future, and needs `parent_verified` to be true.
+             *     Turning `parent_verified` on without it stamps the server
+             *     time; sending it again records a re-check. Turning
+             *     `parent_verified` off clears it. Manager writes ignore it.
+             */
+            parent_verified_at?: string | null;
+            /**
              * @description List of media URLs (optional, max 20 URLs).
              *     Each URL must use http or https scheme and be max 2,048 characters.
              */
@@ -8484,6 +8525,15 @@ export interface components {
             wechat?: string;
             /** @description Admin only. Shows the Parent-Verified badge on the public website. Manager writes ignore it. */
             parent_verified?: boolean;
+            /**
+             * Format: date-time
+             * @description Admin only. When a parent last checked the organization. May
+             *     not be in the future, and needs `parent_verified` to be true.
+             *     Turning `parent_verified` on without it stamps the server
+             *     time; sending it again records a re-check. Turning
+             *     `parent_verified` off clears it. Manager writes ignore it.
+             */
+            parent_verified_at?: string | null;
             media_urls?: string[];
             /**
              * Format: uri
@@ -8554,6 +8604,13 @@ export interface components {
             wechat?: string | null;
             /** @description Admin-set. Shows the Parent-Verified badge on the public website. */
             parent_verified?: boolean;
+            /**
+             * Format: date-time
+             * @description When a parent last checked the organization. Null when it is
+             *     not verified, or when it was verified before checked dates
+             *     were recorded.
+             */
+            parent_verified_at?: string | null;
             media_urls: string[];
             /**
              * Format: uri
@@ -8689,6 +8746,8 @@ export interface components {
             age_min: number;
             /** @description Maximum age (required, 1-120, must be greater than age_min) */
             age_max: number;
+            kind?: components["schemas"]["ListingKind"];
+            facts?: components["schemas"]["ListingFacts"];
             location_ids?: components["schemas"]["ActivityLocationIds"];
         };
         ActivityUpdate: {
@@ -8715,6 +8774,8 @@ export interface components {
             age_min?: number;
             /** @description Maximum age (must provide both age_min and age_max together) */
             age_max?: number;
+            kind?: components["schemas"]["ListingKind"];
+            facts?: components["schemas"]["ListingFacts"];
             location_ids?: components["schemas"]["ActivityLocationIds"];
         };
         Activity: {
@@ -8734,6 +8795,8 @@ export interface components {
             readonly source_category_name?: string | null;
             age_min: number;
             age_max: number;
+            kind: components["schemas"]["ListingKind"];
+            facts: components["schemas"]["ListingFacts"];
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */

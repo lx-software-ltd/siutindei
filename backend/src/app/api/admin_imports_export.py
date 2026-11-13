@@ -243,6 +243,8 @@ def serialize_export_activity(
         "source_note": activity.source_note,
         "age_min": age_min,
         "age_max": age_max,
+        "kind": activity.kind,
+        "facts": activity.facts or {},
         "pricing": [
             serialize_export_pricing(pricing, location_name_by_id, warnings)
             for pricing in pricing_rows

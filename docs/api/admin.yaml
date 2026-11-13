@@ -4562,6 +4562,32 @@ components:
         Language map for translated text. The server always includes English as "en".
         Additional entries must use ISO 639-1 codes plus "yue" (Cantonese, ISO 639-3).
 
+    ListingKind:
+      type: string
+      enum: [class, camp, place, preschool, eat]
+      description: |
+        What the listing is: a weekly class or club, a camp or workshop
+        with dates, a place to play, a nursery or kindergarten, or a
+        place to eat with children. Admin-write only; manager routes and
+        org-scoped partner keys ignore it. Defaults to `class`.
+
+    ListingFacts:
+      type: object
+      additionalProperties:
+        type: boolean
+      description: |
+        Parent-checked facts. `true` means a parent saw it, `false` that
+        a parent saw it is missing; leave a key out when nobody checked.
+        Allowed keys per kind: `class` drop_in, parent_stays,
+        sen_friendly; `camp` the same plus lunch_included; `place`
+        toilets, changing_table, shade, fenced, stroller_access,
+        water_play, lifeguard, parking, food_nearby; `eat` high_chairs,
+        kids_menu, changing_table, stroller_access, room_to_run,
+        outdoor_seating; `preschool` none. Another key or a non-boolean
+        value is a validation error. Changing `kind` without sending
+        `facts` drops the keys the new kind does not allow. Admin-write
+        only; manager routes and org-scoped partner keys ignore it.
+
     AdminImportFile:
       type: object
       required: [organizations]
@@ -4851,6 +4877,16 @@ components:
           type: integer
           minimum: 1
           maximum: 120
+        kind:
+          allOf:
+            - $ref: '#/components/schemas/ListingKind'
+          description: |
+            When a new activity omits it, `camp` if the name reads like
+            a camp or workshop (camp, workshop, holiday course, 夏令營,
+            冬令營, 日營, 工作坊, 暑期班), else `class`. An existing
+            activity keeps its kind unless the file sends one.
+        facts:
+          $ref: '#/components/schemas/ListingFacts'
         pricing:
           type: array
           items:
@@ -5812,6 +5848,16 @@ components:
         parent_verified:
           type: boolean
           description: Admin only. Shows the Parent-Verified badge on the public website. Manager writes ignore it.
+        parent_verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            Admin only. When a parent last checked the organization. May
+            not be in the future, and needs `parent_verified` to be true.
+            Turning `parent_verified` on without it stamps the server
+            time; sending it again records a re-check. Turning
+            `parent_verified` off clears it. Manager writes ignore it.
         media_urls:
           type: array
           maxItems: 20
@@ -5970,6 +6016,16 @@ components:
         parent_verified:
           type: boolean
           description: Admin only. Shows the Parent-Verified badge on the public website. Manager writes ignore it.
+        parent_verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            Admin only. When a parent last checked the organization. May
+            not be in the future, and needs `parent_verified` to be true.
+            Turning `parent_verified` on without it stamps the server
+            time; sending it again records a re-check. Turning
+            `parent_verified` off clears it. Manager writes ignore it.
         media_urls:
           type: array
           maxItems: 20
@@ -6126,6 +6182,14 @@ components:
         parent_verified:
           type: boolean
           description: Admin-set. Shows the Parent-Verified badge on the public website.
+        parent_verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            When a parent last checked the organization. Null when it is
+            not verified, or when it was verified before checked dates
+            were recorded.
         media_urls:
           type: array
           items:
@@ -6359,6 +6423,10 @@ components:
           minimum: 1
           maximum: 120
           description: Maximum age (required, 1-120, must be greater than age_min)
+        kind:
+          $ref: '#/components/schemas/ListingKind'
+        facts:
+          $ref: '#/components/schemas/ListingFacts'
         location_ids:
           $ref: '#/components/schemas/ActivityLocationIds'
 
@@ -6408,6 +6476,10 @@ components:
           minimum: 1
           maximum: 120
           description: Maximum age (must provide both age_min and age_max together)
+        kind:
+          $ref: '#/components/schemas/ListingKind'
+        facts:
+          $ref: '#/components/schemas/ListingFacts'
         location_ids:
           $ref: '#/components/schemas/ActivityLocationIds'
 
@@ -6423,6 +6495,8 @@ components:
           description_translations,
           age_min,
           age_max,
+          kind,
+          facts,
           created_at,
           updated_at,
           location_ids,
@@ -6461,6 +6535,10 @@ components:
           type: integer
         age_max:
           type: integer
+        kind:
+          $ref: '#/components/schemas/ListingKind'
+        facts:
+          $ref: '#/components/schemas/ListingFacts'
         created_at:
           type: string
           format: date-time

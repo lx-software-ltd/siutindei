@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.db.age_bounds import inclusive_age_bounds
 from app.db.models import Activity, Location, Organization
 from app.services.catalog_version_match import apply_child_gate
 from app.services.catalog_version_payload import (
@@ -15,6 +16,7 @@ from app.services.catalog_version_payload import (
     schedule_payload,
 )
 from app.services.import_merge import RowPlan
+from app.services.listing_kinds import guess_kind
 
 _ACTIVITY_KEYS = (
     "name",
@@ -26,6 +28,8 @@ _ACTIVITY_KEYS = (
     "source_url",
     "source_note",
     "source_category_name",
+    "kind",
+    "facts",
 )
 
 
@@ -56,6 +60,27 @@ def stage_source_category(body: dict[str, Any]) -> None:
     name = body.get("category_name")
     if isinstance(name, str) and name.strip():
         body["source_category_name"] = name.strip()
+
+
+def fill_activity_body(
+    body: dict[str, Any],
+    existing: Activity | None,
+    name: str,
+) -> None:
+    """Fill what the activity validators need but the file may leave out.
+
+    A new activity with no kind gets one guessed from its name. An age
+    change on an existing activity carries the other bound.
+    """
+    if existing is None:
+        if not body.get("kind"):
+            body["kind"] = guess_kind(name)
+        return
+    age_min, age_max = inclusive_age_bounds(existing.age_range)
+    if "age_min" in body and "age_max" not in body:
+        body["age_max"] = age_max
+    if "age_max" in body and "age_min" not in body:
+        body["age_min"] = age_min
 
 
 def keep_applied_category(body: dict[str, Any], plan: RowPlan) -> str | None:

@@ -55,6 +55,8 @@ ALLOWED_ACTIVITY_FIELDS = {
     "description_translations",
     "age_min",
     "age_max",
+    "kind",
+    "facts",
     "category_id",
     "category_name",
     "source_url",

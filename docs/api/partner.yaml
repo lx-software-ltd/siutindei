@@ -31,6 +31,10 @@ info:
     - Org-scoped keys cannot create organizations (`POST
       /v1/partner/organizations` returns `403`) and cannot change the
       organization manager.
+    - Org-scoped keys cannot write `parent_verified`,
+      `parent_verified_at`, `source_url`, or `source_note` on an
+      organization, or `kind`, `facts`, `source_url`, or `source_note`
+      on an activity. Those fields are dropped from the request.
     - A full-access key lists every organization (`pending_review`,
       `approved`, and `rejected`) and can read pending name-cleanup
       proposals (`GET /v1/partner/name-fixes`), venue proposals

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import patch
 from uuid import uuid4
+
+import pytest
 
 from app.api.admin_crud import (
     _drop_admin_only_write_fields,
@@ -445,3 +448,143 @@ def test_parent_verified_is_admin_only(db_session, sample_organization) -> None:
         assert exc.field == "parent_verified"
     else:
         raise AssertionError("a string flag must be rejected")
+
+
+def test_verifying_stamps_the_checked_date(db_session, sample_organization) -> None:
+    repo = OrganizationRepository(db_session)
+    assert _serialize_organization(sample_organization)["parent_verified_at"] is None
+
+    before = datetime.now(UTC)
+    _update_organization(repo, sample_organization, {"parent_verified": True})
+    db_session.flush()
+    db_session.refresh(sample_organization)
+    stamped = sample_organization.parent_verified_at
+    assert stamped is not None
+    assert before <= stamped <= datetime.now(UTC)
+    assert _serialize_organization(sample_organization)["parent_verified_at"] == (
+        stamped
+    )
+
+    _update_organization(repo, sample_organization, {"parent_verified": True})
+    db_session.flush()
+    assert sample_organization.parent_verified_at == stamped
+
+    _update_organization(repo, sample_organization, {"parent_verified": False})
+    db_session.flush()
+    assert sample_organization.parent_verified is False
+    assert sample_organization.parent_verified_at is None
+
+
+def test_admin_records_a_recheck_with_a_date(db_session, sample_organization) -> None:
+    repo = OrganizationRepository(db_session)
+    _update_organization(
+        repo,
+        sample_organization,
+        {"parent_verified": True, "parent_verified_at": "2026-03-01T00:00:00+08:00"},
+    )
+    db_session.flush()
+    assert sample_organization.parent_verified_at == datetime(
+        2026, 2, 28, 16, 0, tzinfo=UTC
+    )
+
+    _update_organization(
+        repo,
+        sample_organization,
+        {"parent_verified": True, "parent_verified_at": "2026-06-01T09:30:00Z"},
+    )
+    db_session.flush()
+    assert sample_organization.parent_verified_at == datetime(
+        2026, 6, 1, 9, 30, tzinfo=UTC
+    )
+
+    _update_organization(
+        repo,
+        sample_organization,
+        {"parent_verified_at": "2026-07-01T09:30:00Z"},
+    )
+    db_session.flush()
+    assert sample_organization.parent_verified_at == datetime(
+        2026, 7, 1, 9, 30, tzinfo=UTC
+    )
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"parent_verified": True, "parent_verified_at": "2999-01-01T00:00:00Z"},
+        {"parent_verified": True, "parent_verified_at": "last week"},
+        {"parent_verified": True, "parent_verified_at": 20260101},
+        {"parent_verified": False, "parent_verified_at": "2026-01-01T00:00:00Z"},
+        {"parent_verified_at": "2026-01-01T00:00:00Z"},
+    ],
+)
+def test_checked_date_rejects_future_bad_or_unverified(
+    db_session, sample_organization, body
+) -> None:
+    repo = OrganizationRepository(db_session)
+    with pytest.raises(ValidationError) as exc_info:
+        _update_organization(repo, sample_organization, body)
+    assert exc_info.value.field == "parent_verified_at"
+
+
+def test_create_verified_stamps_the_checked_date(db_session) -> None:
+    repo = OrganizationRepository(db_session)
+    created = _create_organization(
+        repo,
+        {
+            "name": f"Verified Studio {uuid4().hex[:8]}",
+            "manager_id": "00000000-0000-0000-0000-000000000001",
+            "parent_verified": True,
+        },
+    )
+    assert created.parent_verified_at is not None
+    dated = _create_organization(
+        repo,
+        {
+            "name": f"Dated Studio {uuid4().hex[:8]}",
+            "manager_id": "00000000-0000-0000-0000-000000000001",
+            "parent_verified": True,
+            "parent_verified_at": "2026-01-05T02:00:00Z",
+        },
+    )
+    assert dated.parent_verified_at == datetime(2026, 1, 5, 2, 0, tzinfo=UTC)
+    plain = _create_organization(
+        repo,
+        {
+            "name": f"Plain Studio {uuid4().hex[:8]}",
+            "manager_id": "00000000-0000-0000-0000-000000000001",
+        },
+    )
+    assert plain.parent_verified_at is None
+
+
+def test_managers_cannot_write_the_checked_date(
+    db_session, sample_organization
+) -> None:
+    body = {"name": "Studio", "parent_verified_at": "2026-01-01T00:00:00Z"}
+    _drop_admin_only_write_fields(body)
+    assert body == {"name": "Studio"}
+
+    repo = OrganizationRepository(db_session)
+    _update_organization_for_manager(
+        repo,
+        sample_organization,
+        {"parent_verified": True, "parent_verified_at": "2026-01-01T00:00:00Z"},
+    )
+    assert sample_organization.parent_verified is False
+    assert sample_organization.parent_verified_at is None
+
+
+def test_database_rejects_a_date_without_the_flag(
+    db_session, sample_organization
+) -> None:
+    from sqlalchemy import text
+    from sqlalchemy.exc import IntegrityError
+
+    nested = db_session.begin_nested()
+    with pytest.raises(IntegrityError):
+        db_session.execute(
+            text("UPDATE organizations SET parent_verified_at = now() WHERE id = :id"),
+            {"id": sample_organization.id},
+        )
+    nested.rollback()

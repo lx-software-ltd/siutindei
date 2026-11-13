@@ -54,6 +54,8 @@ def activity_payload(activity: Activity) -> dict[str, Any]:
         "source_url": activity.source_url,
         "source_note": activity.source_note,
         "source_category_name": activity.source_category_name,
+        "kind": activity.kind,
+        "facts": dict(activity.facts or {}),
     }
 
 

@@ -75,6 +75,20 @@ class Activity(Base):
         nullable=True,
     )
     age_range: Mapped[object] = mapped_column(INT4RANGE(), nullable=False)
+    kind: Mapped[str] = mapped_column(
+        Text(),
+        nullable=False,
+        default="class",
+        server_default=text("'class'"),
+        comment="Listing kind: decides what the card and page show",
+    )
+    facts: Mapped[dict[str, bool]] = mapped_column(
+        sa.dialects.postgresql.JSONB(),
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+        comment="Parent-checked facts: true seen, false seen missing",
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=False,
@@ -105,6 +119,18 @@ class Activity(Base):
     schedules: Mapped[list[ActivitySchedule]] = relationship(
         back_populates="activity",
         cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "kind IN ('class', 'camp', 'place', 'preschool', 'eat')",
+            name="activities_kind_check",
+        ),
+        CheckConstraint(
+            "jsonb_typeof(facts) = 'object'",
+            name="activities_facts_object_check",
+        ),
+        Index("activities_kind_idx", "kind"),
     )
 
 

@@ -13,6 +13,7 @@ from typing import Any
 
 from app.api.admin_imports_catalog import normalize_org_name
 from app.db.age_bounds import inclusive_age_bounds
+from app.services.listing_kinds import DEFAULT_KIND
 
 ORG_SHAPE_KEYS = (
     "name",
@@ -50,6 +51,8 @@ ACTIVITY_SHAPE_KEYS = (
     "source_url",
     "source_note",
     "source_category_name",
+    "kind",
+    "facts",
 )
 LOCATION_SHAPE_KEYS = ("address", "area_id", "lat", "lng", "place_id")
 PRICING_SHAPE_KEYS = (
@@ -133,7 +136,11 @@ def organization_shape(data: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def activity_shape(data: Mapping[str, Any]) -> dict[str, Any]:
-    """Activity fields. Category id is a taxonomy choice, not source data."""
+    """Activity fields. Category id is a taxonomy choice, not source data.
+
+    A snapshot from before kinds has no ``kind`` and no ``facts``; it
+    reads as the column defaults.
+    """
     age_min, age_max = _ages(data)
     return {
         "name": _norm_name(data.get("name")),
@@ -145,6 +152,8 @@ def activity_shape(data: Mapping[str, Any]) -> dict[str, Any]:
         "source_url": _text(data.get("source_url")),
         "source_note": _text(data.get("source_note")),
         "source_category_name": _text(data.get("source_category_name")),
+        "kind": _text(data.get("kind")) or DEFAULT_KIND,
+        "facts": _facts(data.get("facts")),
     }
 
 
@@ -249,6 +258,12 @@ def _translations(value: Any) -> dict[str, str]:
         if (text := _text(item)) is not None
     }
     return dict(sorted(cleaned.items()))
+
+
+def _facts(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    return {str(key): item for key, item in sorted(value.items())}
 
 
 def _urls(value: Any) -> list[str]:
