@@ -5,12 +5,12 @@ import { useState } from 'react';
 
 import type { Locale } from '@/content/locales';
 import { listingMetaLine } from '@/components/sections/listings/listing-card';
+import { useActivityHref } from '@/components/shared/static-activity-pages';
 import type { ActivityListing } from '@/lib/activities/types';
 import { listingAgeLabel } from '@/lib/activities/listing-facts';
 import { listingImageUrl, listingTitle } from '@/lib/activities/listing-utils';
 import { formatListingPriceSummary } from '@/lib/activities/price-format';
 import { iconSrcForActivityCategory } from '@/lib/home-wizard/choice-icons';
-import { localizePath } from '@/lib/locale-routing';
 import { LISTING_IMAGE_HEIGHT, LISTING_IMAGE_WIDTH } from '@/lib/listing-image';
 
 export interface SearchMapListItemLabels {
@@ -109,7 +109,7 @@ const VIEW_CLASS_NAME =
   'border border-ink-900/15 bg-white px-4 text-sm font-semibold text-ink-900 hover:bg-brand-50';
 
 export function SearchMapListItem(props: SearchMapListItemProps) {
-  const href = `${localizePath('/activity', props.locale)}?id=${props.listing.activity.id}`;
+  const href = useActivityHref(props.locale, props.listing.activity.id);
   const isSelected = props.isSelected === true;
   const title = listingTitle(props.locale, props.listing);
 

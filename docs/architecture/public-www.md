@@ -215,11 +215,31 @@ Source: [`apps/public_www`](../../apps/public_www).
   `NEXT_PUBLIC_*` via static `process.env.NEXT_PUBLIC_FOO` access so Next.js
   inlines values in the client bundle (dynamic `process.env[name]` is empty in
   the browser and breaks search).
-- **SEO:** `buildLocalizedMetadata` (canonical, hreflang). Sitewide
-  WebSite + Organization JSON-LD is injected into the exported locale home
-  pages at build time (`scripts/inject-structured-data.mjs`, the
-  `jsonld:inject` build step). The activity page sets
-  `Course` JSON-LD and the document title client-side once the activity loads.
+- **SEO:** `buildLocalizedMetadata` (canonical, hreflang, `en_HK` /
+  `zh_HK` Open Graph locales). Sitewide WebSite + Organization JSON-LD is
+  injected into the exported locale home pages at build time
+  (`scripts/inject-structured-data.mjs`, the `jsonld:inject` build step);
+  `sameAs` and `contactPoint` appear only when `NEXT_PUBLIC_INSTAGRAM_URL`
+  and `NEXT_PUBLIC_EMAIL` are set.
+- **Catalogue pages:** `src/lib/activities/catalogue-snapshot.ts` reads the
+  build-time catalogue: the snapshot `CatalogueSnapshotFunction` writes
+  (`PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH`, downloaded by
+  `scripts/deploy/fetch-public-www-catalogue-snapshot.sh`), or on staging
+  with the fixture on, the first 60 fixture activities. Each activity gets
+  `/<locale>/activity/<id>/` with its own title, description, share image,
+  and `Course` + `BreadcrumbList` JSON-LD in the HTML.
+  `/<locale>/activities/` (hub) and `/<locale>/activities/<type>/` (types
+  with at least three activities) list them as cards. The home page links
+  to the hub, each type, and twelve activities. `/activity-pages.json`
+  lists the pre-rendered ids; cards link to the static page when the id is
+  listed and to `/<locale>/activity/?id=` otherwise, and that page
+  forwards to the static page when one exists. `/activity/` and `/search/`
+  are `noindex, follow`. With no catalogue the build exports placeholder
+  pages, which `scripts/prune-export-placeholders.mjs` deletes.
+- **Crawlers:** `robots.ts` admits AI search and user-action fetchers
+  (`AI_SEARCH_USER_AGENTS`) and disallows training crawlers
+  (`AI_TRAINING_USER_AGENTS`). The Cloudflare policy enforces the same
+  split (`ai_search` / `ai_user` disabled, `ai_training: block`).
   Optional GTM / Meta Pixel via `NEXT_PUBLIC_GTM_ID` /
   `NEXT_PUBLIC_META_PIXEL_ID` and host allow-lists; CSP `script-src` /
   `connect-src` extended at build time when those env vars are set
@@ -517,7 +537,9 @@ Rules of the design:
   `fetch()` is an HTML page the site cannot parse.
 - No rule targets verified bots or HTML navigations, so indexing is
   unaffected. `robots.txt` disallows `/v1/` and `/cdn-cgi/` because they are
-  not pages; AI crawlers are blocked by Cloudflare's `ai_bots_protection`.
+  not pages; AI training crawlers are blocked by Cloudflare's
+  `ai_bots_protection` and `ai_training`, and AI search crawlers are let
+  through.
 - Cloudflare does not cache HTML or the search API. CloudFront stays the
   single cache, so deploy invalidations keep their meaning and the
   five-minute search cache is not doubled.

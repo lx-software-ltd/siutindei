@@ -1,7 +1,7 @@
 // Injects sitewide WebSite + Organization JSON-LD into the exported locale
 // home pages. Runs at build time (like redirect:inject / lang:inject) so
 // crawlers see structured data in the static HTML without client-side JS.
-// Per-activity JSON-LD is injected client-side by activity-detail-page.tsx.
+// Activity and landing pages render their own JSON-LD at build time.
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
@@ -11,7 +11,8 @@ const OUT_DIR = process.env.PUBLIC_WWW_OUT_DIR
   : path.resolve('out');
 const CONTENT_DIR = path.resolve('src/content');
 const SUPPORTED_LOCALES = ['en', 'zh-HK'];
-const DEFAULT_SOCIAL_IMAGE = '/images/seo/siutindei-og-2026-11.jpg';
+const LOGO_IMAGE = '/images/brand/siutindei-logo-mark.svg';
+const ALTERNATE_NAMES = ['小天地', '小天地 Siu Tin Dei'];
 const JSON_LD_MARKER = '<!-- jsonld-structured-data -->';
 
 function requireEnv(name) {
@@ -37,20 +38,45 @@ async function loadLocaleDescription(locale) {
   return content?.seo?.fallbackDescription ?? '';
 }
 
-function buildStructuredData({ siteName, siteOrigin, locale, description }) {
+function optionalEnv(name) {
+  return process.env[name]?.trim() ?? '';
+}
+
+function buildStructuredData({
+  siteName,
+  siteOrigin,
+  locale,
+  description,
+  email = '',
+  instagramUrl = '',
+}) {
   const localeHomeUrl = `${siteOrigin}/${locale}/`;
   const organization = {
     '@type': 'Organization',
     '@id': `${siteOrigin}/#organization`,
     name: siteName,
+    alternateName: ALTERNATE_NAMES,
     legalName: 'LX Software',
     url: siteOrigin,
-    logo: `${siteOrigin}${DEFAULT_SOCIAL_IMAGE}`,
+    logo: `${siteOrigin}${LOGO_IMAGE}`,
+    areaServed: { '@type': 'Place', name: 'Hong Kong' },
+    ...(instagramUrl ? { sameAs: [instagramUrl] } : {}),
+    ...(email
+      ? {
+          contactPoint: {
+            '@type': 'ContactPoint',
+            contactType: 'customer support',
+            email,
+            availableLanguage: ['en', 'zh-HK'],
+          },
+        }
+      : {}),
   };
   const webSite = {
     '@type': 'WebSite',
     '@id': `${siteOrigin}/#website`,
     name: siteName,
+    alternateName: ALTERNATE_NAMES,
     url: localeHomeUrl,
     inLanguage: locale,
     description,
@@ -102,6 +128,8 @@ async function main() {
       siteOrigin,
       locale,
       description,
+      email: optionalEnv('NEXT_PUBLIC_EMAIL'),
+      instagramUrl: optionalEnv('NEXT_PUBLIC_INSTAGRAM_URL'),
     });
     if (await injectIntoFile(filePath, structuredData)) {
       updatedCount += 1;

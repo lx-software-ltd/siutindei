@@ -58,6 +58,7 @@
         "title": "探索",
         "links": [
           { "label": "主頁", "href": "/" },
+          { "label": "所有活動", "href": "/activities" },
           { "label": "搜尋活動", "href": "/search" },
           { "label": "關於我們", "href": "/about" }
         ]
@@ -73,32 +74,40 @@
     ]
   },
   "seo": {
-    "fallbackTitle": "Siu Tin Dei | 香港兒童活動",
-    "fallbackDescription": "透過 Siu Tin Dei 發掘香港精選兒童活動。",
+    "fallbackTitle": "小天地 Siu Tin Dei | 香港兒童活動",
+    "fallbackDescription": "透過小天地 Siu Tin Dei 發掘香港精選兒童活動。",
     "defaultSocialImage": "/images/seo/siutindei-og-2026-11.jpg",
-    "defaultSocialImageAlt": "Siu Tin Dei 香港兒童活動",
+    "defaultSocialImageAlt": "小天地 Siu Tin Dei 香港兒童活動",
     "home": {
-      "title": "Siu Tin Dei | 香港兒童活動",
-      "description": "透過 Siu Tin Dei 發掘香港精選兒童活動。"
+      "title": "小天地 Siu Tin Dei | 香港兒童活動",
+      "description": "小天地 Siu Tin Dei 整理香港兒童課程、興趣班及工作坊，由赤柱開始。查看適合年齡、每週時間及收費，並直接聯絡主辦機構。"
     },
     "about": {
-      "title": "關於 Siu Tin Dei",
+      "title": "關於我們",
       "description": "搬到舂坎角之後找不到活動，所以由赤柱開始做 Siu Tin Dei，幫處境相同的家庭找活動。"
     },
     "search": {
-      "title": "搜尋兒童活動 | Siu Tin Dei",
+      "title": "搜尋兒童活動",
       "description": "按地區、年齡及活動類型瀏覽香港兒童活動。"
     },
+    "activities": {
+      "titleTemplate": "{place}兒童活動",
+      "descriptionTemplate": "小天地 Siu Tin Dei 整理{placeFull}的兒童課程、興趣班及工作坊，列出適合年齡、每週時間、收費及主辦機構聯絡方法，每項活動上架前都經本地家長審核。"
+    },
+    "activityCategory": {
+      "titleTemplate": "{place}兒童{category}活動",
+      "descriptionTemplate": "小天地 Siu Tin Dei 收錄{placeFull} {count} 個兒童{categoryLower}活動，比較適合年齡、每週時間及收費，並直接聯絡主辦機構。"
+    },
     "activityDetail": {
-      "title": "活動詳情 | Siu Tin Dei",
+      "title": "活動詳情",
       "description": "查看時間表、收費及透過 Siu Tin Dei 聯絡機構。"
     },
     "privacy": {
-      "title": "私隱政策 | Siu Tin Dei",
+      "title": "私隱政策",
       "description": "LX Software（於香港註冊的獨資企業）如何在 Siu Tin Dei 收集、使用及保護個人資料。"
     },
     "terms": {
-      "title": "使用條款 | Siu Tin Dei",
+      "title": "使用條款",
       "description": "規管 Siu Tin Dei 網站及流動應用程式使用的條款。"
     }
   },
@@ -342,6 +351,26 @@
     "goHomeLabel": "返回主頁",
     "mapAltLabel": "地圖位置",
     "listingFreeTrialLabel": "免費試堂"
+  },
+  "activitiesPage": {
+    "hubHeadingTemplate": "{place}兒童活動",
+    "hubIntro": "小天地 Siu Tin Dei 整理{place}的兒童課程、興趣班及工作坊。每個活動頁都列出適合年齡、每週時間、收費及主辦機構的聯絡方法。",
+    "categoryHeadingTemplate": "{place}兒童{category}活動",
+    "categoryIntroTemplate": "小天地 Siu Tin Dei 收錄{place}共 {count} 個兒童{categoryLower}活動。比較適合年齡、每週時間及收費，再聯絡主辦機構。",
+    "browseByTypeHeading": "按活動類型瀏覽",
+    "otherTypesHeading": "其他活動類型",
+    "allActivitiesHeading": "所有活動",
+    "activityCountTemplate": "{count} 個活動",
+    "atAGlanceHeading": "一覽",
+    "agesLabel": "年齡",
+    "daysLabel": "上課日",
+    "pricesLabel": "每堂收費",
+    "agesRangeTemplate": "{min} 至 {max} 歲",
+    "priceRangeTemplate": "{min} 至 {max}",
+    "searchLinkLabel": "用搜尋按年齡、日子及收費篩選",
+    "homeFeaturedHeading": "活動頁面",
+    "homeAllLinkTemplate": "查看全部 {count} 個活動",
+    "emptyLabel": "暫時未有活動，請試試搜尋。"
   },
   "hostCta": {
     "title": "小店，來這裡發聲",

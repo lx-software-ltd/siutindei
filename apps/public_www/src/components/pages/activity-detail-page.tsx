@@ -44,6 +44,10 @@ import {
   venueVariants,
   venueWeeklyEntries,
 } from '@/lib/activities/detail-view';
+import {
+  activityBreadcrumbItems,
+  activityStructuredData,
+} from '@/lib/activities/activity-page-data';
 import { listingVenues } from '@/lib/activities/group-listings';
 import {
   categoryLabelForListing,
@@ -83,112 +87,13 @@ interface ActivityDetailPageProps {
   readonly locale: Locale;
   readonly activityId: string;
   readonly copy: SiteContent['activityDetail'];
+  /** The build's copy, so the exported HTML has the activity in it. */
+  readonly initialListing?: ActivityListing | null;
+  /** Activity types with a landing page, for the breadcrumb. */
+  readonly landingTypeIds?: readonly string[];
 }
 
 type Copy = SiteContent['activityDetail'];
-
-function breadcrumbItems(
-  locale: Locale,
-  listing: ActivityListing,
-  copy: Copy,
-): readonly BreadcrumbItem[] {
-  const items: BreadcrumbItem[] = [
-    { label: copy.homeLabel, href: localizePath(ROUTES.home, locale) },
-    {
-      label: copy.searchLabel,
-      href: buildSearchPageHref(locale, DEFAULT_SEARCH_FILTERS, { view: 'list' }),
-    },
-  ];
-  const typeId = categoryTypeIdForListing(listing);
-  const categoryLabel = categoryLabelForListing(locale, listing);
-  if (typeId && categoryLabel) {
-    items.push({
-      label: categoryLabel,
-      href: buildSearchPageHref(
-        locale,
-        { ...DEFAULT_SEARCH_FILTERS, activityTypeIds: [typeId] },
-        { view: 'list' },
-      ),
-    });
-  }
-  const neighbourhood = homeWizardChoices.neighbourhoods.find(
-    (entry) => entry.areaId === listing.location.areaId,
-  );
-  const place = shortPlaceLabel(locale, listing.location);
-  if (neighbourhood && place) {
-    items.push({
-      label: place,
-      href: buildSearchPageHref(
-        locale,
-        {
-          ...DEFAULT_SEARCH_FILTERS,
-          regionId: neighbourhood.regionId,
-          neighbourhoodId: neighbourhood.id,
-        },
-        { view: 'list' },
-      ),
-    });
-  }
-  return items;
-}
-
-function structuredDataFor(
-  locale: Locale,
-  listing: ActivityListing,
-  imageUrls: readonly string[],
-): Record<string, unknown> {
-  const description = pickTranslation(
-    locale,
-    listing.activity.description ?? '',
-    listing.activity.descriptionTranslations,
-  );
-  const { ageMin, ageMax } = listing.activity;
-  const venues = listingVenues(listing);
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Course',
-    name: listingTitle(locale, listing),
-    description: description || undefined,
-    provider: { '@type': 'Organization', name: listingOrgName(locale, listing) },
-    ...(imageUrls.length > 0 ? { image: imageUrls.slice(0, 5) } : {}),
-    ...(ageMin !== null || ageMax !== null
-      ? {
-          audience: {
-            '@type': 'PeopleAudience',
-            ...(ageMin !== null ? { suggestedMinAge: ageMin } : {}),
-            ...(ageMax !== null ? { suggestedMaxAge: ageMax } : {}),
-          },
-        }
-      : {}),
-    hasCourseInstance: venues.map((variant) => ({
-      '@type': 'CourseInstance',
-      courseMode: 'onsite',
-      location: {
-        '@type': 'Place',
-        name: variant.location.name ?? placeLabelForLocation(locale, variant.location) ?? undefined,
-        ...(variant.location.address ? { address: variant.location.address } : {}),
-        ...(variant.location.lat !== null && variant.location.lng !== null
-          ? {
-              geo: {
-                '@type': 'GeoCoordinates',
-                latitude: variant.location.lat,
-                longitude: variant.location.lng,
-              },
-            }
-          : {}),
-      },
-    })),
-    ...(listing.pricing
-      ? {
-          offers: {
-            '@type': 'Offer',
-            price: listing.pricing.amount,
-            priceCurrency: listing.pricing.currency.toUpperCase(),
-          },
-        }
-      : {}),
-  };
-}
 
 function cardLabels(copy: Copy): ListingCardLabels {
   return {
@@ -200,9 +105,16 @@ function cardLabels(copy: Copy): ListingCardLabels {
   };
 }
 
-export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailPageProps) {
-  const [listing, setListing] = useState<ActivityListing | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export function ActivityDetailPage({
+  locale,
+  activityId,
+  copy,
+  initialListing = null,
+  landingTypeIds = [],
+}: ActivityDetailPageProps) {
+  const prerendered = initialListing?.activity.id === activityId ? initialListing : null;
+  const [listing, setListing] = useState<ActivityListing | null>(prerendered);
+  const [isLoading, setIsLoading] = useState(prerendered === null);
   const [emptyReason, setEmptyReason] = useState<ActivityDetailEmptyReason | null>(null);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   const [backHref, setBackHref] = useState<string | null>(null);
@@ -215,7 +127,10 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
+    const hasPrerendered = prerendered !== null;
+    if (!hasPrerendered) {
+      setIsLoading(true);
+    }
     setEmptyReason(null);
     setSelectedVenueId(null);
     setOrganiserActivityIds([]);
@@ -235,7 +150,9 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
       })
       .catch((error: unknown) => {
         logActivityLoadError('activity detail', error);
-        if (!cancelled) {
+        // A pre-rendered page keeps the build's copy, for example when a
+        // crawler is not allowed to call the search API.
+        if (!cancelled && !hasPrerendered) {
           setEmptyReason('error');
           setListing(null);
         }
@@ -249,7 +166,7 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
     return () => {
       cancelled = true;
     };
-  }, [activityId]);
+  }, [activityId, prerendered]);
 
   const imageUrls = useMemo(() => (listing ? listingImageUrls(listing) : []), [listing]);
   const firstImageUrl = imageUrls[0] ?? null;
@@ -262,16 +179,16 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
   }, [firstImageUrl]);
 
   useEffect(() => {
-    if (!listing) {
+    if (!listing || prerendered) {
       return undefined;
     }
     const script = document.createElement('script');
     script.type = 'application/ld+json';
-    script.textContent = JSON.stringify(structuredDataFor(locale, listing, imageUrls));
+    script.textContent = JSON.stringify(activityStructuredData(locale, listing, imageUrls));
     document.head.appendChild(script);
 
-    // The static export ships one generic /activity/ page; give each
-    // activity a real tab/browser title once its data loads.
+    // The `?id=` page is one generic export; give each activity a real
+    // tab title once its data loads. Pre-rendered pages have their own.
     const previousTitle = document.title;
     document.title = `${listingTitle(locale, listing)} · ${siteName}`;
 
@@ -279,7 +196,7 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
       script.remove();
       document.title = previousTitle;
     };
-  }, [imageUrls, listing, locale, siteName]);
+  }, [imageUrls, listing, locale, prerendered, siteName]);
 
   useEffect(() => {
     if (!listing) {
@@ -294,7 +211,10 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
 
   if (!listing || emptyReason) {
     return (
-      <ActivityDetailEmpty locale={locale} reason={emptyReason ?? 'notFound'} copy={copy} />
+      <>
+        <meta name="robots" content="noindex" />
+        <ActivityDetailEmpty locale={locale} reason={emptyReason ?? 'notFound'} copy={copy} />
+      </>
     );
   }
 
@@ -365,7 +285,7 @@ export function ActivityDetailPage({ locale, activityId, copy }: ActivityDetailP
     >
       <ActivityBreadcrumb
         backHref={backHref}
-        items={breadcrumbItems(locale, listing, copy)}
+        items={activityBreadcrumbItems(locale, listing, copy, landingTypeIds)}
         copy={copy}
       />
       <div className="mt-2 grid gap-x-8 gap-y-6 short:grid-cols-2 short:items-start short:gap-x-6 lg:grid-cols-[minmax(0,1fr)_360px]">

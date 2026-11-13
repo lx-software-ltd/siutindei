@@ -28,6 +28,7 @@ export async function generateMetadata({ params }: LocaleRouteProps) {
       url: content.seo.defaultSocialImage,
       alt: content.seo.defaultSocialImageAlt,
     },
+    robots: { index: false, follow: true },
   });
 }
 
