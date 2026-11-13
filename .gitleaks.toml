@@ -4,5 +4,5 @@ title = "siutindei gitleaks"
 useDefault = true
 
 [allowlist]
-description = "generic-api-key reads the word token inside max_tokens and then the next assignment. This is a boolean keyword argument."
-regexes = ['''reasoning_off=True''']
+description = "generic-api-key reads the word token inside max_tokens and then the next assignment; that is a boolean keyword argument. abcdef1234567890 is the fictional IndexNow key in tests/test_public_www_indexnow.py; real IndexNow keys are public."
+regexes = ['''reasoning_off=True''', '''^abcdef1234567890$''']

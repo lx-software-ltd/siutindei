@@ -31,13 +31,12 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlsplit
-from xml.etree import ElementTree
 
 ENDPOINT = "https://api.indexnow.org/indexnow"
 KEY_PATTERN = re.compile(r"^[A-Za-z0-9-]{8,128}$")
 LOCALES = ("en", "zh-HK")
 MAX_URLS_PER_REQUEST = 10_000
-SITEMAP_NS = "{http://www.sitemaps.org/schemas/sitemap/0.9}"
+SITEMAP_LOC = re.compile(r"<loc>\s*([^<\s]+)\s*</loc>")
 CATALOGUE_PATH = re.compile(r"^/(en|zh-HK)/(activities/([^/]+/)?)?$")
 
 
@@ -47,8 +46,8 @@ def valid_key(raw: str | None) -> str | None:
 
 
 def sitemap_urls(xml: str) -> list[str]:
-    root = ElementTree.fromstring(xml)
-    return [loc.text.strip() for loc in root.iter(f"{SITEMAP_NS}loc") if loc.text]
+    """``<loc>`` values from the sitemap this build wrote; no XML parser, so no entity expansion."""
+    return SITEMAP_LOC.findall(xml)
 
 
 def changed_activity_ids(

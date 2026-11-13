@@ -15,6 +15,7 @@ import catalogue_snapshot_digests
 import indexnow
 
 ORIGIN = "https://example.com"
+FAKE_KEY = "abcdef1234567890"
 FIXTURE = (
     ROOT / "apps" / "public_www" / "tests" / "fixtures" / "catalogue-snapshot.json"
 )
@@ -114,12 +115,12 @@ def test_valid_key(raw: str, expected: str | None) -> None:
 
 
 def test_write_key_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("INDEXNOW_KEY", "abcdef1234567890")
+    monkeypatch.setenv("INDEXNOW_KEY", FAKE_KEY)
 
     assert indexnow.main(["write-key", str(tmp_path)]) == 0
-    assert (tmp_path / "abcdef1234567890.txt").read_text(
+    assert (tmp_path / f"{FAKE_KEY}.txt").read_text(
         encoding="utf-8"
-    ) == "abcdef1234567890"
+    ) == FAKE_KEY
 
     monkeypatch.setenv("INDEXNOW_KEY", "not a key")
     assert indexnow.main(["write-key", str(tmp_path)]) == 1
@@ -135,7 +136,7 @@ def test_ping_posts_changed_urls_and_never_fails_the_deploy(
     previous, current = tmp_path / "previous.json", tmp_path / "current.json"
     previous.write_text(json.dumps({"a1": "old"}), encoding="utf-8")
     current.write_text(json.dumps({"a1": "new"}), encoding="utf-8")
-    monkeypatch.setenv("INDEXNOW_KEY", "abcdef1234567890")
+    monkeypatch.setenv("INDEXNOW_KEY", FAKE_KEY)
     monkeypatch.setenv("NEXT_PUBLIC_SITE_ORIGIN", f"{ORIGIN}/")
     sent: list[dict] = []
 
@@ -168,12 +169,12 @@ def test_submit_reports_http_errors_without_raising(
 
     monkeypatch.setattr(indexnow.urllib.request, "urlopen", fake_urlopen)
 
-    assert indexnow.submit(ORIGIN, "abcdef1234567890", [f"{ORIGIN}/en/"]) is False
+    assert indexnow.submit(ORIGIN, FAKE_KEY, [f"{ORIGIN}/en/"]) is False
     assert requests == [
         {
             "host": "example.com",
-            "key": "abcdef1234567890",
-            "keyLocation": f"{ORIGIN}/abcdef1234567890.txt",
+            "key": FAKE_KEY,
+            "keyLocation": f"{ORIGIN}/{FAKE_KEY}.txt",
             "urlList": [f"{ORIGIN}/en/"],
         }
     ]
