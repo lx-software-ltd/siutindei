@@ -37,7 +37,12 @@ function CopyrightNotice({ text }: { readonly text: string }) {
   return (
     <>
       {text.slice(0, brandAt)}
-      <a href={LX_SOFTWARE_URL} target="_blank" rel="noreferrer noopener">
+      <a
+        href={LX_SOFTWARE_URL}
+        target="_blank"
+        rel="noreferrer noopener"
+        className="link-underlined"
+      >
         {LX_SOFTWARE_NAME}
       </a>
       {text.slice(brandAt + LX_SOFTWARE_NAME.length)}

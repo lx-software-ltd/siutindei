@@ -5,6 +5,7 @@
   --color-brand-200: #f7de84;
   --color-brand-500: #f5c51b;
   --color-brand-600: #dfae10;
+  --color-brand-700: #6b4e0e;
   --color-ink-900: #2e1d12;
   --color-ink-700: #57402e;
   --color-ink-500: #8a7461;
@@ -290,8 +291,11 @@ a:focus-visible {
   line-height: 1.5;
 }
 
-.site-footer a {
-  font-weight: 600;
+.site-footer a.link-underlined,
+.site-footer a.link-underlined:hover {
+  color: var(--color-brand-700);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 }
 
 @media (min-width: 768px) {
