@@ -12,7 +12,9 @@ import { useSearchContext } from '@/components/shared/search/search-context';
 import { formatContentTemplate } from '@/content/content-field-utils';
 import { saveRecentSearch } from '@/lib/activities/recent-storage';
 import {
+  kindHasTopics,
   toggleActivityTypeId,
+  withKind,
   type SearchFiltersState,
 } from '@/lib/activities/search-params';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
@@ -29,6 +31,7 @@ import {
 import {
   homeWizardChoices,
   labelForLocale,
+  OFFERED_KINDS,
   REGIONS_BY_ID,
 } from '@/lib/home-wizard/choices';
 import {
@@ -36,7 +39,9 @@ import {
   REGION_ROW_ORDER,
   iconSrcForActivity,
   iconSrcForAge,
+  iconSrcForKind,
   iconSrcForRegion,
+  WEEKEND_ICON_SRC,
 } from '@/lib/home-wizard/choice-icons';
 
 function regionLabel(regionId: string | null, locale: Locale): string {
@@ -54,13 +59,30 @@ function neighbourhoodButtonClass(isSelected: boolean): string {
   );
 }
 
-type NavigatorStep = 'location' | 'neighbourhood' | 'age' | 'activity';
+type NavigatorStep = 'location' | 'neighbourhood' | 'kind' | 'age' | 'activity';
 
-function stepsFor(regionId: string | null): readonly NavigatorStep[] {
+/** The weekend preset is not a kind: the default kinds on a Saturday or Sunday. */
+function isWeekendPreset(filters: SearchFiltersState): boolean {
+  return !filters.kind && filters.day === 'weekend';
+}
+
+function showsTopicStep(filters: SearchFiltersState): boolean {
+  return Boolean(filters.kind) && kindHasTopics(filters.kind);
+}
+
+function stepsFor(
+  regionId: string | null,
+  filters: SearchFiltersState,
+): readonly NavigatorStep[] {
+  const steps: NavigatorStep[] = ['location'];
   if (showsNeighbourhoodChoices(regionId)) {
-    return ['location', 'neighbourhood', 'age', 'activity'];
+    steps.push('neighbourhood');
   }
-  return ['location', 'age', 'activity'];
+  steps.push('kind', 'age');
+  if (showsTopicStep(filters) || !(filters.kind || isWeekendPreset(filters))) {
+    steps.push('activity');
+  }
+  return steps;
 }
 
 const EMPTY_NAVIGATOR_FILTERS: SearchFiltersState = {
@@ -76,8 +98,12 @@ interface SearchNavigatorProps {
   readonly copy: SiteContent['smallWorld']['navigator'];
 }
 
-function stepIndex(step: NavigatorStep, regionId: string | null): number {
-  return stepsFor(regionId).indexOf(step) + 1;
+function stepIndex(
+  step: NavigatorStep,
+  regionId: string | null,
+  filters: SearchFiltersState,
+): number {
+  return stepsFor(regionId, filters).indexOf(step) + 1;
 }
 
 export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
@@ -115,17 +141,32 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
       neighbourhoodId: allowed.length === 1 ? allowed[0].id : null,
     }));
     setHasSelectedLocation(true);
-    setStep(showsNeighbourhoodChoices(regionId) ? 'neighbourhood' : 'age');
+    setStep(showsNeighbourhoodChoices(regionId) ? 'neighbourhood' : 'kind');
   }
 
   function selectNeighbourhood(neighbourhoodId: string | null) {
     setDraft((current) => ({ ...current, neighbourhoodId }));
+    setStep('kind');
+  }
+
+  function selectKind(kind: string) {
+    setDraft((current) => ({ ...withKind(current, kind), day: null }));
+    setStep('age');
+  }
+
+  function selectWeekend() {
+    setDraft((current) => ({ ...withKind(current, null), day: 'weekend' }));
     setStep('age');
   }
 
   function selectAge(ageGroupId: string) {
-    setDraft((current) => ({ ...current, ageGroupId }));
-    setStep('activity');
+    const next = { ...draft, ageGroupId };
+    setDraft(next);
+    if (showsTopicStep(next)) {
+      setStep('activity');
+      return;
+    }
+    submit(next);
   }
 
   function toggleType(typeId: string) {
@@ -133,7 +174,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   }
 
   function goBack() {
-    const steps = stepsFor(draft.regionId);
+    const steps = stepsFor(draft.regionId, draft);
     const index = steps.indexOf(step);
     if (index > 0) {
       setStep(steps[index - 1]);
@@ -141,7 +182,11 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   }
 
   function handleSeeActivities() {
-    const submitted = withoutImpliedOpenLocation(draft);
+    submit(draft);
+  }
+
+  function submit(filters: SearchFiltersState) {
+    const submitted = withoutImpliedOpenLocation(filters);
     setFilters(submitted);
     saveRecentSearch(submitted);
     closeNavigator();
@@ -222,8 +267,8 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
       >
         <p className="mb-3 text-sm text-ink-500 sm:mb-4">
           {formatContentTemplate(copy.stepProgressTemplate, {
-            current: stepIndex(step, hasSelectedLocation ? draft.regionId : null),
-            total: stepsFor(hasSelectedLocation ? draft.regionId : null).length,
+            current: stepIndex(step, hasSelectedLocation ? draft.regionId : null, draft),
+            total: stepsFor(hasSelectedLocation ? draft.regionId : null, draft).length,
           })}
         </p>
         {step === 'location' ? (
@@ -326,10 +371,36 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
             {copy.noAreasOpenLabel}
           </p>
         ) : null}
+        {step === 'kind' ? (
+          <fieldset>
+            <legend className="sr-only">{copy.steps.kind.label}</legend>
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+              {OFFERED_KINDS.map((kind) => (
+                <ChoiceTile
+                  key={kind.id}
+                  label={labelForLocale(kind.labels, locale)}
+                  hint={labelForLocale(kind.hint, locale)}
+                  iconSrc={iconSrcForKind(kind.id)}
+                  isSelected={draft.kind === kind.id}
+                  size="compact"
+                  onClick={() => selectKind(kind.id)}
+                />
+              ))}
+              <ChoiceTile
+                label={copy.weekendLabel}
+                hint={copy.weekendHint}
+                iconSrc={WEEKEND_ICON_SRC}
+                isSelected={isWeekendPreset(draft)}
+                size="compact"
+                onClick={selectWeekend}
+              />
+            </div>
+          </fieldset>
+        ) : null}
         {step === 'age' ? (
           <fieldset>
             <legend className="sr-only">{copy.steps.age.label}</legend>
-            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 sm:gap-4">
               {homeWizardChoices.ageGroups.map((group) => {
                 const iconSrc = iconSrcForAge(group.id);
                 if (!iconSrc) {

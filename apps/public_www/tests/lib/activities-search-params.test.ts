@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   activeRefinementCount,
+  ageRangeForGroup,
   buildSearchQueryString,
   categoryIdsForTypes,
   daysForChoice,
@@ -9,25 +10,35 @@ import {
   parseSearchFiltersFromQuery,
   parseSearchViewMode,
   toggleActivityTypeId,
+  withKind,
+  type SearchFiltersState,
 } from '@/lib/activities/search-params';
+
+const EMPTY: SearchFiltersState = {
+  ageGroupId: null,
+  regionId: null,
+  neighbourhoodId: null,
+  activityTypeIds: [],
+  textQuery: '',
+};
 
 describe('search-params', () => {
   it('round-trips filters in the query string', () => {
     const params = new URLSearchParams(
       buildSearchQueryString({
-        ageGroupId: '3-6',
+        ageGroupId: '3-5',
         regionId: 'kowloon',
         neighbourhoodId: null,
-        activityTypeIds: ['early-years', 'learning'],
+        activityTypeIds: ['art', 'stem'],
         textQuery: 'music',
       }),
     );
 
     const parsed = parseSearchFiltersFromQuery(params);
-    expect(parsed.ageGroupId).toBe('3-6');
+    expect(parsed.ageGroupId).toBe('3-5');
     expect(parsed.regionId).toBe('kowloon');
     expect(parsed.neighbourhoodId).toBeNull();
-    expect(parsed.activityTypeIds).toEqual(['early-years', 'learning']);
+    expect(parsed.activityTypeIds).toEqual(['art', 'stem']);
     expect(parsed.textQuery).toBe('music');
     expect(params.get('view')).toBe('map');
   });
@@ -43,7 +54,7 @@ describe('search-params', () => {
   it('writes view=list when the list is requested', () => {
     const query = buildSearchQueryString(
       {
-        ageGroupId: '3-6',
+        ageGroupId: '3-5',
         regionId: null,
         neighbourhoodId: null,
         activityTypeIds: [],
@@ -55,31 +66,31 @@ describe('search-params', () => {
   });
 
   it('maps activity types to category ids', () => {
-    expect(categoryIdsForTypes(['early-years'])).toEqual([
-      'c1111111-1111-1111-1111-111111111201',
+    expect(categoryIdsForTypes(['art'])).toEqual([
+      'c1111111-1111-1111-1111-111111111304',
     ]);
   });
 
   it('toggles activity type ids without dropping other filters', () => {
     const base = {
-      ageGroupId: '3-6',
+      ageGroupId: '3-5',
       regionId: 'kowloon',
       neighbourhoodId: null,
       activityTypeIds: [] as const,
       textQuery: 'music',
     };
 
-    const added = toggleActivityTypeId(base, 'early-years');
-    expect(added.activityTypeIds).toEqual(['early-years']);
-    expect(added.ageGroupId).toBe('3-6');
+    const added = toggleActivityTypeId(base, 'art');
+    expect(added.activityTypeIds).toEqual(['art']);
+    expect(added.ageGroupId).toBe('3-5');
     expect(added.regionId).toBe('kowloon');
     expect(added.textQuery).toBe('music');
 
-    const addedAgain = toggleActivityTypeId(added, 'learning');
-    expect(addedAgain.activityTypeIds).toEqual(['early-years', 'learning']);
+    const addedAgain = toggleActivityTypeId(added, 'stem');
+    expect(addedAgain.activityTypeIds).toEqual(['art', 'stem']);
 
-    const removed = toggleActivityTypeId(addedAgain, 'early-years');
-    expect(removed.activityTypeIds).toEqual(['learning']);
+    const removed = toggleActivityTypeId(addedAgain, 'art');
+    expect(removed.activityTypeIds).toEqual(['stem']);
   });
 
   it('round-trips refinements and maps them to API parameters', () => {
@@ -111,6 +122,56 @@ describe('search-params', () => {
       classPriceMax: 250,
       sort: 'price',
     });
+  });
+
+  it('round-trips a kind and searches the default kinds without one', () => {
+    const parsed = parseSearchFiltersFromQuery(
+      new URLSearchParams(buildSearchQueryString(withKind(EMPTY, 'camp'))),
+    );
+    expect(parsed.kind).toBe('camp');
+    expect(filtersToApiParams(parsed).kinds).toEqual(['camp']);
+    expect(filtersToApiParams(EMPTY).kinds).toEqual(['class', 'camp', 'place']);
+  });
+
+  it('drops topics and class-only filters for a place', () => {
+    const filters = withKind(
+      {
+        ...EMPTY,
+        activityTypeIds: ['art'],
+        freeTrial: true,
+        classPriceMax: 250,
+      },
+      'place',
+    );
+    expect(filters.activityTypeIds).toEqual([]);
+    expect(filters.freeTrial).toBe(false);
+    expect(filters.classPriceMax).toBeNull();
+
+    const parsed = parseSearchFiltersFromQuery(
+      new URLSearchParams('kind=place&types=art&trial=1&price=250'),
+    );
+    expect(parsed.activityTypeIds).toEqual([]);
+    expect(activeRefinementCount(parsed)).toBe(0);
+    expect(filtersToApiParams(parsed)).toMatchObject({ categoryIds: [] });
+    expect(filtersToApiParams(parsed)).not.toHaveProperty('freeTrial');
+  });
+
+  it('sends the age group as an age range', () => {
+    expect(filtersToApiParams({ ...EMPTY, ageGroupId: '6-11' })).toMatchObject({
+      ageMin: 6,
+      ageMax: 11,
+    });
+    expect(ageRangeForGroup('0-1')).toEqual({ ageMin: 0, ageMax: 0 });
+    expect(ageRangeForGroup('3-6')).toBeUndefined();
+  });
+
+  it('ignores unknown kinds, ages, and topics', () => {
+    const parsed = parseSearchFiltersFromQuery(
+      new URLSearchParams('kind=eat&age=3-6&types=early-years,art'),
+    );
+    expect(parsed.kind).toBeUndefined();
+    expect(parsed.ageGroupId).toBeNull();
+    expect(parsed.activityTypeIds).toEqual(['art']);
   });
 
   it('ignores unknown refinement values', () => {

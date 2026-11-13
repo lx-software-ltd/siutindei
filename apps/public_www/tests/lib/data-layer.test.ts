@@ -140,10 +140,10 @@ describe('dataLayer helpers', () => {
     expect(searchFieldsFromFilters(DEFAULT_SEARCH_FILTERS)).toEqual({});
     expect(
       searchFieldsFromFilters({
-        ageGroupId: '3-6',
+        ageGroupId: '3-5',
         regionId: 'kowloon',
         neighbourhoodId: null,
-        activityTypeIds: ['early-years', 'learning'],
+        activityTypeIds: ['art', 'stem'],
         textQuery: '  pottery  ',
       }),
     ).toEqual({
@@ -151,7 +151,7 @@ describe('dataLayer helpers', () => {
       area_id: 'a1111111-1111-1111-1111-111111111102',
       age: 4,
       category_id:
-        'c1111111-1111-1111-1111-111111111201,c1111111-1111-1111-1111-111111111202',
+        'c1111111-1111-1111-1111-111111111304,c1111111-1111-1111-1111-111111111307',
     });
   });
 
@@ -159,13 +159,13 @@ describe('dataLayer helpers', () => {
     window.localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, 'granted');
 
     trackSearch({
-      ageGroupId: '6-12',
+      ageGroupId: '6-11',
       regionId: null,
       neighbourhoodId: null,
       activityTypeIds: [],
       textQuery: '',
     });
 
-    expect(window.dataLayer).toEqual([{ event: 'search', age: 9 }]);
+    expect(window.dataLayer).toEqual([{ event: 'search', age: 8 }]);
   });
 });

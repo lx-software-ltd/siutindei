@@ -231,7 +231,7 @@ describe('SearchResultsPage', () => {
   });
 
   it('shows the total, active filters, and removes one filter', async () => {
-    currentSearchParams.value = new URLSearchParams('view=list&age=3-6&free=1&day=weekend');
+    currentSearchParams.value = new URLSearchParams('view=list&age=3-5&free=1&day=weekend');
     vi.mocked(fetchActivitySearch).mockResolvedValue({
       items: [buildListing()],
       nextCursor: null,
@@ -255,14 +255,14 @@ describe('SearchResultsPage', () => {
     fireEvent.click(
       within(filters).getByRole('button', { name: 'Remove filter: Weekend' }),
     );
-    expect(replace).toHaveBeenLastCalledWith('/en/search/?age=3-6&free=1&view=list');
+    expect(replace).toHaveBeenLastCalledWith('/en/search/?age=3-5&free=1&view=list');
 
     fireEvent.click(within(filters).getByRole('button', { name: copy.clearFiltersLabel }));
     expect(replace).toHaveBeenLastCalledWith('/en/search/?view=list');
   });
 
   it('shows phones only the name search among the applied filters', async () => {
-    currentSearchParams.value = new URLSearchParams('view=list&q=pottery&age=3-6&free=1');
+    currentSearchParams.value = new URLSearchParams('view=list&q=pottery&age=3-5&free=1');
     const copy = renderPage();
 
     const filters = await screen.findByRole('list', { name: copy.activeFiltersLabel });
@@ -280,7 +280,7 @@ describe('SearchResultsPage', () => {
   });
 
   it('leaves no gap under the filter row on phones without a name search', async () => {
-    currentSearchParams.value = new URLSearchParams('view=list&age=3-6');
+    currentSearchParams.value = new URLSearchParams('view=list&age=3-5');
     const copy = renderPage();
     await screen.findByRole('list', { name: copy.activeFiltersLabel });
 
@@ -330,12 +330,12 @@ describe('SearchResultsPage', () => {
   });
 
   it('remembers the search for the activity page back link', async () => {
-    currentSearchParams.value = new URLSearchParams('view=list&age=3-6');
+    currentSearchParams.value = new URLSearchParams('view=list&age=3-5');
     renderPage();
 
     await waitFor(() => {
       expect(window.sessionStorage.getItem('siutindei.lastSearchHref')).toBe(
-        '/en/search/?age=3-6&view=list',
+        '/en/search/?age=3-5&view=list',
       );
     });
   });
@@ -415,7 +415,7 @@ describe('SearchResultsPage', () => {
 
   it('searches the neighbourhood named in the query', async () => {
     currentSearchParams.value = new URLSearchParams(
-      'region=kowloon&neighbourhood=yau-tsim-mong-mong-kok&age=3-6',
+      'region=kowloon&neighbourhood=yau-tsim-mong-mong-kok&age=3-5',
     );
     renderPage();
 
@@ -432,7 +432,7 @@ describe('SearchResultsPage', () => {
   it('pushes search after a successful fetch when consent is granted', async () => {
     window.localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, 'granted');
     currentSearchParams.value = new URLSearchParams(
-      'q=pottery&region=kowloon&age=3-6&types=early-years',
+      'q=pottery&region=kowloon&age=3-5&types=art',
     );
     vi.mocked(fetchActivitySearch).mockResolvedValue({
       items: [buildListing()],
@@ -446,7 +446,7 @@ describe('SearchResultsPage', () => {
         search_term: 'pottery',
         area_id: 'a1111111-1111-1111-1111-111111111102',
         age: 4,
-        category_id: 'c1111111-1111-1111-1111-111111111201',
+        category_id: 'c1111111-1111-1111-1111-111111111304',
       });
     });
   });
@@ -489,7 +489,7 @@ describe('SearchResultsPage', () => {
     expect(fetchActivitySearch).toHaveBeenCalledTimes(1);
 
     currentSearchParams.value = new URLSearchParams(
-      'age=6-12&region=kowloon&view=map',
+      'age=6-11&region=kowloon&view=map',
     );
     await act(async () => {
       rerender(<Tree />);
@@ -500,7 +500,7 @@ describe('SearchResultsPage', () => {
   it('does not rewrite a search that names no area', async () => {
     process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'southern-stanley';
     clearSearchAreaScopeCacheForTests();
-    currentSearchParams.value = new URLSearchParams('age=3-6');
+    currentSearchParams.value = new URLSearchParams('age=3-5');
     vi.mocked(fetchActivitySearch).mockClear();
     const copy = renderPage();
 

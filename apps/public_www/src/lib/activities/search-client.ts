@@ -31,6 +31,15 @@ export function buildActivitySearchRequest(
   if (params.age !== undefined) {
     url.searchParams.set('age', String(params.age));
   }
+  if (params.kinds && params.kinds.length > 0) {
+    url.searchParams.set('kind', params.kinds.join(','));
+  }
+  if (params.ageMin !== undefined) {
+    url.searchParams.set('age_min', String(params.ageMin));
+  }
+  if (params.ageMax !== undefined) {
+    url.searchParams.set('age_max', String(params.ageMax));
+  }
   if (params.areaId) {
     url.searchParams.set('area_id', params.areaId);
   }

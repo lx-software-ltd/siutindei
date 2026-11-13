@@ -123,6 +123,9 @@ export type ActivitySearchSort = 'time' | 'price';
 
 export interface ActivitySearchParams {
   readonly age?: number;
+  readonly kinds?: readonly string[];
+  readonly ageMin?: number;
+  readonly ageMax?: number;
   readonly areaId?: string;
   readonly categoryIds?: readonly string[];
   readonly activityId?: string;

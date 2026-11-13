@@ -27,6 +27,8 @@ interface StagingFixtureItem {
     readonly age_min?: number | null;
     readonly age_max?: number | null;
     readonly category_id?: string | null;
+    readonly category_root_id?: string | null;
+    readonly kind?: string | null;
   };
   readonly organization: {
     readonly id: string;
@@ -175,6 +177,26 @@ function matchesItem(
     return false;
   }
 
+  if (params.kinds && params.kinds.length > 0) {
+    if (!params.kinds.includes(item.activity.kind ?? 'class')) {
+      return false;
+    }
+  }
+
+  if (params.ageMin !== undefined || params.ageMax !== undefined) {
+    const ageMin = item.activity.age_min;
+    const ageMax = item.activity.age_max;
+    if (ageMin == null || ageMax == null) {
+      return false;
+    }
+    if (
+      (params.ageMax !== undefined && ageMin > params.ageMax) ||
+      (params.ageMin !== undefined && ageMax < params.ageMin)
+    ) {
+      return false;
+    }
+  }
+
   if (params.age !== undefined) {
     const ageMin = item.activity.age_min;
     const ageMax = item.activity.age_max;
@@ -195,7 +217,8 @@ function matchesItem(
 
   if (params.categoryIds && params.categoryIds.length > 0) {
     const categoryId = item.activity.category_id ?? '';
-    if (!params.categoryIds.includes(categoryId)) {
+    const rootId = item.activity.category_root_id ?? '';
+    if (!params.categoryIds.includes(categoryId) && !params.categoryIds.includes(rootId)) {
       return false;
     }
   }

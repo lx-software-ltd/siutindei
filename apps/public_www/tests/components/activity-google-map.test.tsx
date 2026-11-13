@@ -29,7 +29,7 @@ function buildListing(id = 'act-1'): ActivityListing {
       descriptionTranslations: {},
       ageMin: null,
       ageMax: null,
-      categoryId: 'c1111111-1111-1111-1111-111111111101',
+      categoryId: 'c1111111-1111-1111-1111-111111111301',
     },
     organization: {
       id: 'org-1',

@@ -10,7 +10,9 @@ import { Modal } from '@/components/shared/ui/modal';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { saveRecentSearch } from '@/lib/activities/recent-storage';
 import {
+  kindHasTopics,
   toggleActivityTypeId,
+  withKind,
   type SearchFiltersState,
 } from '@/lib/activities/search-params';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
@@ -29,12 +31,14 @@ import { REGIONS_BY_ID } from '@/lib/home-wizard/choices';
 import {
   homeWizardChoices,
   labelForLocale,
+  OFFERED_KINDS,
 } from '@/lib/home-wizard/choices';
 import {
   ALL_HONG_KONG_ICON_SRC,
   REGION_ROW_ORDER,
   iconSrcForActivity,
   iconSrcForAge,
+  iconSrcForKind,
   iconSrcForRegion,
 } from '@/lib/home-wizard/choice-icons';
 import { SearchChoiceButton } from './search-choice-button';
@@ -44,6 +48,7 @@ interface SearchPanelCopy {
   readonly whereLabel: string;
   readonly neighbourhoodLabel: string;
   readonly anywhereInRegionLabel: string;
+  readonly kindLabel: string;
   readonly childAgeLabel: string;
   readonly activityTypesLabel: string;
   readonly activityTypesHint: string;
@@ -139,6 +144,12 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
 
   function updateDraft(partial: Partial<SearchFiltersState>) {
     setDraft((current) => ({ ...current, ...partial }));
+  }
+
+  function toggleKind(kindId: string) {
+    setDraft((current) =>
+      withKind(current, current.kind === kindId ? null : kindId),
+    );
   }
 
   function toggleType(typeId: string) {
@@ -245,9 +256,26 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
         </fieldset>
         <fieldset className="min-w-0">
           <legend className="mb-2 text-sm font-semibold text-ink-900">
+            {copy.kindLabel}
+          </legend>
+          <div className="grid w-full min-w-0 max-w-full grid-cols-1 gap-2 md:grid-cols-3">
+            {OFFERED_KINDS.map((kind) => (
+              <SearchChoiceButton
+                key={kind.id}
+                label={labelForLocale(kind.labels, locale)}
+                iconSrc={iconSrcForKind(kind.id)}
+                isSelected={draft.kind === kind.id}
+                layout="chip"
+                onClick={() => toggleKind(kind.id)}
+              />
+            ))}
+          </div>
+        </fieldset>
+        <fieldset className="min-w-0">
+          <legend className="mb-2 text-sm font-semibold text-ink-900">
             {copy.childAgeLabel}
           </legend>
-          <div className="grid w-full min-w-0 max-w-full grid-cols-3 gap-2 md:gap-3">
+          <div className="grid w-full min-w-0 max-w-full grid-cols-3 gap-2 md:grid-cols-5 md:gap-3">
             {homeWizardChoices.ageGroups.map((group) => {
               const iconSrc = iconSrcForAge(group.id);
               if (!iconSrc) {
@@ -265,27 +293,29 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
             })}
           </div>
         </fieldset>
-        <fieldset className="min-w-0">
-          <legend className="mb-2 text-sm font-semibold text-ink-900">
-            {copy.activityTypesLabel}
-            <span className="font-medium text-ink-500">
-              {' · '}
-              {copy.activityTypesHint}
-            </span>
-          </legend>
-          <div className="grid w-full min-w-0 max-w-full grid-cols-2 gap-2 md:grid-cols-4">
-            {homeWizardChoices.activityTypes.map((type) => (
-              <SearchChoiceButton
-                key={type.id}
-                label={labelForLocale(type.labels, locale)}
-                iconSrc={iconSrcForActivity(type.id)}
-                isSelected={draft.activityTypeIds.includes(type.id)}
-                layout="chip"
-                onClick={() => toggleType(type.id)}
-              />
-            ))}
-          </div>
-        </fieldset>
+        {kindHasTopics(draft.kind) ? (
+          <fieldset className="min-w-0">
+            <legend className="mb-2 text-sm font-semibold text-ink-900">
+              {copy.activityTypesLabel}
+              <span className="font-medium text-ink-500">
+                {' · '}
+                {copy.activityTypesHint}
+              </span>
+            </legend>
+            <div className="grid w-full min-w-0 max-w-full grid-cols-2 gap-2 md:grid-cols-4">
+              {homeWizardChoices.activityTypes.map((type) => (
+                <SearchChoiceButton
+                  key={type.id}
+                  label={labelForLocale(type.labels, locale)}
+                  iconSrc={iconSrcForActivity(type.id)}
+                  isSelected={draft.activityTypeIds.includes(type.id)}
+                  layout="chip"
+                  onClick={() => toggleType(type.id)}
+                />
+              ))}
+            </div>
+          </fieldset>
+        ) : null}
       </form>
     </Modal>
   );

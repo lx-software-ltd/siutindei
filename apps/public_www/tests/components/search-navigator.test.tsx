@@ -8,6 +8,8 @@ import {
   AGE_ICON_SRC,
   ALL_HONG_KONG_ICON_SRC,
   REGION_ICON_SRC,
+  WEEKEND_ICON_SRC,
+  iconSrcForActivity,
 } from '@/lib/home-wizard/choice-icons';
 import { homeWizardChoices } from '@/lib/home-wizard/choices';
 import { clearSearchAreaScopeCacheForTests } from '@/lib/home-wizard/area-scope';
@@ -64,7 +66,7 @@ describe('SearchNavigator', () => {
         name: content.smallWorld.navigator.steps.location.title,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
     expect(choiceImage('All Hong Kong')).toHaveAttribute(
       'src',
       ALL_HONG_KONG_ICON_SRC,
@@ -79,14 +81,14 @@ describe('SearchNavigator', () => {
       REGION_ICON_SRC.kowloon,
     );
     expect(
-      screen.queryByRole('button', { name: '3–6 years' }),
+      screen.queryByRole('button', { name: '3–5 years' }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Kowloon' }).closest('[inert]'),
     ).toBeNull();
   });
 
-  it('auto-advances through location and age, then submits filters', () => {
+  it('auto-advances through location, kind, and age, then submits filters', () => {
     const content = openNavigator();
 
     fireEvent.click(screen.getByRole('button', { name: 'Kowloon' }));
@@ -95,42 +97,52 @@ describe('SearchNavigator', () => {
         name: content.smallWorld.navigator.steps.neighbourhood.title,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Step 2 of 4')).toBeInTheDocument();
+    expect(screen.getByText('Step 2 of 5')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Anywhere in Kowloon' }));
+    expect(
+      screen.getByRole('heading', {
+        name: content.smallWorld.navigator.steps.kind.title,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Step 3 of 5')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^Somewhere to eat with kids/ }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^A class or club/ }));
     expect(
       screen.getByRole('heading', {
         name: content.smallWorld.navigator.steps.age.title,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Step 3 of 4')).toBeInTheDocument();
-    expect(choiceImage('3–6 years')).toHaveAttribute(
+    expect(screen.getByText('Step 4 of 5')).toBeInTheDocument();
+    expect(choiceImage('3–5 years')).toHaveAttribute(
       'src',
-      AGE_ICON_SRC['3-6'],
+      AGE_ICON_SRC['3-5'],
     );
-    expect(choiceImage('3–6 years')).toHaveClass(
+    expect(choiceImage('3–5 years')).toHaveClass(
       'choice-tile__icon',
       'h-14',
       'sm:h-[4.8rem]',
     );
     expect(
-      screen.getByRole('button', { name: '3–6 years' }).parentElement,
-    ).toHaveClass('grid-cols-3');
+      screen.getByRole('button', { name: '3–5 years' }).parentElement,
+    ).toHaveClass('grid-cols-3', 'sm:grid-cols-5');
 
-    fireEvent.click(screen.getByRole('button', { name: '3–6 years' }));
+    fireEvent.click(screen.getByRole('button', { name: '3–5 years' }));
     expect(
       screen.getByRole('heading', {
         name: content.smallWorld.navigator.steps.activity.title,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Step 4 of 4')).toBeInTheDocument();
+    expect(screen.getByText('Step 5 of 5')).toBeInTheDocument();
 
     const workshop = screen.getByRole('button', {
-      name: 'Early years and schools',
+      name: 'Art and making',
     });
     expect(workshop).toHaveAttribute('aria-pressed', 'false');
     expect(workshop.querySelector('img')).toHaveAttribute(
       'src',
-      `/images/categories/${homeWizardChoices.activityTypes[0].id}.svg`,
+      iconSrcForActivity(homeWizardChoices.activityTypes[3].id),
     );
 
     fireEvent.click(workshop);
@@ -147,7 +159,7 @@ describe('SearchNavigator', () => {
       }),
     );
     expect(push).toHaveBeenCalledWith(
-      '/en/search/?age=3-6&region=kowloon&types=early-years&view=map',
+      '/en/search/?kind=class&age=3-5&region=kowloon&types=art&view=map',
     );
   });
 
@@ -160,11 +172,12 @@ describe('SearchNavigator', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Kowloon' }));
     fireEvent.click(screen.getByRole('button', { name: 'Anywhere in Kowloon' }));
+    fireEvent.click(screen.getByRole('button', { name: /^A class or club/ }));
     const backOnAge = screen.getByRole('button', { name: navigator.backLabel });
     expect(backOnAge.closest('[data-modal-footer]')).not.toBeNull();
     expect(backOnAge).toHaveClass('w-full');
 
-    fireEvent.click(screen.getByRole('button', { name: '3–6 years' }));
+    fireEvent.click(screen.getByRole('button', { name: '3–5 years' }));
     const back = screen.getByRole('button', { name: navigator.backLabel });
     const see = screen.getByRole('button', { name: navigator.seeActivitiesLabel });
     for (const action of [back, see]) {
@@ -192,10 +205,11 @@ describe('SearchNavigator', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Kowloon' }));
     fireEvent.click(screen.getByRole('button', { name: 'Mong Kok' }));
-    fireEvent.click(screen.getByRole('button', { name: '3–6 years' }));
+    fireEvent.click(screen.getByRole('button', { name: /^A camp or workshop/ }));
+    fireEvent.click(screen.getByRole('button', { name: '3–5 years' }));
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'Early years and schools',
+        name: 'Art and making',
       }),
     );
     fireEvent.click(
@@ -205,7 +219,7 @@ describe('SearchNavigator', () => {
     );
 
     expect(push).toHaveBeenCalledWith(
-      '/en/search/?age=3-6&region=kowloon&neighbourhood=yau-tsim-mong-mong-kok&types=early-years&view=map',
+      '/en/search/?kind=camp&age=3-5&region=kowloon&neighbourhood=yau-tsim-mong-mong-kok&types=art&view=map',
     );
   });
 
@@ -244,9 +258,9 @@ describe('SearchNavigator', () => {
         name: content.smallWorld.navigator.steps.location.title,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: '3–6 years' }),
+      screen.queryByRole('button', { name: '3–5 years' }),
     ).not.toBeInTheDocument();
   });
 
@@ -260,7 +274,7 @@ describe('SearchNavigator', () => {
     expect(allAreas).toHaveAttribute('aria-disabled', 'true');
     expect(allAreas).not.toBeDisabled();
     expect(allAreas).toHaveTextContent('Only Hong Kong Island is open');
-    expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 5')).toBeInTheDocument();
     const kowloon = screen.getByRole('button', { name: /Kowloon/ });
     expect(kowloon).toHaveAttribute('aria-disabled', 'true');
     expect(kowloon).toHaveTextContent('Coming soon');
@@ -288,7 +302,9 @@ describe('SearchNavigator', () => {
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     expect(
-      screen.getByRole('heading', { name: 'How old is your child?' }),
+      screen.getByRole('heading', {
+        name: content.smallWorld.navigator.steps.kind.title,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -302,13 +318,13 @@ describe('SearchNavigator', () => {
       'aria-pressed',
       'false',
     );
-    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
   });
 
   it('can continue when the scope names no neighbourhood', () => {
     process.env.NEXT_PUBLIC_SEARCH_AREA_SCOPE = 'atlantis';
     clearSearchAreaScopeCacheForTests();
-    openNavigator();
+    const content = openNavigator();
 
     expect(screen.getByRole('status')).toHaveTextContent(
       'No areas are open yet',
@@ -319,7 +335,9 @@ describe('SearchNavigator', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     expect(
-      screen.getByRole('heading', { name: 'How old is your child?' }),
+      screen.getByRole('heading', {
+        name: content.smallWorld.navigator.steps.kind.title,
+      }),
     ).toBeInTheDocument();
   });
 
@@ -330,10 +348,48 @@ describe('SearchNavigator', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Hong Kong Island' }));
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    fireEvent.click(screen.getByRole('button', { name: '3–6 years' }));
+    fireEvent.click(screen.getByRole('button', { name: /^A class or club/ }));
+    fireEvent.click(screen.getByRole('button', { name: '3–5 years' }));
     fireEvent.click(
       screen.getByRole('button', { name: content.smallWorld.navigator.seeActivitiesLabel }),
     );
-    expect(push).toHaveBeenCalledWith('/en/search/?age=3-6&view=map');
+    expect(push).toHaveBeenCalledWith('/en/search/?kind=class&age=3-5&view=map');
+  });
+
+  it('submits on the age for a kind without topics', () => {
+    const content = openNavigator();
+
+    fireEvent.click(screen.getByRole('button', { name: 'All Hong Kong' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: /^Somewhere to go today/ }),
+    );
+    expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', {
+        name: content.smallWorld.navigator.steps.age.title,
+      }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Under 1' }));
+
+    expect(push).toHaveBeenCalledWith(
+      '/en/search/?kind=place&age=0-1&view=map',
+    );
+  });
+
+  it('searches the weekend across every kind', () => {
+    const content = openNavigator();
+    const navigator = content.smallWorld.navigator;
+
+    fireEvent.click(screen.getByRole('button', { name: 'All Hong Kong' }));
+    const weekend = screen.getByRole('button', {
+      name: (name) => name.startsWith(navigator.weekendLabel),
+    });
+    expect(weekend.querySelector('img')).toHaveAttribute('src', WEEKEND_ICON_SRC);
+    fireEvent.click(weekend);
+    fireEvent.click(screen.getByRole('button', { name: '6–11 years' }));
+
+    expect(push).toHaveBeenCalledWith(
+      '/en/search/?age=6-11&day=weekend&view=map',
+    );
   });
 });

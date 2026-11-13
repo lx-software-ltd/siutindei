@@ -12,8 +12,10 @@ import {
   AGE_ICON_SRC,
   ALL_HONG_KONG_ICON_SRC,
   REGION_ICON_SRC,
+  iconSrcForActivity,
+  iconSrcForKind,
 } from '@/lib/home-wizard/choice-icons';
-import { homeWizardChoices } from '@/lib/home-wizard/choices';
+import { homeWizardChoices, OFFERED_KINDS } from '@/lib/home-wizard/choices';
 import { clearSearchAreaScopeCacheForTests } from '@/lib/home-wizard/area-scope';
 import { loadRecentSearch } from '@/lib/activities/recent-storage';
 
@@ -59,7 +61,7 @@ describe('SearchPanel', () => {
     push.mockClear();
   });
 
-  it('shows activity, age, and Hong Kong region icons with labels', () => {
+  it('shows kind, activity, age, and Hong Kong region icons with labels', () => {
     renderPanel();
 
     expect(choiceImage('All Hong Kong')).toHaveAttribute(
@@ -91,10 +93,20 @@ describe('SearchPanel', () => {
       );
     }
 
+    for (const kind of OFFERED_KINDS) {
+      expect(choiceImage(kind.labels.en)).toHaveAttribute(
+        'src',
+        iconSrcForKind(kind.id),
+      );
+    }
+    expect(
+      screen.queryByRole('button', { name: 'Somewhere to eat with kids' }),
+    ).toBeNull();
+
     for (const type of homeWizardChoices.activityTypes) {
       expect(choiceImage(type.labels.en)).toHaveAttribute(
         'src',
-        `/images/categories/${type.id}.svg`,
+        iconSrcForActivity(type.id),
       );
     }
   });
@@ -149,13 +161,13 @@ describe('SearchPanel', () => {
     }
   });
 
-  it('shows the ages as three icon tiles in one row', () => {
+  it('shows the ages as icon tiles, three across on phones and five from iPad up', () => {
     renderPanel();
 
     const age = screen.getByRole('button', {
       name: homeWizardChoices.ageGroups[0].labels.en,
     });
-    expect(age.parentElement).toHaveClass('grid', 'grid-cols-3');
+    expect(age.parentElement).toHaveClass('grid', 'grid-cols-3', 'md:grid-cols-5');
     expect(age).toHaveClass('flex-col', 'min-w-0');
     expect(age.querySelector('.search-choice-icon')).toHaveClass('h-9', 'md:h-12');
   });
@@ -188,7 +200,7 @@ describe('SearchPanel', () => {
 
     expect(screen.getByText(/pick any/)).toBeInTheDocument();
     const workshop = screen.getByRole('button', {
-      name: 'Early years and schools',
+      name: 'Art and making',
     });
     const row = workshop.parentElement;
     expect(row).toHaveClass('grid', 'grid-cols-2', 'md:grid-cols-4');
@@ -210,7 +222,7 @@ describe('SearchPanel', () => {
     renderPanel();
 
     const workshop = screen.getByRole('button', {
-      name: 'Early years and schools',
+      name: 'Art and making',
     });
     expect(workshop).toHaveAttribute('aria-pressed', 'false');
 
@@ -221,11 +233,36 @@ describe('SearchPanel', () => {
     expect(workshop).toHaveAttribute('aria-pressed', 'false');
   });
 
+  it('hides topics for a kind without them and clears the kind on a second press', () => {
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Art and making' }));
+    const place = screen.getByRole('button', { name: 'Somewhere to go today' });
+    fireEvent.click(place);
+    expect(place).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('button', { name: 'Art and making' })).toBeNull();
+
+    fireEvent.click(place);
+    expect(place).toHaveAttribute('aria-pressed', 'false');
+    expect(
+      screen.getByRole('button', { name: 'Art and making' }),
+    ).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('puts the chosen kind on the search URL', () => {
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: 'A camp or workshop' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+
+    expect(push).toHaveBeenCalledWith('/en/search/?kind=camp&view=map');
+  });
+
   it('does not show a clear activity types button', () => {
     renderPanel();
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Early years and schools' }),
+      screen.getByRole('button', { name: 'Art and making' }),
     );
 
     expect(

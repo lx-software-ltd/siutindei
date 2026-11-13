@@ -27,6 +27,7 @@
       "whereLabel": "地區",
       "neighbourhoodLabel": "社區",
       "anywhereInRegionLabel": "呢個地區任何地方",
+      "kindLabel": "想搵",
       "childAgeLabel": "子女年齡",
       "activityTypesLabel": "活動類型",
       "activityTypesHint": "可揀多項",
@@ -182,6 +183,8 @@
       "backLabel": "返回",
       "continueLabel": "繼續",
       "seeActivitiesLabel": "查看活動",
+      "weekendLabel": "今個週末去邊",
+      "weekendHint": "星期六、日的活動",
       "stepProgressTemplate": "第 {current} 步，共 {total} 步",
       "steps": {
         "location": {
@@ -191,6 +194,10 @@
         "neighbourhood": {
           "title": "邊個社區？",
           "label": "社區"
+        },
+        "kind": {
+          "title": "想搵咩？",
+          "label": "想搵"
         },
         "age": {
           "title": "小朋友幾歲？",
@@ -259,6 +266,8 @@
     "sortTimeLabel": "日子及時間",
     "sortPriceLabel": "最低價錢",
     "sortChoiceTemplate": "排序：{choice}",
+    "kindFilterLabel": "想搵",
+    "anyKindLabel": "乜都得",
     "freeFilterLabel": "免費",
     "freeTrialFilterLabel": "免費試堂",
     "dayFilterLabel": "日子",

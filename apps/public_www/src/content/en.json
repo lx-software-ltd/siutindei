@@ -27,6 +27,7 @@
       "whereLabel": "Area",
       "neighbourhoodLabel": "Neighbourhood",
       "anywhereInRegionLabel": "Anywhere in this area",
+      "kindLabel": "Looking for",
       "childAgeLabel": "Child age",
       "activityTypesLabel": "Activity types",
       "activityTypesHint": "pick any",
@@ -182,6 +183,8 @@
       "backLabel": "Back",
       "continueLabel": "Continue",
       "seeActivitiesLabel": "See activities",
+      "weekendLabel": "What's on this weekend",
+      "weekendHint": "Anything on Saturday or Sunday",
       "stepProgressTemplate": "Step {current} of {total}",
       "steps": {
         "location": {
@@ -191,6 +194,10 @@
         "neighbourhood": {
           "title": "Which neighbourhood?",
           "label": "Neighbourhood"
+        },
+        "kind": {
+          "title": "What are you looking for?",
+          "label": "Looking for"
         },
         "age": {
           "title": "How old is your child?",
@@ -259,6 +266,8 @@
     "sortTimeLabel": "Day and time",
     "sortPriceLabel": "Lowest price",
     "sortChoiceTemplate": "Sort: {choice}",
+    "kindFilterLabel": "Looking for",
+    "anyKindLabel": "Anything",
     "freeFilterLabel": "Free",
     "freeTrialFilterLabel": "Free trial",
     "dayFilterLabel": "Day",
