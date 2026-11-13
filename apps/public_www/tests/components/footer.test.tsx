@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { Footer } from '@/components/sections/footer';
 import { getContent } from '@/content';
+import { LX_SOFTWARE_URL } from '@/lib/site-config';
 
 const INSTAGRAM_URL = 'https://www.instagram.com/studio_example';
 const FACEBOOK_URL = 'https://www.facebook.com/studio_example';
@@ -62,6 +63,29 @@ describe('Footer', () => {
       screen.queryByText(/a sole proprietorship registered in Hong Kong/),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/All rights reserved/)).toBeInTheDocument();
+  });
+
+  it('links LX Software to the company site', () => {
+    renderFooter();
+
+    const link = screen.getByRole('link', { name: 'LX Software' });
+    expect(link).toHaveAttribute('href', LX_SOFTWARE_URL);
+    expect(link).toHaveAttribute('href', 'https://www.lx-software.com');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noreferrer noopener');
+    expect(screen.getByText(/All rights reserved/)).toHaveTextContent(
+      /© \d{4} LX Software\. All rights reserved\./,
+    );
+  });
+
+  it('links LX Software in the Chinese copyright line', () => {
+    renderFooter('zh-HK');
+
+    const link = screen.getByRole('link', { name: 'LX Software' });
+    expect(link).toHaveAttribute('href', 'https://www.lx-software.com');
+    expect(screen.getByText(/版權所有/)).toHaveTextContent(
+      /© \d{4} LX Software。版權所有。/,
+    );
   });
 
   it('drops the Chinese tagline as well', () => {
