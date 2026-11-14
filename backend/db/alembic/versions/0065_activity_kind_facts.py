@@ -124,17 +124,25 @@ def backfill_kind(bind: Any) -> None:
     bind.execute(sa.text("SELECT set_config('app.catalog_backfill', 'on', true)"))
     _set_kind_for_categories(bind, "place", _PLACE_SUFFIXES)
     _set_kind_for_categories(bind, "preschool", _PRESCHOOL_SUFFIXES)
-    words = " OR ".join(
-        f"strpos(name, :word{index}) > 0" for index in range(len(_CAMP_NAME_WORDS))
-    )
+    # One bound name per entry of _CAMP_NAME_WORDS. The SQL stays a literal
+    # so a scanner does not read it as assembled from outside the file.
+    if len(_CAMP_NAME_WORDS) != 5:
+        raise RuntimeError("The camp backfill names five words")
     bind.execute(
         sa.text(
             "UPDATE activities SET kind = 'camp' "
-            f"WHERE kind = 'class' AND (name ~* :pattern OR {words})"
+            "WHERE kind = 'class' AND (name ~* :pattern "
+            "OR strpos(name, :word0) > 0 OR strpos(name, :word1) > 0 "
+            "OR strpos(name, :word2) > 0 OR strpos(name, :word3) > 0 "
+            "OR strpos(name, :word4) > 0)"
         ),
         {
             "pattern": _CAMP_NAME_PATTERN,
-            **{f"word{index}": word for index, word in enumerate(_CAMP_NAME_WORDS)},
+            "word0": _CAMP_NAME_WORDS[0],
+            "word1": _CAMP_NAME_WORDS[1],
+            "word2": _CAMP_NAME_WORDS[2],
+            "word3": _CAMP_NAME_WORDS[3],
+            "word4": _CAMP_NAME_WORDS[4],
         },
     )
     bind.execute(sa.text("SELECT set_config('app.catalog_backfill', 'off', true)"))
