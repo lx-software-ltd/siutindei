@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 import pytest
+from app.db.age_bounds import inclusive_age_bounds
 from app.db.models import Activity, ActivityPricing, ActivitySchedule, Organization
 from app.db.models.audit_log import AuditLog
 from app.db.models.org_enrichment import OrgEnrichmentProposal, OrgEnrichmentRun
@@ -611,7 +612,7 @@ def test_serialize_proposal_does_not_rewrite_the_snapshot(db_session) -> None:
     assert proposal.current_value is None
 
 
-def test_enrichment_refuses_an_age_over_18(
+def test_enrichment_stores_an_age_over_18_as_18(
     db_session, sample_activity_category
 ) -> None:
     org = _org(db_session)
@@ -641,11 +642,9 @@ def test_enrichment_refuses_an_age_over_18(
         user_id="admin",
         request_id="req-age-18",
     )
-    assert results[0]["status"] == "error"
-    assert "18" in results[0]["error"]
-    assert (
-        db_session.query(Activity).filter(Activity.name == "All ages swim").count() == 0
-    )
+    assert results[0]["status"] == "applied"
+    stored = db_session.query(Activity).filter(Activity.name == "All ages swim").one()
+    assert inclusive_age_bounds(stored.age_range) == (5, 18)
 
 
 def test_approved_org_refuses_an_unknown_category(db_session) -> None:

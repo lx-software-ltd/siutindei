@@ -20,7 +20,7 @@ from app.api.admin_validators import (
     _validate_string_length,
     _validate_translations_map,
 )
-from app.db.age_bounds import inclusive_age_bounds
+from app.db.age_bounds import cap_listing_ages, inclusive_age_bounds
 from app.db.models import (
     Activity,
     ActivityLocation,
@@ -77,8 +77,8 @@ def _create_activity(repo: ActivityRepository, body: dict[str, Any]) -> Activity
     if age_min is None or age_max is None:
         raise ValidationError("age_min and age_max are required")
 
-    _validate_age_range(age_min, age_max)
-    age_range = Range(int(age_min), int(age_max), bounds="[]")
+    age_min, age_max = _validate_age_range(age_min, age_max)
+    age_range = Range(age_min, age_max, bounds="[]")
 
     category_uuid = _parse_uuid(category_id)
     category_repo = ActivityCategoryRepository(repo.session)
@@ -201,8 +201,8 @@ def _update_activity(
         age_max = body.get("age_max")
         if age_min is None or age_max is None:
             raise ValidationError("age_min and age_max are required together")
-        _validate_age_range(age_min, age_max)
-        entity.age_range = Range(int(age_min), int(age_max), bounds="[]")
+        age_min, age_max = _validate_age_range(age_min, age_max)
+        entity.age_range = Range(age_min, age_max, bounds="[]")
     if "kind" in body or "facts" in body:
         _apply_kind_and_facts(entity, body)
     if "category_id" in body or "kind" in body:
@@ -240,29 +240,9 @@ def _source_category_name(value: Any) -> str | None:
     return text or None
 
 
-MAX_LISTING_AGE = 18
-
-
-def _validate_age_range(age_min: Any, age_max: Any) -> None:
-    """Validate age range values. A listing never goes past age 18."""
-    try:
-        age_min_val = int(age_min)
-        age_max_val = int(age_max)
-    except (ValueError, TypeError) as exc:
-        raise ValidationError("age_min and age_max must be valid integers") from exc
-
-    if age_min_val < 0:
-        raise ValidationError(
-            "age_min must be at least 0",
-            field="age_min",
-        )
-    if age_max_val > MAX_LISTING_AGE:
-        raise ValidationError(
-            f"age_max must be at most {MAX_LISTING_AGE}",
-            field="age_max",
-        )
-    if age_min_val >= age_max_val:
-        raise ValidationError("age_min must be less than age_max")
+def _validate_age_range(age_min: Any, age_max: Any) -> tuple[int, int]:
+    """Cap a listing age at 18. The minimum cannot exceed the maximum."""
+    return cap_listing_ages(age_min, age_max)
 
 
 def _ensure_unique_activity_name(

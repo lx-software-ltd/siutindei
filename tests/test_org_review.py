@@ -1127,7 +1127,7 @@ def test_activity_added_after_rejection_is_a_warning(
         category_id=sample_activity_category.id,
         name=f"Adult Class {uuid4().hex[:8]}",
         description="Before the rejection",
-        age_range=Range(18, 40, bounds="[]"),
+        age_range=Range(16, 18, bounds="[]"),
         created_at=datetime(2023, 1, 1, tzinfo=UTC),
     )
     db_session.add_all([newer, older])

@@ -223,9 +223,10 @@ def _apply_activity(
                 field="category_id",
             )
         category_id = PENDING_CATEGORY_ID
-    age_min = _whole_number(override.get("age_min", proposed.get("age_min")), "age_min")
-    age_max = _whole_number(override.get("age_max", proposed.get("age_max")), "age_max")
-    _validate_age_range(age_min, age_max)
+    age_min, age_max = _validate_age_range(
+        _whole_number(override.get("age_min", proposed.get("age_min")), "age_min"),
+        _whole_number(override.get("age_max", proposed.get("age_max")), "age_max"),
+    )
     activity = Activity(
         org_id=org.id,
         category_id=category_id,

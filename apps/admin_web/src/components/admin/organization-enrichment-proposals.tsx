@@ -12,6 +12,7 @@ import type {
 } from '../../lib/api-client-enrichment';
 import { adminCurrencyOptions } from '../../lib/admin-currencies';
 import { positiveSessions, visibleBlockers } from '../../lib/enrichment-overrides';
+import { MAX_LISTING_AGE } from '../../lib/listing-age';
 import { locationListLabel } from '../../lib/location-label';
 import type { GeographicAreaNode } from '../../lib/api-client-user';
 import { CascadingAreaSelect } from '../ui/cascading-area-select';
@@ -418,8 +419,12 @@ function ProposalFields({
     );
   }
   if (row.kind === 'create_activity') {
-    const ageMin = override.age_min ?? numberOrBlank(proposed.age_min);
-    const ageMax = override.age_max ?? numberOrBlank(proposed.age_max);
+    const ageMin = capShownAge(
+      override.age_min ?? numberOrBlank(proposed.age_min)
+    );
+    const ageMax = capShownAge(
+      override.age_max ?? numberOrBlank(proposed.age_max)
+    );
     const words = proposed.category_words ? String(proposed.category_words) : '';
     const named = proposed.category_name ? String(proposed.category_name) : '';
     const said =
@@ -443,7 +448,7 @@ function ProposalFields({
               id={`age-min-${row.id}`}
               type='number'
               min={0}
-              max={17}
+              max={MAX_LISTING_AGE}
               value={ageMin === undefined ? '' : String(ageMin)}
               onChange={(event) =>
                 onOverride({
@@ -460,7 +465,7 @@ function ProposalFields({
               id={`age-max-${row.id}`}
               type='number'
               min={0}
-              max={18}
+              max={MAX_LISTING_AGE}
               value={ageMax === undefined ? '' : String(ageMax)}
               onChange={(event) =>
                 onOverride({
@@ -809,4 +814,11 @@ function numberOrBlank(value: unknown): number | undefined {
     return Number(value);
   }
   return undefined;
+}
+
+function capShownAge(value: number | undefined): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  return Math.min(value, MAX_LISTING_AGE);
 }

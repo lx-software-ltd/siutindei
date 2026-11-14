@@ -314,7 +314,9 @@ def collect_issues(
             )
         note()
         lower, upper = _age_bounds(activity)
-        if lower == 0 and upper == 18:
+        if (activity.kind or "class") not in {"place", "eat"} and (
+            lower == 0 and upper == 18
+        ):
             add(
                 "default_age_range",
                 "warning",

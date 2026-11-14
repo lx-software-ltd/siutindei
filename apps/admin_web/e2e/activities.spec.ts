@@ -108,10 +108,10 @@ test.describe('Activities Panel', () => {
     await adminPage.getByRole('button', { name: 'Create' }).click();
 
     // Should show error message
-    await expect(adminPage.getByText('Age min must be less than age max.').first()).toBeVisible();
+    await expect(adminPage.getByText('Age min cannot exceed age max.').first()).toBeVisible();
   });
 
-  test('should reject an age max over 18', async ({ adminPage }) => {
+  test('should store an age max over 18 as 18', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New activity' }).click();
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
@@ -119,9 +119,14 @@ test.describe('Activities Panel', () => {
     await adminPage.getByLabel('Age Min').fill('5');
     await adminPage.getByLabel('Age Max').fill('19');
 
+    const posted = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'POST' && request.url().includes('/activities')
+    );
     await adminPage.getByRole('button', { name: 'Create' }).click();
 
-    await expect(adminPage.getByText('Age max must be 18 or less.').first()).toBeVisible();
+    await expect(adminPage.getByText('Age min cannot exceed age max.')).toHaveCount(0);
+    expect((await posted).postDataJSON()).toMatchObject({ age_min: 5, age_max: 18 });
   });
 
   test('should fill out the activity form', async ({ adminPage }) => {
@@ -300,23 +305,25 @@ test.describe('Activities Panel - Form Validation', () => {
     await adminPage.getByRole('button', { name: 'Create' }).click();
 
     // Should not show age validation error
-    await expect(adminPage.getByText('Age min must be less than age max.')).not.toBeVisible();
+    await expect(adminPage.getByText('Age min cannot exceed age max.')).toHaveCount(0);
   });
 
-  test('should reject equal age min and max', async ({ adminPage }) => {
+  test('should accept equal age min and max', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New activity' }).click();
-    // Fill form with equal min and max
     await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
     await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
     await adminPage.getByLabel('Name').fill('Test Activity');
     await adminPage.getByLabel('Age Min').fill('5');
     await adminPage.getByLabel('Age Max').fill('5');
 
-    // Submit
+    const posted = adminPage.waitForRequest(
+      (request) =>
+        request.method() === 'POST' && request.url().includes('/activities')
+    );
     await adminPage.getByRole('button', { name: 'Create' }).click();
 
-    // Should show error message
-    await expect(adminPage.getByText('Age min must be less than age max.').first()).toBeVisible();
+    await expect(adminPage.getByText('Age min cannot exceed age max.')).toHaveCount(0);
+    expect((await posted).postDataJSON()).toMatchObject({ age_min: 5, age_max: 5 });
   });
 
   test('should use number input for age fields', async ({ adminPage }) => {

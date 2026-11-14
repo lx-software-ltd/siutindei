@@ -35,8 +35,8 @@ info:
     |-------|-------|
     | lat | -90 to 90 |
     | lng | -180 to 180 |
-    | age_min | 0 to 17 |
-    | age_max | 1 to 18 |
+    | age_min | 0 or more; stored as at most 18 |
+    | age_max | 0 or more; stored as at most 18. A higher value is saved as 18. age_min cannot exceed age_max, and the two may be equal. |
     | amount | >= 0 |
     | sessions_count | > 0 |
     | day_of_week_utc | 0-6 (Sunday-Saturday) |
@@ -4892,11 +4892,11 @@ components:
         age_min:
           type: integer
           minimum: 0
-          maximum: 17
+          description: Whole years. Stored as at most 18. A higher value is saved as 18.
         age_max:
           type: integer
-          minimum: 1
-          maximum: 18
+          minimum: 0
+          description: Whole years. Stored as at most 18. A higher value is saved as 18. May equal age_min.
         kind:
           allOf:
             - $ref: '#/components/schemas/ListingKind'
@@ -6509,13 +6509,11 @@ components:
         age_min:
           type: integer
           minimum: 0
-          maximum: 17
-          description: Minimum age (required, 0-17, must be less than age_max)
+          description: Minimum age in whole years. Stored as at most 18. A higher value is saved as 18. Cannot exceed age_max, and may equal it.
         age_max:
           type: integer
-          minimum: 1
-          maximum: 18
-          description: Maximum age (required, 1-18, must be greater than age_min)
+          minimum: 0
+          description: Maximum age in whole years. Stored as at most 18. A higher value is saved as 18.
         kind:
           $ref: '#/components/schemas/ListingKind'
         facts:
@@ -6562,13 +6560,11 @@ components:
         age_min:
           type: integer
           minimum: 0
-          maximum: 17
-          description: Minimum age (must provide both age_min and age_max together)
+          description: Minimum age. Provide both age_min and age_max. Stored as at most 18. A higher value is saved as 18. Cannot exceed age_max, and may equal it.
         age_max:
           type: integer
-          minimum: 1
-          maximum: 18
-          description: Maximum age (must provide both age_min and age_max together)
+          minimum: 0
+          description: Maximum age. Provide both age_min and age_max. Stored as at most 18. A higher value is saved as 18.
         kind:
           $ref: '#/components/schemas/ListingKind'
         facts:
