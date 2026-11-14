@@ -6,6 +6,7 @@ import type { Locale } from '@/content/locales';
 import type { SiteContent } from '@/content/types';
 import { ActivityGoogleMap } from '@/components/shared/maps/activity-google-map';
 import { isGoogleMapsEnabled } from '@/lib/google-maps/config';
+import { iconSrcForKind } from '@/lib/home-wizard/choice-icons';
 import { listingsWithCoordinates } from '@/lib/google-maps/coordinates';
 import type { ActivityListing } from '@/lib/activities/types';
 
@@ -17,6 +18,12 @@ const PHONE_MAP_QUERY =
 
 const ENLARGE_ICON_SRC = '/images/ui/enlarge-map.svg';
 const REDUCE_ICON_SRC = '/images/ui/reduce-map.svg';
+
+export interface SearchMapLayerToggle {
+  readonly label: string;
+  readonly isOn: boolean;
+  readonly onToggle: () => void;
+}
 
 export interface SearchMapLoadMore {
   readonly hasMore: boolean;
@@ -33,6 +40,8 @@ interface SearchMapSplitLayoutProps {
   readonly onSelect: (activityId: string) => void;
   readonly isLoading: boolean;
   readonly loadMore?: SearchMapLoadMore;
+  /** Adds another layer of pins beside the results, such as family-friendly food. */
+  readonly layerToggle?: SearchMapLayerToggle;
 }
 
 interface MapPaneBodyProps {
@@ -252,6 +261,7 @@ export function SearchMapSplitLayout({
   onSelect,
   isLoading,
   loadMore,
+  layerToggle,
 }: SearchMapSplitLayoutProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const mappableCount = listingsWithCoordinates(listings).length;
@@ -338,6 +348,29 @@ export function SearchMapSplitLayout({
           />
           {isExpanded ? copy.reduceMapLabel : copy.enlargeMapLabel}
         </button>
+        {layerToggle ? (
+          <button
+            type="button"
+            aria-pressed={layerToggle.isOn}
+            onClick={layerToggle.onToggle}
+            className={
+              'absolute left-3 top-3 z-20 inline-flex h-11 items-center gap-2 rounded-full ' +
+              'border border-ink-900/15 px-3 text-sm font-semibold text-ink-900 shadow-lg transition ' +
+              (layerToggle.isOn ? 'bg-brand-500 hover:bg-brand-600' : 'bg-white hover:bg-brand-50')
+            }
+          >
+            <img
+              src={iconSrcForKind('eat')}
+              alt=""
+              width={20}
+              height={20}
+              decoding="async"
+              aria-hidden="true"
+              className="h-5 w-5"
+            />
+            {layerToggle.label}
+          </button>
+        ) : null}
         <MapPaneBody
           locale={locale}
           copy={copy}

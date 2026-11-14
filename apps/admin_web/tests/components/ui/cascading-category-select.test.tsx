@@ -67,6 +67,26 @@ function sportTree(): ActivityCategoryNode[] {
         },
       ],
     },
+    {
+      id: 'cat-schools',
+      parent_id: null,
+      name: 'Schools',
+      name_translations: { en: 'Schools' },
+      display_order: 4,
+      is_system: true,
+      system_role: 'schools',
+      hidden_from_public: true,
+      children: [
+        {
+          id: 'cat-primary',
+          parent_id: 'cat-schools',
+          name: 'Primary school',
+          name_translations: { en: 'Primary school' },
+          display_order: 1,
+          children: [],
+        },
+      ],
+    },
   ];
 }
 
@@ -290,6 +310,38 @@ describe('CascadingCategorySelect add subcategory', () => {
     const subcategory = pending().getByLabelText(/^Subcategory/) as HTMLSelectElement;
     expect(category.labels?.[0]?.textContent).toContain('*');
     expect(subcategory.labels?.[0]?.textContent).toBe('Subcategory');
+  });
+
+  it('marks a hidden fixed root and still offers a new subcategory under it', async () => {
+    const user = userEvent.setup();
+    function AdminSchools() {
+      const [value, setValue] = useState('cat-sport');
+      return (
+        <ActivitySelect
+          label='School activity'
+          value={value}
+          onChange={setValue}
+          allowNewSubcategory
+        />
+      );
+    }
+    render(<AdminSchools />);
+    const school = () => within(screen.getByRole('region', { name: 'School activity' }));
+    await waitFor(() => {
+      expect(school().getByLabelText('Category')).toBeVisible();
+    });
+    expect(
+      school().getByRole('option', { name: 'Schools (hidden from public)' })
+    ).toBeInTheDocument();
+    expect(
+      school().getByRole('option', { name: 'Pending categorisation (pending)' })
+    ).toBeInTheDocument();
+    await user.selectOptions(
+      school().getByLabelText('Category'),
+      'Schools (hidden from public)'
+    );
+    expect(school().getByRole('option', { name: 'Primary school' })).toBeInTheDocument();
+    expect(school().getByRole('option', { name: ADD_LABEL })).toBeInTheDocument();
   });
 
   it('stores the parent category while the new-subcategory field is open', async () => {

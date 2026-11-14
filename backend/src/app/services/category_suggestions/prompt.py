@@ -34,7 +34,11 @@ def redact_contacts(value: str) -> str:
 _RECHECK_NOTE = (
     " The activity has no trusted category. Choose the best leaf in the "
     "taxonomy. Reply reassign with that leaf's category_id. Reply propose "
-    "only when no leaf fits. Do not reply confirm."
+    "only when no leaf fits. Do not reply confirm. A school above "
+    "kindergarten goes to the matching school leaf. A members-only club "
+    "goes to Members-only clubs, but a programme the club opens to "
+    "non-members goes to its topic. A venue anyone can walk into goes "
+    "under Places to play, and a class taught at a venue goes to its topic."
 )
 
 

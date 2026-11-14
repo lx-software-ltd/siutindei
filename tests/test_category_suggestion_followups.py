@@ -75,7 +75,11 @@ def test_reject_without_target_stays_visible_as_stranded(
         warnings=[],
     )
     finish_capture_batch({}, db_session)
-    suggestion = db_session.query(CategorySuggestion).one()
+    suggestion = (
+        db_session.query(CategorySuggestion)
+        .filter(CategorySuggestion.decided_by.is_distinct_from("migration:0066"))
+        .one()
+    )
     apply_decision(
         db_session,
         suggestion,

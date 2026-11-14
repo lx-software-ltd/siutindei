@@ -7,11 +7,14 @@ import { breadcrumbStructuredData, serializeJsonLd } from '@/lib/activities/acti
 import {
   cardListing,
   catalogueCategories,
+  catalogueKindPages,
   catalogueListings,
 } from '@/lib/activities/catalogue-snapshot';
+import { HUB_SECTION_KINDS, KIND_PAGES } from '@/lib/activities/kind-pages';
 import {
   catalogueScopePlace,
   itemListStructuredData,
+  landingCoverage,
   landingFacts,
 } from '@/lib/activities/landing-page-data';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
@@ -61,6 +64,25 @@ export default async function ActivitiesHubPage({ params }: LocaleRouteProps) {
     label: content.activityDetail.homeLabel,
     href: localizePath(ROUTES.home, locale),
   };
+  const kindPageSlugs = new Set(catalogueKindPages().map((page) => page.typeId));
+  const kindSections = KIND_PAGES.filter((page) => HUB_SECTION_KINDS.has(page.kind))
+    .map((page) => {
+      const kindListings = listings.filter((listing) => listing.activity.kind === page.kind);
+      return {
+        id: page.slug,
+        heading: labelForLocale(page.labels, locale),
+        listings: kindListings.map(cardListing),
+        moreHref: kindPageSlugs.has(page.slug) ? categoryLandingPath(locale, page.slug) : null,
+        moreLabel: formatContentTemplate(copy.kindSectionLinkTemplate, {
+          count: kindListings.length,
+        }),
+      };
+    })
+    .filter((section) => section.listings.length > 0);
+  const sections =
+    kindSections.length > 0
+      ? kindSections
+      : [{ id: 'all', heading: copy.allActivitiesHeading, listings: [] }];
 
   return (
     <>
@@ -82,6 +104,7 @@ export default async function ActivitiesHubPage({ params }: LocaleRouteProps) {
         intro={formatContentTemplate(copy.hubIntro, { ...place })}
         breadcrumbs={[homeCrumb]}
         facts={landingFacts(locale, listings, copy)}
+        coverage={landingCoverage(locale, listings, copy)}
         categoriesHeading={copy.browseByTypeHeading}
         categories={catalogueCategories().map((category) => ({
           typeId: category.typeId,
@@ -89,7 +112,7 @@ export default async function ActivitiesHubPage({ params }: LocaleRouteProps) {
           href: categoryLandingPath(locale, category.typeId),
           count: category.listings.length,
         }))}
-        listings={listings.map(cardListing)}
+        sections={sections}
         searchHref={buildSearchPageHref(locale, DEFAULT_SEARCH_FILTERS, { view: 'list' })}
       />
     </>

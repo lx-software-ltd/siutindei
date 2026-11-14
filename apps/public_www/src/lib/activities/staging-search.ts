@@ -2,8 +2,9 @@ import { stagingScopeAreaIds } from '@/lib/home-wizard/area-scope';
 import { getSearchConfig, getSiteConfig } from '@/lib/site-config';
 
 import { hideImportTemplateCopy } from './description-boilerplate';
-import { mapActivityListing } from './map-listing';
+import { mapActivityListing, parseListingKind } from './map-listing';
 import { classPriceEquivalent } from './price-format';
+import { hongKongToday } from './schedule-dates';
 import { toHongKongSession } from './schedule-format';
 import type {
   ActivityListing,
@@ -27,6 +28,8 @@ interface StagingFixtureItem {
     readonly age_min?: number | null;
     readonly age_max?: number | null;
     readonly category_id?: string | null;
+    readonly category_root_id?: string | null;
+    readonly kind?: string | null;
   };
   readonly organization: {
     readonly id: string;
@@ -65,6 +68,8 @@ interface StagingFixtureItem {
       readonly end_minutes_utc: number;
     }>;
     readonly languages: string[];
+    readonly starts_on?: string | null;
+    readonly ends_on?: string | null;
   } | null;
   readonly _sort: StagingSortMeta;
 }
@@ -175,6 +180,30 @@ function matchesItem(
     return false;
   }
 
+  if (params.kinds && params.kinds.length > 0) {
+    if (!params.kinds.includes(item.activity.kind ?? 'class')) {
+      return false;
+    }
+  }
+
+  if (item.activity.kind === 'eat' && !item.organization.parent_verified) {
+    return false;
+  }
+
+  if (params.ageMin !== undefined || params.ageMax !== undefined) {
+    const ageMin = item.activity.age_min;
+    const ageMax = item.activity.age_max;
+    if (ageMin == null || ageMax == null) {
+      return false;
+    }
+    if (
+      (params.ageMax !== undefined && ageMin > params.ageMax) ||
+      (params.ageMin !== undefined && ageMax < params.ageMin)
+    ) {
+      return false;
+    }
+  }
+
   if (params.age !== undefined) {
     const ageMin = item.activity.age_min;
     const ageMax = item.activity.age_max;
@@ -195,7 +224,8 @@ function matchesItem(
 
   if (params.categoryIds && params.categoryIds.length > 0) {
     const categoryId = item.activity.category_id ?? '';
-    if (!params.categoryIds.includes(categoryId)) {
+    const rootId = item.activity.category_root_id ?? '';
+    if (!params.categoryIds.includes(categoryId) && !params.categoryIds.includes(rootId)) {
       return false;
     }
   }
@@ -251,6 +281,9 @@ function matchesRefinements(
       return false;
     }
   }
+  if (!datesMatch(item, params)) {
+    return false;
+  }
   if (params.daysOfWeekHkt && params.daysOfWeekHkt.length > 0) {
     const days = (item.schedule?.weekly_entries ?? []).map(
       (entry) =>
@@ -267,18 +300,34 @@ function matchesRefinements(
   return true;
 }
 
+/** Twin of the API date rule: ended sessions drop out, a window keeps overlaps. */
+function datesMatch(item: StagingFixtureItem, params: ActivitySearchParams): boolean {
+  const startsOn = item.schedule?.starts_on ?? null;
+  const endsOn = item.schedule?.ends_on ?? null;
+  if (endsOn && endsOn < hongKongToday()) {
+    return false;
+  }
+  if (params.dateFrom && endsOn && endsOn < params.dateFrom) {
+    return false;
+  }
+  return !(params.dateTo && startsOn && startsOn > params.dateTo);
+}
+
 function classPriceOf(item: StagingFixtureItem): number | null {
   const pricing = item.pricing;
   if (!pricing) {
     return null;
   }
-  return classPriceEquivalent({
-    pricingType: pricing.pricing_type,
-    amount: Number(pricing.amount),
-    currency: pricing.currency,
-    sessionsCount: pricing.sessions_count ?? null,
-    freeTrialClassOffered: pricing.free_trial_class_offered,
-  });
+  return classPriceEquivalent(
+    {
+      pricingType: pricing.pricing_type,
+      amount: Number(pricing.amount),
+      currency: pricing.currency,
+      sessionsCount: pricing.sessions_count ?? null,
+      freeTrialClassOffered: pricing.free_trial_class_offered,
+    },
+    parseListingKind(item.activity.kind),
+  );
 }
 
 function matchesText(item: StagingFixtureItem, query: string): boolean {

@@ -1,6 +1,8 @@
 import type {
   ActivityListing,
   FeedbackRating,
+  ListingFacts,
+  ListingKind,
   FeedbackReview,
   OrganizationContact,
   TranslationMap,
@@ -42,6 +44,11 @@ export interface ActivityWireListing {
     age_min?: number | null;
     age_max?: number | null;
     category_id?: string | null;
+    kind?: string | null;
+    facts?: Record<string, unknown> | null;
+    category_root_id?: string | null;
+    category_name?: string | null;
+    category_name_translations?: Record<string, string>;
   };
   organization: {
     id: string;
@@ -55,6 +62,7 @@ export interface ActivityWireListing {
     description_source?: string | null;
     place_id?: string | null;
     parent_verified?: boolean | null;
+    parent_verified_at?: string | null;
     updated_at?: string | null;
     contact?: ContactWire | null;
     rating?: { count: number; average_stars: number | string } | null;
@@ -85,6 +93,8 @@ export interface ActivityWireListing {
       end_minutes_utc: number;
     }>;
     languages?: string[];
+    starts_on?: string | null;
+    ends_on?: string | null;
   } | null;
 }
 
@@ -105,6 +115,23 @@ function toNumber(value: number | string | null | undefined): number | null {
 function blankToNull(value: string | null | undefined): string | null {
   const trimmed = value?.trim() ?? '';
   return trimmed === '' ? null : trimmed;
+}
+
+const LISTING_KINDS: readonly ListingKind[] = ['class', 'camp', 'place', 'preschool', 'eat'];
+
+/** An old snapshot or a card row without a kind is a class. */
+export function parseListingKind(value: string | null | undefined): ListingKind {
+  return LISTING_KINDS.find((kind) => kind === value) ?? 'class';
+}
+
+function mapFacts(value: Record<string, unknown> | null | undefined): ListingFacts {
+  const facts: Record<string, boolean> = {};
+  for (const [key, seen] of Object.entries(value ?? {})) {
+    if (typeof seen === 'boolean') {
+      facts[key] = seen;
+    }
+  }
+  return facts;
 }
 
 function mapContact(
@@ -172,6 +199,11 @@ export function mapActivityListing(
       ageMin: item.activity.age_min ?? null,
       ageMax: item.activity.age_max ?? null,
       categoryId: item.activity.category_id ?? null,
+      kind: parseListingKind(item.activity.kind),
+      facts: card ? {} : mapFacts(item.activity.facts),
+      categoryRootId: item.activity.category_root_id ?? item.activity.category_id ?? null,
+      categoryName: blankToNull(item.activity.category_name),
+      categoryNameTranslations: mapTranslationMap(item.activity.category_name_translations),
     },
     organization: {
       id: item.organization.id,
@@ -187,6 +219,10 @@ export function mapActivityListing(
       descriptionSource: item.organization.description_source ?? null,
       placeId: card ? null : item.organization.place_id ?? null,
       parentVerified: item.organization.parent_verified === true,
+      parentVerifiedAt:
+        item.organization.parent_verified === true
+          ? item.organization.parent_verified_at ?? null
+          : null,
       updatedAt: item.organization.updated_at ?? null,
       contact: card ? null : mapContact(item.organization.contact),
       rating: mapRating(item.organization.rating),
@@ -222,6 +258,8 @@ export function mapActivityListing(
             }),
           ),
           languages: item.schedule.languages ?? [],
+          startsOn: item.schedule.starts_on ?? null,
+          endsOn: item.schedule.ends_on ?? null,
         }
       : null,
   };

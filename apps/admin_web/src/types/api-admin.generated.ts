@@ -1568,11 +1568,16 @@ export interface paths {
         /**
          * Review queue counts
          * @description Aggregated in SQL. `by_issue` counts organizations once per issue
-         *     code, including warnings.
+         *     code, including warnings. With `area_id`, the response adds a
+         *     `readiness` block for that area and its descendants; the other
+         *     counts stay catalogue-wide.
          */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Active area to check against the opening gate. */
+                    area_id?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -1587,6 +1592,13 @@ export interface paths {
                     content: {
                         "application/json": components["schemas"]["OrgReviewSummary"];
                     };
+                };
+                /** @description area_id is not a UUID, or not an active area */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
             };
         };
@@ -7700,6 +7712,38 @@ export interface components {
         TranslationMap: {
             [key: string]: string;
         };
+        /**
+         * @description What the listing is: a weekly class or club, a camp or workshop
+         *     with dates, a place to play, a nursery or kindergarten, or a
+         *     place to eat with children. Admin-write only; manager routes and
+         *     org-scoped partner keys ignore it. Defaults to `class`.
+         *     The category decides it where it can: under Places to play it
+         *     is `place`, under Nurseries and kindergartens `preschool`, and
+         *     under Eat with kids `eat`. Under a topic (a home-wizard root) a
+         *     `place`, `preschool`, or `eat` becomes `class`. Facts the
+         *     resulting kind does not allow are dropped. When every activity
+         *     of an organization sits in a category hidden from public, the
+         *     organization is rejected as `not_relevant` with
+         *     `reviewed_by = system:category`, unless it is already rejected.
+         * @enum {string}
+         */
+        ListingKind: "class" | "camp" | "place" | "preschool" | "eat";
+        /**
+         * @description Parent-checked facts. `true` means a parent saw it, `false` that
+         *     a parent saw it is missing; leave a key out when nobody checked.
+         *     Allowed keys per kind: `class` drop_in, parent_stays,
+         *     sen_friendly; `camp` the same plus lunch_included; `place`
+         *     toilets, changing_table, shade, fenced, stroller_access,
+         *     water_play, lifeguard, parking, food_nearby; `eat` high_chairs,
+         *     kids_menu, changing_table, stroller_access, room_to_run,
+         *     outdoor_seating; `preschool` none. Another key or a non-boolean
+         *     value is a validation error. Changing `kind` without sending
+         *     `facts` drops the keys the new kind does not allow. Admin-write
+         *     only; manager routes and org-scoped partner keys ignore it.
+         */
+        ListingFacts: {
+            [key: string]: boolean;
+        };
         AdminImportFile: {
             /**
              * Format: uuid
@@ -7892,6 +7936,14 @@ export interface components {
             vetting_note?: string;
             age_min: number;
             age_max: number;
+            /**
+             * @description When a new activity omits it, `camp` if the name reads like
+             *     a camp or workshop (camp, workshop, holiday course, 夏令營,
+             *     冬令營, 日營, 工作坊, 暑期班), else `class`. An existing
+             *     activity keeps its kind unless the file sends one.
+             */
+            kind?: components["schemas"]["ListingKind"];
+            facts?: components["schemas"]["ListingFacts"];
             pricing?: components["schemas"]["AdminImportPricing"][];
             schedules?: components["schemas"]["AdminImportSchedule"][];
         };
@@ -7911,6 +7963,18 @@ export interface components {
             timezone: string;
             languages?: string[];
             weekly_entries: components["schemas"]["AdminImportScheduleEntry"][];
+            /**
+             * Format: date
+             * @description First day of a dated session (Hong Kong calendar), with ends_on.
+             *     A camp lists one schedule per session. Rows match on venue,
+             *     languages, and starts_on.
+             */
+            starts_on?: string;
+            /**
+             * Format: date
+             * @description Last day of a dated session, on or after starts_on.
+             */
+            ends_on?: string;
         };
         AdminImportScheduleEntry: {
             /** @description Local day of week (0=Sunday). */
@@ -8310,6 +8374,39 @@ export interface components {
                 [key: string]: number;
             };
             with_blockers: number;
+            readiness?: components["schemas"]["AreaReadiness"];
+        };
+        /**
+         * @description Whether an area can open. It is ready when at least
+         *     `thresholds.complete_share` of its classes and camps are complete
+         *     and at least `thresholds.verified_share` of its organisers are
+         *     parent-verified. Rejected organisers and listings in hidden
+         *     categories are left out. A share is null when there is nothing
+         *     to count, and then the area is not ready.
+         */
+        AreaReadiness: {
+            /** Format: uuid */
+            area_id: string;
+            /** @description Listings per kind. Every kind is present, including zeros. */
+            listings_by_kind: {
+                [key: string]: number;
+            };
+            classes_and_camps: number;
+            /**
+             * @description Classes and camps with a price and a time that has not ended. A
+             *     class also needs an age range that is not a catch-all. A camp
+             *     needs a dated session that has not ended.
+             */
+            complete_classes_and_camps: number;
+            organisers: number;
+            verified_organisers: number;
+            complete_share: number | null;
+            verified_share: number | null;
+            thresholds: {
+                complete_share: number;
+                verified_share: number;
+            };
+            ready: boolean;
         };
         OrgReviewDecisionRequest: {
             /** @enum {string} */
@@ -8409,6 +8506,15 @@ export interface components {
             /** @description Admin only. Shows the Parent-Verified badge on the public website. Manager writes ignore it. */
             parent_verified?: boolean;
             /**
+             * Format: date-time
+             * @description Admin only. When a parent last checked the organization. May
+             *     not be in the future, and needs `parent_verified` to be true.
+             *     Turning `parent_verified` on without it stamps the server
+             *     time; sending it again records a re-check. Turning
+             *     `parent_verified` off clears it. Manager writes ignore it.
+             */
+            parent_verified_at?: string | null;
+            /**
              * @description List of media URLs (optional, max 20 URLs).
              *     Each URL must use http or https scheme and be max 2,048 characters.
              */
@@ -8484,6 +8590,15 @@ export interface components {
             wechat?: string;
             /** @description Admin only. Shows the Parent-Verified badge on the public website. Manager writes ignore it. */
             parent_verified?: boolean;
+            /**
+             * Format: date-time
+             * @description Admin only. When a parent last checked the organization. May
+             *     not be in the future, and needs `parent_verified` to be true.
+             *     Turning `parent_verified` on without it stamps the server
+             *     time; sending it again records a re-check. Turning
+             *     `parent_verified` off clears it. Manager writes ignore it.
+             */
+            parent_verified_at?: string | null;
             media_urls?: string[];
             /**
              * Format: uri
@@ -8554,6 +8669,13 @@ export interface components {
             wechat?: string | null;
             /** @description Admin-set. Shows the Parent-Verified badge on the public website. */
             parent_verified?: boolean;
+            /**
+             * Format: date-time
+             * @description When a parent last checked the organization. Null when it is
+             *     not verified, or when it was verified before checked dates
+             *     were recorded.
+             */
+            parent_verified_at?: string | null;
             media_urls: string[];
             /**
              * Format: uri
@@ -8689,6 +8811,8 @@ export interface components {
             age_min: number;
             /** @description Maximum age (required, 1-120, must be greater than age_min) */
             age_max: number;
+            kind?: components["schemas"]["ListingKind"];
+            facts?: components["schemas"]["ListingFacts"];
             location_ids?: components["schemas"]["ActivityLocationIds"];
         };
         ActivityUpdate: {
@@ -8715,6 +8839,8 @@ export interface components {
             age_min?: number;
             /** @description Maximum age (must provide both age_min and age_max together) */
             age_max?: number;
+            kind?: components["schemas"]["ListingKind"];
+            facts?: components["schemas"]["ListingFacts"];
             location_ids?: components["schemas"]["ActivityLocationIds"];
         };
         Activity: {
@@ -8734,6 +8860,8 @@ export interface components {
             readonly source_category_name?: string | null;
             age_min: number;
             age_max: number;
+            kind: components["schemas"]["ListingKind"];
+            facts: components["schemas"]["ListingFacts"];
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -8874,6 +9002,20 @@ export interface components {
              *     Translation maps still keep zh-HK.
              */
             languages?: ("en" | "zh" | "ja" | "ko" | "fr" | "de" | "es" | "pt" | "it" | "ru" | "ar" | "hi" | "th" | "vi" | "id" | "ms" | "tl" | "nl" | "pl" | "tr" | "yue")[];
+            /**
+             * Format: date
+             * @description First day of a dated session (Hong Kong calendar). Set it with
+             *     ends_on for a camp or workshop; leave both empty for a weekly
+             *     class. Each entry's Hong Kong weekday must occur between the
+             *     two dates. Several sessions can share an activity, venue, and
+             *     languages when their start dates differ.
+             */
+            starts_on?: string | null;
+            /**
+             * Format: date
+             * @description Last day of a dated session, on or after starts_on.
+             */
+            ends_on?: string | null;
         };
         ScheduleUpdate: {
             /** @enum {string} */
@@ -8881,6 +9023,13 @@ export interface components {
             weekly_entries?: components["schemas"]["WeeklyScheduleEntry"][];
             /** @description Same codes as ScheduleCreate. zh-HK and zh_HK are stored as yue. */
             languages?: ("en" | "zh" | "ja" | "ko" | "fr" | "de" | "es" | "pt" | "it" | "ru" | "ar" | "hi" | "th" | "vi" | "id" | "ms" | "tl" | "nl" | "pl" | "tr" | "yue")[];
+            /**
+             * Format: date
+             * @description Same rules as ScheduleCreate. Send null on both to clear.
+             */
+            starts_on?: string | null;
+            /** Format: date */
+            ends_on?: string | null;
         };
         Schedule: {
             /** Format: uuid */
@@ -8892,6 +9041,10 @@ export interface components {
             schedule_type: string;
             weekly_entries: components["schemas"]["WeeklyScheduleEntry"][];
             languages: string[];
+            /** Format: date */
+            starts_on?: string | null;
+            /** Format: date */
+            ends_on?: string | null;
             version?: number;
         };
         ScheduleListResponse: {
@@ -9283,14 +9436,24 @@ export interface components {
             name: string;
             name_translations: components["schemas"]["TranslationMap"];
             display_order: number;
-            /** @description When true, the home wizard lists this category. Pending categorisation cannot be shown. Search expands the category to its descendants. */
+            /** @description When true, the home wizard lists this category. Pending categorisation and the fixed roots cannot be shown. Search expands the category to its descendants. */
             show_in_wizard?: boolean;
+            /** @description When true, public and partner search skip activities in this category and every category under it. Schools and Members-only clubs start hidden. Pending categorisation cannot change it. */
+            hidden_from_public?: boolean;
             /**
              * @description True for Pending categorisation
-             *     (`c1111111-1111-1111-1111-111111111199`). That row cannot
-             *     be renamed, re-parented, deleted, or used as a parent.
+             *     (`c1111111-1111-1111-1111-111111111199`) and the five fixed
+             *     roots (`…1401` to `…1405`). These rows cannot be renamed,
+             *     re-parented, or deleted, and cannot appear in the home
+             *     wizard. Pending cannot be a parent; the fixed roots can, and
+             *     their children are ordinary categories.
              */
             is_system?: boolean;
+            /**
+             * @description Which system row this is, or null for an ordinary category. `places`, `nurseries`, and `eat` decide the kind of an activity under them.
+             * @enum {string|null}
+             */
+            system_role?: "pending" | "places" | "nurseries" | "eat" | "schools" | "members_clubs" | null;
             /** @description Nested child categories (tree responses) */
             children?: components["schemas"]["ActivityCategory"][];
         };
@@ -9308,6 +9471,8 @@ export interface components {
             display_order?: number;
             /** @description Include this category in the home wizard. */
             show_in_wizard?: boolean;
+            /** @description Hide this category and everything under it from public search. Not allowed on Pending categorisation. */
+            hidden_from_public?: boolean;
         };
         ActivityCategoryUpdate: {
             /** @description Category name */
@@ -9323,6 +9488,8 @@ export interface components {
             display_order?: number;
             /** @description Include this category in the home wizard. */
             show_in_wizard?: boolean;
+            /** @description Hide this category and everything under it from public search. Not allowed on Pending categorisation. */
+            hidden_from_public?: boolean;
         };
         ActivityCategoryListResponse: {
             items: components["schemas"]["ActivityCategory"][];

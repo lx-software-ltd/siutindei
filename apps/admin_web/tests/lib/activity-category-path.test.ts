@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  categoryOptionLabel,
   flattenCategoriesByPathOrder,
   groupCategoriesByParent,
+  isPendingCategory,
   type CategoryPathNode,
 } from '@/lib/activity-category-path';
 
@@ -79,5 +81,29 @@ describe('groupCategoriesByParent', () => {
       'earlier',
       'later',
     ]);
+  });
+});
+
+describe('category roles', () => {
+  it('treats only the pending role as pending', () => {
+    expect(isPendingCategory({ is_system: true, system_role: 'pending' })).toBe(true);
+    expect(isPendingCategory({ is_system: true })).toBe(true);
+    expect(isPendingCategory({ is_system: true, system_role: 'schools' })).toBe(false);
+    expect(isPendingCategory({ is_system: false, system_role: null })).toBe(false);
+    expect(isPendingCategory(undefined)).toBe(false);
+  });
+
+  it('labels pending and hidden categories', () => {
+    expect(categoryOptionLabel('Pending', { system_role: 'pending' })).toBe(
+      'Pending (pending)'
+    );
+    expect(
+      categoryOptionLabel('Schools', {
+        is_system: true,
+        system_role: 'schools',
+        hidden_from_public: true,
+      })
+    ).toBe('Schools (hidden from public)');
+    expect(categoryOptionLabel('Sports', { system_role: null })).toBe('Sports');
   });
 });

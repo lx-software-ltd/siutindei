@@ -2,7 +2,7 @@ import type { ActivityDetailCopy } from './types';
 import { DetailIcon, type DetailIconName } from './detail-icon';
 
 export interface KeyFact {
-  readonly id: 'ages' | 'when' | 'where' | 'price' | 'language';
+  readonly id: 'ages' | 'when' | 'hours' | 'where' | 'price' | 'language';
   readonly icon: DetailIconName;
   readonly value: string | null;
   readonly detail?: string | null;
@@ -19,6 +19,7 @@ function labelFor(copy: ActivityDetailCopy, id: KeyFact['id']): string {
   return {
     ages: copy.agesLabel,
     when: copy.whenLabel,
+    hours: copy.openingHoursLabel,
     where: copy.whereLabel,
     price: copy.priceLabel,
     language: copy.languageLabel,
@@ -29,6 +30,7 @@ function missingFor(copy: ActivityDetailCopy, id: KeyFact['id']): string | null 
   return {
     ages: copy.askForAgesLabel,
     when: copy.askForTimesLabel,
+    hours: null,
     where: copy.askForPlaceLabel,
     price: copy.askForPriceLabel,
     language: null,

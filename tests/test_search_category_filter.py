@@ -37,7 +37,7 @@ def test_build_search_query_applies_category_filter() -> None:
 def test_wizard_group_search_sql_unions_legacy_roots() -> None:
     """An empty wizard group can still match the legacy roots."""
 
-    group_id = UUID("c1111111-1111-1111-1111-111111111201")
+    group_id = UUID("c1111111-1111-1111-1111-111111111301")
     filters = ActivitySearchFilters(category_ids=[group_id])
     compiled = str(build_search_query(filters)).upper()
     assert "EXISTS" in compiled
@@ -76,3 +76,12 @@ def test_build_search_query_applies_area_tree_filter() -> None:
     query = build_search_query(filters)
     where_clause = str(query.whereclause)
     assert "geographic_areas" in where_clause
+
+
+def test_search_sql_excludes_hidden_category_trees() -> None:
+    """Public search drops activities under a category hidden from public."""
+
+    compiled = str(build_search_query(ActivitySearchFilters())).lower()
+    assert "hidden_category_tree" in compiled
+    assert "hidden_from_public" in compiled
+    assert "activities.category_id not in" in compiled

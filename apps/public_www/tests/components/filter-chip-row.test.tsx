@@ -125,4 +125,29 @@ describe('FilterChipRow', () => {
     fireEvent.change(price, { target: { value: '' } });
     expect(replace).toHaveBeenLastCalledWith('/en/search/?day=weekend&lang=yue&view=map');
   });
+
+  it('picks a kind and keeps class-only filters to classes', () => {
+    currentSearchParams.value = new URLSearchParams('trial=1&price=250');
+    renderChipRow();
+
+    const kind = screen.getByRole('combobox', { name: copy.kindFilterLabel });
+    expect(
+      Array.from((kind as HTMLSelectElement).options).map((option) => option.value),
+    ).toEqual(['', 'class', 'camp', 'place']);
+    fireEvent.change(kind, { target: { value: 'place' } });
+
+    expect(replace).toHaveBeenLastCalledWith('/en/search/?kind=place&view=map');
+    expect(
+      screen.queryByRole('button', { name: copy.freeTrialFilterLabel }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: copy.priceFilterLabel }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(kind, { target: { value: 'class' } });
+    expect(replace).toHaveBeenLastCalledWith('/en/search/?kind=class&view=map');
+    expect(
+      screen.getByRole('combobox', { name: copy.priceFilterLabel }),
+    ).toBeInTheDocument();
+  });
 });

@@ -5,6 +5,7 @@ import { HeroSearchBar } from '@/components/sections/hero/hero-search-bar';
 import { SearchBarCompact } from '@/components/sections/search/search-bar-compact';
 import { SearchProvider } from '@/components/shared/search/search-context';
 import { getContent } from '@/content';
+import { DEFAULT_SEARCH_FILTERS } from '@/lib/activities/search-params';
 import { clearSearchAreaScopeCacheForTests } from '@/lib/home-wizard/area-scope';
 
 const push = vi.hoisted(() => vi.fn());
@@ -76,5 +77,27 @@ describe('search bars with one open region', () => {
     expect(compactSearch?.className).toContain('text-[2.25rem]');
     fireEvent.click(searchButtons[0]);
     expect(push).toHaveBeenCalledWith('/en/search/?view=map');
+  });
+});
+
+describe('compact search bar', () => {
+  it('names the chosen kind ahead of its topics', () => {
+    const labels = getContent('en').navbar.searchBar;
+    render(
+      <SearchProvider
+        initialFilters={{
+          ...DEFAULT_SEARCH_FILTERS,
+          kind: 'camp',
+          activityTypeIds: ['art'],
+        }}
+      >
+        <SearchBarCompact locale="en" labels={labels} />
+      </SearchProvider>,
+    );
+
+    const phoneSummary = document.querySelector('.search-bar-compact button.md\\:hidden');
+    expect(phoneSummary?.querySelectorAll('span')[1]).toHaveTextContent(
+      'Any age · A camp or workshop · Art and making',
+    );
   });
 });

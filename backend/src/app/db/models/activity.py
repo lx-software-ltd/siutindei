@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -75,6 +75,20 @@ class Activity(Base):
         nullable=True,
     )
     age_range: Mapped[object] = mapped_column(INT4RANGE(), nullable=False)
+    kind: Mapped[str] = mapped_column(
+        Text(),
+        nullable=False,
+        default="class",
+        server_default=text("'class'"),
+        comment="Listing kind: decides what the card and page show",
+    )
+    facts: Mapped[dict[str, bool]] = mapped_column(
+        sa.dialects.postgresql.JSONB(),
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+        comment="Parent-checked facts: true seen, false seen missing",
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=False,
@@ -105,6 +119,18 @@ class Activity(Base):
     schedules: Mapped[list[ActivitySchedule]] = relationship(
         back_populates="activity",
         cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "kind IN ('class', 'camp', 'place', 'preschool', 'eat')",
+            name="activities_kind_check",
+        ),
+        CheckConstraint(
+            "jsonb_typeof(facts) = 'object'",
+            name="activities_facts_object_check",
+        ),
+        Index("activities_kind_idx", "kind"),
     )
 
 
@@ -223,17 +249,40 @@ class ActivitySchedule(Base):
         default=1,
         server_default=text("1"),
     )
+    starts_on: Mapped[date | None] = mapped_column(
+        sa.Date(),
+        nullable=True,
+        comment="First day of a dated session, Hong Kong calendar",
+    )
+    ends_on: Mapped[date | None] = mapped_column(
+        sa.Date(),
+        nullable=True,
+        comment="Last day of a dated session, Hong Kong calendar",
+    )
 
     __table_args__ = (
         CheckConstraint(
             "schedule_type = 'weekly'",
             name="schedule_type_weekly_only",
         ),
-        UniqueConstraint(
+        CheckConstraint(
+            "(starts_on IS NULL AND ends_on IS NULL) OR "
+            "(starts_on IS NOT NULL AND ends_on IS NOT NULL AND ends_on >= starts_on)",
+            name="schedule_dates_check",
+        ),
+        Index(
+            "schedule_unique_activity_location_languages_start",
             "activity_id",
             "location_id",
             "languages",
-            name="schedule_unique_activity_location_languages",
+            "starts_on",
+            unique=True,
+            postgresql_nulls_not_distinct=True,
+        ),
+        Index(
+            "activity_schedule_ends_on_idx",
+            "ends_on",
+            postgresql_where=text("ends_on IS NOT NULL"),
         ),
     )
 

@@ -54,6 +54,27 @@ describe('ActivitiesLandingPage questions', () => {
     expect(questions.textContent).toContain(copy.joinAnswer);
   });
 
+  it('groups the hub by kind, links the kind page, and skips coverage without dates', async () => {
+    const content = getContent('en');
+    const copy = content.activitiesPage;
+    const { container } = render(
+      withChromeCopy(
+        <PageLayout locale="en" navbarContent={content.navbar} footerContent={content.footer}>
+          {await ActivitiesHubPage({ params: Promise.resolve({ locale: 'en' }) })}
+        </PageLayout>,
+      ),
+    );
+
+    const classes = screen.getByRole('heading', { level: 2, name: copy.kindPages.classes });
+    const section = classes.closest('section') as HTMLElement;
+    expect(within(section).getByRole('link', { name: /^See all \d+/ })).toHaveAttribute(
+      'href',
+      '/en/activities/classes',
+    );
+    expect(screen.queryByRole('heading', { level: 2, name: copy.kindPages.places })).toBeNull();
+    expect(container.querySelector('[data-coverage]')).toBeNull();
+  });
+
   it('leaves out questions the data cannot answer', () => {
     const content = getContent('en');
     render(
@@ -65,8 +86,9 @@ describe('ActivitiesLandingPage questions', () => {
         breadcrumbs={[]}
         facts={{ ages: '3 to 8 years', days: null, prices: null }}
         categoriesHeading="Types"
+        coverage={null}
         categories={[]}
-        listings={[]}
+        sections={[]}
         searchHref="/en/search/"
       />,
     );

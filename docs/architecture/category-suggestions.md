@@ -209,9 +209,55 @@ DATABASE_URL=postgresql+psycopg://... \
 That writes `shared/home_wizard/home_wizard_choices.json` and
 `apps/public_www/src/data/home_wizard_choices.json`. Public search
 matches a category and its descendants, and it still excludes Pending
-categorisation. A search for one of the seven wizard groups that has
+categorisation. A search for one of the nine topics that has
 no activities on its leaves also includes the legacy roots, and the
 response sets `category_match` to `legacy_fallback`. That union stops
 for a group once any activity is on the group or a leaf under it. A
 category shown in the wizard cannot be deleted until
 the flag is cleared.
+
+## Topics, fixed roots, and hidden categories
+
+Migration `0066_family_guide_taxonomy` replaced the seven `0040`
+groups with nine topics (`…1301` to `…1309`, `show_in_wizard`) and
+five fixed roots: Places to play (`…1401`), Nurseries and
+kindergartens (`…1402`), Eat with kids (`…1403`), Schools (`…1404`),
+and Members-only clubs (`…1405`). Primary school, Secondary school,
+and International and prep schools keep their `0040` ids under
+Schools. Every other old name is an import alias: a merged
+`category_suggestions` row decided by `migration:0066`, so a file that
+still sends "Swimming pool" or "游泳池" resolves to the new row.
+
+The fixed roots are protected like Pending categorisation: no rename,
+re-parent, delete, or home-wizard flag, from the admin console or a
+partner key. Their children are ordinary categories. An activity under
+Places to play, Nurseries and kindergartens, or Eat with kids takes
+the kind `place`, `preschool`, or `eat`; under a topic a `place`,
+`preschool`, or `eat` becomes `class`. `kind_for_category` in
+`app.services.listing_kinds` decides this, and every write that
+assigns a category goes through it (admin and import activity writes,
+accepted import changes, review apply and revert, scan auto-apply,
+discover auto-map, and enrichment apply).
+
+`activity_categories.hidden_from_public` hides a category and every
+category under it from public and partner search, including results
+without a price or schedule and the result count. Schools and
+Members-only clubs start hidden; an admin can hide or show any other
+category except Pending. Only the admin console changes the flag.
+
+When a category is assigned and the organization is left with
+activities that are all hidden, `reject_if_only_hidden` rejects it as
+`not_relevant` with `reviewed_by = system:category`. An organization
+already rejected keeps its reason, one with no activities is left
+alone, and moving an activity back out does not undo the rejection.
+The migration did the same once with `reviewed_by = migration:0066`.
+Hiding or showing a category does not reject anyone by itself.
+Organization review raises no price or schedule blocker for a hidden
+activity, and warns `no_listable_activities` when every activity is
+hidden, which flags an organization an admin approved again by hand.
+
+The recheck prompt sends schools above kindergarten to the matching
+school leaf and members-only clubs to Members-only clubs. A programme
+a club opens to non-members goes to its topic, a venue anyone can walk
+into goes under Places to play, and a class taught at a venue goes to
+its topic.

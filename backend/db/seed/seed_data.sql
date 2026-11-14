@@ -67,7 +67,7 @@ INSERT INTO activities (
   id, org_id, category_id, name, description, age_range, source_url, source_note
 )
 SELECT 'dddddddd-dddd-dddd-dddd-dddddddddddd', '11111111-1111-1111-1111-111111111111',
-       'c1111111-1111-1111-1111-111111111233',
+       'c1111111-1111-1111-1111-111111111304',
        'Creative Painting', 'Painting classes for young artists.',
        int4range(4, 9, '[]'),
        'https://harborarts.example/painting', 'Sample class note'
@@ -77,7 +77,7 @@ WHERE NOT EXISTS (
 
 INSERT INTO activities (id, org_id, category_id, name, description, age_range)
 SELECT 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', '22222222-2222-2222-2222-222222222222',
-       'c1111111-1111-1111-1111-111111111232',
+       'c1111111-1111-1111-1111-111111111305',
        'Beginner Dance', 'Introductory dance sessions.',
        int4range(3, 7, '[]')
 WHERE NOT EXISTS (
@@ -86,12 +86,12 @@ WHERE NOT EXISTS (
 
 -- Existing local databases keep the original category until this update.
 UPDATE activities
-SET category_id = 'c1111111-1111-1111-1111-111111111233'
+SET category_id = 'c1111111-1111-1111-1111-111111111304'
 WHERE id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
   AND category_id = '99999999-9999-9999-9999-999999999999';
 
 UPDATE activities
-SET category_id = 'c1111111-1111-1111-1111-111111111232'
+SET category_id = 'c1111111-1111-1111-1111-111111111305'
 WHERE id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
   AND category_id = '99999999-9999-9999-9999-999999999999';
 

@@ -5,8 +5,10 @@ import { useMemo } from 'react';
 import { useFormValidation } from '../../hooks/use-form-validation';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import {
+  categoryOptionLabel,
   flattenCategoriesByPathOrder,
   groupCategoriesByParent,
+  isPendingCategory,
 } from '../../lib/activity-category-path';
 import { ADMIN_API_MAX_LIST_LIMIT } from '../../lib/admin-list-query';
 import { adminTabLabel, formatAdminPageName } from '../../lib/admin-page-name';
@@ -44,6 +46,7 @@ interface ActivityCategoryFormState {
   parent_id: string;
   display_order: string;
   show_in_wizard: boolean;
+  hidden_from_public: boolean;
 }
 
 const PAGE_NAME = formatAdminPageName('Categories', adminTabLabel.categories);
@@ -55,6 +58,7 @@ const emptyForm: ActivityCategoryFormState = {
   parent_id: '',
   display_order: '0',
   show_in_wizard: false,
+  hidden_from_public: false,
 };
 
 function itemToForm(item: ActivityCategory): ActivityCategoryFormState {
@@ -66,8 +70,17 @@ function itemToForm(item: ActivityCategory): ActivityCategoryFormState {
     display_order:
       item.display_order !== undefined ? `${item.display_order}` : '0',
     show_in_wizard: Boolean(item.show_in_wizard),
+    hidden_from_public: Boolean(item.hidden_from_public),
   };
 }
+
+type PublicState = 'listed' | 'hidden' | 'inherited';
+
+const PUBLIC_STATE_LABEL: Record<PublicState, string> = {
+  listed: 'Listed',
+  hidden: 'Hidden from public',
+  inherited: 'Hidden by a parent',
+};
 
 function parseDisplayOrder(value: string): number | null {
   const trimmed = value.trim();
@@ -122,6 +135,23 @@ export function ActivityCategoriesPanel() {
     return map;
   }, [childrenByParent]);
 
+  const publicStateById = useMemo(() => {
+    const map = new Map<string, PublicState>();
+    function walk(nodes: ActivityCategory[], parentHidden: boolean) {
+      for (const node of nodes) {
+        const state: PublicState = node.hidden_from_public
+          ? 'hidden'
+          : parentHidden
+            ? 'inherited'
+            : 'listed';
+        map.set(node.id, state);
+        walk(childrenByParent.get(node.id) ?? [], state !== 'listed');
+      }
+    }
+    walk(childrenByParent.get('') ?? [], false);
+    return map;
+  }, [childrenByParent]);
+
   const excludedIds = useMemo(() => {
     if (!panel.editingId) return new Set<string>();
     const excluded = new Set<string>([panel.editingId]);
@@ -143,7 +173,7 @@ export function ActivityCategoriesPanel() {
     function walk(nodes: ActivityCategory[], prefix = '') {
       for (const node of nodes) {
         const path = prefix ? `${prefix} / ${node.name}` : node.name;
-        if (!excludedIds.has(node.id) && !node.is_system) {
+        if (!excludedIds.has(node.id) && !isPendingCategory(node)) {
           options.push({ id: node.id, label: path });
         }
         const children = childrenByParent.get(node.id) ?? [];
@@ -159,6 +189,7 @@ export function ActivityCategoriesPanel() {
     (item) => item.id === panel.editingId
   );
   const isSystemLocked = Boolean(editingCategory?.is_system);
+  const isPending = isPendingCategory(editingCategory);
 
   const validate = () => {
     if (!panel.formState.name.trim()) {
@@ -203,8 +234,14 @@ export function ActivityCategoriesPanel() {
 
   const formToPayload = (form: ActivityCategoryFormState) => {
     const displayOrder = parseDisplayOrder(form.display_order);
-    if (isSystemLocked) {
+    if (isPending) {
       return { display_order: displayOrder };
+    }
+    if (isSystemLocked) {
+      return {
+        display_order: displayOrder,
+        hidden_from_public: form.hidden_from_public,
+      };
     }
     return {
       name: form.name.trim(),
@@ -215,6 +252,7 @@ export function ActivityCategoriesPanel() {
       parent_id: form.parent_id || null,
       display_order: displayOrder,
       show_in_wizard: form.show_in_wizard,
+      hidden_from_public: form.hidden_from_public,
     };
   };
 
@@ -338,6 +376,23 @@ export function ActivityCategoriesPanel() {
           />
           Show in the home wizard
         </label>
+        <label className='flex items-center gap-2 text-sm sm:col-span-2'>
+          <input
+            type='checkbox'
+            checked={panel.formState.hidden_from_public}
+            disabled={isPending}
+            onChange={(event) => {
+              if (isPending) {
+                return;
+              }
+              panel.setFormState((prev) => ({
+                ...prev,
+                hidden_from_public: event.target.checked,
+              }));
+            }}
+          />
+          Hidden from public (search skips this category and everything under it)
+        </label>
       </AdminFieldGrid>
     </AdminEditorPanel>
   );
@@ -348,11 +403,10 @@ export function ActivityCategoriesPanel() {
       <ResourceTableShell
         ariaLabel={PAGE_NAME}
         rows={tableRows}
-        getLabel={(item) => {
-          const label = categoryPathById.get(item.id) || item.name;
-          return item.is_system ? `${label} (pending)` : label;
-        }}
-        middleColumnCount={2}
+        getLabel={(item) =>
+          categoryOptionLabel(categoryPathById.get(item.id) || item.name, item)
+        }
+        middleColumnCount={3}
         isLoading={panel.isLoading}
         isLoadingMore={panel.isLoadingMore}
         hasMore={panel.hasMore}
@@ -378,21 +432,30 @@ export function ActivityCategoriesPanel() {
           <>
             <AdminDataTableHeadCell>Path</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>
+              Public
+            </AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>
               Display Order
             </AdminDataTableHeadCell>
           </>
         }
         renderCells={(item) => {
           const label = categoryPathById.get(item.id) || item.name;
-          const pathLabel = item.is_system ? `${label} (pending)` : label;
+          const pathLabel = isPendingCategory(item) ? `${label} (pending)` : label;
+          const publicLabel =
+            PUBLIC_STATE_LABEL[publicStateById.get(item.id) ?? 'listed'];
           return (
             <>
               <AdminDataTableCell>
                 <AdminTableName>{pathLabel}</AdminTableName>
+                <AdminDataTableCellMeta until='secondary' label='Public'>
+                  {publicLabel}
+                </AdminDataTableCellMeta>
                 <AdminDataTableCellMeta until='secondary' label='Display Order' empty={item.display_order == null}>
                   <AdminTableNumber>{item.display_order}</AdminTableNumber>
                 </AdminDataTableCellMeta>
               </AdminDataTableCell>
+              <AdminDataTableCell priority='secondary'>{publicLabel}</AdminDataTableCell>
               <AdminDataTableCell priority='secondary'>
                 <AdminTableNumber>{item.display_order}</AdminTableNumber>
               </AdminDataTableCell>

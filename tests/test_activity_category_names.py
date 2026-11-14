@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import pytest
 from app.api.admin_resource_activity_category import _update_activity_category
+from app.db.models.category_suggestion import SCHOOLS_CATEGORY_ID
 from app.db.repositories.activity_category import ActivityCategoryRepository
 from app.exceptions import ValidationError
 from app.services.activity_categories import create_activity_category
@@ -67,3 +68,26 @@ def test_rename_rejects_a_sibling_name(db_session):
 
     with pytest.raises(ValidationError, match="already exists under that parent"):
         _update_activity_category(repo, canoeing, {"name": "KAYAKING"})
+
+
+def test_a_new_root_cannot_take_a_fixed_root_name(db_session):
+    repo = ActivityCategoryRepository(db_session)
+    with pytest.raises(ValidationError, match="already exists under that parent"):
+        create_activity_category(repo, {"name": "schools"})
+
+
+def test_children_of_a_fixed_root_follow_the_sibling_rule(db_session):
+    repo = ActivityCategoryRepository(db_session)
+    with pytest.raises(ValidationError, match="already exists under that parent"):
+        create_activity_category(
+            repo,
+            {"name": "PRIMARY SCHOOL", "parent_id": str(SCHOOLS_CATEGORY_ID)},
+        )
+    forest = create_activity_category(
+        repo,
+        {"name": "Example forest school", "parent_id": str(SCHOOLS_CATEGORY_ID)},
+    )
+    db_session.add(forest)
+    db_session.flush()
+    _update_activity_category(repo, forest, {"name": "Example bush school"})
+    assert forest.name == "Example bush school"

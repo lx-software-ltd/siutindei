@@ -132,7 +132,7 @@ describe('DiscoveryHomePage', () => {
       document.querySelectorAll('#home-catalogue-heading ~ ul a[href^="/en/activity/"]'),
     );
     expect(activityLinks).toHaveLength(HOME_ACTIVITY_LINK_LIMIT);
-    expect(document.querySelector('a[href^="/en/activities/early-years"]')).toBeInTheDocument();
+    expect(document.querySelector('a[href^="/en/activities/baby-toddler"]')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /See all \d+ activities/ }).getAttribute('href')).toMatch(
       /^\/en\/activities\/?$/,
     );

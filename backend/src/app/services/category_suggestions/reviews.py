@@ -13,6 +13,7 @@ from app.db.models import Activity, ActivityCategory, Organization
 from app.db.models.category_scan import ActivityCategoryReview
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID, CategorySuggestion
 from app.exceptions import ValidationError
+from app.services.listing_kinds import move_to_category
 
 _BULK_ACTIONS = {"apply", "dismiss"}
 BULK_PAGE_SIZE = 100
@@ -70,7 +71,7 @@ def apply_suggestion_to_reviews(
         activity = session.get(Activity, review.activity_id)
         if target_id is not None and activity is not None:
             review.previous_category_id = _uuid(activity.category_id)
-            activity.category_id = target_id  # type: ignore[assignment]
+            move_to_category(session, activity, target_id)
             review.proposed_category_id = target_id
             review.status = "applied"
         else:
@@ -99,7 +100,7 @@ def _apply(
             return _decide(review, "confirmed", decided_by)
         raise ValidationError("category_id is required", field="category_id")
     review.previous_category_id = _uuid(activity.category_id)
-    activity.category_id = target.id  # type: ignore[assignment]
+    move_to_category(session, activity, target.id)
     review.proposed_category_id = _uuid(target.id)
     return _decide(review, "applied", decided_by)
 
@@ -121,7 +122,7 @@ def _revert(
     previous = session.get(ActivityCategory, review.previous_category_id)
     if previous is None or _uuid(previous.id) == PENDING_CATEGORY_ID:
         raise ValidationError("Previous category is missing", field="category_id")
-    activity.category_id = previous.id  # type: ignore[assignment]
+    move_to_category(session, activity, previous.id)
     return _decide(review, "reverted", decided_by)
 
 

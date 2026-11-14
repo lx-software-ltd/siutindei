@@ -50,12 +50,29 @@ test.describe('Categories Panel', () => {
     const rows = adminPage
       .getByRole('table', { name: 'Categories' })
       .locator('tr[data-testid^="admin-row-"]:not([data-testid$="-detail"])');
-    await expect(rows).toHaveCount(5);
+    await expect(rows).toHaveCount(8);
     await expect(rows.nth(0)).toHaveAttribute('data-testid', 'admin-row-cat-sport');
     await expect(rows.nth(1)).toHaveAttribute('data-testid', 'admin-row-cat-water');
     await expect(rows.nth(2)).toHaveAttribute('data-testid', 'admin-row-cat-team');
     await expect(rows.nth(3)).toHaveAttribute('data-testid', 'admin-row-cat-arts');
     await expect(rows.nth(4)).toHaveAttribute('data-testid', 'admin-row-cat-paint');
+    await expect(rows.nth(5)).toHaveAttribute('data-testid', 'admin-row-cat-places');
+    await expect(rows.nth(6)).toHaveAttribute('data-testid', 'admin-row-cat-schools');
+    await expect(rows.nth(7)).toHaveAttribute('data-testid', 'admin-row-cat-primary');
+    await expect(
+      adminPage.getByRole('columnheader', { name: 'Public' })
+    ).toBeVisible();
+    await expect(rows.nth(6)).toContainText('Hidden from public');
+    await expect(rows.nth(7)).toContainText('Hidden by a parent');
+  });
+
+  test('locks a fixed root but lets an admin hide it', async ({ adminPage }) => {
+    await adminPage.getByTestId('admin-row-cat-schools').click();
+    await expect(adminPage.getByLabel('Parent')).toBeDisabled();
+    const hidden = adminPage.getByLabel(/Hidden from public/);
+    await expect(hidden).toBeEnabled();
+    await expect(hidden).toBeChecked();
+    await expect(adminPage.getByLabel('Show in the home wizard')).toBeDisabled();
   });
 
   test('should create a new category', async ({ adminPage }) => {

@@ -5,6 +5,7 @@ function variantKey(variant: ActivityListingVariant): string {
     variant.location.id,
     variant.pricing,
     variant.schedule?.weeklyEntries ?? null,
+    variant.schedule?.startsOn ?? null,
   ]);
 }
 

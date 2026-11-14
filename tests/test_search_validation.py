@@ -6,7 +6,10 @@ from decimal import Decimal
 
 import pytest
 
-from app.api.search_validation import validate_search_query_params
+from app.api.search_validation import (
+    validate_listing_filters,
+    validate_search_query_params,
+)
 from app.exceptions import ValidationError
 
 
@@ -148,3 +151,62 @@ def test_validate_search_rejects_unknown_view() -> None:
             view="compact",
         )
     assert exc.value.field == "view"
+
+
+def _listing(**kwargs):
+    values = {
+        "kinds": [],
+        "age": None,
+        "age_min": None,
+        "age_max": None,
+        "verified": None,
+    }
+    values.update(kwargs)
+    return validate_listing_filters(**values)
+
+
+def test_listing_filters_default_to_every_kind_and_no_age() -> None:
+    result = _listing()
+    assert result.kinds == ()
+    assert result.age_min is None
+    assert result.age_max is None
+    assert result.verified is False
+
+
+def test_listing_filters_split_and_dedupe_kinds() -> None:
+    result = _listing(kinds=["class,camp", " place ", "class", ""])
+    assert result.kinds == ("class", "camp", "place")
+
+
+def test_listing_filters_reject_unknown_kind() -> None:
+    with pytest.raises(ValidationError) as exc:
+        _listing(kinds=["class,party"])
+    assert exc.value.field == "kind"
+
+
+def test_listing_filters_accept_an_age_range() -> None:
+    result = _listing(age_min=6, age_max=11)
+    assert (result.age_min, result.age_max) == (6, 11)
+    assert _listing(age_min=12).age_max is None
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "field"),
+    [
+        ({"age": 4, "age_min": 3}, "age"),
+        ({"age": 4, "age_max": 5}, "age"),
+        ({"age_min": -1}, "age_min"),
+        ({"age_max": -1}, "age_max"),
+        ({"age_min": 8, "age_max": 6}, "age_min"),
+        ({"verified": "maybe"}, "verified"),
+    ],
+)
+def test_listing_filters_reject_bad_combinations(kwargs, field) -> None:
+    with pytest.raises(ValidationError) as exc:
+        _listing(**kwargs)
+    assert exc.value.field == field
+
+
+def test_listing_filters_read_verified_flag() -> None:
+    assert _listing(verified="true").verified is True
+    assert _listing(verified="false").verified is False

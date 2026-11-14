@@ -78,3 +78,44 @@ def test_category_export_accepts_an_items_object() -> None:
         {"version": 2, "activityTypes": [], "ageGroups": [], "regions": []},
     )
     assert built["activityTypes"][0]["id"] == "early-years-and-schools"
+
+
+def test_kinds_are_copied_through() -> None:
+    existing = json.loads(_CHOICES.read_text(encoding="utf-8"))
+    built = _builder().build_home_wizard_choices([], existing)
+    assert built["kinds"] == existing["kinds"]
+
+
+def test_committed_file_lists_topics_kinds_and_five_age_groups() -> None:
+    existing = json.loads(_CHOICES.read_text(encoding="utf-8"))
+    assert existing["version"] == 3
+    assert [item["id"] for item in existing["activityTypes"]] == [
+        "baby-toddler",
+        "sports",
+        "water",
+        "art",
+        "performing",
+        "languages",
+        "stem",
+        "tutoring",
+        "community",
+    ]
+    assert [item["categoryId"][-4:] for item in existing["activityTypes"]] == [
+        str(suffix) for suffix in range(1301, 1310)
+    ]
+    assert [
+        (group["id"], group["minAge"], group["maxAge"])
+        for group in existing["ageGroups"]
+    ] == [("0-1", 0, 0), ("1-2", 1, 2), ("3-5", 3, 5), ("6-11", 6, 11), ("12-18", 12, 18)]
+    for group in existing["ageGroups"]:
+        assert group["minAge"] <= group["searchAge"] <= group["maxAge"]
+    kinds = {kind["id"]: kind for kind in existing["kinds"]}
+    assert list(kinds) == ["class", "camp", "place", "eat"]
+    assert [kind_id for kind_id, kind in kinds.items() if kind["hasTopics"]] == [
+        "class",
+        "camp",
+    ]
+    assert [kind_id for kind_id, kind in kinds.items() if kind["pilot"]] == ["eat"]
+    for kind in kinds.values():
+        assert set(kind["labels"]) == {"en", "zh-HK"}
+        assert set(kind["hint"]) == {"en", "zh-HK"}

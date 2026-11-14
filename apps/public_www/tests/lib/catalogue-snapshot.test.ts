@@ -14,14 +14,18 @@ import {
   catalogueCategories,
   catalogueCategoryParams,
   catalogueListing,
+  catalogueKindPages,
   catalogueListings,
+  catalogueTopicPages,
   clearCatalogueCacheForTests,
+  landingTypeIdForListing,
   latestUpdate,
+  offeredPilotKindIds,
 } from '@/lib/activities/catalogue-snapshot';
 
 interface FixtureRow {
-  activity: { id: string; category_id: string };
-  organization: { status?: string; updated_at?: string };
+  activity: { id: string; category_id: string; category_root_id?: string; kind?: string };
+  organization: { status?: string; updated_at?: string; parent_verified?: boolean };
   [key: string]: unknown;
 }
 
@@ -98,12 +102,96 @@ describe('catalogue snapshot', () => {
     ];
     vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, writeSnapshot(rows));
 
-    const categories = catalogueCategories();
-    expect(categories.map((category) => category.categoryId)).toEqual([firstCategory]);
-    expect(catalogueCategoryParams()).toEqual([
-      { locale: 'en', category: categories[0].typeId },
-      { locale: 'zh-HK', category: categories[0].typeId },
+    const topics = catalogueTopicPages();
+    expect(topics.map((category) => category.categoryId)).toEqual([firstCategory]);
+    expect(catalogueKindPages().map((category) => category.typeId)).toEqual(['classes']);
+    expect(catalogueCategories().map((category) => category.typeId)).toEqual([
+      'classes',
+      topics[0].typeId,
     ]);
+    expect(catalogueCategoryParams()).toEqual([
+      { locale: 'en', category: 'classes' },
+      { locale: 'en', category: topics[0].typeId },
+      { locale: 'zh-HK', category: 'classes' },
+      { locale: 'zh-HK', category: topics[0].typeId },
+    ]);
+  });
+
+  it('gives eat a page and offers it only from three verified places', () => {
+    const eatRows = (count: number, verified = true) =>
+      categoryRows(firstCategory, count).map((row) => {
+        row.activity.kind = 'eat';
+        row.organization = { ...row.organization, parent_verified: verified };
+        return row;
+      });
+    vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, writeSnapshot(eatRows(LANDING_PAGE_MIN_ACTIVITIES - 1)));
+    expect(offeredPilotKindIds()).toEqual([]);
+    expect(catalogueKindPages().map((page) => page.typeId)).not.toContain('eat');
+
+    clearCatalogueCacheForTests();
+    vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, writeSnapshot(eatRows(LANDING_PAGE_MIN_ACTIVITIES, false)));
+    expect(catalogueListings()).toEqual([]);
+    expect(offeredPilotKindIds()).toEqual([]);
+    expect(catalogueKindPages().map((page) => page.typeId)).not.toContain('eat');
+
+    clearCatalogueCacheForTests();
+    vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, writeSnapshot(eatRows(LANDING_PAGE_MIN_ACTIVITIES)));
+    expect(offeredPilotKindIds()).toEqual(['eat']);
+    expect(catalogueKindPages().map((page) => page.typeId)).toEqual(['eat']);
+  });
+
+  it('drops ended sessions and lists camps by their next start', () => {
+    const camps = categoryRows(firstCategory, LANDING_PAGE_MIN_ACTIVITIES + 1);
+    const sessions: ReadonlyArray<[string, string]> = [
+      ['2099-08-03', '2099-08-07'],
+      ['2099-07-06', '2099-07-10'],
+      ['2099-07-20', '2099-07-24'],
+      ['2020-07-20', '2020-07-24'],
+    ];
+    camps.forEach((row, index) => {
+      row.activity.kind = 'camp';
+      const [startsOn, endsOn] = sessions[index];
+      row.schedule = { ...(row.schedule as object), starts_on: startsOn, ends_on: endsOn };
+    });
+    vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, writeSnapshot(camps));
+
+    expect(catalogueListing(camps[3].activity.id)).toBeNull();
+    const [page] = catalogueKindPages();
+    expect(page.typeId).toBe('camps');
+    expect(page.listings.map((listing) => listing.activity.id)).toEqual([
+      camps[1].activity.id,
+      camps[2].activity.id,
+      camps[0].activity.id,
+    ]);
+  });
+
+  it('files a leaf under its root topic and keeps places off topic pages', () => {
+    const classes = categoryRows(firstCategory, LANDING_PAGE_MIN_ACTIVITIES);
+    const places = categoryRows(secondCategory, LANDING_PAGE_MIN_ACTIVITIES);
+    for (const row of classes) {
+      row.activity.category_root_id = firstCategory;
+      row.activity.category_id = 'c1111111-1111-1111-1111-111111119999';
+    }
+    for (const row of places) {
+      row.activity.kind = 'place';
+    }
+    const rows = [...classes, ...places];
+    vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, writeSnapshot(rows));
+
+    const [topic] = catalogueTopicPages();
+    expect(topic.categoryId).toBe(firstCategory);
+    expect(topic.listings.map((listing) => listing.activity.kind)).toEqual(
+      classes.map(() => 'class'),
+    );
+    expect(catalogueKindPages().map((page) => [page.typeId, page.listings.length])).toEqual([
+      ['classes', LANDING_PAGE_MIN_ACTIVITIES],
+      ['places', LANDING_PAGE_MIN_ACTIVITIES],
+    ]);
+
+    const place = catalogueListings().find((listing) => listing.activity.kind === 'place');
+    const leafClass = catalogueListings().find((listing) => listing.activity.kind === 'class');
+    expect(place && landingTypeIdForListing(place)).toBe('places');
+    expect(leafClass && landingTypeIdForListing(leafClass)).toBe(topic.typeId);
   });
 
   it('drops hidden and permanently closed organisations', () => {

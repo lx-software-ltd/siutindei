@@ -5,6 +5,15 @@ export interface WizardLabels {
   readonly 'zh-HK': string;
 }
 
+export interface WizardKindOption {
+  readonly id: string;
+  readonly labels: WizardLabels;
+  readonly hint: WizardLabels;
+  readonly hasTopics: boolean;
+  /** A pilot kind is offered only once the catalogue has enough listings. */
+  readonly pilot: boolean;
+}
+
 export interface WizardActivityTypeOption {
   readonly id: string;
   readonly categoryId: string;
@@ -14,6 +23,8 @@ export interface WizardActivityTypeOption {
 export interface WizardAgeGroupOption {
   readonly id: string;
   readonly searchAge: number;
+  readonly minAge: number;
+  readonly maxAge: number;
   readonly labels: WizardLabels;
 }
 
@@ -33,6 +44,7 @@ export interface WizardNeighbourhoodOption {
 
 export interface HomeWizardChoices {
   readonly version: number;
+  readonly kinds: readonly WizardKindOption[];
   readonly activityTypes: readonly WizardActivityTypeOption[];
   readonly ageGroups: readonly WizardAgeGroupOption[];
   readonly regions: readonly WizardRegionOption[];
@@ -40,6 +52,30 @@ export interface HomeWizardChoices {
 }
 
 export const homeWizardChoices = choicesJson as HomeWizardChoices;
+
+/** Kinds the wizard and the results page offer. Pilot kinds wait. */
+export const OFFERED_KINDS: readonly WizardKindOption[] = homeWizardChoices.kinds.filter(
+  (kind) => !kind.pilot,
+);
+
+export const DEFAULT_SEARCH_KINDS: readonly string[] = OFFERED_KINDS.map(
+  (kind) => kind.id,
+);
+
+/**
+ * The kinds to offer once the build knows which pilot kinds have enough
+ * listings. `pilotKindIds` comes from the catalogue at build time.
+ */
+export function offeredKinds(pilotKindIds: readonly string[]): readonly WizardKindOption[] {
+  return homeWizardChoices.kinds.filter(
+    (kind) => !kind.pilot || pilotKindIds.includes(kind.id),
+  );
+}
+
+/** Any kind in the choices file, pilot or not, so a shared link still parses. */
+export function kindOption(kindId: string | null | undefined): WizardKindOption | undefined {
+  return homeWizardChoices.kinds.find((kind) => kind.id === kindId);
+}
 
 export const REGIONS_BY_ID: ReadonlyMap<string, WizardRegionOption> = new Map(
   homeWizardChoices.regions.map((region) => [region.id, region]),

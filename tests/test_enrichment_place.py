@@ -639,7 +639,9 @@ def test_unmatched_category_wording_becomes_a_suggestion(db_session) -> None:
     )
     activity = db_session.scalars(select(Activity)).one()
     assert str(activity.category_id) == str(PENDING_CATEGORY_ID)
-    suggestion = db_session.scalars(select(CategorySuggestion)).one()
+    suggestion = db_session.scalars(
+        select(CategorySuggestion).where(CategorySuggestion.decided_by.is_distinct_from("migration:0066"))
+    ).one()
     assert suggestion.requested_name == "Ballet"
     assert suggestion.source == "import"
 
@@ -927,7 +929,9 @@ def test_a_matched_category_does_not_capture_other_wording(db_session) -> None:
     )
     activity = db_session.scalars(select(Activity)).one()
     assert str(activity.category_id) == str(dance.id)
-    assert db_session.scalars(select(CategorySuggestion)).all() == []
+    assert db_session.scalars(
+        select(CategorySuggestion).where(CategorySuggestion.decided_by.is_distinct_from("migration:0066"))
+    ).all() == []
 
 
 def test_unknown_wording_is_not_captured_when_imports_reject_it(db_session) -> None:
@@ -951,7 +955,9 @@ def test_unknown_wording_is_not_captured_when_imports_reject_it(db_session) -> N
     )
     activity = db_session.scalars(select(Activity)).one()
     assert str(activity.category_id) == str(PENDING_CATEGORY_ID)
-    assert db_session.scalars(select(CategorySuggestion)).all() == []
+    assert db_session.scalars(
+        select(CategorySuggestion).where(CategorySuggestion.decided_by.is_distinct_from("migration:0066"))
+    ).all() == []
 
 
 def test_apply_rejects_two_logos(db_session) -> None:

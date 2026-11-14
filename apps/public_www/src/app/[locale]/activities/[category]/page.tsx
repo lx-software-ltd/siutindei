@@ -13,12 +13,13 @@ import {
 import {
   catalogueScopePlace,
   itemListStructuredData,
+  landingCoverage,
   landingFacts,
   lowerCategory,
 } from '@/lib/activities/landing-page-data';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
 import { DEFAULT_SEARCH_FILTERS } from '@/lib/activities/search-params';
-import { labelForLocale } from '@/lib/home-wizard/choices';
+import { kindOption, labelForLocale } from '@/lib/home-wizard/choices';
 import { resolveLocalePageContext } from '@/lib/locale-page';
 import { localizePath } from '@/lib/locale-routing';
 import { ROUTES } from '@/lib/routes';
@@ -74,6 +75,13 @@ export default async function ActivityCategoryPage({ params }: CategoryRouteProp
   const heading = formatContentTemplate(copy.categoryHeadingTemplate, values);
   const siteOrigin = getSiteOrigin();
   const pagePath = categoryLandingPath(locale, typeId);
+  const searchFilters =
+    category?.pageKind === 'kind'
+      ? {
+          ...DEFAULT_SEARCH_FILTERS,
+          kind: kindOption(category.listingKind) ? category.listingKind : null,
+        }
+      : { ...DEFAULT_SEARCH_FILTERS, activityTypeIds: category ? [typeId] : [] };
   const crumbs = [
     { label: content.activityDetail.homeLabel, href: localizePath(ROUTES.home, locale) },
     { label: content.activityDetail.searchLabel, href: localizePath(ROUTES.activities, locale) },
@@ -98,6 +106,7 @@ export default async function ActivityCategoryPage({ params }: CategoryRouteProp
         intro={formatContentTemplate(copy.categoryIntroTemplate, values)}
         breadcrumbs={crumbs}
         facts={landingFacts(locale, listings, copy)}
+        coverage={landingCoverage(locale, listings, copy)}
         categoriesHeading={copy.otherTypesHeading}
         categories={catalogueCategories()
           .filter((entry) => entry.typeId !== typeId)
@@ -107,12 +116,10 @@ export default async function ActivityCategoryPage({ params }: CategoryRouteProp
             href: categoryLandingPath(locale, entry.typeId),
             count: entry.listings.length,
           }))}
-        listings={listings.map(cardListing)}
-        searchHref={buildSearchPageHref(
-          locale,
-          { ...DEFAULT_SEARCH_FILTERS, activityTypeIds: category ? [typeId] : [] },
-          { view: 'list' },
-        )}
+        sections={[
+          { id: 'all', heading: copy.allActivitiesHeading, listings: listings.map(cardListing) },
+        ]}
+        searchHref={buildSearchPageHref(locale, searchFilters, { view: 'list' })}
       />
     </>
   );

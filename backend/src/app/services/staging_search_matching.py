@@ -6,8 +6,13 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from app.db.queries import ActivitySearchFilters, applied_search_area_scope
+from app.db.queries import (
+    ActivitySearchFilters,
+    applied_search_area_scope,
+    search_today,
+)
 from app.db.search_conditions import class_price_value, hong_kong_day
+from app.services.schedule_dates import parse_schedule_date, schedule_dates_match
 
 
 def row_class_price(row: dict[str, Any]) -> Decimal | None:
@@ -51,13 +56,8 @@ def matches(
     }:
         return False
 
-    if filters.age is not None:
-        age_min = activity.get("age_min")
-        age_max = activity.get("age_max")
-        if age_min is None or age_max is None:
-            return False
-        if not (age_min <= filters.age <= age_max):
-            return False
+    if not _listing_matches(item, filters):
+        return False
 
     if filters.area_id is not None:
         allowed = area_descendants.get(str(filters.area_id), [str(filters.area_id)])
@@ -106,11 +106,46 @@ def matches(
         if not any(language in langs for language in filters.languages):
             return False
 
+    if not _dates_match(schedule, filters):
+        return False
+
     entries = schedule.get("weekly_entries") or []
     if not _entries_match(entries, filters):
         return False
 
     return not (filters.text_query and not _text_matches(item, filters.text_query))
+
+
+def _dates_match(schedule: dict[str, Any], filters: ActivitySearchFilters) -> bool:
+    return schedule_dates_match(
+        parse_schedule_date(schedule.get("starts_on"), "starts_on"),
+        parse_schedule_date(schedule.get("ends_on"), "ends_on"),
+        search_today(filters),
+        filters.date_from,
+        filters.date_to,
+    )
+
+
+def _listing_matches(item: dict[str, Any], filters: ActivitySearchFilters) -> bool:
+    """Python twin of ``listing_conditions``. A row without ``kind`` is a class."""
+    activity = item["activity"]
+    if filters.kinds and (activity.get("kind") or "class") not in filters.kinds:
+        return False
+    verified = bool((item.get("organization") or {}).get("parent_verified"))
+    if not verified and (filters.verified_only or activity.get("kind") == "eat"):
+        return False
+    wants_range = filters.age_min is not None or filters.age_max is not None
+    if filters.age is None and not wants_range:
+        return True
+    age_min = activity.get("age_min")
+    age_max = activity.get("age_max")
+    if age_min is None or age_max is None:
+        return False
+    if filters.age is not None and not age_min <= filters.age <= age_max:
+        return False
+    if filters.age_min is not None and age_max < filters.age_min:
+        return False
+    return not (filters.age_max is not None and age_min > filters.age_max)
 
 
 def _text_matches(item: dict[str, Any], text_query: str) -> bool:

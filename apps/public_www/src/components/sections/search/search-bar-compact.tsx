@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { Locale } from '@/content/locales';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { buildMapSearchHref } from '@/lib/activities/map-search-url';
-import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
+import { homeWizardChoices, kindOption, labelForLocale } from '@/lib/home-wizard/choices';
 import { buildSearchPageHref } from '@/lib/activities/map-search-url';
 import { summarizeTypes } from '@/lib/activities/search/summarize-types';
 import {
@@ -46,8 +46,14 @@ export function SearchBarCompact({ locale, labels }: SearchBarCompactProps) {
   const ageLabel = ageGroup
     ? labelForLocale(ageGroup.labels, locale)
     : labels.anyAge;
+  const kind = kindOption(filters.kind);
   const typesLabel =
-    summarizeTypes(locale, filters.activityTypeIds) || labels.anyType;
+    [
+      kind ? labelForLocale(kind.labels, locale) : '',
+      summarizeTypes(locale, filters.activityTypeIds),
+    ]
+      .filter(Boolean)
+      .join(' · ') || labels.anyType;
 
   const located = withDefaultOpenLocation(filters);
   const mapHref = buildMapSearchHref(locale, located);

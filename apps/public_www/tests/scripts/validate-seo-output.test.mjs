@@ -51,10 +51,17 @@ describe('pageProblems', () => {
     expect(pageProblems('/about/', '<meta http-equiv="refresh" content="0;url=/en/about/">', options)).toEqual([]);
   });
 
-  it('needs Course JSON-LD on activity pages and catalogue links on home pages', () => {
+  it('needs listing JSON-LD on activity pages and catalogue links on home pages', () => {
     expect(pageProblems('/en/activity/a1/', page({ path: '/en/activity/a1/' }), options)).toEqual([
-      'is an activity page without Course JSON-LD',
+      'is an activity page without listing JSON-LD',
     ]);
+    expect(
+      pageProblems(
+        '/en/activity/a1/',
+        page({ path: '/en/activity/a1/', jsonLd: [{ '@type': 'TouristAttraction' }] }),
+        options,
+      ),
+    ).toEqual([]);
     expect(
       pageProblems(
         '/en/activity/a1/',

@@ -33,6 +33,7 @@ from app.api.admin_validators import (
 from app.db.models import Organization
 from app.db.repositories import OrganizationRepository
 from app.exceptions import ValidationError
+from app.utils import parse_datetime
 from app.utils.translations import build_translation_map
 
 
@@ -96,6 +97,61 @@ def _parse_parent_verified(value: Any) -> bool:
     raise ValidationError("parent_verified must be a boolean", field="parent_verified")
 
 
+def _parse_parent_verified_at(value: Any) -> datetime | None:
+    """Parse the admin-only checked date. It may not be in the future."""
+    if value is None:
+        return None
+    parsed: datetime | None = None
+    if isinstance(value, str):
+        try:
+            parsed = parse_datetime(value.strip())
+        except ValueError:
+            parsed = None
+    if parsed is None:
+        raise ValidationError(
+            "parent_verified_at must be an ISO 8601 date-time",
+            field="parent_verified_at",
+        )
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    if parsed > datetime.now(UTC):
+        raise ValidationError(
+            "parent_verified_at cannot be in the future",
+            field="parent_verified_at",
+        )
+    return parsed
+
+
+def _apply_parent_verified(entity: Organization, body: dict[str, Any]) -> None:
+    """Set the flag and its checked date.
+
+    Turning the flag on stamps the server time unless a date is sent.
+    Sending a date while verified records a re-check. Turning the flag
+    off clears the date.
+    """
+    was_verified = bool(entity.parent_verified)
+    verified = (
+        _parse_parent_verified(body["parent_verified"])
+        if "parent_verified" in body
+        else was_verified
+    )
+    checked_at = _parse_parent_verified_at(body.get("parent_verified_at"))
+    if not verified:
+        if checked_at is not None:
+            raise ValidationError(
+                "parent_verified_at needs parent_verified",
+                field="parent_verified_at",
+            )
+        entity.parent_verified = False
+        entity.parent_verified_at = None
+        return
+    entity.parent_verified = True
+    if checked_at is not None:
+        entity.parent_verified_at = checked_at
+    elif not was_verified:
+        entity.parent_verified_at = datetime.now(UTC)
+
+
 def _ensure_unique_organization_name(
     repo: OrganizationRepository,
     name: str,
@@ -117,6 +173,7 @@ def _update_organization_for_manager(
 ) -> Organization:
     """Update an organization for a manager (limited fields)."""
     body.pop("parent_verified", None)
+    body.pop("parent_verified_at", None)
     body.pop("source_url", None)
     body.pop("source_note", None)
     if "name" in body:
@@ -249,9 +306,10 @@ def _create_organization(
         ),
         description_source=parse_description_source(body.get("description_source")),
         review_status="pending_review",
-        parent_verified=_parse_parent_verified(body.get("parent_verified", False)),
+        parent_verified=False,
         **contact_fields,
     )
+    _apply_parent_verified(entity, body)
     from app.services.data_quality.names import record_imported_name
 
     record_imported_name(repo.session, entity, body, "organization")
@@ -290,8 +348,8 @@ def _update_organization(
         )
     if "manager_id" in body:
         entity.manager_id = _validate_manager_id(body["manager_id"], required=True)  # type: ignore[assignment]
-    if "parent_verified" in body:
-        entity.parent_verified = _parse_parent_verified(body["parent_verified"])
+    if "parent_verified" in body or "parent_verified_at" in body:
+        _apply_parent_verified(entity, body)
     updated_media_urls: list[str] | None = None
     if "media_urls" in body:
         updated_media_urls = _parse_media_urls(body["media_urls"])
@@ -405,6 +463,7 @@ def _serialize_organization(entity: Organization) -> dict[str, Any]:
         "source_note": entity.source_note,
         "description_source": entity.description_source,
         "parent_verified": bool(entity.parent_verified),
+        "parent_verified_at": entity.parent_verified_at,
         "review_status": entity.review_status,
         "reviewed_at": entity.reviewed_at,
         "reviewed_by": entity.reviewed_by,

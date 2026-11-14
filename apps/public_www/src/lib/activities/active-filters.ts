@@ -1,12 +1,13 @@
 import type { Locale } from '@/content/locales';
 import { formatTemplate } from '@/lib/format-template';
-import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
+import { homeWizardChoices, kindOption, labelForLocale } from '@/lib/home-wizard/choices';
 
 import { languageLabel } from './listing-facts';
 import { formatMoney } from './price-format';
 import { dayLabel } from './schedule-format';
 import {
   placeLabelForFilters,
+  withKind,
   type SearchDayChoice,
   type SearchFiltersState,
 } from './search-params';
@@ -64,6 +65,14 @@ export function activeFilters(
       without: filters.neighbourhoodId
         ? { ...filters, neighbourhoodId: null }
         : { ...filters, regionId: null, neighbourhoodId: null },
+    });
+  }
+  const kind = filters.kind ? kindOption(filters.kind) : undefined;
+  if (kind) {
+    chips.push({
+      id: 'kind',
+      label: labelForLocale(kind.labels, locale),
+      without: withKind(filters, null),
     });
   }
   const ageGroup = homeWizardChoices.ageGroups.find((group) => group.id === filters.ageGroupId);

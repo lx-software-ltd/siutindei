@@ -869,3 +869,44 @@ def test_include_incomplete_rejects_a_non_boolean(monkeypatch) -> None:
         assert exc.field == "include_incomplete"
         return
     raise AssertionError(json.dumps(event))
+
+
+def test_a_day_filter_keeps_places_without_opening_hours(
+    monkeypatch, test_engine
+) -> None:
+    _patch_engine(monkeypatch, test_engine)
+    seeded = _seed(test_engine)
+    approved = UUID(seeded["approved_id"])
+    with Session(test_engine) as session:
+        linked = session.get(Activity, seeded["linked_id"])
+        scheduled = session.get(Activity, seeded["scheduled_id"])
+        assert linked is not None and scheduled is not None
+        linked.kind = "place"
+        scheduled.kind = "place"
+        session.commit()
+    try:
+        tuesday = fetch_search_response(
+            ActivitySearchFilters(
+                org_ids=(approved,),
+                limit=20,
+                include_incomplete=True,
+                day_of_week_utc=2,
+            )
+        )
+        assert _ids(tuesday) == {seeded["linked_id"]}
+
+        monday = fetch_search_response(
+            ActivitySearchFilters(
+                org_ids=(approved,),
+                limit=20,
+                include_incomplete=True,
+                days_of_week_hkt=(1,),
+            )
+        )
+        assert _ids(monday) == {
+            seeded["complete_id"],
+            seeded["scheduled_id"],
+            seeded["linked_id"],
+        }
+    finally:
+        _delete(test_engine, seeded)

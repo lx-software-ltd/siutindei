@@ -368,6 +368,27 @@ def test_parse_filters_reads_new_parameters() -> None:
     assert filters.include_total is True
 
 
+def test_parse_filters_reads_listing_parameters() -> None:
+    filters = parse_filters(
+        _event(
+            {
+                "kind": ["class,camp", "place"],
+                "age_min": ["6"],
+                "age_max": ["11"],
+                "verified": ["true"],
+            }
+        )
+    )
+    assert filters.kinds == ("class", "camp", "place")
+    assert (filters.age, filters.age_min, filters.age_max) == (None, 6, 11)
+    assert filters.verified_only is True
+
+    plain = parse_filters(_event({}))
+    assert plain.kinds == ()
+    assert (plain.age_min, plain.age_max) == (None, None)
+    assert plain.verified_only is False
+
+
 @pytest.mark.parametrize(
     ("params", "field"),
     [
@@ -376,6 +397,10 @@ def test_parse_filters_reads_new_parameters() -> None:
         ({"class_price_max": ["-1"]}, "class_price_max"),
         ({"sort": ["distance"]}, "sort"),
         ({"include_total": ["perhaps"]}, "include_total"),
+        ({"kind": ["class,school"]}, "kind"),
+        ({"age": ["4"], "age_max": ["5"]}, "age"),
+        ({"age_min": ["7"], "age_max": ["6"]}, "age_min"),
+        ({"verified": ["perhaps"]}, "verified"),
     ],
 )
 def test_parse_filters_rejects_bad_values(params, field) -> None:

@@ -2,7 +2,9 @@
 
 ``summarize_catalog`` must return the same counts as
 ``summarize_snapshots`` in ``org_review.py``. Blocker predicates mirror
-``collect_issues``. Warning issue codes are counted here for the summary
+``collect_issues``; an activity in a hidden category raises no
+pricing or schedule blocker, and the kind rules live in
+``org_review_kinds.py``. Warning issue codes are counted here for the summary
 and still filtered in Python when paging the queue.
 """
 
@@ -14,11 +16,10 @@ from sqlalchemy import String, and_, case, cast, func, literal, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.db.category_visibility import public_category_clause
 from app.db.models import (
     Activity,
     ActivityLocation,
-    ActivityPricing,
-    ActivitySchedule,
     Location,
     NameFixProposal,
     Organization,
@@ -32,8 +33,13 @@ from app.services.description_boilerplate import (
 )
 from app.services.org_review import (
     ACTIVITY_ADDED_SINCE_REJECTED,
+    NO_LISTABLE,
     REVIEW_REASONS,
     REVIEW_STATUSES,
+)
+from app.services.org_review_kinds import (
+    kind_issue_predicates,
+    missing_pricing_blocker,
 )
 
 BLOCKER_ISSUE_CODES = (
@@ -135,7 +141,10 @@ def _reason_counts(session: Session) -> dict[str, int]:
 
 def has_blocker_clause() -> ColumnElement[bool]:
     """True when the organization has at least one release blocker."""
-    predicates = _issue_predicates()
+    predicates = {
+        **_issue_predicates(),
+        "missing_pricing": missing_pricing_blocker(public_category_clause),
+    }
     return or_(*(predicates[code] for code in BLOCKER_ISSUE_CODES))
 
 
@@ -180,12 +189,14 @@ def _issue_predicates() -> dict[str, ColumnElement[bool]]:
         "no_place_id": _blank(Organization.place_id),
         "no_locations": ~_location_exists(),
         "no_activities": ~_activity_exists(),
+        NO_LISTABLE: and_(
+            _activity_exists(),
+            ~_child_exists(Activity, public_category_clause(Activity.category_id)),
+        ),
         "missing_coordinates": _child_exists(
             Location,
             or_(Location.lat.is_(None), Location.lng.is_(None)),
         ),
-        "missing_pricing": _activity_missing(ActivityPricing),
-        "missing_schedule": _activity_missing(ActivitySchedule),
         "pending_category": _child_exists(
             Activity,
             Activity.category_id == PENDING_CATEGORY_ID,
@@ -235,6 +246,7 @@ def _issue_predicates() -> dict[str, ColumnElement[bool]]:
                 Activity.created_at > Organization.reviewed_at,
             ),
         ),
+        **kind_issue_predicates(public_category_clause),
     }
 
 
@@ -330,8 +342,3 @@ def _activity_missing_location() -> Any:
         .exists()
     )
     return _child_exists(Activity, missing)
-
-
-def _activity_missing(child: Any) -> Any:
-    missing_child = ~select(child.id).where(child.activity_id == Activity.id).exists()
-    return _child_exists(Activity, missing_child)

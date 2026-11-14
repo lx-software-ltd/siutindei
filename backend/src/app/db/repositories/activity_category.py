@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import Activity, ActivityCategory
-from app.db.models.category_suggestion import PENDING_CATEGORY_ID
+from app.db.models.category_suggestion import FIXED_ROOT_IDS, PENDING_CATEGORY_ID
 from app.db.repositories.base import BaseRepository
 from app.exceptions import ValidationError
 
@@ -101,6 +101,11 @@ class ActivityCategoryRepository(BaseRepository[ActivityCategory]):
         if category_id == PENDING_CATEGORY_ID:
             raise ValidationError(
                 "Pending categorisation cannot be deleted",
+                field="id",
+            )
+        if category_id in FIXED_ROOT_IDS:
+            raise ValidationError(
+                "Fixed root categories cannot be deleted",
                 field="id",
             )
         if entity.show_in_wizard:

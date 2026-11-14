@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.api.admin_imports_catalog import catalog_source_key
 from app.db.age_bounds import inclusive_age_bounds
+from app.db.category_visibility import hidden_category_ids
 from app.db.models import (
     Activity,
     ActivityPricing,
@@ -33,6 +34,11 @@ from app.services.org_review_children import (
     linked_activity_ids,
     pending_category_check_ids,
 )
+from app.services.org_review_kinds import (
+    load_activity_signals,
+    note_activity_kind_issues,
+    note_verification,
+)
 from app.services.translation_gaps import note_review_gaps
 
 REVIEW_STATUSES = ("pending_review", "approved", "rejected")
@@ -41,6 +47,8 @@ ACTIVITY_ADDED_SINCE_REJECTED = "activity_added_since_rejected"
 ACTIVITY_ADDED_SINCE_REJECTED_MESSAGE = (
     "New activity added after this organization was rejected"
 )
+NO_LISTABLE = "no_listable_activities"
+NO_LISTABLE_MESSAGE = "Every activity is in a category hidden from public search"
 REJECTED_ACTIVITY_IMPORT_WARNING = (
     "organization was rejected; new activity flagged for review"
 )
@@ -120,9 +128,12 @@ def collect_issues(
     duplicate_ids: set[str] | None = None,
     linked_activity_ids: set[str] | None = None,
     pending_name_fix_ids: set[str] | None = None,
+    hidden_activity_ids: set[str] | None = None,
+    activity_signals: dict[str, set[str]] | None = None,
 ) -> tuple[list[ReviewIssue], int]:
     """Return issues and how many checks ran, so completeness can reach 1."""
     org_id = str(organization.id)
+    hidden = hidden_activity_ids or set()
     issues: list[ReviewIssue] = []
     checks = 0
 
@@ -238,6 +249,10 @@ def collect_issues(
             org_id,
             "No activities",
         )
+    note_verification(organization, add, note)
+    note()
+    if activities and hidden.issuperset(str(a.id) for a in activities):
+        add(NO_LISTABLE, "warning", "organization", org_id, NO_LISTABLE_MESSAGE)
 
     for location in locations:
         note()
@@ -251,24 +266,15 @@ def collect_issues(
             )
     for activity in activities:
         activity_id = str(activity.id)
-        note()
-        if pricing_counts.get(activity_id, 0) <= 0:
-            add(
-                "missing_pricing",
-                "blocker",
-                "activity",
-                activity_id,
-                "Activity has no price",
-            )
-        note()
-        if schedule_counts.get(activity_id, 0) <= 0:
-            add(
-                "missing_schedule",
-                "blocker",
-                "activity",
-                activity_id,
-                "Activity has no schedule",
-            )
+        note_activity_kind_issues(
+            activity,
+            activity_id not in hidden,
+            pricing_counts.get(activity_id, 0),
+            schedule_counts.get(activity_id, 0),
+            (activity_signals or {}).get(activity_id, set()),
+            add,
+            note,
+        )
         note()
         if str(activity.category_id) == str(PENDING_CATEGORY_ID):
             add(
@@ -361,6 +367,11 @@ def load_snapshots(
         activities_by_org[str(activity.org_id)].append(activity)
     pending_checks = pending_category_check_ids(session, activity_ids)
     linked_ids = linked_activity_ids(session, activity_ids)
+    signals = load_activity_signals(session, activity_ids)
+    hidden_categories = hidden_category_ids(session)
+    hidden_ids = {
+        str(a.id) for a in activities if UUID(str(a.category_id)) in hidden_categories
+    }
     from app.services.name_fixes import load_name_fix_config
     from app.services.org_duplicates import orgs_with_duplicate_signals
     from app.services.org_review_names import pending_name_fix_ids as load_name_ids
@@ -401,6 +412,8 @@ def load_snapshots(
                 if str(activity.id) in linked_ids
             },
             name_ids,
+            hidden_ids,
+            signals,
         )
         snapshots.append(
             OrgReviewSnapshot(

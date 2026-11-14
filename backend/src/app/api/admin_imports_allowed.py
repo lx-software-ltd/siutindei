@@ -55,6 +55,8 @@ ALLOWED_ACTIVITY_FIELDS = {
     "description_translations",
     "age_min",
     "age_max",
+    "kind",
+    "facts",
     "category_id",
     "category_name",
     "source_url",
@@ -78,4 +80,6 @@ ALLOWED_SCHEDULE_FIELDS = {
     "timezone",
     "languages",
     "weekly_entries",
+    "starts_on",
+    "ends_on",
 }

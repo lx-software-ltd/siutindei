@@ -15,7 +15,7 @@ import { ANALYTICS_CONSENT_STORAGE_KEY } from '@/lib/analytics/consent';
 import { formatTemplate } from '@/lib/format-template';
 
 import { withChromeCopy } from '../helpers/chrome-copy';
-import { buildListing, buildLocation } from '../helpers/listing-fixture';
+import { buildListing, buildLocation, buildSchedule } from '../helpers/listing-fixture';
 
 vi.mock('@/lib/activities/search-client', () => ({
   fetchActivityListingById: vi.fn(),
@@ -167,6 +167,7 @@ describe('ActivityDetailPage', () => {
     expect(wechat.closest('a')).toBeNull();
     expect(wechat).not.toHaveClass('underline');
     expect(screen.getByText(copy.parentVerifiedLabel)).toBeInTheDocument();
+    expect(screen.getByText(copy.parentVerifiedExplainer)).toBeInTheDocument();
     expect(screen.getAllByText(/4\.5/).length).toBeGreaterThan(0);
   });
 
@@ -184,7 +185,79 @@ describe('ActivityDetailPage', () => {
     );
     expect(within(facts).getByRole('link', { name: copy.askForTimesLabel })).toBeInTheDocument();
     expect(screen.queryByText(copy.parentVerifiedLabel)).not.toBeInTheDocument();
+    expect(screen.queryByText(copy.parentVerifiedExplainer)).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: copy.reviewsHeading })).not.toBeInTheDocument();
+  });
+
+  it('shows a place with opening hours, what a parent saw, and when they checked', async () => {
+    vi.mocked(fetchActivityListingById).mockResolvedValue(
+      buildListing({
+        activity: {
+          kind: 'place',
+          categoryName: 'Playground',
+          facts: { toilets: true, shade: false },
+        },
+        organization: { parentVerified: true, parentVerifiedAt: '2026-10-15T00:00:00Z' },
+      }),
+    );
+    renderPage();
+
+    await screen.findByRole('heading', { level: 1, name: 'Kowloon art' });
+    const [facts] = screen.getAllByLabelText(copy.keyFactsLabel);
+    expect(within(facts).getByText(copy.openingHoursLabel)).toBeInTheDocument();
+    expect(within(facts).queryByText(copy.agesLabel)).not.toBeInTheDocument();
+    expect(within(facts).queryByText(copy.languageLabel)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Taught in/)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: copy.openingHoursHeading })).toBeInTheDocument();
+
+    const goodToKnow = screen.getByRole('heading', { level: 2, name: copy.goodToKnowHeading });
+    const section = goodToKnow.closest('section') as HTMLElement;
+    expect(within(section).getByText(copy.factLabels.toilets.present)).toBeInTheDocument();
+    expect(within(section).getByText(copy.factLabels.shade.absent)).toBeInTheDocument();
+    expect(screen.getByText(/Checked October 2026/)).toBeInTheDocument();
+  });
+
+  it('lists a camp\'s upcoming sessions and shows the next one as a key fact', async () => {
+    const weekdays = [1, 2, 3, 4, 5].map((day) => ({
+      dayOfWeekUtc: day,
+      startMinutesUtc: 60,
+      endMinutesUtc: 420,
+    }));
+    const session = (startsOn: string, endsOn: string) => ({
+      location: buildLocation(),
+      pricing: null,
+      schedule: buildSchedule({ weeklyEntries: weekdays, startsOn, endsOn }),
+    });
+    vi.mocked(fetchActivityListingById).mockResolvedValue({
+      ...buildListing({ activity: { kind: 'camp' } }),
+      variants: [
+        session('2099-07-27', '2099-07-31'),
+        session('2020-07-20', '2020-07-24'),
+        session('2099-07-20', '2099-07-24'),
+      ],
+    });
+    renderPage();
+
+    await screen.findByRole('heading', { level: 1, name: 'Kowloon art' });
+    const [facts] = screen.getAllByLabelText(copy.keyFactsLabel);
+    expect(within(facts).getByText('20–24 Jul · 09:00–15:00')).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { level: 2, name: copy.datesHeading });
+    const section = heading.closest('section') as HTMLElement;
+    expect(within(section).getAllByRole('listitem').map((row) => row.firstChild?.textContent)).toEqual([
+      '20–24 Jul',
+      '27–31 Jul',
+    ]);
+    expect(
+      screen.queryByRole('heading', { level: 2, name: copy.scheduleHeading }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('leaves out the good-to-know section when nothing was checked', async () => {
+    renderPage();
+
+    await screen.findByRole('heading', { level: 1, name: 'Kowloon art' });
+    expect(screen.queryByRole('heading', { name: copy.goodToKnowHeading })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Checked /)).not.toBeInTheDocument();
   });
 
   it('lets visitors switch between venues', async () => {

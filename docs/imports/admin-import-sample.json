@@ -133,6 +133,53 @@
               ]
             }
           ]
+        },
+        {
+          "name": "Summer Art Camp",
+          "description": "A week of painting and sculpture, morning sessions.",
+          "kind": "camp",
+          "category_id": "77777777-7777-7777-7777-777777777777",
+          "age_min": 5,
+          "age_max": 9,
+          "pricing": [
+            {
+              "location_name": "Kowloon Bay Studio",
+              "pricing_type": "per_sessions",
+              "amount": 2400,
+              "currency": "HKD",
+              "sessions_count": 5
+            }
+          ],
+          "schedules": [
+            {
+              "location_name": "Kowloon Bay Studio",
+              "timezone": "Asia/Hong_Kong",
+              "languages": ["en"],
+              "starts_on": "2026-07-20",
+              "ends_on": "2026-07-24",
+              "weekly_entries": [
+                { "day_of_week": 1, "start_time": "09:00", "end_time": "12:00" },
+                { "day_of_week": 2, "start_time": "09:00", "end_time": "12:00" },
+                { "day_of_week": 3, "start_time": "09:00", "end_time": "12:00" },
+                { "day_of_week": 4, "start_time": "09:00", "end_time": "12:00" },
+                { "day_of_week": 5, "start_time": "09:00", "end_time": "12:00" }
+              ]
+            },
+            {
+              "location_name": "Kowloon Bay Studio",
+              "timezone": "Asia/Hong_Kong",
+              "languages": ["en"],
+              "starts_on": "2026-08-03",
+              "ends_on": "2026-08-07",
+              "weekly_entries": [
+                { "day_of_week": 1, "start_time": "09:00", "end_time": "12:00" },
+                { "day_of_week": 2, "start_time": "09:00", "end_time": "12:00" },
+                { "day_of_week": 3, "start_time": "09:00", "end_time": "12:00" },
+                { "day_of_week": 4, "start_time": "09:00", "end_time": "12:00" },
+                { "day_of_week": 5, "start_time": "09:00", "end_time": "12:00" }
+              ]
+            }
+          ]
         }
       ]
     },

@@ -320,7 +320,9 @@ def test_proposal_groups_and_named_match_becomes_reassign(
         },
         {},
     )
-    suggestion = db_session.scalars(select(CategorySuggestion)).one()
+    suggestion = db_session.scalars(
+        select(CategorySuggestion).where(CategorySuggestion.decided_by.is_distinct_from("migration:0066"))
+    ).one()
     assert suggestion.source == "scan"
     assert suggestion.requested_name == "Wheel throwing"
     assert suggestion.activity_count == 2

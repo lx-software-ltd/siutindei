@@ -35,6 +35,7 @@ from app.services.category_suggestions.settings import (
     resolved_fallback_models,
     resolved_model_name,
 )
+from app.services.listing_kinds import move_to_category
 from app.services.openrouter_client import (
     WORKLOAD_CATEGORY_SUGGESTION,
     OpenRouterError,
@@ -270,7 +271,7 @@ def _move_linked(
         if str(activity.category_id) == str(target.id):
             continue
         previous = UUID(str(activity.category_id))
-        activity.category_id = target.id
+        move_to_category(session, activity, target.id)
         _add_review(
             session,
             run=run,

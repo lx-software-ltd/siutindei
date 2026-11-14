@@ -16,6 +16,11 @@ from app.db.models import (
 )
 from app.db.repositories import ActivityScheduleRepository
 from app.exceptions import ValidationError
+from app.services.schedule_dates import (
+    format_schedule_date,
+    parse_schedule_date,
+    validate_schedule_dates,
+)
 
 
 def _create_schedule(
@@ -36,6 +41,8 @@ def _create_schedule(
         schedule_type=ScheduleType.WEEKLY,
         languages=_parse_languages(body.get("languages")),
         entries=_parse_weekly_entries(body.get("weekly_entries")),
+        starts_on=parse_schedule_date(body.get("starts_on"), "starts_on"),
+        ends_on=parse_schedule_date(body.get("ends_on"), "ends_on"),
     )
     _validate_schedule(schedule)
     _ensure_unique_schedule(repo, schedule, current_id=None)
@@ -61,6 +68,9 @@ def _update_schedule(
     if "weekly_entries" in body:
         parsed_entries = _parse_weekly_entries(body.get("weekly_entries"))
         _sync_weekly_entries(repo.session, entity, parsed_entries)
+    for field in ("starts_on", "ends_on"):
+        if field in body:
+            setattr(entity, field, parse_schedule_date(body[field], field))
     _validate_schedule(entity)
     _ensure_unique_schedule(repo, entity, current_id=entity.id)
     return entity
@@ -83,6 +93,8 @@ def _serialize_schedule(entity: ActivitySchedule) -> dict[str, Any]:
             for entry in entries
         ],
         "languages": entity.languages,
+        "starts_on": format_schedule_date(entity.starts_on),
+        "ends_on": format_schedule_date(entity.ends_on),
         "version": entity.version,
     }
 
@@ -173,6 +185,7 @@ def _validate_schedule(schedule: ActivitySchedule) -> None:
                 field=field_prefix,
             )
         seen.add(key)
+    validate_schedule_dates(schedule.starts_on, schedule.ends_on, schedule.entries)
 
 
 def _validate_entry(entry: ActivityScheduleEntry, field_prefix: str) -> None:
@@ -257,19 +270,21 @@ def _ensure_unique_schedule(
     schedule: ActivitySchedule,
     current_id: str | None,
 ) -> None:
-    """Ensure schedule uniqueness by activity, location, and languages."""
-    existing = repo.find_by_activity_location_languages(
-        _coerce_uuid(schedule.activity_id),
-        _coerce_uuid(schedule.location_id),
-        schedule.languages,
-    )
+    """Ensure one schedule per activity, location, languages, and start date."""
+    with repo.session.no_autoflush:
+        existing = repo.find_by_activity_location_languages(
+            _coerce_uuid(schedule.activity_id),
+            _coerce_uuid(schedule.location_id),
+            schedule.languages,
+            starts_on=schedule.starts_on,
+        )
     if existing is None:
         return
     if current_id is not None and str(existing.id) == str(current_id):
         return
     raise ValidationError(
-        "Schedule already exists for activity, location, and languages",
-        field="languages",
+        "Schedule already exists for activity, location, languages, and start date",
+        field="starts_on" if schedule.starts_on is not None else "languages",
     )
 
 

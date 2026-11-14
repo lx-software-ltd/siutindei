@@ -1,6 +1,6 @@
 import type { Locale } from '@/content/locales';
 import { formatClassEquivalent, formatPricing } from '@/lib/activities/price-format';
-import type { SearchPricing } from '@/lib/activities/types';
+import type { ListingKind, SearchPricing } from '@/lib/activities/types';
 
 import { DetailSection } from './detail-section';
 import type { ActivityDetailCopy } from './types';
@@ -8,11 +8,13 @@ import type { ActivityDetailCopy } from './types';
 export function ActivityPrice({
   locale,
   pricings,
+  kind = 'class',
   hasFreeTrial,
   copy,
 }: {
   readonly locale: Locale;
   readonly pricings: readonly SearchPricing[];
+  readonly kind?: ListingKind;
   readonly hasFreeTrial: boolean;
   readonly copy: ActivityDetailCopy;
 }) {
@@ -23,7 +25,7 @@ export function ActivityPrice({
       ) : (
         <ul className="space-y-2">
           {pricings.map((pricing) => {
-            const equivalent = formatClassEquivalent(locale, pricing);
+            const equivalent = formatClassEquivalent(locale, pricing, kind);
             return (
               <li key={JSON.stringify(pricing)}>
                 <p className="text-lg font-semibold text-ink-900">

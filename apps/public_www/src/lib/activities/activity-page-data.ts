@@ -1,16 +1,19 @@
 import type { Locale } from '@/content/locales';
-import { homeWizardChoices } from '@/lib/home-wizard/choices';
+import { homeWizardChoices, kindOption, labelForLocale } from '@/lib/home-wizard/choices';
 import { localizePath } from '@/lib/locale-routing';
 import { ROUTES } from '@/lib/routes';
 
 import { categoryLandingPath } from './activity-href';
 import { listingVenues } from './group-listings';
+import { kindPageForKind } from './kind-pages';
 import {
   categoryLabelForListing,
   categoryTypeIdForListing,
+  isCatchAllAgeRange,
   listingAgeLabel,
   placeLabelForLocation,
   shortPlaceLabel,
+  TOPIC_KINDS,
 } from './listing-facts';
 import {
   isTemplateDescription,
@@ -33,8 +36,9 @@ interface BreadcrumbCopy {
 }
 
 /**
- * Home, the activities hub, the activity type (its landing page when
- * there is one, else a search), then the neighbourhood search.
+ * Home, the activities hub, the topic for a class or camp or else the
+ * kind (its landing page when there is one, else a search), then the
+ * neighbourhood search.
  */
 export function activityBreadcrumbItems(
   locale: Locale,
@@ -46,8 +50,10 @@ export function activityBreadcrumbItems(
     { label: copy.homeLabel, href: localizePath(ROUTES.home, locale) },
     { label: copy.searchLabel, href: localizePath(ROUTES.activities, locale) },
   ];
-  const typeId = categoryTypeIdForListing(listing);
+  const kind = listing.activity.kind;
+  const typeId = TOPIC_KINDS.has(kind) ? categoryTypeIdForListing(listing) : null;
   const categoryLabel = categoryLabelForListing(locale, listing);
+  const kindPage = kindPageForKind(kind);
   if (typeId && categoryLabel) {
     items.push({
       label: categoryLabel,
@@ -58,6 +64,13 @@ export function activityBreadcrumbItems(
             { ...DEFAULT_SEARCH_FILTERS, activityTypeIds: [typeId] },
             { view: 'list' },
           ),
+    });
+  } else if (kindPage && (landingTypeIds.includes(kindPage.slug) || kindOption(kind))) {
+    items.push({
+      label: labelForLocale(kindPage.labels, locale),
+      href: landingTypeIds.includes(kindPage.slug)
+        ? categoryLandingPath(locale, kindPage.slug)
+        : buildSearchPageHref(locale, { ...DEFAULT_SEARCH_FILTERS, kind }, { view: 'list' }),
     });
   }
   const neighbourhood = homeWizardChoices.neighbourhoods.find(
@@ -169,6 +182,38 @@ const IN_LANGUAGE: Readonly<Record<string, string>> = {
   'zh-HK': 'zh-HK',
 };
 
+/** Kinds that are somewhere to go rather than a course, with their schema.org type. */
+const VENUE_TYPES: Readonly<Partial<Record<ActivityListing['activity']['kind'], string>>> = {
+  place: 'TouristAttraction',
+  eat: 'Restaurant',
+  preschool: 'Preschool',
+};
+
+function venueStructuredData(
+  locale: Locale,
+  listing: ActivityListing,
+  imageUrls: readonly string[],
+  pageUrl?: string,
+): Record<string, unknown> {
+  const description = listingDescription(locale, listing);
+  const venue = listing.location;
+  return {
+    '@context': 'https://schema.org',
+    '@type': VENUE_TYPES[listing.activity.kind],
+    name: listingTitle(locale, listing),
+    ...(pageUrl ? { url: pageUrl } : {}),
+    description: description || undefined,
+    ...(imageUrls.length > 0 ? { image: imageUrls.slice(0, 5) } : {}),
+    ...(venue.address ? { address: venue.address } : {}),
+    ...(venue.lat !== null && venue.lng !== null
+      ? { geo: { '@type': 'GeoCoordinates', latitude: venue.lat, longitude: venue.lng } }
+      : {}),
+    ...(listing.activity.kind === 'place' && listing.pricing?.pricingType === 'free'
+      ? { isAccessibleForFree: true }
+      : {}),
+  };
+}
+
 export function activityStructuredData(
   locale: Locale,
   listing: ActivityListing,
@@ -186,6 +231,9 @@ export function activityStructuredData(
     ),
   ];
   const category = categoryLabelForListing(locale, listing);
+  if (VENUE_TYPES[listing.activity.kind]) {
+    return venueStructuredData(locale, listing, imageUrls, pageUrl);
+  }
   return {
     '@context': 'https://schema.org',
     '@type': 'Course',
@@ -196,7 +244,7 @@ export function activityStructuredData(
     provider: { '@type': 'Organization', name: listingOrgName(locale, listing) },
     ...(imageUrls.length > 0 ? { image: imageUrls.slice(0, 5) } : {}),
     ...(languages.length > 0 ? { inLanguage: languages } : {}),
-    ...(ageMin !== null || ageMax !== null
+    ...((ageMin !== null || ageMax !== null) && !isCatchAllAgeRange(ageMin, ageMax)
       ? {
           audience: {
             '@type': 'PeopleAudience',

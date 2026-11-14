@@ -46,6 +46,10 @@ from app.db.models import Location
 from app.exceptions import ValidationError
 from app.services.catalog_version_match import ImportRowOutcome
 from app.services.org_delete import ORGANIZATION_DELETED
+from app.services.org_review_decision import (
+    HIDDEN_ONLY_IMPORT_WARNING,
+    reject_if_only_hidden,
+)
 
 ALLOWED_ROOT_FIELDS = {"organizations", "default_manager_id"}
 
@@ -259,8 +263,9 @@ def process_organization(
         warnings=warnings,
         path=path,
     )
+    org_result = results[-1]
     if raw_org.get("place_id"):
-        results[-1]["place_id"] = raw_org["place_id"]
+        org_result["place_id"] = raw_org["place_id"]
 
     location_cache: dict[str, Location] = {}
     raw_locations = raw_org.get("locations", [])
@@ -315,3 +320,6 @@ def process_organization(
                 allow_updates=allow_updates,
                 import_job_id=import_job_id,
             )
+    if reject_if_only_hidden(session, org.id):
+        org_result["warnings"].append(HIDDEN_ONLY_IMPORT_WARNING)
+        summary["warnings"] += 1

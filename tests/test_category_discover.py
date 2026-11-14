@@ -108,7 +108,9 @@ def test_unknown_label_stays_whole_and_is_queued(db_session, sample_activity) ->
     )
     assert run.labels_total == 1
     assert len(batches) == 1
-    suggestion = db_session.scalars(select(CategorySuggestion)).one()
+    suggestion = db_session.scalars(
+        select(CategorySuggestion).where(CategorySuggestion.decided_by.is_distinct_from("migration:0066"))
+    ).one()
     assert suggestion.requested_name == "Art, Music"
     assert suggestion.source == "scan"
     assert suggestion.fingerprint == normalize_category_key("Art, Music")

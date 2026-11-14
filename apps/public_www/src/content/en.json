@@ -27,6 +27,7 @@
       "whereLabel": "Area",
       "neighbourhoodLabel": "Neighbourhood",
       "anywhereInRegionLabel": "Anywhere in this area",
+      "kindLabel": "Looking for",
       "childAgeLabel": "Child age",
       "activityTypesLabel": "Activity types",
       "activityTypesHint": "pick any",
@@ -76,7 +77,7 @@
   },
   "seo": {
     "fallbackTitle": "Siu Tin Dei | Children's activities in Hong Kong",
-    "fallbackDescription": "Discover curated children's activities in Hong Kong with Siu Tin Dei.",
+    "fallbackDescription": "Find children's classes, camps, and places to play near home with Siu Tin Dei, starting in Stanley.",
     "defaultSocialImage": "/images/seo/siutindei-og-2026-11.jpg",
     "defaultSocialImageAlt": "Siu Tin Dei children's activities in Hong Kong",
     "home": {
@@ -89,15 +90,15 @@
     },
     "search": {
       "title": "Search children's activities",
-      "description": "Browse children's activities in Hong Kong by area, age, and activity type."
+      "description": "Browse children's activities by area, age, and activity type, starting in Stanley."
     },
     "activities": {
       "titleTemplate": "Children's activities in {place}",
-      "descriptionTemplate": "Classes, clubs, and workshops for children in {placeFull}, with ages, weekly times, prices, and organiser contacts. Checked by local parents."
+      "descriptionTemplate": "Classes, camps, and places to play for children in {placeFull}, with ages, times, prices, and organiser contacts. Listings a local parent has checked carry a badge."
     },
     "activityCategory": {
       "titleTemplate": "{category} for children in {place}",
-      "descriptionTemplate": "{count} {categoryLower} activities for children in {placeFull}. Compare ages, weekly times, and prices, and contact the organiser."
+      "descriptionTemplate": "{count} {categoryLower} listings for children in {placeFull}. Compare who each suits, when it runs, and what it costs, and contact the organiser."
     },
     "activityDetail": {
       "title": "Activity details",
@@ -146,7 +147,7 @@
   },
   "smallWorld": {
     "title": "Every child deserves their own small world",
-    "subtitle": "Siu Tin Dei curates trusted classes, workshops, and outdoor adventures across Hong Kong — each one checked by local parents before it appears here.",
+    "subtitle": "Siu Tin Dei lists every class, camp, and place to play we can find near you, the free and the tiny included, starting in Stanley. A local parent checks them one by one, and the checked ones carry a badge.",
     "sceneAriaLabel": "Kawaii Hong Kong pictures floating around the page",
     "bubbles": {
       "junk": "A Chinese junk boat",
@@ -182,6 +183,8 @@
       "backLabel": "Back",
       "continueLabel": "Continue",
       "seeActivitiesLabel": "See activities",
+      "weekendLabel": "What's on this weekend",
+      "weekendHint": "Anything on Saturday or Sunday",
       "stepProgressTemplate": "Step {current} of {total}",
       "steps": {
         "location": {
@@ -191,6 +194,10 @@
         "neighbourhood": {
           "title": "Which neighbourhood?",
           "label": "Neighbourhood"
+        },
+        "kind": {
+          "title": "What are you looking for?",
+          "label": "Looking for"
         },
         "age": {
           "title": "How old is your child?",
@@ -204,7 +211,7 @@
     }
   },
   "discovery": {
-    "pageTitle": "Discover children's activities in Hong Kong",
+    "pageTitle": "Discover children's activities in Stanley",
     "continueSearchingTitle": "Continue searching",
     "recentlyViewedTitle": "Recently viewed",
     "popularTitle": "Popular activities in Hong Kong",
@@ -241,6 +248,7 @@
     "mapEmptyLabel": "No map locations for these results.",
     "mapUnavailableLabel": "Google Maps is not configured for this environment.",
     "mapAriaLabel": "Activity locations on Google Maps",
+    "familyFoodLabel": "Family-friendly food",
     "enlargeMapLabel": "Enlarge map",
     "reduceMapLabel": "Reduce map",
     "loadingMapLabel": "Loading map...",
@@ -259,6 +267,8 @@
     "sortTimeLabel": "Day and time",
     "sortPriceLabel": "Lowest price",
     "sortChoiceTemplate": "Sort: {choice}",
+    "kindFilterLabel": "Looking for",
+    "anyKindLabel": "Anything",
     "freeFilterLabel": "Free",
     "freeTrialFilterLabel": "Free trial",
     "dayFilterLabel": "Day",
@@ -303,6 +313,7 @@
     "keyFactsLabel": "Key facts",
     "agesLabel": "Ages",
     "whenLabel": "When",
+    "openingHoursLabel": "Opening hours",
     "whereLabel": "Where",
     "priceLabel": "Price",
     "languageLabel": "Language",
@@ -315,7 +326,31 @@
     "readMoreLabel": "Read more",
     "readLessLabel": "Show less",
     "scheduleHeading": "Schedule",
+    "datesHeading": "Dates",
     "scheduleMissingLabel": "The organiser has not published times yet.",
+    "openingHoursHeading": "Opening hours",
+    "openingHoursMissingLabel": "Opening hours are not listed yet.",
+    "goodToKnowHeading": "Good to know",
+    "goodToKnowHint": "What a parent saw on a visit.",
+    "factLabels": {
+      "toilets": { "present": "Toilets", "absent": "No toilets" },
+      "changing_table": { "present": "Baby changing table", "absent": "No baby changing table" },
+      "shade": { "present": "Shade", "absent": "Little or no shade" },
+      "fenced": { "present": "Fenced in", "absent": "Not fenced in" },
+      "stroller_access": { "present": "Pram friendly", "absent": "Hard with a pram" },
+      "water_play": { "present": "Water play", "absent": "No water play" },
+      "lifeguard": { "present": "Lifeguard on duty", "absent": "No lifeguard" },
+      "parking": { "present": "Parking nearby", "absent": "No parking nearby" },
+      "food_nearby": { "present": "Food nearby", "absent": "No food nearby" },
+      "high_chairs": { "present": "High chairs", "absent": "No high chairs" },
+      "kids_menu": { "present": "Kids' menu", "absent": "No kids' menu" },
+      "room_to_run": { "present": "Room to run around", "absent": "Little room to run around" },
+      "outdoor_seating": { "present": "Outdoor seating", "absent": "No outdoor seating" },
+      "drop_in": { "present": "Drop-in welcome", "absent": "Booking needed" },
+      "parent_stays": { "present": "A parent stays", "absent": "Children are dropped off" },
+      "sen_friendly": { "present": "SEN friendly", "absent": "Not set up for SEN" },
+      "lunch_included": { "present": "Lunch included", "absent": "Bring a packed lunch" }
+    },
     "taughtInLabel": "Taught in {languages}",
     "priceHeading": "Price",
     "priceMissingLabel": "The organiser has not published a price yet.",
@@ -346,6 +381,8 @@
     "shareLabel": "Share",
     "linkCopiedLabel": "Link copied",
     "parentVerifiedLabel": "Parent-Verified",
+    "parentVerifiedExplainer": "A Siu Tin Dei parent visited or spoke to this organiser and confirmed the details.",
+    "parentCheckedTemplate": "Checked {date}",
     "notFoundHint": "We counted to ten and looked everywhere, even inside the steamer. It may have ended, or the link may be out of date.",
     "errorHint": "Something went wrong while loading it. Please try again in a moment.",
     "browseActivitiesLabel": "Browse activities",
@@ -355,13 +392,23 @@
   },
   "activitiesPage": {
     "hubHeadingTemplate": "Children's activities in {place}",
-    "hubIntro": "Siu Tin Dei lists classes, clubs, and workshops for children in {place}. Each activity page shows the ages, the weekly times, the price, and how to contact the organiser.",
+    "hubIntro": "Siu Tin Dei lists classes, camps, and places to play for children in {place}. Each page shows who it suits, when it runs or opens, what it costs, and how to contact the organiser.",
     "categoryHeadingTemplate": "{category} for children in {place}",
-    "categoryIntroTemplate": "Siu Tin Dei lists {count} {categoryLower} activities for children in {place}. Compare the ages, weekly times, and prices, then contact the organiser.",
+    "categoryIntroTemplate": "Siu Tin Dei has {count} listings in {categoryLower} for children in {place}. Compare who each one suits, when it runs or opens, and what it costs, then contact the organiser.",
+    "kindPages": {
+      "classes": "Classes and clubs",
+      "camps": "Camps and workshops",
+      "places": "Places to play",
+      "nurseries": "Nurseries and kindergartens",
+      "eat": "Places to eat"
+    },
+    "kindSectionLinkTemplate": "See all {count}",
+    "coverageTemplate": "{count} listings. {verified} checked by a local parent. Last updated {date}.",
+    "coverageUnverifiedTemplate": "{count} listings. Last updated {date}.",
     "browseByTypeHeading": "Browse by activity type",
     "otherTypesHeading": "Other activity types",
     "allActivitiesHeading": "All activities",
-    "activityCountTemplate": "{count} activities",
+    "activityCountTemplate": "{count} listings",
     "atAGlanceHeading": "At a glance",
     "agesLabel": "Ages",
     "daysLabel": "Days",
@@ -369,11 +416,11 @@
     "agesRangeTemplate": "{min} to {max} years",
     "priceRangeTemplate": "{min} to {max}",
     "questionsHeading": "Questions parents ask",
-    "agesQuestion": "What ages are these activities for?",
-    "agesAnswerTemplate": "{ages}. Each activity page gives its own age range.",
-    "daysQuestion": "Which days do they run?",
-    "daysAnswerTemplate": "{days}. Each activity page lists its weekly times.",
-    "pricesQuestion": "How much do they cost?",
+    "agesQuestion": "What ages are the classes for?",
+    "agesAnswerTemplate": "{ages}. Each class page gives its own age range.",
+    "daysQuestion": "Which days do the classes run?",
+    "daysAnswerTemplate": "{days}. Each class page lists its weekly times.",
+    "pricesQuestion": "How much does a class cost?",
     "pricesAnswerTemplate": "{prices} per class, where the organiser publishes a price.",
     "joinQuestion": "How do I join?",
     "joinAnswer": "Open the activity's page and contact the organiser with the details shown there.",
@@ -404,7 +451,7 @@
         "id": "what-is-siu-tin-dei",
         "heading": "What is Siu Tin Dei",
         "paragraphs": [
-          "Siu Tin Dei (小天地) is a website that lists children's classes, clubs, and workshops in Hong Kong. Each activity page shows the ages, the weekly times, the price, and how to contact the organiser.",
+          "Siu Tin Dei (小天地) is a website that lists children's classes, camps, and places to play in Hong Kong. Each activity page shows the ages, the times, the price, and how to contact the organiser.",
           "It lists activities in {placeFull} today, and adds new areas one district at a time.",
           "Siu Tin Dei is run by LX Software, a business registered in Hong Kong."
         ]
@@ -461,6 +508,20 @@
           ]
         },
         {
+          "id": "how-listings-are-checked",
+          "heading": "How listings are checked",
+          "paragraphs": [
+            "Most listings start from public sources: organisers' own websites and pages, and public lists. Then I check them one organiser at a time, by visiting or by talking to the organiser. A checked listing carries the Parent-Verified badge. A listing without the badge has not been checked yet."
+          ]
+        },
+        {
+          "id": "free",
+          "heading": "Free for families and organisers",
+          "paragraphs": [
+            "Siu Tin Dei is free to use, and listing a class, camp, or place to play is free."
+          ]
+        },
+        {
           "id": "write-to-me",
           "heading": "Get in touch",
           "paragraphs": [
@@ -472,7 +533,7 @@
   },
   "hero": {
     "title": "Siu Tin Dei",
-    "subtitle": "Curated children's activities in Hong Kong."
+    "subtitle": "Children's activities near home, starting in Stanley."
   },
   "features": {
     "title": "Why Siu Tin Dei"

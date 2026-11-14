@@ -35,7 +35,7 @@ describe('llms.txt', () => {
     vi.stubEnv('PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH', SNAPSHOT_FIXTURE);
     const text = buildLlmsTxt('https://example.com', 'Siu Tin Dei');
 
-    expect(text).toContain(`](https://example.com/en/activities/): ${catalogueListings().length} activities`);
+    expect(text).toContain(`](https://example.com/en/activities/): ${catalogueListings().length} listings`);
     for (const category of catalogueCategories()) {
       expect(text).toContain(`](https://example.com/en/activities/${category.typeId}/)`);
     }

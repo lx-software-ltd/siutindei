@@ -315,3 +315,21 @@ def _first_empty_wizard_group(session: Session) -> UUID:
         if category_match_mode(session, [group_id]) == "legacy_fallback":
             return group_id
     raise AssertionError("expected an empty wizard group")
+
+
+def test_recheck_prompt_routes_schools_clubs_and_venues(
+    db_session, sample_activity
+) -> None:
+    system, user = build_scan_prompt(
+        db_session,
+        [sample_activity],
+        ignore_current_category=True,
+    )
+    assert "matching school leaf" in system
+    assert "Members-only clubs" in system
+    assert "Places to play" in system
+    offered = {item["id"] for item in json.loads(user)["taxonomy"]}
+    assert "c1111111-1111-1111-1111-111111111213" in offered
+    assert "c1111111-1111-1111-1111-111111111405" in offered
+    assert "c1111111-1111-1111-1111-111111111404" not in offered
+    assert "c1111111-1111-1111-1111-111111111401" not in offered

@@ -7,6 +7,20 @@ import { useFormValidation } from '../../hooks/use-form-validation';
 import { useOrganizationScope } from '../../hooks/use-organization-scope';
 import { useResourceEditor } from '../../hooks/use-resource-editor';
 import { formatAdminPageName } from '../../lib/admin-page-name';
+import {
+  categoryKindRule,
+  DEFAULT_LISTING_KIND,
+  FACT_KEYS,
+  FACT_LABELS,
+  factsForKind,
+  isListingKind,
+  kindForCategoryRule,
+  LISTING_KIND_OPTIONS,
+  listingKindLabel,
+  setFact,
+  type ListingFacts,
+  type ListingKind,
+} from '../../lib/listing-kinds';
 import { parseRequiredNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/api-client-admin';
 import { normalizeKey } from '../../lib/string-utils';
@@ -32,9 +46,11 @@ import {
 import { AdminEditorActions, AdminEditorPanel } from '../ui/admin-editor-panel';
 import { AdminFieldGrid, formErrorClassName } from '../ui/admin-field-grid';
 import { AdminReadOnlyValue } from '../ui/admin-read-only-value';
+import { AdminToggleChip } from '../ui/admin-tab-strip';
 import { CascadingCategorySelect } from '../ui/cascading-category-select';
 import { Input } from '../ui/input';
 import { LanguageToggleInput } from '../ui/language-toggle-input';
+import { Select } from '../ui/select';
 import {
   deleteRowActions,
   ResourceTableShell,
@@ -66,6 +82,8 @@ interface ActivityFormState {
   age_max: string;
   source_url: string;
   source_note: string;
+  kind: ListingKind;
+  facts: ListingFacts;
 }
 
 const emptyForm: ActivityFormState = {
@@ -79,9 +97,18 @@ const emptyForm: ActivityFormState = {
   age_max: '',
   source_url: '',
   source_note: '',
+  kind: DEFAULT_LISTING_KIND,
+  facts: {},
 };
 
+const FACT_STATES: { label: string; value: boolean | undefined }[] = [
+  { label: 'Yes', value: true },
+  { label: 'No', value: false },
+  { label: 'Not checked', value: undefined },
+];
+
 function itemToForm(item: Activity): ActivityFormState {
+  const kind = isListingKind(item.kind) ? item.kind : DEFAULT_LISTING_KIND;
   return {
     org_id: item.org_id ?? '',
     category_id: item.category_id ?? '',
@@ -93,6 +120,8 @@ function itemToForm(item: Activity): ActivityFormState {
     age_max: item.age_max !== undefined ? `${item.age_max}` : '',
     source_url: item.source_url ?? '',
     source_note: item.source_note ?? '',
+    kind,
+    facts: factsForKind(kind, item.facts),
   };
 }
 
@@ -122,19 +151,25 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     noun: 'activity',
   });
 
-  const categoryPathById = useMemo(() => {
-    const map = new Map<string, string>();
-    function walk(nodes: typeof categoryTree, prefix = '') {
+  const { categoryPathById, categoryRootById } = useMemo(() => {
+    const paths = new Map<string, string>();
+    const roots = new Map<string, (typeof categoryTree)[number]>();
+    function walk(
+      nodes: typeof categoryTree,
+      root?: (typeof categoryTree)[number],
+      prefix = ''
+    ) {
       for (const node of nodes) {
         const path = prefix ? `${prefix} / ${node.name}` : node.name;
-        map.set(node.id, path);
+        paths.set(node.id, path);
+        roots.set(node.id, root ?? node);
         if (node.children) {
-          walk(node.children, path);
+          walk(node.children, root ?? node, path);
         }
       }
     }
     walk(categoryTree);
-    return map;
+    return { categoryPathById: paths, categoryRootById: roots };
   }, [categoryTree]);
 
   const getCategoryPath = (categoryId?: string) =>
@@ -312,6 +347,8 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
       ? {
           source_url: form.source_url.trim() || null,
           source_note: form.source_note.trim() || null,
+          kind: form.kind,
+          facts: factsForKind(form.kind, form.facts),
         }
       : {}),
   });
@@ -342,6 +379,20 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
   const editorForm = versionView.snapshot
     ? activityFormFromSnapshot(versionView.snapshot, panel.formState)
     : panel.formState;
+  const kindRule = categoryKindRule(categoryRootById.get(editorForm.category_id));
+  const kindOptions = LISTING_KIND_OPTIONS.filter((option) => {
+    if (option.value === editorForm.kind || !kindRule) {
+      return true;
+    }
+    return 'fixed' in kindRule
+      ? option.value === kindRule.fixed
+      : kindRule.allowed.includes(option.value);
+  });
+  const kindHint = !kindRule
+    ? 'Decides what the public card and page show.'
+    : 'fixed' in kindRule
+      ? `Set by the category: ${listingKindLabel(kindRule.fixed)}.`
+      : 'A topic category takes classes and clubs, or camps and workshops.';
 
   const detail = (
     <AdminEditorPanel
@@ -395,12 +446,18 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
           <CascadingCategorySelect
             tree={categoryTree}
             value={editorForm.category_id}
-            onChange={(categoryId, _chain) => {
+            onChange={(categoryId, chain) => {
               markTouched('category_id');
-              panel.setFormState((prev) => ({
-                ...prev,
-                category_id: categoryId,
-              }));
+              const rule = categoryKindRule(chain[0]);
+              panel.setFormState((prev) => {
+                const kind = kindForCategoryRule(rule, prev.kind);
+                return {
+                  ...prev,
+                  category_id: categoryId,
+                  kind,
+                  facts: factsForKind(kind, prev.facts),
+                };
+              });
             }}
             disabled={locked}
             required
@@ -469,6 +526,85 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
                   }))
                 }
               />
+            </VersionField>
+            <VersionField
+              label='Listing kind'
+              htmlFor='activity-kind'
+              versionKey='kind'
+              hint={kindHint}
+            >
+              <Select
+                id='activity-kind'
+                value={editorForm.kind}
+                disabled={locked || Boolean(kindRule && 'fixed' in kindRule)}
+                onChange={(event) => {
+                  const kind = event.target.value;
+                  if (!isListingKind(kind)) {
+                    return;
+                  }
+                  panel.setFormState((prev) => ({
+                    ...prev,
+                    kind,
+                    facts: factsForKind(kind, prev.facts),
+                  }));
+                }}
+              >
+                {kindOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+            </VersionField>
+            <VersionField
+              label='Checked facts'
+              labelId='activity-facts-label'
+              versionKey='facts'
+              hint='What a parent saw. Leave Not checked when nobody looked.'
+            >
+              {FACT_KEYS[editorForm.kind].length === 0 ? (
+                <p className='text-sm text-ink-700'>
+                  This kind has no checked facts.
+                </p>
+              ) : (
+                <div
+                  className='space-y-2'
+                  role='group'
+                  aria-labelledby='activity-facts-label'
+                >
+                  {FACT_KEYS[editorForm.kind].map((key) => {
+                    const label = FACT_LABELS[key] ?? key;
+                    const current = editorForm.facts[key];
+                    return (
+                      <div
+                        key={key}
+                        role='group'
+                        aria-label={label}
+                        className='flex flex-wrap items-center gap-2'
+                      >
+                        <span className='w-full text-sm text-ink-900 sm:w-32'>
+                          {label}
+                        </span>
+                        {FACT_STATES.map((state) => (
+                          <AdminToggleChip
+                            key={state.label}
+                            pressed={current === state.value}
+                            disabled={locked}
+                            onClick={() =>
+                              panel.setFormState((prev) => ({
+                                ...prev,
+                                facts: setFact(prev.facts, key, state.value),
+                              }))
+                            }
+                          >
+                            {state.label}
+                          </AdminToggleChip>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </VersionField>
           </>
         ) : null}

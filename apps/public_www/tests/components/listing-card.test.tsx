@@ -46,6 +46,33 @@ describe('ListingCard', () => {
     expect(screen.queryByText(labels.parentVerified)).not.toBeInTheDocument();
   });
 
+  it('shows a place with its opening hours and no age, trial, or request line', () => {
+    renderCard(
+      buildListing({
+        activity: { kind: 'place', ageMin: 0, ageMax: 12 },
+        pricing: buildPricing({ freeTrialClassOffered: true }),
+      }),
+    );
+
+    expect(screen.getByText(/Open Mon 10:00–11:00/)).toBeInTheDocument();
+    expect(screen.queryByText('Ages 0–12')).not.toBeInTheDocument();
+    expect(screen.queryByText(labels.freeTrial)).not.toBeInTheDocument();
+    expect(screen.queryByText(labels.detailsOnRequest)).not.toBeInTheDocument();
+  });
+
+  it('shows a camp without weekly times or a free trial', () => {
+    renderCard(
+      buildListing({
+        activity: { kind: 'camp', ageMin: 6, ageMax: 10 },
+        pricing: buildPricing({ freeTrialClassOffered: true }),
+      }),
+    );
+
+    expect(screen.getByText('Ages 6–10')).toBeInTheDocument();
+    expect(screen.queryByText(/Mon 10:00/)).not.toBeInTheDocument();
+    expect(screen.queryByText(labels.freeTrial)).not.toBeInTheDocument();
+  });
+
   it('summarises several venues and prices', () => {
     const base = buildListing();
     renderCard({

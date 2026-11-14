@@ -13,6 +13,7 @@ from app.db.models import ActivityCategory
 from app.db.models.category_suggestion import (
     PENDING_CATEGORY_ID,
     PENDING_CATEGORY_NAME,
+    SCHOOLS_CATEGORY_ID,
 )
 from app.db.repositories.activity_category import _reraise_duplicate_name
 from app.exceptions import AuthorizationError, ValidationError
@@ -266,6 +267,51 @@ def test_category_writes_cover_the_rejected_shapes(monkeypatch, test_engine) -> 
         )
         assert wizard["statusCode"] == 400
         assert "admin console" in json.loads(wizard["body"])["error"]
+
+        hidden = _write(
+            "POST",
+            "/v1/partner/activity-categories",
+            None,
+            {"name": f"Hidden {token}", "hidden_from_public": True},
+        )
+        assert hidden["statusCode"] == 400
+        assert "hidden_from_public" in json.loads(hidden["body"])["error"]
+
+        schools = str(SCHOOLS_CATEGORY_ID)
+        renamed_root = _write(
+            "PUT",
+            f"/v1/partner/activity-categories/{schools}",
+            schools,
+            {"name": f"Renamed root {token}"},
+        )
+        assert renamed_root["statusCode"] == 400
+        assert "Fixed root" in json.loads(renamed_root["body"])["error"]
+        deleted_root = _handle_partner_routes(
+            _partner_event(
+                "DELETE",
+                f"/v1/partner/activity-categories/{schools}",
+                "crud",
+                "",
+            ),
+            "DELETE",
+            "activity-categories",
+            schools,
+        )
+        assert deleted_root["statusCode"] == 400
+        detail = _handle_partner_routes(
+            _partner_event(
+                "GET",
+                f"/v1/partner/activity-categories/{schools}",
+                "read",
+                "",
+            ),
+            "GET",
+            "activity-categories",
+            schools,
+        )
+        root_body = json.loads(detail["body"])
+        assert root_body["hidden_from_public"] is True
+        assert root_body["system_role"] == "schools"
 
         with Session(test_engine) as session:
             pending_existed = (

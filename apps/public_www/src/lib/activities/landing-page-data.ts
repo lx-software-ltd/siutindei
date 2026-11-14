@@ -4,7 +4,9 @@ import type { SiteContent } from '@/content/types';
 import { joinPlaceNames, namedOpenPlace } from '@/lib/home-wizard/area-scope';
 
 import { staticActivityPath } from './activity-href';
+import { latestUpdate } from './catalogue-snapshot';
 import { listingVariants } from './group-listings';
+import { formatMonthYear, isCatchAllAgeRange } from './listing-facts';
 import { listingTitle } from './listing-utils';
 import { classPriceEquivalent, formatMoney, listingPrices } from './price-format';
 import { dayLabel, toHongKongSession } from './schedule-format';
@@ -46,14 +48,25 @@ export interface LandingFacts {
   readonly prices: string | null;
 }
 
-/** Ages, weekdays, and per-class prices across the listings, from their data. */
+/**
+ * Ages, weekdays, and per-class prices across the classes, from their data.
+ * Other kinds have no class price or weekly times, and a catch-all age
+ * range would stretch the span to "0 to 100 years".
+ */
 export function landingFacts(
   locale: Locale,
-  listings: readonly ActivityListing[],
+  allListings: readonly ActivityListing[],
   copy: SiteContent['activitiesPage'],
 ): LandingFacts {
-  const minimums = listings.map((listing) => listing.activity.ageMin).filter((age) => age !== null);
-  const maximums = listings.map((listing) => listing.activity.ageMax).filter((age) => age !== null);
+  const listings = allListings.filter((listing) => listing.activity.kind === 'class');
+  const aged = listings.filter(
+    ({ activity }) =>
+      activity.ageMin !== null &&
+      activity.ageMax !== null &&
+      !isCatchAllAgeRange(activity.ageMin, activity.ageMax),
+  );
+  const minimums = aged.map((listing) => listing.activity.ageMin as number);
+  const maximums = aged.map((listing) => listing.activity.ageMax as number);
   const ages =
     minimums.length > 0 && maximums.length > 0
       ? formatContentTemplate(copy.agesRangeTemplate, {
@@ -77,7 +90,7 @@ export function landingFacts(
 
   const prices = listings
     .flatMap((listing) => listingPrices(listing))
-    .map((pricing) => ({ value: classPriceEquivalent(pricing), currency: pricing.currency }))
+    .map((pricing) => ({ value: classPriceEquivalent(pricing, 'class'), currency: pricing.currency }))
     .filter((price): price is { value: number; currency: string } => price.value !== null);
   const currency = prices[0]?.currency;
   const sameCurrency = prices.filter((price) => price.currency === currency);
@@ -95,6 +108,23 @@ export function landingFacts(
   }
 
   return { ages, days: dayList || null, prices: priceRange };
+}
+
+/** "28 listings. 6 checked by a local parent. Last updated November 2026." */
+export function landingCoverage(
+  locale: Locale,
+  listings: readonly ActivityListing[],
+  copy: SiteContent['activitiesPage'],
+): string | null {
+  const date = formatMonthYear(locale, latestUpdate(listings)?.toISOString());
+  if (listings.length === 0 || !date) {
+    return null;
+  }
+  const verified = listings.filter((listing) => listing.organization.parentVerified).length;
+  return formatContentTemplate(
+    verified > 0 ? copy.coverageTemplate : copy.coverageUnverifiedTemplate,
+    { count: listings.length, verified, date },
+  );
 }
 
 export function itemListStructuredData(

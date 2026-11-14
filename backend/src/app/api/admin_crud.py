@@ -67,13 +67,22 @@ class ResourceConfig:
     update_handler: Callable[..., Any]
     # Optional: different update handler for manager routes (e.g., to restrict fields)
     manager_update_handler: Callable[..., Any] | None = None
+    # Runs after a create or update is flushed, before commit.
+    after_write: Callable[[Session, Any], None] | None = None
 
 
-_ADMIN_ONLY_WRITE_FIELDS = ("source_url", "source_note", "parent_verified")
+_ADMIN_ONLY_WRITE_FIELDS = (
+    "source_url",
+    "source_note",
+    "parent_verified",
+    "parent_verified_at",
+    "kind",
+    "facts",
+)
 
 
 def _drop_admin_only_write_fields(body: dict[str, Any]) -> None:
-    """Managers cannot write listing provenance or the parent-verified flag."""
+    """Managers cannot write provenance, the verified flag and date, kind, or facts."""
     for key in _ADMIN_ONLY_WRITE_FIELDS:
         body.pop(key, None)
 
@@ -226,6 +235,8 @@ def _crud_post(
     else:
         entity = config.create_handler(repo, body)
     repo.create(entity)
+    if config.after_write is not None:
+        config.after_write(session, entity)
     session.commit()
     session.refresh(entity)
     logger.info(f"Created {config.name}: {entity.id}")
@@ -270,6 +281,8 @@ def _crud_put(
 
     updated = update_handler(repo, entity, body)
     repo.update(updated)
+    if config.after_write is not None:
+        config.after_write(session, updated)
     session.commit()
     session.refresh(updated)
     logger.info(f"Updated {config.name}: {resource_id}")
