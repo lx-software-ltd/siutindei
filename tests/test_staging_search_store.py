@@ -22,15 +22,17 @@ def test_staging_fixture_has_at_least_3000_items() -> None:
 
 
 def test_filter_by_category_and_age() -> None:
+    # Sports, one of the nine wizard topics the fixture is built from.
+    sports = UUID("c1111111-1111-1111-1111-111111111302")
     filters = ActivitySearchFilters(
         age=4,
-        category_ids=[UUID("c1111111-1111-1111-1111-111111111201")],
+        category_ids=[sports],
         limit=10,
     )
     response = staging_search_store.fetch_staging_search_response(filters)
     assert len(response.items) == 10
     for item in response.items:
-        assert item.activity.category_id == "c1111111-1111-1111-1111-111111111201"
+        assert item.activity.category_id == str(sports)
         assert item.activity.age_min is not None
         assert item.activity.age_max is not None
         assert item.activity.age_min <= 4 <= item.activity.age_max
@@ -278,7 +280,9 @@ def test_staging_kind_age_range_and_verified_filters(kinds_fixture) -> None:
 
 def test_staging_returns_kind_category_and_checked_date(kinds_fixture) -> None:
     fetch = staging_search_store.fetch_staging_search_response
-    by_id = {item.activity.id[-1]: item for item in fetch(ActivitySearchFilters()).items}
+    by_id = {
+        item.activity.id[-1]: item for item in fetch(ActivitySearchFilters()).items
+    }
 
     old = by_id["1"].activity
     assert old.kind == "class"
@@ -297,8 +301,12 @@ def test_staging_returns_kind_category_and_checked_date(kinds_fixture) -> None:
 
 
 def test_staging_shows_eat_only_from_verified_organisers(tmp_path, monkeypatch) -> None:
-    checked = _item(1, org=_ORG_A, pricing={"pricing_type": "free", "amount": 0}, entry=(1, 60))
-    unchecked = _item(2, org=_ORG_B, pricing={"pricing_type": "free", "amount": 0}, entry=(1, 60))
+    checked = _item(
+        1, org=_ORG_A, pricing={"pricing_type": "free", "amount": 0}, entry=(1, 60)
+    )
+    unchecked = _item(
+        2, org=_ORG_B, pricing={"pricing_type": "free", "amount": 0}, entry=(1, 60)
+    )
     for item in (checked, unchecked):
         item["activity"]["kind"] = "eat"
     checked["organization"]["parent_verified"] = True
