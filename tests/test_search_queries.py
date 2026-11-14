@@ -130,3 +130,11 @@ def test_build_search_query_shows_eat_only_from_verified_organizations() -> None
     )
     assert eat_rule in _sql(ActivitySearchFilters())
     assert eat_rule in _sql(ActivitySearchFilters(kinds=("eat",)))
+
+
+def test_validate_filters_allows_one_probe_row_above_the_page_limit() -> None:
+    """The pager asks for limit + 1 rows; the request limit stays 200."""
+
+    validate_filters(ActivitySearchFilters(limit=201))
+    with pytest.raises(ValueError, match="limit"):
+        validate_filters(ActivitySearchFilters(limit=202))
