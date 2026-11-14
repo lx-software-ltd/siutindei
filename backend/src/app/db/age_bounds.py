@@ -1,13 +1,41 @@
 """Inclusive age bounds for Postgres int4range values.
 
-Postgres stores ``int4range(0, 18, '[]')`` as ``[0, 19)``. Callers that
-show or compare an inclusive maximum must subtract one from an exclusive
-upper bound.
+A listing age is never stored above ``MAX_LISTING_AGE``. Writers cap
+with ``cap_listing_ages`` before building the range. Postgres stores
+``int4range(0, 18, '[]')`` as ``[0, 19)``. Callers that show or compare
+an inclusive maximum must subtract one from an exclusive upper bound.
 """
 
 from __future__ import annotations
 
 from typing import Any
+
+from app.exceptions import ValidationError
+
+MAX_LISTING_AGE = 18
+
+
+def cap_listing_ages(age_min: Any, age_max: Any) -> tuple[int, int]:
+    """Return the ages to store. Anything over 18 becomes 18.
+
+    ``age_min`` may equal ``age_max``. It cannot be negative, and it
+    cannot be higher than ``age_max`` after the cap.
+    """
+    try:
+        lower = int(age_min)
+        upper = int(age_max)
+    except (TypeError, ValueError) as exc:
+        raise ValidationError("age_min and age_max must be valid integers") from exc
+    if lower < 0:
+        raise ValidationError("age_min must be at least 0", field="age_min")
+    lower = min(lower, MAX_LISTING_AGE)
+    upper = min(upper, MAX_LISTING_AGE)
+    if lower > upper:
+        raise ValidationError(
+            "age_min cannot exceed age_max",
+            field="age_min",
+        )
+    return lower, upper
 
 
 def inclusive_age_bounds(age_range: Any) -> tuple[int | None, int | None]:

@@ -234,8 +234,11 @@ def _issue_predicates() -> dict[str, ColumnElement[bool]]:
         ),
         "default_age_range": _child_exists(
             Activity,
-            (func.lower(Activity.age_range) == 0)
-            & (func.upper(Activity.age_range) == 19),
+            and_(
+                Activity.kind.notin_(("place", "eat")),
+                func.lower(Activity.age_range) == 0,
+                func.upper(Activity.age_range) == 19,
+            ),
         ),
         ACTIVITY_ADDED_SINCE_REJECTED: and_(
             Organization.review_status == "rejected",

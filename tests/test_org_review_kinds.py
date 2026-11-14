@@ -29,6 +29,7 @@ from app.services.area_readiness import (
     area_readiness,
 )
 from app.services.org_review import load_snapshots, summarize_snapshots
+from app.services.org_review_kinds import is_catch_all_age
 from app.services.org_review_sql import (
     has_blocker_clause,
     issue_clause,
@@ -242,28 +243,31 @@ def test_places_need_neither_and_preschools_only_warn_on_price(db_session) -> No
     _assert_sql_matches_python(db_session, [places, preschools])
 
 
+def test_catch_all_age_excludes_the_import_default() -> None:
+    assert is_catch_all_age(0, 99)
+    assert is_catch_all_age(0, 25)
+    assert not is_catch_all_age(0, 18)
+    assert not is_catch_all_age(1, 99)
+    assert not is_catch_all_age(5, 12)
+
+
 def test_catch_all_ages_warn_for_classes_and_camps_only(db_session) -> None:
     area, category = _area(db_session), _category(db_session)
     organization, location = _org(db_session, area)
-    wide_class = _activity(db_session, organization, location, category, ages=(0, 99))
-    wide_camp = _activity(
-        db_session, organization, location, category, kind="camp", ages=(0, 25)
-    )
     import_default = _activity(
         db_session, organization, location, category, ages=(0, 18)
     )
-    wide_place = _activity(
-        db_session, organization, location, category, kind="place", ages=(0, 99)
+    all_ages_place = _activity(
+        db_session, organization, location, category, kind="place", ages=(0, 18)
     )
-    narrow = _activity(db_session, organization, location, category, ages=(1, 99))
+    narrow = _activity(db_session, organization, location, category, ages=(5, 12))
 
     issues = _issues(db_session, organization)
-    assert issues[("catch_all_age", str(wide_class.id))] == "warning"
-    assert issues[("catch_all_age", str(wide_camp.id))] == "warning"
     assert ("catch_all_age", str(import_default.id)) not in issues
     assert issues[("default_age_range", str(import_default.id))] == "warning"
-    assert ("catch_all_age", str(wide_place.id)) not in issues
-    assert ("catch_all_age", str(narrow.id)) not in issues
+    assert ("default_age_range", str(all_ages_place.id)) not in issues
+    assert ("catch_all_age", str(all_ages_place.id)) not in issues
+    assert ("default_age_range", str(narrow.id)) not in issues
     _assert_sql_matches_python(db_session, [organization])
 
 
@@ -428,7 +432,7 @@ def _ready_area(db_session):
     camp = _activity(
         db_session, plain, plain_location, category, kind="camp", dates=_UPCOMING
     )
-    _activity(db_session, plain, plain_location, category, ages=(0, 99))
+    _activity(db_session, plain, plain_location, category, ages=(0, 18))
     _activity(db_session, plain, plain_location, category, kind="place", price=None)
     rejected, rejected_location = _org(
         db_session,

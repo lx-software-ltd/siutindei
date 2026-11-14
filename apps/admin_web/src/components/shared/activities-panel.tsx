@@ -21,6 +21,7 @@ import {
   type ListingFacts,
   type ListingKind,
 } from '../../lib/listing-kinds';
+import { MAX_LISTING_AGE, capListingAge } from '../../lib/listing-age';
 import { parseRequiredNumber } from '../../lib/number-parsers';
 import type { ApiMode } from '../../lib/api-client-admin';
 import { normalizeKey } from '../../lib/string-utils';
@@ -239,8 +240,9 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     ) {
       return 'Age range must be numeric.';
     }
-    if (ageMin >= ageMax) {
-      return 'Age min must be less than age max.';
+    const capped = capListingAge(ageMin, ageMax);
+    if (capped.ageMin > capped.ageMax) {
+      return 'Age min cannot exceed age max.';
     }
     return null;
   };
@@ -294,10 +296,15 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     }
     return ageMaxValue === null ? 'Age max must be numeric.' : '';
   }, [ageMaxValue, panel.formState.age_max]);
-  const ageRangeError =
-    ageMinValue !== null && ageMaxValue !== null && ageMinValue >= ageMaxValue
-      ? 'Age min must be less than age max.'
+  const ageRangeError = (() => {
+    if (ageMinValue === null || ageMaxValue === null) {
+      return '';
+    }
+    const capped = capListingAge(ageMinValue, ageMaxValue);
+    return capped.ageMin > capped.ageMax
+      ? 'Age min cannot exceed age max.'
       : '';
+  })();
 
   const handleNameChange = (language: LanguageCode, value: string) => {
     markTouched('name');
@@ -332,26 +339,34 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     panel.items.find((item) => item.id === panel.editingId)
       ?.source_category_name ?? '';
 
-  const formToPayload = (form: ActivityFormState) => ({
-    org_id: form.org_id,
-    category_id: form.category_id,
-    name: form.name.trim(),
-    description: form.description.trim() || null,
-    name_translations: buildTranslationsPayload(form.name_translations),
-    description_translations: buildTranslationsPayload(
-      form.description_translations
-    ),
-    age_min: parseRequiredNumber(form.age_min),
-    age_max: parseRequiredNumber(form.age_max),
-    ...(isAdmin
-      ? {
-          source_url: form.source_url.trim() || null,
-          source_note: form.source_note.trim() || null,
-          kind: form.kind,
-          facts: factsForKind(form.kind, form.facts),
-        }
-      : {}),
-  });
+  const formToPayload = (form: ActivityFormState) => {
+    const ageMin = parseRequiredNumber(form.age_min);
+    const ageMax = parseRequiredNumber(form.age_max);
+    const ages =
+      ageMin !== null && ageMax !== null
+        ? capListingAge(ageMin, ageMax)
+        : { ageMin, ageMax };
+    return {
+      org_id: form.org_id,
+      category_id: form.category_id,
+      name: form.name.trim(),
+      description: form.description.trim() || null,
+      name_translations: buildTranslationsPayload(form.name_translations),
+      description_translations: buildTranslationsPayload(
+        form.description_translations
+      ),
+      age_min: ages.ageMin,
+      age_max: ages.ageMax,
+      ...(isAdmin
+        ? {
+            source_url: form.source_url.trim() || null,
+            source_note: form.source_note.trim() || null,
+            kind: form.kind,
+            facts: factsForKind(form.kind, form.facts),
+          }
+        : {}),
+    };
+  };
 
   const handleSubmit = () => {
     validation.setHasSubmitted(true);
@@ -655,6 +670,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             id='activity-age-max'
             type='number'
             min='0'
+            max={MAX_LISTING_AGE}
             value={editorForm.age_max}
             disabled={locked}
             onChange={(e) => {
