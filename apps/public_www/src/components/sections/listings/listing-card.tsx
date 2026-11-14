@@ -11,6 +11,7 @@ import { useActivityHref } from '@/components/shared/static-activity-pages';
 import { listingVariants, listingVenues } from '@/lib/activities/group-listings';
 import {
   categoryLabelForListing,
+  checkedFactLabels,
   listingAgeLabel,
   shortPlaceLabel,
 } from '@/lib/activities/listing-facts';
@@ -70,6 +71,17 @@ export function listingCardRules(listing: ActivityListing): {
   }
 }
 
+const CARD_FACT_LIMIT = 4;
+
+/** An eat card's checked facts, the missing ones too ("High chairs · No kids' menu"). */
+export function listingFactsLine(locale: Locale, listing: ActivityListing): string | null {
+  if (listing.activity.kind !== 'eat') {
+    return null;
+  }
+  const facts = checkedFactLabels(locale, listing).slice(0, CARD_FACT_LIMIT);
+  return facts.length > 0 ? facts.join(' · ') : null;
+}
+
 function openingLine(locale: Locale, snippet: string): string {
   return locale === 'zh-HK' ? `開放：${snippet}` : `Open ${snippet}`;
 }
@@ -119,6 +131,7 @@ export function ListingCard({
   const orgName = listingOrgName(locale, listing);
   const regionId = regionIdForListing(listing);
   const { place, schedule } = listingMetaLine(locale, listing, labels.locationsCount);
+  const factsLine = listingFactsLine(locale, listing);
   const price = formatListingPriceSummary(locale, listing);
   const ageLabel = listingAgeLabel(locale, listing);
   const categoryLabel = categoryLabelForListing(locale, listing);
@@ -237,6 +250,7 @@ export function ListingCard({
             {schedule}
           </p>
         ) : null}
+        {factsLine ? <p className="text-sm text-ink-700">{factsLine}</p> : null}
         {price || hasFreeTrial ? (
           <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink-900">
             {price ? <span>{price}</span> : null}

@@ -112,6 +112,9 @@ function isPublished(row: CatalogueRow): boolean {
   if (status === 'closed_permanently' || status === 'hidden') {
     return false;
   }
+  if (row.activity.kind === 'eat' && !row.organization.parent_verified) {
+    return false;
+  }
   return row.location.status !== 'permanently_closed';
 }
 
@@ -222,6 +225,16 @@ export function catalogueKindPages(): readonly CatalogueCategory[] {
     labels: page.labels,
     listings: kindPageListings(listings, page.kind),
   })).filter(hasEnoughListings);
+}
+
+/** Pilot kinds with enough listings for a kind page, which the wizard then offers. */
+export function offeredPilotKindIds(): readonly string[] {
+  const kindsWithPages = new Set<string>(
+    catalogueKindPages().map((page) => page.listingKind ?? ''),
+  );
+  return homeWizardChoices.kinds
+    .filter((kind) => kind.pilot && kindsWithPages.has(kind.id))
+    .map((kind) => kind.id);
 }
 
 /** Wizard topics with enough classes and camps for a page, in wizard order. */

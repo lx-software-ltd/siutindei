@@ -179,11 +179,15 @@ describe('search-params', () => {
 
   it('ignores unknown kinds, ages, and topics', () => {
     const parsed = parseSearchFiltersFromQuery(
-      new URLSearchParams('kind=eat&age=3-6&types=early-years,art'),
+      new URLSearchParams('kind=party&age=3-6&types=early-years,art'),
     );
     expect(parsed.kind).toBeUndefined();
     expect(parsed.ageGroupId).toBeNull();
     expect(parsed.activityTypeIds).toEqual(['art']);
+  });
+
+  it('reads a pilot kind from a shared link', () => {
+    expect(parseSearchFiltersFromQuery(new URLSearchParams('kind=eat')).kind).toBe('eat');
   });
 
   it('ignores unknown refinement values', () => {

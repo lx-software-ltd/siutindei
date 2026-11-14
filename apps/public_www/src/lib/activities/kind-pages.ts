@@ -18,11 +18,12 @@ const KIND_BY_SLUG: Readonly<Record<KindPageSlug, ListingKind>> = {
   camps: 'camp',
   places: 'place',
   nurseries: 'preschool',
+  eat: 'eat',
 };
 
-/** Hub order: the three the hub lists, then nurseries, which it only links. */
+/** Hub order: the three the hub lists, then the pages it only links. */
 export const KIND_PAGES: readonly KindPage[] = (
-  ['classes', 'camps', 'places', 'nurseries'] as const
+  ['classes', 'camps', 'places', 'nurseries', 'eat'] as const
 ).map((slug) => ({
   slug,
   kind: KIND_BY_SLUG[slug],

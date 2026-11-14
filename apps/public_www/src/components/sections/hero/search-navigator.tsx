@@ -8,6 +8,7 @@ import type { SiteContent } from '@/content/types';
 import { Button } from '@/components/shared/ui/button';
 import { ChoiceTile } from '@/components/shared/ui/choice-tile';
 import { Modal } from '@/components/shared/ui/modal';
+import { useOfferedKinds } from '@/components/shared/offered-kinds';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { formatContentTemplate } from '@/content/content-field-utils';
 import { saveRecentSearch } from '@/lib/activities/recent-storage';
@@ -32,7 +33,6 @@ import {
 import {
   homeWizardChoices,
   labelForLocale,
-  OFFERED_KINDS,
   REGIONS_BY_ID,
 } from '@/lib/home-wizard/choices';
 import {
@@ -106,6 +106,7 @@ function stepIndex(
 export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   const router = useRouter();
   const { setFilters } = useSearchContext();
+  const offeredKinds = useOfferedKinds();
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<NavigatorStep>('location');
   const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
@@ -372,7 +373,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
           <fieldset>
             <legend className="sr-only">{copy.steps.kind.label}</legend>
             <div className="grid grid-cols-2 gap-2 sm:gap-4">
-              {OFFERED_KINDS.map((kind) => (
+              {offeredKinds.map((kind) => (
                 <ChoiceTile
                   key={kind.id}
                   label={labelForLocale(kind.labels, locale)}

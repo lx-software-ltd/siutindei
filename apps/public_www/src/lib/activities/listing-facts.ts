@@ -1,4 +1,6 @@
+import enContent from '@/content/en.json';
 import type { Locale } from '@/content/locales';
+import zhHKContent from '@/content/zh-HK.json';
 import {
   homeWizardChoices,
   labelForLocale,
@@ -115,6 +117,24 @@ export function checkedFacts(listing: ActivityListing): readonly CheckedFact[] {
   return FACT_KEYS[kind]
     .filter((key) => typeof facts[key] === 'boolean')
     .map((key) => ({ key, present: facts[key] }));
+}
+
+type FactLabels = Readonly<Record<string, { readonly present: string; readonly absent: string }>>;
+
+const FACT_LABELS: Readonly<Record<Locale, FactLabels>> = {
+  en: enContent.activityDetail.factLabels,
+  'zh-HK': zhHKContent.activityDetail.factLabels,
+};
+
+/** "High chairs", "No kids' menu": each checked fact, the missing ones included. */
+export function checkedFactLabels(locale: Locale, listing: ActivityListing): readonly string[] {
+  return checkedFacts(listing).flatMap((fact) => {
+    const labels = FACT_LABELS[locale][fact.key];
+    if (!labels) {
+      return [];
+    }
+    return [fact.present ? labels.present : labels.absent];
+  });
 }
 
 /** "November 2026" / "2026年11月", in Hong Kong time. Null for a bad date. */

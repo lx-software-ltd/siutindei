@@ -7,6 +7,7 @@ import type { Locale } from '@/content/locales';
 import { formatContentTemplate } from '@/content/content-field-utils';
 import { Button } from '@/components/shared/ui/button';
 import { Modal } from '@/components/shared/ui/modal';
+import { useOfferedKinds } from '@/components/shared/offered-kinds';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { saveRecentSearch } from '@/lib/activities/recent-storage';
 import {
@@ -31,7 +32,6 @@ import { REGIONS_BY_ID } from '@/lib/home-wizard/choices';
 import {
   homeWizardChoices,
   labelForLocale,
-  OFFERED_KINDS,
 } from '@/lib/home-wizard/choices';
 import {
   ALL_HONG_KONG_ICON_SRC,
@@ -117,6 +117,7 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
   const router = useRouter();
   const formId = useId();
   const { filters, isSearchOpen, setFilters, closeSearch } = useSearchContext();
+  const offeredKinds = useOfferedKinds();
   const [draft, setDraft] = useState<SearchFiltersState>(() =>
     withDefaultOpenLocation(sanitizeSearchFilters(filters).filters),
   );
@@ -258,8 +259,10 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
           <legend className="mb-2 text-sm font-semibold text-ink-900">
             {copy.kindLabel}
           </legend>
-          <div className="grid w-full min-w-0 max-w-full grid-cols-1 gap-2 md:grid-cols-3">
-            {OFFERED_KINDS.map((kind) => (
+          <div
+            className={`grid w-full min-w-0 max-w-full grid-cols-1 gap-2 ${offeredKinds.length > 3 ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}
+          >
+            {offeredKinds.map((kind) => (
               <SearchChoiceButton
                 key={kind.id}
                 label={labelForLocale(kind.labels, locale)}

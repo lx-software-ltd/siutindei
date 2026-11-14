@@ -248,6 +248,7 @@
     "mapEmptyLabel": "這些結果沒有地圖位置。",
     "mapUnavailableLabel": "此環境未設定 Google Maps。",
     "mapAriaLabel": "Google 地圖上的活動位置",
+    "familyFoodLabel": "親子餐廳",
     "enlargeMapLabel": "放大地圖",
     "reduceMapLabel": "縮小地圖",
     "loadingMapLabel": "載入地圖中...",
@@ -398,7 +399,8 @@
       "classes": "興趣班及課程",
       "camps": "營會及工作坊",
       "places": "遊樂好去處",
-      "nurseries": "幼兒園及幼稚園"
+      "nurseries": "幼兒園及幼稚園",
+      "eat": "親子餐廳"
     },
     "kindSectionLinkTemplate": "查看全部 {count} 個",
     "coverageTemplate": "共 {count} 個項目，其中 {verified} 個經本地家長查證。最後更新：{date}。",

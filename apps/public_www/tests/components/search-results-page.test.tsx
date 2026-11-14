@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SearchResultsPage } from '@/components/pages/search-results-page';
+import { OfferedKinds } from '@/components/shared/offered-kinds';
 import { SearchProvider } from '@/components/shared/search/search-context';
 import { getContent } from '@/content';
 import { homeWizardChoices } from '@/lib/home-wizard/choices';
@@ -105,13 +106,15 @@ function wideSummary(): HTMLElement {
   return summary as HTMLElement;
 }
 
-function renderPage() {
+function renderPage(pilotKindIds: readonly string[] = []) {
   const copy = getContent('en').searchPage;
   render(
     withChromeCopy(
-      <SearchProvider>
-        <SearchResultsPage locale="en" copy={copy} />
-      </SearchProvider>,
+      <OfferedKinds pilotKindIds={pilotKindIds}>
+        <SearchProvider>
+          <SearchResultsPage locale="en" copy={copy} />
+        </SearchProvider>
+      </OfferedKinds>,
     ),
   );
   return copy;
@@ -400,6 +403,55 @@ describe('SearchResultsPage', () => {
       'lg:px-8',
       'lg:pt-4',
     );
+  });
+
+  it('adds family-friendly food pins beside the results once eat is offered', async () => {
+    const cafe: ActivityListing = {
+      ...buildListing(),
+      activity: {
+        ...buildListing().activity,
+        id: 'eat-1',
+        name: 'Harbour Cafe',
+        kind: 'eat',
+        facts: { high_chairs: true, kids_menu: false },
+      },
+      organization: { ...buildListing().organization, id: 'org-2', parentVerified: true },
+    };
+    vi.mocked(fetchActivitySearch).mockImplementation(async (params) => ({
+      items: params.kinds?.includes('eat') ? [cafe] : [buildListing()],
+      nextCursor: null,
+    }));
+    currentSearchParams.value = new URLSearchParams('age=3-5&region=kowloon');
+    const copy = renderPage(['eat']);
+
+    const toggle = await screen.findByRole('button', { name: copy.familyFoodLabel });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    const results = await screen.findByRole('region', { name: copy.resultsLabel });
+    await within(results).findByText('Kowloon art');
+    expect(within(results).queryByText('Harbour Cafe')).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    expect(await within(results).findByText('Harbour Cafe')).toBeInTheDocument();
+    expect(within(results).getByText("High chairs · No kids' menu")).toBeInTheDocument();
+    expect(within(results).getByText('Kowloon art')).toBeInTheDocument();
+    const foodRequest = vi
+      .mocked(fetchActivitySearch)
+      .mock.calls.map(([params]) => params)
+      .find((params) => params.kinds?.includes('eat'));
+    expect(foodRequest).toMatchObject({ kinds: ['eat'] });
+    expect(foodRequest).not.toHaveProperty('ageMin');
+
+    fireEvent.click(toggle);
+    await waitFor(() =>
+      expect(within(results).queryByText('Harbour Cafe')).not.toBeInTheDocument(),
+    );
+  });
+
+  it('does not offer family-friendly food before the pilot has enough places', async () => {
+    const copy = renderPage();
+    await screen.findByRole('application', { name: copy.mapAriaLabel });
+    expect(screen.queryByRole('button', { name: copy.familyFoodLabel })).not.toBeInTheDocument();
   });
 
   it('hides the view toggle when maps are disabled', async () => {

@@ -20,11 +20,12 @@ import {
   clearCatalogueCacheForTests,
   landingTypeIdForListing,
   latestUpdate,
+  offeredPilotKindIds,
 } from '@/lib/activities/catalogue-snapshot';
 
 interface FixtureRow {
   activity: { id: string; category_id: string; category_root_id?: string; kind?: string };
-  organization: { status?: string; updated_at?: string };
+  organization: { status?: string; updated_at?: string; parent_verified?: boolean };
   [key: string]: unknown;
 }
 
@@ -114,6 +115,29 @@ describe('catalogue snapshot', () => {
       { locale: 'zh-HK', category: 'classes' },
       { locale: 'zh-HK', category: topics[0].typeId },
     ]);
+  });
+
+  it('gives eat a page and offers it only from three verified places', () => {
+    const eatRows = (count: number, verified = true) =>
+      categoryRows(firstCategory, count).map((row) => {
+        row.activity.kind = 'eat';
+        row.organization = { ...row.organization, parent_verified: verified };
+        return row;
+      });
+    vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, writeSnapshot(eatRows(LANDING_PAGE_MIN_ACTIVITIES - 1)));
+    expect(offeredPilotKindIds()).toEqual([]);
+    expect(catalogueKindPages().map((page) => page.typeId)).not.toContain('eat');
+
+    clearCatalogueCacheForTests();
+    vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, writeSnapshot(eatRows(LANDING_PAGE_MIN_ACTIVITIES, false)));
+    expect(catalogueListings()).toEqual([]);
+    expect(offeredPilotKindIds()).toEqual([]);
+    expect(catalogueKindPages().map((page) => page.typeId)).not.toContain('eat');
+
+    clearCatalogueCacheForTests();
+    vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, writeSnapshot(eatRows(LANDING_PAGE_MIN_ACTIVITIES)));
+    expect(offeredPilotKindIds()).toEqual(['eat']);
+    expect(catalogueKindPages().map((page) => page.typeId)).toEqual(['eat']);
   });
 
   it('drops ended sessions and lists camps by their next start', () => {

@@ -263,6 +263,14 @@ Source: [`apps/public_www`](../../apps/public_www).
   camps page sorts by the next start. The weekend preset also sends
   `date_from` and `date_to` for the coming Saturday and Sunday; undated
   schedules match any window.
+- **Eat pilot:** search, both staging stores, and the build drop an
+  `eat` listing unless a parent verified its organiser. The build
+  offers `eat` in the wizard and the results page (`OfferedKinds` in
+  the locale layout, from `offeredPilotKindIds()`) only once three
+  such listings give it the `/activities/eat/` page. In map view a
+  "Family-friendly food" toggle adds eat pins for the same area beside
+  the results. Eat cards list the facts a parent checked, the missing
+  ones included ("No high chairs").
 - **Listing kinds:** every listing has a `kind` (a missing one reads as
   `class`). Cards and activity pages follow it
   (`listingCardRules` in `listing-card.tsx`): classes show weekly times,

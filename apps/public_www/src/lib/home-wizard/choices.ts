@@ -62,8 +62,19 @@ export const DEFAULT_SEARCH_KINDS: readonly string[] = OFFERED_KINDS.map(
   (kind) => kind.id,
 );
 
+/**
+ * The kinds to offer once the build knows which pilot kinds have enough
+ * listings. `pilotKindIds` comes from the catalogue at build time.
+ */
+export function offeredKinds(pilotKindIds: readonly string[]): readonly WizardKindOption[] {
+  return homeWizardChoices.kinds.filter(
+    (kind) => !kind.pilot || pilotKindIds.includes(kind.id),
+  );
+}
+
+/** Any kind in the choices file, pilot or not, so a shared link still parses. */
 export function kindOption(kindId: string | null | undefined): WizardKindOption | undefined {
-  return OFFERED_KINDS.find((kind) => kind.id === kindId);
+  return homeWizardChoices.kinds.find((kind) => kind.id === kindId);
 }
 
 export const REGIONS_BY_ID: ReadonlyMap<string, WizardRegionOption> = new Map(

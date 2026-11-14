@@ -17,9 +17,11 @@ import { buildMapSearchHref, buildSearchPageHref } from '@/lib/activities/map-se
 import { rememberSearchHref } from '@/lib/activities/recent-storage';
 import { useActivitySearch } from '@/lib/activities/search/use-activity-search';
 import {
+  familyFoodFilters,
   parseSearchFiltersFromQuery,
   parseSearchViewMode,
 } from '@/lib/activities/search-params';
+import { useOfferedKinds } from '@/components/shared/offered-kinds';
 import { sanitizeSearchFilters } from '@/lib/home-wizard/area-scope';
 import { listingsWithCoordinates } from '@/lib/google-maps/coordinates';
 import { isGoogleMapsEnabled } from '@/lib/google-maps/config';
@@ -37,6 +39,8 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
   const applyFilters = useApplySearchFilters(locale);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAreaNotice, setShowAreaNotice] = useState(false);
+  const [showFamilyFood, setShowFamilyFood] = useState(false);
+  const offeredKinds = useOfferedKinds();
 
   const searchKey = searchParams.toString();
   const urlFilterState = useMemo(
@@ -87,6 +91,23 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
     view: 'card',
     includeTotal: true,
   });
+  const familyFoodOffered =
+    showMapSplit && urlFilters.kind !== 'eat' && offeredKinds.some((kind) => kind.id === 'eat');
+  const familyFoodOn = familyFoodOffered && showFamilyFood;
+  const familyFood = useActivitySearch({
+    filters: familyFoodFilters(urlFilters),
+    locale,
+    pageSize: SEARCH_RESULTS_PAGE_LIMIT,
+    view: 'card',
+    enabled: familyFoodOn,
+  });
+  const resultIds = new Set(search.items.map((listing) => listing.activity.id));
+  const mapListings = familyFoodOn
+    ? [
+        ...search.items,
+        ...familyFood.items.filter((listing) => !resultIds.has(listing.activity.id)),
+      ]
+    : search.items;
   const listings = search.items;
   const isLoading = search.isLoading;
   const categoryMatch = search.categoryMatch;
@@ -174,10 +195,19 @@ export function SearchResultsPage({ locale, copy }: SearchResultsPageProps) {
             <SearchMapSplitLayout
               locale={locale}
               copy={copy}
-              listings={listings}
+              listings={mapListings}
               selectedId={selectedId}
               onSelect={setSelectedId}
               isLoading={isLoading}
+              layerToggle={
+                familyFoodOffered
+                  ? {
+                      label: copy.familyFoodLabel,
+                      isOn: familyFoodOn,
+                      onToggle: () => setShowFamilyFood((current) => !current),
+                    }
+                  : undefined
+              }
               loadMore={{
                 hasMore: search.hasMore,
                 isLoadingMore: search.isLoadingMore,

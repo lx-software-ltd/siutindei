@@ -248,6 +248,7 @@
     "mapEmptyLabel": "No map locations for these results.",
     "mapUnavailableLabel": "Google Maps is not configured for this environment.",
     "mapAriaLabel": "Activity locations on Google Maps",
+    "familyFoodLabel": "Family-friendly food",
     "enlargeMapLabel": "Enlarge map",
     "reduceMapLabel": "Reduce map",
     "loadingMapLabel": "Loading map...",
@@ -398,7 +399,8 @@
       "classes": "Classes and clubs",
       "camps": "Camps and workshops",
       "places": "Places to play",
-      "nurseries": "Nurseries and kindergartens"
+      "nurseries": "Nurseries and kindergartens",
+      "eat": "Places to eat"
     },
     "kindSectionLinkTemplate": "See all {count}",
     "coverageTemplate": "{count} listings. {verified} checked by a local parent. Last updated {date}.",

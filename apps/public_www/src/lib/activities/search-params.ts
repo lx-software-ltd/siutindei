@@ -319,6 +319,16 @@ export function buildSearchQueryString(
   return params.toString();
 }
 
+/** The map's family-food layer: places to eat in the same area, nothing else narrowed. */
+export function familyFoodFilters(filters: SearchFiltersState): SearchFiltersState {
+  return {
+    ...DEFAULT_SEARCH_FILTERS,
+    kind: 'eat',
+    regionId: filters.regionId,
+    neighbourhoodId: filters.neighbourhoodId,
+  };
+}
+
 /** The weekend preset is not a kind: the default kinds on a Saturday or Sunday. */
 export function isWeekendPreset(filters: SearchFiltersState): boolean {
   return !filters.kind && filters.day === 'weekend';

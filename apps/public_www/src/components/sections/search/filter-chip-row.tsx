@@ -18,7 +18,8 @@ import {
   withKind,
   type SearchDayChoice,
 } from '@/lib/activities/search-params';
-import { labelForLocale, OFFERED_KINDS } from '@/lib/home-wizard/choices';
+import { useOfferedKinds } from '@/components/shared/offered-kinds';
+import { labelForLocale } from '@/lib/home-wizard/choices';
 
 interface FilterChipRowProps {
   readonly locale: Locale;
@@ -49,6 +50,7 @@ export function FilterChipRow({
 }: FilterChipRowProps) {
   const { filters } = useSearchContext();
   const applyFilters = useApplySearchFilters(locale);
+  const offeredKinds = useOfferedKinds();
   const classFilters = kindHasClassFilters(filters.kind);
 
   return (
@@ -63,7 +65,7 @@ export function FilterChipRow({
           value={filters.kind ?? ''}
           options={[
             { value: '', label: copy.anyKindLabel },
-            ...OFFERED_KINDS.map((kind) => ({
+            ...offeredKinds.map((kind) => ({
               value: kind.id,
               label: labelForLocale(kind.labels, locale),
             })),

@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import type { Locale } from '@/content/locales';
-import { listingCardRules, listingMetaLine } from '@/components/sections/listings/listing-card';
+import {
+  listingCardRules,
+  listingFactsLine,
+  listingMetaLine,
+} from '@/components/sections/listings/listing-card';
 import { useActivityHref } from '@/components/shared/static-activity-pages';
 import type { ActivityListing } from '@/lib/activities/types';
 import { listingAgeLabel } from '@/lib/activities/listing-facts';
@@ -81,6 +85,7 @@ function SummaryBody({ locale, listing, labels }: SearchMapListItemBase) {
   const age = listingAgeLabel(locale, listing);
   const { place, schedule } = listingMetaLine(locale, listing, labels.locationsCount);
   const meta = [place, schedule].filter(Boolean).join(' · ');
+  const factsLine = listingFactsLine(locale, listing);
   const price = formatListingPriceSummary(locale, listing);
 
   return (
@@ -94,6 +99,9 @@ function SummaryBody({ locale, listing, labels }: SearchMapListItemBase) {
         ) : null}
         <h3 className="line-clamp-2 text-sm font-semibold text-ink-900">{title}</h3>
         {meta ? <p className="mt-0.5 line-clamp-1 text-xs text-ink-700">{meta}</p> : null}
+        {factsLine ? (
+          <p className="mt-0.5 line-clamp-1 text-xs text-ink-700">{factsLine}</p>
+        ) : null}
         {price || listingCardRules(listing).detailsOnRequest ? (
           <p className="mt-0.5 text-sm font-semibold text-ink-900">
             {price ?? <span className="font-normal text-ink-500">{labels.detailsOnRequest}</span>}
