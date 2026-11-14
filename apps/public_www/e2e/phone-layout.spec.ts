@@ -103,8 +103,9 @@ test.describe('phone layout', () => {
 
       const fieldsets = dialog.locator('fieldset');
       const areas = fieldsets.nth(0).locator('.search-choice');
-      const ages = fieldsets.nth(1).locator('.search-choice');
-      const types = fieldsets.nth(2).locator('.search-choice');
+      const kinds = fieldsets.nth(1).locator('.search-choice');
+      const ages = fieldsets.nth(2).locator('.search-choice');
+      const types = fieldsets.nth(3).locator('.search-choice');
 
       const areaBoxes = await boxesOf(areas);
       const dialogBox = await boxOf(dialog);
@@ -112,17 +113,20 @@ test.describe('phone layout', () => {
       expect(areaBoxes[0].width).toBeGreaterThan(dialogBox.width * 0.8);
       expect(gridShape(areaBoxes.slice(1))).toEqual({ columns: 2, rows: 2 });
 
+      const kindBoxes = await boxesOf(kinds);
+      expect(gridShape(kindBoxes)).toEqual({ columns: 1, rows: kindBoxes.length });
+
       const ageBoxes = await boxesOf(ages);
-      expect(gridShape(ageBoxes)).toEqual({ columns: ageBoxes.length, rows: 1 });
+      expect(gridShape(ageBoxes)).toEqual({ columns: 3, rows: Math.ceil(ageBoxes.length / 3) });
 
       const typeBoxes = await boxesOf(types);
       expect(gridShape(typeBoxes).columns).toBe(2);
       expect(new Set(typeBoxes.map((box) => Math.round(box.width))).size).toBe(1);
 
-      for (const choices of [areas, ages, types]) {
+      for (const choices of [areas, kinds, ages, types]) {
         await expect(choices.first().locator('img')).toBeVisible();
       }
-      for (const box of [...areaBoxes, ...ageBoxes, ...typeBoxes]) {
+      for (const box of [...areaBoxes, ...kindBoxes, ...ageBoxes, ...typeBoxes]) {
         expect(box.height).toBeGreaterThanOrEqual(44);
       }
 
@@ -172,8 +176,10 @@ test.describe('phone layout', () => {
     await expect(dialog).toBeVisible();
 
     await dialog.getByRole('button', { name: 'All Hong Kong', exact: true }).click();
+    const kinds = dialog.locator('fieldset .choice-tile');
+    expect(gridShape(await boxesOf(kinds))).toEqual({ columns: 2, rows: 2 });
+    await kinds.nth(0).click();
     const ages = dialog.locator('fieldset .choice-tile');
-    expect(gridShape(await boxesOf(ages))).toEqual({ columns: 3, rows: 1 });
     await ages.nth(1).click();
 
     const back = dialog.getByRole('button', { name: 'Back', exact: true });
