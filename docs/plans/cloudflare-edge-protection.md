@@ -171,8 +171,18 @@ Transform rule (phase `http_request_late_transform`):
 
 Bot management:
 
-- `ai_bots_protection: block`. Enforced blocking of GPTBot, CCBot,
-  Bytespider and the rest of Cloudflare's AI crawler list.
+- `ai_bots_protection: block` and `ai_training: block`. Enforced
+  blocking of GPTBot, CCBot, Bytespider and the rest of Cloudflare's AI
+  training crawler list.
+- `ai_search: disabled` and `ai_user: disabled`. AI search crawlers
+  (OAI-SearchBot, Claude-SearchBot, PerplexityBot) and user-action
+  fetchers (ChatGPT-User, Claude-User) may read pages so AI answers can
+  cite them. Decided on 13 Nov 2026 in
+  `docs/plans/public-www-seo-and-llm-search.md`; `robots.ts` names the
+  same groups.
+- `is_robots_txt_managed: false` and `bot_preference_sync_enabled:
+  false`, so crawlers get the `robots.txt` the build emits and not a
+  Cloudflare-generated one.
 - `fight_mode: false` for now. Reasons: it cannot be scoped away from the
   same-origin search fetch and has no Free-plan skip, so a false positive
   turns into a broken search for that visitor; and its JavaScript

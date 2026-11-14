@@ -207,10 +207,13 @@ def _normalize_item(item: dict[str, Any]) -> dict[str, Any]:
             entry["end_minutes_utc"],
         ),
     )[0]
+    languages_key = ",".join(schedule.get("languages") or [])
+    if schedule.get("starts_on"):
+        languages_key = f"{languages_key}@{schedule['starts_on']}"
     schedule_id = _uuid_from_parts(
         item["activity"]["id"],
         item["location"]["id"],
-        ",".join(schedule.get("languages") or []),
+        languages_key,
     )
     normalized = dict(item)
     normalized["_sort"] = {
@@ -268,6 +271,11 @@ def _to_schema(
             age_min=activity.get("age_min"),
             age_max=activity.get("age_max"),
             category_id=activity.get("category_id"),
+            kind=activity.get("kind") or "class",
+            facts={} if card else dict(activity.get("facts") or {}),
+            category_root_id=activity.get("category_root_id"),
+            category_name=activity.get("category_name"),
+            category_name_translations=activity.get("category_name_translations") or {},
         ),
         organization=OrganizationSchema(
             id=organization["id"],
@@ -283,6 +291,7 @@ def _to_schema(
             description_source=organization.get("description_source"),
             place_id=organization.get("place_id") if detail else None,
             parent_verified=bool(organization.get("parent_verified", False)),
+            parent_verified_at=organization.get("parent_verified_at"),
             updated_at=organization.get("updated_at"),
             contact=(
                 None
@@ -333,6 +342,8 @@ def _to_schema(
                 for entry in entries
             ],
             languages=schedule.get("languages") or [],
+            starts_on=schedule.get("starts_on"),
+            ends_on=schedule.get("ends_on"),
         ),
     )
 

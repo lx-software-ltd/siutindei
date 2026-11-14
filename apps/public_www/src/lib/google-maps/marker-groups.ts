@@ -1,5 +1,5 @@
 import type { ActivityListing } from '@/lib/activities/types';
-import { iconSrcForActivityCategory } from '@/lib/home-wizard/choice-icons';
+import { iconSrcForListing } from '@/lib/home-wizard/choice-icons';
 
 import { listingCoordinate } from './coordinates';
 
@@ -9,13 +9,14 @@ export interface MarkerGroup {
   readonly lat: number;
   readonly lng: number;
   readonly ids: readonly string[];
-  readonly categoryId: string | null;
+  /** The pin icon of the first activity at the place. */
+  readonly iconSrc: string;
 }
 
 const GROUP_PRECISION = 4;
 
 export function groupMarkers(listings: readonly ActivityListing[]): readonly MarkerGroup[] {
-  const groups = new Map<string, { lat: number; lng: number; ids: string[]; categoryId: string | null }>();
+  const groups = new Map<string, { lat: number; lng: number; ids: string[]; iconSrc: string }>();
   for (const listing of listings) {
     const coordinate = listingCoordinate(listing);
     if (!coordinate) {
@@ -33,7 +34,7 @@ export function groupMarkers(listings: readonly ActivityListing[]): readonly Mar
       lat: coordinate.lat,
       lng: coordinate.lng,
       ids: [listing.activity.id],
-      categoryId: listing.activity.categoryId,
+      iconSrc: iconSrcForListing(listing.activity),
     });
   }
   return [...groups].map(([key, group]) => ({ key, ...group }));
@@ -44,7 +45,7 @@ export function markerIconSrc(group: MarkerGroup, isSelected: boolean): string {
   if (group.ids.length > 1) {
     return `/images/markers/group${suffix}.svg`;
   }
-  return iconSrcForActivityCategory(group.categoryId)
+  return group.iconSrc
     .replace('/images/categories/', '/images/markers/')
     .replace(/\.svg$/, `${suffix}.svg`);
 }

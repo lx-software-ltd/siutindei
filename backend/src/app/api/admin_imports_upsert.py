@@ -36,6 +36,7 @@ from app.api.admin_imports_utils import persist_import_change
 from app.api.admin_imports_venues import link_activity_to_venue
 from app.api.admin_imports_version import (
     activity_terminal,
+    fill_activity_body,
     hold_existing,
     keep_applied_category,
     location_terminal,
@@ -209,17 +210,6 @@ def upsert_organization(
         source=str(raw_org.get("source") or "") or None,
     )
     return created, "created"
-
-
-def _keep_age_pair(body: dict[str, Any], existing: Activity) -> None:
-    """An age change still has to carry the other bound the validator needs."""
-    from app.db.age_bounds import inclusive_age_bounds
-
-    age_min, age_max = inclusive_age_bounds(existing.age_range)
-    if "age_min" in body and "age_max" not in body:
-        body["age_max"] = age_max
-    if "age_max" in body and "age_min" not in body:
-        body["age_min"] = age_min
 
 
 def _keep_phone_pair(body: dict[str, Any], existing: Organization) -> None:
@@ -398,8 +388,7 @@ def upsert_activity(
         return held
     resolve_activity_category_fields(session, body)
     capture_name = keep_applied_category(body, plan)
-    if existing is not None:
-        _keep_age_pair(body, existing)
+    fill_activity_body(body, existing, name)
 
     if existing:
         updated = _update_activity(repo, existing, body)

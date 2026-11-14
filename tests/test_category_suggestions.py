@@ -154,7 +154,11 @@ def test_resolve_exact_alias_fuzzy_and_capture(
         import_job_id=None,
     )
     assert again
-    suggestion = db_session.query(CategorySuggestion).one()
+    suggestion = (
+        db_session.query(CategorySuggestion)
+        .filter(CategorySuggestion.decided_by.is_distinct_from("migration:0066"))
+        .one()
+    )
     assert suggestion.activity_count == 1
     suggestion.status = "rejected"
     db_session.flush()
@@ -281,7 +285,11 @@ def test_decisions_reassign_and_alias(
         warnings=[],
     )
     finish_capture_batch({})
-    suggestion = db_session.query(CategorySuggestion).one()
+    suggestion = (
+        db_session.query(CategorySuggestion)
+        .filter(CategorySuggestion.decided_by.is_distinct_from("migration:0066"))
+        .one()
+    )
     mapped = apply_decision(
         db_session,
         suggestion,

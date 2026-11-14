@@ -1,7 +1,7 @@
 import type { Locale } from '@/content/locales';
 
 import { listingVariants } from './group-listings';
-import type { ActivityListing, SearchPricing } from './types';
+import type { ActivityListing, ListingKind, SearchPricing } from './types';
 
 const SUFFIXES: Record<string, { readonly en: string; readonly zh: string }> = {
   per_class: { en: ' / class', zh: ' / 堂' },
@@ -24,9 +24,15 @@ export function formatMoney(
   }).format(amount);
 }
 
-/** Price of one class, the same rule the search API sorts and filters by. */
-export function classPriceEquivalent(pricing: SearchPricing | null): number | null {
-  if (!pricing) {
+/**
+ * Price of one class, the same rule the search API sorts and filters by.
+ * Only a class has one: a day camp or a kindergarten fee is not a class price.
+ */
+export function classPriceEquivalent(
+  pricing: SearchPricing | null,
+  kind: ListingKind = 'class',
+): number | null {
+  if (!pricing || kind !== 'class') {
     return null;
   }
   switch (pricing.pricingType) {
@@ -69,11 +75,12 @@ export function formatPricing(locale: Locale, pricing: SearchPricing): string {
 export function formatClassEquivalent(
   locale: Locale,
   pricing: SearchPricing,
+  kind: ListingKind = 'class',
 ): string | null {
   if (pricing.pricingType !== 'per_sessions') {
     return null;
   }
-  const perClass = classPriceEquivalent(pricing);
+  const perClass = classPriceEquivalent(pricing, kind);
   if (perClass === null) {
     return null;
   }
@@ -85,6 +92,13 @@ function pricingKey(pricing: SearchPricing): string {
   return `${pricing.pricingType}:${pricing.amount}:${pricing.currency}:${pricing.sessionsCount ?? ''}`;
 }
 
+function comparablePrice(pricing: SearchPricing, kind: ListingKind): number {
+  if (kind !== 'class') {
+    return pricing.pricingType === 'free' ? 0 : pricing.amount;
+  }
+  return classPriceEquivalent(pricing, kind) ?? Number.POSITIVE_INFINITY;
+}
+
 /** Distinct prices across the rows of a listing, cheapest per class first. */
 export function listingPrices(listing: ActivityListing): readonly SearchPricing[] {
   const byKey = new Map<string, SearchPricing>();
@@ -94,8 +108,8 @@ export function listingPrices(listing: ActivityListing): readonly SearchPricing[
     }
   }
   return [...byKey.values()].sort((left, right) => {
-    const leftValue = classPriceEquivalent(left) ?? Number.POSITIVE_INFINITY;
-    const rightValue = classPriceEquivalent(right) ?? Number.POSITIVE_INFINITY;
+    const leftValue = comparablePrice(left, listing.activity.kind);
+    const rightValue = comparablePrice(right, listing.activity.kind);
     return leftValue - rightValue;
   });
 }

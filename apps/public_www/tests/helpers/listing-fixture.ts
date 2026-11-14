@@ -61,6 +61,11 @@ export function buildListing(
       ageMin: 3,
       ageMax: 6,
       categoryId: ARTS_CATEGORY_ID,
+      kind: 'class',
+      facts: {},
+      categoryRootId: ARTS_CATEGORY_ID,
+      categoryName: null,
+      categoryNameTranslations: {},
       ...overrides.activity,
     },
     organization: {

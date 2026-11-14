@@ -188,6 +188,8 @@ export const mockActivities = [
     age_max: 12,
     source_url: 'https://lcsd.example/swim',
     source_note: 'Class listing',
+    kind: 'class',
+    facts: { drop_in: false },
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
     version: 1,
@@ -210,6 +212,8 @@ export const mockActivities = [
     },
     age_min: 3,
     age_max: 10,
+    kind: 'camp',
+    facts: {},
     created_at: '2024-01-02T00:00:00Z',
     updated_at: '2024-01-02T00:00:00Z',
     version: 1,
@@ -279,6 +283,48 @@ export const mockActivityCategoryTree = [
       },
     ],
   },
+  {
+    id: 'cat-places',
+    parent_id: null,
+    name: 'Places to play',
+    name_translations: { en: 'Places to play' },
+    display_order: 110,
+    show_in_wizard: false,
+    hidden_from_public: false,
+    is_system: true,
+    system_role: 'places',
+    children: [
+      {
+        id: 'cat-playground',
+        parent_id: 'cat-places',
+        name: 'Playground and park',
+        name_translations: { en: 'Playground and park' },
+        display_order: 1,
+        children: [],
+      },
+    ],
+  },
+  {
+    id: 'cat-schools',
+    parent_id: null,
+    name: 'Schools',
+    name_translations: { en: 'Schools' },
+    display_order: 140,
+    show_in_wizard: false,
+    hidden_from_public: true,
+    is_system: true,
+    system_role: 'schools',
+    children: [
+      {
+        id: 'cat-primary',
+        parent_id: 'cat-schools',
+        name: 'Primary school',
+        name_translations: { en: 'Primary school' },
+        display_order: 1,
+        children: [],
+      },
+    ],
+  },
 ];
 
 export const mockActivityCategories = [
@@ -340,6 +386,42 @@ export const mockActivityCategories = [
       yue: 'Water Sports (yue)',
     },
     display_order: 1,
+    children: [],
+  },
+  {
+    id: 'cat-places',
+    parent_id: null,
+    name: 'Places to play',
+    name_translations: { en: 'Places to play' },
+    display_order: 110,
+    show_in_wizard: false,
+    hidden_from_public: false,
+    is_system: true,
+    system_role: 'places',
+    children: [],
+  },
+  {
+    id: 'cat-schools',
+    parent_id: null,
+    name: 'Schools',
+    name_translations: { en: 'Schools' },
+    display_order: 140,
+    show_in_wizard: false,
+    hidden_from_public: true,
+    is_system: true,
+    system_role: 'schools',
+    children: [],
+  },
+  {
+    id: 'cat-primary',
+    parent_id: 'cat-schools',
+    name: 'Primary school',
+    name_translations: { en: 'Primary school' },
+    display_order: 1,
+    show_in_wizard: false,
+    hidden_from_public: false,
+    is_system: false,
+    system_role: null,
     children: [],
   },
 ];
@@ -1957,22 +2039,28 @@ export async function setupApiMocks(
   });
 
   // Mock schedules list
+  const createdSchedules: Record<string, unknown>[] = [];
   await page.route('**/api/mock/**/admin/schedules*', async (route) => {
     const method = route.request().method();
     if (method === 'GET') {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ items: mockSchedules, next_cursor: null }),
+        body: JSON.stringify({
+          items: [...createdSchedules, ...mockSchedules],
+          next_cursor: null,
+        }),
       });
     } else if (method === 'POST') {
       const body = route.request().postDataJSON();
       const created = {
-        id: 'schedule-new-' + Date.now(),
+        id: `schedule-new-${createdSchedules.length + 1}`,
         ...body,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        version: 1,
       };
+      createdSchedules.unshift(created);
       await route.fulfill({
         status: 201,
         contentType: 'application/json',
@@ -2323,6 +2411,22 @@ export async function setupApiMocks(
           by_status_source: { importer: 1 },
           by_issue: { no_locations: 1, activity_added_since_rejected: 1 },
           with_blockers: 1,
+          ...(new URL(url).searchParams.get('area_id')
+            ? {
+                readiness: {
+                  area_id: new URL(url).searchParams.get('area_id'),
+                  listings_by_kind: { class: 8, camp: 2, place: 5, preschool: 0, eat: 0 },
+                  classes_and_camps: 10,
+                  complete_classes_and_camps: 7,
+                  organisers: 6,
+                  verified_organisers: 3,
+                  complete_share: 0.7,
+                  verified_share: 0.5,
+                  thresholds: { complete_share: 0.8, verified_share: 0.5 },
+                  ready: false,
+                },
+              }
+            : {}),
         }),
       });
       return;

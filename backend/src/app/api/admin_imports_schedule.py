@@ -21,6 +21,7 @@ from app.db.models import Activity, ActivitySchedule, Location
 from app.db.repositories import ActivityScheduleRepository
 from app.exceptions import ValidationError
 from app.services.catalog_version_payload import schedule_payload
+from app.services.schedule_dates import format_schedule_date, parse_schedule_date
 
 
 def upsert_schedule(
@@ -35,11 +36,14 @@ def upsert_schedule(
 ) -> tuple[ActivitySchedule, str]:
     tzinfo = parse_timezone(raw_schedule.get("timezone"), "timezone")
     languages = _parse_languages(raw_schedule.get("languages"))
+    starts_on = parse_schedule_date(raw_schedule.get("starts_on"), "starts_on")
+    ends_on = parse_schedule_date(raw_schedule.get("ends_on"), "ends_on")
     repo = ActivityScheduleRepository(session)
     existing = repo.find_by_activity_location_languages(
         coerce_uuid(activity.id),
         coerce_uuid(location.id),
         languages,
+        starts_on=starts_on,
     )
     entries = parse_weekly_entries_local(
         raw_schedule.get("weekly_entries"),
@@ -58,6 +62,7 @@ def upsert_schedule(
         existing,
         languages,
         entries,
+        (format_schedule_date(starts_on), format_schedule_date(ends_on)),
         allow_updates,
         warnings,
     )
@@ -71,6 +76,8 @@ def upsert_schedule(
         "schedule_type": "weekly",
         "languages": languages,
         "weekly_entries": entries,
+        "starts_on": format_schedule_date(starts_on),
+        "ends_on": format_schedule_date(ends_on),
     }
     restrict_import_body(body, plan)
     if existing:

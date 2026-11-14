@@ -22,6 +22,11 @@ function buildListing(
       ageMin: 1,
       ageMax: 8,
       categoryId: null,
+      kind: 'class',
+      facts: {},
+      categoryRootId: null,
+      categoryName: null,
+      categoryNameTranslations: {},
     },
     organization: {
       id: 'org-1',

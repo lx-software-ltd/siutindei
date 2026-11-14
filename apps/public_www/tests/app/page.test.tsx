@@ -4,7 +4,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DiscoveryHomePage } from '@/components/pages/discovery-home-page';
 import { PageLayout } from '@/components/shared/page-layout';
 import { getContent } from '@/content';
+import { HOME_ACTIVITY_LINK_LIMIT } from '@/components/sections/discovery/home-catalogue-links';
+import { clearCatalogueCacheForTests } from '@/lib/activities/catalogue-snapshot';
 import { ANALYTICS_CONSENT_STORAGE_KEY } from '@/lib/analytics/consent';
+import { SNAPSHOT_FIXTURE } from '../helpers/catalogue-fixture';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/',
@@ -106,6 +109,33 @@ describe('DiscoveryHomePage', () => {
       }
     }
     expect(document.querySelector('.hero-scope-sign')).not.toBeInTheDocument();
+    expect(screen.getByText(content.discovery.pageTitle)).toBeVisible();
+  });
+
+  it('links to the pre-rendered activity pages without the search API', () => {
+        vi.stubEnv('PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH', SNAPSHOT_FIXTURE);
+    clearCatalogueCacheForTests();
+    const content = getContent('en');
+
+    try {
+      render(
+        <PageLayout locale="en" navbarContent={content.navbar} footerContent={content.footer}>
+          <DiscoveryHomePage locale="en" content={content} />
+        </PageLayout>,
+      );
+    } finally {
+      vi.unstubAllEnvs();
+      clearCatalogueCacheForTests();
+    }
+
+    const activityLinks = Array.from(
+      document.querySelectorAll('#home-catalogue-heading ~ ul a[href^="/en/activity/"]'),
+    );
+    expect(activityLinks).toHaveLength(HOME_ACTIVITY_LINK_LIMIT);
+    expect(document.querySelector('a[href^="/en/activities/baby-toddler"]')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /See all \d+ activities/ }).getAttribute('href')).toMatch(
+      /^\/en\/activities\/?$/,
+    );
   });
 
   it('shows the Stanley plate when the scope names Stanley', () => {

@@ -136,6 +136,18 @@ test.describe('Activities Panel', () => {
     await expect(adminPage.getByLabel('Age Max')).toHaveValue('12');
   });
 
+  test('takes the kind from a fixed root category', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New activity' }).click();
+    await adminPage.getByLabel('Category').selectOption({ label: 'Places to play' });
+    await adminPage
+      .getByLabel('Subcategory')
+      .selectOption({ label: 'Playground and park' });
+    const kind = adminPage.getByLabel('Listing kind');
+    await expect(kind).toHaveValue('place');
+    await expect(kind).toBeDisabled();
+    await expect(adminPage.getByText('Set by the category: Places to play.')).toBeVisible();
+  });
+
   test('should create a new activity', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Fill the form completely

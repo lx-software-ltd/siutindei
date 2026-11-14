@@ -488,6 +488,15 @@ a.link-unadorned:hover {
   text-decoration: none;
 }
 
+/* The reset above is unlayered, so it beats a Tailwind underline utility.
+   Use this class when an address should look clickable before hover. */
+a.link-underlined,
+a.link-underlined:hover {
+  color: var(--color-brand-700);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 a:focus-visible,
 button:focus-visible {
   outline: 2px solid var(--color-brand-500);

@@ -115,6 +115,8 @@ interface LocalizedMetadataOptions {
   socialImage?: {
     url: string;
     alt?: string;
+    width?: number;
+    height?: number;
   };
   robots?: {
     index: boolean;
@@ -122,7 +124,16 @@ interface LocalizedMetadataOptions {
   };
 }
 
-function buildPageTitle(title: string, path: string, siteName: string): string {
+const OPEN_GRAPH_LOCALES: Record<Locale, string> = {
+  en: 'en_HK',
+  'zh-HK': 'zh_HK',
+};
+
+export function openGraphLocale(locale: Locale): string {
+  return OPEN_GRAPH_LOCALES[locale];
+}
+
+export function buildPageTitle(title: string, path: string, siteName: string): string {
   const normalizedTitle = title.trim();
   if (normalizedTitle === '') {
     return siteName;
@@ -153,6 +164,9 @@ export function buildLocalizedMetadata({
   const pageTitle = buildPageTitle(title, path, siteName);
   const socialImageUrl = socialImage?.url || DEFAULT_SOCIAL_IMAGE;
   const socialImageAlt = socialImage?.alt || siteName;
+  const isDefaultImage = socialImageUrl === DEFAULT_SOCIAL_IMAGE;
+  const socialImageWidth = socialImage?.width ?? (isDefaultImage ? DEFAULT_SOCIAL_IMAGE_WIDTH : undefined);
+  const socialImageHeight = socialImage?.height ?? (isDefaultImage ? DEFAULT_SOCIAL_IMAGE_HEIGHT : undefined);
 
   return {
     title: pageTitle,
@@ -167,13 +181,15 @@ export function buildLocalizedMetadata({
       url: localizedPath,
       siteName,
       type: 'website',
-      locale,
+      locale: openGraphLocale(locale),
+      alternateLocale: SUPPORTED_LOCALES.filter((entry) => entry !== locale).map(openGraphLocale),
       images: [
         {
           url: socialImageUrl,
           alt: socialImageAlt,
-          width: DEFAULT_SOCIAL_IMAGE_WIDTH,
-          height: DEFAULT_SOCIAL_IMAGE_HEIGHT,
+          ...(socialImageWidth && socialImageHeight
+            ? { width: socialImageWidth, height: socialImageHeight }
+            : {}),
         },
       ],
     },
@@ -181,7 +197,7 @@ export function buildLocalizedMetadata({
       card: 'summary_large_image',
       title: pageTitle,
       description,
-      images: [socialImageUrl],
+      images: [{ url: socialImageUrl, alt: socialImageAlt }],
     },
     robots: {
       index: robots?.index ?? true,

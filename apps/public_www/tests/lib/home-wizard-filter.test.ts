@@ -34,6 +34,11 @@ const sampleItems: readonly ActivityListing[] = [
       ageMin: null,
       ageMax: null,
       categoryId: 'c1',
+      kind: 'class',
+      facts: {},
+      categoryRootId: 'c1',
+      categoryName: null,
+      categoryNameTranslations: {},
     },
     organization: {
       id: 'o1',
@@ -62,6 +67,11 @@ const sampleItems: readonly ActivityListing[] = [
       ageMin: null,
       ageMax: null,
       categoryId: 'c2',
+      kind: 'class',
+      facts: {},
+      categoryRootId: 'c2',
+      categoryName: null,
+      categoryNameTranslations: {},
     },
     organization: {
       id: 'o2',

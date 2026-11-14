@@ -1,92 +1,182 @@
 {
-  "version": 2,
+  "version": 3,
+  "kinds": [
+    {
+      "id": "class",
+      "labels": {
+        "en": "A class or club",
+        "zh-HK": "興趣班或課程"
+      },
+      "hint": {
+        "en": "Every week",
+        "zh-HK": "每星期上課"
+      },
+      "hasTopics": true,
+      "pilot": false
+    },
+    {
+      "id": "camp",
+      "labels": {
+        "en": "A camp or workshop",
+        "zh-HK": "營會或工作坊"
+      },
+      "hint": {
+        "en": "School holidays and one-off days",
+        "zh-HK": "假期及單次活動"
+      },
+      "hasTopics": true,
+      "pilot": false
+    },
+    {
+      "id": "place",
+      "labels": {
+        "en": "Somewhere to go today",
+        "zh-HK": "今日去邊度玩"
+      },
+      "hint": {
+        "en": "Playgrounds, beaches, indoor play",
+        "zh-HK": "遊樂場、沙灘、室內遊樂場"
+      },
+      "hasTopics": false,
+      "pilot": false
+    },
+    {
+      "id": "eat",
+      "labels": {
+        "en": "Somewhere to eat with kids",
+        "zh-HK": "親子餐廳"
+      },
+      "hint": {
+        "en": "Checked by a parent",
+        "zh-HK": "家長親身試過"
+      },
+      "hasTopics": false,
+      "pilot": true
+    }
+  ],
   "activityTypes": [
     {
-      "id": "early-years",
-      "categoryId": "c1111111-1111-1111-1111-111111111201",
+      "id": "baby-toddler",
+      "categoryId": "c1111111-1111-1111-1111-111111111301",
       "labels": {
-        "en": "Early years and schools",
-        "zh-HK": "幼兒及學校"
-      }
-    },
-    {
-      "id": "learning",
-      "categoryId": "c1111111-1111-1111-1111-111111111202",
-      "labels": {
-        "en": "Learning and tutoring",
-        "zh-HK": "學習及補習"
-      }
-    },
-    {
-      "id": "arts",
-      "categoryId": "c1111111-1111-1111-1111-111111111203",
-      "labels": {
-        "en": "Arts and performance",
-        "zh-HK": "藝術及表演"
+        "en": "Baby and toddler",
+        "zh-HK": "嬰幼兒及親子"
       }
     },
     {
       "id": "sports",
-      "categoryId": "c1111111-1111-1111-1111-111111111204",
+      "categoryId": "c1111111-1111-1111-1111-111111111302",
       "labels": {
-        "en": "Sports and movement",
+        "en": "Sports",
         "zh-HK": "運動"
       }
     },
     {
-      "id": "play",
-      "categoryId": "c1111111-1111-1111-1111-111111111205",
+      "id": "water",
+      "categoryId": "c1111111-1111-1111-1111-111111111303",
       "labels": {
-        "en": "Play and outdoors",
-        "zh-HK": "遊樂及戶外"
+        "en": "Swimming and water sports",
+        "zh-HK": "游泳及水上活動"
       }
     },
     {
-      "id": "culture",
-      "categoryId": "c1111111-1111-1111-1111-111111111206",
+      "id": "art",
+      "categoryId": "c1111111-1111-1111-1111-111111111304",
       "labels": {
-        "en": "Culture",
-        "zh-HK": "文化"
+        "en": "Art and making",
+        "zh-HK": "藝術及手作"
+      }
+    },
+    {
+      "id": "performing",
+      "categoryId": "c1111111-1111-1111-1111-111111111305",
+      "labels": {
+        "en": "Music, dance and drama",
+        "zh-HK": "音樂、舞蹈及戲劇"
+      }
+    },
+    {
+      "id": "languages",
+      "categoryId": "c1111111-1111-1111-1111-111111111306",
+      "labels": {
+        "en": "Languages",
+        "zh-HK": "語言"
+      }
+    },
+    {
+      "id": "stem",
+      "categoryId": "c1111111-1111-1111-1111-111111111307",
+      "labels": {
+        "en": "STEM and coding",
+        "zh-HK": "STEM 及編程"
+      }
+    },
+    {
+      "id": "tutoring",
+      "categoryId": "c1111111-1111-1111-1111-111111111308",
+      "labels": {
+        "en": "Tutoring and exam preparation",
+        "zh-HK": "補習及應試"
       }
     },
     {
       "id": "community",
-      "categoryId": "c1111111-1111-1111-1111-111111111207",
+      "categoryId": "c1111111-1111-1111-1111-111111111309",
       "labels": {
-        "en": "Community and support",
-        "zh-HK": "社區及支援"
+        "en": "Outdoors, scouts and community",
+        "zh-HK": "戶外、童軍及社區"
       }
     }
   ],
   "ageGroups": [
     {
-      "id": "1-3",
+      "id": "0-1",
+      "searchAge": 0,
+      "minAge": 0,
+      "maxAge": 0,
+      "labels": {
+        "en": "Under 1",
+        "zh-HK": "1歲以下"
+      }
+    },
+    {
+      "id": "1-2",
       "searchAge": 2,
       "minAge": 1,
-      "maxAge": 3,
+      "maxAge": 2,
       "labels": {
-        "en": "1–3 years",
-        "zh-HK": "1–3歲"
+        "en": "1–2 years",
+        "zh-HK": "1–2歲"
       }
     },
     {
-      "id": "3-6",
+      "id": "3-5",
       "searchAge": 4,
       "minAge": 3,
-      "maxAge": 6,
+      "maxAge": 5,
       "labels": {
-        "en": "3–6 years",
-        "zh-HK": "3–6歲"
+        "en": "3–5 years",
+        "zh-HK": "3–5歲"
       }
     },
     {
-      "id": "6-12",
-      "searchAge": 9,
+      "id": "6-11",
+      "searchAge": 8,
       "minAge": 6,
-      "maxAge": 12,
+      "maxAge": 11,
       "labels": {
-        "en": "6–12 years",
-        "zh-HK": "6–12歲"
+        "en": "6–11 years",
+        "zh-HK": "6–11歲"
+      }
+    },
+    {
+      "id": "12-18",
+      "searchAge": 14,
+      "minAge": 12,
+      "maxAge": 18,
+      "labels": {
+        "en": "12–18 years",
+        "zh-HK": "12–18歲"
       }
     }
   ],

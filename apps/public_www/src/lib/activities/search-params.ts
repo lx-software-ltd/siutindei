@@ -1,6 +1,12 @@
 import type { Locale } from '@/content/locales';
-import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
+import {
+  DEFAULT_SEARCH_KINDS,
+  homeWizardChoices,
+  kindOption,
+  labelForLocale,
+} from '@/lib/home-wizard/choices';
 
+import { comingWeekend, hongKongToday } from './schedule-dates';
 import type { ActivitySearchParams, ActivitySearchSort } from './types';
 
 export type SearchViewMode = 'list' | 'map';
@@ -8,6 +14,8 @@ export type SearchViewMode = 'list' | 'map';
 export type SearchDayChoice = 'weekend' | 'weekdays' | `${number}`;
 
 export interface SearchFiltersState {
+  /** One offered kind, or none for the default mix of kinds. */
+  readonly kind?: string | null;
   readonly ageGroupId: string | null;
   readonly regionId: string | null;
   readonly neighbourhoodId: string | null;
@@ -54,14 +62,44 @@ export function placeLabelForFilters(
   return region ? labelForLocale(region.labels, locale) : null;
 }
 
-export function searchAgeForGroup(ageGroupId: string | null): number | undefined {
+export function ageRangeForGroup(
+  ageGroupId: string | null,
+): { readonly ageMin: number; readonly ageMax: number } | undefined {
   if (!ageGroupId) {
     return undefined;
   }
   const group = homeWizardChoices.ageGroups.find(
     (entry) => entry.id === ageGroupId,
   );
-  return group?.searchAge;
+  return group ? { ageMin: group.minAge, ageMax: group.maxAge } : undefined;
+}
+
+/** The sample age analytics records for an age group. */
+export function searchAgeForGroup(ageGroupId: string | null): number | undefined {
+  return homeWizardChoices.ageGroups.find((entry) => entry.id === ageGroupId)
+    ?.searchAge;
+}
+
+/** Topics apply to the default mix and to kinds that have them. */
+export function kindHasTopics(kind: string | null | undefined): boolean {
+  return kind ? kindOption(kind)?.hasTopics === true : true;
+}
+
+/** Class-price and free-trial filters only make sense for classes. */
+export function kindHasClassFilters(kind: string | null | undefined): boolean {
+  return !kind || kind === 'class';
+}
+
+export function withKind(
+  filters: SearchFiltersState,
+  kind: string | null,
+): SearchFiltersState {
+  const next: SearchFiltersState = { ...filters, kind };
+  return {
+    ...next,
+    activityTypeIds: kindHasTopics(kind) ? next.activityTypeIds : [],
+    ...(kindHasClassFilters(kind) ? {} : { classPriceMax: null, freeTrial: false }),
+  };
 }
 
 function areaIdForRegion(regionId: string | null): string | undefined {
@@ -161,6 +199,24 @@ function isOn(value: string | null): boolean {
 }
 
 /** Number of refinements set beyond place, age, type, and text. */
+function parseKind(value: string | null): string | null {
+  return kindOption(value) ? value : null;
+}
+
+function parseAgeGroupId(value: string | null): string | null {
+  return homeWizardChoices.ageGroups.some((group) => group.id === value)
+    ? value
+    : null;
+}
+
+function parseActivityTypeIds(value: string | null): string[] {
+  if (!value) {
+    return [];
+  }
+  const known = new Set(homeWizardChoices.activityTypes.map((type) => type.id));
+  return value.split(',').filter((typeId) => known.has(typeId));
+}
+
 export function activeRefinementCount(filters: SearchFiltersState): number {
   return [
     filters.free,
@@ -174,27 +230,32 @@ export function activeRefinementCount(filters: SearchFiltersState): number {
 export function parseSearchFiltersFromQuery(
   searchParams: URLSearchParams,
 ): SearchFiltersState {
-  const ageGroupId = searchParams.get('age') || DEFAULT_SEARCH_FILTERS.ageGroupId;
+  const kind = parseKind(searchParams.get('kind'));
+  const ageGroupId = parseAgeGroupId(searchParams.get('age'));
   const regionId = searchParams.get('region') || null;
   const neighbourhoodId = searchParams.get('neighbourhood') || null;
-  const typesParam = searchParams.get('types');
-  const activityTypeIds = typesParam
-    ? typesParam.split(',').filter((value) => value.length > 0)
+  const activityTypeIds = kindHasTopics(kind)
+    ? parseActivityTypeIds(searchParams.get('types'))
     : [];
+  const classFilters = kindHasClassFilters(kind);
   const textQuery = searchParams.get('q') ?? '';
 
   const sort = searchParams.get('sort') === 'price' ? 'price' : undefined;
   return {
+    ...(kind ? { kind } : {}),
     ageGroupId,
     regionId,
     neighbourhoodId,
     activityTypeIds,
     textQuery,
     ...(isOn(searchParams.get('free')) ? { free: true } : {}),
-    ...(isOn(searchParams.get('trial')) ? { freeTrial: true } : {}),
+    ...(classFilters && isOn(searchParams.get('trial')) ? { freeTrial: true } : {}),
     ...withValue('day', parseDayChoice(searchParams.get('day'))),
     ...withValue('language', parseLanguage(searchParams.get('lang'))),
-    ...withValue('classPriceMax', parsePriceBand(searchParams.get('price'))),
+    ...withValue(
+      'classPriceMax',
+      classFilters ? parsePriceBand(searchParams.get('price')) : null,
+    ),
     ...(sort ? { sort } : {}),
   };
 }
@@ -217,6 +278,9 @@ export function buildSearchQueryString(
   options?: { readonly view?: SearchViewMode },
 ): string {
   const params = new URLSearchParams();
+  if (filters.kind) {
+    params.set('kind', filters.kind);
+  }
   if (filters.ageGroupId) {
     params.set('age', filters.ageGroupId);
   }
@@ -255,33 +319,62 @@ export function buildSearchQueryString(
   return params.toString();
 }
 
+/** The map's family-food layer: places to eat in the same area, nothing else narrowed. */
+export function familyFoodFilters(filters: SearchFiltersState): SearchFiltersState {
+  return {
+    ...DEFAULT_SEARCH_FILTERS,
+    kind: 'eat',
+    regionId: filters.regionId,
+    neighbourhoodId: filters.neighbourhoodId,
+  };
+}
+
+/** The weekend preset is not a kind: the default kinds on a Saturday or Sunday. */
+export function isWeekendPreset(filters: SearchFiltersState): boolean {
+  return !filters.kind && filters.day === 'weekend';
+}
+
+/** The weekend preset also limits dated sessions to the coming weekend. */
 export function filtersToApiParams(
   filters: SearchFiltersState,
+  today: string = hongKongToday(),
 ): Pick<
   ActivitySearchParams,
-  | 'age'
+  | 'kinds'
+  | 'ageMin'
+  | 'ageMax'
   | 'areaId'
   | 'categoryIds'
   | 'q'
   | 'pricingType'
   | 'freeTrial'
   | 'daysOfWeekHkt'
+  | 'dateFrom'
+  | 'dateTo'
   | 'languages'
   | 'classPriceMax'
   | 'sort'
 > & { readonly categoryIds: readonly string[] } {
   const textQuery = filters.textQuery.trim();
+  const weekend = isWeekendPreset(filters) ? comingWeekend(today) : null;
   const days = daysForChoice(filters.day);
+  const classFilters = kindHasClassFilters(filters.kind);
   return {
-    age: searchAgeForGroup(filters.ageGroupId),
+    kinds: filters.kind ? [filters.kind] : DEFAULT_SEARCH_KINDS,
+    ...ageRangeForGroup(filters.ageGroupId),
     areaId: areaIdForFilters(filters),
-    categoryIds: categoryIdsForTypes(filters.activityTypeIds),
+    categoryIds: kindHasTopics(filters.kind)
+      ? categoryIdsForTypes(filters.activityTypeIds)
+      : [],
     ...(textQuery.length >= 2 ? { q: textQuery } : {}),
     ...(filters.free ? { pricingType: 'free' } : {}),
-    ...(filters.freeTrial ? { freeTrial: true } : {}),
+    ...(classFilters && filters.freeTrial ? { freeTrial: true } : {}),
     ...(days.length > 0 ? { daysOfWeekHkt: days } : {}),
+    ...(weekend ?? {}),
     ...(filters.language ? { languages: [filters.language] } : {}),
-    ...(filters.classPriceMax !== null && filters.classPriceMax !== undefined
+    ...(classFilters &&
+    filters.classPriceMax !== null &&
+    filters.classPriceMax !== undefined
       ? { classPriceMax: filters.classPriceMax }
       : {}),
     ...(filters.sort === 'price' ? { sort: 'price' as const } : {}),

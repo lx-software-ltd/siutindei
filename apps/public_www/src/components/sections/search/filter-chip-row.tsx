@@ -12,10 +12,14 @@ import { useApplySearchFilters } from '@/components/sections/search/use-apply-se
 import { dayChoiceLabel, priceBandLabel } from '@/lib/activities/active-filters';
 import { languageLabel } from '@/lib/activities/listing-facts';
 import {
+  kindHasClassFilters,
   SEARCH_LANGUAGE_CODES,
   SEARCH_PRICE_BANDS,
+  withKind,
   type SearchDayChoice,
 } from '@/lib/activities/search-params';
+import { useOfferedKinds } from '@/components/shared/offered-kinds';
+import { labelForLocale } from '@/lib/home-wizard/choices';
 
 interface FilterChipRowProps {
   readonly locale: Locale;
@@ -46,6 +50,8 @@ export function FilterChipRow({
 }: FilterChipRowProps) {
   const { filters } = useSearchContext();
   const applyFilters = useApplySearchFilters(locale);
+  const offeredKinds = useOfferedKinds();
+  const classFilters = kindHasClassFilters(filters.kind);
 
   return (
     <div className="search-toolbar flex shrink-0 items-center border-b border-brand-100 bg-white">
@@ -54,6 +60,18 @@ export function FilterChipRow({
         aria-label={copy.filtersLabel}
         className="mx-auto flex min-w-0 max-w-7xl flex-1 items-center gap-2 overflow-x-auto px-4 py-1.5 [justify-content:safe_center] max-md:[scrollbar-width:none] sm:px-6 md:py-3 lg:px-8"
       >
+        <ChipSelect
+          label={copy.kindFilterLabel}
+          value={filters.kind ?? ''}
+          options={[
+            { value: '', label: copy.anyKindLabel },
+            ...offeredKinds.map((kind) => ({
+              value: kind.id,
+              label: labelForLocale(kind.labels, locale),
+            })),
+          ]}
+          onValueChange={(value) => applyFilters(withKind(filters, value || null))}
+        />
         <Chip
           isSelected={filters.free === true}
           aria-pressed={filters.free === true}
@@ -61,13 +79,15 @@ export function FilterChipRow({
         >
           {copy.freeFilterLabel}
         </Chip>
-        <Chip
-          isSelected={filters.freeTrial === true}
-          aria-pressed={filters.freeTrial === true}
-          onClick={() => applyFilters({ ...filters, freeTrial: !filters.freeTrial })}
-        >
-          {copy.freeTrialFilterLabel}
-        </Chip>
+        {classFilters ? (
+          <Chip
+            isSelected={filters.freeTrial === true}
+            aria-pressed={filters.freeTrial === true}
+            onClick={() => applyFilters({ ...filters, freeTrial: !filters.freeTrial })}
+          >
+            {copy.freeTrialFilterLabel}
+          </Chip>
+        ) : null}
         <ChipSelect
           label={copy.dayFilterLabel}
           value={filters.day ?? ''}
@@ -91,24 +111,26 @@ export function FilterChipRow({
           ]}
           onValueChange={(value) => applyFilters({ ...filters, language: value || null })}
         />
-        <ChipSelect
-          label={copy.priceFilterLabel}
-          value={
-            filters.classPriceMax === null || filters.classPriceMax === undefined
-              ? ''
-              : String(filters.classPriceMax)
-          }
-          options={[
-            { value: '', label: copy.anyPriceLabel },
-            ...SEARCH_PRICE_BANDS.map((amount) => ({
-              value: String(amount),
-              label: priceBandLabel(locale, amount, copy),
-            })),
-          ]}
-          onValueChange={(value) =>
-            applyFilters({ ...filters, classPriceMax: value ? Number(value) : null })
-          }
-        />
+        {classFilters ? (
+          <ChipSelect
+            label={copy.priceFilterLabel}
+            value={
+              filters.classPriceMax === null || filters.classPriceMax === undefined
+                ? ''
+                : String(filters.classPriceMax)
+            }
+            options={[
+              { value: '', label: copy.anyPriceLabel },
+              ...SEARCH_PRICE_BANDS.map((amount) => ({
+                value: String(amount),
+                label: priceBandLabel(locale, amount, copy),
+              })),
+            ]}
+            onValueChange={(value) =>
+              applyFilters({ ...filters, classPriceMax: value ? Number(value) : null })
+            }
+          />
+        ) : null}
         {isMapView ? null : (
           <SearchSortSelect
             copy={copy}

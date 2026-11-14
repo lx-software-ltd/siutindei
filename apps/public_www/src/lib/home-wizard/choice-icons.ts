@@ -1,21 +1,39 @@
+import type { SearchActivity } from '@/lib/activities/types';
+
 import { homeWizardChoices } from './choices';
 
+// Map markers swap /images/categories/ for /images/markers/, so every
+// path here needs a marker twin.
 const ACTIVITY_ICON_SRC: Record<string, string> = {
-  'early-years': '/images/categories/early-years.svg',
-  learning: '/images/categories/learning.svg',
-  arts: '/images/categories/arts.svg',
+  'baby-toddler': '/images/categories/early-years.svg',
   sports: '/images/categories/sports.svg',
-  play: '/images/categories/play.svg',
-  culture: '/images/categories/culture.svg',
+  water: '/images/categories/play.svg',
+  art: '/images/categories/arts.svg',
+  performing: '/images/categories/arts.svg',
+  languages: '/images/categories/learning.svg',
+  stem: '/images/categories/learning.svg',
+  tutoring: '/images/categories/learning.svg',
   community: '/images/categories/community.svg',
 };
 
-export const DEFAULT_ACTIVITY_ICON_SRC = ACTIVITY_ICON_SRC['early-years'];
+export const DEFAULT_ACTIVITY_ICON_SRC = '/images/categories/class.svg';
+
+export const KIND_ICON_SRC: Record<string, string> = {
+  class: '/images/categories/class.svg',
+  camp: '/images/categories/workshop.svg',
+  place: '/images/categories/outdoor.svg',
+  eat: '/images/categories/indoor.svg',
+  preschool: '/images/categories/early-years.svg',
+};
+
+export const WEEKEND_ICON_SRC = '/images/categories/play.svg';
 
 export const AGE_ICON_SRC: Record<string, string> = {
-  '1-3': '/images/ages/baby.png',
-  '3-6': '/images/ages/toddler.png',
-  '6-12': '/images/ages/child.png',
+  '0-1': '/images/ages/baby.png',
+  '1-2': '/images/ages/baby.png',
+  '3-5': '/images/ages/toddler.png',
+  '6-11': '/images/ages/child.png',
+  '12-18': '/images/ages/child.png',
 };
 
 export const REGION_ICON_SRC: Record<string, string> = {
@@ -42,18 +60,26 @@ export function activityTypeIdForCategory(
   categoryId: string | null,
 ): string {
   if (!categoryId) {
-    return homeWizardChoices.activityTypes[0]?.id ?? 'early-years';
+    return '';
   }
   const match = homeWizardChoices.activityTypes.find(
     (type) => type.categoryId === categoryId,
   );
-  return match?.id ?? homeWizardChoices.activityTypes[0]?.id ?? 'early-years';
+  return match?.id ?? '';
 }
 
-export function iconSrcForActivityCategory(
-  categoryId: string | null,
+/** The topic's icon, else the kind's, for a card, page, or map pin. */
+export function iconSrcForListing(
+  activity: Pick<SearchActivity, 'kind' | 'categoryId' | 'categoryRootId'>,
 ): string {
-  return iconSrcForActivity(activityTypeIdForCategory(categoryId));
+  const typeId =
+    activityTypeIdForCategory(activity.categoryRootId) ||
+    activityTypeIdForCategory(activity.categoryId);
+  return typeId ? iconSrcForActivity(typeId) : iconSrcForKind(activity.kind);
+}
+
+export function iconSrcForKind(kindId: string): string {
+  return KIND_ICON_SRC[kindId] ?? DEFAULT_ACTIVITY_ICON_SRC;
 }
 
 export function iconSrcForAge(ageGroupId: string): string | undefined {

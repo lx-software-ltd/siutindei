@@ -11,12 +11,17 @@ from app.api.admin_validators import (
     _validate_translations_map,
 )
 from app.db.models import ActivityCategory
-from app.db.models.category_suggestion import PENDING_CATEGORY_ID
+from app.db.models.category_suggestion import (
+    FIXED_ROOT_IDS,
+    PENDING_CATEGORY_ID,
+    SYSTEM_CATEGORY_ROLES,
+)
 from app.db.repositories import ActivityCategoryRepository
 from app.exceptions import ValidationError
 from app.services.activity_categories import (
     create_activity_category,
     parse_display_order,
+    parse_hidden_from_public,
     reject_same_parent_name,
     validate_category_parent,
 )
@@ -38,7 +43,9 @@ def _serialize_activity_category(entity: ActivityCategory) -> dict[str, Any]:
         ),
         "display_order": entity.display_order,
         "show_in_wizard": bool(entity.show_in_wizard),
-        "is_system": _to_uuid(entity.id) == PENDING_CATEGORY_ID,
+        "hidden_from_public": bool(entity.hidden_from_public),
+        "is_system": _to_uuid(entity.id) in SYSTEM_CATEGORY_ROLES,
+        "system_role": SYSTEM_CATEGORY_ROLES.get(_to_uuid(entity.id)),
     }
 
 
@@ -48,11 +55,14 @@ def _update_activity_category(
     body: dict[str, Any],
 ) -> ActivityCategory:
     """Update an activity category."""
-    if _to_uuid(entity.id) == PENDING_CATEGORY_ID and (
+    category_id = _to_uuid(entity.id)
+    if category_id in SYSTEM_CATEGORY_ROLES and (
         "name" in body or "name_translations" in body or "parent_id" in body
     ):
         raise ValidationError(
-            "Pending categorisation cannot be renamed or re-parented",
+            "Pending categorisation cannot be renamed or re-parented"
+            if category_id == PENDING_CATEGORY_ID
+            else "Fixed root categories cannot be renamed or re-parented",
             field="id",
         )
     if "name" in body:
@@ -81,12 +91,27 @@ def _update_activity_category(
                 "show_in_wizard must be a boolean",
                 field="show_in_wizard",
             )
-        if show_in_wizard and _to_uuid(entity.id) == PENDING_CATEGORY_ID:
+        if show_in_wizard and category_id == PENDING_CATEGORY_ID:
             raise ValidationError(
                 "Pending categorisation cannot appear in the home wizard",
                 field="show_in_wizard",
             )
+        if show_in_wizard and category_id in FIXED_ROOT_IDS:
+            raise ValidationError(
+                "Fixed root categories cannot appear in the home wizard",
+                field="show_in_wizard",
+            )
         entity.show_in_wizard = show_in_wizard
+
+    if "hidden_from_public" in body:
+        hidden = parse_hidden_from_public(body["hidden_from_public"])
+        if category_id == PENDING_CATEGORY_ID:
+            raise ValidationError(
+                "Pending categorisation is never listed, so it has no "
+                "public visibility to change",
+                field="hidden_from_public",
+            )
+        entity.hidden_from_public = hidden
 
     if "name" in body or "parent_id" in body:
         parent_id = _to_uuid(entity.parent_id) if entity.parent_id else None
@@ -94,7 +119,7 @@ def _update_activity_category(
             repo,
             str(entity.name),
             parent_id,
-            category_id=_to_uuid(entity.id),
+            category_id=category_id,
         )
 
     return entity

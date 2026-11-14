@@ -117,9 +117,20 @@ export interface ActivityCategoryNode {
   name: string;
   name_translations: Record<string, string>;
   display_order: number;
+  show_in_wizard?: boolean;
+  hidden_from_public?: boolean;
   is_system?: boolean;
+  system_role?: CategorySystemRole | null;
   children: ActivityCategoryNode[];
 }
+
+export type CategorySystemRole =
+  | 'pending'
+  | 'places'
+  | 'nurseries'
+  | 'eat'
+  | 'schools'
+  | 'members_clubs';
 
 function buildUserUrl(resource: string, id?: string) {
   return id

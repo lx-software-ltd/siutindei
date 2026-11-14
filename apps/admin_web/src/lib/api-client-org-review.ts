@@ -59,6 +59,21 @@ export interface OrgReviewSummary {
   by_status_source: Record<string, number>;
   by_issue: Record<string, number>;
   with_blockers: number;
+  readiness?: AreaReadiness;
+}
+
+/** The opening gate for one area. A share is null when there is nothing to count. */
+export interface AreaReadiness {
+  area_id: string;
+  listings_by_kind: Record<string, number>;
+  classes_and_camps: number;
+  complete_classes_and_camps: number;
+  organisers: number;
+  verified_organisers: number;
+  complete_share: number | null;
+  verified_share: number | null;
+  thresholds: { complete_share: number; verified_share: number };
+  ready: boolean;
 }
 
 export interface OrgReviewDetail extends OrgReviewListItem {
@@ -134,8 +149,12 @@ export function listOrgReviews(filters: OrgReviewFilters = {}) {
   return request<OrgReviewListResponse>(url.toString());
 }
 
-export function getOrgReviewSummary() {
-  return request<OrgReviewSummary>(buildApiUrl('v1/admin/org-review/summary'));
+export function getOrgReviewSummary(areaId?: string) {
+  const url = new URL(buildApiUrl('v1/admin/org-review/summary'));
+  if (areaId) {
+    url.searchParams.set('area_id', areaId);
+  }
+  return request<OrgReviewSummary>(url.toString());
 }
 
 export function getOrgReviewDetail(orgId: string) {

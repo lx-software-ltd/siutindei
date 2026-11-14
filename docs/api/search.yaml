@@ -11,6 +11,8 @@ info:
     | Parameter | Range | Description |
     |-----------|-------|-------------|
     | age | >= 0 | Child's age to filter activities |
+    | age_min | >= 0 | Youngest age of a wanted range |
+    | age_max | >= 0 | Oldest age of a wanted range |
     | price_min | >= 0 | Minimum price filter |
     | price_max | >= 0 | Maximum price filter |
     | day_of_week_utc | 0-6 | Day of week (0=Sunday, 6=Saturday) |
@@ -27,6 +29,8 @@ info:
 
     ### Filter Combinations
     - `start_minutes_utc` must be less than `end_minutes_utc` when both provided
+    - `age` cannot be combined with `age_min` or `age_max`
+    - `age_min` must be less than or equal to `age_max` when both provided
 
 paths:
   /v1/activities/search:
@@ -42,10 +46,77 @@ paths:
         - name: age
           in: query
           required: false
-          description: Filter activities suitable for this age (>= 0)
+          description: |
+            Filter activities suitable for this age (>= 0): the activity's
+            age range contains it. Cannot be combined with `age_min` or
+            `age_max`.
           schema:
             type: integer
             minimum: 0
+        - name: age_min
+          in: query
+          required: false
+          description: |
+            Youngest age of the wanted range (>= 0). An activity matches
+            when its age range overlaps `age_min` to `age_max`, so a class
+            for ages 6 to 8 matches 6 to 11. Without `age_max` the range
+            has no upper end.
+          schema:
+            type: integer
+            minimum: 0
+        - name: age_max
+          in: query
+          required: false
+          description: |
+            Oldest age of the wanted range (>= 0), inclusive. Without
+            `age_min` the range starts at 0.
+          schema:
+            type: integer
+            minimum: 0
+        - name: kind
+          in: query
+          required: false
+          description: |
+            Listing kinds to return, comma-separated, for example
+            `class,camp,place`. Repeating the parameter adds kinds.
+            Omitted returns every kind, as before this parameter existed.
+            An unknown kind is rejected.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/ListingKind"
+        - name: verified
+          in: query
+          required: false
+          description: |
+            When `true`, only activities of parent-verified organizations.
+            `false` or omitted applies no filter.
+          schema:
+            type: boolean
+            default: false
+        - name: date_from
+          in: query
+          required: false
+          description: |
+            First day of the wanted dates, `YYYY-MM-DD` on the Hong Kong
+            calendar. Keeps dated sessions that end on or after it.
+            Weekly schedules with no dates always match. Sessions whose
+            last day is before today in Hong Kong are never returned.
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          required: false
+          description: |
+            Last day of the wanted dates, `YYYY-MM-DD` on the Hong Kong
+            calendar, on or after `date_from`. Keeps dated sessions that
+            start on or before it.
+          schema:
+            type: string
+            format: date
         - name: area_id
           in: query
           required: false
@@ -72,7 +143,10 @@ paths:
           description: |
             Filter by activity category UUID. Multiple values allowed; results
             match any listed category or one of its descendants. Pending
-            categorisation is excluded.
+            categorisation is excluded, and so is any category hidden from
+            public (Schools, Members-only clubs, and whatever an admin
+            hides), with everything under it, whether or not a category is
+            given.
           style: form
           explode: true
           schema:
@@ -182,9 +256,11 @@ paths:
           description: |
             Response shape. `full` is the default and matches the existing
             payload. `card` omits descriptions, description translations,
-            place_id, contact, reviews, and updated_at, keeps only the first media URL
-            and the first weekly entry, and drops `name_translations.en`
-            when it equals `name`.
+            facts, place_id, contact, reviews, and updated_at, keeps only the
+            first media URL and the first weekly entry, drops
+            `name_translations.en` when it equals `name` (and
+            `category_name_translations.en` when it equals
+            `category_name`), and omits `kind` when it is `class`.
           schema:
             type: string
             enum: [card, full]
@@ -533,6 +609,14 @@ components:
           description: |
             Set by an admin. Clients show a Parent-Verified badge when
             true. `view=card` omits the field when false.
+        parent_verified_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            When a parent last checked this organization. Null when it is
+            not verified, or when it was verified before the date was
+            recorded. `view=card` omits the field when null.
         updated_at:
           type: string
           format: date-time
@@ -709,6 +793,46 @@ components:
           type: string
           format: uuid
           description: Activity category UUID
+        kind:
+          allOf:
+            - $ref: "#/components/schemas/ListingKind"
+          default: class
+          description: |
+            What the listing is, which decides what its card shows.
+            `view=card` omits the field when it is `class`; clients read a
+            missing kind as `class`.
+        facts:
+          type: object
+          additionalProperties:
+            type: boolean
+          description: |
+            Parent-checked facts. `true` means a parent saw it, `false`
+            that a parent saw it is missing, and an absent key that nobody
+            checked. The keys depend on `kind`. `view=card` omits the field.
+        category_root_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: |
+            The root at the top of the category's path: a wizard topic, a
+            fixed root such as Places to play, or a legacy root. Equals
+            `category_id` when the activity sits on a root. `view=card`
+            omits the field when null.
+        category_name:
+          type: string
+          nullable: true
+          description: |
+            English name of the activity's own category. `view=card`
+            omits the field when null.
+        category_name_translations:
+          $ref: "#/components/schemas/TranslationMap"
+    ListingKind:
+      type: string
+      enum: [class, camp, place, preschool, eat]
+      description: |
+        `class` runs every week, `camp` has dates, `place` is somewhere to
+        turn up, `preschool` is a nursery or kindergarten, and `eat` is a
+        place to eat with children.
     Pricing:
       type: object
       required: [pricing_type, amount, currency, free_trial_class_offered]
@@ -758,6 +882,19 @@ components:
           type: array
           items:
             type: string
+        starts_on:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            First day of a dated session such as a camp week, Hong Kong
+            calendar. Null for a weekly schedule. `view=card` omits it
+            when null.
+        ends_on:
+          type: string
+          format: date
+          nullable: true
+          description: Last day of a dated session. Null for a weekly schedule.
     TranslationMap:
       type: object
       additionalProperties:

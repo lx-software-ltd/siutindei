@@ -15,6 +15,8 @@ export interface ScheduleFormState {
   schedule_type: 'weekly';
   weekly_entries: WeeklyEntryForm[];
   languages: LanguageCode[];
+  starts_on: string;
+  ends_on: string;
 }
 
 export const emptyForm: ScheduleFormState = {
@@ -23,6 +25,8 @@ export const emptyForm: ScheduleFormState = {
   schedule_type: 'weekly',
   weekly_entries: [],
   languages: [],
+  starts_on: '',
+  ends_on: '',
 };
 
 export const dayOfWeekOptions = [
@@ -271,7 +275,71 @@ export function itemToForm(item: ActivitySchedule): ScheduleFormState {
     schedule_type: 'weekly',
     weekly_entries: weeklyEntries,
     languages: toLanguageCodes(item.languages),
+    starts_on: item.starts_on ?? '',
+    ends_on: item.ends_on ?? '',
   };
+}
+
+const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+const msPerDay = 24 * 60 * 60 * 1000;
+
+function isoDayNumber(value: string): number | null {
+  if (!isoDatePattern.test(value)) return null;
+  const time = Date.parse(`${value}T00:00:00Z`);
+  return Number.isFinite(time) ? Math.floor(time / msPerDay) : null;
+}
+
+export function sessionDatesError(startsOn: string, endsOn: string): string {
+  if (!startsOn && !endsOn) return '';
+  if (!startsOn) return 'Set the first day, or clear the last day.';
+  if (!endsOn) return 'Set the last day, or clear the first day.';
+  const start = isoDayNumber(startsOn);
+  const end = isoDayNumber(endsOn);
+  if (start === null || end === null) return 'Use a full date.';
+  if (end < start) return 'The last day must be on or after the first day.';
+  return '';
+}
+
+/** Weekdays (0 = Sunday) between two ISO dates, inclusive. */
+export function weekdaysBetween(startsOn: string, endsOn: string): Set<number> {
+  const days = new Set<number>();
+  const start = isoDayNumber(startsOn);
+  const end = isoDayNumber(endsOn);
+  if (start === null || end === null) return days;
+  for (let day = start; day <= end && days.size < 7; day += 1) {
+    // Day 0 of the Unix epoch was a Thursday.
+    days.add((day + 4) % 7);
+  }
+  return days;
+}
+
+export function daysOutsideSessionError(form: ScheduleFormState): string {
+  if (!form.starts_on || !form.ends_on) return '';
+  const sessionDays = weekdaysBetween(form.starts_on, form.ends_on);
+  const outside = form.weekly_entries.some(
+    (entry) => !sessionDays.has(Number(entry.day_of_week_local))
+  );
+  return outside ? 'Every day must fall between the first and last day.' : '';
+}
+
+const sessionDateFormat = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+export function formatSessionDates(
+  startsOn?: string | null,
+  endsOn?: string | null
+): string {
+  if (!startsOn || !endsOn) return '';
+  const start = isoDayNumber(startsOn);
+  const end = isoDayNumber(endsOn);
+  if (start === null || end === null) return '';
+  const first = sessionDateFormat.format(new Date(start * msPerDay));
+  if (start === end) return first;
+  return `${first} – ${sessionDateFormat.format(new Date(end * msPerDay))}`;
 }
 
 export function getDayLabel(dayOfWeek: number): string {

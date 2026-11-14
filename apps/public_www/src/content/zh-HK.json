@@ -27,6 +27,7 @@
       "whereLabel": "地區",
       "neighbourhoodLabel": "社區",
       "anywhereInRegionLabel": "呢個地區任何地方",
+      "kindLabel": "想搵",
       "childAgeLabel": "子女年齡",
       "activityTypesLabel": "活動類型",
       "activityTypesHint": "可揀多項",
@@ -47,18 +48,19 @@
     }
   },
   "footer": {
-    "copyrightTemplate": "© {year} LX Software（於香港註冊的獨資企業）。版權所有。",
-    "contactHeading": "聯絡我們",
+    "copyrightTemplate": "© {year} LX Software。版權所有。",
     "contactIconLabels": {
       "email": "電郵",
       "whatsapp": "WhatsApp",
-      "instagram": "Instagram"
+      "instagram": "Instagram",
+      "facebook": "Facebook"
     },
     "columns": [
       {
         "title": "探索",
         "links": [
           { "label": "主頁", "href": "/" },
+          { "label": "所有活動", "href": "/activities" },
           { "label": "搜尋活動", "href": "/search" },
           { "label": "關於我們", "href": "/about" }
         ]
@@ -74,32 +76,40 @@
     ]
   },
   "seo": {
-    "fallbackTitle": "Siu Tin Dei | 香港兒童活動",
-    "fallbackDescription": "透過 Siu Tin Dei 發掘香港精選兒童活動。",
+    "fallbackTitle": "小天地 Siu Tin Dei | 香港兒童活動",
+    "fallbackDescription": "透過小天地 Siu Tin Dei 尋找住家附近的兒童課程、營會及遊樂好去處，由赤柱開始。",
     "defaultSocialImage": "/images/seo/siutindei-og-2026-11.jpg",
-    "defaultSocialImageAlt": "Siu Tin Dei 香港兒童活動",
+    "defaultSocialImageAlt": "小天地 Siu Tin Dei 香港兒童活動",
     "home": {
-      "title": "Siu Tin Dei | 香港兒童活動",
-      "description": "透過 Siu Tin Dei 發掘香港精選兒童活動。"
+      "title": "小天地 Siu Tin Dei | 香港兒童活動",
+      "description": "小天地 Siu Tin Dei 整理香港兒童課程、興趣班及工作坊，由赤柱開始。查看適合年齡、每週時間及收費，並直接聯絡主辦機構。"
     },
     "about": {
-      "title": "關於 Siu Tin Dei",
+      "title": "關於我們",
       "description": "搬到舂坎角之後找不到活動，所以由赤柱開始做 Siu Tin Dei，幫處境相同的家庭找活動。"
     },
     "search": {
-      "title": "搜尋兒童活動 | Siu Tin Dei",
-      "description": "按地區、年齡及活動類型瀏覽香港兒童活動。"
+      "title": "搜尋兒童活動",
+      "description": "按地區、年齡及活動類型瀏覽兒童活動，由赤柱開始。"
+    },
+    "activities": {
+      "titleTemplate": "{place}兒童活動",
+      "descriptionTemplate": "小天地 Siu Tin Dei 整理{placeFull}的兒童課程、營會及遊樂好去處，列出適合年齡、時間、收費及主辦機構聯絡方法。經本地家長查證的活動會有標記。"
+    },
+    "activityCategory": {
+      "titleTemplate": "{place}兒童{category}",
+      "descriptionTemplate": "小天地 Siu Tin Dei 收錄{placeFull} {count} 個兒童{categoryLower}項目，比較適合對象、時間及收費，並直接聯絡主辦機構。"
     },
     "activityDetail": {
-      "title": "活動詳情 | Siu Tin Dei",
+      "title": "活動詳情",
       "description": "查看時間表、收費及透過 Siu Tin Dei 聯絡機構。"
     },
     "privacy": {
-      "title": "私隱政策 | Siu Tin Dei",
+      "title": "私隱政策",
       "description": "LX Software（於香港註冊的獨資企業）如何在 Siu Tin Dei 收集、使用及保護個人資料。"
     },
     "terms": {
-      "title": "使用條款 | Siu Tin Dei",
+      "title": "使用條款",
       "description": "規管 Siu Tin Dei 網站及流動應用程式使用的條款。"
     }
   },
@@ -137,7 +147,7 @@
   },
   "smallWorld": {
     "title": "每個孩子，都值得擁有自己的小天地",
-    "subtitle": "小天地為香港家庭精選可信的課程、工作坊及戶外體驗，每一項活動上架前都經本地家長審核。",
+    "subtitle": "小天地整理你家附近找得到的每一個課程、營會及遊樂好去處，免費的、小型的都不遺漏，由赤柱開始。本地家長逐一查證，查證過的會有標記。",
     "sceneAriaLabel": "頁面上漂浮的可愛香港插畫",
     "bubbles": {
       "junk": "中式帆船",
@@ -173,6 +183,8 @@
       "backLabel": "返回",
       "continueLabel": "繼續",
       "seeActivitiesLabel": "查看活動",
+      "weekendLabel": "今個週末去邊",
+      "weekendHint": "星期六、日的活動",
       "stepProgressTemplate": "第 {current} 步，共 {total} 步",
       "steps": {
         "location": {
@@ -182,6 +194,10 @@
         "neighbourhood": {
           "title": "邊個社區？",
           "label": "社區"
+        },
+        "kind": {
+          "title": "想搵咩？",
+          "label": "想搵"
         },
         "age": {
           "title": "小朋友幾歲？",
@@ -195,7 +211,7 @@
     }
   },
   "discovery": {
-    "pageTitle": "探索香港兒童活動",
+    "pageTitle": "探索赤柱兒童活動",
     "continueSearchingTitle": "繼續搜尋",
     "recentlyViewedTitle": "最近瀏覽",
     "popularTitle": "香港熱門活動",
@@ -232,6 +248,7 @@
     "mapEmptyLabel": "這些結果沒有地圖位置。",
     "mapUnavailableLabel": "此環境未設定 Google Maps。",
     "mapAriaLabel": "Google 地圖上的活動位置",
+    "familyFoodLabel": "親子餐廳",
     "enlargeMapLabel": "放大地圖",
     "reduceMapLabel": "縮小地圖",
     "loadingMapLabel": "載入地圖中...",
@@ -250,6 +267,8 @@
     "sortTimeLabel": "日子及時間",
     "sortPriceLabel": "最低價錢",
     "sortChoiceTemplate": "排序：{choice}",
+    "kindFilterLabel": "想搵",
+    "anyKindLabel": "乜都得",
     "freeFilterLabel": "免費",
     "freeTrialFilterLabel": "免費試堂",
     "dayFilterLabel": "日子",
@@ -294,6 +313,7 @@
     "keyFactsLabel": "重點資料",
     "agesLabel": "年齡",
     "whenLabel": "時間",
+    "openingHoursLabel": "開放時間",
     "whereLabel": "地點",
     "priceLabel": "價錢",
     "languageLabel": "語言",
@@ -306,7 +326,31 @@
     "readMoreLabel": "閱讀更多",
     "readLessLabel": "收起",
     "scheduleHeading": "上課時間",
+    "datesHeading": "日期",
     "scheduleMissingLabel": "主辦機構尚未公佈上課時間。",
+    "openingHoursHeading": "開放時間",
+    "openingHoursMissingLabel": "暫未列出開放時間。",
+    "goodToKnowHeading": "實用資料",
+    "goodToKnowHint": "家長到訪時所見。",
+    "factLabels": {
+      "toilets": { "present": "有洗手間", "absent": "沒有洗手間" },
+      "changing_table": { "present": "有嬰兒換片枱", "absent": "沒有嬰兒換片枱" },
+      "shade": { "present": "有遮蔭", "absent": "遮蔭很少" },
+      "fenced": { "present": "有圍欄", "absent": "沒有圍欄" },
+      "stroller_access": { "present": "方便嬰兒車", "absent": "嬰兒車不便" },
+      "water_play": { "present": "有玩水設施", "absent": "沒有玩水設施" },
+      "lifeguard": { "present": "有救生員當值", "absent": "沒有救生員" },
+      "parking": { "present": "附近有泊車位", "absent": "附近沒有泊車位" },
+      "food_nearby": { "present": "附近有食肆", "absent": "附近沒有食肆" },
+      "high_chairs": { "present": "有BB櫈", "absent": "沒有BB櫈" },
+      "kids_menu": { "present": "有兒童餐", "absent": "沒有兒童餐" },
+      "room_to_run": { "present": "有空間跑跳", "absent": "跑跳空間很少" },
+      "outdoor_seating": { "present": "有戶外座位", "absent": "沒有戶外座位" },
+      "drop_in": { "present": "可即場參加", "absent": "需要預約" },
+      "parent_stays": { "present": "家長陪同", "absent": "家長不用陪同" },
+      "sen_friendly": { "present": "照顧特殊教育需要", "absent": "未有照顧特殊教育需要" },
+      "lunch_included": { "present": "包午餐", "absent": "要自備午餐" }
+    },
     "taughtInLabel": "授課語言：{languages}",
     "priceHeading": "價錢",
     "priceMissingLabel": "主辦機構尚未公佈價錢。",
@@ -337,12 +381,53 @@
     "shareLabel": "分享",
     "linkCopiedLabel": "已複製連結",
     "parentVerifiedLabel": "家長認證",
+    "parentVerifiedExplainer": "小天地的家長曾到訪或聯絡這間機構，並確認了資料。",
+    "parentCheckedTemplate": "{date}查證",
     "notFoundHint": "我們數到十，連蒸籠裏都找過了。活動可能已結束，或連結已過期。",
     "errorHint": "載入活動時出了問題，請稍後再試。",
     "browseActivitiesLabel": "瀏覽活動",
     "goHomeLabel": "返回主頁",
     "mapAltLabel": "地圖位置",
     "listingFreeTrialLabel": "免費試堂"
+  },
+  "activitiesPage": {
+    "hubHeadingTemplate": "{place}兒童活動",
+    "hubIntro": "小天地 Siu Tin Dei 整理{place}的兒童課程、營會及遊樂好去處。每頁都列出適合對象、上課或開放時間、收費及主辦機構的聯絡方法。",
+    "categoryHeadingTemplate": "{place}兒童{category}",
+    "categoryIntroTemplate": "小天地 Siu Tin Dei 收錄{place}共 {count} 個兒童{categoryLower}項目。比較適合對象、時間及收費，再聯絡主辦機構。",
+    "kindPages": {
+      "classes": "興趣班及課程",
+      "camps": "營會及工作坊",
+      "places": "遊樂好去處",
+      "nurseries": "幼兒園及幼稚園",
+      "eat": "親子餐廳"
+    },
+    "kindSectionLinkTemplate": "查看全部 {count} 個",
+    "coverageTemplate": "共 {count} 個項目，其中 {verified} 個經本地家長查證。最後更新：{date}。",
+    "coverageUnverifiedTemplate": "共 {count} 個項目。最後更新：{date}。",
+    "browseByTypeHeading": "按活動類型瀏覽",
+    "otherTypesHeading": "其他活動類型",
+    "allActivitiesHeading": "所有活動",
+    "activityCountTemplate": "{count} 個項目",
+    "atAGlanceHeading": "一覽",
+    "agesLabel": "年齡",
+    "daysLabel": "上課日",
+    "pricesLabel": "每堂收費",
+    "agesRangeTemplate": "{min} 至 {max} 歲",
+    "priceRangeTemplate": "{min} 至 {max}",
+    "questionsHeading": "家長常問",
+    "agesQuestion": "這些課程適合幾多歲的小朋友？",
+    "agesAnswerTemplate": "{ages}。每個課程頁都列出各自的適合年齡。",
+    "daysQuestion": "課程在星期幾上課？",
+    "daysAnswerTemplate": "{days}。每個課程頁都列出每週時間。",
+    "pricesQuestion": "每堂收費多少？",
+    "pricesAnswerTemplate": "每堂{prices}（只計算主辦機構有公布收費的活動）。",
+    "joinQuestion": "怎樣參加？",
+    "joinAnswer": "打開活動頁，按頁上的資料聯絡主辦機構。",
+    "searchLinkLabel": "用搜尋按年齡、日子及收費篩選",
+    "homeFeaturedHeading": "活動頁面",
+    "homeAllLinkTemplate": "查看全部 {count} 個活動",
+    "emptyLabel": "暫時未有活動，請試試搜尋。"
   },
   "hostCta": {
     "title": "小店，來這裡發聲",
@@ -362,6 +447,37 @@
         "我搬到舂坎角，找不到任何活動。",
         "附近其他家庭應該也一樣，所以我做了 Siu Tin Dei。"
       ],
+      "summary": {
+        "id": "what-is-siu-tin-dei",
+        "heading": "小天地 Siu Tin Dei 是什麼",
+        "paragraphs": [
+          "小天地 Siu Tin Dei 是一個整理香港兒童課程、營會及遊樂好去處的網站。每個活動頁都列出適合年齡、時間、收費及主辦機構的聯絡方法。",
+          "現時收錄{placeFull}的活動，之後會逐區加入新地區。",
+          "小天地 Siu Tin Dei 由於香港註冊的 LX Software 營運。"
+        ]
+      },
+      "questions": {
+        "id": "questions",
+        "heading": "家長常問",
+        "items": [
+          {
+            "question": "怎樣參加活動？",
+            "answer": "打開活動頁，按頁上的資料聯絡主辦機構。活動頁列出適合年齡、每週時間及收費。"
+          },
+          {
+            "question": "小天地 Siu Tin Dei 覆蓋哪些地區？",
+            "answer": "現時收錄{placeFull}的活動，之後會逐區加入新地區。"
+          },
+          {
+            "question": "我開班教學，可以自己管理頁面嗎？",
+            "answer": "可以。與我聯絡，就可以自己管理頁面，用你的方式介紹你提供的活動。"
+          },
+          {
+            "question": "誰營運小天地 Siu Tin Dei？",
+            "answer": "於香港註冊的 LX Software。私隱政策及使用條款說明網站如何處理你的資料。"
+          }
+        ]
+      },
       "sections": [
         {
           "id": "stanley",
@@ -392,10 +508,24 @@
           ]
         },
         {
-          "id": "write-to-me",
-          "heading": "寫信給我",
+          "id": "how-listings-are-checked",
+          "heading": "活動資料如何查證",
           "paragraphs": [
-            "如果有什麼不對，如果你想自己管理頁面，或者你有建議，寫信給我。"
+            "大部分資料先來自公開來源，例如主辦機構自己的網站及專頁，以及公開名單。之後我會逐間機構查證，親身到訪或直接聯絡主辦機構。查證過的活動會有「家長認證」標記；未有標記的，即是尚未查證。"
+          ]
+        },
+        {
+          "id": "free",
+          "heading": "家長和機構都免費",
+          "paragraphs": [
+            "小天地免費使用，刊登課程、營會或遊樂好去處亦不收費。"
+          ]
+        },
+        {
+          "id": "write-to-me",
+          "heading": "與我聯絡",
+          "paragraphs": [
+            "如果有什麼不對，如果你想自己管理頁面，或者你有建議，與我聯絡。"
           ]
         }
       ]
@@ -403,7 +533,7 @@
   },
   "hero": {
     "title": "Siu Tin Dei",
-    "subtitle": "香港精選兒童活動。"
+    "subtitle": "住家附近的兒童活動，由赤柱開始。"
   },
   "features": {
     "title": "為何選擇 Siu Tin Dei"

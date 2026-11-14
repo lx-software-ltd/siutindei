@@ -1,0 +1,1855 @@
+{
+ "schema_version": 1,
+ "generated_at": "2026-11-13T00:00:00Z",
+ "area_scope": null,
+ "items": [
+  {
+   "activity": {
+    "id": "81622378-60bf-506b-b132-9b71f0fa4913",
+    "name": "Early years and schools in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for early years and schools in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Early years and schools in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for early years and schools in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111301"
+   },
+   "organization": {
+    "id": "2e6c32e6-b468-56d4-9365-3b7c9e2cec20",
+    "name": "Early years and schools Studio — Central and Western",
+    "description": "English-language early years and schools provider in Hong Kong.",
+    "name_translations": {
+     "en": "Early years and schools Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language early years and schools provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "7e0a5a9d-ee59-56a9-86f2-9b01c6cbe8b0",
+    "area_id": "4800fff7-4d9b-54df-b2a6-144788bd4a33",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Kennedy Town, Central and Western, Hong Kong",
+    "lat": "22.2812",
+    "lng": "114.1289"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "dc13f2f2-65e1-5971-8fc1-55f0f9c0d45d"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "047a0a99-9727-568b-b4c5-267e6916c867",
+    "name": "Early years and schools in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for early years and schools in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Early years and schools in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for early years and schools in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111301"
+   },
+   "organization": {
+    "id": "2e6c32e6-b468-56d4-9365-3b7c9e2cec20",
+    "name": "Early years and schools Studio — Central and Western",
+    "description": "English-language early years and schools provider in Hong Kong.",
+    "name_translations": {
+     "en": "Early years and schools Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language early years and schools provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "f1191431-8524-5e2a-9d42-7e17236adcbc",
+    "area_id": "28b5a275-6c45-5812-9b0d-68ecb3151245",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Shek Tong Tsui, Central and Western, Hong Kong",
+    "lat": "22.2873",
+    "lng": "114.1358"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "9037264a-6d4b-5828-8198-18c2ee0ba096"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "3e0d7169-1ca5-5bd3-8f8d-e7013f27f22b",
+    "name": "Early years and schools in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for early years and schools in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Early years and schools in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for early years and schools in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111301"
+   },
+   "organization": {
+    "id": "2e6c32e6-b468-56d4-9365-3b7c9e2cec20",
+    "name": "Early years and schools Studio — Central and Western",
+    "description": "English-language early years and schools provider in Hong Kong.",
+    "name_translations": {
+     "en": "Early years and schools Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language early years and schools provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "aea975bb-bce6-5851-9d66-17cf52617c8f",
+    "area_id": "bc0287d0-b618-589f-bfba-df8b344ea33b",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Sai Ying Pun, Central and Western, Hong Kong",
+    "lat": "22.2858",
+    "lng": "114.1428"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "254c4f09-524d-53a9-84a8-8c605ece75cb"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "001f66a3-6d7e-56bd-bc18-d332f4f5f0b6",
+    "name": "Early years and schools in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for early years and schools in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Early years and schools in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for early years and schools in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111301"
+   },
+   "organization": {
+    "id": "2e6c32e6-b468-56d4-9365-3b7c9e2cec20",
+    "name": "Early years and schools Studio — Central and Western",
+    "description": "English-language early years and schools provider in Hong Kong.",
+    "name_translations": {
+     "en": "Early years and schools Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language early years and schools provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "5a03028d-6b77-5a13-b4ba-8b36aae9cabb",
+    "area_id": "45d914d4-2076-573f-8b56-db680feb6521",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Sheung Wan, Central and Western, Hong Kong",
+    "lat": "22.2864",
+    "lng": "114.1506"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "c40d122b-369a-5a6e-945a-db35d95b10e4"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "5993528c-08e5-53cf-930f-c23a0301b7f2",
+    "name": "Learning and tutoring in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for learning and tutoring in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Learning and tutoring in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for learning and tutoring in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111308"
+   },
+   "organization": {
+    "id": "73ee0b4d-0181-5cc6-bed2-130b0e584678",
+    "name": "Learning and tutoring Studio — Central and Western",
+    "description": "English-language learning and tutoring provider in Hong Kong.",
+    "name_translations": {
+     "en": "Learning and tutoring Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language learning and tutoring provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "a3463077-71cf-51bf-bc2d-97842c56d7fc",
+    "area_id": "ce9f3304-9d20-55af-b669-434eda7ee903",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Mid-Levels, Central and Western, Hong Kong",
+    "lat": "22.2828",
+    "lng": "114.1485"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "81ec0e60-1d09-542f-8ebf-91b874fd38b4"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "341504f0-7d47-5831-b24d-37bc38a5de3c",
+    "name": "Learning and tutoring in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for learning and tutoring in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Learning and tutoring in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for learning and tutoring in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111308"
+   },
+   "organization": {
+    "id": "73ee0b4d-0181-5cc6-bed2-130b0e584678",
+    "name": "Learning and tutoring Studio — Central and Western",
+    "description": "English-language learning and tutoring provider in Hong Kong.",
+    "name_translations": {
+     "en": "Learning and tutoring Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language learning and tutoring provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "dd05bcd9-285b-50bc-a306-7542eca7a9db",
+    "area_id": "99e8a019-c973-5f07-b56c-eea47235b418",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, The Peak, Central and Western, Hong Kong",
+    "lat": "22.2714",
+    "lng": "114.1498"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "6cc3a445-d9a9-50ad-b905-4a537cf8dd1d"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "454382b1-2a70-5e5c-9d85-02090a9478a2",
+    "name": "Learning and tutoring in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for learning and tutoring in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Learning and tutoring in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for learning and tutoring in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111308"
+   },
+   "organization": {
+    "id": "73ee0b4d-0181-5cc6-bed2-130b0e584678",
+    "name": "Learning and tutoring Studio — Central and Western",
+    "description": "English-language learning and tutoring provider in Hong Kong.",
+    "name_translations": {
+     "en": "Learning and tutoring Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language learning and tutoring provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "7e0a5a9d-ee59-56a9-86f2-9b01c6cbe8b0",
+    "area_id": "4800fff7-4d9b-54df-b2a6-144788bd4a33",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Kennedy Town, Central and Western, Hong Kong",
+    "lat": "22.2812",
+    "lng": "114.1289"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "676a9929-128f-52a1-af06-5caba601507e"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "046d2513-04c4-5420-ac4f-699ec4399d66",
+    "name": "Learning and tutoring in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for learning and tutoring in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Learning and tutoring in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for learning and tutoring in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111308"
+   },
+   "organization": {
+    "id": "73ee0b4d-0181-5cc6-bed2-130b0e584678",
+    "name": "Learning and tutoring Studio — Central and Western",
+    "description": "English-language learning and tutoring provider in Hong Kong.",
+    "name_translations": {
+     "en": "Learning and tutoring Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language learning and tutoring provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "f1191431-8524-5e2a-9d42-7e17236adcbc",
+    "area_id": "28b5a275-6c45-5812-9b0d-68ecb3151245",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Shek Tong Tsui, Central and Western, Hong Kong",
+    "lat": "22.2873",
+    "lng": "114.1358"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "99193d45-f46a-5801-b94f-b6e7ca6fdfc0"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "32481169-a807-5e03-b68a-94213604060c",
+    "name": "Arts and performance in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for arts and performance in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Arts and performance in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for arts and performance in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111304"
+   },
+   "organization": {
+    "id": "2e49bf89-b04e-574c-9ef3-241524805c09",
+    "name": "Arts and performance Studio — Central and Western",
+    "description": "English-language arts and performance provider in Hong Kong.",
+    "name_translations": {
+     "en": "Arts and performance Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language arts and performance provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "6ecd88b2-1cb6-541b-b4a6-cc980685fc50",
+    "area_id": "e723b5d0-2a65-55a1-8a8d-eb09b4f80348",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Central, Central and Western, Hong Kong",
+    "lat": "22.2814",
+    "lng": "114.1580"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "417f1578-696b-52cc-bc77-495ad11150f6"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "c35cef8c-e738-57c6-9a61-3aab2744e499",
+    "name": "Arts and performance in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for arts and performance in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Arts and performance in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for arts and performance in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111304"
+   },
+   "organization": {
+    "id": "2e49bf89-b04e-574c-9ef3-241524805c09",
+    "name": "Arts and performance Studio — Central and Western",
+    "description": "English-language arts and performance provider in Hong Kong.",
+    "name_translations": {
+     "en": "Arts and performance Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language arts and performance provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "54f3012d-ecc6-5952-8c00-4734666953ef",
+    "area_id": "2964b9f2-8d72-5370-8def-4d9662981086",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Admiralty, Central and Western, Hong Kong",
+    "lat": "22.2794",
+    "lng": "114.1650"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "cb790a55-9655-56bd-a5ef-daa582382362"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "c378e6b7-e379-5743-a6a0-8ba8ce730798",
+    "name": "Arts and performance in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for arts and performance in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Arts and performance in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for arts and performance in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111304"
+   },
+   "organization": {
+    "id": "2e49bf89-b04e-574c-9ef3-241524805c09",
+    "name": "Arts and performance Studio — Central and Western",
+    "description": "English-language arts and performance provider in Hong Kong.",
+    "name_translations": {
+     "en": "Arts and performance Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language arts and performance provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "a3463077-71cf-51bf-bc2d-97842c56d7fc",
+    "area_id": "ce9f3304-9d20-55af-b669-434eda7ee903",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Mid-Levels, Central and Western, Hong Kong",
+    "lat": "22.2828",
+    "lng": "114.1485"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "3098526f-5f3e-5f0b-832a-79d2623e7307"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "ccaafb06-1e8b-55ed-a5e2-c4e1e149817d",
+    "name": "Arts and performance in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for arts and performance in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Arts and performance in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for arts and performance in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111304"
+   },
+   "organization": {
+    "id": "2e49bf89-b04e-574c-9ef3-241524805c09",
+    "name": "Arts and performance Studio — Central and Western",
+    "description": "English-language arts and performance provider in Hong Kong.",
+    "name_translations": {
+     "en": "Arts and performance Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language arts and performance provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "dd05bcd9-285b-50bc-a306-7542eca7a9db",
+    "area_id": "99e8a019-c973-5f07-b56c-eea47235b418",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, The Peak, Central and Western, Hong Kong",
+    "lat": "22.2714",
+    "lng": "114.1498"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "a66a4aae-24a3-521c-a238-8b4687e74720"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "1699dfaa-4adb-5713-b25d-eb0c0d27c9a9",
+    "name": "Sports and movement in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for sports and movement in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Sports and movement in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for sports and movement in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111302"
+   },
+   "organization": {
+    "id": "c2e31f73-b49f-58e4-83c0-ea36aaadd93f",
+    "name": "Sports and movement Studio — Central and Western",
+    "description": "English-language sports and movement provider in Hong Kong.",
+    "name_translations": {
+     "en": "Sports and movement Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language sports and movement provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "aea975bb-bce6-5851-9d66-17cf52617c8f",
+    "area_id": "bc0287d0-b618-589f-bfba-df8b344ea33b",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Sai Ying Pun, Central and Western, Hong Kong",
+    "lat": "22.2858",
+    "lng": "114.1428"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "48f88ac5-12c2-546d-9e8f-5515cd71b889"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "c0daae08-591d-5cdd-8833-ab5fb7216834",
+    "name": "Sports and movement in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for sports and movement in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Sports and movement in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for sports and movement in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111302"
+   },
+   "organization": {
+    "id": "c2e31f73-b49f-58e4-83c0-ea36aaadd93f",
+    "name": "Sports and movement Studio — Central and Western",
+    "description": "English-language sports and movement provider in Hong Kong.",
+    "name_translations": {
+     "en": "Sports and movement Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language sports and movement provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "5a03028d-6b77-5a13-b4ba-8b36aae9cabb",
+    "area_id": "45d914d4-2076-573f-8b56-db680feb6521",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Sheung Wan, Central and Western, Hong Kong",
+    "lat": "22.2864",
+    "lng": "114.1506"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "3dbd0291-a834-5b01-b920-d1f8ce9498f9"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "2cbe818a-64a5-54f2-a6aa-9a4da87ef50a",
+    "name": "Sports and movement in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for sports and movement in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Sports and movement in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for sports and movement in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111302"
+   },
+   "organization": {
+    "id": "c2e31f73-b49f-58e4-83c0-ea36aaadd93f",
+    "name": "Sports and movement Studio — Central and Western",
+    "description": "English-language sports and movement provider in Hong Kong.",
+    "name_translations": {
+     "en": "Sports and movement Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language sports and movement provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "6ecd88b2-1cb6-541b-b4a6-cc980685fc50",
+    "area_id": "e723b5d0-2a65-55a1-8a8d-eb09b4f80348",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Central, Central and Western, Hong Kong",
+    "lat": "22.2814",
+    "lng": "114.1580"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "7a2ac935-92fc-59ee-8a7c-7b546b33eb85"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "fcc0d6e5-d2a7-5675-921e-06e8a522dbc8",
+    "name": "Sports and movement in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for sports and movement in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Sports and movement in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for sports and movement in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111302"
+   },
+   "organization": {
+    "id": "c2e31f73-b49f-58e4-83c0-ea36aaadd93f",
+    "name": "Sports and movement Studio — Central and Western",
+    "description": "English-language sports and movement provider in Hong Kong.",
+    "name_translations": {
+     "en": "Sports and movement Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language sports and movement provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "54f3012d-ecc6-5952-8c00-4734666953ef",
+    "area_id": "2964b9f2-8d72-5370-8def-4d9662981086",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Admiralty, Central and Western, Hong Kong",
+    "lat": "22.2794",
+    "lng": "114.1650"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "d1189988-7d54-5ed7-9155-bd212288b266"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "bce4426c-69c2-56cc-a5ed-b517cb0dcfef",
+    "name": "Play and outdoors in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for play and outdoors in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Play and outdoors in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for play and outdoors in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111303"
+   },
+   "organization": {
+    "id": "5851d679-7bd0-57aa-ba1b-5c787300e357",
+    "name": "Play and outdoors Studio — Central and Western",
+    "description": "English-language play and outdoors provider in Hong Kong.",
+    "name_translations": {
+     "en": "Play and outdoors Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language play and outdoors provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "7e0a5a9d-ee59-56a9-86f2-9b01c6cbe8b0",
+    "area_id": "4800fff7-4d9b-54df-b2a6-144788bd4a33",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Kennedy Town, Central and Western, Hong Kong",
+    "lat": "22.2812",
+    "lng": "114.1289"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "60870f4e-35f9-5254-948a-b4ed455b9149"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "6c0dd008-32d1-59c1-aca7-766b29b7ca8b",
+    "name": "Play and outdoors in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for play and outdoors in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Play and outdoors in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for play and outdoors in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111303"
+   },
+   "organization": {
+    "id": "5851d679-7bd0-57aa-ba1b-5c787300e357",
+    "name": "Play and outdoors Studio — Central and Western",
+    "description": "English-language play and outdoors provider in Hong Kong.",
+    "name_translations": {
+     "en": "Play and outdoors Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language play and outdoors provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "f1191431-8524-5e2a-9d42-7e17236adcbc",
+    "area_id": "28b5a275-6c45-5812-9b0d-68ecb3151245",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Shek Tong Tsui, Central and Western, Hong Kong",
+    "lat": "22.2873",
+    "lng": "114.1358"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "90d5a841-fc69-50c7-9ca1-5794a14764c0"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "ad790834-b9c9-57c4-854a-924e55a44511",
+    "name": "Play and outdoors in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for play and outdoors in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Play and outdoors in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for play and outdoors in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111303"
+   },
+   "organization": {
+    "id": "5851d679-7bd0-57aa-ba1b-5c787300e357",
+    "name": "Play and outdoors Studio — Central and Western",
+    "description": "English-language play and outdoors provider in Hong Kong.",
+    "name_translations": {
+     "en": "Play and outdoors Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language play and outdoors provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "aea975bb-bce6-5851-9d66-17cf52617c8f",
+    "area_id": "bc0287d0-b618-589f-bfba-df8b344ea33b",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Sai Ying Pun, Central and Western, Hong Kong",
+    "lat": "22.2858",
+    "lng": "114.1428"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "cb80175a-2b3e-5105-8a09-59f8ae49117c"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "bcfacf0a-856e-5a70-91e5-e2aa433b9a7b",
+    "name": "Play and outdoors in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for play and outdoors in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Play and outdoors in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for play and outdoors in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111303"
+   },
+   "organization": {
+    "id": "5851d679-7bd0-57aa-ba1b-5c787300e357",
+    "name": "Play and outdoors Studio — Central and Western",
+    "description": "English-language play and outdoors provider in Hong Kong.",
+    "name_translations": {
+     "en": "Play and outdoors Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language play and outdoors provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "5a03028d-6b77-5a13-b4ba-8b36aae9cabb",
+    "area_id": "45d914d4-2076-573f-8b56-db680feb6521",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Sheung Wan, Central and Western, Hong Kong",
+    "lat": "22.2864",
+    "lng": "114.1506"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "28b423b1-9280-5a94-bdfe-a3c2d75f9237"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "14c5c15c-f3b7-561c-b5c9-3da7d0207d11",
+    "name": "Culture in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for culture in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Culture in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for culture in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111305"
+   },
+   "organization": {
+    "id": "281a699c-0f6a-54ff-ae93-f76a95751cb4",
+    "name": "Culture Studio — Central and Western",
+    "description": "English-language culture provider in Hong Kong.",
+    "name_translations": {
+     "en": "Culture Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language culture provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "a3463077-71cf-51bf-bc2d-97842c56d7fc",
+    "area_id": "ce9f3304-9d20-55af-b669-434eda7ee903",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Mid-Levels, Central and Western, Hong Kong",
+    "lat": "22.2828",
+    "lng": "114.1485"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "cf5eeb9e-0226-508c-9074-1b91ddb5d193"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "b3c0618c-8990-56b3-8809-72305e706b7f",
+    "name": "Culture in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for culture in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Culture in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for culture in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111305"
+   },
+   "organization": {
+    "id": "281a699c-0f6a-54ff-ae93-f76a95751cb4",
+    "name": "Culture Studio — Central and Western",
+    "description": "English-language culture provider in Hong Kong.",
+    "name_translations": {
+     "en": "Culture Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language culture provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "dd05bcd9-285b-50bc-a306-7542eca7a9db",
+    "area_id": "99e8a019-c973-5f07-b56c-eea47235b418",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, The Peak, Central and Western, Hong Kong",
+    "lat": "22.2714",
+    "lng": "114.1498"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "f0e8942d-15ce-5b2a-8c80-17c30ce81799"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "73c863e1-c512-5c41-9cee-88d58923a858",
+    "name": "Culture in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for culture in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Culture in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for culture in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111305"
+   },
+   "organization": {
+    "id": "281a699c-0f6a-54ff-ae93-f76a95751cb4",
+    "name": "Culture Studio — Central and Western",
+    "description": "English-language culture provider in Hong Kong.",
+    "name_translations": {
+     "en": "Culture Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language culture provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "7e0a5a9d-ee59-56a9-86f2-9b01c6cbe8b0",
+    "area_id": "4800fff7-4d9b-54df-b2a6-144788bd4a33",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Kennedy Town, Central and Western, Hong Kong",
+    "lat": "22.2812",
+    "lng": "114.1289"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "806bcdea-eefe-5d66-9d9f-d7c5ad34c2ca"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "a176f6c4-97ff-5af9-9fc2-cf8ccaeb5250",
+    "name": "Culture in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for culture in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Culture in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for culture in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111305"
+   },
+   "organization": {
+    "id": "281a699c-0f6a-54ff-ae93-f76a95751cb4",
+    "name": "Culture Studio — Central and Western",
+    "description": "English-language culture provider in Hong Kong.",
+    "name_translations": {
+     "en": "Culture Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language culture provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "f1191431-8524-5e2a-9d42-7e17236adcbc",
+    "area_id": "28b5a275-6c45-5812-9b0d-68ecb3151245",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Shek Tong Tsui, Central and Western, Hong Kong",
+    "lat": "22.2873",
+    "lng": "114.1358"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "e69f11f0-070f-5d35-a7a7-df6ab554d291"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "7cdf5e74-aec3-5131-8c1e-3a599e3f9def",
+    "name": "Community and support in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for community and support in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Community and support in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for community and support in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111309"
+   },
+   "organization": {
+    "id": "130ce609-2a31-5d2e-a876-e4f001bb9fc0",
+    "name": "Community and support Studio — Central and Western",
+    "description": "English-language community and support provider in Hong Kong.",
+    "name_translations": {
+     "en": "Community and support Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language community and support provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "6ecd88b2-1cb6-541b-b4a6-cc980685fc50",
+    "area_id": "e723b5d0-2a65-55a1-8a8d-eb09b4f80348",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Central, Central and Western, Hong Kong",
+    "lat": "22.2814",
+    "lng": "114.1580"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "09a7594c-9574-5340-a81a-c389baae8dcd"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "5881c915-4e1a-5131-abae-644686332a9d",
+    "name": "Community and support in Central and Western (ages 1–3, per class)",
+    "description": "Staging listing for community and support in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Community and support in Central and Western (ages 1–3, per class)"
+    },
+    "description_translations": {
+     "en": "Staging listing for community and support in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111309"
+   },
+   "organization": {
+    "id": "130ce609-2a31-5d2e-a876-e4f001bb9fc0",
+    "name": "Community and support Studio — Central and Western",
+    "description": "English-language community and support provider in Hong Kong.",
+    "name_translations": {
+     "en": "Community and support Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language community and support provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "54f3012d-ecc6-5952-8c00-4734666953ef",
+    "area_id": "2964b9f2-8d72-5370-8def-4d9662981086",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Admiralty, Central and Western, Hong Kong",
+    "lat": "22.2794",
+    "lng": "114.1650"
+   },
+   "pricing": {
+    "pricing_type": "per_class",
+    "amount": 150.0,
+    "currency": "HKD",
+    "sessions_count": null,
+    "free_trial_class_offered": true
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "17b01f2e-a4c6-50da-b0bb-dc55f6584188"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "f36697fa-e841-52ab-9025-dc04628f35f6",
+    "name": "Community and support in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for community and support in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Community and support in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for community and support in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111309"
+   },
+   "organization": {
+    "id": "130ce609-2a31-5d2e-a876-e4f001bb9fc0",
+    "name": "Community and support Studio — Central and Western",
+    "description": "English-language community and support provider in Hong Kong.",
+    "name_translations": {
+     "en": "Community and support Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language community and support provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "a3463077-71cf-51bf-bc2d-97842c56d7fc",
+    "area_id": "ce9f3304-9d20-55af-b669-434eda7ee903",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, Mid-Levels, Central and Western, Hong Kong",
+    "lat": "22.2828",
+    "lng": "114.1485"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 1,
+      "start_minutes_utc": 600,
+      "end_minutes_utc": 660
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 1,
+    "start_minutes_utc": 600,
+    "schedule_id": "9bd5d8fc-9a78-5325-854f-e3328f0215b3"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  },
+  {
+   "activity": {
+    "id": "7814ba48-16df-5af9-9533-9b482d9124a5",
+    "name": "Community and support in Central and Western (ages 1–3, per term)",
+    "description": "Staging listing for community and support in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English.",
+    "name_translations": {
+     "en": "Community and support in Central and Western (ages 1–3, per term)"
+    },
+    "description_translations": {
+     "en": "Staging listing for community and support in Central and Western, Hong Kong. Suitable for ages 1 to 3. Sessions run in English."
+    },
+    "age_min": 1,
+    "age_max": 3,
+    "category_id": "c1111111-1111-1111-1111-111111111309"
+   },
+   "organization": {
+    "id": "130ce609-2a31-5d2e-a876-e4f001bb9fc0",
+    "name": "Community and support Studio — Central and Western",
+    "description": "English-language community and support provider in Hong Kong.",
+    "name_translations": {
+     "en": "Community and support Studio — Central and Western"
+    },
+    "description_translations": {
+     "en": "English-language community and support provider in Hong Kong."
+    },
+    "media_urls": [],
+    "logo_media_url": null
+   },
+   "location": {
+    "id": "dd05bcd9-285b-50bc-a306-7542eca7a9db",
+    "area_id": "99e8a019-c973-5f07-b56c-eea47235b418",
+    "region_area_id": "a1111111-1111-1111-1111-111111111101",
+    "address": "1 Example Road, The Peak, Central and Western, Hong Kong",
+    "lat": "22.2714",
+    "lng": "114.1498"
+   },
+   "pricing": {
+    "pricing_type": "per_sessions",
+    "amount": 1200.0,
+    "currency": "HKD",
+    "sessions_count": 8,
+    "free_trial_class_offered": false
+   },
+   "schedule": {
+    "schedule_type": "weekly",
+    "weekly_entries": [
+     {
+      "day_of_week_utc": 6,
+      "start_minutes_utc": 540,
+      "end_minutes_utc": 600
+     }
+    ],
+    "languages": [
+     "en"
+    ]
+   },
+   "_sort": {
+    "day_of_week_utc": 6,
+    "start_minutes_utc": 540,
+    "schedule_id": "ea0c5793-00bb-5ae4-8595-5f132898b20f"
+   },
+   "_meta": {
+    "district_name": "Central and Western",
+    "region_label": "Hong Kong Island"
+   }
+  }
+ ]
+}

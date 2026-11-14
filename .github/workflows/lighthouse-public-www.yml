@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       page_paths:
-        description: 'Comma/newline-separated page paths or full URLs to audit. Empty uses /en/ and /zh-HK/. A bare / is rewritten to /en/ because / is a locale redirect. /en/search/ is omitted because this build has no search API.'
+        description: 'Comma/newline-separated page paths or full URLs to audit. Empty uses /en/, /zh-HK/, /en/activities/, /en/activities/arts/, and one activity page from the committed catalogue fixture. A bare / is rewritten to /en/ because / is a locale redirect. /en/search/ is omitted because this build has no search API.'
         required: false
         default: ''
 
@@ -52,6 +52,7 @@ jobs:
           NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_config.outputs.production_site_origin }}
           NEXT_PUBLIC_SITE_NAME: ${{ vars.NEXT_PUBLIC_SITE_NAME || steps.resolve_public_site_config.outputs.site_name }}
           NEXT_PUBLIC_SITE_TAGLINE: ${{ vars.NEXT_PUBLIC_SITE_TAGLINE || steps.resolve_public_site_config.outputs.site_tagline }}
+          PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH: ${{ github.workspace }}/apps/public_www/tests/fixtures/catalogue-snapshot.json
         run: npm run build
 
       - name: Run Lighthouse CI

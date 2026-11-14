@@ -4,13 +4,17 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 import type { Locale } from '@/content/locales';
-import { listingMetaLine } from '@/components/sections/listings/listing-card';
+import {
+  listingCardRules,
+  listingFactsLine,
+  listingMetaLine,
+} from '@/components/sections/listings/listing-card';
+import { useActivityHref } from '@/components/shared/static-activity-pages';
 import type { ActivityListing } from '@/lib/activities/types';
 import { listingAgeLabel } from '@/lib/activities/listing-facts';
 import { listingImageUrl, listingTitle } from '@/lib/activities/listing-utils';
 import { formatListingPriceSummary } from '@/lib/activities/price-format';
-import { iconSrcForActivityCategory } from '@/lib/home-wizard/choice-icons';
-import { localizePath } from '@/lib/locale-routing';
+import { iconSrcForListing } from '@/lib/home-wizard/choice-icons';
 import { LISTING_IMAGE_HEIGHT, LISTING_IMAGE_WIDTH } from '@/lib/listing-image';
 
 export interface SearchMapListItemLabels {
@@ -63,7 +67,7 @@ function Thumbnail({ listing, title }: { readonly listing: ActivityListing; read
       ) : (
         <span className="flex h-full items-center justify-center">
           <img
-            src={iconSrcForActivityCategory(listing.activity.categoryId)}
+            src={iconSrcForListing(listing.activity)}
             alt=""
             width={40}
             height={40}
@@ -81,6 +85,7 @@ function SummaryBody({ locale, listing, labels }: SearchMapListItemBase) {
   const age = listingAgeLabel(locale, listing);
   const { place, schedule } = listingMetaLine(locale, listing, labels.locationsCount);
   const meta = [place, schedule].filter(Boolean).join(' · ');
+  const factsLine = listingFactsLine(locale, listing);
   const price = formatListingPriceSummary(locale, listing);
 
   return (
@@ -94,9 +99,14 @@ function SummaryBody({ locale, listing, labels }: SearchMapListItemBase) {
         ) : null}
         <h3 className="line-clamp-2 text-sm font-semibold text-ink-900">{title}</h3>
         {meta ? <p className="mt-0.5 line-clamp-1 text-xs text-ink-700">{meta}</p> : null}
-        <p className="mt-0.5 text-sm font-semibold text-ink-900">
-          {price ?? <span className="font-normal text-ink-500">{labels.detailsOnRequest}</span>}
-        </p>
+        {factsLine ? (
+          <p className="mt-0.5 line-clamp-1 text-xs text-ink-700">{factsLine}</p>
+        ) : null}
+        {price || listingCardRules(listing).detailsOnRequest ? (
+          <p className="mt-0.5 text-sm font-semibold text-ink-900">
+            {price ?? <span className="font-normal text-ink-500">{labels.detailsOnRequest}</span>}
+          </p>
+        ) : null}
       </div>
     </>
   );
@@ -109,7 +119,7 @@ const VIEW_CLASS_NAME =
   'border border-ink-900/15 bg-white px-4 text-sm font-semibold text-ink-900 hover:bg-brand-50';
 
 export function SearchMapListItem(props: SearchMapListItemProps) {
-  const href = `${localizePath('/activity', props.locale)}?id=${props.listing.activity.id}`;
+  const href = useActivityHref(props.locale, props.listing.activity.id);
   const isSelected = props.isSelected === true;
   const title = listingTitle(props.locale, props.listing);
 

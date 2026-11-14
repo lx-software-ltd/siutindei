@@ -109,6 +109,7 @@ def create_activity_category(
     reject_same_parent_name(repo, name, parent_id)
     display_order = parse_display_order(body.get("display_order"))
     show_in_wizard = _parse_show_in_wizard(body.get("show_in_wizard", False))
+    hidden_from_public = parse_hidden_from_public(body.get("hidden_from_public", False))
 
     return ActivityCategory(
         name=name,
@@ -116,6 +117,7 @@ def create_activity_category(
         parent_id=parent_id,
         display_order=display_order,
         show_in_wizard=show_in_wizard,
+        hidden_from_public=hidden_from_public,
     )
 
 
@@ -153,6 +155,18 @@ def _parse_show_in_wizard(value: Any) -> bool:
         raise ValidationError(
             "show_in_wizard must be a boolean",
             field="show_in_wizard",
+        )
+    return value
+
+
+def parse_hidden_from_public(value: Any) -> bool:
+    """Read the hidden-from-public flag; omitted means listed."""
+    if value is None:
+        return False
+    if not isinstance(value, bool):
+        raise ValidationError(
+            "hidden_from_public must be a boolean",
+            field="hidden_from_public",
         )
     return value
 

@@ -9,6 +9,7 @@ interface ChoiceTileProps {
   readonly size?: ChoiceTileSize;
   readonly disabled?: boolean;
   readonly disabledHint?: string;
+  readonly hint?: string;
 }
 
 const TILE_SIZE_CLASS: Record<
@@ -37,6 +38,7 @@ export function ChoiceTile({
   size = 'default',
   disabled = false,
   disabledHint,
+  hint,
 }: ChoiceTileProps) {
   const selectedClassName = disabled
     ? 'cursor-not-allowed border-brand-100 bg-white opacity-40'
@@ -81,6 +83,8 @@ export function ChoiceTile({
       </span>
       {disabled && disabledHint ? (
         <span className="text-xs font-medium text-ink-500">{disabledHint}</span>
+      ) : hint ? (
+        <span className="text-center text-xs font-medium text-ink-500">{hint}</span>
       ) : null}
     </button>
   );

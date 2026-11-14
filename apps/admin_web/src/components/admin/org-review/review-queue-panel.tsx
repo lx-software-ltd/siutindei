@@ -65,6 +65,7 @@ import { BULK_FIELDS_FORM_ID, BulkFieldsDialog } from './bulk-fields-dialog';
 import { REVIEW_REASON_OPTIONS, RejectForm } from './reject-form';
 import { CatalogOrgMap } from './catalog-org-map';
 import { NeighbourhoodFilter } from './neighbourhood-filter';
+import { AreaReadinessCard } from './area-readiness-card';
 
 const PAGE_NAME = formatAdminPageName('Catalog');
 const CATALOG_IMPORT_FILTER_LIMIT = 20;
@@ -119,6 +120,7 @@ const ISSUE_OPTIONS = [
   ['no_locations', 'No locations'],
   ['activity_no_location', 'Activity has no location'],
   ['no_activities', 'No activities'],
+  ['no_listable_activities', 'Only hidden activities'],
   ['missing_coordinates', 'Missing map pin'],
   ['missing_pricing', 'Missing price'],
   ['missing_schedule', 'Missing schedule'],
@@ -131,6 +133,11 @@ const ISSUE_OPTIONS = [
   ['pending_name_fix', 'Name change waiting'],
   ['possible_duplicate', 'Possible duplicate'],
   ['activity_added_since_rejected', 'Added since rejected'],
+  ['catch_all_age', 'Age range too wide'],
+  ['hours_as_class_times', 'Times look like opening hours'],
+  ['class_price_outlier', 'Class price looks like a term fee'],
+  ['verification_stale', 'Parent check over a year old'],
+  ['camp_without_dates', 'Camp without upcoming dates'],
 ];
 
 function catalogReviewStatusLabel(status: string): string | undefined {
@@ -723,6 +730,13 @@ function CatalogPanelReady({
           value={summary?.by_issue.activity_added_since_rejected ?? 0}
         />
       </div>
+      {filters.area_id ? (
+        <AreaReadinessCard
+          areaId={filters.area_id}
+          areaName={selectedAreaName}
+          refreshKey={summary}
+        />
+      ) : null}
       <AdminTabStrip
         aria-label='Catalog view'
         activeKey={view}

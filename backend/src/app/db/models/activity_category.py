@@ -56,6 +56,13 @@ class ActivityCategory(Base):
         default=False,
         server_default=text("false"),
     )
+    hidden_from_public: Mapped[bool] = mapped_column(
+        Boolean(),
+        nullable=False,
+        default=False,
+        server_default=text("false"),
+        comment="Public search leaves out this category and its descendants",
+    )
 
     parent: Mapped[ActivityCategory | None] = relationship(
         remote_side="ActivityCategory.id",

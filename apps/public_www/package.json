@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && npm run redirect:inject && npm run lang:inject && npm run jsonld:inject && npm run csp:inject && npm run csp:validate",
+    "build": "next build && npm run export:prune-placeholders && npm run redirect:inject && npm run lang:inject && npm run jsonld:inject && npm run csp:inject && npm run csp:validate && npm run seo:validate",
     "start": "next start",
     "lint": "eslint --max-warnings=0 .",
     "lint:fix": "eslint --fix .",
@@ -16,11 +16,13 @@
     "audit:assets": "node ./scripts/audit-assets.mjs",
     "audit:deps:prod": "npm audit --omit=dev --audit-level=high",
     "assert:build-env-contract": "node ./scripts/assert-build-env-contract.mjs",
+    "export:prune-placeholders": "node ./scripts/prune-export-placeholders.mjs",
     "redirect:inject": "node ./scripts/inject-static-redirects.mjs",
     "lang:inject": "node ./scripts/inject-html-lang.mjs",
     "jsonld:inject": "node ./scripts/inject-structured-data.mjs",
     "csp:inject": "node ./scripts/inject-csp-meta.mjs",
     "csp:validate": "node ./scripts/validate-csp-meta.mjs",
+    "seo:validate": "node ./scripts/validate-seo-output.mjs",
     "lighthouse:ci": "lhci autorun --config=.lighthouserc.json"
   },
   "dependencies": {

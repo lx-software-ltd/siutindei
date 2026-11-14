@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 from app.db.models import (
@@ -54,6 +55,8 @@ def activity_payload(activity: Activity) -> dict[str, Any]:
         "source_url": activity.source_url,
         "source_note": activity.source_note,
         "source_category_name": activity.source_category_name,
+        "kind": activity.kind,
+        "facts": dict(activity.facts or {}),
     }
 
 
@@ -100,6 +103,12 @@ def schedule_payload(
             }
             for entry in schedule.entries
         ],
+        "starts_on": _iso_date(schedule.starts_on),
+        "ends_on": _iso_date(schedule.ends_on),
         "activity_id": str(schedule.activity_id),
         "location_id": str(schedule.location_id),
     }
+
+
+def _iso_date(value: date | None) -> str | None:
+    return value.isoformat() if value is not None else None

@@ -53,6 +53,8 @@ import {
 interface DiscoveryHomeSectionProps {
   readonly locale: Locale;
   readonly copy: SiteContent['discovery'];
+  /** The page also links to pre-rendered activity pages, so a failed search can stay silent. */
+  readonly hasStaticCatalogue?: boolean;
 }
 
 type CardLabels = ListingCarouselLabels;
@@ -214,7 +216,11 @@ function RegionCarousel({
   );
 }
 
-export function DiscoveryHomeSection({ locale, copy }: DiscoveryHomeSectionProps) {
+export function DiscoveryHomeSection({
+  locale,
+  copy,
+  hasStaticCatalogue = false,
+}: DiscoveryHomeSectionProps) {
   const { filters } = useSearchContext();
   const openPlace = namedOpenPlace(locale);
   const recentSearchFilters = useSyncExternalStore(
@@ -270,6 +276,9 @@ export function DiscoveryHomeSection({ locale, copy }: DiscoveryHomeSectionProps
   };
 
   if (primary.errorMessage) {
+    if (hasStaticCatalogue) {
+      return null;
+    }
     return (
       <p className="mx-auto max-w-3xl px-4 py-12 text-center text-red-700">
         {copy.errorLabel}

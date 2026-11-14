@@ -8,11 +8,13 @@ one place.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from app.api.admin_imports_catalog import normalize_org_name
 from app.db.age_bounds import inclusive_age_bounds
+from app.services.listing_kinds import DEFAULT_KIND
 
 ORG_SHAPE_KEYS = (
     "name",
@@ -50,6 +52,8 @@ ACTIVITY_SHAPE_KEYS = (
     "source_url",
     "source_note",
     "source_category_name",
+    "kind",
+    "facts",
 )
 LOCATION_SHAPE_KEYS = ("address", "area_id", "lat", "lng", "place_id")
 PRICING_SHAPE_KEYS = (
@@ -60,7 +64,13 @@ PRICING_SHAPE_KEYS = (
     "sessions_count",
     "free_trial_class_offered",
 )
-SCHEDULE_SHAPE_KEYS = ("location_address", "languages", "entries")
+SCHEDULE_SHAPE_KEYS = (
+    "location_address",
+    "languages",
+    "entries",
+    "starts_on",
+    "ends_on",
+)
 
 
 def build_shape(entity_type: str, data: Mapping[str, Any]) -> dict[str, Any]:
@@ -133,7 +143,11 @@ def organization_shape(data: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def activity_shape(data: Mapping[str, Any]) -> dict[str, Any]:
-    """Activity fields. Category id is a taxonomy choice, not source data."""
+    """Activity fields. Category id is a taxonomy choice, not source data.
+
+    A snapshot from before kinds has no ``kind`` and no ``facts``; it
+    reads as the column defaults.
+    """
     age_min, age_max = _ages(data)
     return {
         "name": _norm_name(data.get("name")),
@@ -145,6 +159,8 @@ def activity_shape(data: Mapping[str, Any]) -> dict[str, Any]:
         "source_url": _text(data.get("source_url")),
         "source_note": _text(data.get("source_note")),
         "source_category_name": _text(data.get("source_category_name")),
+        "kind": _text(data.get("kind")) or DEFAULT_KIND,
+        "facts": _facts(data.get("facts")),
     }
 
 
@@ -177,11 +193,13 @@ def pricing_shape(data: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def schedule_shape(data: Mapping[str, Any]) -> dict[str, Any]:
-    """Schedule identity is the venue, languages, and UTC slots."""
+    """Schedule identity is the venue, languages, UTC slots, and dates."""
     return {
         "location_address": _norm_name(data.get("location_address")),
         "languages": _strings(data.get("languages")),
         "entries": _entries(data),
+        "starts_on": _date_text(data.get("starts_on")),
+        "ends_on": _date_text(data.get("ends_on")),
     }
 
 
@@ -251,6 +269,12 @@ def _translations(value: Any) -> dict[str, str]:
     return dict(sorted(cleaned.items()))
 
 
+def _facts(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    return {str(key): item for key, item in sorted(value.items())}
+
+
 def _urls(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
@@ -303,3 +327,10 @@ def _quantize(value: Any, places: int) -> str | None:
         return None
     quant = Decimal("1").scaleb(-places)
     return format(number.quantize(quant), "f")
+
+
+def _date_text(value: Any) -> str | None:
+    if isinstance(value, date):
+        return value.isoformat()
+    text = _text(value)
+    return text[:10] if text else None

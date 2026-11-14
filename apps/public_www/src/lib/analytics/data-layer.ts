@@ -9,6 +9,7 @@ import {
 } from '@/lib/activities/listing-utils';
 import {
   filtersToApiParams,
+  searchAgeForGroup,
   type SearchFiltersState,
 } from '@/lib/activities/search-params';
 import type { ActivityListing } from '@/lib/activities/types';
@@ -90,11 +91,12 @@ export function searchFieldsFromFilters(
   filters: SearchFiltersState,
 ): AnalyticsSearchFields {
   const apiParams = filtersToApiParams(filters);
+  const age = searchAgeForGroup(filters.ageGroupId);
   const searchTerm = filters.textQuery.trim();
   return {
     ...(searchTerm ? { search_term: searchTerm } : {}),
     ...(apiParams.areaId ? { area_id: apiParams.areaId } : {}),
-    ...(apiParams.age !== undefined ? { age: apiParams.age } : {}),
+    ...(age !== undefined ? { age } : {}),
     ...(apiParams.categoryIds.length > 0
       ? { category_id: apiParams.categoryIds.join(',') }
       : {}),

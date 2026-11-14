@@ -34,6 +34,11 @@ function buildListing(
       ageMin: null,
       ageMax: null,
       categoryId: 'c1111111-1111-1111-1111-111111111101',
+      kind: 'class',
+      facts: {},
+      categoryRootId: 'c1111111-1111-1111-1111-111111111101',
+      categoryName: null,
+      categoryNameTranslations: {},
     },
     organization: {
       id: 'org-1',
@@ -69,12 +74,17 @@ function buildListing(
 function renderDiscovery(
   locale: 'en' | 'zh-HK' = 'en',
   filters?: SearchFiltersState,
+  hasStaticCatalogue = false,
 ) {
   const content = getContent(locale);
   render(
     withChromeCopy(
       <SearchProvider initialFilters={filters}>
-        <DiscoveryHomeSection locale={locale} copy={content.discovery} />
+        <DiscoveryHomeSection
+          locale={locale}
+          copy={content.discovery}
+          hasStaticCatalogue={hasStaticCatalogue}
+        />
       </SearchProvider>,
     ),
   );
@@ -318,6 +328,28 @@ describe('DiscoveryHomeSection', () => {
     expect(
       screen.queryByRole('link', { name: content.discovery.nearRegionTitle }),
     ).not.toBeInTheDocument();
+  });
+
+  it('shows the search error when the page has no static catalogue', async () => {
+    vi.mocked(fetchActivitySearch).mockRejectedValue(new Error('offline'));
+    const content = renderDiscovery();
+
+    expect(await screen.findByText(content.discovery.errorLabel)).toBeInTheDocument();
+  });
+
+  it('stays silent on a search error when the page links to the static catalogue', async () => {
+    vi.mocked(fetchActivitySearch).mockRejectedValue(new Error('offline'));
+    const content = renderDiscovery('en', undefined, true);
+
+    await waitFor(() => {
+      expect(fetchActivitySearch).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('link', { name: content.discovery.popularTitle }),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.queryByText(content.discovery.errorLabel)).not.toBeInTheDocument();
   });
 
   it('says no areas are open when the scope matches nothing', async () => {

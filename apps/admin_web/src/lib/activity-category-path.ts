@@ -64,3 +64,33 @@ export function flattenCategoriesByPathOrder<T extends CategoryPathNode>(
   walk(childrenByParent.get('') ?? []);
   return ordered;
 }
+
+export interface CategoryRoleNode {
+  is_system?: boolean;
+  system_role?: string | null;
+}
+
+/** Pending categorisation. Older payloads only set `is_system`. */
+export function isPendingCategory(node: CategoryRoleNode | undefined): boolean {
+  if (!node) {
+    return false;
+  }
+  if (node.system_role !== undefined && node.system_role !== null) {
+    return node.system_role === 'pending';
+  }
+  return node.system_role === undefined && Boolean(node.is_system);
+}
+
+/** Category name with the pending or hidden marker the admin lists show. */
+export function categoryOptionLabel(
+  name: string,
+  node: CategoryRoleNode & { hidden_from_public?: boolean }
+): string {
+  if (isPendingCategory(node)) {
+    return `${name} (pending)`;
+  }
+  if (node.hidden_from_public) {
+    return `${name} (hidden from public)`;
+  }
+  return name;
+}

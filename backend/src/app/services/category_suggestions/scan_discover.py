@@ -29,6 +29,7 @@ from app.services.category_suggestions.scan_apply import (
     _add_review,
     _audit_scan,
 )
+from app.services.listing_kinds import move_to_category
 
 # An admin already decided, or verify already settled the category.
 _LEAVE = ("applied", "confirmed", "dismissed", "reverted")
@@ -343,7 +344,7 @@ def _move_known(
     previous = UUID(str(activity.category_id))
     can_auto = not overridden
     if can_auto:
-        activity.category_id = target.id
+        move_to_category(session, activity, target.id)
     _add_review(
         session,
         run=run,

@@ -5,7 +5,9 @@ from __future__ import annotations
 import os
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
+from functools import lru_cache
 from typing import Any
 from uuid import UUID
 
@@ -17,6 +19,7 @@ from sqlalchemy.sql import Select
 from sqlalchemy.sql.selectable import CompoundSelect
 
 from app.data.hk_neighbourhoods import resolve_search_area_scope
+from app.db.category_visibility import public_category_clause
 from app.db.models import (
     Activity,
     ActivityCategory,
@@ -39,10 +42,12 @@ from app.db.search_conditions import (
     UNPRICED_SORT_KEY,
     apply_entry_filters,
     build_language_conditions,
+    listing_conditions,
     price_conditions,
     price_sort_key,
     text_query_condition,
 )
+from app.services.schedule_dates import hong_kong_today, schedule_search_conditions
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -96,6 +101,13 @@ class ActivitySearchFilters:
     class_price_max: Decimal | None = None
     sort: str = "time"
     include_total: bool = False
+    kinds: Sequence[str] = ()
+    age_min: int | None = None
+    age_max: int | None = None
+    verified_only: bool = False
+    date_from: date | None = None
+    date_to: date | None = None
+    today: date | None = None
 
 
 def validate_filters(filters: ActivitySearchFilters) -> None:
@@ -153,11 +165,9 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
     if review_gate_enabled():
         query = query.where(Organization.review_status == "approved")
     query = query.where(Activity.category_id != PENDING_CATEGORY_ID)
+    query = query.where(public_category_clause(Activity.category_id))
 
-    conditions: list = []
-
-    if filters.age is not None:
-        conditions.append(Activity.age_range.contains(filters.age))
+    conditions: list = listing_conditions(filters)
 
     if filters.area_id is not None:
         area_ids = area_descendant_ids_subquery(filters.area_id)
@@ -180,6 +190,8 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
 
     if filters.schedule_type is not None:
         conditions.append(ActivitySchedule.schedule_type == filters.schedule_type)
+
+    conditions.extend(schedule_date_conditions(filters))
 
     if filters.languages:
         language_conditions = build_language_conditions(filters.languages)
@@ -204,6 +216,20 @@ def build_search_query(filters: ActivitySearchFilters) -> Select:
 
     query = query.order_by(*order_columns)
     return query.limit(filters.limit)
+
+
+def search_today(filters: ActivitySearchFilters) -> date:
+    """The Hong Kong date that decides whether a session has ended."""
+    return filters.today if filters.today is not None else hong_kong_today()
+
+
+def schedule_date_conditions(
+    filters: ActivitySearchFilters, schedule: Any = ActivitySchedule
+) -> list:
+    """Ended sessions drop out; ``date_from`` and ``date_to`` keep overlaps."""
+    return schedule_search_conditions(
+        search_today(filters), filters.date_from, filters.date_to, schedule
+    )
 
 
 def _entry_order_subquery(filters: ActivitySearchFilters) -> sa.Subquery:
@@ -344,9 +370,17 @@ def _category_descendant_ids_subquery(
 
 def _category_tree(category_ids: Sequence[UUID]) -> Any:
     """Recursive category ids starting at the requested rows."""
+    return _category_tree_for(tuple(sorted(set(category_ids))))
+
+
+@lru_cache(maxsize=128)
+def _category_tree_for(category_ids: tuple[UUID, ...]) -> Any:
+    # One CTE object per id set. The incomplete phase and the total count
+    # reference the tree more than once in one statement, and two CTEs that
+    # share a name fail to compile.
     base = (
         select(ActivityCategory.id)
-        .where(ActivityCategory.id.in_(tuple(category_ids)))
+        .where(ActivityCategory.id.in_(category_ids))
         .where(ActivityCategory.id != PENDING_CATEGORY_ID)
         .cte(name="category_tree", recursive=True)
     )

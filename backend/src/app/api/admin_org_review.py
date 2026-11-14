@@ -34,6 +34,7 @@ from app.db.engine import get_engine
 from app.db.models import GeographicArea, Location, Organization
 from app.db.queries import area_descendant_ids_subquery
 from app.exceptions import NotFoundError, ValidationError
+from app.services.area_readiness import area_readiness
 from app.services.org_review import (
     REVIEW_REASONS,
     REVIEW_STATUSES,
@@ -143,8 +144,13 @@ def _handle_list(event: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _handle_summary(event: Mapping[str, Any]) -> dict[str, Any]:
+    area_id = _parse_area_id(_blank_to_none(_query_param(event, "area_id")))
     with Session(get_engine()) as session:
-        return json_response(200, summarize_catalog(session), event=event)
+        summary = summarize_catalog(session)
+        if area_id is not None:
+            _require_active_area(session, area_id)
+            summary["readiness"] = area_readiness(session, area_id)
+        return json_response(200, summary, event=event)
 
 
 def _needs_warning_scan(filters: ReviewListFilters) -> bool:

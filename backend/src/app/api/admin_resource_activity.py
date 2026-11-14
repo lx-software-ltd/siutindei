@@ -30,6 +30,15 @@ from app.db.models import (
 )
 from app.db.repositories import ActivityCategoryRepository, ActivityRepository
 from app.exceptions import ValidationError
+from app.services.listing_kinds import (
+    DEFAULT_KIND,
+    assign_category,
+    facts_for_kind,
+    kind_for_category,
+    parse_kind,
+    validate_facts,
+)
+from app.services.org_review_decision import reject_if_only_hidden
 from app.utils.translations import build_translation_map
 
 MAX_ACTIVITY_LOCATIONS = 100
@@ -76,6 +85,11 @@ def _create_activity(repo: ActivityRepository, body: dict[str, Any]) -> Activity
     if category_repo.get_by_id(category_uuid) is None:
         raise ValidationError("category_id not found", field="category_id")
 
+    kind = parse_kind(body["kind"]) if "kind" in body else DEFAULT_KIND
+    facts = validate_facts(kind, body.get("facts"))
+    kind = kind_for_category(repo.session, category_uuid, kind)
+    facts = facts_for_kind(kind, facts)
+
     location_ids = _optional_location_ids(body)
     parsed_org_id = _parse_uuid(org_id)
     if location_ids is not None:
@@ -100,6 +114,8 @@ def _create_activity(repo: ActivityRepository, body: dict[str, Any]) -> Activity
         ),
         source_category_name=_source_category_name(body.get("source_category_name")),
         age_range=age_range,
+        kind=kind,
+        facts=facts,
     )
     from app.services.data_quality.names import record_imported_name
 
@@ -116,10 +132,12 @@ def _update_activity_for_manager(
     entity: Activity,
     body: dict[str, Any],
 ) -> Activity:
-    """Update an activity for a manager (no provenance fields)."""
+    """Update an activity for a manager (no provenance, kind, or facts)."""
     body.pop("source_url", None)
     body.pop("source_note", None)
     body.pop("source_category_name", None)
+    body.pop("kind", None)
+    body.pop("facts", None)
     return _update_activity(repo, entity, body)
 
 
@@ -185,6 +203,10 @@ def _update_activity(
             raise ValidationError("age_min and age_max are required together")
         _validate_age_range(age_min, age_max)
         entity.age_range = Range(int(age_min), int(age_max), bounds="[]")
+    if "kind" in body or "facts" in body:
+        _apply_kind_and_facts(entity, body)
+    if "category_id" in body or "kind" in body:
+        assign_category(repo.session, entity, entity.category_id)
     if "location_ids" in body:
         location_ids = _parse_location_ids(body["location_ids"])
         _assert_locations_for_org(repo.session, entity.org_id, location_ids)
@@ -193,6 +215,21 @@ def _update_activity(
 
     record_imported_name(repo.session, entity, body, "activity")
     return entity
+
+
+def _after_activity_write(session: Session, entity: Activity) -> None:
+    """A category change can leave the organization with only hidden ones."""
+    reject_if_only_hidden(session, entity.org_id)
+
+
+def _apply_kind_and_facts(entity: Activity, body: dict[str, Any]) -> None:
+    """Set kind and facts. A new kind drops the facts it does not allow."""
+    kind = parse_kind(body["kind"]) if "kind" in body else entity.kind
+    if "facts" in body:
+        entity.facts = validate_facts(kind, body["facts"])
+    else:
+        entity.facts = facts_for_kind(kind, entity.facts)
+    entity.kind = kind
 
 
 def _source_category_name(value: Any) -> str | None:
@@ -266,6 +303,8 @@ def _serialize_activity(entity: Activity) -> dict[str, Any]:
         "source_category_name": entity.source_category_name,
         "age_min": age_min,
         "age_max": age_max,
+        "kind": entity.kind,
+        "facts": entity.facts or {},
         "created_at": entity.created_at,
         "updated_at": entity.updated_at,
         "version": entity.version,

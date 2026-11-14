@@ -232,7 +232,15 @@ def test_apply_writes_in_section_order_with_expected_payloads():
     assert ruleset_body is not None
     assert ruleset_body["name"] == "Public website rate limits"
     assert ruleset_body["rules"][0]["description"] == "search-per-ip"
-    assert fake.writes[2][2] == {"fight_mode": False, "ai_bots_protection": "block"}
+    assert fake.writes[2][2] == {
+        "fight_mode": False,
+        "ai_bots_protection": "block",
+        "ai_training": "block",
+        "ai_search": "disabled",
+        "ai_user": "disabled",
+        "is_robots_txt_managed": False,
+        "bot_preference_sync_enabled": False,
+    }
     assert fake.writes[3][2] == {"proxied": True}
 
 

@@ -5,6 +5,7 @@
   --color-brand-200: #f7de84;
   --color-brand-500: #f5c51b;
   --color-brand-600: #dfae10;
+  --color-brand-700: #6b4e0e;
   --color-ink-900: #2e1d12;
   --color-ink-700: #57402e;
   --color-ink-500: #8a7461;
@@ -214,16 +215,39 @@ a:focus-visible {
   color: var(--color-ink-700);
 }
 
-.card a:not(.btn) {
+.card a:not(.btn):not(.contact-icon) {
   color: var(--color-ink-900);
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 0.15em;
 }
 
-.card a[href^="mailto:"]:not(.btn) {
+.card a[href^="mailto:"]:not(.btn):not(.contact-icon) {
   white-space: nowrap;
   hyphens: none;
+}
+
+.contact-icons {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0 0;
+  padding: 0;
+}
+
+.contact-icons a,
+.contact-icons a:hover {
+  display: inline-flex;
+  text-decoration: none;
+}
+
+.contact-icons img {
+  display: block;
+  width: 72px;
+  height: 72px;
 }
 
 .actions {
@@ -290,8 +314,11 @@ a:focus-visible {
   line-height: 1.5;
 }
 
-.site-footer a {
-  font-weight: 600;
+.site-footer a.link-underlined,
+.site-footer a.link-underlined:hover {
+  color: var(--color-brand-700);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 }
 
 @media (min-width: 768px) {
@@ -353,6 +380,14 @@ a:focus-visible {
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .contact-icons a {
+    transition: transform 150ms ease;
+  }
+
+  .contact-icons a:hover {
+    transform: translateY(-2px);
+  }
+
   .bubble--drift-a {
     animation: bubble-drift-a 9s ease-in-out infinite;
   }

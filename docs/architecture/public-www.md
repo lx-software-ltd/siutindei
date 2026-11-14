@@ -103,7 +103,7 @@ Source: [`apps/public_www`](../../apps/public_www).
     shown, and of the applied filters only a name search (`q`) keeps its
     chip, because the search bar and the filter row already show the rest.
   - The footer sets a small logo, shows the configured email, WhatsApp,
-    and Instagram contacts as coloured tiles from
+    Instagram, and Facebook contacts as coloured tiles from
     `public/images/contact/`, and sets the two link columns side by side.
 - **Body:** About uses the article layout shared with privacy and terms
   (`ArticlePage`: title, intro, on-this-page links, anchored sections) from
@@ -215,11 +215,82 @@ Source: [`apps/public_www`](../../apps/public_www).
   `NEXT_PUBLIC_*` via static `process.env.NEXT_PUBLIC_FOO` access so Next.js
   inlines values in the client bundle (dynamic `process.env[name]` is empty in
   the browser and breaks search).
-- **SEO:** `buildLocalizedMetadata` (canonical, hreflang). Sitewide
-  WebSite + Organization JSON-LD is injected into the exported locale home
-  pages at build time (`scripts/inject-structured-data.mjs`, the
-  `jsonld:inject` build step). The activity page sets
-  `Course` JSON-LD and the document title client-side once the activity loads.
+- **SEO:** `buildLocalizedMetadata` (canonical, hreflang, `en_HK` /
+  `zh_HK` Open Graph locales). Sitewide WebSite + Organization JSON-LD is
+  injected into the exported locale home pages at build time
+  (`scripts/inject-structured-data.mjs`, the `jsonld:inject` build step);
+  `sameAs` lists `NEXT_PUBLIC_INSTAGRAM_URL` and `NEXT_PUBLIC_FACEBOOK_URL`
+  when they are set, and `contactPoint` appears when `NEXT_PUBLIC_EMAIL` is
+  set. The about page adds `AboutPage` and `BreadcrumbList` JSON-LD, a
+  "What is Siu Tin Dei" block, and questions parents ask. The hub and
+  landing pages answer age, day, price, and joining questions from the
+  classes in the catalogue; catch-all age ranges and other kinds stay out
+  of those answers. Each landing page also states its coverage: how many
+  listings, how many a local parent checked, and the month of the last
+  update.
+- **`/llms.txt`:** a static route (`src/lib/llms-txt.ts`) with the site
+  summary, the about and legal pages, and, when the build has a
+  catalogue, the hub, each kind and topic page, and up to 200 activity
+  pages.
+- **Build-output check:** `scripts/validate-seo-output.mjs` (the last
+  build step, `seo:validate`) fails the build when an indexable page has
+  no single H1, title, description, or self canonical, when an activity
+  page has no listing JSON-LD (`Course`, or `TouristAttraction`,
+  `Restaurant`, or `Preschool` for those kinds), when a home page has no activity links
+  although the build has a catalogue, or when `sitemap.xml` lists a page
+  that is missing or `noindex`. Redirect stubs and `noindex` pages are
+  skipped.
+- **Catalogue pages:** `src/lib/activities/catalogue-snapshot.ts` reads the
+  build-time catalogue: the snapshot `CatalogueSnapshotFunction` writes
+  (`PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH`, downloaded by
+  `scripts/deploy/fetch-public-www-catalogue-snapshot.sh`), or on staging
+  with the fixture on, the first 60 fixture activities. Each activity gets
+  `/<locale>/activity/<id>/` with its own title, description, share image,
+  and listing + `BreadcrumbList` JSON-LD in the HTML.
+  `/<locale>/activities/` (hub) groups listings by kind (classes, camps,
+  places). `/<locale>/activities/<slug>/` is either a kind page
+  (`classes`, `camps`, `places`, `nurseries`; `src/lib/activities/kind-pages.ts`)
+  or a wizard topic page, which lists only classes and camps whose category
+  or root category is that topic. Either needs at least three listings.
+  The home page links to the hub, each landing page, and twelve
+  activities.
+- **Session dates:** a schedule may carry `startsOn` and `endsOn` (a
+  dated session, usually a camp week; `src/lib/activities/schedule-dates.ts`).
+  Search and the build drop sessions that ended before today in Hong
+  Kong, so a page built before a session ends still shows it until the
+  next build. A card shows the next session ("21–25 Jul · 09:00–15:00"),
+  the activity page lists the upcoming sessions under "Dates", and the
+  camps page sorts by the next start. The weekend preset also sends
+  `date_from` and `date_to` for the coming Saturday and Sunday; undated
+  schedules match any window.
+- **Eat pilot:** search, both staging stores, and the build drop an
+  `eat` listing unless a parent verified its organiser. The build
+  offers `eat` in the wizard and the results page (`OfferedKinds` in
+  the locale layout, from `offeredPilotKindIds()`) only once three
+  such listings give it the `/activities/eat/` page. In map view a
+  "Family-friendly food" toggle adds eat pins for the same area beside
+  the results. Eat cards list the facts a parent checked, the missing
+  ones included ("No high chairs").
+- **Listing kinds:** every listing has a `kind` (a missing one reads as
+  `class`). Cards and activity pages follow it
+  (`listingCardRules` in `listing-card.tsx`): classes show weekly times,
+  a free trial, and a per-class price; camps show neither weekly times
+  nor a free trial; places and restaurants show "Open …" hours, no ages,
+  and the facts a parent checked (`checkedFacts` in
+  `src/lib/activities/listing-facts.ts`) under "Good to know". A
+  parent-verified organiser shows the month of the check next to the
+  badge. Topic icons and labels resolve through `categoryRootId`, so a
+  leaf category files under its root topic; other kinds use their own
+  category name and the kind icon. `/activity-pages.json`
+  lists the pre-rendered ids; cards link to the static page when the id is
+  listed and to `/<locale>/activity/?id=` otherwise, and that page
+  forwards to the static page when one exists. `/activity/` and `/search/`
+  are `noindex, follow`. With no catalogue the build exports placeholder
+  pages, which `scripts/prune-export-placeholders.mjs` deletes.
+- **Crawlers:** `robots.ts` admits AI search and user-action fetchers
+  (`AI_SEARCH_USER_AGENTS`) and disallows training crawlers
+  (`AI_TRAINING_USER_AGENTS`). The Cloudflare policy enforces the same
+  split (`ai_search` / `ai_user` disabled, `ai_training: block`).
   Optional GTM / Meta Pixel via `NEXT_PUBLIC_GTM_ID` /
   `NEXT_PUBLIC_META_PIXEL_ID` and host allow-lists; CSP `script-src` /
   `connect-src` extended at build time when those env vars are set
@@ -288,6 +359,7 @@ deploy-public-www.yml  ── npm ci → assert env → audit → build (with SH
 workflow_dispatch (Promote Public Website Release)
         ├── promotion_mode=latest_staging  → reads marker, fresh prod build, upload + /* invalidation (default)
         ├── promotion_mode=release_id      → operator supplies sha, same fresh prod build and upload
+        ├── promotion_mode=refresh_production → rebuild the live commit with the latest catalogue (daily schedule)
         └── promotion_mode=maintenance_on  → upload apps/public_www/maintenance/ to production
 ```
 
@@ -297,9 +369,41 @@ workflow_dispatch (Promote Public Website Release)
 |---|---|---|
 | [`deploy-backend.yml`](../../.github/workflows/deploy-backend.yml) | `workflow_dispatch` (`public website` or `all stacks`), `push: backend/**` | CDK deploy of `lxsoftware-siutindei-public-www` (S3 + CloudFront for production and staging). |
 | [`deploy-public-www.yml`](../../.github/workflows/deploy-public-www.yml) | `push: staging`, `workflow_dispatch`, `repository_dispatch: deploy-public-www` | Build + sync to staging bucket, write release marker, then run the staging smoke checks against the deployed site. |
-| [`promote-public-www.yml`](../../.github/workflows/promote-public-www.yml) | `workflow_dispatch` | Promote a staging release to production or flip production into maintenance mode. |
+| [`promote-public-www.yml`](../../.github/workflows/promote-public-www.yml) | `workflow_dispatch`, `repository_dispatch`, `schedule` (daily 04:00 HKT) | Promote a staging release to production, flip production into maintenance mode, or, on the schedule, refresh the live release with the latest catalogue snapshot. |
 | [`smoke-public-www-staging.yml`](../../.github/workflows/smoke-public-www-staging.yml) | `workflow_dispatch` | Crawl staging sitemap and assert every page responds 2xx/3xx. |
-| [`lighthouse-public-www.yml`](../../.github/workflows/lighthouse-public-www.yml) | `workflow_dispatch` | Run Lighthouse CI on the local production build. Default pages are `/en/` and `/zh-HK/`. A bare `/` is rewritten to `/en/` because `/` is a locale redirect. `/en/search/` is not a default: this build has no search API, so that page's only large text is the client-rendered error. |
+| [`lighthouse-public-www.yml`](../../.github/workflows/lighthouse-public-www.yml) | `workflow_dispatch` | Run Lighthouse CI on a local build from the committed catalogue fixture (`apps/public_www/tests/fixtures/catalogue-snapshot.json`). Default pages are `/en/`, `/zh-HK/`, `/en/activities/`, `/en/activities/arts/`, and one fixture activity page. A bare `/` is rewritten to `/en/` because `/` is a locale redirect. `/en/search/` is not a default: this build has no search API, so that page's only large text is the client-rendered error. |
+
+### Daily catalogue refresh
+
+The hourly catalogue snapshot only reaches production when the site is
+rebuilt. `promote-public-www.yml` runs `refresh_production` every day at
+20:00 UTC (04:00 HKT):
+
+1. After every production promotion or refresh, the workflow writes three
+   markers to the staging bucket: `releases/production-release-id.txt`,
+   `releases/production-build-sha.txt` (the commit that was built), and
+   `releases/production-catalogue-digests.json` (one sha256 per activity,
+   from `scripts/deploy/catalogue_snapshot_digests.py`; `generated_at` is
+   ignored).
+2. The refresh checks out the recorded commit, so it never ships code
+   that was not promoted, downloads the snapshot, and compares digests.
+   When nothing changed it stops before `npm ci`. It skips with a notice
+   until a promotion has written the markers.
+3. Otherwise it builds and deploys through the normal promotion path.
+
+Activities added between refreshes use the `?id=` page until the next
+rebuild. The `production` GitHub Environment must not require reviewers,
+or each scheduled run waits for approval.
+
+### IndexNow
+
+When `INDEXNOW_KEY` (a GitHub Environment variable, 8 to 128 letters,
+digits, or hyphens; public by design) is set, production builds write
+`/<key>.txt` and, after the deploy, `scripts/deploy/indexnow.py ping`
+posts URLs to `api.indexnow.org` (Bing, Yandex, Naver, Seznam). A
+promotion sends every sitemap URL; a refresh sends the added, changed,
+and removed activity pages plus the home and activities pages. Failures
+are warnings and never fail the deploy.
 
 ### Promotion script
 
@@ -329,12 +433,13 @@ and is invoked by both workflows. It supports three primary modes:
    `__MAINTENANCE_BUBBLES__` and `__MAINTENANCE_FOOTER__` from
    `maintenance/partials/`, then substitutes `__NEXT_PUBLIC_EMAIL__`,
    `__NEXT_PUBLIC_WHATSAPP_URL__`, `__NEXT_PUBLIC_INSTAGRAM_URL__`,
-   `__NEXT_PUBLIC_LX_SOFTWARE_URL__`, and `__NEXT_PUBLIC_BUILD_YEAR__`.
+   `__NEXT_PUBLIC_FACEBOOK_URL__`, `__NEXT_PUBLIC_LX_SOFTWARE_URL__`,
+   and `__NEXT_PUBLIC_BUILD_YEAR__`.
    Email and WhatsApp use the same public contacts as the full site:
    `NEXT_PUBLIC_EMAIL` and `NEXT_PUBLIC_WHATSAPP_URL` when set, otherwise
    `contactEmail` and `whatsappUrl` in
    `apps/public_www/build-env.defaults.json` (`hello@siutindei.com`,
-   `https://wa.me/85294460861`). An unset Instagram URL becomes `#`;
+   `https://wa.me/85294460861`). An unset Instagram or Facebook URL becomes `#`;
    an unset LX Software URL defaults to `https://www.lx-software.com`;
    an unset build year defaults to the current calendar year. It also
    copies `favicon.ico`,
@@ -517,7 +622,9 @@ Rules of the design:
   `fetch()` is an HTML page the site cannot parse.
 - No rule targets verified bots or HTML navigations, so indexing is
   unaffected. `robots.txt` disallows `/v1/` and `/cdn-cgi/` because they are
-  not pages; AI crawlers are blocked by Cloudflare's `ai_bots_protection`.
+  not pages; AI training crawlers are blocked by Cloudflare's
+  `ai_bots_protection` and `ai_training`, and AI search crawlers are let
+  through.
 - Cloudflare does not cache HTML or the search API. CloudFront stays the
   single cache, so deploy invalidations keep their meaning and the
   five-minute search cache is not doubled.

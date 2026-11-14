@@ -50,6 +50,11 @@ function buildListing(
       ageMin: null,
       ageMax: null,
       categoryId: 'c1111111-1111-1111-1111-111111111101',
+      kind: 'class',
+      facts: {},
+      categoryRootId: 'c1111111-1111-1111-1111-111111111101',
+      categoryName: null,
+      categoryNameTranslations: {},
     },
     organization: {
       id: `org-${id}`,

@@ -29,7 +29,12 @@ function buildListing(id = 'act-1'): ActivityListing {
       descriptionTranslations: {},
       ageMin: null,
       ageMax: null,
-      categoryId: 'c1111111-1111-1111-1111-111111111101',
+      categoryId: 'c1111111-1111-1111-1111-111111111301',
+      kind: 'class',
+      facts: {},
+      categoryRootId: 'c1111111-1111-1111-1111-111111111301',
+      categoryName: null,
+      categoryNameTranslations: {},
     },
     organization: {
       id: 'org-1',

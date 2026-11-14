@@ -132,6 +132,33 @@ def price_conditions(
     return conditions
 
 
+def listing_conditions(filters: ActivitySearchFilters) -> list:
+    """Age, kind, and parent-verified filters on the activity and its organiser.
+
+    ``age_min`` and ``age_max`` match any activity whose age range
+    overlaps theirs. A missing bound is open. An ``eat`` listing is
+    public only when a parent verified its organiser, for every caller,
+    including a direct ``activity_id`` lookup.
+    """
+    conditions: list = [
+        or_(Activity.kind != "eat", Organization.parent_verified.is_(True))
+    ]
+    if filters.age is not None:
+        conditions.append(Activity.age_range.contains(filters.age))
+    if filters.age_min is not None or filters.age_max is not None:
+        wanted = func.int4range(
+            sa.literal(filters.age_min, sa.Integer),
+            sa.literal(filters.age_max, sa.Integer),
+            "[]",
+        )
+        conditions.append(Activity.age_range.op("&&")(wanted))
+    if filters.kinds:
+        conditions.append(Activity.kind.in_(tuple(filters.kinds)))
+    if filters.verified_only:
+        conditions.append(Organization.parent_verified.is_(True))
+    return conditions
+
+
 def text_query_condition(text_query: str) -> Any:
     """Case-insensitive match on names and name translation values."""
     pattern = ilike_pattern(text_query)

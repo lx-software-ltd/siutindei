@@ -209,3 +209,104 @@ def test_staging_price_sort_total_and_detail_fields(small_fixture) -> None:
     listed = fetch(ActivitySearchFilters(view="card")).items[0]
     assert listed.organization.contact is None
     assert listed.organization.reviews == []
+
+
+_TOPIC = "c1111111-1111-1111-1111-111111111302"
+_PLACES_ROOT = "c1111111-1111-1111-1111-111111111401"
+_PLAYGROUND = "c1111111-1111-1111-1111-111111111411"
+
+
+@pytest.fixture
+def kinds_fixture(tmp_path, monkeypatch):
+    old = _item(
+        1,
+        org=_ORG_A,
+        pricing={"pricing_type": "per_class", "amount": 150},
+        entry=(1, 120),
+    )
+    camp = _item(
+        2,
+        org=_ORG_A,
+        pricing={"pricing_type": "per_day", "amount": 400},
+        entry=(2, 120),
+    )
+    camp["activity"].update(
+        kind="camp",
+        age_min=8,
+        age_max=12,
+        category_id=_TOPIC,
+        category_root_id=_TOPIC,
+        category_name="Sports",
+        category_name_translations={"en": "Sports", "zh-HK": "運動"},
+        facts={"lunch_included": True},
+    )
+    place = _item(
+        3,
+        org=_ORG_B,
+        pricing={"pricing_type": "free", "amount": 0},
+        entry=(3, 120),
+    )
+    place["activity"].update(
+        kind="place",
+        age_min=0,
+        age_max=18,
+        category_id=_PLAYGROUND,
+        category_root_id=_PLACES_ROOT,
+        category_name="Playground and park",
+        category_name_translations={"en": "Playground and park"},
+        facts={"toilets": True, "shade": False},
+    )
+    place["organization"].update(
+        parent_verified=True, parent_verified_at="2026-11-01T02:00:00Z"
+    )
+    _write_fixture(tmp_path, monkeypatch, [old, camp, place])
+    yield
+    staging_search_store._FIXTURE_CACHE = None
+    staging_search_store._SORTED_PUBLISHED_ITEMS = None
+
+
+def test_staging_kind_age_range_and_verified_filters(kinds_fixture) -> None:
+    fetch = staging_search_store.fetch_staging_search_response
+    assert _ids(fetch(ActivitySearchFilters())) == ["1", "2", "3"]
+    assert _ids(fetch(ActivitySearchFilters(kinds=("class",)))) == ["1"]
+    assert _ids(fetch(ActivitySearchFilters(kinds=("camp", "place")))) == ["2", "3"]
+    assert _ids(fetch(ActivitySearchFilters(age_min=6, age_max=7))) == ["1", "3"]
+    assert _ids(fetch(ActivitySearchFilters(age_min=12))) == ["2", "3"]
+    assert _ids(fetch(ActivitySearchFilters(age_max=2))) == ["3"]
+    assert _ids(fetch(ActivitySearchFilters(verified_only=True))) == ["1", "3"]
+
+
+def test_staging_returns_kind_category_and_checked_date(kinds_fixture) -> None:
+    fetch = staging_search_store.fetch_staging_search_response
+    by_id = {item.activity.id[-1]: item for item in fetch(ActivitySearchFilters()).items}
+
+    old = by_id["1"].activity
+    assert old.kind == "class"
+    assert old.facts == {}
+    assert old.category_root_id is None
+    assert old.category_name is None
+
+    place = by_id["3"]
+    assert place.activity.kind == "place"
+    assert place.activity.facts == {"toilets": True, "shade": False}
+    assert place.activity.category_root_id == _PLACES_ROOT
+    assert place.activity.category_name == "Playground and park"
+    assert place.organization.parent_verified_at is not None
+    assert by_id["2"].activity.category_name_translations["zh-HK"] == "運動"
+    assert by_id["2"].organization.parent_verified_at is None
+
+
+def test_staging_shows_eat_only_from_verified_organisers(tmp_path, monkeypatch) -> None:
+    checked = _item(1, org=_ORG_A, pricing={"pricing_type": "free", "amount": 0}, entry=(1, 60))
+    unchecked = _item(2, org=_ORG_B, pricing={"pricing_type": "free", "amount": 0}, entry=(1, 60))
+    for item in (checked, unchecked):
+        item["activity"]["kind"] = "eat"
+    checked["organization"]["parent_verified"] = True
+    _write_fixture(tmp_path, monkeypatch, [checked, unchecked])
+    fetch = staging_search_store.fetch_staging_search_response
+    try:
+        assert _ids(fetch(ActivitySearchFilters())) == ["1"]
+        assert _ids(fetch(ActivitySearchFilters(kinds=("eat",)))) == ["1"]
+    finally:
+        staging_search_store._FIXTURE_CACHE = None
+        staging_search_store._SORTED_PUBLISHED_ITEMS = None

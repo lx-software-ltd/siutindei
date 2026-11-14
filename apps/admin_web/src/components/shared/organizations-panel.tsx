@@ -54,6 +54,8 @@ import {
   SOCIAL_FIELDS,
   DESCRIPTION_SOURCE_OPTIONS,
   catalogSourcePayload,
+  checkedDateInput,
+  checkedDatePayload,
   emptyForm,
   ORG_SOURCE_OPTIONS,
   isValidEmail,
@@ -62,6 +64,7 @@ import {
   itemToForm,
   normalizePhoneNumber,
   normalizeSocialValue,
+  todayCheckedDate,
   type OrganizationFormState,
   type SocialFieldKey,
 } from './organizations/organization-form-utils';
@@ -137,6 +140,9 @@ export function OrganizationsPanel({
     version: panel.items.find((item) => item.id === panel.editingId)?.version,
   });
   const locked = versionView.locked;
+  const editingOrganization = panel.items.find(
+    (item) => item.id === panel.editingId
+  );
   const editorForm = versionView.snapshot
     ? organizationFormFromSnapshot(versionView.snapshot, panel.formState)
     : panel.formState;
@@ -430,6 +436,14 @@ export function OrganizationsPanel({
       payload.source_note = form.source_note.trim() || null;
       payload.description_source = form.description_source || null;
       payload.parent_verified = form.parent_verified;
+      const loadedCheckedDate = checkedDateInput(existingOrg?.parent_verified_at);
+      if (
+        form.parent_verified &&
+        form.parent_verified_at &&
+        form.parent_verified_at !== loadedCheckedDate
+      ) {
+        payload.parent_verified_at = checkedDatePayload(form.parent_verified_at);
+      }
     }
     return payload;
   };
@@ -746,11 +760,58 @@ export function OrganizationsPanel({
                       panel.setFormState((prev) => ({
                         ...prev,
                         parent_verified: event.target.checked,
+                        parent_verified_at: event.target.checked
+                          ? prev.parent_verified_at
+                          : '',
                       }))
                     }
                   />
                   Parent-Verified
                 </label>
+              </VersionField>
+              <VersionField
+                versionKey='parent_verified_at'
+                label='Checked on'
+                htmlFor='org-parent-verified-at'
+                hint={
+                  editorForm.parent_verified && !editorForm.parent_verified_at
+                    ? editingOrganization?.parent_verified
+                      ? 'No date recorded.'
+                      : 'Today, when you save.'
+                    : undefined
+                }
+              >
+                <div className='flex flex-wrap items-center gap-2'>
+                  <Input
+                    id='org-parent-verified-at'
+                    type='date'
+                    className='w-auto'
+                    max={todayCheckedDate()}
+                    disabled={locked || !editorForm.parent_verified}
+                    value={editorForm.parent_verified_at}
+                    onChange={(event) =>
+                      panel.setFormState((prev) => ({
+                        ...prev,
+                        parent_verified_at: event.target.value,
+                      }))
+                    }
+                  />
+                  <Button
+                    type='button'
+                    variant='secondary'
+                    size='sm'
+                    disabled={locked}
+                    onClick={() =>
+                      panel.setFormState((prev) => ({
+                        ...prev,
+                        parent_verified: true,
+                        parent_verified_at: todayCheckedDate(),
+                      }))
+                    }
+                  >
+                    Checked today
+                  </Button>
+                </div>
               </VersionField>
               </>
             )}

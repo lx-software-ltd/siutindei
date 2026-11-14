@@ -1,7 +1,21 @@
+import enContent from '@/content/en.json';
 import type { Locale } from '@/content/locales';
-import { homeWizardChoices, labelForLocale } from '@/lib/home-wizard/choices';
+import zhHKContent from '@/content/zh-HK.json';
+import {
+  homeWizardChoices,
+  labelForLocale,
+  type WizardActivityTypeOption,
+} from '@/lib/home-wizard/choices';
 
-import type { ActivityListing, SearchLocation } from './types';
+import type { ActivityListing, SearchActivity, SearchLocation } from './types';
+
+/** Kinds whose listings belong to a wizard topic. */
+export const TOPIC_KINDS: ReadonlySet<SearchActivity['kind']> = new Set(['class', 'camp']);
+
+/** A range that starts at birth and runs to adulthood says nothing about fit. */
+export function isCatchAllAgeRange(ageMin: number | null, ageMax: number | null): boolean {
+  return (ageMin ?? 0) <= 0 && (ageMax ?? Number.POSITIVE_INFINITY) >= 18;
+}
 
 /** "Ages 3–6", "Ages 3+", or "Up to 6 years". Null when neither bound is set. */
 export function formatAgeRange(
@@ -29,25 +43,111 @@ export function listingAgeLabel(
   locale: Locale,
   listing: ActivityListing,
 ): string | null {
-  return formatAgeRange(locale, listing.activity.ageMin, listing.activity.ageMax);
+  const { ageMin, ageMax, kind } = listing.activity;
+  if (kind === 'place' || kind === 'eat' || isCatchAllAgeRange(ageMin, ageMax)) {
+    return null;
+  }
+  return formatAgeRange(locale, ageMin, ageMax);
 }
 
+/** The wizard topic at the top of the category path, else the category itself. */
+export function topicForListing(listing: ActivityListing): WizardActivityTypeOption | null {
+  const { categoryRootId, categoryId } = listing.activity;
+  const types = homeWizardChoices.activityTypes;
+  return (
+    types.find((type) => type.categoryId === categoryRootId) ??
+    types.find((type) => type.categoryId === categoryId) ??
+    null
+  );
+}
+
+/** The topic for a class or camp; the category's own name for anything else. */
 export function categoryLabelForListing(
   locale: Locale,
   listing: ActivityListing,
 ): string | null {
-  const match = homeWizardChoices.activityTypes.find(
-    (type) => type.categoryId === listing.activity.categoryId,
-  );
-  return match ? labelForLocale(match.labels, locale) : null;
+  const topic = topicForListing(listing);
+  if (topic && TOPIC_KINDS.has(listing.activity.kind)) {
+    return labelForLocale(topic.labels, locale);
+  }
+  const { categoryName, categoryNameTranslations } = listing.activity;
+  const own = categoryNameTranslations[locale] ?? categoryName;
+  return own ?? (topic ? labelForLocale(topic.labels, locale) : null);
 }
 
 export function categoryTypeIdForListing(listing: ActivityListing): string | null {
-  return (
-    homeWizardChoices.activityTypes.find(
-      (type) => type.categoryId === listing.activity.categoryId,
-    )?.id ?? null
-  );
+  return topicForListing(listing)?.id ?? null;
+}
+
+/** Fact keys a parent can check, per kind, in the order the page lists them. */
+const FACT_KEYS: Readonly<Record<SearchActivity['kind'], readonly string[]>> = {
+  place: [
+    'toilets',
+    'changing_table',
+    'shade',
+    'fenced',
+    'stroller_access',
+    'water_play',
+    'lifeguard',
+    'parking',
+    'food_nearby',
+  ],
+  eat: [
+    'high_chairs',
+    'kids_menu',
+    'changing_table',
+    'stroller_access',
+    'room_to_run',
+    'outdoor_seating',
+  ],
+  class: ['drop_in', 'parent_stays', 'sen_friendly'],
+  camp: ['drop_in', 'parent_stays', 'sen_friendly', 'lunch_included'],
+  preschool: [],
+};
+
+export interface CheckedFact {
+  readonly key: string;
+  /** True when a parent saw it, false when a parent saw it missing. */
+  readonly present: boolean;
+}
+
+/** The facts a parent checked for this kind. Unchecked keys are left out. */
+export function checkedFacts(listing: ActivityListing): readonly CheckedFact[] {
+  const { kind, facts } = listing.activity;
+  return FACT_KEYS[kind]
+    .filter((key) => typeof facts[key] === 'boolean')
+    .map((key) => ({ key, present: facts[key] }));
+}
+
+type FactLabels = Readonly<Record<string, { readonly present: string; readonly absent: string }>>;
+
+const FACT_LABELS: Readonly<Record<Locale, FactLabels>> = {
+  en: enContent.activityDetail.factLabels,
+  'zh-HK': zhHKContent.activityDetail.factLabels,
+};
+
+/** "High chairs", "No kids' menu": each checked fact, the missing ones included. */
+export function checkedFactLabels(locale: Locale, listing: ActivityListing): readonly string[] {
+  return checkedFacts(listing).flatMap((fact) => {
+    const labels = FACT_LABELS[locale][fact.key];
+    if (!labels) {
+      return [];
+    }
+    return [fact.present ? labels.present : labels.absent];
+  });
+}
+
+/** "November 2026" / "2026年11月", in Hong Kong time. Null for a bad date. */
+export function formatMonthYear(locale: Locale, value: string | null | undefined): string | null {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return new Intl.DateTimeFormat(locale === 'zh-HK' ? 'zh-HK' : 'en-GB', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Asia/Hong_Kong',
+  }).format(date);
 }
 
 export function neighbourhoodLabelForLocation(

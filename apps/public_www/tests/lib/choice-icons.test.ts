@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -7,13 +7,16 @@ import {
   AGE_ICON_SRC,
   ALL_HONG_KONG_ICON_SRC,
   DEFAULT_ACTIVITY_ICON_SRC,
+  KIND_ICON_SRC,
   REGION_ICON_SRC,
   REGION_ROW_ORDER,
   activityTypeIdForCategory,
   iconSrcForActivity,
-  iconSrcForActivityCategory,
+  iconSrcForListing,
   iconSrcForAge,
+  iconSrcForKind,
   iconSrcForRegion,
+  WEEKEND_ICON_SRC,
 } from '@/lib/home-wizard/choice-icons';
 import { homeWizardChoices } from '@/lib/home-wizard/choices';
 
@@ -29,13 +32,18 @@ describe('choice icons', () => {
   it('maps listing category ids to activity-type icons', () => {
     for (const type of homeWizardChoices.activityTypes) {
       expect(activityTypeIdForCategory(type.categoryId)).toBe(type.id);
-      expect(iconSrcForActivityCategory(type.categoryId)).toBe(
-        iconSrcForActivity(type.id),
-      );
+      expect(
+        iconSrcForListing({ kind: 'class', categoryId: 'leaf', categoryRootId: type.categoryId }),
+      ).toBe(iconSrcForActivity(type.id));
     }
-    expect(activityTypeIdForCategory(null)).toBe('early-years');
-    expect(activityTypeIdForCategory('unknown')).toBe('early-years');
-    expect(iconSrcForActivityCategory(null)).toBe(DEFAULT_ACTIVITY_ICON_SRC);
+    expect(activityTypeIdForCategory(null)).toBe('');
+    expect(activityTypeIdForCategory('unknown')).toBe('');
+    expect(iconSrcForListing({ kind: 'class', categoryId: null, categoryRootId: null })).toBe(
+      DEFAULT_ACTIVITY_ICON_SRC,
+    );
+    expect(iconSrcForListing({ kind: 'place', categoryId: 'park', categoryRootId: 'places' })).toBe(
+      KIND_ICON_SRC.place,
+    );
   });
 
   it('maps every age group to the original age PNGs', () => {
@@ -43,12 +51,32 @@ describe('choice icons', () => {
       homeWizardChoices.ageGroups.map((group) => group.id),
     );
     expect(AGE_ICON_SRC).toEqual({
-      '1-3': '/images/ages/baby.png',
-      '3-6': '/images/ages/toddler.png',
-      '6-12': '/images/ages/child.png',
+      '0-1': '/images/ages/baby.png',
+      '1-2': '/images/ages/baby.png',
+      '3-5': '/images/ages/toddler.png',
+      '6-11': '/images/ages/child.png',
+      '12-18': '/images/ages/child.png',
     });
     for (const group of homeWizardChoices.ageGroups) {
       expect(iconSrcForAge(group.id)).toMatch(/^\/images\/ages\/.+\.png$/);
+    }
+  });
+
+  it('gives every kind and the weekend preset an illustration with a map marker', () => {
+    for (const kind of homeWizardChoices.kinds) {
+      expect(iconSrcForKind(kind.id)).toBe(KIND_ICON_SRC[kind.id]);
+    }
+    expect(iconSrcForKind('unknown')).toBe(DEFAULT_ACTIVITY_ICON_SRC);
+    const sources = [
+      ...Object.values(KIND_ICON_SRC),
+      ...homeWizardChoices.activityTypes.map((type) => iconSrcForActivity(type.id)),
+      WEEKEND_ICON_SRC,
+      DEFAULT_ACTIVITY_ICON_SRC,
+    ];
+    for (const src of sources) {
+      for (const path of [src, src.replace('/images/categories/', '/images/markers/')]) {
+        expect(existsSync(resolve(__dirname, '../../public', path.slice(1)))).toBe(true);
+      }
     }
   });
 

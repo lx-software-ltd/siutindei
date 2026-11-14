@@ -130,9 +130,10 @@ def _audit(session: Session, event: Mapping[str, Any], partner: PartnerContext) 
 
 
 def _reject_wizard_membership(body: Mapping[str, Any]) -> None:
-    """Home-wizard membership is published from the admin console."""
-    if "show_in_wizard" in body:
-        raise ValidationError(
-            "show_in_wizard is managed in the admin console",
-            field="show_in_wizard",
-        )
+    """Home-wizard membership and public visibility are set in the admin console."""
+    for field in ("show_in_wizard", "hidden_from_public"):
+        if field in body:
+            raise ValidationError(
+                f"{field} is managed in the admin console",
+                field=field,
+            )

@@ -4,7 +4,8 @@ Admins merge organizations that are the same provider, review display
 names that still need the import cleanup rules, give every
 activity a venue, and fill missing English, Chinese, and Hong Kong
 text. The tools live on the Data quality nav item:
-Duplicates, Names, Locations, Translations, then Categories.
+Duplicates, Names, Locations, Translations, then Categories. Release
+checks and area readiness live on Catalog.
 
 Endpoint shapes live in `docs/api/admin.yaml` under
 `/v1/admin/org-duplicates`, `/v1/admin/name-fixes`,
@@ -26,6 +27,60 @@ reject one organization at
 categories. An org-scoped key can read
 its own venue rows and receives `403` on those writes. See
 `docs/api/partner.yaml`.
+
+## Checks by kind
+
+The review queue (`backend/src/app/services/org_review.py`) reads the
+listing kind. The rules and their SQL mirrors live in
+`org_review_kinds.py`, and a test checks that both flag the same
+organizations.
+
+| Issue | `class` | `camp` | `place`, `eat` | `preschool` |
+| --- | --- | --- | --- | --- |
+| `missing_pricing` | blocker | blocker | not raised | warning |
+| `missing_schedule` | blocker | blocker | not raised | not raised |
+
+Warnings, with their thresholds as named constants:
+
+- `catch_all_age`: a class or camp whose ages run from 0 to 18 or more.
+  The exact import default, 0 to 18, keeps its own `default_age_range`
+  warning instead.
+- `hours_as_class_times`: a class with sessions of six hours or more on
+  six or more days. Those are opening hours, so the kind is probably
+  `place`.
+- `class_price_outlier`: a `per_class` or `per_hour` price above
+  HK$1,500, which is usually a term fee.
+- `verification_stale`: a parent check more than 365 days old, or one
+  with no date. It prompts the owner to check again. The public badge
+  and the listing stay.
+- `camp_without_dates`: a listed camp that has a schedule but no dated
+  session ending today or later. Search drops ended sessions, so the
+  camp shows as "dates on request" until the next dates are added.
+
+## Area readiness
+
+`GET /v1/admin/org-review/summary?area_id=` adds a `readiness` block
+for that area and the areas under it
+(`backend/src/app/services/area_readiness.py`). It counts listings per
+kind, classes and camps that are complete, and organisers that are
+parent-verified. Rejected organisers and listings in hidden categories
+are left out. A class is complete with a price, a weekly time, and an
+age range that is not a catch-all; a camp needs a price and a dated
+session that has not ended. A session that has ended does not count
+as a time for either.
+The area is ready when at least 80% of its classes and camps are
+complete and at least 50% of its organisers are verified
+(`READY_COMPLETE_SHARE`, `READY_VERIFIED_SHARE`). Catalog shows the
+result in a "Ready to open?" card for the chosen neighbourhood.
+
+To widen `SEARCH_AREA_SCOPE`:
+
+1. On Catalog, choose each area already in the scope and check that it
+   still shows Ready.
+2. Choose the new area and fix its blockers and warnings until it shows
+   Ready.
+3. Then the owner adds the area's slug to the `SEARCH_AREA_SCOPE`
+   GitHub variable and redeploys.
 
 ## Merge
 

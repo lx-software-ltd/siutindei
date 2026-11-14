@@ -112,6 +112,11 @@ class Organization(Base):
         server_default=text("false"),
         comment="Admin-only: parents have verified this organization",
     )
+    parent_verified_at: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=True,
+        comment="Admin-only: when a parent last checked this organization",
+    )
     review_status: Mapped[str] = mapped_column(
         Text(),
         nullable=False,
@@ -202,5 +207,9 @@ class Organization(Base):
         CheckConstraint(
             "review_reason IS NULL OR review_status = 'rejected'",
             name="organizations_review_reason_rejected_check",
+        ),
+        CheckConstraint(
+            "parent_verified_at IS NULL OR parent_verified",
+            name="organizations_parent_verified_at_check",
         ),
     )

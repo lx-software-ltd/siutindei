@@ -99,3 +99,34 @@ def test_build_search_query_applies_cursor() -> None:
     query = build_search_query(filters)
     where_clause = str(query.whereclause)
     assert "activity_schedule.id" in where_clause
+
+
+def _sql(filters: ActivitySearchFilters) -> str:
+    query = build_search_query(filters)
+    return str(query.compile(dialect=postgresql.dialect())).lower()
+
+
+def test_build_search_query_filters_by_kind() -> None:
+    assert "activities.kind in" in _sql(ActivitySearchFilters(kinds=("class", "camp")))
+    assert "activities.kind in" not in _sql(ActivitySearchFilters())
+
+
+def test_build_search_query_overlaps_age_range() -> None:
+    sql = _sql(ActivitySearchFilters(age_min=6, age_max=11))
+    assert "activities.age_range && int4range" in sql
+    assert "activities.age_range &&" not in _sql(ActivitySearchFilters(age=4))
+
+
+def test_build_search_query_limits_to_verified_organizations() -> None:
+    verified = "organizations.parent_verified is true"
+    assert _sql(ActivitySearchFilters(verified_only=True)).count(verified) == 2
+    assert _sql(ActivitySearchFilters()).count(verified) == 1
+
+
+def test_build_search_query_shows_eat_only_from_verified_organizations() -> None:
+    eat_rule = (
+        "(activities.kind != %(kind_1)s::varchar "
+        "or organizations.parent_verified is true)"
+    )
+    assert eat_rule in _sql(ActivitySearchFilters())
+    assert eat_rule in _sql(ActivitySearchFilters(kinds=("eat",)))
