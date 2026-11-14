@@ -209,17 +209,6 @@ _FACT_KEYS = {
     ),
 }
 
-_REFERENCES = (
-    ("activities", "category_id"),
-    ("category_suggestions", "suggested_parent_id"),
-    ("category_suggestions", "maps_to_category_id"),
-    ("category_suggestions", "created_category_id"),
-    ("category_suggestions", "merged_into_category_id"),
-    ("activity_category_reviews", "current_category_id"),
-    ("activity_category_reviews", "proposed_category_id"),
-    ("activity_category_reviews", "previous_category_id"),
-)
-
 _INSERT = sa.text(
     """
     INSERT INTO activity_categories (
@@ -286,33 +275,76 @@ def _as_actor(bind: Any) -> None:
     )
 
 
+# The old id and the new id arrive as bound arrays. Each statement names its
+# own table, so none of the SQL is assembled from a name.
+_MOVE_REFERENCES = (
+    sa.text(
+        "UPDATE activities SET category_id = m.new_id FROM ("
+        "SELECT * FROM unnest(CAST(:old_ids AS uuid[]), CAST(:new_ids AS uuid[])) "
+        "AS m(old_id, new_id)) AS m WHERE activities.category_id = m.old_id"
+    ),
+    sa.text(
+        "UPDATE category_suggestions SET suggested_parent_id = m.new_id FROM ("
+        "SELECT * FROM unnest(CAST(:old_ids AS uuid[]), CAST(:new_ids AS uuid[])) "
+        "AS m(old_id, new_id)) AS m "
+        "WHERE category_suggestions.suggested_parent_id = m.old_id"
+    ),
+    sa.text(
+        "UPDATE category_suggestions SET maps_to_category_id = m.new_id FROM ("
+        "SELECT * FROM unnest(CAST(:old_ids AS uuid[]), CAST(:new_ids AS uuid[])) "
+        "AS m(old_id, new_id)) AS m "
+        "WHERE category_suggestions.maps_to_category_id = m.old_id"
+    ),
+    sa.text(
+        "UPDATE category_suggestions SET created_category_id = m.new_id FROM ("
+        "SELECT * FROM unnest(CAST(:old_ids AS uuid[]), CAST(:new_ids AS uuid[])) "
+        "AS m(old_id, new_id)) AS m "
+        "WHERE category_suggestions.created_category_id = m.old_id"
+    ),
+    sa.text(
+        "UPDATE category_suggestions SET merged_into_category_id = m.new_id FROM ("
+        "SELECT * FROM unnest(CAST(:old_ids AS uuid[]), CAST(:new_ids AS uuid[])) "
+        "AS m(old_id, new_id)) AS m "
+        "WHERE category_suggestions.merged_into_category_id = m.old_id"
+    ),
+    sa.text(
+        "UPDATE activity_category_reviews SET current_category_id = m.new_id FROM ("
+        "SELECT * FROM unnest(CAST(:old_ids AS uuid[]), CAST(:new_ids AS uuid[])) "
+        "AS m(old_id, new_id)) AS m "
+        "WHERE activity_category_reviews.current_category_id = m.old_id"
+    ),
+    sa.text(
+        "UPDATE activity_category_reviews SET proposed_category_id = m.new_id FROM ("
+        "SELECT * FROM unnest(CAST(:old_ids AS uuid[]), CAST(:new_ids AS uuid[])) "
+        "AS m(old_id, new_id)) AS m "
+        "WHERE activity_category_reviews.proposed_category_id = m.old_id"
+    ),
+    sa.text(
+        "UPDATE activity_category_reviews SET previous_category_id = m.new_id FROM ("
+        "SELECT * FROM unnest(CAST(:old_ids AS uuid[]), CAST(:new_ids AS uuid[])) "
+        "AS m(old_id, new_id)) AS m "
+        "WHERE activity_category_reviews.previous_category_id = m.old_id"
+    ),
+    sa.text(
+        "UPDATE activity_categories SET parent_id = m.new_id FROM ("
+        "SELECT * FROM unnest(CAST(:old_ids AS uuid[]), CAST(:new_ids AS uuid[])) "
+        "AS m(old_id, new_id)) AS m "
+        "WHERE activity_categories.parent_id = m.old_id "
+        "AND activity_categories.id <> ALL(CAST(:moved AS uuid[]))"
+    ),
+)
+
+
 def _move_references(bind: Any, pairs: Sequence[tuple[str, str]]) -> None:
     """Point every category reference at its mapped row."""
     params = {
         "old_ids": [_id(old) for old, _new in pairs],
         "new_ids": [_id(new) for _old, new in pairs],
     }
-    mapping = (
-        "SELECT * FROM unnest(CAST(:old_ids AS uuid[]), CAST(:new_ids AS uuid[])) "
-        "AS m(old_id, new_id)"
-    )
-    for table, column in _REFERENCES:
-        bind.execute(
-            sa.text(
-                f"UPDATE {table} SET {column} = m.new_id "
-                f"FROM ({mapping}) AS m WHERE {table}.{column} = m.old_id"
-            ),
-            params,
-        )
-    bind.execute(
-        sa.text(
-            "UPDATE activity_categories SET parent_id = m.new_id "
-            f"FROM ({mapping}) AS m "
-            "WHERE activity_categories.parent_id = m.old_id "
-            "AND activity_categories.id <> ALL(CAST(:moved AS uuid[]))"
-        ),
-        {**params, "moved": params["old_ids"] + params["new_ids"]},
-    )
+    for statement in _MOVE_REFERENCES[:-1]:
+        bind.execute(statement, params)
+    moved = params["old_ids"] + params["new_ids"]
+    bind.execute(_MOVE_REFERENCES[-1], {**params, "moved": moved})
 
 
 def upgrade() -> None:
