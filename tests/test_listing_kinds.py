@@ -341,6 +341,24 @@ def test_managers_cannot_write_kind_or_facts(db_session, sample_activity) -> Non
     assert sample_activity.facts == {}
 
 
+def test_import_rejects_an_age_over_18(
+    db_session, sample_organization, sample_activity_category
+) -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        upsert_activity(
+            db_session,
+            sample_organization,
+            {
+                "name": "All ages swim",
+                "category_id": str(sample_activity_category.id),
+                "age_min": 5,
+                "age_max": 100,
+            },
+        )
+    assert exc_info.value.field == "age_max"
+    assert "18" in str(exc_info.value)
+
+
 def test_import_guesses_kind_when_the_file_sends_none(
     db_session, sample_organization, sample_activity_category
 ) -> None:

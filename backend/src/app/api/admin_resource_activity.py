@@ -240,8 +240,11 @@ def _source_category_name(value: Any) -> str | None:
     return text or None
 
 
+MAX_LISTING_AGE = 18
+
+
 def _validate_age_range(age_min: Any, age_max: Any) -> None:
-    """Validate age range values."""
+    """Validate age range values. A listing never goes past age 18."""
     try:
         age_min_val = int(age_min)
         age_max_val = int(age_max)
@@ -253,9 +256,9 @@ def _validate_age_range(age_min: Any, age_max: Any) -> None:
             "age_min must be at least 0",
             field="age_min",
         )
-    if age_max_val > 120:
+    if age_max_val > MAX_LISTING_AGE:
         raise ValidationError(
-            "age_max must be at most 120",
+            f"age_max must be at most {MAX_LISTING_AGE}",
             field="age_max",
         )
     if age_min_val >= age_max_val:

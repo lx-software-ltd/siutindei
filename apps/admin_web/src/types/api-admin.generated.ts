@@ -8807,9 +8807,9 @@ export interface components {
             source_note?: string | null;
             /** @description Category label from the import file. Stored even when the activity is assigned to an existing category. Managers cannot set it. */
             readonly source_category_name?: string | null;
-            /** @description Minimum age (required, 0-119, must be less than age_max) */
+            /** @description Minimum age (required, 0-17, must be less than age_max) */
             age_min: number;
-            /** @description Maximum age (required, 1-120, must be greater than age_min) */
+            /** @description Maximum age (required, 1-18, must be greater than age_min) */
             age_max: number;
             kind?: components["schemas"]["ListingKind"];
             facts?: components["schemas"]["ListingFacts"];

@@ -106,7 +106,8 @@ class TestValidateAgeRange:
         """Valid age ranges should pass validation."""
         _validate_age_range(0, 5)
         _validate_age_range(5, 12)
-        _validate_age_range(0, 120)
+        _validate_age_range(0, 18)
+        _validate_age_range(17, 18)
 
     def test_age_min_negative(self) -> None:
         """Negative age_min should raise ValidationError."""
@@ -115,11 +116,11 @@ class TestValidateAgeRange:
         assert "age_min must be at least 0" in str(exc_info.value)
         assert exc_info.value.field == "age_min"
 
-    def test_age_max_above_120(self) -> None:
-        """age_max above 120 should raise ValidationError."""
+    def test_age_max_above_18(self) -> None:
+        """age_max above 18 should raise ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
-            _validate_age_range(0, 121)
-        assert "age_max must be at most 120" in str(exc_info.value)
+            _validate_age_range(0, 19)
+        assert "age_max must be at most 18" in str(exc_info.value)
         assert exc_info.value.field == "age_max"
 
     def test_age_min_equals_age_max(self) -> None:
@@ -145,9 +146,9 @@ class TestValidateAgeRange:
         _validate_age_range("5", "12")
 
     def test_boundary_values(self) -> None:
-        """Boundary values (0, 120) should be valid."""
+        """Boundary values (0, 18) should be valid."""
         _validate_age_range(0, 1)
-        _validate_age_range(119, 120)
+        _validate_age_range(17, 18)
 
 
 class TestValidatePricingAmount:

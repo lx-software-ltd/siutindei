@@ -239,6 +239,9 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     ) {
       return 'Age range must be numeric.';
     }
+    if (ageMax > 18) {
+      return 'Age max must be 18 or less.';
+    }
     if (ageMin >= ageMax) {
       return 'Age min must be less than age max.';
     }
@@ -292,7 +295,10 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
     if (!trimmed) {
       return 'Enter a maximum age.';
     }
-    return ageMaxValue === null ? 'Age max must be numeric.' : '';
+    if (ageMaxValue === null) {
+      return 'Age max must be numeric.';
+    }
+    return ageMaxValue > 18 ? 'Age max must be 18 or less.' : '';
   }, [ageMaxValue, panel.formState.age_max]);
   const ageRangeError =
     ageMinValue !== null && ageMaxValue !== null && ageMinValue >= ageMaxValue
@@ -655,6 +661,7 @@ export function ActivitiesPanel({ mode }: ActivitiesPanelProps) {
             id='activity-age-max'
             type='number'
             min='0'
+            max='18'
             value={editorForm.age_max}
             disabled={locked}
             onChange={(e) => {

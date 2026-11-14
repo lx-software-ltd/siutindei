@@ -443,7 +443,7 @@ function ProposalFields({
               id={`age-min-${row.id}`}
               type='number'
               min={0}
-              max={120}
+              max={17}
               value={ageMin === undefined ? '' : String(ageMin)}
               onChange={(event) =>
                 onOverride({
@@ -460,7 +460,7 @@ function ProposalFields({
               id={`age-max-${row.id}`}
               type='number'
               min={0}
-              max={120}
+              max={18}
               value={ageMax === undefined ? '' : String(ageMax)}
               onChange={(event) =>
                 onOverride({

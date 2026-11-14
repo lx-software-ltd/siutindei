@@ -611,6 +611,43 @@ def test_serialize_proposal_does_not_rewrite_the_snapshot(db_session) -> None:
     assert proposal.current_value is None
 
 
+def test_enrichment_refuses_an_age_over_18(
+    db_session, sample_activity_category
+) -> None:
+    org = _org(db_session)
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    proposal = _proposal(
+        run,
+        section="Activities",
+        kind="create_activity",
+        label="Activity · Swim",
+        proposed_value={
+            "name": "All ages swim",
+            "category_name": sample_activity_category.name,
+            "age_min": 5,
+            "age_max": 100,
+        },
+        proposed_hash="hash-age-18",
+    )
+    db_session.add(proposal)
+    db_session.flush()
+    results, _quality_run = apply_proposals(
+        db_session,
+        org.id,
+        [str(proposal.id)],
+        {},
+        user_id="admin",
+        request_id="req-age-18",
+    )
+    assert results[0]["status"] == "error"
+    assert "18" in results[0]["error"]
+    assert (
+        db_session.query(Activity).filter(Activity.name == "All ages swim").count() == 0
+    )
+
+
 def test_approved_org_refuses_an_unknown_category(db_session) -> None:
     org = _org(db_session, review_status="approved")
     run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")

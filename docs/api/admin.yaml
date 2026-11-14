@@ -35,8 +35,8 @@ info:
     |-------|-------|
     | lat | -90 to 90 |
     | lng | -180 to 180 |
-    | age_min | 0 to 119 |
-    | age_max | 1 to 120 |
+    | age_min | 0 to 17 |
+    | age_max | 1 to 18 |
     | amount | >= 0 |
     | sessions_count | > 0 |
     | day_of_week_utc | 0-6 (Sunday-Saturday) |
@@ -4892,11 +4892,11 @@ components:
         age_min:
           type: integer
           minimum: 0
-          maximum: 119
+          maximum: 17
         age_max:
           type: integer
           minimum: 1
-          maximum: 120
+          maximum: 18
         kind:
           allOf:
             - $ref: '#/components/schemas/ListingKind'
@@ -6509,13 +6509,13 @@ components:
         age_min:
           type: integer
           minimum: 0
-          maximum: 119
-          description: Minimum age (required, 0-119, must be less than age_max)
+          maximum: 17
+          description: Minimum age (required, 0-17, must be less than age_max)
         age_max:
           type: integer
           minimum: 1
-          maximum: 120
-          description: Maximum age (required, 1-120, must be greater than age_min)
+          maximum: 18
+          description: Maximum age (required, 1-18, must be greater than age_min)
         kind:
           $ref: '#/components/schemas/ListingKind'
         facts:
@@ -6562,12 +6562,12 @@ components:
         age_min:
           type: integer
           minimum: 0
-          maximum: 119
+          maximum: 17
           description: Minimum age (must provide both age_min and age_max together)
         age_max:
           type: integer
           minimum: 1
-          maximum: 120
+          maximum: 18
           description: Maximum age (must provide both age_min and age_max together)
         kind:
           $ref: '#/components/schemas/ListingKind'

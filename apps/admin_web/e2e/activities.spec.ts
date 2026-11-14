@@ -111,6 +111,19 @@ test.describe('Activities Panel', () => {
     await expect(adminPage.getByText('Age min must be less than age max.').first()).toBeVisible();
   });
 
+  test('should reject an age max over 18', async ({ adminPage }) => {
+    await adminPage.getByRole('button', { name: 'New activity' }).click();
+    await adminPage.getByLabel('Category').selectOption({ label: 'Sport' });
+    await adminPage.getByLabel('Subcategory').selectOption({ label: 'Water Sports' });
+    await adminPage.getByLabel('Name').fill('Test Activity');
+    await adminPage.getByLabel('Age Min').fill('5');
+    await adminPage.getByLabel('Age Max').fill('19');
+
+    await adminPage.getByRole('button', { name: 'Create' }).click();
+
+    await expect(adminPage.getByText('Age max must be 18 or less.').first()).toBeVisible();
+  });
+
   test('should fill out the activity form', async ({ adminPage }) => {
     await adminPage.getByRole('button', { name: 'New activity' }).click();
     // Select organization
