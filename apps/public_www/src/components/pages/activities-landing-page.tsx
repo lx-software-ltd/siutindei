@@ -4,18 +4,12 @@ import type { Locale } from '@/content/locales';
 import type { SiteContent } from '@/content/types';
 import { ActivityBreadcrumb } from '@/components/sections/activity-detail/activity-breadcrumb';
 import { ListingGrid } from '@/components/sections/listings/listing-grid';
+import { CategoryLinkNav } from '@/components/shared/category-link-nav';
 import { StaticActivityPages } from '@/components/shared/static-activity-pages';
 import { formatContentTemplate } from '@/content/content-field-utils';
 import type { ActivityBreadcrumbItem } from '@/lib/activities/activity-page-data';
-import type { LandingFacts } from '@/lib/activities/landing-page-data';
+import type { CategoryLinkGroup, LandingFacts } from '@/lib/activities/landing-page-data';
 import type { ActivityListing } from '@/lib/activities/types';
-
-export interface LandingCategoryLink {
-  readonly typeId: string;
-  readonly label: string;
-  readonly href: string;
-  readonly count: number;
-}
 
 /** A group of cards: one per kind on the hub, a single one on a landing page. */
 export interface LandingSection {
@@ -35,8 +29,8 @@ interface ActivitiesLandingPageProps {
   readonly breadcrumbs: readonly ActivityBreadcrumbItem[];
   readonly facts: LandingFacts;
   readonly coverage: string | null;
-  readonly categoriesHeading: string;
-  readonly categories: readonly LandingCategoryLink[];
+  /** The kinds, then the topics, each under its own heading. */
+  readonly categoryGroups: readonly CategoryLinkGroup[];
   readonly sections: readonly LandingSection[];
   readonly searchHref: string;
 }
@@ -49,8 +43,7 @@ export function ActivitiesLandingPage({
   breadcrumbs,
   facts,
   coverage,
-  categoriesHeading,
-  categories,
+  categoryGroups,
   sections,
   searchHref,
 }: ActivitiesLandingPageProps) {
@@ -107,28 +100,15 @@ export function ActivitiesLandingPage({
         </section>
       ) : null}
 
-      {categories.length > 0 ? (
-        <nav aria-labelledby="activities-by-type" className="mt-8">
-          <h2 id="activities-by-type" className="text-lg font-semibold text-ink-900">
-            {categoriesHeading}
-          </h2>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {categories.map((category) => (
-              <li key={category.typeId}>
-                <Link
-                  href={category.href}
-                  className="link-unadorned inline-flex min-h-11 items-center gap-2 rounded-full border border-brand-200 bg-white px-4 text-sm font-semibold text-ink-900 hover:bg-brand-50"
-                >
-                  {category.label}
-                  <span className="font-normal text-ink-700">
-                    {formatContentTemplate(copy.activityCountTemplate, { count: category.count })}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      ) : null}
+      {categoryGroups.map((group) => (
+        <CategoryLinkNav
+          key={group.id}
+          group={group}
+          countTemplate={copy.activityCountTemplate}
+          headingLevel="h2"
+          className="mt-8"
+        />
+      ))}
 
       {sections.map((section) => (
         <section

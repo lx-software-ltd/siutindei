@@ -64,10 +64,17 @@ export interface CatalogueCategory {
   readonly listings: readonly ActivityListing[];
 }
 
-let cachedListings: readonly ActivityListing[] | null = null;
+interface Catalogue {
+  /** Every published listing in scope. */
+  readonly all: readonly ActivityListing[];
+  /** The listings the build pre-renders. */
+  readonly pages: readonly ActivityListing[];
+}
+
+let cachedCatalogue: Catalogue | null = null;
 
 export function clearCatalogueCacheForTests(): void {
-  cachedListings = null;
+  cachedCatalogue = null;
 }
 
 function snapshotRequired(): boolean {
@@ -158,10 +165,9 @@ function loadRows(): { rows: readonly CatalogueRow[]; limit: number | null } {
   return { rows: [], limit: null };
 }
 
-/** Every activity of the catalogue in the public area scope, grouped. */
-export function catalogueListings(): readonly ActivityListing[] {
-  if (cachedListings) {
-    return cachedListings;
+function loadCatalogue(): Catalogue {
+  if (cachedCatalogue) {
+    return cachedCatalogue;
   }
   const { rows, limit } = loadRows();
   const scope = stagingScopeAreaIds();
@@ -180,8 +186,13 @@ export function catalogueListings(): readonly ActivityListing[] {
         `Set ${CATALOGUE_SNAPSHOT_PATH_ENV} to the downloaded snapshot.`,
     );
   }
-  cachedListings = capped;
-  return capped;
+  cachedCatalogue = { all: listings, pages: capped };
+  return cachedCatalogue;
+}
+
+/** Every activity of the catalogue in the public area scope, grouped. */
+export function catalogueListings(): readonly ActivityListing[] {
+  return loadCatalogue().pages;
 }
 
 export function catalogueListing(activityId: string): ActivityListing | null {
@@ -235,6 +246,23 @@ export function offeredPilotKindIds(): readonly string[] {
   return homeWizardChoices.kinds
     .filter((kind) => kind.pilot && kindsWithPages.has(kind.id))
     .map((kind) => kind.id);
+}
+
+/**
+ * Wizard topics with at least one class or camp in scope, in wizard order.
+ * Counts every published listing, not only the pre-rendered sample, so a
+ * topic search can find stays offered. With no catalogue to count (local
+ * dev, a build without a snapshot) every topic is offered.
+ */
+export function offeredTopicIds(): readonly string[] {
+  const topicIds = homeWizardChoices.activityTypes.map((type) => type.id);
+  const found = new Set(
+    loadCatalogue()
+      .all.filter((listing) => TOPIC_KINDS.has(listing.activity.kind))
+      .map((listing) => topicForListing(listing)?.id),
+  );
+  const offered = topicIds.filter((id) => found.has(id));
+  return offered.length > 0 ? offered : topicIds;
 }
 
 /** Wizard topics with enough classes and camps for a page, in wizard order. */

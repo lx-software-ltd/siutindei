@@ -1,13 +1,14 @@
 import Link from 'next/link';
 
+import { CategoryLinkNav } from '@/components/shared/category-link-nav';
+
 import type { Locale } from '@/content/locales';
 import type { SiteContent } from '@/content/types';
 import { formatContentTemplate } from '@/content/content-field-utils';
-import { categoryLandingPath, staticActivityPath } from '@/lib/activities/activity-href';
-import { catalogueCategories, catalogueListings } from '@/lib/activities/catalogue-snapshot';
-import { catalogueScopePlace } from '@/lib/activities/landing-page-data';
+import { staticActivityPath } from '@/lib/activities/activity-href';
+import { catalogueListings } from '@/lib/activities/catalogue-snapshot';
+import { catalogueScopePlace, categoryLinkGroups } from '@/lib/activities/landing-page-data';
 import { listingOrgName, listingTitle, sortListingsForDiscovery } from '@/lib/activities/listing-utils';
-import { labelForLocale } from '@/lib/home-wizard/choices';
 import { localizePath } from '@/lib/locale-routing';
 import { ROUTES } from '@/lib/routes';
 
@@ -29,7 +30,6 @@ export function HomeCatalogueLinks({ locale, content }: HomeCatalogueLinksProps)
   }
   const copy = content.activitiesPage;
   const place = catalogueScopePlace(locale, content.discovery);
-  const categories = catalogueCategories();
   const featured = sortListingsForDiscovery(listings).slice(0, HOME_ACTIVITY_LINK_LIMIT);
 
   return (
@@ -38,30 +38,15 @@ export function HomeCatalogueLinks({ locale, content }: HomeCatalogueLinksProps)
         <h2 id="home-catalogue-heading" className="text-2xl font-bold text-ink-900">
           {formatContentTemplate(copy.hubHeadingTemplate, { ...place })}
         </h2>
-        {categories.length > 0 ? (
-          <nav aria-labelledby="home-catalogue-types" className="mt-6">
-            <h3 id="home-catalogue-types" className="text-lg font-semibold text-ink-900">
-              {copy.browseByTypeHeading}
-            </h3>
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {categories.map((category) => (
-                <li key={category.typeId}>
-                  <Link
-                    href={categoryLandingPath(locale, category.typeId)}
-                    className="link-unadorned inline-flex min-h-11 items-center gap-2 rounded-full border border-brand-200 bg-white px-4 text-sm font-semibold text-ink-900 hover:bg-brand-50"
-                  >
-                    {labelForLocale(category.labels, locale)}
-                    <span className="font-normal text-ink-700">
-                      {formatContentTemplate(copy.activityCountTemplate, {
-                        count: category.listings.length,
-                      })}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        ) : null}
+        {categoryLinkGroups(locale, copy).map((group) => (
+          <CategoryLinkNav
+            key={group.id}
+            group={group}
+            countTemplate={copy.activityCountTemplate}
+            headingLevel="h3"
+            className="mt-6"
+          />
+        ))}
         <h3 className="mt-8 text-lg font-semibold text-ink-900">{copy.homeFeaturedHeading}</h3>
         <ul className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
           {featured.map((listing) => (

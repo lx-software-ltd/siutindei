@@ -3,14 +3,67 @@ import type { Locale } from '@/content/locales';
 import type { SiteContent } from '@/content/types';
 import { joinPlaceNames, namedOpenPlace } from '@/lib/home-wizard/area-scope';
 
-import { staticActivityPath } from './activity-href';
-import { latestUpdate } from './catalogue-snapshot';
+import { labelForLocale } from '@/lib/home-wizard/choices';
+
+import { categoryLandingPath, staticActivityPath } from './activity-href';
+import {
+  catalogueKindPages,
+  catalogueTopicPages,
+  latestUpdate,
+  type CatalogueCategory,
+} from './catalogue-snapshot';
 import { listingVariants } from './group-listings';
 import { formatMonthYear, isCatchAllAgeRange } from './listing-facts';
 import { listingTitle } from './listing-utils';
 import { classPriceEquivalent, formatMoney, listingPrices } from './price-format';
 import { dayLabel, toHongKongSession } from './schedule-format';
 import type { ActivityListing } from './types';
+
+export interface CategoryLink {
+  readonly typeId: string;
+  readonly label: string;
+  readonly href: string;
+  readonly count: number;
+}
+
+/** A labelled group of landing-page links: the kinds, or the topics. */
+export interface CategoryLinkGroup {
+  readonly id: 'kinds' | 'topics';
+  readonly heading: string;
+  readonly links: readonly CategoryLink[];
+}
+
+/**
+ * The kind pages, then the topic pages, each under its own heading. On a
+ * landing page the page itself is left out and its group reads "Other".
+ */
+export function categoryLinkGroups(
+  locale: Locale,
+  copy: SiteContent['activitiesPage'],
+  current: CatalogueCategory | null = null,
+): readonly CategoryLinkGroup[] {
+  const links = (pages: readonly CatalogueCategory[]): readonly CategoryLink[] =>
+    pages
+      .filter((page) => page.typeId !== current?.typeId)
+      .map((page) => ({
+        typeId: page.typeId,
+        label: labelForLocale(page.labels, locale),
+        href: categoryLandingPath(locale, page.typeId),
+        count: page.listings.length,
+      }));
+  return [
+    {
+      id: 'kinds',
+      heading: current?.pageKind === 'kind' ? copy.otherKindsHeading : copy.browseByKindHeading,
+      links: links(catalogueKindPages()),
+    },
+    {
+      id: 'topics',
+      heading: current?.pageKind === 'topic' ? copy.otherTopicsHeading : copy.browseByTopicHeading,
+      links: links(catalogueTopicPages()),
+    },
+  ];
+}
 
 const HONG_KONG: Readonly<Record<Locale, string>> = { en: 'Hong Kong', 'zh-HK': '香港' };
 

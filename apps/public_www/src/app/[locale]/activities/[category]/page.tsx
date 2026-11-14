@@ -6,12 +6,12 @@ import { categoryLandingPath } from '@/lib/activities/activity-href';
 import { breadcrumbStructuredData, serializeJsonLd } from '@/lib/activities/activity-page-data';
 import {
   cardListing,
-  catalogueCategories,
   catalogueCategory,
   catalogueCategoryParams,
 } from '@/lib/activities/catalogue-snapshot';
 import {
   catalogueScopePlace,
+  categoryLinkGroups,
   itemListStructuredData,
   landingCoverage,
   landingFacts,
@@ -107,15 +107,7 @@ export default async function ActivityCategoryPage({ params }: CategoryRouteProp
         breadcrumbs={crumbs}
         facts={landingFacts(locale, listings, copy)}
         coverage={landingCoverage(locale, listings, copy)}
-        categoriesHeading={copy.otherTypesHeading}
-        categories={catalogueCategories()
-          .filter((entry) => entry.typeId !== typeId)
-          .map((entry) => ({
-            typeId: entry.typeId,
-            label: labelForLocale(entry.labels, locale),
-            href: categoryLandingPath(locale, entry.typeId),
-            count: entry.listings.length,
-          }))}
+        categoryGroups={categoryLinkGroups(locale, copy, category)}
         sections={[
           { id: 'all', heading: copy.allActivitiesHeading, listings: listings.map(cardListing) },
         ]}
