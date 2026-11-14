@@ -131,7 +131,8 @@ def _listing_matches(item: dict[str, Any], filters: ActivitySearchFilters) -> bo
     activity = item["activity"]
     if filters.kinds and (activity.get("kind") or "class") not in filters.kinds:
         return False
-    if filters.verified_only and not item["organization"].get("parent_verified"):
+    verified = bool(item["organization"].get("parent_verified"))
+    if not verified and (filters.verified_only or activity.get("kind") == "eat"):
         return False
     wants_range = filters.age_min is not None or filters.age_max is not None
     if filters.age is None and not wants_range:

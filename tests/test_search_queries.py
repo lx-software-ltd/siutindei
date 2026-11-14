@@ -118,6 +118,15 @@ def test_build_search_query_overlaps_age_range() -> None:
 
 
 def test_build_search_query_limits_to_verified_organizations() -> None:
-    sql = _sql(ActivitySearchFilters(verified_only=True))
-    assert "organizations.parent_verified is true" in sql
-    assert "organizations.parent_verified is true" not in _sql(ActivitySearchFilters())
+    verified = "organizations.parent_verified is true"
+    assert _sql(ActivitySearchFilters(verified_only=True)).count(verified) == 2
+    assert _sql(ActivitySearchFilters()).count(verified) == 1
+
+
+def test_build_search_query_shows_eat_only_from_verified_organizations() -> None:
+    eat_rule = (
+        "(activities.kind != %(kind_1)s::varchar "
+        "or organizations.parent_verified is true)"
+    )
+    assert eat_rule in _sql(ActivitySearchFilters())
+    assert eat_rule in _sql(ActivitySearchFilters(kinds=("eat",)))

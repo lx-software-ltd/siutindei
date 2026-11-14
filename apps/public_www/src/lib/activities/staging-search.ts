@@ -186,6 +186,10 @@ function matchesItem(
     }
   }
 
+  if (item.activity.kind === 'eat' && !item.organization.parent_verified) {
+    return false;
+  }
+
   if (params.ageMin !== undefined || params.ageMax !== undefined) {
     const ageMin = item.activity.age_min;
     const ageMax = item.activity.age_max;

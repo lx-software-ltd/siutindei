@@ -294,3 +294,19 @@ def test_staging_returns_kind_category_and_checked_date(kinds_fixture) -> None:
     assert place.organization.parent_verified_at is not None
     assert by_id["2"].activity.category_name_translations["zh-HK"] == "運動"
     assert by_id["2"].organization.parent_verified_at is None
+
+
+def test_staging_shows_eat_only_from_verified_organisers(tmp_path, monkeypatch) -> None:
+    checked = _item(1, org=_ORG_A, pricing={"pricing_type": "free", "amount": 0}, entry=(1, 60))
+    unchecked = _item(2, org=_ORG_B, pricing={"pricing_type": "free", "amount": 0}, entry=(1, 60))
+    for item in (checked, unchecked):
+        item["activity"]["kind"] = "eat"
+    checked["organization"]["parent_verified"] = True
+    _write_fixture(tmp_path, monkeypatch, [checked, unchecked])
+    fetch = staging_search_store.fetch_staging_search_response
+    try:
+        assert _ids(fetch(ActivitySearchFilters())) == ["1"]
+        assert _ids(fetch(ActivitySearchFilters(kinds=("eat",)))) == ["1"]
+    finally:
+        staging_search_store._FIXTURE_CACHE = None
+        staging_search_store._SORTED_PUBLISHED_ITEMS = None
