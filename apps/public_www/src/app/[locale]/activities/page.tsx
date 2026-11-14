@@ -6,13 +6,13 @@ import { categoryLandingPath } from '@/lib/activities/activity-href';
 import { breadcrumbStructuredData, serializeJsonLd } from '@/lib/activities/activity-page-data';
 import {
   cardListing,
-  catalogueCategories,
   catalogueKindPages,
   catalogueListings,
 } from '@/lib/activities/catalogue-snapshot';
 import { HUB_SECTION_KINDS, KIND_PAGES } from '@/lib/activities/kind-pages';
 import {
   catalogueScopePlace,
+  categoryLinkGroups,
   itemListStructuredData,
   landingCoverage,
   landingFacts,
@@ -105,13 +105,7 @@ export default async function ActivitiesHubPage({ params }: LocaleRouteProps) {
         breadcrumbs={[homeCrumb]}
         facts={landingFacts(locale, listings, copy)}
         coverage={landingCoverage(locale, listings, copy)}
-        categoriesHeading={copy.browseByTypeHeading}
-        categories={catalogueCategories().map((category) => ({
-          typeId: category.typeId,
-          label: labelForLocale(category.labels, locale),
-          href: categoryLandingPath(locale, category.typeId),
-          count: category.listings.length,
-        }))}
+        categoryGroups={categoryLinkGroups(locale, copy)}
         sections={sections}
         searchHref={buildSearchPageHref(locale, DEFAULT_SEARCH_FILTERS, { view: 'list' })}
       />

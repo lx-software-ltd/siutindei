@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { OfferedKinds } from '@/components/shared/offered-kinds';
 import { PageLayout } from '@/components/shared/page-layout';
-import { offeredPilotKindIds } from '@/lib/activities/catalogue-snapshot';
+import { offeredPilotKindIds, offeredTopicIds } from '@/lib/activities/catalogue-snapshot';
 import {
   generateLocaleStaticParams,
   type LocaleRouteParams,
@@ -52,7 +52,7 @@ export default async function LocaleLayout({
           </p>
         </section>
       </noscript>
-      <OfferedKinds pilotKindIds={offeredPilotKindIds()}>
+      <OfferedKinds pilotKindIds={offeredPilotKindIds()} topicIds={offeredTopicIds()}>
         <PageLayout
           locale={locale}
           navbarContent={content.navbar}

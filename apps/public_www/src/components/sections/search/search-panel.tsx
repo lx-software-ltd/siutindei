@@ -7,7 +7,7 @@ import type { Locale } from '@/content/locales';
 import { formatContentTemplate } from '@/content/content-field-utils';
 import { Button } from '@/components/shared/ui/button';
 import { Modal } from '@/components/shared/ui/modal';
-import { useOfferedKinds } from '@/components/shared/offered-kinds';
+import { useOfferedKinds, useOfferedTopicIds } from '@/components/shared/offered-kinds';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { saveRecentSearch } from '@/lib/activities/recent-storage';
 import {
@@ -32,6 +32,7 @@ import { REGIONS_BY_ID } from '@/lib/home-wizard/choices';
 import {
   homeWizardChoices,
   labelForLocale,
+  topicsToShow,
 } from '@/lib/home-wizard/choices';
 import {
   ALL_HONG_KONG_ICON_SRC,
@@ -118,6 +119,7 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
   const formId = useId();
   const { filters, isSearchOpen, setFilters, closeSearch } = useSearchContext();
   const offeredKinds = useOfferedKinds();
+  const offeredTopicIds = useOfferedTopicIds();
   const [draft, setDraft] = useState<SearchFiltersState>(() =>
     withDefaultOpenLocation(sanitizeSearchFilters(filters).filters),
   );
@@ -306,7 +308,7 @@ export function SearchPanel({ locale, copy }: SearchPanelProps) {
               </span>
             </legend>
             <div className="grid w-full min-w-0 max-w-full grid-cols-2 gap-2 md:grid-cols-4">
-              {homeWizardChoices.activityTypes.map((type) => (
+              {topicsToShow(offeredTopicIds, draft.activityTypeIds).map((type) => (
                 <SearchChoiceButton
                   key={type.id}
                   label={labelForLocale(type.labels, locale)}

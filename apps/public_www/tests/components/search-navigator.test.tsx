@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SearchNavigator } from '@/components/sections/hero/search-navigator';
+import { OfferedKinds } from '@/components/shared/offered-kinds';
 import { SearchProvider } from '@/components/shared/search/search-context';
 import { getContent } from '@/content';
 import {
@@ -22,20 +23,22 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-function renderNavigator() {
+function renderNavigator(topicIds?: readonly string[]) {
   const content = getContent('en');
   render(
-    <SearchProvider>
-      <main id="main-content">
-        <SearchNavigator locale="en" copy={content.smallWorld.navigator} />
-      </main>
-    </SearchProvider>,
+    <OfferedKinds pilotKindIds={[]} topicIds={topicIds}>
+      <SearchProvider>
+        <main id="main-content">
+          <SearchNavigator locale="en" copy={content.smallWorld.navigator} />
+        </main>
+      </SearchProvider>
+    </OfferedKinds>,
   );
   return content;
 }
 
-function openNavigator() {
-  const content = renderNavigator();
+function openNavigator(topicIds?: readonly string[]) {
+  const content = renderNavigator(topicIds);
   fireEvent.click(
     screen.getByRole('button', {
       name: content.smallWorld.navigator.buttonLabel,
@@ -161,6 +164,19 @@ describe('SearchNavigator', () => {
     expect(push).toHaveBeenCalledWith(
       '/en/search/?kind=class&age=3-5&region=kowloon&types=art&view=map',
     );
+  });
+
+  it('offers only the topics the catalogue has listings for', () => {
+    openNavigator(['sports', 'art']);
+    fireEvent.click(screen.getByRole('button', { name: 'Kowloon' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anywhere in Kowloon' }));
+    fireEvent.click(screen.getByRole('button', { name: /^A class or club/ }));
+    fireEvent.click(screen.getByRole('button', { name: '3–5 years' }));
+
+    expect(screen.getByRole('button', { name: 'Sports' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Art and making' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Languages' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Baby and toddler' })).not.toBeInTheDocument();
   });
 
   it('pins Back and See activities under the choices in one row', () => {

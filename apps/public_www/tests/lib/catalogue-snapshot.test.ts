@@ -21,7 +21,9 @@ import {
   landingTypeIdForListing,
   latestUpdate,
   offeredPilotKindIds,
+  offeredTopicIds,
 } from '@/lib/activities/catalogue-snapshot';
+import { homeWizardChoices, topicsToShow } from '@/lib/home-wizard/choices';
 
 interface FixtureRow {
   activity: { id: string; category_id: string; category_root_id?: string; kind?: string };
@@ -192,6 +194,33 @@ describe('catalogue snapshot', () => {
     const leafClass = catalogueListings().find((listing) => listing.activity.kind === 'class');
     expect(place && landingTypeIdForListing(place)).toBe('places');
     expect(leafClass && landingTypeIdForListing(leafClass)).toBe(topic.typeId);
+  });
+
+  it('offers a topic from one class or camp, and every topic without a catalogue', () => {
+    const allTopicIds = homeWizardChoices.activityTypes.map((type) => type.id);
+    vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, '');
+    expect(offeredTopicIds()).toEqual(allTopicIds);
+
+    clearCatalogueCacheForTests();
+    const [sports, water] = ['sports', 'water'].map(
+      (id) => homeWizardChoices.activityTypes.find((type) => type.id === id)!,
+    );
+    const [sportsClass] = categoryRows(firstCategory, 1);
+    sportsClass.activity.category_id = sports.categoryId;
+    sportsClass.activity.category_root_id = sports.categoryId;
+    const [waterPlace] = categoryRows(secondCategory, 1);
+    waterPlace.activity.kind = 'place';
+    waterPlace.activity.category_id = water.categoryId;
+    waterPlace.activity.category_root_id = water.categoryId;
+    vi.stubEnv(CATALOGUE_SNAPSHOT_PATH_ENV, writeSnapshot([sportsClass, waterPlace]));
+
+    expect(offeredTopicIds()).toEqual(['sports']);
+    expect(catalogueTopicPages()).toEqual([]);
+    expect(topicsToShow(offeredTopicIds(), []).map((type) => type.id)).toEqual(['sports']);
+    expect(topicsToShow(offeredTopicIds(), ['languages']).map((type) => type.id)).toEqual([
+      'sports',
+      'languages',
+    ]);
   });
 
   it('drops hidden and permanently closed organisations', () => {

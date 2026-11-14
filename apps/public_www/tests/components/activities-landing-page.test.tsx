@@ -75,6 +75,32 @@ describe('ActivitiesLandingPage questions', () => {
     expect(container.querySelector('[data-coverage]')).toBeNull();
   });
 
+  it('lists the kinds and the topics under separate headings', async () => {
+    const content = getContent('en');
+    const copy = content.activitiesPage;
+    render(
+      withChromeCopy(
+        <PageLayout locale="en" navbarContent={content.navbar} footerContent={content.footer}>
+          {await ActivitiesHubPage({ params: Promise.resolve({ locale: 'en' }) })}
+        </PageLayout>,
+      ),
+    );
+
+    const kinds = screen.getByRole('navigation', { name: copy.browseByKindHeading });
+    const kindHrefs = within(kinds)
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href'));
+    expect(kindHrefs).toContain('/en/activities/classes');
+    const topics = screen.getByRole('navigation', { name: copy.browseByTopicHeading });
+    const topicHrefs = within(topics)
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href'));
+    expect(topicHrefs.length).toBeGreaterThan(0);
+    const kindSlugs = Object.keys(copy.kindPages).map((slug) => `/en/activities/${slug}`);
+    expect(topicHrefs.filter((href) => kindSlugs.includes(href ?? ''))).toEqual([]);
+    expect(kindHrefs.every((href) => kindSlugs.includes(href ?? ''))).toBe(true);
+  });
+
   it('leaves out questions the data cannot answer', () => {
     const content = getContent('en');
     render(
@@ -85,9 +111,8 @@ describe('ActivitiesLandingPage questions', () => {
         intro="Intro"
         breadcrumbs={[]}
         facts={{ ages: '3 to 8 years', days: null, prices: null }}
-        categoriesHeading="Types"
         coverage={null}
-        categories={[]}
+        categoryGroups={[]}
         sections={[]}
         searchHref="/en/search/"
       />,

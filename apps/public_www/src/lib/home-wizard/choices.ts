@@ -72,6 +72,16 @@ export function offeredKinds(pilotKindIds: readonly string[]): readonly WizardKi
   );
 }
 
+/** The offered topics, plus any already picked so a shared link can be unpicked. */
+export function topicsToShow(
+  offeredTopicIds: readonly string[],
+  selectedIds: readonly string[],
+): readonly WizardActivityTypeOption[] {
+  return homeWizardChoices.activityTypes.filter(
+    (type) => offeredTopicIds.includes(type.id) || selectedIds.includes(type.id),
+  );
+}
+
 /** Any kind in the choices file, pilot or not, so a shared link still parses. */
 export function kindOption(kindId: string | null | undefined): WizardKindOption | undefined {
   return homeWizardChoices.kinds.find((kind) => kind.id === kindId);
