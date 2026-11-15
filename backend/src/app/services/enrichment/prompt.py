@@ -35,6 +35,8 @@ MODEL_INSTRUCTIONS = (
     "200 characters. region, district, and neighbourhood are the area names on the "
     "page. region is Hong Kong Island, Kowloon, New Territories, or Islands. "
     "category_words is the site's wording when it is not the catalog name. "
+    "age_min may equal age_max. When a page gives an age over 18, or says "
+    "all ages, write 18. "
     "Use exactly this shape:\n"
     '{"locations": [{"address": "...", "region": "...", "district": "...", '
     '"neighbourhood": "...", '

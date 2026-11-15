@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SearchPanel } from '@/components/sections/search/search-panel';
+import { OfferedKinds } from '@/components/shared/offered-kinds';
 import {
   SearchProvider,
   useSearchContext,
@@ -35,13 +36,15 @@ function OpenOnMount() {
   return null;
 }
 
-function renderPanel() {
+function renderPanel(topicIds?: readonly string[]) {
   const content = getContent('en');
   render(
-    <SearchProvider>
-      <OpenOnMount />
-      <SearchPanel locale="en" copy={content.navbar.searchPanel} />
-    </SearchProvider>,
+    <OfferedKinds pilotKindIds={[]} topicIds={topicIds}>
+      <SearchProvider>
+        <OpenOnMount />
+        <SearchPanel locale="en" copy={content.navbar.searchPanel} />
+      </SearchProvider>
+    </OfferedKinds>,
   );
   return content;
 }
@@ -59,6 +62,14 @@ describe('SearchPanel', () => {
     clearSearchAreaScopeCacheForTests();
     window.localStorage.clear();
     push.mockClear();
+  });
+
+  it('offers only the topics the catalogue has listings for', () => {
+    renderPanel(['water']);
+
+    expect(screen.getByRole('button', { name: 'Swimming and water sports' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sports' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Languages' })).not.toBeInTheDocument();
   });
 
   it('shows kind, activity, age, and Hong Kong region icons with labels', () => {

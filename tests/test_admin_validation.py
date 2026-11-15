@@ -106,7 +106,8 @@ class TestValidateAgeRange:
         """Valid age ranges should pass validation."""
         _validate_age_range(0, 5)
         _validate_age_range(5, 12)
-        _validate_age_range(0, 120)
+        _validate_age_range(0, 18)
+        _validate_age_range(17, 18)
 
     def test_age_min_negative(self) -> None:
         """Negative age_min should raise ValidationError."""
@@ -115,24 +116,23 @@ class TestValidateAgeRange:
         assert "age_min must be at least 0" in str(exc_info.value)
         assert exc_info.value.field == "age_min"
 
-    def test_age_max_above_120(self) -> None:
-        """age_max above 120 should raise ValidationError."""
-        with pytest.raises(ValidationError) as exc_info:
-            _validate_age_range(0, 121)
-        assert "age_max must be at most 120" in str(exc_info.value)
-        assert exc_info.value.field == "age_max"
+    def test_age_above_18_is_stored_as_18(self) -> None:
+        """A maximum or minimum over 18 is capped, including a single age."""
+        assert _validate_age_range(0, 19) == (0, 18)
+        assert _validate_age_range(5, 100) == (5, 18)
+        assert _validate_age_range(20, 40) == (18, 18)
 
     def test_age_min_equals_age_max(self) -> None:
-        """age_min equal to age_max should raise ValidationError."""
-        with pytest.raises(ValidationError) as exc_info:
-            _validate_age_range(10, 10)
-        assert "age_min must be less than age_max" in str(exc_info.value)
+        """A single age is a valid range."""
+        assert _validate_age_range(10, 10) == (10, 10)
+        assert _validate_age_range(0, 0) == (0, 0)
 
     def test_age_min_greater_than_age_max(self) -> None:
-        """age_min greater than age_max should raise ValidationError."""
+        """age_min above age_max should raise ValidationError."""
         with pytest.raises(ValidationError) as exc_info:
             _validate_age_range(15, 10)
-        assert "age_min must be less than age_max" in str(exc_info.value)
+        assert "age_min cannot exceed age_max" in str(exc_info.value)
+        assert exc_info.value.field == "age_min"
 
     def test_age_invalid_type(self) -> None:
         """Non-integer age values should raise ValidationError."""
@@ -145,9 +145,9 @@ class TestValidateAgeRange:
         _validate_age_range("5", "12")
 
     def test_boundary_values(self) -> None:
-        """Boundary values (0, 120) should be valid."""
+        """Boundary values (0, 18) should be valid."""
         _validate_age_range(0, 1)
-        _validate_age_range(119, 120)
+        _validate_age_range(17, 18)
 
 
 class TestValidatePricingAmount:

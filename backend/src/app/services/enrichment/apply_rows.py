@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.api.admin_imports_lookups import lookup_district_area_id
 from app.api.admin_imports_utils import parse_time_minutes, to_utc_weekly
+from app.api.admin_resource_activity import _validate_age_range
 from app.api.admin_validators import (
     _validate_email,
     _validate_phone_fields,
@@ -222,10 +223,10 @@ def _apply_activity(
                 field="category_id",
             )
         category_id = PENDING_CATEGORY_ID
-    age_min = _whole_number(override.get("age_min", proposed.get("age_min")), "age_min")
-    age_max = _whole_number(override.get("age_max", proposed.get("age_max")), "age_max")
-    if age_min > age_max:
-        raise ValidationError("age_min cannot exceed age_max", field="age_min")
+    age_min, age_max = _validate_age_range(
+        _whole_number(override.get("age_min", proposed.get("age_min")), "age_min"),
+        _whole_number(override.get("age_max", proposed.get("age_max")), "age_max"),
+    )
     activity = Activity(
         org_id=org.id,
         category_id=category_id,

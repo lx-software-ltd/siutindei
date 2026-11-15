@@ -7934,7 +7934,9 @@ export interface components {
              *     is empty.
              */
             vetting_note?: string;
+            /** @description Whole years. Stored as at most 18. A higher value is saved as 18. */
             age_min: number;
+            /** @description Whole years. Stored as at most 18. A higher value is saved as 18. May equal age_min. */
             age_max: number;
             /**
              * @description When a new activity omits it, `camp` if the name reads like
@@ -8807,9 +8809,9 @@ export interface components {
             source_note?: string | null;
             /** @description Category label from the import file. Stored even when the activity is assigned to an existing category. Managers cannot set it. */
             readonly source_category_name?: string | null;
-            /** @description Minimum age (required, 0-119, must be less than age_max) */
+            /** @description Minimum age in whole years. Stored as at most 18. A higher value is saved as 18. Cannot exceed age_max, and may equal it. */
             age_min: number;
-            /** @description Maximum age (required, 1-120, must be greater than age_min) */
+            /** @description Maximum age in whole years. Stored as at most 18. A higher value is saved as 18. */
             age_max: number;
             kind?: components["schemas"]["ListingKind"];
             facts?: components["schemas"]["ListingFacts"];
@@ -8835,9 +8837,9 @@ export interface components {
             source_note?: string | null;
             /** @description Imported category label. Managers cannot set it. */
             readonly source_category_name?: string | null;
-            /** @description Minimum age (must provide both age_min and age_max together) */
+            /** @description Minimum age. Provide both age_min and age_max. Stored as at most 18. A higher value is saved as 18. Cannot exceed age_max, and may equal it. */
             age_min?: number;
-            /** @description Maximum age (must provide both age_min and age_max together) */
+            /** @description Maximum age. Provide both age_min and age_max. Stored as at most 18. A higher value is saved as 18. */
             age_max?: number;
             kind?: components["schemas"]["ListingKind"];
             facts?: components["schemas"]["ListingFacts"];

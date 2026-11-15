@@ -8,7 +8,7 @@ import type { SiteContent } from '@/content/types';
 import { Button } from '@/components/shared/ui/button';
 import { ChoiceTile } from '@/components/shared/ui/choice-tile';
 import { Modal } from '@/components/shared/ui/modal';
-import { useOfferedKinds } from '@/components/shared/offered-kinds';
+import { useOfferedKinds, useOfferedTopicIds } from '@/components/shared/offered-kinds';
 import { useSearchContext } from '@/components/shared/search/search-context';
 import { formatContentTemplate } from '@/content/content-field-utils';
 import { saveRecentSearch } from '@/lib/activities/recent-storage';
@@ -34,6 +34,7 @@ import {
   homeWizardChoices,
   labelForLocale,
   REGIONS_BY_ID,
+  topicsToShow,
 } from '@/lib/home-wizard/choices';
 import {
   ALL_HONG_KONG_ICON_SRC,
@@ -107,6 +108,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
   const router = useRouter();
   const { setFilters } = useSearchContext();
   const offeredKinds = useOfferedKinds();
+  const offeredTopicIds = useOfferedTopicIds();
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<NavigatorStep>('location');
   const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
@@ -422,7 +424,7 @@ export function SearchNavigator({ locale, copy }: SearchNavigatorProps) {
           <fieldset>
             <legend className="sr-only">{copy.steps.activity.label}</legend>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
-              {homeWizardChoices.activityTypes.map((type) => (
+              {topicsToShow(offeredTopicIds, draft.activityTypeIds).map((type) => (
                 <ChoiceTile
                   key={type.id}
                   label={labelForLocale(type.labels, locale)}

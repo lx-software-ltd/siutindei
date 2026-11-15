@@ -706,7 +706,9 @@ Columns:
 - `source_category_name` (text, optional) — category label from the
   import file. Kept when the activity is assigned to an existing
   category. Manager routes ignore this field.
-- `age_range` (int4range, required)
+- `age_range` (int4range, required) — inclusive ages from 0 to 18.
+  A higher age is stored as 18 by the write paths. Postgres keeps an
+  exclusive upper bound, so 18 is `upper = 19`.
 - `kind` (text, default `class`) — listing kind: `class`, `camp`,
   `place`, `preschool`, or `eat`. It decides what the card and page
   show. Admin-write only; manager routes ignore it. An import that
@@ -731,6 +733,8 @@ Constraints:
 - UNIQUE (case-insensitive) on (`org_id`, `lower(trim(name))`)
 - CHECK `activities_kind_check`: `kind` is one of the five kinds
 - CHECK `activities_facts_object_check`: `jsonb_typeof(facts) = 'object'`
+- CHECK `activities_age_range_check`: `lower(age_range)` is 0 to 18
+  and `upper(age_range)` is at most 19 (inclusive maximum 18)
 
 Migration `0065_activity_kind_facts` backfills `kind` from the `0040`
 leaves: `place` for the Play and outdoors and Culture groups, the three

@@ -252,8 +252,16 @@ Source: [`apps/public_www`](../../apps/public_www).
   (`classes`, `camps`, `places`, `nurseries`; `src/lib/activities/kind-pages.ts`)
   or a wizard topic page, which lists only classes and camps whose category
   or root category is that topic. Either needs at least three listings.
-  The home page links to the hub, each landing page, and twelve
-  activities.
+  The hub, each landing page, and the home page list the kind pages
+  under "Browse by type" and the topic pages under "Browse by topic"
+  (`categoryLinkGroups` in `src/lib/activities/landing-page-data.ts`).
+  The home page also links twelve activities.
+- **Offered topics:** the wizard and the search panel offer only topics
+  with at least one class or camp in the catalogue (`offeredTopicIds()`,
+  passed to `OfferedKinds` in the locale layout), counting every
+  published listing in scope, not only the pre-rendered sample. With no
+  catalogue every topic is offered. A topic already picked, for example
+  from a shared link, stays visible so it can be unpicked.
 - **Session dates:** a schedule may carry `startsOn` and `endsOn` (a
   dated session, usually a camp week; `src/lib/activities/schedule-dates.ts`).
   Search and the build drop sessions that ended before today in Hong

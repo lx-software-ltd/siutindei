@@ -15,6 +15,7 @@ from app.api.admin_resource_activity import (
     _update_activity,
     _update_activity_for_manager,
 )
+from app.db.age_bounds import inclusive_age_bounds
 from app.db.models import Activity, ActivityCategory
 from app.db.repositories import ActivityRepository
 from app.exceptions import ValidationError
@@ -339,6 +340,84 @@ def test_managers_cannot_write_kind_or_facts(db_session, sample_activity) -> Non
     db_session.refresh(sample_activity)
     assert sample_activity.kind == "class"
     assert sample_activity.facts == {}
+
+
+def test_import_stores_an_age_over_18_as_18(
+    db_session, sample_organization, sample_activity_category
+) -> None:
+    activity, status = upsert_activity(
+        db_session,
+        sample_organization,
+        {
+            "name": "All ages swim",
+            "category_id": str(sample_activity_category.id),
+            "age_min": 5,
+            "age_max": 100,
+        },
+    )
+    assert status == "created"
+    assert inclusive_age_bounds(activity.age_range) == (5, 18)
+    updated, update_status = upsert_activity(
+        db_session,
+        sample_organization,
+        {
+            "name": "All ages swim",
+            "category_id": str(sample_activity_category.id),
+            "age_min": 20,
+            "age_max": 40,
+        },
+    )
+    assert update_status == "updated"
+    assert updated.id == activity.id
+    assert inclusive_age_bounds(updated.age_range) == (18, 18)
+
+
+def test_import_keeps_a_single_age(
+    db_session, sample_organization, sample_activity_category
+) -> None:
+    activity, status = upsert_activity(
+        db_session,
+        sample_organization,
+        {
+            "name": "Five year olds",
+            "category_id": str(sample_activity_category.id),
+            "age_min": 5,
+            "age_max": 5,
+        },
+    )
+    assert status == "created"
+    assert inclusive_age_bounds(activity.age_range) == (5, 5)
+
+
+def test_import_rejects_a_minimum_above_the_maximum(
+    db_session, sample_organization, sample_activity_category
+) -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        upsert_activity(
+            db_session,
+            sample_organization,
+            {
+                "name": "Backwards ages",
+                "category_id": str(sample_activity_category.id),
+                "age_min": 15,
+                "age_max": 10,
+            },
+        )
+    assert exc_info.value.field == "age_min"
+
+
+def test_database_rejects_an_age_over_18(
+    db_session, sample_organization, sample_activity_category
+) -> None:
+    activity = Activity(
+        org_id=sample_organization.id,
+        category_id=sample_activity_category.id,
+        name="Too old",
+        age_range=Range(0, 99, bounds="[]"),
+    )
+    db_session.add(activity)
+    with pytest.raises(IntegrityError), db_session.begin_nested():
+        db_session.flush()
 
 
 def test_import_guesses_kind_when_the_file_sends_none(

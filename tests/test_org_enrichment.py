@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 import pytest
+from app.db.age_bounds import inclusive_age_bounds
 from app.db.models import Activity, ActivityPricing, ActivitySchedule, Organization
 from app.db.models.audit_log import AuditLog
 from app.db.models.org_enrichment import OrgEnrichmentProposal, OrgEnrichmentRun
@@ -609,6 +610,41 @@ def test_serialize_proposal_does_not_rewrite_the_snapshot(db_session) -> None:
     assert payload["current_value"]["logo"] == "saved"
     assert "logo_media_url" not in payload["current_value"]
     assert proposal.current_value is None
+
+
+def test_enrichment_stores_an_age_over_18_as_18(
+    db_session, sample_activity_category
+) -> None:
+    org = _org(db_session)
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    proposal = _proposal(
+        run,
+        section="Activities",
+        kind="create_activity",
+        label="Activity · Swim",
+        proposed_value={
+            "name": "All ages swim",
+            "category_name": sample_activity_category.name,
+            "age_min": 5,
+            "age_max": 100,
+        },
+        proposed_hash="hash-age-18",
+    )
+    db_session.add(proposal)
+    db_session.flush()
+    results, _quality_run = apply_proposals(
+        db_session,
+        org.id,
+        [str(proposal.id)],
+        {},
+        user_id="admin",
+        request_id="req-age-18",
+    )
+    assert results[0]["status"] == "applied"
+    stored = db_session.query(Activity).filter(Activity.name == "All ages swim").one()
+    assert inclusive_age_bounds(stored.age_range) == (5, 18)
 
 
 def test_approved_org_refuses_an_unknown_category(db_session) -> None:

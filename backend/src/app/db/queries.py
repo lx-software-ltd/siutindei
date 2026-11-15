@@ -52,6 +52,8 @@ from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+MAX_SEARCH_LIMIT = 200
+
 
 @dataclass(frozen=True)
 class ActivitySearchCursor:
@@ -120,8 +122,10 @@ def validate_filters(filters: ActivitySearchFilters) -> None:
     ):
         raise ValueError("start_minutes_utc must be less than end_minutes_utc.")
 
-    if filters.limit <= 0 or filters.limit > 200:
-        raise ValueError("limit must be between 1 and 200.")
+    # The pager asks for one row more than the page to learn whether
+    # another page exists.
+    if filters.limit <= 0 or filters.limit > MAX_SEARCH_LIMIT + 1:
+        raise ValueError(f"limit must be between 1 and {MAX_SEARCH_LIMIT}.")
 
     if filters.sort not in SEARCH_SORTS:
         raise ValueError("sort must be time or price.")

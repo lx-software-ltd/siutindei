@@ -11,6 +11,7 @@ from app.api.admin_imports_catalog import (
     apply_zh_translations,
     residual_vetting_note,
 )
+from app.db.age_bounds import MAX_LISTING_AGE
 from app.exceptions import ValidationError
 
 FLAT_ORG_PASSTHROUGH_FIELDS = {
@@ -30,7 +31,7 @@ FLAT_ORG_PASSTHROUGH_FIELDS = {
 }
 
 FLAT_ACTIVITY_DEFAULT_AGE_MIN = 0
-FLAT_ACTIVITY_DEFAULT_AGE_MAX = 18
+FLAT_ACTIVITY_DEFAULT_AGE_MAX = MAX_LISTING_AGE
 
 
 def apply_default_manager_id(payload: dict[str, Any]) -> None:

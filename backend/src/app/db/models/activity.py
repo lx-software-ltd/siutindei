@@ -130,6 +130,11 @@ class Activity(Base):
             "jsonb_typeof(facts) = 'object'",
             name="activities_facts_object_check",
         ),
+        CheckConstraint(
+            "lower(age_range) >= 0 AND lower(age_range) <= 18 "
+            "AND upper(age_range) <= 19",
+            name="activities_age_range_check",
+        ),
         Index("activities_kind_idx", "kind"),
     )
 
