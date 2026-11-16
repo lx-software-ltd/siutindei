@@ -58,6 +58,7 @@
     "js-yaml@4": "4.3.2",
     "js-yaml@5": "5.5.0",
     "extract-zip": "npm:@electron-internal/extract-zip@1.0.5",
-    "uuid": "^14.0.3"
+    "uuid": "^14.0.3",
+    "minimatch@10": "11.0.1"
   }
 }
