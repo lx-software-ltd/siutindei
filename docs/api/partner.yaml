@@ -56,6 +56,10 @@ info:
       /v1/partner/activity-categories`). A full-access `read` key can
       list and fetch categories. Creating, updating, and deleting
       require a full-access `crud` key.
+      A full-access `crud` key can also post a catalog import file at
+      `POST /v1/partner/imports`. The body is the same JSON as
+      `POST /v1/admin/imports`. `manager_id`, `dry_run`,
+      `mark_parent_verified`, and `approve` are query parameters.
       A full-access `crud` key is the partner equivalent of an admin
       for these routes. A `read` key receives `403` on website
       enrichment and enrichment settings, including GET.
@@ -493,6 +497,83 @@ paths:
           description: Read-only key or organization-scoped key
         "404":
           description: Review not found
+
+  /v1/partner/imports:
+    post:
+      summary: Import a catalog file
+      description: |
+        Full-access `crud` keys only. A full-access `crud` key is the
+        partner equivalent of an admin. Organization-scoped keys and
+        `read` keys receive `403`.
+
+        The body is the same JSON object as `POST /v1/admin/imports`.
+        `parent_verified`, `parent_verified_at`, and `review_status`
+        on an organisation are unknown fields and are ignored.
+
+        Query parameters:
+
+        - `manager_id` fills a missing or placeholder
+          `default_manager_id`. When it is omitted,
+          `BOARD_CATALOG_MANAGER_ID` is used. A value that is not that
+          catalog manager is rejected before any write. A placeholder
+          with neither a query value nor the environment variable is
+          rejected before any write.
+        - `mark_parent_verified=true` sets the parent-verified flag and
+          its date on organisations this file created or matched and
+          left unchanged.
+        - `approve=true` approves those same organisations. Release
+          blockers leave that organisation pending and return its
+          issues in `blocked`. This route does not accept `force`.
+        - `dry_run=true` validates and rolls back. It cannot be combined
+          with `mark_parent_verified` or `approve`.
+
+        A second post matches an existing organisation by name and does
+        not duplicate it. The flags still apply to that match. A match
+        owned by another manager is `managed by provider`. There is no
+        import-job row and no uploaded file.
+      parameters:
+        - name: manager_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: dry_run
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
+        - name: mark_parent_verified
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
+        - name: approve
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Same object as an admin catalog import file.
+      responses:
+        "200":
+          description: |
+            Import summary and per-row results, plus the organisation
+            ids that were parent-verified, approved, or blocked.
+        "400":
+          description: |
+            Invalid file, manager id, or flag. A dry run combined with
+            parent verification or approval is rejected before any write.
+        "403":
+          description: Read-only key or organization-scoped key
 
   /v1/partner/organization-merges:
     post:

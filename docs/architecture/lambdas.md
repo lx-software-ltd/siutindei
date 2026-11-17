@@ -138,7 +138,8 @@ their primary responsibilities.
   also `POST` review decisions and bulk apply/dismiss,
   `POST /v1/partner/organization-merges`, `POST
   /v1/partner/organizations/{id}/approve`, `POST
-  /v1/partner/organizations/{id}/reject`, `GET` and `POST`
+  /v1/partner/organizations/{id}/reject`, `POST /v1/partner/imports`,
+  `GET` and `POST`
   `/v1/partner/organizations/{id}/enrichment` (apply, dismiss, and
   leaflet upload included), `GET` and `PUT /v1/partner/enrichment-settings`, and
   `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`

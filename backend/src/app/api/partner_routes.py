@@ -23,6 +23,7 @@ from app.api.partner_category_reviews import (
     handle_partner_category_reviews,
     partner_get_activities,
 )
+from app.api.partner_imports import handle_partner_imports
 from app.api.partner_location_fixes import (
     handle_partner_location_fix_write,
     handle_partner_location_fixes,
@@ -103,6 +104,15 @@ class PartnerRoute:
             return True
         segments = organization_tail(str(event.get("path") or ""))
         return bool(segments) and segments[0] == self.tail
+
+
+def _partner_imports(
+    event: Mapping[str, Any],
+    method: str,
+    resource_id: str | None,
+    partner: PartnerContext,
+) -> dict[str, Any]:
+    return handle_partner_imports(event, method, resource_id, partner)
 
 
 def _partner_name_fixes(
@@ -205,6 +215,14 @@ def _partner_org_reject(
 
 
 _PARTNER_ROUTES = (
+    PartnerRoute(
+        "imports",
+        _partner_imports,
+        methods=frozenset({"POST"}),
+        has_id=False,
+        full_access=True,
+        crud_only=True,
+    ),
     PartnerRoute(
         "name-fixes",
         _partner_name_fixes,
