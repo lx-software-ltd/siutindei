@@ -88,7 +88,7 @@ The owner's answer of 17 Nov 2026.
 
 14. **Eat with kids may be imported once the owner has visited.** The
     owner visited the 50 venues in
-    `docs/imports/bump-list-eat-with-kids.json` and asked for them to
+    `docs/imports/eat-with-kids-visited.json` and asked for them to
     be imported across Hong Kong, not only Stanley. The file goes
     through the admin import. It carries no descriptions, ratings,
     opening hours, or prices. The owner still marks each organisation
