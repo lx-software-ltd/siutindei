@@ -84,6 +84,17 @@ The owner's answers to the follow-up questions, also 13 Nov 2026.
     the hiding, because the review gate (`ORG_REVIEW_GATE_ENABLED`) is
     off by default.
 
+The owner's answer of 17 Nov 2026.
+
+14. **Eat with kids may be imported once the owner has visited.** The
+    owner visited the 50 venues in
+    `docs/imports/bump-list-eat-with-kids.json` and asked for them to
+    be imported across Hong Kong, not only Stanley. The file goes
+    through the admin import. It carries no descriptions, ratings,
+    opening hours, or prices. The owner still marks each organisation
+    parent-verified in the admin console, because the import cannot,
+    and an unverified eat listing stays out of search.
+
 Also agreed, from the "push back" list the owner accepted:
 
 - Cut schools and members-only clubs. Keep playgroups and
@@ -972,7 +983,8 @@ Yellow backend, green public site. No schema change. Stanley only.
 2. **Data entry.** The owner adds each place by hand in the admin
    console after visiting: organisation, venue, one activity of kind
    `eat` under "Eat with kids", its facts, and opening hours. No
-   import and no enrichment for this kind.
+   enrichment for this kind. An import is allowed only for venues
+   the owner has visited (decision 14).
 3. **Public site.** The `eat` kind is already in the choices file as
    a pilot (workstream E). The wizard and the results page offer it
    only when the snapshot has at least three such listings. The map

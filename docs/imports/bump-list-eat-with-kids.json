@@ -1,0 +1,1033 @@
+{
+  "default_manager_id": "REPLACE_WITH_YOUR_MANAGER_ID",
+  "organizations": [
+    {
+      "name": "Oolaa Mid-Levels",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Oolaa Mid-Levels",
+          "area_name": "Mid-Levels"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Oolaa Mid-Levels",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true,
+            "kids_menu": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pier 8",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Central Piers",
+          "area_name": "Central"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Pier 8",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "outdoor_seating": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Falcone",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "The Peak",
+          "area_name": "The Peak"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Falcone",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {}
+        }
+      ]
+    },
+    {
+      "name": "Juno",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Juno Sheung Wan",
+          "area_name": "Sheung Wan"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Juno",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {}
+        }
+      ]
+    },
+    {
+      "name": "Mr Wolf",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Mr Wolf Central",
+          "area_name": "Central"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Mr Wolf",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "changing_table": true,
+            "high_chairs": true,
+            "outdoor_seating": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dara",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Dara Sheung Wan",
+          "area_name": "Sheung Wan"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Dara",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "changing_table": true,
+            "high_chairs": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Purna Café",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Purna Café Mid-Levels",
+          "area_name": "Mid-Levels"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Purna Café",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "outdoor_seating": true,
+            "room_to_run": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "South Lane Mid-Levels",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "South Lane Mid-Levels",
+          "area_name": "Mid-Levels"
+        }
+      ],
+      "activities": [
+        {
+          "name": "South Lane Mid-Levels",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true,
+            "outdoor_seating": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rajasthan Rifles",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "The Peak",
+          "area_name": "The Peak"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Rajasthan Rifles",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true,
+            "outdoor_seating": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 Ships",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "PMQ",
+          "area_name": "Central"
+        }
+      ],
+      "activities": [
+        {
+          "name": "22 Ships",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "outdoor_seating": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Central Market",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Central Market",
+          "area_name": "Central"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Central Market",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Barkada",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Barkada Central",
+          "area_name": "Central"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Barkada",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Genki Sushi Shun Tak Centre",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Shun Tak Centre",
+          "area_name": "Sheung Wan"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Genki Sushi Shun Tak Centre",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "changing_table": true,
+            "high_chairs": true,
+            "kids_menu": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "1862 bar de Tapas y Vino",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Tai Kwun",
+          "area_name": "Central"
+        }
+      ],
+      "activities": [
+        {
+          "name": "1862 bar de Tapas y Vino",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cooshti",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Cooshti Wan Chai",
+          "area_name": "Wan Chai"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Cooshti",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "changing_table": true,
+            "outdoor_seating": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Brick Lane Admiralty",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Brick Lane Admiralty",
+          "area_name": "Admiralty"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Brick Lane Admiralty",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "room_to_run": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Baumhaus",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Baumhaus Wan Chai",
+          "area_name": "Wan Chai"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Baumhaus",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "changing_table": true,
+            "high_chairs": true,
+            "room_to_run": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "The Optimist",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "The Optimist Wan Chai",
+          "area_name": "Wan Chai"
+        }
+      ],
+      "activities": [
+        {
+          "name": "The Optimist",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "room_to_run": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "The Murray",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "The Murray",
+          "area_name": "Admiralty"
+        }
+      ],
+      "activities": [
+        {
+          "name": "The Murray",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "outdoor_seating": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "One Small Step",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "One Small Step Wan Chai",
+          "area_name": "Wan Chai"
+        }
+      ],
+      "activities": [
+        {
+          "name": "One Small Step",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "changing_table": true,
+            "high_chairs": true,
+            "room_to_run": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "La Vache Pacific Place",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Pacific Place",
+          "area_name": "Admiralty"
+        }
+      ],
+      "activities": [
+        {
+          "name": "La Vache Pacific Place",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {}
+        }
+      ]
+    },
+    {
+      "name": "Oolaa Wan Chai",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Oolaa Wan Chai",
+          "area_name": "Wan Chai"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Oolaa Wan Chai",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "kids_menu": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Little Cove Espresso Pacific Place",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Pacific Place",
+          "area_name": "Admiralty"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Little Cove Espresso Pacific Place",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "changing_table": true,
+            "high_chairs": true,
+            "kids_menu": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jello & Mellow",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Jello & Mellow Quarry Bay",
+          "area_name": "Quarry Bay"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Jello & Mellow",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true,
+            "room_to_run": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Frites Causeway Bay",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Frites Causeway Bay",
+          "area_name": "Causeway Bay"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Frites Causeway Bay",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true,
+            "room_to_run": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Frites North Point",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Frites North Point",
+          "area_name": "North Point"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Frites North Point",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true,
+            "room_to_run": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Frites Quarry Bay",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Frites Quarry Bay",
+          "area_name": "Quarry Bay"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Frites Quarry Bay",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true,
+            "room_to_run": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Time Café",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Time Café Quarry Bay",
+          "area_name": "Quarry Bay"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Time Café",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {}
+        }
+      ]
+    },
+    {
+      "name": "Soho Banh Mi",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "The Pulse",
+          "area_name": "Repulse Bay"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Soho Banh Mi",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {}
+        }
+      ]
+    },
+    {
+      "name": "Groa",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Repulse Bay Arcade",
+          "area_name": "Repulse Bay"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Groa",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "changing_table": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Little Cove Kennedy Town",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Kennedy Town Promenade",
+          "area_name": "Kennedy Town"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Little Cove Kennedy Town",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "changing_table": true,
+            "high_chairs": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Feather & Bone Sai Ying Pun",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Feather & Bone Sai Ying Pun",
+          "area_name": "Sai Ying Pun"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Feather & Bone Sai Ying Pun",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true,
+            "outdoor_seating": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "South Lane Shek Tong Tsui",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "South Lane Shek Tong Tsui",
+          "area_name": "Shek Tong Tsui"
+        }
+      ],
+      "activities": [
+        {
+          "name": "South Lane Shek Tong Tsui",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true,
+            "outdoor_seating": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dan Ryan's Festival Walk",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Festival Walk",
+          "area_name": "Kowloon Tong"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Dan Ryan's Festival Walk",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dockyard Hung Hom",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Dockyard Hung Hom",
+          "area_name": "Hung Hom"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Dockyard Hung Hom",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "room_to_run": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Coffee Hwajwon",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Elements",
+          "area_name": "Tsim Sha Tsui"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Coffee Hwajwon",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {}
+        }
+      ]
+    },
+    {
+      "name": "Outback Steakhouse Moko",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Moko",
+          "area_name": "Mong Kok"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Outback Steakhouse Moko",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auntie Malay",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Ocean Terminal",
+          "area_name": "Tsim Sha Tsui"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Auntie Malay",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "The Lobby, The Peninsula",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "The Peninsula Hong Kong",
+          "area_name": "Tsim Sha Tsui"
+        }
+      ],
+      "activities": [
+        {
+          "name": "The Lobby, The Peninsula",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pizza Express Moko",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Moko",
+          "area_name": "Mong Kok"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Pizza Express Moko",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {}
+        }
+      ]
+    },
+    {
+      "name": "Mr Tree",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Mr Tree Lai Chi Kok",
+          "area_name": "Lai Chi Kok"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Mr Tree",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true,
+            "room_to_run": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Aqua",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Aqua Tsim Sha Tsui",
+          "area_name": "Tsim Sha Tsui"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Aqua",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {}
+        }
+      ]
+    },
+    {
+      "name": "The Square Restaurant",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Sai Kung Square",
+          "area_name": "Sai Kung Town"
+        }
+      ],
+      "activities": [
+        {
+          "name": "The Square Restaurant",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true,
+            "outdoor_seating": true,
+            "room_to_run": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "M Square",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "WM Hotel",
+          "area_name": "Sai Kung Town"
+        }
+      ],
+      "activities": [
+        {
+          "name": "M Square",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "changing_table": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Winston's Sai Kung",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Winston's Sai Kung",
+          "area_name": "Sai Kung Town"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Winston's Sai Kung",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true,
+            "outdoor_seating": true,
+            "room_to_run": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Little Cove Espresso Sai Kung",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Little Cove Espresso Sai Kung",
+          "area_name": "Sai Kung Town"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Little Cove Espresso Sai Kung",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "changing_table": true,
+            "high_chairs": true,
+            "outdoor_seating": true,
+            "stroller_access": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "The Alchemist Café",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Hong Kong Heritage Museum",
+          "area_name": "Che Kung Temple"
+        }
+      ],
+      "activities": [
+        {
+          "name": "The Alchemist Café",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "outdoor_seating": true,
+            "room_to_run": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Beans the Greenhouse",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Grand Central Plaza",
+          "area_name": "Sha Tin Town Centre"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Beans the Greenhouse",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "outdoor_seating": true,
+            "room_to_run": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Simplylife New Town Plaza",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "New Town Plaza",
+          "area_name": "Sha Tin Town Centre"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Simplylife New Town Plaza",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {}
+        }
+      ]
+    },
+    {
+      "name": "Pause",
+      "vetting_note": "Owner visited. Facts pre-filled from the BUMP&CO restaurant list (Nov 2025); confirm against your visit and add opening hours.",
+      "locations": [
+        {
+          "name": "Pause Mui Wo",
+          "area_name": "Mui Wo"
+        }
+      ],
+      "activities": [
+        {
+          "name": "Pause",
+          "kind": "eat",
+          "category_id": "c1111111-1111-1111-1111-111111111403",
+          "facts": {
+            "high_chairs": true
+          }
+        }
+      ]
+    }
+  ]
+}
