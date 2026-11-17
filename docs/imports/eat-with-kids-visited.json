@@ -3,11 +3,14 @@
   "organizations": [
     {
       "name": "Oolaa Mid-Levels",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Oolaa Mid-Levels",
-          "area_name": "Mid-Levels"
+          "name": "G/F, 28 Stanley Street, Central, Hong Kong",
+          "area_name": "Central",
+          "address": "G/F, 28 Stanley Street, Central, Hong Kong",
+          "lat": 22.2814,
+          "lng": 114.1555
         }
       ],
       "activities": [
@@ -18,17 +21,71 @@
           "facts": {
             "high_chairs": true,
             "kids_menu": true
-          }
+          },
+          "description": "All-day dining on Stanley Street. The original Soho venue moved here.",
+          "source_url": "https://www.oolaagroup.com/restaurants/oolaa-central",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "07:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "07:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "07:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "07:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "07:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "07:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "07:00",
+                  "end_time": "23:00"
+                }
+              ],
+              "location_name": "G/F, 28 Stanley Street, Central, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "All-day dining on Stanley Street. The original Soho venue moved here.",
+      "website": "https://www.oolaagroup.com/restaurants/oolaa-central",
+      "source_url": "https://www.oolaagroup.com/restaurants/oolaa-central",
+      "phone": "27966988",
+      "email": "oolaacentral@oolaagroup.com",
+      "instagram": "@oolaagroup"
     },
     {
       "name": "Pier 8",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Central Piers",
-          "area_name": "Central"
+          "name": "Roof, Hong Kong Maritime Museum, Central Ferry Pier No. 8, Man Kwong Street, Central, Hong Kong",
+          "area_name": "Central",
+          "address": "Roof, Hong Kong Maritime Museum, Central Ferry Pier No. 8, Man Kwong Street, Central, Hong Kong",
+          "lat": 22.2868,
+          "lng": 114.1618
         }
       ],
       "activities": [
@@ -39,17 +96,69 @@
           "facts": {
             "outdoor_seating": true,
             "stroller_access": true
-          }
+          },
+          "description": "Harbourfront cafe on the roof of the Maritime Museum at Pier 8.",
+          "source_url": "https://www.cafe8.org",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "10:00",
+                  "end_time": "19:30"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "10:00",
+                  "end_time": "19:30"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "10:00",
+                  "end_time": "19:30"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "10:00",
+                  "end_time": "19:30"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "10:00",
+                  "end_time": "19:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "10:00",
+                  "end_time": "19:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "10:00",
+                  "end_time": "19:30"
+                }
+              ],
+              "location_name": "Roof, Hong Kong Maritime Museum, Central Ferry Pier No. 8, Man Kwong Street, Central, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Harbourfront cafe on the roof of the Maritime Museum at Pier 8.",
+      "website": "https://www.cafe8.org",
+      "source_url": "https://www.cafe8.org",
+      "phone": "37912158"
     },
     {
       "name": "Falcone",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "The Peak",
-          "area_name": "The Peak"
+          "name": "Shop G02, G/F, Peak Galleria, 118 Peak Road, The Peak, Hong Kong",
+          "area_name": "The Peak",
+          "address": "Shop G02, G/F, Peak Galleria, 118 Peak Road, The Peak, Hong Kong",
+          "lat": 22.2709,
+          "lng": 114.1499
         }
       ],
       "activities": [
@@ -57,17 +166,70 @@
           "name": "Falcone",
           "kind": "eat",
           "category_id": "c1111111-1111-1111-1111-111111111403",
-          "facts": {}
+          "facts": {},
+          "description": "Neapolitan pizza and pasta at Peak Galleria.",
+          "source_url": "https://www.pizzeriafalcone.com/contact",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "10:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "10:00",
+                  "end_time": "21:00"
+                }
+              ],
+              "location_name": "Shop G02, G/F, Peak Galleria, 118 Peak Road, The Peak, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Neapolitan pizza and pasta at Peak Galleria.",
+      "website": "https://www.pizzeriafalcone.com/contact",
+      "source_url": "https://www.pizzeriafalcone.com/contact",
+      "phone": "21546143",
+      "email": "peak@pizzeriafalcone.com"
     },
     {
       "name": "Juno",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Juno Sheung Wan",
-          "area_name": "Sheung Wan"
+          "name": "G/F, 88 Wing Lok Street, Sheung Wan, Hong Kong",
+          "area_name": "Sheung Wan",
+          "address": "G/F, 88 Wing Lok Street, Sheung Wan, Hong Kong",
+          "lat": 22.2868,
+          "lng": 114.1508
         }
       ],
       "activities": [
@@ -75,17 +237,107 @@
           "name": "Juno",
           "kind": "eat",
           "category_id": "c1111111-1111-1111-1111-111111111403",
-          "facts": {}
+          "facts": {},
+          "description": "Italian-Mediterranean restaurant on Wing Lok Street.",
+          "source_url": "https://www.juno.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "11:30",
+                  "end_time": "16:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "11:30",
+                  "end_time": "16:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "11:30",
+                  "end_time": "16:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "11:30",
+                  "end_time": "16:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:30",
+                  "end_time": "16:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:30",
+                  "end_time": "16:30"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:30",
+                  "end_time": "16:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                }
+              ],
+              "location_name": "G/F, 88 Wing Lok Street, Sheung Wan, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Italian-Mediterranean restaurant on Wing Lok Street.",
+      "website": "https://www.juno.hk/",
+      "source_url": "https://www.juno.hk/",
+      "phone": "27035188",
+      "email": "info@juno.hk",
+      "instagram": "@junohongkong",
+      "whatsapp": "51830188"
     },
     {
       "name": "Mr Wolf",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Mr Wolf Central",
-          "area_name": "Central"
+          "name": "5/F, Crawford House, 70 Queen's Road Central, Central, Hong Kong",
+          "area_name": "Central",
+          "address": "5/F, Crawford House, 70 Queen's Road Central, Central, Hong Kong",
+          "lat": 22.2816,
+          "lng": 114.1568
         }
       ],
       "activities": [
@@ -98,17 +350,70 @@
             "high_chairs": true,
             "outdoor_seating": true,
             "stroller_access": true
-          }
+          },
+          "description": "All-day European bistro with a terrace on Queen's Road Central.",
+          "source_url": "https://mrwolf.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "08:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "08:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "08:00",
+                  "end_time": "00:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "08:00",
+                  "end_time": "00:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "08:00",
+                  "end_time": "00:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "08:00",
+                  "end_time": "00:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "08:00",
+                  "end_time": "19:00"
+                }
+              ],
+              "location_name": "5/F, Crawford House, 70 Queen's Road Central, Central, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "All-day European bistro with a terrace on Queen's Road Central.",
+      "website": "https://mrwolf.hk/",
+      "source_url": "https://mrwolf.hk/",
+      "phone": "25260838",
+      "email": "info@mrwolf.hk"
     },
     {
       "name": "Dara",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Dara Sheung Wan",
-          "area_name": "Sheung Wan"
+          "name": "Shop 3, 5-6, G/F, Soho 189, 189 Queen's Road West, Sai Ying Pun, Hong Kong",
+          "area_name": "Sai Ying Pun",
+          "address": "Shop 3, 5-6, G/F, Soho 189, 189 Queen's Road West, Sai Ying Pun, Hong Kong",
+          "lat": 22.2862,
+          "lng": 114.1422
         }
       ],
       "activities": [
@@ -120,17 +425,71 @@
             "changing_table": true,
             "high_chairs": true,
             "stroller_access": true
-          }
+          },
+          "description": "Modern Filipino restaurant at Soho 189.",
+          "source_url": "https://book.bistrochat.com/dara",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "12:00",
+                  "end_time": "23:30"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "12:00",
+                  "end_time": "23:30"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "12:00",
+                  "end_time": "23:30"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "12:00",
+                  "end_time": "23:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:30",
+                  "end_time": "01:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:30",
+                  "end_time": "01:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:30",
+                  "end_time": "23:30"
+                }
+              ],
+              "location_name": "Shop 3, 5-6, G/F, Soho 189, 189 Queen's Road West, Sai Ying Pun, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Modern Filipino restaurant at Soho 189.",
+      "website": "https://book.bistrochat.com/dara",
+      "source_url": "https://book.bistrochat.com/dara",
+      "phone": "51074474",
+      "instagram": "@dara_hkg",
+      "facebook": "https://www.facebook.com/hkg.dara"
     },
     {
       "name": "Purna Café",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Purna Café Mid-Levels",
-          "area_name": "Mid-Levels"
+          "name": "G/F, 119 Caine Road, Mid-Levels, Hong Kong",
+          "area_name": "Mid-Levels",
+          "address": "G/F, 119 Caine Road, Mid-Levels, Hong Kong",
+          "lat": 22.2828,
+          "lng": 114.1505
         }
       ],
       "activities": [
@@ -141,17 +500,65 @@
           "facts": {
             "outdoor_seating": true,
             "room_to_run": true
-          }
+          },
+          "description": "Cafe on Caine Road with a small garden playground at the back. Closed Tuesdays.",
+          "source_url": "https://www.instagram.com/purna.co____/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "08:00",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "08:00",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "08:00",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "08:00",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "08:00",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "08:00",
+                  "end_time": "18:00"
+                }
+              ],
+              "location_name": "G/F, 119 Caine Road, Mid-Levels, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Cafe on Caine Road with a small garden playground at the back. Closed Tuesdays.",
+      "website": "https://www.instagram.com/purna.co____/",
+      "source_url": "https://www.instagram.com/purna.co____/",
+      "email": "purnapurna.co@gmail.com",
+      "instagram": "@purna.co____"
     },
     {
       "name": "South Lane Mid-Levels",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "South Lane Mid-Levels",
-          "area_name": "Mid-Levels"
+          "name": "Shop B1-B2, G/F, Peace Tower, 30-32 Robinson Road, Mid-Levels, Hong Kong",
+          "area_name": "Mid-Levels",
+          "address": "Shop B1-B2, G/F, Peace Tower, 30-32 Robinson Road, Mid-Levels, Hong Kong",
+          "lat": 22.2792,
+          "lng": 114.1519
         }
       ],
       "activities": [
@@ -162,17 +569,27 @@
           "facts": {
             "high_chairs": true,
             "outdoor_seating": true
-          }
+          },
+          "description": "Cafe that was on Robinson Road. OpenRice lists this branch as closed; confirm before visiting.",
+          "source_url": "https://www.southlane.co/"
         }
-      ]
+      ],
+      "description": "Cafe that was on Robinson Road. OpenRice lists this branch as closed; confirm before visiting.",
+      "website": "https://www.southlane.co/",
+      "source_url": "https://www.southlane.co/",
+      "phone": "57448390",
+      "email": "hello@southlane.co"
     },
     {
       "name": "Rajasthan Rifles",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "The Peak",
-          "area_name": "The Peak"
+          "name": "Shop G01, G/F, The Peak Galleria, 118 Peak Road, The Peak, Hong Kong",
+          "area_name": "The Peak",
+          "address": "Shop G01, G/F, The Peak Galleria, 118 Peak Road, The Peak, Hong Kong",
+          "lat": 22.271,
+          "lng": 114.15
         }
       ],
       "activities": [
@@ -184,17 +601,70 @@
             "high_chairs": true,
             "outdoor_seating": true,
             "stroller_access": true
-          }
+          },
+          "description": "Anglo-Indian restaurant at Peak Galleria, opposite the Peak Tram.",
+          "source_url": "https://www.rajasthanrifles.com/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "08:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "08:30",
+                  "end_time": "21:00"
+                }
+              ],
+              "location_name": "Shop G01, G/F, The Peak Galleria, 118 Peak Road, The Peak, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Anglo-Indian restaurant at Peak Galleria, opposite the Peak Tram.",
+      "website": "https://www.rajasthanrifles.com/",
+      "source_url": "https://www.rajasthanrifles.com/",
+      "phone": "23888874",
+      "email": "info@rajasthanrifles.com"
     },
     {
       "name": "22 Ships",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "PMQ",
-          "area_name": "Central"
+          "name": "S109-S113, Block A, PMQ, Staunton Street, Central, Hong Kong",
+          "area_name": "Central",
+          "address": "S109-S113, Block A, PMQ, Staunton Street, Central, Hong Kong",
+          "lat": 22.2833,
+          "lng": 114.1515
         }
       ],
       "activities": [
@@ -204,17 +674,81 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "outdoor_seating": true
-          }
+          },
+          "description": "Spanish tapas at PMQ, with weekend brunch and a balcony.",
+          "source_url": "https://www.22ships.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 6,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "18:00",
+                  "end_time": "23:00"
+                }
+              ],
+              "location_name": "S109-S113, Block A, PMQ, Staunton Street, Central, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Spanish tapas at PMQ, with weekend brunch and a balcony.",
+      "website": "https://www.22ships.hk/",
+      "source_url": "https://www.22ships.hk/",
+      "phone": "25550722",
+      "email": "info@22ships.hk",
+      "instagram": "@22shipshkg"
     },
     {
       "name": "Central Market",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Central Market",
-          "area_name": "Central"
+          "name": "93 Queen's Road Central and 80 Des Voeux Road Central, Central, Hong Kong",
+          "area_name": "Central",
+          "address": "93 Queen's Road Central and 80 Des Voeux Road Central, Central, Hong Kong",
+          "lat": 22.2836,
+          "lng": 114.1578
         }
       ],
       "activities": [
@@ -224,17 +758,70 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "high_chairs": true
-          }
+          },
+          "description": "Revitalised market with ground-floor dining and high chairs in quieter hours.",
+          "source_url": "https://www.centralmarket.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "93 Queen's Road Central and 80 Des Voeux Road Central, Central, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Revitalised market with ground-floor dining and high chairs in quieter hours.",
+      "website": "https://www.centralmarket.hk/",
+      "source_url": "https://www.centralmarket.hk/",
+      "phone": "36188668",
+      "email": "info@centralmarket.hk"
     },
     {
       "name": "Barkada",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Barkada Central",
-          "area_name": "Central"
+          "name": "G/F, 25 Elgin Street, Central, Hong Kong",
+          "area_name": "Central",
+          "address": "G/F, 25 Elgin Street, Central, Hong Kong",
+          "lat": 22.282,
+          "lng": 114.1522
         }
       ],
       "activities": [
@@ -244,17 +831,95 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "high_chairs": true
-          }
+          },
+          "description": "Filipino restaurant on Elgin Street. Closed Mondays.",
+          "source_url": "http://www.barkada.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 2,
+                  "start_time": "12:00",
+                  "end_time": "14:30"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "12:00",
+                  "end_time": "14:30"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "12:00",
+                  "end_time": "14:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "12:00",
+                  "end_time": "14:30"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                }
+              ],
+              "location_name": "G/F, 25 Elgin Street, Central, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Filipino restaurant on Elgin Street. Closed Mondays.",
+      "website": "http://www.barkada.hk/",
+      "source_url": "http://www.barkada.hk/",
+      "phone": "26630238",
+      "email": "info@barkada.hk"
     },
     {
       "name": "Genki Sushi Shun Tak Centre",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Shun Tak Centre",
-          "area_name": "Sheung Wan"
+          "name": "Shop 241, 2/F, Shun Tak Centre, 168-200 Connaught Road Central, Sheung Wan, Hong Kong",
+          "area_name": "Sheung Wan",
+          "address": "Shop 241, 2/F, Shun Tak Centre, 168-200 Connaught Road Central, Sheung Wan, Hong Kong",
+          "lat": 22.2878,
+          "lng": 114.1516
         }
       ],
       "activities": [
@@ -267,17 +932,69 @@
             "high_chairs": true,
             "kids_menu": true,
             "stroller_access": true
-          }
+          },
+          "description": "Conveyor-belt sushi in Shun Tak Centre, next to mall changing rooms.",
+          "source_url": "https://www.genkisushi.com.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:00",
+                  "end_time": "22:30"
+                }
+              ],
+              "location_name": "Shop 241, 2/F, Shun Tak Centre, 168-200 Connaught Road Central, Sheung Wan, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Conveyor-belt sushi in Shun Tak Centre, next to mall changing rooms.",
+      "website": "https://www.genkisushi.com.hk/",
+      "source_url": "https://www.genkisushi.com.hk/",
+      "phone": "25408929"
     },
     {
       "name": "1862 bar de Tapas y Vino",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Tai Kwun",
-          "area_name": "Central"
+          "name": "Shop 14-G01, Hall D, Prison Yard, Tai Kwun, Hollywood Road, Central, Hong Kong",
+          "area_name": "Central",
+          "address": "Shop 14-G01, Hall D, Prison Yard, Tai Kwun, Hollywood Road, Central, Hong Kong",
+          "lat": 22.2809,
+          "lng": 114.1539
         }
       ],
       "activities": [
@@ -287,17 +1004,76 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "high_chairs": true
-          }
+          },
+          "description": "Spanish tapas in Tai Kwun's former prison yard.",
+          "source_url": "https://www.1862.com.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "Shop 14-G01, Hall D, Prison Yard, Tai Kwun, Hollywood Road, Central, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Spanish tapas in Tai Kwun's former prison yard.",
+      "website": "https://www.1862.com.hk/",
+      "source_url": "https://www.1862.com.hk/",
+      "phone": "26331862",
+      "email": "enquiry@1862.com.hk",
+      "instagram": "@1862_hk"
     },
     {
       "name": "Cooshti",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Cooshti Wan Chai",
-          "area_name": "Wan Chai"
+          "name": "G & 1/F, 35G Lee Tung Avenue, 200 Queen's Road East, Wan Chai, Hong Kong",
+          "area_name": "Wan Chai",
+          "address": "G & 1/F, 35G Lee Tung Avenue, 200 Queen's Road East, Wan Chai, Hong Kong",
+          "lat": 22.2754,
+          "lng": 114.1724
         }
       ],
       "activities": [
@@ -309,17 +1085,70 @@
             "changing_table": true,
             "outdoor_seating": true,
             "stroller_access": true
-          }
+          },
+          "description": "All-day dining on Lee Tung Avenue with outdoor seating.",
+          "source_url": "https://www.cooshti.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "08:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "08:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "08:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "08:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "08:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "09:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "09:00",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "G & 1/F, 35G Lee Tung Avenue, 200 Queen's Road East, Wan Chai, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "All-day dining on Lee Tung Avenue with outdoor seating.",
+      "website": "https://www.cooshti.hk/",
+      "source_url": "https://www.cooshti.hk/",
+      "phone": "27967328",
+      "email": "leetung@cooshti.hk"
     },
     {
       "name": "Brick Lane Admiralty",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Brick Lane Admiralty",
-          "area_name": "Admiralty"
+          "name": "Shop 404, 4/F, Citic Tower, 1 Tim Mei Avenue, Admiralty, Hong Kong",
+          "area_name": "Admiralty",
+          "address": "Shop 404, 4/F, Citic Tower, 1 Tim Mei Avenue, Admiralty, Hong Kong",
+          "lat": 22.2806,
+          "lng": 114.1668
         }
       ],
       "activities": [
@@ -329,17 +1158,70 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "room_to_run": true
-          }
+          },
+          "description": "British restaurant with a children's playroom and harbour terrace.",
+          "source_url": "https://www.bricklane.com.hk/restaurants/admiralty/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "08:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "08:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "08:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "08:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "08:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "Shop 404, 4/F, Citic Tower, 1 Tim Mei Avenue, Admiralty, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "British restaurant with a children's playroom and harbour terrace.",
+      "website": "https://www.bricklane.com.hk/restaurants/admiralty/",
+      "source_url": "https://www.bricklane.com.hk/restaurants/admiralty/",
+      "phone": "23632500",
+      "email": "connect@bricklane.com.hk"
     },
     {
       "name": "Baumhaus",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Baumhaus Wan Chai",
-          "area_name": "Wan Chai"
+          "name": "1/F, Kar Yau Building, 36-44 Queen's Road East, Wan Chai, Hong Kong",
+          "area_name": "Wan Chai",
+          "address": "1/F, Kar Yau Building, 36-44 Queen's Road East, Wan Chai, Hong Kong",
+          "lat": 22.2772,
+          "lng": 114.1686
         }
       ],
       "activities": [
@@ -352,17 +1234,70 @@
             "high_chairs": true,
             "room_to_run": true,
             "stroller_access": true
-          }
+          },
+          "description": "Family centre cafe with a playroom for children up to four.",
+          "source_url": "https://www.baumhaus.com.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "09:00",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "09:00",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "09:00",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "09:00",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "09:00",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "09:00",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "09:00",
+                  "end_time": "18:00"
+                }
+              ],
+              "location_name": "1/F, Kar Yau Building, 36-44 Queen's Road East, Wan Chai, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Family centre cafe with a playroom for children up to four.",
+      "website": "https://www.baumhaus.com.hk/",
+      "source_url": "https://www.baumhaus.com.hk/",
+      "phone": "23215898",
+      "email": "info@baumhaus.com.hk"
     },
     {
       "name": "The Optimist",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "The Optimist Wan Chai",
-          "area_name": "Wan Chai"
+          "name": "G/F-2/F, 239 Hennessy Road, Wan Chai, Hong Kong",
+          "area_name": "Wan Chai",
+          "address": "G/F-2/F, 239 Hennessy Road, Wan Chai, Hong Kong",
+          "lat": 22.2782,
+          "lng": 114.1756
         }
       ],
       "activities": [
@@ -372,17 +1307,105 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "room_to_run": true
-          }
+          },
+          "description": "Northern Spanish restaurant over three floors, with a kids menu and a play area at brunch.",
+          "source_url": "https://theoptimist.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "11:30",
+                  "end_time": "14:45"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "11:30",
+                  "end_time": "14:45"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "11:30",
+                  "end_time": "14:45"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "11:30",
+                  "end_time": "14:45"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:30",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:30",
+                  "end_time": "15:30"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:30",
+                  "end_time": "15:30"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "18:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "18:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "18:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "18:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "18:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "18:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "18:00",
+                  "end_time": "22:30"
+                }
+              ],
+              "location_name": "G/F-2/F, 239 Hennessy Road, Wan Chai, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Northern Spanish restaurant over three floors, with a kids menu and a play area at brunch.",
+      "website": "https://theoptimist.hk/",
+      "source_url": "https://theoptimist.hk/",
+      "phone": "24333324",
+      "email": "info@theoptimist.hk"
     },
     {
       "name": "The Murray",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "The Murray",
-          "area_name": "Admiralty"
+          "name": "The Murray, 22 Cotton Tree Drive, Central, Hong Kong",
+          "area_name": "Admiralty",
+          "address": "The Murray, 22 Cotton Tree Drive, Central, Hong Kong",
+          "lat": 22.2776,
+          "lng": 114.1604
         }
       ],
       "activities": [
@@ -392,17 +1415,140 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "outdoor_seating": true
-          }
+          },
+          "description": "Garden terrace dining at The Murray, with outdoor tables when the weather is good.",
+          "source_url": "https://www.niccolohotels.com/en/the-murray-hong-kong/dining/garden-lounge",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "12:00",
+                  "end_time": "14:30"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "12:00",
+                  "end_time": "14:30"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "12:00",
+                  "end_time": "14:30"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "12:00",
+                  "end_time": "14:30"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "12:00",
+                  "end_time": "14:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "12:00",
+                  "end_time": "14:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "12:00",
+                  "end_time": "14:30"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "15:00",
+                  "end_time": "17:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "15:00",
+                  "end_time": "17:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "15:00",
+                  "end_time": "17:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "15:00",
+                  "end_time": "17:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "15:00",
+                  "end_time": "17:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "15:00",
+                  "end_time": "17:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "15:00",
+                  "end_time": "17:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "18:00",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "The Murray, 22 Cotton Tree Drive, Central, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Garden terrace dining at The Murray, with outdoor tables when the weather is good.",
+      "website": "https://www.niccolohotels.com/en/the-murray-hong-kong/dining/garden-lounge",
+      "source_url": "https://www.niccolohotels.com/en/the-murray-hong-kong/dining/garden-lounge",
+      "phone": "31418888",
+      "email": "gardenlounge@niccolohotels.com"
     },
     {
       "name": "One Small Step",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "One Small Step Wan Chai",
-          "area_name": "Wan Chai"
+          "name": "Shop 612, 6/F, Hopewell Mall, 183 Queen's Road East, Wan Chai, Hong Kong",
+          "area_name": "Wan Chai",
+          "address": "Shop 612, 6/F, Hopewell Mall, 183 Queen's Road East, Wan Chai, Hong Kong",
+          "lat": 22.2748,
+          "lng": 114.1705
         }
       ],
       "activities": [
@@ -415,17 +1561,70 @@
             "high_chairs": true,
             "room_to_run": true,
             "stroller_access": true
-          }
+          },
+          "description": "Family cafe and indoor playground on the children's floor of Hopewell Mall.",
+          "source_url": "https://www.onesmallstep.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "11:00",
+                  "end_time": "20:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "11:00",
+                  "end_time": "20:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "11:00",
+                  "end_time": "20:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "11:00",
+                  "end_time": "20:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:00",
+                  "end_time": "21:00"
+                }
+              ],
+              "location_name": "Shop 612, 6/F, Hopewell Mall, 183 Queen's Road East, Wan Chai, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Family cafe and indoor playground on the children's floor of Hopewell Mall.",
+      "website": "https://www.onesmallstep.hk/",
+      "source_url": "https://www.onesmallstep.hk/",
+      "phone": "69311731",
+      "email": "info@onesmallstep.hk"
     },
     {
       "name": "La Vache Pacific Place",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Pacific Place",
-          "area_name": "Admiralty"
+          "name": "Shop 007, LG1, One Pacific Place, 88 Queensway, Admiralty, Hong Kong",
+          "area_name": "Admiralty",
+          "address": "Shop 007, LG1, One Pacific Place, 88 Queensway, Admiralty, Hong Kong",
+          "lat": 22.2775,
+          "lng": 114.1663
         }
       ],
       "activities": [
@@ -433,17 +1632,70 @@
           "name": "La Vache Pacific Place",
           "kind": "eat",
           "category_id": "c1111111-1111-1111-1111-111111111403",
-          "facts": {}
+          "facts": {},
+          "description": "Parisian steak-frites at Pacific Place.",
+          "source_url": "https://www.lavache.com.hk/locations",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "12:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "Shop 007, LG1, One Pacific Place, 88 Queensway, Admiralty, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Parisian steak-frites at Pacific Place.",
+      "website": "https://www.lavache.com.hk/locations",
+      "source_url": "https://www.lavache.com.hk/locations",
+      "phone": "28016122",
+      "email": "pacificplace@lavache.com.hk"
     },
     {
       "name": "Oolaa Wan Chai",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Oolaa Wan Chai",
-          "area_name": "Wan Chai"
+          "name": "Shop 2, G/F, Starcrest, 9 Star Street, Wan Chai, Hong Kong",
+          "area_name": "Wan Chai",
+          "address": "Shop 2, G/F, Starcrest, 9 Star Street, Wan Chai, Hong Kong",
+          "lat": 22.2766,
+          "lng": 114.1682
         }
       ],
       "activities": [
@@ -454,17 +1706,70 @@
           "facts": {
             "kids_menu": true,
             "stroller_access": true
-          }
+          },
+          "description": "All-day dining on Star Street, near Pacific Place 3.",
+          "source_url": "https://www.oolaagroup.com/restaurants/oolaa-petite",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "07:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "07:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "07:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "07:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "07:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "08:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "08:00",
+                  "end_time": "23:00"
+                }
+              ],
+              "location_name": "Shop 2, G/F, Starcrest, 9 Star Street, Wan Chai, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "All-day dining on Star Street, near Pacific Place 3.",
+      "website": "https://www.oolaagroup.com/restaurants/oolaa-petite",
+      "source_url": "https://www.oolaagroup.com/restaurants/oolaa-petite",
+      "phone": "25293823",
+      "email": "oolaapetite@oolaagroup.com"
     },
     {
       "name": "Little Cove Espresso Pacific Place",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Pacific Place",
-          "area_name": "Admiralty"
+          "name": "Shop 202, 2/F, Pacific Place, 88 Queensway, Admiralty, Hong Kong",
+          "area_name": "Admiralty",
+          "address": "Shop 202, 2/F, Pacific Place, 88 Queensway, Admiralty, Hong Kong",
+          "lat": 22.2776,
+          "lng": 114.166
         }
       ],
       "activities": [
@@ -477,17 +1782,69 @@
             "high_chairs": true,
             "kids_menu": true,
             "stroller_access": true
-          }
+          },
+          "description": "Specialty coffee and food on Level 2 of Pacific Place.",
+          "source_url": "https://www.littlecoveespresso.com/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                }
+              ],
+              "location_name": "Shop 202, 2/F, Pacific Place, 88 Queensway, Admiralty, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Specialty coffee and food on Level 2 of Pacific Place.",
+      "website": "https://www.littlecoveespresso.com/",
+      "source_url": "https://www.littlecoveespresso.com/",
+      "phone": "59949507"
     },
     {
       "name": "Jello & Mellow",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Jello & Mellow Quarry Bay",
-          "area_name": "Quarry Bay"
+          "name": "9/F, 1001 King's Road, Quarry Bay, Hong Kong",
+          "area_name": "Quarry Bay",
+          "address": "9/F, 1001 King's Road, Quarry Bay, Hong Kong",
+          "lat": 22.2856,
+          "lng": 114.2162
         }
       ],
       "activities": [
@@ -498,17 +1855,70 @@
           "facts": {
             "high_chairs": true,
             "room_to_run": true
-          }
+          },
+          "description": "Playhouse cafe in Taikoo with a playroom attached to the dining room.",
+          "source_url": "https://jelloandmellow.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "12:00",
+                  "end_time": "20:30"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "12:00",
+                  "end_time": "20:30"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "12:00",
+                  "end_time": "20:30"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "12:00",
+                  "end_time": "20:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "12:00",
+                  "end_time": "20:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:00",
+                  "end_time": "21:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:00",
+                  "end_time": "21:00"
+                }
+              ],
+              "location_name": "9/F, 1001 King's Road, Quarry Bay, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Playhouse cafe in Taikoo with a playroom attached to the dining room.",
+      "website": "https://jelloandmellow.hk/",
+      "source_url": "https://jelloandmellow.hk/",
+      "phone": "51114895",
+      "email": "hello@jelloandmellow.hk"
     },
     {
       "name": "Frites Causeway Bay",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Frites Causeway Bay",
-          "area_name": "Causeway Bay"
+          "name": "G/F, Crowne Plaza Hong Kong, 8 Leighton Road, Causeway Bay, Hong Kong",
+          "area_name": "Causeway Bay",
+          "address": "G/F, Crowne Plaza Hong Kong, 8 Leighton Road, Causeway Bay, Hong Kong",
+          "lat": 22.2778,
+          "lng": 114.1826
         }
       ],
       "activities": [
@@ -519,17 +1929,70 @@
           "facts": {
             "high_chairs": true,
             "room_to_run": true
-          }
+          },
+          "description": "Belgian restaurant with a kids area. Kids eat free on listed days.",
+          "source_url": "https://frites.com/frites-hong-kong-locations/causeway-bay/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "11:30",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "11:30",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "11:30",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "11:30",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:30",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:00",
+                  "end_time": "23:00"
+                }
+              ],
+              "location_name": "G/F, Crowne Plaza Hong Kong, 8 Leighton Road, Causeway Bay, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Belgian restaurant with a kids area. Kids eat free on listed days.",
+      "website": "https://frites.com/frites-hong-kong-locations/causeway-bay/",
+      "source_url": "https://frites.com/frites-hong-kong-locations/causeway-bay/",
+      "phone": "30080716",
+      "email": "fritescwb@frites.com"
     },
     {
       "name": "Frites North Point",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Frites North Point",
-          "area_name": "North Point"
+          "name": "Shops 4-5, G/F, Li-Ning Building, 218 Electric Road, North Point, Hong Kong",
+          "area_name": "North Point",
+          "address": "Shops 4-5, G/F, Li-Ning Building, 218 Electric Road, North Point, Hong Kong",
+          "lat": 22.2888,
+          "lng": 114.1924
         }
       ],
       "activities": [
@@ -540,17 +2003,70 @@
           "facts": {
             "high_chairs": true,
             "room_to_run": true
-          }
+          },
+          "description": "Belgian restaurant near Fortress Hill, with a kids area.",
+          "source_url": "https://frites.com/frites-hong-kong-locations/north-point/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:00",
+                  "end_time": "22:30"
+                }
+              ],
+              "location_name": "Shops 4-5, G/F, Li-Ning Building, 218 Electric Road, North Point, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Belgian restaurant near Fortress Hill, with a kids area.",
+      "website": "https://frites.com/frites-hong-kong-locations/north-point/",
+      "source_url": "https://frites.com/frites-hong-kong-locations/north-point/",
+      "phone": "23335538",
+      "email": "fritesnp@frites.com"
     },
     {
       "name": "Frites Quarry Bay",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Frites Quarry Bay",
-          "area_name": "Quarry Bay"
+          "name": "G/F, Oxford House, Taikoo Place, 979 King's Road, Quarry Bay, Hong Kong",
+          "area_name": "Quarry Bay",
+          "address": "G/F, Oxford House, Taikoo Place, 979 King's Road, Quarry Bay, Hong Kong",
+          "lat": 22.2874,
+          "lng": 114.2116
         }
       ],
       "activities": [
@@ -561,17 +2077,70 @@
           "facts": {
             "high_chairs": true,
             "room_to_run": true
-          }
+          },
+          "description": "Belgian restaurant at Oxford House, Taikoo Place.",
+          "source_url": "https://frites.com/frites-hong-kong-locations/quarry-bay/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:00",
+                  "end_time": "22:30"
+                }
+              ],
+              "location_name": "G/F, Oxford House, Taikoo Place, 979 King's Road, Quarry Bay, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Belgian restaurant at Oxford House, Taikoo Place.",
+      "website": "https://frites.com/frites-hong-kong-locations/quarry-bay/",
+      "source_url": "https://frites.com/frites-hong-kong-locations/quarry-bay/",
+      "phone": "22505188",
+      "email": "fritesqb@frites.com"
     },
     {
       "name": "Time Café",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Time Café Quarry Bay",
-          "area_name": "Quarry Bay"
+          "name": "Shop 01, 12/F, 1001 King's Road, Quarry Bay, Hong Kong",
+          "area_name": "Quarry Bay",
+          "address": "Shop 01, 12/F, 1001 King's Road, Quarry Bay, Hong Kong",
+          "lat": 22.2856,
+          "lng": 114.2162
         }
       ],
       "activities": [
@@ -579,17 +2148,62 @@
           "name": "Time Café",
           "kind": "eat",
           "category_id": "c1111111-1111-1111-1111-111111111403",
-          "facts": {}
+          "facts": {},
+          "description": "Family cafe with a play area and a nursing room. Closed Mondays.",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 2,
+                  "start_time": "11:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "11:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "11:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "Shop 01, 12/F, 1001 King's Road, Quarry Bay, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Family cafe with a play area and a nursing room. Closed Mondays.",
+      "phone": "23833322",
+      "facebook": "https://www.facebook.com/QTimeCafe"
     },
     {
       "name": "Soho Banh Mi",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "The Pulse",
-          "area_name": "Repulse Bay"
+          "name": "Shop 109, Level 1, The Pulse, 28 Beach Road, Repulse Bay, Hong Kong",
+          "area_name": "Repulse Bay",
+          "address": "Shop 109, Level 1, The Pulse, 28 Beach Road, Repulse Bay, Hong Kong",
+          "lat": 22.2362,
+          "lng": 114.1976
         }
       ],
       "activities": [
@@ -597,17 +2211,70 @@
           "name": "Soho Banh Mi",
           "kind": "eat",
           "category_id": "c1111111-1111-1111-1111-111111111403",
-          "facts": {}
+          "facts": {},
+          "description": "Vietnamese barbecue and banh mi at The Pulse.",
+          "source_url": "https://www.thepulse.com.hk/tenant/sohobanhmi",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "10:00",
+                  "end_time": "20:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "10:00",
+                  "end_time": "20:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "10:00",
+                  "end_time": "20:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "10:00",
+                  "end_time": "20:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "10:00",
+                  "end_time": "20:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "10:00",
+                  "end_time": "20:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "10:00",
+                  "end_time": "20:00"
+                }
+              ],
+              "location_name": "Shop 109, Level 1, The Pulse, 28 Beach Road, Repulse Bay, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Vietnamese barbecue and banh mi at The Pulse.",
+      "website": "https://www.thepulse.com.hk/tenant/sohobanhmi",
+      "source_url": "https://www.thepulse.com.hk/tenant/sohobanhmi",
+      "phone": "63801216",
+      "instagram": "@sohobanhmi"
     },
     {
       "name": "Groa",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Repulse Bay Arcade",
-          "area_name": "Repulse Bay"
+          "name": "Shop 203A, 1/F, Repulse Bay Arcade, 109 Repulse Bay Road, Hong Kong",
+          "area_name": "Repulse Bay",
+          "address": "Shop 203A, 1/F, Repulse Bay Arcade, 109 Repulse Bay Road, Hong Kong",
+          "lat": 22.239,
+          "lng": 114.1959
         }
       ],
       "activities": [
@@ -617,17 +2284,60 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "changing_table": true
-          }
+          },
+          "description": "Coastal eatery in Repulse Bay Arcade. Closed Mondays and Tuesdays.",
+          "source_url": "https://www.groabynute.com/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 3,
+                  "start_time": "12:00",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "12:00",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "12:00",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "12:00",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "12:00",
+                  "end_time": "21:30"
+                }
+              ],
+              "location_name": "Shop 203A, 1/F, Repulse Bay Arcade, 109 Repulse Bay Road, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Coastal eatery in Repulse Bay Arcade. Closed Mondays and Tuesdays.",
+      "website": "https://www.groabynute.com/",
+      "source_url": "https://www.groabynute.com/",
+      "phone": "60303083",
+      "email": "hello@groabynute.com"
     },
     {
       "name": "Little Cove Kennedy Town",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Kennedy Town Promenade",
-          "area_name": "Kennedy Town"
+          "name": "Shop 3, G/F, New Fortune House, 3-5 New Praya, Kennedy Town, Hong Kong",
+          "area_name": "Kennedy Town",
+          "address": "Shop 3, G/F, New Fortune House, 3-5 New Praya, Kennedy Town, Hong Kong",
+          "lat": 22.2814,
+          "lng": 114.1286
         }
       ],
       "activities": [
@@ -638,17 +2348,69 @@
           "facts": {
             "changing_table": true,
             "high_chairs": true
-          }
+          },
+          "description": "Specialty coffee on the Kennedy Town waterfront, near the playground.",
+          "source_url": "https://www.littlecoveespresso.com/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                }
+              ],
+              "location_name": "Shop 3, G/F, New Fortune House, 3-5 New Praya, Kennedy Town, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Specialty coffee on the Kennedy Town waterfront, near the playground.",
+      "website": "https://www.littlecoveespresso.com/",
+      "source_url": "https://www.littlecoveespresso.com/",
+      "phone": "67376242"
     },
     {
       "name": "Feather & Bone Sai Ying Pun",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Feather & Bone Sai Ying Pun",
-          "area_name": "Sai Ying Pun"
+          "name": "Shop 1, G/F, Bohemian House, 321 Des Voeux Road West, Sai Ying Pun, Hong Kong",
+          "area_name": "Sai Ying Pun",
+          "address": "Shop 1, G/F, Bohemian House, 321 Des Voeux Road West, Sai Ying Pun, Hong Kong",
+          "lat": 22.2874,
+          "lng": 114.1368
         }
       ],
       "activities": [
@@ -659,17 +2421,70 @@
           "facts": {
             "high_chairs": true,
             "outdoor_seating": true
-          }
+          },
+          "description": "Butcher, grocer and all-day dining at Bohemian House.",
+          "source_url": "https://featherandbone.com.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "08:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "08:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "08:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "08:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "08:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "08:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "08:00",
+                  "end_time": "22:30"
+                }
+              ],
+              "location_name": "Shop 1, G/F, Bohemian House, 321 Des Voeux Road West, Sai Ying Pun, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Butcher, grocer and all-day dining at Bohemian House.",
+      "website": "https://featherandbone.com.hk/",
+      "source_url": "https://featherandbone.com.hk/",
+      "phone": "37050280",
+      "email": "info@featherandbone.com.hk"
     },
     {
       "name": "South Lane Shek Tong Tsui",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "South Lane Shek Tong Tsui",
-          "area_name": "Shek Tong Tsui"
+          "name": "G/F, 14 South Lane, Shek Tong Tsui, Hong Kong",
+          "area_name": "Shek Tong Tsui",
+          "address": "G/F, 14 South Lane, Shek Tong Tsui, Hong Kong",
+          "lat": 22.2868,
+          "lng": 114.1354
         }
       ],
       "activities": [
@@ -680,17 +2495,70 @@
           "facts": {
             "high_chairs": true,
             "outdoor_seating": true
-          }
+          },
+          "description": "Cafe with a courtyard on South Lane.",
+          "source_url": "https://www.southlane.co/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "08:00",
+                  "end_time": "17:30"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "08:00",
+                  "end_time": "17:30"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "08:00",
+                  "end_time": "17:30"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "08:00",
+                  "end_time": "17:30"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "08:00",
+                  "end_time": "17:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "08:00",
+                  "end_time": "17:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "08:00",
+                  "end_time": "17:30"
+                }
+              ],
+              "location_name": "G/F, 14 South Lane, Shek Tong Tsui, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Cafe with a courtyard on South Lane.",
+      "website": "https://www.southlane.co/",
+      "source_url": "https://www.southlane.co/",
+      "phone": "57448390",
+      "email": "hello@southlane.co"
     },
     {
       "name": "Dan Ryan's Festival Walk",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Festival Walk",
-          "area_name": "Kowloon Tong"
+          "name": "Shop LG2-28, LG2/F, Festival Walk, 80 Tat Chee Avenue, Kowloon Tong, Hong Kong",
+          "area_name": "Kowloon Tong",
+          "address": "Shop LG2-28, LG2/F, Festival Walk, 80 Tat Chee Avenue, Kowloon Tong, Hong Kong",
+          "lat": 22.3374,
+          "lng": 114.1746
         }
       ],
       "activities": [
@@ -700,17 +2568,69 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "high_chairs": true
-          }
+          },
+          "description": "American grill in Festival Walk, with high chairs and colouring.",
+          "source_url": "https://www.danryans.com/our-locations",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:00",
+                  "end_time": "22:30"
+                }
+              ],
+              "location_name": "Shop LG2-28, LG2/F, Festival Walk, 80 Tat Chee Avenue, Kowloon Tong, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "American grill in Festival Walk, with high chairs and colouring.",
+      "website": "https://www.danryans.com/our-locations",
+      "source_url": "https://www.danryans.com/our-locations",
+      "phone": "22658811"
     },
     {
       "name": "Dockyard Hung Hom",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Dockyard Hung Hom",
-          "area_name": "Hung Hom"
+          "name": "Level 1, Kerry Hotel Hong Kong, 38 Hung Luen Road, Hung Hom, Hong Kong",
+          "area_name": "Hung Hom",
+          "address": "Level 1, Kerry Hotel Hong Kong, 38 Hung Luen Road, Hung Hom, Hong Kong",
+          "lat": 22.3012,
+          "lng": 114.1926
         }
       ],
       "activities": [
@@ -721,17 +2641,71 @@
           "facts": {
             "room_to_run": true,
             "stroller_access": true
-          }
+          },
+          "description": "Harbourfront food hall at Kerry Hotel, with a play corner for young children.",
+          "source_url": "https://www.shangri-la.com/en/landing/khhk-dockyard/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "12:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "12:00",
+                  "end_time": "00:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "12:00",
+                  "end_time": "00:00"
+                }
+              ],
+              "location_name": "Level 1, Kerry Hotel Hong Kong, 38 Hung Luen Road, Hung Hom, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Harbourfront food hall at Kerry Hotel, with a play corner for young children.",
+      "website": "https://www.shangri-la.com/en/landing/khhk-dockyard/",
+      "source_url": "https://www.shangri-la.com/en/landing/khhk-dockyard/",
+      "phone": "22525228",
+      "email": "dockyard.khhk@thekerryhotels.com",
+      "instagram": "@dockyardhongkong"
     },
     {
       "name": "Coffee Hwajwon",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Elements",
-          "area_name": "Tsim Sha Tsui"
+          "name": "Shop 1028B, 1/F, Water Zone, ELEMENTS, 1 Austin Road West, Tsim Sha Tsui, Hong Kong",
+          "area_name": "Tsim Sha Tsui",
+          "address": "Shop 1028B, 1/F, Water Zone, ELEMENTS, 1 Austin Road West, Tsim Sha Tsui, Hong Kong",
+          "lat": 22.3046,
+          "lng": 114.1614
         }
       ],
       "activities": [
@@ -739,17 +2713,70 @@
           "name": "Coffee Hwajwon",
           "kind": "eat",
           "category_id": "c1111111-1111-1111-1111-111111111403",
-          "facts": {}
+          "facts": {},
+          "description": "Korean cafe in Elements with tatami seating.",
+          "source_url": "https://www.elementshk.com/eng/elements/dining/coffee-hwajeon",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "Shop 1028B, 1/F, Water Zone, ELEMENTS, 1 Austin Road West, Tsim Sha Tsui, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Korean cafe in Elements with tatami seating.",
+      "website": "https://www.elementshk.com/eng/elements/dining/coffee-hwajeon",
+      "source_url": "https://www.elementshk.com/eng/elements/dining/coffee-hwajeon",
+      "phone": "25199303",
+      "instagram": "@coffeehwajeon"
     },
     {
       "name": "Outback Steakhouse Moko",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Moko",
-          "area_name": "Mong Kok"
+          "name": "Shop 605, Level 6, MOKO, 193 Prince Edward Road West, Mong Kok, Hong Kong",
+          "area_name": "Mong Kok",
+          "address": "Shop 605, Level 6, MOKO, 193 Prince Edward Road West, Mong Kok, Hong Kong",
+          "lat": 22.3234,
+          "lng": 114.1726
         }
       ],
       "activities": [
@@ -759,17 +2786,69 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "high_chairs": true
-          }
+          },
+          "description": "Australian-style steakhouse in MOKO, with high chairs and crayons.",
+          "source_url": "https://www.outback.com.hk/locations/7?lang=en",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "Shop 605, Level 6, MOKO, 193 Prince Edward Road West, Mong Kok, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Australian-style steakhouse in MOKO, with high chairs and crayons.",
+      "website": "https://www.outback.com.hk/locations/7?lang=en",
+      "source_url": "https://www.outback.com.hk/locations/7?lang=en",
+      "phone": "25292228"
     },
     {
       "name": "Auntie Malay",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Ocean Terminal",
-          "area_name": "Tsim Sha Tsui"
+          "name": "Shop G16, G/F, Ocean Terminal, Harbour City, 3-27 Canton Road, Tsim Sha Tsui, Hong Kong",
+          "area_name": "Tsim Sha Tsui",
+          "address": "Shop G16, G/F, Ocean Terminal, Harbour City, 3-27 Canton Road, Tsim Sha Tsui, Hong Kong",
+          "lat": 22.2951,
+          "lng": 114.1665
         }
       ],
       "activities": [
@@ -779,17 +2858,70 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "high_chairs": true
-          }
+          },
+          "description": "Malaysian restaurant in Ocean Terminal, on the same floor as baby shops.",
+          "source_url": "https://www.auntiemalay.com/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "11:30",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "11:30",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "11:30",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "11:30",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:30",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "Shop G16, G/F, Ocean Terminal, Harbour City, 3-27 Canton Road, Tsim Sha Tsui, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Malaysian restaurant in Ocean Terminal, on the same floor as baby shops.",
+      "website": "https://www.auntiemalay.com/",
+      "source_url": "https://www.auntiemalay.com/",
+      "phone": "21103533",
+      "email": "info@auntiemalay.com"
     },
     {
       "name": "The Lobby, The Peninsula",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "The Peninsula Hong Kong",
-          "area_name": "Tsim Sha Tsui"
+          "name": "G/F, The Peninsula Hong Kong, 22 Salisbury Road, Tsim Sha Tsui, Hong Kong",
+          "area_name": "Tsim Sha Tsui",
+          "address": "G/F, The Peninsula Hong Kong, 22 Salisbury Road, Tsim Sha Tsui, Hong Kong",
+          "lat": 22.2952,
+          "lng": 114.1718
         }
       ],
       "activities": [
@@ -799,17 +2931,69 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "high_chairs": true
-          }
+          },
+          "description": "Hotel lobby cafe with high chairs, on Salisbury Road.",
+          "source_url": "https://www.peninsula.com/en/hong-kong/hotel-fine-dining/the-lobby-afternoon-tea",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "07:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "10:00",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "07:00",
+                  "end_time": "22:30"
+                }
+              ],
+              "location_name": "G/F, The Peninsula Hong Kong, 22 Salisbury Road, Tsim Sha Tsui, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Hotel lobby cafe with high chairs, on Salisbury Road.",
+      "website": "https://www.peninsula.com/en/hong-kong/hotel-fine-dining/the-lobby-afternoon-tea",
+      "source_url": "https://www.peninsula.com/en/hong-kong/hotel-fine-dining/the-lobby-afternoon-tea",
+      "phone": "26966772"
     },
     {
       "name": "Pizza Express Moko",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Moko",
-          "area_name": "Mong Kok"
+          "name": "Shop 182, Level 1, MOKO, 193 Prince Edward Road West, Mong Kok, Hong Kong",
+          "area_name": "Mong Kok",
+          "address": "Shop 182, Level 1, MOKO, 193 Prince Edward Road West, Mong Kok, Hong Kong",
+          "lat": 22.3232,
+          "lng": 114.1724
         }
       ],
       "activities": [
@@ -817,17 +3001,70 @@
           "name": "Pizza Express Moko",
           "kind": "eat",
           "category_id": "c1111111-1111-1111-1111-111111111403",
-          "facts": {}
+          "facts": {},
+          "description": "Pizza restaurant in MOKO, with kids plates and colouring.",
+          "source_url": "https://www.pizzaexpress.com.hk/restaurants/moko",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "09:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "09:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "09:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "09:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "09:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "09:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "09:00",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "Shop 182, Level 1, MOKO, 193 Prince Edward Road West, Mong Kok, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Pizza restaurant in MOKO, with kids plates and colouring.",
+      "website": "https://www.pizzaexpress.com.hk/restaurants/moko",
+      "source_url": "https://www.pizzaexpress.com.hk/restaurants/moko",
+      "phone": "31641334",
+      "email": "info@pizzaexpress.hk"
     },
     {
       "name": "Mr Tree",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Mr Tree Lai Chi Kok",
-          "area_name": "Lai Chi Kok"
+          "name": "1/F, D2 Place TWO, 15 Cheung Shun Street, Lai Chi Kok, Hong Kong",
+          "area_name": "Lai Chi Kok",
+          "address": "1/F, D2 Place TWO, 15 Cheung Shun Street, Lai Chi Kok, Hong Kong",
+          "lat": 22.3366,
+          "lng": 114.1488
         }
       ],
       "activities": [
@@ -838,17 +3075,137 @@
           "facts": {
             "high_chairs": true,
             "room_to_run": true
-          }
+          },
+          "description": "Restaurant with an indoor playground for ages 0 to 6, in D2 Place TWO.",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "15:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "15:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "15:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "15:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "15:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "15:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "15:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "18:30",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "18:30",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "18:30",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "18:30",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "18:30",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "18:30",
+                  "end_time": "21:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "18:30",
+                  "end_time": "21:30"
+                }
+              ],
+              "location_name": "1/F, D2 Place TWO, 15 Cheung Shun Street, Lai Chi Kok, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Restaurant with an indoor playground for ages 0 to 6, in D2 Place TWO.",
+      "phone": "31840033",
+      "facebook": "https://www.facebook.com/Mr.Tree38HK"
     },
     {
       "name": "Aqua",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Aqua Tsim Sha Tsui",
-          "area_name": "Tsim Sha Tsui"
+          "name": "17/F, H Zentre, 15 Middle Road, Tsim Sha Tsui, Hong Kong",
+          "area_name": "Tsim Sha Tsui",
+          "address": "17/F, H Zentre, 15 Middle Road, Tsim Sha Tsui, Hong Kong",
+          "lat": 22.2972,
+          "lng": 114.1736
         }
       ],
       "activities": [
@@ -856,17 +3213,105 @@
           "name": "Aqua",
           "kind": "eat",
           "category_id": "c1111111-1111-1111-1111-111111111403",
-          "facts": {}
+          "facts": {},
+          "description": "Italian and Japanese restaurant with Sunday family brunch, a playground and face painting.",
+          "source_url": "https://aqua.com.hk/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "12:00",
+                  "end_time": "15:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:00",
+                  "end_time": "16:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:00",
+                  "end_time": "16:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "17:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "17:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "17:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "17:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "17:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "17:30",
+                  "end_time": "22:30"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "17:30",
+                  "end_time": "22:30"
+                }
+              ],
+              "location_name": "17/F, H Zentre, 15 Middle Road, Tsim Sha Tsui, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Italian and Japanese restaurant with Sunday family brunch, a playground and face painting.",
+      "website": "https://aqua.com.hk/",
+      "source_url": "https://aqua.com.hk/",
+      "phone": "34272288",
+      "email": "aqua@aqua.com.hk"
     },
     {
       "name": "The Square Restaurant",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Sai Kung Square",
-          "area_name": "Sai Kung Town"
+          "name": "G/F & Cockloft, 22 Wan King Path, Sai Kung, Hong Kong",
+          "area_name": "Sai Kung Town",
+          "address": "G/F & Cockloft, 22 Wan King Path, Sai Kung, Hong Kong",
+          "lat": 22.3811,
+          "lng": 114.2717
         }
       ],
       "activities": [
@@ -879,17 +3324,61 @@
             "outdoor_seating": true,
             "room_to_run": true,
             "stroller_access": true
-          }
+          },
+          "description": "All-day dining on Wan King Path, looking onto the playground. Closed Mondays and Tuesdays.",
+          "source_url": "https://skthesquare.com/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 3,
+                  "start_time": "08:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "08:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "08:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "08:00",
+                  "end_time": "23:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "08:00",
+                  "end_time": "23:00"
+                }
+              ],
+              "location_name": "G/F & Cockloft, 22 Wan King Path, Sai Kung, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "All-day dining on Wan King Path, looking onto the playground. Closed Mondays and Tuesdays.",
+      "website": "https://skthesquare.com/",
+      "source_url": "https://skthesquare.com/",
+      "phone": "91936036",
+      "email": "info@skthesquare.com",
+      "instagram": "@thesquaresk"
     },
     {
       "name": "M Square",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "WM Hotel",
-          "area_name": "Sai Kung Town"
+          "name": "Shop A1, LG/F, WM Hotel Hong Kong, 28 Wai Man Road, Sai Kung, Hong Kong",
+          "area_name": "Sai Kung Town",
+          "address": "Shop A1, LG/F, WM Hotel Hong Kong, 28 Wai Man Road, Sai Kung, Hong Kong",
+          "lat": 22.3794,
+          "lng": 114.2734
         }
       ],
       "activities": [
@@ -899,17 +3388,70 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "changing_table": true
-          }
+          },
+          "description": "Family grill at WM Hotel, with space for strollers and a changing room downstairs.",
+          "source_url": "https://www.wmhotel.hk/en/dinings/restaurant",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "12:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:30",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "Shop A1, LG/F, WM Hotel Hong Kong, 28 Wai Man Road, Sai Kung, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Family grill at WM Hotel, with space for strollers and a changing room downstairs.",
+      "website": "https://www.wmhotel.hk/en/dinings/restaurant",
+      "source_url": "https://www.wmhotel.hk/en/dinings/restaurant",
+      "phone": "23673333",
+      "instagram": "@msquarehongkong"
     },
     {
       "name": "Winston's Sai Kung",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Winston's Sai Kung",
-          "area_name": "Sai Kung Town"
+          "name": "G/F, 55 See Cheung Street, Sai Kung, Hong Kong",
+          "area_name": "Sai Kung Town",
+          "address": "G/F, 55 See Cheung Street, Sai Kung, Hong Kong",
+          "lat": 22.3816,
+          "lng": 114.2708
         }
       ],
       "activities": [
@@ -922,17 +3464,69 @@
             "outdoor_seating": true,
             "room_to_run": true,
             "stroller_access": true
-          }
+          },
+          "description": "Neighbourhood coffee shop on See Cheung Street, with indoor and outdoor seats.",
+          "source_url": "https://www.winstonscoffee.com/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "07:00",
+                  "end_time": "19:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "07:00",
+                  "end_time": "19:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "07:00",
+                  "end_time": "19:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "07:00",
+                  "end_time": "19:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "07:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "07:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "07:00",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "G/F, 55 See Cheung Street, Sai Kung, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Neighbourhood coffee shop on See Cheung Street, with indoor and outdoor seats.",
+      "website": "https://www.winstonscoffee.com/",
+      "source_url": "https://www.winstonscoffee.com/",
+      "phone": "90553289"
     },
     {
       "name": "Little Cove Espresso Sai Kung",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Little Cove Espresso Sai Kung",
-          "area_name": "Sai Kung Town"
+          "name": "Shop 1-2, G/F, Siu Yat Building, Sai Kung Hoi Pong Square, Sai Kung, Hong Kong",
+          "area_name": "Sai Kung Town",
+          "address": "Shop 1-2, G/F, Siu Yat Building, Sai Kung Hoi Pong Square, Sai Kung, Hong Kong",
+          "lat": 22.3818,
+          "lng": 114.273
         }
       ],
       "activities": [
@@ -945,17 +3539,71 @@
             "high_chairs": true,
             "outdoor_seating": true,
             "stroller_access": true
-          }
+          },
+          "description": "Specialty coffee on Sai Kung waterfront square, with outdoor seating.",
+          "source_url": "https://www.littlecoveespresso.com/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "07:30",
+                  "end_time": "18:00"
+                }
+              ],
+              "location_name": "Shop 1-2, G/F, Siu Yat Building, Sai Kung Hoi Pong Square, Sai Kung, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Specialty coffee on Sai Kung waterfront square, with outdoor seating.",
+      "website": "https://www.littlecoveespresso.com/",
+      "source_url": "https://www.littlecoveespresso.com/",
+      "phone": "63970875",
+      "email": "info@littlecoveespresso.com",
+      "instagram": "@littlecove.espresso"
     },
     {
       "name": "The Alchemist Café",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Hong Kong Heritage Museum",
-          "area_name": "Che Kung Temple"
+          "name": "Shop G6, G/F, Hong Kong Heritage Museum, 1 Man Lam Road, Sha Tin, Hong Kong",
+          "area_name": "Che Kung Temple",
+          "address": "Shop G6, G/F, Hong Kong Heritage Museum, 1 Man Lam Road, Sha Tin, Hong Kong",
+          "lat": 22.377,
+          "lng": 114.1858
         }
       ],
       "activities": [
@@ -966,17 +3614,69 @@
           "facts": {
             "outdoor_seating": true,
             "room_to_run": true
-          }
+          },
+          "description": "Cafe beside the Heritage Museum lawn, with outdoor tables.",
+          "source_url": "https://thealchemistcafe.com/branch/sha-tin",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "10:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "08:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "08:30",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "Shop G6, G/F, Hong Kong Heritage Museum, 1 Man Lam Road, Sha Tin, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Cafe beside the Heritage Museum lawn, with outdoor tables.",
+      "website": "https://thealchemistcafe.com/branch/sha-tin",
+      "source_url": "https://thealchemistcafe.com/branch/sha-tin",
+      "phone": "27062267"
     },
     {
       "name": "Beans the Greenhouse",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Grand Central Plaza",
-          "area_name": "Sha Tin Town Centre"
+          "name": "Shop 503, 5/F, Grand Central Plaza (HomeSquare), 138 Sha Tin Rural Committee Road, Sha Tin, Hong Kong",
+          "area_name": "Sha Tin Town Centre",
+          "address": "Shop 503, 5/F, Grand Central Plaza (HomeSquare), 138 Sha Tin Rural Committee Road, Sha Tin, Hong Kong",
+          "lat": 22.3855,
+          "lng": 114.1882
         }
       ],
       "activities": [
@@ -987,17 +3687,69 @@
           "facts": {
             "outdoor_seating": true,
             "room_to_run": true
-          }
+          },
+          "description": "Cafe with a greenhouse terrace next to an outdoor play area.",
+          "source_url": "https://www.beanscafe.com.hk/locations",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "11:00",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "Shop 503, 5/F, Grand Central Plaza (HomeSquare), 138 Sha Tin Rural Committee Road, Sha Tin, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Cafe with a greenhouse terrace next to an outdoor play area.",
+      "website": "https://www.beanscafe.com.hk/locations",
+      "source_url": "https://www.beanscafe.com.hk/locations",
+      "phone": "27777078"
     },
     {
       "name": "Simplylife New Town Plaza",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "New Town Plaza",
-          "area_name": "Sha Tin Town Centre"
+          "name": "Shop 129, Level 1, New Town Plaza Phase I, 18-19 Sha Tin Centre Street, Sha Tin, Hong Kong",
+          "area_name": "Sha Tin Town Centre",
+          "address": "Shop 129, Level 1, New Town Plaza Phase I, 18-19 Sha Tin Centre Street, Sha Tin, Hong Kong",
+          "lat": 22.3816,
+          "lng": 114.1888
         }
       ],
       "activities": [
@@ -1005,17 +3757,69 @@
           "name": "Simplylife New Town Plaza",
           "kind": "eat",
           "category_id": "c1111111-1111-1111-1111-111111111403",
-          "facts": {}
+          "facts": {},
+          "description": "Bakery cafe in New Town Plaza.",
+          "source_url": "https://www.newtownplaza.com.hk/dining/simplylife-2/",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 0,
+                  "start_time": "07:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 1,
+                  "start_time": "07:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "07:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "07:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "07:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "07:30",
+                  "end_time": "22:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "07:30",
+                  "end_time": "22:00"
+                }
+              ],
+              "location_name": "Shop 129, Level 1, New Town Plaza Phase I, 18-19 Sha Tin Centre Street, Sha Tin, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Bakery cafe in New Town Plaza.",
+      "website": "https://www.newtownplaza.com.hk/dining/simplylife-2/",
+      "source_url": "https://www.newtownplaza.com.hk/dining/simplylife-2/",
+      "phone": "22070050"
     },
     {
       "name": "Pause",
-      "vetting_note": "Owner visited. Confirm the facts against your visit and add opening hours.",
+      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
         {
-          "name": "Pause Mui Wo",
-          "area_name": "Mui Wo"
+          "name": "G/F, 21 Chung Hau Street, Mui Wo, Lantau Island, Hong Kong",
+          "area_name": "Mui Wo",
+          "address": "G/F, 21 Chung Hau Street, Mui Wo, Lantau Island, Hong Kong",
+          "lat": 22.2646,
+          "lng": 114.0012
         }
       ],
       "activities": [
@@ -1025,9 +3829,60 @@
           "category_id": "c1111111-1111-1111-1111-111111111403",
           "facts": {
             "high_chairs": true
-          }
+          },
+          "description": "Cafe in Mui Wo with high chairs and toys.",
+          "source_url": "https://www.pause.hk/cafe",
+          "schedules": [
+            {
+              "timezone": "Asia/Hong_Kong",
+              "weekly_entries": [
+                {
+                  "day_of_week": 1,
+                  "start_time": "08:00",
+                  "end_time": "17:00"
+                },
+                {
+                  "day_of_week": 2,
+                  "start_time": "08:00",
+                  "end_time": "17:00"
+                },
+                {
+                  "day_of_week": 3,
+                  "start_time": "08:00",
+                  "end_time": "17:00"
+                },
+                {
+                  "day_of_week": 4,
+                  "start_time": "08:00",
+                  "end_time": "17:00"
+                },
+                {
+                  "day_of_week": 5,
+                  "start_time": "08:00",
+                  "end_time": "17:00"
+                },
+                {
+                  "day_of_week": 6,
+                  "start_time": "08:00",
+                  "end_time": "18:00"
+                },
+                {
+                  "day_of_week": 0,
+                  "start_time": "08:00",
+                  "end_time": "18:00"
+                }
+              ],
+              "location_name": "G/F, 21 Chung Hau Street, Mui Wo, Lantau Island, Hong Kong"
+            }
+          ]
         }
-      ]
+      ],
+      "description": "Cafe in Mui Wo with high chairs and toys.",
+      "website": "https://www.pause.hk/cafe",
+      "source_url": "https://www.pause.hk/cafe",
+      "phone": "61116585",
+      "email": "hello@pause.hk",
+      "instagram": "@pause.hkcafe"
     }
   ]
 }
