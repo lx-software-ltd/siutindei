@@ -29,6 +29,7 @@ export type ImportResultGroup = {
 const IMPORT_JOB_SOURCE_LABELS: Record<string, string> = {
   ui: 'UI import',
   board: 'Board API',
+  partner: 'Partner API',
 };
 
 /** History Source column. Missing source is an em dash. */

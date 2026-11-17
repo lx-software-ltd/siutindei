@@ -82,7 +82,7 @@ def handle_decision(
         if organization is None:
             raise NotFoundError("organizations", resource_id)
         try:
-            _apply_decision(
+            apply_review_decision(
                 session,
                 organization,
                 action,
@@ -130,7 +130,7 @@ def apply_organization_rejection(
         organization = session.get(Organization, org_id)
         if organization is None:
             raise NotFoundError("organizations", resource_id)
-        _apply_decision(
+        apply_review_decision(
             session,
             organization,
             "reject",
@@ -170,7 +170,7 @@ def apply_organization_approval(
         if organization is None:
             raise NotFoundError("organizations", resource_id)
         try:
-            _apply_decision(
+            apply_review_decision(
                 session,
                 organization,
                 "approve",
@@ -323,7 +323,7 @@ def _apply_one(
             if action == "set_fields":
                 _apply_fields(repo, organization, fields or {})
             else:
-                _apply_decision(
+                apply_review_decision(
                     session,
                     organization,
                     action,
@@ -355,7 +355,7 @@ def _apply_one(
     }
 
 
-def _apply_decision(
+def apply_review_decision(
     session: Session,
     organization: Organization,
     action: str,
@@ -367,6 +367,7 @@ def _apply_decision(
     notes_provided: bool,
     reason: str | None = None,
 ) -> None:
+    """Apply one review decision. Blockers raise ReviewBlockedError."""
     if action == "approve":
         snapshot = snapshot_for_org(session, organization)
         blockers = [issue for issue in snapshot.issues if issue.severity == "blocker"]
