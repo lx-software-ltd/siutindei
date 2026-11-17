@@ -181,8 +181,17 @@ in the `x-partner-key` header:
   `force`, which releases the organization while blockers remain), read and run website enrichment (including apply,
   dismiss, and enrichment settings), manage activity categories, and
   post a catalog import file at `POST /v1/partner/imports`. The file
-  cannot set parent verification or review status; those are explicit
-  query flags, and approval still stops on release blockers.
+  cannot set parent verification or review status. Query flags can
+  verify and approve only organisations that request created, and
+  approval still stops on release blockers. A repeat of the same
+  request returns the stored import job and does not change an
+  organisation an admin already rejected. The route records an
+  import job (source `partner`), queues the same data-quality run as
+  the Imports page, and enqueues category enrichment. It bundles
+  steps this key can already do one organisation at a time. Public
+  search hides an eat listing until the organisation is
+  parent-verified. The approval gate applies only when
+  `ORG_REVIEW_GATE_ENABLED` is true.
   A full-access `read` key can list and fetch categories. A `read` key
   is rejected on organization approval, organization rejection, category writes, and those
   enrichment routes, including GET.

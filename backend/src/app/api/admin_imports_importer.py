@@ -62,7 +62,12 @@ def process_import_payload(
     allow_org_updates: bool = False,
     catalog_manager_id: str | None = None,
     import_job_id: Any = None,
+    commit_batch: bool = True,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Import one file.
+
+    A live run commits before return when ``commit_batch`` is set.
+    """
     collect_unknown_fields(payload, ALLOWED_ROOT_FIELDS, "root", file_warnings)
     apply_default_manager_id(payload)
 
@@ -100,7 +105,8 @@ def process_import_payload(
                 import_job_id=import_job_id,
             )
 
-        finish_import_batch(session, dry_run=dry_run)
+        if commit_batch:
+            finish_import_batch(session, dry_run=dry_run)
     finally:
         finish_capture_batch(summary, session)
         summary["allow_updates"] = allow_org_updates

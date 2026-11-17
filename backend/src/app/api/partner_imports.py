@@ -2,22 +2,33 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.admin_auth import _set_session_audit_context
 from app.api.admin_imports_fields import manager_ids_match
 from app.api.admin_imports_importer import process_import_payload
+from app.api.admin_imports_jobs import (
+    begin_import_job,
+    fail_import_job,
+    find_import_job_by_key,
+    finish_import_job,
+    store_import_job,
+)
 from app.api.admin_org_review_actions import (
     ReviewBlockedError,
-    _apply_decision,
+    apply_review_decision,
 )
 from app.api.admin_request import _parse_body, _query_param
-from app.api.admin_resource_organization import _apply_parent_verified
+from app.api.admin_resource_organization import apply_parent_verified
 from app.api.partner_auth import (
     PartnerContext,
     partner_actor,
@@ -25,15 +36,19 @@ from app.api.partner_auth import (
     require_full_access,
 )
 from app.db.engine import get_engine
-from app.db.models import Organization
+from app.db.models import ImportJob, Organization
 from app.exceptions import ValidationError
 from app.utils import json_response
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-_APPLIED_STATUSES = frozenset({"created", "unchanged"})
 _FLAG_NAMES = ("dry_run", "mark_parent_verified", "approve")
+_TRUE = frozenset({"true", "1"})
+_FALSE = frozenset({"false", "0"})
+# The admin Lambda stops at 120 seconds. A running job older than that
+# plus a short buffer belongs to a request that can no longer finish.
+_RUNNING_STALE_AFTER = timedelta(seconds=150)
 
 
 def handle_partner_imports(
@@ -47,6 +62,8 @@ def handle_partner_imports(
     The body is the admin import JSON. ``manager_id``, ``dry_run``,
     ``mark_parent_verified``, and ``approve`` are query parameters.
     The file cannot set the parent-verified flag or the review status.
+    Those flags apply only to organisations this request creates.
+    The same file and flags return the stored import job.
     """
     require_full_access(partner)
     require_crud(partner)
@@ -68,50 +85,17 @@ def handle_partner_imports(
             field="dry_run",
         )
 
+    object_key = partner_import_object_key(payload, manager_id, flags)
     actor = partner_actor(event, partner)
-    with Session(get_engine()) as session:
-        if not flags["dry_run"]:
-            _set_session_audit_context(session, event, user_id=actor)
-        summary, results = process_import_payload(
-            session,
-            payload,
-            [],
-            dry_run=flags["dry_run"],
-            allow_org_updates=False,
-            catalog_manager_id=manager_id,
-        )
-        verified, approved, blocked = _apply_flags(
-            session,
-            results,
-            mark_parent_verified=flags["mark_parent_verified"],
-            approve=flags["approve"],
-            reviewer=actor,
-        )
-        if flags["dry_run"]:
-            session.rollback()
-        else:
-            session.commit()
-
-    logger.info(
-        "Partner catalog import",
-        extra={
-            "dry_run": flags["dry_run"],
-            "organizations_created": summary.get("organizations", {}).get("created", 0),
-            "verified": len(verified),
-            "approved": len(approved),
-            "blocked": len(blocked),
-        },
-    )
-    return json_response(
-        200,
-        {
-            "summary": summary,
-            "results": results,
-            "parent_verified": verified,
-            "approved": approved,
-            "blocked": blocked,
-        },
-        event=event,
+    if flags["dry_run"]:
+        return _dry_run(event, payload, manager_id, object_key)
+    return _live(
+        event,
+        payload,
+        manager_id,
+        flags,
+        object_key,
+        actor,
     )
 
 
@@ -148,6 +132,217 @@ def resolve_import_manager(
     return chosen
 
 
+def partner_import_object_key(
+    payload: Mapping[str, Any],
+    manager_id: str,
+    flags: Mapping[str, bool],
+) -> str:
+    """Stable job key for one file, manager, and flag set.
+
+    A repeat of that request finds the stored job. There is no S3
+    object. The key stays outside ``admin/imports/``, so import history
+    does not offer a download.
+    """
+    body = {
+        "manager_id": manager_id,
+        "dry_run": bool(flags["dry_run"]),
+        "mark_parent_verified": bool(flags["mark_parent_verified"]),
+        "approve": bool(flags["approve"]),
+        "payload": payload,
+    }
+    raw = json.dumps(body, sort_keys=True, separators=(",", ":"), default=str)
+    digest = hashlib.sha256(raw.encode()).hexdigest()
+    return f"partner/imports/{digest}.json"
+
+
+def _live(
+    event: Mapping[str, Any],
+    payload: dict[str, Any],
+    manager_id: str,
+    flags: Mapping[str, bool],
+    object_key: str,
+    actor: str,
+) -> dict[str, Any]:
+    with Session(get_engine()) as session:
+        state, job = _claim(session, object_key)
+        if state == "running":
+            return json_response(
+                409,
+                {
+                    "error": "Import is already running",
+                    "id": str(job.id),
+                    "object_key": object_key,
+                },
+                event=event,
+            )
+        if state == "done":
+            return json_response(
+                200,
+                _public_body(job, replayed=True),
+                event=event,
+            )
+        job_id = str(job.id)
+        session.commit()
+
+    enqueue_ids: list[str] = []
+    run_id = None
+    try:
+        with Session(get_engine()) as session:
+            _set_session_audit_context(session, event, user_id=actor)
+            from app.services.catalog_version_match import set_import_job_context
+
+            set_import_job_context(session, job_id)
+            file_warnings: list[str] = []
+            summary, results = process_import_payload(
+                session,
+                payload,
+                file_warnings,
+                dry_run=False,
+                allow_org_updates=False,
+                catalog_manager_id=manager_id,
+                import_job_id=job_id,
+                commit_batch=False,
+            )
+            from app.services.category_suggestions.resolve import (
+                import_enrichment_ids,
+            )
+
+            enqueue_ids = import_enrichment_ids(dry_run=False)
+            verified, approved, blocked = _apply_flags(
+                session,
+                results,
+                mark_parent_verified=flags["mark_parent_verified"],
+                approve=flags["approve"],
+                reviewer=actor,
+            )
+            _stamp_summary(
+                summary,
+                _partner_result(results, verified, approved, blocked),
+            )
+            job = finish_import_job(
+                session,
+                job_id,
+                summary=summary,
+                results=results,
+                file_warnings=file_warnings,
+            )
+            from app.services.data_quality.runs import stage_import_run
+
+            run_id = stage_import_run(
+                session,
+                import_job_id=job.id,
+                results=results,
+                requested_by=actor,
+            )
+            if run_id:
+                summary["data_quality_run_id"] = run_id
+                job.summary = dict(summary)
+            body = _public_body(job, replayed=False)
+            session.commit()
+    except Exception as exc:
+        from app.services.category_suggestions.resolve import (
+            take_import_category_enqueues,
+        )
+
+        take_import_category_enqueues()
+        _record_failure(job_id, exc)
+        raise
+
+    _enqueue_follow_up(enqueue_ids, run_id)
+    _log_import(
+        dry_run=False,
+        summary=body["summary"],
+        verified=body["parent_verified"],
+        approved=body["approved"],
+        blocked=body["blocked"],
+    )
+    return json_response(200, body, event=event)
+
+
+def _dry_run(
+    event: Mapping[str, Any],
+    payload: dict[str, Any],
+    manager_id: str,
+    object_key: str,
+) -> dict[str, Any]:
+    with Session(get_engine()) as session:
+        existing = find_import_job_by_key(session, object_key)
+        if existing is not None and existing.dry_run and existing.status == "completed":
+            return json_response(
+                200,
+                _public_body(existing, replayed=True),
+                event=event,
+            )
+        file_warnings: list[str] = []
+        summary, results = process_import_payload(
+            session,
+            payload,
+            file_warnings,
+            dry_run=True,
+            allow_org_updates=False,
+            catalog_manager_id=manager_id,
+        )
+        from app.services.category_suggestions.resolve import import_enrichment_ids
+
+        import_enrichment_ids(dry_run=True)
+        session.rollback()
+        partner_result = _partner_result(results, [], [], [])
+        _stamp_summary(summary, partner_result)
+        job = store_import_job(
+            session,
+            object_key,
+            dry_run=True,
+            summary=summary,
+            results=results,
+            file_warnings=file_warnings,
+        )
+        body = _public_body(job, replayed=False)
+        session.commit()
+
+    _log_import(
+        dry_run=True,
+        summary=body["summary"],
+        verified=[],
+        approved=[],
+        blocked=[],
+    )
+    return json_response(200, body, event=event)
+
+
+def _claim(session: Session, object_key: str) -> tuple[str, ImportJob]:
+    """Return ``running``, ``done``, or ``start`` for this file and flags."""
+    existing = find_import_job_by_key(session, object_key)
+    if existing is not None:
+        return _claim_existing(session, existing)
+    try:
+        with session.begin_nested():
+            job = begin_import_job(session, object_key, source="partner")
+        return "start", job
+    except IntegrityError:
+        existing = find_import_job_by_key(session, object_key)
+        if existing is None:
+            raise
+        return _claim_existing(session, existing)
+
+
+def _claim_existing(session: Session, job: ImportJob) -> tuple[str, ImportJob]:
+    if job.status == "completed":
+        return "done", job
+    if job.status == "running" and _running_is_live(job):
+        return "running", job
+    started = begin_import_job(session, job.object_key, source="partner")
+    return "start", started
+
+
+def _running_is_live(job: ImportJob) -> bool:
+    updated = job.updated_at
+    if updated is None:
+        return True
+    if updated.tzinfo is None:
+        updated = updated.replace(tzinfo=UTC)
+    return datetime.now(UTC) - updated < _RUNNING_STALE_AFTER
+
+
 def _apply_flags(
     session: Session,
     results: list[dict[str, Any]],
@@ -156,24 +351,40 @@ def _apply_flags(
     approve: bool,
     reviewer: str,
 ) -> tuple[list[str], list[str], list[dict[str, Any]]]:
-    """Verify and approve organisations this file created or matched."""
+    """Verify and approve organisations this request created.
+
+    An organisation that is already verified is left out of
+    ``parent_verified``. Approval runs only while the review status is
+    ``pending_review``. A rejected organisation stays rejected.
+    """
     verified: list[str] = []
     approved: list[str] = []
     blocked: list[dict[str, Any]] = []
     if not mark_parent_verified and not approve:
         return verified, approved, blocked
-    for org_id in _target_ids(results):
+    for org_id in _created_ids(results):
         organization = session.get(Organization, UUID(org_id))
         if organization is None:
             continue
-        if mark_parent_verified:
-            _apply_parent_verified(organization, {"parent_verified": True})
+        if mark_parent_verified and not organization.parent_verified:
+            apply_parent_verified(organization, {"parent_verified": True})
             verified.append(org_id)
         if not approve:
             continue
+        if organization.review_status == "rejected":
+            blocked.append(
+                {
+                    "org_id": org_id,
+                    "message": "Organization is rejected",
+                    "issues": [],
+                }
+            )
+            continue
+        if organization.review_status == "approved":
+            continue
         try:
             with session.begin_nested():
-                _apply_decision(
+                apply_review_decision(
                     session,
                     organization,
                     "approve",
@@ -197,14 +408,127 @@ def _apply_flags(
     return verified, approved, blocked
 
 
-def _target_ids(results: list[dict[str, Any]]) -> list[str]:
+def _created_ids(results: list[dict[str, Any]]) -> list[str]:
     return [
         str(result["id"])
         for result in results
         if result.get("type") == "organizations"
-        and result.get("status") in _APPLIED_STATUSES
+        and result.get("status") == "created"
         and result.get("id")
     ]
+
+
+def _partner_result(
+    results: list[dict[str, Any]],
+    verified: list[str],
+    approved: list[str],
+    blocked: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "parent_verified": verified,
+        "approved": approved,
+        "blocked": blocked,
+        "failed": _outcome_rows(results, "failed"),
+        "skipped": _outcome_rows(results, "skipped"),
+    }
+
+
+def _outcome_rows(results: list[dict[str, Any]], status: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for result in results:
+        if result.get("status") != status:
+            continue
+        rows.append(
+            {
+                "type": result.get("type"),
+                "id": result.get("id"),
+                "key": result.get("key"),
+                "path": result.get("path"),
+                "status": status,
+                "errors": result.get("errors") or [],
+            }
+        )
+    return rows
+
+
+def _stamp_summary(summary: dict[str, Any], partner_result: dict[str, Any]) -> None:
+    summary["allow_updates"] = False
+    summary["source"] = "partner"
+    summary["partner_result"] = partner_result
+
+
+def _public_body(job: ImportJob, *, replayed: bool) -> dict[str, Any]:
+    summary = dict(job.summary or {})
+    partner = dict(summary.pop("partner_result", {}) or {})
+    body = {
+        "id": str(job.id),
+        "object_key": job.object_key,
+        "replayed": replayed,
+        "summary": summary,
+        "results": list(job.results or []),
+        "file_warnings": list(job.file_warnings or []),
+        "parent_verified": list(partner.get("parent_verified") or []),
+        "approved": list(partner.get("approved") or []),
+        "blocked": list(partner.get("blocked") or []),
+        "failed": list(partner.get("failed") or []),
+        "skipped": list(partner.get("skipped") or []),
+    }
+    run_id = summary.get("data_quality_run_id")
+    if run_id:
+        body["data_quality_run_id"] = run_id
+    return body
+
+
+def _enqueue_follow_up(enqueue_ids: list[str], run_id: str | None) -> None:
+    if enqueue_ids:
+        from app.services.category_suggestions.events import enqueue_enrichment
+
+        try:
+            enqueue_enrichment(enqueue_ids)
+        except Exception:
+            logger.exception("Category suggestion enqueue failed")
+    if run_id:
+        from app.services.data_quality.runs import enqueue_staged_run
+
+        enqueue_staged_run(run_id)
+
+
+def _record_failure(job_id: str, exc: BaseException) -> None:
+    logger.info(
+        "Partner catalog import failed",
+        extra={"error_type": type(exc).__name__},
+    )
+    try:
+        with Session(get_engine()) as session:
+            fail_import_job(session, job_id, type(exc).__name__)
+            session.commit()
+    except Exception:
+        logger.info(
+            "Partner catalog import failure status was not saved",
+            extra={"error_type": type(exc).__name__},
+        )
+
+
+def _log_import(
+    *,
+    dry_run: bool,
+    summary: Mapping[str, Any],
+    verified: list[str],
+    approved: list[str],
+    blocked: list[dict[str, Any]],
+) -> None:
+    organizations = summary.get("organizations")
+    created = organizations.get("created", 0) if isinstance(organizations, dict) else 0
+    logger.info(
+        "Partner catalog import",
+        extra={
+            "dry_run": dry_run,
+            "organizations_created": created,
+            "verified": len(verified),
+            "approved": len(approved),
+            "blocked": len(blocked),
+        },
+    )
 
 
 def _flags(event: Mapping[str, Any]) -> dict[str, bool]:
@@ -215,9 +539,10 @@ def _flag(event: Mapping[str, Any], name: str) -> bool:
     raw = _query_param(event, name)
     if raw in (None, ""):
         return False
-    if raw == "true":
+    value = raw.strip().lower()
+    if value in _TRUE:
         return True
-    if raw == "false":
+    if value in _FALSE:
         return False
     raise ValidationError(f"{name} must be true or false", field=name)
 

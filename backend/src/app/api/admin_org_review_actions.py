@@ -384,6 +384,32 @@ def _apply_decision(
         apply_listing_status(organization, parsed, "owner")
 
 
+def apply_review_decision(
+    session: Session,
+    organization: Organization,
+    action: str,
+    *,
+    force: bool,
+    notes: Any,
+    status: Any,
+    reviewer_sub: str | None,
+    notes_provided: bool,
+    reason: str | None = None,
+) -> None:
+    """Apply one review decision. Blockers raise ReviewBlockedError."""
+    _apply_decision(
+        session,
+        organization,
+        action,
+        force=force,
+        notes=notes,
+        status=status,
+        reviewer_sub=reviewer_sub,
+        notes_provided=notes_provided,
+        reason=reason,
+    )
+
+
 def _apply_fields(
     repo: OrganizationRepository,
     organization: Organization,

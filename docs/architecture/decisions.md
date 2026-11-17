@@ -176,7 +176,8 @@ parallel environments (production + staging) inside a single CDK stack
   scope, and are validated by a dedicated in-VPC Lambda authorizer
   (5-minute result cache). Scope and organization filtering are re-enforced
   in the handlers. A full-access `crud` key can post a catalog import
-  file at `POST /v1/partner/imports`. Admins generate and revoke keys
+  file at `POST /v1/partner/imports`. The import is stored as an
+  import job with source `partner`. Admins generate and revoke keys
   via `/v1/admin/api-keys` (revocation is a soft delete to preserve
   the audit trail).
 - Public search responses are cached at the CloudFront edge (5-minute TTL) via

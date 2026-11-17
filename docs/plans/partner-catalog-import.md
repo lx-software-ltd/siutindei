@@ -19,25 +19,39 @@ parameters, so the file does not need new fields.
   before any write. A placeholder with neither a query value nor the
   environment variable is rejected the same way.
 - `mark_parent_verified=true` sets `parent_verified` and
-  `parent_verified_at` on organisations this file created or matched
-  and left unchanged.
-- `approve=true` approves those same organisations with the existing
-  release rules. A blocker leaves that organisation pending and lists
-  the issues. It does not force approval and does not roll back the
-  import.
-- `dry_run=true` validates and rolls back. It cannot be combined with
-  the two flags above.
+  `parent_verified_at` on organisations this request created. An
+  organisation that is already verified is omitted from the response
+  list. A name match this request did not create is left unchanged.
+- `approve=true` approves those same new organisations with the
+  existing release rules, and only while `review_status` is
+  `pending_review`. A blocker leaves that organisation pending and
+  lists the issues. A rejected organisation stays rejected. An
+  organisation that is already approved is omitted from `approved`.
+  It does not force approval and does not roll back the import.
+- `dry_run=true` validates, rolls back, and stores the job. It cannot
+  be combined with the two flags above.
+- Flags accept `true`, `false`, `1`, and `0`. Letter case does not
+  matter.
+- The live route commits a running import job first, then commits the
+  organisations, flags, and completed job together. The same request
+  returns that job. A repeat while it is running returns 409. A
+  running job older than 150 seconds is run again. The job source is
+  `partner`. A data-quality run and category
+  enrichment are queued the same way as the Imports page.
+- `failed` and `skipped` are also returned at the top of the response.
 
 Hours and map pins stay in the file. This route does not invent them.
 
 ## Non-goals
 
-- Changing `POST /v1/admin/imports` or the Imports page.
+- Changing how `POST /v1/admin/imports` writes. Import history gains
+  a Partner API label for jobs this route stores.
 - Letting the file set `parent_verified`, `parent_verified_at`, or
   `review_status`. Those fields stay unknown on an organisation row
   and are ignored.
-- An S3 object, an `import_jobs` row, or `allow_updates`. A second
-  post matches by name and does not duplicate the organisation.
+- An S3 object or `allow_updates`. A second post of a changed file
+  matches by name and does not duplicate the organisation. The same
+  file and flags return the stored job instead of writing again.
 - Organization-scoped keys, `read` keys, and `force`.
 - A new API Gateway resource. The route rides `/v1/partner/{proxy+}`.
 - Schema or seed changes.
@@ -53,6 +67,9 @@ Hours and map pins stay in the file. This route does not invent them.
 - `docs/architecture/aws-assets-map.md`
 - `docs/architecture/data-quality.md`
 - `docs/architecture/decisions.md`
+- `docs/api/admin.yaml`
+- `apps/admin_web/src/lib/import-job-results.ts`
+- `apps/admin_web/src/lib/api-client-imports.ts`
 
 ## Invariants this change preserves
 
@@ -65,9 +82,13 @@ Hours and map pins stay in the file. This route does not invent them.
   approve an organisation.
 - Organization-scoped keys and `read` keys receive `403` before the
   database opens.
-- The flags apply only to organisations this file created or left
-  unchanged. Failed and skipped rows are left alone. A match owned by
-  another manager is still `managed by provider`.
+- The flags apply only to organisations this request created. A
+  matched or rejected organisation is left alone. Failed and skipped
+  rows are left alone and are listed on the response. A match owned
+  by another manager is still `managed by provider`.
+- Public search hides an eat listing until the organisation is
+  parent-verified. Approval filters search only when the review gate
+  is on.
 
 ## Done when
 

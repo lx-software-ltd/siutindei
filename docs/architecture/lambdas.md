@@ -138,7 +138,10 @@ their primary responsibilities.
   also `POST` review decisions and bulk apply/dismiss,
   `POST /v1/partner/organization-merges`, `POST
   /v1/partner/organizations/{id}/approve`, `POST
-  /v1/partner/organizations/{id}/reject`, `POST /v1/partner/imports`,
+  /v1/partner/organizations/{id}/reject`, `POST /v1/partner/imports`
+  (import job source `partner`, data-quality run, category enrichment;
+  flags apply only to organisations that request created; the same
+  request returns the stored job),
   `GET` and `POST`
   `/v1/partner/organizations/{id}/enrichment` (apply, dismiss, and
   leaflet upload included), `GET` and `PUT /v1/partner/enrichment-settings`, and
@@ -168,7 +171,11 @@ their primary responsibilities.
   1-hour presigned download URL for each file under
   `admin/imports/` that is at most 7 days old). Live imports commit once per batch
   after per-row SAVEPOINTs, so a Lambda timeout mid-batch rolls
-  back the whole file),
+  back the whole file. `POST /v1/partner/imports` commits a running
+  job first, then commits the organisations, verification, approval,
+  and completed job together. A repeat while that job is still
+  running returns 409; a running job older than 150 seconds is run
+  again),
   and address autocomplete (Nominatim via the AWS/HTTP proxy)
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`)
 - Category suggestions and category checks: admin-only routes under

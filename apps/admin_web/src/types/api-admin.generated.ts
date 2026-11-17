@@ -888,6 +888,7 @@ export interface paths {
          *     `source` is set from the caller, not the body. An admin session
          *     is `ui` (the Imports page). The importer group is `board` (the
          *     board catalog API). An admin who is also an importer stays `ui`.
+         *     `POST /v1/partner/imports` stores `partner`.
          *     A retry keeps the source already stored on the job. Jobs stored
          *     before this field existed report null.
          *     When `dry_run` is true the file is validated the same way as a live
@@ -8213,10 +8214,11 @@ export interface components {
             /**
              * @description Who started the import. `ui` is an admin session (the
              *     Imports page). `board` is the importer group (the board
-             *     catalog API). Null on jobs stored before this field existed.
+             *     catalog API). `partner` is `POST /v1/partner/imports`.
+             *     Null on jobs stored before this field existed.
              * @enum {string|null}
              */
-            source: "ui" | "board" | null;
+            source: "ui" | "board" | "partner" | null;
             /**
              * Format: uuid
              * @description Post-import data-quality run, when one was queued.
@@ -8236,10 +8238,11 @@ export interface components {
             /**
              * @description Who started the import. `ui` is an admin session (the
              *     Imports page). `board` is the importer group (the board
-             *     catalog API). Null on jobs stored before this field existed.
+             *     catalog API). `partner` is `POST /v1/partner/imports`.
+             *     Null on jobs stored before this field existed.
              * @enum {string|null}
              */
-            source: "ui" | "board" | null;
+            source: "ui" | "board" | "partner" | null;
             summary: components["schemas"]["AdminImportSummary"];
             results: components["schemas"]["AdminImportResult"][];
             file_warnings: string[];
@@ -8269,10 +8272,11 @@ export interface components {
             /**
              * @description Who started the import. `ui` is an admin session (the
              *     Imports page). `board` is the importer group (the board
-             *     catalog API). Null on jobs stored before this field existed.
+             *     catalog API). `partner` is `POST /v1/partner/imports`.
+             *     Null on jobs stored before this field existed.
              * @enum {string|null}
              */
-            source: "ui" | "board" | null;
+            source: "ui" | "board" | "partner" | null;
             /** @enum {string} */
             status: "running" | "completed" | "failed";
             summary: components["schemas"]["AdminImportSummary"];

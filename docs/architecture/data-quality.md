@@ -24,7 +24,8 @@ and update, merge organizations at
 `POST /v1/partner/organizations/{id}/approve` (including `force`),
 reject one organization at
 `POST /v1/partner/organizations/{id}/reject`, post a catalog import
-file at `POST /v1/partner/imports`, and list or delete empty leftover
+file at `POST /v1/partner/imports` (the same post-import data-quality
+run as the Imports page), and list or delete empty leftover
 categories. An org-scoped key can read
 its own venue rows and receives `403` on those writes. See
 `docs/api/partner.yaml`.

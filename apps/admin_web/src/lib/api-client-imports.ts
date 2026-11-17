@@ -96,7 +96,7 @@ export interface AdminImportResponse {
   summary: AdminImportSummary;
   results: AdminImportResult[];
   file_warnings: string[];
-  source?: 'ui' | 'board' | null;
+  source?: 'ui' | 'board' | 'partner' | null;
   data_quality_run_id?: string | null;
 }
 
@@ -106,7 +106,7 @@ export interface AdminImportJob {
   download_url?: string;
   dry_run: boolean;
   allow_updates?: boolean;
-  source?: 'ui' | 'board' | null;
+  source?: 'ui' | 'board' | 'partner' | null;
   status?: string;
   summary: AdminImportSummary;
   results: AdminImportResult[];
