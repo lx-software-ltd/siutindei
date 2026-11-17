@@ -59,6 +59,7 @@ Hours and map pins stay in the file. This route does not invent them.
 ## Files
 
 - `backend/src/app/api/partner_imports.py`
+- `backend/src/app/api/partner_imports_flags.py`
 - `backend/src/app/api/partner_routes.py`
 - `tests/test_partner_imports.py`
 - `docs/api/partner.yaml`

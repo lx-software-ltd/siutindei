@@ -9,10 +9,10 @@ from decimal import Decimal
 from uuid import uuid4
 
 from app.api.partner_imports import (
-    _apply_flags,
     partner_import_object_key,
     resolve_import_manager,
 )
+from app.api.partner_imports_flags import apply_import_flags
 from app.api.partner_routes import handle_partner_routes
 from app.db.models import (
     ActivityCategory,
@@ -565,7 +565,7 @@ def test_verify_list_skips_an_org_that_is_already_verified(
             session.commit()
             checked_at = org.parent_verified_at
         with Session(test_engine) as session:
-            verified, approved, blocked = _apply_flags(
+            verified, approved, blocked = apply_import_flags(
                 session,
                 [{"type": "organizations", "status": "created", "id": org_id}],
                 mark_parent_verified=True,
@@ -601,7 +601,7 @@ def test_approve_leaves_a_rejected_organisation(monkeypatch, test_engine) -> Non
             org.review_reason = "duplicate"
             session.commit()
         with Session(test_engine) as session:
-            _verified, approved, blocked = _apply_flags(
+            _verified, approved, blocked = apply_import_flags(
                 session,
                 [{"type": "organizations", "status": "created", "id": org_id}],
                 mark_parent_verified=False,
