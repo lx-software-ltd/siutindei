@@ -550,37 +550,6 @@
       "instagram": "@purna.co____"
     },
     {
-      "name": "South Lane Mid-Levels",
-      "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
-      "locations": [
-        {
-          "name": "Shop B1-B2, G/F, Peace Tower, 30-32 Robinson Road, Mid-Levels, Hong Kong",
-          "area_name": "Mid-Levels",
-          "address": "Shop B1-B2, G/F, Peace Tower, 30-32 Robinson Road, Mid-Levels, Hong Kong",
-          "lat": 22.2792,
-          "lng": 114.1519
-        }
-      ],
-      "activities": [
-        {
-          "name": "South Lane Mid-Levels",
-          "kind": "eat",
-          "category_id": "c1111111-1111-1111-1111-111111111403",
-          "facts": {
-            "high_chairs": true,
-            "outdoor_seating": true
-          },
-          "description": "Cafe that was on Robinson Road. OpenRice lists this branch as closed; confirm before visiting.",
-          "source_url": "https://www.southlane.co/"
-        }
-      ],
-      "description": "Cafe that was on Robinson Road. OpenRice lists this branch as closed; confirm before visiting.",
-      "website": "https://www.southlane.co/",
-      "source_url": "https://www.southlane.co/",
-      "phone": "57448390",
-      "email": "hello@southlane.co"
-    },
-    {
       "name": "Rajasthan Rifles",
       "vetting_note": "Owner visited. Public address, hours, website and phone filled from the venue site or directory listings (Nov 2026). Confirm against your visit.",
       "locations": [
