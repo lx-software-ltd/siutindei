@@ -139,6 +139,9 @@ def validate_model_sheet(
             "currency": str((row.get("currency") or {}).get("value") or "HKD")[:8]
             or "HKD",
         }
+        upper = checked_value(row.get("amount_max"), pages)
+        if upper is not None and _AMOUNT_RE.search(upper["quote"]):
+            proposed["amount_max"] = upper["value"]
         if pricing_type == PricingType.PER_SESSIONS.value:
             sessions = checked_value(row.get("sessions_count"), pages)
             count = (

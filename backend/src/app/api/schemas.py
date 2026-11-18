@@ -116,6 +116,7 @@ class PricingSchema(BaseModel):
 
     pricing_type: str
     amount: Decimal
+    amount_max: Decimal | None = None
     currency: str
     sessions_count: int | None
     free_trial_class_offered: bool

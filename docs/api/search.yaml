@@ -13,8 +13,8 @@ info:
     | age | >= 0 | Child's age to filter activities |
     | age_min | >= 0 | Youngest age of a wanted range |
     | age_max | >= 0 | Oldest age of a wanted range |
-    | price_min | >= 0 | Minimum price filter |
-    | price_max | >= 0 | Maximum price filter |
+    | price_min | >= 0 | Minimum price filter. A row matches when its upper bound is at least this value. |
+    | price_max | >= 0 | Maximum price filter. A row matches when its lower bound is at most this value. |
     | day_of_week_utc | 0-6 | Day of week (0=Sunday, 6=Saturday) |
     | start_minutes_utc | 0-1439 | Start time in minutes from midnight UTC |
     | end_minutes_utc | 0-1439 | End time in minutes from midnight UTC |
@@ -172,7 +172,10 @@ paths:
         - name: price_min
           in: query
           required: false
-          description: Minimum price filter (>= 0)
+          description: |
+            Minimum price filter (>= 0). A price matches when its upper
+            bound (`amount_max`, or `amount` for one price) is at least
+            this value.
           schema:
             type: number
             format: decimal
@@ -180,7 +183,9 @@ paths:
         - name: price_max
           in: query
           required: false
-          description: Maximum price filter (>= 0)
+          description: |
+            Maximum price filter (>= 0). A price matches when `amount`,
+            the lower bound, is at most this value.
           schema:
             type: number
             format: decimal
@@ -325,8 +330,9 @@ paths:
           description: |
             Highest price of one class (>= 0). Free is 0, `per_class` and
             `per_hour` are the amount, and `per_sessions` with a
-            `sessions_count` is the amount divided by the count. Other
-            prices have no per-class equivalent and are excluded.
+            `sessions_count` is the amount divided by the count. A range
+            uses its lower bound. Other prices have no per-class
+            equivalent and are excluded.
           schema:
             type: number
             format: decimal
@@ -842,6 +848,13 @@ components:
           enum: [per_class, per_sessions, per_hour, per_day, free, per_month, per_year]
         amount:
           type: number
+          description: Price, or the lower bound when `amount_max` is set.
+        amount_max:
+          type: number
+          nullable: true
+          description: |
+            Upper bound of a price range. Null when the fee is a single
+            price. Greater than `amount`.
         currency:
           type: string
           description: ISO 4217 currency code (case-insensitive)

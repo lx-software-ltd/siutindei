@@ -23,7 +23,7 @@ import {
 } from './listing-utils';
 import { buildSearchPageHref } from './map-search-url';
 import { DEFAULT_SEARCH_FILTERS } from './search-params';
-import type { ActivityListing } from './types';
+import type { ActivityListing, SearchPricing } from './types';
 
 export interface ActivityBreadcrumbItem {
   readonly label: string;
@@ -214,6 +214,29 @@ function venueStructuredData(
   };
 }
 
+function offerStructuredData(
+  pricing: SearchPricing,
+  pageUrl?: string,
+): Record<string, unknown> {
+  const shared = {
+    priceCurrency: pricing.currency.toUpperCase(),
+    ...(pageUrl ? { url: pageUrl } : {}),
+  };
+  if (pricing.amountMax != null && pricing.amountMax > pricing.amount) {
+    return {
+      '@type': 'AggregateOffer',
+      lowPrice: pricing.amount,
+      highPrice: pricing.amountMax,
+      ...shared,
+    };
+  }
+  return {
+    '@type': 'Offer',
+    price: pricing.amount,
+    ...shared,
+  };
+}
+
 export function activityStructuredData(
   locale: Locale,
   listing: ActivityListing,
@@ -272,14 +295,7 @@ export function activityStructuredData(
       },
     })),
     ...(listing.pricing
-      ? {
-          offers: {
-            '@type': 'Offer',
-            price: listing.pricing.amount,
-            priceCurrency: listing.pricing.currency.toUpperCase(),
-            ...(pageUrl ? { url: pageUrl } : {}),
-          },
-        }
+      ? { offers: offerStructuredData(listing.pricing, pageUrl) }
       : {}),
   };
 }

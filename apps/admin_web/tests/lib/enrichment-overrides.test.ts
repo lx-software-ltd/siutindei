@@ -138,4 +138,23 @@ describe('enrichment pricing overrides', () => {
       }).map((item) => item.field)
     ).toEqual(['location_id']);
   });
+
+  it('sends an upper bound the reviewer typed, including a cleared one', () => {
+    expect(
+      chosenEnrichmentOverrides(
+        ['price-1'],
+        { 'price-1': { amount_max: '800' } },
+        [price]
+      )
+    ).toEqual({ 'price-1': { amount_max: '800' } });
+    const ranged = {
+      ...price,
+      proposed_value: { ...price.proposed_value, amount_max: '800' },
+      blockers: [{ field: 'amount_max', message: 'Upper bound must be a number above the amount' }],
+    };
+    expect(visibleBlockers(ranged, { amount_max: '' }, context)).toEqual([]);
+    expect(
+      chosenEnrichmentOverrides(['price-1'], { 'price-1': { amount_max: '' } }, [ranged])
+    ).toEqual({ 'price-1': { amount_max: '' } });
+  });
 });

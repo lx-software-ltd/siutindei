@@ -24,6 +24,18 @@ export function formatMoney(
   }).format(amount);
 }
 
+function formatAmountSpan(locale: Locale, pricing: SearchPricing): string {
+  const low = formatMoney(locale, pricing.amount, pricing.currency);
+  const high = pricing.amountMax;
+  if (high == null || high <= pricing.amount) {
+    return low;
+  }
+  const highText = new Intl.NumberFormat(locale === 'zh-HK' ? 'zh-HK' : 'en-HK', {
+    maximumFractionDigits: 0,
+  }).format(high);
+  return `${low}–${highText}`;
+}
+
 /**
  * Price of one class, the same rule the search API sorts and filters by.
  * Only a class has one: a day camp or a kindergarten fee is not a class price.
@@ -54,7 +66,7 @@ export function formatPricing(locale: Locale, pricing: SearchPricing): string {
   if (pricing.pricingType === 'free') {
     return locale === 'zh-HK' ? '免費' : 'Free';
   }
-  const amount = formatMoney(locale, pricing.amount, pricing.currency);
+  const amount = formatAmountSpan(locale, pricing);
   if (
     pricing.pricingType === 'per_sessions' &&
     pricing.sessionsCount &&
@@ -89,7 +101,7 @@ export function formatClassEquivalent(
 }
 
 function pricingKey(pricing: SearchPricing): string {
-  return `${pricing.pricingType}:${pricing.amount}:${pricing.currency}:${pricing.sessionsCount ?? ''}`;
+  return `${pricing.pricingType}:${pricing.amount}:${pricing.amountMax ?? ''}:${pricing.currency}:${pricing.sessionsCount ?? ''}`;
 }
 
 function comparablePrice(pricing: SearchPricing, kind: ListingKind): number {

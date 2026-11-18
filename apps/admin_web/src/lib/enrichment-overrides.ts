@@ -101,6 +101,10 @@ export function visibleBlockers(
       if (override.amount !== undefined && validAmount(override.amount)) {
         continue;
       }
+    } else if (item.field === 'amount_max') {
+      if (type === 'free' || upperBoundResolved(override, proposed)) {
+        continue;
+      }
     } else if (item.field === 'currency') {
       if (override.currency && /^[A-Za-z]{3}$/.test(override.currency)) {
         continue;
@@ -177,6 +181,12 @@ export function chosenEnrichmentOverrides(
       draft.amount !== String(proposed.amount ?? '')
     ) {
       cleaned.amount = draft.amount;
+    }
+    if (
+      draft.amount_max !== undefined &&
+      draft.amount_max !== String(proposed.amount_max ?? '')
+    ) {
+      cleaned.amount_max = draft.amount_max;
     }
     const proposedCurrency = String(proposed.currency || 'HKD');
     if (draft.currency && draft.currency !== proposedCurrency) {
@@ -286,6 +296,22 @@ function fold(value: unknown): string {
     .filter(Boolean)
     .join(' ')
     .toLocaleLowerCase();
+}
+
+function upperBoundResolved(
+  override: EnrichmentOverride,
+  proposed: EnrichmentProposal['proposed_value']
+): boolean {
+  if (override.amount_max === undefined) {
+    return false;
+  }
+  if (override.amount_max.trim() === '') {
+    return true;
+  }
+  const upper = Number(override.amount_max);
+  const rawAmount = override.amount ?? proposed.amount;
+  const lower = Number(rawAmount);
+  return Number.isFinite(upper) && Number.isFinite(lower) && upper > lower;
 }
 
 function validAmount(value: string): boolean {

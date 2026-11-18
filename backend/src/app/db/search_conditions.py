@@ -29,12 +29,31 @@ MINUTES_PER_DAY = 1440
 UNPRICED_SORT_KEY = Decimal("1000000000")
 
 
+def amounts_overlap(
+    amount: Decimal,
+    amount_max: Decimal | None,
+    price_min: Decimal | None,
+    price_max: Decimal | None,
+) -> bool:
+    """True when a price overlaps the requested bounds.
+
+    ``amount`` is the price, or the lower bound of a range. The upper
+    bound is ``amount_max`` when set. A single price overlaps the same
+    window it matched before the range column existed.
+    """
+    upper = amount if amount_max is None else amount_max
+    if price_min is not None and upper < price_min:
+        return False
+    return not (price_max is not None and amount > price_max)
+
+
 def class_price_expression(pricing: Any = ActivityPricing) -> Any:
     """Price of one class, or NULL when the pricing type cannot say.
 
-    Free is 0. Per class and per hour are the amount. A term with a
-    session count is the amount over the count. Day, month, year, and a
-    term without a count have no per-class equivalent.
+    Free is 0. Per class and per hour are the lower bound. A term with
+    a session count is that bound over the count. A range uses its
+    lower bound. Day, month, year, and a term without a count have no
+    per-class equivalent.
     """
     return sa.case(
         (pricing.pricing_type == PricingType.FREE, sa.literal(Decimal(0))),
@@ -121,8 +140,9 @@ def price_conditions(
     conditions: list = []
     if filters.pricing_type is not None:
         conditions.append(pricing.pricing_type == filters.pricing_type)
+    upper = func.coalesce(pricing.amount_max, pricing.amount)
     if filters.price_min is not None:
-        conditions.append(pricing.amount >= filters.price_min)
+        conditions.append(upper >= filters.price_min)
     if filters.price_max is not None:
         conditions.append(pricing.amount <= filters.price_max)
     if filters.free_trial:

@@ -293,6 +293,7 @@ def _apply_pricing(
             location_id=location.id,
             pricing_type=fields["pricing_type"],
             amount=fields["amount"],
+            amount_max=fields["amount_max"],
             currency=fields["currency"],
             sessions_count=fields["sessions_count"],
             free_trial_class_offered=bool(proposed.get("free_trial_class_offered")),

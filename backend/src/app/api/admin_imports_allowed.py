@@ -71,6 +71,7 @@ ALLOWED_PRICING_FIELDS = {
     "location_name",
     "pricing_type",
     "amount",
+    "amount_max",
     "currency",
     "sessions_count",
     "free_trial_class_offered",

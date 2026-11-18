@@ -127,6 +127,7 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
         currency: str = "HKD",
         sessions_count: int | None = None,
         free_trial_class_offered: bool = False,
+        amount_max: Decimal | None = None,
     ) -> ActivityPricing:
         """Create new pricing.
 
@@ -134,7 +135,7 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
             activity_id: Activity UUID.
             location_id: Location UUID.
             pricing_type: Type of pricing.
-            amount: Price amount.
+            amount: Price amount, or the lower bound of a range.
             currency: Currency code.
             sessions_count: Number of sessions (for per_sessions type).
             free_trial_class_offered: Whether a free trial class is offered.
@@ -147,6 +148,7 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
             location_id=location_id,
             pricing_type=pricing_type,
             amount=amount,
+            amount_max=amount_max,
             currency=currency,
             sessions_count=sessions_count,
             free_trial_class_offered=free_trial_class_offered,
@@ -158,6 +160,7 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
         pricing: ActivityPricing,
         pricing_type: PricingType | None = None,
         amount: Decimal | None = None,
+        amount_max: Decimal | None = None,
         currency: str | None = None,
         sessions_count: int | None = None,
         free_trial_class_offered: bool | None = None,
@@ -168,6 +171,7 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
             pricing: The pricing to update.
             pricing_type: New pricing type (if provided).
             amount: New amount (if provided).
+            amount_max: New upper bound (if provided).
             currency: New currency (if provided).
             sessions_count: New sessions count (if provided).
             free_trial_class_offered: New free trial flag (if provided).
@@ -179,6 +183,8 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
             pricing.pricing_type = pricing_type
         if amount is not None:
             pricing.amount = amount
+        if amount_max is not None:
+            pricing.amount_max = amount_max
         if currency is not None:
             pricing.currency = currency
         if sessions_count is not None:

@@ -188,6 +188,7 @@ class ActivityPricing(Base):
         nullable=False,
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    amount_max: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     currency: Mapped[str] = mapped_column(Text(), nullable=False, server_default="HKD")
     sessions_count: Mapped[int | None] = mapped_column(Integer(), nullable=True)
     free_trial_class_offered: Mapped[bool] = mapped_column(
@@ -208,6 +209,11 @@ class ActivityPricing(Base):
             "(pricing_type <> 'per_sessions') OR "
             "(sessions_count IS NOT NULL AND sessions_count > 0)",
             name="pricing_sessions_count_check",
+        ),
+        CheckConstraint(
+            "(pricing_type = 'free' AND amount_max IS NULL) OR "
+            "(pricing_type <> 'free' AND (amount_max IS NULL OR amount_max > amount))",
+            name="pricing_amount_max_check",
         ),
     )
 

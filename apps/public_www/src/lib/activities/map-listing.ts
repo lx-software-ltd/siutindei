@@ -81,6 +81,7 @@ export interface ActivityWireListing {
   pricing?: {
     pricing_type: string;
     amount: number | string;
+    amount_max?: number | string | null;
     currency: string;
     sessions_count?: number | null;
     free_trial_class_offered: boolean;
@@ -242,6 +243,7 @@ export function mapActivityListing(
       ? {
           pricingType: item.pricing.pricing_type,
           amount: toNumber(item.pricing.amount) ?? 0,
+          amountMax: toNumber(item.pricing.amount_max),
           currency: item.pricing.currency,
           sessionsCount: item.pricing.sessions_count ?? null,
           freeTrialClassOffered: item.pricing.free_trial_class_offered,

@@ -317,12 +317,14 @@ class Pricing {
     required this.pricingType,
     required this.amount,
     required this.currency,
+    this.amountMax,
     this.sessionsCount,
     this.freeTrialClassOffered = false,
   });
 
   final String pricingType;
   final double amount;
+  final double? amountMax;
   final String currency;
   final int? sessionsCount;
   final bool freeTrialClassOffered;
@@ -331,6 +333,7 @@ class Pricing {
     return Pricing(
       pricingType: json['pricing_type'] as String,
       amount: (json['amount'] as num).toDouble(),
+      amountMax: (json['amount_max'] as num?)?.toDouble(),
       currency: json['currency'] as String,
       sessionsCount: json['sessions_count'] as int?,
       freeTrialClassOffered: json['free_trial_class_offered'] as bool? ?? false,

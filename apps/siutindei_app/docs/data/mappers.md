@@ -62,6 +62,7 @@ class ActivityMapper {
     return PricingEntity(
       type: PricingType.fromString(model.pricingType),
       amount: model.amount,
+      amountMax: model.amountMax,
       currency: model.currency,
       sessionsCount: model.sessionsCount,
     );
@@ -204,6 +205,7 @@ static PricingEntity pricingToEntity(Pricing model) {
   return PricingEntity(
     type: PricingType.fromString(model.pricingType), // String -> Enum
     amount: model.amount,
+    amountMax: model.amountMax,
     currency: model.currency,
   );
 }

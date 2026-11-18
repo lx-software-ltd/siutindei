@@ -15,6 +15,7 @@ import {
 } from '@/lib/activities/catalogue-snapshot';
 import type { ActivityListing } from '@/lib/activities/types';
 import { SNAPSHOT_FIXTURE } from '../helpers/catalogue-fixture';
+import { buildListing, buildPricing } from '../helpers/listing-fixture';
 
 const copy = { homeLabel: 'Home', searchLabel: 'Activities' };
 
@@ -67,6 +68,20 @@ describe('activity page data', () => {
       image: ['https://img.example/a.jpg'],
     });
     expect((data.hasCourseInstance as unknown[]).length).toBeGreaterThan(0);
+    expect(data.offers).toMatchObject({ '@type': 'Offer', price: listing.pricing?.amount });
+  });
+
+  it('describes a price range as an aggregate offer', () => {
+    const ranged = buildListing({
+      pricing: buildPricing({ amount: 200, amountMax: 300 }),
+    });
+    const data = activityStructuredData('en', ranged, []);
+    expect(data.offers).toEqual({
+      '@type': 'AggregateOffer',
+      lowPrice: 200,
+      highPrice: 300,
+      priceCurrency: 'HKD',
+    });
   });
 
   it('numbers breadcrumb list items and makes them absolute', () => {

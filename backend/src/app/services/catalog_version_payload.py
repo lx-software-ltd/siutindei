@@ -79,6 +79,7 @@ def pricing_payload(pricing: ActivityPricing, location: Location) -> dict[str, A
         "location_address": location.address,
         "pricing_type": pricing.pricing_type,
         "amount": pricing.amount,
+        "amount_max": pricing.amount_max,
         "currency": pricing.currency,
         "sessions_count": pricing.sessions_count,
         "free_trial_class_offered": pricing.free_trial_class_offered,
