@@ -7,10 +7,12 @@ from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
+from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
 from app.db.models import ActivityPricing, PricingType
 from app.db.repositories.base import BaseRepository
+from app.exceptions import ValidationError
 
 
 class ActivityPricingRepository(BaseRepository[ActivityPricing]):
@@ -83,6 +85,48 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
             )
         )
         return self._session.execute(query).scalar_one_or_none()
+
+    def save_for_activity_location(
+        self,
+        activity_id: UUID,
+        location_id: UUID,
+        pricing_type: PricingType,
+        amount: Decimal,
+        currency: str,
+        sessions_count: int | None,
+        free_trial_class_offered: bool,
+        amount_max: Decimal | None = None,
+    ) -> ActivityPricing:
+        """Keep one price for an activity, venue, and pricing type.
+
+        A matching row is updated. Two matching rows are an error.
+        """
+        try:
+            existing = self.find_by_activity_location_pricing_type(
+                activity_id, location_id, pricing_type
+            )
+        except MultipleResultsFound as exc:
+            raise ValidationError(
+                "Multiple pricing entries found",
+                field="pricing_type",
+            ) from exc
+        if existing is None:
+            return self.create_pricing(
+                activity_id=activity_id,
+                location_id=location_id,
+                pricing_type=pricing_type,
+                amount=amount,
+                currency=currency,
+                sessions_count=sessions_count,
+                free_trial_class_offered=free_trial_class_offered,
+                amount_max=amount_max,
+            )
+        existing.amount = amount
+        existing.amount_max = amount_max
+        existing.currency = currency
+        existing.sessions_count = sessions_count
+        existing.free_trial_class_offered = free_trial_class_offered
+        return existing
 
     def find_by_price_range(
         self,
